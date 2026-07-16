@@ -44,25 +44,36 @@ ViewState view_state_from_settings_tab(const SettingsFileTab& t);
 // trims set.
 std::string format_default_settings_template(const std::string& stem);
 
+// The complete non-engine (GUI-kind) value set the settings writer
+// serializes, gathered into one snapshot. Constructed at each call site and
+// consumed within the call: the reference members borrow the caller's
+// storage (the two tab bands and the audio_player string), the scalars are
+// copied. One struct so the writer and the autocomplete recall
+// (format_nonengine_value in settings_io.cpp) take the identical value set
+// without a positional parameter list.
+struct NonEngineSettingsSnapshot {
+    const ViewState&   tab_a;
+    const ViewState&   tab_b;
+    bool               follow;
+    char               active_audio_view;
+    char               active_markers_view;
+    char               active_tab_view;
+    float              playback_speed;
+    double             font_size;
+    const std::string& audio_player;
+};
+
 // Atomic write: emits keys in the canonical order defined by the shared
 // in-file descriptor list. Engine keys are formatted from the typed
 // EngineSettings parameter via per-field switch; typed scalars come from
-// the explicit parameters; all four per-tab trim lines (tab_a/tab_b begin/
+// the snapshot; all four per-tab trim lines (tab_a/tab_b begin/
 // end) are always emitted, `-1` when the corresponding trim flag is unset
 // on tab_a.trim / tab_b.trim (the load grammar reads -1 back as unset).
 // Matches the `.warpmarkers` write pattern (tmp → fsync → rename).
 // Best-effort: failure is logged by the caller.
 bool write_settings_file(
     const std::string& path,
-    const ViewState& tab_a,
-    const ViewState& tab_b,
-    bool follow,
-    char active_audio_view,
-    char active_markers_view,
-    char active_tab_view,
-    float playback_speed,
-    double font_size,
-    const std::string& audio_player,
+    const NonEngineSettingsSnapshot& gui,
     const EngineSettings& engine);
 
 // The on-disk value text that write_settings_file would emit for GUI-kind

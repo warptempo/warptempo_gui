@@ -3,24 +3,14 @@
 #include "frame_format.h"
 #include "settings_io.h"
 
-#include <algorithm>
 #include <cstdio>
 #include <sstream>
 
 std::expected<void, std::string> GuiPhaseResetMarkers::load(const std::string& path) {
-    markers_.clear();
-    ++generation_;
-
-    auto r = parse_phaseresetmarkers_file(path);
-    if (!r) return std::unexpected(std::move(r.error()));
-
-    markers_.reserve(r->size());
-    for (const PhaseResetMarker& pm : *r) {
-        GuiPhaseResetMarker g;                   // no extra fields today
-        static_cast<PhaseResetMarker&>(g) = pm;  // copy the serialized base
-        markers_.push_back(g);
-    }
-    return {};
+    // The parse fills each serialized PhaseResetMarker base; the shared
+    // load_impl (clear-bump-parse-upcast) copies it into a
+    // GuiPhaseResetMarker (no extra fields today).
+    return load_impl(path, parse_phaseresetmarkers_file);
 }
 
 namespace {
@@ -62,7 +52,7 @@ bool save_impl(const std::string& path,
 }  // namespace
 
 bool GuiPhaseResetMarkers::save(const std::string& path) const {
-    return save(path, markers_);
+    return save(path, markers());
 }
 
 bool GuiPhaseResetMarkers::save(const std::string& path,
@@ -70,21 +60,4 @@ bool GuiPhaseResetMarkers::save(const std::string& path,
     // Authored domain: positions are whole source frames (int64), written
     // as plain integer text (format_authored_frame).
     return save_impl(path, markers_);
-}
-
-int GuiPhaseResetMarkers::insert_marker(GuiPhaseResetMarker m) {
-    const int64_t time = m.time_frame;
-    auto it = std::lower_bound(
-        markers_.begin(), markers_.end(), time,
-        [](const GuiPhaseResetMarker& a, int64_t t) { return a.time_frame < t; });
-    const int idx = static_cast<int>(it - markers_.begin());
-    markers_.insert(it, std::move(m));
-    ++generation_;
-    return idx;
-}
-
-void GuiPhaseResetMarkers::remove_marker(int index) {
-    if (index < 0 || index >= static_cast<int>(markers_.size())) return;
-    markers_.erase(markers_.begin() + index);
-    ++generation_;
 }

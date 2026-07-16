@@ -1,5 +1,6 @@
 #pragma once
 
+#include "marker_store.h"
 #include "value_format.h"
 #include "warpmarkers_parse.h"
 
@@ -63,7 +64,10 @@ inline std::vector<WarpMarker> slice_to_warp_markers(
     return std::vector<WarpMarker>(src.begin(), src.end());
 }
 
-class GuiWarpMarkers {
+// The store mechanics (sorted vector, generation token, insert/remove/mut
+// accessors) are the shared GuiMarkerStore base (marker_store.h); this
+// class carries the warp column's parse and serializer surfaces.
+class GuiWarpMarkers : public GuiMarkerStore<GuiWarpMarker> {
 public:
     // Parses `path`. On success, populates markers() and returns the parsed
     // markers. The first malformed line aborts the parse and returns a
@@ -82,53 +86,6 @@ public:
     // positions, whole source frames as plain integer text.
     static bool save(const std::string& path,
                      const std::vector<GuiWarpMarker>& markers);
-
-    const std::vector<GuiWarpMarker>&       markers() const { return markers_; }
-
-    // Inserts `m` at the position that preserves ascending time_frame
-    // order. Returns the insertion index. Equal times are legal —
-    // markers may coincide exactly; degeneracy collapses to one 1.00
-    // owner at the render boundary (build_warp_frame_map), not here.
-    int insert_marker(GuiWarpMarker m);
-
-    // Removes the marker at `index`. No-op if out of range.
-    void remove_marker(int index);
-
-    // Mutable accessor for edits to a single marker in place. A caller
-    // that changes time_frame must restore order via
-    // reorder_markers_by_time before the store is next read (flag/tempo
-    // toggles preserve order trivially). Bumps generation_ on call.
-    // Contract is "you may mutate"; a spurious bump (caller read-only)
-    // costs one stem rebuild on the next tick — negligible.
-    GuiWarpMarker* marker_mut(int index) {
-        ++generation_;
-        if (index < 0 || index >= static_cast<int>(markers_.size())) return nullptr;
-        return &markers_[index];
-    }
-
-    // Bulk-mutable accessor. The class assumes ascending time_frame
-    // order (equal times legal); a caller that changes times must restore
-    // order via reorder_markers_by_time before the store is next read.
-    // Exposed for operations that twiddle a flag across many markers at
-    // once. Bumps generation_ on call (same rationale as marker_mut).
-    std::vector<GuiWarpMarker>& markers_mut() {
-        ++generation_;
-        return markers_;
-    }
-
-    void clear() {
-        markers_.clear();
-        ++generation_;
-    }
-
-    // Monotonically-increasing token bumped on every mutating method.
-    // Consumers (stem cache fingerprint) detect any marker-store
-    // change by comparing generations rather than diffing contents.
-    long long generation() const { return generation_; }
-
-private:
-    std::vector<GuiWarpMarker>       markers_;
-    long long                    generation_ = 0;
 };
 
 // True if the marker at `idx` should render as disabled. `disabled` is allowed

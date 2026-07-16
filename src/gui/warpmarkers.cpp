@@ -5,24 +5,14 @@
 #include "value_format.h"
 #include "warp_frame_map_build.h"
 
-#include <algorithm>
 #include <cstdio>
 #include <sstream>
 
 std::expected<void, std::string> GuiWarpMarkers::load(const std::string& path) {
-    markers_.clear();
-    ++generation_;
-
-    auto r = parse_warpmarkers_file(path);
-    if (!r) return std::unexpected(std::move(r.error()));
-
-    markers_.reserve(r->size());
-    for (const WarpMarker& wm : *r) {
-        GuiWarpMarker g;                    // session-only fields default
-        static_cast<WarpMarker&>(g) = wm;   // copy the serialized base
-        markers_.push_back(g);
-    }
-    return {};
+    // The parse fills each serialized WarpMarker base; the shared load_impl
+    // (clear-bump-parse-upcast) copies it into a GuiWarpMarker whose
+    // session-only iter/bpm fields keep their defaults.
+    return load_impl(path, parse_warpmarkers_file);
 }
 
 namespace {
@@ -92,7 +82,7 @@ bool save_impl(const std::string& path,
 }  // namespace
 
 bool GuiWarpMarkers::save(const std::string& path) const {
-    return save(path, markers_);
+    return save(path, markers());
 }
 
 bool GuiWarpMarkers::save(const std::string& path,
@@ -100,22 +90,6 @@ bool GuiWarpMarkers::save(const std::string& path,
     // Authored domain: positions are whole source frames (int64), written
     // as plain integer text (format_authored_frame).
     return save_impl(path, markers_);
-}
-
-int GuiWarpMarkers::insert_marker(GuiWarpMarker m) {
-    auto it = std::lower_bound(
-        markers_.begin(), markers_.end(), m.time_frame,
-        [](const GuiWarpMarker& a, int64_t t) { return a.time_frame < t; });
-    const int idx = static_cast<int>(it - markers_.begin());
-    markers_.insert(it, std::move(m));
-    ++generation_;
-    return idx;
-}
-
-void GuiWarpMarkers::remove_marker(int index) {
-    if (index < 0 || index >= static_cast<int>(markers_.size())) return;
-    markers_.erase(markers_.begin() + index);
-    ++generation_;
 }
 
 bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx) {

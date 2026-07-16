@@ -58,15 +58,16 @@ bool GuiSaveOps::save() {
     // write fails the save: dirty must survive so the unsaved-work dialog can
     // offer retry instead of silently baselining in-memory-only state.
     if (!app.settings_path.empty()) {
-        if (!write_settings_file(app.settings_path,
-                                 app.tab_a, app.tab_b,
-                                 app.follow_mode,
-                                 app.active_audio_view,
-                                 app.active_markers_view,
-                                 app.active_tab_view,
-                                 app.playback_speed,
-                                 app.font_size,
-                                 app.audio_player,
+        const NonEngineSettingsSnapshot gui{
+            app.tab_a, app.tab_b,
+            app.follow_mode,
+            app.active_audio_view,
+            app.active_markers_view,
+            app.active_tab_view,
+            app.playback_speed,
+            app.font_size,
+            app.audio_player};
+        if (!write_settings_file(app.settings_path, gui,
                                  app.engine_settings)) {
             std::fprintf(stderr,
                 "warptempo_gui: settings save failed: %s\n",

@@ -408,15 +408,16 @@ RenderOutcome do_render(const RenderRequest& req,
                 const std::filesystem::path st_path =
                     bf / (req.batch_basename + ".settings");
                 existed = existed_before(st_path);
-                if (!write_settings_file(st_path.string(),
-                                         tab_a, tab_b,
-                                         req.authoring.follow,
-                                         /*active_audio_view=*/'T',
-                                         req.authoring.active_markers_view,
-                                         req.authoring.active_tab,
-                                         req.authoring.playback_speed,
-                                         req.authoring.font_size,
-                                         req.authoring.audio_player,
+                const NonEngineSettingsSnapshot gui{
+                    tab_a, tab_b,
+                    req.authoring.follow,
+                    /*active_audio_view=*/'T',
+                    req.authoring.active_markers_view,
+                    req.authoring.active_tab,
+                    req.authoring.playback_speed,
+                    req.authoring.font_size,
+                    req.authoring.audio_player};
+                if (!write_settings_file(st_path.string(), gui,
                                          req.engine_settings)) {
                     note_failure(st_path);
                     return result;

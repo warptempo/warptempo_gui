@@ -1,5 +1,6 @@
 #pragma once
 
+#include "marker_store.h"
 #include "phaseresetmarkers_parse.h"
 
 #include <expected>
@@ -21,7 +22,10 @@ inline std::vector<PhaseResetMarker> slice_to_phase_reset_markers(
     return std::vector<PhaseResetMarker>(src.begin(), src.end());
 }
 
-class GuiPhaseResetMarkers {
+// The store mechanics (sorted vector, generation token, insert/remove/mut
+// accessors) are the shared GuiMarkerStore base (marker_store.h); this
+// class carries the phase reset column's parse and serializer surfaces.
+class GuiPhaseResetMarkers : public GuiMarkerStore<GuiPhaseResetMarker> {
 public:
     // Parses `path`. On success, populates markers() and returns the parsed
     // markers. The first malformed line aborts the parse and returns a
@@ -46,44 +50,4 @@ public:
     // authored positions, whole source frames as plain integer text.
     static bool save(const std::string& path,
                      const std::vector<GuiPhaseResetMarker>& markers);
-
-    const std::vector<GuiPhaseResetMarker>&        markers() const { return markers_; }
-
-    // Inserts `m` at the position that preserves ascending time_frame
-    // order. Returns the insertion index. Equal times are legal —
-    // markers may sit arbitrarily close or coincide exactly — and the
-    // store keeps them ordered: this insert places by lower_bound, and
-    // the time-mutating gestures reorder through the reorder-and-remap
-    // path, so the list is always sorted at rest.
-    int insert_marker(GuiPhaseResetMarker m);
-
-    // Removes the marker at `index`. No-op if out of range.
-    void remove_marker(int index);
-
-    // Bumps generation_ on call. Same shape as GuiWarpMarkers
-    // — contract is "you may mutate"; a spurious bump (caller read-only)
-    // costs one stem rebuild on the next tick.
-    GuiPhaseResetMarker* marker_mut(int index) {
-        ++generation_;
-        if (index < 0 || index >= static_cast<int>(markers_.size())) return nullptr;
-        return &markers_[index];
-    }
-
-    std::vector<GuiPhaseResetMarker>& markers_mut() {
-        ++generation_;
-        return markers_;
-    }
-
-    void clear() {
-        markers_.clear();
-        ++generation_;
-    }
-
-    // Monotonically-increasing token bumped on every mutating method.
-    // Mirrors GuiWarpMarkers::generation().
-    long long generation() const { return generation_; }
-
-private:
-    std::vector<GuiPhaseResetMarker>      markers_;
-    long long                      generation_ = 0;
 };

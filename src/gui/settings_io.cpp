@@ -97,84 +97,77 @@ constexpr SettingDescriptor kSettingsOrder[] = {
 };
 
 // The on-disk value text for one non-engine descriptor kind, given the
-// writer's live inputs. The single byte definition for GUI-kind value
-// serialization: write_settings_file emits `key=<this>` and the settings
-// editor's autocomplete recall (recall_gui_setting_value) reads it back, so
-// the two can never diverge. An unset trim bound returns the literal `-1` (the
+// writer's live inputs (the NonEngineSettingsSnapshot the caller built). The
+// single byte definition for GUI-kind value serialization:
+// write_settings_file emits `key=<this>` and the settings editor's
+// autocomplete recall (recall_gui_setting_value) reads it back, so the two
+// can never diverge. An unset trim bound returns the literal `-1` (the
 // unset spelling the load schema decodes); every key emits a concrete value.
 // audio_player's empty value is the free-text no-player opt-out. Returns
 // std::nullopt only for EnginePassthrough (engine kinds serialize through
 // format_engine_field_value).
 std::optional<std::string> format_nonengine_value(
         SettingKind kind,
-        const ViewState& tab_a,
-        const ViewState& tab_b,
-        bool follow,
-        char active_audio_view,
-        char active_markers_view,
-        char active_tab_view,
-        float playback_speed,
-        double font_size,
-        const std::string& audio_player) {
+        const NonEngineSettingsSnapshot& gui) {
     char buf[64];
     switch (kind) {
         case SettingKind::EnginePassthrough:
             return std::nullopt;
         case SettingKind::ActiveAudioViewChar:
-            return std::string(1, active_audio_view);
+            return std::string(1, gui.active_audio_view);
         case SettingKind::ActiveMarkersViewChar:
-            return std::string(1, active_markers_view);
+            return std::string(1, gui.active_markers_view);
         case SettingKind::ActiveTabViewChar:
-            return std::string(1, active_tab_view);
+            return std::string(1, gui.active_tab_view);
         case SettingKind::PlaybackSpeedFloat:
-            std::snprintf(buf, sizeof(buf), "%.1f", playback_speed);
+            std::snprintf(buf, sizeof(buf), "%.1f", gui.playback_speed);
             return std::string(buf);
         case SettingKind::FollowFlag:
-            return std::string(follow ? "true" : "false");
+            return std::string(gui.follow ? "true" : "false");
         case SettingKind::FontSizePt:
             // %g so the default round-trips as `11` (matching the template)
             // and a fractional value as e.g. `10.5`.
-            std::snprintf(buf, sizeof(buf), "%g", font_size);
+            std::snprintf(buf, sizeof(buf), "%g", gui.font_size);
             return std::string(buf);
         case SettingKind::AudioPlayerPath:
-            return audio_player;
+            return gui.audio_player;
         case SettingKind::TrimBegin_A:
-            if (!tab_a.trim.has_begin) return std::string("-1");
-            return format_authored_frame(tab_a.trim.begin_frame);
+            if (!gui.tab_a.trim.has_begin) return std::string("-1");
+            return format_authored_frame(gui.tab_a.trim.begin_frame);
         case SettingKind::TrimEnd_A:
-            if (!tab_a.trim.has_end) return std::string("-1");
-            return format_authored_frame(tab_a.trim.end_frame);
+            if (!gui.tab_a.trim.has_end) return std::string("-1");
+            return format_authored_frame(gui.tab_a.trim.end_frame);
         case SettingKind::TrimBegin_B:
-            if (!tab_b.trim.has_begin) return std::string("-1");
-            return format_authored_frame(tab_b.trim.begin_frame);
+            if (!gui.tab_b.trim.has_begin) return std::string("-1");
+            return format_authored_frame(gui.tab_b.trim.begin_frame);
         case SettingKind::TrimEnd_B:
-            if (!tab_b.trim.has_end) return std::string("-1");
-            return format_authored_frame(tab_b.trim.end_frame);
+            if (!gui.tab_b.trim.has_end) return std::string("-1");
+            return format_authored_frame(gui.tab_b.trim.end_frame);
         case SettingKind::ReadOnly_A:
-            return std::string(tab_a.read_only ? "true" : "false");
+            return std::string(gui.tab_a.read_only ? "true" : "false");
         case SettingKind::ReadOnly_B:
-            return std::string(tab_b.read_only ? "true" : "false");
+            return std::string(gui.tab_b.read_only ? "true" : "false");
         case SettingKind::ViewportStart_A:
             std::snprintf(buf, sizeof(buf), "%lld",
-                          static_cast<long long>(tab_a.viewport_start_sample));
+                          static_cast<long long>(gui.tab_a.viewport_start_sample));
             return std::string(buf);
         case SettingKind::ZoomLevel_A:
-            std::snprintf(buf, sizeof(buf), "%d", tab_a.zoom_level);
+            std::snprintf(buf, sizeof(buf), "%d", gui.tab_a.zoom_level);
             return std::string(buf);
         case SettingKind::Playhead_A:
             std::snprintf(buf, sizeof(buf), "%lld",
-                          static_cast<long long>(tab_a.playhead_cursor_sample));
+                          static_cast<long long>(gui.tab_a.playhead_cursor_sample));
             return std::string(buf);
         case SettingKind::ViewportStart_B:
             std::snprintf(buf, sizeof(buf), "%lld",
-                          static_cast<long long>(tab_b.viewport_start_sample));
+                          static_cast<long long>(gui.tab_b.viewport_start_sample));
             return std::string(buf);
         case SettingKind::ZoomLevel_B:
-            std::snprintf(buf, sizeof(buf), "%d", tab_b.zoom_level);
+            std::snprintf(buf, sizeof(buf), "%d", gui.tab_b.zoom_level);
             return std::string(buf);
         case SettingKind::Playhead_B:
             std::snprintf(buf, sizeof(buf), "%lld",
-                          static_cast<long long>(tab_b.playhead_cursor_sample));
+                          static_cast<long long>(gui.tab_b.playhead_cursor_sample));
             return std::string(buf);
     }
     return std::nullopt;
@@ -277,15 +270,7 @@ std::string format_default_settings_template(const std::string& stem) {
 
 bool write_settings_file(
     const std::string& path,
-    const ViewState& tab_a,
-    const ViewState& tab_b,
-    bool follow,
-    char active_audio_view,
-    char active_markers_view,
-    char active_tab_view,
-    float playback_speed,
-    double font_size,
-    const std::string& audio_player,
+    const NonEngineSettingsSnapshot& gui,
     const EngineSettings& engine) {
     std::string data;
     for (const auto& desc : kSettingsOrder) {
@@ -300,10 +285,7 @@ bool write_settings_file(
         // editor's autocomplete recall, and every one emits a line (unset trim
         // bounds return `-1`). nullopt is EnginePassthrough-only, already
         // handled above; the guard below is defensive.
-        std::optional<std::string> v = format_nonengine_value(
-            desc.kind, tab_a, tab_b, follow,
-            active_audio_view, active_markers_view, active_tab_view,
-            playback_speed, font_size, audio_player);
+        std::optional<std::string> v = format_nonengine_value(desc.kind, gui);
         if (!v) continue;
         data += desc.key;
         data += '=';
@@ -344,8 +326,9 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // desc->kind is non-EnginePassthrough here (guarded above), so
     // format_nonengine_value always yields a value — an unset trim bound
     // recalls as `-1` (`tab_a_trim_begin=-1`), matching what Ctrl+S writes.
-    return format_nonengine_value(
-        desc->kind, eff_a, eff_b, app.follow_mode,
+    const NonEngineSettingsSnapshot gui{
+        eff_a, eff_b, app.follow_mode,
         app.active_audio_view, app.active_markers_view, app.active_tab_view,
-        app.playback_speed, app.font_size, app.audio_player);
+        app.playback_speed, app.font_size, app.audio_player};
+    return format_nonengine_value(desc->kind, gui);
 }
