@@ -635,17 +635,10 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
     // marker's displayed position; the viewport recenter below also uses this
     // displayed value via center_viewport_on_playhead.
     int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
-    // Playhead domain clamp: Tab mirrors move_playhead_to exactly — both
-    // read live_total_frames, which reports the active display context's
-    // domain total (active_display_context, gui_display_context.h, is the
-    // shared domain source) — so Tab and bare Left/Right — which route
-    // through move_playhead_to's clamp — cannot disagree about the same
-    // endpoint. Tab onto trim end — legal at total — rests at total - 1.
-    {
-        const int64_t live_total = live_total_frames(app, audio);
-        if (sample < 0) sample = 0;
-        if (live_total > 0 && sample >= live_total) sample = live_total - 1;
-    }
+    // Playhead domain clamp through clamp_playhead_to_live_domain (the
+    // domain ruling): Tab onto trim end — legal at total — rests at
+    // total - 1, exactly like a bare Left/Right sync.
+    sample = clamp_playhead_to_live_domain(sample, app, audio);
 
     playback_lifecycle.stop_playback_if_playing();
 
@@ -708,69 +701,14 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
     if (count < 1) count = 1;
     // Strict modifier matching: each wheel chord is an exact match.
     if (ctrl && !shift && !alt) {
-        // Ctrl+wheel: when the begin trim bound is last-selected, move the end
-        // bound. Otherwise nudge the focused warp marker's tempo. Refused in
-        // read-only (the trim-end move was read-only-mobile while trim was one
-        // unified setting across both tabs; with per-tab trim that rationale is
-        // gone, so the bound refuses exactly like the marker tempo nudge, a
-        // silent no-op).
+        // Ctrl+wheel: when the begin trim bound is last-selected (both bounds
+        // set), move the end bound through wheel_move_trim_end (input_trim.cpp,
+        // beside nudge_selected_trim whose pixel-anchoring shape it shares).
+        // Otherwise nudge the focused warp marker's tempo below.
         if (app.last_sel_group == LastSelGroup::Trim &&
             app.last_selected_trim == 'B' &&
             app.trim.has_begin && app.trim.has_end) {
-            if (active_view_state(app).read_only) return;
-            const int sr = audio.sample_rate();
-            if (audio.total_frames() <= 0 || sr <= 0) return;
-            const double spp = current_samples_per_pixel(app, audio);
-            if (spp <= 0.0) return;
-            // Pixel-column-anchored end-move, marker-identical to the
-            // nudges (the derivation and the exact-painted-move rationale
-            // live at nudge_selected_markers): read the end bound's
-            // currently painted column, step it by the wheel's
-            // whole-column step, and commit that column's time — source
-            // view: viewport start plus column times samples-per-pixel;
-            // target view: the column's target-domain time inverse-mapped
-            // through the display context's cached map — through
-            // snap_authored_frame
-            // (inside authored_frame_at_column), so the stored bound is a
-            // whole source frame. The step keeps its samples_visible /
-            // kTrimEndWheelDivisor magnitude, expressed as whole pixel
-            // columns per detent so each detent's painted move is exact
-            // and no sub-column residue accumulates across detents. The
-            // end bound clamps to its own absolute walls — floor 0,
-            // ceiling the end wall at frame EOF exactly (end-at-EOF is a
-            // valid render); plain integer compares, the load
-            // guard's own comparison, applied AFTER the column snap so
-            // the walls win over the pixel grid. There is no
-            // partner wall — the end bound crosses the begin bound freely
-            // and the begin bound is untouched here — but each wheel frame
-            // is a commit, so a move landing the end on or before the
-            // begin destroys both bounds (auto_clear_crossed_trim). The
-            // zero floor is the walls' lower end, kept for
-            // representability — a negative position is unrepresentable in
-            // the authored frame form the .settings file persists.
-            const int64_t step = std::max<int64_t>(
-                1, samples_visible(app, audio) / kTrimEndWheelDivisor);
-            const int64_t step_cols = std::max<int64_t>(
-                1, static_cast<int64_t>(std::nearbyint(
-                       static_cast<double>(step) / spp)));
-            const int64_t dcols =
-                (button == GuiMouseButton::WheelUp ? -step_cols : +step_cols) *
-                count;
-            const auto& map = *active_display_context(app, audio).warp_frame_map;
-            const int c = painted_column_of_source_frame(
-                app, audio, static_cast<double>(app.trim.end_frame), map);
-            int64_t v = authored_frame_at_column(
-                app, audio, c + static_cast<int>(dcols), map);
-            if (v < 0) v = 0;
-            const int64_t end_wall = audio.total_frames();
-            if (v > end_wall) v = end_wall;
-            app.trim.end_frame = v;
-            // Commit auto-clear (ruling at auto_clear_crossed_trim), before
-            // the invalidations so the repaint shows the cleared state.
-            auto_clear_crossed_trim();
-            viewport.invalidate_waveform_area();
-            viewport.invalidate_timestamp_area();
-            target_render.trigger();
+            wheel_move_trim_end(button, count);
             return;
         }
         if (active_view_state(app).read_only) return;

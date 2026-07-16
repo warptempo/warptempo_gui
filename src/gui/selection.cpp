@@ -393,14 +393,10 @@ void Selection::sync_playhead_to_last_selected(bool edge_follow) {
 }
 
 void Selection::jump_playhead_to(int64_t target_sample) {
-    // Playhead domain clamp, mirroring move_playhead_to exactly (same
-    // live_total_frames read; the domain ruling lives there): a jump onto
-    // trim end — legal at total — rests at total - 1.
-    const int64_t live_total = live_total_frames(app, audio);
-    if (target_sample < 0) target_sample = 0;
-    if (live_total > 0 && target_sample >= live_total) {
-        target_sample = live_total - 1;
-    }
+    // Playhead domain clamp through clamp_playhead_to_live_domain (the
+    // domain ruling): a jump onto trim end — legal at total — rests at
+    // total - 1.
+    target_sample = clamp_playhead_to_live_domain(target_sample, app, audio);
     app.playhead_cursor_sample = target_sample;
 
     const int64_t visible = samples_visible(app, audio);

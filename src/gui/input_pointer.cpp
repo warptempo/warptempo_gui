@@ -709,38 +709,14 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     if (!app.drag.active) {
-        // No active gesture: run hover-popup detection. Only in warp
-        // mode, with no editor, no dialog (already returned), no drag,
-        // and not while iteration mode owns the popup space.
-        // Visibility is set immediately on every transition into an
-        // eligible rect (no dwell, no tick involvement).
-        if (app.active_markers_view == 'W' &&
-            !app.iteration_mode_enabled &&
-            !text_editor::is_active(app.top_flag_editor) &&
-            !app.queue_running) {
-            const int hit = hit_test_flag(app, audio, mouse_x, mouse_y);
-            if (hit != app.hover_popup.marker_index) {
-                // Hover readout lives on the bottom strip now.
-                // No dwell: show immediately on rect-entry; recompute
-                // cached_text once, derive visible, damage when the old
-                // popup was showing or the new one will.
-                const bool was_visible = app.hover_popup.visible;
-                app.hover_popup.marker_index = hit;
-                app.hover_popup.copy_payload.clear();
-                app.hover_popup.cached_text =
-                    popup_eligible_marker(app, hit)
-                        ? compute_hover_popup_text(
-                              slice_to_warp_markers(app.warpmarkers.markers()), hit,
-                              audio.sample_rate(), audio.total_frames(),
-                              &app.hover_popup.copy_payload)
-                        : std::string();
-                app.hover_popup.visible = !app.hover_popup.cached_text.empty();
-                if (was_visible || app.hover_popup.visible)
-                    viewport.invalidate_timestamp_area();
-            }
-        } else {
-            viewport.clear_hover_popup();
-        }
+        // No active gesture: hover recomputation is owned by
+        // recompute_hover_at_cursor (one implementation for motion and
+        // viewport mutation), suppressions included. The branches above
+        // already returned on the suppressions it re-checks (prompt, the
+        // editors, the other drags), so those re-checks are harmless; its
+        // W-mode / iter-mode / top_flag_editor / queue_running arms clear
+        // the popup exactly like this path's own else-clear did.
+        viewport.recompute_hover_at_cursor();
         return;
     }
     // A drag is active — drop any pending popup.
@@ -817,14 +793,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // internal short-circuit).
         int64_t ph = to_domain_frame(app, audio, ph_src,
                                      app.drag.frozen_warp_frame_map);
-        // Playhead domain clamp, mirroring move_playhead_to (the ruling
-        // lives there). With both marker walls at total - 1 the source-view
+        // Playhead domain clamp through clamp_playhead_to_live_domain (the
+        // domain ruling). With both marker walls at total - 1 the source-view
         // value is already in domain; this closes the target-view case
         // where to_domain_frame of a wall-resting marker rounds to the
         // target total.
-        const int64_t live_total = live_total_frames(app, audio);
-        if (ph < 0) ph = 0;
-        if (live_total > 0 && ph >= live_total) ph = live_total - 1;
+        ph = clamp_playhead_to_live_domain(ph, app, audio);
         if (ph != app.playhead_cursor_sample) {
             const double old_px = playhead_pixel_x(app, audio);
             app.playhead_cursor_sample = ph;

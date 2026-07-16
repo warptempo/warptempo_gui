@@ -93,24 +93,13 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
 // range; trim is purely cosmetic so the playhead is free to sit in
 // the dim region.
 //
-// Playhead domain ruling (the chokepoint statement): the playhead rests
-// in [0, total - 1] of its LIVE view's domain, everywhere, after any
-// gesture. Every playhead sync route mirrors this exact clamp (same
-// live_total_frames read) — jump_playhead_to, Tab recentering, the trim
-// pins, the marker-drag tracking, and the S/T + target-buffer domain
-// re-expressions. Both marker columns wall at total - 1, so a sync onto
-// a marker is in-domain by construction; trim end is the one legal
-// endpoint at total (an exclusive bound), and a sync onto it
-// deliberately rests the playhead at total - 1.
+// The [0, total - 1] live-domain clamp is the shared ruling spelled at
+// clamp_playhead_to_live_domain (app_state.h) — this gesture route funnels
+// through it exactly like every non-gesture sync route, so they can never
+// disagree about the same endpoint.
 void Viewport::move_playhead_to(int64_t new_sample) {
     if (audio.total_frames() <= 0) return;
-    if (new_sample < 0) new_sample = 0;
-    // Live-domain total: source-frame total in source view, target-frame
-    // total (cached at `t`-toggle) in target view. The playhead in target
-    // view is target-frame, so its clamp must be against the deformed
-    // timeline's length.
-    const int64_t total = live_total_frames(app, audio);
-    if (total > 0 && new_sample >= total) new_sample = total - 1;
+    new_sample = clamp_playhead_to_live_domain(new_sample, app, audio);
 
     const double old_px = playhead_pixel_x(app, audio);
     const int64_t old_vp = app.viewport_start_sample;
@@ -421,19 +410,17 @@ void Viewport::clear_hover_popup() {
     if (was_visible) invalidate_timestamp_area();
 }
 
-// Re-evaluate hover at the cursor's last on_motion coordinates. Called after
+// Re-evaluate hover at the cursor's last on_motion coordinates. The single
+// hover-popup implementation: on_motion's no-gesture path delegates here, and
 // viewport mutations (zoom, scroll, center, playhead-driven viewport shift)
-// so a stationary cursor's hover state tracks the rects that just slid under
-// it. The suppression set matches on_motion's hover path: prompt, editors,
-// pointer gestures, render queue, non-warp marker view, and iter mode.
+// call it so a stationary cursor's hover state tracks the rects that just slid
+// under it. Suppression set: prompt, any_pointer_gesture_active (the five
+// pointer drags), the three text editors, render queue, non-warp marker view,
+// and iter mode — each clears the popup.
 void Viewport::recompute_hover_at_cursor() {
     if (app.last_mouse_x < 0 || app.last_mouse_y < 0) return;
     if (app.prompt.active ||
-        app.drag.active ||
-        app.playhead_drag.active ||
-        app.editor_text_drag.active ||
-        app.scroll_drag.active ||
-        app.trim_drag.active ||
+        any_pointer_gesture_active(app) ||
         text_editor::is_active(app.settings_editor) ||
         text_editor::is_active(app.commit_editor) ||
         text_editor::is_active(app.top_flag_editor) ||

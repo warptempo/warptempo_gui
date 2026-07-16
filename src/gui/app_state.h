@@ -997,22 +997,27 @@ double  scanner_pixel_x(const AppState& a, const GuiAudio& audio,
 // viewport math can reach it.
 int64_t live_total_frames(const AppState& a, const GuiAudio& audio);
 
-// Live-domain playhead clamp — the chokepoint for playhead values that
-// become live WITHOUT passing through a gesture. The playhead domain
-// ruling lives at Viewport::move_playhead_to (viewport.cpp): the playhead
-// rests in [0, total - 1] of its LIVE view's domain. This helper applies
-// that exact clamp against the SAME live_total_frames read (so the two
-// can never disagree about the same value) at the live-ization routes a
-// persisted or stashed value takes into the live fields — the source
-// load's tab snapshots, the Ctrl+Tab restore, and the render-entry
-// adopt's tab bands — so an arbitrary non-negative persisted int64 (the
-// settings schema is load-lenient on view scratch) rests in-domain
-// BEFORE any translation arithmetic (the S/T toggle's double->int64
-// conversion, Shift+Space's launch offset) can consume it. Clamping IS
-// the load-lenient ruling, never a refusal: a value already in
-// [0, total - 1] passes through unchanged. An empty live domain
-// (total <= 0 — unreachable once audio is loaded, zero-frame sources
-// refuse) has no in-domain frame and clamps to 0.
+// Live-domain playhead clamp — the single spelling of the playhead domain
+// ruling: the playhead rests in [0, total - 1] of its LIVE view's domain,
+// everywhere, after any gesture. Both marker columns wall at total - 1, so
+// a sync onto a marker is in-domain by construction; trim end is the one
+// legal endpoint at total (an exclusive bound), and a sync onto it
+// deliberately rests the playhead at total - 1. Every playhead write
+// funnels through here: Viewport::move_playhead_to (the gesture route),
+// and the non-gesture live-ization routes a persisted or stashed value
+// takes into the live fields — the source load's tab snapshots, the
+// Ctrl+Tab restore, and the render-entry adopt's tab bands — so an
+// arbitrary non-negative persisted int64 (the settings schema is
+// load-lenient on view scratch) rests in-domain BEFORE any translation
+// arithmetic (the S/T toggle's double->int64 conversion, Shift+Space's
+// launch offset) can consume it. The clamp reads live_total_frames — the
+// active display context's domain total, source-frame total in source view
+// and target-frame total (cached at `t`-toggle) in target view — so it
+// always matches the domain the value will live in. Clamping IS the
+// load-lenient ruling, never a refusal: a value already in [0, total - 1]
+// passes through unchanged. An empty live domain (total <= 0 — unreachable
+// once audio is loaded, zero-frame sources refuse) has no in-domain frame
+// and clamps to 0.
 inline int64_t clamp_playhead_to_live_domain(int64_t frame,
                                              const AppState& a,
                                              const GuiAudio& audio) {

@@ -569,6 +569,13 @@ private:
     // partner destroys both bounds (auto_clear_crossed_trim).
     void nudge_selected_trim(int direction);
 
+    // Ctrl+wheel trim-end move: the pixel-anchored end-bound gesture, the
+    // only authoring gesture the wheel dispatcher owns, shape-shared with
+    // nudge_selected_trim. handle_wheel routes here once the begin trim bound
+    // is last-selected with both bounds set; the op itself refuses in
+    // read-only and no-ops on unusable audio/zoom state.
+    void wheel_move_trim_end(GuiMouseButton button, int count);
+
     // Bare `t` toggle: flip app.active_audio_view between Source and Target.
     // Stops any current playback before switching domains. Source → Target
     // translates app.viewport_start_sample / playhead_cursor_sample /
