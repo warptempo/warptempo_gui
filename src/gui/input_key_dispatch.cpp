@@ -186,6 +186,16 @@ bool GuiInputHandler::modal_bottom_strip_editor_active() const {
             app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
 }
 
+// Any text editor consuming printable keys — the two bottom-strip editors
+// plus the top-strip flag editor in EITHER kind (the FlagPayload editor takes
+// typed letters too). The platform layer's kLeftClickKey probe: while this is
+// true that key types a normal letter rather than emulating the left button.
+bool GuiInputHandler::any_text_editor_active() const {
+    return text_editor::is_active(app.settings_editor) ||
+           text_editor::is_active(app.commit_editor) ||
+           text_editor::is_active(app.top_flag_editor);
+}
+
 // Bottom-strip modal-editor key gate, the sibling of
 // read_only_key_blocked's allowlist shape. True when key+mods is not on
 // the allowlist and should be dropped. While a bottom-strip editor is open

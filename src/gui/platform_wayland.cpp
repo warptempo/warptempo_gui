@@ -1209,6 +1209,17 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // from the last keyboard event (for example Ctrl+wheel authoring).
         repeat_key_ = 0;
         mod_ctrl_ = mod_shift_ = mod_alt_ = false;
+
+        // Losing the keyboard is the hard end of the key stream: a held
+        // synthesized-left button will never see its release. End it here on
+        // the logical 1->0 edge, the same tail as on_keyboard_leave.
+        if (synth_left_held_) {
+            synth_left_held_    = false;
+            synth_left_keycode_ = 0;
+            if (!pointer_left_held_ && on_button_release_)
+                on_button_release_(GuiMouseButton::Left,
+                                   pointer_x_, pointer_y_, current_mods());
+        }
     }
 
     if (has_pointer && !wl_pointer_) {
@@ -1304,6 +1315,18 @@ void GuiPlatform::on_keyboard_leave(uint32_t /*serial*/,
                                     struct wl_surface* /*surface*/) {
     mod_ctrl_ = mod_shift_ = mod_alt_ = false;
     repeat_key_ = 0;
+
+    // A held synthesized-left button can never see its keycode-matched release
+    // once keyboard focus is gone, so end it here on the logical 1->0 edge —
+    // the same rationale as the pointer-capability-loss tail that ends a held
+    // physical button. A concurrent physical hold keeps the button down.
+    if (synth_left_held_) {
+        synth_left_held_    = false;
+        synth_left_keycode_ = 0;
+        if (!pointer_left_held_ && on_button_release_)
+            on_button_release_(GuiMouseButton::Left,
+                               pointer_x_, pointer_y_, current_mods());
+    }
 }
 
 void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
@@ -1318,6 +1341,21 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
         // Cancel repeat if the released key was the one repeating.
         if (xkb_keycode == repeat_keycode_) {
             repeat_key_ = 0;
+        }
+        // End a synthesized-left hold on its owning keycode's release. The
+        // keycode match means a kLeftClickKey press typed into an editor —
+        // which never started a hold — has no effect here. The release is
+        // NEVER gated: not by the editor probe (an editor opened mid-hold must
+        // not orphan the button) and not by pointer focus (it lands at the
+        // last known coordinates, the same convention as the
+        // pointer-capability-loss tail). It fires only on the logical 1->0
+        // edge, so a concurrent physical hold keeps the button down.
+        if (synth_left_held_ && xkb_keycode == synth_left_keycode_) {
+            synth_left_held_    = false;
+            synth_left_keycode_ = 0;
+            if (!pointer_left_held_ && on_button_release_)
+                on_button_release_(GuiMouseButton::Left,
+                                   pointer_x_, pointer_y_, current_mods());
         }
         return;
     }
@@ -1361,6 +1399,29 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
     // Other keysyms pass through.
     GuiKey key = static_cast<GuiKey>(sym);
     if (key >= 'A' && key <= 'Z') key |= 0x20;
+
+    // kLeftClickKey emulates BTN_LEFT at this boundary, so downstream it IS
+    // the mouse and inherits every mouse gate (read-only tabs, drag gates,
+    // prompt/editor modality) for free. The editor probe is consulted at
+    // PRESS time ONLY: when a text editor is open the key stays a normal
+    // letter and falls through to delivery AND repeat arming below (a held
+    // letter repeats in the editor like any key). Otherwise it is the button
+    // and is swallowed entirely as a key event — no delivery, no repeat
+    // arming (a held button must not machine-gun re-press). pointer_focused_
+    // gating means a press with the pointer off the window silently no-ops, as
+    // a real BTN_LEFT would not be delivered to this surface either.
+    if (key == kLeftClickKey &&
+        !(text_editor_active_probe_ && text_editor_active_probe_())) {
+        if (!synth_left_held_ && pointer_focused_) {
+            const bool was_held = pointer_left_held_;   // logical, synth is false
+            synth_left_held_    = true;
+            synth_left_keycode_ = xkb_keycode;
+            if (!was_held && on_button_press_)
+                on_button_press_(GuiMouseButton::Left,
+                                 pointer_x_, pointer_y_, current_mods());
+        }
+        return;
+    }
 
     GuiInputState mods = current_mods();
     mods.codepoint = xkb_state_key_get_utf32(xkb_state_, xkb_keycode);
@@ -1420,7 +1481,10 @@ GuiInputState GuiPlatform::current_mods() const {
     s.ctrl  = mod_ctrl_;
     s.shift = mod_shift_;
     s.alt   = mod_alt_;
-    s.primary_button_held = pointer_left_held_;
+    // Logical left button: either the physical BTN_LEFT or the kLeftClickKey
+    // synthesized hold. Drags consult this bit on motion; without the OR a
+    // synthesized-key drag tears on the first motion event.
+    s.primary_button_held = pointer_left_held_ || synth_left_held_;
     return s;
 }
 
@@ -1499,7 +1563,18 @@ void GuiPlatform::on_pointer_button(uint32_t /*serial*/, uint32_t /*time*/,
 
     const bool pressed = (state == WL_POINTER_BUTTON_STATE_PRESSED);
 
-    if (button == BTN_LEFT) pointer_left_held_ = pressed;
+    // Left button rides the logical edge model shared with the kLeftClickKey
+    // synthesized hold: deliver a press only on the 0->1 edge of
+    // (pointer_left_held_ || synth_left_held_) and a release only on its 1->0
+    // edge, so a physical press during a synthesized hold (or vice versa)
+    // never double-delivers. Non-left buttons never participate in the OR and
+    // are delivered unchanged.
+    if (button == BTN_LEFT) {
+        const bool was_held = pointer_left_held_ || synth_left_held_;
+        pointer_left_held_  = pressed;
+        const bool now_held = pointer_left_held_ || synth_left_held_;
+        if (now_held == was_held) return;   // no logical edge — swallow
+    }
 
     if (pressed) {
         if (on_button_press_)
@@ -1667,6 +1742,7 @@ void GuiPlatform::set_on_wheel(WheelCallback cb)                { on_wheel_ = st
 void GuiPlatform::set_on_motion(MotionCallback cb)              { on_motion_ = std::move(cb); }
 void GuiPlatform::set_on_close(CloseCallback cb)                { on_close_ = std::move(cb); }
 void GuiPlatform::set_wheel_context_probe(WheelContextProbe cb)    { wheel_context_probe_ = std::move(cb); }
+void GuiPlatform::set_text_editor_active_probe(TextEditorProbe cb) { text_editor_active_probe_ = std::move(cb); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }
 void GuiPlatform::set_worker_completion_fd(int fd, std::function<void()> on_event) {

@@ -258,6 +258,14 @@ struct GuiInputHandler {
     // when there was a session to cancel.
     bool cancel_archival_session();
 
+    // True when ANY text editor is consuming printable keys — the settings
+    // editor, the commit editor, or the top-strip flag editor in EITHER kind
+    // (unlike modal_bottom_strip_editor_active, which is modal-only and omits
+    // the non-modal FlagPayload editor). The platform's kLeftClickKey probe:
+    // while an editor is open that key types a letter instead of the button.
+    // Public because main.cpp's probe lambda calls it.
+    bool any_text_editor_active() const;
+
 private:
     // ActiveBatch holds the batch render state machine (start_render_batch
     // and its lifecycle). Each entry is dispatched onto GuiAsyncRenderer and

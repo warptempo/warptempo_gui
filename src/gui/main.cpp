@@ -707,6 +707,14 @@ int main(int argc, char** argv) {
         return input_handler.wheel_context(x, y);
     });
 
+    // kLeftClickKey emulates the left mouse button at the platform boundary,
+    // except while a text editor is open, when it stays a normal letter. This
+    // probe is the "editor open" truth the platform consults at that key's
+    // press time.
+    gui.set_text_editor_active_probe([&]() {
+        return input_handler.any_text_editor_active();
+    });
+
     gui.set_on_motion([&](int mouse_x, int mouse_y, GuiInputState mods) {
         input_handler.on_motion(mouse_x, mouse_y, mods);
     });

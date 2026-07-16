@@ -34,6 +34,10 @@ public:
     // consults it per raw pointer frame before accumulating sub-detent
     // scroll so remainder is bound to the routing context it will emit in.
     using WheelContextProbe    = std::function<int(int x, int y)>;
+    // Predicate installed by main.cpp: true when a text editor is consuming
+    // printable keys. Consulted at kLeftClickKey PRESS time to decide whether
+    // that key is a synthesized left button (false) or a normal letter (true).
+    using TextEditorProbe      = std::function<bool()>;
     using TickCallback         = std::function<void()>;
     using PrePaintCallback     = std::function<void()>;
 
@@ -62,6 +66,7 @@ public:
     void set_on_motion(MotionCallback cb);
     void set_on_close(CloseCallback cb);
     void set_wheel_context_probe(WheelContextProbe cb);
+    void set_text_editor_active_probe(TextEditorProbe cb);
     void set_on_tick(TickCallback cb);
     void set_on_pre_paint(PrePaintCallback cb);
 
@@ -207,6 +212,17 @@ private:
     // primary_button_held field of GuiInputState.
     bool pointer_left_held_ = false;
 
+    // kLeftClickKey emulation state. synth_left_held_ is true while that key
+    // is held as a synthesized left button; synth_left_keycode_ is the xkb
+    // keycode that owns the hold, so the release is matched by keycode
+    // exactly like repeat cancellation is. The logical left button is
+    // (pointer_left_held_ || synth_left_held_): a press is delivered only on
+    // the 0->1 edge of that OR and a release only on the 1->0 edge (the evdev
+    // model for two devices sharing BTN_LEFT), so physical and synthesized
+    // sources never double-deliver.
+    bool     synth_left_held_    = false;
+    uint32_t synth_left_keycode_ = 0;
+
     // Accumulated vertical scroll carry, in value120 units (120 = one
     // detent). on_pointer_frame() folds the per-frame delta (arbitrated
     // from the two staged sources below) into this and drains it into
@@ -279,6 +295,7 @@ private:
     MotionCallback       on_motion_;
     CloseCallback        on_close_;
     WheelContextProbe    wheel_context_probe_;
+    TextEditorProbe      text_editor_active_probe_;
     TickCallback         on_tick_;
     PrePaintCallback     on_pre_paint_;
 

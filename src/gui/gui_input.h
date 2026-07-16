@@ -74,6 +74,12 @@ inline bool is_play_pause_key(GuiKey key) {
         || key == GuiKeys::KpEnter;
 }
 
+// The keyboard key the platform layer translates into BTN_LEFT (press =
+// button down at the pointer position, hold = button held, release = button
+// up), except while a text editor is open, when it stays a normal letter.
+// Rebinding the emulation to a different key is exactly this one edit.
+constexpr GuiKey kLeftClickKey = GuiKeys::W;
+
 struct GuiInputState {
     bool     ctrl                = false;
     bool     shift               = false;
