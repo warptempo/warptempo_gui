@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <atomic>
-#include <chrono>
 #include <random>
 #include <vector>
 #include <string>
@@ -11,7 +10,6 @@
 #include <fftw3.h>
 
 #include "engine.h"
-#include "render_profile.h"
 #include "synth_spectrum_trig.h"
 #include "warp_frame_map.h"
 
@@ -448,16 +446,8 @@ struct AudioSTFT {
                         std::vector<int32_t>& rank_of_bin,
                         std::vector<uint64_t>& frontier_leaf,
                         std::vector<uint64_t>& frontier_summary,
-                        std::mt19937& rng,
-                        PghiProfile* prof = nullptr) {
+                        std::mt19937& rng) {
         const int K = M / 2 + 1;
-
-        // Profiling (temporary): count/clock only when prof is non-null.
-        std::chrono::steady_clock::time_point prof_t_entry, prof_t_quiet;
-        if (prof) {
-            prof->frames += 1;
-            prof_t_entry = std::chrono::steady_clock::now();
-        }
 
         // Per-frame alpha = R_s / R_a, the synthesis-to-analysis hop ratio.
         // Used as b_s = alpha * b_a in the vertical (frequency) integration
@@ -471,11 +461,6 @@ struct AudioSTFT {
         // Reset / frame-0 seat: seed theta = phi, skip integration.
         if (seed) {
             for (int k = 0; k < K; ++k) theta[k] = ph_cur[k];
-            if (prof) {
-                prof->seed_frames += 1;
-                prof->drain_s += std::chrono::duration<double>(
-                    std::chrono::steady_clock::now() - prof_t_entry).count();
-            }
             return;
         }
 
@@ -495,17 +480,10 @@ struct AudioSTFT {
             if (quiet[k] == 1) {
                 theta[k] = quiet_dist(rng);
                 done_scratch[k] = 1;
-                if (prof) prof->quiet_bins += 1;
             } else {
                 done_scratch[k] = 0;                                  // in I
                 ++remaining;
-                if (prof) prof->significant_bins += 1;
             }
-        }
-        if (prof) {
-            prof_t_quiet = std::chrono::steady_clock::now();
-            prof->quiet_s += std::chrono::duration<double>(
-                prof_t_quiet - prof_t_entry).count();
         }
 
         // Algorithm 1, realized as a RANKED ACTIVE-FRONTIER walk over one
@@ -598,10 +576,6 @@ struct AudioSTFT {
             while (p < prev_stream.size() &&
                    done_scratch[prev_stream[p].bin] != 0) {
                 ++p;
-                if (prof) {
-                    prof->pops_total += 1;
-                    prof->prev_done_skips += 1;
-                }
             }
             const bool have_prev = p < prev_stream.size();
             const int  mar = min_active_rank();
@@ -623,7 +597,6 @@ struct AudioSTFT {
             const bool take_prev = have_prev &&
                 (mar < 0 ||
                  !(prev_stream[p].mag < cur_order[mar].mag));
-            if (prof) prof->pops_total += 1;
             if (take_prev) {
                 // Previous-frame bin -> trapezoidal time-step into frame n.
                 const int m = prev_stream[p].bin;
@@ -640,10 +613,6 @@ struct AudioSTFT {
                 // by b_s = alpha * b_a) to its still-unassigned significant
                 // neighbors (trapezoidal in df). Centered convention -> no
                 // expected_f offset; the gradient is the whole step.
-                // Profiling flag: an active bin has an undone neighbor by
-                // definition, so a selection that writes no theta indicates a
-                // frontier-update defect (current_noop_pops stays zero).
-                bool assigned_neighbor = false;
                 for (int dir = 0; dir < 2; ++dir) {
                     const int nb = (dir == 0) ? m + 1 : m - 1;
                     if (nb < 0 || nb >= K) continue;
@@ -655,19 +624,13 @@ struct AudioSTFT {
                     update_frontier(nb - 1);
                     update_frontier(nb);
                     update_frontier(nb + 1);
-                    if (prof) assigned_neighbor = true;
                 }
                 // m has spent its undone neighbors and deactivates here;
                 // partially redundant with the nb updates when nb == m +- 1,
                 // but update_frontier is idempotent — keep the simple
                 // complete update set.
                 update_frontier(m);
-                if (prof && !assigned_neighbor) prof->current_noop_pops += 1;
             }
-        }
-        if (prof) {
-            prof->drain_s += std::chrono::duration<double>(
-                std::chrono::steady_clock::now() - prof_t_quiet).count();
         }
     }
 

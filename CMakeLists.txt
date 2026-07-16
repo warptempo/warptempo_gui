@@ -67,9 +67,12 @@ set(WARPTEMPO_ENGINE_SOURCES
 # this ONE TU only (appended after the global -O3 -march=native below). A source
 # property in this directory scope binds every target that compiles the file, so
 # both warptempo_gui and warptempo_cli pick it up. Must not spread to any other
-# source — the rest of the engine keeps strict FP semantics.
+# source — the rest of the engine keeps strict FP semantics. This TU is the
+# tree's one fast-math boundary and must stay a normal non-LTO object even under
+# an LTO build, so whole-program optimization can never inline or re-form it
+# across FP-option domains (-fno-lto is inert in the default non-LTO build).
 set_source_files_properties(src/engine/synth_spectrum_trig.cpp
-    PROPERTIES COMPILE_OPTIONS "-ffast-math")
+    PROPERTIES COMPILE_OPTIONS "-ffast-math;-fno-lto")
 set(WARPTEMPO_PREPOST_SOURCES
     src/prepost/trimmer.cpp
     src/prepost/peak_limiter.cpp

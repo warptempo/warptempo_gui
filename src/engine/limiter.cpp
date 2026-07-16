@@ -1,10 +1,7 @@
 #include "limiter.h"
-#include "render_profile.h"
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <complex>
-#include <cstdio>
 #include <iostream>
 #include <limits>
 #include <vector>
@@ -220,13 +217,6 @@ All allocations are function-local and freed at every return; nothing persists
 across renders.
 */
 void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
-    // Temporary render profiling: clock the whole pass. The direct-bypass scan
-    // below is product behavior (not profile-gated); the profile line reports
-    // its raw-max, ceiling, and verdict when enabled.
-    const bool prof = render_profile_enabled();
-    std::chrono::steady_clock::time_point prof_t0;
-    if (prof) prof_t0 = std::chrono::steady_clock::now();
-
     auto& lp = stft.limiter_params;
 
     const int channels    = stft.channels;
@@ -238,9 +228,9 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     // Direct-bypass scan over the untouched input render (one linear read
     // before any limiter-local allocation): an already-compliant deliverable
     // (every sample finite and within the ceiling) needs no spectral pass and
-    // returns unchanged. A nonqualifying render pays this one extra read. These
-    // values also feed the profile line's raw-max and verdict. Cancellation is
-    // observed here inline (nothing is allocated yet, so no destroy()).
+    // returns unchanged. A nonqualifying render pays this one extra read.
+    // Cancellation is observed here inline (nothing is allocated yet, so no
+    // destroy()).
     if (stft.cancel_flag && stft.cancel_flag->load()) {
         stft.cancellation_observed = true;
         return;
@@ -257,24 +247,10 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
         return;
     }
 
-    auto emit_spectral_profile = [&](int peaks, int iterations, double output_max) {
-        const double wall = std::chrono::duration<double>(
-            std::chrono::steady_clock::now() - prof_t0).count();
-        const bool bypass = all_finite && (max_abs <= ceiling);
-        char line[256];
-        std::snprintf(line, sizeof(line),
-            "[profile] spectral limiter: wall %.3fs raw-max %.5f ceiling %.5f "
-            "would-bypass %s peaks %d iterations %d output-max %.5f",
-            wall, max_abs, ceiling, bypass ? "yes" : "no", peaks, iterations,
-            output_max);
-        std::cerr << line << "\n";
-    };
-
     if (all_finite && max_abs <= ceiling) {
         // Already within the ceiling: the deliverable is compliant as rendered,
         // so no spectral attenuation is applied and the render is left as-is.
         std::cout << "[Pass 3/3] Spectral limiter................. already compliant, no attenuation required\n";
-        if (prof) emit_spectral_profile(0, 0, max_abs);  // output == raw max (untouched)
         return;
     }
 
@@ -429,7 +405,6 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     if (observed_cancel()) return;
     if (queue.empty()) {
         std::cout << "[Pass 3/3] Spectral limiter................. 0 peaks, no attenuation required\n";
-        if (prof) emit_spectral_profile(0, 0, max_abs);  // render left untouched
         destroy();
         return;   // render left untouched (no round-trip applied)
     }
@@ -703,16 +678,6 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     std::cout << "[Pass 3/3] Spectral limiter................. "
               << resolved.size() << " peaks, " << iterations
               << " iterations, done\n";
-
-    if (prof) {
-        double prof_recon_max = 0.0;
-        for (float s : render) {
-            const double a = std::fabs(static_cast<double>(s));
-            if (a > prof_recon_max) prof_recon_max = a;
-        }
-        emit_spectral_profile(static_cast<int>(resolved.size()), iterations,
-                              prof_recon_max);
-    }
 
     destroy();
 }

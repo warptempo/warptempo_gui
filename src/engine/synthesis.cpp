@@ -1,13 +1,10 @@
 #include "synthesis.h"
-#include "render_profile.h"
 #include <algorithm>
 #include <cassert>
-#include <chrono>
 #include <condition_variable>
 #include <cmath>
 #include <complex>
 #include <cstdint>
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -22,8 +19,11 @@ namespace {
 // into PghiHeapNode key order. The pack casts each magnitude to float (the key
 // precision), then places the bitwise-complemented float bits in the high 32
 // bits of a uint64 and the source bin in the low 32; four LSB-first stable
-// counting passes over the four key bytes (shifts 32/40/48/56) sort on the
-// packed key, and the unpack recovers the float by complement + memcpy. The
+// counting passes inspect ONLY the four key bytes (bits 32..63, shifts
+// 32/40/48/56) — the low 32-bit bin field is carried payload, never
+// radix-processed, so ascending-bin ties among equal keys come from the
+// ascending fill order plus the passes' stability — and the unpack recovers
+// the float by complement + memcpy. The
 // domain requirement — magnitudes nonnegative and finite (negative zero and
 // NaN unreachable) — is guaranteed by the caller (see the order-contract
 // comment at the call site); no defensive handling for values outside it. The
@@ -120,15 +120,6 @@ void Synthesis::synthesize_full(
     // run_channel so each channel can be handed to its own thread.
     std::vector<std::vector<float>> mono(channels);
     std::vector<char> ch_cancelled(channels, 0);
-
-    // Temporary render profiling: per-channel stage timings, printed at stage
-    // end. Slots are sized to channels so each channel thread writes only its
-    // own; reads/clocks happen only when profiling is enabled.
-    using prof_clock = std::chrono::steady_clock;
-    auto prof_secs = [](prof_clock::duration d) {
-        return std::chrono::duration<double>(d).count();
-    };
-    std::vector<SynthChannelProfile> chan_prof(static_cast<size_t>(channels));
 
     const int kAnalysisRingDepth = 4;
     class AnalysisRing {
@@ -250,8 +241,6 @@ void Synthesis::synthesize_full(
     // inverse FFTW resources are disjoint between the two threads.
     auto run_channel = [&](int ch) {
         const int K2 = K;
-        const bool prof = render_profile_enabled();
-        SynthChannelProfile& cp = chan_prof[ch];
         // --- One-deep consumer lookahead state ------------------------------
         // The producer analyzes frames in order, while the consumer keeps the
         // current frame plus one analyzed lookahead. Producer-side PGHI prep
@@ -411,8 +400,6 @@ void Synthesis::synthesize_full(
                         // finish_push keeps the slot
                         // publication order — nothing half-built is ever
                         // consumer-visible.
-                        prof_clock::time_point st{};
-                        if (prof) st = prof_clock::now();
                         radix_sort_magnitudes(mag_cur_prod.data(), K2,
                                               radix_a, radix_b, order_cur);
                         slot->cur_order = order_cur;
@@ -420,11 +407,6 @@ void Synthesis::synthesize_full(
                             if (slot->quiet[n.bin] != 1)
                                 slot->prev_stream.push_back(n);
                         }
-                        // sort_s is producer-owned: the single writer of this
-                        // field (pghi_integrate writes the others), read after
-                        // the joins. It covers the whole order build — fill,
-                        // sort, cur_order copy, prev_stream filter.
-                        if (prof) cp.pghi.sort_s += prof_secs(prof_clock::now() - st);
                     }
                     if (!analysis_ring.finish_push()) return;
                     ph_prev_prod.swap(ph_cur_prod);
@@ -456,20 +438,16 @@ void Synthesis::synthesize_full(
         // no phi_prev (same as frame 0 on the full path).
         int64_t ta_prev = 0, ta_cur = 0, ta_nxt = 0;
         if (wcount >= 1) {
-            prof_clock::time_point pt{};
-            if (prof) pt = prof_clock::now();
             if (!pop_analysis(mag_cur, ph_cur, dt_in, df_in, quiet_in,
                               prev_stream, cur_order)) {
                 ch_cancelled[ch] = 1;
                 return;
             }
-            if (prof) { cp.analysis_wait_s += prof_secs(prof_clock::now() - pt); pt = prof_clock::now(); }
             if (!pop_analysis(mag_nxt, ph_nxt, dt_in, df_in, quiet_in,
                               prev_stream, cur_order)) {
                 ch_cancelled[ch] = 1;
                 return;
             }
-            if (prof) cp.analysis_wait_s += prof_secs(prof_clock::now() - pt);
             ta_cur = ta_for(0);
             ta_nxt = ta_for(1);
         }
@@ -545,32 +523,24 @@ void Synthesis::synthesize_full(
             const bool    frame0     = (frame_idx == 0);
             const bool    seed_frame = frame0 || phase_reset_fired;
 
-            prof_clock::time_point t{};
-            if (prof) { cp.frames += 1; t = prof_clock::now(); }
             stft.pghi_integrate(seed_frame, R_a_actual, R_a_fwd,
                                 ph_cur,
                                 th_prev, dt_prev, dt_in, df_in, quiet_in,
                                 theta, done_scratch, prev_stream, cur_order,
                                 rank_of_bin, frontier_leaf, frontier_summary,
-                                rng, prof ? &cp.pghi : nullptr);
-            if (prof) cp.pghi_s += prof_secs(prof_clock::now() - t);
+                                rng);
             // dt_in (this frame's dt) becomes the next frame's dt_prev.
             dt_prev.swap(dt_in);
 
-            if (prof) t = prof_clock::now();
             stft.populate_synth_spectrum(ch, mag_cur, theta);
-            if (prof) cp.populate_s += prof_secs(prof_clock::now() - t);
 
             // IFFT length M; un-shift the centered frame back into the [0, N)
             // OLA window (the inverse of analyze_frame's placement). With n in
             // [0, N) and Mfft = 2N the index resolves to two contiguous ranges,
             // so the split below replaces the per-sample modulo with no change to
             // the loads, multiplies, or accumulation order.
-            if (prof) t = prof_clock::now();
             fftw_execute(stft.fft_ws[ch].plan_inv);
-            if (prof) cp.ifft_s += prof_secs(prof_clock::now() - t);
 
-            if (prof) t = prof_clock::now();
             const double inv_M = 1.0 / Mfft;
             const int half = N / 2;
             const double* io = stft.fft_ws[ch].ifft_out;
@@ -607,7 +577,6 @@ void Synthesis::synthesize_full(
             std::memmove(ola.data(), ola.data() + R_s,
                          static_cast<size_t>(N - R_s) * sizeof(double));
             std::fill(ola.data() + (N - R_s), ola.data() + N, 0.0);
-            if (prof) cp.ola_emit_s += prof_secs(prof_clock::now() - t);
 
             // Progress is reported by channel 0 only; with channels running
             // concurrently it is approximate, which is fine (cosmetic).
@@ -630,13 +599,11 @@ void Synthesis::synthesize_full(
                 ta_prev = ta_cur;
                 ta_cur  = ta_nxt;
                 ta_nxt  = ta_for(frame_idx + 2);
-                if (prof) t = prof_clock::now();
                 if (!pop_analysis(mag_nxt, ph_nxt, dt_in, df_in, quiet_in,
                                   prev_stream, cur_order)) {
                     ch_cancelled[ch] = 1;
                     return;
                 }
-                if (prof) cp.analysis_wait_s += prof_secs(prof_clock::now() - t);
             }
         }
 
@@ -653,9 +620,6 @@ void Synthesis::synthesize_full(
     // All per-channel state is private to run_channel and fft_ws[ch] is
     // per-channel, so the passes are independent. Join before the interleave
     // below.
-    double prof_synth_wall_s = 0.0;
-    prof_clock::time_point prof_wall_t0{};
-    if (render_profile_enabled()) prof_wall_t0 = prof_clock::now();
     {
         std::vector<std::thread> workers;
         workers.reserve(static_cast<size_t>(std::max(0, channels - 1)));
@@ -664,55 +628,12 @@ void Synthesis::synthesize_full(
         run_channel(0);
         for (auto& w : workers) w.join();
     }
-    if (render_profile_enabled())
-        prof_synth_wall_s = prof_secs(prof_clock::now() - prof_wall_t0);
 
     for (int ch = 0; ch < channels; ++ch) {
         if (ch_cancelled[ch]) {
             stft.cancellation_observed = true;
             return;                      // cancellation on any channel aborts before emission
         }
-    }
-
-    // Temporary render profiling report: one cluster of lines per channel,
-    // then the whole channel-run wall. Skipped on cancellation (returns above).
-    // The sort figure is accumulated on the analysis producer thread: it
-    // overlaps the consumer's drain rather than adding to pghi serial time,
-    // and the pghi wrap covers quiet + drain only.
-    if (render_profile_enabled()) {
-        for (int ch = 0; ch < channels; ++ch) {
-            const SynthChannelProfile& cp = chan_prof[ch];
-            const PghiProfile& hp = cp.pghi;
-            char line[512];
-            std::snprintf(line, sizeof(line),
-                "[profile] synth ch%d: frames %lld pghi %.3fs (quiet %.3fs sort %.3fs drain %.3fs) "
-                "populate %.3fs ifft %.3fs ola %.3fs analysis-wait %.3fs",
-                ch, cp.frames, cp.pghi_s, hp.quiet_s, hp.sort_s, hp.drain_s,
-                cp.populate_s, cp.ifft_s, cp.ola_emit_s, cp.analysis_wait_s);
-            std::cerr << line << "\n";
-            const long long total_bins = hp.quiet_bins + hp.significant_bins;
-            const long long noop_pops = hp.prev_done_skips + hp.current_noop_pops;
-            const double noop_pct = hp.pops_total
-                ? 100.0 * static_cast<double>(noop_pops) /
-                  static_cast<double>(hp.pops_total)
-                : 0.0;
-            const double quiet_pct = total_bins
-                ? 100.0 * static_cast<double>(hp.quiet_bins) /
-                  static_cast<double>(total_bins)
-                : 0.0;
-            char line2[512];
-            std::snprintf(line2, sizeof(line2),
-                "[profile] synth ch%d heap: pops %lld prev-done-skips %lld "
-                "current-noop-pops %lld no-write %.1f%% quiet-bins %.1f%% "
-                "seed-frames %lld",
-                ch, hp.pops_total, hp.prev_done_skips, hp.current_noop_pops,
-                noop_pct, quiet_pct, hp.seed_frames);
-            std::cerr << line2 << "\n";
-        }
-        char wline[128];
-        std::snprintf(wline, sizeof(wline),
-            "[profile] synth wall: %.3fs", prof_synth_wall_s);
-        std::cerr << wline << "\n";
     }
 
     if (show_progress) std::cout << "\r" << pass_label << "100%\n";

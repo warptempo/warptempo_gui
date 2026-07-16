@@ -1,40 +1,17 @@
 #include "peak_limiter.h"
 
 #include <algorithm>
-#include <chrono>
 #include <cmath>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
 
 namespace {
 
 constexpr double kAttFloor = 1e-12;
-
-// Deliberate local duplicate of the temporary render_profile helper (avoids a
-// cross-directory include from src/prepost into src/engine). True iff
-// WARPTEMPO_PROFILE is exactly "1". Removed with the profiling facility.
-bool profile_enabled() {
-    static const bool enabled = [] {
-        const char* v = std::getenv("WARPTEMPO_PROFILE");
-        return v && std::strcmp(v, "1") == 0;
-    }();
-    return enabled;
-}
 
 }  // namespace
 
 void apply_peak_limiter(std::vector<float>& buffer, int channels,
                         int sample_rate, double ceiling_dbfs,
                         double attack_ms, double release_ms) {
-    // Temporary render profiling: clock the whole stage. The unity-bypass scan
-    // below is product behavior (not profile-gated); the profile line reports
-    // its max, ceiling, and verdict when enabled.
-    const bool prof = profile_enabled();
-    std::chrono::steady_clock::time_point prof_t0;
-    if (prof) prof_t0 = std::chrono::steady_clock::now();
-
     // Unity-bypass scan over the untouched buffer (one linear read before any
     // limiter allocation): on an already-compliant buffer (every sample finite
     // and within the ceiling) the limiter's gain never leaves 1.0, so the
@@ -50,19 +27,7 @@ void apply_peak_limiter(std::vector<float>& buffer, int channels,
         if (a > max_abs) max_abs = a;
     }
 
-    auto emit_profile = [&]() {
-        const double wall = std::chrono::duration<double>(
-            std::chrono::steady_clock::now() - prof_t0).count();
-        const bool bypass = all_finite && (max_abs <= ceiling);
-        char line[256];
-        std::snprintf(line, sizeof(line),
-            "[profile] peak limiter: wall %.3fs max %.5f ceiling %.5f would-bypass %s",
-            wall, max_abs, ceiling, bypass ? "yes" : "no");
-        std::cerr << line << "\n";
-    };
-
     if (all_finite && max_abs <= ceiling) {
-        if (prof) emit_profile();
         return;  // buffer already within the ceiling; left untouched
     }
 
@@ -77,8 +42,6 @@ void apply_peak_limiter(std::vector<float>& buffer, int channels,
     pl.process(buffer.data(), total_frames, sink);
     pl.flush(sink);
     buffer.swap(out);
-
-    if (prof) emit_profile();
 }
 
 PeakLimiter::PeakLimiter(double ceiling_dbfs,
