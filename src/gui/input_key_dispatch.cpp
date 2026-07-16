@@ -125,15 +125,6 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
          ctrl && shift && !alt);
     const bool is_zero =
         (key == GuiKeys::Digit0 && !ctrl && !shift && !alt);
-    // Shift+0..9 selects a playback speed. Playback speed is a playback
-    // preference, not an authoring mutation, so the read-only gate admits
-    // it like Space and the scrub chords; in a read-only tab whose active
-    // view is target, set_playback_speed's own target-view refusal
-    // (playback_lifecycle.cpp) still governs, so admission here is safe
-    // in every view domain.
-    const bool is_speed_select =
-        (key >= GuiKeys::Digit0 && key <= GuiKeys::Digit9 &&
-         shift && !ctrl && !alt);
     const bool is_follow =
         (key == GuiKeys::F && !ctrl && !shift && !alt);
     const bool is_center =
@@ -165,7 +156,6 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     return !(is_o || is_play_pause || is_scrub ||
              is_home_end || is_page_updown ||
              is_zoom || is_zoom_symbol || is_font_size_step || is_zero ||
-             is_speed_select ||
              is_follow || is_center || is_sub_t || is_sub_p ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
              is_esc || is_ctrl_q);

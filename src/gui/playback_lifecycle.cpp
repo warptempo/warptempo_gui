@@ -77,8 +77,9 @@ void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
 // target view's whole purpose is that
 // audio plays the user's authored warp, so an extra speed multiplier
 // on top would defeat that purpose. The persistent app.playback_speed
-// is left untouched; toggling back to source view restores it
-// naturally because set_playback_speed refuses writes in target view.
+// is left untouched; toggling back to source view restores it naturally
+// because every launch re-applies from app.playback_speed (a speed set
+// while in target view only stores, taking effect at this launch site).
 void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     if (playback.is_playing()) {
         playback.stop();
@@ -201,17 +202,21 @@ void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
     playback.play(sample, viewport.trim_end_sample());
 }
 
-// Helpers for Shift+<digit> speed selection. Refused silently in target
-// view: target view's audio is the warped target buffer, and adding
-// a playback-speed multiplier on top would defeat the premise
-// (the audible result must match the authored warp, not the
-// warp scaled by an extra factor). The persistent app.playback_speed
-// is left untouched so a T→S round trip restores whatever rate the
-// user last set in source view. This is the only path that writes
-// app.playback_speed, so the refusal here is sufficient.
+// Sets the persistent playback speed (the settings editor is the authoring
+// surface). In target view the write STORES only: target view's audio is the
+// warped target buffer, played at its natural rate, so a playback-speed
+// multiplier on top would defeat the premise (the audible result must match
+// the authored warp, not the warp scaled by an extra factor). The stored
+// value takes effect on the return to source view, where the next playback
+// launch re-applies it from app.playback_speed. This is the only path that
+// writes app.playback_speed.
 void GuiPlaybackLifecycle::set_playback_speed(float s) {
-    if (app.active_audio_view == 'T') return;
     app.playback_speed = s;
+    // Target view auditions the authored warp at its natural rate, so a speed
+    // set here only stores; it becomes audible on the return to source view
+    // (every launch re-applies from app.playback_speed, forced to 1.0 while
+    // the active view is target).
+    if (app.active_audio_view == 'T') return;
     playback.set_speed(s);
     // Speed change without resync would cause a backward cursor jump:
     // the predictor would retroactively apply the new speed to the

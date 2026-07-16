@@ -27,7 +27,7 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     app.active_audio_view   = sf.has_active_audio_view   ? sf.active_audio_view   : 'S';
     app.active_markers_view = sf.has_active_markers_view ? sf.active_markers_view : 'W';
     app.active_tab_view     = sf.has_active_tab_view     ? sf.active_tab_view     : 'A';
-    app.playback_speed = sf.has_playback_speed ? sf.playback_speed : 1.0f;
+    app.playback_speed = sf.has_playback_speed ? sf.playback_speed : 0.7f;
     // GUI font size, same application shape as playback_speed: absent
     // key means the default. The value is applied once at launch when the
     // source loads — the same behavior class as playback_speed (see the
@@ -154,7 +154,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
 
     // Reset playback bookkeeping; the device is brought up after markers
     // are parsed so the initial playhead has the final trim-begin.
-    app.playback_speed = 1.0f;
+    app.playback_speed = 0.7f;
     // Mirror for font_size: reset to the default before the .settings parse
     // below, which overwrites it when the key is present (absent key means
     // 11.0). Applied to the renderer after the parse, beside set_speed.

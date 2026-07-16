@@ -77,12 +77,9 @@ inline bool is_play_pause_key(GuiKey key) {
 // The keyboard key the platform layer translates into BTN_LEFT (press =
 // button down at the pointer position, hold = button held, release = button
 // up), except while a text editor is open, when it stays a normal letter.
-// Rebinding the emulation to a different key is exactly this one edit. A
-// SHIFT-modified press is deliberately NOT translated (level-0 keysym
-// delivery means Shift+<key> still matches this constant; shift adds
-// nothing to clicks in this GUI while Shift+<key> chords are real commands —
-// e.g. the Shift+digit playback presets), so rebinding to a key with a
-// Shift chord stays safe.
+// Rebinding the emulation to a different key is exactly this one edit. Any
+// modifier state (shift/ctrl/alt) rides along to the synthesized button,
+// exactly as it would for a physical BTN_LEFT device.
 constexpr GuiKey kLeftClickKey = GuiKeys::Digit2;
 
 struct GuiInputState {

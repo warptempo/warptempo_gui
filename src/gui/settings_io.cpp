@@ -66,7 +66,7 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "active_audio_view",           SettingKind::ActiveAudioViewChar,  EngineField::Title,                   "S"        },
     { "active_markers_view",         SettingKind::ActiveMarkersViewChar,EngineField::Title,                   "W"        },
     { "active_tab_view",             SettingKind::ActiveTabViewChar,    EngineField::Title,                   "A"        },
-    { "playback_speed",              SettingKind::PlaybackSpeedFloat,   EngineField::Title,                   "1.0" },
+    { "playback_speed",              SettingKind::PlaybackSpeedFloat,   EngineField::Title,                   "0.7" },
     { "follow",                      SettingKind::FollowFlag,           EngineField::Title,                   "true"     },
     // GUI-kind key, NOT an engine key: the single GUI-wide monospace text
     // size in points (pixels = points * 4/3). Valid range 6..72. Like

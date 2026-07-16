@@ -3,7 +3,6 @@
 #include "engine/engine_geometry.h"  // kN
 #include "gui_display_context.h"
 #include "paint_handler.h"
-#include "playback_speed_presets.h"
 #include "render.h"
 #include "render_pipeline.h"
 #include "settings_io.h"
@@ -249,7 +248,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Bare o                 → toggle read-only off (escape chord)
     //   - Space                  → playback toggle
     //   - Left/Right (no mods)   → playhead-by-pixel scrub
-    //   - Shift+0..9             → select playback speed
     //   - Home/End (no mods)     → playhead to trim region bounds
     //   - PageUp/PageDown        → viewport step scroll by the Alt-wheel
     //     (no mods)                step. Pure navigation, same family as
@@ -375,28 +373,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Shift+<digit> selects a playback speed. Shift+0 is 1.00, Shift+1
-    // is 0.10, Shift+9 is 0.90. Applies immediately whether or not
-    // playback is active — the audio callback picks up the new atomic
-    // on the next buffer. Each preset is read from kPlaybackSpeedPresets
-    // (the shared source of truth, indexed by digit), so the dispatch and
-    // the .settings reader's acceptance check can never diverge.
-    if (shift && !ctrl && !alt) {
-        switch (key) {
-        case GuiKeys::Digit0: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[0]); return;
-        case GuiKeys::Digit1: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[1]); return;
-        case GuiKeys::Digit2: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[2]); return;
-        case GuiKeys::Digit3: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[3]); return;
-        case GuiKeys::Digit4: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[4]); return;
-        case GuiKeys::Digit5: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[5]); return;
-        case GuiKeys::Digit6: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[6]); return;
-        case GuiKeys::Digit7: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[7]); return;
-        case GuiKeys::Digit8: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[8]); return;
-        case GuiKeys::Digit9: playback_lifecycle.set_playback_speed(kPlaybackSpeedPresets[9]); return;
-        default: break;
-        }
-    }
-
     // Bare 0 toggles between fit-file and the snap zoom level.
     // From fit-file → kSnapZoomLevel (the 2.4 s snap level, centered on
     // playhead via apply_zoom_change's numeric branch). From any numeric
@@ -511,8 +487,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // Ctrl+Shift+= / Ctrl+Shift+- step the GUI font size by one point. A
-    // display-preference gesture, the sibling of the Shift+digit
-    // playback-speed step: silent (no stderr per press, so held-key repeat
+    // display-preference gesture: silent (no stderr per press, so held-key repeat
     // does not spam the log), deliberately no undo-history entry and no
     // target render (font_size is not engine input and not authoring state),
     // persisted on the next Ctrl+S through the existing .settings writer. The

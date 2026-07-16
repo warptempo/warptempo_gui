@@ -494,7 +494,7 @@ struct AppState {
     bool    playhead_scanner_active = false;
     bool    playhead_scanner_restore_pending = false;
     bool    playhead_scanner_endpoint_painted = false;
-    float   playback_speed          = 1.0f;
+    float   playback_speed          = 0.7f;
 
     // GUI-wide monospace text size in points (the font_size setting; 6..72,
     // default 11). A display preference, not engine input and not authoring
