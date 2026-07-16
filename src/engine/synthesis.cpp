@@ -16,6 +16,56 @@
 #include <thread>
 #include <vector>
 
+namespace {
+
+// Stable descending-magnitude, ascending-bin sort of a frame's K magnitudes
+// into PghiHeapNode key order. The pack casts each magnitude to float (the key
+// precision), then places the bitwise-complemented float bits in the high 32
+// bits of a uint64 and the source bin in the low 32; four LSB-first stable
+// counting passes over the four key bytes (shifts 32/40/48/56) sort on the
+// packed key, and the unpack recovers the float by complement + memcpy. The
+// domain requirement — magnitudes nonnegative and finite (negative zero and
+// NaN unreachable) — is guaranteed by the caller (see the order-contract
+// comment at the call site); no defensive handling for values outside it. The
+// two uint64 vectors are caller-owned scratch, reused across frames. The
+// float-bits round trip is exact and the whole sort is integer work, so the
+// output order is deterministic and byte-identical to the explicit comparator
+// it replaces.
+void radix_sort_magnitudes(const double* mag, int K,
+                           std::vector<uint64_t>& a,
+                           std::vector<uint64_t>& b,
+                           std::vector<PghiHeapNode>& out) {
+    a.clear();
+    for (int k = 0; k < K; ++k) {
+        const float m = static_cast<float>(mag[k]);
+        uint32_t bits;
+        std::memcpy(&bits, &m, 4);
+        a.push_back((uint64_t(~bits) << 32) | uint32_t(k));
+    }
+    uint32_t hist[256];
+    for (int pass = 0; pass < 4; ++pass) {
+        const int shift = 32 + pass * 8;
+        std::memset(hist, 0, sizeof(hist));
+        for (uint64_t v : a) ++hist[(v >> shift) & 0xff];
+        uint32_t sum = 0;
+        for (int i = 0; i < 256; ++i) { uint32_t c = hist[i]; hist[i] = sum; sum += c; }
+        b.resize(a.size());
+        for (uint64_t v : a) b[hist[(v >> shift) & 0xff]++] = v;
+        a.swap(b);
+    }
+    out.resize(static_cast<size_t>(K));
+    for (int k = 0; k < K; ++k) {
+        const uint64_t v = a[static_cast<size_t>(k)];
+        const uint32_t bits = ~static_cast<uint32_t>(v >> 32);
+        float m;
+        std::memcpy(&m, &bits, 4);
+        out[static_cast<size_t>(k)].mag = m;
+        out[static_cast<size_t>(k)].bin = static_cast<int32_t>(v & 0xffffffffu);
+    }
+}
+
+}  // namespace
+
 void Synthesis::synthesize_full(
     AudioSTFT& stft,
     std::function<void(const float*, size_t)> write_cb,
@@ -295,6 +345,11 @@ void Synthesis::synthesize_full(
                 std::vector<PghiHeapNode> order_cur, order_prev;
                 order_cur.reserve(static_cast<size_t>(K2));
                 order_prev.reserve(static_cast<size_t>(K2));
+                // Scratch buffers for radix_sort_magnitudes, reserved to K2
+                // once and reused every frame (no steady-state allocation).
+                std::vector<uint64_t> radix_a, radix_b;
+                radix_a.reserve(static_cast<size_t>(K2));
+                radix_b.reserve(static_cast<size_t>(K2));
                 for (int k = 0; k < K2; ++k)
                     order_cur.push_back({0.0f, k});
                 for (int aidx = 0; aidx <= wend; ++aidx) {
@@ -323,13 +378,21 @@ void Synthesis::synthesize_full(
                                        ph_prev_prod, ph_cur_prod, ph_nxt_prod,
                                        slot->dt, slot->df, slot->quiet);
                         // PGHI key orders for synthesis frame f, built here so
-                        // the fill+sort overlaps the consumer's drain. ONE full
-                        // sort per iteration of frame f's magnitudes
-                        // (mag_cur_prod) into order_cur under the normative
-                        // TOTAL key order — descending float(mag), ties
-                        // ascending bin; this comparator is the single sort in
-                        // the pipeline (pghi_integrate consumes both orders
-                        // as-is and never sorts). The one order serves twice:
+                        // the sort overlaps the consumer's drain. ONE full sort
+                        // per iteration of frame f's magnitudes (mag_cur_prod)
+                        // into order_cur under the normative TOTAL key order —
+                        // descending float(mag), ties ascending bin. This is
+                        // the sole statement of that order: the magnitudes are
+                        // sqrt of bounded PCM analysis, so each is nonnegative
+                        // and finite (negative zero and NaN unreachable), and
+                        // over that domain the IEEE-754 float bit pattern is
+                        // monotone with numeric value — so ascending order on
+                        // the complemented bits equals descending magnitude,
+                        // and a stable radix fed bins in ascending order
+                        // reproduces the ascending-bin tie-break. That radix is
+                        // radix_sort_magnitudes, the single sort in the pipeline
+                        // (pghi_integrate consumes both orders as-is and never
+                        // sorts). The one order serves twice:
                         // shipped whole as this slot's cur_order (the
                         // consumer's frontier rank order for frame f), and
                         // retained one iteration as order_prev, so THIS slot's
@@ -341,22 +404,17 @@ void Synthesis::synthesize_full(
                         // Built for every frame, including frames the consumer
                         // will seed (frame 0, phase resets — consumer knowledge
                         // the producer doesn't have): a seed frame's orders are
-                        // simply unused, an accepted harmless waste. clear() +
-                        // push_back/assign into the reserved vectors reuses
-                        // capacity; building before finish_push keeps the slot
+                        // simply unused, an accepted harmless waste. The
+                        // reserved vectors are filled in place (order_cur by the
+                        // radix's resize/index writes, prev_stream by clear +
+                        // push_back), reusing capacity; building before
+                        // finish_push keeps the slot
                         // publication order — nothing half-built is ever
                         // consumer-visible.
                         prof_clock::time_point st{};
                         if (prof) st = prof_clock::now();
-                        order_cur.clear();
-                        for (int k = 0; k < K2; ++k)
-                            order_cur.push_back(
-                                {static_cast<float>(mag_cur_prod[k]), k});
-                        std::sort(order_cur.begin(), order_cur.end(),
-                                  [](const PghiHeapNode& a, const PghiHeapNode& b) {
-                                      return a.mag != b.mag ? a.mag > b.mag
-                                                            : a.bin < b.bin;
-                                  });
+                        radix_sort_magnitudes(mag_cur_prod.data(), K2,
+                                              radix_a, radix_b, order_cur);
                         slot->cur_order = order_cur;
                         for (const PghiHeapNode& n : order_prev) {
                             if (slot->quiet[n.bin] != 1)

@@ -47,7 +47,7 @@ struct PghiProfile {
                                      // frontier's proof and a nonzero count
                                      // indicates a frontier-update defect
     double quiet_s = 0.0;            // quiet-bin RNG assignment loop
-    double sort_s = 0.0;             // key-order fill + std::sort + cur_order
+    double sort_s = 0.0;             // radix sort of the key order + cur_order
                                      // copy + prev-stream filter, on the
                                      // analysis producer thread — overlaps the
                                      // consumer's drain rather than adding to
