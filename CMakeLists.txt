@@ -61,7 +61,15 @@ set(WARPTEMPO_ENGINE_SOURCES
     src/engine/engine.cpp
     src/engine/limiter.cpp
     src/engine/synthesis.cpp
+    src/engine/synth_spectrum_trig.cpp
 )
+# Scoped fast-math: unlocks GCC's libmvec vectorization of the synthesis trig in
+# this ONE TU only (appended after the global -O3 -march=native below). A source
+# property in this directory scope binds every target that compiles the file, so
+# both warptempo_gui and warptempo_cli pick it up. Must not spread to any other
+# source — the rest of the engine keeps strict FP semantics.
+set_source_files_properties(src/engine/synth_spectrum_trig.cpp
+    PROPERTIES COMPILE_OPTIONS "-ffast-math")
 set(WARPTEMPO_PREPOST_SOURCES
     src/prepost/trimmer.cpp
     src/prepost/peak_limiter.cpp

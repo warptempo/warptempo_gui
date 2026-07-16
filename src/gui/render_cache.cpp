@@ -148,8 +148,11 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // the spectral limiter now returns an already-compliant deliverable untouched,
 // so a raw-compliant buffer whose identity reconstruction overshot the ceiling
 // (formerly attenuated) keeps its bytes — a byte change in that edge, so prior
-// artifacts must re-render rather than pose as current renders.
-constexpr uint32_t kFingerprintVersion = 10;
+// artifacts must re-render rather than pose as current renders. Version 11: the
+// synthesis spectrum trig now evaluates through vectorized libmvec sin/cos, so
+// interior bins differ from the prior scalar-sincos reference by a few ulps —
+// prior artifacts must re-render rather than pose as current renders.
+constexpr uint32_t kFingerprintVersion = 11;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the

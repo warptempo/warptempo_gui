@@ -12,6 +12,7 @@
 
 #include "engine.h"
 #include "render_profile.h"
+#include "synth_spectrum_trig.h"
 #include "warp_frame_map.h"
 
 // --- Data Structures ---
@@ -554,17 +555,16 @@ struct AudioSTFT {
                                  const std::vector<double>& theta) {
         FftWorkspace& w = fft_ws[ch];
         const int K = M / 2 + 1;
-        for (int k = 0; k < K; ++k) {
-            // One sincos rather than separate cos+sin: glibc extension, and
-            // this project is Arch/glibc-only by charter.
-            double s, c;
-            sincos(theta[k], &s, &c);
-            w.ifft_in[k][0] = mag[k] * c;
-            w.ifft_in[k][1] = mag[k] * s;
-        }
-        // Hermitian-endpoint correction, applied AFTER the interior loop so the
-        // interior bins' arithmetic (the sincos and both writes above) is
-        // byte-for-byte untouched. The half-spectrum of an even-length real
+        // Separate cos+sin evaluated through the vectorized helper: the
+        // two-output sincos does not auto-vectorize, whereas the helper's
+        // dedicated -ffast-math TU lets GCC lower the pair to glibc libmvec
+        // (the Arch/glibc-only charter is what licenses that dependency). The
+        // helper writes all K bins including the two endpoints; the correction
+        // loop below then overwrites those two.
+        synth_spectrum_trig(theta.data(), mag.data(), w.ifft_in, K);
+        // Hermitian-endpoint correction, applied AFTER the interior loop so it
+        // overwrites the two endpoint coefficients the helper wrote. The
+        // half-spectrum of an even-length real
         // transform is Hermitian; the DC bin (k == 0) and the Nyquist bin
         // (k == K-1) have no imaginary degree of freedom, and FFTW's c2r
         // ignores whatever imaginary part sits there. The old code wrote
