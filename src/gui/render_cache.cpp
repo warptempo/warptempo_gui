@@ -144,8 +144,12 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // must re-render rather than pose as current recipes. Version 9: output_format
 // left the settings vocabulary (wav is the only product), so the
 // `output_format` field no longer participates in the fingerprint — prior
-// artifacts, whose keys still carried that string, must re-render.
-constexpr uint32_t kFingerprintVersion = 9;
+// artifacts, whose keys still carried that string, must re-render. Version 10:
+// the spectral limiter now returns an already-compliant deliverable untouched,
+// so a raw-compliant buffer whose identity reconstruction overshot the ceiling
+// (formerly attenuated) keeps its bytes — a byte change in that edge, so prior
+// artifacts must re-render rather than pose as current renders.
+constexpr uint32_t kFingerprintVersion = 10;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the

@@ -28,21 +28,42 @@ bool profile_enabled() {
 void apply_peak_limiter(std::vector<float>& buffer, int channels,
                         int sample_rate, double ceiling_dbfs,
                         double attack_ms, double release_ms) {
-    // Temporary render profiling: clock the whole stage and, when enabled,
-    // size the approved unity-bypass predicate (all input samples finite and
-    // within the ceiling) without acting on it.
+    // Temporary render profiling: clock the whole stage. The unity-bypass scan
+    // below is product behavior (not profile-gated); the profile line reports
+    // its max, ceiling, and verdict when enabled.
     const bool prof = profile_enabled();
     std::chrono::steady_clock::time_point prof_t0;
-    double prof_max = 0.0, prof_ceiling = 0.0;
-    bool   prof_all_finite = true;
-    if (prof) {
-        prof_t0 = std::chrono::steady_clock::now();
-        prof_ceiling = std::pow(10.0, ceiling_dbfs / 20.0);
-        for (float s : buffer) {
-            if (!std::isfinite(s)) prof_all_finite = false;
-            const double a = std::fabs(static_cast<double>(s));
-            if (a > prof_max) prof_max = a;
-        }
+    if (prof) prof_t0 = std::chrono::steady_clock::now();
+
+    // Unity-bypass scan over the untouched buffer (one linear read before any
+    // limiter allocation): on an already-compliant buffer (every sample finite
+    // and within the ceiling) the limiter's gain never leaves 1.0, so the
+    // buffer returns unchanged. A
+    // non-finite sample falls through to the limiter (its hardclip backstop
+    // owns that breach-class input). A nonqualifying buffer pays this extra read.
+    const double ceiling = std::pow(10.0, ceiling_dbfs / 20.0);
+    double max_abs = 0.0;
+    bool   all_finite = true;
+    for (float s : buffer) {
+        if (!std::isfinite(s)) all_finite = false;
+        const double a = std::fabs(static_cast<double>(s));
+        if (a > max_abs) max_abs = a;
+    }
+
+    auto emit_profile = [&]() {
+        const double wall = std::chrono::duration<double>(
+            std::chrono::steady_clock::now() - prof_t0).count();
+        const bool bypass = all_finite && (max_abs <= ceiling);
+        char line[256];
+        std::snprintf(line, sizeof(line),
+            "[profile] peak limiter: wall %.3fs max %.5f ceiling %.5f would-bypass %s",
+            wall, max_abs, ceiling, bypass ? "yes" : "no");
+        std::cerr << line << "\n";
+    };
+
+    if (all_finite && max_abs <= ceiling) {
+        if (prof) emit_profile();
+        return;  // buffer already within the ceiling; left untouched
     }
 
     const std::size_t total_frames =
@@ -57,16 +78,7 @@ void apply_peak_limiter(std::vector<float>& buffer, int channels,
     pl.flush(sink);
     buffer.swap(out);
 
-    if (prof) {
-        const double wall = std::chrono::duration<double>(
-            std::chrono::steady_clock::now() - prof_t0).count();
-        const bool bypass = prof_all_finite && (prof_max <= prof_ceiling);
-        char line[256];
-        std::snprintf(line, sizeof(line),
-            "[profile] peak limiter: wall %.3fs max %.5f ceiling %.5f would-bypass %s",
-            wall, prof_max, prof_ceiling, bypass ? "yes" : "no");
-        std::cerr << line << "\n";
-    }
+    if (prof) emit_profile();
 }
 
 PeakLimiter::PeakLimiter(double ceiling_dbfs,
