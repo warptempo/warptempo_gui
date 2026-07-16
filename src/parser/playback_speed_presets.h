@@ -1,25 +1,24 @@
 #pragma once
 
 // The complete playback-speed vocabulary. The GUI authors playback_speed
-// exclusively through the Shift+0..9 presets: Shift+0 is 1.00 (normal speed)
-// and Shift+1..9 are 0.10..0.90, the slow-down precision-finetune tool.
-// Indexed by the pressed digit, so kPlaybackSpeedPresets[d] is the speed for
-// Shift+d. This table is the single source of truth for both the Shift+digit
-// dispatch and the .settings schema's on-disk acceptance check. It lives
-// parser-side because the whole-settings schema (settings_file.h) enforces
-// preset membership in BOTH products — a sidecar set is loadable in the GUI
-// and the CLI, or in neither.
+// through the settings editor (`:playback_speed=<value>`), the sole
+// authoring surface, which red-flashes any off-preset value at commit. This
+// table is the single source of truth for the on-disk vocabulary — the ten
+// one-decimal speeds 0.10..1.00 — and for the .settings schema's on-disk
+// acceptance check. It lives parser-side because the whole-settings schema
+// (settings_file.h) enforces preset membership in BOTH products — a sidecar
+// set is loadable in the GUI and the CLI, or in neither.
 inline constexpr float kPlaybackSpeedPresets[] = {
-    1.0f,  // Shift+0
-    0.1f,  // Shift+1
-    0.2f,  // Shift+2
-    0.3f,  // Shift+3
-    0.4f,  // Shift+4
-    0.5f,  // Shift+5
-    0.6f,  // Shift+6
-    0.7f,  // Shift+7
-    0.8f,  // Shift+8
-    0.9f,  // Shift+9
+    1.0f,
+    0.1f,
+    0.2f,
+    0.3f,
+    0.4f,
+    0.5f,
+    0.6f,
+    0.7f,
+    0.8f,
+    0.9f,
 };
 
 // True iff `v` is bit-exactly one of the preset speeds. Used by the .settings
