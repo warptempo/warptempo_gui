@@ -179,6 +179,11 @@ inline bool parse_value_double(std::string_view s, double& out) {
     // complement (v <= 0 catches it) only by accident and would
     // round-trip as "-0".
     if (s.front() == '-') return false;
+    // Values are lowercase-only spellings: reject any ASCII uppercase byte
+    // (the practical effect is refusing an uppercase exponent like "1E0";
+    // lowercase "1e0" stays legal, and the writers never emit exponents).
+    for (char c : s)
+        if (c >= 'A' && c <= 'Z') return false;
     double v = 0.0;
     const auto res = std::from_chars(s.data(), s.data() + s.size(), v);
     if (res.ec != std::errc{}) return false;

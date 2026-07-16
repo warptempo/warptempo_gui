@@ -143,4 +143,33 @@ std::optional<std::expected<void, std::string>> try_engine_key(
     int ln, const std::string& key, const std::string& value,
     EngineSettings& engine);
 
+// The typed result of a GUI-kind (key, value) grammar check. `kind` selects
+// which member carries the parsed value.
+struct GuiSettingValue {
+    enum class Kind { Bool, ViewChar, ZoomLevel, Frame64,
+                      PlaybackSpeed, FontSize, TrimFrame, Text };
+    Kind        kind = Kind::Bool;
+    bool        b    = false;   // Bool (follow, tab_X_read_only)
+    char        c    = 0;       // ViewChar (S/T, W/P, A/B)
+    int         i    = 0;       // ZoomLevel (tab_X_zoom)
+    int64_t     i64  = 0;       // Frame64 (viewport_start/playhead), TrimFrame
+    float       f    = 0.0f;    // PlaybackSpeed
+    double      d    = 0.0;     // FontSize
+    bool trim_unset  = false;   // TrimFrame: blank value = bound unset
+    std::string text;           // Text (audio_player)
+};
+
+// The single grammar/vocabulary owner for GUI-kind settings values — the
+// GUI-kind sibling of validate_engine_setting. STATE-FREE: it parses and
+// vocabulary-checks one (key, value) pair; state-dependent rules stay at the
+// boundaries (the load-side trim past-EOF walls live in
+// first_past_eof_wall_defect; the editor adds its read-only-tab trim refusal,
+// its own trim walls, and active/inactive routing on top). Both the whole-file
+// reader below and the GUI settings editor call this, so a spelling is loadable
+// iff it commits. Returns std::nullopt when `key` is not a GUI-kind key (the
+// caller falls through to its own unknown-key handling, mirroring
+// try_engine_key); an expected error carries the bad_value-style reason text.
+std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
+    const std::string& key, const std::string& value);
+
 }  // namespace warptempo_settings

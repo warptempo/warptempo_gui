@@ -51,6 +51,18 @@ inline bool parse_bool_token(const std::string& s, bool& out) {
 // std::from_chars grammar), and floating values must be finite. These parse
 // SYNTAX only; range and vocabulary rules belong to the per-key schema.
 
+// Values are lowercase-only spellings. from_chars' float grammar admits an
+// uppercase exponent marker ('7E-1'), so the float parsers reject any ASCII
+// uppercase byte up front; lowercase '7e-1' stays legal, and the product
+// writers never emit exponents at all, so no product-written file is
+// affected. The integer parsers need no such guard: base-10 digit runs admit
+// no letters.
+inline bool has_ascii_upper(const std::string& s) {
+    for (char c : s)
+        if (c >= 'A' && c <= 'Z') return true;
+    return false;
+}
+
 inline bool parse_int_strict(const std::string& s, int& out) {
     if (s.empty()) return false;
     int v = 0;
@@ -71,6 +83,7 @@ inline bool parse_int64_strict(const std::string& s, int64_t& out) {
 
 inline bool parse_float_strict(const std::string& s, float& out) {
     if (s.empty()) return false;
+    if (has_ascii_upper(s)) return false;  // lowercase-only: rejects '7E-1'
     float v = 0.0f;
     const auto res = std::from_chars(s.data(), s.data() + s.size(), v);
     if (res.ec != std::errc{} || res.ptr != s.data() + s.size()) return false;
@@ -81,6 +94,7 @@ inline bool parse_float_strict(const std::string& s, float& out) {
 
 inline bool parse_double_strict(const std::string& s, double& out) {
     if (s.empty()) return false;
+    if (has_ascii_upper(s)) return false;  // lowercase-only: rejects '1E1'
     double v = 0.0;
     const auto res = std::from_chars(s.data(), s.data() + s.size(), v);
     if (res.ec != std::errc{} || res.ptr != s.data() + s.size()) return false;

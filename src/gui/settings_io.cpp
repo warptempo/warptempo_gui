@@ -49,9 +49,10 @@ struct SettingDescriptor {
     // value. Valid only when kind == EnginePassthrough; ignored otherwise.
     EngineField field;
     // Template default for non-engine kinds. nullptr means "no fixed
-    // default" — for the optional trims the template omits the line
-    // entirely. For engine kinds, the template default comes from a
-    // default-constructed EngineSettings and this field is unused.
+    // default" (unused now — every non-engine descriptor carries one; the
+    // trims default to "" so the template writes the blank line). For engine
+    // kinds, the template default comes from a default-constructed
+    // EngineSettings and this field is unused.
     const char* default_value;
 };
 
@@ -81,14 +82,14 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     // an explicit empty value (`audio_player=`) is the deliberate opt-out
     // meaning "no external player".
     { "audio_player",                SettingKind::AudioPlayerPath,      EngineField::Title,                   "audacious" },
-    { "tab_a_trim_begin",            SettingKind::TrimBegin_A,          EngineField::Title,                   nullptr },
-    { "tab_a_trim_end",              SettingKind::TrimEnd_A,            EngineField::Title,                   nullptr },
+    { "tab_a_trim_begin",            SettingKind::TrimBegin_A,          EngineField::Title,                   "" },
+    { "tab_a_trim_end",              SettingKind::TrimEnd_A,            EngineField::Title,                   "" },
     { "tab_a_read_only",             SettingKind::ReadOnly_A,           EngineField::Title,                   "false" },
     { "tab_a_viewport_start",        SettingKind::ViewportStart_A,      EngineField::Title,                   "0" },
     { "tab_a_zoom",                  SettingKind::ZoomLevel_A,          EngineField::Title,                   "0" },
     { "tab_a_playhead_cursor",       SettingKind::Playhead_A,           EngineField::Title,                   "0" },
-    { "tab_b_trim_begin",            SettingKind::TrimBegin_B,          EngineField::Title,                   nullptr },
-    { "tab_b_trim_end",              SettingKind::TrimEnd_B,            EngineField::Title,                   nullptr },
+    { "tab_b_trim_begin",            SettingKind::TrimBegin_B,          EngineField::Title,                   "" },
+    { "tab_b_trim_end",              SettingKind::TrimEnd_B,            EngineField::Title,                   "" },
     { "tab_b_read_only",             SettingKind::ReadOnly_B,           EngineField::Title,                   "false" },
     { "tab_b_viewport_start",        SettingKind::ViewportStart_B,      EngineField::Title,                   "0" },
     { "tab_b_zoom",                  SettingKind::ZoomLevel_B,          EngineField::Title,                   "0" },
@@ -99,9 +100,11 @@ constexpr SettingDescriptor kSettingsOrder[] = {
 // writer's live inputs. The single byte definition for GUI-kind value
 // serialization: write_settings_file emits `key=<this>` and the settings
 // editor's autocomplete recall (recall_gui_setting_value) reads it back, so
-// the two can never diverge. Returns std::nullopt for an unset optional trim
-// bound (the writer omits the line; the recall substitutes the empty value)
-// and for EnginePassthrough (engine kinds serialize through
+// the two can never diverge. An unset trim bound returns the EMPTY string:
+// the writer always emits the line (`tab_a_trim_begin=`), blank when unset —
+// the audio_player convention, symmetric with the load schema (blank and
+// absent are both unset) and the editor's empty-value clear. Returns
+// std::nullopt only for EnginePassthrough (engine kinds serialize through
 // format_engine_field_value).
 std::optional<std::string> format_nonengine_value(
         SettingKind kind,
@@ -137,16 +140,16 @@ std::optional<std::string> format_nonengine_value(
         case SettingKind::AudioPlayerPath:
             return audio_player;
         case SettingKind::TrimBegin_A:
-            if (!tab_a.trim.has_begin) return std::nullopt;
+            if (!tab_a.trim.has_begin) return std::string{};
             return format_authored_frame(tab_a.trim.begin_frame);
         case SettingKind::TrimEnd_A:
-            if (!tab_a.trim.has_end) return std::nullopt;
+            if (!tab_a.trim.has_end) return std::string{};
             return format_authored_frame(tab_a.trim.end_frame);
         case SettingKind::TrimBegin_B:
-            if (!tab_b.trim.has_begin) return std::nullopt;
+            if (!tab_b.trim.has_begin) return std::string{};
             return format_authored_frame(tab_b.trim.begin_frame);
         case SettingKind::TrimEnd_B:
-            if (!tab_b.trim.has_end) return std::nullopt;
+            if (!tab_b.trim.has_end) return std::string{};
             return format_authored_frame(tab_b.trim.end_frame);
         case SettingKind::ReadOnly_A:
             return std::string(tab_a.read_only ? "true" : "false");
@@ -266,9 +269,9 @@ std::string format_default_settings_template(const std::string& stem) {
             s += desc.default_value;
             s += '\n';
         }
-        // Optional trims (nullptr default, non-engine kind): skipped at
-        // template build; the writer emits them at Ctrl+S iff the flag
-        // is set.
+        // Every non-engine descriptor carries a default now — the trims'
+        // is "" so the template writes their blank line (`tab_a_trim_begin=`),
+        // the unset form both products load.
     }
     return s;
 }
@@ -295,8 +298,9 @@ bool write_settings_file(
             continue;
         }
         // Non-engine kinds share their value serialization with the settings
-        // editor's autocomplete recall. A nullopt result is an unset optional
-        // trim bound: omit the line entirely (the recall shows it as empty).
+        // editor's autocomplete recall, and every one emits a line (unset trim
+        // bounds return the blank value). nullopt is EnginePassthrough-only,
+        // already handled above; the guard below is defensive.
         std::optional<std::string> v = format_nonengine_value(
             desc.kind, tab_a, tab_b, follow,
             active_audio_view, active_markers_view, active_tab_view,
@@ -338,11 +342,12 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     eff_active.playhead_cursor_sample = app.playhead_cursor_sample;
     eff_active.trim                   = app.trim;
 
-    std::optional<std::string> v = format_nonengine_value(
+    // desc->kind is non-EnginePassthrough here (guarded above), so
+    // format_nonengine_value always yields a value — an unset trim bound
+    // recalls as the blank value (`tab_a_trim_begin=`), matching what Ctrl+S
+    // writes.
+    return format_nonengine_value(
         desc->kind, eff_a, eff_b, app.follow_mode,
         app.active_audio_view, app.active_markers_view, app.active_tab_view,
         app.playback_speed, app.font_size, app.audio_player);
-    // An unset optional trim recalls as the empty value (`tab_a_trim_begin=`),
-    // its absent-in-file form.
-    return v.value_or(std::string{});
 }

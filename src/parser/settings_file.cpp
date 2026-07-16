@@ -90,6 +90,132 @@ std::optional<std::expected<void, std::string>> try_engine_key(
     return std::expected<void, std::string>{};
 }
 
+std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
+        const std::string& key, const std::string& value) {
+    using R = std::expected<GuiSettingValue, std::string>;
+    auto err = [](std::string reason) -> R {
+        return std::unexpected(std::move(reason));
+    };
+
+    GuiSettingValue out;
+
+    // A per-tab key prefix selects the tab (routing is the caller's job); the
+    // suffix selects the field. The two tabs share one grammar by construction.
+    if (key.rfind("tab_a_", 0) == 0 || key.rfind("tab_b_", 0) == 0) {
+        const std::string suffix = key.substr(6);
+        if (suffix == "viewport_start" || suffix == "playhead_cursor") {
+            int64_t v = 0;
+            if (!parse_int64_strict(value, v) || v < 0)
+                return err("must be a non-negative integer");
+            out.kind = GuiSettingValue::Kind::Frame64;
+            out.i64 = v;
+            return R(out);
+        }
+        if (suffix == "zoom") {
+            int v = 0;
+            if (!parse_int_strict(value, v) ||
+                v < kFitFileLevel || v > kMaxNumericLevel)
+                return err("must be a zoom level");
+            out.kind = GuiSettingValue::Kind::ZoomLevel;
+            out.i = v;
+            return R(out);
+        }
+        if (suffix == "read_only") {
+            bool v = false;
+            if (!parse_bool_token(value, v))
+                return err(
+                    "must be one of {true, false, 1, 0, yes, no, on, off}");
+            out.kind = GuiSettingValue::Kind::Bool;
+            out.b = v;
+            return R(out);
+        }
+        if (suffix == "trim_begin" || suffix == "trim_end") {
+            out.kind = GuiSettingValue::Kind::TrimFrame;
+            // Blank and absent are both unset (absent keeps pre-convention
+            // files loading); the writer always emits the key, blank when
+            // unset — the audio_player convention, and the symmetric twin of
+            // the editor's empty-value clear. The past-EOF wall stays
+            // state-dependent (caller-side).
+            if (value.empty()) {
+                out.trim_unset = true;
+                return R(out);
+            }
+            int64_t v = 0;
+            if (!parse_authored_frame(value, v))
+                return err("must be a whole source-frame position");
+            out.i64 = v;
+            return R(out);
+        }
+        return std::nullopt;  // unrecognized tab suffix: not a GUI-kind key
+    }
+
+    if (key == "follow") {
+        // Bools share parse_bool_token schema-wide (same grammar as the
+        // per-tab read_only keys).
+        bool v = false;
+        if (!parse_bool_token(value, v))
+            return err("must be one of {true, false, 1, 0, yes, no, on, off}");
+        out.kind = GuiSettingValue::Kind::Bool;
+        out.b = v;
+        return R(out);
+    }
+    if (key == "active_audio_view") {
+        if (value != "S" && value != "T") return err("must be S or T");
+        out.kind = GuiSettingValue::Kind::ViewChar;
+        out.c = value[0];
+        return R(out);
+    }
+    if (key == "active_markers_view") {
+        if (value != "W" && value != "P") return err("must be W or P");
+        out.kind = GuiSettingValue::Kind::ViewChar;
+        out.c = value[0];
+        return R(out);
+    }
+    if (key == "active_tab_view") {
+        if (value != "A" && value != "B") return err("must be A or B");
+        out.kind = GuiSettingValue::Kind::ViewChar;
+        out.c = value[0];
+        return R(out);
+    }
+    if (key == "playback_speed") {
+        // Preset-vocabulary-only on disk: the GUI authors playback_speed
+        // through the settings editor (:playback_speed=), whose commit
+        // red-flashes any value outside kPlaybackSpeedPresets (the shared
+        // source of truth), so any off-preset value is a state the GUI can
+        // never produce. Exact float equality against the table is sound: the
+        // writer emits each preset with the same one-decimal %.1f this parses
+        // back, and both the on-disk text and the table literal are the
+        // nearest float of the same short decimal.
+        float v = 0.0f;
+        if (!parse_float_strict(value, v) || !is_playback_speed_preset(v))
+            return err("must be a preset speed");
+        out.kind = GuiSettingValue::Kind::PlaybackSpeed;
+        out.f = v;
+        return R(out);
+    }
+    if (key == "font_size") {
+        double v = 0.0;
+        if (!parse_double_strict(value, v) || v < 6.0 || v > 72.0)
+            return err("must be a number in [6, 72]");
+        out.kind = GuiSettingValue::Kind::FontSize;
+        out.d = v;
+        return R(out);
+    }
+    if (key == "audio_player") {
+        // GUI-kind launcher for the `l` render-listen command: an external
+        // player binary name or path. Any value is accepted (no path/binary
+        // grammar — it is user-supplied), INCLUDING empty: an empty value is
+        // legal and means "no external player". The key is always present in a
+        // product-written .settings, so the shared schema loads `audio_player=`
+        // in both products.
+        out.kind = GuiSettingValue::Kind::Text;
+        out.text = value;
+        return R(out);
+    }
+
+    return std::nullopt;  // not a GUI-kind key
+}
+
 }  // namespace warptempo_settings
 
 std::expected<SettingsFile, std::string> read_settings_file(
@@ -112,9 +238,21 @@ std::expected<SettingsFile, std::string> read_settings_file(
             return *e;
         }
 
-        // A per-tab key prefix selects the tab; the suffix selects the
-        // field. Keeping one arm per field (rather than per tab) keeps the
-        // two tabs' grammars identical by construction.
+        // The single GUI-kind grammar owner. std::nullopt means the key is
+        // neither an engine key (checked above) nor a GUI-kind key — the
+        // unknown-key case; an expected error carries the reason bad_value
+        // composes. On success, store the typed value into the SettingsFile
+        // fields; the has_* flags and tab routing stay here (state the schema
+        // function is deliberately blind to).
+        auto g = warptempo_settings::validate_gui_setting(key, value);
+        if (!g) {
+            return prefix_line_error(ln, "unknown key '" + key + "'");
+        }
+        if (!*g) {
+            return bad_value(ln, key, value, (*g).error());
+        }
+        const warptempo_settings::GuiSettingValue& gv = **g;
+
         SettingsFileTab* tab = nullptr;
         std::string suffix;
         if (key.rfind("tab_a_", 0) == 0) {
@@ -125,120 +263,52 @@ std::expected<SettingsFile, std::string> read_settings_file(
             suffix = key.substr(6);
         }
 
-        if (tab != nullptr && suffix == "viewport_start") {
-            int64_t v = 0;
-            if (!parse_int64_strict(value, v) || v < 0) {
-                return bad_value(ln, key, value,
-                                 "must be a non-negative integer");
+        if (tab != nullptr) {
+            if (suffix == "viewport_start") {
+                tab->has_viewport_start = true;
+                tab->viewport_start = gv.i64;
+            } else if (suffix == "zoom") {
+                tab->has_zoom = true;
+                tab->zoom = gv.i;
+            } else if (suffix == "playhead_cursor") {
+                tab->has_playhead = true;
+                tab->playhead = gv.i64;
+            } else if (suffix == "read_only") {
+                tab->has_read_only = true;
+                tab->read_only = gv.b;
+            } else if (suffix == "trim_begin") {
+                // A blank value is unset (absent-key equivalent): leave has_.
+                if (!gv.trim_unset) {
+                    tab->trim.has_begin = true;
+                    tab->trim.begin_frame = gv.i64;
+                }
+            } else if (suffix == "trim_end") {
+                if (!gv.trim_unset) {
+                    tab->trim.has_end = true;
+                    tab->trim.end_frame = gv.i64;
+                }
             }
-            tab->has_viewport_start = true;
-            tab->viewport_start = v;
-        } else if (tab != nullptr && suffix == "zoom") {
-            int v = 0;
-            if (!parse_int_strict(value, v) ||
-                v < kFitFileLevel || v > kMaxNumericLevel) {
-                return bad_value(ln, key, value, "must be a zoom level");
-            }
-            tab->has_zoom = true;
-            tab->zoom = v;
-        } else if (tab != nullptr && suffix == "playhead_cursor") {
-            int64_t v = 0;
-            if (!parse_int64_strict(value, v) || v < 0) {
-                return bad_value(ln, key, value,
-                                 "must be a non-negative integer");
-            }
-            tab->has_playhead = true;
-            tab->playhead = v;
-        } else if (tab != nullptr && suffix == "read_only") {
-            bool v = false;
-            if (!parse_bool_token(value, v)) {
-                return bad_value(
-                    ln, key, value,
-                    "must be one of {true, false, 1, 0, yes, no, on, off}");
-            }
-            tab->has_read_only = true;
-            tab->read_only = v;
-        } else if (tab != nullptr && suffix == "trim_begin") {
-            int64_t v = 0;
-            if (!parse_authored_frame(value, v)) {
-                return bad_value(ln, key, value,
-                                 "must be a whole source-frame position");
-            }
-            tab->trim.has_begin = true;
-            tab->trim.begin_frame = v;
-        } else if (tab != nullptr && suffix == "trim_end") {
-            int64_t v = 0;
-            if (!parse_authored_frame(value, v)) {
-                return bad_value(ln, key, value,
-                                 "must be a whole source-frame position");
-            }
-            tab->trim.has_end = true;
-            tab->trim.end_frame = v;
         } else if (key == "follow") {
-            // Bools share parse_bool_token schema-wide (same grammar as
-            // the per-tab read_only keys).
-            bool v = false;
-            if (!parse_bool_token(value, v)) {
-                return bad_value(
-                    ln, key, value,
-                    "must be one of {true, false, 1, 0, yes, no, on, off}");
-            }
-            out.follow = v;
             out.has_follow = true;
+            out.follow = gv.b;
         } else if (key == "active_audio_view") {
-            if (value != "S" && value != "T") {
-                return bad_value(ln, key, value, "must be S or T");
-            }
             out.has_active_audio_view = true;
-            out.active_audio_view = value[0];
+            out.active_audio_view = gv.c;
         } else if (key == "active_markers_view") {
-            if (value != "W" && value != "P") {
-                return bad_value(ln, key, value, "must be W or P");
-            }
             out.has_active_markers_view = true;
-            out.active_markers_view = value[0];
+            out.active_markers_view = gv.c;
         } else if (key == "active_tab_view") {
-            if (value != "A" && value != "B") {
-                return bad_value(ln, key, value, "must be A or B");
-            }
             out.has_active_tab_view = true;
-            out.active_tab_view = value[0];
+            out.active_tab_view = gv.c;
         } else if (key == "playback_speed") {
-            // Preset-vocabulary-only on disk: the GUI authors playback_speed
-            // through the settings editor (:playback_speed=), whose commit
-            // red-flashes any value outside kPlaybackSpeedPresets (the shared
-            // source of truth), so any off-preset value is a state the GUI
-            // can never produce.
-            // Exact float equality against the table is sound: the writer
-            // emits each preset with the same one-decimal %.1f this parses
-            // back, and both the on-disk text and the table literal are the
-            // nearest float of the same short decimal.
-            float v = 0.0f;
-            if (!parse_float_strict(value, v) ||
-                !is_playback_speed_preset(v)) {
-                return bad_value(ln, key, value, "must be a preset speed");
-            }
             out.has_playback_speed = true;
-            out.playback_speed = v;
+            out.playback_speed = gv.f;
         } else if (key == "font_size") {
-            double v = 0.0;
-            if (!parse_double_strict(value, v) || v < 6.0 || v > 72.0) {
-                return bad_value(ln, key, value,
-                                 "must be a number in [6, 72]");
-            }
             out.has_font_size = true;
-            out.font_size = v;
+            out.font_size = gv.d;
         } else if (key == "audio_player") {
-            // GUI-kind launcher for the `l` render-listen command: an external
-            // player binary name or path. Any value is accepted (no path/binary
-            // grammar — it is user-supplied), INCLUDING empty: an empty value is
-            // legal and means "no external player". The key is always present in
-            // a product-written .settings, so this reader (the shared GUI+CLI
-            // schema) must load `audio_player=` in both products.
             out.has_audio_player = true;
-            out.audio_player = value;
-        } else {
-            return prefix_line_error(ln, "unknown key '" + key + "'");
+            out.audio_player = gv.text;
         }
         return {};
     });
