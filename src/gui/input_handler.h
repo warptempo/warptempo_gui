@@ -29,6 +29,7 @@
 #include <cmath>
 #include <expected>
 #include <filesystem>
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -457,22 +458,32 @@ private:
     // Home-End / trim begin-end. Caller gates on no modifiers held.
     void handle_plain_bare_keys(GuiKey key);
 
+    // Shared key route for the modal bottom-strip editors (settings
+    // prompt, render-commit prompt, bpm bracket editor). The modal
+    // contract is stated once at the definition; returns true if the
+    // editor consumed the key (on_key then returns), false on Ctrl+Q so
+    // on_key runs the close routing. `autocomplete` is the optional
+    // bare-Tab hook — empty (the bpm editor) lets Tab reach
+    // text_editor::handle_key unchanged; commit / cancel / Ctrl+Q
+    // teardown are the per-editor bodies.
+    bool route_modal_editor_key(text_editor::State& ed, GuiKey key,
+                                GuiInputState mods,
+                                const std::function<void()>& autocomplete,
+                                const std::function<void()>& commit,
+                                const std::function<void()>& cancel,
+                                const std::function<void()>& ctrl_q_teardown);
+
     // Routes a key to the active top-flag editor. Returns true if the editor
     // consumed it (on_key then returns); false if the key is a command that
-    // must run. The two kinds differ at the command tail: the top-strip
-    // flag editor (non-modal) cancels the edit and lets every command fall
-    // through, while the bpm editor (a modal bottom-strip surface) reaches
-    // the tail only for the three chords the on_key modal gate admits
-    // beyond its own keys — Ctrl+S runs the save with the editor left
-    // open, Ctrl+Q tears the editor and bpm mode down together and falls
-    // through to the close routing, and anything else swallows.
+    // must run. The two kinds split up front: the bpm editor (a modal
+    // bottom-strip surface) takes route_modal_editor_key, while the
+    // top-strip flag editor (non-modal) keeps its own flow whose command
+    // tail cancels the edit and lets every command fall through.
     bool handle_top_flag_editor_key(GuiKey key, GuiInputState mods);
 
-    // Routes a key to the active settings-prompt editor. Same
-    // consumed/command contract as handle_top_flag_editor_key's modal
-    // (bpm) tail: Ctrl+S saves with the editor left open, Ctrl+Q discards
-    // the edit and falls through, everything else the editor does not
-    // consume swallows.
+    // Routes a key to the active settings-prompt editor through
+    // route_modal_editor_key, with bare Tab autocompleting the value side
+    // of `key=` from the key's current stored value.
     bool handle_settings_editor_key(GuiKey key, GuiInputState mods);
 
     // Render-commit prompt (Shift+.). A bottom-strip modal editor, structural
@@ -485,7 +496,7 @@ private:
     // bare-Tab longest-common-prefix completion over the entry identifiers.
     // commit_editor_commit: resolve the pending to exactly one entry and adopt.
     // commit_editor_exit_no_commit: Esc / Ctrl+Q teardown. handle_commit_editor_key:
-    // the key router, same modal contract as handle_settings_editor_key.
+    // the key router, through route_modal_editor_key like the settings editor.
     void open_commit_editor();
     void commit_editor_autocomplete();
     void commit_editor_commit();
