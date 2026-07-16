@@ -36,7 +36,7 @@ inline double princarg(double phase) {
     return phase - 2.0 * M_PI * std::floor((phase + M_PI) / (2.0 * M_PI));
 }
 
-// PGHI ("heap") tunables. kPghiTol is the significance threshold,
+// PGHI tunables. kPghiTol is the significance threshold,
 // relative to the per-frame-pair peak magnitude (the LTFAT default, ~-120 dB);
 // it decides only which bins may ANCHOR a frequency-spread, never who gets a
 // phase. kPghiFreqStep is the per-bin frequency step b_a (constant for the r2c
@@ -48,16 +48,18 @@ inline double princarg(double phase) {
 inline constexpr double kPghiTol      = 1e-6;
 inline constexpr double kPghiFreqStep = 1.0;
 
-// One node in the PGHI integration walk (Algorithm 1). `mag` is the selection
-// key: the double magnitude rounded to float, halving the node to 8 bytes
-// (float + int32_t, no padding) to cut the sort and heap memory traffic; near
-// ties below float precision resolve by the fixed rules in the walk below.
+// One entry in the PGHI integration walk's sorted key orders (Algorithm 1).
+// `mag` is the selection key: the double magnitude rounded to float, halving
+// the entry to 8 bytes (float + int32_t, no padding) to cut the sort memory
+// traffic; ties at float precision resolve by the explicit total key order
+// (descending mag, ascending bin — the producer's one sort in synthesis.cpp).
 // `bin` is the spectral bin. The previous/current role is POSITIONAL: a
 // PREVIOUS-frame significant bin (eligible to be time-stepped into the current
-// frame) lives only in the descending-sorted prev stream, and a CURRENT-frame
-// bin already assigned (eligible to frequency-spread to its neighbors) lives
-// only in the current-node max-heap. Selection is by `mag` so the loudest
-// available propagation path wins.
+// frame) lives only in the prev stream, and CURRENT-frame bins live in
+// cur_order (all K bins by rank), with the already-assigned-and-productive
+// subset (eligible to frequency-spread to their neighbors) tracked as the
+// active-frontier bitset over those ranks. Selection is by `mag` so the
+// loudest available propagation path wins.
 struct PghiHeapNode {
     float   mag;
     int32_t bin;
@@ -110,7 +112,7 @@ struct AudioSTFT {
     // give the analysis frame a centered zero-padded layout (Prusa-Holighaus):
     // the N-length window sits with its center at FFT index 0, and the
     // remaining M-N samples are zero. Doubles the bin density (bin_hz_width =
-    // sr/M) and is what makes the heap-integration phase consistent on the
+    // sr/M) and is what makes the PGHI phase integration consistent on the
     // truncated-Gaussian-like Hann lobe in the bin grid.
     int M = 0;
     int R_s = 0;
@@ -275,7 +277,7 @@ struct AudioSTFT {
     // is zero. Clearing the whole buffer each frame is cheap next to the
     // M-point FFT. Centered placement makes the per-bin phase carry no
     // group-delay ramp (expected_f == 0 in PGHI) — which is the condition
-    // under which PGHI's heap integration actually converges.
+    // under which PGHI's phase integration actually converges.
     void analyze_frame(int ch, const float* planar_ch,
                        int64_t ta, int64_t src_frames,
                        std::vector<double>& M_out,
@@ -392,7 +394,7 @@ struct AudioSTFT {
         const double abstol  = kPghiTol * peak_mag;
 
         // Prusa Alg. 1 line 3 classifies sub-tolerance ("quiet") bins before
-        // heap integration. The consumer still performs quiet-bin RNG draws so
+        // the integration walk. The consumer still performs quiet-bin RNG draws so
         // the draw stream stays in synthesis frame/bin order.
         for (int k = 0; k < K; ++k) {
             if (mag_cur[k] > abstol) {
@@ -404,9 +406,9 @@ struct AudioSTFT {
     }
 
     // Consumer-side PGHI phase integration for one frame (Prusa-Holighaus
-    // Alg. 1). The producer supplies dt_cur, df, quiet, and prev_stream (the
-    // pre-sorted previous-frame magnitude stream). The consumer keeps the seed
-    // seating, quiet-bin RNG draws, and heap propagation so RNG state and
+    // Alg. 1). The producer supplies dt_cur, df, quiet, prev_stream, and
+    // cur_order (both pre-sorted key orders). The consumer keeps the seed
+    // seating, quiet-bin RNG draws, and frontier propagation so RNG state and
     // sequential phase dependencies stay local to synthesis.
     //
     //   seed   : frame-0 or immediately-after-a-reset frame. No prior synthesis
@@ -416,17 +418,23 @@ struct AudioSTFT {
     //                      to R_s is alpha (the stretch); used as b_s =
     //                      alpha * b_a in the frequency-spread step (Prusa).
     //   prev_stream : the previous-frame candidate population, built on the
-    //                 analysis producer thread. Its construction rule
-    //                 (ascending-bin fill of {float(mag_prev[k]), k} over this
-    //                 frame's quiet mask, then a descending exact-float sort)
-    //                 is normative and lives at the producer build site in
-    //                 synthesis.cpp; this function consumes the stream as-is.
+    //                 analysis producer thread: exactly the bins this frame's
+    //                 quiet mask leaves in I, keyed on the previous frame's
+    //                 magnitudes, in the normative total key order (descending
+    //                 float mag, ties ascending bin). The construction lives
+    //                 at the producer build site in synthesis.cpp; this
+    //                 function consumes the stream as-is.
+    //   cur_order   : ALL K bins keyed on this frame's magnitudes, in the same
+    //                 total key order — rank r is the r-th loudest current
+    //                 bin. Supplies the bin-by-rank and key-by-rank lookups
+    //                 for the frontier; this function performs no sorting.
     //
-    // Scratch (size K, reused): done_scratch, heap_scratch (current-frame
-    // nodes only).
+    // Scratch (reused across frames): done_scratch (size K), rank_of_bin
+    // (size K, rebuilt each frame as cur_order's inverse permutation),
+    // frontier_leaf ((K+63)/64 words, one bit per rank) and frontier_summary
+    // (one bit per leaf word) — the two-level active-frontier bitset.
     void pghi_integrate(bool seed,
                         int64_t R_a_back, int64_t R_a_fwd,
-                        const std::vector<double>& mag_cur,
                         const std::vector<double>& ph_cur,
                         const std::vector<double>& th_prev,
                         const std::vector<double>& dt_prev,
@@ -436,7 +444,10 @@ struct AudioSTFT {
                         std::vector<double>& theta,
                         std::vector<char>&   done_scratch,
                         const std::vector<PghiHeapNode>& prev_stream,
-                        std::vector<PghiHeapNode>& heap_scratch,
+                        const std::vector<PghiHeapNode>& cur_order,
+                        std::vector<int32_t>& rank_of_bin,
+                        std::vector<uint64_t>& frontier_leaf,
+                        std::vector<uint64_t>& frontier_summary,
                         std::mt19937& rng,
                         PghiProfile* prof = nullptr) {
         const int K = M / 2 + 1;
@@ -497,35 +508,90 @@ struct AudioSTFT {
                 prof_t_quiet - prof_t_entry).count();
         }
 
-        // Algorithm 1, realized as a SPLIT-STREAM walk. The conceptual max-heap
-        // holds two node populations with different lifecycles: every
-        // previous-frame candidate (keyed on mag_prev) is known up front, while
-        // current-frame candidates (keyed on mag_cur) arrive dynamically as
-        // bins complete. So the previous-frame population is ONE descending
-        // sort walked by index `p`, and heap_scratch holds only current-frame
-        // nodes. Each selection takes max(prev stream head, current heap top)
-        // by exact float comparison: the maximum over a partition equals the
-        // global maximum, so for distinct magnitudes the assignment sequence is
-        // identical, pop for pop, to a single combined heap. The done-skip
-        // advance over the prev stream is exactly the combined heap's discard
-        // pops (a previous-frame node whose bin was already assigned via a
-        // neighbor spread).
-        auto cmp = [](const PghiHeapNode& a, const PghiHeapNode& b) {
-            return a.mag < b.mag;                                     // max-heap on mag
+        // Algorithm 1, realized as a RANKED ACTIVE-FRONTIER walk over one
+        // producer-sorted total key order. The conceptual max-heap holds two
+        // node populations with different lifecycles: every previous-frame
+        // candidate (keyed on mag_prev) is known up front — ONE descending
+        // stream walked by index `p` — and current-frame candidates (keyed on
+        // mag_cur) arrive dynamically as bins complete. But every current key
+        // is float(mag_cur[bin]), fully known before the walk, so the current
+        // population needs no heap: cur_order ranks all K bins under the
+        // explicit total key order (descending float mag, ties ascending
+        // bin), and a bitset over those ranks tracks the ACTIVE set — a bin
+        // is active iff done AND significant AND it has an undone neighbor
+        // (undone implies significant: quiet bins are done from the start).
+        // That is exactly the PRODUCTIVE subset of the old current-node
+        // heap's live nodes. Selecting the minimum active rank (= maximum
+        // active magnitude) and assigning all its undone neighbors at once is
+        // the old pop's semantics; a bin whose neighbors were consumed by
+        // others deactivates via the neighbor updates and is never selected —
+        // the old no-op pop, semantically inert in Algorithm 1 (a coordinate
+        // with no neighbor in I cannot execute the spread), deleted. For
+        // distinct float keys the assignment sequence is identical, write for
+        // write, to a single combined heap's; equal keys resolve by the
+        // explicit total order (cross-partition ties still prev-first)
+        // instead of the former sort/heap layout order.
+        const int ranks = static_cast<int>(cur_order.size());
+        for (int r = 0; r < ranks; ++r)
+            rank_of_bin[cur_order[r].bin] = r;
+        std::fill(frontier_leaf.begin(), frontier_leaf.end(), 0ull);
+        std::fill(frontier_summary.begin(), frontier_summary.end(), 0ull);
+
+        // Recompute bin b's frontier bit after a done transition in its
+        // neighborhood. The quiet exclusion is load-bearing: quiet bins are
+        // done from the start but were never current-node candidates and must
+        // never spread. Clearing an unset bit is a harmless no-op, so callers
+        // pass the complete b-1/b/b+1 neighborhood of every newly done bin
+        // without filtering; the summary bit clears only when its whole leaf
+        // word empties.
+        auto update_frontier = [&](int b) {
+            if (b < 0 || b >= K) return;
+            const bool active =
+                done_scratch[b] == 1 && quiet[b] != 1 &&
+                ((b > 0 && !done_scratch[b - 1]) ||
+                 (b < K - 1 && !done_scratch[b + 1]));
+            const int r = rank_of_bin[b];
+            const size_t word = static_cast<size_t>(r) >> 6;
+            const uint64_t bit = 1ull << (r & 63);
+            if (active) {
+                frontier_leaf[word] |= bit;
+                frontier_summary[word >> 6] |= 1ull << (word & 63);
+            } else {
+                frontier_leaf[word] &= ~bit;
+                if (frontier_leaf[word] == 0)
+                    frontier_summary[word >> 6] &= ~(1ull << (word & 63));
+            }
         };
+        // Minimum active rank (= maximum active current magnitude), or -1
+        // when the frontier is empty. Two-level scan: the first set summary
+        // bit names the first nonzero leaf word, and ctz inside that word
+        // names the first set rank bit.
+        auto min_active_rank = [&]() -> int {
+            for (size_t sw = 0; sw < frontier_summary.size(); ++sw) {
+                if (frontier_summary[sw] == 0) continue;
+                const size_t word =
+                    (sw << 6) +
+                    static_cast<size_t>(__builtin_ctzll(frontier_summary[sw]));
+                return static_cast<int>(
+                    (word << 6) +
+                    static_cast<size_t>(__builtin_ctzll(frontier_leaf[word])));
+            }
+            return -1;
+        };
+
         // prev_stream arrives pre-built and pre-sorted from the analysis
-        // producer thread: exactly the bins this frame's quiet mask leaves in
-        // I, keyed on the previous frame's magnitudes, descending. The drain
-        // below walks it read-only by index `p`.
+        // producer thread; the drain below walks it read-only by index `p`.
+        // The frontier starts empty — the only done bins are quiet ones,
+        // which the activation predicate excludes — exactly the old heap's
+        // empty start, so the first selection is always a prev take.
         size_t p = 0;
-        heap_scratch.clear();
         // Drain while I is nonempty (Algorithm 1, tracked by `remaining`).
-        // Entries still in prev_stream and nodes still in heap_scratch at exit
-        // are provably inert — a previous-frame entry finds its bin already
-        // done, and a current-frame node finds no undone significant neighbor —
-        // so none can write theta; heap_scratch's clear() at the top of the
-        // next call discards them, and the caller replaces prev_stream with
-        // the next frame's producer-built stream.
+        // Entries still in prev_stream at exit are provably inert — a
+        // previous-frame entry finds its bin already done — and the frontier
+        // is empty at exit (no undone bin remains, so no bin has an undone
+        // neighbor); the bitsets are rebuilt from zero next call, and the
+        // caller replaces prev_stream and cur_order with the next frame's
+        // producer-built orders.
         while (remaining != 0) {
             // Skip previous-frame entries whose bin is already assigned: these
             // are exactly the discard pops the combined heap performed.
@@ -538,26 +604,25 @@ struct AudioSTFT {
                 }
             }
             const bool have_prev = p < prev_stream.size();
-            const bool have_cur  = !heap_scratch.empty();
+            const int  mar = min_active_rank();
             // Defensive only: every bin in I has its previous-frame entry in
             // the stream, so both sources cannot exhaust while remaining > 0.
             // If breached, exit with the unassigned bins' theta stale — the
             // same outcome the combined heap's !empty() conjunct produced.
-            if (!have_prev && !have_cur) break;
-            // Cross-partition ties (prev-stream head vs current-heap top) go to
-            // the previous-frame stream by the fixed rule !(prev < cur). This
-            // pins ONLY the cross-partition order; equal keys WITHIN one
-            // population — several equal-mag prev entries in the sorted stream,
-            // or equal-mag current nodes in the heap — are taken in that
-            // population's own sort/heap layout order, deterministic for a fixed
-            // binary but not a defined total key order. The keys are floats, so
-            // magnitudes closer than float precision (denormal-small doubles
-            // that round to 0.0f included) collapse to exact ties resolved the
-            // same way; on distinct float keys the assignment sequence matches a
-            // single combined heap pop for pop.
+            if (!have_prev && mar < 0) break;
+            // Cross-partition ties (prev-stream head vs frontier maximum) go
+            // to the previous-frame stream by the fixed rule !(prev < cur).
+            // Within each population equal keys follow the explicit total
+            // order — several equal-mag prev entries are taken in ascending
+            // bin order (the stream's sort), and equal-mag frontier bins
+            // likewise (rank order). The keys are floats, so magnitudes
+            // closer than float precision (denormal-small doubles that round
+            // to 0.0f included) collapse to exact ties resolved the same way;
+            // on distinct float keys the assignment sequence matches a single
+            // combined heap pop for pop.
             const bool take_prev = have_prev &&
-                (!have_cur ||
-                 !(prev_stream[p].mag < heap_scratch.front().mag));
+                (mar < 0 ||
+                 !(prev_stream[p].mag < cur_order[mar].mag));
             if (prof) prof->pops_total += 1;
             if (take_prev) {
                 // Previous-frame bin -> trapezoidal time-step into frame n.
@@ -566,19 +631,18 @@ struct AudioSTFT {
                 theta[m] = th_prev[m] + half_Rs * (dt_prev[m] + dt_cur[m]);
                 done_scratch[m] = 1;
                 --remaining;
-                heap_scratch.push_back({static_cast<float>(mag_cur[m]), m});
-                std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
+                update_frontier(m - 1);
+                update_frontier(m);
+                update_frontier(m + 1);
             } else {
-                std::pop_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
-                const PghiHeapNode node = heap_scratch.back();
-                heap_scratch.pop_back();
-                const int m = node.bin;
-                // Current-frame bin -> integrate the frequency gradient (scaled
+                const int m = cur_order[mar].bin;
+                // Frontier bin -> integrate the frequency gradient (scaled
                 // by b_s = alpha * b_a) to its still-unassigned significant
                 // neighbors (trapezoidal in df). Centered convention -> no
                 // expected_f offset; the gradient is the whole step.
-                // Profiling flag: a pop whose neighbors are all out of range,
-                // out of I, or already done writes no theta (a no-op pop).
+                // Profiling flag: an active bin has an undone neighbor by
+                // definition, so a selection that writes no theta indicates a
+                // frontier-update defect (current_noop_pops stays zero).
                 bool assigned_neighbor = false;
                 for (int dir = 0; dir < 2; ++dir) {
                     const int nb = (dir == 0) ? m + 1 : m - 1;
@@ -588,10 +652,16 @@ struct AudioSTFT {
                     theta[nb] = theta[m] + ((nb == m + 1) ? step : -step);
                     done_scratch[nb] = 1;
                     --remaining;
-                    heap_scratch.push_back({static_cast<float>(mag_cur[nb]), nb});
-                    std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
+                    update_frontier(nb - 1);
+                    update_frontier(nb);
+                    update_frontier(nb + 1);
                     if (prof) assigned_neighbor = true;
                 }
+                // m has spent its undone neighbors and deactivates here;
+                // partially redundant with the nb updates when nb == m +- 1,
+                // but update_frontier is idempotent — keep the simple
+                // complete update set.
+                update_frontier(m);
                 if (prof && !assigned_neighbor) prof->current_noop_pops += 1;
             }
         }

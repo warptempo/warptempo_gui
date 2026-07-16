@@ -89,11 +89,15 @@ void Synthesis::synthesize_full(
             std::vector<double> dt;
             std::vector<double> df;
             std::vector<char> quiet;
-            // Producer-built PGHI previous-magnitude stream for the synthesis
-            // frame this slot's prep serves (see the build site in the
-            // producer loop). Reserved to K up front and recycled by swap in
-            // pop(), so no steady-state reallocation.
+            // Producer-built PGHI key orders for the synthesis frame this
+            // slot's prep serves (see the build site in the producer loop):
+            // prev_stream is the previous-frame magnitude stream (filtered to
+            // this slot's significance set), cur_order the full sorted
+            // current-frame key order (the consumer's frontier rank order).
+            // Both reserved to K up front and recycled by swap in pop(), so
+            // no steady-state reallocation.
             std::vector<PghiHeapNode> prev_stream;
+            std::vector<PghiHeapNode> cur_order;
         };
 
         AnalysisRing(int depth, int k)
@@ -105,6 +109,7 @@ void Synthesis::synthesize_full(
                 slot.df.resize(static_cast<size_t>(k));
                 slot.quiet.resize(static_cast<size_t>(k));
                 slot.prev_stream.reserve(static_cast<size_t>(k));
+                slot.cur_order.reserve(static_cast<size_t>(k));
             }
         }
 
@@ -140,7 +145,8 @@ void Synthesis::synthesize_full(
                  std::vector<double>& dt,
                  std::vector<double>& df,
                  std::vector<char>& quiet,
-                 std::vector<PghiHeapNode>& prev_stream) {
+                 std::vector<PghiHeapNode>& prev_stream,
+                 std::vector<PghiHeapNode>& cur_order) {
             std::unique_lock<std::mutex> lock(mutex_);
             not_empty_.wait(lock, [&] { return abort_ || count_ > 0; });
             if (abort_) return false;
@@ -151,6 +157,7 @@ void Synthesis::synthesize_full(
             slot.df.swap(df);
             slot.quiet.swap(quiet);
             slot.prev_stream.swap(prev_stream);
+            slot.cur_order.swap(cur_order);
             head_ = (head_ + 1) % slots_.size();
             --count_;
             lock.unlock();
@@ -198,9 +205,9 @@ void Synthesis::synthesize_full(
         // --- One-deep consumer lookahead state ------------------------------
         // The producer analyzes frames in order, while the consumer keeps the
         // current frame plus one analyzed lookahead. Producer-side PGHI prep
-        // and the sorted previous-magnitude stream ride with the lookahead
-        // slot: slot 0 has no usable prep, and slot f+1 carries prep and
-        // stream for synthesis frame f. This is INTERNAL pipeline
+        // and the sorted key orders (prev_stream, cur_order) ride with the
+        // lookahead slot: slot 0 has no usable prep, and slot f+1 carries
+        // prep and orders for synthesis frame f. This is INTERNAL pipeline
         // latency only: synthesis frame m still OLA-adds into output position
         // m*R_s. All inter-frame phase state is held in these per-channel
         // buffers; the PGHI helpers read them directly.
@@ -209,13 +216,19 @@ void Synthesis::synthesize_full(
         std::vector<double> th_prev(K2,0.0), dt_prev(K2,0.0);
         std::vector<double> dt_in(K2), df_in(K2);
         std::vector<char>   quiet_in(K2);
-        // Per-channel synthesis scratch. prev_stream is not scratch: it
-        // receives the producer-built sorted previous-magnitude stream through
-        // the ring pop's swap, alongside dt_in/df_in/quiet_in.
+        // Per-channel synthesis scratch. prev_stream and cur_order are not
+        // scratch: they receive the producer-built sorted key orders through
+        // the ring pop's swap, alongside dt_in/df_in/quiet_in. rank_of_bin
+        // and the two frontier bitset levels are pghi_integrate's ranked
+        // active-frontier scratch, rebuilt each frame (capacity reused).
         std::vector<double> theta(K2);
         std::vector<char>   done_scratch(K2);
         std::vector<PghiHeapNode> prev_stream; prev_stream.reserve(K2);
-        std::vector<PghiHeapNode> heap_scratch; heap_scratch.reserve(K2);
+        std::vector<PghiHeapNode> cur_order;   cur_order.reserve(K2);
+        std::vector<int32_t>  rank_of_bin(K2);
+        const size_t frontier_words = (static_cast<size_t>(K2) + 63) / 64;
+        std::vector<uint64_t> frontier_leaf(frontier_words);
+        std::vector<uint64_t> frontier_summary((frontier_words + 63) / 64);
         // Per-channel quiet-bin RNG. Each stream is consumed only by its own
         // channel, in bin order, so the draw sequence is identical whether
         // channels run serially or on separate threads — which is
@@ -269,6 +282,21 @@ void Synthesis::synthesize_full(
             analysis_thread = std::thread([&, ch, psrc] {
                 std::vector<double> ph_prev_prod(K2,0.0), ph_cur_prod(K2,0.0), ph_nxt_prod(K2,0.0);
                 std::vector<double> mag_prev_prod(K2,0.0), mag_cur_prod(K2,0.0), mag_nxt_prod(K2,0.0);
+                // Two-deep rotation of full sorted key orders: each iteration
+                // aidx >= 1 builds order_cur for analysis(aidx-1) and the
+                // end-of-iteration swap retains it one iteration as
+                // order_prev. Seed order_cur with analysis(-1)'s order — the
+                // zero magnitude vector (mag_cur_prod's zero initialization)
+                // under the total key order: all keys tie at 0.0f, so bins
+                // ascending. Iteration 0's rotation hands it to iteration 1
+                // as order_prev; frame 0 always seeds, so the stream filtered
+                // from it is never drained, but the shipped value stays
+                // well-defined.
+                std::vector<PghiHeapNode> order_cur, order_prev;
+                order_cur.reserve(static_cast<size_t>(K2));
+                order_prev.reserve(static_cast<size_t>(K2));
+                for (int k = 0; k < K2; ++k)
+                    order_cur.push_back({0.0f, k});
                 for (int aidx = 0; aidx <= wend; ++aidx) {
                     if (analysis_ring.abort_requested() || cancel_requested()) {
                         analysis_ring.request_abort();
@@ -282,8 +310,9 @@ void Synthesis::synthesize_full(
                     slot->phi = ph_nxt_prod;
                     // Slot 0 carries analysis(0) only; prep(0) is delivered
                     // with slot 1, so the consumer never reads slot 0's prep —
-                    // its prev_stream ships empty.
+                    // its prev_stream and cur_order ship empty.
                     slot->prev_stream.clear();
+                    slot->cur_order.clear();
                     if (aidx >= 1) {
                         const int f = aidx - 1;
                         const int64_t ta_back = ta_for(f);
@@ -293,37 +322,50 @@ void Synthesis::synthesize_full(
                                        mag_prev_prod, mag_cur_prod,
                                        ph_prev_prod, ph_cur_prod, ph_nxt_prod,
                                        slot->dt, slot->df, slot->quiet);
-                        // PGHI previous-magnitude stream for synthesis frame f,
-                        // built here so the fill+sort overlaps the consumer's
-                        // drain. Construction rule (normative — pghi_integrate
-                        // consumes the stream as-is): ascending-bin fill of
-                        // {float(mag), bin} over frame f-1's magnitudes
-                        // (mag_prev_prod, exactly the consumer's mag_prev at
-                        // frame f) for every bin this slot's quiet mask leaves
-                        // in I, then a descending exact-float sort. Built for
-                        // every frame, including frames the consumer will seed
-                        // (frame 0, phase resets — consumer knowledge the
-                        // producer doesn't have): a seed frame's stream is
+                        // PGHI key orders for synthesis frame f, built here so
+                        // the fill+sort overlaps the consumer's drain. ONE full
+                        // sort per iteration of frame f's magnitudes
+                        // (mag_cur_prod) into order_cur under the normative
+                        // TOTAL key order — descending float(mag), ties
+                        // ascending bin; this comparator is the single sort in
+                        // the pipeline (pghi_integrate consumes both orders
+                        // as-is and never sorts). The one order serves twice:
+                        // shipped whole as this slot's cur_order (the
+                        // consumer's frontier rank order for frame f), and
+                        // retained one iteration as order_prev, so THIS slot's
+                        // prev_stream is the previous iteration's retained
+                        // order — frame f-1's magnitudes, exactly the
+                        // consumer's mag_prev at frame f — filtered by a
+                        // linear pass to the bins this slot's quiet mask
+                        // leaves in I, equal keys in the explicit total order.
+                        // Built for every frame, including frames the consumer
+                        // will seed (frame 0, phase resets — consumer knowledge
+                        // the producer doesn't have): a seed frame's orders are
                         // simply unused, an accepted harmless waste. clear() +
-                        // push_back into the reserved slot vector reuses its
+                        // push_back/assign into the reserved vectors reuses
                         // capacity; building before finish_push keeps the slot
                         // publication order — nothing half-built is ever
                         // consumer-visible.
                         prof_clock::time_point st{};
                         if (prof) st = prof_clock::now();
-                        for (int k = 0; k < K2; ++k) {
-                            if (slot->quiet[k] != 1) {
-                                slot->prev_stream.push_back(
-                                    {static_cast<float>(mag_prev_prod[k]), k});
-                            }
-                        }
-                        std::sort(slot->prev_stream.begin(), slot->prev_stream.end(),
+                        order_cur.clear();
+                        for (int k = 0; k < K2; ++k)
+                            order_cur.push_back(
+                                {static_cast<float>(mag_cur_prod[k]), k});
+                        std::sort(order_cur.begin(), order_cur.end(),
                                   [](const PghiHeapNode& a, const PghiHeapNode& b) {
-                                      return a.mag > b.mag;      // descending, exact float compare
+                                      return a.mag != b.mag ? a.mag > b.mag
+                                                            : a.bin < b.bin;
                                   });
+                        slot->cur_order = order_cur;
+                        for (const PghiHeapNode& n : order_prev) {
+                            if (slot->quiet[n.bin] != 1)
+                                slot->prev_stream.push_back(n);
+                        }
                         // sort_s is producer-owned: the single writer of this
                         // field (pghi_integrate writes the others), read after
-                        // the joins.
+                        // the joins. It covers the whole order build — fill,
+                        // sort, cur_order copy, prev_stream filter.
                         if (prof) cp.pghi.sort_s += prof_secs(prof_clock::now() - st);
                     }
                     if (!analysis_ring.finish_push()) return;
@@ -331,6 +373,11 @@ void Synthesis::synthesize_full(
                     ph_cur_prod.swap(ph_nxt_prod);
                     mag_prev_prod.swap(mag_cur_prod);
                     mag_cur_prod.swap(mag_nxt_prod);
+                    // Retain this iteration's order for the next slot's
+                    // prev_stream (at iteration 0 this hands over the seeded
+                    // zero-key order; the empty ex-order_prev left in
+                    // order_cur is cleared before the next build).
+                    order_prev.swap(order_cur);
                 }
             });
         }
@@ -340,8 +387,9 @@ void Synthesis::synthesize_full(
                                 std::vector<double>& dt,
                                 std::vector<double>& df,
                                 std::vector<char>& quiet,
-                                std::vector<PghiHeapNode>& stream) -> bool {
-            return analysis_ring.pop(md, pd, dt, df, quiet, stream);
+                                std::vector<PghiHeapNode>& stream,
+                                std::vector<PghiHeapNode>& order) -> bool {
+            return analysis_ring.pop(md, pd, dt, df, quiet, stream, order);
         };
 
         // Prime: analysis frames 0 and 1 (1 is the analysis-only frame when
@@ -353,13 +401,13 @@ void Synthesis::synthesize_full(
             prof_clock::time_point pt{};
             if (prof) pt = prof_clock::now();
             if (!pop_analysis(mag_cur, ph_cur, dt_in, df_in, quiet_in,
-                              prev_stream)) {
+                              prev_stream, cur_order)) {
                 ch_cancelled[ch] = 1;
                 return;
             }
             if (prof) { cp.analysis_wait_s += prof_secs(prof_clock::now() - pt); pt = prof_clock::now(); }
             if (!pop_analysis(mag_nxt, ph_nxt, dt_in, df_in, quiet_in,
-                              prev_stream)) {
+                              prev_stream, cur_order)) {
                 ch_cancelled[ch] = 1;
                 return;
             }
@@ -420,6 +468,7 @@ void Synthesis::synthesize_full(
             // prep(frame) delivered with the frame+1 slot, prev_stream = the
             // producer-built sorted stream for `frame` (analysis(frame-1)
             // magnitudes filtered by prep(frame)'s quiet mask, from the same
+            // slot), cur_order = the full sorted key order of mag_cur (same
             // slot), and ph_prev/mag_prev = analysis(frame-1) (zero at frame
             // 0; consumer-side those two are swap-recycling storage only).
             // R_a_actual is the integer source hop this frame actually
@@ -436,14 +485,15 @@ void Synthesis::synthesize_full(
             const int64_t R_a_actual = (frame_idx > 0) ? (ta_cur - ta_prev) : 0;
             const int64_t R_a_fwd    = ta_nxt - ta_cur;
             const bool    frame0     = (frame_idx == 0);
-            const bool    seed_heap  = frame0 || phase_reset_fired;
+            const bool    seed_frame = frame0 || phase_reset_fired;
 
             prof_clock::time_point t{};
             if (prof) { cp.frames += 1; t = prof_clock::now(); }
-            stft.pghi_integrate(seed_heap, R_a_actual, R_a_fwd,
-                                mag_cur, ph_cur,
+            stft.pghi_integrate(seed_frame, R_a_actual, R_a_fwd,
+                                ph_cur,
                                 th_prev, dt_prev, dt_in, df_in, quiet_in,
-                                theta, done_scratch, prev_stream, heap_scratch,
+                                theta, done_scratch, prev_stream, cur_order,
+                                rank_of_bin, frontier_leaf, frontier_summary,
                                 rng, prof ? &cp.pghi : nullptr);
             if (prof) cp.pghi_s += prof_secs(prof_clock::now() - t);
             // dt_in (this frame's dt) becomes the next frame's dt_prev.
@@ -479,7 +529,8 @@ void Synthesis::synthesize_full(
             // PGHI fully overwrites theta before reading it next frame, so the
             // stale th_prev the swap leaves in theta is dead on arrival);
             // ph_cur -> ph_prev and ph_nxt -> ph_cur (mag likewise). After this,
-            // ph_prev holds frame_idx's analysis phase, ready for the next heap call.
+            // ph_prev holds frame_idx's analysis phase, ready for the next
+            // pghi_integrate call.
             th_prev.swap(theta);
             ph_prev.swap(ph_cur);
             ph_cur.swap(ph_nxt);
@@ -523,7 +574,7 @@ void Synthesis::synthesize_full(
                 ta_nxt  = ta_for(frame_idx + 2);
                 if (prof) t = prof_clock::now();
                 if (!pop_analysis(mag_nxt, ph_nxt, dt_in, df_in, quiet_in,
-                                  prev_stream)) {
+                                  prev_stream, cur_order)) {
                     ch_cancelled[ch] = 1;
                     return;
                 }

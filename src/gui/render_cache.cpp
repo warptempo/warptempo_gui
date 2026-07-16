@@ -163,8 +163,14 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // to exact ties — resolved cross-partition by the prev-first rule and within a
 // population by its layout order, a different arrangement than v12's double keys
 // (denormal-small magnitudes round to 0.0f and tie the same way) — prior
-// artifacts must re-render rather than pose as current renders.
-constexpr uint32_t kFingerprintVersion = 13;
+// artifacts must re-render rather than pose as current renders. Version 14:
+// the PGHI current-node heap is replaced by a ranked active-frontier bitset
+// over one explicit total key order (descending float magnitude, ties
+// ascending bin); the assignment sequence is identical for distinct keys, but
+// equal-key order — previously sort/heap layout order — is now the explicit
+// total order, so tie-bearing renders change bytes and prior artifacts must
+// re-render rather than pose as current renders.
+constexpr uint32_t kFingerprintVersion = 14;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the

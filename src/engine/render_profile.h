@@ -31,20 +31,24 @@ struct PghiProfile {
     long long frames = 0;            // one per pghi_integrate call
     long long seed_frames = 0;       // calls that take the seed early-return
     long long quiet_bins = 0;        // bins assigned a random synthesis phase
-    long long significant_bins = 0;  // bins entering I (heap-assigned)
+    long long significant_bins = 0;  // bins entering I (walk-assigned)
     long long pops_total = 0;        // drain-loop selection events: prev-stream
                                      // takes + prev-stream done-skips +
-                                     // current-heap pops (the same magnitude a
-                                     // single combined heap's pops would be)
+                                     // frontier takes (a conceptual combined
+                                     // heap's pops minus its no-op pops)
     long long prev_done_skips = 0;   // prev-stream entries skipped because their
                                      // bin was already assigned (the analogue of
                                      // a combined heap's discarded pops)
-    long long current_noop_pops = 0; // current-heap pops that spread to neither
-                                     // neighbor (no theta write); together with
-                                     // prev_done_skips this bounds the total
-                                     // no-write selection work
+    long long current_noop_pops = 0; // frontier selections that spread to
+                                     // neither neighbor (no theta write) —
+                                     // structurally zero: an active frontier
+                                     // bin has an undone neighbor by
+                                     // definition, so the measured zero is the
+                                     // frontier's proof and a nonzero count
+                                     // indicates a frontier-update defect
     double quiet_s = 0.0;            // quiet-bin RNG assignment loop
-    double sort_s = 0.0;             // prev-stream fill + std::sort, on the
+    double sort_s = 0.0;             // key-order fill + std::sort + cur_order
+                                     // copy + prev-stream filter, on the
                                      // analysis producer thread — overlaps the
                                      // consumer's drain rather than adding to
                                      // pghi serial time
