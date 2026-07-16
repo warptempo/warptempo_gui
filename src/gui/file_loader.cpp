@@ -148,9 +148,11 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // Reset playback bookkeeping; the device is brought up after markers
     // are parsed so the initial playhead has the final trim-begin.
     app.playback_speed = 0.7f;
-    // Mirror for font_size: reset to the default before the .settings parse
-    // below, which overwrites it when the key is present (absent key means
-    // 11.0). Applied to the renderer after the parse, beside set_speed.
+    // Mirror for font_size: construction-state default before the .settings
+    // parse below. Every key is required by the schema, so the parse always
+    // assigns font_size; this initializer only covers the no-.settings /
+    // first-open path. Applied to the renderer after the parse, beside
+    // set_speed.
     app.font_size      = 11.0;
 
     // Companion files: discover paths, create <basename>.warpmarkers,
@@ -204,8 +206,11 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.scroll_drag = ScrollDragState{};
     // Project trim is not cleared implicitly by the fresh-ViewState assignment
     // (it lives on AppState now). Reset it explicitly before the initial-playhead
-    // read so an absent trim key at launch leaves trim unset (playhead at
-    // sample 0, not a leftover begin from the base-state struct).
+    // read: this is construction-state for the no-.settings / first-open path.
+    // A .settings always carries the four trim keys (unset is the `-1` value, not
+    // an absent key), so its parse always assigns; the reset only keeps a
+    // launch with no .settings from reading a leftover begin out of the
+    // base-state struct (playhead at sample 0).
     app.trim.has_begin      = false;
     app.trim.has_end        = false;
     app.trim.begin_frame  = 0;

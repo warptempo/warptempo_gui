@@ -10,20 +10,21 @@
 #include <string>
 
 // Whole-file strict schema for the `.settings` sidecar — the single owner
-// of key membership, duplicate detection, per-key value grammar, and the
-// required/optional split, run by BOTH products (GuiFileLoader::load_file
-// and warptempo_cli) before any value is applied. A sidecar set is loadable
-// in the GUI and the CLI, or in neither.
+// of key membership, duplicate detection, and per-key value grammar over an
+// all-required canonical key set, run by BOTH products
+// (GuiFileLoader::load_file and warptempo_cli) before any value is applied.
+// A sidecar set is loadable in the GUI and the CLI, or in neither.
 //
 // The file is program-written (Ctrl+S / the first-open template), so every
 // violation is adversarial under the two-category rule and load-fatal with
-// the FIRST error only: an unknown key, a keyless non-comment line, a
-// duplicate of ANY key, a malformed or out-of-vocabulary value (an
-// off-preset playback_speed included), and a missing canonical key all
-// refuse. Lexing is byte-exact: each line is split at its first '=' verbatim,
-// with no BOM, blank-line, comment, or whitespace tolerance (a product writer
-// emits none of those). EVERY canonical key is required: the program writes
-// all of them, so a file short of any one is hand-damaged and refuses.
+// the FIRST error only: an unknown key, a keyless line, a duplicate of ANY
+// key, a malformed or out-of-vocabulary value (an off-preset playback_speed
+// included), and a missing canonical key all refuse. Lexing is byte-exact:
+// each line is split at its first '=' verbatim, with no BOM, blank-line,
+// comment, or whitespace tolerance (a product writer emits none of those,
+// so a '#' line is not a comment — it takes the keyless-line refusal like any
+// other). There are no optional keys: the program writes EVERY canonical key,
+// so a file short of any one is hand-damaged and refuses.
 //
 // This schema owns the zoom-level range too: a zoom outside
 // kFitFileLevel..kMaxNumericLevel is refused here in both products. What

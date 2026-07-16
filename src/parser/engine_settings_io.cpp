@@ -90,9 +90,11 @@ bool validate_engine_setting(const std::string& key,
         return true;
     }
     if (key == "bpm") {
-        // Free-text provenance descriptor on one line. Accepted verbatim
-        // (caller already trims the line); empty is the canonical unset
-        // form (`bpm=`).
+        // Free-text provenance descriptor on one line, taken verbatim. The
+        // file boundary (scan_settings_file) is byte-exact, so a
+        // product-written value has no surrounding whitespace; the editor
+        // commit still trims its typed line (interactive latitude). Empty is
+        // the canonical unset form (`bpm=`).
         out.bpm = value;
         return true;
     }

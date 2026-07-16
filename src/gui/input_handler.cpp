@@ -1059,7 +1059,29 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         const int64_t other_old_ph = other.playhead_cursor_sample;
         const int64_t other_new_ph = clamp_dest(xlate(other_old_ph));
         other.playhead_cursor_sample = other_new_ph;
-        other.viewport_start_sample += (other_new_ph - other_old_ph);
+        // Shift the stored inactive viewport by the same playhead delta, but
+        // keep the result a load-shaped band: non-negative and overflow-safe.
+        // The stored viewport is any canonical int64 (settings editor / loaded
+        // file), so the raw signed add can overflow, and a domain-contracting
+        // flip (a legal playhead far right of its viewport under a faster map)
+        // can drive an unchecked += below zero — either would let a normal
+        // gesture plus Ctrl+S serialize an int64 the load grammar refuses.
+        // The subtraction cannot overflow (other_new_ph is clamp_dest output in
+        // [0, dest_total - 1] and other_old_ph is a non-negative int64, so the
+        // difference lies in (INT64_MIN, INT64_MAX]); the add saturates toward
+        // the delta's sign, then max(0, .) floors it. No band-aware upper/domain
+        // clamp is applied — stored bands are load-shaped only (a slowing map
+        // legitimately persists positions past the source total), and the
+        // Ctrl+Tab restore's runtime clamp owns the domain fit exactly as it
+        // does for values read from disk. Non-negative + overflow-safe is the
+        // writable-implies-loadable bar.
+        const int64_t delta = other_new_ph - other_old_ph;
+        int64_t moved;
+        if (__builtin_add_overflow(other.viewport_start_sample, delta,
+                                   &moved)) {
+            moved = delta >= 0 ? INT64_MAX : 0;
+        }
+        other.viewport_start_sample = std::max<int64_t>(0, moved);
     }
 
     // Domain is flipped — current_samples_per_pixel below reads the

@@ -48,10 +48,10 @@ std::string format_default_settings_template(const std::string& stem);
 // in-file descriptor list. Engine keys are formatted from the typed
 // EngineSettings parameter via per-field switch; typed scalars come from
 // the explicit parameters; all four per-tab trim lines (tab_a/tab_b begin/
-// end) are always emitted, blank when the corresponding trim flag is unset
-// on tab_a.trim / tab_b.trim — the audio_player convention. Matches the
-// `.warpmarkers` write pattern (tmp → fsync → rename). Best-effort: failure
-// is logged by the caller.
+// end) are always emitted, `-1` when the corresponding trim flag is unset
+// on tab_a.trim / tab_b.trim (the load grammar reads -1 back as unset).
+// Matches the `.warpmarkers` write pattern (tmp → fsync → rename).
+// Best-effort: failure is logged by the caller.
 bool write_settings_file(
     const std::string& path,
     const ViewState& tab_a,
@@ -71,7 +71,7 @@ bool write_settings_file(
 // the active tab). Shared with the writer through format_nonengine_value so
 // recall and save can never diverge. Returns std::nullopt for engine keys (the
 // settings editor falls back to format_engine_setting_value) and for unknown
-// keys; an unset optional trim bound recalls as the empty string. Used by the
-// settings prompt's Tab autocomplete.
+// keys; an unset trim bound recalls as the literal `-1` (the same unset
+// spelling the writer emits). Used by the settings prompt's Tab autocomplete.
 std::optional<std::string> recall_gui_setting_value(const AppState& app,
                                                     const std::string& key);
