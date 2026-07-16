@@ -255,12 +255,10 @@ std::pair<long long, long long> compute_trim_samples(
     long long end   = total_frames;
 
     if (a.trim.has_begin) {
-        begin = static_cast<long long>(
-            std::nearbyint(a.trim.begin_frame));
+        begin = a.trim.begin_frame;
     }
     if (a.trim.has_end) {
-        end = static_cast<long long>(
-            std::nearbyint(a.trim.end_frame));
+        end = a.trim.end_frame;
     }
     if (begin < 0) begin = 0;
     if (begin > total_frames) begin = total_frames;

@@ -31,13 +31,11 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
         int64_t begin_tgt = 0;
         int64_t end_tgt   = live_total;
         if (app.trim.has_begin) {
-            const int64_t begin_src = static_cast<int64_t>(
-                std::nearbyint(app.trim.begin_frame));
+            const int64_t begin_src = app.trim.begin_frame;
             begin_tgt = source_frame_to_active_domain(app, audio, begin_src);
         }
         if (app.trim.has_end) {
-            const int64_t end_src = static_cast<int64_t>(
-                std::nearbyint(app.trim.end_frame));
+            const int64_t end_src = app.trim.end_frame;
             end_tgt = source_frame_to_active_domain(app, audio, end_src);
         }
         // Per-side clamp to the deformed timeline only — no ordering clamp:

@@ -727,9 +727,3 @@ void init_monospace_grid_metrics(cairo_t* cr);
 double flag_pending_text_left_x(
     const AppState& app, const GuiAudio& audio,
     int marker_idx);
-
-// Diagnostic (F-flaggeom follow-up): when true, on_redraw strokes the flag
-// hit rectangles — recomputed via the SAME path hit_test_flag uses — over the
-// painted chips, so any paint-vs-hit coordinate divergence is visible. Off in
-// normal builds. Remove once the edge-alignment diagnosis is complete.
-constexpr bool kDebugHitRects = false;

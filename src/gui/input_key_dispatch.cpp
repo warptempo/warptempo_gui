@@ -582,6 +582,12 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         const std::filesystem::path batch_folder =
             queue_root /
             (std::to_string(next_index) + "_" + command_tag);
+        // The batch folder is created BEFORE requests are built here, the
+        // reverse of the bpm sweep (which creates AFTER building): the
+        // iteration sweep's delta enumeration is total, so no cell can be
+        // rejected and the folder can never end up empty. The bpm sweep's
+        // cells can be bracket-rejected, so it creates after building to
+        // avoid leaving an empty folder behind.
         std::filesystem::create_directories(batch_folder, ec);
         if (ec) {
             std::fprintf(stderr,

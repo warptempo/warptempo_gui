@@ -545,8 +545,8 @@ struct AppState {
     // failure or before the first audio load.
     GuiWarpMarkers  warpmarkers;
 
-    // Parsed phase reset markers. Authored by the GUI but not
-    // yet consumed by the render pipeline.
+    // Parsed phase reset markers. Authored by the GUI and compiled by the
+    // parser (derive_phase_reset_frame_map) into engine input on every render.
     GuiPhaseResetMarkers phaseresetmarkers;
 
     // Multi-selection set + focus. `last_selected_marker` is either -1 or

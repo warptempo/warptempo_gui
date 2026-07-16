@@ -119,7 +119,11 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
 }
 
 // Toggle the disabled flag on each selected phase reset. Unconditional —
-// phase resets have no label-def gating like warp markers do.
+// phase resets have no label-def gating like warp markers do. This mutates
+// each marker in place via marker_mut, whereas the warp column's
+// toggle_disabled (warpmarkers_ops.cpp) builds a proposed vector and swaps
+// it in; the two are behaviorally equivalent and the style split is a
+// cosmetic mirror divergence, accepted.
 void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
     if (app.selected_markers.empty()) return;
     std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();

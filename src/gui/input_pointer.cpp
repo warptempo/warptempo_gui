@@ -387,11 +387,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 else       selection.set_single_selection(hit);
                 int64_t src_sample;
                 if (app.active_markers_view == 'P') {
-                    src_sample = static_cast<int64_t>(std::nearbyint(
-                        app.phaseresetmarkers.markers()[hit].time_frame));
+                    src_sample = app.phaseresetmarkers.markers()[hit].time_frame;
                 } else {
-                    src_sample = static_cast<int64_t>(std::nearbyint(
-                        app.warpmarkers.markers()[hit].time_frame));
+                    src_sample = app.warpmarkers.markers()[hit].time_frame;
                 }
                 const int64_t sample =
                     source_frame_to_active_domain(app, audio, src_sample);
@@ -414,11 +412,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 }
                 int64_t src_sample;
                 if (app.active_markers_view == 'P') {
-                    src_sample = static_cast<int64_t>(std::nearbyint(
-                        app.phaseresetmarkers.markers()[hit].time_frame));
+                    src_sample = app.phaseresetmarkers.markers()[hit].time_frame;
                 } else {
-                    src_sample = static_cast<int64_t>(std::nearbyint(
-                        app.warpmarkers.markers()[hit].time_frame));
+                    src_sample = app.warpmarkers.markers()[hit].time_frame;
                 }
                 const int64_t sample =
                     source_frame_to_active_domain(app, audio, src_sample);
@@ -623,11 +619,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (hit >= 0) {
             int64_t src_sample;
             if (app.active_markers_view == 'P') {
-                src_sample = static_cast<int64_t>(std::nearbyint(
-                    app.phaseresetmarkers.markers()[hit].time_frame));
+                src_sample = app.phaseresetmarkers.markers()[hit].time_frame;
             } else {
-                src_sample = static_cast<int64_t>(std::nearbyint(
-                    app.warpmarkers.markers()[hit].time_frame));
+                src_sample = app.warpmarkers.markers()[hit].time_frame;
             }
             // Target view: forward-translate the snapped marker's
             // source-frame to active-domain so the playhead lands on

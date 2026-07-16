@@ -1344,8 +1344,7 @@ double flag_pending_text_left_x(
     // clears the editor; the click handler exits before any drag begins),
     // so a fresh build is correct and app.drag.frozen_warp_frame_map need not be
     // consulted.
-    const int64_t src_sample = static_cast<int64_t>(
-        std::nearbyint(mv[marker_idx].time_frame));
+    const int64_t src_sample = mv[marker_idx].time_frame;
     double ms = static_cast<double>(src_sample);
     if (app.active_audio_view == 'T') {
         const auto& target_warp_frame_map = target_view_warp_frame_map_cached(

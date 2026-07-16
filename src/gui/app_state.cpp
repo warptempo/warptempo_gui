@@ -294,9 +294,9 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
         drag_overlay_storage.times   = &app.drag.moveable_times;
         drag_overlay = &drag_overlay_storage;
     }
-    // This two-way branch chain must stay in step with the debug rect
-    // builder (paint_debug_hit_rects, paint_handler.cpp), which strokes the
-    // same rects this hit test consumes.
+    // This two-way branch chain is the sole hit-rect builder: the chip
+    // paint and this hit test share flag_chip_rect, so the rects computed
+    // here are exactly the painted chip geometry.
     std::vector<FlagHitRect> rects;
     if (app.active_markers_view == 'P') {
         rects = compute_phase_reset_flag_hit_rects(

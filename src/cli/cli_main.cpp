@@ -95,6 +95,13 @@ int main(int argc, char** argv) {
     // whole-file reader refuses an unopenable file with its own could-not-open
     // diagnostic, which surfaces verbatim through the print below.
     // title and the applied trim come from it. ---
+    //
+    // Sidecar check order here is settings -> markers -> resets -> probe,
+    // while the GUI load checks probe -> audio -> markers -> settings. On a
+    // file set with multiple defects the two products therefore report a
+    // DIFFERENT first error; the loadability verdict is identical (a set is
+    // loadable in both products or neither), only the message order diverges.
+    // Accepted.
     EngineSettings es;
     SettingsFile   sf;
     SettingsTrim   trim;

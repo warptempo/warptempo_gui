@@ -112,11 +112,9 @@ void Selection::cycle_selection(bool forward) {
     auto frame_of = [&](int i) -> int64_t {
         int64_t src_f;
         if (phase_reset) {
-            src_f = static_cast<int64_t>(std::nearbyint(
-                phase_reset_vec[i].time_frame));
+            src_f = phase_reset_vec[i].time_frame;
         } else {
-            src_f = static_cast<int64_t>(std::nearbyint(
-                warp_vec[i].time_frame));
+            src_f = warp_vec[i].time_frame;
         }
         return source_frame_to_active_domain(app, audio, src_f);
     };
@@ -370,13 +368,11 @@ void Selection::sync_playhead_to_last_selected(bool edge_follow) {
     if (app.active_markers_view == 'P') {
         const auto& tv = app.phaseresetmarkers.markers();
         if (last >= static_cast<int>(tv.size())) return;
-        src_sample = static_cast<int64_t>(std::nearbyint(
-            tv[last].time_frame));
+        src_sample = tv[last].time_frame;
     } else {
         const auto& mv = app.warpmarkers.markers();
         if (last >= static_cast<int>(mv.size())) return;
-        src_sample = static_cast<int64_t>(std::nearbyint(
-            mv[last].time_frame));
+        src_sample = mv[last].time_frame;
     }
     // Target view: the marker time_frame is source-domain but the
     // playhead is active-domain. Forward-translate so the playhead
