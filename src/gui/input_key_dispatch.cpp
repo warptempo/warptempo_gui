@@ -423,9 +423,12 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // flag lands, through do_render's reuse-rung renames), so a cell name
     // scanned at command time could be stolen and then overwritten — two
     // successful publications collapsing to one pathname. Allocating only
-    // once the worker is confirmed idle (renders/ is written solely by the
-    // worker) makes the scan exact. The idle route allocates here inline for
-    // the same one implementation.
+    // once the worker is confirmed idle makes the scan exact: idle drains the
+    // whole CompletionPending interval, so worker publication is fully done
+    // before the scan, and every other renders/ mutation (batch-folder
+    // creation, the adopt wipe) runs on this same GUI thread, so none can
+    // interleave with it. The idle route allocates here inline for the same
+    // one implementation.
     if (ctrl && alt && !shift &&
         key == GuiKeys::E) {
         if (app.source_audio_path.empty()) return true;

@@ -347,12 +347,18 @@ private:
     // create the folder, and scan it for the next `<N>.wav` cell. Writes the
     // folder path into `out_folder` and `<max_cell+1>` into `out_basename`;
     // returns false after printing the one stderr line on directory-creation
-    // failure. MUST only run when the render worker is idle: renders/ is
-    // written solely by the worker, so an idle-moment scan cannot race a
-    // publication — the command-time scan it replaces could, because a
-    // cancelled render may still publish into renders/ during its
-    // cancellation drain, after the scan but before the cancel flag lands,
-    // stealing the scanned cell name.
+    // failure. MUST only run when the render worker is idle: idle means
+    // GuiAsyncRenderer::is_busy() is false, which spans the whole
+    // CompletionPending interval, so the prior worker has finished do_render
+    // and ALL publication into renders/ before the scan runs; every OTHER
+    // renders/ mutation (sweep batch-folder creation, the adopt wipe) runs on
+    // this same GUI event thread, so none can interleave with the scan
+    // either; the only other writer thread, the master-floats cache writer,
+    // writes solely under the cache tree, never renders/ — so an
+    // idle-moment scan cannot race a publication. The
+    // command-time scan it replaces could, because a cancelled render may
+    // still publish into renders/ during its cancellation drain, after the
+    // scan but before the cancel flag lands, stealing the scanned cell name.
     bool allocate_miscellaneous_cell(std::string& out_folder,
                                      std::string& out_basename);
 
