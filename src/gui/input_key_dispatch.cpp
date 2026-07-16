@@ -541,9 +541,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // materializing RenderRequests. Accumulate with a CHECKED product
         // that refuses the instant the running total exceeds the cap, so no
         // overflow can occur (the cap sits far below any integer boundary).
-        // kMaxIterSweepCells is planner-chosen anti-pathology insurance,
-        // flagged for architect retune.
-        constexpr size_t kMaxIterSweepCells = 10000;
+        // kMaxIterSweepCells is the architect-ruled cap.
+        constexpr size_t kMaxIterSweepCells = 1000;
         size_t total_cells = 1;
         bool over_cap = false;
         for (const auto& d : per_marker_delta_cents) {
@@ -598,7 +597,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         }
 
         // The cap check above bounds total_cells at kMaxIterSweepCells
-        // (<= 10000), so this narrowing to int is exact — no truncation and
+        // (<= 1000), so this narrowing to int is exact — no truncation and
         // no negative wrap can reach the reserve/enumeration below.
         const int total = static_cast<int>(total_cells);
         int pad_width = 1;
