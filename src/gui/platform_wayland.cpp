@@ -1239,7 +1239,16 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // using the same release tail as an ordinary/lost-button finish, so
         // marker/trim commits and the three navigation/text gestures cannot
         // remain stuck until a future pointer capability happens to appear.
-        if (left_was_held && on_button_release_) {
+        //
+        // The logical left button is `pointer_left_held_ || synth_left_held_`.
+        // Clearing the physical bit ends the gesture only when it drives that
+        // OR 1->0 -- physical left was held AND no synthesized hold remains. If
+        // a synthesized left is still held (bare `2` synth-left plus a physical
+        // BTN_LEFT), the OR stays 1: leave the synth hold and its keycode owner
+        // untouched so its later release delivers the single 1->0 edge, and
+        // suppress the release here. This mirrors the keyboard-leave/capability
+        // tails, which likewise hold the release while the OTHER source is held.
+        if (left_was_held && !synth_left_held_ && on_button_release_) {
             on_button_release_(GuiMouseButton::Left,
                                pointer_x_, pointer_y_, current_mods());
         }

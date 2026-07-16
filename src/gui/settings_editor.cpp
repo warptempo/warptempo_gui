@@ -38,6 +38,20 @@ bool is_key_char(char c) {
     return std::isalnum(uc) || c == '_';
 }
 
+// The `follow` value grammar, mirrored from the loader arm in
+// src/parser/settings_file.cpp (case-insensitive true/false ONLY). The parser
+// is frozen, so this is deliberate duplication: the loader arm there is the
+// grammar owner. Note this is NOT parse_bool_token -- follow does not accept
+// the {1,0,yes,no,on,off} vocabulary the loader reserves for per-tab read_only.
+bool parse_follow_token(const std::string& value, bool& out) {
+    std::string lower = value;
+    for (char& c : lower)
+        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    if (lower == "true")  { out = true;  return true; }
+    if (lower == "false") { out = false; return true; }
+    return false;
+}
+
 } // namespace
 
 void GuiSettingsEditor::open() {
@@ -102,8 +116,8 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     }
     if (key == "follow") {
         bool v = false;
-        if (!warptempo_parse::parse_bool_token(value, v)) {
-            reject("follow must be one of {true, false, 1, 0, yes, no, on, off}");
+        if (!parse_follow_token(value, v)) {
+            reject("follow must be true or false");
             return true;
         }
         if (v == app.follow_mode) { unchanged(); return true; }
@@ -175,6 +189,12 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             clamp_viewport_start(app, audio);
             viewport.invalidate_waveform_area();
             viewport.kick_waveform_sync();
+            // A pre-`:` marker hover popup would repaint stale over the shifted
+            // viewport; clear it, mirroring the scroll/pan gesture path. (The
+            // sibling zoom and playhead_cursor arms need no clear here: their
+            // chokepoints -- apply_zoom_change / move_playhead_to -- carry the
+            // hover tail internally, exactly as their gestures do.)
+            viewport.clear_hover_popup();
         } else {
             if (v == band.viewport_start_sample) { unchanged(); return true; }
             band.viewport_start_sample = v;   // the restore clamps at tab-in
