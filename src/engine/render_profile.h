@@ -20,9 +20,13 @@ inline bool render_profile_enabled() {
     return enabled;
 }
 
-// Per-channel PGHI counters and time split, accumulated inside pghi_integrate
-// when a non-null pointer is passed. Plain member adds; one instance per
-// channel so concurrent channel threads never share a slot.
+// Per-channel PGHI counters and time split. All fields except sort_s are
+// accumulated inside pghi_integrate when a non-null pointer is passed; sort_s
+// is accumulated by the channel's analysis producer thread (the prev-stream
+// fill+sort runs there). Plain member adds; one instance per channel, and
+// within an instance each field has a single writer thread (distinct members,
+// so the concurrent producer/consumer writes never race), read only after the
+// joins.
 struct PghiProfile {
     long long frames = 0;            // one per pghi_integrate call
     long long seed_frames = 0;       // calls that take the seed early-return
@@ -40,7 +44,10 @@ struct PghiProfile {
                                      // prev_done_skips this bounds the total
                                      // no-write selection work
     double quiet_s = 0.0;            // quiet-bin RNG assignment loop
-    double sort_s = 0.0;             // prev-stream fill + std::sort
+    double sort_s = 0.0;             // prev-stream fill + std::sort, on the
+                                     // analysis producer thread — overlaps the
+                                     // consumer's drain rather than adding to
+                                     // pghi serial time
     double drain_s = 0.0;            // selection walk (seed frames' trivial
                                      // seat time is attributed here too)
 };

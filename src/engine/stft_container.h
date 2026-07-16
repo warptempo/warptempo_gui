@@ -404,9 +404,10 @@ struct AudioSTFT {
     }
 
     // Consumer-side PGHI phase integration for one frame (Prusa-Holighaus
-    // Alg. 1). The producer supplies dt_cur, df, and quiet. The consumer keeps
-    // the seed seating, quiet-bin RNG draws, and heap propagation so RNG state
-    // and sequential phase dependencies stay local to synthesis.
+    // Alg. 1). The producer supplies dt_cur, df, quiet, and prev_stream (the
+    // pre-sorted previous-frame magnitude stream). The consumer keeps the seed
+    // seating, quiet-bin RNG draws, and heap propagation so RNG state and
+    // sequential phase dependencies stay local to synthesis.
     //
     //   seed   : frame-0 or immediately-after-a-reset frame. No prior synthesis
     //            phase to integrate from, so theta seats to phi and no quiet-bin
@@ -414,12 +415,17 @@ struct AudioSTFT {
     //   R_a_back/R_a_fwd : actual backward/forward analysis hops. Their ratio
     //                      to R_s is alpha (the stretch); used as b_s =
     //                      alpha * b_a in the frequency-spread step (Prusa).
+    //   prev_stream : the previous-frame candidate population, built on the
+    //                 analysis producer thread. Its construction rule
+    //                 (ascending-bin fill of {float(mag_prev[k]), k} over this
+    //                 frame's quiet mask, then a descending exact-float sort)
+    //                 is normative and lives at the producer build site in
+    //                 synthesis.cpp; this function consumes the stream as-is.
     //
-    // Scratch (size K, reused): done_scratch, prev_scratch (previous-frame
-    // stream, sorted descending), heap_scratch (current-frame nodes only).
+    // Scratch (size K, reused): done_scratch, heap_scratch (current-frame
+    // nodes only).
     void pghi_integrate(bool seed,
                         int64_t R_a_back, int64_t R_a_fwd,
-                        const std::vector<double>& mag_prev,
                         const std::vector<double>& mag_cur,
                         const std::vector<double>& ph_cur,
                         const std::vector<double>& th_prev,
@@ -429,14 +435,14 @@ struct AudioSTFT {
                         const std::vector<char>& quiet,
                         std::vector<double>& theta,
                         std::vector<char>&   done_scratch,
-                        std::vector<PghiHeapNode>& prev_scratch,
+                        const std::vector<PghiHeapNode>& prev_stream,
                         std::vector<PghiHeapNode>& heap_scratch,
                         std::mt19937& rng,
                         PghiProfile* prof = nullptr) {
         const int K = M / 2 + 1;
 
         // Profiling (temporary): count/clock only when prof is non-null.
-        std::chrono::steady_clock::time_point prof_t_entry, prof_t_quiet, prof_t_sort;
+        std::chrono::steady_clock::time_point prof_t_entry, prof_t_quiet;
         if (prof) {
             prof->frames += 1;
             prof_t_entry = std::chrono::steady_clock::now();
@@ -507,43 +513,31 @@ struct AudioSTFT {
         auto cmp = [](const PghiHeapNode& a, const PghiHeapNode& b) {
             return a.mag < b.mag;                                     // max-heap on mag
         };
-        prev_scratch.clear();
-        for (int k = 0; k < K; ++k) {
-            if (done_scratch[k] == 0) {
-                prev_scratch.push_back({static_cast<float>(mag_prev[k]), k});
-            }
-        }
-        std::sort(prev_scratch.begin(), prev_scratch.end(),
-                  [](const PghiHeapNode& a, const PghiHeapNode& b) {
-                      return a.mag > b.mag;      // descending, exact float compare
-                  });
-        // Sort/drain boundary: the sort window covers exactly the prev-stream
-        // fill plus std::sort above; the drain walk below is timed separately.
-        if (prof) {
-            prof_t_sort = std::chrono::steady_clock::now();
-            prof->sort_s += std::chrono::duration<double>(
-                prof_t_sort - prof_t_quiet).count();
-        }
+        // prev_stream arrives pre-built and pre-sorted from the analysis
+        // producer thread: exactly the bins this frame's quiet mask leaves in
+        // I, keyed on the previous frame's magnitudes, descending. The drain
+        // below walks it read-only by index `p`.
         size_t p = 0;
         heap_scratch.clear();
         // Drain while I is nonempty (Algorithm 1, tracked by `remaining`).
-        // Entries still in prev_scratch and nodes still in heap_scratch at exit
+        // Entries still in prev_stream and nodes still in heap_scratch at exit
         // are provably inert — a previous-frame entry finds its bin already
         // done, and a current-frame node finds no undone significant neighbor —
-        // so none can write theta; the clear() calls at the top of the next
-        // call discard them.
+        // so none can write theta; heap_scratch's clear() at the top of the
+        // next call discards them, and the caller replaces prev_stream with
+        // the next frame's producer-built stream.
         while (remaining != 0) {
             // Skip previous-frame entries whose bin is already assigned: these
             // are exactly the discard pops the combined heap performed.
-            while (p < prev_scratch.size() &&
-                   done_scratch[prev_scratch[p].bin] != 0) {
+            while (p < prev_stream.size() &&
+                   done_scratch[prev_stream[p].bin] != 0) {
                 ++p;
                 if (prof) {
                     prof->pops_total += 1;
                     prof->prev_done_skips += 1;
                 }
             }
-            const bool have_prev = p < prev_scratch.size();
+            const bool have_prev = p < prev_stream.size();
             const bool have_cur  = !heap_scratch.empty();
             // Defensive only: every bin in I has its previous-frame entry in
             // the stream, so both sources cannot exhaust while remaining > 0.
@@ -563,11 +557,11 @@ struct AudioSTFT {
             // single combined heap pop for pop.
             const bool take_prev = have_prev &&
                 (!have_cur ||
-                 !(prev_scratch[p].mag < heap_scratch.front().mag));
+                 !(prev_stream[p].mag < heap_scratch.front().mag));
             if (prof) prof->pops_total += 1;
             if (take_prev) {
                 // Previous-frame bin -> trapezoidal time-step into frame n.
-                const int m = prev_scratch[p].bin;
+                const int m = prev_stream[p].bin;
                 ++p;
                 theta[m] = th_prev[m] + half_Rs * (dt_prev[m] + dt_cur[m]);
                 done_scratch[m] = 1;
@@ -603,7 +597,7 @@ struct AudioSTFT {
         }
         if (prof) {
             prof->drain_s += std::chrono::duration<double>(
-                std::chrono::steady_clock::now() - prof_t_sort).count();
+                std::chrono::steady_clock::now() - prof_t_quiet).count();
         }
     }
 
