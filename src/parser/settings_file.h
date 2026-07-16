@@ -54,7 +54,8 @@ constexpr int kMaxNumericLevel = 10;
 
 // One tab's trim in the .settings schema. Positions are whole source frames
 // (int64_t), decoded via parse_authored_frame (frame_format.h). A has_* of
-// false means the key was absent; the paired _frame field must not be read.
+// false means the key was absent OR present-blank — both mean unset; the
+// paired _frame field must not be read.
 struct SettingsTrim {
     bool    has_begin   = false;
     int64_t begin_frame = 0;
@@ -96,8 +97,11 @@ struct SettingsFile {
     float  playback_speed          = 1.0f;  // preset vocabulary only
     bool   has_font_size           = false;
     double font_size               = 11.0;  // points, [6, 72]
-    // Optional GUI-kind launcher for the `l` render-listen command: a
-    // non-empty external player name or path. Absent = no player set.
+    // Optional GUI-kind launcher for the `l` render-listen command: an
+    // external player name or path. A present but BLANK value
+    // (`audio_player=`) is the deliberate no-player opt-out; has_audio_player
+    // false (key absent) resolves to the `audacious` default GUI-side, in
+    // apply_settings_engine_and_prefs — this struct does not apply it.
     bool        has_audio_player   = false;
     std::string audio_player;
 };

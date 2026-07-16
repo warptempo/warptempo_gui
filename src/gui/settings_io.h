@@ -47,8 +47,9 @@ std::string format_default_settings_template(const std::string& stem);
 // Atomic write: emits keys in the canonical order defined by the shared
 // in-file descriptor list. Engine keys are formatted from the typed
 // EngineSettings parameter via per-field switch; typed scalars come from
-// the explicit parameters; the per-tab trim lines are emitted only when the
-// corresponding trim flag is set on tab_a.trim / tab_b.trim. Matches the
+// the explicit parameters; all four per-tab trim lines (tab_a/tab_b begin/
+// end) are always emitted, blank when the corresponding trim flag is unset
+// on tab_a.trim / tab_b.trim — the audio_player convention. Matches the
 // `.warpmarkers` write pattern (tmp → fsync → rename). Best-effort: failure
 // is logged by the caller.
 bool write_settings_file(
