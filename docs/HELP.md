@@ -50,7 +50,7 @@ A Wayland compositor is required at runtime — there is no X11 backend. Tested 
 
 Windows (WSL2): the project builds and runs under WSL2 with a Debian or Ubuntu userland — install the Debian / Ubuntu dependencies above inside the WSL distribution and build normally. The headless CLI behaves as on any Linux host. The GUI is not supported under WSL: WSLg provides a Wayland compositor but routes audio through PulseAudio, not JACK, and the application has no non-JACK audio path.
 
-macOS: the GUI is not supported — it is a Wayland-native client and macOS has no Wayland. The headless CLI is portable C++ and should build with Homebrew dependencies (`brew install cmake pkg-config fftw`) and `-DWARPTEMPO_BUILD_GUI=OFF`, though this path is not regularly tested.
+macOS: the GUI is not supported — it is a Wayland-native client and macOS has no Wayland. The headless CLI is portable C++ and should build with Homebrew dependencies (`brew install cmake pkg-config fftw`) and `-DWARPTEMPO_BUILD_GUI=OFF`, though this path is not regularly tested. The macOS CLI renders correctly but is slower than the Linux build: the synthesis-trig vectorization relies on glibc's libmvec, which macOS does not provide, so that stage falls back to scalar sin/cos (roughly a 10% longer render).
 
 ## Build
 
@@ -61,7 +61,7 @@ cmake -B build -S .
 cmake --build build -j$(nproc)
 ```
 
-The default build produces one binary: the `warptempo_gui` application (Cairo/Wayland front end over the in-tree parser, engine, prepost, and audio-io sources; all audio container I/O is in-tree — WAV only, no third-party codec). There are no library archives — each binary compiles the shared source lists directly. `-O3 -march=native` is always on for GCC and Clang, so every binary is tuned for the host CPU and is not portable across machines; rebuild on the target host.
+The default build produces one binary: the `warptempo_gui` application (Cairo/Wayland front end over the in-tree parser, engine, prepost, and audio-io sources; all audio container I/O is in-tree — WAV only, no third-party codec). There are no library archives — each binary compiles the shared source lists directly. `-O3 -march=native` is always on for GCC and Clang, so every binary is tuned for the host CPU and is not portable across machines; rebuild on the target host. A rebuilt binary is also a new rendering reference: its output is equivalent to, but not byte-identical with, the previous build's (see Reproducibility below).
 
 One opt-in binary, default OFF:
 
@@ -158,6 +158,16 @@ Phase reset markers carry two pieces of state: a position and a disabled flag. T
 There is no output-format choice: the render product is always the finished wav (there is no `output_format` settings key). As future-proofing, every archival render — GUI `Ctrl+Alt+R`, the sweeps' batch cells, and the CLI — also writes the full frame-map pair beside nothing: `<wav-stem>.warpframemap` and `<wav-stem>.phaseresetframemap` land in `~/.cache/warptempo_gui/<pid>/` (batch cells under a subdirectory mirroring their batch folder), together exactly the engine's input for the full (untrimmed) render, with the phase resets already compiled into the engine's origin-centered query domain. Retrieve them from there between the render and program close; the GUI removes its per-process directory when it exits, CLI-written directories are swept at the next GUI launch, and orphans from dead processes are swept then too, so nothing accumulates. The pair is written all-or-nothing: a write failure removes both files rather than leaving a mixed-generation pair. Trim never affects the pair (always the full maps), and the limiter does not apply to map files.
 
 The wav output is always brought to a delivery ceiling by the built-in limiter — a transparent spectral stage at -0.3 dBFS, then a 0 dBFS lookahead peak limiter with a hard-clip backstop — and written as 24-bit PCM. There is no bypass: the limiter is unconditional and is not a settings key.
+
+## Reproducibility
+
+Rendering is deterministic per machine and binary: the same project rendered twice on the same host with the same build produces byte-identical wav output, every time. This is a hard guarantee — the whole pipeline is fixed-order and free of timing- or scheduling-dependent math.
+
+Across builds and machines the guarantee deliberately weakens to equivalence. A rebuild after a compiler or glibc upgrade, a rebuild on a different CPU, or a build on another machine produces renders that are audibly and structurally identical but not byte-identical: floating-point library results and instruction selection shift by ulps, and on threshold-straddling material the limiter can quantize such a shift into a small localized sample difference (measured at the -38 dBFS / two-samples class on a stress recipe — far below audibility, and ear-verified quality-neutral). Compare renders byte-for-byte only within one host and build; after upgrading or migrating, re-render rather than expecting old files to match.
+
+One related caveat when moving a project directory between machines: a render's recipe fingerprint identifies the musical recipe, not the host or toolchain that produced it, so a render made on another machine can look current to the reuse logic. After migrating, re-render anything you intend to keep comparing against.
+
+The engineering background — why the guarantee is shaped this way, and the performance work that established it — is recorded in `docs/engineering/perf_campaign_2026_07.md`.
 
 ## Hotkey reference
 
