@@ -54,4 +54,13 @@ struct GuiPlaybackLifecycle {
     // outside the target buffer's range fall back to playback.stop() —
     // keep-alive intent is well-defined for in-range positions only.
     void reseek_keeping_alive(int64_t sample);
+
+    // Set follow mode to `desired`. Shared by the bare-`f` toggle (which passes
+    // !app.follow_mode) and the settings editor's `follow=` commit (which passes
+    // the parsed value) so the two stay one implementation. An off→on edge
+    // during live playback clears the manual-pan suppression and resyncs so
+    // follow resumes paging, not just the one initial jump; with playback
+    // stopped (the settings editor is modal, so its open stopped playback) the
+    // edge branch is inert and this is a plain field set.
+    void set_follow_mode(bool desired);
 };

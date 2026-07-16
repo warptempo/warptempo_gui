@@ -202,6 +202,22 @@ void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
     playback.play(sample, viewport.trim_end_sample());
 }
 
+// Set follow mode (contract at the header declaration). Shared by the bare-`f`
+// toggle and the settings editor's `follow=` commit.
+void GuiPlaybackLifecycle::set_follow_mode(bool desired) {
+    const bool was_off = !app.follow_mode;
+    app.follow_mode = desired;
+    if (was_off && app.follow_mode && playback.is_playing()) {
+        // Explicit enable overrides a prior manual-pan suppression so follow
+        // resumes paging, not just the one initial jump. Land the scanner at
+        // the page-turn position if it had drifted offscreen; no-op when it is
+        // already in view.
+        app.follow_overridden_for_session = false;
+        playback.resync_predictor();
+        viewport.follow_scroll_if_needed();
+    }
+}
+
 // Sets the persistent playback speed (the settings editor is the authoring
 // surface). In target view the write STORES only: target view's audio is the
 // warped target buffer, played at its natural rate, so a playback-speed

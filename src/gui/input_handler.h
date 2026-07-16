@@ -218,6 +218,14 @@ struct GuiInputHandler {
             [this] { return dispatch_pending_archival_command(); };
     }
 
+    // The settings editor is a keyboard front-end that funnels each `:`-typed
+    // GUI-kind key into the SAME gesture chokepoint the key's gesture uses.
+    // Three of those chokepoints are private methods here
+    // (handle_active_audio_view_toggle, apply_font_size,
+    // auto_clear_crossed_trim); the friendship lets the editor reach them
+    // through its back-pointer without a parallel writer.
+    friend struct GuiSettingsEditor;
+
     void on_key(GuiKey key, GuiInputState mods);
     void on_button_press(GuiMouseButton button, int x, int y, GuiInputState mods);
     void on_button_release(GuiMouseButton button, int x, int y,
@@ -569,6 +577,15 @@ private:
     // allowed once the target buffer is ready; target render
     // update-in-progress gates playback elsewhere.
     void handle_active_audio_view_toggle();
+
+    // Apply a new GUI font size (points), running the shared live sequence:
+    // assign app.font_size, push it to the renderer (set_gui_font_size_pt),
+    // full-window invalidate, then the resize-path geometry-and-cache rebuild.
+    // Both callers gate the no-op case before calling (the Ctrl+Shift+=/-
+    // step's constructive clamp, the settings editor's same-value gate), so
+    // this assumes a real change. Shared by the font-size gesture and the
+    // settings editor's `font_size=` commit.
+    void apply_font_size(double pt);
 
     // Source-view read-only allowlist. Returns true if key+mods is NOT on the
     // allowlist of navigation / playback / zoom / view-switch / close-prompt /

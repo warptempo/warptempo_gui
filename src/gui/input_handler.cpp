@@ -507,10 +507,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         const double delta = (key == GuiKeys::Equal) ? +1.0 : -1.0;
         const double next  = std::clamp(app.font_size + delta, 6.0, 72.0);
         if (next == app.font_size) return;
-        app.font_size = next;
-        set_gui_font_size_pt(next);
-        viewport.invalidate_all();
-        paint_handler.on_resize(app.width, app.height);
+        apply_font_size(next);
         return;
     }
 
@@ -1104,4 +1101,15 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         // view's playback reads source.wav across archival renders.
         target_render.rebind_to_source();
     }
+}
+
+void GuiInputHandler::apply_font_size(double pt) {
+    // The shared live sequence a source load's apply_settings_engine_and_prefs
+    // tail runs (assign the field, push to the renderer, full invalidate, then
+    // the resize-path geometry-and-cache rebuild). Both callers gate the no-op
+    // case, so no early-return here.
+    app.font_size = pt;
+    set_gui_font_size_pt(pt);
+    viewport.invalidate_all();
+    paint_handler.on_resize(app.width, app.height);
 }

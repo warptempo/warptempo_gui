@@ -5,9 +5,11 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <string>
 
 struct ViewState;
+struct AppState;
 
 // The `.settings` reader is the parser-side whole-file schema
 // (read_settings_file in settings_file.h), shared verbatim with
@@ -61,3 +63,14 @@ bool write_settings_file(
     double font_size,
     const std::string& audio_player,
     const EngineSettings& engine);
+
+// The on-disk value text that write_settings_file would emit for GUI-kind
+// `key` given the current live AppState — byte-identical to a Ctrl+S at this
+// instant (it mirrors the pre-write refresh_active_tab_view_from_app stash for
+// the active tab). Shared with the writer through format_nonengine_value so
+// recall and save can never diverge. Returns std::nullopt for engine keys (the
+// settings editor falls back to format_engine_setting_value) and for unknown
+// keys; an unset optional trim bound recalls as the empty string. Used by the
+// settings prompt's Tab autocomplete.
+std::optional<std::string> recall_gui_setting_value(const AppState& app,
+                                                    const std::string& key);

@@ -1346,21 +1346,12 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         break;
     case GuiKeys::Up:     viewport.zoom_in();                        break;
     case GuiKeys::Down:   viewport.zoom_out();                       break;
-    case GuiKeys::F: {
-        const bool was_off = !app.follow_mode;
-        app.follow_mode = !app.follow_mode;
-        if (was_off && app.follow_mode &&
-            playback.is_playing()) {
-            // Explicit enable overrides a prior manual-pan suppression so
-            // follow resumes paging, not just the one initial jump.
-            app.follow_overridden_for_session = false;
-            playback.resync_predictor();
-            // Land the scanner at the page-turn position if it had drifted
-            // offscreen; no-op when it is already in view.
-            viewport.follow_scroll_if_needed();
-        }
+    case GuiKeys::F:
+        // Toggle follow mode. The full body (off→on edge resync) lives in
+        // GuiPlaybackLifecycle::set_follow_mode, shared with the settings
+        // editor's `follow=` commit.
+        playback_lifecycle.set_follow_mode(!app.follow_mode);
         break;
-    }
     case GuiKeys::C:      viewport.apply_zoom_change(kSnapZoomLevel);
                     viewport.center_viewport_on_playhead();    break;
     case GuiKeys::Home:   playback_lifecycle.stop_playback_if_playing();

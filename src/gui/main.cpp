@@ -574,7 +574,7 @@ int main(int argc, char** argv) {
     GuiPrompt prompt(app, gui, viewport,
                      phase_reset_propagate, save_ops, playback_lifecycle);
     GuiSettingsEditor settings_editor(app, audio, viewport, active_views, undo,
-                                      target_render);
+                                      target_render, playback_lifecycle);
     gui.set_worker_completion_fd(async_renderer.completion_fd(),
         [&async_renderer]() { async_renderer.on_completion_event(); });
     gui.set_waveform_worker_completion_fd(waveform_worker.completion_fd(),
@@ -589,6 +589,12 @@ int main(int argc, char** argv) {
                                   playback_lifecycle, save_ops, prompt,
                                   settings_editor, target_render,
                                   paint_handler);
+    // Back-wire the settings editor to the input handler (constructed after the
+    // editor, which the input handler holds by reference — the cycle is
+    // resolved with a pointer set here). The editor reaches
+    // handle_active_audio_view_toggle / apply_font_size / auto_clear_crossed_trim
+    // through it, so a `:`-typed GUI key funnels into the same gesture code.
+    settings_editor.input = &input_handler;
 
     // Viewport worker kick: any viewport mutation (pan/zoom/center/follow)
     // requests the new waveform immediately rather than waiting for the next
