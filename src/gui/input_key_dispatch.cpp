@@ -1042,11 +1042,12 @@ void GuiInputHandler::commit_editor_commit() {
 // teardown and returns false so on_key runs the close routing; anything
 // else is swallowed as a backstop. `autocomplete` is the optional
 // bare-Tab hook — only an unmodified Tab is intercepted (Shift / Ctrl /
-// Alt + Tab fall through to handle_key unchanged), and an empty hook
-// (the bpm editor) lets bare Tab reach handle_key too. All three
-// surfaces draw in the bottom strip, so the clipboard / Consumed repaint
-// is uniformly invalidate_timestamp_area; commit and cancel own their
-// own invalidations.
+// Alt + Tab fall through to handle_key unchanged); the bpm editor passes
+// an empty hook, but bare Tab never reaches this route for it at all —
+// the on_key modal gate (modal_editor_key_blocked) swallows it first.
+// All three surfaces draw in the bottom strip, so the clipboard /
+// Consumed repaint is uniformly invalidate_timestamp_area; commit and
+// cancel own their own invalidations.
 bool GuiInputHandler::route_modal_editor_key(
         text_editor::State& ed, GuiKey key, GuiInputState mods,
         const std::function<void()>& autocomplete,
@@ -1388,10 +1389,11 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
 // Top-flag editor key routing. See the declaration for the consumed/command
 // contract. The two kinds split up front: the bpm bracket editor draws in
 // the bottom strip (like the settings editor) and is modal, so it takes
-// the shared modal route — with no bare-Tab hook, Tab reaches handle_key
-// like any other key; Ctrl+S saves with the editor (and the bpm session)
-// left open, and Esc and Enter are the mode's only exits. The FlagPayload
-// editor keeps its own non-modal flow below.
+// the shared modal route — with no bare-Tab hook, and bare Tab never
+// reaching this route at all (the on_key modal gate swallows it first);
+// Ctrl+S saves with the editor (and the bpm session) left open, and Esc
+// and Enter are the mode's only exits. The FlagPayload editor keeps its
+// own non-modal flow below.
 bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                                                  GuiInputState mods) {
     if (app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {

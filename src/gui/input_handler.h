@@ -463,8 +463,9 @@ private:
     // contract is stated once at the definition; returns true if the
     // editor consumed the key (on_key then returns), false on Ctrl+Q so
     // on_key runs the close routing. `autocomplete` is the optional
-    // bare-Tab hook — empty (the bpm editor) lets Tab reach
-    // text_editor::handle_key unchanged; commit / cancel / Ctrl+Q
+    // bare-Tab hook — empty for the bpm editor, but bare Tab never
+    // arrives there at all: the on_key modal gate (modal_editor_key_blocked)
+    // swallows it before this route ever sees it; commit / cancel / Ctrl+Q
     // teardown are the per-editor bodies.
     bool route_modal_editor_key(text_editor::State& ed, GuiKey key,
                                 GuiInputState mods,

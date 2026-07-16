@@ -6,7 +6,6 @@
 #include "warp_frame_map.h"
 
 #include <algorithm>
-#include <cmath>
 #include <cstdint>
 #include <set>
 #include <vector>
