@@ -1410,7 +1410,10 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
     // arming (a held button must not machine-gun re-press). pointer_focused_
     // gating means a press with the pointer off the window silently no-ops, as
     // a real BTN_LEFT would not be delivered to this surface either.
-    if (key == kLeftClickKey &&
+    // Shift carve-out: a Shift-modified press falls through as a normal key
+    // event instead of the button (see kLeftClickKey's comment for the
+    // rationale — level-0 delivery, Shift+<key> chords are real commands).
+    if (key == kLeftClickKey && !mod_shift_ &&
         !(text_editor_active_probe_ && text_editor_active_probe_())) {
         if (!synth_left_held_ && pointer_focused_) {
             const bool was_held = pointer_left_held_;   // logical, synth is false
