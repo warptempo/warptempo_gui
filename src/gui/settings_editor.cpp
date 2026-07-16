@@ -302,8 +302,17 @@ void GuiSettingsEditor::commit() {
     // (an empty value means no external player — the writer always emits the
     // line as `audio_player=`, which re-loads as no-player). A launch
     // preference like font_size: no undo history, no dirty tracking, silently
-    // persisted on Ctrl+S.
+    // persisted on Ctrl+S. A same-value commit no-op-deactivates like every
+    // routed GUI-kind key (the empty value included).
     if (key == "audio_player") {
+        if (value == app.audio_player) {
+            std::fprintf(stderr,
+                "warptempo_gui: setting unchanged: %s=%s\n",
+                key.c_str(), value.c_str());
+            viewport.invalidate_timestamp_area();
+            text_editor::deactivate(app.settings_editor);
+            return;
+        }
         app.audio_player = value;
         std::fprintf(stderr, "warptempo_gui: audio_player set: '%s'\n",
             value.c_str());

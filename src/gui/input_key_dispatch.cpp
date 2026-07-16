@@ -702,21 +702,15 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     return false;
 }
 
-// Identify a render entry by its WAV filename, disambiguated only when needed:
-// the bare `<basename>.wav` when that filename is unique across ALL entries,
-// else the batch-qualified `<batch_dir>/<basename>.wav`. A commit wipes
-// renders/, so the common single-batch case lists short `01.wav`, `02.wav`, …;
-// colliding basenames across batches fall back to `1_iterations/01.wav`.
-// The Shift+. commit editor resolves the typed identifier against these
-// strings.
-static std::string render_entry_wav_id(
-        const AppState::RenderEntry& e,
-        const std::vector<AppState::RenderEntry>& list) {
-    const std::string bare = e.basename + ".wav";
-    int count = 0;
-    for (const auto& o : list) if (o.basename + ".wav" == bare) ++count;
-    if (count == 1) return bare;                            // unique: short form
-    return e.batch_folder.filename().string() + "/" + bare;  // disambiguate
+// Identify a render entry by its path relative to renders/ —
+// `<batch_dir>/<basename>.wav` — always folder-qualified. One path per file,
+// so the id is unique by filesystem construction; Tab autocomplete then
+// discriminates on the short leading batch-folder name instead of deep value
+// decimals inside near-identical cell basenames, and the painted
+// `commit: ./renders/<id>` line is the entry's real on-disk path. The Shift+.
+// commit editor resolves the typed identifier against these strings.
+static std::string render_entry_id(const AppState::RenderEntry& e) {
+    return e.batch_folder.filename().string() + "/" + e.basename + ".wav";
 }
 
 // -- Standalone render-entry adoption (the Shift+. commit editor) --------
@@ -973,7 +967,7 @@ void GuiInputHandler::commit_editor_autocomplete() {
     std::string lcp;
     bool have = false;
     for (const auto& e : list) {
-        const std::string c = render_entry_wav_id(e, list);
+        const std::string c = render_entry_id(e);
         if (c.size() < pending.size() ||
             c.compare(0, pending.size(), pending) != 0) continue;
         if (!have) { lcp = c; have = true; }
@@ -996,12 +990,12 @@ void GuiInputHandler::commit_editor_autocomplete() {
 }
 
 // Enter handler: resolve the pending to exactly one entry and adopt it.
-// Resolution accepts a match on the entry's canonical wav id (bare
-// `<basename>.wav` when unique, else batch-qualified), OR — for forgiveness —
-// on its always-unambiguous `<batch_dir>/<basename>.wav` full form. On a
-// unique resolve, adopt_render_entry runs; a true result closes the editor, a
-// false result (bad sidecar / missing wav) red-flashes and stays open. Zero
-// or several matches red-flash and stay open.
+// Resolution accepts exactly the entry's canonical id
+// (`<batch_dir>/<basename>.wav`); ids are unique by filesystem construction
+// (one path per file), so the first match resolves. On a resolve,
+// adopt_render_entry runs; a true result closes the editor, a false result
+// (bad sidecar / missing wav) red-flashes and stays open. Zero matches
+// red-flash and stay open.
 void GuiInputHandler::commit_editor_commit() {
     if (!text_editor::is_active(app.commit_editor)) return;
     const std::string pending = app.commit_editor.pending;
@@ -1015,16 +1009,12 @@ void GuiInputHandler::commit_editor_commit() {
         renders_dir.enumerate_render_entries();
 
     const AppState::RenderEntry* found = nullptr;
-    int match_count = 0;
     for (const auto& e : list) {
-        const std::string full =
-            e.batch_folder.filename().string() + "/" + e.basename + ".wav";
-        if (render_entry_wav_id(e, list) == pending || full == pending) {
+        if (render_entry_id(e) == pending) {
             found = &e;
-            ++match_count;
+            break;
         }
     }
-    if (match_count != 1) found = nullptr;   // zero or several
     if (!found) { reject(); return; }
 
     // Copy the entry before adopting: adopt wipes renders/ at its tail, and
