@@ -521,14 +521,15 @@ void Synthesis::synthesize_full(
             const PghiProfile& hp = cp.pghi;
             char line[512];
             std::snprintf(line, sizeof(line),
-                "[profile] synth ch%d: frames %lld pghi %.3fs (quiet %.3fs heap %.3fs) "
+                "[profile] synth ch%d: frames %lld pghi %.3fs (quiet %.3fs sort %.3fs drain %.3fs) "
                 "populate %.3fs ifft %.3fs ola %.3fs analysis-wait %.3fs",
-                ch, cp.frames, cp.pghi_s, hp.quiet_s, hp.heap_s,
+                ch, cp.frames, cp.pghi_s, hp.quiet_s, hp.sort_s, hp.drain_s,
                 cp.populate_s, cp.ifft_s, cp.ola_emit_s, cp.analysis_wait_s);
             std::cerr << line << "\n";
             const long long total_bins = hp.quiet_bins + hp.significant_bins;
-            const double inert_pct = hp.pops_total
-                ? 100.0 * static_cast<double>(hp.pops_inert) /
+            const long long noop_pops = hp.prev_done_skips + hp.current_noop_pops;
+            const double noop_pct = hp.pops_total
+                ? 100.0 * static_cast<double>(noop_pops) /
                   static_cast<double>(hp.pops_total)
                 : 0.0;
             const double quiet_pct = total_bins
@@ -537,10 +538,11 @@ void Synthesis::synthesize_full(
                 : 0.0;
             char line2[512];
             std::snprintf(line2, sizeof(line2),
-                "[profile] synth ch%d heap: pops %lld inert %lld (%.1f%%) "
-                "quiet-bins %.1f%% seed-frames %lld",
-                ch, hp.pops_total, hp.pops_inert, inert_pct, quiet_pct,
-                hp.seed_frames);
+                "[profile] synth ch%d heap: pops %lld prev-done-skips %lld "
+                "current-noop-pops %lld no-write %.1f%% quiet-bins %.1f%% "
+                "seed-frames %lld",
+                ch, hp.pops_total, hp.prev_done_skips, hp.current_noop_pops,
+                noop_pct, quiet_pct, hp.seed_frames);
             std::cerr << line2 << "\n";
         }
         char wline[128];

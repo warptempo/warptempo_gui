@@ -257,15 +257,16 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
         return;
     }
 
-    auto emit_spectral_profile = [&](int peaks, double recon_max) {
+    auto emit_spectral_profile = [&](int peaks, int iterations, double output_max) {
         const double wall = std::chrono::duration<double>(
             std::chrono::steady_clock::now() - prof_t0).count();
         const bool bypass = all_finite && (max_abs <= ceiling);
         char line[256];
         std::snprintf(line, sizeof(line),
             "[profile] spectral limiter: wall %.3fs raw-max %.5f ceiling %.5f "
-            "would-bypass %s peaks %d recon-max %.5f",
-            wall, max_abs, ceiling, bypass ? "yes" : "no", peaks, recon_max);
+            "would-bypass %s peaks %d iterations %d output-max %.5f",
+            wall, max_abs, ceiling, bypass ? "yes" : "no", peaks, iterations,
+            output_max);
         std::cerr << line << "\n";
     };
 
@@ -273,7 +274,7 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
         // Already within the ceiling: the deliverable is compliant as rendered,
         // so no spectral attenuation is applied and the render is left as-is.
         std::cout << "[Pass 3/3] Spectral limiter................. already compliant, no attenuation required\n";
-        if (prof) emit_spectral_profile(0, max_abs);  // recon == raw max (untouched)
+        if (prof) emit_spectral_profile(0, 0, max_abs);  // output == raw max (untouched)
         return;
     }
 
@@ -428,7 +429,7 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     if (observed_cancel()) return;
     if (queue.empty()) {
         std::cout << "[Pass 3/3] Spectral limiter................. 0 peaks, no attenuation required\n";
-        if (prof) emit_spectral_profile(0, max_abs);  // render left untouched
+        if (prof) emit_spectral_profile(0, 0, max_abs);  // render left untouched
         destroy();
         return;   // render left untouched (no round-trip applied)
     }
@@ -709,7 +710,8 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
             const double a = std::fabs(static_cast<double>(s));
             if (a > prof_recon_max) prof_recon_max = a;
         }
-        emit_spectral_profile(iterations, prof_recon_max);
+        emit_spectral_profile(static_cast<int>(resolved.size()), iterations,
+                              prof_recon_max);
     }
 
     destroy();

@@ -436,7 +436,7 @@ struct AudioSTFT {
         const int K = M / 2 + 1;
 
         // Profiling (temporary): count/clock only when prof is non-null.
-        std::chrono::steady_clock::time_point prof_t_entry, prof_t_quiet;
+        std::chrono::steady_clock::time_point prof_t_entry, prof_t_quiet, prof_t_sort;
         if (prof) {
             prof->frames += 1;
             prof_t_entry = std::chrono::steady_clock::now();
@@ -456,7 +456,7 @@ struct AudioSTFT {
             for (int k = 0; k < K; ++k) theta[k] = ph_cur[k];
             if (prof) {
                 prof->seed_frames += 1;
-                prof->heap_s += std::chrono::duration<double>(
+                prof->drain_s += std::chrono::duration<double>(
                     std::chrono::steady_clock::now() - prof_t_entry).count();
             }
             return;
@@ -517,6 +517,13 @@ struct AudioSTFT {
                   [](const PghiHeapNode& a, const PghiHeapNode& b) {
                       return a.mag > b.mag;      // descending, exact float compare
                   });
+        // Sort/drain boundary: the sort window covers exactly the prev-stream
+        // fill plus std::sort above; the drain walk below is timed separately.
+        if (prof) {
+            prof_t_sort = std::chrono::steady_clock::now();
+            prof->sort_s += std::chrono::duration<double>(
+                prof_t_sort - prof_t_quiet).count();
+        }
         size_t p = 0;
         heap_scratch.clear();
         // Drain while I is nonempty (Algorithm 1, tracked by `remaining`).
@@ -533,7 +540,7 @@ struct AudioSTFT {
                 ++p;
                 if (prof) {
                     prof->pops_total += 1;
-                    prof->pops_inert += 1;
+                    prof->prev_done_skips += 1;
                 }
             }
             const bool have_prev = p < prev_scratch.size();
@@ -543,12 +550,17 @@ struct AudioSTFT {
             // If breached, exit with the unassigned bins' theta stale — the
             // same outcome the combined heap's !empty() conjunct produced.
             if (!have_prev && !have_cur) break;
-            // Exact ties go to the previous-frame stream (!(prev < cur)) — a
-            // fixed rule replacing the combined heap's layout-dependent tie
-            // order. The keys are floats, so magnitudes closer than float
-            // precision (denormal-small doubles that round to 0.0f included)
-            // become exact ties handled by the same fixed rule; on distinct
-            // float keys the assignment sequence is otherwise unchanged.
+            // Cross-partition ties (prev-stream head vs current-heap top) go to
+            // the previous-frame stream by the fixed rule !(prev < cur). This
+            // pins ONLY the cross-partition order; equal keys WITHIN one
+            // population — several equal-mag prev entries in the sorted stream,
+            // or equal-mag current nodes in the heap — are taken in that
+            // population's own sort/heap layout order, deterministic for a fixed
+            // binary but not a defined total key order. The keys are floats, so
+            // magnitudes closer than float precision (denormal-small doubles
+            // that round to 0.0f included) collapse to exact ties resolved the
+            // same way; on distinct float keys the assignment sequence matches a
+            // single combined heap pop for pop.
             const bool take_prev = have_prev &&
                 (!have_cur ||
                  !(prev_scratch[p].mag < heap_scratch.front().mag));
@@ -571,6 +583,9 @@ struct AudioSTFT {
                 // by b_s = alpha * b_a) to its still-unassigned significant
                 // neighbors (trapezoidal in df). Centered convention -> no
                 // expected_f offset; the gradient is the whole step.
+                // Profiling flag: a pop whose neighbors are all out of range,
+                // out of I, or already done writes no theta (a no-op pop).
+                bool assigned_neighbor = false;
                 for (int dir = 0; dir < 2; ++dir) {
                     const int nb = (dir == 0) ? m + 1 : m - 1;
                     if (nb < 0 || nb >= K) continue;
@@ -581,12 +596,14 @@ struct AudioSTFT {
                     --remaining;
                     heap_scratch.push_back({static_cast<float>(mag_cur[nb]), nb});
                     std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
+                    if (prof) assigned_neighbor = true;
                 }
+                if (prof && !assigned_neighbor) prof->current_noop_pops += 1;
             }
         }
         if (prof) {
-            prof->heap_s += std::chrono::duration<double>(
-                std::chrono::steady_clock::now() - prof_t_quiet).count();
+            prof->drain_s += std::chrono::duration<double>(
+                std::chrono::steady_clock::now() - prof_t_sort).count();
         }
     }
 

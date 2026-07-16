@@ -32,10 +32,17 @@ struct PghiProfile {
                                      // takes + prev-stream done-skips +
                                      // current-heap pops (the same magnitude a
                                      // single combined heap's pops would be)
-    long long pops_inert = 0;        // prev-stream done-skips (the analogue of
+    long long prev_done_skips = 0;   // prev-stream entries skipped because their
+                                     // bin was already assigned (the analogue of
                                      // a combined heap's discarded pops)
+    long long current_noop_pops = 0; // current-heap pops that spread to neither
+                                     // neighbor (no theta write); together with
+                                     // prev_done_skips this bounds the total
+                                     // no-write selection work
     double quiet_s = 0.0;            // quiet-bin RNG assignment loop
-    double heap_s = 0.0;             // seed seat + prev-stream sort + drain loop
+    double sort_s = 0.0;             // prev-stream fill + std::sort
+    double drain_s = 0.0;            // selection walk (seed frames' trivial
+                                     // seat time is attributed here too)
 };
 
 // Per-channel synthesis stage timings, accumulated in run_channel when

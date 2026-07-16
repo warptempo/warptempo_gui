@@ -154,13 +154,16 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // prior artifacts must re-render rather than pose as current renders. Version
 // 12: the PGHI walk is restructured as a sorted previous-frame stream plus a
 // current-only heap; the assignment order is identical for distinct
-// magnitudes, but exact-tie order changed (the previous-frame stream now wins
-// ties, replacing the heap's layout-dependent order), so prior artifacts must
-// re-render rather than pose as current renders. Version 13: the PGHI selection
-// key is now the float-rounded magnitude, so magnitudes closer than float
-// precision resolve in a different fixed order than v12 (and denormal-small
-// magnitudes round to 0.0f and tie) — prior artifacts must re-render rather
-// than pose as current renders.
+// magnitudes, but cross-partition tie order changed (a prev-stream/current-heap
+// tie now goes to the previous-frame stream, replacing the single heap's
+// layout-dependent order; equal keys within either population still follow that
+// population's own layout order), so prior artifacts must re-render rather than
+// pose as current renders. Version 13: the PGHI selection key is now the
+// float-rounded magnitude, so magnitudes closer than float precision collapse
+// to exact ties — resolved cross-partition by the prev-first rule and within a
+// population by its layout order, a different arrangement than v12's double keys
+// (denormal-small magnitudes round to 0.0f and tie the same way) — prior
+// artifacts must re-render rather than pose as current renders.
 constexpr uint32_t kFingerprintVersion = 13;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
