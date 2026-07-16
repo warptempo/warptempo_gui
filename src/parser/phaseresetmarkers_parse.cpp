@@ -8,8 +8,6 @@
 
 namespace {
 
-using warptempo_parse::strip_bom;
-
 // Parse "[#]<frame position>" into a PhaseResetMarker. Returns the marker on
 // success; on failure, returns a one-line diagnostic. The caller has
 // already rejected any whitespace on the line, so the token reaching here is
@@ -57,15 +55,12 @@ parse_phaseresetmarkers_file(const std::string& path) {
     // a valid prefix can never yield a silently shortened marker list.
     if (f.bad())
         return std::unexpected("read error in file: " + path);
-    if (!raw_lines.empty()) strip_bom(raw_lines.front());
 
     int64_t last_time = -1;
 
     for (size_t idx = 0; idx < raw_lines.size(); ++idx) {
         const int line_number = static_cast<int>(idx + 1);
         const std::string& raw = raw_lines[idx];
-
-        if (raw.empty()) continue;
 
         // '#' marks a disabled marker and nothing else. parse_line below
         // strips a leading '#', flags the marker disabled, and parses the
@@ -74,10 +69,10 @@ parse_phaseresetmarkers_file(const std::string& path) {
         // adversarial, load-fatal, first error only. Comment lines are not
         // part of the grammar.
 
-        // Marker lines are byte-exact canonical: any space, tab, or CR
-        // anywhere on the line is a hard, line-numbered parse error. The
-        // former trimming and whitespace tokenization were legacy-format
-        // residue.
+        // Marker lines are byte-exact canonical: no BOM, blank, or whitespace
+        // tolerance (the writer emits none). Any space, tab, or CR anywhere on
+        // the line is a hard, line-numbered parse error, and a byte-empty line
+        // fails parse_line's own empty-token refusal below.
         if (raw.find_first_of(" \t\r") != std::string::npos) {
             return fail(line_number, "no whitespace allowed in canonical line");
         }

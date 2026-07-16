@@ -213,9 +213,11 @@ inline std::string format_bpm_bracket_text(const GuiWarpMarker& m) {
 // positive integer (metronomes count integer beats) capped at
 // kBpmBeatsMax; lo/hi are doubles (parse_value_double strictness) within
 // the bpm bracket [kBpmMin, kBpmMax] (value_format.h) with lo <= hi
-// (degenerate lo=hi is valid); no whitespace, no missing fields, no
-// alternate forms. On failure returns false and leaves out-params
-// unchanged.
+// (degenerate lo=hi is valid), each pinned to ONE canonical spelling — the
+// bpm writer's form (format_value_double, min 0 decimals), so "210" and
+// "210.5" commit while "210.0" and "210.50" refuse; no whitespace, no
+// missing fields, no alternate forms. On failure returns false and leaves
+// out-params unchanged.
 inline bool parse_bpm_bracket(const std::string& s,
                               int& beats, double& lo, double& hi) {
     if (s.empty()) return false;
@@ -254,8 +256,10 @@ inline bool parse_bpm_bracket(const std::string& s,
     int    b = 0;
     double l = 0.0, h = 0.0;
     if (!parse_pos_int(left, b))                  return false;
-    if (!parse_value_double(lo_s, l) || l < kBpmMin || l > kBpmMax) return false;
-    if (!parse_value_double(hi_s, h) || h < kBpmMin || h > kBpmMax) return false;
+    if (!parse_value_double(lo_s, l) || l < kBpmMin || l > kBpmMax ||
+        format_value_double(l, 0) != lo_s) return false;
+    if (!parse_value_double(hi_s, h) || h < kBpmMin || h > kBpmMax ||
+        format_value_double(h, 0) != hi_s) return false;
     if (l > h) return false;
     beats = b;
     lo    = l;

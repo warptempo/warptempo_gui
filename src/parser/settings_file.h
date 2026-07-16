@@ -20,10 +20,10 @@
 // the FIRST error only: an unknown key, a keyless non-comment line, a
 // duplicate of ANY key, a malformed or out-of-vocabulary value (an
 // off-preset playback_speed included), and a missing canonical key all
-// refuse. Blank lines and '#' comment lines stay skippable — the
-// long-standing settings line grammar. EVERY canonical key is required: the
-// program writes all of them, so a file short of any one is hand-damaged and
-// refuses.
+// refuse. Lexing is byte-exact: each line is split at its first '=' verbatim,
+// with no BOM, blank-line, comment, or whitespace tolerance (a product writer
+// emits none of those). EVERY canonical key is required: the program writes
+// all of them, so a file short of any one is hand-damaged and refuses.
 //
 // This schema owns the zoom-level range too: a zoom outside
 // kFitFileLevel..kMaxNumericLevel is refused here in both products. What
@@ -121,10 +121,10 @@ std::unexpected<std::string> bad_value(int ln, const std::string& key,
 using SettingsLineFn = std::function<std::expected<void, std::string>(
     int ln, const std::string& key, const std::string& value)>;
 
-// Scan `in` under the shared lexical contract — BOM strip on line 1,
-// whitespace trim, blank and '#' comment skip, first-'=' split, empty-key
-// and keyless-line refusal, duplicate-key refusal against a seen set — and
-// invoke `on_pair` once per meaningful line. After the loop, enforce that
+// Scan `in` under the shared lexical contract — split each line at its first
+// '=' verbatim (no BOM, blank-line, comment, or whitespace tolerance),
+// empty-key and keyless-line refusal, duplicate-key refusal against a seen
+// set — and invoke `on_pair` once per line. After the loop, enforce that
 // every canonical key is present (the required-key list in settings_file.cpp),
 // reporting the first missing one. Returns the first error (lexical, callback,
 // or missing-required-key), or success.

@@ -43,13 +43,15 @@ bool validate_engine_setting(const std::string& key,
                              EngineSettings& out,
                              std::string& reason) {
     if (key == "title") {
-        // One canonical spelling, no input latitude. The value arrives already
-        // trimmed of surrounding whitespace by both boundaries
-        // (scan_settings_file and the editor commit), so whitespace ownership
-        // is theirs; the title is taken verbatim after three refusals: an empty
-        // title, a double-quote-wrapped spelling (the quotes would be part of
-        // the name, never a valid title), and a '/' (it would compose the
-        // render path into a subdirectory or onto another file).
+        // One canonical spelling, no input latitude. The file boundary
+        // (scan_settings_file) is byte-exact — a product-written file has no
+        // surrounding whitespace to trim, and a hand-padded value is taken
+        // verbatim here — while the editor commit still trims its typed line
+        // (interactive input latitude). The title is taken verbatim after
+        // three refusals: an empty title, a double-quote-wrapped spelling (the
+        // quotes would be part of the name, never a valid title), and a '/'
+        // (it would compose the render path into a subdirectory or onto
+        // another file).
         if (value.empty()) {
             reason = "must be non-empty";
             return false;
@@ -68,18 +70,20 @@ bool validate_engine_setting(const std::string& key,
     if (key == "scale") {
         // Full positive double, the same rule as a marker scale value
         // (parse_value_double strictness plus a > 0 refusal), bounded by
-        // the scale bracket (value_format.h: [kScaleMin, kScaleMax]). The
-        // writers persist the padded shortest round-trip form (min 4
-        // decimals), so any accepted value reloads bit-identically — no
-        // serialization round-trip gate is needed. This single validator
-        // serves both boundaries: a malformed .settings aborts the load, an
-        // editor commit red-flashes.
+        // the scale bracket (value_format.h: [kScaleMin, kScaleMax]), then
+        // pinned to ONE canonical spelling: the accepted spelling IS the
+        // writer's spelling (format_value_double, min 4 decimals), so "2"
+        // refuses and "2.0000" loads. This single validator serves both
+        // boundaries: a malformed .settings aborts the load, an editor commit
+        // red-flashes.
         double v;
         if (!parse_value_double(value, v) || !(v > 0.0) ||
-            v < kScaleMin || v > kScaleMax) {
+            v < kScaleMin || v > kScaleMax ||
+            format_value_double(v, 4) != value) {
             reason = "must be a finite double within [" +
                      format_value_double(kScaleMin, 4) + ", " +
-                     format_value_double(kScaleMax, 4) + "]";
+                     format_value_double(kScaleMax, 4) +
+                     "] in canonical spelling";
             return false;
         }
         out.scale = v;

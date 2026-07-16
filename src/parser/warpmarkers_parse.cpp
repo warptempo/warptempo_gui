@@ -14,8 +14,6 @@
 
 namespace {
 
-using warptempo_parse::strip_bom;
-
 bool is_valid_label_format(const std::string& s) {
     static const std::regex re("^[a-z]\\.[a-z0-9]{2}$");
     return std::regex_match(s, re);
@@ -60,12 +58,15 @@ bool parse_tempo_field(const std::string& s, int64_t& out,
 // parse_value_double (whole field consumed, finite, no leading '-') under
 // a strict positivity refusal — a well-formed negative or typed zero gets
 // a pointed message, other malformed spellings fail the parse — then the
-// scale bracket [kScaleMin, kScaleMax] (value_format.h). The serializer
-// pads the shortest round-trip form (format_value_double, min 4 decimals),
-// so historical fixed-decimal sidecars re-serialize byte-identically.
+// scale bracket [kScaleMin, kScaleMax] (value_format.h), then ONE canonical
+// spelling: the accepted spelling IS the writer's spelling
+// (format_value_double at `canonical_decimals`, min 4 for scale), so "1.2000"
+// loads and "1.2" refuses. This is a deliberate tempo/scale asymmetry with
+// parse_tempo_field, which pins the exact N.NN spelling through
+// parse_tempo_cents.
 bool parse_positive_value(const std::string& s, double& out,
                           const char* what, double lo, double hi,
-                          std::string& error_out) {
+                          int canonical_decimals, std::string& error_out) {
     double v = 0.0;
     if (!parse_value_double(s, v)) {
         // parse_value_double rejects a leading '-' outright; a well-formed
@@ -88,6 +89,10 @@ bool parse_positive_value(const std::string& s, double& out,
         error_out = std::string(what) + " must be within [" +
                     format_value_double(lo, 2) + ", " +
                     format_value_double(hi, 2) + "]: " + s;
+        return false;
+    }
+    if (format_value_double(v, canonical_decimals) != s) {
+        error_out = std::string(what) + " must be in canonical spelling: " + s;
         return false;
     }
     out = v;
@@ -160,7 +165,7 @@ bool parse_new_payload(const std::string& payload,
         std::optional<double> scale_v;
         if (star != std::string::npos) {
             double sv = 0.0;
-            if (!parse_positive_value(scale_part, sv, "scale", kScaleMin, kScaleMax, error_out)) {
+            if (!parse_positive_value(scale_part, sv, "scale", kScaleMin, kScaleMax, 4, error_out)) {
                 return false;
             }
             scale_v = sv;
@@ -204,7 +209,7 @@ bool parse_new_payload(const std::string& payload,
     std::optional<double> scale_v;
     if (star != std::string::npos) {
         double sv = 0.0;
-        if (!parse_positive_value(scale_part, sv, "scale", kScaleMin, kScaleMax, error_out)) {
+        if (!parse_positive_value(scale_part, sv, "scale", kScaleMin, kScaleMax, 4, error_out)) {
             return false;
         }
         scale_v = sv;
@@ -291,7 +296,6 @@ parse_warpmarkers_file(const std::string& path) {
     // a valid prefix can never yield a silently shortened marker list.
     if (f.bad())
         return std::unexpected("read error in file: " + path);
-    if (!raw_lines.empty()) strip_bom(raw_lines.front());
 
     // ----- Build markers ---------------------------------------------------
 
@@ -311,15 +315,11 @@ parse_warpmarkers_file(const std::string& path) {
 
     for (size_t idx = 0; idx < raw_lines.size(); ++idx) {
         const int line_number = static_cast<int>(idx + 1);
-        // Marker lines are byte-exact canonical: any space, tab, or CR
-        // anywhere on the line is a hard, line-numbered parse error via
-        // parse_single_canonical_line below. Only byte-empty lines are
-        // skipped as blanks; a whitespace-only line is an error like any
-        // other whitespace. The former trimming was legacy-format residue.
+        // Marker lines are byte-exact canonical: no BOM, blank, or whitespace
+        // tolerance (the writer emits none). Any space, tab, or CR anywhere on
+        // the line — and a byte-empty line — is a hard, line-numbered parse
+        // error via parse_single_canonical_line below.
         std::string t = raw_lines[idx];
-        if (t.empty()) {
-            continue;
-        }
 
         // '#' marks a disabled marker and nothing else. The strict parser
         // (parse_single_canonical_line) strips a leading '#', flags the

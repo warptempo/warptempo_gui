@@ -4,7 +4,7 @@
 #include "parse_text_util.h"
 #include "playback_speed_presets.h"
 
-#include <cctype>
+#include <cstdio>
 #include <expected>
 #include <fstream>
 #include <set>
@@ -14,11 +14,7 @@ namespace {
 
 using warptempo_parse::parse_bool_token;
 using warptempo_parse::parse_double_strict;
-using warptempo_parse::parse_float_strict;
-using warptempo_parse::parse_int64_strict;
-using warptempo_parse::parse_int_strict;
 using warptempo_parse::prefix_line_error;
-using warptempo_parse::trim_ws;
 
 // Every canonical .settings key, in kSettingsOrder's on-disk order. This is
 // the membership SoT for the required-key check: EVERY key is required, so a
@@ -56,16 +52,18 @@ std::expected<void, std::string> scan_settings_file(
     int ln = 0;
     while (std::getline(in, line)) {
         ++ln;
-        if (ln == 1) warptempo_parse::strip_bom(line);
-        const std::string trimmed = trim_ws(line);
-        if (trimmed.empty()) continue;
-        if (trimmed[0] == '#') continue;
-        const size_t eq = trimmed.find('=');
+        // Byte-exact lexing: split each line at its first '=', verbatim. No
+        // BOM, blank-line, comment, or whitespace tolerance — a product writer
+        // emits none of those, so a line without a '=' (an empty or comment
+        // line included) is the keyless-line refusal, and a padded key or
+        // value reaches the per-key grammar unmodified (vocabulary keys refuse
+        // the padding; free-text fields take the bytes verbatim).
+        const size_t eq = line.find('=');
         if (eq == std::string::npos) {
             return prefix_line_error(ln, "not a key=value line");
         }
-        const std::string key   = trim_ws(trimmed.substr(0, eq));
-        const std::string value = trim_ws(trimmed.substr(eq + 1));
+        const std::string key   = line.substr(0, eq);
+        const std::string value = line.substr(eq + 1);
         if (key.empty()) {
             return prefix_line_error(ln, "empty key");
         }
@@ -80,8 +78,8 @@ std::expected<void, std::string> scan_settings_file(
     // stream read failure mid-file). eofbit+failbit is the ordinary end of a
     // healthy file and parses on; badbit alone is a filesystem or media read
     // error, checked here BEFORE the required-key tail so a read that failed
-    // after the three required keys already arrived can never be laundered
-    // into a complete-looking file.
+    // after every canonical key already arrived can never be laundered into
+    // a complete-looking file.
     if (in.bad()) {
         return std::unexpected(std::string("I/O read error"));
     }
@@ -122,25 +120,29 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     if (key.rfind("tab_a_", 0) == 0 || key.rfind("tab_b_", 0) == 0) {
         const std::string suffix = key.substr(6);
         if (suffix == "viewport_start" || suffix == "playhead_cursor") {
+            // Canonical integer spelling via parse_authored_frame (digits only,
+            // no sign/point/leading zeros, int64 overflow refused) — exactly
+            // the writer's %lld output for these non-negative scratch values.
             int64_t v = 0;
-            if (!parse_int64_strict(value, v) || v < 0)
+            if (!parse_authored_frame(value, v))
                 return err("must be a non-negative integer");
             out.i64 = v;
             return R(out);
         }
         if (suffix == "zoom") {
-            int v = 0;
-            if (!parse_int_strict(value, v) ||
+            // Same canonical integer spelling, then the persisted zoom-level
+            // range (kFitFileLevel..kMaxNumericLevel), the writer's %d output.
+            int64_t v = 0;
+            if (!parse_authored_frame(value, v) ||
                 v < kFitFileLevel || v > kMaxNumericLevel)
                 return err("must be a zoom level");
-            out.i = v;
+            out.i = static_cast<int>(v);
             return R(out);
         }
         if (suffix == "read_only") {
             bool v = false;
             if (!parse_bool_token(value, v))
-                return err(
-                    "must be one of {true, false, 1, 0, yes, no, on, off}");
+                return err("must be true or false");
             out.b = v;
             return R(out);
         }
@@ -168,7 +170,7 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         // per-tab read_only keys).
         bool v = false;
         if (!parse_bool_token(value, v))
-            return err("must be one of {true, false, 1, 0, yes, no, on, off}");
+            return err("must be true or false");
         out.b = v;
         return R(out);
     }
@@ -188,24 +190,35 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         return R(out);
     }
     if (key == "playback_speed") {
-        // Preset-vocabulary-only on disk: the GUI authors playback_speed
-        // through the settings editor (:playback_speed=), whose commit
-        // red-flashes any value outside kPlaybackSpeedPresets (the shared
-        // source of truth), so any off-preset value is a state the GUI can
-        // never produce. Exact float equality against the table is sound: the
-        // writer emits each preset with the same one-decimal %.1f this parses
-        // back, and both the on-disk text and the table literal are the
-        // nearest float of the same short decimal.
-        float v = 0.0f;
-        if (!parse_float_strict(value, v) || !is_playback_speed_preset(v))
-            return err("must be a preset speed");
-        out.f = v;
-        return R(out);
+        // Preset-vocabulary-only on disk, matched by exact TEXT: the GUI
+        // authors playback_speed through the settings editor
+        // (:playback_speed=), whose commit red-flashes any value outside
+        // kPlaybackSpeedPresets (the shared source of truth), so any
+        // off-preset spelling is a state the GUI can never produce. The table
+        // pairs each on-disk spelling the writer emits (%.1f) with its
+        // nearest-float value; a byte match adopts the paired float. No float
+        // parse at the boundary — ".7", "0.70", and "00.7" are not the
+        // spelling and refuse.
+        for (const PlaybackSpeedPreset& p : kPlaybackSpeedPresets) {
+            if (value == p.text) {
+                out.f = p.value;
+                return R(out);
+            }
+        }
+        return err("must be a preset speed");
     }
     if (key == "font_size") {
+        // One canonical spelling: the value must parse into [6, 72] AND
+        // re-serialize byte-identically through the writer's %g form (the same
+        // format format_nonengine_value uses), so "11" and "10.5" load while
+        // "11.0" and "011" refuse.
         double v = 0.0;
         if (!parse_double_strict(value, v) || v < 6.0 || v > 72.0)
-            return err("must be a number in [6, 72]");
+            return err("must be a number in [6, 72] in canonical spelling");
+        char buf[64];
+        std::snprintf(buf, sizeof(buf), "%g", v);
+        if (value != buf)
+            return err("must be a number in [6, 72] in canonical spelling");
         out.d = v;
         return R(out);
     }
