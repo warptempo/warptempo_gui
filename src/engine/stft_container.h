@@ -49,16 +49,18 @@ inline constexpr double kPghiTol      = 1e-6;
 inline constexpr double kPghiFreqStep = 1.0;
 
 // One node in the PGHI integration walk (Algorithm 1). `mag` is the selection
-// key. `bin` is the spectral bin. `current` distinguishes the two live frames:
-// false => a PREVIOUS-frame significant bin, eligible to be time-stepped into
-// the current frame (these live in the descending-sorted prev stream); true =>
-// a CURRENT-frame bin already assigned, eligible to frequency-spread to its
-// neighbors (these live in the current-node max-heap). Selection is by `mag`
-// so the loudest available propagation path wins.
+// key: the double magnitude rounded to float, halving the node to 8 bytes
+// (float + int32_t, no padding) to cut the sort and heap memory traffic; near
+// ties below float precision resolve by the fixed rules in the walk below.
+// `bin` is the spectral bin. The previous/current role is POSITIONAL: a
+// PREVIOUS-frame significant bin (eligible to be time-stepped into the current
+// frame) lives only in the descending-sorted prev stream, and a CURRENT-frame
+// bin already assigned (eligible to frequency-spread to its neighbors) lives
+// only in the current-node max-heap. Selection is by `mag` so the loudest
+// available propagation path wins.
 struct PghiHeapNode {
-    double mag;
-    int    bin;
-    bool   current;
+    float   mag;
+    int32_t bin;
 };
 
 // --- Output sample timing convention ---
@@ -496,7 +498,7 @@ struct AudioSTFT {
         // bins complete. So the previous-frame population is ONE descending
         // sort walked by index `p`, and heap_scratch holds only current-frame
         // nodes. Each selection takes max(prev stream head, current heap top)
-        // by exact double comparison: the maximum over a partition equals the
+        // by exact float comparison: the maximum over a partition equals the
         // global maximum, so for distinct magnitudes the assignment sequence is
         // identical, pop for pop, to a single combined heap. The done-skip
         // advance over the prev stream is exactly the combined heap's discard
@@ -508,12 +510,12 @@ struct AudioSTFT {
         prev_scratch.clear();
         for (int k = 0; k < K; ++k) {
             if (done_scratch[k] == 0) {
-                prev_scratch.push_back({mag_prev[k], k, false});
+                prev_scratch.push_back({static_cast<float>(mag_prev[k]), k});
             }
         }
         std::sort(prev_scratch.begin(), prev_scratch.end(),
                   [](const PghiHeapNode& a, const PghiHeapNode& b) {
-                      return a.mag > b.mag;      // descending, exact double compare
+                      return a.mag > b.mag;      // descending, exact float compare
                   });
         size_t p = 0;
         heap_scratch.clear();
@@ -543,7 +545,10 @@ struct AudioSTFT {
             if (!have_prev && !have_cur) break;
             // Exact ties go to the previous-frame stream (!(prev < cur)) — a
             // fixed rule replacing the combined heap's layout-dependent tie
-            // order; unreachable on analog-sourced (tie-free) material.
+            // order. The keys are floats, so magnitudes closer than float
+            // precision (denormal-small doubles that round to 0.0f included)
+            // become exact ties handled by the same fixed rule; on distinct
+            // float keys the assignment sequence is otherwise unchanged.
             const bool take_prev = have_prev &&
                 (!have_cur ||
                  !(prev_scratch[p].mag < heap_scratch.front().mag));
@@ -555,7 +560,7 @@ struct AudioSTFT {
                 theta[m] = th_prev[m] + half_Rs * (dt_prev[m] + dt_cur[m]);
                 done_scratch[m] = 1;
                 --remaining;
-                heap_scratch.push_back({mag_cur[m], m, true});
+                heap_scratch.push_back({static_cast<float>(mag_cur[m]), m});
                 std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
             } else {
                 std::pop_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
@@ -574,7 +579,7 @@ struct AudioSTFT {
                     theta[nb] = theta[m] + ((nb == m + 1) ? step : -step);
                     done_scratch[nb] = 1;
                     --remaining;
-                    heap_scratch.push_back({mag_cur[nb], nb, true});
+                    heap_scratch.push_back({static_cast<float>(mag_cur[nb]), nb});
                     std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
                 }
             }

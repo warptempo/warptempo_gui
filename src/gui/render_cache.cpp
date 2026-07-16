@@ -156,8 +156,12 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // current-only heap; the assignment order is identical for distinct
 // magnitudes, but exact-tie order changed (the previous-frame stream now wins
 // ties, replacing the heap's layout-dependent order), so prior artifacts must
-// re-render rather than pose as current renders.
-constexpr uint32_t kFingerprintVersion = 12;
+// re-render rather than pose as current renders. Version 13: the PGHI selection
+// key is now the float-rounded magnitude, so magnitudes closer than float
+// precision resolve in a different fixed order than v12 (and denormal-small
+// magnitudes round to 0.0f and tie) — prior artifacts must re-render rather
+// than pose as current renders.
+constexpr uint32_t kFingerprintVersion = 13;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the
