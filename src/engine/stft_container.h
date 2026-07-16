@@ -464,9 +464,9 @@ struct AudioSTFT {
         // structure, so freshly randomized phase is what keeps the residual
         // floor decorrelated from frame to frame. Significant bins (in I)
         // get their phase via the heap below.
-        // Instrumentation-only countdown of still-unassigned significant bins;
-        // it never affects the loop condition (the heap still drains fully) and
-        // exists only to classify inert pops.
+        // Countdown of still-unassigned significant bins (the set I); the drain
+        // loop below runs while it is nonzero (Algorithm 1). Also read by the
+        // profiler to classify inert pops.
         long long remaining = 0;
         std::uniform_real_distribution<double> quiet_dist(-M_PI, M_PI);
         for (int k = 0; k < K; ++k) {
@@ -476,7 +476,8 @@ struct AudioSTFT {
                 if (prof) prof->quiet_bins += 1;
             } else {
                 done_scratch[k] = 0;                                  // in I
-                if (prof) { prof->significant_bins += 1; ++remaining; }
+                ++remaining;
+                if (prof) prof->significant_bins += 1;
             }
         }
         if (prof) {
@@ -497,7 +498,14 @@ struct AudioSTFT {
                 std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
             }
         }
-        while (!heap_scratch.empty()) {
+        // Drain while I is nonempty (Algorithm 1, tracked by `remaining`). The
+        // !empty() conjunct is defensive only: every bin in I is seeded with its
+        // previous-frame node, so the heap cannot empty while remaining > 0. Any
+        // nodes still in the heap at exit are provably inert — a previous-frame
+        // node finds its bin already done, and a current-frame node finds no
+        // undone significant neighbor — so none can write theta; heap_scratch.clear()
+        // at the top of the next call discards them.
+        while (remaining != 0 && !heap_scratch.empty()) {
             std::pop_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
             const PghiHeapNode node = heap_scratch.back();
             heap_scratch.pop_back();
@@ -511,7 +519,7 @@ struct AudioSTFT {
                 if (done_scratch[m] == 0) {
                     theta[m] = th_prev[m] + half_Rs * (dt_prev[m] + dt_cur[m]);
                     done_scratch[m] = 1;
-                    if (prof) --remaining;
+                    --remaining;
                     heap_scratch.push_back({mag_cur[m], m, true});
                     std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
                 }
@@ -527,7 +535,7 @@ struct AudioSTFT {
                     const double step = alpha_fp * 0.5 * (df[m] + df[nb]);
                     theta[nb] = theta[m] + ((nb == m + 1) ? step : -step);
                     done_scratch[nb] = 1;
-                    if (prof) --remaining;
+                    --remaining;
                     heap_scratch.push_back({mag_cur[nb], nb, true});
                     std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
                 }
