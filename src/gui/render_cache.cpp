@@ -151,8 +151,13 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // artifacts must re-render rather than pose as current renders. Version 11: the
 // synthesis spectrum trig now evaluates through vectorized libmvec sin/cos, so
 // interior bins differ from the prior scalar-sincos reference by a few ulps —
-// prior artifacts must re-render rather than pose as current renders.
-constexpr uint32_t kFingerprintVersion = 11;
+// prior artifacts must re-render rather than pose as current renders. Version
+// 12: the PGHI walk is restructured as a sorted previous-frame stream plus a
+// current-only heap; the assignment order is identical for distinct
+// magnitudes, but exact-tie order changed (the previous-frame stream now wins
+// ties, replacing the heap's layout-dependent order), so prior artifacts must
+// re-render rather than pose as current renders.
+constexpr uint32_t kFingerprintVersion = 12;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the

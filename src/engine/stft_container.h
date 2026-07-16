@@ -48,12 +48,13 @@ inline double princarg(double phase) {
 inline constexpr double kPghiTol      = 1e-6;
 inline constexpr double kPghiFreqStep = 1.0;
 
-// One entry in the PGHI integration max-heap (Algorithm 1). `mag` is the heap
+// One node in the PGHI integration walk (Algorithm 1). `mag` is the selection
 // key. `bin` is the spectral bin. `current` distinguishes the two live frames:
 // false => a PREVIOUS-frame significant bin, eligible to be time-stepped into
-// the current frame; true => a CURRENT-frame bin already assigned, eligible to
-// frequency-spread to its neighbors. Ordered by `mag` so the loudest available
-// propagation path wins.
+// the current frame (these live in the descending-sorted prev stream); true =>
+// a CURRENT-frame bin already assigned, eligible to frequency-spread to its
+// neighbors (these live in the current-node max-heap). Selection is by `mag`
+// so the loudest available propagation path wins.
 struct PghiHeapNode {
     double mag;
     int    bin;
@@ -412,7 +413,8 @@ struct AudioSTFT {
     //                      to R_s is alpha (the stretch); used as b_s =
     //                      alpha * b_a in the frequency-spread step (Prusa).
     //
-    // Scratch (size K, reused): done_scratch, heap_scratch.
+    // Scratch (size K, reused): done_scratch, prev_scratch (previous-frame
+    // stream, sorted descending), heap_scratch (current-frame nodes only).
     void pghi_integrate(bool seed,
                         int64_t R_a_back, int64_t R_a_fwd,
                         const std::vector<double>& mag_prev,
@@ -425,6 +427,7 @@ struct AudioSTFT {
                         const std::vector<char>& quiet,
                         std::vector<double>& theta,
                         std::vector<char>&   done_scratch,
+                        std::vector<PghiHeapNode>& prev_scratch,
                         std::vector<PghiHeapNode>& heap_scratch,
                         std::mt19937& rng,
                         PghiProfile* prof = nullptr) {
@@ -464,10 +467,9 @@ struct AudioSTFT {
         // here is the published choice — quiet bins carry no coherent
         // structure, so freshly randomized phase is what keeps the residual
         // floor decorrelated from frame to frame. Significant bins (in I)
-        // get their phase via the heap below.
+        // get their phase via the split-stream walk below.
         // Countdown of still-unassigned significant bins (the set I); the drain
-        // loop below runs while it is nonzero (Algorithm 1). Also read by the
-        // profiler to classify inert pops.
+        // loop below runs while it is nonzero (Algorithm 1).
         long long remaining = 0;
         std::uniform_real_distribution<double> quiet_dist(-M_PI, M_PI);
         for (int k = 0; k < K; ++k) {
@@ -487,44 +489,79 @@ struct AudioSTFT {
                 prof_t_quiet - prof_t_entry).count();
         }
 
-        // Algorithm 1. Seed the heap with the previous frame's significant bins
-        // (time-step candidates), keyed on their previous magnitude.
+        // Algorithm 1, realized as a SPLIT-STREAM walk. The conceptual max-heap
+        // holds two node populations with different lifecycles: every
+        // previous-frame candidate (keyed on mag_prev) is known up front, while
+        // current-frame candidates (keyed on mag_cur) arrive dynamically as
+        // bins complete. So the previous-frame population is ONE descending
+        // sort walked by index `p`, and heap_scratch holds only current-frame
+        // nodes. Each selection takes max(prev stream head, current heap top)
+        // by exact double comparison: the maximum over a partition equals the
+        // global maximum, so for distinct magnitudes the assignment sequence is
+        // identical, pop for pop, to a single combined heap. The done-skip
+        // advance over the prev stream is exactly the combined heap's discard
+        // pops (a previous-frame node whose bin was already assigned via a
+        // neighbor spread).
         auto cmp = [](const PghiHeapNode& a, const PghiHeapNode& b) {
             return a.mag < b.mag;                                     // max-heap on mag
         };
-        heap_scratch.clear();
+        prev_scratch.clear();
         for (int k = 0; k < K; ++k) {
             if (done_scratch[k] == 0) {
-                heap_scratch.push_back({mag_prev[k], k, false});
-                std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
+                prev_scratch.push_back({mag_prev[k], k, false});
             }
         }
-        // Drain while I is nonempty (Algorithm 1, tracked by `remaining`). The
-        // !empty() conjunct is defensive only: every bin in I is seeded with its
-        // previous-frame node, so the heap cannot empty while remaining > 0. Any
-        // nodes still in the heap at exit are provably inert — a previous-frame
-        // node finds its bin already done, and a current-frame node finds no
-        // undone significant neighbor — so none can write theta; heap_scratch.clear()
-        // at the top of the next call discards them.
-        while (remaining != 0 && !heap_scratch.empty()) {
-            std::pop_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
-            const PghiHeapNode node = heap_scratch.back();
-            heap_scratch.pop_back();
-            if (prof) {
-                prof->pops_total += 1;
-                if (remaining == 0) prof->pops_inert += 1;
-            }
-            const int m = node.bin;
-            if (!node.current) {
-                // Previous-frame bin -> trapezoidal time-step into frame n.
-                if (done_scratch[m] == 0) {
-                    theta[m] = th_prev[m] + half_Rs * (dt_prev[m] + dt_cur[m]);
-                    done_scratch[m] = 1;
-                    --remaining;
-                    heap_scratch.push_back({mag_cur[m], m, true});
-                    std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
+        std::sort(prev_scratch.begin(), prev_scratch.end(),
+                  [](const PghiHeapNode& a, const PghiHeapNode& b) {
+                      return a.mag > b.mag;      // descending, exact double compare
+                  });
+        size_t p = 0;
+        heap_scratch.clear();
+        // Drain while I is nonempty (Algorithm 1, tracked by `remaining`).
+        // Entries still in prev_scratch and nodes still in heap_scratch at exit
+        // are provably inert — a previous-frame entry finds its bin already
+        // done, and a current-frame node finds no undone significant neighbor —
+        // so none can write theta; the clear() calls at the top of the next
+        // call discard them.
+        while (remaining != 0) {
+            // Skip previous-frame entries whose bin is already assigned: these
+            // are exactly the discard pops the combined heap performed.
+            while (p < prev_scratch.size() &&
+                   done_scratch[prev_scratch[p].bin] != 0) {
+                ++p;
+                if (prof) {
+                    prof->pops_total += 1;
+                    prof->pops_inert += 1;
                 }
+            }
+            const bool have_prev = p < prev_scratch.size();
+            const bool have_cur  = !heap_scratch.empty();
+            // Defensive only: every bin in I has its previous-frame entry in
+            // the stream, so both sources cannot exhaust while remaining > 0.
+            // If breached, exit with the unassigned bins' theta stale — the
+            // same outcome the combined heap's !empty() conjunct produced.
+            if (!have_prev && !have_cur) break;
+            // Exact ties go to the previous-frame stream (!(prev < cur)) — a
+            // fixed rule replacing the combined heap's layout-dependent tie
+            // order; unreachable on analog-sourced (tie-free) material.
+            const bool take_prev = have_prev &&
+                (!have_cur ||
+                 !(prev_scratch[p].mag < heap_scratch.front().mag));
+            if (prof) prof->pops_total += 1;
+            if (take_prev) {
+                // Previous-frame bin -> trapezoidal time-step into frame n.
+                const int m = prev_scratch[p].bin;
+                ++p;
+                theta[m] = th_prev[m] + half_Rs * (dt_prev[m] + dt_cur[m]);
+                done_scratch[m] = 1;
+                --remaining;
+                heap_scratch.push_back({mag_cur[m], m, true});
+                std::push_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
             } else {
+                std::pop_heap(heap_scratch.begin(), heap_scratch.end(), cmp);
+                const PghiHeapNode node = heap_scratch.back();
+                heap_scratch.pop_back();
+                const int m = node.bin;
                 // Current-frame bin -> integrate the frequency gradient (scaled
                 // by b_s = alpha * b_a) to its still-unassigned significant
                 // neighbors (trapezoidal in df). Centered convention -> no

@@ -203,6 +203,7 @@ void Synthesis::synthesize_full(
         // Per-channel synthesis scratch.
         std::vector<double> theta(K2);
         std::vector<char>   done_scratch(K2);
+        std::vector<PghiHeapNode> prev_scratch; prev_scratch.reserve(K2);
         std::vector<PghiHeapNode> heap_scratch; heap_scratch.reserve(K2);
         // Per-channel quiet-bin RNG. Each stream is consumed only by its own
         // channel, in bin order, so the draw sequence is identical whether
@@ -391,8 +392,8 @@ void Synthesis::synthesize_full(
             stft.pghi_integrate(seed_heap, R_a_actual, R_a_fwd,
                                 mag_prev, mag_cur, ph_cur,
                                 th_prev, dt_prev, dt_in, df_in, quiet_in,
-                                theta, done_scratch, heap_scratch, rng,
-                                prof ? &cp.pghi : nullptr);
+                                theta, done_scratch, prev_scratch, heap_scratch,
+                                rng, prof ? &cp.pghi : nullptr);
             if (prof) cp.pghi_s += prof_secs(prof_clock::now() - t);
             // dt_in (this frame's dt) becomes the next frame's dt_prev.
             dt_prev.swap(dt_in);

@@ -28,10 +28,14 @@ struct PghiProfile {
     long long seed_frames = 0;       // calls that take the seed early-return
     long long quiet_bins = 0;        // bins assigned a random synthesis phase
     long long significant_bins = 0;  // bins entering I (heap-assigned)
-    long long pops_total = 0;        // drain-loop pop iterations
-    long long pops_inert = 0;        // pops occurring after all bins assigned
+    long long pops_total = 0;        // drain-loop selection events: prev-stream
+                                     // takes + prev-stream done-skips +
+                                     // current-heap pops (the same magnitude a
+                                     // single combined heap's pops would be)
+    long long pops_inert = 0;        // prev-stream done-skips (the analogue of
+                                     // a combined heap's discarded pops)
     double quiet_s = 0.0;            // quiet-bin RNG assignment loop
-    double heap_s = 0.0;             // seed seat + heap seed + drain loop
+    double heap_s = 0.0;             // seed seat + prev-stream sort + drain loop
 };
 
 // Per-channel synthesis stage timings, accumulated in run_channel when
