@@ -20,6 +20,24 @@ using warptempo_parse::parse_int_strict;
 using warptempo_parse::prefix_line_error;
 using warptempo_parse::trim_ws;
 
+// Every canonical .settings key, in kSettingsOrder's on-disk order. This is
+// the membership SoT for the required-key check: EVERY key is required, so a
+// file missing any one is load-fatal. It is the parser-side twin of the GUI
+// writer's kSettingsOrder (settings_io.cpp) — adding a settings key touches
+// BOTH lists (and, for its grammar, kEngineKeys/validate_engine_setting for an
+// engine key or validate_gui_setting for a GUI-kind key). kEngineKeys stays
+// file-local to engine_settings_io.cpp; this flat list owns membership
+// completeness here.
+constexpr const char* kCanonicalSettingsKeys[] = {
+    "title", "scale", "bpm", "notes", "url", "cover",
+    "active_audio_view", "active_markers_view", "active_tab_view",
+    "playback_speed", "follow", "font_size", "audio_player",
+    "tab_a_trim_begin", "tab_a_trim_end", "tab_a_read_only",
+    "tab_a_viewport_start", "tab_a_zoom", "tab_a_playhead_cursor",
+    "tab_b_trim_begin", "tab_b_trim_end", "tab_b_read_only",
+    "tab_b_viewport_start", "tab_b_zoom", "tab_b_playhead_cursor",
+};
+
 }  // namespace
 
 namespace warptempo_settings {
@@ -68,7 +86,7 @@ std::expected<void, std::string> scan_settings_file(
         return std::unexpected(std::string("I/O read error"));
     }
 
-    for (const char* k : {"title", "scale"}) {
+    for (const char* k : kCanonicalSettingsKeys) {
         if (seen.count(k) == 0) {
             return std::unexpected(
                 std::string("missing required key '") + k + "'");
@@ -107,7 +125,6 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
             int64_t v = 0;
             if (!parse_int64_strict(value, v) || v < 0)
                 return err("must be a non-negative integer");
-            out.kind = GuiSettingValue::Kind::Frame64;
             out.i64 = v;
             return R(out);
         }
@@ -116,7 +133,6 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
             if (!parse_int_strict(value, v) ||
                 v < kFitFileLevel || v > kMaxNumericLevel)
                 return err("must be a zoom level");
-            out.kind = GuiSettingValue::Kind::ZoomLevel;
             out.i = v;
             return R(out);
         }
@@ -125,24 +141,22 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
             if (!parse_bool_token(value, v))
                 return err(
                     "must be one of {true, false, 1, 0, yes, no, on, off}");
-            out.kind = GuiSettingValue::Kind::Bool;
             out.b = v;
             return R(out);
         }
         if (suffix == "trim_begin" || suffix == "trim_end") {
-            out.kind = GuiSettingValue::Kind::TrimFrame;
-            // Blank and absent are both unset (absent keeps pre-convention
-            // files loading); the writer always emits the key, blank when
-            // unset — the audio_player convention, and the symmetric twin of
-            // the editor's empty-value clear. The past-EOF wall stays
-            // state-dependent (caller-side).
-            if (value.empty()) {
+            // The unset spelling is the exact literal `-1`. It sits outside the
+            // authored-frame domain (parse_authored_frame refuses a sign), so
+            // the value grammar is unambiguous: `-1` (unset) or a canonical
+            // whole source frame. The past-EOF wall stays state-dependent
+            // (caller-side).
+            if (value == "-1") {
                 out.trim_unset = true;
                 return R(out);
             }
             int64_t v = 0;
             if (!parse_authored_frame(value, v))
-                return err("must be a whole source-frame position");
+                return err("must be a whole source-frame position or -1 (unset)");
             out.i64 = v;
             return R(out);
         }
@@ -155,25 +169,21 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         bool v = false;
         if (!parse_bool_token(value, v))
             return err("must be one of {true, false, 1, 0, yes, no, on, off}");
-        out.kind = GuiSettingValue::Kind::Bool;
         out.b = v;
         return R(out);
     }
     if (key == "active_audio_view") {
         if (value != "S" && value != "T") return err("must be S or T");
-        out.kind = GuiSettingValue::Kind::ViewChar;
         out.c = value[0];
         return R(out);
     }
     if (key == "active_markers_view") {
         if (value != "W" && value != "P") return err("must be W or P");
-        out.kind = GuiSettingValue::Kind::ViewChar;
         out.c = value[0];
         return R(out);
     }
     if (key == "active_tab_view") {
         if (value != "A" && value != "B") return err("must be A or B");
-        out.kind = GuiSettingValue::Kind::ViewChar;
         out.c = value[0];
         return R(out);
     }
@@ -189,7 +199,6 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         float v = 0.0f;
         if (!parse_float_strict(value, v) || !is_playback_speed_preset(v))
             return err("must be a preset speed");
-        out.kind = GuiSettingValue::Kind::PlaybackSpeed;
         out.f = v;
         return R(out);
     }
@@ -197,7 +206,6 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         double v = 0.0;
         if (!parse_double_strict(value, v) || v < 6.0 || v > 72.0)
             return err("must be a number in [6, 72]");
-        out.kind = GuiSettingValue::Kind::FontSize;
         out.d = v;
         return R(out);
     }
@@ -208,7 +216,6 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         // legal and means "no external player". The key is always present in a
         // product-written .settings, so the shared schema loads `audio_player=`
         // in both products.
-        out.kind = GuiSettingValue::Kind::Text;
         out.text = value;
         return R(out);
     }
@@ -242,8 +249,8 @@ std::expected<SettingsFile, std::string> read_settings_file(
         // neither an engine key (checked above) nor a GUI-kind key — the
         // unknown-key case; an expected error carries the reason bad_value
         // composes. On success, store the typed value into the SettingsFile
-        // fields; the has_* flags and tab routing stay here (state the schema
-        // function is deliberately blind to).
+        // fields; tab routing and the trim unset decode stay here (state the
+        // schema function is deliberately blind to).
         auto g = warptempo_settings::validate_gui_setting(key, value);
         if (!g) {
             return prefix_line_error(ln, "unknown key '" + key + "'");
@@ -265,19 +272,16 @@ std::expected<SettingsFile, std::string> read_settings_file(
 
         if (tab != nullptr) {
             if (suffix == "viewport_start") {
-                tab->has_viewport_start = true;
                 tab->viewport_start = gv.i64;
             } else if (suffix == "zoom") {
-                tab->has_zoom = true;
                 tab->zoom = gv.i;
             } else if (suffix == "playhead_cursor") {
-                tab->has_playhead = true;
                 tab->playhead = gv.i64;
             } else if (suffix == "read_only") {
-                tab->has_read_only = true;
                 tab->read_only = gv.b;
             } else if (suffix == "trim_begin") {
-                // A blank value is unset (absent-key equivalent): leave has_.
+                // The `-1` unset spelling leaves has_begin false (SettingsTrim's
+                // default); any other value sets the bound.
                 if (!gv.trim_unset) {
                     tab->trim.has_begin = true;
                     tab->trim.begin_frame = gv.i64;
@@ -289,25 +293,18 @@ std::expected<SettingsFile, std::string> read_settings_file(
                 }
             }
         } else if (key == "follow") {
-            out.has_follow = true;
             out.follow = gv.b;
         } else if (key == "active_audio_view") {
-            out.has_active_audio_view = true;
             out.active_audio_view = gv.c;
         } else if (key == "active_markers_view") {
-            out.has_active_markers_view = true;
             out.active_markers_view = gv.c;
         } else if (key == "active_tab_view") {
-            out.has_active_tab_view = true;
             out.active_tab_view = gv.c;
         } else if (key == "playback_speed") {
-            out.has_playback_speed = true;
             out.playback_speed = gv.f;
         } else if (key == "font_size") {
-            out.has_font_size = true;
             out.font_size = gv.d;
         } else if (key == "audio_player") {
-            out.has_audio_player = true;
             out.audio_player = gv.text;
         }
         return {};

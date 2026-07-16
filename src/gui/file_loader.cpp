@@ -23,26 +23,19 @@
 
 void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     app.engine_settings = sf.engine;
-    app.follow_mode    = sf.has_follow ? sf.follow : true;
-    app.active_audio_view   = sf.has_active_audio_view   ? sf.active_audio_view   : 'S';
-    app.active_markers_view = sf.has_active_markers_view ? sf.active_markers_view : 'W';
-    app.active_tab_view     = sf.has_active_tab_view     ? sf.active_tab_view     : 'A';
-    app.playback_speed = sf.has_playback_speed ? sf.playback_speed : 0.7f;
-    // GUI font size, same application shape as playback_speed: absent
-    // key means the default. The value is applied once at launch when the
-    // source loads — the same behavior class as playback_speed (see the
-    // font_size descriptor in settings_io.cpp).
-    app.font_size      = sf.has_font_size ? sf.font_size : 11.0;
-    // GUI launch preference for the `l` render-listen command. Constructive
-    // default "audacious" like every sibling above (a value fallback, not a
-    // has-flag gate), so load and adopt apply it identically for any
-    // schema-legal SettingsFile: a present value (blank included — the
-    // deliberate opt-out) applies verbatim, and an entry that OMITS the key
-    // resolves to "audacious" rather than leaving the live player stale. Adopt
-    // shares this routine, so adopt-absent == load-absent == "audacious" (the
-    // 1:1); product-written render entries always emit the key, so the absent
-    // branch is reached only by legacy or hand-edited sidecars.
-    app.audio_player = sf.has_audio_player ? sf.audio_player : "audacious";
+    app.follow_mode         = sf.follow;
+    app.active_audio_view   = sf.active_audio_view;
+    app.active_markers_view = sf.active_markers_view;
+    app.active_tab_view     = sf.active_tab_view;
+    app.playback_speed      = sf.playback_speed;
+    // GUI font size, applied once at launch when the source loads — the same
+    // behavior class as playback_speed (see the font_size descriptor in
+    // settings_io.cpp).
+    app.font_size           = sf.font_size;
+    // GUI launch preference for the `l` render-listen command, applied
+    // verbatim: a blank value is the deliberate no-player opt-out. Adopt shares
+    // this routine, so an adopted render entry's player is 1:1 with its file.
+    app.audio_player        = sf.audio_player;
 }
 
 bool GuiFileLoader::load_file(const std::string& path) {
@@ -336,18 +329,12 @@ bool GuiFileLoader::load_file(const std::string& path) {
         // there is no audio-relative range check on them — the runtime clamps
         // own any out-of-range value.
         auto apply = [&](const SettingsFileTab& src, ViewState& dst) {
-            if (src.has_viewport_start) {
-                dst.viewport_start_sample = src.viewport_start;
-            }
-            if (src.has_zoom) {
-                dst.zoom_level = src.zoom;
-            }
-            if (src.has_playhead) {
-                // Applied verbatim here; the live-domain clamp runs on both
-                // tab snapshots after this settings block, once the persisted
-                // S/T domain is computable (the clamp site below).
-                dst.playhead_cursor_sample = src.playhead;
-            }
+            dst.viewport_start_sample = src.viewport_start;
+            dst.zoom_level            = src.zoom;
+            // Applied verbatim here; the live-domain clamp runs on both tab
+            // snapshots after this settings block, once the persisted S/T
+            // domain is computable (the clamp site below).
+            dst.playhead_cursor_sample = src.playhead;
         };
         apply(sf.tab_a, app.tab_a);
         apply(sf.tab_b, app.tab_b);
@@ -358,16 +345,17 @@ bool GuiFileLoader::load_file(const std::string& path) {
         // on_resize) stay below where they always ran. The render-entry adopt
         // shares this exact routine so its in-memory result is 1:1 with a load.
         apply_settings_engine_and_prefs(app, sf);
-        // Per-tab trim: apply each bound when its key is present;
-        // absence leaves the load-time reset (above) in place. Values apply
-        // verbatim here; a crossed/equal pair normalizes in the auto-clear
-        // block after the past-EOF guard below (order rationale there).
+        // Per-tab trim: apply each bound the file set (SettingsTrim's has_begin
+        // /has_end reflect the `-1` unset decode); an unset bound leaves the
+        // load-time reset (above) in place. Values apply verbatim here; a
+        // crossed/equal pair normalizes in the auto-clear block after the
+        // past-EOF guard below (order rationale there).
         if (sf.tab_a.trim.has_begin) { app.tab_a.trim.has_begin = true; app.tab_a.trim.begin_frame = sf.tab_a.trim.begin_frame; }
         if (sf.tab_a.trim.has_end)   { app.tab_a.trim.has_end   = true; app.tab_a.trim.end_frame   = sf.tab_a.trim.end_frame; }
         if (sf.tab_b.trim.has_begin) { app.tab_b.trim.has_begin = true; app.tab_b.trim.begin_frame = sf.tab_b.trim.begin_frame; }
         if (sf.tab_b.trim.has_end)   { app.tab_b.trim.has_end   = true; app.tab_b.trim.end_frame   = sf.tab_b.trim.end_frame; }
-        if (sf.tab_a.has_read_only) app.tab_a.read_only = sf.tab_a.read_only;
-        if (sf.tab_b.has_read_only) app.tab_b.read_only = sf.tab_b.read_only;
+        app.tab_a.read_only = sf.tab_a.read_only;
+        app.tab_b.read_only = sf.tab_b.read_only;
 
         // Persisted viewport/playhead positions are display scratch, not
         // authored data: they apply verbatim (above) with no load-range

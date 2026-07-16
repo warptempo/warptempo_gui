@@ -19,11 +19,11 @@
 // violation is adversarial under the two-category rule and load-fatal with
 // the FIRST error only: an unknown key, a keyless non-comment line, a
 // duplicate of ANY key, a malformed or out-of-vocabulary value (an
-// off-preset playback_speed included), and a missing required engine key
-// (title, scale) all refuse. Blank lines and '#'
-// comment lines stay skippable — the long-standing settings line grammar.
-// Absent optional keys are legal (has_* stays false; callers apply their
-// defaults): older sidecars carry fewer keys and remain loadable.
+// off-preset playback_speed included), and a missing canonical key all
+// refuse. Blank lines and '#' comment lines stay skippable — the
+// long-standing settings line grammar. EVERY canonical key is required: the
+// program writes all of them, so a file short of any one is hand-damaged and
+// refuses.
 //
 // This schema owns the zoom-level range too: a zoom outside
 // kFitFileLevel..kMaxNumericLevel is refused here in both products. What
@@ -54,8 +54,9 @@ constexpr int kMaxNumericLevel = 10;
 
 // One tab's trim in the .settings schema. Positions are whole source frames
 // (int64_t), decoded via parse_authored_frame (frame_format.h). A has_* of
-// false means the key was absent OR present-blank — both mean unset; the
-// paired _frame field must not be read.
+// false means the on-disk value was the literal `-1` (the unset spelling); a
+// blank or absent key is load-fatal. The paired _frame field must not be read
+// when has_* is false.
 struct SettingsTrim {
     bool    has_begin   = false;
     int64_t begin_frame = 0;
@@ -66,43 +67,33 @@ struct SettingsTrim {
 // One tab's view-state band: viewport / zoom / playhead scratch, the
 // read-only flag, and the trim pair.
 struct SettingsFileTab {
-    bool    has_viewport_start = false;
-    int64_t viewport_start     = 0;
-    bool    has_zoom           = false;
-    int     zoom               = 0;
-    bool    has_playhead       = false;
-    int64_t playhead           = 0;
-    bool    has_read_only      = false;
-    bool    read_only          = false;
+    int64_t viewport_start = 0;
+    int     zoom           = 0;
+    int64_t playhead       = 0;
+    bool    read_only      = false;
     SettingsTrim trim;
 };
 
 struct SettingsFile {
-    // The typed engine block; the required keys (title, scale) are
-    // guaranteed present, the provenance keys default empty.
+    // The typed engine block. Every engine key is required in the file, so all
+    // six fields are reader-assigned (the provenance values may be blank).
     EngineSettings engine;
 
     SettingsFileTab tab_a;
     SettingsFileTab tab_b;
 
-    bool   has_follow              = false;
+    // Every canonical key is required, so the reader always assigns these
+    // fields; the member initializers below are construction-state only.
     bool   follow                  = true;
-    bool   has_active_audio_view   = false;
     char   active_audio_view       = 'S';   // S | T
-    bool   has_active_markers_view = false;
     char   active_markers_view     = 'W';   // W | P
-    bool   has_active_tab_view     = false;
     char   active_tab_view         = 'A';   // A | B
-    bool   has_playback_speed      = false;
-    float  playback_speed          = 1.0f;  // preset vocabulary only
-    bool   has_font_size           = false;
+    float  playback_speed          = 0.7f;  // preset vocabulary only
     double font_size               = 11.0;  // points, [6, 72]
-    // Optional GUI-kind launcher for the `l` render-listen command: an
-    // external player name or path. A present but BLANK value
-    // (`audio_player=`) is the deliberate no-player opt-out; has_audio_player
-    // false (key absent) resolves to the `audacious` default GUI-side, in
-    // apply_settings_engine_and_prefs — this struct does not apply it.
-    bool        has_audio_player   = false;
+    // GUI-kind launcher for the `l` render-listen command: an external player
+    // name or path. A BLANK value (`audio_player=`) is the deliberate
+    // no-player opt-out — the only spelling of it. The key is required, so the
+    // reader always assigns this field.
     std::string audio_player;
 };
 
@@ -133,9 +124,10 @@ using SettingsLineFn = std::function<std::expected<void, std::string>(
 // Scan `in` under the shared lexical contract — BOM strip on line 1,
 // whitespace trim, blank and '#' comment skip, first-'=' split, empty-key
 // and keyless-line refusal, duplicate-key refusal against a seen set — and
-// invoke `on_pair` once per meaningful line. After the loop, enforce the
-// required engine keys (title, scale). Returns
-// the first error (lexical, callback, or missing-required-key), or success.
+// invoke `on_pair` once per meaningful line. After the loop, enforce that
+// every canonical key is present (the required-key list in settings_file.cpp),
+// reporting the first missing one. Returns the first error (lexical, callback,
+// or missing-required-key), or success.
 std::expected<void, std::string> scan_settings_file(std::istream& in,
                                                     const SettingsLineFn& on_pair);
 
@@ -147,20 +139,19 @@ std::optional<std::expected<void, std::string>> try_engine_key(
     int ln, const std::string& key, const std::string& value,
     EngineSettings& engine);
 
-// The typed result of a GUI-kind (key, value) grammar check. `kind` selects
-// which member carries the parsed value.
+// The typed result of a GUI-kind (key, value) grammar check. The consumers
+// (the whole-file reader and the settings editor) route by key name / tab
+// suffix, so only the parsed-value members below are read; each member's
+// comment names the key(s) that fill it.
 struct GuiSettingValue {
-    enum class Kind { Bool, ViewChar, ZoomLevel, Frame64,
-                      PlaybackSpeed, FontSize, TrimFrame, Text };
-    Kind        kind = Kind::Bool;
-    bool        b    = false;   // Bool (follow, tab_X_read_only)
-    char        c    = 0;       // ViewChar (S/T, W/P, A/B)
-    int         i    = 0;       // ZoomLevel (tab_X_zoom)
-    int64_t     i64  = 0;       // Frame64 (viewport_start/playhead), TrimFrame
-    float       f    = 0.0f;    // PlaybackSpeed
-    double      d    = 0.0;     // FontSize
-    bool trim_unset  = false;   // TrimFrame: blank value = bound unset
-    std::string text;           // Text (audio_player)
+    bool        b    = false;   // follow, tab_X_read_only
+    char        c    = 0;       // active_audio_view / _markers_view / _tab_view (S/T, W/P, A/B)
+    int         i    = 0;       // tab_X_zoom
+    int64_t     i64  = 0;       // tab_X_viewport_start / _playhead_cursor / _trim_*
+    float       f    = 0.0f;    // playback_speed
+    double      d    = 0.0;     // font_size
+    bool trim_unset  = false;   // tab_X_trim_*: the value was -1 (bound unset)
+    std::string text;           // audio_player
 };
 
 // The single grammar/vocabulary owner for GUI-kind settings values — the

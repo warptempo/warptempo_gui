@@ -505,14 +505,16 @@ struct AppState {
     double  font_size               = 11.0;
 
     // GUI-kind launch preference: the external audio player the `l`
-    // ("Listen to renders") command spawns with the rendered wavs. Default
-    // "audacious": a fresh state (no `.settings`, or a legacy `.settings`
-    // carrying no audio_player line) launches audacious on `l`. An explicit
-    // value overrides; an explicit BLANK value (`audio_player=`) is the
-    // deliberate opt-out, and `l` then reports "no audio_player set" and does
-    // nothing. Loaded from the `.settings` at file load and persisted on
-    // Ctrl+S; the one GUI-kind key settable via the settings editor
-    // (`:audio_player=<path>`); consumed only by the `l` launcher.
+    // ("Listen to renders") command spawns with the rendered wavs. The
+    // "audacious" default lives in exactly two places: this member initializer
+    // (the pre-load state) and the first-open template's audio_player line
+    // (settings_io.cpp) — the key is required in every `.settings`, so a load
+    // always assigns this field from the file. A BLANK value
+    // (`audio_player=`) is the deliberate opt-out, and `l` then reports
+    // "no audio_player set" and does nothing. Persisted on Ctrl+S. The one
+    // GUI-kind key with NO gesture: the settings editor
+    // (`:audio_player=<path>`) is its sole authoring surface; consumed only
+    // by the `l` launcher.
     std::string audio_player = "audacious";
 
     // One-shot stash of the scanner's last painted pixel-x under the

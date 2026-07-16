@@ -228,11 +228,7 @@ void GuiPlaybackLifecycle::set_follow_mode(bool desired) {
 // writes app.playback_speed.
 void GuiPlaybackLifecycle::set_playback_speed(float s) {
     app.playback_speed = s;
-    // Target view auditions the authored warp at its natural rate, so a speed
-    // set here only stores; it becomes audible on the return to source view
-    // (every launch re-applies from app.playback_speed, forced to 1.0 while
-    // the active view is target).
-    if (app.active_audio_view == 'T') return;
+    if (app.active_audio_view == 'T') return;  // target view: store only (see above)
     playback.set_speed(s);
     // Speed change without resync would cause a backward cursor jump:
     // the predictor would retroactively apply the new speed to the

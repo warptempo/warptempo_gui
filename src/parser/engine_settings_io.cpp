@@ -2,8 +2,6 @@
 
 #include "value_format.h"
 
-#include <cctype>
-#include <cmath>
 #include <string>
 
 namespace {
@@ -45,32 +43,26 @@ bool validate_engine_setting(const std::string& key,
                              EngineSettings& out,
                              std::string& reason) {
     if (key == "title") {
-        // Strip a matching leading/trailing double-quote pair, then validate
-        // non-empty after whitespace trim, no embedded newline, and no slash.
-        std::string v = value;
-        if (v.size() >= 2 && v.front() == '"' && v.back() == '"') {
-            v = v.substr(1, v.size() - 2);
-        }
-        std::size_t a = 0;
-        while (a < v.size() &&
-               std::isspace(static_cast<unsigned char>(v[a]))) ++a;
-        std::size_t b = v.size();
-        while (b > a &&
-               std::isspace(static_cast<unsigned char>(v[b - 1]))) --b;
-        v = v.substr(a, b - a);
-        if (v.empty()) {
-            reason = "must be non-empty after whitespace trim";
+        // One canonical spelling, no input latitude. The value arrives already
+        // trimmed of surrounding whitespace by both boundaries
+        // (scan_settings_file and the editor commit), so whitespace ownership
+        // is theirs; the title is taken verbatim after three refusals: an empty
+        // title, a double-quote-wrapped spelling (the quotes would be part of
+        // the name, never a valid title), and a '/' (it would compose the
+        // render path into a subdirectory or onto another file).
+        if (value.empty()) {
+            reason = "must be non-empty";
             return false;
         }
-        if (v.find('\n') != std::string::npos) {
-            reason = "must not contain an embedded newline";
+        if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
+            reason = "must not be wrapped in quotes";
             return false;
         }
-        if (v.find('/') != std::string::npos) {
+        if (value.find('/') != std::string::npos) {
             reason = "must not contain '/'";
             return false;
         }
-        out.title = std::move(v);
+        out.title = value;
         return true;
     }
     if (key == "scale") {

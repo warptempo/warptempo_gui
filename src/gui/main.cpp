@@ -238,7 +238,8 @@ GuiRect bottom_lower_row_area(const AppState& a) {
 }
 
 // Resolve the trim playback/navigation range from AppState's trim fields.
-// Absent has_trim_* falls back to [0, total_frames]. The stored bounds are
+// An unset bound (has_begin/has_end false) falls back to its side's extreme
+// of [0, total_frames]. The stored bounds are
 // already whole int64 frames; each side clamps to
 // [0, total_frames] independently so playback ranges stay inside the
 // buffer. There is NO

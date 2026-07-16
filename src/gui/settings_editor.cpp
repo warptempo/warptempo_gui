@@ -2,7 +2,6 @@
 
 #include "input_handler.h"
 #include "render_output_naming.h"
-#include "render_pipeline.h"
 #include "settings_io.h"
 #include "target_render.h"
 #include "text_editor.h"
@@ -209,7 +208,8 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         if (band.read_only) {
             reject("tab is read-only; trim is not settable here"); return true;
         }
-        // A blank value clears that bound (its absent/unset file form).
+        // A `-1` value clears that bound (the unset file form); a blank value
+        // fails the validator and red-flashes, so it never reaches here.
         if (gv.trim_unset) {
             TrimState& t = active ? app.trim : band.trim;
             bool& has = is_begin ? t.has_begin : t.has_end;
@@ -412,7 +412,7 @@ void GuiSettingsEditor::autocomplete_value() {
     // playback_speed, follow, font_size, audio_player, per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S would write, so recall and save never diverge.
-    // An unset optional trim recalls as the empty value (`tab_a_trim_begin=`).
+    // An unset optional trim recalls as `-1` (`tab_a_trim_begin=-1`).
     // Only a truly unknown key is not recallable.
     std::optional<std::string> cur =
         format_engine_setting_value(app.engine_settings, key);

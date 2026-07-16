@@ -4,7 +4,6 @@
 #include "gui_display_context.h"
 #include "paint_handler.h"
 #include "render.h"
-#include "render_pipeline.h"
 #include "settings_io.h"
 #include "text_editor.h"
 #include "time_format.h"

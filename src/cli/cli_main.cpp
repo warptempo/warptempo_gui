@@ -115,8 +115,7 @@ int main(int argc, char** argv) {
         // Both tabs are kept for the past-EOF guard below; the render applies
         // the active tab's trim, matching the GUI, which renders the trim of
         // the tab persisted in active_tab_view.
-        const char active_tab =
-            sf.has_active_tab_view ? sf.active_tab_view : 'A';
+        const char active_tab = sf.active_tab_view;
         trim = (active_tab == 'B') ? sf.tab_b.trim : sf.tab_a.trim;
     }
 
