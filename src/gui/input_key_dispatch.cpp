@@ -142,7 +142,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (ctrl && shift && !alt && key == GuiKeys::Tab);
     const bool is_esc = (key == GuiKeys::Escape);
     const bool is_ctrl_q =
-        (ctrl && !shift && !alt && key == GuiKeys::Q);
+        (ctrl && !shift && !alt && key == GuiKeys::W);
     // Ctrl+Z (undo) and Ctrl+Shift+Z (redo) are NOT on the allowlist: they
     // drop at this gate. The old design admitted them because an undo entry
     // may target the OTHER (writable) tab, deferring the real decision to
@@ -190,7 +190,7 @@ bool GuiInputHandler::any_text_editor_active() const {
 // read_only_key_blocked's allowlist shape. True when key+mods is not on
 // the allowlist and should be dropped. While a bottom-strip editor is open
 // the user can reach the editor itself, Esc (exit), Ctrl+S (save; the
-// editor stays open), and Ctrl+Q (close routing) —
+// editor stays open), and Ctrl+W (close routing) —
 // nothing else: Space-as-playback, zoom, mode toggles, tab switches,
 // undo/redo, and the marker / trim chords all drop here. "The editor
 // itself" mirrors text_editor::handle_key's consumption exactly — Escape
@@ -235,7 +235,7 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
     const bool is_save =
         (ctrl && !shift && !alt && key == GuiKeys::S);
     const bool is_ctrl_q =
-        (ctrl && !shift && !alt && key == GuiKeys::Q);
+        (ctrl && !shift && !alt && key == GuiKeys::W);
     return !(is_esc || is_commit || is_editor_ctrl_chord ||
              is_editor_motion_or_edit || is_printable ||
              is_settings_autocomplete || is_commit_autocomplete ||
@@ -1047,9 +1047,9 @@ void GuiInputHandler::commit_editor_commit() {
 // Shared key route for the modal bottom-strip editors — the settings
 // prompt, the render-commit prompt, and the bpm bracket editor. All three
 // spell one modal contract: the on_key gate (modal_editor_key_blocked)
-// admits only the editor's own keys plus Esc, Ctrl+S, and Ctrl+Q, so a
+// admits only the editor's own keys plus Esc, Ctrl+S, and Ctrl+W, so a
 // NotConsumed key here is one of those three chords. Ctrl+S saves with
-// the editor left open (save is not an exit); Ctrl+Q runs the caller's
+// the editor left open (save is not an exit); Ctrl+W runs the caller's
 // teardown and returns false so on_key runs the close routing; anything
 // else is swallowed as a backstop. `autocomplete` is the optional
 // bare-Tab hook — only an unmodified Tab is intercepted (Shift / Ctrl /
@@ -1095,7 +1095,7 @@ bool GuiInputHandler::route_modal_editor_key(
         save_ops.save();
         return true;
     }
-    if (ctrl && !shift && !alt && key == GuiKeys::Q) {
+    if (ctrl && !shift && !alt && key == GuiKeys::W) {
         ctrl_q_teardown();
         return false;  // let on_key run the close routing
     }
@@ -1449,7 +1449,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                 viewport.invalidate_timestamp_area();
             },
             [this] {
-                // Ctrl+Q tears the editor and the mode down together
+                // Ctrl+W tears the editor and the mode down together
                 // (mode-without-editor stays unreachable).
                 flag_editor.exit_top_flag_edit_no_commit();
                 flag_editor.exit_bpm_mode();
@@ -1482,7 +1482,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
     // Cancel the edit (Esc-discard: no commit, no validation), using the
     // same teardown Esc uses, then fall through (no return) so the key
     // reaches the global command dispatch below and runs. This is how every
-    // command (Ctrl+Q/S, Ctrl+Z, Ctrl+Tab, Ctrl+P, ...) works
+    // command (Ctrl+W/S, Ctrl+Z, Ctrl+Tab, Ctrl+P, ...) works
     // mid-edit: exit first, then the command. No command list — the editor
     // owns only its editing keymap and everything else punches through.
     flag_editor.exit_top_flag_edit_no_commit();

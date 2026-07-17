@@ -675,8 +675,8 @@ int main(int argc, char** argv) {
 
     gui.set_on_close([&]() {
         // Window-manager close (title-bar X) routes through the unsaved-
-        // work dialog when dirty, same as Ctrl+Q. Cancel any in-flight
-        // pointer drag before the prompt goes up, matching the Ctrl+Q
+        // work dialog when dirty, same as Ctrl+W. Cancel any in-flight
+        // pointer drag before the prompt goes up, matching the Ctrl+W
         // hatch: while the prompt is up the pointer handlers swallow motion
         // and release, so a drag left alive would commit on the next motion
         // if the user dismisses the prompt. cancel_active_drags is a no-op

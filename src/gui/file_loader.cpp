@@ -118,7 +118,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // Loading is a blocking, uninterruptible phase: the run loop is suspended
     // for the whole synchronous decode/pyramid/install, so the callback below
     // only pumps the compositor (drain_events reads no socket fd) and never
-    // reports cancel. A Ctrl+Q / WM close pressed during loading is not
+    // reports cancel. A Ctrl+W / WM close pressed during loading is not
     // observed until the load completes; the queued event is then read when
     // run() resumes and the deferred quit is honored on completion. An urgent
     // abort is pkill / the compositor's force-close.

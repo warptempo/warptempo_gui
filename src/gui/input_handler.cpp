@@ -65,12 +65,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Escape map to sentinel chars '\x7f' and '\x1b' so they participate
     // in the same vector<char> match as letter responses.
     if (app.prompt.active) {
-        // PASTE_CONFIRM only: Ctrl+Q abandons the pending paste (the real
+        // PASTE_CONFIRM only: Ctrl+W abandons the pending paste (the real
         // cancel, not a synthesized Esc) and then runs the normal close
         // path. The unsaved-work dialog (CLOSE_WINDOW) deliberately falls
         // through to the modal swallow below and keeps blocking this chord.
         if (app.prompt.trigger == DialogTrigger::PASTE_CONFIRM &&
-            ctrl && !shift && !alt && key == GuiKeys::Q) {
+            ctrl && !shift && !alt && key == GuiKeys::W) {
             prompt.cancel_paste_confirmation();
             prompt.request_close();
             return;
@@ -101,14 +101,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // has been loaded or edited yet).
     //
     // Loading is a BLOCKING, UNINTERRUPTIBLE phase: the run loop is suspended
-    // for the whole synchronous decode/pyramid/install, so a Ctrl+Q or WM
+    // for the whole synchronous decode/pyramid/install, so a Ctrl+W or WM
     // close pressed during loading is not observed here at all — it is read
     // when run() resumes after the load completes, and the deferred quit is
-    // then honored (the app quits on completion). This gate's Ctrl+Q admission
+    // then honored (the app quits on completion). This gate's Ctrl+W admission
     // is for a close queued before/around load, which still yields that
     // deferred quit; an urgent abort is pkill / the compositor's force-close.
     if (app.loading || audio.total_frames() <= 0) {
-        if (ctrl && !shift && !alt && key == GuiKeys::Q) {
+        if (ctrl && !shift && !alt && key == GuiKeys::W) {
             prompt.request_close();
         }
         return;
@@ -123,17 +123,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // escape hatch, finalize the selection first (reading the still-live
     // editor geometry) and then fall through with no return, so the
     // editor and global handlers below run Esc (cancel the edit) or
-    // Ctrl+Q (tear the edit down, then open the close prompt) exactly as
+    // Ctrl+W (tear the edit down, then open the close prompt) exactly as
     // they would with no drag in flight. A text drag is not a navigation
     // gesture, so it gets no bare-`s` carve-out.
     if (app.editor_text_drag.active) {
         const bool escape_hatch =
             key == GuiKeys::Escape ||
-            (ctrl && !shift && !alt && key == GuiKeys::Q);
+            (ctrl && !shift && !alt && key == GuiKeys::W);
         if (!escape_hatch) return;
         finalize_editor_text_drag();
         // fall through: the editor handler below runs Esc (cancel the
-        // edit) or Ctrl+Q (tear the edit down, then the close prompt
+        // edit) or Ctrl+W (tear the edit down, then the close prompt
         // opens) exactly as with no drag in flight.
     }
 
@@ -142,7 +142,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // bpm bracket editor) and the prompts (gated above); the top-strip
     // flag editor is deliberately non-modal. While a bottom-strip editor
     // is open, only the keys the editor itself consumes plus Esc, Ctrl+S,
-    // and Ctrl+Q get through (modal_editor_key_blocked); everything
+    // and Ctrl+W get through (modal_editor_key_blocked); everything
     // else — playback, navigation, zoom, mode toggles, tab switches,
     // undo/redo, marker / trim chords — drops here, so no authoring or
     // view change can happen while the editor is up. Admitted keys route
@@ -200,7 +200,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Drag-modal input: a pointer drag owns the keyboard exactly as the
     // prompt and the text editors above do. While any drag gesture is in
     // flight, swallow every hotkey except the escape hatches — Esc stops
-    // the gesture (cancel_active_drags), and Ctrl+Q cancels the in-flight
+    // the gesture (cancel_active_drags), and Ctrl+W cancels the in-flight
     // drag first (the same abandon Esc performs, since the gesture is
     // uncommitted) and then runs the close flow.
     // Cancelling before the prompt goes up is what keeps a dismissed
@@ -217,7 +217,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             cancel_active_drags();
             return;
         }
-        if (ctrl && !shift && !alt && key == GuiKeys::Q) {
+        if (ctrl && !shift && !alt && key == GuiKeys::W) {
             cancel_active_drags();
             prompt.request_close();
             return;
@@ -264,7 +264,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Ctrl+Tab               → switch A/B tab (the other escape)
     //   - Ctrl+Shift+Tab         → march paired tabs in lockstep
     //   - Esc                    → top-level no-op
-    //   - Ctrl+Q                 → close-prompt routing
+    //   - Ctrl+W                 → close-prompt routing
     // Ctrl+S is NOT admitted: read-only means no save, so it drops at this
     // gate like the authoring chords. Gesture-owned state changed in a locked
     // tab (the read-only flag itself, trim, view state, font size, playback
@@ -319,8 +319,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Esc cancels an in-flight render / queued batch.
     if (handle_escape_cancels(key)) return;
 
-    // Ctrl+Q: quit (via unsaved-work dialog when dirty).
-    if (ctrl && !shift && !alt && key == GuiKeys::Q) {
+    // Ctrl+W: quit (via unsaved-work dialog when dirty).
+    if (ctrl && !shift && !alt && key == GuiKeys::W) {
         prompt.request_close();
         return;
     }
