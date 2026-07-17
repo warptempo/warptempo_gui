@@ -1,5 +1,6 @@
 #include "render_cache.h"
 
+#include "env_fingerprint.h"
 #include "wav_io.h"
 
 #include <algorithm>
@@ -30,6 +31,7 @@ inline void put_bytes(std::vector<uint8_t>& v, const void* p, size_t n) {
 }
 inline void put_u32(std::vector<uint8_t>& v, uint32_t x) { put_bytes(v, &x, sizeof x); }
 inline void put_i32(std::vector<uint8_t>& v, int32_t  x) { put_bytes(v, &x, sizeof x); }
+inline void put_i64(std::vector<uint8_t>& v, int64_t  x) { put_bytes(v, &x, sizeof x); }
 inline void put_f64(std::vector<uint8_t>& v, double   x) { put_bytes(v, &x, sizeof x); }
 inline void put_u8 (std::vector<uint8_t>& v, uint8_t  x) { v.push_back(x); }
 inline void put_str(std::vector<uint8_t>& v, const std::string& s) {
@@ -179,8 +181,21 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // reuses instead of re-rendering; identity stays sound per artifact because the
 // on-disk rung pairs the fingerprint with the title-derived output path, so a
 // retitle lands at a different deliverable path; prior artifacts must re-render
-// rather than pose as current renders.
-constexpr uint32_t kFingerprintVersion = 15;
+// rather than pose as current renders. Version 16: the key becomes render
+// identity — "would a fresh render of this recipe, in this environment,
+// produce these bytes" — with three membership changes: (a) the
+// render-environment quartet (the four library content hashes actually mapped
+// into the producing process) joins the key, so a pre-upgrade artifact can
+// never match a post-upgrade recipe and re-rendering after a library epoch
+// change is automatic behavior, not advice; (b) the marker components
+// serialize the RESOLVED render inputs (resolve_warp_markers_for_render's
+// survivors and build_phase_reset_source_frames' collapsed enabled positions)
+// instead of the raw stores, so edits normalization proves byte-inert — moving
+// a disabled marker, retouching a dropped field, deleting one member of an
+// equal-frame reset group — stop forcing misses; (c) the engine-settings
+// component becomes an exhaustive per-EngineField decision. Prior artifacts
+// must re-render rather than pose as current recipes.
+constexpr uint32_t kFingerprintVersion = 16;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the
@@ -213,7 +228,8 @@ bool write_bytes_to_path(const std::string& path, const std::vector<char>& bytes
 
 } // namespace
 
-bool stat_file_identity(const std::string& path, RenderFileIdentity& out) {
+bool stat_artifact_identity(const std::string& path,
+                            ArtifactStatIdentity& out) {
     struct stat st{};
     if (::stat(path.c_str(), &st) != 0) return false;
     if (st.st_size < 0) return false;
@@ -229,8 +245,20 @@ bool stat_file_identity(const std::string& path, RenderFileIdentity& out) {
         base > std::numeric_limits<int64_t>::max() - nsec) {
         return false;
     }
-    out.size = static_cast<uint64_t>(st.st_size);
-    out.mtime = base + nsec;
+    out.dev      = static_cast<uint64_t>(st.st_dev);
+    out.inode    = static_cast<uint64_t>(st.st_ino);
+    out.size     = static_cast<uint64_t>(st.st_size);
+    out.mtime_ns = base + nsec;
+    return true;
+}
+
+bool stat_file_identity(const std::string& path, RenderFileIdentity& out) {
+    // The fingerprint's source trust boundary is size+mtime only (header
+    // ruling); the full-identity stat above is the one stat implementation.
+    ArtifactStatIdentity full;
+    if (!stat_artifact_identity(path, full)) return false;
+    out.size = full.size;
+    out.mtime = full.mtime_ns;
     return true;
 }
 
@@ -238,55 +266,85 @@ std::vector<uint8_t> render_fingerprint(
         const std::string& source_audio_path,
         const RenderFileIdentity& source_identity,
         int sample_rate,
-        const std::vector<GuiWarpMarker>& warp_markers,
-        const std::vector<GuiPhaseResetMarker>& phase_resets,
+        const std::vector<MarkerForRender>& resolved_warp_markers,
+        const std::vector<double>& phase_reset_source_frames,
         const EngineSettings& s,
         bool has_trim_begin, int64_t trim_begin_frame,
         bool has_trim_end,   int64_t trim_end_frame) {
     std::vector<uint8_t> fp;
-    fp.reserve(256 + warp_markers.size() * 64);
+    fp.reserve(256 + resolved_warp_markers.size() * 64);
 
     put_u32(fp, kFingerprintVersion);
+
+    // Render environment: the four library content hashes actually mapped
+    // into THIS process (per-process constants — one lazy computation for
+    // the process lifetime), in RenderEnvHashes declaration order. The
+    // COMPUTED quartet, deliberately not the .settings *_hash attestation
+    // keys: the fingerprint must name the libraries that would actually
+    // produce the bytes, so a pre-upgrade artifact can never match a
+    // post-upgrade recipe.
+    const RenderEnvHashes& env = compute_render_env_hashes();
+    put_str(fp, env.libm);
+    put_str(fp, env.libmvec);
+    put_str(fp, env.fftw3);
+    put_str(fp, env.fftw3_threads);
+
     put_str(fp, source_audio_path);
     put_bytes(fp, &source_identity.size, sizeof source_identity.size);
     put_bytes(fp, &source_identity.mtime, sizeof source_identity.mtime);
     put_i32(fp, static_cast<int32_t>(sample_rate));
 
-    // Engine settings: only render-byte-affecting engine input belongs in the
-    // key, so `scale` alone participates. The naming/provenance fields (title,
-    // bpm, notes, url, cover) are deliberately excluded (architect 2026-07-17)
-    // so a retitle/annotation edit hits the reuse rungs everywhere — the target
-    // preview, do_render's archival rungs (a retitled Ctrl+Alt+R byte-copies
-    // from the cache into the new `<title>.wav` instead of re-synthesizing),
-    // and undo walks in both directions. The five excluded keys are named
-    // identically at the editor's is_render_inert_engine_key predicate
-    // (settings_editor.cpp), which skips the preview trigger for the same edits.
-    put_f64(fp, s.scale);
+    // Engine settings: an EXHAUSTIVE per-field render-byte decision, so a
+    // future EngineSettings field cannot silently drift out of the key. Two
+    // guards force a human decision here when the schema grows: the switch
+    // has no default (a new EngineField enumerator draws -Wswitch), and the
+    // static_assert below fails the build the moment EngineSettings gains a
+    // field (the canonical-key addition recipe touches both). Only `scale`
+    // is DSP input; the five naming/provenance fields never change one
+    // rendered byte — title names the output path only, bpm/notes/url/cover
+    // are serialized provenance — so a retitle/annotation edit hits the reuse
+    // rungs everywhere (architect 2026-07-17).
+    static_assert(sizeof(EngineSettings) ==
+                      5 * sizeof(std::string) + sizeof(double),
+                  "EngineSettings changed: decide the new field's render-byte "
+                  "role in render_fingerprint's per-field switch, then update "
+                  "this size expression");
+    constexpr EngineField kEngineFieldKeyOrder[] = {
+        EngineField::Title, EngineField::Scale, EngineField::Bpm,
+        EngineField::Notes, EngineField::Url,   EngineField::Cover,
+    };
+    for (const EngineField field : kEngineFieldKeyOrder) {
+        switch (field) {  // no default: a new enumerator must be decided here
+            case EngineField::Title: break;  // inert: output pathname only
+            case EngineField::Scale: put_f64(fp, s.scale); break;  // DSP input
+            case EngineField::Bpm:   break;  // inert provenance
+            case EngineField::Notes: break;  // inert provenance
+            case EngineField::Url:   break;  // inert provenance
+            case EngineField::Cover: break;  // inert provenance
+        }
+    }
 
     // Trim, with the frame values normalized to 0 when the bound is unset so
     // a stale value behind a false has-bound cannot move the key (the engine
     // ignores it in that state). Authored int64 bounds widened to the f64
-    // encoding deliberately, like the marker positions below — the
-    // fingerprint bytes stay identical across the int64-typed API.
+    // encoding (exact — whole frames sit far below 2^53).
     put_u8 (fp, has_trim_begin ? 1 : 0);
     put_f64(fp, has_trim_begin ? static_cast<double>(trim_begin_frame) : 0.0);
     put_u8 (fp, has_trim_end ? 1 : 0);
     put_f64(fp, has_trim_end ? static_cast<double>(trim_end_frame) : 0.0);
 
-    // Warp markers: parser-domain base fields only (the GuiWarpMarker session
-    // scratch never reaches the engine). Positions are int64 frames widened
-    // to the f64 encoding deliberately — the fingerprint bytes stay
-    // identical to the ones minted when the fields were integer-valued
-    // doubles, so archival sidecars stay valid. The tempo is integer cents
-    // widened through tempo_from_cents for the same reason: the conversion
-    // is bit-identical to the double the old parse stored, so every
-    // existing entry's fingerprint still verifies and the change never
-    // invalidates the corpus.
-    put_u32(fp, static_cast<uint32_t>(warp_markers.size()));
-    for (const auto& m : warp_markers) {
-        put_f64(fp, static_cast<double>(m.time_frame));
-        put_u8 (fp, m.tempo_inherits ? 1 : 0);
-        put_f64(fp, tempo_from_cents(m.tempo_cents));
+    // Warp markers: the RESOLVED render list — exactly the MarkerForRender
+    // fields build_warp_frame_map reads (frame, resolved owning tempo cents,
+    // typed scale, label def/ref), after resolve_warp_markers_for_render's
+    // filter/collapse/seed/materialize/normalize pipeline. Raw disabled
+    // markers, cascade-dropped refs, collapsed duplicates, and fields
+    // materialization discards never reach this list, so edits that cannot
+    // change engine input cannot move the key. All survivors are enabled by
+    // the resolver's output invariants — no disabled flag exists here.
+    put_u32(fp, static_cast<uint32_t>(resolved_warp_markers.size()));
+    for (const auto& m : resolved_warp_markers) {
+        put_i64(fp, m.time_frame);
+        put_i64(fp, m.tempo_cents);
         // Optional typed scale: presence flag then the value (0.0 filler
         // when absent, so an absent scale and a hypothetical 0.0 cannot
         // collide — 0.0 is unparseable as a typed scale anyway).
@@ -294,15 +352,17 @@ std::vector<uint8_t> render_fingerprint(
         put_f64(fp, m.tempo_scale.value_or(0.0));
         put_str(fp, m.label_def);
         put_str(fp, m.label_ref);
-        put_u8 (fp, m.disabled ? 1 : 0);
     }
 
-    // Phase reset markers: base fields. Disabled entries are kept in the key
-    // because toggling disabled is a real output change.
-    put_u32(fp, static_cast<uint32_t>(phase_resets.size()));
-    for (const auto& p : phase_resets) {
-        put_f64(fp, static_cast<double>(p.time_frame));
-        put_u8 (fp, p.disabled ? 1 : 0);
+    // Phase resets: the RESOLVED authored intermediate — the collapsed
+    // enabled positions build_phase_reset_source_frames emits. Disabled
+    // resets and collapsed equal-frame duplicates are already gone. The
+    // doubles are whole source frames by construction (int64 authored
+    // positions widened exactly), so the cast back is exact — no rounding
+    // occurs.
+    put_u32(fp, static_cast<uint32_t>(phase_reset_source_frames.size()));
+    for (const double p : phase_reset_source_frames) {
+        put_i64(fp, static_cast<int64_t>(p));
     }
 
     return fp;
@@ -368,9 +428,23 @@ bool write_fingerprint_sidecar(const std::string& wav_path,
 }
 
 bool fingerprint_sidecar_matches(const std::string& wav_path,
-                                 const std::vector<uint8_t>& fingerprint) {
+                                 const std::vector<uint8_t>& fingerprint,
+                                 ArtifactStatIdentity* out_identity) {
+    // One stat serves both the sidecar's size/mtime validation and the
+    // TOCTOU capture handed back through out_identity: with concurrent
+    // GUI/CLI processes publishing the same title, the wav can be atomically
+    // replaced between this validation and the caller's later read/copy
+    // while the not-yet-replaced sidecar still validates — atomic
+    // publication of each file does not make the wav/sidecar PAIR atomic.
+    // The consumer therefore re-stats AFTER its read/copy and compares all
+    // four fields against this capture; a mismatch discards the result as a
+    // miss (no locks, no retries — a mismatch means concurrent publication,
+    // and one wasted read falling back to synthesis is the whole remedy).
+    ArtifactStatIdentity full_identity;
+    if (!stat_artifact_identity(wav_path, full_identity)) return false;
     RenderFileIdentity wav_identity;
-    if (!stat_file_identity(wav_path, wav_identity)) return false;
+    wav_identity.size = full_identity.size;
+    wav_identity.mtime = full_identity.mtime_ns;
 
     std::ifstream in(fingerprint_sidecar_path(wav_path), std::ios::binary);
     if (!in) return false;
@@ -401,24 +475,29 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
                     recorded_fingerprint)) {
         return false;
     }
-    return recorded_fingerprint == fingerprint;
+    if (recorded_fingerprint != fingerprint) return false;
+    if (out_identity) *out_identity = full_identity;
+    return true;
 }
 
 std::string find_reusable_artifact(const std::string& preferred,
                                    const std::string& exclude,
-                                   const std::vector<uint8_t>& fingerprint) {
+                                   const std::vector<uint8_t>& fingerprint,
+                                   ArtifactStatIdentity* out_identity) {
     // Preferred first: the common current-title case is one stat chain, no
     // scan. It is skipped only when it equals the caller-handled `exclude`
     // (do_render's same-path up-to-date rung already auditioned that path).
     if (preferred != exclude &&
-        fingerprint_sidecar_matches(preferred, fingerprint)) {
+        fingerprint_sidecar_matches(preferred, fingerprint, out_identity)) {
         return preferred;
     }
 
     // On miss, scan the preferred wav's own directory for any sibling
     // deliverable whose .fingerprint attests this exact recipe (the retitle
-    // case: an old-title sibling now matches). Non-recursive, regular files
-    // only, an unreadable directory is a miss (error_code form, never throws).
+    // case: an old-title sibling now matches). Lexically non-recursive over
+    // this one directory; symlink and exclusion semantics are recorded at
+    // the header contract. An unreadable directory is a miss (error_code
+    // form, never throws).
     const std::filesystem::path dir =
         std::filesystem::path(preferred).parent_path();
     std::error_code ec;
@@ -439,15 +518,16 @@ std::string find_reusable_artifact(const std::string& preferred,
         candidates.push_back(wav.string());
     }
 
-    // Deterministic pick among reuse-equivalent candidates: same fingerprint
-    // means same recipe under the fingerprint trust boundary (the recipe
-    // fingerprint identifies the musical recipe, not the producing
-    // host/toolchain — docs/HELP.md's Reproducibility section is the SoT),
-    // so sorted order makes the choice stable, not a byte-identity claim.
+    // Deterministic pick among reuse-equivalent candidates: since v16 the
+    // fingerprint carries the render-environment quartet beside the recipe,
+    // so a match names the same recipe rendered under the same libraries —
+    // byte-equivalent under the fingerprint trust boundary. Sorted order
+    // just makes the choice stable.
     std::sort(candidates.begin(), candidates.end());
     for (const std::string& candidate : candidates) {
         if (candidate == preferred || candidate == exclude) continue;
-        if (fingerprint_sidecar_matches(candidate, fingerprint)) {
+        if (fingerprint_sidecar_matches(candidate, fingerprint,
+                                        out_identity)) {
             return candidate;
         }
     }

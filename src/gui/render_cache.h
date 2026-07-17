@@ -1,8 +1,7 @@
 #pragma once
 
 #include "engine_settings.h"
-#include "phaseresetmarkers.h"
-#include "warpmarkers.h"
+#include "warp_frame_map_build.h"  // MarkerForRender (the resolver's output)
 
 #include <atomic>
 #include <cstdint>
@@ -23,22 +22,52 @@ struct RenderFileIdentity {
 // every archival sidecar, so size and mtime are the source trust boundary.
 bool stat_file_identity(const std::string& path, RenderFileIdentity& out);
 
-// Canonical content fingerprint over everything the engine reads for a
-// target-view render and archival wav render: source path, source file
-// identity, sample rate, the parser-domain warp and phase-reset marker fields,
-// the render-affecting engine settings (`scale` only, since v15), and the
-// trim bounds. Mirrors the inputs of build_render_request. GUI-only marker
-// session scratch (iteration / BPM authoring) is intentionally excluded — it
-// never reaches the engine, so two states differing only there must share a
-// key. Trim frame values are normalized to 0 when their bound is unset. Same
-// inputs always produce byte-identical output; the result is hashed to name
-// a cache file and stored verbatim for an exact-compare confirm on lookup.
+// Full stat identity of an on-disk file at a single instant: device, inode,
+// size, mtime in nanoseconds. Captured by fingerprint_sidecar_matches at
+// validation time so a reuse consumer can BIND its later read/copy to the
+// exact wav object the sidecar validated (the TOCTOU guard: atomic
+// publication of each file does not make the wav/sidecar pair atomic across
+// concurrent GUI/CLI processes).
+struct ArtifactStatIdentity {
+    uint64_t dev      = 0;
+    uint64_t inode    = 0;
+    uint64_t size     = 0;
+    int64_t  mtime_ns = 0;
+    bool operator==(const ArtifactStatIdentity&) const = default;
+};
+bool stat_artifact_identity(const std::string& path, ArtifactStatIdentity& out);
+
+// Canonical RENDER-IDENTITY fingerprint (v16): "would a fresh render of this
+// recipe, in this environment, produce these bytes". The key serializes, in
+// order: the content version; the render-environment quartet
+// (compute_render_env_hashes() — the four library content hashes actually
+// mapped into THIS process, so a pre-upgrade artifact can never match a
+// post-upgrade recipe); source path + source file identity; sample rate; an
+// exhaustive per-EngineField decision over the engine settings (`scale`
+// serialized, the five naming/provenance fields explicitly inert — the
+// decision switch in the serializer is the single drift guard); the trim
+// bounds (frame values normalized to 0 when their bound is unset); and the
+// RESOLVED marker state — the exact engine inputs, not the raw stores:
+// resolve_warp_markers_for_render's survivors (per marker: frame, resolved
+// tempo cents, typed scale, label def/ref — precisely the MarkerForRender
+// fields build_warp_frame_map reads) and build_phase_reset_source_frames'
+// collapsed enabled positions as whole int64 frames. Raw disabled markers,
+// dropped fields, and collapsed duplicates therefore no longer move the key:
+// two states normalization proves render-identical share a fingerprint.
+// CALLERS OWN THE RESOLVE: this function is pure serialization; each call
+// site either threads an already-resolved product through (do_render) or
+// runs its own resolve and accepts the resolver's per-resolve stderr lines
+// (compute_live_render_fingerprint). GUI-only marker session scratch
+// (iteration / BPM authoring) never reaches the resolver, so it is excluded
+// by construction. Same inputs always produce byte-identical output; the
+// result is hashed to name a cache file and stored verbatim for an
+// exact-compare confirm on lookup.
 std::vector<uint8_t> render_fingerprint(
     const std::string& source_audio_path,
     const RenderFileIdentity& source_identity,
     int sample_rate,
-    const std::vector<GuiWarpMarker>& warp_markers,
-    const std::vector<GuiPhaseResetMarker>& phase_resets,
+    const std::vector<MarkerForRender>& resolved_warp_markers,
+    const std::vector<double>& phase_reset_source_frames,
     const EngineSettings& settings,
     bool has_trim_begin, int64_t trim_begin_frame,
     bool has_trim_end,   int64_t trim_end_frame);
@@ -84,26 +113,41 @@ bool write_fingerprint_sidecar(const std::string& wav_path,
 // three fields, no extras), the wav's current stat identity equals the
 // recorded one, and the recorded hex decodes to a byte-exact match of
 // fingerprint. Any anomaly whatsoever is false — the caller re-renders.
+// On a match, a non-null `out_identity` receives the wav's full stat
+// identity from the SAME stat the validation used (never a second stat):
+// the validation-time capture a reuse consumer compares against a re-stat
+// AFTER its read/copy completes, so audio from a different publication than
+// the validated sidecar is discarded as a miss (the TOCTOU bind at
+// ArtifactStatIdentity above).
 bool fingerprint_sidecar_matches(const std::string& wav_path,
-                                 const std::vector<uint8_t>& fingerprint);
+                                 const std::vector<uint8_t>& fingerprint,
+                                 ArtifactStatIdentity* out_identity = nullptr);
 
 // Returns the path of a deliverable wav in `preferred`'s directory whose
 // .fingerprint sidecar matches `fingerprint`, or empty. `preferred` is
 // auditioned first (the common current-title case costs one stat chain,
 // no scan); on miss, the directory's *.fingerprint entries are tried in
-// sorted order (deterministic pick among reuse-equivalent candidates: same
-// fingerprint means same recipe under the fingerprint trust boundary — the
-// recipe fingerprint identifies the musical recipe, not the producing
-// host/toolchain, so sorted order is a stable choice among candidates, not a
-// byte-identity claim; docs/HELP.md's Reproducibility section is the SoT).
-// `exclude` (may be empty) is never returned — the caller has already
-// handled that path (do_render's same-path up-to-date rung).
-// Regular files only, the one directory, non-recursive: renders/ cells
-// are never reuse sources (standing ruling), and they live in a
-// subdirectory the scan never descends into.
+// sorted order (deterministic pick among reuse-equivalent candidates: since
+// v16 the fingerprint carries the render-environment quartet beside the
+// recipe, so a match names the same recipe rendered under the same
+// libraries — byte-equivalent under the fingerprint trust boundary; sorted
+// order just makes the choice stable). A non-null `out_identity` receives
+// the returned wav's validation-time stat identity (see
+// fingerprint_sidecar_matches). `exclude` (may be empty) is never returned —
+// the caller has already handled that path (do_render's same-path up-to-date
+// rung). The scan is LEXICALLY non-recursive over the one directory:
+// renders/ cells are never reuse sources (standing ruling) because they live
+// in a subdirectory the scan never descends into. It FOLLOWS symlinks
+// (directory_entry::is_regular_file semantics) and excludes `preferred` /
+// `exclude` by pathname string only, so a hand-placed symlink or alias can
+// point a candidate pair at bytes outside the directory — acceptable by the
+// standing non-adversarial ruling: an honestly matching pair has recipe
+// validity under the fingerprint trust boundary, and hand-placed symlink
+// aliases are outside the catered domain.
 std::string find_reusable_artifact(const std::string& preferred,
                                    const std::string& exclude,
-                                   const std::vector<uint8_t>& fingerprint);
+                                   const std::vector<uint8_t>& fingerprint,
+                                   ArtifactStatIdentity* out_identity = nullptr);
 
 // Two-tier store for rendered target-view and archival audio, keyed by
 // render_fingerprint. Entries are canonical deliverable wav bytes encoded

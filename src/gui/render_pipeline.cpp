@@ -482,12 +482,18 @@ RenderOutcome do_render(const RenderRequest& req,
     // load-time-captured identity (req.source_load_size/mtime): the loaded
     // source is immutable for the process lifetime, so no on-disk re-stat is
     // needed. Every render is wav, so the fingerprint is always computed.
+    // The marker components are the resolved products THIS render already
+    // built above (resolve_warp_markers_for_render's survivors and the
+    // collapsed phase-reset positions), threaded through rather than
+    // re-resolved — the resolver's one-line-per-normalization-per-resolve
+    // stderr signal stays exactly once per dispatch here.
     RenderFileIdentity source_identity;
     source_identity.size = req.source_load_size;
     source_identity.mtime = req.source_load_mtime;
     const std::vector<uint8_t> fingerprint = render_fingerprint(
         req.source_audio_path, source_identity,
-        static_cast<int>(sample_rate), req.warp_markers, req.phase_resets,
+        static_cast<int>(sample_rate), *resolved_warp_markers,
+        phase_reset_source_frames,
         req.engine_settings,
         req.has_trim_begin, req.trim_begin_frame,
         req.has_trim_end, req.trim_end_frame);
@@ -556,30 +562,55 @@ RenderOutcome do_render(const RenderRequest& req,
         // reuses the old-title deliverable (architect-ruled that a provenance
         // edit must reuse). final_output_path is excluded — it is the up-to-
         // date check above and has already run.
+        ArtifactStatIdentity candidate_identity{};
         const std::string artifact_candidate = find_reusable_artifact(
             compose_source_sibling_path().string(),
-            final_output_path, fingerprint);
+            final_output_path, fingerprint, &candidate_identity);
         if (!artifact_candidate.empty()) {
             std::error_code ec;
             std::filesystem::copy_file(
                 artifact_candidate, staging_output_path,
                 std::filesystem::copy_options::overwrite_existing, ec);
-            // The copy above is a potentially long byte copy; a cancel that
-            // lands during it must not publish. Re-check between the copy and
-            // the rename to the final name — the staging file is not yet under
-            // a final name, and cancelled_outcome unlinks it.
-            if (!ec && cancel_requested()) return cancelled_outcome();
+            // Identity bind (TOCTOU): the copy read the candidate wav, so
+            // re-stat it AFTER the copy completes and require the exact
+            // object the sidecar validation saw (dev, inode, size,
+            // mtime_ns — the capture at fingerprint_sidecar_matches). A
+            // mismatch means a concurrent GUI/CLI publication replaced the
+            // wav between validation and copy — the staged bytes may be
+            // another recipe's.
+            bool identity_stable = true;
             if (!ec) {
-                std::filesystem::rename(staging_output_path, final_output_path, ec);
+                ArtifactStatIdentity post_copy{};
+                identity_stable =
+                    stat_artifact_identity(artifact_candidate, post_copy) &&
+                    post_copy == candidate_identity;
             }
-            if (!ec) {
-                return finalize_published_wav("reused_artifact");
+            if (!ec && !identity_stable) {
+                // Discard the staged copy and fall through exactly as if the
+                // candidate had not matched — silent, byte-identical to a
+                // no-candidate miss (the next rung / synthesis is the whole
+                // remedy; no locks, no retries).
+                cleanup_all();
+            } else {
+                // The copy above is a potentially long byte copy; a cancel
+                // that lands during it must not publish. Re-check between the
+                // copy and the rename to the final name — the staging file is
+                // not yet under a final name, and cancelled_outcome unlinks
+                // it.
+                if (!ec && cancel_requested()) return cancelled_outcome();
+                if (!ec) {
+                    std::filesystem::rename(staging_output_path,
+                                            final_output_path, ec);
+                }
+                if (!ec) {
+                    return finalize_published_wav("reused_artifact");
+                }
+                std::fprintf(stderr,
+                    "warptempo_gui: render warning: project artifact reuse "
+                    "failed for '%s': %s; falling back to a full render\n",
+                    artifact_candidate.c_str(), ec.message().c_str());
+                cleanup_all();
             }
-            std::fprintf(stderr,
-                "warptempo_gui: render warning: project artifact reuse "
-                "failed for '%s': %s; falling back to a full render\n",
-                artifact_candidate.c_str(), ec.message().c_str());
-            cleanup_all();
         }
 
         // Rung: render cache. A confirmed hit publishes the canonical wav

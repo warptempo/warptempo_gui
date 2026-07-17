@@ -314,6 +314,16 @@ bool Undo::history_entry_actionable(const std::vector<UndoEntry>& stack) const {
 void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                                  std::vector<UndoEntry>& to,
                                  int saved_distance_delta) {
+    // Fingerprint-driven trigger basis: capture the live render identity
+    // BEFORE anything mutates — including the originating-tab switch below,
+    // which can change the active trim the fingerprint reads — and compare
+    // it after the whole restore (the trigger decision at the tail). Cost:
+    // one fingerprint = one resolve + serializing a few hundred fields + FNV
+    // — microseconds against a keypress; the resolver's per-resolve stderr
+    // lines re-print for a resting ambiguous store, the intended signal
+    // (rationale at compute_live_render_fingerprint).
+    const std::vector<uint8_t> fp_before = target_render.live_fingerprint();
+
     playback_lifecycle.stop_playback_if_playing();
     viewport.clear_hover_popup();
     UndoEntry entry = std::move(from.back());
@@ -407,14 +417,25 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // synchronously so the restored markers and the waveform land together. A
     // single keystroke, so bounded — the drag-time async-warp_frame_map policy is about
     // the marker-drag torrent, not discrete events. kick_waveform_sync's damage
-    // duplicates invalidate_waveform_area above (harmless); target_render.trigger
-    // below still owns target-buffer freshness when target view is available.
+    // duplicates invalidate_waveform_area above (harmless); the fingerprint-
+    // gated trigger below still owns target-buffer freshness when target view
+    // is available.
     viewport.kick_waveform_sync();
     viewport.invalidate_timestamp_area();
-    // Every undo/redo restores engine input (markers, phase resets, or
-    // settings) — fire a target render in target view. No-op in
-    // source view.
-    target_render.trigger();
+    // Fire the target preview iff this restore changed render identity: the
+    // live fingerprint (v16 — env quartet, resolved marker state, engine
+    // fields, trim) is compared against the pre-restore capture, so a
+    // restore of only render-inert state — an undo/redo of a
+    // title/bpm/notes/url/cover edit — no longer stops playback, kills a
+    // running archival render, or parks a spurious target update: the target
+    // bytes did not become stale, and no cache-rung optimism is needed to
+    // say so. An empty fingerprint is the tripwire "no identity" form: treat
+    // it as unknown and trigger, degrading to the old unconditional
+    // behavior. No-op in source view (trigger's own gate).
+    const std::vector<uint8_t> fp_after = target_render.live_fingerprint();
+    if (fp_before.empty() || fp_after.empty() || fp_before != fp_after) {
+        target_render.trigger();
+    }
 }
 
 void Undo::do_undo() {

@@ -34,16 +34,6 @@ bool is_key_char(char c) {
     return std::isalnum(uc) || c == '_';
 }
 
-// The naming/provenance engine keys: they never change one rendered byte, so a
-// commit to any of them must NOT fire the target preview. This is the exact
-// five-key set the render fingerprint excludes (render_fingerprint in
-// render_cache.cpp — the two sites must name the same keys); `scale` (and any
-// future DSP key) is render-affecting and is deliberately absent here.
-bool is_render_inert_engine_key(const std::string& key) {
-    return key == "title" || key == "bpm" || key == "notes" ||
-           key == "url" || key == "cover";
-}
-
 } // namespace
 
 void GuiSettingsEditor::open() {
@@ -421,6 +411,18 @@ void GuiSettingsEditor::commit() {
         return;
     }
 
+    // Fingerprint-driven trigger basis: the render fingerprint IS render
+    // identity (v16 — env quartet, resolved marker state, exhaustive engine
+    // fields, trim), so "does this commit stale the preview" is exactly
+    // "did the fingerprint move". Capture it before applying the value; a
+    // hand-kept inert-key predicate that mirrored the fingerprint's field
+    // set was deleted with v16 (two sites naming one schema drift silently).
+    // Cost: one fingerprint = one resolve + serializing a few hundred fields
+    // + FNV — microseconds against a keypress; the resolver's per-resolve
+    // stderr lines re-print for a resting ambiguous store, the intended
+    // signal (rationale at compute_live_render_fingerprint).
+    const std::vector<uint8_t> fp_before = target_render.live_fingerprint();
+
     SettingsSnapshot pre = capture_current_settings(app);
     app.engine_settings = std::move(candidate);
     undo.push_settings_undo(std::move(pre));
@@ -431,16 +433,16 @@ void GuiSettingsEditor::commit() {
 
     viewport.invalidate_timestamp_area();
     text_editor::deactivate(app.settings_editor);
-    // Render-affecting engine settings fire the target preview; the
-    // naming/provenance keys (is_render_inert_engine_key) do not — the buffer
-    // is not stale (no is_dirty_), so a later S->T rebinds the existing buffer
-    // without even a reuse-rung walk, and in target view a background archival
-    // render is not killed for an edit that cannot change the preview. The undo
-    // path (restore_history_entry's unconditional trigger) is deliberately left
-    // alone: a settings undo entry cannot cheaply classify what changed, and
-    // that trigger now lands instantly through the render_cache rung because the
-    // fingerprint no longer carries the provenance fields.
-    if (!is_render_inert_engine_key(key)) {
+    // Fire the target preview iff this commit changed render identity: a
+    // render-affecting edit (scale) triggers; a naming/provenance edit does
+    // not — the buffer is not stale (no is_dirty_), so a later S->T rebinds
+    // the existing buffer without even a reuse-rung walk, and in target view
+    // a background archival render is not killed for an edit that cannot
+    // change the preview. An empty fingerprint is the tripwire "no identity"
+    // form: treat it as unknown and trigger, degrading to the old
+    // unconditional behavior rather than skipping a real staleness.
+    const std::vector<uint8_t> fp_after = target_render.live_fingerprint();
+    if (fp_before.empty() || fp_after.empty() || fp_before != fp_after) {
         target_render.trigger();
     }
 }
