@@ -11,8 +11,10 @@
 // empty and is overwritten at source load from the stem). N is not
 // a field here — it is the geometry constant in
 // engine/engine_geometry.h (kN = 4096). bpm, notes, url, and cover are
-// inert provenance: free text,
-// unvalidated, never read by the engine or acted on by the GUI.
+// provenance: free text,
+// unvalidated, never read by the engine's DSP; like every engine-settings
+// field they participate in the render fingerprint, so an edit makes the
+// next render fresh.
 struct EngineSettings {
     std::string title;
     double      scale                    = 1.0;

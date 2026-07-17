@@ -125,79 +125,35 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
     return parse_i64_exact(line.substr(p.size()), out);
 }
 
-// The fingerprint includes the bytes the current writer would produce for the
-// same inputs. The writer's PCM_24 lattice policy changed, so pre-change
-// sidecars and cache entries must stop matching and re-render under this
-// writer before cmp baselines are refreshed. Version 3: the marker
-// tempo_scale field changed representation (string -> optional double),
-// changing the per-marker byte layout. Version 4: the phase reset
-// derivation's semantics changed — a reset now fires exactly at the authored
-// source frame — so artifacts rendered under the prior derivation must stop
-// matching and re-render. Version 5: the engine's phase reset placement
-// timing changed (the placement-selected frame seeds, one hop earlier), so
-// artifacts rendered under the prior engine must stop matching and re-render.
-// Version 6: the synthesis write now snaps the DC and Nyquist bins to their
-// nearest legal real phase (endpoint bins have no imaginary degree of
-// freedom), changing every render's bytes, so prior-DSP artifacts must stop
-// matching and re-render rather than pose as current-DSP renders. Version 7:
-// the resolver normalizes a label ref whose implied effective tempo lies
-// outside the authored per-marker envelope [0.125, 8.0] to a plain 1.00
-// owner instead of rendering the unclamped implied ratio — a
-// previously-valid input whose bytes change, so prior artifacts must stop
-// matching and re-render. Version 8: the limiter became unconditional and
-// left the settings vocabulary, so the `limiter` field no longer participates
-// in the fingerprint — prior artifacts, whose keys still carried that byte,
-// must re-render rather than pose as current recipes. Version 9: output_format
-// left the settings vocabulary (wav is the only product), so the
-// `output_format` field no longer participates in the fingerprint — prior
-// artifacts, whose keys still carried that string, must re-render. Version 10:
-// the spectral limiter now returns an already-compliant deliverable untouched,
-// so a raw-compliant buffer whose identity reconstruction overshot the ceiling
-// (formerly attenuated) keeps its bytes — a byte change in that edge, so prior
-// artifacts must re-render rather than pose as current renders. Version 11: the
-// synthesis spectrum trig now evaluates through vectorized libmvec sin/cos, so
-// interior bins differ from the prior scalar-sincos reference by a few ulps —
-// prior artifacts must re-render rather than pose as current renders. Version
-// 12: the PGHI walk is restructured as a sorted previous-frame stream plus a
-// current-only heap; the assignment order is identical for distinct
-// magnitudes, but cross-partition tie order changed (a prev-stream/current-heap
-// tie now goes to the previous-frame stream, replacing the single heap's
-// layout-dependent order; equal keys within either population still follow that
-// population's own layout order), so prior artifacts must re-render rather than
-// pose as current renders. Version 13: the PGHI selection key is now the
-// float-rounded magnitude, so magnitudes closer than float precision collapse
-// to exact ties — resolved cross-partition by the prev-first rule and within a
-// population by its layout order, a different arrangement than v12's double keys
-// (denormal-small magnitudes round to 0.0f and tie the same way) — prior
-// artifacts must re-render rather than pose as current renders. Version 14:
-// the PGHI current-node heap is replaced by a ranked active-frontier bitset
-// over one explicit total key order (descending float magnitude, ties
-// ascending bin); the assignment sequence is identical for distinct keys, but
-// equal-key order — previously sort/heap layout order — is now the explicit
-// total order, so tie-bearing renders change bytes and prior artifacts must
-// re-render rather than pose as current renders. Version 15: the
-// naming/provenance engine fields (title, bpm, notes, url, cover) are removed
-// from the key — they never change rendered bytes, so a provenance edit now
-// reuses instead of re-rendering; identity stays sound per artifact because the
-// on-disk rung pairs the fingerprint with the title-derived output path, so a
-// retitle lands at a different deliverable path; prior artifacts must re-render
-// rather than pose as current renders. Version 16: the key becomes render
-// identity — "would a fresh render of this recipe, in this environment,
-// produce these bytes" — with three membership changes: (a) the
-// render-environment quartet (the four library stat-identity digests actually
-// mapped into the producing process) joins the key, so a pre-upgrade artifact can
-// never match a post-upgrade recipe and re-rendering after a library epoch
-// change is automatic behavior, not advice; (b) the marker components
-// serialize the RESOLVED render inputs (resolve_warp_markers_for_render's
-// survivors and build_phase_reset_source_frames' collapsed enabled positions)
-// instead of the raw stores, so edits normalization proves byte-inert — moving
-// a disabled marker, retouching a dropped field, deleting one member of an
-// equal-frame reset group — stop forcing misses; under unconditional
-// triggers this is what turns an inert edit's forced re-derive into a cache
-// hit instead of a resynthesis; (c) the engine-settings
-// component becomes an exhaustive per-EngineField decision. Prior artifacts
-// must re-render rather than pose as current recipes.
-constexpr uint32_t kFingerprintVersion = 16;
+// Canonical RENDER-IDENTITY fingerprint: the FULL recipe in this environment
+// — "would a fresh render of this recipe, in this environment, produce these
+// bytes". Serializes, in order: the content version; the computed
+// render-environment quartet (compute_render_env_hashes() — the four library
+// stat-identity digests actually mapped into THIS process, so a pre-upgrade
+// artifact can never match a post-upgrade recipe); the source path plus its
+// load-time source identity; the sample rate; EVERY EngineSettings field —
+// the five naming/provenance fields (title, bpm, notes, url, cover) included
+// by ruling (architect 2026-07-17: they change about once per movement, so a
+// provenance edit forcing a fresh render is accepted; the payoff is that no
+// inert-field classification exists anywhere, and a re-render refreshes the
+// artifact's attested .settings provenance); the trim bounds; and the
+// RESOLVED marker state — resolve_warp_markers_for_render's survivors and
+// build_phase_reset_source_frames' collapsed enabled reset positions, the
+// exact engine inputs, so two states normalization proves render-identical
+// share a key (under unconditional triggers this is what turns an inert
+// marker edit's forced re-derive into a cache hit). The key is a conservative
+// over-approximation of byte identity, and that direction is the point: a
+// match guarantees byte-identical output; a mismatch at worst re-renders
+// redundantly.
+// CALLERS OWN THE RESOLVE: render_fingerprint is pure serialization; each
+// call site either threads an already-resolved product through (do_render) or
+// runs its own resolve and accepts the resolver's per-resolve stderr lines
+// (compute_live_render_fingerprint). GUI-only marker session scratch
+// (iteration / BPM authoring) never reaches the resolver, so it is excluded
+// by construction. Same inputs always produce byte-identical output; the
+// result is hashed to name a cache file and stored verbatim for an
+// exact-compare confirm on lookup.
+constexpr uint32_t kFingerprintVersion = 17;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the
@@ -296,16 +252,13 @@ std::vector<uint8_t> render_fingerprint(
     put_bytes(fp, &source_identity.mtime, sizeof source_identity.mtime);
     put_i32(fp, static_cast<int32_t>(sample_rate));
 
-    // Engine settings: an EXHAUSTIVE per-field render-byte decision, so a
-    // future EngineSettings field cannot silently drift out of the key. Two
-    // guards force a human decision here when the schema grows: the switch
-    // has no default (a new EngineField enumerator draws -Wswitch), and the
-    // static_assert below fails the build the moment EngineSettings gains a
-    // field (the canonical-key addition recipe touches both). Only `scale`
-    // is DSP input; the five naming/provenance fields never change one
-    // rendered byte — title names the output path only, bpm/notes/url/cover
-    // are serialized provenance — so a retitle/annotation edit hits the reuse
-    // rungs everywhere (architect 2026-07-17).
+    // Engine settings: EVERY field serializes — the full-recipe key (ruling
+    // above), so no field carries an inert/live classification. The
+    // exhaustive switch still forces a human decision here when the schema
+    // grows: it has no default (a new EngineField enumerator draws -Wswitch),
+    // and the static_assert below fails the build the moment EngineSettings
+    // gains a field (the canonical-key addition recipe touches both), so a new
+    // field's encoding and order must be chosen at this switch.
     static_assert(sizeof(EngineSettings) ==
                       5 * sizeof(std::string) + sizeof(double),
                   "EngineSettings changed: decide the new field's render-byte "
@@ -317,12 +270,12 @@ std::vector<uint8_t> render_fingerprint(
     };
     for (const EngineField field : kEngineFieldKeyOrder) {
         switch (field) {  // no default: a new enumerator must be decided here
-            case EngineField::Title: break;  // inert: output pathname only
-            case EngineField::Scale: put_f64(fp, s.scale); break;  // DSP input
-            case EngineField::Bpm:   break;  // inert provenance
-            case EngineField::Notes: break;  // inert provenance
-            case EngineField::Url:   break;  // inert provenance
-            case EngineField::Cover: break;  // inert provenance
+            case EngineField::Title: put_str(fp, s.title); break;
+            case EngineField::Scale: put_f64(fp, s.scale); break;
+            case EngineField::Bpm:   put_str(fp, s.bpm);   break;
+            case EngineField::Notes: put_str(fp, s.notes); break;
+            case EngineField::Url:   put_str(fp, s.url);   break;
+            case EngineField::Cover: put_str(fp, s.cover); break;
         }
     }
 
@@ -483,60 +436,6 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
     if (recorded_fingerprint != fingerprint) return false;
     if (out_identity) *out_identity = full_identity;
     return true;
-}
-
-std::string find_reusable_artifact(const std::string& preferred,
-                                   const std::string& exclude,
-                                   const std::vector<uint8_t>& fingerprint,
-                                   ArtifactStatIdentity* out_identity) {
-    // Preferred first: the common current-title case is one stat chain, no
-    // scan. It is skipped only when it equals the caller-handled `exclude`
-    // (do_render's same-path up-to-date rung already auditioned that path).
-    if (preferred != exclude &&
-        fingerprint_sidecar_matches(preferred, fingerprint, out_identity)) {
-        return preferred;
-    }
-
-    // On miss, scan the preferred wav's own directory for any sibling
-    // deliverable whose .fingerprint attests this exact recipe (the retitle
-    // case: an old-title sibling now matches). Lexically non-recursive over
-    // this one directory; symlink and exclusion semantics are recorded at
-    // the header contract. An unreadable directory is a miss (error_code
-    // form, never throws).
-    const std::filesystem::path dir =
-        std::filesystem::path(preferred).parent_path();
-    std::error_code ec;
-    std::filesystem::directory_iterator it(dir, ec), end;
-    if (ec) return std::string();
-
-    std::vector<std::string> candidates;
-    for (; it != end; it.increment(ec)) {
-        if (ec) return std::string();
-        if (!it->is_regular_file(ec)) continue;
-        const std::filesystem::path& entry = it->path();
-        if (entry.extension() != kSidecarExtension) continue;
-        // Candidate wav = the sidecar's stem with the .wav deliverable
-        // extension — the exact inverse of fingerprint_sidecar_path, so the
-        // match below re-derives this same sidecar entry.
-        std::filesystem::path wav = entry;
-        wav.replace_extension(".wav");
-        candidates.push_back(wav.string());
-    }
-
-    // Deterministic pick among reuse-equivalent candidates: since v16 the
-    // fingerprint carries the render-environment quartet beside the recipe,
-    // so a match names the same recipe rendered under the same libraries —
-    // byte-equivalent under the fingerprint trust boundary. Sorted order
-    // just makes the choice stable.
-    std::sort(candidates.begin(), candidates.end());
-    for (const std::string& candidate : candidates) {
-        if (candidate == preferred || candidate == exclude) continue;
-        if (fingerprint_sidecar_matches(candidate, fingerprint,
-                                        out_identity)) {
-            return candidate;
-        }
-    }
-    return std::string();
 }
 
 void RenderCache::init() {

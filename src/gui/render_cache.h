@@ -37,15 +37,14 @@ struct ArtifactStatIdentity {
 };
 bool stat_artifact_identity(const std::string& path, ArtifactStatIdentity& out);
 
-// Canonical RENDER-IDENTITY fingerprint (v16): "would a fresh render of this
+// Canonical RENDER-IDENTITY fingerprint: "would a fresh render of this
 // recipe, in this environment, produce these bytes". The key serializes, in
 // order: the content version; the render-environment quartet
 // (compute_render_env_hashes() — the four library stat-identity digests
 // actually mapped into THIS process, so a pre-upgrade artifact can never match a
-// post-upgrade recipe); source path + source file identity; sample rate; an
-// exhaustive per-EngineField decision over the engine settings (`scale`
-// serialized, the five naming/provenance fields explicitly inert — the
-// decision switch in the serializer is the single drift guard); the trim
+// post-upgrade recipe); source path + source file identity; sample rate; every
+// EngineSettings field (full-recipe key — the exhaustive decision switch in
+// the serializer is the single drift guard); the trim
 // bounds (frame values normalized to 0 when their bound is unset); and the
 // RESOLVED marker state — the exact engine inputs, not the raw stores:
 // resolve_warp_markers_for_render's survivors (per marker: frame, resolved
@@ -122,32 +121,6 @@ bool write_fingerprint_sidecar(const std::string& wav_path,
 bool fingerprint_sidecar_matches(const std::string& wav_path,
                                  const std::vector<uint8_t>& fingerprint,
                                  ArtifactStatIdentity* out_identity = nullptr);
-
-// Returns the path of a deliverable wav in `preferred`'s directory whose
-// .fingerprint sidecar matches `fingerprint`, or empty. `preferred` is
-// auditioned first (the common current-title case costs one stat chain,
-// no scan); on miss, the directory's *.fingerprint entries are tried in
-// sorted order (deterministic pick among reuse-equivalent candidates: since
-// v16 the fingerprint carries the render-environment quartet beside the
-// recipe, so a match names the same recipe rendered under the same
-// libraries — byte-equivalent under the fingerprint trust boundary; sorted
-// order just makes the choice stable). A non-null `out_identity` receives
-// the returned wav's validation-time stat identity (see
-// fingerprint_sidecar_matches). `exclude` (may be empty) is never returned —
-// the caller has already handled that path (do_render's same-path up-to-date
-// rung). The scan is LEXICALLY non-recursive over the one directory:
-// renders/ cells are never reuse sources (standing ruling) because they live
-// in a subdirectory the scan never descends into. It FOLLOWS symlinks
-// (directory_entry::is_regular_file semantics) and excludes `preferred` /
-// `exclude` by pathname string only, so a hand-placed symlink or alias can
-// point a candidate pair at bytes outside the directory — acceptable by the
-// standing non-adversarial ruling: an honestly matching pair has recipe
-// validity under the fingerprint trust boundary, and hand-placed symlink
-// aliases are outside the catered domain.
-std::string find_reusable_artifact(const std::string& preferred,
-                                   const std::string& exclude,
-                                   const std::vector<uint8_t>& fingerprint,
-                                   ArtifactStatIdentity* out_identity = nullptr);
 
 // Two-tier store for rendered target-view and archival audio, keyed by
 // render_fingerprint. Entries are canonical deliverable wav bytes encoded

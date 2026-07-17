@@ -560,18 +560,24 @@ RenderOutcome do_render(const RenderRequest& req,
     // skips them.
     if (cancel_requested()) return cancelled_outcome();
     if (!req.output_buffer) {
-        // Rung: project artifact candidate. Any source-dir sibling whose
-        // .fingerprint attests this exact recipe is published by byte copy —
-        // the highest-integrity reuse there is. The current-title sibling is
-        // auditioned first; on miss the directory is scanned so a retitle
-        // reuses the old-title deliverable (architect-ruled that a provenance
-        // edit must reuse). final_output_path is excluded — it is the up-to-
-        // date check above and has already run.
+        // Rung: project artifact candidate. The ONE candidate is the
+        // current-title source-dir sibling (the Ctrl+Alt+R deliverable); when
+        // its .fingerprint attests this exact recipe it is published by byte
+        // copy — the highest-integrity reuse there is. This rung serves a
+        // batch/misc cell adopting an existing identical deliverable.
+        // final_output_path is skipped (the != guard): the up-to-date rung
+        // above owns it, and for a Ctrl+Alt+R one-off the sibling IS
+        // final_output_path. There is no directory scan and no retitle reuse:
+        // every engine field is in the key, so a provenance edit changes the
+        // fingerprint and simply re-renders (architect 2026-07-17 — provenance
+        // changes about once per movement); renders/ cells are never reuse
+        // sources, by construction (only exact composed paths are auditioned).
         ArtifactStatIdentity candidate_identity{};
-        const std::string artifact_candidate = find_reusable_artifact(
-            compose_source_sibling_path().string(),
-            final_output_path, fingerprint, &candidate_identity);
-        if (!artifact_candidate.empty()) {
+        const std::string artifact_candidate =
+            compose_source_sibling_path().string();
+        if (artifact_candidate != final_output_path &&
+            fingerprint_sidecar_matches(artifact_candidate, fingerprint,
+                                        &candidate_identity)) {
             std::error_code ec;
             std::filesystem::copy_file(
                 artifact_candidate, staging_output_path,
