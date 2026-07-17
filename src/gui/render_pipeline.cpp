@@ -459,7 +459,12 @@ RenderOutcome do_render(const RenderRequest& req,
     // bounds produced an untrimmed deliverable. The fingerprint below and
     // the entry .settings recipe record keep the request's trim bounds
     // unchanged on purpose: under the fallback that recipe genuinely
-    // renders the full bytes, so the attestation stays honest.
+    // renders the full bytes, so the attestation stays honest. The fallback
+    // recipe therefore fingerprints differently from the equivalent explicit
+    // no-trim recipe and misses that recipe's cache and artifacts — accepted
+    // conservatism (architect 2026-07-17): reuse serves common recipes only,
+    // and over-inclusion can only cost a redundant re-render, never reuse
+    // wrong bytes.
     std::optional<TrimPlan> trim_plan;
     if (req.has_trim_begin || req.has_trim_end) {
         auto plan = plan_trim(full_warp_frame_map, full_phase_reset_frame_map,

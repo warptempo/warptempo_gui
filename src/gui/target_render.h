@@ -22,9 +22,8 @@
 // exactly as do_render builds its own fingerprint. Runs its OWN marker
 // resolve (this site stands alone — rationale at the definition), so the
 // resolver's per-resolve stderr lines print here too for a resting ambiguous
-// store — the intended signal. Keys the target-view reuse rungs
-// (dispatch_render_now) and both fingerprint-driven settings-path triggers
-// (the settings editor's engine commit tail and undo/redo's restore).
+// store — the intended signal. Its sole consumer is the target-view reuse
+// rungs (dispatch_render_now).
 std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
                                                      const GuiAudio& audio);
 
@@ -95,17 +94,6 @@ struct GuiTargetRender {
     // in progress.
     bool is_updating() const {
         return pending_ || in_flight_;
-    }
-
-    // The live state's render identity (compute_live_render_fingerprint over
-    // this struct's own app/audio references). The fingerprint-driven trigger
-    // sites — the settings editor's engine commit tail and undo/redo's
-    // restore — compare this before and after their mutation and call
-    // trigger() iff it moved, so a render-inert edit (a provenance settings
-    // change, an undo that restores only inert state) never stops playback,
-    // kills a running archival render, or parks a spurious target update.
-    std::vector<uint8_t> live_fingerprint() const {
-        return compute_live_render_fingerprint(app, audio);
     }
 
     // Rebind the playback device's borrowed sample buffer to source.wav.

@@ -22,9 +22,9 @@ std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
     source_identity.mtime = audio.source_load_mtime();
 
     // The v16 fingerprint serializes the RESOLVED marker state (the exact
-    // engine inputs), and this site stands alone — no resolve exists in the
-    // reuse-rung / trigger-classification flows that call it — so it runs
-    // its own resolve and ACCEPTS the resolver's one-line-per-normalization-
+    // engine inputs), and the only caller — the reuse rungs in
+    // dispatch_render_now — has no resolve of its own, so this site runs its
+    // own resolve and ACCEPTS the resolver's one-line-per-normalization-
     // per-resolve stderr output (same signal, same store as the render's own
     // resolve; a resting ambiguous store re-printing is the intended
     // ambiguity signal). Cost: one fingerprint = one resolve + serializing a
@@ -57,6 +57,17 @@ void GuiTargetRender::trigger() {
     // view — so a later S→T ensure_ready() sees the staleness and
     // dispatches against the accumulated source-view edits rather than
     // re-binding to a buffer that no longer matches the live state.
+    //
+    // Triggers are unconditional product-wide — no fingerprint pre-detection
+    // on any mutation path (architect ruling 2026-07-17). Mutation sites call
+    // this hook even when the mutation provably leaves render identity
+    // unchanged (a provenance settings commit, an inert-only undo/redo
+    // restore, a normalization-inert marker gesture): using the GUI during a
+    // render is allowed to cancel and re-render — the longest expected render
+    // is short, and dispatch_render_now's reuse rungs absorb an
+    // identity-unchanged re-derive as a cache hit, so pre-detection would buy
+    // nothing but a parallel classification surface. (A fingerprint-gated
+    // design existed briefly and was removed by this ruling.)
     is_dirty_ = true;
     // Source view: archival renders keep running in the background and
     // playback keeps reading source.wav. Nothing to do here.

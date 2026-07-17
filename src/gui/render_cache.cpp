@@ -192,7 +192,9 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // survivors and build_phase_reset_source_frames' collapsed enabled positions)
 // instead of the raw stores, so edits normalization proves byte-inert — moving
 // a disabled marker, retouching a dropped field, deleting one member of an
-// equal-frame reset group — stop forcing misses; (c) the engine-settings
+// equal-frame reset group — stop forcing misses; under unconditional
+// triggers this is what turns an inert edit's forced re-derive into a cache
+// hit instead of a resynthesis; (c) the engine-settings
 // component becomes an exhaustive per-EngineField decision. Prior artifacts
 // must re-render rather than pose as current recipes.
 constexpr uint32_t kFingerprintVersion = 16;
@@ -327,7 +329,10 @@ std::vector<uint8_t> render_fingerprint(
     // Trim, with the frame values normalized to 0 when the bound is unset so
     // a stale value behind a false has-bound cannot move the key (the engine
     // ignores it in that state). Authored int64 bounds widened to the f64
-    // encoding (exact — whole frames sit far below 2^53).
+    // encoding (exact — whole frames sit far below 2^53). The authored bounds
+    // serialize verbatim even when plan_trim will refuse them and the render
+    // falls back to untrimmed — accepted conservatism, recorded at do_render's
+    // trim-plan block.
     put_u8 (fp, has_trim_begin ? 1 : 0);
     put_f64(fp, has_trim_begin ? static_cast<double>(trim_begin_frame) : 0.0);
     put_u8 (fp, has_trim_end ? 1 : 0);

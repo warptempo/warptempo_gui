@@ -411,18 +411,6 @@ void GuiSettingsEditor::commit() {
         return;
     }
 
-    // Fingerprint-driven trigger basis: the render fingerprint IS render
-    // identity (v16 — env quartet, resolved marker state, exhaustive engine
-    // fields, trim), so "does this commit stale the preview" is exactly
-    // "did the fingerprint move". Capture it before applying the value; a
-    // hand-kept inert-key predicate that mirrored the fingerprint's field
-    // set was deleted with v16 (two sites naming one schema drift silently).
-    // Cost: one fingerprint = one resolve + serializing a few hundred fields
-    // + FNV — microseconds against a keypress; the resolver's per-resolve
-    // stderr lines re-print for a resting ambiguous store, the intended
-    // signal (rationale at compute_live_render_fingerprint).
-    const std::vector<uint8_t> fp_before = target_render.live_fingerprint();
-
     SettingsSnapshot pre = capture_current_settings(app);
     app.engine_settings = std::move(candidate);
     undo.push_settings_undo(std::move(pre));
@@ -433,16 +421,13 @@ void GuiSettingsEditor::commit() {
 
     viewport.invalidate_timestamp_area();
     text_editor::deactivate(app.settings_editor);
-    // Fire the target preview iff this commit changed render identity: a
-    // render-affecting edit (scale) triggers; a naming/provenance edit does
-    // not — the buffer is not stale (no is_dirty_), so a later S->T rebinds
-    // the existing buffer without even a reuse-rung walk, and in target view
-    // a background archival render is not killed for an edit that cannot
-    // change the preview.
-    const std::vector<uint8_t> fp_after = target_render.live_fingerprint();
-    if (fp_before != fp_after) {
-        target_render.trigger();
-    }
+    // The trigger is unconditional by ruling — rationale recorded at
+    // GuiTargetRender::trigger — so a provenance commit (title/bpm/notes/url/
+    // cover) in target view also re-previews; the re-derive lands on
+    // dispatch_render_now's reuse rungs (identity unchanged -> cache hit).
+    // Playback is not at stake at this site: the editor is modal and its open
+    // already stopped playback.
+    target_render.trigger();
 }
 
 void GuiSettingsEditor::autocomplete_value() {
