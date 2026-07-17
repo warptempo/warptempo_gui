@@ -40,60 +40,54 @@ constexpr int64_t kTrimAutosetVisibleDivisor = 2;
 }
 
 // Plain x. Sets the begin bound at the playhead and autosets the end bound
-// half of the visible span away. dir carries the asymmetry: Begin pushes End
-// later, End pushes Begin earlier.
-void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
+// half of the visible span LATER. Begin-only by construction: the sole caller
+// is the x key (input_handler.cpp), which always places begin and pushes end
+// later, so there is no side parameter — the partner is always End.
+void GuiInputHandler::handle_trim_set_begin_autoset() {
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
-    const int64_t dir = (side == TrimSide::Begin) ? 1 : -1;
-
-    bool&    this_has    = (side == TrimSide::Begin) ? app.trim.has_begin   : app.trim.has_end;
-    int64_t& this_bound  = (side == TrimSide::Begin) ? app.trim.begin_frame : app.trim.end_frame;
-    bool&    other_has   = (side == TrimSide::Begin) ? app.trim.has_end     : app.trim.has_begin;
-    int64_t& other_bound = (side == TrimSide::Begin) ? app.trim.end_frame   : app.trim.begin_frame;
 
     const int64_t cand_src =
         active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
 
+    // End is placed half the visible span LATER than begin.
     const int64_t offset =
-        dir * std::max<int64_t>(
-                  1, samples_visible(app, audio) / kTrimAutosetVisibleDivisor);
+        std::max<int64_t>(
+            1, samples_visible(app, audio) / kTrimAutosetVisibleDivisor);
 
-    // Per-bound absolute walls: begin at frame EOF-1, end at frame EOF. side
-    // Begin sets begin here and places End as the partner; side End sets end
-    // and places Begin.
+    // Per-bound absolute walls: begin at frame EOF-1, end at frame EOF.
     const int64_t total = audio.total_frames();
-    const int64_t this_wall_frame  = (side == TrimSide::Begin) ? total - 1 : total;
-    const int64_t other_wall_frame = (side == TrimSide::Begin) ? total : total - 1;
+    const int64_t begin_wall_frame = total - 1;
+    const int64_t end_wall_frame   = total;
 
     // Store the exact frame — trim bounds are whole source frames held in
     // int64_t like marker positions; the .settings writer persists the exact
     // value as integer text (frame_format.h), so a saved bound reloads
     // bit-identically. The playhead is already an int64 frame, so the whole
     // path is integer arithmetic — no double ever enters.
-    // Clamp the primary bound to its own wall: the playhead normally sits
-    // inside the walls, so this is cheap insurance at the exact edge, keeping
-    // the autoset consistent with every other trim gesture.
-    int64_t this_frame = cand_src;
-    if (this_frame < 0)               this_frame = 0;
-    if (this_frame > this_wall_frame) this_frame = this_wall_frame;
-    this_bound = this_frame;
-    this_has   = true;
-    const int64_t this_active =
-        source_frame_to_active_domain(app, audio, cand_src);
-    int64_t other_active = this_active + offset;
-    // Partner placement clamp: [0, the partner's own wall mapped through
-    // source_frame_to_active_domain] — the same per-bound wall every trim
-    // gesture holds (End partner wall frame EOF, Begin partner wall frame
-    // EOF-1), no longer a placement-only choice. The mapping is monotone, so
-    // the active-domain clamp matches the source-domain wall.
-    const int64_t other_wall_active =
-        source_frame_to_active_domain(app, audio, other_wall_frame);
-    if (other_active < 0)                 other_active = 0;
-    if (other_active > other_wall_active) other_active = other_wall_active;
-    other_bound = active_domain_to_source_frame(app, audio, other_active);
-    other_has = true;
+    // Clamp begin to its own wall: the playhead normally sits inside the walls,
+    // so this is cheap insurance at the exact edge, keeping the autoset
+    // consistent with every other trim gesture.
+    int64_t begin_frame = cand_src;
+    if (begin_frame < 0)                begin_frame = 0;
+    if (begin_frame > begin_wall_frame) begin_frame = begin_wall_frame;
+    app.trim.begin_frame = begin_frame;
+    app.trim.has_begin   = true;
 
-    // Snap the playhead onto the frame of the bound just set at it. The
+    const int64_t begin_active =
+        source_frame_to_active_domain(app, audio, cand_src);
+    int64_t end_active = begin_active + offset;
+    // Partner (end) placement clamp: [0, end's own wall mapped through
+    // source_frame_to_active_domain] — the same per-bound wall (frame EOF)
+    // every trim gesture holds. The mapping is monotone, so the active-domain
+    // clamp matches the source-domain wall.
+    const int64_t end_wall_active =
+        source_frame_to_active_domain(app, audio, end_wall_frame);
+    if (end_active < 0)               end_active = 0;
+    if (end_active > end_wall_active) end_active = end_wall_active;
+    app.trim.end_frame = active_domain_to_source_frame(app, audio, end_active);
+    app.trim.has_end   = true;
+
+    // Snap the playhead onto the frame of the begin bound just set at it. The
     // bound stores an exact frame, so it can differ
     // from the live playhead sample only in target view via the integer
     // domain round trip. In target view the playback gate checks the
@@ -103,27 +97,24 @@ void GuiInputHandler::handle_trim_set_autoset(TrimSide side) {
     // Playhead domain clamp through clamp_playhead_to_live_domain (the
     // domain ruling): a pin onto trim end at total rests at total - 1.
     app.playhead_cursor_sample = clamp_playhead_to_live_domain(
-        source_frame_to_active_domain(app, audio, this_bound), app, audio);
+        source_frame_to_active_domain(app, audio, app.trim.begin_frame),
+        app, audio);
 
     app.trim_begin_selected = true;
     app.trim_end_selected   = true;
     app.last_selected_trim  = 'B';
     app.last_sel_group      = LastSelGroup::Trim;
 
-    // The autoset is a commit: at the head/tail walls the partner clamp can
-    // land the pair equal (e.g. an End-side autoset at playhead 0 pins both
-    // bounds to frame 0), and equal cannot rest. Runs after the selection
-    // flags above so the cleared state wins, before the invalidations below
-    // so the repaint shows it.
+    // The autoset is a commit: the partner (end) clamp at the tail wall, or a
+    // target-view domain round-trip that compresses the offset below one
+    // source frame, can land the pair equal, and equal cannot rest. Runs after
+    // the selection flags above so the cleared state wins, before the
+    // invalidations below so the repaint shows it.
     auto_clear_crossed_trim();
 
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     target_render.trigger();
-}
-
-void GuiInputHandler::handle_trim_set_begin_autoset() {
-    handle_trim_set_autoset(TrimSide::Begin);
 }
 
 
@@ -238,7 +229,7 @@ bool GuiInputHandler::trim_mouse_x_to_source_frame(int mouse_x,
 
     // Target view: the cursor column is an active-domain frame; the trim
     // store is source-domain. Inverse-translate at the boundary, mirroring
-    // handle_trim_set_autoset.
+    // handle_trim_set_begin_autoset.
     const int64_t src_frame =
         active_domain_to_source_frame(app, audio, domain_frame);
     out_frame = static_cast<double>(src_frame);

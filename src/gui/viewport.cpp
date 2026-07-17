@@ -17,7 +17,7 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
     if (app.active_audio_view == 'T') {
         // Target view: trim is authored source-domain (b/e store
         // whole int64 source frames via inverse-translation in
-        // handle_trim_set_autoset) but Home/End needs to land
+        // handle_trim_set_begin_autoset) but Home/End needs to land
         // the playhead in the active target-frame domain. Build
         // the live warp_frame_map and forward-translate the source-domain
         // trim boundaries; unset sides fall back to 0 / live total,

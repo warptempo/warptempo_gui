@@ -58,12 +58,10 @@ void render_waveform_to_cache_surface(
     const int inset_h = area_h - 2 * waveform_inset_px();
     if (inset_h <= 0) { cairo_destroy(ccr); return; }
     const GuiRect cache_area{0, waveform_inset_px(), area_w, inset_h};
-    if (channel_count == 1) {
-        render_waveform(ccr, cache_area, audio, 0,
-                        vp_start, vp_end,
-                        kWaveform,
-                        warp_frame_map_or_null);
-    } else if (channel_count >= 2) {
+    // channel_count is render_channels() = min(source channels, 2), and the
+    // source load refuses channels != 2, so it is always 2 — only the stereo
+    // split runs (the mono arm is unreachable and gone).
+    if (channel_count >= 2) {
         // No channel gap: the 1972 Krips material
         // is effectively never unity, so the two channels' inner excursions do
         // not visually collide at the shared midline; a plain halve of the
@@ -146,12 +144,7 @@ static void render_waveform_strip_to_cache_surface(
 
     const int inset_h = area_h - 2 * waveform_inset_px();
     if (inset_h <= 0) { cairo_restore(ccr); cairo_destroy(ccr); return; }
-    if (channel_count == 1) {
-        const GuiRect a{strip_x, waveform_inset_px(), strip_w, inset_h};
-        render_waveform(ccr, a, audio, 0,
-                        strip_vp_start, strip_vp_end,
-                        kWaveform, warp_frame_map_or_null);
-    } else if (channel_count >= 2) {
+    if (channel_count >= 2) {  // always 2 (stereo); see the sibling fn above
         const int ch_h = inset_h / 2;
         const GuiRect ch0{strip_x, waveform_inset_px(), strip_w, ch_h};
         const GuiRect ch1{strip_x, waveform_inset_px() + ch_h, strip_w, ch_h};

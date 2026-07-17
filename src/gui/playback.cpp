@@ -351,20 +351,10 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
         std::fprintf(stderr,
             "warptempo_gui: no physical jack playback ports found; "
             "client is active and can be patched manually.\n");
-    } else if (channels == 1) {
-        for (int i = 0; i < 2 && physical_ports[i]; ++i) {
-            const int r = jack_connect(impl_->client,
-                                       jack_port_name(impl_->ports[0]),
-                                       physical_ports[i]);
-            if (r != 0 && r != EEXIST) {
-                std::fprintf(stderr,
-                    "warptempo_gui: jack auto-connect failed (%s -> %s, code=%d); "
-                    "patch manually if needed.\n",
-                    jack_port_name(impl_->ports[0]), physical_ports[i], r);
-            }
-        }
-        jack_free(physical_ports);
     } else {
+        // sources are stereo-only by the channels != 2 load refusal, so
+        // playback.init is only ever called with channels == 2 — only this
+        // stereo auto-connect arm runs.
         int connected = 0;
         for (int c = 0; c < channels && physical_ports[c]; ++c) {
             const int r = jack_connect(impl_->client,
@@ -541,20 +531,12 @@ int64_t GuiPlayback::domain_end() const {
 void GuiPlayback::rebind_buffer(const float* samples, int64_t total_frames,
                                 int64_t domain_offset) {
     if (!impl_) return;
-    if (!impl_->client_active) {
-        // No live client — just stash so a future init() against the same
-        // sample rate / channel count would see the new buffer. In
-        // practice the target render path runs only after a successful init,
-        // so this branch is defensive.
-        impl_->samples       = samples;
-        impl_->total_frames  = total_frames;
-        impl_->domain_offset = domain_offset;
-        return;
-    }
     // Caller invariant: the device must be fenced by stop() before rebind.
-    // This flag check is defense in depth for skipped stops; a mid-flight
-    // pointer swap would be silent corruption. The refusal keeps the
-    // buffer/offset pair consistent: neither is stored.
+    // Every caller lives in target_render.cpp and runs after the one-shot
+    // init() at load, so the client is live here — there is no re-init path a
+    // no-client stash could ever feed. This flag check is defense in depth for
+    // skipped stops; a mid-flight pointer swap would be silent corruption. The
+    // refusal keeps the buffer/offset pair consistent: neither is stored.
     if (impl_->playing.load(std::memory_order_relaxed)) {
         std::fprintf(stderr,
             "warptempo_gui: rebind_buffer called while playing — refusing "

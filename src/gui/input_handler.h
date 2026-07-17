@@ -520,9 +520,10 @@ private:
 
     // Plain x: set the begin bound at the playhead (exact int64 frame)
     // and autoset the end bound half of the visible span later. Only the
-    // autoset PARTNER is placement-clamped to [0, live EOF] in the active
+    // autoset PARTNER (end) is placement-clamped to [0, live EOF] in the active
     // domain — a choice of where to put the bound the user did not position,
-    // not a wall (see handle_trim_set_autoset).
+    // not a wall (see the definition in input_trim.cpp). Begin-only: the x key
+    // is the sole caller.
     void handle_trim_set_begin_autoset();
 
     // Shift+x: clear both trim bounds unconditionally. Silent no-op when
@@ -543,7 +544,6 @@ private:
     // invalidations, so the repaint shows the cleared state.
     void auto_clear_crossed_trim();
 
-    void handle_trim_set_autoset(TrimSide side);
     void handle_trim_unset(TrimSide side);
 
     // Mouse gestures on the trim boundary stems. on_press routes a
