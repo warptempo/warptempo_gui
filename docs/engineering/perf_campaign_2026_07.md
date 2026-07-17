@@ -421,3 +421,30 @@ fingerprint v15). Findings from the implementation:
   every system update; the GUI matches it from each rebuild until the next
   glibc update, then may drift ulp-class until the next chosen rebuild
   (epoch semantics, documented in HELP's Reproducibility section).
+
+## 13. Postscript 2: the vendored-math attempt (implemented, measured, ROLLED BACK)
+
+To retire the remaining GUI drift surface (dynamic glibc libm/libmvec) on
+Arch, a full vendored-math epoch was implemented and landed briefly: an
+OpenLibm v0.8.7 subset (23 sources + header closure, byte-verbatim,
+SHA-256-manifested) plus sqrt/llrint instruction shims, ld --wrap bridges
+to hidden prefixed symbols, -static-libstdc++/-static-libgcc, a
+set-theoretic post-link linkage audit, and a fingerprint bump with the
+manifest id serialized into the payload. It was CORRECT — post-link
+audits clean, run-to-run and GUI-vs-CLI cmp null — and 2.4x SLOWER:
+full-render CLI wall ~7 s -> 16.7 s (user CPU 20.6 s -> 41.1 s). Cause:
+OpenLibm carries the classic fdlibm/msun algorithms, while glibc 2.43
+ships modern, far faster implementations; at ~160M atan2 (analysis) and
+~160M sincos (synthesis) calls per render, the per-call gap dominates.
+The architect rolled it back (hard reset to the v15 state) rather than
+escalate to vendoring modern implementations (CORE-MATH/SLEEF class) —
+"too clever by half." Lessons recorded: (a) any future vendoring attempt
+must benchmark the vendored per-call cost at render volume FIRST; (b) the
+correctness machinery (wrap bridges, closure discovery incl. the
+round/lround and libstdc++ fenv imports, the post-link audit design)
+worked and is reusable; (c) byte-stability for the GUI on a rolling
+distro is now pursued environmentally (package pinning / LTS / upgrade
+discipline), not in-tree. Also verified in passing: libm.so.6 imports six
+GLIBC_PRIVATE symbols, so pinning an old libm.so under a newer libc has
+no ABI guarantee (a snapshot-preload pin can break loudly at any glibc
+update).
