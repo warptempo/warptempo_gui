@@ -184,8 +184,8 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // rather than pose as current renders. Version 16: the key becomes render
 // identity — "would a fresh render of this recipe, in this environment,
 // produce these bytes" — with three membership changes: (a) the
-// render-environment quartet (the four library content hashes actually mapped
-// into the producing process) joins the key, so a pre-upgrade artifact can
+// render-environment quartet (the four library stat-identity digests actually
+// mapped into the producing process) joins the key, so a pre-upgrade artifact can
 // never match a post-upgrade recipe and re-rendering after a library epoch
 // change is automatic behavior, not advice; (b) the marker components
 // serialize the RESOLVED render inputs (resolve_warp_markers_for_render's
@@ -276,8 +276,8 @@ std::vector<uint8_t> render_fingerprint(
 
     put_u32(fp, kFingerprintVersion);
 
-    // Render environment: the four library content hashes actually mapped
-    // into THIS process (per-process constants — one lazy computation for
+    // Render environment: the four library stat-identity digests actually
+    // mapped into THIS process (per-process constants — one lazy computation for
     // the process lifetime), in RenderEnvHashes declaration order. The
     // COMPUTED quartet, deliberately not the .settings *_hash attestation
     // keys: the fingerprint must name the libraries that would actually

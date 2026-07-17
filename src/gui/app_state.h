@@ -523,12 +523,12 @@ struct AppState {
     // by the `l` launcher.
     std::string audio_player = "audacious";
 
-    // Render-environment attestation: the STORED per-library content hashes
-    // (16 lowercase hex digits each, env_fingerprint.h) the loaded `.settings`
-    // recorded at its last save. Pre-load default is empty — never written as
-    // empty: the four keys are required, so a load always assigns them, and
-    // the first-open template stamps the four CURRENT hashes (a fresh project
-    // starts matched, no prompt). Compared against compute_render_env_hashes()
+    // Render-environment attestation: the STORED per-library stat-identity
+    // digests (16 lowercase hex digits each, env_fingerprint.h) the loaded
+    // `.settings` recorded at its last save. Pre-load default is empty — never
+    // written as empty: the four keys are required, so a load always assigns
+    // them, and the first-open template stamps the four CURRENT hashes (a fresh
+    // project starts matched, no prompt). Compared against compute_render_env_hashes()
     // once at source load; any mismatch opens the env-hash prompt, whose [o]k
     // — the sole response — stamps all four LIVE hashes to the current
     // environment's (no dismiss-without-ack path exists). The settings editor

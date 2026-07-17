@@ -40,8 +40,8 @@ bool stat_artifact_identity(const std::string& path, ArtifactStatIdentity& out);
 // Canonical RENDER-IDENTITY fingerprint (v16): "would a fresh render of this
 // recipe, in this environment, produce these bytes". The key serializes, in
 // order: the content version; the render-environment quartet
-// (compute_render_env_hashes() — the four library content hashes actually
-// mapped into THIS process, so a pre-upgrade artifact can never match a
+// (compute_render_env_hashes() — the four library stat-identity digests
+// actually mapped into THIS process, so a pre-upgrade artifact can never match a
 // post-upgrade recipe); source path + source file identity; sample rate; an
 // exhaustive per-EngineField decision over the engine settings (`scale`
 // serialized, the five naming/provenance fields explicitly inert — the
