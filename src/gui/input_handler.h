@@ -374,11 +374,11 @@ private:
                                      std::string& out_basename);
 
     // Attach the process-wide render resources to an assembled request:
-    // the single RenderCache (constructed in main, reached through
+    // the single RenderCacheDir (constructed in main, reached through
     // target_render's reference), the GUI's shared source buffer, and the
     // source's load identity. These are required request fields — do_render
-    // dereferences the buffer and cache without fallbacks. Every archival
-    // dispatch site must call this after build_render_request.
+    // dereferences the buffer directly and the cache dir on the disk route.
+    // Every archival dispatch site must call this after build_render_request.
     void attach_shared_render_resources(RenderRequest& req);
 
     // Sweep every BPM in the BPM owner's [bpm_lo, bpm_hi] range,

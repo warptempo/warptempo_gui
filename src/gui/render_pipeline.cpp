@@ -77,8 +77,7 @@ RenderRequest build_render_request(std::string source_audio_path,
 
 RenderOutcome do_render(const RenderRequest& req,
                         std::shared_ptr<const std::atomic<bool>> cancel_token) {
-    // Raw view for the pipeline body; the owning token itself travels only
-    // into insert_master_floats, whose writer thread outlives this call.
+    // Raw view of the cancel token for the pipeline body and the engine.
     const std::atomic<bool>* cancel_flag = cancel_token.get();
 
     // --- Read settings (typed; the live app.engine_settings is mutated
@@ -124,11 +123,11 @@ RenderOutcome do_render(const RenderRequest& req,
     // renders the full pair verbatim; the parser knows nothing of trim.
     // Built here at the probe, beside the phase-reset assembly above: the
     // two authored-position validations are this pipeline's parallel
-    // pair. Building ahead of the fingerprint reuse return below is safe:
-    // a fingerprint match implies this exact marker set builds clean, so
-    // validating before the reuse rungs can never refuse a reusable
-    // render, and the reuse hit's extra map build is negligible against
-    // the pipeline.
+    // pair. Building ahead of the fingerprint up-to-date return below is
+    // safe: a fingerprint match implies this exact marker set builds clean,
+    // so validating before the up-to-date rung can never refuse an
+    // already-current render, and the extra map build on that path is
+    // negligible against the pipeline.
     auto resolved_warp_markers =
         resolve_warp_markers_for_render(slice_to_warp_markers(req.warp_markers),
                                         sample_rate, total_frames);
@@ -204,7 +203,7 @@ RenderOutcome do_render(const RenderRequest& req,
 
     // --- Cache-dir framemap pair (future-proofing; GUI archival disk route
     // only). Drop the FULL warp frame map and its phase-reset column into the
-    // RenderCache per-process dir, named by the final wav's basename stem —
+    // RenderCacheDir per-process dir, named by the final wav's basename stem —
     // together exactly the engine's input for the FULL render (deliverable-
     // relative target column, absolute source frames, always untrimmed). The
     // dir is removed at shutdown and orphans
@@ -226,7 +225,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // the existing non-fatal skip). A source-dir single (empty batch_folder)
     // stays flat <pid>/<stem>.* — one source per process, no collision. ---
     if (!req.output_buffer) {
-        const std::string pid_dir = req.render_cache->process_dir();
+        const std::string pid_dir = req.render_cache_dir->process_dir();
         if (!pid_dir.empty()) {
             std::filesystem::path target_dir = pid_dir;
             if (!req.batch_folder.empty()) {
@@ -248,9 +247,9 @@ RenderOutcome do_render(const RenderRequest& req,
     }
 
     // Staging path (render_staging_path: final path plus ".tmp") for the
-    // atomic rename used by the wav engine path and the reuse rungs: every
-    // publication writes staging first, gates on cancel, then renames to the
-    // final name, so a cancel never lands a partial file under a final name.
+    // atomic rename used by the wav engine path: the engine writes staging
+    // first, gates on cancel, then renames to the final name, so a cancel
+    // never lands a partial file under a final name.
     const std::string staging_output_path =
         render_staging_path(final_output_path);
 
@@ -260,18 +259,14 @@ RenderOutcome do_render(const RenderRequest& req,
 
     // Cancellation gate for the orchestrator-side phases. The engine
     // observes the same token internally; these checks cover everything
-    // around it — the reuse rungs, the post-engine chain, the map writes,
-    // and every final-name publication — so an Esc (or a superseding
+    // around it — the up-to-date rung, the post-engine chain, the map
+    // writes, and every final-name publication — so an Esc (or a superseding
     // dispatch) that lands after the engine's last internal check can never
-    // publish a deliverable, fingerprint, or cache entry as Success. A
-    // cancelled return unlinks the staging file; nothing has landed under a
-    // final name at any gated point. The buffer route gates twice: the
-    // cache prep threads the OWNING cancel_token into insert_master_floats
-    // — the token is per-dispatch and never reset, so the writer thread's
-    // own loads of it (the pre-launch drop and the post-encode re-check)
-    // name exactly this session even after later dispatches — and a
-    // final buffer-route check ahead of finish_success keeps a cancelled
-    // target render from ever reporting Success with an abandoned buffer.
+    // publish a deliverable or fingerprint as Success. A cancelled return
+    // unlinks the staging file; nothing has landed under a final name at any
+    // gated point. The buffer route has no rename to gate, so its final
+    // buffer-route check ahead of finish_success keeps a cancelled target
+    // render from ever reporting Success with an abandoned buffer.
     auto cancel_requested = [&]() {
         return cancel_flag && cancel_flag->load();
     };
@@ -432,8 +427,7 @@ RenderOutcome do_render(const RenderRequest& req,
             return result;
         };
 
-    auto finish_success = [&](const char* outcome) -> RenderOutcome {
-        (void)outcome;
+    auto finish_success = [&]() -> RenderOutcome {
         std::fprintf(stderr, "warptempo_gui: render complete: %s\n",
                      req.output_buffer ? "<buffer>" : final_output_path.c_str());
         return RenderOutcome::Success;
@@ -452,19 +446,18 @@ RenderOutcome do_render(const RenderRequest& req,
     // view, engine maps/schedule, crop, projection) keys on
     // trim_plan — never on "a bound was set" — so the fallback render is
     // byte-identical to a no-trim render of the same recipe. The plan is
-    // computed here, AHEAD of the fingerprint up-to-date and reuse returns
-    // below, precisely so that fallback line prints once per dispatch even
-    // when the deliverable is already current — a repeat dispatch of a
-    // fallback recipe must still surface the signal that its visible trim
-    // bounds produced an untrimmed deliverable. The fingerprint below and
-    // the entry .settings recipe record keep the request's trim bounds
-    // unchanged on purpose: under the fallback that recipe genuinely
-    // renders the full bytes, so the attestation stays honest. The fallback
-    // recipe therefore fingerprints differently from the equivalent explicit
-    // no-trim recipe and misses that recipe's cache and artifacts — accepted
-    // conservatism (architect 2026-07-17): reuse serves common recipes only,
-    // and over-inclusion can only cost a redundant re-render, never reuse
-    // wrong bytes.
+    // computed here, AHEAD of the fingerprint up-to-date return below,
+    // precisely so that fallback line prints once per dispatch even when the
+    // deliverable is already current — a repeat dispatch of a fallback recipe
+    // must still surface the signal that its visible trim bounds produced an
+    // untrimmed deliverable. The fingerprint below and the entry .settings
+    // recipe record keep the request's trim bounds unchanged on purpose:
+    // under the fallback that recipe genuinely renders the full bytes, so the
+    // attestation stays honest. The fallback recipe therefore fingerprints
+    // differently from the equivalent explicit no-trim recipe and misses its
+    // up-to-date artifact — accepted conservatism (architect 2026-07-17):
+    // over-inclusion can only cost a redundant re-render, never reuse wrong
+    // bytes.
     std::optional<TrimPlan> trim_plan;
     if (req.has_trim_begin || req.has_trim_end) {
         auto plan = plan_trim(full_warp_frame_map, full_phase_reset_frame_map,
@@ -519,7 +512,7 @@ RenderOutcome do_render(const RenderRequest& req,
         // (re)published above are the whole reuse condition: the Shift+.
         // commit derives everything it adopts from the snapshot set, so there
         // is nothing else the entry needs on disk.
-        return finish_success("reused_up_to_date");
+        return finish_success();
     }
 
     // On-disk wav publishes finish here. Ctrl+Alt+R one-off wavs are primary
@@ -534,7 +527,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // can leave an orphan wav that enumerate_render_entries surfaces;
     // adopt_render_entry's validate-before-mutate path refuses that entry
     // cleanly. That residual crash window is the accepted design.
-    auto finalize_published_wav = [&](const char* outcome) -> RenderOutcome {
+    auto finalize_published_wav = [&]() -> RenderOutcome {
         CommitCriticalSidecars sidecars =
             publish_commit_critical_batch_sidecars(/*hard_fail=*/true);
         if (!sidecars.ok) {
@@ -551,103 +544,8 @@ RenderOutcome do_render(const RenderRequest& req,
                 final_output_path.c_str());
         }
         cleanup_all();
-        return finish_success(outcome);
+        return finish_success();
     };
-
-    // Reuse rungs, in trust order, above the engine: a project artifact
-    // byte-copy, then a render-cache wav-byte publish. Both run before any
-    // source-load or engine work; the buffer route (target-view preview)
-    // skips them.
-    if (cancel_requested()) return cancelled_outcome();
-    if (!req.output_buffer) {
-        // Rung: project artifact candidate. The ONE candidate is the
-        // current-title source-dir sibling (the Ctrl+Alt+R deliverable); when
-        // its .fingerprint attests this exact recipe it is published by byte
-        // copy — the highest-integrity reuse there is. This rung serves a
-        // batch/misc cell adopting an existing identical deliverable.
-        // final_output_path is skipped (the != guard): the up-to-date rung
-        // above owns it, and for a Ctrl+Alt+R one-off the sibling IS
-        // final_output_path. There is no directory scan and no retitle reuse:
-        // every engine field is in the key, so a provenance edit changes the
-        // fingerprint and simply re-renders (architect 2026-07-17 — provenance
-        // changes about once per movement); renders/ cells are never reuse
-        // sources, by construction (only exact composed paths are auditioned).
-        ArtifactStatIdentity candidate_identity{};
-        const std::string artifact_candidate =
-            compose_source_sibling_path().string();
-        if (artifact_candidate != final_output_path &&
-            fingerprint_sidecar_matches(artifact_candidate, fingerprint,
-                                        &candidate_identity)) {
-            std::error_code ec;
-            std::filesystem::copy_file(
-                artifact_candidate, staging_output_path,
-                std::filesystem::copy_options::overwrite_existing, ec);
-            // Identity bind (TOCTOU): the copy read the candidate wav, so
-            // re-stat it AFTER the copy completes and require the exact
-            // object the sidecar validation saw (dev, inode, size,
-            // mtime_ns — the capture at fingerprint_sidecar_matches). A
-            // mismatch means a concurrent GUI/CLI publication replaced the
-            // wav between validation and copy — the staged bytes may be
-            // another recipe's.
-            bool identity_stable = true;
-            if (!ec) {
-                ArtifactStatIdentity post_copy{};
-                identity_stable =
-                    stat_artifact_identity(artifact_candidate, post_copy) &&
-                    post_copy == candidate_identity;
-            }
-            if (!ec && !identity_stable) {
-                // Discard the staged copy and fall through exactly as if the
-                // candidate had not matched — silent, byte-identical to a
-                // no-candidate miss (the next rung / synthesis is the whole
-                // remedy; no locks, no retries).
-                cleanup_all();
-            } else {
-                // The copy above is a potentially long byte copy; a cancel
-                // that lands during it must not publish. Re-check between the
-                // copy and the rename to the final name — the staging file is
-                // not yet under a final name, and cancelled_outcome unlinks
-                // it.
-                if (!ec && cancel_requested()) return cancelled_outcome();
-                if (!ec) {
-                    std::filesystem::rename(staging_output_path,
-                                            final_output_path, ec);
-                }
-                if (!ec) {
-                    return finalize_published_wav("reused_artifact");
-                }
-                std::fprintf(stderr,
-                    "warptempo_gui: render warning: project artifact reuse "
-                    "failed for '%s': %s; falling back to a full render\n",
-                    artifact_candidate.c_str(), ec.message().c_str());
-                cleanup_all();
-            }
-        }
-
-        // Rung: render cache. A confirmed hit publishes the canonical wav
-        // bytes by direct byte I/O: RAM dumps the blob, disk copies the entry
-        // file after sidecar confirmation. No sample conversion occurs.
-        if (req.render_cache->publish_wav(fingerprint, source_channels_probe,
-                                          static_cast<int>(sample_rate),
-                                          staging_output_path)) {
-            // publish_wav did a potentially large byte write or disk copy to
-            // the staging path; a cancel that lands during it must not
-            // publish. Re-check between publish_wav and the rename to the
-            // final name — the staging file is not yet under a final name, and
-            // cancelled_outcome unlinks it.
-            if (cancel_requested()) return cancelled_outcome();
-            std::error_code ec;
-            std::filesystem::rename(staging_output_path, final_output_path, ec);
-            if (!ec) {
-                return finalize_published_wav("reused_cache");
-            }
-            std::fprintf(stderr,
-                "warptempo_gui: render warning: render cache publish "
-                "failed for '%s'; falling back to a full render\n",
-                final_output_path.c_str());
-            cleanup_all();
-        }
-    }
 
     std::fprintf(stderr, "warptempo_gui: rendering -> %s\n",
                  final_output_path.c_str());
@@ -770,33 +668,11 @@ RenderOutcome do_render(const RenderRequest& req,
         }
         if (*fin == FinishRenderStatus::Cancelled) return cancelled_outcome();
 
-        if (req.output_buffer) {
-            // Target playback auditions the deliverable lattice —
-            // finish_render just snapped the limited buffer to PCM_24 in
-            // place — so fresh renders, cache hits, and archival-artifact
-            // loads carry sample-identical target-view audio: the writer
-            // thread encodes the already-quantized buffer exactly by the
-            // codec's roundtrip identity, so the cache blob decodes back to
-            // these floats.
-            const int64_t inserted_frames = src_ch > 0
-                ? static_cast<int64_t>(req.output_buffer->size() /
-                                       static_cast<size_t>(src_ch))
-                : 0;
-            // The fingerprint is always computed; the insert additionally
-            // requires a non-empty buffer.
-            if (inserted_frames > 0) {
-                req.render_cache->insert_master_floats(
-                    fingerprint, *req.output_buffer, src_ch, src_sr,
-                    inserted_frames, cancel_token);
-            }
-        }
-
         // Buffer-route publication gate: the buffer path has no rename to
         // gate, so this is its last cancel check before finish_success. A
-        // cancel that lands after finish_render's own gate — during the
-        // cache prep above included — returns Cancelled here, and
-        // on_render_done discards the abandoned buffer instead of binding
-        // it to target view.
+        // cancel that lands after finish_render's own gate returns Cancelled
+        // here, and on_render_done discards the abandoned buffer instead of
+        // binding it to target view.
         if (req.output_buffer) {
             if (cancel_requested()) return cancelled_outcome();
         }
@@ -816,24 +692,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 cleanup_all();
                 return RenderOutcome::Failed;
             }
-            // Populate the render cache with the canonical bytes that were
-            // just published. The insert races nothing: the rename above
-            // already landed, the cache's writer thread copies its own job
-            // data, and a concurrent lookup that misses because the write
-            // hasn't landed yet simply re-renders.
-            {
-                std::vector<char> wav_blob;
-                if (!read_file_bytes(final_output_path, wav_blob)) {
-                    std::fprintf(stderr,
-                        "warptempo_gui: render warning: read failed for "
-                        "'%s'\n",
-                        final_output_path.c_str());
-                } else if (encoded_frames > 0) {
-                    req.render_cache->insert(fingerprint, wav_blob, src_ch,
-                                             src_sr, encoded_frames);
-                }
-            }
-            return finalize_published_wav("success");
+            return finalize_published_wav();
         }
     }
 
@@ -842,5 +701,5 @@ RenderOutcome do_render(const RenderRequest& req,
     // an error return). The buffer already holds the synthesised audio; there
     // is no staging file to publish and no batch sidecar to write.
     cleanup_all();
-    return finish_success("success");
+    return finish_success();
 }

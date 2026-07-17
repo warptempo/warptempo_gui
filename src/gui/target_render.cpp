@@ -1,55 +1,11 @@
 #include "target_render.h"
 
 #include "app_state.h"
-#include "phase_reset_frame_map_build.h"
-#include "render_output_naming.h"
-#include "warp_frame_map_build.h"
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
 #include <cmath>
-#include <filesystem>
 #include <cstdio>
 #include <utility>
-
-std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
-                                                     const GuiAudio& audio) {
-    // The fingerprint's identity bytes are the load-time pair (GuiAudio's
-    // recorded size/mtime), taken directly with no on-disk re-stat: the loaded
-    // source is immutable for the process lifetime, so the captured identity is
-    // authoritative — exactly as do_render builds its own fingerprint.
-    RenderFileIdentity source_identity;
-    source_identity.size  = audio.source_load_size();
-    source_identity.mtime = audio.source_load_mtime();
-
-    // The fingerprint serializes the RESOLVED marker state (the exact
-    // engine inputs), and the only caller — the reuse rungs in
-    // dispatch_render_now — has no resolve of its own, so this site runs its
-    // own resolve and ACCEPTS the resolver's one-line-per-normalization-
-    // per-resolve stderr output (same signal, same store as the render's own
-    // resolve; a resting ambiguous store re-printing is the intended
-    // ambiguity signal). Cost: one fingerprint = one resolve + serializing a
-    // few hundred fields + FNV — microseconds against a keypress; the env
-    // component is a per-process constant.
-    auto resolved_warp_markers = resolve_warp_markers_for_render(
-        slice_to_warp_markers(app.warpmarkers.markers()),
-        audio.sample_rate(), static_cast<long>(audio.total_frames()));
-    auto phase_reset_source_frames = build_phase_reset_source_frames(
-        slice_to_phase_reset_markers(app.phaseresetmarkers.markers()),
-        audio.sample_rate(), audio.total_frames());
-    // The resolver is infallible (its std::expected is signature symmetry with
-    // build_warp_frame_map — zero unexpected returns), and the phase-reset
-    // assembly's only refusal (a past-EOF reset) cannot reach a live store:
-    // gesture walls clamp to total-1 and a past-EOF sidecar is adversarial
-    // load-fatal. So the live fingerprint is always well-formed; .value()
-    // makes a breach loud (bad_expected_access -> terminate) rather than
-    // silently degrading.
-    return render_fingerprint(
-        app.source_audio_path, source_identity, audio.sample_rate(),
-        resolved_warp_markers.value(), phase_reset_source_frames.value(),
-        app.engine_settings,
-        app.trim.has_begin, app.trim.begin_frame,
-        app.trim.has_end,   app.trim.end_frame);
-}
 
 void GuiTargetRender::trigger() {
     // Output-affecting mutation hook: the buffer is now stale relative
@@ -64,10 +20,11 @@ void GuiTargetRender::trigger() {
     // unchanged (a normalization-inert marker gesture, e.g. a disabled-marker
     // retouch, or an undo/redo restoring only such state): using the GUI during a
     // render is allowed to cancel and re-render — the longest expected render
-    // is short, and dispatch_render_now's reuse rungs absorb an
-    // identity-unchanged re-derive as a cache hit, so pre-detection would buy
-    // nothing but a parallel classification surface. (A fingerprint-gated
-    // design existed briefly and was removed by this ruling.)
+    // is short, so an identity-unchanged re-derive just re-synthesizes,
+    // accepted (renders are fast); pre-detection would buy nothing but a
+    // parallel classification surface. (A fingerprint-gated design and a
+    // reuse-of-synthesis cache both existed briefly and were removed by this
+    // ruling.)
     is_dirty_ = true;
     // Source view: archival renders keep running in the background and
     // playback keeps reading source.wav. Nothing to do here.
@@ -121,8 +78,7 @@ void GuiTargetRender::maybe_dispatch_pending() {
     // The one-slot parked archival command dispatches ahead of the pending
     // preview: an explicit user command outranks a derived preview. The
     // preview stays pending_ behind the new session — the same
-    // defer-behind-a-busy-worker shape as always — and re-derives, or
-    // adopts the new session's output through the reuse rungs, when that
+    // defer-behind-a-busy-worker shape as always — and re-derives when that
     // session ends and re-pumps this method.
     if (dispatch_pending_archival && dispatch_pending_archival()) return;
     if (!pending_)                  return;
@@ -147,117 +103,17 @@ void GuiTargetRender::dispatch_render_now() {
         return;
     }
     pending_ = false;
-    // The batch cancel sentinel may still be set from trigger(); clear it on
-    // both the cache-hit and synthesis paths so the next archival render path
-    // starts from a clean slate.
+    // The batch cancel sentinel may still be set from trigger(); clear it so
+    // the next archival render path starts from a clean slate.
     app.queue_cancel_requested = false;
 
-    // The preview always proceeds from here: the parser resolver normalizes
-    // ambiguous marker arrangements to tempo 1.00 at resolve time (one
-    // stderr line per timestamp), so there is no store state to refuse; a
-    // build failure is tripwire-class and the existing failure path handles
-    // it.
-
-    // Consult the render cache before synthesizing. The only callers
-    // (trigger()'s idle branch and maybe_dispatch_pending()) reach here only
-    // when the worker is idle, so the GUI thread exclusively owns
-    // target_buffer and can fill it from the cache without racing the worker.
-    // The fingerprint covers the same engine input build_render_request packs
-    // below. Every target-view source carries identical deliverable-lattice
-    // samples: fresh limited renders quantize in place at publication, cache
-    // hits decode the exact codec roundtrip of those samples, and archival
-    // artifact loads decode the same deliverable.
-    //
-    // The identity build lives in compute_live_render_fingerprint, using the
-    // load-time-captured source identity with no on-disk re-stat: the loaded
-    // source is immutable for the process lifetime, so do_render renders from
-    // the in-memory source samples with no source-changed refusal.
-    last_fingerprint_ = compute_live_render_fingerprint(app, audio);
-
-    if (render_cache.lookup(last_fingerprint_, audio.channels(),
-                            audio.sample_rate(), app.target_buffer)) {
-        // Hit: target_buffer now holds the cached audio. Mirror
-        // on_render_done()'s Success tail with no async render; in_flight_
-        // stays false since no worker round trip is pending. Live state IS the
-        // request state on this synchronous rung, so the stamp is exact.
-        const BufferStartVerdict verdict =
-            compute_buffer_start_frame_for(app.trim.has_begin,
-                                           app.trim.begin_frame,
-                                           app.trim.has_end,
-                                           app.trim.end_frame);
-        dispatched_buffer_start_frame_ = verdict.start_frame;
-        // Reuse skips do_render, whose trim-plan block owns the fallback
-        // line on fresh dispatches — so the ruled one-line-per-resolve
-        // signal prints here instead. This rung cannot see plan_trim's
-        // error string; the span case is the only refusal a resting live
-        // store can reach (crossed/equal cannot rest, past-EOF is
-        // adversarial load-fatal), so the wording below is exactly the line
-        // validate_trim_frames produces for it.
-        if (verdict.trim_fell_back) {
-            std::fprintf(stderr,
-                "warptempo_gui: trim target span rounds below one output "
-                "sample; rendering untrimmed\n");
-        }
-        complete_successful_buffer();
-        return;
-    }
-
-    // This rung auditions the current-title archival deliverable only —
-    // there is no directory scan and no retitle reuse (every engine field is
-    // in the key, so a provenance edit changes the fingerprint and simply
-    // re-renders). Fresh renders, cache hits, and archival artifact loads all
-    // expose identical deliverable-lattice samples because fresh limited
-    // renders quantize in place before cache publication and the codec
-    // roundtrip is exact.
-    ArtifactStatIdentity candidate_identity{};
-    const std::string artifact_candidate =
-        compose_render_output_path(
-            render_output_directory(app.source_audio_path),
-            render_output_stem(app.engine_settings))
-            .string();
-    if (fingerprint_sidecar_matches(artifact_candidate, last_fingerprint_,
-                                    &candidate_identity) &&
-        read_wav_to_float(artifact_candidate, audio.channels(),
-                          audio.sample_rate(), app.target_buffer)) {
-        // Identity bind (TOCTOU): re-stat AFTER the read completes and
-        // require the exact wav object the sidecar validation saw (dev,
-        // inode, size, mtime_ns — the capture at
-        // fingerprint_sidecar_matches). A mismatch means a concurrent
-        // GUI/CLI publication replaced the wav between validation and
-        // read — the buffer may hold another recipe's audio.
-        ArtifactStatIdentity post_read{};
-        if (stat_artifact_identity(artifact_candidate, post_read) &&
-            post_read == candidate_identity) {
-            // Live state IS the request state on this synchronous rung,
-            // so the stamp is exact.
-            const BufferStartVerdict verdict =
-                compute_buffer_start_frame_for(app.trim.has_begin,
-                                               app.trim.begin_frame,
-                                               app.trim.has_end,
-                                               app.trim.end_frame);
-            dispatched_buffer_start_frame_ = verdict.start_frame;
-            // Reuse skips do_render's trim-plan block; print the fallback
-            // signal here — same rationale as the cache rung above (this
-            // is the only other pre-do_render return).
-            if (verdict.trim_fell_back) {
-                std::fprintf(stderr,
-                    "warptempo_gui: trim target span rounds below one "
-                    "output sample; rendering untrimmed\n");
-            }
-            complete_successful_buffer();
-            std::fprintf(stderr,
-                "warptempo_gui: target view loaded from archival render: "
-                "%s\n",
-                artifact_candidate.c_str());
-            return;
-        }
-        // Discard the suspect read and fall through exactly as if the
-        // candidate had not matched — silent, byte-identical to a
-        // no-candidate miss (the synthesis path below clears the buffer
-        // before dispatch; no locks, no retries).
-    }
-
-    // Miss: synthesize. The remainder is the original dispatch path.
+    // The preview always proceeds to synthesis from here: the parser resolver
+    // normalizes ambiguous marker arrangements to tempo 1.00 at resolve time
+    // (one stderr line per timestamp), so there is no store state to refuse;
+    // a build failure is tripwire-class and the existing failure path handles
+    // it. Every dispatch re-synthesizes — reuse-of-synthesis is retired
+    // (architect 2026-07-17), renders are fast, and the user reaching this
+    // path already caused a render.
     in_flight_ = true;
 
     // Re-stamp the progress text. A cancelled archival's on_done
@@ -284,14 +140,13 @@ void GuiTargetRender::dispatch_render_now() {
     // snapshot is immutable while app.trim is not: a trim drag mutates the live
     // authored store before its release commits, so the async completion
     // consumes this stamp rather than recomputing the origin from a store that
-    // may have drifted mid-render. No fallback print here even when the
-    // verdict says fell-back: this fresh dispatch runs do_render, whose own
-    // trim-plan block prints the one line per resolve — printing at this
-    // stamp too would double it.
+    // may have drifted mid-render. This fresh dispatch runs do_render, whose
+    // own trim-plan block prints the fallback line once per resolve; a full
+    // deliverable (trim fell back) anchors at 0, which the helper returns
+    // directly.
     dispatched_buffer_start_frame_ =
         compute_buffer_start_frame_for(app.trim.has_begin, app.trim.begin_frame,
-                                       app.trim.has_end,   app.trim.end_frame)
-            .start_frame;
+                                       app.trim.has_end,   app.trim.end_frame);
     // Buffer-output route. do_render skips the on-disk rename, sidecar
     // writes, and the peak-pyramid sidecar; synth samples append into
     // *output_buffer instead. The post-engine chain runs in place on the
@@ -299,10 +154,11 @@ void GuiTargetRender::dispatch_render_now() {
     // spectral + peak limited chain — the target-view preview gets the same
     // cropping and limiting as the disk path.
     req.output_buffer = &app.target_buffer;
-    // The process's single RenderCache (this struct's own member, wired from
-    // main.cpp). do_render uses it on this path only to queue the writer-thread
-    // canonical encode after a successful limited target render.
-    req.render_cache = &render_cache;
+    // The process's single RenderCacheDir (this struct's own member, wired
+    // from main.cpp). do_render dereferences it only on the disk route (the
+    // framemap-pair write); the buffer route here never touches it, but the
+    // required-field contract has every dispatcher populate it.
+    req.render_cache_dir = &render_cache_dir;
     req.source_samples = audio.samples_shared();
     req.source_load_size = audio.source_load_size();
     req.source_load_mtime = audio.source_load_mtime();
@@ -384,8 +240,7 @@ void GuiTargetRender::complete_successful_buffer() {
     app.queue_progress_text.clear();
 }
 
-GuiTargetRender::BufferStartVerdict
-GuiTargetRender::compute_buffer_start_frame_for(
+int64_t GuiTargetRender::compute_buffer_start_frame_for(
     bool has_begin, int64_t begin_frame,
     bool has_end, int64_t end_frame) const {
     // Buffer frame 0 corresponds to target frame 0 for a full-song render;
@@ -396,18 +251,18 @@ GuiTargetRender::compute_buffer_start_frame_for(
     // llrint(T_b) in full-target coordinates and the exact authored
     // begin/end display falls out.
     //
-    // Survival verdict (do_render decoupling; rationale at the struct in
-    // target_render.h): a trim plan_trim refuses renders the FULL, untrimmed
-    // buffer, so its anchor is 0, not llrint(T_b), and trim_fell_back
-    // carries that outcome to the reuse rungs' diagnostic. The render is
+    // Fallback mirror (do_render decoupling): a trim plan_trim refuses
+    // renders the FULL, untrimmed buffer, so its anchor is 0, not llrint(T_b)
+    // — do_render's own trim-plan block owns the one-line fallback signal on
+    // every dispatch, so this helper only needs the anchor. The render is
     // trimmed iff llrint(T_e) - llrint(T_b) >= 1 (validate_trim_frames'
     // span rule, the only refusal reachable from a live store —
     // crossed/equal cannot rest and past-EOF is adversarial load-fatal; a
     // crossed pair would fail this same compare anyway, T being monotone).
     // The bound-unset defaults — begin 0, end total — are
     // validate_trim_frames' own, so an end-only trim reaches the same
-    // verdict do_render's plan does. Callers pass the trim pair the
-    // produced samples embody and stamp the result at production time, so
+    // verdict do_render's plan does. The caller passes the trim pair the
+    // produced samples embody and stamps the result at production time, so
     // no buffer-frames gate: the buffer may still be empty at the stamp.
     if ((has_begin || has_end) &&
         audio.sample_rate() > 0 && audio.total_frames() > 0) {
@@ -426,14 +281,14 @@ GuiTargetRender::compute_buffer_start_frame_for(
             end_source_frame < 0.0 ? 0.0 : end_source_frame,
             target_warp_frame_map));
         if (t_end - t_begin < 1) {
-            return {0, true};  // fallback: the FULL deliverable, anchor 0
+            return 0;  // fallback: the FULL deliverable, anchor 0
         }
         // Begin unset anchors at 0 (the surviving window starts at the
         // domain origin); a set begin anchors at its target image — the
         // same llrint(T_b) expression as ever, bit-identical.
-        return {has_begin ? t_begin : 0, false};
+        return has_begin ? t_begin : 0;
     }
-    return {0, false};
+    return 0;
 }
 
 void GuiTargetRender::ensure_ready() {

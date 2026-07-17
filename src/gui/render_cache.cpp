@@ -1,9 +1,7 @@
 #include "render_cache.h"
 
 #include "env_fingerprint.h"
-#include "wav_io.h"
 
-#include <algorithm>
 #include <charconv>
 #include <cerrno>
 #include <cstdio>
@@ -42,21 +40,6 @@ inline void put_str(std::vector<uint8_t>& v, const std::string& s) {
     // field partitions into the same byte stream.
     put_u64(v, static_cast<uint64_t>(s.size()));
     put_bytes(v, s.data(), s.size());
-}
-
-// FNV-1a, 64-bit. Used only to name files and bucket the in-memory maps; a
-// collision degrades to a miss via the exact fingerprint-blob compare, never
-// to a wrong hit.
-uint64_t fnv1a64(const std::vector<uint8_t>& d) {
-    uint64_t h = 1469598103934665603ull;
-    for (uint8_t b : d) { h ^= b; h *= 1099511628211ull; }
-    return h;
-}
-
-std::string hex16(uint64_t h) {
-    char buf[17];
-    std::snprintf(buf, sizeof buf, "%016llx", static_cast<unsigned long long>(h));
-    return std::string(buf);
 }
 
 char hex_digit(uint8_t x) {
@@ -145,19 +128,15 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // RESOLVED marker state — resolve_warp_markers_for_render's survivors and
 // build_phase_reset_source_frames' collapsed enabled reset positions, the
 // exact engine inputs, so two states normalization proves render-identical
-// share a key (under unconditional triggers this is what turns an inert
-// marker edit's forced re-derive into a cache hit). The key is a conservative
-// over-approximation of byte identity, and that direction is the point: a
-// match guarantees byte-identical output; a mismatch at worst re-renders
-// redundantly.
-// CALLERS OWN THE RESOLVE: render_fingerprint is pure serialization; each
-// call site either threads an already-resolved product through (do_render) or
-// runs its own resolve and accepts the resolver's per-resolve stderr lines
-// (compute_live_render_fingerprint). GUI-only marker session scratch
-// (iteration / BPM authoring) never reaches the resolver, so it is excluded
-// by construction. Same inputs always produce byte-identical output; the
-// result is hashed to name a cache file and stored verbatim for an
-// exact-compare confirm on lookup.
+// share a key. The key is a conservative over-approximation of byte identity,
+// and that direction is the point: a match guarantees byte-identical output;
+// a mismatch at worst re-renders redundantly.
+// The sole caller is do_render, which threads an already-resolved product
+// through (its own resolve produces the per-resolve stderr lines). GUI-only
+// marker session scratch (iteration / BPM authoring) never reaches the
+// resolver, so it is excluded by construction. Same inputs always produce
+// byte-identical output; the result is hex-encoded into the .fingerprint
+// sidecar and exact-compared by fingerprint_sidecar_matches.
 constexpr uint32_t kFingerprintVersion = 18;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
@@ -166,33 +145,11 @@ constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 constexpr uint32_t kSidecarVersion     = 1;
 constexpr char     kSidecarExtension[] = ".fingerprint";
 
-bool write_bytes_to_path(const std::string& path, const std::vector<char>& bytes) {
-    std::FILE* f = std::fopen(path.c_str(), "wb");
-    if (!f) return false;
-
-    bool ok = false;
-    do {
-        if (!bytes.empty() &&
-            std::fwrite(bytes.data(), 1, bytes.size(), f) != bytes.size()) {
-            break;
-        }
-        if (std::fflush(f) != 0) break;
-        if (::fsync(::fileno(f)) != 0) break;
-        ok = true;
-    } while (false);
-
-    if (std::fclose(f) != 0) ok = false;
-    if (!ok) {
-        std::error_code ec;
-        std::filesystem::remove(path, ec);
-    }
-    return ok;
-}
-
 } // namespace
 
-bool stat_artifact_identity(const std::string& path,
-                            ArtifactStatIdentity& out) {
+bool stat_file_identity(const std::string& path, RenderFileIdentity& out) {
+    // The one on-disk stat: size and mtime in nanoseconds. The fingerprint's
+    // source trust boundary is exactly this pair (header ruling).
     struct stat st{};
     if (::stat(path.c_str(), &st) != 0) return false;
     if (st.st_size < 0) return false;
@@ -208,20 +165,8 @@ bool stat_artifact_identity(const std::string& path,
         base > std::numeric_limits<int64_t>::max() - nsec) {
         return false;
     }
-    out.dev      = static_cast<uint64_t>(st.st_dev);
-    out.inode    = static_cast<uint64_t>(st.st_ino);
-    out.size     = static_cast<uint64_t>(st.st_size);
-    out.mtime_ns = base + nsec;
-    return true;
-}
-
-bool stat_file_identity(const std::string& path, RenderFileIdentity& out) {
-    // The fingerprint's source trust boundary is size+mtime only (header
-    // ruling); the full-identity stat above is the one stat implementation.
-    ArtifactStatIdentity full;
-    if (!stat_artifact_identity(path, full)) return false;
-    out.size = full.size;
-    out.mtime = full.mtime_ns;
+    out.size  = static_cast<uint64_t>(st.st_size);
+    out.mtime = base + nsec;
     return true;
 }
 
@@ -391,23 +336,9 @@ bool write_fingerprint_sidecar(const std::string& wav_path,
 }
 
 bool fingerprint_sidecar_matches(const std::string& wav_path,
-                                 const std::vector<uint8_t>& fingerprint,
-                                 ArtifactStatIdentity* out_identity) {
-    // One stat serves both the sidecar's size/mtime validation and the
-    // TOCTOU capture handed back through out_identity: with concurrent
-    // GUI/CLI processes publishing the same title, the wav can be atomically
-    // replaced between this validation and the caller's later read/copy
-    // while the not-yet-replaced sidecar still validates — atomic
-    // publication of each file does not make the wav/sidecar PAIR atomic.
-    // The consumer therefore re-stats AFTER its read/copy and compares all
-    // four fields against this capture; a mismatch discards the result as a
-    // miss (no locks, no retries — a mismatch means concurrent publication,
-    // and one wasted read falling back to synthesis is the whole remedy).
-    ArtifactStatIdentity full_identity;
-    if (!stat_artifact_identity(wav_path, full_identity)) return false;
+                                 const std::vector<uint8_t>& fingerprint) {
     RenderFileIdentity wav_identity;
-    wav_identity.size = full_identity.size;
-    wav_identity.mtime = full_identity.mtime_ns;
+    if (!stat_file_identity(wav_path, wav_identity)) return false;
 
     std::ifstream in(fingerprint_sidecar_path(wav_path), std::ios::binary);
     if (!in) return false;
@@ -438,12 +369,10 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
                     recorded_fingerprint)) {
         return false;
     }
-    if (recorded_fingerprint != fingerprint) return false;
-    if (out_identity) *out_identity = full_identity;
-    return true;
+    return recorded_fingerprint == fingerprint;
 }
 
-void RenderCache::init() {
+void RenderCacheDir::init() {
     enabled_ = false;
 
     std::string base;
@@ -452,7 +381,7 @@ void RenderCache::init() {
     } else if (const char* home = std::getenv("HOME"); home && home[0]) {
         base = std::string(home) + "/.cache";
     } else {
-        return; // no cache home; store stays disabled
+        return; // no cache home; manager stays disabled
     }
 
     parent_ = base + "/warptempo_gui";
@@ -469,7 +398,7 @@ void RenderCache::init() {
     enabled_ = true;
 }
 
-void RenderCache::sweep_orphans() {
+void RenderCacheDir::sweep_orphans() {
     std::error_code ec;
     std::filesystem::directory_iterator it(parent_, ec), end;
     if (ec) return;
@@ -498,15 +427,7 @@ void RenderCache::sweep_orphans() {
     }
 }
 
-void RenderCache::shutdown() {
-    join_writer();
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        ram_.clear();
-        ram_bytes_ = 0;
-        disk_index_.clear();
-        disk_bytes_ = 0;
-    }
+void RenderCacheDir::shutdown() {
     if (!dir_.empty()) {
         std::error_code ec;
         std::filesystem::remove_all(dir_, ec);
@@ -514,561 +435,6 @@ void RenderCache::shutdown() {
     enabled_ = false;
 }
 
-std::string RenderCache::process_dir() const {
+std::string RenderCacheDir::process_dir() const {
     return enabled_ ? dir_ : std::string();
-}
-
-void RenderCache::join_writer() {
-    std::thread local;
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        local = std::move(writer_);
-    }
-    if (local.joinable()) local.join();
-}
-
-bool RenderCache::lookup(const std::vector<uint8_t>& fp,
-                         int channels, int sample_rate,
-                         std::vector<float>& out) {
-    if (!enabled_) {
-        return false;
-    }
-    const uint64_t h = fnv1a64(fp);
-
-    std::vector<char> ram_blob;
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (auto it = ram_.find(h); it != ram_.end()) {
-            RamEntry& e = it->second;
-            if (e.fingerprint == fp && e.channels == channels &&
-                e.sample_rate == sample_rate) {
-                e.seq = ++lru_seq_;
-                ram_blob = e.blob;
-            }
-        }
-    }
-    if (!ram_blob.empty()) {
-        return decode_wav_blob_to_float(ram_blob, channels, sample_rate, out);
-    }
-
-    DiskEntry candidate;
-    bool have_candidate = false;
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (auto it = disk_index_.find(h); it != disk_index_.end() &&
-            it->second.fingerprint == fp) {
-            candidate = it->second;
-            have_candidate = true;
-        }
-    }
-
-    if (have_candidate) {
-        const std::string path = dir_ + "/" + candidate.filename;
-        // The potentially large wav read happens outside mutex_. If
-        // eviction or failed validation removes the pair mid-read, the reader
-        // reports a miss and the caller re-renders.
-        if (read_file(path, fp, channels, sample_rate, out)) {
-            std::lock_guard<std::mutex> lock(mutex_);
-            if (auto it = disk_index_.find(h); it != disk_index_.end() &&
-                it->second.filename == candidate.filename &&
-                it->second.fingerprint == fp) {
-                it->second.seq = ++lru_seq_;
-            }
-            return true;
-        }
-
-        bool drop_pair = false;
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            // Match the success-path re-check before mutating the disk index.
-            if (auto it = disk_index_.find(h); it != disk_index_.end() &&
-                it->second.filename == candidate.filename &&
-                it->second.fingerprint == fp) {
-                disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
-                disk_index_.erase(it);
-                drop_pair = true;
-            }
-        }
-        if (drop_pair) remove_disk_pair(path);
-    }
-
-    return false;
-}
-
-bool RenderCache::publish_wav(const std::vector<uint8_t>& fp,
-                              int channels, int sample_rate,
-                              const std::string& staging_path) {
-    if (!enabled_) return false;
-    const uint64_t h = fnv1a64(fp);
-
-    std::vector<char> ram_blob;
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (auto it = ram_.find(h); it != ram_.end()) {
-            RamEntry& e = it->second;
-            if (e.fingerprint == fp && e.channels == channels &&
-                e.sample_rate == sample_rate) {
-                e.seq = ++lru_seq_;
-                ram_blob = e.blob;
-            }
-        }
-    }
-    if (!ram_blob.empty()) {
-        return write_bytes_to_path(staging_path, ram_blob);
-    }
-
-    DiskEntry candidate;
-    bool have_candidate = false;
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (auto it = disk_index_.find(h); it != disk_index_.end() &&
-            it->second.fingerprint == fp) {
-            candidate = it->second;
-            have_candidate = true;
-        }
-    }
-    if (!have_candidate) return false;
-
-    const std::string path = dir_ + "/" + candidate.filename;
-    bool copied = false;
-    ArtifactStatIdentity candidate_identity{};
-    if (fingerprint_sidecar_matches(path, fp, &candidate_identity)) {
-        std::error_code ec;
-        std::filesystem::copy_file(
-            path, staging_path,
-            std::filesystem::copy_options::overwrite_existing, ec);
-        // Identity bind (TOCTOU): the copy read the candidate wav, so re-stat
-        // it AFTER the copy completes and require the exact object the sidecar
-        // validation saw (dev, inode, size, mtime_ns — the capture at
-        // fingerprint_sidecar_matches). The racing party is this process's own
-        // cache writer thread: under a 64-bit FNV name collision it can
-        // remove/replace this hash-named wav for a distinct fingerprint
-        // between validation and copy. A mismatch keeps copied false and
-        // discards the staged copy exactly as a miss (the fall-through below
-        // removes the staging file; the next rung / synthesis is the whole
-        // remedy — no locks, no retries).
-        if (!ec) {
-            ArtifactStatIdentity post_copy{};
-            copied = stat_artifact_identity(path, post_copy) &&
-                     post_copy == candidate_identity;
-        }
-    }
-    if (copied) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (auto it = disk_index_.find(h); it != disk_index_.end() &&
-            it->second.filename == candidate.filename &&
-            it->second.fingerprint == fp) {
-            it->second.seq = ++lru_seq_;
-        }
-        return true;
-    }
-
-    bool drop_pair = false;
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        // Match the success-path re-check before mutating the disk index.
-        if (auto it = disk_index_.find(h); it != disk_index_.end() &&
-            it->second.filename == candidate.filename &&
-            it->second.fingerprint == fp) {
-            disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
-            disk_index_.erase(it);
-            drop_pair = true;
-        }
-    }
-    if (drop_pair) remove_disk_pair(path);
-    std::error_code ec;
-    std::filesystem::remove(staging_path, ec);
-    return false;
-}
-
-struct RenderCache::WriterJob {
-    enum class Kind {
-        WriteBlobToDisk,
-        EncodeMasterThenRoute,
-    };
-
-    Kind kind = Kind::WriteBlobToDisk;
-    uint64_t h = 0;
-    std::vector<uint8_t> fp;
-    std::string fname;
-    std::string path;
-    std::vector<char> blob;
-    std::vector<float> samples;
-    int channels = 0;
-    int sample_rate = 0;
-    int64_t frame_count = 0;
-    // EncodeMasterThenRoute only: the dispatching render's per-dispatch
-    // session cancel token (never reset after creation, so a load of it
-    // names exactly that session). Null for WriteBlobToDisk jobs.
-    std::shared_ptr<const std::atomic<bool>> cancel_token;
-};
-
-void RenderCache::insert(const std::vector<uint8_t>& fp,
-                         const std::vector<char>& blob,
-                         int channels, int sample_rate, int64_t frame_count) {
-    if (!enabled_) {
-        return;
-    }
-    if (frame_count <= 0 || blob.empty() || channels <= 0 || sample_rate <= 0) {
-        return;
-    }
-
-    const uint64_t h = fnv1a64(fp);
-    const uint64_t bytes = static_cast<uint64_t>(blob.size());
-    const int64_t ram_tier_frames =
-        static_cast<int64_t>(sample_rate) * kRamTierMaxSeconds;
-    const bool to_ram =
-        frame_count <= ram_tier_frames && bytes <= kRamBudgetBytes;
-    if (to_ram) {
-        insert_ram(h, fp, blob, channels, sample_rate);
-        return;
-    }
-
-    insert_disk(h, fp, blob, frame_count);
-}
-
-void RenderCache::insert_master_floats(
-        const std::vector<uint8_t>& fp,
-        const std::vector<float>& samples,
-        int channels, int sample_rate,
-        int64_t frame_count,
-        std::shared_ptr<const std::atomic<bool>> cancel_token) {
-    if (!enabled_) {
-        return;
-    }
-    if (frame_count <= 0 || samples.empty() ||
-        channels <= 0 || sample_rate <= 0) {
-        return;
-    }
-    const size_t ch = static_cast<size_t>(channels);
-    if (samples.size() % ch != 0) return;
-
-    const uint64_t h = fnv1a64(fp);
-    WriterJob job;
-    job.kind = WriterJob::Kind::EncodeMasterThenRoute;
-    job.h = h;
-    job.fp = fp;
-    job.fname = hex16(h) + ".wav";
-    job.path = dir_ + "/" + job.fname;
-    job.samples = samples;
-    job.channels = channels;
-    job.sample_rate = sample_rate;
-    job.frame_count = frame_count;
-    job.cancel_token = std::move(cancel_token);
-    start_writer_job(std::move(job));
-}
-
-bool RenderCache::insert_ram(uint64_t h, const std::vector<uint8_t>& fp,
-                             const std::vector<char>& blob,
-                             int channels, int sample_rate) {
-    const uint64_t bytes = static_cast<uint64_t>(blob.size());
-
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (auto it = ram_.find(h); it != ram_.end()) {
-        ram_bytes_ -= static_cast<uint64_t>(it->second.blob.size());
-        ram_.erase(it);
-    }
-    if (bytes > kRamBudgetBytes) return false; // pathological single entry; skip
-
-    evict_ram_until(kRamBudgetBytes - bytes);
-
-    RamEntry e;
-    e.fingerprint = fp;
-    e.blob        = blob;
-    e.channels    = channels;
-    e.sample_rate = sample_rate;
-    e.seq         = ++lru_seq_;
-    ram_[h]       = std::move(e);
-    ram_bytes_   += bytes;
-    return true;
-}
-
-void RenderCache::evict_ram_until(uint64_t target_max) {
-    while (ram_bytes_ > target_max && !ram_.empty()) {
-        auto victim = ram_.begin();
-        for (auto it = ram_.begin(); it != ram_.end(); ++it)
-            if (it->second.seq < victim->second.seq) victim = it;
-        ram_bytes_ -= static_cast<uint64_t>(victim->second.blob.size());
-        ram_.erase(victim);
-    }
-}
-
-bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
-                              const std::vector<char>& blob,
-                              int64_t frame_count) {
-    WriterJob job;
-    job.kind = WriterJob::Kind::WriteBlobToDisk;
-    job.h = h;
-    job.fp = fp;
-    job.fname = hex16(h) + ".wav";
-    job.path = dir_ + "/" + job.fname;
-    job.blob = blob;
-    job.frame_count = frame_count;
-    start_writer_job(std::move(job));
-    return true;
-}
-
-void RenderCache::start_writer_job(WriterJob job) {
-    join_writer();
-
-    // Drop the job if the dispatching render was cancelled while we waited
-    // on the previous writer. The check sits after the potentially long
-    // join and before anything becomes externally observable — the disk
-    // index mutation below and the writer thread launch. A cancel can still
-    // land between this load and the thread start; the writer thread's
-    // post-encode re-check of the same job token catches that window, so
-    // the two checks together keep a killed session from publishing cache
-    // state.
-    if (job.cancel_token && job.cancel_token->load()) {
-        return;
-    }
-
-    if (job.kind == WriterJob::Kind::WriteBlobToDisk) {
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            if (auto it = disk_index_.find(job.h); it != disk_index_.end()) {
-                disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
-                disk_index_.erase(it);
-            }
-        }
-        remove_disk_pair(job.path);
-    }
-
-    std::thread new_writer([this, job = std::move(job)]() mutable {
-        auto write_disk_blob = [this, &job]() {
-            uint64_t written = 0;
-            if (!write_file(job.path, job.fp, job.blob,
-                            job.frame_count, written)) {
-                return;
-            }
-
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                DiskEntry e;
-                e.fingerprint = job.fp;
-                e.filename    = job.fname;
-                e.size_bytes  = written;
-                e.seq         = ++lru_seq_;
-                disk_index_[job.h] = std::move(e);
-                disk_bytes_   += written;
-                evict_disk_until(kDiskBudgetBytes);
-            }
-        };
-
-        if (job.kind == WriterJob::Kind::EncodeMasterThenRoute) {
-            std::vector<char> encoded;
-            if (!encode_pcm24_wav_blob(job.samples, job.channels,
-                                       job.sample_rate, encoded)) {
-                std::fprintf(stderr,
-                    "warptempo_gui: render-cache insert dropped: failed to "
-                    "encode target samples as canonical PCM_24 wav\n");
-                return;
-            }
-            job.samples.clear();
-            job.samples.shrink_to_fit();
-            job.blob = std::move(encoded);
-
-            // Post-encode cancellation re-check, before anything publishes:
-            // the RAM insert, the disk-index mutation, and the pair write
-            // all come after this point. The token is created per dispatch
-            // and never reset, so this load names exactly the dispatching
-            // session; a cancel landing anywhere before this point —
-            // including the window between the handoff's pre-launch check
-            // and this thread's start — drops the entry silently
-            // (consistent with the pre-launch drop), and a cancel landing
-            // after it completes the write, which is the accepted
-            // late-cancel tail, now bounded by this check.
-            if (job.cancel_token && job.cancel_token->load()) {
-                return;
-            }
-
-            const uint64_t bytes = static_cast<uint64_t>(job.blob.size());
-            const int64_t ram_tier_frames =
-                static_cast<int64_t>(job.sample_rate) * kRamTierMaxSeconds;
-            const bool to_ram =
-                job.frame_count <= ram_tier_frames && bytes <= kRamBudgetBytes;
-            if (to_ram) {
-                insert_ram(job.h, job.fp, job.blob,
-                           job.channels, job.sample_rate);
-                return;
-            }
-
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                if (auto it = disk_index_.find(job.h);
-                    it != disk_index_.end()) {
-                    disk_bytes_ -= std::min(disk_bytes_, it->second.size_bytes);
-                    disk_index_.erase(it);
-                }
-            }
-            remove_disk_pair(job.path);
-            write_disk_blob();
-            return;
-        }
-
-        write_disk_blob();
-    });
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        writer_ = std::move(new_writer);
-    }
-}
-
-void RenderCache::evict_disk_until(uint64_t target_max) {
-    while (disk_bytes_ > target_max && disk_index_.size() > 1) {
-        auto victim = disk_index_.begin();
-        for (auto it = disk_index_.begin(); it != disk_index_.end(); ++it)
-            if (it->second.seq < victim->second.seq) victim = it;
-        remove_disk_pair(dir_ + "/" + victim->second.filename);
-        disk_bytes_ -= victim->second.size_bytes;
-        disk_index_.erase(victim);
-    }
-}
-
-void RenderCache::remove_disk_pair(const std::string& wav_path) {
-    std::error_code ec;
-    std::filesystem::remove(wav_path, ec);
-    std::filesystem::remove(wav_path + ".tmp", ec);
-    const std::string sidecar = fingerprint_sidecar_path(wav_path);
-    std::filesystem::remove(sidecar, ec);
-    std::filesystem::remove(sidecar + ".tmp", ec);
-}
-
-bool RenderCache::read_file(const std::string& path,
-                            const std::vector<uint8_t>& want_fp,
-                            int channels, int sample_rate,
-                            std::vector<float>& out) {
-    ArtifactStatIdentity candidate_identity{};
-    if (!fingerprint_sidecar_matches(path, want_fp, &candidate_identity)) {
-        return false;
-    }
-    if (read_wav_to_float(path, channels, sample_rate, out)) {
-        // Identity bind (TOCTOU): re-stat AFTER the decode and require the
-        // exact wav object the sidecar validation saw (dev, inode, size,
-        // mtime_ns — the capture at fingerprint_sidecar_matches). The racing
-        // party is this process's own cache writer thread: under a 64-bit FNV
-        // name collision it can remove/replace this hash-named wav for a
-        // distinct fingerprint between validation and decode. A mismatch
-        // discards the decoded buffer exactly as a miss (silent — the caller
-        // re-renders; no locks, no retries).
-        ArtifactStatIdentity post_read{};
-        if (stat_artifact_identity(path, post_read) &&
-            post_read == candidate_identity) {
-            return true;
-        }
-    }
-    out.clear();
-    return false;
-}
-
-bool read_wav_to_float(const std::string& path,
-                       int expected_channels, int expected_sample_rate,
-                       std::vector<float>& out) {
-    if (expected_channels <= 0 || expected_sample_rate <= 0) return false;
-    auto info = wav_probe(path);
-    if (!info) return false;
-    if (info->channels != expected_channels ||
-        info->sample_rate != expected_sample_rate) {
-        return false;
-    }
-    auto tmp = wav_read_full(path);
-    if (!tmp) return false;
-    out = std::move(*tmp);
-    return true;
-}
-
-bool read_file_bytes(const std::string& path, std::vector<char>& out) {
-    std::ifstream in(path, std::ios::binary | std::ios::ate);
-    if (!in) return false;
-    const std::streamoff end = in.tellg();
-    if (end < 0) return false;
-    if (static_cast<uint64_t>(end) > std::numeric_limits<size_t>::max()) {
-        return false;
-    }
-    std::vector<char> tmp(static_cast<size_t>(end));
-    in.seekg(0, std::ios::beg);
-    if (!tmp.empty() && !in.read(tmp.data(), static_cast<std::streamsize>(tmp.size()))) {
-        return false;
-    }
-    out = std::move(tmp);
-    return true;
-}
-
-bool encode_pcm24_wav_blob(const std::vector<float>& samples,
-                           int channels, int sample_rate,
-                           std::vector<char>& out_blob) {
-    if (channels <= 0 || sample_rate <= 0) return false;
-    const size_t ch = static_cast<size_t>(channels);
-    if (samples.size() % ch != 0) return false;
-    const int64_t frame_count = static_cast<int64_t>(samples.size() / ch);
-
-    std::vector<char> blob;
-    auto writer = WavWriter::open_memory(blob, channels, sample_rate);
-    if (!writer) return false;
-    auto ok = writer->write_frames(samples.data(), frame_count);
-    if (!ok) return false;
-    ok = writer->close();
-    if (!ok) return false;
-    out_blob = std::move(blob);
-    return true;
-}
-
-bool decode_wav_blob_to_float(const std::vector<char>& blob,
-                              int expected_channels,
-                              int expected_sample_rate,
-                              std::vector<float>& out_samples) {
-    if (blob.empty() || expected_channels <= 0 || expected_sample_rate <= 0) {
-        return false;
-    }
-    const std::span<const char> bytes(blob.data(), blob.size());
-    auto info = wav_probe(bytes);
-    if (!info) return false;
-    if (info->channels != expected_channels ||
-        info->sample_rate != expected_sample_rate) {
-        return false;
-    }
-    auto tmp = wav_read_full(bytes);
-    if (!tmp) return false;
-    out_samples = std::move(*tmp);
-    return true;
-}
-
-bool RenderCache::write_file(const std::string& path,
-                             const std::vector<uint8_t>& fp,
-                             const std::vector<char>& blob,
-                             int64_t frame_count, uint64_t& out_bytes) {
-    if (frame_count <= 0 || blob.empty()) return false;
-
-    const std::string tmp = path + ".tmp";
-    remove_disk_pair(path);
-
-    if (!write_bytes_to_path(tmp, blob)) {
-        remove_disk_pair(path);
-        return false;
-    }
-
-    std::error_code ec;
-    std::filesystem::rename(tmp, path, ec);
-    if (ec) {
-        remove_disk_pair(path);
-        return false;
-    }
-    if (!write_fingerprint_sidecar(path, fp)) {
-        remove_disk_pair(path);
-        return false;
-    }
-
-    const uint64_t wav_size = std::filesystem::file_size(path, ec);
-    if (ec) {
-        remove_disk_pair(path);
-        return false;
-    }
-    const uint64_t sidecar_size =
-        std::filesystem::file_size(fingerprint_sidecar_path(path), ec);
-    if (ec) {
-        remove_disk_pair(path);
-        return false;
-    }
-    out_bytes = wav_size + sidecar_size;
-    return true;
 }

@@ -149,12 +149,13 @@ struct RenderRequest {
     std::string batch_folder;
     std::string batch_basename;
 
-    // The process's single RenderCache, populated at request-build time
+    // The process's single RenderCacheDir, populated at request-build time
     // from the same instance main.cpp constructs and hands to
     // GuiTargetRender by reference. Required contract: every dispatcher
-    // populates it; it is never null in a program-built request, and
-    // do_render dereferences it without a null check.
-    RenderCache* render_cache = nullptr;
+    // populates it; it is never null in a program-built request. do_render
+    // dereferences it on the disk route only, for the framemap-pair
+    // future-proofing write (the buffer route skips it).
+    RenderCacheDir* render_cache_dir = nullptr;
 };
 
 // Synchronous render. Blocks the caller until the pipeline finishes (or
@@ -164,8 +165,7 @@ struct RenderRequest {
 // failure path; Cancelled if `cancel_token` (when non-null) was observed set
 // inside the engine. The token is GuiAsyncRenderer's per-dispatch session
 // cancel token: created fresh for each dispatch and never reset, so it names
-// exactly this render's session even when a copy outlives the render (the
-// cache writer thread holds one). The queue walker uses the outcome to count
+// exactly this render's session. The queue walker uses the outcome to count
 // successes and to detect mid-render cancellation.
 RenderOutcome do_render(const RenderRequest& req,
                         std::shared_ptr<const std::atomic<bool>> cancel_token =

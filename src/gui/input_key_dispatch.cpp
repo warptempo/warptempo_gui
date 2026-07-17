@@ -404,8 +404,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // .phaseresetmarkers / .settings / .fingerprint), so each misc cell is a
     // first-class `l`-auditionable, `Shift+.`-adoptable entry. Repeat presses
     // with unchanged state are DELIBERATE — each is an explicit command that
-    // produces one more cell; identical bytes come cheap from do_render's reuse
-    // rungs (render_cache, then the on-disk artifact against its .fingerprint).
+    // produces one more cell; each cell re-synthesizes (reuse-of-synthesis is
+    // retired, architect 2026-07-17 — renders are fast).
     //
     // The AUTHORING recipe (markers, settings, trim, snapshot, resources) is
     // frozen here at command time; only the OUTPUT naming (batch_folder /
