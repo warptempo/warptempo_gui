@@ -308,9 +308,9 @@ bool Undo::history_entry_actionable(const std::vector<UndoEntry>& stack) const {
 
 // Direction-parameterized restore core shared by do_undo / do_redo, making the
 // two symmetric by construction. Pops the top entry of `from`, records the
-// live-state counter-entry onto `to` (kCap-trimmed), and applies the common
-// restore body; saved_distance moves by `saved_distance_delta` (+1 undo, −1
-// redo). The caller has already run history_entry_actionable on `from`.
+// live-state counter-entry onto `to`, and applies the common restore body;
+// saved_distance moves by `saved_distance_delta` (+1 undo, −1 redo). The caller
+// has already run history_entry_actionable on `from`.
 void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                                  std::vector<UndoEntry>& to,
                                  int saved_distance_delta) {
@@ -334,12 +334,11 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     std::vector<GuiPhaseResetMarker> before_t = counter.phase_reset_snapshot;
 
     to.push_back(std::move(counter));
-    if (to.size() > UndoHistory::kCap) {
-        // `to` is the redo stack on an undo (delta +1) or the undo stack on a
-        // redo (delta -1); the delta IS the stack's saved-distance sign, so it
-        // doubles as evict_bottom_with_saved_ref's direction argument.
-        app.history.evict_bottom_with_saved_ref(to, saved_distance_delta);
-    }
+    // No kCap trim here: each restore moves one entry between the stacks (`from`
+    // popped above, `to` pushed here), and push — the only operation that grows
+    // the total — clears the redo stack and caps the undo stack. So
+    // undo_stack.size() + redo_stack.size() never exceeds kCap and the
+    // destination cannot overflow.
     if (app.history.saved_valid) app.history.saved_distance += saved_distance_delta;
 
     // Restore the originating A/B tab before the marker swap. The
