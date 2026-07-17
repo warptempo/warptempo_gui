@@ -439,9 +439,11 @@ std::string find_reusable_artifact(const std::string& preferred,
         candidates.push_back(wav.string());
     }
 
-    // Deterministic pick among byte-identical candidates: same fingerprint
-    // means same recipe means same deliverable bytes, so sorted order makes
-    // the choice stable.
+    // Deterministic pick among reuse-equivalent candidates: same fingerprint
+    // means same recipe under the fingerprint trust boundary (the recipe
+    // fingerprint identifies the musical recipe, not the producing
+    // host/toolchain — docs/HELP.md's Reproducibility section is the SoT),
+    // so sorted order makes the choice stable, not a byte-identity claim.
     std::sort(candidates.begin(), candidates.end());
     for (const std::string& candidate : candidates) {
         if (candidate == preferred || candidate == exclude) continue;

@@ -26,13 +26,13 @@ bool stat_file_identity(const std::string& path, RenderFileIdentity& out);
 // Canonical content fingerprint over everything the engine reads for a
 // target-view render and archival wav render: source path, source file
 // identity, sample rate, the parser-domain warp and phase-reset marker fields,
-// the full engine settings, and the trim bounds. Mirrors the inputs of
-// build_render_request. GUI-only marker session scratch (iteration / BPM
-// authoring) is intentionally excluded — it never reaches the engine, so two
-// states differing only there must share a key. Trim frame values are
-// normalized to 0 when their bound is unset. Same inputs always produce byte-identical
-// output; the result is hashed to name a cache file and stored verbatim for an
-// exact-compare confirm on lookup.
+// the render-affecting engine settings (`scale` only, since v15), and the
+// trim bounds. Mirrors the inputs of build_render_request. GUI-only marker
+// session scratch (iteration / BPM authoring) is intentionally excluded — it
+// never reaches the engine, so two states differing only there must share a
+// key. Trim frame values are normalized to 0 when their bound is unset. Same
+// inputs always produce byte-identical output; the result is hashed to name
+// a cache file and stored verbatim for an exact-compare confirm on lookup.
 std::vector<uint8_t> render_fingerprint(
     const std::string& source_audio_path,
     const RenderFileIdentity& source_identity,
@@ -91,8 +91,11 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
 // .fingerprint sidecar matches `fingerprint`, or empty. `preferred` is
 // auditioned first (the common current-title case costs one stat chain,
 // no scan); on miss, the directory's *.fingerprint entries are tried in
-// sorted order (deterministic pick among byte-identical candidates —
-// same fingerprint means same recipe means same deliverable bytes).
+// sorted order (deterministic pick among reuse-equivalent candidates: same
+// fingerprint means same recipe under the fingerprint trust boundary — the
+// recipe fingerprint identifies the musical recipe, not the producing
+// host/toolchain, so sorted order is a stable choice among candidates, not a
+// byte-identity claim; docs/HELP.md's Reproducibility section is the SoT).
 // `exclude` (may be empty) is never returned — the caller has already
 // handled that path (do_render's same-path up-to-date rung).
 // Regular files only, the one directory, non-recursive: renders/ cells
