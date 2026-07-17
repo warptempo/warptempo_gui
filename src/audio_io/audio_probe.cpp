@@ -29,14 +29,6 @@ audio_probe(const std::string& path)
         out.sample_rate = info->sample_rate;
         out.channels = info->channels;
         out.frames = info->frames;
-        switch (info->format) {
-        case WavSampleFormat::Pcm16:
-            out.kind = AudioFileKind::WavPcm16;
-            break;
-        case WavSampleFormat::Pcm24:
-            out.kind = AudioFileKind::WavPcm24;
-            break;
-        }
         return out;
     }
 

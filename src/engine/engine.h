@@ -30,7 +30,6 @@ struct EngineParams {
 
     std::vector<WarpFrameMapSegment> warp_frame_map;  // rounded + precise breakpoints
 
-    int    N                          = 4096;
     double limiter_ceiling_dbfs       = -0.3;   // spectral
     double limiter_tolerance_db       = 0.01;
 

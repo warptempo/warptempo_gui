@@ -458,9 +458,7 @@ std::expected<FinishRenderStatus, std::string> finish_render(
         }
     }
     if (cancelled()) return FinishRenderStatus::Cancelled;
-    apply_peak_limiter(buffer, channels, sample_rate,
-                       kPeakLimiterCeilingDbfs, kPeakLimiterAttackMs,
-                       kPeakLimiterReleaseMs);
+    apply_peak_limiter(buffer, channels, sample_rate);
     if (cancelled()) return FinishRenderStatus::Cancelled;
     if (output_wav_path.empty()) {
         // Buffer route (target view). Target playback auditions the

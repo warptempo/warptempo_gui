@@ -259,8 +259,6 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
                 valid_bits = read_u16(fmt, 18);
                 if (guid_is_subformat(fmt.data() + 24, 1)) {
                     tag = 1;
-                } else if (guid_is_subformat(fmt.data() + 24, 3)) {
-                    tag = 3;
                 } else {
                     return std::unexpected("unsupported WAVE_FORMAT_EXTENSIBLE subformat");
                 }

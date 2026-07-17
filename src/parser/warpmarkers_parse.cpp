@@ -134,9 +134,8 @@ bool parse_tempo_with_scale(const std::string& s, WarpMarker& m,
 // On success, returns true and the WarpMarker carries the parsed payload.
 // On failure, returns false and `error_out` is set.
 //
-// `disabled_in` is plumbed through so the caller can attach a metadata
-// flag (`#`) that came from outside the payload. Time and trim flags
-// are not handled here.
+// The `#` disabled flag, the marker time, and trim flags come from outside
+// the payload and are the caller's job; they are not handled here.
 bool parse_new_payload(const std::string& payload,
                        WarpMarker& m,
                        std::string& error_out) {

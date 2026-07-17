@@ -158,7 +158,6 @@ EngineResult run_warptempo_engine(const EngineParams& p,
                                   const std::atomic<bool>* cancel_flag) {
     AudioSTFT audio_stft;
 
-    audio_stft.N = p.N;
     audio_stft.cancel_flag = cancel_flag;
 
     init_fftw_threads(audio_stft);
@@ -166,11 +165,6 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     auto& lp = audio_stft.limiter_params;
     lp.ceiling_dbfs         = p.limiter_ceiling_dbfs;
     lp.tolerance_db         = p.limiter_tolerance_db;
-
-    if (audio_stft.N <= 0 || audio_stft.N % 4 != 0) {
-        std::cerr << "error: N must be a positive multiple of 4.\n";
-        return EngineResult::Failed;
-    }
 
     // Buffer-out only: the output buffer is the engine's sole sink; encode
     // lives orchestrator-side in the prepost chain.

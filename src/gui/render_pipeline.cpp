@@ -715,7 +715,6 @@ RenderOutcome do_render(const RenderRequest& req,
         ep.source_frame_schedule = trim_plan
             ? &trim_plan->pre.source_frame_schedule
             : nullptr;
-        ep.N                    = N_fft;
 
         // Projection refusal, orchestrator-side before the engine allocates
         // (refuse-before-cost): the engine's buffered emission is llrint of

@@ -77,7 +77,8 @@ inline constexpr double kPeakLimiterReleaseMs   = 0.5;
 // application. Called by the shared post-engine chain (finish_render in
 // trimmer.h) on whichever buffer the render fills — disk render or target
 // view — after the post_trim crop, never before it, so the limiter's envelope
-// sees exactly the delivered samples.
+// sees exactly the delivered samples. The stage's ceiling/attack/release are
+// the kPeakLimiter* constants above, read directly (they are fixed, never
+// per-call flexibility).
 void apply_peak_limiter(std::vector<float>& buffer, int channels,
-                        int sample_rate, double ceiling_dbfs,
-                        double attack_ms, double release_ms);
+                        int sample_rate);

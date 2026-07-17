@@ -10,6 +10,7 @@
 #include <fftw3.h>
 
 #include "engine.h"
+#include "engine_geometry.h"     // kN, kRs
 #include "synth_spectrum_trig.h"
 #include "warp_frame_map.h"
 
@@ -103,17 +104,20 @@ struct AudioSTFT {
     // Valid for the duration of run_warptempo_engine. src_info carries the
     // frame count, channel count, and sample rate that describe it.
     const float* src_samples = nullptr;
-    // Default N=4096: the analysis window length and the OLA frame stride
-    // (R_s = N/4) baseline. Must stay divisible by 4; 4096 = 2^12 is FFTW-clean.
-    int N = 4096;
-    // FFT length used by the forward/inverse plans. Set to 2*N in init_fftw to
-    // give the analysis frame a centered zero-padded layout (Prusa-Holighaus):
-    // the N-length window sits with its center at FFT index 0, and the
-    // remaining M-N samples are zero. Doubles the bin density (bin_hz_width =
-    // sr/M) and is what makes the PGHI phase integration consistent on the
-    // truncated-Gaussian-like Hann lobe in the bin grid.
-    int M = 0;
-    int R_s = 0;
+    // The analysis window length and the OLA frame stride (R_s = N/4). N and
+    // R_s are co-equal compile-time geometry constants, kept symmetric and
+    // pulled directly from engine_geometry.h (kN/kRs): the engine consumes the
+    // locked geometry, it does not derive it per-init from a runtime N. N is
+    // divisible by 4 by construction; 4096 = 2^12 is FFTW-clean.
+    static constexpr int N = kN;
+    // FFT length used by the forward/inverse plans. M = 2*N gives the analysis
+    // frame a centered zero-padded layout (Prusa-Holighaus): the N-length
+    // window sits with its center at FFT index 0, and the remaining M-N samples
+    // are zero. Doubles the bin density (bin_hz_width = sr/M) and is what makes
+    // the PGHI phase integration consistent on the truncated-Gaussian-like Hann
+    // lobe in the bin grid.
+    static constexpr int M = 2 * N;
+    static constexpr int R_s = kRs;
     int channels = 0;
     double bin_hz_width = 0.0;
     size_t target_total_frames = 0;
@@ -226,8 +230,6 @@ struct AudioSTFT {
     }
 
     void init_fftw() {
-        R_s = N / 4;
-        M = 2 * N;
         bin_hz_width = static_cast<double>(src_info.samplerate) / M;
         window.resize(N);
         synth_window.resize(N);

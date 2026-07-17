@@ -385,7 +385,6 @@ int main(int argc, char** argv) {
     ep.source_frame_schedule = trim_plan
         ? &trim_plan->pre.source_frame_schedule
         : nullptr;
-    ep.N            = N_fft;
     // limiter_ceiling_dbfs / tolerance stay at EngineParams defaults —
     // do_render inherits them too. The spectral limiter always runs.
 

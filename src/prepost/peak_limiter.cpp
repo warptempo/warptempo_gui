@@ -10,15 +10,14 @@ constexpr double kAttFloor = 1e-12;
 }  // namespace
 
 void apply_peak_limiter(std::vector<float>& buffer, int channels,
-                        int sample_rate, double ceiling_dbfs,
-                        double attack_ms, double release_ms) {
+                        int sample_rate) {
     // Unity-bypass scan over the untouched buffer (one linear read before any
     // limiter allocation): on an already-compliant buffer (every sample finite
     // and within the ceiling) the limiter's gain never leaves 1.0, so the
     // buffer returns unchanged. A
     // non-finite sample falls through to the limiter (its hardclip backstop
     // owns that breach-class input). A nonqualifying buffer pays this extra read.
-    const double ceiling = std::pow(10.0, ceiling_dbfs / 20.0);
+    const double ceiling = std::pow(10.0, kPeakLimiterCeilingDbfs / 20.0);
     double max_abs = 0.0;
     bool   all_finite = true;
     for (float s : buffer) {
@@ -33,7 +32,8 @@ void apply_peak_limiter(std::vector<float>& buffer, int channels,
 
     const std::size_t total_frames =
         buffer.size() / static_cast<std::size_t>(channels);
-    PeakLimiter pl(ceiling_dbfs, attack_ms, release_ms, sample_rate, channels);
+    PeakLimiter pl(kPeakLimiterCeilingDbfs, kPeakLimiterAttackMs,
+                   kPeakLimiterReleaseMs, sample_rate, channels);
     std::vector<float> out;
     out.reserve(buffer.size());
     auto sink = [&](const float* p, std::size_t n) {
