@@ -12,6 +12,21 @@
 #include <functional>
 #include <vector>
 
+// The live state's would-be render fingerprint: the same render_fingerprint
+// computation, over the same inputs (env quartet, source path + load-time
+// identity, sample rate, the RESOLVED marker state of both stores, engine
+// fields, trim), that a dispatch of the current state performs. The identity
+// bytes are the load-time pair (GuiAudio's recorded size/mtime), taken
+// directly with no on-disk re-verification: the loaded source is immutable
+// for the process lifetime, so the captured identity is authoritative —
+// exactly as do_render builds its own fingerprint. Runs its OWN marker
+// resolve (this site stands alone — rationale at the definition), so the
+// resolver's per-resolve stderr lines print here too for a resting ambiguous
+// store — the intended signal. Its sole consumer is the target-view reuse
+// rungs (dispatch_render_now).
+std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
+                                                     const GuiAudio& audio);
+
 // Target-view live target render orchestrator. Owns the cancel-restart
 // dispatch helper called from every output-affecting mutation site (marker
 // edits, phase reset edits, trim hotkeys, settings commits, undo/redo, tab
@@ -35,20 +50,20 @@ struct GuiTargetRender {
     GuiAsyncRenderer& async_renderer;
     GuiPlayback&      playback;
     Viewport&         viewport;
-    RenderCacheDir&   render_cache_dir;
+    RenderCache&      render_cache;
 
     GuiTargetRender(AppState&         app_,
                     const GuiAudio&   audio_,
                     GuiAsyncRenderer& async_renderer_,
                     GuiPlayback&      playback_,
                     Viewport&         viewport_,
-                    RenderCacheDir&   render_cache_dir_)
+                    RenderCache&      render_cache_)
         : app(app_),
           audio(audio_),
           async_renderer(async_renderer_),
           playback(playback_),
           viewport(viewport_),
-          render_cache_dir(render_cache_dir_) {}
+          render_cache(render_cache_) {}
 
     // Output-affecting mutation hook. Called from every site that mutates
     // engine input (markers, phase resets, trim, output-affecting settings,
@@ -113,27 +128,48 @@ private:
     // have arrived during render).
     void on_render_done(RenderOutcome outcome);
 
-    // Shared Success tail for worker completions: caches the buffer's frame
-    // count and rebinds playback to the completed target buffer.
+    // Shared Success tail for cache hits, archival artifact loads, and worker
+    // completions. Cache insertion is owned by the render worker; target_render
+    // only consumes lookup/artifact results and binds the completed buffer.
     void complete_successful_buffer();
 
-    // The domain offset for the target-buffer playback bind: the
-    // full-target-frame coordinate that target_buffer[0] represents — 0 for a
-    // full-song (no-trim) render; with a surviving trim, the trim-begin
-    // source frame mapped through the target-view warp_frame_map (the engine
-    // renders only the trim range, so buffer frame 0 is the trim's
-    // target-frame start). Takes BOTH bounds because it must mirror
-    // do_render's ambiguous-trim fallback: a trim whose target span rounds
-    // below one output sample renders the FULL deliverable, so the anchor is
-    // 0 then, not the begin's target image (rule mirror at the definition).
-    // No buffer-frames gate: the caller stamps the origin at production time,
-    // when the buffer may still be empty. The stamp rests in
-    // dispatched_buffer_start_frame_ below and travels to GuiPlayback with
-    // each bind.
-    int64_t compute_buffer_start_frame_for(bool has_begin,
-                                           int64_t begin_frame,
-                                           bool has_end,
-                                           int64_t end_frame) const;
+    // One trim-survival verdict per dispatch, driving BOTH the buffer's
+    // domain anchor and the fallback diagnostic. start_frame is the domain
+    // offset for the target-buffer playback bind: the full-target-frame
+    // coordinate that target_buffer[0] represents — 0 for a full-song
+    // (no-trim) render; with a surviving trim, the trim-begin source frame
+    // mapped through the target-view warp_frame_map (the engine renders
+    // only the trim range, so buffer frame 0 is the trim's target-frame
+    // start). trim_fell_back is true iff a trim bound was set but the plan
+    // refuses, so the render is the FULL, untrimmed deliverable. This
+    // verdict is the one GUI-thread read that must distinguish "a trim
+    // bound was set" from "a trim plan exists", and it cannot see the
+    // worker's plan — so compute_buffer_start_frame_for re-derives the
+    // survival test from the same exact-double images through the same map,
+    // once, and the anchor and the diagnostic both consume that single
+    // result (no second arithmetic implementation).
+    struct BufferStartVerdict {
+        int64_t start_frame = 0;
+        bool    trim_fell_back = false;
+    };
+
+    // Compute the verdict above for an explicit trim pair. Takes BOTH
+    // bounds because it must mirror do_render's ambiguous-trim fallback: a
+    // trim whose target span rounds below one output sample renders the
+    // FULL deliverable, so the anchor is 0 then, not the begin's target
+    // image (rule mirror at the definition). No buffer-frames gate: callers
+    // stamp the origin at production time, when the buffer may still be
+    // empty. The stamp rests in dispatched_buffer_start_frame_ below and
+    // travels to GuiPlayback with each bind.
+    BufferStartVerdict compute_buffer_start_frame_for(bool has_begin,
+                                                      int64_t begin_frame,
+                                                      bool has_end,
+                                                      int64_t end_frame) const;
+
+    // Render fingerprint of the most recent dispatch. Computed at the top of
+    // dispatch_render_now() and used for target-view cache/artifact lookups.
+    // The worker computes the same fingerprint for fresh target-route inserts.
+    std::vector<uint8_t> last_fingerprint_;
 
     // Full-target-domain frame coordinate that element zero of app.target_buffer
     // represents for the production currently in flight or most recently

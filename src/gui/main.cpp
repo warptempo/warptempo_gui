@@ -526,23 +526,23 @@ int main(int argc, char** argv) {
             "warptempo_gui: failed to start waveform worker; exiting\n");
         return 1;
     }
-    // Per-process directory manager for the inert framemap-pair
-    // future-proofing writes (the archival disk route and the CLI drop the
-    // full warp + phase-reset map pair into <cache home>/warptempo_gui/<pid>/;
-    // no product path reads it back). init() creates the per-process directory
-    // and sweeps dead-PID orphan directories; shutdown(), after the event
-    // loop, removes this process's directory. Constructed before target_render,
-    // which holds it by reference. A failed init() leaves the manager disabled
-    // (process_dir() returns empty), so callers need no special-casing.
-    RenderCacheDir render_cache_dir;
-    render_cache_dir.init();
+    // Shared process-local render cache for target-view reuse, archival
+    // reuse/publish rungs, and committed-render survival after the renders
+    // folder is wiped. init() creates the per-process cache directory under
+    // the user cache home and sweeps dead-PID orphan directories; shutdown(),
+    // after the event loop, removes this process's directory. Constructed
+    // before target_render, which holds it by reference. A failed init() leaves
+    // the cache disabled (every lookup misses), so target_render needs no
+    // special-casing.
+    RenderCache render_cache;
+    render_cache.init();
     // GuiTargetRender is the cancel-restart dispatcher for target-view
     // live audio. It must be constructed after async_renderer
     // (a dependency) and BEFORE the op clusters (which take it as a
     // ref). The trigger() method is a no-op in source view, so injecting
     // it into source-view-only call sites is harmless.
     GuiTargetRender target_render(app, audio, async_renderer, playback,
-                                  viewport, render_cache_dir);
+                                  viewport, render_cache);
     // Paint handler constructed before file_loader, which applies font_size
     // changes through its on_resize (the shared geometry-and-cache rebuild
     // path). The font_size hotkey uses the input handler's own paint_handler
@@ -991,11 +991,11 @@ int main(int argc, char** argv) {
     // Tear the audio device down before the sample buffer goes out of scope.
     playback.shutdown();
     gui.shutdown();
-    // Join the render worker before the cache-dir teardown so a render
-    // completing during shutdown cannot write into a removed directory.
-    // Idempotent; the destructor's later call is then a no-op.
+    // Join the render worker before cache teardown so a render completing
+    // during shutdown cannot touch the dismantled cache. Idempotent; the
+    // destructor's later call is then a no-op.
     async_renderer.shutdown();
-    // Remove this process's framemap-pair cache directory.
-    render_cache_dir.shutdown();
+    // Remove this process's render-cache directory and free the RAM tier.
+    render_cache.shutdown();
     return 0;
 }
