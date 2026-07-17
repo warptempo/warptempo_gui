@@ -686,6 +686,14 @@ struct AppState {
     // gesture-owned, excluded from
     // undo/redo history, and render-affecting but deliberately treated as
     // transient view state.
+    //
+    // settings_dirty also receives a history-less DERIVED contribution: the
+    // four *_hash keys (libm/libmvec/fftw3/fftw3_threads) are the one
+    // GUI-kind-committed family that participates in dirty, and their
+    // contribution is not carried in a stored flag — Undo::recompute_dirty
+    // compares the live quartet against the saved baseline quartet on every
+    // recompute, so a restamp away from the saved baseline reads dirty and a
+    // restamp back reads clean regardless of undo/redo position.
     bool        warp_dirty           = false;
     bool        phase_reset_dirty    = false;
     bool        settings_dirty       = false;

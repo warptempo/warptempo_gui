@@ -79,7 +79,7 @@ void resolve_mapped_paths(std::string (&paths)[kLibCount]) {
 // detection, not security, and a fixed seed makes identical bytes hash
 // identically across processes. Do not "correct" the basis — every stored
 // hash would change and fire every project's mismatch prompt once for nothing.
-bool fnv1a64_file(const std::string& path, uint64_t& out) {
+bool content_hash64_file(const std::string& path, uint64_t& out) {
     std::FILE* f = std::fopen(path.c_str(), "rb");
     if (!f) return false;
     uint64_t h = 1469598103934665603ull;
@@ -272,7 +272,7 @@ RenderEnvHashes compute_impl() {
             continue;
         }
         uint64_t h = 0;
-        if (!fnv1a64_file(paths[i], h)) {
+        if (!content_hash64_file(paths[i], h)) {
             hashes[i] = kAbsentSentinel;  // unreadable: sentinel, no line
             rewrite = true;
             continue;
