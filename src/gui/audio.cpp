@@ -497,13 +497,6 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
         return false;
     }
 
-    if (next_channels > 2) {
-        std::fprintf(stderr,
-                     "warptempo_gui: %d-channel file '%s'; only the first 2 "
-                     "channels will be displayed\n",
-                     next_channels, path.c_str());
-    }
-
     auto full = wav_read_full(path);
     if (!full) {
         std::fprintf(stderr,

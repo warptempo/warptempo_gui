@@ -628,7 +628,6 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     long long viewport_start_sample,
     long long viewport_end_sample,
     int sample_rate,
-    double font_size,
     const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
     const DragOverlay* drag_overlay = nullptr,
     bool iteration_on = false);
@@ -675,16 +674,10 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     long long viewport_start_sample,
     long long viewport_end_sample,
     int sample_rate,
-    double font_size,
     const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
     const DragOverlay* drag_overlay = nullptr);
 
-// Returns the text that render_flags would draw for `markers[idx]`. Used
-// by the GUI text editor to seed the editable payload (the on-screen rect
-// content) when entering edit mode on a flag.
-std::string flag_text_for_marker(const std::vector<GuiWarpMarker>& markers, int idx);
-
-// Iteration-aware sibling of flag_text_for_marker. Returns the
+// Iteration-aware flag text composer. Returns the
 // plain flag text when `iteration_on` is false or the marker is iter-
 // ineligible; otherwise splices the inline `+[lo, hi]` bracket after
 // the tempo. The single canonical composer for warp flag text — used

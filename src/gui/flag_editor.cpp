@@ -106,7 +106,7 @@ bool extract_iter_bracket(std::string& payload,
 // paths, the iter grammar, and the bpm-bracket editor session, reaching
 // undo and viewport through the struct's reference members. The popup
 // eligibility and flag-text helpers (iter_popup_eligible_marker,
-// bpm_popup_eligible_marker, flag_text_for_marker, ...) live in
+// bpm_popup_eligible_marker, ...) live in
 // warpmarkers.h alongside effective_disabled, so this TU sees them via
 // #include "warpmarkers.h".
 

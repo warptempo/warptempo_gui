@@ -94,7 +94,7 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
             std::strlen(kBpmEditorPrefix) * adv;
         g.bottom_strip = true;
     } else if (text_editor::is_active(app.top_flag_editor)) {
-        // FlagPayload / IterationBracket — top strip.
+        // FlagPayload — top strip.
         const double tl = flag_pending_text_left_x(
             app, audio, app.top_flag_editor.target);
         if (tl < 0.0) return g;   // flag off-view: leave invalid

@@ -63,7 +63,6 @@ struct GuiPaintHandler;
 struct BaseTempoScale {
     int64_t base_tempo_cents;
     double  scale;
-    double  ratio;
 };
 
 inline std::optional<BaseTempoScale> compute_base_tempo_scale(
@@ -113,7 +112,7 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
     // GUI could never author.
     if (scale < kScaleMin || scale > kScaleMax) return std::nullopt;
 
-    return BaseTempoScale{base_tempo_cents, scale, ratio};
+    return BaseTempoScale{base_tempo_cents, scale};
 }
 
 // -- Target-view entry validity predicate --------------------------------

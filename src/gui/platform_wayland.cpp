@@ -679,7 +679,6 @@ void GuiPlatform::recreate_shm_pool(int w, int h) {
     for (int i = 0; i < kShmBufferCount; ++i) {
         const size_t offset = static_cast<size_t>(i) * buffer_bytes;
         shm_buffers_[i].pixels     = static_cast<char*>(shm_pool_map_) + offset;
-        shm_buffers_[i].size_bytes = buffer_bytes;
         shm_buffers_[i].busy       = false;
         shm_buffers_[i].pending.clear();
 
@@ -711,7 +710,6 @@ void GuiPlatform::destroy_shm_pool() {
             shm_buffers_[i].buffer = nullptr;
         }
         shm_buffers_[i].pixels     = nullptr;
-        shm_buffers_[i].size_bytes = 0;
         shm_buffers_[i].busy       = false;
         shm_buffers_[i].pending.clear();
     }

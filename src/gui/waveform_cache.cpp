@@ -402,7 +402,6 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // so the next maybe_rebuild_stem_cache reads the same coordinate
     // system the just-blitted waveform pixels were rendered against.
     std::swap(wf_cache.fp_warp_frame_map,     wf_cache.pending_fp_warp_frame_map);
-    wf_cache.dirty           = false;
 
     // Invalidate the waveform area so the next paint blits the new
     // pixels. Matches the rect Viewport::invalidate_waveform_area uses.
@@ -521,8 +520,6 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.pending_fp_target       = in.is_target;
     wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
     wf_cache.pending_fp_warp_frame_map      = in.warp_frame_map;
-
-    wf_cache.dirty = false;
 
     const GuiRect a = waveform_area(app);
     gui.invalidate_region(0, 0, app.width, a.y + a.h);
@@ -928,7 +925,6 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     stem_cache.fp_trim_has_end              = trim_has_end;
     stem_cache.fp_trim_begin_selected       = trim_begin_sel;
     stem_cache.fp_trim_end_selected         = trim_end_sel;
-    stem_cache.dirty                        = false;
 
     // Invalidate the stem region. Viewport-driven invalidations
     // already cover this strip, but pure marker-store edits (warp_gen /
@@ -990,8 +986,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                                  mv == 'W';
 
     // FlagPayload editor target drives the skip-guard (cache leaves a
-    // hole for the live editor render to fill). The IterationBracket /
-    // BpmBracket kinds do not feed the cache fingerprint.
+    // hole for the live editor render to fill). The BpmBracket kind
+    // does not feed the cache fingerprint.
     // FlagPayload (W view) drives the skip-guard: the cache leaves a hole for
     // the live editor render to fill. P view has no per-flag editor.
     int flag_target = -1;
@@ -1132,7 +1128,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_trim_has_end            = dtrim.has_end;
     flag_cache.fp_trim_begin_selected     = dtrim.begin_selected;
     flag_cache.fp_trim_end_selected       = dtrim.end_selected;
-    flag_cache.dirty                      = false;
 
     gui.invalidate_region(top_strip.x, top_strip.y,
                           top_strip.w, top_strip.h);

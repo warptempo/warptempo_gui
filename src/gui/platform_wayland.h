@@ -129,7 +129,6 @@ private:
         struct wl_buffer* buffer       = nullptr;
         cairo_surface_t*  surface      = nullptr;  // image-surface on `pixels`
         void*             pixels       = nullptr;  // points into mmap region
-        size_t            size_bytes   = 0;
         bool              busy         = false;    // true between attach and release
         // Damage accumulated since this buffer was last attached. The list is
         // bounded by the same containment coalescing as damage_; in practice

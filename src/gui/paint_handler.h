@@ -148,14 +148,6 @@ struct WaveformCache {
     // (WaveformJob.audio), so the slot carries no audio pointer or keepalive —
     // the deferred redispatch just names &audio.
 
-    // `dirty` no longer drives the dispatch decision (the
-    // pending_fp_* comparison does). It remains as a startup/clear flag:
-    // set at construction and at destroy_surface to indicate "the live
-    // surface has no valid pixels yet, show nothing until the first
-    // worker completion publishes pixels." Not consulted by
-    // maybe_enqueue_waveform_render.
-    bool dirty = true;
-
     void destroy_surface() {
         if (surface) {
             cairo_surface_destroy(surface);
@@ -169,7 +161,6 @@ struct WaveformCache {
         height = 0;
         pending_width  = 0;
         pending_height = 0;
-        dirty  = true;
         fp_rendered = false;
         // Poison the pending fingerprint so the next maybe_enqueue tick sees a
         // guaranteed mismatch and re-dispatches — area_w = -1 is impossible for
@@ -238,10 +229,6 @@ struct StemCache {
     bool      fp_trim_begin_selected         = false;
     bool      fp_trim_end_selected           = false;
 
-    // Mirrors WaveformCache::dirty — "no pixels yet, skip blit." Set at
-    // construction and at destroy_surface; cleared by the first rebuild.
-    bool dirty = true;
-
     void destroy_surface() {
         if (surface) {
             cairo_surface_destroy(surface);
@@ -249,7 +236,6 @@ struct StemCache {
         }
         width  = 0;
         height = 0;
-        dirty  = true;
     }
 
     ~StemCache() { destroy_surface(); }
@@ -312,8 +298,6 @@ struct FlagCache {
     bool      fp_trim_begin_selected      = false;
     bool      fp_trim_end_selected        = false;
 
-    bool dirty = true;
-
     void destroy_surface() {
         if (surface) {
             cairo_surface_destroy(surface);
@@ -321,7 +305,6 @@ struct FlagCache {
         }
         width  = 0;
         height = 0;
-        dirty  = true;
     }
 
     ~FlagCache() { destroy_surface(); }

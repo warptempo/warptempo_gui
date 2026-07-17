@@ -1185,17 +1185,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // so iteration popups appear or vanish in one frame.
     if (key == GuiKeys::I && !ctrl && !shift && !alt) {
         if (app.active_markers_view == 'W') {
-            // Mutual exclusion. Toggling iter ON forces
-            // BPM mode off; toggling iter OFF leaves BPM untouched.
-            // Forced bpm-off routes through the exit_bpm_mode chokepoint so
-            // it wipes the session-only bpm state like any other mode exit.
-            // Backstop only: bpm mode is exactly its modal editor session
-            // now, and the modal key gate drops `i` while that editor is
-            // open, so this branch has no reachable path.
             const bool turning_on = !app.iteration_mode_enabled;
-            if (turning_on && app.bpm_mode_enabled) {
-                flag_editor.exit_bpm_mode();
-            }
             if (!turning_on) {
                 // Turning iteration mode OFF wipes every marker's
                 // session-only iter bracket — exiting the mode is the
@@ -1472,7 +1462,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
         return true;
     }
     if (action == text_editor::KeyAction::Consumed) {
-        // FlagPayload / IterationBracket draw in the top strip.
+        // FlagPayload draws in the top strip.
         viewport.invalidate_top_strip();
         return true;
     }

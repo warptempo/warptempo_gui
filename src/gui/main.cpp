@@ -123,8 +123,8 @@ static_assert(sizeof(kZoomMsPerPixel) / sizeof(kZoomMsPerPixel[0])
 
 // compute_hover_popup_text lives in the parser (warp_frame_map_build.{cpp,h})
 // and operates on the parser's WarpMarker. It is a different translation
-// unit from flag_text_for_marker, which stays in render.cpp over
-// GuiWarpMarker.
+// unit from the GUI flag-text composer (flag_text_iter), which stays in
+// render.cpp over GuiWarpMarker.
 
 // UndoEntry, DragState, UndoHistory, PlayheadDragState,
 // HoverPopupState, DialogTrigger, PromptState, ViewState, AppState live in

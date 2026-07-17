@@ -218,11 +218,6 @@ void render_marker_stems_impl(
 
 } // namespace
 
-std::string flag_text_for_marker(const std::vector<GuiWarpMarker>& markers, int idx) {
-    if (idx < 0 || idx >= static_cast<int>(markers.size())) return {};
-    return flag_text(markers, idx);
-}
-
 // The single iteration-aware text composer. Returns the plain flag_text for
 // ineligible markers or when iteration mode is off; for an eligible owning
 // marker with iteration on, splices the inline bracket after the tempo and
@@ -1053,7 +1048,6 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     long long viewport_start_sample,
     long long viewport_end_sample,
     int sample_rate,
-    double font_size,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay,
     FlagTextFn&& get_flag_text) {
@@ -1061,7 +1055,6 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return out;
     if (viewport_end_sample <= viewport_start_sample) return out;
     if (sample_rate <= 0) return out;
-    (void)font_size;
 
     // Mirror render_flags: uniform y/height for the hit rect so clicks
     // register consistently across flag types. The rect comes from the shared
@@ -1096,13 +1089,12 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     long long viewport_start_sample,
     long long viewport_end_sample,
     int sample_rate,
-    double font_size,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay,
     bool iteration_on) {
     return compute_flag_hit_rects_impl(top_strip_area, waveform_width, markers,
         viewport_start_sample, viewport_end_sample,
-        sample_rate, font_size, warp_frame_map, drag_overlay,
+        sample_rate, warp_frame_map, drag_overlay,
         [&](int i) {
             return flag_text_iter(markers, i, iteration_on);
         });
@@ -1224,12 +1216,11 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     long long viewport_start_sample,
     long long viewport_end_sample,
     int sample_rate,
-    double font_size,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay) {
     return compute_flag_hit_rects_impl(top_strip_area, waveform_width, phase_resets,
         viewport_start_sample, viewport_end_sample,
-        sample_rate, font_size, warp_frame_map, drag_overlay,
+        sample_rate, warp_frame_map, drag_overlay,
         [&](int i) {
             return phase_reset_flag_text(phase_resets[i]);
         });

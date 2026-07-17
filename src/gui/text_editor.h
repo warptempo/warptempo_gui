@@ -57,14 +57,13 @@ constexpr int kMaxPendingCharsRenderCommit = 256;
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind now selects only the length cap
 // (handle_key accepts any printable ASCII and defers grammar to the
-// commit-time validator). The flag editor uses FlagPayload (payload text);
-// the iteration popup uses IterationBracket; the BPM popup uses BpmBracket;
+// commit-time validator). The flag editor uses FlagPayload (payload text,
+// iteration grammar included); the BPM popup uses BpmBracket;
 // the settings-prompt editor uses SettingsAssignment (`key=value`); the
 // render-commit prompt uses RenderCommit (a render entry's relative-path
 // identifier, resolved against the renders/ listing at commit).
 enum class Kind {
     FlagPayload,
-    IterationBracket,
     BpmBracket,
     SettingsAssignment,
     RenderCommit,

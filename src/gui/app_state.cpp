@@ -47,8 +47,8 @@ void remap_marker_indices_after_reorder(AppState& app,
 }
 
 // hit_test_* promoted from lambdas in main(). The captured `app` and `audio`
-// references are now explicit arguments. The kMarkerHitHalfPx / flag_font_size_px()
-// constants resolve through app_state.h / paint_handler.h respectively.
+// references are now explicit arguments. The kMarkerHitHalfPx constant
+// resolves through app_state.h.
 
 int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
                          int mouse_x) {
@@ -301,14 +301,14 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     if (app.active_markers_view == 'P') {
         rects = compute_phase_reset_flag_hit_rects(
             top, area.w, app.phaseresetmarkers.markers(),
-            vp_start, vp_end, audio.sample_rate(), flag_font_size_px(),
+            vp_start, vp_end, audio.sample_rate(),
             tmap_arg, drag_overlay);
     } else {
         // Warp hit-rects must track the bracketed flag width so
         // clicks land on the iteration-mode chip.
         rects = compute_flag_hit_rects(
             top, area.w, app.warpmarkers.markers(),
-            vp_start, vp_end, audio.sample_rate(), flag_font_size_px(),
+            vp_start, vp_end, audio.sample_rate(),
             tmap_arg, drag_overlay,
             app.iteration_mode_enabled);
     }
