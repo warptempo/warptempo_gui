@@ -61,11 +61,11 @@ void GuiPrompt::open_error_notice(std::string text) {
 }
 
 // Load-time render-environment mismatch, advisory only (all-lowercase text
-// and label per the style ruling). Response keys: 'o' acknowledges (stamp +
-// dirty), and the Esc sentinel dismisses without stamping — Esc must be a
-// listed response key to get through the prompt's key filter at all, but it
-// carries no label (labels are display-only; the single displayed response
-// is "[o]k").
+// and label per the style ruling). ONE response key: 'o' acknowledges
+// (stamp + dirty). There is deliberately NO dismiss-without-ack path — Esc
+// is not a response key, so the prompt's key filter swallows it like every
+// other non-response key, and acknowledging is the only way past the
+// prompt.
 void GuiPrompt::open_env_hash_mismatch(const std::string& changed_list) {
     // A modal surface is opening: stop playback (same rule as every other
     // prompt open; at the load-time call site playback is not running, but
@@ -74,8 +74,8 @@ void GuiPrompt::open_env_hash_mismatch(const std::string& changed_list) {
     app.prompt.active          = true;
     app.prompt.text            = "render libraries changed since last save (" +
                                  changed_list +
-                                 "). new renders may not match old ones";
-    app.prompt.response_keys   = {'o', '\x1b'};
+                                 "). new renders may not match old ones.";
+    app.prompt.response_keys   = {'o'};
     app.prompt.response_labels = {"[o]k"};
     app.prompt.trigger         = DialogTrigger::ENV_HASH_MISMATCH;
     viewport.clear_hover_popup();
@@ -103,11 +103,13 @@ void GuiPrompt::activate_response(char k) {
     }
 
     if (trigger == DialogTrigger::ENV_HASH_MISMATCH) {
+        // 'o' is the SOLE response key (no dismiss-without-ack path exists;
+        // Esc never reaches here — it is not in response_keys, so the key
+        // filter swallows it). Acknowledge: stamp all four stored hashes to
+        // the current environment's and mark settings dirty through the
+        // history-less env-hash rider (Ctrl+S persists the restamp). The
+        // next load then matches and stays quiet.
         if (k == 'o') {
-            // Acknowledge: stamp all four stored hashes to the current
-            // environment's and mark settings dirty through the history-less
-            // env-hash rider (Ctrl+S persists the restamp). The next load
-            // then matches and stays quiet.
             const RenderEnvHashes& cur = compute_render_env_hashes();
             app.libm_hash          = cur.libm;
             app.libmvec_hash       = cur.libmvec;
@@ -116,14 +118,6 @@ void GuiPrompt::activate_response(char k) {
             app.env_hash_dirty = true;
             app.settings_dirty = true;
             app.dirty          = true;
-            app.prompt.active = false;
-            viewport.invalidate_all();
-            return;
-        }
-        if (k == '\x1b') {
-            // Standard dismiss WITHOUT stamping: the store keeps the old
-            // hashes, so the prompt returns on every later load until
-            // acknowledged, and a save meanwhile writes the OLD hashes.
             app.prompt.active = false;
             viewport.invalidate_all();
             return;

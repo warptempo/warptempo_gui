@@ -758,9 +758,9 @@ int main(int argc, char** argv) {
             // successfully: compare the four STORED hashes against the
             // running environment's and open the advisory mismatch prompt
             // naming the changed libraries. Detection, not prevention — a
-            // mismatch render stays fully valid; 'o' restamps (dirty,
-            // Ctrl+S persists), Esc keeps the old hashes so the prompt
-            // returns on every later load until acknowledged.
+            // mismatch render stays fully valid; 'o', the sole response,
+            // restamps (dirty, Ctrl+S persists), and no dismiss-without-ack
+            // path exists.
             {
                 const RenderEnvHashes& cur = compute_render_env_hashes();
                 std::string changed;

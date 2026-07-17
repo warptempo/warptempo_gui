@@ -366,9 +366,9 @@ enum class DialogTrigger {
     PASTE_CONFIRM,
     ERROR_NOTICE,
     // Load-time render-environment mismatch (GuiPrompt::open_env_hash_mismatch):
-    // advisory only — 'o' stamps the stored hashes to the current environment
-    // and marks settings dirty; Esc dismisses without stamping, so the prompt
-    // returns on every later load until acknowledged.
+    // advisory only — 'o', the sole response key, stamps the stored hashes to
+    // the current environment and marks settings dirty. No dismiss-without-ack
+    // path: acknowledging is the only way past the prompt.
     ENV_HASH_MISMATCH,
 };
 
@@ -529,11 +529,10 @@ struct AppState {
     // the first-open template stamps the four CURRENT hashes (a fresh project
     // starts matched, no prompt). Compared against compute_render_env_hashes()
     // once at source load; any mismatch opens the env-hash prompt, whose [o]k
-    // stamps all four to the current hashes (Esc keeps the old ones so the
-    // prompt returns on every later load — the warning cannot be silently
-    // saved away). The settings editor (`:libm_hash=<16hex>` etc.) is the
-    // manual authoring surface. Stored identity, not recipe: the render
-    // fingerprint never reads these.
+    // — the sole response — stamps all four to the current hashes (no
+    // dismiss-without-ack path exists). The settings editor
+    // (`:libm_hash=<16hex>` etc.) is the manual authoring surface. Stored
+    // identity, not recipe: the render fingerprint never reads these.
     std::string libm_hash;
     std::string libmvec_hash;
     std::string fftw3_hash;
