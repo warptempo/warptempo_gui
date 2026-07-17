@@ -1,7 +1,8 @@
 #include "audio.h"
 #include "render_cache.h"
 
-#include "audio_reader.h"
+#include "audio_probe.h"
+#include "wav_io.h"
 
 #include <algorithm>
 #include <array>
@@ -503,7 +504,7 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
                      next_channels, path.c_str());
     }
 
-    auto full = audio_read_full(path);
+    auto full = wav_read_full(path);
     if (!full) {
         std::fprintf(stderr,
                      "warptempo_gui: could not read '%s': %s\n",

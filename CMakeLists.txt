@@ -46,7 +46,6 @@ set(WARPTEMPO_AUDIO_IO_SOURCES
     src/audio_io/pcm24.cpp
     src/audio_io/wav_io.cpp
     src/audio_io/audio_probe.cpp
-    src/audio_io/audio_reader.cpp
 )
 set(WARPTEMPO_PARSER_SOURCES
     src/parser/warpmarkers_parse.cpp
