@@ -27,13 +27,10 @@ struct GuiInputHandler;
 //    per-tab read_only / font_size / the four *_hash keys): commit_gui_setting
 //    parses strictly (red-flash on any malformed or out-of-vocabulary value,
 //    mirroring the load schema) then applies through the key's own gesture
-//    chokepoint. These are launch/view state: no undo entry, no dirty
-//    (EXCEPT the *_hash keys, whose direct assign changes dirty state: the
-//    stored identity must reach the next Ctrl+S visibly, so the commit calls
-//    recompute_dirty, which DERIVES the env-hash contribution by comparing the
-//    live quartet against the saved baseline — an edit away reads dirty, an
-//    edit back to the on-disk value reads clean); a same-value commit
-//    no-op-deactivates like the engine no-op gate.
+//    chokepoint. These are launch/view state: no undo entry, no dirty (the
+//    four *_hash keys included — their direct assign is stored identity that
+//    persists on the next ordinary Ctrl+S and marks nothing dirty); a
+//    same-value commit no-op-deactivates like the engine no-op gate.
 // 3. Canonical engine keys go through validate_engine_setting; on success
 //    the typed field of app.engine_settings is updated and a settings-undo
 //    entry pushed. Non-engine, non-canonical keys are rejected ("unknown

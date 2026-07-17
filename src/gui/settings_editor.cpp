@@ -68,10 +68,9 @@ void GuiSettingsEditor::exit_no_commit() {
 // out-of-vocabulary value, and otherwise applies the typed value through the
 // key's own gesture chokepoint — no parallel state writer, no grammar spelled
 // twice. GUI-kind commits touch no undo history and no dirty state (launch/view
-// state, like audio_player) EXCEPT the four *_hash keys, whose branch assigns
-// the live quartet directly and calls undo.recompute_dirty(), which DERIVES
-// the env-hash contribution to settings_dirty by comparing the live quartet
-// against the saved baseline; a same-value commit no-op-deactivates like the
+// state, like audio_player) — the four *_hash keys included: their branch
+// assigns the live quartet directly and persists on the next ordinary save,
+// marking nothing dirty; a same-value commit no-op-deactivates like the
 // engine no-op gate. Playback is already stopped (the editor is modal), so the
 // appliers need no playback special-casing. Returns false when `key` is not a
 // GUI-kind key, so the caller falls through to the engine-key path.
@@ -148,15 +147,11 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     if (key == "libm_hash" || key == "libmvec_hash" ||
         key == "fftw3_hash" || key == "fftw3_threads_hash") {
         // Render-environment attestation: a trivial history-less chokepoint
-        // like audio_player's (assign directly, no gesture exists), but
-        // DIRTY-affecting, unlike every other GUI-kind key — the stored hashes
-        // are persisted identity, and an edit must reach the next Ctrl+S
-        // visibly. Dirty is DERIVED, not force-set: after writing the live
-        // value, recompute_dirty ORs `live quartet != saved baseline` into
-        // settings_dirty, so an edit AWAY from the on-disk value reads dirty
-        // and an edit BACK to it reads clean again. This commit pushes no undo
-        // entry, so the history walk is unaffected; only the comparison moves.
-        // The grammar (exactly 16 lowercase hex digits) was already enforced by
+        // like audio_player's (assign directly, no gesture exists) — an
+        // ordinary GUI-kind commit that marks NOTHING dirty. The stored hashes
+        // are persisted identity that rides the next ordinary Ctrl+S; this
+        // commit pushes no undo entry and touches no dirty state. The grammar
+        // (exactly 16 lowercase hex digits) was already enforced by
         // validate_gui_setting above; applied() prints the one stderr line and
         // deactivates.
         std::string& stored =
@@ -166,7 +161,6 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
                                       app.fftw3_threads_hash;
         if (gv.text == stored) { unchanged(); return true; }
         stored = gv.text;
-        undo.recompute_dirty();
         applied(); return true;
     }
 

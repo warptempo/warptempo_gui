@@ -53,15 +53,6 @@ void Undo::recompute_dirty() {
             else               app.warp_dirty        = true;
         }
     }
-    // The env-hash restamps (prompt ack, `:libX_hash=` editor commits) and the
-    // Shift+. adopt of an entry with different hashes are history-less, so the
-    // walks above cannot see them. Their dirty is DERIVED here by comparing the
-    // live quartet against the saved baseline (stamped at load and after a
-    // successful save), not carried in a stored flag: a restamp that moves live
-    // away reads dirty until saved, an edit back to the baseline reads clean,
-    // and the adopt path is correct purely by comparison regardless of the
-    // order of its apply vs this recompute call.
-    app.settings_dirty = app.settings_dirty || env_hashes_differ_from_baseline(app);
     app.dirty = app.warp_dirty || app.phase_reset_dirty || app.settings_dirty;
 }
 

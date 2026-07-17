@@ -755,24 +755,14 @@ int main(int argc, char** argv) {
                 gui.request_exit();
                 return;
             }
-            // Establish the saved env-hash baseline: the load just applied the
-            // file's four hashes into the live fields (or, with no `.settings`,
-            // the first-open template stamped the current environment into
-            // them), so live == what is on disk. Dirty is derived from live vs
-            // this baseline thereafter — a fresh load starts clean, and a later
-            // restamp/adopt reads dirty by comparison. This is the LOAD-only
-            // establishment: adopt (Shift+.) shares apply_settings_engine_and_prefs
-            // but deliberately does NOT re-baseline, so adopting different
-            // hashes stays dirty.
-            baseline_env_hashes(app);
-
             // Render-environment check, after the sidecars applied
             // successfully: compare the four STORED hashes against the
             // running environment's and open the advisory mismatch prompt
             // naming the changed libraries. Detection, not prevention — a
             // mismatch render stays fully valid; 'o', the sole response,
-            // restamps (dirty, Ctrl+S persists), and no dismiss-without-ack
-            // path exists.
+            // restamps (history-less, no-dirty GUI-kind state; the next
+            // ordinary Ctrl+S persists it), and no dismiss-without-ack path
+            // exists.
             {
                 const RenderEnvHashes& cur = compute_render_env_hashes();
                 std::string changed;

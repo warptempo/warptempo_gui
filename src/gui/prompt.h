@@ -56,11 +56,11 @@ struct GuiPrompt {
     // only. `changed_list` is the comma+space-joined subset of
     // `libm, libmvec, fftw3, fftw3_threads` whose stored hash mismatched the
     // running environment's. Text and label are all-lowercase. ONE response:
-    // 'o' stamps all four stored hashes to the current environment's and
-    // marks settings dirty (Ctrl+S persists). There is no dismiss-without-ack
-    // path — Esc is not a response key, so the prompt's key filter swallows
-    // it and acknowledging is the only way past the prompt. Never blocks or
-    // invalidates a render.
+    // 'o' stamps all four stored hashes to the current environment's
+    // (history-less, no-dirty GUI-kind state; the next ordinary Ctrl+S
+    // persists it). There is no dismiss-without-ack path — Esc is not a
+    // response key, so the prompt's key filter swallows it and acknowledging is
+    // the only way past the prompt. Never blocks or invalidates a render.
     void open_env_hash_mismatch(const std::string& changed_list);
 
     // Real abandon for an active PASTE_CONFIRM prompt: dismiss the

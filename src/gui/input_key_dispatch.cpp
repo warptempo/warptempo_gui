@@ -845,16 +845,11 @@ bool GuiInputHandler::adopt_render_entry(
     // slots were cleared above, so landing on the file's marker mode carries
     // an empty selection, exactly as a fresh load's empty-selection state.
     //
-    // This replaces the four LIVE env hashes with the entry's, and DELIBERATELY
-    // does NOT re-baseline (baseline advances only at load and save). No
-    // follow-up recompute_dirty is needed for the hashes even though the
-    // recompute above (after push_undo_both) ran before this replacement: the
-    // env-hash dirty is DERIVED by comparing live vs baseline at EVERY
-    // recompute, and adopt is always dirty via its history push regardless. If
-    // the entry's hashes differ from the source project's, an undo back to the
-    // saved position stays dirty — do_undo's own recompute_dirty compares the
-    // still-replaced live hashes (undo never restores the history-external GUI
-    // prefs) against the unchanged baseline.
+    // This replaces the four LIVE env hashes with the entry's. The hashes are
+    // history-less, no-dirty GUI-kind state (like the other adopted view
+    // prefs), so this replacement marks nothing dirty on its own; adopt is
+    // dirty via its cross-file history push regardless, and the adopted hashes
+    // ride the next ordinary Ctrl+S.
     apply_settings_engine_and_prefs(app, *settings);
 
     // Clamp both adopted tab bands' playheads into the live domain (the

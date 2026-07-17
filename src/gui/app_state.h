@@ -367,8 +367,9 @@ enum class DialogTrigger {
     ERROR_NOTICE,
     // Load-time render-environment mismatch (GuiPrompt::open_env_hash_mismatch):
     // advisory only — 'o', the sole response key, stamps the stored hashes to
-    // the current environment and marks settings dirty. No dismiss-without-ack
-    // path: acknowledging is the only way past the prompt.
+    // the current environment (history-less, no-dirty GUI-kind state that
+    // persists on the next ordinary save). No dismiss-without-ack path:
+    // acknowledging is the only way past the prompt.
     ENV_HASH_MISMATCH,
 };
 
@@ -531,29 +532,17 @@ struct AppState {
     // once at source load; any mismatch opens the env-hash prompt, whose [o]k
     // — the sole response — stamps all four LIVE hashes to the current
     // environment's (no dismiss-without-ack path exists). The settings editor
-    // (`:libm_hash=<16hex>` etc.) is the manual authoring surface. Stored
-    // identity, not recipe: the render fingerprint never reads these.
+    // (`:libm_hash=<16hex>` etc.) is the manual authoring surface. These are
+    // history-less, no-dirty GUI-kind state: a restamp (prompt 'o' / editor
+    // commit) mutates only these live fields and never marks the file dirty;
+    // the new quartet persists on the next ordinary save (save_ops writes the
+    // live values verbatim), and a save-less session simply re-modals the
+    // mismatch on the next load by design (self-healing). Stored identity, not
+    // recipe: the render fingerprint never reads these.
     std::string libm_hash;
     std::string libmvec_hash;
     std::string fftw3_hash;
     std::string fftw3_threads_hash;
-
-    // Saved baseline of the four hashes above: what the on-disk `.settings`
-    // holds. Stamped from the LIVE quartet at exactly two points — after a
-    // successful source load applies the file's values (the first-open
-    // template path stamps the current env into BOTH live and baseline, so a
-    // fresh project starts clean), and after a successful settings write
-    // (save_ops). Env-hash dirty is DERIVED, not stored: recompute_dirty ORs
-    // `live quartet != this baseline` into settings_dirty, so a restamp
-    // (prompt 'o' / editor commit) that moves live away reads dirty until
-    // saved, an edit back to the baseline reads clean again, and a Shift+.
-    // adopt of an entry with different hashes reads dirty purely by comparison
-    // (no per-mutator flag to leak in either direction). These fields never
-    // serialize and are never history-tracked.
-    std::string libm_hash_baseline;
-    std::string libmvec_hash_baseline;
-    std::string fftw3_hash_baseline;
-    std::string fftw3_threads_hash_baseline;
 
     // One-shot stash of the scanner's last painted pixel-x under the
     // OLD viewport, set by viewport-mutating operations during
@@ -681,19 +670,11 @@ struct AppState {
     // in dirty via settings_dirty. View-state keys — the GUI-kind keys
     // (viewport/zoom/playhead per tab, follow, active_audio_view,
     // active_markers_view, active_tab_view, playback_speed, trim, read_only,
-    // font_size, audio_player) — do NOT participate: they are silently
-    // persisted on Ctrl+S and not tracked as dirty, so quitting without saving
-    // simply drops them. Trim is gesture-owned, excluded from
-    // undo/redo history, and render-affecting but deliberately treated as
-    // transient view state.
-    //
-    // settings_dirty also receives a history-less DERIVED contribution: the
-    // four *_hash keys (libm/libmvec/fftw3/fftw3_threads) are the one
-    // GUI-kind-committed family that participates in dirty, and their
-    // contribution is not carried in a stored flag — Undo::recompute_dirty
-    // compares the live quartet against the saved baseline quartet on every
-    // recompute, so a restamp away from the saved baseline reads dirty and a
-    // restamp back reads clean regardless of undo/redo position.
+    // font_size, audio_player, and the four *_hash env-attestation keys) — do
+    // NOT participate: they are silently persisted on Ctrl+S and not tracked as
+    // dirty, so quitting without saving simply drops them. Trim is
+    // gesture-owned, excluded from undo/redo history, and render-affecting but
+    // deliberately treated as transient view state.
     bool        warp_dirty           = false;
     bool        phase_reset_dirty    = false;
     bool        settings_dirty       = false;
@@ -952,27 +933,6 @@ inline bool any_pointer_gesture_active(const AppState& app) {
     return app.drag.active || app.trim_drag.active ||
            app.scroll_drag.active || app.playhead_drag.active ||
            app.editor_text_drag.active;
-}
-
-// Stamp the saved-baseline render-env quartet from the live quartet. Called
-// after a successful source load applies the file's hashes (or the first-open
-// template stamps the current env into the live fields) and after a successful
-// settings write. recompute_dirty compares live vs this baseline to derive the
-// env-hash contribution to settings_dirty.
-inline void baseline_env_hashes(AppState& app) {
-    app.libm_hash_baseline          = app.libm_hash;
-    app.libmvec_hash_baseline       = app.libmvec_hash;
-    app.fftw3_hash_baseline         = app.fftw3_hash;
-    app.fftw3_threads_hash_baseline = app.fftw3_threads_hash;
-}
-
-// True when the live render-env quartet differs from the saved baseline —
-// the derived env-hash contribution to dirty state.
-inline bool env_hashes_differ_from_baseline(const AppState& app) {
-    return app.libm_hash          != app.libm_hash_baseline
-        || app.libmvec_hash       != app.libmvec_hash_baseline
-        || app.fftw3_hash         != app.fftw3_hash_baseline
-        || app.fftw3_threads_hash != app.fftw3_threads_hash_baseline;
 }
 
 // Restore ascending time_frame order after a mutation that may have

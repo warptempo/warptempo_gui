@@ -61,11 +61,11 @@ void GuiPrompt::open_error_notice(std::string text) {
 }
 
 // Load-time render-environment mismatch, advisory only (all-lowercase text
-// and label per the style ruling). ONE response key: 'o' acknowledges
-// (stamp + dirty). There is deliberately NO dismiss-without-ack path — Esc
-// is not a response key, so the prompt's key filter swallows it like every
-// other non-response key, and acknowledging is the only way past the
-// prompt.
+// and label per the style ruling). ONE response key: 'o' acknowledges by
+// restamping the four live hashes (history-less, no-dirty GUI-kind state).
+// There is deliberately NO dismiss-without-ack path — Esc is not a response
+// key, so the prompt's key filter swallows it like every other non-response
+// key, and acknowledging is the only way past the prompt.
 void GuiPrompt::open_env_hash_mismatch(const std::string& changed_list) {
     // A modal surface is opening: stop playback (same rule as every other
     // prompt open; at the load-time call site playback is not running, but
@@ -106,23 +106,16 @@ void GuiPrompt::activate_response(char k) {
         // 'o' is the SOLE response key (no dismiss-without-ack path exists;
         // Esc never reaches here — it is not in response_keys, so the key
         // filter swallows it). Acknowledge: stamp all four LIVE hashes to the
-        // current environment's. The prompt only opened because live differed
-        // from the current environment, and the baseline (stamped at load) is
-        // the OLD on-disk quartet, so the restamp unconditionally moves live
-        // away from the baseline — hence settings_dirty/dirty are set true
-        // directly for an immediate titlebar update. Correctness is by
-        // comparison: any later recompute_dirty re-derives the same via
-        // live != baseline, and a Ctrl+S advances the baseline back to clean.
-        // (The prompt is modal and opens right after load at the saved history
-        // position, so the env hash is the only possible dirty source here.)
+        // current environment's. This is history-less, no-dirty GUI-kind state
+        // (like trim / view prefs): the restamp marks NOTHING dirty and simply
+        // persists on the next ordinary Ctrl+S. A save-less session drops it,
+        // so the next load re-fires this modal by design (self-healing).
         if (k == 'o') {
             const RenderEnvHashes& cur = compute_render_env_hashes();
             app.libm_hash          = cur.libm;
             app.libmvec_hash       = cur.libmvec;
             app.fftw3_hash         = cur.fftw3;
             app.fftw3_threads_hash = cur.fftw3_threads;
-            app.settings_dirty = true;
-            app.dirty          = true;
             app.prompt.active = false;
             viewport.invalidate_all();
             return;
