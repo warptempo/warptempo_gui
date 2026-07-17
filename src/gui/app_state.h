@@ -529,14 +529,31 @@ struct AppState {
     // the first-open template stamps the four CURRENT hashes (a fresh project
     // starts matched, no prompt). Compared against compute_render_env_hashes()
     // once at source load; any mismatch opens the env-hash prompt, whose [o]k
-    // — the sole response — stamps all four to the current hashes (no
-    // dismiss-without-ack path exists). The settings editor
+    // — the sole response — stamps all four LIVE hashes to the current
+    // environment's (no dismiss-without-ack path exists). The settings editor
     // (`:libm_hash=<16hex>` etc.) is the manual authoring surface. Stored
     // identity, not recipe: the render fingerprint never reads these.
     std::string libm_hash;
     std::string libmvec_hash;
     std::string fftw3_hash;
     std::string fftw3_threads_hash;
+
+    // Saved baseline of the four hashes above: what the on-disk `.settings`
+    // holds. Stamped from the LIVE quartet at exactly two points — after a
+    // successful source load applies the file's values (the first-open
+    // template path stamps the current env into BOTH live and baseline, so a
+    // fresh project starts clean), and after a successful settings write
+    // (save_ops). Env-hash dirty is DERIVED, not stored: recompute_dirty ORs
+    // `live quartet != this baseline` into settings_dirty, so a restamp
+    // (prompt 'o' / editor commit) that moves live away reads dirty until
+    // saved, an edit back to the baseline reads clean again, and a Shift+.
+    // adopt of an entry with different hashes reads dirty purely by comparison
+    // (no per-mutator flag to leak in either direction). These fields never
+    // serialize and are never history-tracked.
+    std::string libm_hash_baseline;
+    std::string libmvec_hash_baseline;
+    std::string fftw3_hash_baseline;
+    std::string fftw3_threads_hash_baseline;
 
     // One-shot stash of the scanner's last painted pixel-x under the
     // OLD viewport, set by viewport-mutating operations during
@@ -673,13 +690,6 @@ struct AppState {
     bool        phase_reset_dirty    = false;
     bool        settings_dirty       = false;
     bool        dirty                = false;
-
-    // History-less settings-dirty rider for the env-hash restamps (the
-    // mismatch prompt's 'o' and the `:libX_hash=` editor commits). Those
-    // mutations push no undo entry, so recompute_dirty's history walk cannot
-    // see them; it ORs this flag into settings_dirty instead, and a
-    // successful save clears it (the write persisted the stored hashes).
-    bool        env_hash_dirty       = false;
 
     // Target-view live audio buffer. The render pipeline appends
     // synthesised samples here via RenderRequest::output_buffer when the
@@ -934,6 +944,27 @@ inline bool any_pointer_gesture_active(const AppState& app) {
     return app.drag.active || app.trim_drag.active ||
            app.scroll_drag.active || app.playhead_drag.active ||
            app.editor_text_drag.active;
+}
+
+// Stamp the saved-baseline render-env quartet from the live quartet. Called
+// after a successful source load applies the file's hashes (or the first-open
+// template stamps the current env into the live fields) and after a successful
+// settings write. recompute_dirty compares live vs this baseline to derive the
+// env-hash contribution to settings_dirty.
+inline void baseline_env_hashes(AppState& app) {
+    app.libm_hash_baseline          = app.libm_hash;
+    app.libmvec_hash_baseline       = app.libmvec_hash;
+    app.fftw3_hash_baseline         = app.fftw3_hash;
+    app.fftw3_threads_hash_baseline = app.fftw3_threads_hash;
+}
+
+// True when the live render-env quartet differs from the saved baseline —
+// the derived env-hash contribution to dirty state.
+inline bool env_hashes_differ_from_baseline(const AppState& app) {
+    return app.libm_hash          != app.libm_hash_baseline
+        || app.libmvec_hash       != app.libmvec_hash_baseline
+        || app.fftw3_hash         != app.fftw3_hash_baseline
+        || app.fftw3_threads_hash != app.fftw3_threads_hash_baseline;
 }
 
 // Restore ascending time_frame order after a mutation that may have

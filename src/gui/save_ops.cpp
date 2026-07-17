@@ -78,10 +78,10 @@ bool GuiSaveOps::save() {
                 app.settings_path.c_str());
             return false;
         }
-        // The write just persisted the stored env hashes, so the
-        // history-less env-hash dirty rider is settled; recompute_dirty
-        // below stops ORing it in.
-        app.env_hash_dirty = false;
+        // The write just persisted the stored env hashes, so the saved
+        // baseline advances to the live quartet; recompute_dirty below then
+        // finds live == baseline and stops contributing env-hash dirty.
+        baseline_env_hashes(app);
     }
 
     // Save rebinds the saved reference to the current timeline position

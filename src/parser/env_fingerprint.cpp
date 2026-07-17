@@ -27,8 +27,10 @@ constexpr const char* kLibNames[kLibCount] = {
     "libfftw3_threads.so.3",
 };
 
-// Fixed 16-hex sentinel for a library absent from /proc/self/maps — the safe
-// direction: it differs from any real hash, so a stored real hash mismatches.
+// Fixed 16-hex sentinel for a library absent from /proc/self/maps. Reserved by
+// convention: a real content hash of all-zero is astronomically unlikely, and
+// the 64-bit non-cryptographic scheme already accepts collision risk, so a
+// stored real hash reliably mismatches the sentinel (the safe direction).
 constexpr char kAbsentSentinel[] = "0000000000000000";
 
 std::string hex16(uint64_t h) {
@@ -69,8 +71,14 @@ void resolve_mapped_paths(std::string (&paths)[kLibCount]) {
     }
 }
 
-// FNV-1a 64-bit over the file's full contents, streamed. Change detection,
-// not security — no new dependencies.
+// Project-local FNV-style content hash over the file's full contents,
+// streamed: xor-then-multiply per byte with the standard 64-bit FNV prime.
+// The offset basis below (1469598103934665603) is NOT the canonical FNV-1a-64
+// basis (14695981039346656037, one digit longer) — it is a project-fixed seed
+// inherited from the render-cache helper. That is immaterial: this is change
+// detection, not security, and a fixed seed makes identical bytes hash
+// identically across processes. Do not "correct" the basis — every stored
+// hash would change and fire every project's mismatch prompt once for nothing.
 bool fnv1a64_file(const std::string& path, uint64_t& out) {
     std::FILE* f = std::fopen(path.c_str(), "rb");
     if (!f) return false;
@@ -90,10 +98,14 @@ bool fnv1a64_file(const std::string& path, uint64_t& out) {
     return true;
 }
 
-// (size, mtime in nanoseconds, inode) — the stat identity the cache
-// validates against, the same identity triple render-cache-style stat
-// validation uses elsewhere.
+// (device, size, mtime in nanoseconds, inode) — the stat identity the cache
+// validates against. Inode numbers are unique only within a device, so st_dev
+// joins the triple; the resolved library path (stored on CacheEntry, not here)
+// completes the identity so a shared/relocated $XDG_CACHE_HOME across
+// containers/chroots or a filesystem replacement cannot alias one library's
+// cached hash onto another.
 struct LibIdentity {
+    uint64_t dev      = 0;
     uint64_t size     = 0;
     int64_t  mtime_ns = 0;
     uint64_t inode    = 0;
@@ -103,6 +115,7 @@ bool stat_identity(const std::string& path, LibIdentity& out) {
     struct stat st{};
     if (::stat(path.c_str(), &st) != 0) return false;
     if (st.st_size < 0) return false;
+    out.dev = static_cast<uint64_t>(st.st_dev);
     out.size = static_cast<uint64_t>(st.st_size);
     out.mtime_ns = static_cast<int64_t>(st.st_mtim.tv_sec) * 1000000000ll +
                    static_cast<int64_t>(st.st_mtim.tv_nsec);
@@ -131,8 +144,20 @@ struct CacheEntry {
     bool        present = false;
     LibIdentity id;
     std::string hash;
+    std::string path;   // resolved on-disk library path; part of identity
 };
 
+// Cache line format (one space-separated line per present library):
+//
+//     name dev size mtime_ns inode hash path
+//
+// The first six fields are whitespace-free tokens (soname, four integers, and
+// the fixed 16-hex digest); the PATH IS LAST and is the whole remainder of the
+// line, so a library path containing spaces round-trips unambiguously. Any
+// older-format line (five fields before the hash, no dev/path) fails this
+// stricter parse and takes the whole-cache-discard fallback below — the
+// intended one-time migration.
+//
 // Read the whole cache into per-library slots keyed by library name. A
 // missing, unreadable, or malformed cache is NEVER an error: any defect
 // discards the whole cache silently (all four rehash and it rewrites).
@@ -144,20 +169,31 @@ void read_cache(const std::string& path, CacheEntry (&entries)[kLibCount]) {
     while (std::getline(in, line)) {
         std::istringstream ls(line);
         std::string name, hash;
-        uint64_t size = 0, inode = 0;
+        uint64_t dev = 0, size = 0, inode = 0;
         int64_t mtime_ns = 0;
-        std::string trailing;
-        if (!(ls >> name >> size >> mtime_ns >> inode >> hash) ||
-            (ls >> trailing) || !is_hash_spelling(hash)) {
-            return;  // malformed line: discard the whole cache
+        if (!(ls >> name >> dev >> size >> mtime_ns >> inode >> hash) ||
+            !is_hash_spelling(hash)) {
+            return;  // malformed fixed fields: discard the whole cache
+        }
+        // The path is the remainder after the hash: skip the single
+        // separating space, then take the rest of the line verbatim (spaces
+        // included). A missing/empty remainder is malformed.
+        std::string lib_path;
+        std::getline(ls, lib_path);
+        if (!lib_path.empty() && lib_path.front() == ' ')
+            lib_path.erase(lib_path.begin());
+        if (lib_path.empty()) {
+            return;  // no path field: discard the whole cache
         }
         for (int i = 0; i < kLibCount; ++i) {
             if (name == kLibNames[i]) {
                 parsed[i].present     = true;
+                parsed[i].id.dev      = dev;
                 parsed[i].id.size     = size;
                 parsed[i].id.mtime_ns = mtime_ns;
                 parsed[i].id.inode    = inode;
                 parsed[i].hash        = hash;
+                parsed[i].path        = lib_path;
             }
         }
     }
@@ -183,9 +219,12 @@ void write_cache(const std::string& path,
     if (!out) return;
     for (int i = 0; i < kLibCount; ++i) {
         if (!entries[i].present) continue;  // absent library: no line
-        out << kLibNames[i] << ' ' << entries[i].id.size << ' '
-            << entries[i].id.mtime_ns << ' ' << entries[i].id.inode << ' '
-            << entries[i].hash << '\n';
+        // name dev size mtime_ns inode hash path — path last (the remainder),
+        // so a space-bearing library path round-trips (see read_cache).
+        out << kLibNames[i] << ' ' << entries[i].id.dev << ' '
+            << entries[i].id.size << ' ' << entries[i].id.mtime_ns << ' '
+            << entries[i].id.inode << ' ' << entries[i].hash << ' '
+            << entries[i].path << '\n';
     }
     out.close();
     if (!out) {
@@ -220,10 +259,14 @@ RenderEnvHashes compute_impl() {
             hashes[i] = kAbsentSentinel;
             continue;
         }
-        if (cached[i].present && cached[i].id.size == id.size &&
+        if (cached[i].present && cached[i].id.dev == id.dev &&
+            cached[i].id.size == id.size &&
             cached[i].id.mtime_ns == id.mtime_ns &&
-            cached[i].id.inode == id.inode) {
-            // Full (size, mtime, inode) match: the warm path, no read.
+            cached[i].id.inode == id.inode &&
+            cached[i].path == paths[i]) {
+            // Full (dev, size, mtime, inode, path) match: the warm path, no
+            // read. dev+path guard against inode aliasing across devices and a
+            // shared/relocated cache dir naming a different on-disk object.
             hashes[i] = cached[i].hash;
             fresh[i] = cached[i];
             continue;
@@ -238,6 +281,7 @@ RenderEnvHashes compute_impl() {
         fresh[i].present = true;
         fresh[i].id = id;   // pre-hash stat, revalidated on the next run
         fresh[i].hash = hashes[i];
+        fresh[i].path = paths[i];
         rewrite = true;
     }
 

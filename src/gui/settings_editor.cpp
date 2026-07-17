@@ -136,12 +136,16 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         key == "fftw3_hash" || key == "fftw3_threads_hash") {
         // Render-environment attestation: a trivial history-less chokepoint
         // like audio_player's (assign directly, no gesture exists), but
-        // DIRTY-marking, unlike every other GUI-kind key — the stored hashes
+        // DIRTY-affecting, unlike every other GUI-kind key — the stored hashes
         // are persisted identity, and an edit must reach the next Ctrl+S
-        // visibly. History-less dirty rides app.env_hash_dirty (recompute_dirty
-        // ORs it in; a successful save clears it). The grammar (exactly 16
-        // lowercase hex digits) was already enforced by validate_gui_setting
-        // above; applied() prints the one stderr line and deactivates.
+        // visibly. Dirty is DERIVED, not force-set: after writing the live
+        // value, recompute_dirty ORs `live quartet != saved baseline` into
+        // settings_dirty, so an edit AWAY from the on-disk value reads dirty
+        // and an edit BACK to it reads clean again. This commit pushes no undo
+        // entry, so the history walk is unaffected; only the comparison moves.
+        // The grammar (exactly 16 lowercase hex digits) was already enforced by
+        // validate_gui_setting above; applied() prints the one stderr line and
+        // deactivates.
         std::string& stored =
             (key == "libm_hash")    ? app.libm_hash :
             (key == "libmvec_hash") ? app.libmvec_hash :
@@ -149,9 +153,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
                                       app.fftw3_threads_hash;
         if (gv.text == stored) { unchanged(); return true; }
         stored = gv.text;
-        app.env_hash_dirty = true;
-        app.settings_dirty = true;
-        app.dirty          = true;
+        undo.recompute_dirty();
         applied(); return true;
     }
 

@@ -105,17 +105,22 @@ void GuiPrompt::activate_response(char k) {
     if (trigger == DialogTrigger::ENV_HASH_MISMATCH) {
         // 'o' is the SOLE response key (no dismiss-without-ack path exists;
         // Esc never reaches here — it is not in response_keys, so the key
-        // filter swallows it). Acknowledge: stamp all four stored hashes to
-        // the current environment's and mark settings dirty through the
-        // history-less env-hash rider (Ctrl+S persists the restamp). The
-        // next load then matches and stays quiet.
+        // filter swallows it). Acknowledge: stamp all four LIVE hashes to the
+        // current environment's. The prompt only opened because live differed
+        // from the current environment, and the baseline (stamped at load) is
+        // the OLD on-disk quartet, so the restamp unconditionally moves live
+        // away from the baseline — hence settings_dirty/dirty are set true
+        // directly for an immediate titlebar update. Correctness is by
+        // comparison: any later recompute_dirty re-derives the same via
+        // live != baseline, and a Ctrl+S advances the baseline back to clean.
+        // (The prompt is modal and opens right after load at the saved history
+        // position, so the env hash is the only possible dirty source here.)
         if (k == 'o') {
             const RenderEnvHashes& cur = compute_render_env_hashes();
             app.libm_hash          = cur.libm;
             app.libmvec_hash       = cur.libmvec;
             app.fftw3_hash         = cur.fftw3;
             app.fftw3_threads_hash = cur.fftw3_threads;
-            app.env_hash_dirty = true;
             app.settings_dirty = true;
             app.dirty          = true;
             app.prompt.active = false;
