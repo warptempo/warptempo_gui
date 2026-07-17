@@ -387,10 +387,13 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         return true;
     }
 
-    // Ctrl+Alt+E (miscEllaneous): render the current authoring state — the
-    // SAME recipe Ctrl+Alt+R captures (live stores + the active tab's trim) —
-    // into a numbered cell inside a `_miscellaneous` batch folder under
-    // renders/. This is Ctrl+Alt+R with an extra mkdir and a different output
+    // Ctrl+Alt+Shift+R (miscellaneous render): render the current authoring
+    // state — the SAME recipe Ctrl+Alt+R captures (live stores + the active
+    // tab's trim) — into a numbered cell inside a `_miscellaneous` batch folder
+    // under renders/. This moved off its former `e`-based chord because `e` is
+    // now the click key (kLeftClickKey), so an e-chord is swallowed at the
+    // platform boundary and can never reach dispatch as a command.
+    // This is Ctrl+Alt+R with an extra mkdir and a different output
     // location: no queue, no batch runner, one request through the same
     // single-dispatch path. Folder logic (in allocate_miscellaneous_cell):
     // look at the most-recent folder BY INDEX in renders/; if it is a
@@ -419,8 +422,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // creation, the adopt wipe) runs on this same GUI thread, so none can
     // interleave with it. The idle route allocates here inline for the same
     // one implementation.
-    if (ctrl && alt && !shift &&
-        key == GuiKeys::E) {
+    if (ctrl && alt && shift &&
+        key == GuiKeys::R) {
         if (app.source_audio_path.empty()) return true;
 
         // Dispatch validates nothing (same as Ctrl+Alt+R): the render worker's

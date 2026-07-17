@@ -301,9 +301,10 @@ private:
     // batch-dispatch sites share this one walk: the iteration and BPM sweeps
     // use `max_index + 1` for their next batch folder (a missing/empty dir
     // yields max_index 0, so the first folder is index 1 — the pre-factor
-    // convention), and Ctrl+Alt+E additionally reads `max_index_folder_name`
-    // to decide append-vs-new. A tie keeps the first `<digits>_` folder at
-    // that index (strict `>` update), exact for the always->=1 product folders.
+    // convention), and Ctrl+Alt+Shift+R additionally reads
+    // `max_index_folder_name` to decide append-vs-new. A tie keeps the first
+    // `<digits>_` folder at that index (strict `>` update), exact for the
+    // always->=1 product folders.
     static RendersBatchScan max_renders_batch_index(
         const std::filesystem::path& renders_dir);
 
@@ -350,7 +351,7 @@ private:
     // switch_active_tab_view_to.
     AuthoringSnapshot snapshot_current_authoring_state() const;
 
-    // Allocate the Ctrl+Alt+E miscellaneous output cell: derive renders/
+    // Allocate the Ctrl+Alt+Shift+R miscellaneous output cell: derive renders/
     // from the (process-immutable) source path, decide append-into-the-most-
     // recent `_miscellaneous` folder vs. a new `<max+1>_miscellaneous`,
     // create the folder, and scan it for the next `<N>.wav` cell. Writes the

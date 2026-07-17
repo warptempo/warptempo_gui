@@ -325,9 +325,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Render-trigger chords: Ctrl+Alt+R single render, Ctrl+Alt+E miscellaneous
-    // render, Ctrl+Alt+I iteration sweep. (The render-commit chord is Shift+.,
-    // handled separately below.)
+    // Render-trigger chords: Ctrl+Alt+R single render, Ctrl+Alt+Shift+R
+    // miscellaneous render, Ctrl+Alt+I iteration sweep. (The render-commit
+    // chord is Shift+., handled separately below.)
     if (handle_render_dispatch_keys(key, mods)) return;
 
     // Shift+Space in actual target view, phase-reset mode: non-destructive
@@ -592,8 +592,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Bare-key dispatch. Every modifier-gated handler above this point
     // returns on match, so by the time we reach here, any modifier being
     // held means the chord had no binding and should be a silent no-op
-    // — never fall through into a bare binding (e.g. Ctrl+Shift+Alt+E
-    // must not toggle end-time via GuiKeys::E).
+    // — never fall through into a bare binding (e.g. Ctrl+Shift+Alt+F
+    // must not toggle follow via GuiKeys::F).
     if (!ctrl && !shift && !alt) {
         handle_plain_bare_keys(key);
     }

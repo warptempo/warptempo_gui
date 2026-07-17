@@ -1210,6 +1210,13 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         repeat_key_ = 0;
         mod_ctrl_ = mod_shift_ = mod_alt_ = false;
 
+        // A held synthesized-Ctrl modifier can never see its keycode-matched
+        // release once the key stream ends, so drop it here beside the mod
+        // clears. No release event to deliver — the state just falls to off,
+        // exactly as the real mod_* bits do.
+        synth_ctrl_held_    = false;
+        synth_ctrl_keycode_ = 0;
+
         // Losing the keyboard is the hard end of the key stream: a held
         // synthesized-left button will never see its release. End it here on
         // the logical 1->0 edge, the same tail as on_keyboard_leave.
@@ -1243,7 +1250,7 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // The logical left button is `pointer_left_held_ || synth_left_held_`.
         // Clearing the physical bit ends the gesture only when it drives that
         // OR 1->0 -- physical left was held AND no synthesized hold remains. If
-        // a synthesized left is still held (bare `2` synth-left plus a physical
+        // a synthesized left is still held (bare `e` synth-left plus a physical
         // BTN_LEFT), the OR stays 1: leave the synth hold and its keycode owner
         // untouched so its later release delivers the single 1->0 edge, and
         // suppress the release here. This mirrors the keyboard-leave/capability
@@ -1325,6 +1332,13 @@ void GuiPlatform::on_keyboard_leave(uint32_t /*serial*/,
     mod_ctrl_ = mod_shift_ = mod_alt_ = false;
     repeat_key_ = 0;
 
+    // A held synthesized-Ctrl modifier can never see its keycode-matched
+    // release once keyboard focus is gone, so drop it here beside the mod
+    // clears. No release event to deliver — the state just falls to off, the
+    // same tail as the pointer/keyboard capability-loss branches.
+    synth_ctrl_held_    = false;
+    synth_ctrl_keycode_ = 0;
+
     // A held synthesized-left button can never see its keycode-matched release
     // once keyboard focus is gone, so end it here on the logical 1->0 edge —
     // the same rationale as the pointer-capability-loss tail that ends a held
@@ -1365,6 +1379,16 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
             if (!pointer_left_held_ && on_button_release_)
                 on_button_release_(GuiMouseButton::Left,
                                    pointer_x_, pointer_y_, current_mods());
+        }
+        // End a synthesized-Ctrl hold on its owning keycode's release. The
+        // keycode match means a kCtrlModKey press typed into an editor — which
+        // never started a hold — has no effect here. Like the synth-left
+        // release the clear is NEVER gated by the editor probe (an editor
+        // opened mid-hold must not orphan the modifier); no event fires, the
+        // state simply falls to off and the next event carries it.
+        if (synth_ctrl_held_ && xkb_keycode == synth_ctrl_keycode_) {
+            synth_ctrl_held_    = false;
+            synth_ctrl_keycode_ = 0;
         }
         return;
     }
@@ -1434,6 +1458,26 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
         return;
     }
 
+    // kCtrlModKey synthesizes Ctrl modifier STATE at this boundary, the
+    // modifier sibling of the click key above. The editor probe is consulted
+    // at PRESS time ONLY: while a text editor is open the key stays a normal
+    // digit and falls through to delivery AND repeat arming below. Otherwise
+    // it sets the synthesized-Ctrl hold and is swallowed entirely as a key
+    // event — no delivery, no repeat arming (a held modifier must not machine-
+    // gun re-press). No event is synthesized on the state change: the next
+    // key/pointer/wheel event carries the updated Ctrl via current_mods(), the
+    // exact convention on_keyboard_modifiers uses for real modifiers. There is
+    // no pointer_focused_ gate — a modifier serves key chords and the wheel,
+    // not just pointer events.
+    if (key == kCtrlModKey &&
+        !(text_editor_active_probe_ && text_editor_active_probe_())) {
+        if (!synth_ctrl_held_) {
+            synth_ctrl_held_    = true;
+            synth_ctrl_keycode_ = xkb_keycode;
+        }
+        return;
+    }
+
     GuiInputState mods = current_mods();
     mods.codepoint = xkb_state_key_get_utf32(xkb_state_, xkb_keycode);
     deliver_key(key, mods);
@@ -1489,7 +1533,9 @@ void GuiPlatform::on_keyboard_repeat_info(int32_t rate, int32_t delay) {
 
 GuiInputState GuiPlatform::current_mods() const {
     GuiInputState s;
-    s.ctrl  = mod_ctrl_;
+    // Logical Ctrl: either the physical Ctrl modifier or the kCtrlModKey
+    // synthesized hold, the same OR the left button uses for its two sources.
+    s.ctrl  = mod_ctrl_ || synth_ctrl_held_;
     s.shift = mod_shift_;
     s.alt   = mod_alt_;
     // Logical left button: either the physical BTN_LEFT or the kLeftClickKey

@@ -223,6 +223,18 @@ private:
     bool     synth_left_held_    = false;
     uint32_t synth_left_keycode_ = 0;
 
+    // kCtrlModKey emulation state, the modifier sibling of the pair above.
+    // synth_ctrl_held_ is true while that key is held as a synthesized Ctrl
+    // modifier; synth_ctrl_keycode_ is the xkb keycode that owns the hold, so
+    // the release is matched by keycode exactly like the synth-left release.
+    // Logical Ctrl is (mod_ctrl_ || synth_ctrl_held_): current_mods() ORs the
+    // physical modifier bit with this synthesized hold, so both spellings work
+    // everywhere a chord reads Ctrl. No button and no logical-OR edge model —
+    // a modifier only projects state; the next key/pointer/wheel event carries
+    // it, the same convention on_keyboard_modifiers uses for real modifiers.
+    bool     synth_ctrl_held_    = false;
+    uint32_t synth_ctrl_keycode_ = 0;
+
     // Accumulated vertical scroll carry, in value120 units (120 = one
     // detent). on_pointer_frame() folds the per-frame delta (arbitrated
     // from the two staged sources below) into this and drains it into
