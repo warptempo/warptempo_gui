@@ -335,7 +335,10 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
 
     to.push_back(std::move(counter));
     if (to.size() > UndoHistory::kCap) {
-        to.erase(to.begin());
+        // `to` is the redo stack on an undo (delta +1) or the undo stack on a
+        // redo (delta -1); the delta IS the stack's saved-distance sign, so it
+        // doubles as evict_bottom_with_saved_ref's direction argument.
+        app.history.evict_bottom_with_saved_ref(to, saved_distance_delta);
     }
     if (app.history.saved_valid) app.history.saved_distance += saved_distance_delta;
 

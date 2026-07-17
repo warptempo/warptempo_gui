@@ -203,15 +203,42 @@ struct UndoHistory {
     int  saved_distance = 0;
     bool saved_valid    = true;
 
+    // Evict the oldest (bottom) entry of `stack` for the kCap trim while
+    // keeping the saved reference honest. `sign` is -1 when `stack` is the
+    // undo stack (saved distances into it are negative) and +1 when it is the
+    // redo stack (positive). Hopping the saved baseline over an entry is
+    // persistence-equivalent iff that entry's affects_persistence is false —
+    // the same equivalence the redo-orphan collapse in push() applies, here in
+    // both directions. So when the saved reference points at or below the
+    // evicted bottom: a session-only evicted entry pins the reference to the
+    // stack-reachable bound (provably equivalent for dirty purposes, since
+    // recompute_dirty's walk skips session-only entries); a
+    // persistence-affecting evicted entry leaves the baseline genuinely
+    // unreachable and inequivalent, so invalidate it — recompute_dirty's
+    // invalid branch then marks everything dirty, the conservative direction a
+    // save re-establishes.
+    void evict_bottom_with_saved_ref(std::vector<UndoEntry>& stack, int sign) {
+        const bool evicted_affects_persistence =
+            stack.front().affects_persistence;
+        stack.erase(stack.begin());
+        if (!saved_valid) return;
+        const int bound = sign * static_cast<int>(stack.size());
+        const bool saved_at_or_below_evicted =
+            (sign < 0) ? (saved_distance < bound) : (saved_distance > bound);
+        if (!saved_at_or_below_evicted) return;
+        if (evicted_affects_persistence) saved_valid    = false;
+        else                             saved_distance = bound;
+    }
+
     // Push the pre-mutation entry. Clears the redo stack. If the saved
     // reference was on the redo stack, it is orphaned only when the path back
     // to it crosses a persistence-affecting entry. A path made solely of
     // session-only iteration-bracket entries is persistence-equivalent to the
     // current cursor, so collapse the saved reference here before clearing it.
-    // If pushing would evict the bottom of the undo stack and the saved
-    // reference pointed at or below the evicted entry, it's pinned to the
-    // new bottom — that's the least-surprising user-facing behavior even
-    // though it's not strictly correct.
+    // If pushing evicts the bottom of the undo stack and the saved reference
+    // pointed at or below the evicted entry, evict_bottom_with_saved_ref
+    // resolves it by the same equivalence rule in the undo direction (pin when
+    // session-only, invalidate when persistence-affecting).
     void push(UndoEntry entry) {
         if (saved_valid && saved_distance > 0) {
             const int rs = static_cast<int>(redo_stack.size());
@@ -229,11 +256,7 @@ struct UndoHistory {
         if (saved_valid) saved_distance -= 1;
         undo_stack.push_back(std::move(entry));
         if (undo_stack.size() > kCap) {
-            undo_stack.erase(undo_stack.begin());
-            if (saved_valid &&
-                saved_distance < -static_cast<int>(undo_stack.size())) {
-                saved_distance = -static_cast<int>(undo_stack.size());
-            }
+            evict_bottom_with_saved_ref(undo_stack, -1);
         }
     }
 

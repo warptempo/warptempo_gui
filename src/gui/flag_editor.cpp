@@ -382,9 +382,11 @@ void GuiFlagEditor::commit_top_flag_edit() {
     const std::string new_def = parsed.label_def;
 
     // Snapshot the canonical (serialized) fields before writing so we can
-    // tell whether the engine/dirty state actually moved. Iteration-only
-    // commits (bracket changed, tempo/scale/label unchanged) must not mark
-    // dirty or trigger a render — iter values are session-only.
+    // tell whether the engine/dirty state actually moved. An iteration-only
+    // commit (bracket changed, tempo/scale/label unchanged) does not mark
+    // dirty — its undo entry pushes with affects_persistence=false, which
+    // recompute_dirty honors — while the commit tail below still repaints and
+    // triggers unconditionally like any store mutation.
     const GuiWarpMarker before = m;
 
     // Time stays locked; preserve it (parse already produced the
