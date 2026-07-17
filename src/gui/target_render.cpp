@@ -168,16 +168,19 @@ void GuiTargetRender::dispatch_render_now() {
     }
 
     if (!last_fingerprint_.empty()) {
-        const std::string artifact_candidate =
+        // This rung auditions the actual archival deliverable. The current-
+        // title path is tried first; on miss the source directory is scanned
+        // so a retitle loads the old-title deliverable. Fresh renders, cache
+        // hits, and archival artifact loads all expose identical
+        // deliverable-lattice samples because fresh limited renders quantize
+        // in place before cache publication and the codec roundtrip is exact.
+        const std::string artifact_candidate = find_reusable_artifact(
             compose_render_output_path(
                 render_output_directory(app.source_audio_path),
                 render_output_stem(app.engine_settings))
-                .string();
-        // This rung auditions the actual archival deliverable. Fresh renders,
-        // cache hits, and archival artifact loads all expose identical
-        // deliverable-lattice samples because fresh limited renders quantize
-        // in place before cache publication and the codec roundtrip is exact.
-        if (fingerprint_sidecar_matches(artifact_candidate, last_fingerprint_) &&
+                .string(),
+            /*exclude=*/"", last_fingerprint_);
+        if (!artifact_candidate.empty() &&
             read_wav_to_float(artifact_candidate, audio.channels(),
                               audio.sample_rate(), app.target_buffer)) {
             // Live state IS the request state on this synchronous rung, so the

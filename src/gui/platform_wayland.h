@@ -35,8 +35,10 @@ public:
     // scroll so remainder is bound to the routing context it will emit in.
     using WheelContextProbe    = std::function<int(int x, int y)>;
     // Predicate installed by main.cpp: true when a text editor is consuming
-    // printable keys. Consulted at kLeftClickKey PRESS time to decide whether
-    // that key is a synthesized left button (false) or a normal letter (true).
+    // printable keys. Consulted at PRESS time for both synthesized keys —
+    // kLeftClickKey and kCtrlModKey — to decide whether each is its synthesized
+    // form (false) or a normal character (true): while a text editor is open
+    // kLeftClickKey stays a normal letter and kCtrlModKey a normal digit.
     using TextEditorProbe      = std::function<bool()>;
     using TickCallback         = std::function<void()>;
     using PrePaintCallback     = std::function<void()>;

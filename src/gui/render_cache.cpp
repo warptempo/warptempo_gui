@@ -404,6 +404,54 @@ bool fingerprint_sidecar_matches(const std::string& wav_path,
     return recorded_fingerprint == fingerprint;
 }
 
+std::string find_reusable_artifact(const std::string& preferred,
+                                   const std::string& exclude,
+                                   const std::vector<uint8_t>& fingerprint) {
+    // Preferred first: the common current-title case is one stat chain, no
+    // scan. It is skipped only when it equals the caller-handled `exclude`
+    // (do_render's same-path up-to-date rung already auditioned that path).
+    if (preferred != exclude &&
+        fingerprint_sidecar_matches(preferred, fingerprint)) {
+        return preferred;
+    }
+
+    // On miss, scan the preferred wav's own directory for any sibling
+    // deliverable whose .fingerprint attests this exact recipe (the retitle
+    // case: an old-title sibling now matches). Non-recursive, regular files
+    // only, an unreadable directory is a miss (error_code form, never throws).
+    const std::filesystem::path dir =
+        std::filesystem::path(preferred).parent_path();
+    std::error_code ec;
+    std::filesystem::directory_iterator it(dir, ec), end;
+    if (ec) return std::string();
+
+    std::vector<std::string> candidates;
+    for (; it != end; it.increment(ec)) {
+        if (ec) return std::string();
+        if (!it->is_regular_file(ec)) continue;
+        const std::filesystem::path& entry = it->path();
+        if (entry.extension() != kSidecarExtension) continue;
+        // Candidate wav = the sidecar's stem with the .wav deliverable
+        // extension — the exact inverse of fingerprint_sidecar_path, so the
+        // match below re-derives this same sidecar entry.
+        std::filesystem::path wav = entry;
+        wav.replace_extension(".wav");
+        candidates.push_back(wav.string());
+    }
+
+    // Deterministic pick among byte-identical candidates: same fingerprint
+    // means same recipe means same deliverable bytes, so sorted order makes
+    // the choice stable.
+    std::sort(candidates.begin(), candidates.end());
+    for (const std::string& candidate : candidates) {
+        if (candidate == preferred || candidate == exclude) continue;
+        if (fingerprint_sidecar_matches(candidate, fingerprint)) {
+            return candidate;
+        }
+    }
+    return std::string();
+}
+
 void RenderCache::init() {
     enabled_ = false;
 

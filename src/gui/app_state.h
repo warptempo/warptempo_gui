@@ -676,14 +676,14 @@ struct AppState {
     // saved_distance against each persistence-affecting entry's op_mode.
     // Drives both the unsaved-work dialog and the dirty-dot.
     //
-    // Authoring-class settings (engine, scale, N, title,
-    // audio_input, plus any free-form non-view key typed into the settings
-    // editor) participate in dirty via settings_dirty. View-state keys
-    // (viewport, zoom, playhead, follow_mode, active_markers_view,
-    // playback_speed, trim, and the per-tab read_only flags) do NOT
-    // participate: they are silently persisted on Ctrl+S and not tracked as
-    // dirty, so quitting without saving simply drops them. Trim is
-    // gesture-owned, excluded from
+    // Authoring-class settings — the six engine-block keys (title, scale,
+    // bpm, notes, url, cover; editor commits carry undo history) — participate
+    // in dirty via settings_dirty. View-state keys — the GUI-kind keys
+    // (viewport/zoom/playhead per tab, follow, active_audio_view,
+    // active_markers_view, active_tab_view, playback_speed, trim, read_only,
+    // font_size, audio_player) — do NOT participate: they are silently
+    // persisted on Ctrl+S and not tracked as dirty, so quitting without saving
+    // simply drops them. Trim is gesture-owned, excluded from
     // undo/redo history, and render-affecting but deliberately treated as
     // transient view state.
     //

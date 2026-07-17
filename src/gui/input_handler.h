@@ -270,9 +270,10 @@ struct GuiInputHandler {
     // True when ANY text editor is consuming printable keys — the settings
     // editor, the commit editor, or the top-strip flag editor in EITHER kind
     // (unlike modal_bottom_strip_editor_active, which is modal-only and omits
-    // the non-modal FlagPayload editor). The platform's kLeftClickKey probe:
-    // while an editor is open that key types a letter instead of the button.
-    // Public because main.cpp's probe lambda calls it.
+    // the non-modal FlagPayload editor). The platform's press-time probe for
+    // BOTH synthesized keys: while an editor is open kLeftClickKey types its
+    // normal letter and kCtrlModKey its normal digit, instead of the button /
+    // Ctrl modifier. Public because main.cpp's probe lambda calls it.
     bool any_text_editor_active() const;
 
 private:

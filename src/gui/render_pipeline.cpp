@@ -549,16 +549,17 @@ RenderOutcome do_render(const RenderRequest& req,
     // skips them.
     if (cancel_requested()) return cancelled_outcome();
     if (!req.output_buffer) {
-        // Rung: project artifact candidate. A batch entry whose fixed
-        // archival sibling already holds a validated artifact for this
-        // exact fingerprint is published by byte copy — the highest-
-        // integrity reuse there is. When final_output_path already equals
-        // the candidate, this rung is the up-to-date check above and has
-        // already run.
-        const std::string artifact_candidate =
-            compose_source_sibling_path().string();
-        if (artifact_candidate != final_output_path &&
-            fingerprint_sidecar_matches(artifact_candidate, fingerprint)) {
+        // Rung: project artifact candidate. Any source-dir sibling whose
+        // .fingerprint attests this exact recipe is published by byte copy —
+        // the highest-integrity reuse there is. The current-title sibling is
+        // auditioned first; on miss the directory is scanned so a retitle
+        // reuses the old-title deliverable (architect-ruled that a provenance
+        // edit must reuse). final_output_path is excluded — it is the up-to-
+        // date check above and has already run.
+        const std::string artifact_candidate = find_reusable_artifact(
+            compose_source_sibling_path().string(),
+            final_output_path, fingerprint);
+        if (!artifact_candidate.empty()) {
             std::error_code ec;
             std::filesystem::copy_file(
                 artifact_candidate, staging_output_path,

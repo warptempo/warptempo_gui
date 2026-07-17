@@ -87,6 +87,21 @@ bool write_fingerprint_sidecar(const std::string& wav_path,
 bool fingerprint_sidecar_matches(const std::string& wav_path,
                                  const std::vector<uint8_t>& fingerprint);
 
+// Returns the path of a deliverable wav in `preferred`'s directory whose
+// .fingerprint sidecar matches `fingerprint`, or empty. `preferred` is
+// auditioned first (the common current-title case costs one stat chain,
+// no scan); on miss, the directory's *.fingerprint entries are tried in
+// sorted order (deterministic pick among byte-identical candidates —
+// same fingerprint means same recipe means same deliverable bytes).
+// `exclude` (may be empty) is never returned — the caller has already
+// handled that path (do_render's same-path up-to-date rung).
+// Regular files only, the one directory, non-recursive: renders/ cells
+// are never reuse sources (standing ruling), and they live in a
+// subdirectory the scan never descends into.
+std::string find_reusable_artifact(const std::string& preferred,
+                                   const std::string& exclude,
+                                   const std::vector<uint8_t>& fingerprint);
+
 // Two-tier store for rendered target-view and archival audio, keyed by
 // render_fingerprint. Entries are canonical deliverable wav bytes encoded
 // exactly once as PCM_24, the sole deliverable format. For
