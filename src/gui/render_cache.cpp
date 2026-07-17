@@ -169,11 +169,8 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // ascending bin); the assignment sequence is identical for distinct keys, but
 // equal-key order — previously sort/heap layout order — is now the explicit
 // total order, so tie-bearing renders change bytes and prior artifacts must
-// re-render rather than pose as current renders. Version 15: the canonical build
-// now links a pinned static fftw whose numerics differ from the previously-linked
-// system fftw, so every FFT — and thus every render's bytes — changes; prior
-// artifacts must re-render rather than pose as current renders.
-constexpr uint32_t kFingerprintVersion = 15;
+// re-render rather than pose as current renders.
+constexpr uint32_t kFingerprintVersion = 14;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the

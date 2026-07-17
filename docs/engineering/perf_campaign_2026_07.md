@@ -448,3 +448,20 @@ discipline), not in-tree. Also verified in passing: libm.so.6 imports six
 GLIBC_PRIVATE symbols, so pinning an old libm.so under a newer libc has
 no ABI guarantee (a snapshot-preload pin can break loudly at any glibc
 update).
+
+## 14. Postscript 3: static reference retired; stability moves to package pinning
+
+With the vendored-math rollback, the v15 split (static-fftw GUI + fully
+static CLI) lost its coherence: at any glibc epoch the static CLI would
+hold while the dynamic GUI moved, breaking CLI == GUI — and the architect
+ruled that identity non-negotiable. The static machinery was removed
+wholesale (CMakeLists byte-identical to its pre-option state; fingerprint
+ledger back at 14, which is exactly what the dynamic build's bytes are).
+Byte-stability is now purely environmental: pacman-pinned glibc + fftw
+(`IgnorePkg`), everything else rolling, with the boundary protocol at
+each deliberate unpin — re-render a kept reference with the existing
+binaries and cmp (a null means the upgrade was never an epoch); on a real
+epoch: rebuild, GUI-vs-CLI cmp, one ear pass, at a project boundary only.
+The static fftw prefix (~/.warptempo/fftw-3.3.11-static) is inert and
+removable. Net lesson of postscripts 1-3: for this project the correct
+stability boundary is the PACKAGE MANAGER, not the linker.
