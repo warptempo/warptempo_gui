@@ -36,18 +36,16 @@ std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
     auto phase_reset_source_frames = build_phase_reset_source_frames(
         slice_to_phase_reset_markers(app.phaseresetmarkers.markers()),
         audio.sample_rate(), audio.total_frames());
-    if (!resolved_warp_markers || !phase_reset_source_frames) {
-        // Tripwire-class only (the resolver itself produces no errors, and
-        // the phase-reset wall refusal is unreachable from a live store —
-        // past-EOF is adversarial load-fatal). Empty means "no identity":
-        // every reuse rung misses and the trigger sites treat the state as
-        // unknown (and trigger), so the render path surfaces the error.
-        return {};
-    }
-
+    // The resolver is infallible (its std::expected is signature symmetry with
+    // build_warp_frame_map — zero unexpected returns), and the phase-reset
+    // assembly's only refusal (a past-EOF reset) cannot reach a live store:
+    // gesture walls clamp to total-1 and a past-EOF sidecar is adversarial
+    // load-fatal. So the live fingerprint is always well-formed; .value()
+    // makes a breach loud (bad_expected_access -> terminate) rather than
+    // silently degrading.
     return render_fingerprint(
         app.source_audio_path, source_identity, audio.sample_rate(),
-        *resolved_warp_markers, *phase_reset_source_frames,
+        resolved_warp_markers.value(), phase_reset_source_frames.value(),
         app.engine_settings,
         app.trim.has_begin, app.trim.begin_frame,
         app.trim.has_end,   app.trim.end_frame);
@@ -165,8 +163,7 @@ void GuiTargetRender::dispatch_render_now() {
     // the in-memory source samples with no source-changed refusal.
     last_fingerprint_ = compute_live_render_fingerprint(app, audio);
 
-    if (!last_fingerprint_.empty() &&
-        render_cache.lookup(last_fingerprint_, audio.channels(),
+    if (render_cache.lookup(last_fingerprint_, audio.channels(),
                             audio.sample_rate(), app.target_buffer)) {
         // Hit: target_buffer now holds the cached audio. Mirror
         // on_render_done()'s Success tail with no async render; in_flight_
@@ -194,60 +191,58 @@ void GuiTargetRender::dispatch_render_now() {
         return;
     }
 
-    if (!last_fingerprint_.empty()) {
-        // This rung auditions the actual archival deliverable. The current-
-        // title path is tried first; on miss the source directory is scanned
-        // so a retitle loads the old-title deliverable. Fresh renders, cache
-        // hits, and archival artifact loads all expose identical
-        // deliverable-lattice samples because fresh limited renders quantize
-        // in place before cache publication and the codec roundtrip is exact.
-        ArtifactStatIdentity candidate_identity{};
-        const std::string artifact_candidate = find_reusable_artifact(
-            compose_render_output_path(
-                render_output_directory(app.source_audio_path),
-                render_output_stem(app.engine_settings))
-                .string(),
-            /*exclude=*/"", last_fingerprint_, &candidate_identity);
-        if (!artifact_candidate.empty() &&
-            read_wav_to_float(artifact_candidate, audio.channels(),
-                              audio.sample_rate(), app.target_buffer)) {
-            // Identity bind (TOCTOU): re-stat AFTER the read completes and
-            // require the exact wav object the sidecar validation saw (dev,
-            // inode, size, mtime_ns — the capture at
-            // fingerprint_sidecar_matches). A mismatch means a concurrent
-            // GUI/CLI publication replaced the wav between validation and
-            // read — the buffer may hold another recipe's audio.
-            ArtifactStatIdentity post_read{};
-            if (stat_artifact_identity(artifact_candidate, post_read) &&
-                post_read == candidate_identity) {
-                // Live state IS the request state on this synchronous rung,
-                // so the stamp is exact.
-                const BufferStartVerdict verdict =
-                    compute_buffer_start_frame_for(app.trim.has_begin,
-                                                   app.trim.begin_frame,
-                                                   app.trim.has_end,
-                                                   app.trim.end_frame);
-                dispatched_buffer_start_frame_ = verdict.start_frame;
-                // Reuse skips do_render's trim-plan block; print the fallback
-                // signal here — same rationale as the cache rung above (this
-                // is the only other pre-do_render return).
-                if (verdict.trim_fell_back) {
-                    std::fprintf(stderr,
-                        "warptempo_gui: trim target span rounds below one "
-                        "output sample; rendering untrimmed\n");
-                }
-                complete_successful_buffer();
+    // This rung auditions the actual archival deliverable. The current-
+    // title path is tried first; on miss the source directory is scanned
+    // so a retitle loads the old-title deliverable. Fresh renders, cache
+    // hits, and archival artifact loads all expose identical
+    // deliverable-lattice samples because fresh limited renders quantize
+    // in place before cache publication and the codec roundtrip is exact.
+    ArtifactStatIdentity candidate_identity{};
+    const std::string artifact_candidate = find_reusable_artifact(
+        compose_render_output_path(
+            render_output_directory(app.source_audio_path),
+            render_output_stem(app.engine_settings))
+            .string(),
+        /*exclude=*/"", last_fingerprint_, &candidate_identity);
+    if (!artifact_candidate.empty() &&
+        read_wav_to_float(artifact_candidate, audio.channels(),
+                          audio.sample_rate(), app.target_buffer)) {
+        // Identity bind (TOCTOU): re-stat AFTER the read completes and
+        // require the exact wav object the sidecar validation saw (dev,
+        // inode, size, mtime_ns — the capture at
+        // fingerprint_sidecar_matches). A mismatch means a concurrent
+        // GUI/CLI publication replaced the wav between validation and
+        // read — the buffer may hold another recipe's audio.
+        ArtifactStatIdentity post_read{};
+        if (stat_artifact_identity(artifact_candidate, post_read) &&
+            post_read == candidate_identity) {
+            // Live state IS the request state on this synchronous rung,
+            // so the stamp is exact.
+            const BufferStartVerdict verdict =
+                compute_buffer_start_frame_for(app.trim.has_begin,
+                                               app.trim.begin_frame,
+                                               app.trim.has_end,
+                                               app.trim.end_frame);
+            dispatched_buffer_start_frame_ = verdict.start_frame;
+            // Reuse skips do_render's trim-plan block; print the fallback
+            // signal here — same rationale as the cache rung above (this
+            // is the only other pre-do_render return).
+            if (verdict.trim_fell_back) {
                 std::fprintf(stderr,
-                    "warptempo_gui: target view loaded from archival render: "
-                    "%s\n",
-                    artifact_candidate.c_str());
-                return;
+                    "warptempo_gui: trim target span rounds below one "
+                    "output sample; rendering untrimmed\n");
             }
-            // Discard the suspect read and fall through exactly as if the
-            // candidate had not matched — silent, byte-identical to a
-            // no-candidate miss (the synthesis path below clears the buffer
-            // before dispatch; no locks, no retries).
+            complete_successful_buffer();
+            std::fprintf(stderr,
+                "warptempo_gui: target view loaded from archival render: "
+                "%s\n",
+                artifact_candidate.c_str());
+            return;
         }
+        // Discard the suspect read and fall through exactly as if the
+        // candidate had not matched — silent, byte-identical to a
+        // no-candidate miss (the synthesis path below clears the buffer
+        // before dispatch; no locks, no retries).
     }
 
     // Miss: synthesize. The remainder is the original dispatch path.

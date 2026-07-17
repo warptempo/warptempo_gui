@@ -22,12 +22,9 @@
 // exactly as do_render builds its own fingerprint. Runs its OWN marker
 // resolve (this site stands alone — rationale at the definition), so the
 // resolver's per-resolve stderr lines print here too for a resting ambiguous
-// store — the intended signal. Returns empty on the tripwire-class
-// phase-reset assembly refusal (unreachable from a live store): empty means
-// "no identity" — reuse rungs miss, trigger classification treats the state
-// as unknown. Keys the target-view reuse rungs (dispatch_render_now) and
-// both fingerprint-driven settings-path triggers (the settings editor's
-// engine commit tail and undo/redo's restore).
+// store — the intended signal. Keys the target-view reuse rungs
+// (dispatch_render_now) and both fingerprint-driven settings-path triggers
+// (the settings editor's engine commit tail and undo/redo's restore).
 std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
                                                      const GuiAudio& audio);
 

@@ -438,11 +438,9 @@ void GuiSettingsEditor::commit() {
     // not — the buffer is not stale (no is_dirty_), so a later S->T rebinds
     // the existing buffer without even a reuse-rung walk, and in target view
     // a background archival render is not killed for an edit that cannot
-    // change the preview. An empty fingerprint is the tripwire "no identity"
-    // form: treat it as unknown and trigger, degrading to the old
-    // unconditional behavior rather than skipping a real staleness.
+    // change the preview.
     const std::vector<uint8_t> fp_after = target_render.live_fingerprint();
-    if (fp_before.empty() || fp_after.empty() || fp_before != fp_after) {
+    if (fp_before != fp_after) {
         target_render.trigger();
     }
 }
