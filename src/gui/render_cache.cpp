@@ -21,8 +21,12 @@
 namespace {
 
 inline void put_bytes(std::vector<uint8_t>& v, const void* p, size_t n) {
-    const auto* b = static_cast<const uint8_t*>(p);
-    v.insert(v.end(), b, b + n);
+    // resize-then-memcpy rather than v.insert(end, b, b + n): byte-identical
+    // output, but this shape avoids a GCC -O3 -Wstringop-overflow false
+    // positive through the vector reallocation-move inlined from the insert path.
+    const size_t old = v.size();
+    v.resize(old + n);
+    std::memcpy(v.data() + old, p, n);
 }
 inline void put_u32(std::vector<uint8_t>& v, uint32_t x) { put_bytes(v, &x, sizeof x); }
 inline void put_i32(std::vector<uint8_t>& v, int32_t  x) { put_bytes(v, &x, sizeof x); }
@@ -169,8 +173,14 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // ascending bin); the assignment sequence is identical for distinct keys, but
 // equal-key order — previously sort/heap layout order — is now the explicit
 // total order, so tie-bearing renders change bytes and prior artifacts must
-// re-render rather than pose as current renders.
-constexpr uint32_t kFingerprintVersion = 14;
+// re-render rather than pose as current renders. Version 15: the
+// naming/provenance engine fields (title, bpm, notes, url, cover) are removed
+// from the key — they never change rendered bytes, so a provenance edit now
+// reuses instead of re-rendering; identity stays sound per artifact because the
+// on-disk rung pairs the fingerprint with the title-derived output path, so a
+// retitle lands at a different deliverable path; prior artifacts must re-render
+// rather than pose as current renders.
+constexpr uint32_t kFingerprintVersion = 15;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the
@@ -242,16 +252,16 @@ std::vector<uint8_t> render_fingerprint(
     put_bytes(fp, &source_identity.mtime, sizeof source_identity.mtime);
     put_i32(fp, static_cast<int32_t>(sample_rate));
 
-    // Engine settings: every field, so any settings edit the undo stack can
-    // return from also returns to this exact key. Provenance fields do not
-    // change audio; including them only costs a re-render on a provenance edit
-    // (which the live path already does) and guarantees a hit when undone.
-    put_str(fp, s.title);
+    // Engine settings: only render-byte-affecting engine input belongs in the
+    // key, so `scale` alone participates. The naming/provenance fields (title,
+    // bpm, notes, url, cover) are deliberately excluded (architect 2026-07-17)
+    // so a retitle/annotation edit hits the reuse rungs everywhere — the target
+    // preview, do_render's archival rungs (a retitled Ctrl+Alt+R byte-copies
+    // from the cache into the new `<title>.wav` instead of re-synthesizing),
+    // and undo walks in both directions. The five excluded keys are named
+    // identically at the editor's is_render_inert_engine_key predicate
+    // (settings_editor.cpp), which skips the preview trigger for the same edits.
     put_f64(fp, s.scale);
-    put_str(fp, s.bpm);
-    put_str(fp, s.notes);
-    put_str(fp, s.url);
-    put_str(fp, s.cover);
 
     // Trim, with the frame values normalized to 0 when the bound is unset so
     // a stale value behind a false has-bound cannot move the key (the engine

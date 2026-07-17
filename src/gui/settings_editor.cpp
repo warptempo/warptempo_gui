@@ -34,6 +34,16 @@ bool is_key_char(char c) {
     return std::isalnum(uc) || c == '_';
 }
 
+// The naming/provenance engine keys: they never change one rendered byte, so a
+// commit to any of them must NOT fire the target preview. This is the exact
+// five-key set the render fingerprint excludes (render_fingerprint in
+// render_cache.cpp — the two sites must name the same keys); `scale` (and any
+// future DSP key) is render-affecting and is deliberately absent here.
+bool is_render_inert_engine_key(const std::string& key) {
+    return key == "title" || key == "bpm" || key == "notes" ||
+           key == "url" || key == "cover";
+}
+
 } // namespace
 
 void GuiSettingsEditor::open() {
@@ -427,8 +437,18 @@ void GuiSettingsEditor::commit() {
 
     viewport.invalidate_timestamp_area();
     text_editor::deactivate(app.settings_editor);
-    // Engine settings are engine input — fire target render.
-    target_render.trigger();
+    // Render-affecting engine settings fire the target preview; the
+    // naming/provenance keys (is_render_inert_engine_key) do not — the buffer
+    // is not stale (no is_dirty_), so a later S->T rebinds the existing buffer
+    // without even a reuse-rung walk, and in target view a background archival
+    // render is not killed for an edit that cannot change the preview. The undo
+    // path (restore_history_entry's unconditional trigger) is deliberately left
+    // alone: a settings undo entry cannot cheaply classify what changed, and
+    // that trigger now lands instantly through the render_cache rung because the
+    // fingerprint no longer carries the provenance fields.
+    if (!is_render_inert_engine_key(key)) {
+        target_render.trigger();
+    }
 }
 
 void GuiSettingsEditor::autocomplete_value() {
