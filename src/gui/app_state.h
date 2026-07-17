@@ -383,7 +383,7 @@ struct PromptState {
     bool                     active = false;
     std::string              text;
     std::vector<char>        response_keys;     // lowercase
-    std::vector<std::string> response_labels;   // e.g. "[S]ave"
+    std::vector<std::string> response_labels;   // e.g. "[s]ave"
     DialogTrigger            trigger = DialogTrigger::CLOSE_WINDOW;
 };
 

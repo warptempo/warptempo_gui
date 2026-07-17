@@ -18,7 +18,7 @@ std::expected<void, std::string> write_warp_frame_map(
     }
     of.close();
     if (!of) {
-        return std::unexpected("could not write warpframemap '" + path + "' (I/O error)");
+        return std::unexpected("could not write warpframemap '" + path + "' (i/o error)");
     }
     return {};
 }
@@ -35,7 +35,7 @@ std::expected<void, std::string> write_phase_reset_frame_map(
     }
     of.close();
     if (!of) {
-        return std::unexpected("could not write phaseresetframemap '" + path + "' (I/O error)");
+        return std::unexpected("could not write phaseresetframemap '" + path + "' (i/o error)");
     }
     return {};
 }

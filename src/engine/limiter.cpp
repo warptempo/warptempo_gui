@@ -250,7 +250,7 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     if (all_finite && max_abs <= ceiling) {
         // Already within the ceiling: the deliverable is compliant as rendered,
         // so no spectral attenuation is applied and the render is left as-is.
-        std::cout << "[Pass 3/3] Spectral limiter................. already compliant, no attenuation required\n";
+        std::cout << "[pass 3/3] spectral limiter................. already compliant, no attenuation required\n";
         return;
     }
 
@@ -404,7 +404,7 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
 
     if (observed_cancel()) return;
     if (queue.empty()) {
-        std::cout << "[Pass 3/3] Spectral limiter................. 0 peaks, no attenuation required\n";
+        std::cout << "[pass 3/3] spectral limiter................. 0 peaks, no attenuation required\n";
         destroy();
         return;   // render left untouched (no round-trip applied)
     }
@@ -674,8 +674,8 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
             render[dst + ch] = meas_ola[src + ch];
     }
 
-    // The [Pass 3/3] progress header goes to stdout.
-    std::cout << "[Pass 3/3] Spectral limiter................. "
+    // The [pass 3/3] progress header goes to stdout.
+    std::cout << "[pass 3/3] spectral limiter................. "
               << resolved.size() << " peaks, " << iterations
               << " iterations, done\n";
 

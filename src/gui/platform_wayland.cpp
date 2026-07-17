@@ -444,7 +444,7 @@ bool GuiPlatform::init(int width, int height, const char* title) {
 
     if (!wl_compositor_ || !wl_shm_ || !xdg_wm_base_) {
         std::fprintf(stderr,
-                     "warptempo_gui: required Wayland globals missing "
+                     "warptempo_gui: required wayland globals missing "
                      "(wl_compositor=%p wl_shm=%p xdg_wm_base=%p)\n",
                      (void*)wl_compositor_, (void*)wl_shm_, (void*)xdg_wm_base_);
         return false;
@@ -457,7 +457,7 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     if (!wl_output_) {
         std::fprintf(stderr,
                      "warptempo_gui: no wl_output advertised; "
-                     "playback tick will use 60 Hz fallback\n");
+                     "playback tick will use 60 hz fallback\n");
     }
 
     width_  = width;
@@ -764,7 +764,7 @@ bool GuiPlatform::load_cursor_theme() {
     struct wl_buffer* buf = wl_cursor_image_get_buffer(image);
     if (!buf) {
         std::fprintf(stderr,
-            "warptempo_gui: wl_cursor_image_get_buffer returned NULL; "
+            "warptempo_gui: wl_cursor_image_get_buffer returned null; "
             "pointer will not display a cursor image\n");
         return false;
     }

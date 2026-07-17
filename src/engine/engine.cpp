@@ -46,7 +46,7 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
         fftw_plan_with_nthreads(1);
         audio_stft.fftw_threads_inited = true;
     } else {
-        std::cerr << "! fftw_init_threads failed; FFTW will run single-threaded.\n";
+        std::cerr << "! fftw_init_threads failed; fftw will run single-threaded.\n";
     }
 }
 
@@ -103,26 +103,26 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
 // role, not treatment asymmetry.
 bool validate_warp_frame_map_strictly_ascending(const std::vector<WarpFrameMapSegment>& map) {
     if (map.empty()) {
-        std::cerr << "Error: warp_frame_map is empty (program-written maps "
+        std::cerr << "error: warp_frame_map is empty (program-written maps "
                      "always carry the {0,0} seed segment).\n";
         return false;
     }
     for (size_t i = 0; i < map.size(); ++i) {
         if (!std::isfinite(map[i].src_frame) || !std::isfinite(map[i].tgt_frame)) {
-            std::cerr << "Error: warp_frame_map entry " << i << " is not finite ("
+            std::cerr << "error: warp_frame_map entry " << i << " is not finite ("
                       << map[i].src_frame << ", "
                       << map[i].tgt_frame << ").\n";
             return false;
         }
         if (i == 0) continue;
         if (map[i].src_frame <= map[i - 1].src_frame) {
-            std::cerr << "Error: warp_frame_map entry " << i << " has non-monotonic src_frame ("
+            std::cerr << "error: warp_frame_map entry " << i << " has non-monotonic src_frame ("
                       << map[i - 1].src_frame << " -> "
                       << map[i].src_frame << ").\n";
             return false;
         }
         if (map[i].tgt_frame <= map[i - 1].tgt_frame) {
-            std::cerr << "Error: warp_frame_map entry " << i << " has non-monotonic tgt_frame ("
+            std::cerr << "error: warp_frame_map entry " << i << " has non-monotonic tgt_frame ("
                       << map[i - 1].tgt_frame << " -> "
                       << map[i].tgt_frame << ").\n";
             return false;
@@ -137,13 +137,13 @@ bool validate_warp_frame_map_strictly_ascending(const std::vector<WarpFrameMapSe
 bool validate_phase_reset_frame_map_strictly_ascending(const std::vector<double>& resets) {
     for (size_t i = 0; i < resets.size(); ++i) {
         if (!std::isfinite(resets[i])) {
-            std::cerr << "Error: phase reset entry " << i << " is not finite ("
+            std::cerr << "error: phase reset entry " << i << " is not finite ("
                       << resets[i] << ").\n";
             return false;
         }
         if (i == 0) continue;
         if (resets[i] <= resets[i - 1]) {
-            std::cerr << "Error: phase reset entry " << i << " is not strictly ascending ("
+            std::cerr << "error: phase reset entry " << i << " is not strictly ascending ("
                       << resets[i - 1] << " -> "
                       << resets[i] << ").\n";
             return false;
@@ -168,14 +168,14 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     lp.tolerance_db         = p.limiter_tolerance_db;
 
     if (audio_stft.N <= 0 || audio_stft.N % 4 != 0) {
-        std::cerr << "Error: N must be a positive multiple of 4.\n";
+        std::cerr << "error: N must be a positive multiple of 4.\n";
         return EngineResult::Failed;
     }
 
     // Buffer-out only: the output buffer is the engine's sole sink; encode
     // lives orchestrator-side in the prepost chain.
     if (p.output_buffer == nullptr) {
-        std::cerr << "Error: output_buffer is required "
+        std::cerr << "error: output_buffer is required "
                      "(the engine is buffer-out only).\n";
         return EngineResult::Failed;
     }
@@ -189,7 +189,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
 
     if (p.source_audio_samples == nullptr || p.source_audio_frames == 0 ||
         p.source_channels <= 0 || p.source_sample_rate <= 0) {
-        std::cerr << "Error: source buffer parameters are invalid "
+        std::cerr << "error: source buffer parameters are invalid "
                      "(samples=" << static_cast<const void*>(p.source_audio_samples)
                   << ", frames=" << p.source_audio_frames
                   << ", channels=" << p.source_channels
@@ -227,7 +227,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
     // validated geometry, and full maps carry the source's whole target
     // extent); a breach would otherwise render silently wrong bytes.
     if (audio_stft.emit_sample_cap <= 0) {
-        std::cerr << "Error: render refused: final map target of "
+        std::cerr << "error: render refused: final map target of "
                   << tgt_end
                   << " frames rounds to zero output samples\n";
         audio_stft.cleanup();
@@ -257,7 +257,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
             ++expected_count;
         }
         if (p.source_frame_schedule->size() != expected_count) {
-            std::cerr << "Error: supplied source_frame_schedule has "
+            std::cerr << "error: supplied source_frame_schedule has "
                       << p.source_frame_schedule->size()
                       << " entries; the map's target extent needs "
                       << expected_count << ".\n";
@@ -267,7 +267,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         for (size_t m = 1; m < p.source_frame_schedule->size(); ++m) {
             if ((*p.source_frame_schedule)[m] <
                 (*p.source_frame_schedule)[m - 1]) {
-                std::cerr << "Error: supplied source_frame_schedule decreases "
+                std::cerr << "error: supplied source_frame_schedule decreases "
                              "at entry " << m << " ("
                           << (*p.source_frame_schedule)[m - 1] << " -> "
                           << (*p.source_frame_schedule)[m] << ").\n";
@@ -283,10 +283,10 @@ EngineResult run_warptempo_engine(const EngineParams& p,
 
     double duration_sec = static_cast<double>(audio_stft.emit_sample_cap) /
                           audio_stft.src_info.samplerate;
-    std::cout << "[warptempo] Source: <in-memory buffer, "
+    std::cout << "[warptempo] source: <in-memory buffer, "
               << p.source_audio_frames << " frames>"
-              << ", Target: " << std::fixed << duration_sec << "s at "
-              << audio_stft.src_info.samplerate << "Hz\n";
+              << ", target: " << std::fixed << duration_sec << "s at "
+              << audio_stft.src_info.samplerate << "hz\n";
 
     Limiter        limiter;
     Synthesis      synthesis;
@@ -310,8 +310,8 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         size_t s = static_cast<size_t>(it - fm.begin());
         audio_stft.phase_reset_placements.push_back({static_cast<int>(s)});
     }
-    std::cout << "[Pass 1/3"
-              << "] Phase reset placement............. "
+    std::cout << "[pass 1/3"
+              << "] phase reset placement............. "
               << audio_stft.phase_reset_placements.size()
               << " phase resets\n";
 
@@ -328,7 +328,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
                (audio_stft.cancel_flag && audio_stft.cancel_flag->load());
     };
     if (cancel_pending()) {
-        std::cerr << "[Cancelled]\n";
+        std::cerr << "[cancelled]\n";
         audio_stft.cleanup();
         return EngineResult::Cancelled;
     }
@@ -340,18 +340,18 @@ EngineResult run_warptempo_engine(const EngineParams& p,
         std::vector<float>& buf = *p.output_buffer;
         limiter.process(audio_stft, buf);          // spectral -0.3
         if (cancel_pending()) {
-            std::cerr << "[Cancelled]\n";
+            std::cerr << "[cancelled]\n";
             audio_stft.cleanup();
             return EngineResult::Cancelled;
         }
     }
 
     if (cancel_pending()) {
-        std::cerr << "[Cancelled]\n";
+        std::cerr << "[cancelled]\n";
         audio_stft.cleanup();
         return EngineResult::Cancelled;
     }
-    std::cout << "[Success]\n";
+    std::cout << "[success]\n";
 
     audio_stft.cleanup();
     return EngineResult::Success;

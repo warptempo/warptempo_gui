@@ -82,7 +82,7 @@ std::expected<void, std::string> scan_settings_file(
     // after every canonical key already arrived can never be laundered into
     // a complete-looking file.
     if (in.bad()) {
-        return std::unexpected(std::string("I/O read error"));
+        return std::unexpected(std::string("i/o read error"));
     }
 
     for (const char* k : kCanonicalSettingsKeys) {

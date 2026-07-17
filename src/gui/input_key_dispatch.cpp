@@ -562,10 +562,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             // product. Iteration mode and the brackets survive for
             // correction — the wipe-and-exit tail below does not run.
             prompt.open_error_notice(
-                "Iteration sweep refused: more than " +
+                "iteration sweep refused: more than " +
                 std::to_string(kMaxIterSweepCells) +
                 " cells (cap " + std::to_string(kMaxIterSweepCells) +
-                "). Narrow the marker brackets and retry.");
+                "). narrow the marker brackets and retry.");
             return true;
         }
 
@@ -940,7 +940,7 @@ void GuiInputHandler::open_commit_editor() {
     // sweep writing into it. Refuse, don't cancel — a running batch may be
     // irreplaceable queued work; Esc is the explicit cancel.
     if (app.queue_running || app.pending_archival.armed) {
-        app.transient_status_message = "render running; Esc cancels it";
+        app.transient_status_message = "render running; esc cancels it";
         viewport.invalidate_timestamp_area();
         return;
     }

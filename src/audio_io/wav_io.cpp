@@ -35,7 +35,7 @@ std::string implausible_alloc_message(uint64_t bytes)
     const uint64_t mib =
         (bytes + 1024ull * 1024ull - 1) / (1024ull * 1024ull);
     return "implausibly large audio allocation (" + std::to_string(mib) +
-           " MiB); refusing";
+           " mib); refusing";
 }
 
 struct ByteSource {
@@ -175,7 +175,7 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
     unsigned char u32buf[4];
     char wave[4];
     if (!src.read(riff, 4) || !src.read(u32buf, 4) || !src.read(wave, 4)) {
-        return std::unexpected("short WAV header");
+        return std::unexpected("short wav header");
     }
     if (!fourcc_eq(riff, "RIFF") || !fourcc_eq(wave, "WAVE")) {
         return std::unexpected("not a RIFF/WAVE file");
@@ -192,7 +192,7 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
     const uint32_t riff_size = read_u32(u32buf);
     if (static_cast<uint64_t>(riff_size) + 8 != file_size) {
         return std::unexpected(
-            "WAV RIFF size contradicts file size (declared " +
+            "wav RIFF size contradicts file size (declared " +
             std::to_string(static_cast<uint64_t>(riff_size) + 8) +
             " vs physical " + std::to_string(file_size) + ")");
     }
@@ -206,7 +206,7 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
     while (src.tell() + 8 <= file_size) {
         char id[4];
         if (!src.read(id, 4) || !src.read(u32buf, 4)) {
-            return std::unexpected("truncated WAV chunk header");
+            return std::unexpected("truncated wav chunk header");
         }
         const uint32_t chunk_size = read_u32(u32buf);
         const uint64_t payload = src.tell();
@@ -215,21 +215,21 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
         // ordinary truncated or corrupted file — adversarial input — and
         // refuses here.
         if (chunk_payload_size > file_size - payload) {
-            return std::unexpected("WAV chunk extends past end of file");
+            return std::unexpected("wav chunk extends past end of file");
         }
 
         if (fourcc_eq(id, "fmt ")) {
             if (fmt_seen) {
-                return std::unexpected("duplicate WAV fmt chunk");
+                return std::unexpected("duplicate wav fmt chunk");
             }
             if (chunk_payload_size < 16) {
-                return std::unexpected("WAV fmt chunk is too short");
+                return std::unexpected("wav fmt chunk is too short");
             }
             std::array<unsigned char, 40> fmt{};
             const size_t to_read =
                 std::min<size_t>(fmt.size(), chunk_payload_size);
             if (!src.read(fmt.data(), to_read)) {
-                return std::unexpected("truncated WAV fmt chunk");
+                return std::unexpected("truncated wav fmt chunk");
             }
             tag = read_u16(fmt, 0);
             layout.info.channels = read_u16(fmt, 2);
@@ -268,14 +268,14 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
 
             if (layout.info.channels <= 0 || layout.info.sample_rate <= 0 ||
                 layout.block_align == 0) {
-                return std::unexpected("invalid WAV fmt values");
+                return std::unexpected("invalid wav fmt values");
             }
             if (tag == 1 && valid_bits == 16 && bits == 16) {
                 layout.info.format = WavSampleFormat::Pcm16;
             } else if (tag == 1 && valid_bits == 24 && bits == 24) {
                 layout.info.format = WavSampleFormat::Pcm24;
             } else {
-                return std::unexpected("unsupported WAV sample format");
+                return std::unexpected("unsupported wav sample format");
             }
 
             // The multiply stays wide so a header-claimed channel count whose
@@ -284,7 +284,7 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
             const uint32_t expected_align =
                 static_cast<uint32_t>(layout.info.channels) * (bits / 8u);
             if (layout.block_align != expected_align) {
-                return std::unexpected("WAV block alignment mismatch");
+                return std::unexpected("wav block alignment mismatch");
             }
             // For the PCM/Float formats accepted above, byte_rate (fmt
             // payload offset 8) is fully determined by sample_rate *
@@ -295,12 +295,12 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
             if (static_cast<uint64_t>(read_u32(fmt, 4)) * layout.block_align !=
                 read_u32(fmt, 8)) {
                 return std::unexpected(
-                    "WAV byte rate contradicts sample rate and block alignment");
+                    "wav byte rate contradicts sample rate and block alignment");
             }
             fmt_seen = true;
         } else if (fourcc_eq(id, "data")) {
             if (data_seen) {
-                return std::unexpected("duplicate WAV data chunk");
+                return std::unexpected("duplicate wav data chunk");
             }
             layout.data_offset = payload;
             layout.data_size = chunk_payload_size;
@@ -320,7 +320,7 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
         // keeps the two byte sources in agreement).
         if (next > file_size) next = file_size;
         if (!src.seek(next)) {
-            return std::unexpected("failed to skip WAV chunk");
+            return std::unexpected("failed to skip wav chunk");
         }
     }
 
@@ -332,20 +332,20 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
     // passes on a file whose dangling 1..7 trailing bytes are counted into
     // riff_size, so this catch is not redundant with it).
     if (src.tell() != file_size) {
-        return std::unexpected("truncated WAV chunk header");
+        return std::unexpected("truncated wav chunk header");
     }
 
-    if (!fmt_seen) return std::unexpected("WAV fmt chunk not found");
-    if (!data_seen) return std::unexpected("WAV data chunk not found");
+    if (!fmt_seen) return std::unexpected("wav fmt chunk not found");
+    if (!data_seen) return std::unexpected("wav data chunk not found");
     if (layout.data_size % layout.block_align != 0) {
-        return std::unexpected("WAV data size is not frame-aligned");
+        return std::unexpected("wav data size is not frame-aligned");
     }
     layout.info.frames =
         static_cast<int64_t>(layout.data_size / layout.block_align);
     // Zero frames is unusable audio, so it hard-fails here at the owner
     // boundary instead of proceeding into the load-lenient marker flow.
     if (layout.info.frames == 0) {
-        return std::unexpected("WAV data chunk holds zero frames");
+        return std::unexpected("wav data chunk holds zero frames");
     }
     return layout;
 }
@@ -362,7 +362,7 @@ read_range_from_source(ByteSource& src, int64_t begin_frame, int64_t end_frame,
     const WavLayout& layout = *parsed;
     if (begin_frame < 0 || end_frame < begin_frame ||
         end_frame > layout.info.frames) {
-        return std::unexpected("invalid WAV frame range");
+        return std::unexpected("invalid wav frame range");
     }
     if (info_out) *info_out = layout.info;
 
@@ -381,17 +381,17 @@ read_range_from_source(ByteSource& src, int64_t begin_frame, int64_t end_frame,
     if (layout.block_align != 0 &&
         bytes / static_cast<uint64_t>(layout.block_align) !=
             static_cast<uint64_t>(frames)) {
-        return std::unexpected("WAV read is too large");
+        return std::unexpected("wav read is too large");
     }
     if (bytes > kMaxPlausibleAudioAllocBytes) {
         return std::unexpected(implausible_alloc_message(bytes));
     }
     if (bytes > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
-        return std::unexpected("WAV read is too large");
+        return std::unexpected("wav read is too large");
     }
     std::vector<unsigned char> raw(static_cast<size_t>(bytes));
     if (!src.seek(byte_offset) || !src.read(raw.data(), raw.size())) {
-        return std::unexpected("truncated WAV data");
+        return std::unexpected("truncated wav data");
     }
 
     decode_wav_samples(raw.data(), layout.info.format,
@@ -470,7 +470,7 @@ std::expected<WavInfo, std::string> wav_probe(const std::string& path)
     if (!f) {
         const int err = errno;
         return std::unexpected(
-            append_errno_detail("failed to open WAV file", err));
+            append_errno_detail("failed to open wav file", err));
     }
     ByteSource src;
     src.kind = SourceKind::File;
@@ -512,7 +512,7 @@ wav_read_range(const std::string& path, int64_t begin_frame, int64_t end_frame,
     if (!f) {
         const int err = errno;
         return std::unexpected(
-            append_errno_detail("failed to open WAV file", err));
+            append_errno_detail("failed to open wav file", err));
     }
     ByteSource src;
     src.kind = SourceKind::File;
@@ -563,7 +563,7 @@ WavReader::open(const std::string& path)
     if (!f) {
         const int err = errno;
         return std::unexpected(
-            append_errno_detail("failed to open WAV file", err));
+            append_errno_detail("failed to open wav file", err));
     }
 
     ByteSource src;
@@ -587,14 +587,14 @@ WavReader::open(const std::string& path)
 
 std::expected<void, std::string> WavReader::seek_to_frame(int64_t frame)
 {
-    if (!file_) return std::unexpected("WAV reader is not open");
+    if (!file_) return std::unexpected("wav reader is not open");
     if (frame < 0 || frame > info_.frames) {
-        return std::unexpected("invalid WAV frame range");
+        return std::unexpected("invalid wav frame range");
     }
     const uint64_t byte_offset =
         data_offset_ + static_cast<uint64_t>(frame) * block_align_;
     if (std::fseek(file_, static_cast<long>(byte_offset), SEEK_SET) != 0) {
-        return std::unexpected("failed to seek WAV file");
+        return std::unexpected("failed to seek wav file");
     }
     cursor_frame_ = frame;
     return {};
@@ -603,9 +603,9 @@ std::expected<void, std::string> WavReader::seek_to_frame(int64_t frame)
 std::expected<int64_t, std::string> WavReader::read_frames(float* out,
                                                            int64_t frames)
 {
-    if (!file_) return std::unexpected("WAV reader is not open");
+    if (!file_) return std::unexpected("wav reader is not open");
     if (frames < 0 || (frames > 0 && out == nullptr)) {
-        return std::unexpected("invalid WAV frame read");
+        return std::unexpected("invalid wav frame read");
     }
     const int64_t available = info_.frames - cursor_frame_;
     const int64_t to_read = std::min(frames, available);
@@ -614,12 +614,12 @@ std::expected<int64_t, std::string> WavReader::read_frames(float* out,
     const uint64_t bytes =
         static_cast<uint64_t>(to_read) * static_cast<uint64_t>(block_align_);
     if (bytes > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
-        return std::unexpected("WAV read is too large");
+        return std::unexpected("wav read is too large");
     }
     scratch_.resize(static_cast<size_t>(bytes));
     if (std::fread(scratch_.data(), 1, scratch_.size(), file_) !=
         scratch_.size()) {
-        return std::unexpected("truncated WAV data");
+        return std::unexpected("truncated wav data");
     }
     decode_wav_samples(scratch_.data(), info_.format,
                        to_read * info_.channels, out);
@@ -678,7 +678,7 @@ WavWriter::open_file(const std::string& path, int channels, int sample_rate)
     if (!f) {
         const int err = errno;
         return std::unexpected(
-            append_errno_detail("failed to create WAV file", err));
+            append_errno_detail("failed to create wav file", err));
     }
 
     WavWriter w;
@@ -720,9 +720,9 @@ WavWriter::open_memory(std::vector<char>& out, int channels, int sample_rate)
 std::expected<void, std::string> WavWriter::write_frames(
     const float* interleaved, int64_t frames)
 {
-    if (closed_) return std::unexpected("WAV writer is closed");
+    if (closed_) return std::unexpected("wav writer is closed");
     if (frames < 0 || (frames > 0 && interleaved == nullptr)) {
-        return std::unexpected("invalid WAV frame write");
+        return std::unexpected("invalid wav frame write");
     }
     if (frames == 0) return {};
 
@@ -731,7 +731,7 @@ std::expected<void, std::string> WavWriter::write_frames(
     if (channels_ > 0 &&
         samples / static_cast<uint64_t>(channels_) !=
             static_cast<uint64_t>(frames)) {
-        return std::unexpected("WAV write is too large");
+        return std::unexpected("wav write is too large");
     }
     const uint64_t bytes = samples * 3;
     if (bytes / 3 != samples ||
@@ -739,7 +739,7 @@ std::expected<void, std::string> WavWriter::write_frames(
         data_bytes_ > std::numeric_limits<uint64_t>::max() - bytes ||
         frames_written_ > std::numeric_limits<uint64_t>::max() -
                               static_cast<uint64_t>(frames)) {
-        return std::unexpected("WAV write is too large");
+        return std::unexpected("wav write is too large");
     }
     const uint64_t post_data_bytes = data_bytes_ + bytes;
     const uint64_t post_frames =
@@ -747,9 +747,9 @@ std::expected<void, std::string> WavWriter::write_frames(
     const uint64_t header_span = data_size_offset_ + 4;
     if (wav_exceeds_riff_limits(header_span, post_data_bytes, post_frames)) {
         if (post_data_bytes > std::numeric_limits<uint32_t>::max()) {
-            return std::unexpected("WAV data chunk exceeds RIFF size limit");
+            return std::unexpected("wav data chunk exceeds RIFF size limit");
         }
-        return std::unexpected("WAV file exceeds RIFF size limit");
+        return std::unexpected("wav file exceeds RIFF size limit");
     }
 
     scratch_.resize(static_cast<size_t>(bytes));
@@ -782,9 +782,9 @@ std::expected<void, std::string> WavWriter::close()
     const uint64_t header_span = data_size_offset_ + 4;
     if (wav_exceeds_riff_limits(header_span, data_bytes_, frames_written_)) {
         if (data_bytes_ > std::numeric_limits<uint32_t>::max()) {
-            return std::unexpected("WAV data chunk exceeds RIFF size limit");
+            return std::unexpected("wav data chunk exceeds RIFF size limit");
         }
-        return std::unexpected("WAV file exceeds RIFF size limit");
+        return std::unexpected("wav file exceeds RIFF size limit");
     }
     // Every payload this writer produces is even by construction: PCM24 frames
     // are 3 bytes times the stereo channel pair (6), because sources are
@@ -805,7 +805,7 @@ std::expected<void, std::string> WavWriter::close()
             file_ = nullptr;
             closed_ = true;
             return std::unexpected(
-                append_errno_detail("failed to close WAV file", err));
+                append_errno_detail("failed to close wav file", err));
         }
         errno = 0;
         if (std::fclose(file_) != 0) {
@@ -813,7 +813,7 @@ std::expected<void, std::string> WavWriter::close()
             file_ = nullptr;
             closed_ = true;
             return std::unexpected(
-                append_errno_detail("failed to close WAV file", err));
+                append_errno_detail("failed to close wav file", err));
         }
         file_ = nullptr;
     }
@@ -854,13 +854,13 @@ std::expected<void, std::string> WavWriter::write_bytes(const void* data,
         if (size > 0 && std::fwrite(data, 1, size, file_) != size) {
             const int err = errno;
             return std::unexpected(
-                append_errno_detail("failed to write WAV data", err));
+                append_errno_detail("failed to write wav data", err));
         }
     } else if (sink_kind_ == SinkKind::Memory) {
         const char* p = static_cast<const char*>(data);
         memory_->insert(memory_->end(), p, p + size);
     } else {
-        return std::unexpected("WAV writer has no sink");
+        return std::unexpected("wav writer has no sink");
     }
     return {};
 }
@@ -879,23 +879,23 @@ std::expected<void, std::string> WavWriter::patch_u32(uint64_t offset,
         if (std::fseek(file_, static_cast<long>(offset), SEEK_SET) != 0) {
             const int err = errno;
             return std::unexpected(
-                append_errno_detail("failed to patch WAV header", err));
+                append_errno_detail("failed to patch wav header", err));
         }
         errno = 0;
         if (std::fwrite(b, 1, sizeof(b), file_) != sizeof(b)) {
             const int err = errno;
             return std::unexpected(
-                append_errno_detail("failed to patch WAV header", err));
+                append_errno_detail("failed to patch wav header", err));
         }
         errno = 0;
         if (std::fseek(file_, 0, SEEK_END) != 0) {
             const int err = errno;
             return std::unexpected(
-                append_errno_detail("failed to patch WAV header", err));
+                append_errno_detail("failed to patch wav header", err));
         }
     } else if (sink_kind_ == SinkKind::Memory) {
         if (offset + sizeof(b) > memory_->size()) {
-            return std::unexpected("invalid WAV memory patch offset");
+            return std::unexpected("invalid wav memory patch offset");
         }
         std::memcpy(memory_->data() + offset, b, sizeof(b));
     }

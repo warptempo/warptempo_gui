@@ -23,20 +23,20 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     // the prompt is up, so playback cannot restart until it closes.
     playback_lifecycle.stop_playback_if_playing();
     app.prompt.active          = true;
-    app.prompt.text            = "Save unsaved changes?";
+    app.prompt.text            = "save unsaved changes?";
     // Sentinel chars for non-letter keys: 0x7F = Delete, 0x1B = Escape.
     // The GuiKey → char mapping in input_handler.cpp's prompt dispatch
     // produces these for GuiKeys::Delete / GuiKeys::Escape; the prompt
     // machinery remains a vector<char> match.
     //
-    // [S]ave always writes a loadable file: the marker serializer writes
+    // [s]ave always writes a loadable file: the marker serializer writes
     // the time-sorted store (equal times reload legal), trim bounds persist
     // whatever the store holds (inverted bounds reload intact), and
     // settings persist the committed state — the honest invariant is that
-    // the GUI never writes a LOAD-invalid state. [S]ave / [Delete]
-    // (discard-and-proceed) / [Esc] (cancel).
+    // the GUI never writes a LOAD-invalid state. [s]ave / [delete]
+    // (discard-and-proceed) / [esc] (cancel).
     app.prompt.response_keys   = {'s', '\x7f', '\x1b'};
-    app.prompt.response_labels = {"[S]ave", "[Delete]", "[Esc]"};
+    app.prompt.response_labels = {"[s]ave", "[delete]", "[esc]"};
     app.prompt.trigger         = t;
     viewport.clear_hover_popup();
     viewport.invalidate_all();
@@ -54,7 +54,7 @@ void GuiPrompt::open_error_notice(std::string text) {
     app.prompt.active          = true;
     app.prompt.text            = std::move(text);
     app.prompt.response_keys   = {'\x1b'};
-    app.prompt.response_labels = {"[Esc]"};
+    app.prompt.response_labels = {"[esc]"};
     app.prompt.trigger         = DialogTrigger::ERROR_NOTICE;
     viewport.clear_hover_popup();
     viewport.invalidate_all();
@@ -148,10 +148,10 @@ void GuiPrompt::activate_response(char k) {
         if (k == 's' || k == 'r') {
             const bool ok = save_ops.save();
             if (!ok) {
-                app.prompt.text            = "Save failed.";
+                app.prompt.text            = "save failed.";
                 app.prompt.response_keys   = {'r', '\x7f', '\x1b'};
                 app.prompt.response_labels =
-                    {"[R]etry", "[Delete]", "[Esc]"};
+                    {"[r]etry", "[delete]", "[esc]"};
                 viewport.invalidate_all();
                 return;
             }

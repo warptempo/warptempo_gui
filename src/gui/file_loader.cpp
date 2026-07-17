@@ -74,7 +74,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
         if (source_info.error() == kUnknownAudioMagicError) {
             std::fprintf(stderr,
                 "warptempo_gui: source open failed for '%s': %s; inputs are "
-                "WAV only, so convert once at acquisition (e.g. with ffmpeg) "
+                "wav only, so convert once at acquisition (e.g. with ffmpeg) "
                 "and load the converted file\n",
                 path.c_str(), source_info.error().c_str());
         } else {

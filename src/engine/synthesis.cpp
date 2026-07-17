@@ -667,5 +667,5 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
     // place on this buffer — process_to_buffer always does the plain append.
     synthesize_full(stft, append_to_buffer,
                     /*show_progress=*/true,
-                    /*pass_label=*/"[Pass 2/3] Synthesis........................ ");
+                    /*pass_label=*/"[pass 2/3] synthesis........................ ");
 }

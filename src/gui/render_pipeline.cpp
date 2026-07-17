@@ -196,7 +196,7 @@ RenderOutcome do_render(const RenderRequest& req,
             std::fprintf(stderr,
                 "warptempo_gui: render error: output '%s' resolves to "
                 "the source audio file; refusing to overwrite the "
-                "source. Change the title setting.\n",
+                "source. change the title setting.\n",
                 candidate.string().c_str());
             return RenderOutcome::Failed;
         }

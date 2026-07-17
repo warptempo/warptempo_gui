@@ -260,7 +260,7 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
 
     if (channels <= 0 || channels > kMaxJackOutputPorts) {
         std::fprintf(stderr,
-            "warptempo_gui: unsupported channel count for JACK playback "
+            "warptempo_gui: unsupported channel count for jack playback "
             "(channels=%d, max=%d); playback disabled.\n",
             channels, kMaxJackOutputPorts);
         impl_->samples       = nullptr;
@@ -286,8 +286,8 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
                                      &status);
     if (!impl_->client) {
         std::fprintf(stderr,
-            "warptempo_gui: JACK client init failed (status=0x%x); "
-            "playback disabled. Verify pipewire-jack is running.\n",
+            "warptempo_gui: jack client init failed (status=0x%x); "
+            "playback disabled. verify pipewire-jack is running.\n",
             static_cast<unsigned>(status));
         clear_after_failed_init(*impl_);
         return false;
@@ -300,8 +300,8 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
                                       sample_rate_callback,
                                       impl_.get()) != 0) {
         std::fprintf(stderr,
-            "warptempo_gui: JACK sample-rate callback setup failed; "
-            "playback disabled. Verify pipewire-jack is running.\n");
+            "warptempo_gui: jack sample-rate callback setup failed; "
+            "playback disabled. verify pipewire-jack is running.\n");
         clear_after_failed_init(*impl_);
         return false;
     }
@@ -310,8 +310,8 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
                                   process_callback,
                                   impl_.get()) != 0) {
         std::fprintf(stderr,
-            "warptempo_gui: JACK process callback setup failed; "
-            "playback disabled. Verify pipewire-jack is running.\n");
+            "warptempo_gui: jack process callback setup failed; "
+            "playback disabled. verify pipewire-jack is running.\n");
         clear_after_failed_init(*impl_);
         return false;
     }
@@ -326,8 +326,8 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
                                              0);
         if (!impl_->ports[c]) {
             std::fprintf(stderr,
-                "warptempo_gui: JACK output port registration failed "
-                "(port=%s); playback disabled. Verify pipewire-jack is running.\n",
+                "warptempo_gui: jack output port registration failed "
+                "(port=%s); playback disabled. verify pipewire-jack is running.\n",
                 name);
             clear_after_failed_init(*impl_);
             return false;
@@ -336,8 +336,8 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
 
     if (jack_activate(impl_->client) != 0) {
         std::fprintf(stderr,
-            "warptempo_gui: JACK client activation failed; playback disabled. "
-            "Verify pipewire-jack is running.\n");
+            "warptempo_gui: jack client activation failed; playback disabled. "
+            "verify pipewire-jack is running.\n");
         clear_after_failed_init(*impl_);
         return false;
     }
@@ -349,7 +349,7 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
                                                  JackPortIsPhysical | JackPortIsInput);
     if (!physical_ports) {
         std::fprintf(stderr,
-            "warptempo_gui: no physical JACK playback ports found; "
+            "warptempo_gui: no physical jack playback ports found; "
             "client is active and can be patched manually.\n");
     } else if (channels == 1) {
         for (int i = 0; i < 2 && physical_ports[i]; ++i) {
@@ -358,7 +358,7 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
                                        physical_ports[i]);
             if (r != 0 && r != EEXIST) {
                 std::fprintf(stderr,
-                    "warptempo_gui: JACK auto-connect failed (%s -> %s, code=%d); "
+                    "warptempo_gui: jack auto-connect failed (%s -> %s, code=%d); "
                     "patch manually if needed.\n",
                     jack_port_name(impl_->ports[0]), physical_ports[i], r);
             }
@@ -374,14 +374,14 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
                 ++connected;
             } else {
                 std::fprintf(stderr,
-                    "warptempo_gui: JACK auto-connect failed (%s -> %s, code=%d); "
+                    "warptempo_gui: jack auto-connect failed (%s -> %s, code=%d); "
                     "patch manually if needed.\n",
                     jack_port_name(impl_->ports[c]), physical_ports[c], r);
             }
         }
         if (connected < channels) {
             std::fprintf(stderr,
-                "warptempo_gui: JACK auto-connect: connected %d of %d output ports "
+                "warptempo_gui: jack auto-connect: connected %d of %d output ports "
                 "(physical sinks exhausted); patch remaining ports manually if needed.\n",
                 connected, channels);
         }
@@ -389,7 +389,7 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
     }
 
     std::fprintf(stderr,
-        "warptempo_gui: audio backend = JACK direct, graph_sample_rate=%u, "
+        "warptempo_gui: audio backend = jack direct, graph_sample_rate=%u, "
         "source_sample_rate=%d, channels=%d\n",
         impl_->jack_rate.load(std::memory_order_relaxed), sample_rate, channels);
     return true;
@@ -466,8 +466,8 @@ void GuiPlayback::stop() {
     while (impl_->process_cycles.load(std::memory_order_acquire) < c0 + 2) {
         if (std::chrono::steady_clock::now() >= deadline) {
             std::fprintf(stderr,
-                "warptempo_gui: JACK process callback did not quiesce "
-                "within 250 ms; proceeding. Buffer operations after this "
+                "warptempo_gui: jack process callback did not quiesce "
+                "within 250 ms; proceeding. buffer operations after this "
                 "stop may race a stalled callback.\n");
             return;
         }
