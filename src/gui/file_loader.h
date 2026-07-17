@@ -49,7 +49,8 @@ struct GuiFileLoader {
 
 // Apply a parsed settings file's engine block and the scalar session prefs
 // (follow, active_audio_view, active_markers_view, active_tab_view,
-// playback_speed, font_size, audio_player) into `app`. VALUES ONLY — no side
+// playback_speed, font_size, audio_player, the four stored render-environment
+// hashes) into `app`. VALUES ONLY — no side
 // effects: the caller runs set_speed / set_gui_font_size_pt / on_resize itself,
 // so both callers (load_file and the render-entry adopt) apply these fields
 // identically while owning their own side-effect timing. SettingsFile is

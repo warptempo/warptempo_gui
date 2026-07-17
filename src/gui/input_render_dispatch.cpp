@@ -62,6 +62,13 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     s.follow              = app.follow_mode;
     s.font_size           = app.font_size;
     s.audio_player        = app.audio_player;
+    // Stored render-environment hashes, dispatch-moment values (never the
+    // current environment's — the entry's .settings mirrors the session's
+    // stored attestation).
+    s.libm_hash           = app.libm_hash;
+    s.libmvec_hash        = app.libmvec_hash;
+    s.fftw3_hash          = app.fftw3_hash;
+    s.fftw3_threads_hash  = app.fftw3_threads_hash;
 
     // Browse position, captured on the TARGET axis (the entry's .settings is
     // an active_audio_view=T state). Zoom rides through unchanged; the

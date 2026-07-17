@@ -1,6 +1,7 @@
 #include "warpmarkers_parse.h"          // WarpMarker, parse_warpmarkers_file
 #include "phaseresetmarkers_parse.h"  // PhaseResetMarker, parse_phaseresetmarkers_file
 #include "engine_settings.h"            // EngineSettings
+#include "env_fingerprint.h"            // compute_render_env_hashes
 #include "settings_file.h"              // SettingsFile, read_settings_file
 #include "warp_frame_map_build.h"               // build_warp_frame_map,
                                         // resolve_warp_markers_for_render
@@ -124,6 +125,33 @@ int main(int argc, char** argv) {
         // the tab persisted in active_tab_view.
         const char active_tab = sf.active_tab_view;
         trim = (active_tab == 'B') ? sf.tab_b.trim : sf.tab_a.trim;
+    }
+
+    // --- render-environment check, after the settings load: compare the four
+    // STORED hashes against the running environment's. Detection only, never
+    // a refusal — a mismatch render is fully valid; the CLI never writes
+    // sidecars, so it prints ONE stderr line and continues (the GUI owns the
+    // acknowledge-and-restamp prompt). ---
+    {
+        const RenderEnvHashes& cur = compute_render_env_hashes();
+        std::string changed;
+        auto note = [&changed](const char* name) {
+            if (!changed.empty()) changed += ", ";
+            changed += name;
+        };
+        if (sf.libm_hash          != cur.libm)          note("libm");
+        if (sf.libmvec_hash       != cur.libmvec)       note("libmvec");
+        if (sf.fftw3_hash         != cur.fftw3)         note("fftw3");
+        if (sf.fftw3_threads_hash != cur.fftw3_threads) note("fftw3_threads");
+        if (!changed.empty()) {
+            std::fprintf(stderr,
+                "warptempo_cli: render libraries changed since last save "
+                "(%s; glibc %s, fftw %s); output may differ from previous "
+                "renders\n",
+                changed.c_str(),
+                render_env_glibc_version().c_str(),
+                render_env_fftw_version().c_str());
+        }
     }
 
     // --- source-clobber guard, adversarial and load-fatal: a hand-edited

@@ -30,8 +30,11 @@ find_library(FFTW3_THREADS_LIB fftw3_threads HINTS ${FFTW3_LIBRARY_DIRS} REQUIRE
 #
 #  audio_io: in-tree audio container boundary (WAV-only: probing, reading,
 #  and writing all in-tree, no third-party codec).
-#  parser: map / file-parse core (no fftw, no GUI, no engine; the shared headers
-#  warp_frame_map.h and time_format.h live in src/).
+#  parser: map / file-parse core (no GUI, no engine; the shared headers
+#  warp_frame_map.h and time_format.h live in src/). No FFT use, but
+#  env_fingerprint.cpp reads fftw's exported version-string symbol, so the
+#  list link-depends on libfftw3 — satisfied in both products, which link
+#  fftw for the engine anyway.
 #  engine: PGHI DSP core (needs fftw; reads warp_frame_map.h header-only, no
 #  parser dependency). Buffer-out only: analysis, PGHI, synthesis, spectral
 #  limiter, map-extent emission.
@@ -50,6 +53,7 @@ set(WARPTEMPO_PARSER_SOURCES
     src/parser/phaseresetmarkers_parse.cpp
     src/parser/engine_settings_io.cpp
     src/parser/settings_file.cpp
+    src/parser/env_fingerprint.cpp
     src/parser/warp_frame_map_build.cpp
     src/parser/phase_reset_frame_map_build.cpp
     src/parser/marker_store_validate.cpp

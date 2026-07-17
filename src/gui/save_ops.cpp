@@ -66,7 +66,11 @@ bool GuiSaveOps::save() {
             app.active_tab_view,
             app.playback_speed,
             app.font_size,
-            app.audio_player};
+            app.audio_player,
+            app.libm_hash,
+            app.libmvec_hash,
+            app.fftw3_hash,
+            app.fftw3_threads_hash};
         if (!write_settings_file(app.settings_path, gui,
                                  app.engine_settings)) {
             std::fprintf(stderr,
@@ -74,6 +78,10 @@ bool GuiSaveOps::save() {
                 app.settings_path.c_str());
             return false;
         }
+        // The write just persisted the stored env hashes, so the
+        // history-less env-hash dirty rider is settled; recompute_dirty
+        // below stops ORing it in.
+        app.env_hash_dirty = false;
     }
 
     // Save rebinds the saved reference to the current timeline position

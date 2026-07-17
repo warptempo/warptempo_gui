@@ -46,6 +46,14 @@ struct AuthoringSnapshot {
     bool        follow              = true;
     double      font_size           = 11.0;
     std::string audio_player;                // empty = unset
+    // Dispatch-moment STORED render-environment hashes (AppState's four
+    // *_hash fields), carried into the entry's .settings like every
+    // always-emitted key — the stored values, never the current
+    // environment's.
+    std::string libm_hash;
+    std::string libmvec_hash;
+    std::string fftw3_hash;
+    std::string fftw3_threads_hash;
 
     // Dispatch-time browse position, captured on the TARGET axis: the
     // entry's .settings persists active_audio_view=T, so the browse keys

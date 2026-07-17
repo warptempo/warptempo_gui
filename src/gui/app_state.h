@@ -365,6 +365,11 @@ enum class DialogTrigger {
     CLOSE_WINDOW,
     PASTE_CONFIRM,
     ERROR_NOTICE,
+    // Load-time render-environment mismatch (GuiPrompt::open_env_hash_mismatch):
+    // advisory only — 'o' stamps the stored hashes to the current environment
+    // and marks settings dirty; Esc dismisses without stamping, so the prompt
+    // returns on every later load until acknowledged.
+    ENV_HASH_MISMATCH,
 };
 
 // In-window modal prompt state. When `active` is true, the bottom strip
@@ -517,6 +522,23 @@ struct AppState {
     // by the `l` launcher.
     std::string audio_player = "audacious";
 
+    // Render-environment attestation: the STORED per-library content hashes
+    // (16 lowercase hex digits each, env_fingerprint.h) the loaded `.settings`
+    // recorded at its last save. Pre-load default is empty — never written as
+    // empty: the four keys are required, so a load always assigns them, and
+    // the first-open template stamps the four CURRENT hashes (a fresh project
+    // starts matched, no prompt). Compared against compute_render_env_hashes()
+    // once at source load; any mismatch opens the env-hash prompt, whose [o]k
+    // stamps all four to the current hashes (Esc keeps the old ones so the
+    // prompt returns on every later load — the warning cannot be silently
+    // saved away). The settings editor (`:libm_hash=<16hex>` etc.) is the
+    // manual authoring surface. Stored identity, not recipe: the render
+    // fingerprint never reads these.
+    std::string libm_hash;
+    std::string libmvec_hash;
+    std::string fftw3_hash;
+    std::string fftw3_threads_hash;
+
     // One-shot stash of the scanner's last painted pixel-x under the
     // OLD viewport, set by viewport-mutating operations during
     // playback. The next pre-paint reads this in place of computing
@@ -652,6 +674,13 @@ struct AppState {
     bool        phase_reset_dirty    = false;
     bool        settings_dirty       = false;
     bool        dirty                = false;
+
+    // History-less settings-dirty rider for the env-hash restamps (the
+    // mismatch prompt's 'o' and the `:libX_hash=` editor commits). Those
+    // mutations push no undo entry, so recompute_dirty's history walk cannot
+    // see them; it ORs this flag into settings_dirty instead, and a
+    // successful save clears it (the write persisted the stored hashes).
+    bool        env_hash_dirty       = false;
 
     // Target-view live audio buffer. The render pipeline appends
     // synthesised samples here via RenderRequest::output_buffer when the

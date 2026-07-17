@@ -96,6 +96,16 @@ struct SettingsFile {
     // no-player opt-out — the only spelling of it. The key is required, so the
     // reader always assigns this field.
     std::string audio_player;
+    // Render-environment attestation (env_fingerprint.h): the per-library
+    // content digests recorded at the last save, one 16-lowercase-hex-digit
+    // value per render-relevant shared library. Required keys like every
+    // other; the value grammar (exactly 16 lowercase hex digits) is enforced
+    // by validate_gui_setting in both products. These are stored identity,
+    // not recipe: the render fingerprint never reads them.
+    std::string libm_hash;
+    std::string libmvec_hash;
+    std::string fftw3_hash;
+    std::string fftw3_threads_hash;
 };
 
 // Parse and validate the whole `.settings` file at `path`. An unopenable
@@ -152,7 +162,7 @@ struct GuiSettingValue {
     float       f    = 0.0f;    // playback_speed
     double      d    = 0.0;     // font_size
     bool trim_unset  = false;   // tab_X_trim_*: the value was -1 (bound unset)
-    std::string text;           // audio_player
+    std::string text;           // audio_player, the four *_hash keys
 };
 
 // The single grammar/vocabulary owner for GUI-kind settings values — the

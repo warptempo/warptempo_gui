@@ -416,7 +416,11 @@ RenderOutcome do_render(const RenderRequest& req,
                     req.authoring.active_tab,
                     req.authoring.playback_speed,
                     req.authoring.font_size,
-                    req.authoring.audio_player};
+                    req.authoring.audio_player,
+                    req.authoring.libm_hash,
+                    req.authoring.libmvec_hash,
+                    req.authoring.fftw3_hash,
+                    req.authoring.fftw3_threads_hash};
                 if (!write_settings_file(st_path.string(), gui,
                                          req.engine_settings)) {
                     note_failure(st_path);

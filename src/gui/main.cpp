@@ -19,6 +19,7 @@
 #include "app_state.h"
 #include "async_renderer.h"
 #include "audio.h"
+#include "env_fingerprint.h"
 #include "waveform_worker.h"
 #include "warpmarkers.h"
 #include "file_loader.h"
@@ -751,6 +752,27 @@ int main(int argc, char** argv) {
                 // Deeper decode/sidecar failures already request exit at the
                 // owning site; request_exit() is idempotent for those paths.
                 gui.request_exit();
+                return;
+            }
+            // Render-environment check, after the sidecars applied
+            // successfully: compare the four STORED hashes against the
+            // running environment's and open the advisory mismatch prompt
+            // naming the changed libraries. Detection, not prevention — a
+            // mismatch render stays fully valid; 'o' restamps (dirty,
+            // Ctrl+S persists), Esc keeps the old hashes so the prompt
+            // returns on every later load until acknowledged.
+            {
+                const RenderEnvHashes& cur = compute_render_env_hashes();
+                std::string changed;
+                auto note = [&changed](const char* name) {
+                    if (!changed.empty()) changed += ", ";
+                    changed += name;
+                };
+                if (app.libm_hash          != cur.libm)          note("libm");
+                if (app.libmvec_hash       != cur.libmvec)       note("libmvec");
+                if (app.fftw3_hash         != cur.fftw3)         note("fftw3");
+                if (app.fftw3_threads_hash != cur.fftw3_threads) note("fftw3_threads");
+                if (!changed.empty()) prompt.open_env_hash_mismatch(changed);
             }
             return;  // loaded state paints on the next tick
         }

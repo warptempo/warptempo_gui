@@ -61,6 +61,13 @@ struct NonEngineSettingsSnapshot {
     float              playback_speed;
     double             font_size;
     const std::string& audio_player;
+    // The STORED render-environment hashes (AppState's four *_hash fields, or
+    // the dispatch-moment copies in AuthoringSnapshot) — never the current
+    // environment's: an unacknowledged mismatch must survive a save.
+    const std::string& libm_hash;
+    const std::string& libmvec_hash;
+    const std::string& fftw3_hash;
+    const std::string& fftw3_threads_hash;
 };
 
 // Atomic write: emits keys in the canonical order defined by the shared

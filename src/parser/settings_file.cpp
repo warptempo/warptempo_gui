@@ -32,6 +32,7 @@ constexpr const char* kCanonicalSettingsKeys[] = {
     "tab_a_viewport_start", "tab_a_zoom", "tab_a_playhead_cursor",
     "tab_b_trim_begin", "tab_b_trim_end", "tab_b_read_only",
     "tab_b_viewport_start", "tab_b_zoom", "tab_b_playhead_cursor",
+    "libm_hash", "libmvec_hash", "fftw3_hash", "fftw3_threads_hash",
 };
 
 }  // namespace
@@ -222,6 +223,24 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         out.d = v;
         return R(out);
     }
+    if (key == "libm_hash" || key == "libmvec_hash" ||
+        key == "fftw3_hash" || key == "fftw3_threads_hash") {
+        // Render-environment attestation values: exactly 16 lowercase hex
+        // digits, canonical spelling only — the exact bytes the writer emits
+        // (compute_render_env_hashes renders every digest, the absent-library
+        // sentinel included, in this one form). All four keys share the one
+        // grammar.
+        if (value.size() != 16) {
+            return err("must be exactly 16 lowercase hex digits");
+        }
+        for (char c : value) {
+            if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) {
+                return err("must be exactly 16 lowercase hex digits");
+            }
+        }
+        out.text = value;
+        return R(out);
+    }
     if (key == "audio_player") {
         // GUI-kind launcher for the `l` render-listen command: an external
         // player binary name or path. Any value is accepted (no path/binary
@@ -319,6 +338,14 @@ std::expected<SettingsFile, std::string> read_settings_file(
             out.font_size = gv.d;
         } else if (key == "audio_player") {
             out.audio_player = gv.text;
+        } else if (key == "libm_hash") {
+            out.libm_hash = gv.text;
+        } else if (key == "libmvec_hash") {
+            out.libmvec_hash = gv.text;
+        } else if (key == "fftw3_hash") {
+            out.fftw3_hash = gv.text;
+        } else if (key == "fftw3_threads_hash") {
+            out.fftw3_threads_hash = gv.text;
         }
         return {};
     });

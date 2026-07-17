@@ -36,6 +36,14 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     // verbatim: a blank value is the deliberate no-player opt-out. Adopt shares
     // this routine, so an adopted render entry's player is 1:1 with its file.
     app.audio_player        = sf.audio_player;
+    // Render-environment attestation, assigned like every settings field
+    // (adopt therefore applies an entry's stored hashes 1:1 with a load).
+    // The load-time mismatch compare against compute_render_env_hashes()
+    // runs caller-side, after the whole load succeeds.
+    app.libm_hash           = sf.libm_hash;
+    app.libmvec_hash        = sf.libmvec_hash;
+    app.fftw3_hash          = sf.fftw3_hash;
+    app.fftw3_threads_hash  = sf.fftw3_threads_hash;
 }
 
 bool GuiFileLoader::load_file(const std::string& path) {
@@ -345,7 +353,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
         apply(sf.tab_b, app.tab_b);
         // Engine block plus the scalar session prefs (follow,
         // active_audio_view, active_markers_view, active_tab_view,
-        // playback_speed, font_size, audio_player), VALUES ONLY. The
+        // playback_speed, font_size, audio_player, the four stored
+        // render-environment hashes), VALUES ONLY. The
         // side effects that consume these (set_speed, set_gui_font_size_pt,
         // on_resize) stay below where they always ran. The render-entry adopt
         // shares this exact routine so its in-memory result is 1:1 with a load.

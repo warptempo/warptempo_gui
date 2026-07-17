@@ -24,11 +24,14 @@ struct GuiInputHandler;
 // 1. audio_player (a launcher path with no gesture): set directly.
 // 2. GUI-kind keys (viewport / zoom / playhead / follow / active_audio_view /
 //    active_markers_view / active_tab_view / playback_speed / per-tab trim /
-//    per-tab read_only / font_size): commit_gui_setting parses strictly
-//    (red-flash on any malformed or out-of-vocabulary value, mirroring the
-//    load schema) then applies through the key's own gesture chokepoint. These
-//    are launch/view state: no undo entry, no dirty; a same-value commit
-//    no-op-deactivates like the engine no-op gate.
+//    per-tab read_only / font_size / the four *_hash keys): commit_gui_setting
+//    parses strictly (red-flash on any malformed or out-of-vocabulary value,
+//    mirroring the load schema) then applies through the key's own gesture
+//    chokepoint. These are launch/view state: no undo entry, no dirty
+//    (EXCEPT the *_hash keys, whose direct assign marks settings dirty via
+//    the history-less env_hash_dirty rider — stored identity that must reach
+//    the next Ctrl+S visibly); a same-value commit no-op-deactivates like
+//    the engine no-op gate.
 // 3. Canonical engine keys go through validate_engine_setting; on success
 //    the typed field of app.engine_settings is updated and a settings-undo
 //    entry pushed. Non-engine, non-canonical keys are rejected ("unknown

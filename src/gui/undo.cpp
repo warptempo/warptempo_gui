@@ -53,6 +53,10 @@ void Undo::recompute_dirty() {
             else               app.warp_dirty        = true;
         }
     }
+    // The env-hash restamps (prompt ack, `:libX_hash=` editor commits) are
+    // history-less, so the walks above cannot see them; their dirty rides in
+    // app.env_hash_dirty, ORed in here and cleared by a successful save.
+    app.settings_dirty = app.settings_dirty || app.env_hash_dirty;
     app.dirty = app.warp_dirty || app.phase_reset_dirty || app.settings_dirty;
 }
 
