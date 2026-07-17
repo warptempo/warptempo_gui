@@ -461,11 +461,11 @@ private:
     // Shared key route for the modal bottom-strip editors (settings
     // prompt, render-commit prompt, bpm bracket editor). The modal
     // contract is stated once at the definition; returns true if the
-    // editor consumed the key (on_key then returns), false on Ctrl+W so
+    // editor consumed the key (on_key then returns), false on Ctrl+Q so
     // on_key runs the close routing. `autocomplete` is the optional
     // bare-Tab hook — empty for the bpm editor, but bare Tab never
     // arrives there at all: the on_key modal gate (modal_editor_key_blocked)
-    // swallows it before this route ever sees it; commit / cancel / Ctrl+W
+    // swallows it before this route ever sees it; commit / cancel / Ctrl+Q
     // teardown are the per-editor bodies.
     bool route_modal_editor_key(text_editor::State& ed, GuiKey key,
                                 GuiInputState mods,
@@ -496,7 +496,7 @@ private:
     // view; refuses to open over an empty renders/). commit_editor_autocomplete:
     // bare-Tab longest-common-prefix completion over the entry identifiers.
     // commit_editor_commit: resolve the pending to exactly one entry and adopt.
-    // commit_editor_exit_no_commit: Esc / Ctrl+W teardown. handle_commit_editor_key:
+    // commit_editor_exit_no_commit: Esc / Ctrl+Q teardown. handle_commit_editor_key:
     // the key router, through route_modal_editor_key like the settings editor.
     void open_commit_editor();
     void commit_editor_autocomplete();
@@ -620,7 +620,7 @@ private:
     // The gate is the sibling of read_only_key_blocked's allowlist shape:
     // true when key+mods should be dropped while a bottom-strip editor is
     // open (admits only the keys the active editor consumes, Esc, Ctrl+S,
-    // and Ctrl+W).
+    // and Ctrl+Q).
     bool modal_bottom_strip_editor_active() const;
     bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);
 };

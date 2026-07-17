@@ -182,7 +182,7 @@ void GuiPrompt::cancel_paste_confirmation() {
 }
 
 // Route a close gesture through the prompt when history is dirty;
-// otherwise proceed immediately. Centralizes the decision so Ctrl+W and
+// otherwise proceed immediately. Centralizes the decision so Ctrl+Q and
 // the WM-close callback share identical behavior.
 void GuiPrompt::request_close() {
     if (app.prompt.active) return; // already gated; ignore re-entry

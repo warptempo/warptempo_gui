@@ -80,7 +80,7 @@ inline bool is_play_pause_key(GuiKey key) {
 // Rebinding the emulation to a different key is exactly this one edit. Any
 // modifier state (shift/ctrl/alt) rides along to the synthesized button,
 // exactly as it would for a physical BTN_LEFT device.
-constexpr GuiKey kLeftClickKey = GuiKeys::Q;
+constexpr GuiKey kLeftClickKey = GuiKeys::Digit2;
 
 struct GuiInputState {
     bool     ctrl                = false;

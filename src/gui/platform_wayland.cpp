@@ -1176,7 +1176,7 @@ void GuiPlatform::on_toplevel_close() {
     // immediately when the document is clean. Setting should_exit_ here
     // unconditionally was the bug: the run loop (while !should_exit_) exited in
     // the same frame the dialog opened, so a dirty document closed without the
-    // prompt. Ctrl+W was unaffected because it reaches request_close
+    // prompt. Ctrl+Q was unaffected because it reaches request_close
     // directly and only exits via proceed() when clean. Honor the close
     // directly only when no callback is wired.
     if (on_close_) on_close_();
@@ -1243,7 +1243,7 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // The logical left button is `pointer_left_held_ || synth_left_held_`.
         // Clearing the physical bit ends the gesture only when it drives that
         // OR 1->0 -- physical left was held AND no synthesized hold remains. If
-        // a synthesized left is still held (bare `q` synth-left plus a physical
+        // a synthesized left is still held (bare `2` synth-left plus a physical
         // BTN_LEFT), the OR stays 1: leave the synth hold and its keycode owner
         // untouched so its later release delivers the single 1->0 edge, and
         // suppress the release here. This mirrors the keyboard-leave/capability
