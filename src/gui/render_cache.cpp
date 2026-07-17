@@ -30,12 +30,17 @@ inline void put_bytes(std::vector<uint8_t>& v, const void* p, size_t n) {
     std::memcpy(v.data() + old, p, n);
 }
 inline void put_u32(std::vector<uint8_t>& v, uint32_t x) { put_bytes(v, &x, sizeof x); }
+inline void put_u64(std::vector<uint8_t>& v, uint64_t x) { put_bytes(v, &x, sizeof x); }
 inline void put_i32(std::vector<uint8_t>& v, int32_t  x) { put_bytes(v, &x, sizeof x); }
 inline void put_i64(std::vector<uint8_t>& v, int64_t  x) { put_bytes(v, &x, sizeof x); }
 inline void put_f64(std::vector<uint8_t>& v, double   x) { put_bytes(v, &x, sizeof x); }
 inline void put_u8 (std::vector<uint8_t>& v, uint8_t  x) { v.push_back(x); }
 inline void put_str(std::vector<uint8_t>& v, const std::string& s) {
-    put_u32(v, static_cast<uint32_t>(s.size()));
+    // Full uint64_t length prefix, no narrowing: the encoding stays injective
+    // over the whole accepted in-memory string domain, so no oversized
+    // free-text value can wrap its prefix and boundary-splice two distinct
+    // field partitions into the same byte stream.
+    put_u64(v, static_cast<uint64_t>(s.size()));
     put_bytes(v, s.data(), s.size());
 }
 
@@ -153,7 +158,7 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // by construction. Same inputs always produce byte-identical output; the
 // result is hashed to name a cache file and stored verbatim for an
 // exact-compare confirm on lookup.
-constexpr uint32_t kFingerprintVersion = 17;
+constexpr uint32_t kFingerprintVersion = 18;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
 // file itself. The fingerprint content version is serialized inside the
@@ -626,12 +631,27 @@ bool RenderCache::publish_wav(const std::vector<uint8_t>& fp,
 
     const std::string path = dir_ + "/" + candidate.filename;
     bool copied = false;
-    if (fingerprint_sidecar_matches(path, fp)) {
+    ArtifactStatIdentity candidate_identity{};
+    if (fingerprint_sidecar_matches(path, fp, &candidate_identity)) {
         std::error_code ec;
         std::filesystem::copy_file(
             path, staging_path,
             std::filesystem::copy_options::overwrite_existing, ec);
-        copied = !ec;
+        // Identity bind (TOCTOU): the copy read the candidate wav, so re-stat
+        // it AFTER the copy completes and require the exact object the sidecar
+        // validation saw (dev, inode, size, mtime_ns — the capture at
+        // fingerprint_sidecar_matches). The racing party is this process's own
+        // cache writer thread: under a 64-bit FNV name collision it can
+        // remove/replace this hash-named wav for a distinct fingerprint
+        // between validation and copy. A mismatch keeps copied false and
+        // discards the staged copy exactly as a miss (the fall-through below
+        // removes the staging file; the next rung / synthesis is the whole
+        // remedy — no locks, no retries).
+        if (!ec) {
+            ArtifactStatIdentity post_copy{};
+            copied = stat_artifact_identity(path, post_copy) &&
+                     post_copy == candidate_identity;
+        }
     }
     if (copied) {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -918,8 +938,25 @@ bool RenderCache::read_file(const std::string& path,
                             const std::vector<uint8_t>& want_fp,
                             int channels, int sample_rate,
                             std::vector<float>& out) {
-    if (!fingerprint_sidecar_matches(path, want_fp)) return false;
-    if (read_wav_to_float(path, channels, sample_rate, out)) return true;
+    ArtifactStatIdentity candidate_identity{};
+    if (!fingerprint_sidecar_matches(path, want_fp, &candidate_identity)) {
+        return false;
+    }
+    if (read_wav_to_float(path, channels, sample_rate, out)) {
+        // Identity bind (TOCTOU): re-stat AFTER the decode and require the
+        // exact wav object the sidecar validation saw (dev, inode, size,
+        // mtime_ns — the capture at fingerprint_sidecar_matches). The racing
+        // party is this process's own cache writer thread: under a 64-bit FNV
+        // name collision it can remove/replace this hash-named wav for a
+        // distinct fingerprint between validation and decode. A mismatch
+        // discards the decoded buffer exactly as a miss (silent — the caller
+        // re-renders; no locks, no retries).
+        ArtifactStatIdentity post_read{};
+        if (stat_artifact_identity(path, post_read) &&
+            post_read == candidate_identity) {
+            return true;
+        }
+    }
     out.clear();
     return false;
 }

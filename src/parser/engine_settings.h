@@ -21,7 +21,9 @@ struct EngineSettings {
     std::string bpm;   // BPM render descriptor, e.g.
                        // "36 beats @ 220 bpm from 00:32.008 to 00:46.562".
                        // Empty when no BPM render is the current baseline.
-                       // Informational only — no engine or GUI effect.
+                       // Informational — never read by the engine; like every
+                       // engine-settings field it participates in the render
+                       // fingerprint, so an edit makes the next render fresh.
     std::string notes; // Free-text provenance (working notes, one line).
                        // Unvalidated, empty by default.
     std::string url;   // Free-text provenance (source/target URL or any

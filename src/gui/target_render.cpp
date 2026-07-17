@@ -21,7 +21,7 @@ std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
     source_identity.size  = audio.source_load_size();
     source_identity.mtime = audio.source_load_mtime();
 
-    // The v16 fingerprint serializes the RESOLVED marker state (the exact
+    // The fingerprint serializes the RESOLVED marker state (the exact
     // engine inputs), and the only caller — the reuse rungs in
     // dispatch_render_now — has no resolve of its own, so this site runs its
     // own resolve and ACCEPTS the resolver's one-line-per-normalization-
@@ -61,8 +61,8 @@ void GuiTargetRender::trigger() {
     // Triggers are unconditional product-wide — no fingerprint pre-detection
     // on any mutation path (architect ruling 2026-07-17). Mutation sites call
     // this hook even when the mutation provably leaves render identity
-    // unchanged (a provenance settings commit, an inert-only undo/redo
-    // restore, a normalization-inert marker gesture): using the GUI during a
+    // unchanged (a normalization-inert marker gesture, e.g. a disabled-marker
+    // retouch, or an undo/redo restoring only such state): using the GUI during a
     // render is allowed to cancel and re-render — the longest expected render
     // is short, and dispatch_render_now's reuse rungs absorb an
     // identity-unchanged re-derive as a cache hit, so pre-detection would buy

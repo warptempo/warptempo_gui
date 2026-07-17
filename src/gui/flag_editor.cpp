@@ -492,16 +492,17 @@ void GuiFlagEditor::commit_top_flag_edit() {
 
     if (!store_changed) return;
 
-    // The non-iteration commit path is untouched: it always recomputes
-    // dirty and fires a render (existing behavior). Only the iteration-
-    // mode wrapper gates on canonical_changed so a bracket-only edit
-    // stays session-only — no dirty, no engine render.
-    if (!iter_grammar || canonical_changed) {
-        undo.recompute_dirty();
-        viewport.invalidate_waveform_area();
-        viewport.invalidate_timestamp_area();
-        target_render.trigger();
-    }
+    // Unconditional by ruling — rationale at GuiTargetRender::trigger. Any
+    // store change repaints and triggers, a bracket-only commit included (its
+    // undo entry already did): recompute_dirty derives dirty purely from
+    // affects_persistence entries, so a bracket-only push (affects_persistence
+    // false) leaves dirty untouched, and the trigger's re-derive is
+    // identity-unchanged for session-only iteration scratch (excluded from the
+    // render recipe) and lands on dispatch_render_now's reuse rungs.
+    undo.recompute_dirty();
+    viewport.invalidate_waveform_area();
+    viewport.invalidate_timestamp_area();
+    target_render.trigger();
 }
 
 // Wipe every marker's session-only iter bracket. The single clear both

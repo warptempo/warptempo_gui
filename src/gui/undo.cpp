@@ -412,9 +412,10 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     viewport.kick_waveform_sync();
     viewport.invalidate_timestamp_area();
     // Unconditional by ruling — rationale at GuiTargetRender::trigger; an
-    // undo/redo restoring only render-inert state (e.g. a title edit) stops
-    // playback and re-previews through dispatch_render_now's reuse rungs,
-    // accepted. No-op in source view (trigger's own gate).
+    // undo/redo restoring only normalization-inert state (e.g. a disabled-
+    // marker-only restore) stops playback and re-previews through
+    // dispatch_render_now's reuse rungs — cache hit, accepted. No-op in source
+    // view (trigger's own gate).
     target_render.trigger();
 }
 

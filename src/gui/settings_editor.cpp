@@ -422,11 +422,11 @@ void GuiSettingsEditor::commit() {
     viewport.invalidate_timestamp_area();
     text_editor::deactivate(app.settings_editor);
     // The trigger is unconditional by ruling — rationale recorded at
-    // GuiTargetRender::trigger — so a provenance commit (title/bpm/notes/url/
-    // cover) in target view also re-previews; the re-derive lands on
-    // dispatch_render_now's reuse rungs (identity unchanged -> cache hit).
-    // Playback is not at stake at this site: the editor is modal and its open
-    // already stopped playback.
+    // GuiTargetRender::trigger. Under the full-recipe key every engine-settings
+    // commit moves the fingerprint, provenance (title/bpm/notes/url/cover)
+    // included, so the target-view re-preview renders fresh rather than reusing
+    // the prior buffer. Playback is not at stake at this site: the editor is
+    // modal and its open already stopped playback.
     target_render.trigger();
 }
 
