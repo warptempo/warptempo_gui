@@ -404,6 +404,97 @@ std::optional<double> resolve_inherited_tempo_scale(
     return std::nullopt;
 }
 
+namespace {
+
+// Dangling ref: the render resolver normalizes it to the plain 1.00 owner,
+// so the display reports the same exact literal — base 100, no scale, no
+// visible source (the value is a fallback, not taken from anywhere). Shared
+// verbatim by both marker_effective paths (projection def-search and
+// raw-store def-search) when the def cannot be found.
+MarkerEffective undefined_label_readout() {
+    MarkerEffective r;
+    r.base_cents = 100;
+    r.scale.reset();
+    r.source_idx = -1;
+    r.reason = MarkerEffective::NormalizedReason::UndefinedLabel;
+    return r;
+}
+
+// The shared label-ref readout tail. Both marker_effective paths — the silent
+// projection walk and the raw-store carve-out walk — do their OWN def search
+// and their OWN segment-distance derivation (which list, how the next-marker
+// distances are measured, and which source_idx to report all stay honestly
+// split by the authored-display-split ruling), then hand the found def and
+// those distances here to compute the identical readout. `basis` is the list
+// the def was found in (proj or mv), `def_index` its index there, `ref_dist`
+// / `def_dist` the ref and def segment frame-distances (int64, widened into
+// the double arithmetic below), and `report_source_idx` the raw-store index
+// the readout should attribute the def to.
+//
+// An inheriting definition (`pass:LABEL`) resolves through the same
+// resolve_inherited_tempo(_scale) walk over the SAME `basis` list that the
+// render resolver's stage 4 runs before stage 5 measures it, so the def
+// fields match the render by construction. The band verdict routes through
+// label_ref_implied_effective_tempo (the resolver's stage-5 value in the
+// resolver's operation order), so display and render classify identically at
+// the inclusive envelope edges; out-of-band means the render normalizes this
+// ref to the plain 1.00 owner, so the display reports that exact literal with
+// no visible source. The zero-base / zero-eff-tempo guard returns the empty
+// result (an unresolvable readout).
+//
+// settings.scale cancels in the engine's multiplier expression:
+//   multiplier = (ref_dist * def_eff_tempo) / (def_base * def_dist)
+// which is the geometry distance ratio times def_scale exactly once
+// (def_eff_tempo = def_base * def_scale, and def_base cancels), so multiplier
+// IS the displayed scale: base * multiplier equals the segment's frame-map
+// effective tempo in both scale-presence cases. Multiplying def_scale in a
+// second time here would square it — hover/copy would advertise 0.6400 for a
+// 0.8000-scaled definition over equal distances, and pasting that would
+// author the wrong tempo. Carried unclamped — full double, no display ceiling;
+// the render's ref handling is delta-based and never reads this.
+MarkerEffective label_ref_readout_tail(
+    const std::vector<WarpMarker>& basis, int def_index,
+    int64_t ref_dist, int64_t def_dist, int report_source_idx) {
+    MarkerEffective r;
+    const WarpMarker& def = basis[def_index];
+    int64_t               def_base_cents;
+    std::optional<double> def_scale;
+    if (def.tempo_inherits) {
+        def_base_cents = resolve_inherited_tempo(basis, def_index);
+        def_scale      = resolve_inherited_tempo_scale(basis, def_index);
+    } else {
+        def_base_cents = def.tempo_cents;
+        def_scale      = def.tempo_scale;
+    }
+    const double def_scale_val = def_scale.value_or(1.0);
+    // Display-domain cents-to-double boundary: the multiplier below is a
+    // derived scale-like quantity, so the def's tempo enters its double
+    // arithmetic here, through the one conversion route.
+    const double def_base      = tempo_from_cents(def_base_cents);
+    const double def_eff_tempo = def_base * def_scale_val;
+    if (def_base_cents == 0 || def_eff_tempo == 0.0) return r;
+
+    const double implied = label_ref_implied_effective_tempo(
+        def_base_cents, def_scale, ref_dist, def_dist);
+    if (implied < kRefImpliedTempoMin || implied > kRefImpliedTempoMax) {
+        r.base_cents = 100;
+        r.scale.reset();
+        r.source_idx = -1;
+        r.reason = MarkerEffective::NormalizedReason::ExtremeRatio;
+        return r;
+    }
+
+    const double multiplier =
+        (static_cast<double>(ref_dist) * def_eff_tempo) /
+        (def_base * static_cast<double>(def_dist));
+    r.scale      = multiplier;
+    r.base_cents = def_base_cents;
+    r.source_idx = report_source_idx;
+    return r;
+}
+
+}  // namespace
+
 MarkerEffective marker_effective(
     const std::vector<WarpMarker>& mv, int idx, long total_frames) {
     MarkerEffective r;
@@ -499,17 +590,7 @@ MarkerEffective marker_effective(
                 break;
             }
         }
-        if (def_k < 0) {
-            // Dangling ref: the render resolver normalizes it to the plain
-            // 1.00 owner, so the display reports the same exact literal —
-            // base 100, no scale, no visible source (the value is a
-            // fallback, not taken from anywhere).
-            r.base_cents = 100;
-            r.scale.reset();
-            r.source_idx = -1;
-            r.reason = MarkerEffective::NormalizedReason::UndefinedLabel;
-            return r;
-        }
+        if (def_k < 0) return undefined_label_readout();
 
         // Segment distances over the projection, each running to the NEXT
         // projection marker or to total_frames for the last — the
@@ -524,61 +605,12 @@ MarkerEffective marker_effective(
         const int64_t def_dist = next_frame(def_k) - proj[def_k].time_frame;
         if (ref_dist <= 0 || def_dist <= 0) return r;
 
-        const WarpMarker& def = proj[def_k];
-        int64_t               def_base_cents;
-        std::optional<double> def_scale;
-        if (def.tempo_inherits) {
-            // An inheriting definition (`pass:LABEL`): the resolver's
-            // stage 4 materializes it through this same walk over this
-            // same list before stage 5 measures it, so the hover def
-            // fields match the render by construction.
-            def_base_cents = resolve_inherited_tempo(proj, def_k);
-            def_scale      = resolve_inherited_tempo_scale(proj, def_k);
-        } else {
-            def_base_cents = def.tempo_cents;
-            def_scale      = def.tempo_scale;
-        }
-        const double def_scale_val = def_scale.value_or(1.0);
-        // Display-domain cents-to-double boundary: the multiplier below is
-        // a derived scale-like quantity, so the def's tempo enters its
-        // double arithmetic here, through the one conversion route.
-        const double def_base      = tempo_from_cents(def_base_cents);
-        const double def_eff_tempo = def_base * def_scale_val;
-        if (def_base_cents == 0 || def_eff_tempo == 0.0) return r;
-
-        // Band verdict from the shared classification helper — the
-        // resolver's stage-5 value in the resolver's operation order, so
-        // display and render agree at the inclusive envelope edges.
-        // Out-of-band means the render normalizes this ref to the plain
-        // 1.00 owner, so the display reports that exact literal with no
-        // visible source.
-        const double implied = label_ref_implied_effective_tempo(
-            def_base_cents, def_scale, ref_dist, def_dist);
-        if (implied < kRefImpliedTempoMin || implied > kRefImpliedTempoMax) {
-            r.base_cents = 100;
-            r.scale.reset();
-            r.source_idx = -1;
-            r.reason = MarkerEffective::NormalizedReason::ExtremeRatio;
-            return r;
-        }
-
-        // settings.scale cancels in the engine's multiplier expression:
-        //   multiplier = (ref_dist * def_eff_tempo)
-        //              / (def_base * def_dist)
-        // which is the geometry distance ratio times def_scale exactly once
-        // (def_eff_tempo = def_base * def_scale, and def_base cancels), so
-        // multiplier IS the displayed scale: base * multiplier equals the
-        // segment's frame-map effective tempo in both scale-presence cases.
-        // Carried unclamped — full double, no display ceiling.
-        const double multiplier =
-            (static_cast<double>(ref_dist) * def_eff_tempo) /
-            (def_base * static_cast<double>(def_dist));
-        r.scale      = multiplier;
-        r.base_cents = def_base_cents;
-        // The def's raw-store index — never synthetic: synthetic owners
-        // carry no labels, so a found def is always a real raw marker.
-        r.source_idx = raw_index[def_k];
-        return r;
+        // Shared readout tail over the projection: resolve the def's tempo,
+        // classify the band, compute the displayed multiplier. The def's
+        // raw-store index is never synthetic — synthetic owners carry no
+        // labels, so a found def is always a real raw marker.
+        return label_ref_readout_tail(proj, def_k, ref_dist, def_dist,
+                                      raw_index[def_k]);
     }
 
     // ---- Raw-store resolution: the carve-outs (effectively-disabled
@@ -626,17 +658,7 @@ MarkerEffective marker_effective(
             break;
         }
     }
-    if (def_idx < 0) {
-        // Dangling ref: the render resolver normalizes it to the plain
-        // 1.00 owner, so the display reports the same exact literal —
-        // base 100, no scale, no visible source (the value is a
-        // fallback, not taken from anywhere).
-        r.base_cents = 100;
-        r.scale.reset();
-        r.source_idx = -1;
-        r.reason = MarkerEffective::NormalizedReason::UndefinedLabel;
-        return r;
-    }
+    if (def_idx < 0) return undefined_label_readout();
 
     // Render measures each segment to the next marker that survives into
     // the resolved list, so the reference and definition distances must run
@@ -668,67 +690,13 @@ MarkerEffective marker_effective(
     const int64_t def_dist_frames =
         mv[def_next].time_frame - mv[def_idx].time_frame;
     if (def_dist_frames <= 0 || lr_dist_frames <= 0) return r;
-    const double lr_src_dist  = static_cast<double>(lr_dist_frames);
-    const double def_src_dist = static_cast<double>(def_dist_frames);
 
-    const WarpMarker& def = mv[def_idx];
-    int64_t               def_base_cents;
-    std::optional<double> def_scale;
-    if (def.tempo_inherits) {
-        // An inheriting definition (a pass) contributes both its resolved
-        // base and its resolved scale, mirroring resolve_warp_markers_for_render
-        // so the hover multiplier matches the frame map. Both resolvers walk
-        // backward from def_idx-1, correctly excluding the pass itself.
-        def_base_cents = resolve_inherited_tempo(mv, def_idx);
-        def_scale      = resolve_inherited_tempo_scale(mv, def_idx);
-    } else {
-        def_base_cents = def.tempo_cents;
-        def_scale      = def.tempo_scale;
-    }
-    const double def_scale_val = def_scale.value_or(1.0);
-    // Display-domain cents-to-double boundary: the multiplier below is
-    // a derived scale-like quantity, so the def's tempo enters its
-    // double arithmetic here, through the one conversion route.
-    const double def_base      = tempo_from_cents(def_base_cents);
-    const double def_eff_tempo = def_base * def_scale_val;
-    if (def_base_cents == 0 || def_eff_tempo == 0.0) return r;
-
-    // Band verdict from the shared classification helper (resolver
-    // operation order — the same value the resolver's stage-5 check
-    // computes, with the settings scale excluded since it cancels).
-    // Out-of-band means the render normalizes this ref to the plain 1.00
-    // owner, so the display reports that exact literal with no visible
-    // source.
-    const double implied = label_ref_implied_effective_tempo(
-        def_base_cents, def_scale, lr_dist_frames, def_dist_frames);
-    if (implied < kRefImpliedTempoMin || implied > kRefImpliedTempoMax) {
-        r.base_cents = 100;
-        r.scale.reset();
-        r.source_idx = -1;
-        r.reason = MarkerEffective::NormalizedReason::ExtremeRatio;
-        return r;
-    }
-
-    // settings.scale cancels in the engine's multiplier expression:
-    //   multiplier = (lr_src_dist * def_eff_tempo)
-    //              / (def_base * def_src_dist)
-    // which is the geometry distance ratio times def_scale exactly once
-    // (def_eff_tempo = def_base * def_scale, and def_base cancels), so
-    // multiplier IS the displayed scale: base * multiplier equals the
-    // segment's frame-map effective tempo in both scale-presence cases.
-    // Multiplying def_scale in a second time here would square it —
-    // hover/copy would advertise 0.6400 for a 0.8000-scaled definition
-    // over equal distances, and pasting that would author the wrong
-    // tempo.
-    const double multiplier =
-        (lr_src_dist * def_eff_tempo) / (def_base * def_src_dist);
-    // The combined multiplier is carried unclamped — values are full
-    // doubles with no display ceiling; the render's ref handling is
-    // delta-based and never reads this.
-    r.scale = multiplier;
-    r.base_cents = def_base_cents;
-    r.source_idx = def_idx;
-    return r;
+    // Shared readout tail over the raw store: resolve the def's tempo (an
+    // inheriting def walks backward from def_idx-1, correctly excluding the
+    // pass itself), classify the band, compute the displayed multiplier. The
+    // def's own raw-store index is the reported source.
+    return label_ref_readout_tail(mv, def_idx, lr_dist_frames, def_dist_frames,
+                                  def_idx);
 }
 
 std::string compute_hover_popup_text(
