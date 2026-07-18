@@ -58,9 +58,6 @@ int64_t playhead_frame_at_click_column(const AppState& app,
         static_cast<int64_t>(std::nearbyint(static_cast<double>(col) * spp));
 }
 
-// sweep_select_interval (the Shift playhead-drag sweep) lives in app_state.h;
-// the source/target sweeps below resolve it from there.
-
 // The active editor's resolved text geometry, valid only while exactly one
 // editor is active (and, for the flag editor, on-view). Press / motion /
 // release all resolve this so they agree on origin and which strip to
@@ -406,13 +403,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Waveform-area press: start playhead drag gesture.
         {
             if (hit >= 0) {
-                // Press on a marker (within 3px).
+                // Press on a marker (within 3px). Selection is press-time-only:
+                // a plain press single-selects, a Shift press toggles membership
+                // (a click — Shift+drag is not a defined gesture).
                 if (!shift) {
                     selection.set_single_selection(hit);
                 } else {
-                    // Shift+press on marker: toggles membership in the
-                    // selection, last_selected repaired by the helper.
-                    // Plain press collapses to single selection.
                     selection.toggle_selection_membership(hit);
                 }
                 int64_t src_sample;
@@ -421,10 +417,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 } else {
                     src_sample = app.warpmarkers.markers()[hit].time_frame;
                 }
-                // The marker's clamped playhead image — the one value the
-                // cursor, the reseek compare, the reseek, and last_swept_sample
-                // all share, so a wall-adjacent marker reseeks to where the
-                // cursor lands instead of past the range.
+                // The marker's clamped playhead image — the value the cursor and
+                // the reseek share, so a wall-adjacent marker reseeks to where
+                // the cursor lands instead of past the range.
                 const int64_t sample =
                     playhead_image_of_authored_frame(app, audio, src_sample);
                 viewport.move_playhead_to(sample);
@@ -432,27 +427,27 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     playback_lifecycle.reseek_keeping_alive(sample);
                 }
                 if (was_playing) app.follow_overridden_for_session = true;
-                app.playhead_drag.active = true;
-                app.playhead_drag.press_marker_idx = hit;
-                app.playhead_drag.last_swept_sample = sample;
+                // A plain press arms the playhead scrub; a Shift press is a
+                // click only (no drag), so it does not arm.
+                if (!shift) app.playhead_drag.active = true;
             } else {
-                // Press on empty waveform.
+                // Press on empty waveform. Shift is a strict no-op (Shift is a
+                // selection-toggle click, undefined on empty space).
+                if (shift) return;
                 const int click_rel_x = x - area.x;
                 if (click_rel_x < 0 || click_rel_x >= area.w) {
-                    if (!shift) selection.clear_selection();
+                    selection.clear_selection();
                     return;
                 }
                 const int64_t sample =
                     playhead_frame_at_click_column(app, audio, click_rel_x);
-                if (!shift) selection.clear_selection();
+                selection.clear_selection();
                 viewport.move_playhead_to(sample);
                 if (was_playing && sample != playhead_at_entry) {
                     playback_lifecycle.reseek_keeping_alive(sample);
                 }
                 if (was_playing) app.follow_overridden_for_session = true;
                 app.playhead_drag.active = true;
-                app.playhead_drag.press_marker_idx = -1;
-                app.playhead_drag.last_swept_sample = sample;
             }
         }
     }
@@ -621,8 +616,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (spp <= 0.0) return;
 
         // Marker snap test — uses the same 3px epsilon as marker hit-test.
-        // The snap is purely a playhead-positioning magnet; marker
-        // selection is committed live below, from the hit index.
+        // The snap is purely a playhead-positioning magnet; the drag moves the
+        // playhead only and never touches selection (selection is press-time-
+        // only).
         const int hit = hit_test_marker_line(app, audio, mouse_x);
         int64_t new_playhead;
         if (hit >= 0) {
@@ -635,10 +631,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // Land on the snapped marker's clamped playhead image (the F1
             // chokepoint): forward-translate the source frame to the displayed
             // domain, then clamp into the playhead domain, so the
-            // new_playhead != cursor compare and last_swept_sample agree with
-            // the value the cursor actually holds — a compressed final segment
-            // that rounds a wall-adjacent marker to the target total lands on
-            // the reachable total - 1 instead.
+            // new_playhead != cursor compare agrees with the value the cursor
+            // actually holds — a compressed final segment that rounds a
+            // wall-adjacent marker to the target total lands on the reachable
+            // total - 1 instead.
             new_playhead = playhead_image_of_authored_frame(app, audio, src_sample);
         } else {
             // No marker within epsilon: playhead follows cursor freely.
@@ -651,74 +647,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (new_playhead != app.playhead_cursor_sample) {
             viewport.move_playhead_to(new_playhead);
         }
-        // Live selection: the playhead drag selects the marker under the
-        // cursor as it moves. No-Shift tracks a single selection and clears
-        // when the cursor leaves every marker; Shift adds markers passed over
-        // and never clears. press_marker_idx is skipped under Shift so a
-        // Shift-press toggle is not re-added by an incidental motion.
-        bool sel_changed = false;
-        if (!mods.shift) {
-            if (hit >= 0) {
-                const bool already_single =
-                    app.selected_markers.size() == 1 &&
-                    *app.selected_markers.begin() == hit;
-                if (!already_single) {
-                    selection.set_single_selection(hit);
-                    sel_changed = true;
-                }
-            } else if (!app.selected_markers.empty() ||
-                       app.last_selected_marker != -1) {
-                selection.clear_selection();
-                sel_changed = true;
-            }
-        } else {
-            // Endpoint add: unchanged hit-based pickup (3px epsilon).
-            if (hit >= 0 &&
-                hit != app.playhead_drag.press_marker_idx &&
-                !app.selected_markers.count(hit)) {
-                app.selected_markers.insert(hit);
-                app.last_selected_marker = hit;
-                app.last_sel_group = LastSelGroup::Markers;
-                sel_changed = true;
-            }
-            // Interval sweep: add every marker the playhead PASSED since
-            // the last motion event. The per-event hit test only samples
-            // the pointer's instantaneous position, so fast drags skipped
-            // markers between samples (frame-rate dependent selection).
-            // Interval endpoints translate to source domain once (the map
-            // is monotone), then the time-ordered marker list is range-
-            // scanned in travel direction so last_selected_marker ends on
-            // the most recently passed marker.
-            const int64_t prev = app.playhead_drag.last_swept_sample;
-            if (prev >= 0 && new_playhead != prev) {
-                int64_t a = prev, b = new_playhead;
-                const bool forward = (b >= a);
-                if (!forward) std::swap(a, b);
-                int64_t lo = active_domain_to_source_frame(app, audio, a);
-                int64_t hi = active_domain_to_source_frame(app, audio, b);
-                if (lo > hi) std::swap(lo, hi);
-                // Sweep endpoints widen to doubles for the interval
-                // compare against the stores' int64 frames.
-                const double lo_t = static_cast<double>(lo);
-                const double hi_t = static_cast<double>(hi);
-                const bool swept = (app.active_markers_view == 'P')
-                    ? sweep_select_interval(
-                          app, app.phaseresetmarkers.markers(),
-                          lo_t, hi_t, forward,
-                          app.playhead_drag.press_marker_idx)
-                    : sweep_select_interval(
-                          app, app.warpmarkers.markers(),
-                          lo_t, hi_t, forward,
-                          app.playhead_drag.press_marker_idx);
-                if (swept) sel_changed = true;
-            }
-            if (sel_changed) viewport.invalidate_top_strip();
-        }
-        // Keep the sweep anchor fresh on every motion event of the drag,
-        // Shift or not — so a mid-drag Shift press sweeps only from the
-        // current position, never retroactively from the press.
-        app.playhead_drag.last_swept_sample = new_playhead;
-        if (sel_changed) viewport.invalidate_waveform_area();
         return;
     }
     if (!app.drag.active) {

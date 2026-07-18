@@ -85,14 +85,13 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
                 : static_cast<size_t>(src_sample);
             ms = std::nearbyint(map_source_to_target(q, *target_warp_frame_map));
         }
-        // No viewport gate: the kMarkerHitHalfPx halo is the single reach
-        // test, so a stem up to kMarkerHitHalfPx past either strip edge is
-        // grabbable from the nearest onscreen pixels (the mouse is window-
-        // bounded, so the reach is exactly the halo). m_px may be negative or
-        // >= the strip width; the |d| <= kMarkerHitHalfPx test below is the
-        // only reach rule. The arithmetic is int-safe far offscreen for any
-        // in-wall position at every zoom.
+        // Visible columns only: a marker whose painted column falls outside the
+        // strip [0, area.w - 1] is not a hit candidate. The kMarkerHitHalfPx
+        // halo governs reach AROUND a visible column (a click up to
+        // kMarkerHitHalfPx from a visible stem still grabs it), but does not
+        // extend the strip — an offscreen stem is unreachable.
         const int m_px = static_cast<int>(std::nearbyint((ms - vp) / spp));
+        if (m_px < 0 || m_px >= area.w) continue;
         const int d = std::abs(m_px - click_rel_x);
         // Nearest wins; an exact distance tie (legal now that markers may
         // overlap exactly) goes to the higher index via <=. The stem

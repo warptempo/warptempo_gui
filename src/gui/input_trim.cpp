@@ -790,11 +790,10 @@ void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool move_single
     // the range). In the waveform (scrub)
     // it also reseeks live playback when the position changed, overrides follow,
     // and arms the playhead-drag scrub — the subsequent motion is the ordinary
-    // playhead drag (marker snap, live selection, Shift sweep), with
-    // press_marker_idx = -1, the no-marker press convention (a bound press has
-    // no marker index for the sweep's press-skip to preserve). The reposition-
-    // drag branches above are grabs and intentionally do not move the playhead,
-    // matching the marker reposition drag. The top-strip caller passes
+    // playhead drag (marker-snap magnet, playhead only, no selection change).
+    // The reposition-drag branches above are grabs and intentionally do not
+    // move the playhead, matching the marker reposition drag. The top-strip
+    // caller passes
     // scrub=false, mirroring top-strip marker clicks (that press already stopped
     // playback), so a top-strip bound click stays selection + playhead move. The
     // hit-test that routed here only fires when the boundary exists, so
@@ -810,8 +809,6 @@ void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool move_single
         if (was_playing && sample != playhead_at_entry)
             playback_lifecycle.reseek_keeping_alive(sample);
         if (was_playing) app.follow_overridden_for_session = true;
-        app.playhead_drag.active           = true;
-        app.playhead_drag.press_marker_idx = -1;
-        app.playhead_drag.last_swept_sample = sample;
+        app.playhead_drag.active = true;
     }
 }

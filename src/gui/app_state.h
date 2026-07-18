@@ -307,11 +307,11 @@ struct UndoHistory {
 };
 
 // State for the plain/Shift left-button playhead-drag gesture. The drag
-// positions the playhead (with a 3px snap-to-marker magnet) AND mutates
-// selection live during motion: a no-Shift drag single-selects / clears at the
-// marker under the pointer, and a Shift drag sweep-selects every marker the
-// playhead passes between events. The gesture ends on release (or on Escape,
-// which ends at current position); release only resets the struct.
+// positions the playhead ONLY (with a 3px snap-to-marker magnet) and never
+// touches selection: selection changes only at press time (plain-press
+// single-select, Shift-press toggle, Tab). Only a plain press arms the drag; a
+// Shift press is a click. The gesture ends on release (or on Escape, which ends
+// at current position); release only resets the struct.
 //
 // Mouse-side click-keep-alive: a waveform-area press during playback
 // reseeks audio to the clicked sample (Reaper-style) instead of stopping.
@@ -320,18 +320,6 @@ struct UndoHistory {
 // the drag (split-playhead model).
 struct PlayheadDragState {
     bool active                    = false;
-    // Marker index the press landed on, or -1 if pressed on empty space. The
-    // Shift interval sweep excludes this marker from live pickup — the press
-    // already toggled it — so a press-and-sweep never double-toggles its origin.
-    int  press_marker_idx          = -1;
-    // Active-domain playhead position at the previous motion event (the
-    // press position until the first motion). Left edge of the
-    // selection sweep interval: the Shift branch of the motion handler
-    // adds every marker the playhead PASSED between events, not just
-    // the one under the pointer at event time — point-sampling skipped
-    // markers at fast pointer speeds. -1 = unseeded (sweep disabled
-    // until a begin site seeds it).
-    int64_t last_swept_sample      = -1;
 };
 
 // F2.1: mouse drag-to-select inside the active text editor. Only one
@@ -1235,48 +1223,3 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 // owning markers don't). Requires warp view with iteration mode off.
 // Always false in phase reset view (no pass concept).
 bool popup_eligible_marker(const AppState& app, int idx);
-
-// Sweep-select every marker in the time-ordered `markers` list whose
-// time_frame falls in [lo_t, hi_t] (double interval bounds; the stored
-// int64 frames widen exactly into the compares), iterating in travel
-// order (ascending
-// indices when `forward`, else descending) so the final last_selected_marker
-// lands on the most recently passed marker. Skips press_marker_idx (preserves
-// the Shift-press toggle non-re-add guarantee) and already-selected indices.
-// Mutates app's selection set / focus / last_sel_group; returns true if
-// anything was added. Used by the source/target playhead-drag Shift sweeps
-// (input_handler.cpp); templated on the vector element type because the two
-// stores hold different marker types that both expose time_frame.
-// O(log n + scanned) per call.
-template <typename MarkerVec>
-bool sweep_select_interval(AppState& app, const MarkerVec& markers,
-                           double lo_t, double hi_t, bool forward,
-                           int press_marker_idx) {
-    if (lo_t > hi_t) return false;
-    // First index with time_frame >= lo_t through the last with
-    // time_frame <= hi_t (half-open [first, last)).
-    const int first = static_cast<int>(
-        std::lower_bound(markers.begin(), markers.end(), lo_t,
-                         [](const auto& m, double t) {
-                             return m.time_frame < t;
-                         }) - markers.begin());
-    const int last = static_cast<int>(
-        std::upper_bound(markers.begin(), markers.end(), hi_t,
-                         [](double t, const auto& m) {
-                             return t < m.time_frame;
-                         }) - markers.begin());
-    bool changed = false;
-    auto add = [&](int idx) {
-        if (idx == press_marker_idx) return;
-        const bool newly = app.selected_markers.insert(idx).second;
-        if (newly || app.last_selected_marker != idx) changed = true;
-        app.last_selected_marker = idx;
-        app.last_sel_group = LastSelGroup::Markers;
-    };
-    if (forward) {
-        for (int i = first; i < last; ++i) add(i);
-    } else {
-        for (int i = last - 1; i >= first; --i) add(i);
-    }
-    return changed;
-}
