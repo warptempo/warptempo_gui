@@ -156,7 +156,8 @@ void GuiInputHandler::handle_trim_clear_both() {
 // inside a fully-set trim pair, clears both bounds; anywhere else sets begin at
 // the playhead and autosets end. The coincidence test compares the playhead
 // against each bound's playhead_image_of_authored_frame — exactly the value
-// every click / Tab-cycle / drag-pin onto a bound assigns the playhead —
+// landing on a bound assigns the playhead (Home/End are the keyboard routes,
+// clicking the bound's column the pointer route; bounds are not Tab stops) —
 // because the forward/inverse pair is not a round trip on compressed target
 // segments, so "on the bound" means "at the position landing on the bound puts
 // the playhead", reachable by construction. The inside test uses the

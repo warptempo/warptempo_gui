@@ -476,9 +476,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // x is context-aware: on or inside a set trim it clears both bounds,
     // elsewhere it sets begin at the playhead and autosets end half of the
-    // visible span away. The end bound keeps its mouse operations (Alt+drag
-    // single, Ctrl+Alt+drag pair, select+Delete). Plain Ctrl+x is cut
-    // (text_editor.cpp) and stays unbound here.
+    // visible span away. Trim's only pointer route is Ctrl+Alt (single via a
+    // stem/chip hit, pair via a press strictly between the two bound columns),
+    // and Ctrl+Alt+wheel moves the end; trim is outside the selection system,
+    // so there is no Delete arm. Plain Ctrl+x is cut (text_editor.cpp) and
+    // stays unbound here.
     if (!ctrl && !shift && !alt && key == GuiKeys::X) {
         handle_trim_x();
         return;

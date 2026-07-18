@@ -134,9 +134,10 @@ inline double source_grid_position_at_column(int64_t viewport_start,
 
 // Pixel-anchoring pair for gesture commits. Every gesture that moves an
 // authored position by pixel columns (the Alt+Left/Right nudges on both
-// marker columns and the trim bounds, the Ctrl+Alt+wheel trim end-move) or
-// releases one at a pointer position (marker drag commits) anchors to the
-// on-screen column grid through these two helpers: read the item's
+// marker columns, the Ctrl+Alt+wheel trim end-move) or releases one at a
+// pointer position (marker AND trim drag commits both snap their release to
+// the painted column) anchors to the on-screen column grid through these two
+// helpers: read the item's
 // currently painted column with painted_column_of_source_frame, pick the
 // destination column, and commit authored_frame_at_column of it — which
 // funnels through snap_authored_frame (app_state.h), the single
