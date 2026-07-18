@@ -768,8 +768,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // proposed source-time lives in the drag overlay — under the
     // frozen-coord regime apply_drag_motion does not mutate the live
     // store during motion. In target view, forward-translate through
-    // the frozen warp_frame_map (the same map paint walks during motion) so
-    // the playhead lands at the same screen column as the marker stem.
+    // the display context's target map (the same map paint walks during
+    // motion, stable for the drag's lifetime) so the playhead lands at the
+    // same screen column as the marker stem.
     // Viewport is deliberately not followed — the user can pan manually
     // if the drag runs past the edge. The commit completes this tracking
     // by snapping the playhead onto the committed marker frame (commit_drag).
@@ -801,11 +802,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             app.drag.moveable_times[hit_pos]));
         // to_domain_frame decides Source-identity vs mapped forward-map off
         // the active display context, so the call is unconditional: the
-        // frozen map translates in a mapped domain and is inert in the
-        // Source domain (the outer flag test was a duplicate of that
+        // display context's map translates in a mapped domain and is inert in
+        // the Source domain (the outer flag test was a duplicate of that
         // internal short-circuit).
-        int64_t ph = to_domain_frame(app, audio, ph_src,
-                                     app.drag.frozen_warp_frame_map);
+        int64_t ph = to_domain_frame(
+            app, audio, ph_src,
+            *active_display_context(app, audio).warp_frame_map);
         // Playhead domain clamp through clamp_playhead_to_live_domain (the
         // domain ruling). With both marker walls at total - 1 the source-view
         // value is already in domain; this closes the target-view case

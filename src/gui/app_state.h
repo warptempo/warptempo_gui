@@ -151,12 +151,19 @@ struct DragState {
     double              delta_min = -std::numeric_limits<double>::infinity();
     double              delta_max =  std::numeric_limits<double>::infinity();
     bool                moved = false;
-    // Pre-drag warp_frame_map snapshot. Captured at begin_drag via
-    // build_target_view_warp_frame_map so paint can route selected-marker
-    // positions and target-view waveform through a frozen coordinate
-    // system for the duration of the drag. Empty when source view is
-    // active at begin_drag time, or when the build failed.
-    std::vector<WarpFrameMapSegment> frozen_warp_frame_map;
+    // No per-drag map copy: mid-drag target-view translation (paint, playhead
+    // tracking, commit snapping, the waveform job's owned snapshot) reads the
+    // memoized display map — active_display_context /
+    // target_view_warp_frame_map_cached — directly. That cache is keyed on the
+    // marker-store generation + scale (+ sample rate + total frames), and
+    // nothing that changes either is reachable while a drag is in flight: the
+    // frozen-coordinate regime keeps motion in the overlay (no generation
+    // bump), the drag-modal gate swallows every key but the cancels, pointer
+    // gestures are mutually exclusive, the wheel is blocked mid-gesture, editors
+    // cannot open, and resize / WM-close cancel the drag first; a preview
+    // completing mid-drag touches only the audio buffer, playback rebind, dirty
+    // bit, and status text, never the store or scale. So the cache is stable
+    // for the drag's lifetime and equals what a begin_drag copy would hold.
     // Full pre-drag marker state. Captured at button-press so commit_drag
     // can push it onto the undo stack when motion landed; discarded on
     // commit when no motion occurred (DragState is reset wholesale there).

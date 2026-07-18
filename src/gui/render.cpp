@@ -184,9 +184,9 @@ void render_marker_stems_impl(
         const auto& m = markers[i];
         // Effective time: when a drag is active and this marker is
         // in the overlay, read its proposed time from the overlay
-        // instead of the live store. The frozen warp_frame_map (passed in
-        // via `warp_frame_map`) is the matching pre-drag coordinate system
-        // for forward translation.
+        // instead of the live store. The warp_frame_map passed in is the
+        // display cache's target map (stable for the drag's lifetime), the
+        // matching coordinate system for forward translation.
         const double eff_time = drag_overlay
             ? drag_overlay->effective_time(
                   static_cast<int>(i), m.time_frame)
@@ -828,9 +828,10 @@ void iterate_visible_flags_impl(
     candidates.reserve(markers.size());
     for (size_t i = 0; i < markers.size(); ++i) {
         const auto& m = markers[i];
-        // Effective time: drag overlay > live store. The frozen warp_frame_map
-        // supplied via `warp_frame_map` is the matching pre-drag coordinate
-        // system for target-view forward translation.
+        // Effective time: drag overlay > live store. The warp_frame_map
+        // supplied is the display cache's target map (stable for the drag's
+        // lifetime), the matching coordinate system for target-view forward
+        // translation.
         const double eff_time = drag_overlay
             ? drag_overlay->effective_time(
                   static_cast<int>(i), m.time_frame)
@@ -1333,8 +1334,8 @@ double flag_pending_text_left_x(
     // Empty / null warp_frame_map falls through to identity, matching the
     // render-side helpers' convention. Not reachable mid-drag (begin_drag
     // clears the editor; the click handler exits before any drag begins),
-    // so a fresh build is correct and app.drag.frozen_warp_frame_map need not be
-    // consulted.
+    // so a fresh build here is correct — it returns the same target map the
+    // display cache would.
     const int64_t src_sample = mv[marker_idx].time_frame;
     double ms = static_cast<double>(src_sample);
     if (app.active_audio_view == 'T') {

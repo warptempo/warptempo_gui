@@ -194,8 +194,8 @@ const GuiDisplayContext& active_display_context(const AppState& app,
 // deliberate here for a different reason than the domain predicate
 // (to_domain_frame now decides its own domain off the display context too):
 // these wrappers translate against the CONTEXT'S OWN map, while
-// to_domain_frame serves explicit non-live maps (the drag's frozen-map
-// sites) supplied by the caller. Keeping the two separate lets each own its
+// to_domain_frame serves explicit maps (the mid-drag playhead-tracking site)
+// supplied by the caller. Keeping the two separate lets each own its
 // map source without re-selecting one. The empty-map path (the
 // unbuildable-target fallthrough) stays identity — map_source_to_target /
 // map_target_to_source are identity on an empty map.

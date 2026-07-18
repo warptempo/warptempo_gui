@@ -273,19 +273,14 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // The mapped views' flags paint at translated positions
     // (compute_flag_hit_rects with a non-null warp_frame_map), so hit-test
     // must walk the same warp_frame_map. The active display context is the
-    // base (its map is empty — identity — in source view); in target view
-    // the drag-frozen map is a paint-regime override of the context's
-    // translation map so hit-rect positions match the frozen-coord paint
-    // (the paint surfaces carry the same override).
+    // base: its map is empty (identity) in source view, and in target view it
+    // is the memoized target map paint also walks — stable for a drag's
+    // lifetime, so hit-rect positions match the mid-drag paint.
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     const std::vector<WarpFrameMapSegment>* tmap_arg = nullptr;
-    if (ctx.domain == GuiDisplayDomain::TargetLive) {
-        if (app.drag.active) {
-            if (!app.drag.frozen_warp_frame_map.empty())
-                tmap_arg = &app.drag.frozen_warp_frame_map;
-        } else if (!ctx.warp_frame_map->empty()) {
-            tmap_arg = ctx.warp_frame_map;
-        }
+    if (ctx.domain == GuiDisplayDomain::TargetLive &&
+        !ctx.warp_frame_map->empty()) {
+        tmap_arg = ctx.warp_frame_map;
     }
     DragOverlay drag_overlay_storage;
     const DragOverlay* drag_overlay = nullptr;

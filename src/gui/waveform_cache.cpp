@@ -189,15 +189,11 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     std::vector<WarpFrameMapSegment> target_warp_frame_map;
     uint64_t target_warp_frame_map_hash = 0;
     if (is_target) {
-        if (app.drag.active) {
-            target_warp_frame_map = app.drag.frozen_warp_frame_map;
-        } else {
-            const TargetWarpFrameMapCache& c =
-                target_view_warp_frame_map_cached(app, sr,
-                    static_cast<long>(audio.total_frames()));
-            target_warp_frame_map      = c.warp_frame_map;       // job needs an owned snapshot
-            target_warp_frame_map_hash = c.hash;
-        }
+        const TargetWarpFrameMapCache& c =
+            target_view_warp_frame_map_cached(app, sr,
+                static_cast<long>(audio.total_frames()));
+        target_warp_frame_map      = c.warp_frame_map;       // job needs an owned snapshot
+        target_warp_frame_map_hash = c.hash;
     }
     const GuiAudio* audio_source = &audio;
 
@@ -451,8 +447,9 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 //      full sync rebuild.
 //   3. The async worker (maybe_enqueue_waveform_render) is the backstop for
 //      changes the user is not actively driving: resize, the launch file
-//      load, target-view marker drags (frozen during the drag, re-rendered on
-//      the worker at release), follow_scroll_if_needed during playback, and
+//      load, target-view marker drags (frozen during the drag — the display
+//      cache is stable under the frozen-coordinate regime — and re-rendered on
+//      the worker at the release commit), follow_scroll_if_needed during playback, and
 //      the on_tick safety net that catches residual fingerprint drift.
 //
 // This is NOT "make everything synchronous." Async earns its keep for the
@@ -558,7 +555,8 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
     //  - no plate yet (just after load)
     //  - worker mid-render: leave it to the worker; superseding keeps the
     //    latest viewport without racing a swap against our in-place shift
-    //  - active drag: the warp_frame_map is frozen / mid-deformation
+    //  - active drag: the plate is held still by the frozen-coordinate regime
+    //    while the overlay repositions markers, so this is not a clean pan
     //  - dimension mismatch (resize since the plate was rendered)
     //  - view / warp_frame_map mismatch: not a pure pan (e.g. 't' toggle, marker edit)
     if (!wf_cache.surface ||

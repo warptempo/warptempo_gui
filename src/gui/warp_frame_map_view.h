@@ -79,8 +79,8 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
 // `warp_frame_map`. The domain decision comes from the active display
 // context (active_display_context), while the map stays the explicit one
 // the caller passes — its live purpose is explicit-map translation for the
-// drag's frozen-map regime (the playhead tracks the grabbed stem through
-// the same frozen coordinate system paint walks). An empty map is identity
+// mid-drag playhead tracking, which passes the display cache's map (the same
+// coordinate system paint walks). An empty map is identity
 // in the mapped domain. For live-map translation use
 // source_frame_to_active_domain below, which owns the context's own map.
 class GuiAudio;
@@ -97,9 +97,9 @@ int64_t to_domain_frame(const AppState& app, const GuiAudio& audio,
 // every input / playhead boundary that translates against the live displayed
 // domain.
 //
-// NOT for sites translating against a non-live map — a drag's
-// app.drag.frozen_warp_frame_map, or a proposed (pre-commit) marker list. Those keep
-// calling to_domain_frame directly with their explicit map.
+// NOT for sites translating against an explicit caller-supplied map — the
+// mid-drag playhead tracking, or a proposed (pre-commit) marker list. Those
+// keep calling to_domain_frame directly with their explicit map.
 int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio,
                                       int64_t source_frame);
 int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio,
@@ -154,7 +154,7 @@ inline double source_grid_position_at_column(int64_t viewport_start,
 // then divide by the painters' samples-per-pixel — the visible span
 // nearbyint-quantized to whole samples over the strip width — and round
 // with the painters' std::nearbyint. `warp_frame_map` is the map the item is painted through:
-// the live cached map at rest, the drag's frozen map at drag commit.
+// the live cached map, stable for a drag's lifetime, at rest and at drag commit.
 // Ignored in the Source domain; an empty map in a mapped domain falls
 // back to identity, exactly like paint. Returns 0 when the strip has no
 // width (callers guard the degenerate geometry).

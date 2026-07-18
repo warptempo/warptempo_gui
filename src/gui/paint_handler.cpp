@@ -275,19 +275,16 @@ void GuiPaintHandler::paint_phase_reset_overlay(
         // entirely (render_phaseresetmarkers' is_disabled reads `disabled`).
         if (marker.disabled) return;
 
-        // Map selection: same frozen-vs-cached pattern as the debug hit-rects
-        // block and hit_test_flag. No map means identity (matching the stem
-        // renderer's fallback). We are already known to be in target view.
+        // Map selection: the memoized target display map, walked identically at
+        // rest and mid-drag (the frozen-coordinate regime keeps the drag out of
+        // the store, so the cache cannot rebuild while a drag is in flight). No
+        // map means identity (matching the stem renderer's fallback). We are
+        // already known to be in target view.
         const std::vector<WarpFrameMapSegment>* tmap = nullptr;
-        if (app.drag.active) {
-            if (!app.drag.frozen_warp_frame_map.empty())
-                tmap = &app.drag.frozen_warp_frame_map;
-        } else {
-            const auto& m = target_view_warp_frame_map_cached(
-                app, static_cast<long>(audio.sample_rate()),
-                static_cast<long>(audio.total_frames())).warp_frame_map;
-            if (!m.empty()) tmap = &m;
-        }
+        const auto& m = target_view_warp_frame_map_cached(
+            app, static_cast<long>(audio.sample_rate()),
+            static_cast<long>(audio.total_frames())).warp_frame_map;
+        if (!m.empty()) tmap = &m;
 
         // Effective time: during a phase-reset-mode drag, read the focused
         // marker's proposed time through the DragOverlay (same construction

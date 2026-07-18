@@ -42,8 +42,8 @@ struct WaveformJob {
     uint64_t  warp_frame_map_hash     = 0;
 
     // Frame-map snapshot the worker dereferences during the render. Populated
-    // for target view from the value paint-side computed (or
-    // app.drag.frozen_warp_frame_map during a target-view drag). Empty in
+    // for target view from the memoized target display map (an owned copy taken
+    // at job submission, so the worker never races a cache rebuild). Empty in
     // source view. The worker reads — never builds — this.
     std::vector<WarpFrameMapSegment> warp_frame_map;
 

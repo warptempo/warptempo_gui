@@ -136,17 +136,6 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // the free fractional mid-gesture domain). apply_drag_motion writes
     // moveable_times[k] = original_times[k] + delta on every motion event.
     d.moveable_times.assign(d.original_times.begin(), d.original_times.end());
-    // Capture a snapshot of the pre-drag warp_frame_map so paint can route
-    // selected-marker positions and target-view waveform through a frozen
-    // coordinate system. Both views capture: in source view the segment
-    // list is harmless (its forward translation is identity at the
-    // relevant input boundaries) and the symmetry lets paint code route
-    // through DragOverlay unconditionally. Build may fail (returns empty)
-    // — in that case paint walks the identity fallback for the duration
-    // of the drag, which is the correct degradation.
-    d.frozen_warp_frame_map = build_target_view_warp_frame_map(
-        app.warpmarkers.markers(), app.engine_settings.scale,
-        sr, static_cast<long>(audio.total_frames()));
     // Capture the pre-drag list state for undo. Commit pushes the
     // active-mode snapshot only when the drag produced a net position
     // change; a drag that returns to its origin is discarded.
@@ -242,8 +231,9 @@ void MarkerDragOps::commit_drag() {
     // Commit-time column snap. Mid-gesture positions stay free and
     // fractional (apply_drag_motion); only the commit snaps. The released
     // position is snapped to the time of the pixel column it is PAINTED
-    // at — computed against the drag's frozen map, the exact coordinate
-    // system the overlay painted through — and that column time funnels
+    // at — computed against the display cache's map (stable for the drag's
+    // lifetime), the exact coordinate system the overlay painted through — and
+    // that column time funnels
     // through snap_authored_frame (inside authored_frame_at_column), so
     // the stored value is the whole frame of the shown column: stored
     // equals shown, in both views at all zoom levels. With an
@@ -260,6 +250,11 @@ void MarkerDragOps::commit_drag() {
     const int64_t eof_wall = total - 1;
     std::vector<int64_t> committed;
     committed.reserve(app.drag.moveable_times.size());
+    // The map the overlay painted through: the display cache's map (empty /
+    // identity in source view, the memoized target map in target view), stable
+    // for the drag's lifetime, so stored-equals-shown holds at commit.
+    const std::vector<WarpFrameMapSegment>& dmap =
+        *active_display_context(app, audio).warp_frame_map;
     for (size_t k = 0; k < app.drag.moveable_times.size(); ++k) {
         const double proposed = app.drag.moveable_times[k];
         // Only positions the drag actually moved snap; an untouched
@@ -272,9 +267,8 @@ void MarkerDragOps::commit_drag() {
             continue;
         }
         const int c = painted_column_of_source_frame(
-            app, audio, proposed, app.drag.frozen_warp_frame_map);
-        int64_t t = authored_frame_at_column(app, audio, c,
-                                             app.drag.frozen_warp_frame_map);
+            app, audio, proposed, dmap);
+        int64_t t = authored_frame_at_column(app, audio, c, dmap);
         if (t < 0)        t = 0;
         if (t > eof_wall) t = eof_wall;
         committed.push_back(t);
