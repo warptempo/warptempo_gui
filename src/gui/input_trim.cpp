@@ -709,13 +709,15 @@ void GuiInputHandler::wheel_move_trim_end(GuiMouseButton button, int count) {
 
 void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool move_single,
                                                  bool move_both, bool shift,
-                                                 int mouse_x) {
+                                                 bool scrub, int mouse_x) {
     // The caller consumes a trim press only for recognized gestures: an
     // Alt-exact reposition-drag (move_single), a Ctrl+Alt move-both-bounds
-    // drag (move_both), or a plain / Shift select+navigate. The caller filters
-    // every unrecognized combo upstream, so move_single / move_both / shift
-    // fully partition the recognized gestures and the else-branch is a
-    // plain-or-Shift select.
+    // drag (move_both), or a plain / Shift select. The caller filters every
+    // unrecognized combo upstream, so move_single / move_both / shift fully
+    // partition the recognized gestures and the else-branch is that plain-or-
+    // Shift select. `scrub` (true from a waveform press, false from a top-strip
+    // click) decides whether the select arm also continues into the playhead
+    // drag — see the arm below.
     if (which == TrimHit::None) return;
     // Read-only refusal on the movement chords, the trim sibling of the
     // marker Alt+drag refusal in on_button_press: in a read-only tab the
@@ -724,8 +726,8 @@ void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool move_single
     // selectable but not moveable — exactly a marker's read-only behavior.
     // Trim bounds were deliberately moveable in read-only while trim was one
     // unified setting across both tabs; with per-tab trim that rationale is
-    // gone, so the mobility is revoked. The plain / Shift select+navigate
-    // branch below still runs: a click on a bound focuses it, mirroring
+    // gone, so the mobility is revoked. The plain / Shift select branch
+    // below still runs: a click on a bound focuses it and scrubs, mirroring
     // plain marker clicks, which select in read-only.
     if ((move_single || move_both) && active_view_state(app).read_only) return;
     if (move_both) {
@@ -736,15 +738,32 @@ void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool move_single
         begin_trim_drag(which, mouse_x);
         return;
     }
+    // Plain / Shift select arm. A trim bound behaves EXACTLY like a marker:
+    // select the bound and move the playhead onto it. In the waveform (scrub)
+    // it also reseeks live playback when the position changed, overrides follow,
+    // and arms the playhead-drag scrub — the subsequent motion is the ordinary
+    // playhead drag (marker snap, live selection, Shift sweep), with
+    // press_marker_idx = -1, the no-marker press convention (a bound press has
+    // no marker index for the sweep's press-skip to preserve). The reposition-
+    // drag branches above are grabs and intentionally do not move the playhead,
+    // matching the marker reposition drag. The top-strip caller passes
+    // scrub=false, mirroring top-strip marker clicks (that press already stopped
+    // playback), so a top-strip bound click stays selection + playhead move. The
+    // hit-test that routed here only fires when the boundary exists, so
+    // trim_begin/end_frame is set.
+    const bool    was_playing       = playback.is_playing();
+    const int64_t playhead_at_entry = app.playhead_cursor_sample;
     select_trim_boundary(which, /*additive=*/shift);
-    // Mirror the marker flag/stem click: a plain or Shift click on a trim
-    // boundary moves the playhead cursor to that boundary, so trim flags
-    // navigate exactly like marker flags. The reposition-drag branches above
-    // are grabs and intentionally do not move the playhead, matching the
-    // marker reposition drag. The hit-test that routed here only
-    // fires when the boundary exists, so trim_begin/end_frame is set.
     const int64_t src_sample = (which == TrimHit::Begin) ? app.trim.begin_frame
                                                          : app.trim.end_frame;
     const int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
     viewport.move_playhead_to(sample);
+    if (scrub) {
+        if (was_playing && sample != playhead_at_entry)
+            playback_lifecycle.reseek_keeping_alive(sample);
+        if (was_playing) app.follow_overridden_for_session = true;
+        app.playhead_drag.active           = true;
+        app.playhead_drag.press_marker_idx = -1;
+        app.playhead_drag.last_swept_sample = sample;
+    }
 }

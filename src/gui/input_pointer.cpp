@@ -263,7 +263,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         int hit = -1;
         bool in_click_region = false;
         // A trim-boundary press is consumed for an Alt-exact reposition-drag, a
-        // Ctrl+Alt move-both-bounds drag, or a plain / Shift select+navigate;
+        // Ctrl+Alt move-both-bounds drag, or a plain / Shift select (which in
+        // the waveform flows into the playhead scrub like a marker press);
         // every other combination is unrecognized and falls through to the
         // strict-guard no-op below.
         const bool trim_single = alt && !ctrl && !shift;
@@ -272,12 +273,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (inside_waveform) {
             hit = hit_test_marker_line(app, audio, x);
             // A waveform press that misses every marker but lands
-            // on a trim boundary stem routes to the trim gesture path.
-            // Markers take priority on a shared column.
+            // on a trim boundary stem routes to the trim gesture path;
+            // a plain/Shift press there flows into the playhead scrub
+            // exactly like a marker press (scrub=true). Markers take
+            // priority on a shared column.
             if (hit < 0) {
                 const TrimHit th = hit_test_trim_boundary(app, audio, x);
                 if (th != TrimHit::None && trim_gesture) {
-                    handle_trim_boundary_press(th, trim_single, trim_pair, shift, x);
+                    handle_trim_boundary_press(th, trim_single, trim_pair, shift, /*scrub=*/true, x);
                     if (app.trim_drag.active && was_playing)
                         app.follow_overridden_for_session = true;
                     return;
@@ -303,7 +306,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                        ? chip
                                        : hit_test_trim_boundary(app, audio, x);
                 if (th != TrimHit::None && trim_gesture) {
-                    handle_trim_boundary_press(th, trim_single, trim_pair, shift, x);
+                    handle_trim_boundary_press(th, trim_single, trim_pair, shift, /*scrub=*/false, x);
                     if (app.trim_drag.active && was_playing)
                         app.follow_overridden_for_session = true;
                     return;

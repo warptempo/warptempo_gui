@@ -555,10 +555,12 @@ private:
     // Mouse gestures on the trim boundary stems. on_press routes a
     // waveform-area press that misses every marker but lands on a trim
     // boundary here. Alt begins a single-bound drag; Ctrl+Alt begins a
-    // move-both-bounds drag; plain/Shift selects within the trim group. All
-    // update app.last_sel_group = Trim.
+    // move-both-bounds drag; plain/Shift selects and, in the waveform
+    // (scrub=true), continues into the playhead-drag gesture like a marker
+    // press. All update app.last_sel_group = Trim.
     void handle_trim_boundary_press(TrimHit which, bool move_single,
-                                    bool move_both, bool shift, int mouse_x);
+                                    bool move_both, bool shift, bool scrub,
+                                    int mouse_x);
     void select_trim_boundary(TrimHit which, bool additive);
     void begin_trim_drag(TrimHit which, int mouse_x, bool both = false);
     void update_trim_drag(int mouse_x);   // motion: writes the live store
