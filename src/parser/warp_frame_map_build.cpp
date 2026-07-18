@@ -2,6 +2,7 @@
 #include "time_format.h"   // format_timestamp
 #include "value_format.h"  // format_value_double
 
+#include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <expected>
@@ -910,10 +911,13 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
             // value brackets, so a GUI/CLI marker never trips it; the sweep
             // batches' per-cell tempo mutations are deliberately unbracketed
             // and CAN drive a cell's effective product non-positive, and this
-            // builder is that path's ruled async-stderr backstop. The engine
-            // would also reject the resulting map, but only as "not strictly
-            // ascending" — naming the non-positive tempo here is what an async
-            // batch cell's stderr needs to be actionable.
+            // builder is that path's ruled async-stderr backstop. Without this
+            // guard the degradation splits by sign: a NEGATIVE tempo yields a
+            // decreasing target the engine refuses as "not strictly ascending",
+            // while EXACTLY ZERO divides a positive span to +inf — a non-finite
+            // target the emission finiteness contract below refuses first.
+            // Neither downstream refusal could NAME the tempo; this site is
+            // kept for that message vocabulary on the async sweep path.
             if (tempo_val <= 0.0) {
                 return std::unexpected("tempo " +
                                        format_value_double(tempo_val, 2)
@@ -982,13 +986,26 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
 
         // Emission chokepoint: every segment flavor converges here (numeric,
         // label ref via the cached delta; passes resolve to numeric owners
-        // before this builder runs). The target column needs no finite /
-        // strictly-advancing guard: the divisors are finite and positive (the
-        // tempo and scale brackets above) and the source column strictly
-        // ascends (pass 1's sub-frame and past-EOF refusals), so each span is
-        // a positive finite increment. A breach of that is a program bug and
-        // lands on the engine's own loud init validators (strict ascent +
-        // finiteness) over this same in-process map, in both binaries.
+        // before this builder runs). Target FINITENESS is the builder's own
+        // emission contract, owned here because only the producer can refuse it
+        // cleanly: both orchestrators llrint the final target anchor (and a
+        // trim request llrints interior evaluations) BEFORE the engine
+        // validates, and llrint on a non-finite value is an invalid conversion
+        // with an unspecified result, so a non-finite target that slips past
+        // this point would detour through projection/trim/cap vocabulary rather
+        // than the engine's own map validator. STRICT ASCENT stays engine-owned:
+        // finite values convert through llrint cleanly and the engine's "not
+        // strictly ascending" refusal over this same in-process map is loud and
+        // correctly attributed. A non-finite divisor would produce a non-finite
+        // target caught right here, so it needs no separate guard; divisor
+        // POSITIVITY is guaranteed by the tempo <= 0 guard plus the
+        // settings-scale bracket.
+        if (!std::isfinite(target_frame)) {
+            return std::unexpected(
+                "warp frame map target anchor is not finite at "
+                + format_timestamp(src_frame / static_cast<double>(sample_rate)));
+        }
+
         out.push_back({src_frame, target_frame});
 
         src_f_prev = src_frame;

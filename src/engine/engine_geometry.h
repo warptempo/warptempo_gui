@@ -5,7 +5,7 @@
 // static-constexpr N and R_s) — it no longer takes N as a runtime parameter.
 // The orchestrator-side parser/prepost stages (plan_trim,
 // derive_phase_reset_frame_map) still take N as an argument, and every driver
-// (GUI render pipeline, render CLI, engine CLI) hands them kN. N = 4096 matches
+// (GUI render pipeline, render CLI) hands them kN. N = 4096 matches
 // the LTFAT released reference implementation (github.com/ltfat/pvdoneright)
 // with M = 2N = 8192 and R_s = N/4 = 1024; the PGHI paper text states a
 // 4092-sample window -- a figure absent from the released code -- and this

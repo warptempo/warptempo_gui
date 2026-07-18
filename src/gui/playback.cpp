@@ -532,11 +532,16 @@ void GuiPlayback::rebind_buffer(const float* samples, int64_t total_frames,
                                 int64_t domain_offset) {
     if (!impl_) return;
     // Caller invariant: the device must be fenced by stop() before rebind.
-    // Every caller lives in target_render.cpp and runs after the one-shot
-    // init() at load, so the client is live here — there is no re-init path a
-    // no-client stash could ever feed. This flag check is defense in depth for
-    // skipped stops; a mid-flight pointer swap would be silent corruption. The
-    // refusal keeps the buffer/offset pair consistent: neither is stored.
+    // Every caller lives in target_render.cpp, but a live client is NOT
+    // guaranteed: playback.init() failure is deliberately non-fatal at source
+    // load (no JACK server means the GUI runs playback-disabled), and a
+    // target-preview completion then calls this with client_active false. That
+    // is harmless — this body performs no JACK calls, the assignments below are
+    // exactly the right stash for a client-less session, and there is no
+    // re-init path that would ever consume them, so playback simply stays
+    // disabled. This flag check is defense in depth for skipped stops; a
+    // mid-flight pointer swap would be silent corruption. The refusal keeps the
+    // buffer/offset pair consistent: neither is stored.
     if (impl_->playing.load(std::memory_order_relaxed)) {
         std::fprintf(stderr,
             "warptempo_gui: rebind_buffer called while playing — refusing "

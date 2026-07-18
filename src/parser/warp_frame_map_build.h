@@ -72,16 +72,22 @@ struct MarkerEffective {
 // the resolver, whose coincidence collapse guarantees >= 1-frame spacing;
 // kept because the engine validates strict ascent but NOT the >= 1-frame
 // gap, so a sub-frame segment is the one map defect that would render
-// silently wrong bytes), tempo <= 0 (a zero or negative effective product
-// divides by zero or flips sign in the segment arithmetic; reachable — the
-// ruled async-stderr backstop for the sweep batches' per-cell computed tempo
-// mutations, and the one site that can NAME the non-positive tempo, which
-// the engine's own "not strictly ascending" refusal cannot), and — in Pass
-// 2, after all of the above — a label ref with no matching label def
-// (unreachable from the resolver, which normalizes dangling refs first;
-// kept because the engine never consumes refs, so a breach would be a raw
-// failed map-lookup rather than a loud refusal — the guard buys
-// deterministic loudness).
+// silently wrong bytes), tempo <= 0 (reachable — the ruled async-stderr
+// backstop for the sweep batches' per-cell computed tempo mutations, kept for
+// its message vocabulary: without it a NEGATIVE tempo degrades to a decreasing
+// target the engine refuses as "not strictly ascending" and a ZERO tempo to a
+// non-finite target the emission finiteness arm below refuses first, and
+// neither downstream refusal could NAME the tempo), a label ref with no
+// matching label def (Pass 2; unreachable from the resolver, which normalizes
+// dangling refs first; kept because the engine never consumes refs, so a
+// breach would be a raw failed map-lookup rather than a loud refusal — the
+// guard buys deterministic loudness), and — last, at the Pass 2 emission
+// chokepoint — a non-finite target anchor (the builder's own emission
+// contract: both orchestrators llrint the final target anchor and the trimmer
+// llrints interior evaluations BEFORE the engine validates, and llrint on a
+// non-finite value is an invalid conversion with an unspecified result, so
+// only the producer can refuse a non-finite target cleanly; strict ascent
+// stays engine-owned, finite values converting through llrint cleanly there).
 // Builds the full untrimmed map unconditionally; trim is applied downstream
 // by the prepost trimmer (plan_trim translates this map into the cut's
 // coordinates), never here. Scale participates here and not in

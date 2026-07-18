@@ -84,12 +84,15 @@ void init_fftw_threads(AudioSTFT& audio_stft) {
 // which the ascent loops never inspect — because the ascent comparisons
 // are not finite checks: NaN compares false against everything and would
 // slip through, and a trailing +inf passes ascent (inf is greater than
-// any finite prior). The producers validate finiteness at build time
-// (build_warp_frame_map refuses non-finite tempo-scale divisors and
-// non-finite or non-advancing target anchors at its emission chokepoint;
-// the phase reset derivation emits finite authored positions shifted by
-// a finite constant), so a non-finite entry here likewise always means a
-// breach.
+// any finite prior). The producers validate at build time —
+// build_warp_frame_map refuses non-positive tempo (its reachable sweep
+// backstop) and a non-finite target anchor (its own emission contract, since
+// the orchestrators llrint the final anchor before this validator ever runs),
+// and the phase reset derivation emits finite authored positions shifted by a
+// finite constant — so the finiteness arm HERE is the backstop behind the
+// builder's emission contract. STRICT ASCENT, by contrast, is owned HERE at
+// the engine, the class-4 last point before silently-wrong bytes; a
+// non-ascending (or non-finite) entry always means a breach.
 
 // Validate the (src,tgt) warp_frame_map: non-empty, finite entries, strict
 // ascent on both axes. Returns true if OK. The empty refusal guards the
