@@ -70,6 +70,9 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     // The active display context owns the composite view rule: its map is
     // the live target map in target view, and empty (identity) in source
     // view or when the target map cannot build.
+    // Hit tests read the LIVE display context; the painted stems lag it by the
+    // worker's publish latency after a map-changing commit — the accepted
+    // live-vs-painted window recorded at route_trim_ctrl_alt_press.
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
         ctx.warp_frame_map->empty() ? nullptr : ctx.warp_frame_map;
@@ -202,7 +205,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     // The painter culls a bound whose column is outside the viewport, then
     // greedily elides the right chip when two chip rectangles overlap. Hit
     // testing must consume that final visible list: considering both raw
-    // rectangles lets a click on the one painted chip select the elided bound,
+    // rectangles lets a click on the one painted chip grab the elided bound,
     // while considering an off-viewport rectangle makes an unpainted chip
     // reachable at the strip edge.
     struct TrimChipHit {

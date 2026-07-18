@@ -130,9 +130,9 @@ void GuiInputHandler::clear_trim_bounds() {
 // compare end_frame <= begin_frame, run only when both bounds are set, and
 // only at COMMIT — mid-gesture crossing stays free (nothing pops
 // mid-gesture; update_trim_drag never calls this). Every trim commit site —
-// the x autoset, the drag release, the nudge press, the Ctrl+Alt+wheel
-// end-move — calls this after its mutation and before its invalidations, so the
-// repaint shows the cleared state.
+// the x autoset, the Ctrl+Alt drag release, the Ctrl+Alt+wheel end-move, and
+// the settings-editor `:trim_*=` commit — calls this after its mutation and
+// before its invalidations, so the repaint shows the cleared state.
 void GuiInputHandler::auto_clear_crossed_trim() {
     if (app.trim.has_begin && app.trim.has_end &&
         app.trim.end_frame <= app.trim.begin_frame) {
@@ -422,8 +422,8 @@ void GuiInputHandler::commit_trim_drag() {
         // release-snap consequence (the constant-gap phrasing at TrimDragState
         // describes the mid-gesture active-domain motion).
         // The map is the display context's own — identity in source view,
-        // the live cached map in target view — as the trim nudge and
-        // trim-end wheel anchor: markers freeze a pre-drag map because a
+        // the live cached map in target view — as the trim-end wheel move
+        // anchors: markers freeze a pre-drag map because a
         // warp drag deforms it, but trim never enters
         // build_target_view_warp_frame_map, so the live map is stable
         // across the drag. The trim stems paint
@@ -431,8 +431,8 @@ void GuiInputHandler::commit_trim_drag() {
         // can LAG the live cache inside an async waveform-rebuild window
         // (e.g. a trim grab immediately after a tempo commit); inside that
         // window stored-equals-shown holds only transiently, converging when
-        // the rebuild lands — the same displayed-vs-live nuance the nudge and
-        // wheel anchors share. The absolute walls
+        // the rebuild lands — the same displayed-vs-live nuance the trim-end
+        // wheel anchor shares. The absolute walls
         // — both bounds 0..EOF-1, plain integer compares —
         // re-apply AFTER the snap so the walls win over the pixel grid and a
         // wall-clamped release rests exactly on its wall. Degenerate paint
@@ -561,6 +561,19 @@ void GuiInputHandler::wheel_move_trim_end(GuiMouseButton button, int count) {
 //     drag; else the same strictly-between pair rule; else no-op.
 // A lone set bound arms only its halo/chip single drag — no pair arm. Trim
 // drags never touch selection.
+//
+// The routing computes bound columns from the LIVE display context, while the
+// painted stems/chips come from the last COMPLETED waveform fingerprint —
+// after a tempo/scale commit in target view the two can disagree for the frame
+// or two the worker needs to publish. A Ctrl+Alt press inside that window acts
+// on the live geometry, not the lagging pixels: possible outcomes are a missed
+// single hit, a pair grab where a single was aimed, or the nearer-bound pick
+// differing from the visible stems — all immediately visible and recoverable
+// (Esc or drag back), never a malformed authored value. ACCEPTED by ruling: the
+// window is sub-perceptual, the marker hit tests share exactly the same
+// live-vs-painted window and always have, and the cure — a pinned
+// displayed-interaction context threaded through press/motion/release — would
+// re-create the frozen-snapshot complexity this design deleted.
 void GuiInputHandler::route_trim_ctrl_alt_press(int mouse_x, int mouse_y,
                                                 bool inside_top) {
     if (audio.total_frames() <= 0) return;

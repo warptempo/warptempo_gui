@@ -322,10 +322,10 @@ struct EditorTextDragState {
     bool active = false;
 };
 
-// Alt+drag of a trim boundary stem. Parallel to DragState but motion mutates
-// the active tab's live trim mirror directly (no overlay); release triggers a
-// target render when the bound moved. Trim is excluded from undo/redo.
-// Session-only.
+// Ctrl+Alt drag of a trim boundary stem (trim's only pointer gesture).
+// Parallel to DragState but motion mutates the active tab's live trim mirror
+// directly (no overlay); release triggers a target render when the bound
+// moved. Trim is excluded from undo/redo. Session-only.
 struct TrimDragState {
     bool active   = false;
     bool is_begin = false;   // which bound the cursor is dragging
@@ -341,8 +341,10 @@ struct TrimDragState {
 
     // Ctrl+Alt move-both-bounds drag: both bounds translate together by
     // the same delta in the active (on-screen) domain, preserving the gap
-    // as it appears under warp. `is_begin` still records which stem was
-    // grabbed (for cosmetic purposes only — both move regardless).
+    // as it appears under warp. `is_begin` names the grabbed bound — both
+    // move, but the grabbed one is what the viewport clamp keeps in view and
+    // what the playhead pins to during motion, so it is load-bearing, not
+    // cosmetic.
     bool    both                 = false;
     int64_t orig_begin_frame   = 0;
     int64_t orig_end_frame     = 0;
@@ -655,7 +657,7 @@ struct AppState {
     // release, Escape, and file load.
     PlayheadDragState playhead_drag;
 
-    // Alt+drag of a trim boundary stem. Cleared on button
+    // Ctrl+Alt drag of a trim boundary stem. Cleared on button
     // release, Escape, and file load.
     TrimDragState trim_drag;
 

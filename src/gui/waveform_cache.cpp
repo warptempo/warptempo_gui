@@ -782,9 +782,9 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
                                                 app.last_selected_marker);
 
     // Trim boundary stems. Positions ride trim_begin / trim_end
-    // (displayed domain), has-set + selected bits from the active A/B tab.
-    // Computed by the shared helper so the flag cache's b/e chips read the
-    // exact same values (chip + stem are one unit).
+    // (displayed domain), has-set bits from the active A/B tab (trim carries
+    // no selected state). Computed by the shared helper so the flag cache's
+    // b/e chips read the exact same values (chip + stem are one unit).
     const DisplayedTrim dtrim   = compute_displayed_trim();
     const bool trim_has_begin   = dtrim.has_begin;
     const bool trim_has_end     = dtrim.has_end;
@@ -955,9 +955,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
 
     // Displayed-viewport inputs from wf_cache.fp_*. Warp/phase flags are
     // positioned at marker times only. The b/e trim chips also ride this
-    // strip, so the displayed-domain trim positions + has/selected bits (from
-    // the shared helper, identical to the stem cache's) are now part of the
-    // flag cache's identity.
+    // strip, so the displayed-domain trim positions + has bits (trim carries
+    // no selected state; from the shared helper, identical to the stem
+    // cache's) are part of the flag cache's identity.
     const int64_t  vp_start     = wf_cache.fp_vp_start;
     const int64_t  vp_end       = wf_cache.fp_vp_end;
     const bool     is_target    = wf_cache.fp_target;

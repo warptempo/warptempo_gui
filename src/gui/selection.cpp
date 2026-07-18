@@ -77,9 +77,9 @@ void Selection::cycle_selection(bool forward) {
     const int n = phase_reset
         ? static_cast<int>(phase_reset_vec.size())
         : static_cast<int>(warp_vec.size());
-    // No early return on an empty marker list: trim bounds can still be cycle
-    // stops. frame_of / is_disabled below are only invoked for indices in
-    // [0, n), so n == 0 simply yields no marker candidate.
+    // The Tab walk is markers-only (trim bounds are not cycle stops — trim is
+    // outside the selection system). frame_of / is_disabled below are only
+    // invoked for indices in [0, n), so n == 0 simply yields no candidate.
 
     // Helper to read frame-of-index in the active domain. Source view:
     // marker source-frame == active-domain frame (identity). Target view:
@@ -236,8 +236,8 @@ void Selection::sync_playhead_to_last_selected(bool edge_follow) {
 
 void Selection::jump_playhead_to(int64_t target_sample) {
     // Playhead domain clamp through clamp_playhead_to_live_domain (the
-    // domain ruling): a jump onto trim end — legal at total — rests at
-    // total - 1.
+    // domain ruling): the playhead rests in [0, total - 1], the one inclusive
+    // authored domain every marker column and both trim bounds share.
     target_sample = clamp_playhead_to_live_domain(target_sample, app, audio);
     app.playhead_cursor_sample = target_sample;
 

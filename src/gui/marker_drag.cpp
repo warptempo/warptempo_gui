@@ -143,7 +143,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     d.pre_drag_last_selected = app.last_selected_marker;
     d.hit_marker             = hit;
     d.pre_drag_playhead_sample = app.playhead_cursor_sample;
-    // Pre-drag selection/group snapshot for the Esc/Ctrl+Q cancellation
+    // Pre-drag marker selection snapshot for the Esc/Ctrl+Q cancellation
     // restore: first motion collapses the selection onto the grabbed marker,
     // and that collapse is part of the gesture, so cancel restores it wholesale.
     d.pre_drag_selection = capture_selection_snapshot(app);
@@ -155,14 +155,15 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
 // Apply a raw delta (mouse-derived) to the dragging markers, clamped.
 // Writes proposed new times into app.drag.moveable_times — the live
 // marker store is NOT mutated. Paint reads moveable_times through the
-// DragOverlay so dragged markers paint at their proposed positions while
-// the warp_frame_map stays frozen at its pre-drag snapshot. The live store is
-// updated wholesale in commit_drag.
+// DragOverlay so dragged markers paint at their proposed positions while the
+// display warp_frame_map is read from the memoized display cache (no per-drag
+// copy exists — the cache is stable for the drag's lifetime, the ruling at
+// DragState). The live store is updated wholesale in commit_drag.
 //
 // Symmetric across warp and phase reset: both branches write the same
 // statement into the same vector. The waveform cache stays valid
-// throughout the drag — viewport / trim / dimensions / view-domain /
-// frozen-warp_frame_map-hash don't change — so the invalidation triggers a
+// throughout the drag — viewport / trim / dimensions / view-domain / the
+// display warp_frame_map hash don't change — so the invalidation triggers a
 // cheap blit of cached pixels with stems, flags, and playhead repainted
 // on top. A narrow per-marker rect would be wrong in target view, where
 // the dragged marker's proposed position lands at the cursor's pixel
@@ -193,8 +194,7 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         // real, focus the whole selection on the single grabbed marker.
         // Delegated to Selection::set_single_selection — the same helper a
         // marker click uses — so the rule (drop the rest of the marker
-        // selection AND any trim-boundary selection, make Markers the active
-        // group) lives in one place. Deferred to first motion so a click
+        // selection) lives in one place. Deferred to first motion so a click
         // without a drag leaves selection untouched.
         if (first_motion) {
             selection.set_single_selection(app.drag.hit_marker);

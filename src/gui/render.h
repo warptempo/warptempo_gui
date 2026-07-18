@@ -101,8 +101,8 @@ inline constexpr GuiColor kText             = hex(0xFCFCFC);  // Breeze paper wh
 
 // Trim boundary stem color (#F67400 orange). Distinct from
 // kMarker, kSelected, the teal cursor, and the yellow scanner. A set
-// trim begin/end paints as a vertical stem in this color, or kSelected
-// when that boundary is selected.
+// trim begin/end always paints as a vertical stem in this one color —
+// trim is outside the selection system, so there is no selected variant.
 inline constexpr GuiColor kTrimMarker       = hex(0xF67400);  // Breeze orange
 
 // -- GUI font size ---------------------------------------------------------
@@ -470,7 +470,7 @@ void render_markers(cairo_t* cr,
 // `has_begin` / `has_end`) paints a 1px vertical stem at its domain-frame
 // column, spanning the same vertical extent as marker stems (the flag chip's
 // bottom, via flag_chip_bottom_y, down to waveform bottom). Color is
-// kTrimMarker, or kSelected when that bound is selected. `trim.begin` /
+// always kTrimMarker — trim has no selected variant. `trim.begin` /
 // `trim.end` are in the displayed domain (already warp_frame_map-translated by the
 // caller), so no further translation happens here — the columns are placed
 // exactly like marker stems against the same viewport. View-independent: drawn
@@ -493,8 +493,8 @@ void render_trim_stems(cairo_t* cr,
 // edge, the same convention the stem renderer uses). Column placement matches
 // render_trim_stems against the same viewport — `trim.begin` / `trim.end` are
 // already in the displayed domain, so no further translation happens here.
-// The chip has NO editable payload; it is select/drag only and is never a
-// text_editor target.
+// The chip has NO editable payload; it is a Ctrl+Alt grab target only (trim is
+// outside the selection system) and is never a text_editor target.
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
                        GuiRect waveform_area,

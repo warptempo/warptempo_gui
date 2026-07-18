@@ -31,9 +31,9 @@ bool create_if_missing(const std::filesystem::path& p,
 
 // Convert one parsed `.settings` tab band into a live ViewState: the
 // viewport / zoom / playhead scratch, the read-only flag, and the trim pair.
-// The selection and trim-selection fields take their ViewState defaults (a
-// parsed band carries no selection). One home for the band-to-ViewState
-// field mapping; the sole caller is the `'` render-commit
+// The marker selection fields take their ViewState defaults (a parsed band
+// carries no selection; trim is outside the selection system). One home for
+// the band-to-ViewState field mapping; the sole caller is the `'` render-commit
 // (adopt_render_entry) full-inheritance commit.
 ViewState view_state_from_settings_tab(const SettingsFileTab& t);
 

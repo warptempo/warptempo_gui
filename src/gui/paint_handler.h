@@ -431,11 +431,11 @@ private:
     // Displayed-domain trim boundary state, shared by the stem cache (which
     // paints the begin/end stems) and the flag cache (which paints the b/e
     // chips that cap them). Computing it in one place keeps chip and stem in
-    // lockstep — same positions, same has/selected bits — so they always read
-    // as one continuous unit. Positions are the AUTHORED per-bound frames —
-    // unordered (bounds may be inverted mid-gesture — crossed cannot rest —
-    // and this paints per frame; past-EOF is load-fatal, so each
-    // bound is within [0, EOF])
+    // lockstep — same positions, same has bits (trim has no selected state) —
+    // so they always read as one continuous unit. Positions are the AUTHORED
+    // per-bound frames — unordered (bounds may be inverted mid-gesture —
+    // crossed cannot rest — and this paints per frame; past-EOF is load-fatal,
+    // so each bound is within [0, EOF])
     // — translated into the displayed domain (target-view warp_frame_map from
     // wf_cache.fp_warp_frame_map, or source-frame), matching the marker
     // stems' coordinate system.
