@@ -398,11 +398,11 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // so the next maybe_rebuild_stem_cache reads the same coordinate
     // system the just-blitted waveform pixels were rendered against.
     std::swap(wf_cache.fp_warp_frame_map,     wf_cache.pending_fp_warp_frame_map);
-    // The event-sync hit-map mirror does NOT happen here: this is the PLATE
-    // publish, but the aimed-at item pixels (stem/flag caches) adopt this map
-    // only when maybe_rebuild_stem_cache / maybe_rebuild_flag_cache run at the
-    // tick. Mirroring at that item-cache boundary keeps the hit geometry in
-    // step with the pixels the user actually grabs (ruling at the selector).
+    // The event-sync hit-map advance does NOT happen here: this is the PLATE
+    // publish, but the aimed-at item pixels (stem/flag caches) rebuild against
+    // this map only at the tick, and the hit map advances only when the paint
+    // pass COMMITS that rebuild. The rebuilds stage; on_redraw promotes at the
+    // committing frame (the two-phase commit — ruling at the selector).
 
     // Invalidate the waveform area so the next paint blits the new
     // pixels. Matches the rect Viewport::invalidate_waveform_area uses.
@@ -514,12 +514,13 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.fp_target       = in.is_target;
     wf_cache.fp_warp_frame_map_hash = in.warp_frame_map_hash;
     wf_cache.fp_warp_frame_map      = in.warp_frame_map;
-    // The event-sync hit-map mirror does NOT happen here: this synchronous
+    // The event-sync hit-map advance does NOT happen here: this synchronous
     // rebuild publishes the plate fingerprint, but the item caches (stems/flags)
-    // adopt this map only when maybe_rebuild_stem_cache / maybe_rebuild_flag_cache
-    // run — this same tick, but after. Mirroring at that item-cache boundary
-    // keeps the hit geometry in step with the aimed-at pixels (ruling at the
-    // selector).
+    // rebuild against this map only when maybe_rebuild_stem_cache /
+    // maybe_rebuild_flag_cache run — this same tick, but after — and the hit map
+    // advances only when the paint pass commits that rebuild. The rebuilds
+    // stage; on_redraw promotes at the committing frame (the two-phase commit —
+    // ruling at the selector).
 
     wf_cache.pending_fp_vp_start     = in.vp_start;
     wf_cache.pending_fp_vp_end       = in.vp_end;
@@ -927,20 +928,22 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     stem_cache.fp_trim_has_begin            = trim_has_begin;
     stem_cache.fp_trim_has_end              = trim_has_end;
 
-    // Event-synchronized hit geometry: the item pixels just rebuilt, so advance
-    // the hit map to match. In target view mirror the map these stems baked
-    // (wf_cache.fp_warp_frame_map, the same map tmap_arg fed the painter); in
-    // source view the stems show mapless geometry, so clear the slot to the
-    // cold live-map fallback. maybe_rebuild_flag_cache runs in the same tick and
-    // writes the same value (both caches consume wf_cache.fp_warp_frame_map), so
-    // this is a per-item mirror, not a once-after-both site — last writer wins,
-    // and mirroring where each item rebuild runs means the slot changes exactly
-    // when the item pixels change, even when only one of the two rebuilds.
-    // Ruling at the selector.
+    // Event-synchronized hit geometry, STAGE phase: these OFFSCREEN stem pixels
+    // just rebuilt, but the on-screen items change only when the paint pass
+    // blits this cache and commits the frame. So stage the map these stems baked
+    // (wf_cache.fp_warp_frame_map, the same map tmap_arg fed the painter, target
+    // view) or a clear (source view, mapless stems); on_redraw promotes it at
+    // that committing frame. maybe_rebuild_flag_cache runs in the same tick and
+    // stages the same value (both caches consume wf_cache.fp_warp_frame_map), so
+    // this is a per-item stage, not a once-after-both site — last writer wins,
+    // and staging where each item rebuild runs means the staged value tracks the
+    // caches exactly, even when only one of the two rebuilds. Ruling at the
+    // selector.
     if (is_target)
-        app.displayed_target_warp_frame_map = wf_cache.fp_warp_frame_map;
+        app.staged_displayed_target_warp_frame_map = wf_cache.fp_warp_frame_map;
     else
-        app.displayed_target_warp_frame_map.clear();
+        app.staged_displayed_target_warp_frame_map.clear();
+    app.staged_displayed_valid = true;
 
     // Invalidate the stem region. Viewport-driven invalidations
     // already cover this strip, but pure marker-store edits (warp_gen /
@@ -1140,16 +1143,17 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_trim_has_begin          = dtrim.has_begin;
     flag_cache.fp_trim_has_end            = dtrim.has_end;
 
-    // Event-synchronized hit geometry, the flag/chip twin of the stem-cache
-    // mirror: these flags/chips just rebuilt, so advance the hit map to the map
-    // they baked (target view) or clear it to the cold live-map fallback
-    // (source view). Same value the stem rebuild writes this tick; per-item so
-    // the slot changes exactly when the aimed-at pixels change. Ruling at the
-    // selector.
+    // Event-synchronized hit geometry, STAGE phase — the flag/chip twin of the
+    // stem-cache stage: these OFFSCREEN flags/chips just rebuilt, so stage the
+    // map they baked (target view) or a clear (source view); on_redraw promotes
+    // it at the frame that blits this cache. Same value the stem rebuild stages
+    // this tick; per-item so the staged value tracks the caches whichever
+    // rebuilds. Ruling at the selector.
     if (is_target)
-        app.displayed_target_warp_frame_map = wf_cache.fp_warp_frame_map;
+        app.staged_displayed_target_warp_frame_map = wf_cache.fp_warp_frame_map;
     else
-        app.displayed_target_warp_frame_map.clear();
+        app.staged_displayed_target_warp_frame_map.clear();
+    app.staged_displayed_valid = true;
 
     gui.invalidate_region(top_strip.x, top_strip.y,
                           top_strip.w, top_strip.h);

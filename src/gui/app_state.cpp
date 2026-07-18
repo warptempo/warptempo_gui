@@ -52,9 +52,10 @@ void remap_marker_indices_after_reorder(AppState& app,
 
 // Event-synchronized hit map (ruling at the declaration in app_state.h): in
 // target view with a warm displayed map, the item hit tests decide against the
-// map the STEM/FLAG item caches last baked (not the earlier plate publish);
+// map the LAST COMMITTED frame's stem/flag pixels were painted with (promoted
+// at that frame commit, not the offscreen rebuild or the plate publish);
 // otherwise the live display context's map (source view = its identity/empty
-// map, target-view cold = the live map until the first item-cache adoption).
+// map, target-view cold = the live map until the first committed target frame).
 const std::vector<WarpFrameMapSegment>&
 displayed_or_live_target_map(const AppState& app, const GuiAudio& audio) {
     const GuiDisplayContext& ctx = active_display_context(app, audio);

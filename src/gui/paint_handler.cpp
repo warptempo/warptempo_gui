@@ -11,6 +11,7 @@
 #include <cmath>
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 // On-screen paint handler: on_redraw and its per-strip paint passes, the
@@ -643,6 +644,24 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     }
 
     cairo_restore(cr);
+
+    // Event-synchronized hit geometry, PROMOTE phase (ruling at the selector):
+    // this frame has now blitted the current item caches (stems/flags/chips are
+    // blit-only above), so advance the hit map to what the frame commits.
+    // Promote the staged value the last item rebuild left, once — idle frames
+    // with no staged value do nothing. on_redraw runs once per damage rect, but
+    // the whole frame commits atomically after this loop in
+    // GuiPlatform::paint_one_frame, and a rebuild always invalidates its item
+    // region, so the committing frame's damage always includes the items:
+    // promoting on the first rect of that frame lands the slot on this frame's
+    // pixels. No input dispatches mid-loop (single-threaded), so a press only
+    // ever reads the last COMMITTED frame's geometry.
+    if (app.staged_displayed_valid) {
+        app.displayed_target_warp_frame_map =
+            std::move(app.staged_displayed_target_warp_frame_map);
+        app.staged_displayed_target_warp_frame_map.clear();
+        app.staged_displayed_valid = false;
+    }
 
     // Force any pending Cairo ops out to the X server. The subsequent flush
     // in GuiPlatform::dispatch_event is then a cheap no-op.

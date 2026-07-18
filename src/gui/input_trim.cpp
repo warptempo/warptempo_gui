@@ -528,15 +528,17 @@ void GuiInputHandler::wheel_move_trim_end(GuiMouseButton button, int count) {
 // drags never touch selection.
 //
 // The bound columns come from displayed_or_live_target_map — the map the
-// on-screen stems/chips were painted with (advanced when the STEM/FLAG item
-// caches adopt a rebuild, not at the earlier plate publish) — so a Ctrl+Alt hit
-// lands on what is drawn: the routing decision flips at the exact instant the
-// item pixels flip (the event-sync ruling at that selector). What was the open
-// live-vs-painted window for item hits is CLOSED here. Two narrow seams remain
-// ACCEPTED: the COLD-STATE fallback (first paint, a view toggle, or just after
-// load, where the displayed map is empty and the live map serves until the
-// first item-cache adoption), and the playhead-placement clicks (column-based,
-// out of scope by ruling — a far subtler seam).
+// on-screen stems/chips were painted with on the LAST COMMITTED frame (the item
+// rebuilds only STAGE; the paint pass PROMOTES at the committing frame, not at
+// the earlier plate publish) — so a Ctrl+Alt hit lands on what is drawn: the
+// routing decision flips at the exact instant the on-screen items flip (the
+// event-sync ruling at that selector). What was the open live-vs-painted window
+// for item hits is CLOSED to commit granularity. The remaining seams are all
+// ACCEPTED: commit-to-scanout plus human reaction (irreducible — input responds
+// to the previously presented frame), the COLD-STATE fallback (first paint, a
+// view toggle, or just after load, live map until the first committed target
+// frame), and the playhead-placement clicks (column-based, out of scope by
+// ruling — a far subtler seam).
 void GuiInputHandler::route_trim_ctrl_alt_press(int mouse_x, int mouse_y,
                                                 bool inside_top) {
     if (audio.total_frames() <= 0) return;

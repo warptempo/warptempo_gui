@@ -26,11 +26,15 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     app.follow_mode         = sf.follow;
     // Event-synchronized hit geometry: this routine (re)establishes the live
     // view from settings — the source-load and `'` adopt paths both call it —
-    // so drop any displayed hit map from the previous file/session. It reflects
-    // the OTHER file's last target item pixels; clearing yields the cold
-    // live-map fallback until the new view's item caches adopt (the recorded
-    // cold-state seam). Ruling at the selector.
+    // so drop any displayed hit map from the previous file/session, AND the
+    // staged value (else a stale staged map would promote wrong geometry at the
+    // next paint). It reflects the OTHER file's last target item pixels;
+    // clearing yields the cold live-map fallback until the new view's item
+    // caches rebuild, stage, and a frame promotes (the recorded cold-state
+    // seam). Ruling at the selector.
     app.displayed_target_warp_frame_map.clear();
+    app.staged_displayed_target_warp_frame_map.clear();
+    app.staged_displayed_valid = false;
     app.active_audio_view   = sf.active_audio_view;
     app.active_markers_view = sf.active_markers_view;
     app.active_tab_view     = sf.active_tab_view;
