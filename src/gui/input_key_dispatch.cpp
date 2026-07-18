@@ -183,6 +183,12 @@ bool GuiInputHandler::any_text_editor_active() const {
 // editor (evaluated before the open) does not arm, while typing inside an
 // already-open editor does.
 bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
+    // A press the prompt or a live pointer gesture would swallow must not arm:
+    // its owning context rejected the press, and the gate lifting later must not
+    // retroactively empower the hold (e.g. a chord held through a marker drag
+    // must not repeat onto the just-committed marker once the mouse releases).
+    if (app.prompt.active) return false;
+    if (any_pointer_gesture_active(app)) return false;
     if (any_text_editor_active()) {
         // Session-ending / one-shot editor keys never repeat.
         if (key == GuiKeys::Return || key == GuiKeys::KpEnter ||
@@ -328,10 +334,13 @@ bool GuiInputHandler::handle_escape_cancels(GuiKey key) {
 
 // Esc during a pointer drag stops the gesture. Marker and trim drags
 // are stopped before their deferred commit, so their pending change is
-// discarded and the live state returns to pre-drag — both restore the pre-drag
-// playhead the motion had pinned onto the grabbed item; scroll and playhead
-// drags apply their motion continuously, so stopping just ends them
-// where they are. One verb across all four: Esc means stop.
+// discarded and the live state returns to pre-drag — positions, the pinned
+// playhead, AND the selection/group state (the first-motion selection collapse
+// is part of the gesture and dies with it); scroll and playhead drags apply
+// their motion continuously, so stopping just ends them where they are. A live
+// editor-text drag is FINALIZED, not cancelled — selection-only with nothing to
+// revert, it collapses to a caret as its release would. One verb across the
+// pointer drags: Esc means stop.
 void GuiInputHandler::cancel_active_drags() {
     if (app.drag.active) {
         // The live marker store was untouched during motion (proposed
@@ -344,6 +353,15 @@ void GuiInputHandler::cancel_active_drags() {
         // already inside the playhead's [0, total - 1] domain
         // (move_playhead_to holds the ruling).
         app.playhead_cursor_sample = app.drag.pre_drag_playhead_sample;
+        // Restore the pre-drag selection/group snapshot: the first-motion
+        // collapse onto the grabbed marker is part of the gesture and dies with
+        // the cancel.
+        app.selected_markers     = app.drag.pre_drag_selected_markers;
+        app.last_selected_marker = app.drag.pre_drag_last_selected_marker;
+        app.trim_begin_selected  = app.drag.pre_drag_trim_begin_selected;
+        app.trim_end_selected    = app.drag.pre_drag_trim_end_selected;
+        app.last_selected_trim   = app.drag.pre_drag_last_selected_trim;
+        app.last_sel_group       = app.drag.pre_drag_last_sel_group;
         if (playback.is_playing()) playback.resync_predictor();
         app.drag = DragState{};
         viewport.invalidate_waveform_area();
@@ -365,15 +383,32 @@ void GuiInputHandler::cancel_active_drags() {
         // trim drags stop playback at begin — kept for symmetry with the
         // marker arm.
         app.playhead_cursor_sample = app.trim_drag.pre_drag_playhead_sample;
+        // Restore the pre-drag selection/group snapshot: the first-motion
+        // collapse erased marker selection and pointed last_sel_group at Trim;
+        // that collapse dies with the cancel, so follow-up Delete / Alt-arrows
+        // do not target the abandoned bound.
+        app.selected_markers     = app.trim_drag.pre_drag_selected_markers;
+        app.last_selected_marker = app.trim_drag.pre_drag_last_selected_marker;
+        app.trim_begin_selected  = app.trim_drag.pre_drag_trim_begin_selected;
+        app.trim_end_selected    = app.trim_drag.pre_drag_trim_end_selected;
+        app.last_selected_trim   = app.trim_drag.pre_drag_last_selected_trim;
+        app.last_sel_group       = app.trim_drag.pre_drag_last_sel_group;
         if (playback.is_playing()) playback.resync_predictor();
         app.trim_drag = TrimDragState{};
         viewport.invalidate_waveform_area();
+        viewport.invalidate_top_strip();
         viewport.invalidate_timestamp_area();
     }
     // Scroll and playhead drags have already applied their motion, so
     // stopping is just ending the gesture at its current position.
     if (app.scroll_drag.active)   app.scroll_drag = ScrollDragState{};
     if (app.playhead_drag.active) app.playhead_drag = PlayheadDragState{};
+    // A live editor-text drag is FINALIZED, not cancelled: it is selection-only
+    // with nothing to revert, so it collapses a no-motion anchor to a caret and
+    // repaints the owning strip exactly as its release would, instead of
+    // surviving as a keyboard-swallowing ghost until a later pointer motion
+    // notices the lost button.
+    if (app.editor_text_drag.active) finalize_editor_text_drag();
 }
 
 // Render-trigger chords. See the declaration for the chord list.

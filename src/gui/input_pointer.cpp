@@ -372,8 +372,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // canonical-line editor (which owns the selection +
                     // playhead update on its target-switching path).
                     // Read-only refuses the open (silent no-op). Shift+click
-                    // keeps the legacy multi-select toggle below; Ctrl+click
-                    // was handled by the reposition-drag branch above.
+                    // keeps the multi-select toggle below; the Alt reposition-
+                    // drag was handled by the branch above.
                     if (active_view_state(app).read_only) {
                         return;
                     }

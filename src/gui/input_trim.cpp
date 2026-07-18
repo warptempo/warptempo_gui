@@ -292,25 +292,38 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
     app.trim_drag.orig_begin_frame = app.trim.begin_frame;
     app.trim_drag.orig_end_frame   = app.trim.end_frame;
     app.trim_drag.pre_drag_playhead_sample = app.playhead_cursor_sample;
-    // Grab anchor: the press position in source-domain frames. Motion moves
-    // the bound by the cursor's displacement from here, so it tracks the grab
-    // point with no snap (mirrors begin_drag's anchor_mouse_time_frame).
-    // A bad conversion leaves anchor_frame at 0; harmless since the same
-    // unusable state makes update_trim_drag early-return too.
-    double anchor = 0.0;
-    if (trim_mouse_x_to_source_frame(mouse_x, anchor))
-        app.trim_drag.anchor_frame = anchor;
+    // Pre-drag selection/group snapshot for the Esc/Ctrl+Q cancellation
+    // restore: first motion collapses the selection onto the grabbed bound (and
+    // the pair re-sets the partner), erasing marker selection and setting
+    // last_sel_group = Trim, so cancel puts all six back.
+    app.trim_drag.pre_drag_selected_markers      = app.selected_markers;
+    app.trim_drag.pre_drag_last_selected_marker  = app.last_selected_marker;
+    app.trim_drag.pre_drag_trim_begin_selected   = app.trim_begin_selected;
+    app.trim_drag.pre_drag_trim_end_selected     = app.trim_end_selected;
+    app.trim_drag.pre_drag_last_selected_trim    = app.last_selected_trim;
+    app.trim_drag.pre_drag_last_sel_group        = app.last_sel_group;
+    // Grab anchor: each arm captures exactly what its motion path consumes —
+    // the pair path reads anchor_active_frame (active-domain, for the rigid
+    // both-bounds delta); the single-bound path reads anchor_frame (source-
+    // domain press position, motion applying the cursor's displacement from
+    // here, mirroring begin_drag's anchor_mouse_time_frame). A bad conversion
+    // leaves the anchor at 0; harmless since the same unusable state makes
+    // update_trim_drag early-return too.
+    if (both) {
+        int64_t af = 0;
+        if (trim_mouse_x_to_active_frame(mouse_x, af))
+            app.trim_drag.anchor_active_frame = af;
+    } else {
+        double anchor = 0.0;
+        if (trim_mouse_x_to_source_frame(mouse_x, anchor))
+            app.trim_drag.anchor_frame = anchor;
+    }
     // The press only captures drag state — selection and the group tag are
     // deferred to the first real motion (the single path's first-motion
     // collapse, the pair path's first-motion selection in update_trim_drag),
     // mirroring the marker drag. A press that never moves leaves selection,
     // group routing, and last_selected_trim untouched, so the
     // no-motion-commits-nothing rule covers the bookkeeping too.
-    if (both) {
-        int64_t af = 0;
-        if (trim_mouse_x_to_active_frame(mouse_x, af))
-            app.trim_drag.anchor_active_frame = af;
-    }
 }
 
 void GuiInputHandler::update_trim_drag(int mouse_x) {
@@ -318,14 +331,6 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     if (audio.sample_rate() <= 0 || audio.total_frames() <= 0) return;
     const double spp = current_samples_per_pixel(app, audio);
     if (spp <= 0.0) return;
-
-    // Anchor-relative motion: the dragged bound moves by the cursor's
-    // displacement from the grab point, not to the absolute cursor column.
-    // cursor_frame is converted identically to the begin-drag anchor, so
-    // the bound stays the same distance under the cursor for the whole drag.
-    double cursor_frame = 0.0;
-    if (!trim_mouse_x_to_source_frame(mouse_x, cursor_frame)) return;
-    const double delta_frames = cursor_frame - app.trim_drag.anchor_frame;
 
     if (app.trim_drag.both) {
         int64_t cur_active = 0;
@@ -401,6 +406,16 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         }
         return;
     }
+
+    // Anchor-relative motion (single-bound path only): the dragged bound moves
+    // by the cursor's displacement from the grab point, not to the absolute
+    // cursor column. cursor_frame is converted identically to the begin-drag
+    // anchor, so the bound stays the same distance under the cursor for the
+    // whole drag. The pair path above works in the active domain and never
+    // consumes this source-domain conversion, so it is computed only here.
+    double cursor_frame = 0.0;
+    if (!trim_mouse_x_to_source_frame(mouse_x, cursor_frame)) return;
+    const double delta_frames = cursor_frame - app.trim_drag.anchor_frame;
 
     // Single-bound: pre-drag frame plus the anchor-relative delta. The
     // mouse-derived delta rounds once into the integer domain through

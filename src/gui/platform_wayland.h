@@ -282,8 +282,13 @@ private:
     // repeat_period_us_ is the compositor-advertised inter-repeat interval
     // (1_000_000 / rate), in microseconds.
     // Zero rate means "no repeat" and is honored — held keys do not repeat.
+    // repeat_editor_ctx_ is the arm-time editor-active context (from
+    // text_editor_active_probe_): each fire revalidates it so an editor opening
+    // or closing mid-hold disarms rather than acting in a context that never
+    // admitted the press.
     GuiKey        repeat_key_       = 0;
     uint32_t      repeat_keycode_   = 0;
+    bool          repeat_editor_ctx_ = false;
     uint64_t      repeat_due_us_    = 0;
     uint64_t      repeat_delay_us_  = 600'000;   // sensible default if compositor
     uint64_t      repeat_period_us_ = 33'000;    // doesn't advertise (600ms/30Hz)

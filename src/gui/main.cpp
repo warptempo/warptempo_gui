@@ -644,9 +644,9 @@ int main(int argc, char** argv) {
         // and commit a spurious jump. Cancel any in-flight pointer drag before
         // on_resize applies, so the resize always lands on a gesture-free
         // state: cancel_active_drags is a no-op when no drag is active, so the
-        // plain no-gesture resize path is unaffected. The editor text-selection
-        // drag needs no cancel here: its lost-button motion merely finalizes
-        // the selection, a benign finalize rather than a positional commit.
+        // plain no-gesture resize path is unaffected. A live editor text-
+        // selection drag is finalized up front by cancel_active_drags (collapsed
+        // to a caret, selection-only, nothing to revert).
         input_handler.cancel_active_drags();
         paint_handler.on_resize(w, h);
     });
@@ -681,9 +681,10 @@ int main(int argc, char** argv) {
         // and release, so a drag left alive would commit on the next motion
         // if the user dismisses the prompt. cancel_active_drags is a no-op
         // when no drag is active, so the clean and non-drag close paths are
-        // unaffected. The editor text-selection drag needs no cancel here:
-        // after dismissal its lost-button motion merely finalizes the
-        // selection, a benign finalize rather than a positional commit.
+        // unaffected. A live editor text-selection drag is finalized up front
+        // by cancel_active_drags (collapsed to a caret, selection-only, nothing
+        // to revert), so there is no motion-free interval where it would swallow
+        // keys until a later pointer motion noticed the lost button.
         input_handler.cancel_active_drags();
         prompt.request_close();
     });

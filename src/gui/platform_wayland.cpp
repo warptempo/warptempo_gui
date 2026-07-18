@@ -1445,16 +1445,24 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
     // the application probe under the pre-dispatch context (evaluated before
     // deliver_key runs, so a press that opens an editor is judged pre-open):
     // only held-step gestures and editor typing repeat; every edge-triggered
-    // command is one-shot. An ineligible press disarms any armed repeat. Each
-    // repeat fire recomputes modifier bits and codepoint live, so a modifier
-    // change mid-hold affects both the chord and the typed character.
+    // command is one-shot. An ineligible press disarms any armed repeat. A
+    // repeat acts only while BOTH the press-time eligibility still holds under
+    // the live modifiers AND the arm-time editor context is unchanged — each
+    // fire recomputes modifier bits and codepoint live and revalidates both, so
+    // an editor opening/closing mid-hold (any route, the synthesized `e` click
+    // included), a prompt opening, or a pointer gesture starting all disarm at
+    // the next fire rather than acting in a context that never admitted the
+    // press. The arm-time editor context is captured here for that comparison.
     const bool repeat_ok =
         repeat_eligible_probe_ && repeat_eligible_probe_(key, mods);
+    const bool editor_ctx =
+        text_editor_active_probe_ && text_editor_active_probe_();
     deliver_key(key, mods);
     if (repeat_period_us_ > 0 && repeat_ok) {
-        repeat_key_     = key;
-        repeat_keycode_ = xkb_keycode;
-        repeat_due_us_  = monotonic_us() + repeat_delay_us_;
+        repeat_key_        = key;
+        repeat_keycode_    = xkb_keycode;
+        repeat_editor_ctx_ = editor_ctx;
+        repeat_due_us_     = monotonic_us() + repeat_delay_us_;
     } else {
         repeat_key_ = 0;
     }
@@ -1538,6 +1546,17 @@ void GuiPlatform::maybe_fire_repeat() {
     GuiInputState mods = current_mods();
     if (xkb_state_)
         mods.codepoint = xkb_state_key_get_utf32(xkb_state_, repeat_keycode_);
+    // Revalidate before delivering: a repeat acts only while the press-time
+    // eligibility still holds under the live modifiers AND the editor-context
+    // identity is unchanged. A context change (editor opened/closed, prompt up,
+    // pointer gesture started) or lost eligibility disarms with no fire.
+    const bool editor_ctx =
+        text_editor_active_probe_ && text_editor_active_probe_();
+    if (editor_ctx != repeat_editor_ctx_ ||
+        !(repeat_eligible_probe_ && repeat_eligible_probe_(repeat_key_, mods))) {
+        repeat_key_ = 0;
+        return;
+    }
     deliver_key(repeat_key_, mods);
     repeat_due_us_ = now + repeat_period_us_;
 }

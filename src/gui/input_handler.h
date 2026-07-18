@@ -626,10 +626,11 @@ private:
     void apply_font_size(double pt);
 
     // Source-view read-only allowlist. Returns true if key+mods is NOT on the
-    // allowlist of navigation / playback / zoom / view-switch / close-prompt /
-    // save keys honored in a read-only source tab — i.e. should be dropped.
+    // allowlist of navigation / playback / zoom / view-switch / close-prompt
+    // keys honored in a read-only source tab — i.e. should be dropped.
     // Authoring-mutation chords (trim gestures, Delete, undo/redo, the
-    // propagate commands) are blocked here at the gate.
+    // propagate commands) are blocked here at the gate, and Ctrl+S is not
+    // admitted either — read-only means no save from a locked tab.
     bool read_only_key_blocked(GuiKey key, GuiInputState mods);
 
     // Bottom-strip modal-editor predicate + key gate (bodies in

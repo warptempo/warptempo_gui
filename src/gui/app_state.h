@@ -99,6 +99,13 @@ struct UndoEntry {
     bool                      affects_persistence  = true;
 };
 
+// Which selection group the most recent selecting gesture
+// targeted. Routes the group-acting keyboard gestures — Delete and the
+// Alt+Left/Right nudge — to exactly one group (the pointer drags are
+// hit-area-routed and never consult it). Set to Trim when a click/gesture
+// lands on a trim boundary, Markers when it lands on a marker.
+enum class LastSelGroup { Markers, Trim };
+
 // Alt+drag state. `active` gates motion handling; the rest captures the
 // pre-drag snapshot so Escape can restore positions and clamps can be
 // evaluated without re-scanning the marker list on every motion event.
@@ -150,6 +157,17 @@ struct DragState {
     // marker position (commit_drag's sync_playhead_to_last_selected), so
     // this captured value serves only the Esc-cancel restore.
     int64_t                pre_drag_playhead_sample = 0;
+    // Pre-drag selection/group snapshot, captured at begin_drag for the
+    // Esc / Ctrl+Q cancellation restore (the pre_drag_playhead_sample pattern
+    // extended to selection): first motion collapses the selection onto the
+    // grabbed marker (set_single_selection), so cancel puts the whole
+    // selection/group state back.
+    std::set<int>          pre_drag_selected_markers;
+    int                    pre_drag_last_selected_marker = -1;
+    bool                   pre_drag_trim_begin_selected  = false;
+    bool                   pre_drag_trim_end_selected    = false;
+    char                   pre_drag_last_selected_trim   = 0;
+    LastSelGroup           pre_drag_last_sel_group       = LastSelGroup::Markers;
     // Index of the marker that was clicked to start the drag. Used to track
     // the playhead during motion so the audio cursor follows the grabbed
     // marker as it moves.
@@ -272,9 +290,11 @@ struct UndoHistory {
 };
 
 // State for the plain/Shift left-button playhead-drag gesture. The drag
-// only positions the playhead (with a 3px snap-to-marker magnet); selection
-// is set at press time and never mutated by motion. The gesture ends on
-// release (or on Escape, which ends at current position).
+// positions the playhead (with a 3px snap-to-marker magnet) AND mutates
+// selection live during motion: a no-Shift drag single-selects / clears at the
+// marker under the pointer, and a Shift drag sweep-selects every marker the
+// playhead passes between events. The gesture ends on release (or on Escape,
+// which ends at current position); release only resets the struct.
 //
 // Mouse-side click-keep-alive: a waveform-area press during playback
 // reseeks audio to the clicked sample (Reaper-style) instead of stopping.
@@ -283,9 +303,9 @@ struct UndoHistory {
 // the drag (split-playhead model).
 struct PlayheadDragState {
     bool active                    = false;
-    // Marker index the press landed on, or -1 if pressed on empty space;
-    // release uses it to suppress the snap-action when no actual drag
-    // occurred.
+    // Marker index the press landed on, or -1 if pressed on empty space. The
+    // Shift interval sweep excludes this marker from live pickup — the press
+    // already toggled it — so a press-and-sweep never double-toggles its origin.
     int  press_marker_idx          = -1;
     // Active-domain playhead position at the previous motion event (the
     // press position until the first motion). Left edge of the
@@ -307,13 +327,6 @@ struct PlayheadDragState {
 struct EditorTextDragState {
     bool active = false;
 };
-
-// Which selection group the most recent selecting gesture
-// targeted. Routes the group-acting keyboard gestures — Delete and the
-// Alt+Left/Right nudge — to exactly one group (the pointer drags are
-// hit-area-routed and never consult it). Set to Trim when a click/gesture
-// lands on a trim boundary, Markers when it lands on a marker.
-enum class LastSelGroup { Markers, Trim };
 
 // Alt+drag of a trim boundary stem. Parallel to DragState but motion mutates
 // the active tab's live trim mirror directly (no overlay); release triggers a
@@ -345,6 +358,17 @@ struct TrimDragState {
     // trim sibling. Motion pins the playhead onto the grabbed bound; Esc puts
     // it back here.
     int64_t pre_drag_playhead_sample = 0;
+    // Pre-drag selection/group snapshot, captured at begin_trim_drag for the
+    // cancellation restore (the DragState sibling): first motion collapses the
+    // selection onto the grabbed bound (select_trim_boundary, plus the pair's
+    // partner re-set), erasing marker selection and setting last_sel_group =
+    // Trim, so cancel puts the whole selection/group state back.
+    std::set<int> pre_drag_selected_markers;
+    int           pre_drag_last_selected_marker = -1;
+    bool          pre_drag_trim_begin_selected  = false;
+    bool          pre_drag_trim_end_selected    = false;
+    char          pre_drag_last_selected_trim   = 0;
+    LastSelGroup  pre_drag_last_sel_group       = LastSelGroup::Markers;
 };
 
 // Alt+drag on empty waveform: continuous 1:1 grab-pan of the viewport,
@@ -953,7 +977,7 @@ inline int64_t snap_authored_frame(double frame) {
     return static_cast<int64_t>(std::nearbyint(frame));
 }
 
-// The single query for "some pointer gesture is in flight" — a Ctrl marker
+// The single query for "some pointer gesture is in flight" — an Alt marker
 // drag, a trim drag, a scroll drag, a playhead drag, or an editor text
 // drag. Consumed by the wheel_context predicate (on_wheel's
 // completed-detent gate and the platform's per-frame sub-detent

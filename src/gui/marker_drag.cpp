@@ -158,6 +158,15 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     d.pre_drag_last_selected = app.last_selected_marker;
     d.hit_marker             = hit;
     d.pre_drag_playhead_sample = app.playhead_cursor_sample;
+    // Pre-drag selection/group snapshot for the Esc/Ctrl+Q cancellation
+    // restore: first motion collapses the selection onto the grabbed marker,
+    // and that collapse is part of the gesture, so cancel restores all six.
+    d.pre_drag_selected_markers      = app.selected_markers;
+    d.pre_drag_last_selected_marker  = app.last_selected_marker;
+    d.pre_drag_trim_begin_selected   = app.trim_begin_selected;
+    d.pre_drag_trim_end_selected     = app.trim_end_selected;
+    d.pre_drag_last_selected_trim    = app.last_selected_trim;
+    d.pre_drag_last_sel_group        = app.last_sel_group;
     app.drag = std::move(d);
     viewport.clear_hover_popup();
     return true;
@@ -259,9 +268,9 @@ void MarkerDragOps::commit_drag() {
     for (size_t k = 0; k < app.drag.moveable_times.size(); ++k) {
         const double proposed = app.drag.moveable_times[k];
         // Only positions the drag actually moved snap; an untouched
-        // position keeps its stored value bit-exact, so a Ctrl+click
+        // position keeps its stored value bit-exact, so an Alt+click
         // without motion (and a wander that returns exactly to its
-        // origin) commits nothing, as before.
+        // origin) commits nothing.
         if (k < app.drag.original_times.size() &&
             proposed == static_cast<double>(app.drag.original_times[k])) {
             committed.push_back(app.drag.original_times[k]);
@@ -334,7 +343,7 @@ void MarkerDragOps::commit_drag() {
     // Capture the moved flag before the wholesale reset: a drag that
     // engaged motion (even a wander back to the origin) tracked the
     // playhead onto the marker during motion and must finish that tracking
-    // on release; a Ctrl+click without motion never engaged tracking and
+    // on release; an Alt+click without motion never engaged tracking and
     // must leave the playhead alone. This gate is moved, not net_changed —
     // a wander that returns to its origin still re-syncs (a no-op there,
     // since the playhead already rests on the marker's own frame).
