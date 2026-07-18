@@ -1441,15 +1441,19 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
 
     GuiInputState mods = current_mods();
     mods.codepoint = xkb_state_key_get_utf32(xkb_state_, xkb_keycode);
+    // Arm key repeat (last-key-wins). Eligibility is decided at press time by
+    // the application probe under the pre-dispatch context (evaluated before
+    // deliver_key runs, so a press that opens an editor is judged pre-open):
+    // only held-step gestures and editor typing repeat; every edge-triggered
+    // command is one-shot. An ineligible press disarms any armed repeat. Each
+    // repeat fire recomputes modifier bits and codepoint live, so a modifier
+    // change mid-hold affects both the chord and the typed character.
+    const bool repeat_ok =
+        repeat_eligible_probe_ && repeat_eligible_probe_(key, mods);
     deliver_key(key, mods);
-
-    // Arm key repeat (last-key-wins). Keep the press-time codepoint; each
-    // repeat fire refreshes live modifier bits so released modifiers stop
-    // affecting the repeated chord.
-    if (repeat_period_us_ > 0) {
+    if (repeat_period_us_ > 0 && repeat_ok) {
         repeat_key_     = key;
         repeat_keycode_ = xkb_keycode;
-        repeat_mods_    = mods;
         repeat_due_us_  = monotonic_us() + repeat_delay_us_;
     } else {
         repeat_key_ = 0;
@@ -1532,7 +1536,8 @@ void GuiPlatform::maybe_fire_repeat() {
     // thread was slow), deliver only one and resync — bursting wouldn't
     // serve the user.
     GuiInputState mods = current_mods();
-    mods.codepoint = repeat_mods_.codepoint;
+    if (xkb_state_)
+        mods.codepoint = xkb_state_key_get_utf32(xkb_state_, repeat_keycode_);
     deliver_key(repeat_key_, mods);
     repeat_due_us_ = now + repeat_period_us_;
 }
@@ -1783,6 +1788,7 @@ void GuiPlatform::set_on_motion(MotionCallback cb)              { on_motion_ = s
 void GuiPlatform::set_on_close(CloseCallback cb)                { on_close_ = std::move(cb); }
 void GuiPlatform::set_wheel_context_probe(WheelContextProbe cb)    { wheel_context_probe_ = std::move(cb); }
 void GuiPlatform::set_text_editor_active_probe(TextEditorProbe cb) { text_editor_active_probe_ = std::move(cb); }
+void GuiPlatform::set_repeat_eligible_probe(RepeatEligibleProbe cb) { repeat_eligible_probe_ = std::move(cb); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }
 void GuiPlatform::set_worker_completion_fd(int fd, std::function<void()> on_event) {

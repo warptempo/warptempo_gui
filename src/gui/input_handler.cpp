@@ -250,8 +250,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - PageUp/PageDown        → viewport step scroll by the Alt-wheel
     //     (no mods)                step. Pure navigation, same family as
     //                              the scrub and Home/End entries.
-    //   - Up/Down (no mods)      → zoom in/out
-    //   - =/- (no mods)          → zoom symbol-key alias
+    //   - =/- (no mods)          → zoom in/out
     //   - 0 (no mods)            → fit ↔ snap-zoom toggle
     //   - f (no mods)            → follow mode toggle
     //   - c (no mods)            → center+snap-zoom on playhead
@@ -465,8 +464,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Tempo nudge. Alt+Up / Alt+Down only. No view guard here —
     // adjust_tempo_cents returns at once unless the warp view is active, so
     // Alt+arrows are an inert (still consumed) no-op in phase-reset view. Bare
-    // `=` / `-` are the symbol-key alias for the bare Up/Down zoom chord (see
-    // below).
+    // Up / Down are unbound (an ordinary no-op at the bare-key tail); `=` / `-`
+    // are the zoom keys (see below).
     if (alt && !shift && !ctrl && key == GuiKeys::Up) {
         warpops.adjust_tempo_cents(+1); return;
     }

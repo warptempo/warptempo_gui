@@ -39,6 +39,11 @@ public:
     // whether it is its synthesized form (false) or a normal character (true):
     // while a text editor is open kLeftClickKey stays a normal letter.
     using TextEditorProbe      = std::function<bool()>;
+    // Predicate installed by main.cpp: true when the pressed key+mods should
+    // arm key repeat. Consulted at PRESS time (after the codepoint is filled)
+    // so a press that opens an editor — evaluated before the open — does not
+    // arm, while typing inside an already-open editor does.
+    using RepeatEligibleProbe  = std::function<bool(GuiKey, GuiInputState)>;
     using TickCallback         = std::function<void()>;
     using PrePaintCallback     = std::function<void()>;
 
@@ -68,6 +73,7 @@ public:
     void set_on_close(CloseCallback cb);
     void set_wheel_context_probe(WheelContextProbe cb);
     void set_text_editor_active_probe(TextEditorProbe cb);
+    void set_repeat_eligible_probe(RepeatEligibleProbe cb);
     void set_on_tick(TickCallback cb);
     void set_on_pre_paint(PrePaintCallback cb);
 
@@ -265,10 +271,8 @@ private:
     // Key repeat (last-key-wins, timerfd-tick-piggyback).
     // repeat_key_ is the GuiKey currently repeating (0 = none).
     // repeat_keycode_ is the raw xkb keycode of that key, used so the
-    // wl_keyboard.key release event can match-and-cancel.
-    // repeat_mods_ captures the modifier state at the moment the key was
-    // pressed; the same modifiers are delivered with each synthesized
-    // repeat.
+    // wl_keyboard.key release event can match-and-cancel and so each
+    // synthesized repeat recomputes its codepoint live from the xkb state.
     // repeat_due_us_ is the next-fire monotonic time in microseconds; when
     // the playback tick fires and current_monotonic_us >= repeat_due_us_,
     // the on_key_ callback fires and repeat_due_us_ is advanced by the
@@ -280,7 +284,6 @@ private:
     // Zero rate means "no repeat" and is honored — held keys do not repeat.
     GuiKey        repeat_key_       = 0;
     uint32_t      repeat_keycode_   = 0;
-    GuiInputState repeat_mods_      = {};
     uint64_t      repeat_due_us_    = 0;
     uint64_t      repeat_delay_us_  = 600'000;   // sensible default if compositor
     uint64_t      repeat_period_us_ = 33'000;    // doesn't advertise (600ms/30Hz)
@@ -296,6 +299,7 @@ private:
     CloseCallback        on_close_;
     WheelContextProbe    wheel_context_probe_;
     TextEditorProbe      text_editor_active_probe_;
+    RepeatEligibleProbe  repeat_eligible_probe_;
     TickCallback         on_tick_;
     PrePaintCallback     on_pre_paint_;
 

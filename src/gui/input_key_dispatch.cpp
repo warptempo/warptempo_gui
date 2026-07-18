@@ -111,9 +111,6 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) &&
          !ctrl && !shift && !alt);
-    const bool is_zoom =
-        ((key == GuiKeys::Up || key == GuiKeys::Down) &&
-         !ctrl && !shift && !alt);
     const bool is_zoom_symbol =
         ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
          !ctrl && !shift && !alt);
@@ -149,7 +146,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // chords are likewise absent (blocked here).
     return !(is_o || is_play_pause || is_scrub ||
              is_home_end || is_page_updown ||
-             is_zoom || is_zoom_symbol || is_zero ||
+             is_zoom_symbol || is_zero ||
              is_follow || is_center || is_sub_t || is_sub_p ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
              is_esc || is_ctrl_q);
@@ -178,6 +175,45 @@ bool GuiInputHandler::any_text_editor_active() const {
     return text_editor::is_active(app.settings_editor) ||
            text_editor::is_active(app.commit_editor) ||
            text_editor::is_active(app.top_flag_editor);
+}
+
+// Press-time key-repeat eligibility (see the declaration). Repeat serves
+// held-step gestures and editor typing; edge-triggered commands never repeat.
+// Eligibility is judged under the PRESS-TIME context, so a press that opens an
+// editor (evaluated before the open) does not arm, while typing inside an
+// already-open editor does.
+bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
+    if (any_text_editor_active()) {
+        // Session-ending / one-shot editor keys never repeat.
+        if (key == GuiKeys::Return || key == GuiKeys::KpEnter ||
+            key == GuiKeys::Escape || key == GuiKeys::Tab ||
+            key == GuiKeys::IsoLeftTab)
+            return false;
+        // Cursor / edit motion keys repeat under ANY modifiers (the word-jump
+        // and word-erase variants repeat too).
+        if (key == GuiKeys::Left || key == GuiKeys::Right ||
+            key == GuiKeys::Home || key == GuiKeys::End ||
+            key == GuiKeys::BackSpace || key == GuiKeys::Delete)
+            return true;
+        // Otherwise repeat only a printable ASCII insert.
+        return !mods.ctrl && !mods.alt &&
+               mods.codepoint >= 0x20 && mods.codepoint <= 0x7e;
+    }
+    // Global dispatch: only the continuous step gestures repeat — bare
+    // Left/Right scrub, bare PageUp/PageDown, bare Equal/Minus zoom, and the
+    // Alt-exact Left/Right/Up/Down nudges and tempo steps. Every letter,
+    // toggle, opener, Ctrl / Ctrl+Alt chord, Space, Home/End, and Delete is
+    // one-shot.
+    if (!mods.ctrl && !mods.shift && !mods.alt &&
+        (key == GuiKeys::Left || key == GuiKeys::Right ||
+         key == GuiKeys::PageUp || key == GuiKeys::PageDown ||
+         key == GuiKeys::Equal || key == GuiKeys::Minus))
+        return true;
+    if (mods.alt && !mods.ctrl && !mods.shift &&
+        (key == GuiKeys::Left || key == GuiKeys::Right ||
+         key == GuiKeys::Up || key == GuiKeys::Down))
+        return true;
+    return false;
 }
 
 // Bottom-strip modal-editor key gate, the sibling of
@@ -292,7 +328,8 @@ bool GuiInputHandler::handle_escape_cancels(GuiKey key) {
 
 // Esc during a pointer drag stops the gesture. Marker and trim drags
 // are stopped before their deferred commit, so their pending change is
-// discarded and the live state returns to pre-drag; scroll and playhead
+// discarded and the live state returns to pre-drag — both restore the pre-drag
+// playhead the motion had pinned onto the grabbed item; scroll and playhead
 // drags apply their motion continuously, so stopping just ends them
 // where they are. One verb across all four: Esc means stop.
 void GuiInputHandler::cancel_active_drags() {
@@ -321,6 +358,14 @@ void GuiInputHandler::cancel_active_drags() {
             app.trim.begin_frame = app.trim_drag.orig_begin_frame;
             app.trim.end_frame   = app.trim_drag.orig_end_frame;
         }
+        // Restore the pre-drag playhead, the trim sibling of the marker arm
+        // above: motion pinned the playhead onto the grabbed bound, so Esc
+        // puts it back where it started. Deliberately unclamped (a previously-
+        // resting in-domain value). The resync line is inert insurance here —
+        // trim drags stop playback at begin — kept for symmetry with the
+        // marker arm.
+        app.playhead_cursor_sample = app.trim_drag.pre_drag_playhead_sample;
+        if (playback.is_playing()) playback.resync_predictor();
         app.trim_drag = TrimDragState{};
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
@@ -1355,8 +1400,6 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         }
         viewport.move_playhead_pixels(+1);
         break;
-    case GuiKeys::Up:     viewport.zoom_in();                        break;
-    case GuiKeys::Down:   viewport.zoom_out();                       break;
     case GuiKeys::F:
         // Toggle follow mode. The full body (off→on edge resync) lives in
         // GuiPlaybackLifecycle::set_follow_mode, shared with the settings

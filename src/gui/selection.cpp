@@ -152,6 +152,15 @@ void Selection::cycle_selection(bool forward) {
     const bool has_e = app.trim.has_end;
     const int64_t bf = has_b ? bound_frame('B') : 0;
     const int64_t ef = has_e ? bound_frame('E') : 0;
+    // Walk positions: a stop's position in the walk is where landing on it puts
+    // the playhead, which every landing clamps through
+    // clamp_playhead_to_live_domain. An end bound at source total maps to a raw
+    // image past the playhead's [0, total - 1] domain, so it walks at its
+    // clamped frame total - 1, not the raw image the scan could never match.
+    // bf_w / ef_w are those clamped positions, used in every comparison below;
+    // raw bf / ef only feed this clamp.
+    const int64_t bf_w = has_b ? clamp_playhead_to_live_domain(bf, app, audio) : 0;
+    const int64_t ef_w = has_e ? clamp_playhead_to_live_domain(ef, app, audio) : 0;
 
     // Group order within one active-domain frame, forward: begin bound, end
     // bound, then markers by ascending index; backward is the exact reverse
@@ -168,7 +177,11 @@ void Selection::cycle_selection(bool forward) {
     // forward Tab lands on the bound before any marker, and backward
     // Shift+Tab therefore lands on markers before the bound. Every press
     // selects exactly one stop — a bound is an ordinary stop, never lit
-    // together with a marker.
+    // together with a marker. An end bound at the EOF wall shares the walk
+    // frame total - 1 (its clamped landing) with any markers there, so this
+    // bound-before-coincident-markers order applies to that shared frame; the
+    // walk and the landing agree by construction in both views, which is what
+    // lets Tab advance off the bound.
 
     // Current stop, checked bound-first: the bound-first check keys the
     // current stop off the group owner (LastSelGroup::Trim means a bound, not
@@ -179,10 +192,10 @@ void Selection::cycle_selection(bool forward) {
     int  cur_marker = -1;
     if (app.last_sel_group == LastSelGroup::Trim) {
         if (app.last_selected_trim == 'B' && has_b &&
-            app.trim_begin_selected && bf == ph_f) {
+            app.trim_begin_selected && bf_w == ph_f) {
             cur_bound = 'B';
         } else if (app.last_selected_trim == 'E' && has_e &&
-                   app.trim_end_selected && ef == ph_f) {
+                   app.trim_end_selected && ef_w == ph_f) {
             cur_bound = 'E';
         }
     }
@@ -212,8 +225,8 @@ void Selection::cycle_selection(bool forward) {
     char land_bound  = 0;
     if (forward) {
         if (cur_bound == 'B') {
-            if (has_e && ef == ph_f) land_bound = 'E';
-            else                     land_marker = first_marker_at_ph();
+            if (has_e && ef_w == ph_f) land_bound = 'E';
+            else                       land_marker = first_marker_at_ph();
         } else if (cur_bound == 'E') {
             land_marker = first_marker_at_ph();
         } else if (cur_marker >= 0) {
@@ -235,11 +248,11 @@ void Selection::cycle_selection(bool forward) {
             if (land_marker < 0) {
                 // Below the lowest marker in the group, reverse order reaches
                 // the end bound, then the begin bound.
-                if (has_e && ef == ph_f)      land_bound = 'E';
-                else if (has_b && bf == ph_f) land_bound = 'B';
+                if (has_e && ef_w == ph_f)      land_bound = 'E';
+                else if (has_b && bf_w == ph_f) land_bound = 'B';
             }
         } else if (cur_bound == 'E') {
-            if (has_b && bf == ph_f) land_bound = 'B';
+            if (has_b && bf_w == ph_f) land_bound = 'B';
         }
         // cur_bound == 'B' backward: nothing precedes it in the group; fall to
         // the frame scan.
@@ -281,8 +294,8 @@ void Selection::cycle_selection(bool forward) {
                 (forward ? (f < trim_frame) : (f >= trim_frame));
             if (closer) { trim_sel = which; trim_frame = f; }
         };
-        consider('B', has_b, bf);
-        consider('E', has_e, ef);
+        consider('B', has_b, bf_w);
+        consider('E', has_e, ef_w);
 
         const bool have_marker = (marker_sel >= 0);
         const bool have_trim   = (trim_sel != 0);

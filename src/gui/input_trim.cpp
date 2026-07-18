@@ -291,6 +291,7 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
                                           : app.trim.end_frame;
     app.trim_drag.orig_begin_frame = app.trim.begin_frame;
     app.trim_drag.orig_end_frame   = app.trim.end_frame;
+    app.trim_drag.pre_drag_playhead_sample = app.playhead_cursor_sample;
     // Grab anchor: the press position in source-domain frames. Motion moves
     // the bound by the cursor's displacement from here, so it tracks the grab
     // point with no snap (mirrors begin_drag's anchor_mouse_time_frame).

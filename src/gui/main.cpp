@@ -721,6 +721,13 @@ int main(int argc, char** argv) {
         return input_handler.any_text_editor_active();
     });
 
+    // Press-time key-repeat eligibility: the platform consults this before
+    // arming repeat so one-shot commands and editor openers never repeat while
+    // held-step gestures and editor typing do.
+    gui.set_repeat_eligible_probe([&](GuiKey key, GuiInputState mods) {
+        return input_handler.repeat_eligible(key, mods);
+    });
+
     gui.set_on_motion([&](int mouse_x, int mouse_y, GuiInputState mods) {
         input_handler.on_motion(mouse_x, mouse_y, mods);
     });

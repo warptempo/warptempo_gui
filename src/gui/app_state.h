@@ -340,6 +340,11 @@ struct TrimDragState {
     int64_t orig_begin_frame   = 0;
     int64_t orig_end_frame     = 0;
     int64_t anchor_active_frame  = 0;
+    // Active-domain playhead captured at begin_trim_drag for the Esc / Ctrl+Q
+    // cancellation restore — the marker DragState::pre_drag_playhead_sample's
+    // trim sibling. Motion pins the playhead onto the grabbed bound; Esc puts
+    // it back here.
+    int64_t pre_drag_playhead_sample = 0;
 };
 
 // Alt+drag on empty waveform: continuous 1:1 grab-pan of the viewport,

@@ -275,6 +275,15 @@ struct GuiInputHandler {
     // calls it.
     bool any_text_editor_active() const;
 
+    // Press-time key-repeat eligibility, the platform's repeat_eligible_probe_.
+    // Repeat serves held-step gestures and editor typing; edge-triggered
+    // commands (one-shot actions, toggles, editor openers) never repeat. Judged
+    // under the PRESS-TIME context (the platform evaluates it before dispatch),
+    // so a press that opens an editor is judged pre-open and does not arm, while
+    // typing inside an already-open editor does. Public because main.cpp's
+    // probe lambda calls it.
+    bool repeat_eligible(GuiKey key, GuiInputState mods) const;
+
 private:
     // ActiveBatch holds the batch render state machine (start_render_batch
     // and its lifecycle). Each entry is dispatched onto GuiAsyncRenderer and

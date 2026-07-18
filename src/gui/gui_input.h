@@ -90,9 +90,10 @@ struct GuiInputState {
     // The Unicode codepoint this key event resolves to under the live
     // keyboard state (shift / layout applied), as computed by
     // xkb_state_key_get_utf32 at the platform boundary; 0 when the key
-    // produces no character (function keys, bare modifiers). Consulted
-    // only by the text editors' printable-insertion path; every other
-    // consumer reads the GuiKey and ignores this.
+    // produces no character (function keys, bare modifiers). Consulted by
+    // the text editors' printable-insertion path and by repeat_eligible's
+    // editor-typing repeat gate; every other consumer reads the GuiKey and
+    // ignores this.
     uint32_t codepoint           = 0;
 };
 
