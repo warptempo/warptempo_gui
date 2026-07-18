@@ -676,13 +676,14 @@ void GuiInputHandler::nudge_selected_trim(int direction) {
     target_render.trigger();
 
     // No viewport gate, mirroring the marker nudge (drags viewport-clamp the
-    // grabbed item; nudges do not). Track the playhead onto the bound through
-    // move_playhead_to's edge-follow path — at most one pixel of scroll,
-    // keeping the bound just inside the edge. `proposed` rather than `field`:
-    // the auto-clear may have zeroed the store, and the playhead should rest
-    // where the press actually landed.
+    // grabbed item; nudges do not). Track the playhead onto the bound's clamped
+    // landing image (playhead_image_of_authored_frame — the same chokepoint the
+    // pointer landings share) through move_playhead_to's edge-follow path — at
+    // most one pixel of scroll, keeping the bound just inside the edge.
+    // `proposed` rather than `field`: the auto-clear may have zeroed the store,
+    // and the playhead should rest where the nudge actually landed.
     viewport.move_playhead_to(
-        source_frame_to_active_domain(app, audio, proposed));
+        playhead_image_of_authored_frame(app, audio, proposed));
 }
 
 void GuiInputHandler::wheel_move_trim_end(GuiMouseButton button, int count) {
@@ -782,7 +783,11 @@ void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool move_single
         return;
     }
     // Plain / Shift select arm. A trim bound behaves EXACTLY like a marker:
-    // select the bound and move the playhead onto it. In the waveform (scrub)
+    // select the bound and move the playhead onto its clamped landing image
+    // (playhead_image_of_authored_frame) — the one value every consumer here
+    // shares, so cursor and reseek agree and an end bound at the exclusive EOF
+    // wall lands on the reachable total - 1 (reseeking there, not stopping past
+    // the range). In the waveform (scrub)
     // it also reseeks live playback when the position changed, overrides follow,
     // and arms the playhead-drag scrub — the subsequent motion is the ordinary
     // playhead drag (marker snap, live selection, Shift sweep), with
@@ -799,7 +804,7 @@ void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool move_single
     select_trim_boundary(which, /*additive=*/shift);
     const int64_t src_sample = (which == TrimHit::Begin) ? app.trim.begin_frame
                                                          : app.trim.end_frame;
-    const int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
+    const int64_t sample = playhead_image_of_authored_frame(app, audio, src_sample);
     viewport.move_playhead_to(sample);
     if (scrub) {
         if (was_playing && sample != playhead_at_entry)

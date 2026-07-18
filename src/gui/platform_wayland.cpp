@@ -1449,14 +1449,15 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
     // deliver_key runs, so a press that opens an editor is judged pre-open):
     // only held-step gestures and editor typing repeat; every edge-triggered
     // command is one-shot, and an ineligible press disarms any armed repeat.
-    // The repeat contract is two layers: (1) the stored intent dies on ANY
-    // other input event — a different key press re-arms or disarms here via
-    // press-time eligibility, and any pointer-button press (physical or the
-    // synthesized `e`) or wheel emission clears repeat_key_ outright at the
-    // platform input chokepoints; (2) each fire additionally re-checks the
-    // level conditions (eligibility under the live modifiers, and the
-    // editor-active flag still matching its arm-time value). The arm-time
-    // editor flag is captured here for layer (2).
+    // The repeat contract is two layers: (1) the stored intent dies on exactly
+    // three input edges — a different key press (which re-arms or disarms here
+    // via press-time eligibility), a pointer-button PRESS (physical or the
+    // synthesized `e`), and a COMPLETED wheel emission — each clearing
+    // repeat_key_ at its platform input chokepoint; pointer motion, button
+    // release, and sub-detent scroll accumulation deliberately do not disarm;
+    // (2) each fire additionally re-checks the level conditions (eligibility
+    // under the live modifiers, and the editor-active flag still matching its
+    // arm-time value). The arm-time editor flag is captured here for layer (2).
     const bool repeat_ok =
         repeat_eligible_probe_ && repeat_eligible_probe_(key, mods);
     const bool editor_ctx =
@@ -1551,11 +1552,12 @@ void GuiPlatform::maybe_fire_repeat() {
     if (xkb_state_)
         mods.codepoint = xkb_state_key_get_utf32(xkb_state_, repeat_keycode_);
     // Layer (2) of the repeat contract — layer (1), the event-edge disarms, has
-    // already killed the hold for any intervening pointer-button press or wheel
-    // emission and re-armed/disarmed it for any key press. Re-check the level
-    // conditions before delivering: the press-time eligibility must still hold
-    // under the live modifiers and the editor-active flag must still match its
-    // arm-time value. A mismatch or lost eligibility disarms with no fire.
+    // already killed the hold at any intervening pointer-button press or
+    // completed wheel emission and re-armed/disarmed it at any key press. Re-
+    // check the level conditions before delivering: the press-time eligibility
+    // must still hold under the live modifiers and the editor-active flag must
+    // still match its arm-time value. A mismatch or lost eligibility disarms
+    // with no fire.
     const bool editor_ctx =
         text_editor_active_probe_ && text_editor_active_probe_();
     if (editor_ctx != repeat_editor_ctx_ ||

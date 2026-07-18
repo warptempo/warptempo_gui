@@ -287,8 +287,8 @@ private:
     // matches it. This boolean is sufficient because the editor target/session
     // can only change via a key or pointer-button event, and both kill the hold
     // outright — a key press re-arms or disarms via press-time eligibility, and
-    // any pointer-button press or wheel emission clears repeat_key_ at the
-    // platform input chokepoints — so no armed hold can straddle a target
+    // a pointer-button press or a completed wheel emission clears repeat_key_ at
+    // the platform input chokepoints — so no armed hold can straddle a target
     // change.
     GuiKey        repeat_key_       = 0;
     uint32_t      repeat_keycode_   = 0;

@@ -393,8 +393,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 } else {
                     src_sample = app.warpmarkers.markers()[hit].time_frame;
                 }
+                // Land on the marker's clamped playhead image — the F1
+                // chokepoint every press-path landing routes through, so no
+                // consumer acts on a position the cursor did not land on.
                 const int64_t sample =
-                    source_frame_to_active_domain(app, audio, src_sample);
+                    playhead_image_of_authored_frame(app, audio, src_sample);
                 viewport.move_playhead_to(sample);
             }
             return;
@@ -418,8 +421,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 } else {
                     src_sample = app.warpmarkers.markers()[hit].time_frame;
                 }
+                // The marker's clamped playhead image — the one value the
+                // cursor, the reseek compare, the reseek, and last_swept_sample
+                // all share, so a wall-adjacent marker reseeks to where the
+                // cursor lands instead of past the range.
                 const int64_t sample =
-                    source_frame_to_active_domain(app, audio, src_sample);
+                    playhead_image_of_authored_frame(app, audio, src_sample);
                 viewport.move_playhead_to(sample);
                 if (was_playing && sample != playhead_at_entry) {
                     playback_lifecycle.reseek_keeping_alive(sample);
@@ -625,10 +632,14 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             } else {
                 src_sample = app.warpmarkers.markers()[hit].time_frame;
             }
-            // Target view: forward-translate the snapped marker's
-            // source-frame to active-domain so the playhead lands on
-            // the marker's displayed position.
-            new_playhead = source_frame_to_active_domain(app, audio, src_sample);
+            // Land on the snapped marker's clamped playhead image (the F1
+            // chokepoint): forward-translate the source frame to the displayed
+            // domain, then clamp into the playhead domain, so the
+            // new_playhead != cursor compare and last_swept_sample agree with
+            // the value the cursor actually holds — a compressed final segment
+            // that rounds a wall-adjacent marker to the target total lands on
+            // the reachable total - 1 instead.
+            new_playhead = playhead_image_of_authored_frame(app, audio, src_sample);
         } else {
             // No marker within epsilon: playhead follows cursor freely.
             int rel = mouse_x - area.x;
