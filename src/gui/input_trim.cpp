@@ -177,22 +177,39 @@ void GuiInputHandler::handle_trim_clear_both() {
 
 // Bare x, context-aware. Playhead exactly on either set bound, or strictly
 // inside a fully-set trim pair, clears both bounds; anywhere else sets begin at
-// the playhead and autosets end. The comparison is in the SOURCE domain — exact
-// integer frame equality, the walls'/load-guard's own compare — after mapping
-// the active-domain playhead back to a source frame. "inside" needs BOTH bounds
-// (an area), strictly between them; a single set bound clears only by exact
-// coincidence, and any other position autosets over it. Clearing routes through
+// the playhead and autosets end. The coincidence test compares the playhead
+// against each bound's forward-mapped active-domain image CLAMPED through
+// clamp_playhead_to_live_domain — exactly the value every click / Tab-cycle /
+// drag-pin onto a bound assigns the playhead — because the forward/inverse pair
+// is not a round trip on compressed target segments and the end bound's
+// exclusive EOF wall (frame total) maps outside the playhead's [0, total-1]
+// domain. "on the bound" therefore means "at the position landing on the bound
+// puts the playhead", reachable by construction. The inside test uses the
+// UNCLAMPED images (strict betweenness; the edges belong to the coincidence
+// arm), needs BOTH bounds (an area). In source view the forward map is
+// identity, so the begin compare is the exact integer compare and a playhead
+// resting at total - 1 counts as on an end bound at the EOF wall (its closest
+// reachable frame). A single set bound clears only by that coincidence, any
+// other position autosets over it. Clearing routes through
 // handle_trim_clear_both so the one clear+repaint tail is shared.
 void GuiInputHandler::handle_trim_x() {
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
-    const int64_t ph_src =
-        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
+    const int64_t ph = app.playhead_cursor_sample;
+    int64_t begin_active = 0, end_active = 0;
+    if (app.trim.has_begin)
+        begin_active = source_frame_to_active_domain(app, audio,
+                                                     app.trim.begin_frame);
+    if (app.trim.has_end)
+        end_active = source_frame_to_active_domain(app, audio,
+                                                   app.trim.end_frame);
     const bool on_bound =
-        (app.trim.has_begin && ph_src == app.trim.begin_frame) ||
-        (app.trim.has_end   && ph_src == app.trim.end_frame);
+        (app.trim.has_begin &&
+         ph == clamp_playhead_to_live_domain(begin_active, app, audio)) ||
+        (app.trim.has_end &&
+         ph == clamp_playhead_to_live_domain(end_active, app, audio));
     const bool inside =
         app.trim.has_begin && app.trim.has_end &&
-        ph_src > app.trim.begin_frame && ph_src < app.trim.end_frame;
+        ph > begin_active && ph < end_active;
     if (on_bound || inside) { handle_trim_clear_both(); return; }
     handle_trim_set_begin_autoset();
 }
@@ -282,11 +299,13 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
     double anchor = 0.0;
     if (trim_mouse_x_to_source_frame(mouse_x, anchor))
         app.trim_drag.anchor_frame = anchor;
-    app.last_sel_group         = LastSelGroup::Trim;
+    // The press only captures drag state — selection and the group tag are
+    // deferred to the first real motion (the single path's first-motion
+    // collapse, the pair path's first-motion selection in update_trim_drag),
+    // mirroring the marker drag. A press that never moves leaves selection,
+    // group routing, and last_selected_trim untouched, so the
+    // no-motion-commits-nothing rule covers the bookkeeping too.
     if (both) {
-        app.trim_begin_selected = true;
-        app.trim_end_selected   = true;
-        app.last_selected_trim  = is_begin ? 'B' : 'E';
         int64_t af = 0;
         if (trim_mouse_x_to_active_frame(mouse_x, af))
             app.trim_drag.anchor_active_frame = af;
@@ -353,9 +372,22 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         if (nb < 0) nb = 0;
         if (ne < 0) ne = 0;
         if (app.trim.begin_frame != nb || app.trim.end_frame != ne) {
+            const bool first_motion = !app.trim_drag.moved;
             app.trim.begin_frame = nb;
             app.trim.end_frame   = ne;
             app.trim_drag.moved    = true;
+            // First-motion selection, the pair sibling of the single path's
+            // first-motion collapse: the non-additive helper focuses the
+            // grabbed bound (dropping marker selection and setting the Trim
+            // group, the one shared rule), then the partner flag is re-set
+            // because a pair drag's subject is both bounds.
+            if (first_motion) {
+                select_trim_boundary(
+                    app.trim_drag.is_begin ? TrimHit::Begin : TrimHit::End,
+                    /*additive=*/false);
+                (app.trim_drag.is_begin ? app.trim_end_selected
+                                        : app.trim_begin_selected) = true;
+            }
             const int64_t grabbed_src = app.trim_drag.is_begin ? nb : ne;
             // Playhead domain clamp through clamp_playhead_to_live_domain
             // (the domain ruling): a grabbed end riding at total pins the

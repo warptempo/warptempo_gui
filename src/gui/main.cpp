@@ -545,8 +545,8 @@ int main(int argc, char** argv) {
                                   viewport, render_cache);
     // Paint handler constructed before file_loader, which applies font_size
     // changes through its on_resize (the shared geometry-and-cache rebuild
-    // path). The font_size hotkey uses the input handler's own paint_handler
-    // ref for the same rebuild.
+    // path). The settings-editor font_size commit uses the input handler's own
+    // paint_handler ref for the same rebuild.
     GuiPaintHandler paint_handler(app, audio, playback, wf_cache, stem_cache,
                                   flag_cache, waveform_worker, gui);
     // file_loader holds a GuiTargetRender& (its end-of-load ensure_ready()

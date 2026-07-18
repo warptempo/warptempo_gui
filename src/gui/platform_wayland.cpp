@@ -1207,6 +1207,10 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // from the last keyboard event (for example the Ctrl+Alt+wheel end-move).
         repeat_key_ = 0;
         mod_ctrl_ = mod_shift_ = mod_alt_ = false;
+        // The modifier state changed (all chords released) without a scroll
+        // frame, so drop the wheel sub-detent remainder — it was bound to the
+        // old chord.
+        scroll_accum_ = 0.0;
 
         // Losing the keyboard is the hard end of the key stream: a held
         // synthesized-left button will never see its release. End it here on
@@ -1322,6 +1326,9 @@ void GuiPlatform::on_keyboard_leave(uint32_t /*serial*/,
                                     struct wl_surface* /*surface*/) {
     mod_ctrl_ = mod_shift_ = mod_alt_ = false;
     repeat_key_ = 0;
+    // The modifier state changed (all chords released) without a scroll frame,
+    // so drop the wheel sub-detent remainder — it was bound to the old chord.
+    scroll_accum_ = 0.0;
 
     // A held synthesized-left button can never see its keycode-matched release
     // once keyboard focus is gone, so end it here on the logical 1->0 edge —
@@ -1459,6 +1466,9 @@ void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
                           depressed, latched, locked,
                           0, 0, group);
 
+    const bool prev_ctrl  = mod_ctrl_;
+    const bool prev_shift = mod_shift_;
+    const bool prev_alt   = mod_alt_;
     mod_ctrl_  = xkb_state_mod_name_is_active(
         xkb_state_, XKB_MOD_NAME_CTRL,
         XKB_STATE_MODS_EFFECTIVE);
@@ -1468,6 +1478,17 @@ void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
     mod_alt_   = xkb_state_mod_name_is_active(
         xkb_state_, XKB_MOD_NAME_ALT,
         XKB_STATE_MODS_EFFECTIVE);
+
+    // A modifier-state change ends any continuous wheel chord session, so the
+    // sub-detent remainder — bound to the old chord — is dropped outright,
+    // before a scroll frame that would re-probe. This is what keeps the
+    // Ctrl+Alt end-move honest: its read-only / no-end-bound refusals live
+    // downstream in wheel_move_trim_end, invisible to the scroll probe, and
+    // every state change that would flip those refusals (bare `x`, bare `o`)
+    // releases the chord first, clearing the remainder here.
+    if (mod_ctrl_ != prev_ctrl || mod_shift_ != prev_shift ||
+        mod_alt_ != prev_alt)
+        scroll_accum_ = 0.0;
 
     // No on_key synthesis on modifier change — the next non-modifier
     // key event carries the updated state.
@@ -1666,6 +1687,16 @@ void GuiPlatform::on_pointer_frame() {
     // time it can grow or emit. Cursor drift within one hit region keeps the
     // remainder, matching how a physical wheel behaves under drift — the key
     // is region-granular, not per-pixel.
+    //
+    // The context key binds remainder within one continuous chord session; a
+    // modifier-state change clears scroll_accum_ outright at the modifiers
+    // event (and at keyboard leave / capability loss), so remainder can never
+    // bridge a chord release. That is also what keeps the Ctrl+Alt end-move
+    // honest: its read-only / no-end-bound refusals live downstream in
+    // wheel_move_trim_end, where this probe cannot see them, and every state
+    // change that would flip those refusals (bare `x` creating a bound, bare
+    // `o` toggling read-only) requires releasing the chord first — clearing the
+    // remainder before the next same-chord motion can combine with it.
     //
     // Accepted: a remainder contributed in an accepted context, interrupted
     // by a modal that opens and closes with NO scroll frames in between,

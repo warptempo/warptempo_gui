@@ -309,9 +309,10 @@ struct EditorTextDragState {
 };
 
 // Which selection group the most recent selecting gesture
-// targeted. Group-acting gestures (Delete, Alt+drag) act on exactly one
-// group, chosen by this tag. Set to Trim when a click/gesture lands on a
-// trim boundary, Markers when it lands on a marker.
+// targeted. Routes the group-acting keyboard gestures — Delete and the
+// Alt+Left/Right nudge — to exactly one group (the pointer drags are
+// hit-area-routed and never consult it). Set to Trim when a click/gesture
+// lands on a trim boundary, Markers when it lands on a marker.
 enum class LastSelGroup { Markers, Trim };
 
 // Alt+drag of a trim boundary stem. Parallel to DragState but motion mutates
@@ -331,7 +332,7 @@ struct TrimDragState {
     // initial snap. See DragState::anchor_mouse_time_frame.
     double anchor_frame     = 0.0;
 
-    // Ctrl+Shift move-both-bounds drag: both bounds translate together by
+    // Ctrl+Alt move-both-bounds drag: both bounds translate together by
     // the same delta in the active (on-screen) domain, preserving the gap
     // as it appears under warp. `is_begin` still records which stem was
     // grabbed (for cosmetic purposes only — both move regardless).
@@ -345,7 +346,7 @@ struct TrimDragState {
 // driven by pointer motion, panning by the exact per-event pixel delta.
 struct ScrollDragState {
     bool   active   = false;
-    // Pointer x (px) at the previous motion event, seeded at the ctrl+press.
+    // Pointer x (px) at the previous motion event, seeded at the Alt press.
     int    last_x   = 0;
 };
 
@@ -652,7 +653,7 @@ struct AppState {
     // release, Escape, and file load.
     TrimDragState trim_drag;
 
-    // Alt+drag on empty waveform (stepped viewport scroll). Cleared on
+    // Alt+drag on empty waveform (continuous 1:1 grab-pan). Cleared on
     // button release and file load.
     ScrollDragState scroll_drag;
 
@@ -661,7 +662,9 @@ struct AppState {
     EditorTextDragState editor_text_drag;
 
     // Which selection group the last selecting gesture targeted.
-    // Drives Delete / Alt+drag group dispatch. Session-only.
+    // Drives Delete and the Alt+Left/Right nudge routing (plus the Tab-cycle
+    // landing and the playhead sync onto the focused item); the pointer drags
+    // are hit-area-routed and never consult it. Session-only.
     LastSelGroup last_sel_group = LastSelGroup::Markers;
 
     // Hover-popup state. See HoverPopupState above.
@@ -751,8 +754,9 @@ struct AppState {
     // selection channel from the marker sets (selected_markers /
     // phase_reset_selected) — the two groups are orthogonal and can be
     // co-selected. Not persisted to .settings; defaults false and resets on
-    // file load. Which group a group-acting gesture (Delete, Alt+drag)
-    // targets is decided by last_sel_group.
+    // file load. Which group the group-acting keyboard gestures (Delete, the
+    // Alt+Left/Right nudge) target is decided by last_sel_group; the pointer
+    // drags are hit-area-routed and never consult it.
     bool   trim_begin_selected = false;
     bool   trim_end_selected   = false;
     // Which trim bound was most recently selected by a selecting gesture.
