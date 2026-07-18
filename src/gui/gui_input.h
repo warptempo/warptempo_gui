@@ -82,19 +82,6 @@ inline bool is_play_pause_key(GuiKey key) {
 // exactly as it would for a physical BTN_LEFT device.
 constexpr GuiKey kLeftClickKey = GuiKeys::E;
 
-// The keyboard key the platform layer translates into Ctrl modifier STATE
-// (not a button): while held, logical Ctrl is on, ORed with the real Ctrl
-// everywhere (both work), so it composes with any chord or wheel that reads
-// Ctrl. It is swallowed entirely as a key event outside text editors — no
-// on_key delivery and no repeat arming (a held modifier must not machine-gun
-// re-press). The text-editor exception is decided at PRESS time by the same
-// probe kLeftClickKey uses: while an editor is open `2` is a normal digit
-// with normal repeat. The release is keycode-owned and NEVER gated (an editor
-// opened mid-hold must not orphan the modifier). Unlike the click key there
-// is NO pointer_focused_ gate — a modifier serves key chords and the wheel,
-// not just pointer events. Rebinding is exactly this one edit.
-constexpr GuiKey kCtrlModKey = GuiKeys::Digit2;
-
 struct GuiInputState {
     bool     ctrl                = false;
     bool     shift               = false;

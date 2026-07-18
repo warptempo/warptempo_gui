@@ -35,10 +35,9 @@ public:
     // scroll so remainder is bound to the routing context it will emit in.
     using WheelContextProbe    = std::function<int(int x, int y)>;
     // Predicate installed by main.cpp: true when a text editor is consuming
-    // printable keys. Consulted at PRESS time for both synthesized keys —
-    // kLeftClickKey and kCtrlModKey — to decide whether each is its synthesized
-    // form (false) or a normal character (true): while a text editor is open
-    // kLeftClickKey stays a normal letter and kCtrlModKey a normal digit.
+    // printable keys. Consulted at PRESS time for kLeftClickKey to decide
+    // whether it is its synthesized form (false) or a normal character (true):
+    // while a text editor is open kLeftClickKey stays a normal letter.
     using TextEditorProbe      = std::function<bool()>;
     using TickCallback         = std::function<void()>;
     using PrePaintCallback     = std::function<void()>;
@@ -223,18 +222,6 @@ private:
     // sources never double-deliver.
     bool     synth_left_held_    = false;
     uint32_t synth_left_keycode_ = 0;
-
-    // kCtrlModKey emulation state, the modifier sibling of the pair above.
-    // synth_ctrl_held_ is true while that key is held as a synthesized Ctrl
-    // modifier; synth_ctrl_keycode_ is the xkb keycode that owns the hold, so
-    // the release is matched by keycode exactly like the synth-left release.
-    // Logical Ctrl is (mod_ctrl_ || synth_ctrl_held_): current_mods() ORs the
-    // physical modifier bit with this synthesized hold, so both spellings work
-    // everywhere a chord reads Ctrl. No button and no logical-OR edge model —
-    // a modifier only projects state; the next key/pointer/wheel event carries
-    // it, the same convention on_keyboard_modifiers uses for real modifiers.
-    bool     synth_ctrl_held_    = false;
-    uint32_t synth_ctrl_keycode_ = 0;
 
     // Accumulated vertical scroll carry, in value120 units (120 = one
     // detent). on_pointer_frame() folds the per-frame delta (arbitrated

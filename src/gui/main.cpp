@@ -713,11 +713,10 @@ int main(int argc, char** argv) {
         return input_handler.wheel_context(x, y);
     });
 
-    // The two synthesized keys emulate their platform-boundary forms
-    // (kLeftClickKey the left mouse button, kCtrlModKey the Ctrl modifier),
-    // except while a text editor is open, when kLeftClickKey stays a normal
-    // letter and kCtrlModKey a normal digit. This probe is the "editor open"
-    // truth the platform consults at each key's press time.
+    // kLeftClickKey emulates its platform-boundary form (the left mouse
+    // button), except while a text editor is open, when it stays a normal
+    // letter. This probe is the "editor open" truth the platform consults at
+    // its press time.
     gui.set_text_editor_active_probe([&]() {
         return input_handler.any_text_editor_active();
     });
