@@ -375,14 +375,10 @@ void GuiInputHandler::cancel_active_drags() {
         // above: motion pinned the playhead onto the grabbed bound, so Esc
         // puts it back where it started. Deliberately unclamped (a previously-
         // resting in-domain value). Only a TOP-STRIP trim press stops playback;
-        // a waveform Alt / Ctrl+Alt grab leaves playback alive under the follow
+        // a waveform Ctrl+Alt grab leaves playback alive under the follow
         // override, so the predictor resync here is live, not a symmetry no-op.
+        // Trim drags do not touch selection, so there is nothing to restore.
         app.playhead_cursor_sample = app.trim_drag.pre_drag_playhead_sample;
-        // Restore the pre-drag selection/group snapshot: the first-motion
-        // collapse erased marker selection and pointed last_sel_group at Trim;
-        // that collapse dies with the cancel, so follow-up Delete / Alt-arrows
-        // do not target the abandoned bound.
-        restore_selection_snapshot(app, app.trim_drag.pre_drag_selection);
         if (playback.is_playing()) playback.resync_predictor();
         app.trim_drag = TrimDragState{};
         viewport.invalidate_waveform_area();
@@ -943,10 +939,6 @@ bool GuiInputHandler::adopt_render_entry(
         // the live copy is in [0, total - 1] by construction.
         app.playhead_cursor_sample = band.playhead_cursor_sample;
         app.trim                = band.trim;
-        app.trim_begin_selected = band.trim_begin_selected;
-        app.trim_end_selected   = band.trim_end_selected;
-        app.last_selected_trim  = band.last_selected_trim;
-        app.last_sel_group      = band.last_sel_group;
     }
 
     // Caller-side side effects the shared routine deliberately omits, run after
@@ -1435,13 +1427,9 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
                     viewport.center_viewport_on_playhead();    break;
     case GuiKeys::Home:   playback_lifecycle.stop_playback_if_playing();
                     viewport.move_playhead_to(viewport.trim_begin_sample());
-                    if (app.trim.has_begin)
-                        selection.select_trim_bound('B');
                     break;
     case GuiKeys::End:    playback_lifecycle.stop_playback_if_playing();
                     viewport.move_playhead_to(viewport.trim_end_sample() - 1);
-                    if (app.trim.has_end)
-                        selection.select_trim_bound('E');
                     break;
     default: break;
     }

@@ -462,9 +462,7 @@ void render_trim_stems(cairo_t* cr,
                        long long viewport_end_sample,
                        const TrimRange& trim,
                        bool has_begin,
-                       bool begin_selected,
                        bool has_end,
-                       bool end_selected,
                        cairo_surface_t* ink_plate) {
     if (waveform_area.w <= 0 || waveform_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
@@ -486,12 +484,11 @@ void render_trim_stems(cairo_t* cr,
     cairo_set_line_width(cr, 1.0);
     if (ink_plate) cairo_surface_flush(ink_plate);
 
-    auto paint_bound = [&](int64_t frame, bool selected) {
+    auto paint_bound = [&](int64_t frame) {
         const double ms = static_cast<double>(frame);
         if (ms < static_cast<double>(viewport_start_sample)) return;
         if (ms >= static_cast<double>(viewport_end_sample)) return;
-        const GuiColor c = selected ? kSelected : kTrimMarker;
-        cairo_set_source_rgb(cr, c.r, c.g, c.b);
+        cairo_set_source_rgb(cr, kTrimMarker.r, kTrimMarker.g, kTrimMarker.b);
         const double x_raw =
             (ms - static_cast<double>(viewport_start_sample))
                 / samples_per_pixel;
@@ -504,8 +501,8 @@ void render_trim_stems(cairo_t* cr,
                              waveform_area.h, ink_plate, icol);
     };
 
-    if (has_begin) paint_bound(trim.begin, begin_selected);
-    if (has_end)   paint_bound(trim.end, end_selected);
+    if (has_begin) paint_bound(trim.begin);
+    if (has_end)   paint_bound(trim.end);
 
     cairo_restore(cr);
 }
@@ -518,9 +515,7 @@ void render_trim_flags(cairo_t* cr,
                        double font_size,
                        const TrimRange& trim,
                        bool has_begin,
-                       bool begin_selected,
-                       bool has_end,
-                       bool end_selected) {
+                       bool has_end) {
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (!has_begin && !has_end) return;
@@ -557,18 +552,17 @@ void render_trim_flags(cairo_t* cr,
 
     // Column placement mirrors render_trim_stems / render_flags: text_left at
     // the bound's integer pixel column, chip extends right via the shared
-    // text-box primitive. Color mirrors the stem (selected ? kSelected :
-    // kTrimMarker) so chip and stem are one continuous unit.
+    // text-box primitive. Color is kTrimMarker (the stem's), so chip and stem
+    // are one continuous unit.
     // Build the visible-bounds list, sorted by painted column ascending.
     // Order is by position, NOT begin/end identity: in target view or a
     // degenerate inverted trim the painted order can differ from b/e.
     struct TrimChip {
         double      text_left;
-        bool        selected;
         const char* glyph;
     };
     std::vector<TrimChip> chips;
-    auto add_chip = [&](int64_t frame, bool selected, const char* glyph) {
+    auto add_chip = [&](int64_t frame, const char* glyph) {
         const double ms = static_cast<double>(frame);
         if (ms < static_cast<double>(viewport_start_sample)) return;
         if (ms >= static_cast<double>(viewport_end_sample)) return;
@@ -577,10 +571,10 @@ void render_trim_flags(cairo_t* cr,
                 / samples_per_pixel;
         const double text_left =
             static_cast<double>(top_strip_area.x) + std::nearbyint(x_raw);
-        chips.push_back({text_left, selected, glyph});
+        chips.push_back({text_left, glyph});
     };
-    if (has_begin) add_chip(trim.begin, begin_selected, "b");
-    if (has_end)   add_chip(trim.end, end_selected, "e");
+    if (has_begin) add_chip(trim.begin, "b");
+    if (has_end)   add_chip(trim.end, "e");
     std::sort(chips.begin(), chips.end(),
               [](const TrimChip& a, const TrimChip& b) {
                   if (a.text_left != b.text_left)
@@ -611,7 +605,7 @@ void render_trim_flags(cairo_t* cr,
         box.baseline_y  = baseline_y;
         box.text        = chip.glyph;
         box.hl_pad      = hl_pad;
-        box.fill        = chip.selected ? kSelected : kTrimMarker;
+        box.fill        = kTrimMarker;
         box.text_color  = kText;
         render_editor_text_box(cr, box);
         rightmost_right_edge = chip.text_left + glyph_adv + hl_pad;

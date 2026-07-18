@@ -26,41 +26,19 @@ void Selection::set_single_selection(int idx) {
     app.selected_markers.clear();
     if (idx >= 0) app.selected_markers.insert(idx);
     app.last_selected_marker = (idx >= 0) ? idx : -1;
-    // A marker-selecting gesture makes Markers the group that
-    // Delete / Alt+drag act on.
-    app.last_sel_group = LastSelGroup::Markers;
-    // A fresh single-select in the marker group drops any trim-boundary
-    // selection — the two groups are orthogonal, but selecting a marker as
-    // the sole selection means trim is no longer selected.
-    const bool had_trim = app.trim_begin_selected || app.trim_end_selected;
-    app.trim_begin_selected = false;
-    app.trim_end_selected   = false;
     viewport.invalidate_top_strip();
-    if (had_trim) viewport.invalidate_waveform_area();
 }
 
 void Selection::clear_selection() {
-    const bool had_trim = app.trim_begin_selected || app.trim_end_selected;
-    const bool had_markers =
-        !app.selected_markers.empty() || app.last_selected_marker != -1;
-    if (!had_trim && !had_markers) return;   // nothing selected anywhere
-
+    if (app.selected_markers.empty() && app.last_selected_marker == -1)
+        return;   // nothing selected
     app.selected_markers.clear();
     app.last_selected_marker = -1;
-    app.trim_begin_selected = false;
-    app.trim_end_selected   = false;
-    app.last_selected_trim  = 0;
-    app.last_sel_group = LastSelGroup::Markers;
-
     viewport.invalidate_top_strip();
-    // Trim stems live in the stem/waveform-area cache, so repaint it when a
-    // trim bound was deselected (amber stem returns from kSelected).
-    if (had_trim) viewport.invalidate_waveform_area();
 }
 
 bool Selection::toggle_selection_membership(int idx) {
     if (idx < 0) return false;
-    app.last_sel_group = LastSelGroup::Markers;
     bool added;
     auto it = app.selected_markers.find(idx);
     if (it == app.selected_markers.end()) {
@@ -129,193 +107,64 @@ void Selection::cycle_selection(bool forward) {
 
     // The playhead frame is the sole cycle anchor. Strict frame inequalities
     // in the scan below prevent re-landing on the stop we are standing on;
-    // markers and trim bounds sharing one active-domain frame are traversed
-    // by the in-group step so every member is Tab-reachable — stacks are
-    // legal at rest (same-column coincidences, which the parser resolver
-    // normalizes at render/preview time; cross-column and trim-on-marker
-    // ties, which impair no picking).
-    // Disabled markers are skipped as if absent from the active mode's list.
+    // markers sharing one active-domain frame are traversed by the in-group
+    // step so every member is Tab-reachable — stacks are legal at rest
+    // (same-column coincidences, which the parser resolver normalizes at
+    // render/preview time). Disabled markers are skipped as if absent from the
+    // active mode's list. Trim is not part of the selection system, so trim
+    // bounds are not cycle stops; the walk is markers-only.
     const int64_t ph_f = app.playhead_cursor_sample;
 
-    // Trim stops: trim is a project-level authoring tool, orthogonal to the
-    // marker list. The authoring views walk the live app.trim pair; each set
-    // bound has one active-domain frame, projected through
-    // source_frame_to_active_domain exactly as the marker frames are. The
-    // group-order comment below (begin bound, end bound, then markers; the
-    // half-open [begin, end) rationale) applies to the authoring views.
-    const bool has_b = app.trim.has_begin;
-    const bool has_e = app.trim.has_end;
-    // Walk positions: a stop's position in the walk is where landing on it puts
-    // the playhead — playhead_image_of_authored_frame of the bound (the forward
-    // map clamped into the playhead domain). An end bound at source total maps
-    // to a raw image past the playhead's [0, total - 1] domain, so it walks at
-    // its clamped landing frame total - 1, not the raw image the scan could
-    // never match. bf_w / ef_w are those landing positions, used in every
-    // comparison below.
-    const int64_t bf_w = has_b
-        ? playhead_image_of_authored_frame(app, audio, app.trim.begin_frame) : 0;
-    const int64_t ef_w = has_e
-        ? playhead_image_of_authored_frame(app, audio, app.trim.end_frame) : 0;
-
-    // Group order within one active-domain frame, forward: begin bound, end
-    // bound, then markers by ascending index; backward is the exact reverse
-    // (markers descending, end bound, begin bound). This expresses the
-    // authored render window as half-open [begin, end): walking forward you
-    // meet each wall before what lies beyond it — at the begin bound the
-    // markers inside the window, at the end bound the markers whose authored
-    // effect falls outside. A warp marker exactly at the trim begin governs
-    // the deliverable's opening (the start anchor sits on its own segment
-    // line), so its effect is inside; a warp marker exactly at the trim end is
-    // excluded by the slicer's strict source filter, and a phase reset at
-    // either bound typically drops. So a bound precedes its coincident markers
-    // in the forward walk at both walls. Uniform tie rule: at equal frames
-    // forward Tab lands on the bound before any marker, and backward
-    // Shift+Tab therefore lands on markers before the bound. Every press
-    // selects exactly one stop — a bound is an ordinary stop, never lit
-    // together with a marker. An end bound at the EOF wall shares the walk
-    // frame total - 1 (its clamped landing) with any markers there, so this
-    // bound-before-coincident-markers order applies to that shared frame; the
-    // walk and the landing agree by construction in both views, which is what
-    // lets Tab advance off the bound.
-
-    // Current stop, checked bound-first: the bound-first check keys the
-    // current stop off the group owner (LastSelGroup::Trim means a bound, not
-    // a marker, is selected). A bound is the current stop only when its group
-    // owns the selection, its named side is set and selected, and it sits on
-    // the playhead frame.
-    char cur_bound  = 0;    // 'B' / 'E' / 0
-    int  cur_marker = -1;
-    if (app.last_sel_group == LastSelGroup::Trim) {
-        if (app.last_selected_trim == 'B' && has_b &&
-            app.trim_begin_selected && bf_w == ph_f) {
-            cur_bound = 'B';
-        } else if (app.last_selected_trim == 'E' && has_e &&
-                   app.trim_end_selected && ef_w == ph_f) {
-            cur_bound = 'E';
-        }
-    }
-    if (cur_bound == 0) {
+    // Current stop: the last-selected marker when it sits on the playhead frame
+    // (a playhead moved elsewhere by a click breaks the equality and disables
+    // the in-group step below naturally).
+    int cur_marker = -1;
+    {
         const int last = app.last_selected_marker;
         if (last >= 0 && last < n && frame_of(last) == ph_f) cur_marker = last;
     }
 
-    // Lowest-index non-disabled marker sharing the playhead frame. Markers are
-    // frame-sorted, so the group at ph_f is a contiguous run.
-    auto first_marker_at_ph = [&]() -> int {
-        for (int i = 0; i < n; ++i) {
-            const int64_t f = frame_of(i);
-            if (f < ph_f) continue;
-            if (f > ph_f) break;
-            if (!is_disabled(i)) return i;
-        }
-        return -1;
-    };
-
     // In-group step, tried before the frame scan. When the previous Tab landed
-    // on a stop, the caller synced the playhead onto it, so that stop's frame
-    // equals ph_f (a playhead moved elsewhere by a click breaks the equality
-    // and disables this branch naturally). Advance one place within the shared
-    // frame in the cycle direction, following the group order above.
-    int  land_marker = -1;
-    char land_bound  = 0;
-    if (forward) {
-        if (cur_bound == 'B') {
-            if (has_e && ef_w == ph_f) land_bound = 'E';
-            else                       land_marker = first_marker_at_ph();
-        } else if (cur_bound == 'E') {
-            land_marker = first_marker_at_ph();
-        } else if (cur_marker >= 0) {
+    // on a marker, the caller synced the playhead onto it, so that marker's
+    // frame equals ph_f. Advance one place within the shared frame in the cycle
+    // direction (ascending index forward, descending backward).
+    int land_marker = -1;
+    if (cur_marker >= 0) {
+        if (forward) {
             for (int i = cur_marker + 1; i < n; ++i) {
                 if (frame_of(i) != ph_f) break;   // frame-sorted: group ends
                 if (is_disabled(i)) continue;
                 land_marker = i; break;
             }
-            // Bounds at ph_f precede markers in group order; they are never
-            // revisited going forward (the frame scan's strict > excludes them).
-        }
-    } else {
-        if (cur_marker >= 0) {
+        } else {
             for (int i = cur_marker - 1; i >= 0; --i) {
                 if (frame_of(i) != ph_f) break;
                 if (is_disabled(i)) continue;
                 land_marker = i; break;
             }
-            if (land_marker < 0) {
-                // Below the lowest marker in the group, reverse order reaches
-                // the end bound, then the begin bound.
-                if (has_e && ef_w == ph_f)      land_bound = 'E';
-                else if (has_b && bf_w == ph_f) land_bound = 'B';
-            }
-        } else if (cur_bound == 'E') {
-            if (has_b && bf_w == ph_f) land_bound = 'B';
         }
-        // cur_bound == 'B' backward: nothing precedes it in the group; fall to
-        // the frame scan.
     }
 
-    // Frame scan: nearest stop strictly past the playhead in the walk
+    // Frame scan: nearest marker strictly past the playhead in the walk
     // direction. Markers are frame-sorted, so the first in-direction hit is the
-    // nearest. Each set trim bound is weighed independently.
-    if (land_marker < 0 && land_bound == 0) {
-        int     marker_sel   = -1;
-        int64_t marker_frame = 0;
+    // nearest.
+    if (land_marker < 0) {
         if (forward) {
             for (int i = 0; i < n; ++i) {
                 if (frame_of(i) > ph_f && !is_disabled(i)) {
-                    marker_sel = i; marker_frame = frame_of(i); break;
+                    land_marker = i; break;
                 }
             }
         } else {
             for (int i = n - 1; i >= 0; --i) {
                 if (frame_of(i) < ph_f && !is_disabled(i)) {
-                    marker_sel = i; marker_frame = frame_of(i); break;
+                    land_marker = i; break;
                 }
             }
-        }
-
-        char    trim_sel   = 0;   // 'B' / 'E' / 0
-        int64_t trim_frame = 0;
-        auto consider = [&](char which, bool has, int64_t f) {
-            if (!has) return;
-            const bool in_dir = forward ? (f > ph_f) : (f < ph_f);
-            if (!in_dir) return;
-            // Nearer in-direction wins. Crossed bounds are just two stops in
-            // time order — each is weighed at its own frame with no role
-            // ordering. On a bound-vs-bound tie (equal authored bounds, or
-            // target-view compression mapping both to one frame) the group
-            // order decides: forward keeps begin (considered first),
-            // backward takes end (>= lets the later-considered win).
-            const bool closer = (trim_sel == 0) ||
-                (forward ? (f < trim_frame) : (f >= trim_frame));
-            if (closer) { trim_sel = which; trim_frame = f; }
-        };
-        consider('B', has_b, bf_w);
-        consider('E', has_e, ef_w);
-
-        const bool have_marker = (marker_sel >= 0);
-        const bool have_trim   = (trim_sel != 0);
-        if (have_marker || have_trim) {
-            bool take_trim;
-            if (have_marker && have_trim) {
-                if (trim_frame == marker_frame) {
-                    // Marker and bound share this frame. Forward lands on the
-                    // bound (begin before end, already resolved in trim_sel);
-                    // backward lands on the marker (the scan's highest index
-                    // at that frame).
-                    take_trim = forward;
-                } else {
-                    take_trim = forward ? (trim_frame < marker_frame)
-                                        : (trim_frame > marker_frame);
-                }
-            } else {
-                take_trim = have_trim;
-            }
-            if (take_trim) land_bound  = trim_sel;
-            else           land_marker = marker_sel;
         }
     }
 
-    if (land_marker < 0 && land_bound == 0) return;   // nothing ahead
+    if (land_marker < 0) return;   // nothing ahead
 
     // Selection only. Viewport positioning is owned entirely by the sole
     // caller (cycle_marker_focus_with_recenter), which centers the focused
@@ -323,21 +172,7 @@ void Selection::cycle_selection(bool forward) {
     // intermediate viewport write — overridden by that centering in the same
     // keypress — and the resulting damage, accumulated against a non-final
     // viewport, is what produced the outline-blink / cursor-hop artifact.
-    if (land_bound != 0) {
-        // Single-select this trim bound, mirroring select_trim_boundary's
-        // non-additive branch: this bound on, the other off, marker selection
-        // dropped, group set to Trim.
-        app.trim_begin_selected  = (land_bound == 'B');
-        app.trim_end_selected    = (land_bound == 'E');
-        app.last_selected_trim   = land_bound;
-        app.selected_markers.clear();
-        app.last_selected_marker = -1;
-        app.last_sel_group       = LastSelGroup::Trim;
-        viewport.invalidate_top_strip();
-        viewport.invalidate_waveform_area();
-    } else {
-        set_single_selection(land_marker);
-    }
+    set_single_selection(land_marker);
 }
 
 void Selection::select_next_marker() { cycle_selection(true);  }
@@ -415,23 +250,4 @@ void Selection::jump_playhead_to(int64_t target_sample) {
         clamp_viewport_start(app, audio);
     }
     if (playback.is_playing()) playback.resync_predictor();
-}
-
-void Selection::select_trim_bound(char which) {
-    const bool has = (which == 'B') ? app.trim.has_begin : app.trim.has_end;
-    if (!has) return;
-    const int sr = audio.sample_rate();
-    if (sr <= 0) return;
-
-    // The bound is the sole selection (group Trim); any marker selection is
-    // dropped so exactly one thing is selected, matching the Tab walk where a
-    // bound is an ordinary single stop.
-    app.trim_begin_selected  = (which == 'B');
-    app.trim_end_selected    = (which == 'E');
-    app.last_selected_trim   = which;
-    app.selected_markers.clear();
-    app.last_selected_marker = -1;
-    app.last_sel_group       = LastSelGroup::Trim;
-    viewport.invalidate_top_strip();
-    viewport.invalidate_waveform_area();
 }

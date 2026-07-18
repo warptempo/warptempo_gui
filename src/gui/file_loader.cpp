@@ -223,10 +223,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.trim.has_end        = false;
     app.trim.begin_frame  = 0;
     app.trim.end_frame    = 0;
-    app.trim_begin_selected = false;
-    app.trim_end_selected   = false;
     app.editor_text_drag = EditorTextDragState{};
-    app.last_sel_group = LastSelGroup::Markers;
     // Fresh file = fresh history. Both stacks cleared; the loaded state
     // is the saved baseline (signed_distance = 0, valid).
     app.history.reset();
@@ -412,10 +409,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
         // above, so the live copy is in [0, total - 1] by construction.
         app.playhead_cursor_sample       = parsed_tab.playhead_cursor_sample;
         app.trim                = parsed_tab.trim;
-        app.trim_begin_selected = parsed_tab.trim_begin_selected;
-        app.trim_end_selected   = parsed_tab.trim_end_selected;
-        app.last_selected_trim  = parsed_tab.last_selected_trim;
-        app.last_sel_group      = parsed_tab.last_sel_group;
         clamp_viewport_start(app, audio);
     }
 

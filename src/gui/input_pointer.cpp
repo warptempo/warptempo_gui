@@ -254,61 +254,35 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Clicks in iter/BPM mode route through the consolidated
         // flag/marker hit-test below.
 
+        // Ctrl+Alt is trim's ONLY pointer gesture, routed purely by trim
+        // geometry — markers are transparent to it (a marker stem or flag
+        // standing in a trim zone does not block the route; no marker hit test
+        // is consulted). Read-only refuses (all arms, silent). Ctrl+Alt with no
+        // trim geometry — over a marker, empty waveform, or empty top strip, or
+        // outside the strips — is a strict no-op. The follow override fires only
+        // when a drag actually armed and playback was live at press time (a
+        // top-strip press has already stopped playback, so was_playing is the
+        // pre-stop snapshot captured up top).
+        if (ctrl && alt && !shift) {
+            if (!inside_waveform && !inside_top) return;
+            if (active_view_state(app).read_only) return;
+            route_trim_ctrl_alt_press(x, y, inside_top);
+            if (app.trim_drag.active && was_playing)
+                app.follow_overridden_for_session = true;
+            return;
+        }
+
         // Consolidated hit-test across waveform (marker line) and top
         // strip (flag rect). A flag click behaves exactly like a click
-        // on its marker line.
+        // on its marker line. Trim bounds are transparent to every chord but
+        // Ctrl+Alt (handled above), so no trim hit test runs here.
         int hit = -1;
         bool in_click_region = false;
-        // A trim-boundary press is consumed for an Alt-exact reposition-drag, a
-        // Ctrl+Alt move-both-bounds drag, or a plain / Shift select (which in
-        // the waveform flows into the playhead scrub like a marker press);
-        // every other combination is unrecognized and falls through to the
-        // strict-guard no-op below.
-        const bool trim_single = alt && !ctrl && !shift;
-        const bool trim_pair   = ctrl && alt && !shift;
-        const bool trim_gesture = trim_single || trim_pair || (!ctrl && !alt);
         if (inside_waveform) {
             hit = hit_test_marker_line(app, audio, x);
-            // A waveform press that misses every marker but lands
-            // on a trim boundary stem routes to the trim gesture path;
-            // a plain/Shift press there flows into the playhead scrub
-            // exactly like a marker press (scrub=true). Markers take
-            // priority on a shared column.
-            if (hit < 0) {
-                const TrimHit th = hit_test_trim_boundary(app, audio, x);
-                if (th != TrimHit::None && trim_gesture) {
-                    handle_trim_boundary_press(th, trim_single, trim_pair, shift, /*scrub=*/true, x);
-                    if (app.trim_drag.active && was_playing)
-                        app.follow_overridden_for_session = true;
-                    return;
-                }
-            }
             in_click_region = true;
         } else if (inside_top) {
-            // The trim stem is grabbable along its whole visible
-            // extent in the top strip, mirroring the in-waveform stem.
-            // Markers take priority on a shared column, so try the flag
-            // hit-test first; only on a miss does the trim path fill in.
             hit = hit_test_flag(app, audio, x, y);
-            if (hit < 0) {
-                // The b/e chip glyph is painted hl_pad RIGHT of the
-                // bound's column, so a column-only test misses clicks on the
-                // visible chip. In the upper row, test the painted chip RECT
-                // first (mirroring regular-flag hit geometry); fall through to
-                // the column test for the stem in the lower row, the inter-row
-                // gap, and the rest of the strip, where the stem sits at the
-                // true column. Both route to handle_trim_boundary_press.
-                const TrimHit chip = hit_test_trim_chip(app, audio, x, y);
-                const TrimHit th = (chip != TrimHit::None)
-                                       ? chip
-                                       : hit_test_trim_boundary(app, audio, x);
-                if (th != TrimHit::None && trim_gesture) {
-                    handle_trim_boundary_press(th, trim_single, trim_pair, shift, /*scrub=*/false, x);
-                    if (app.trim_drag.active && was_playing)
-                        app.follow_overridden_for_session = true;
-                    return;
-                }
-            }
             in_click_region = true;
         }
 
@@ -348,12 +322,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
 
-        // Strict modifier matching: Alt-exact is hit-routed above (marker
-        // reposition on a marker, trim gestures on a bound, pan on empty
-        // waveform) and Ctrl+Alt-exact is a trim-bound-only gesture (consumed
-        // at the trim path; on a marker or empty waveform it falls through to
-        // here). Every other modifier combination no-ops here. Only the plain
-        // or Shift-modified base press proceeds (Shift adjusts the selection).
+        // Strict modifier matching: Ctrl+Alt (the trim gesture) is handled
+        // above and Alt-exact is hit-routed above (marker reposition on a
+        // marker, pan on empty waveform). Every other modifier combination —
+        // Ctrl on empty, Ctrl+Shift, Shift+Alt, ... — no-ops here. Only the
+        // plain or Shift-modified base press proceeds (Shift adjusts the
+        // selection).
         if (ctrl || alt) return;
 
         // Plain or Shift press. In the waveform area this starts a

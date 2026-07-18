@@ -655,11 +655,9 @@ GuiPaintHandler::DisplayedTrim
 GuiPaintHandler::compute_displayed_trim() const {
     DisplayedTrim out;
 
-    // has-set + selected bits come live from the active tab's trim.
+    // has-set bits come live from the active tab's trim.
     out.has_begin      = app.trim.has_begin;
     out.has_end        = app.trim.has_end;
-    out.begin_selected = out.has_begin && app.trim_begin_selected;
-    out.end_selected   = out.has_end   && app.trim_end_selected;
 
     // Positions read LIVE from app state (no waveform-cache coupling): trim
     // no longer affects waveform pixels, so they must follow the cursor every

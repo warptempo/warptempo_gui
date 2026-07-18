@@ -439,16 +439,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
     if (key == GuiKeys::Delete && !ctrl && !alt && !shift) {
-        // Delete acts on the group named by last_sel_group. With
-        // a trim boundary last-selected, clear the selected bound(s) and
-        // leave markers untouched; otherwise the marker-delete runs. No
-        // read-only check here: Delete drops at the read-only gate above,
-        // which is the keyboard path's single guard, and no pointer path
-        // reaches the delete routines.
-        if (app.last_sel_group == LastSelGroup::Trim) {
-            delete_selected_trim();
-            return;
-        }
+        // Delete acts on the active marker store. No read-only check here:
+        // Delete drops at the read-only gate above, which is the keyboard
+        // path's single guard, and no pointer path reaches the delete routines.
+        // Trim is not part of the selection system, so Delete never acts on a
+        // bound (bare x is trim's clear).
         if (app.active_markers_view == 'P') {
             phase_resets.delete_selected_phase_reset();
             return;
@@ -513,29 +508,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Alt+Left / Alt+Right: nudge the last-selected group by one pixel of
-    // time. Routes like Delete — a last-selected trim bound (Trim group)
-    // nudges the bound; otherwise the marker/phase-reset nudge runs.
+    // Alt+Left / Alt+Right: nudge the selected markers / phase resets by one
+    // pixel of time. Trim is not part of the selection system, so the nudge
+    // never acts on a bound (Ctrl+Alt+wheel is trim's end-move, Ctrl+Alt+drag
+    // its reposition).
     if (alt && !shift && !ctrl && key == GuiKeys::Left) {
-        if (app.last_sel_group == LastSelGroup::Trim) {
-            if ((app.trim_begin_selected && app.trim.has_begin) ||
-                (app.trim_end_selected && app.trim.has_end)) {
-                nudge_selected_trim(-1);
-                return;
-            }
-        }
         if (app.active_markers_view == 'P') phase_resets.nudge_selected_phase_resets(-1);
         else                        warpops.nudge_selected_markers(-1);
         return;
     }
     if (alt && !shift && !ctrl && key == GuiKeys::Right) {
-        if (app.last_sel_group == LastSelGroup::Trim) {
-            if ((app.trim_begin_selected && app.trim.has_begin) ||
-                (app.trim_end_selected && app.trim.has_end)) {
-                nudge_selected_trim(+1);
-                return;
-            }
-        }
         if (app.active_markers_view == 'P') phase_resets.nudge_selected_phase_resets(+1);
         else                        warpops.nudge_selected_markers(+1);
         return;
@@ -567,21 +549,10 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
     if (forward) selection.select_next_marker();
     else         selection.select_prev_marker();
 
+    // The walk is markers-only (trim is not a cycle stop), so recenter on the
+    // focused marker's source frame.
     int64_t src_sample = 0;
-    if (app.last_sel_group == LastSelGroup::Trim) {
-        // The cycle landed on a trim bound. Recenter on its source frame; the
-        // center below is shared with the marker path, so Tab centers onto a
-        // trim bound exactly as it does onto a marker.
-        if (app.last_selected_trim == 'B') {
-            if (!app.trim.has_begin) return;
-            src_sample = app.trim.begin_frame;
-        } else if (app.last_selected_trim == 'E') {
-            if (!app.trim.has_end) return;
-            src_sample = app.trim.end_frame;
-        } else {
-            return;
-        }
-    } else {
+    {
         const int idx = app.last_selected_marker;
         if (idx < 0) return;
         if (app.active_markers_view == 'P') {
@@ -600,8 +571,7 @@ void GuiInputHandler::cycle_marker_focus_with_recenter(bool forward) {
     // displayed value via center_viewport_on_playhead.
     int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
     // Playhead domain clamp through clamp_playhead_to_live_domain (the
-    // domain ruling): Tab onto trim end — legal at total — rests at
-    // total - 1, exactly like a bare Left/Right sync.
+    // domain ruling), exactly like a bare Left/Right sync.
     sample = clamp_playhead_to_live_domain(sample, app, audio);
 
     playback_lifecycle.stop_playback_if_playing();
@@ -665,11 +635,10 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
     if (count < 1) count = 1;
     // Strict modifier matching: each wheel chord is an exact match.
     if (ctrl && alt && !shift) {
-        // Ctrl+Alt+wheel moves the trim-end bound: a pixel-anchored end-move,
-        // shape-shared with nudge_selected_trim. Selection-free — the gesture
-        // always targets the end bound, so there is no last-selected gate
-        // here; wheel_move_trim_end owns the read-only and no-end-bound
-        // refusals.
+        // Ctrl+Alt+wheel moves the trim-end bound: a pixel-anchored end-move.
+        // The gesture always targets the end bound (trim has no selection), so
+        // there is no gate here; wheel_move_trim_end owns the read-only and
+        // no-end-bound refusals.
         wheel_move_trim_end(button, count);
         return;
     }

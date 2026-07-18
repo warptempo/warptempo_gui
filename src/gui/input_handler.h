@@ -522,9 +522,6 @@ private:
     // returns true.
     bool adopt_render_entry(const AppState::RenderEntry& e);
 
-    // Side-parameterized helpers shared by the trim entry points below.
-    enum class TrimSide { Begin, End };
-
     // Bare x, context-aware: playhead exactly on either set bound or strictly
     // inside a fully-set trim pair clears both bounds; anywhere else sets begin
     // at the playhead and autosets end. Source-domain exact frame comparison
@@ -547,9 +544,8 @@ private:
 
     // Field-reset core shared by handle_trim_clear_both (the x key's clear arm)
     // and the crossed-commit auto-clear below: unset both bounds, zero both
-    // frames, drop both trim selections and last_selected_trim. No invalidation
-    // and no trigger — callers own their repaint tail. One implementation so
-    // the two clears can never drift.
+    // frames. No invalidation and no trigger — callers own their repaint tail.
+    // One implementation so the two clears can never drift.
     void clear_trim_bounds();
 
     // Crossed/equal trim cannot REST (ruling comment at the definition):
@@ -559,18 +555,13 @@ private:
     // invalidations, so the repaint shows the cleared state.
     void auto_clear_crossed_trim();
 
-    void handle_trim_unset(TrimSide side);
-
-    // Mouse gestures on the trim boundary stems. on_press routes a
-    // waveform-area press that misses every marker but lands on a trim
-    // boundary here. Alt begins a single-bound drag; Ctrl+Alt begins a
-    // move-both-bounds drag; plain/Shift selects and, in the waveform
-    // (scrub=true), continues into the playhead-drag gesture like a marker
-    // press. All update app.last_sel_group = Trim.
-    void handle_trim_boundary_press(TrimHit which, bool move_single,
-                                    bool move_both, bool shift, bool scrub,
-                                    int mouse_x);
-    void select_trim_boundary(TrimHit which, bool additive);
+    // Ctrl+Alt left press: trim's only pointer gesture, routed purely by trim
+    // geometry (markers are transparent; the caller consults no marker hit test
+    // and refuses read-only up front). A waveform stem-halo / top-strip chip hit
+    // begins that bound's single drag; a press strictly between two set bounds'
+    // columns begins the pair drag on the column-nearer bound; else no-op. Trim
+    // drags never touch selection.
+    void route_trim_ctrl_alt_press(int mouse_x, int mouse_y, bool inside_top);
     void begin_trim_drag(TrimHit which, int mouse_x, bool both = false);
     void update_trim_drag(int mouse_x);   // motion: writes the live store
     // mouse_x → source-domain frame double, the single conversion both the
@@ -584,27 +575,12 @@ private:
     // unusable.
     bool trim_mouse_x_to_active_frame(int mouse_x, int64_t& out_frame);
     void commit_trim_drag();               // release: trigger render if moved
-    // Delete on the trim group: unset each selected bound (reuses
-    // handle_trim_unset) and clears the trim-selected flags.
-    void delete_selected_trim();
-
-    // Alt+Left / Alt+Right on the trim group: nudge the focused bound by
-    // one whole-frame pixel-anchored column at the current zoom, exactly
-    // like nudge_selected_markers (painted column steps by one, the new
-    // column's time commits through snap_authored_frame). direction: -1
-    // earlier, +1 later. Differs from the marker nudge only in its walls:
-    // each bound clamps to its own absolute per-bound range — begin to
-    // [0, EOF-1], end to [0, EOF] (EOF is the exclusive upper bound) — and
-    // there is no partner wall, so the two bounds may cross or equal
-    // mid-gesture; a press that COMMITS the bound onto or across its
-    // partner destroys both bounds (auto_clear_crossed_trim).
-    void nudge_selected_trim(int direction);
 
     // Ctrl+Alt+wheel trim-end move: the pixel-anchored end-bound gesture, the
-    // only authoring gesture the wheel dispatcher owns, shape-shared with
-    // nudge_selected_trim. handle_wheel routes here unconditionally on the
-    // Ctrl+Alt chord; the op itself refuses in read-only, no-ops on unusable
-    // audio/zoom state, and refuses when no end bound is set.
+    // only authoring gesture the wheel dispatcher owns. handle_wheel routes here
+    // unconditionally on the Ctrl+Alt chord; the op itself refuses in read-only,
+    // no-ops on unusable audio/zoom state, and refuses when no end bound is set.
+    // The end bound clamps to the unified authored wall at frame EOF-1.
     void wheel_move_trim_end(GuiMouseButton button, int count);
 
     // Bare `t` toggle: flip app.active_audio_view between Source and Target.

@@ -236,12 +236,8 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             bool& has = is_begin ? t.has_begin : t.has_end;
             if (!has) { unchanged(); return true; }
             int64_t& fr = is_begin ? t.begin_frame : t.end_frame;
-            bool& sel = is_begin
-                ? (active ? app.trim_begin_selected : band.trim_begin_selected)
-                : (active ? app.trim_end_selected   : band.trim_end_selected);
             has = false;
             fr = 0;
-            sel = false;   // an unset bound can't stay selected
             if (active) {
                 viewport.invalidate_waveform_area();
                 target_render.trigger();
@@ -249,10 +245,10 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             applied(); return true;
         }
         const int64_t v = gv.i64;
-        // Per-bound walls, exactly the load guard's compare: begin 0..EOF-1,
-        // end 0..EOF.
+        // Per-bound walls, exactly the load guard's compare: both bounds
+        // 0..EOF-1, the unified inclusive [0, total-1] authored domain.
         const int64_t total = audio.total_frames();
-        const int64_t wall = is_begin ? total - 1 : total;
+        const int64_t wall = total - 1;
         if (v < 0 || v > wall) {
             reject("trim bound is past its wall"); return true;
         }
@@ -276,9 +272,6 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             t.has_end = false;
             t.begin_frame = 0;
             t.end_frame = 0;
-            band.trim_begin_selected = false;
-            band.trim_end_selected = false;
-            band.last_selected_trim = 0;
             std::fprintf(stderr,
                 "warptempo_gui: tab_%c trim crossed (end <= begin); both "
                 "bounds cleared\n", (tab_char == 'B') ? 'b' : 'a');

@@ -99,14 +99,7 @@ struct UndoEntry {
     bool                      affects_persistence  = true;
 };
 
-// Which selection group the most recent selecting gesture
-// targeted. Routes the group-acting keyboard gestures — Delete and the
-// Alt+Left/Right nudge — to exactly one group (the pointer drags are
-// hit-area-routed and never consult it). Set to Trim when a click/gesture
-// lands on a trim boundary, Markers when it lands on a marker.
-enum class LastSelGroup { Markers, Trim };
-
-// The selection/group state a pointer drag's first-motion collapse rewrites,
+// The marker selection state a marker drag's first-motion collapse rewrites,
 // captured wholesale at drag begin and restored wholesale at cancellation —
 // one struct so a future selection field cannot be forgotten in one of the
 // copies (the per-field enumeration was the recurring leak). Moved only by
@@ -115,10 +108,6 @@ enum class LastSelGroup { Markers, Trim };
 struct SelectionSnapshot {
     std::set<int> selected_markers;
     int           last_selected_marker = -1;
-    bool          trim_begin_selected  = false;
-    bool          trim_end_selected    = false;
-    char          last_selected_trim   = 0;
-    LastSelGroup  last_sel_group       = LastSelGroup::Markers;
 };
 
 // Alt+drag state. `active` gates motion handling; the rest captures the
@@ -179,11 +168,11 @@ struct DragState {
     // marker position (commit_drag's sync_playhead_to_last_selected), so
     // this captured value serves only the Esc-cancel restore.
     int64_t                pre_drag_playhead_sample = 0;
-    // Pre-drag selection/group snapshot, captured at begin_drag for the
+    // Pre-drag marker selection snapshot, captured at begin_drag for the
     // Esc / Ctrl+Q cancellation restore (the pre_drag_playhead_sample pattern
     // extended to selection): first motion collapses the selection onto the
-    // grabbed marker (set_single_selection), so cancel puts the whole
-    // selection/group state back.
+    // grabbed marker (set_single_selection), so cancel puts the marker
+    // selection back.
     SelectionSnapshot      pre_drag_selection;
     // Index of the marker that was clicked to start the drag. Used to track
     // the playhead during motion so the audio cursor follows the grabbed
@@ -363,12 +352,6 @@ struct TrimDragState {
     // trim sibling. Motion pins the playhead onto the grabbed bound; Esc puts
     // it back here.
     int64_t pre_drag_playhead_sample = 0;
-    // Pre-drag selection/group snapshot, captured at begin_trim_drag for the
-    // cancellation restore (the DragState sibling): first motion collapses the
-    // selection onto the grabbed bound (select_trim_boundary, plus the pair's
-    // partner re-set), erasing marker selection and setting last_sel_group =
-    // Trim, so cancel puts the whole selection/group state back.
-    SelectionSnapshot pre_drag_selection;
 };
 
 // Alt+drag on empty waveform: continuous 1:1 grab-pan of the viewport,
@@ -502,15 +485,9 @@ struct ViewState {
     // edit). Persisted as tab_a_read_only / tab_b_read_only in .settings.
     bool   read_only          = false;
 
-    // Per-tab backing store for app.trim / app.trim_*_selected /
-    // app.last_selected_trim / app.last_sel_group. Synced only at the
-    // tab-swap boundary in active_views.cpp (same pattern as
-    // viewport/zoom/playhead).
+    // Per-tab backing store for app.trim. Synced only at the tab-swap boundary
+    // in active_views.cpp (same pattern as viewport/zoom/playhead).
     TrimState     trim;
-    bool          trim_begin_selected = false;
-    bool          trim_end_selected   = false;
-    char          last_selected_trim  = 0;
-    LastSelGroup  last_sel_group      = LastSelGroup::Markers;
 };
 
 struct AppState {
@@ -690,12 +667,6 @@ struct AppState {
     // button release, on a lost button mid-drag, and on file load.
     EditorTextDragState editor_text_drag;
 
-    // Which selection group the last selecting gesture targeted.
-    // Drives Delete and the Alt+Left/Right nudge routing (plus the Tab-cycle
-    // landing and the playhead sync onto the focused item); the pointer drags
-    // are hit-area-routed and never consult it. Session-only.
-    LastSelGroup last_sel_group = LastSelGroup::Markers;
-
     // Hover-popup state. See HoverPopupState above.
     HoverPopupState   hover_popup;
 
@@ -772,27 +743,13 @@ struct AppState {
     EngineSettings engine_settings;
 
     // Live working copy of the active tab's trim state. The per-tab
-    // backing store lives in ViewState::trim (and the companion
-    // *_selected / last_selected_trim / last_sel_group fields there).
-    // Excluded from undo/redo. Mirrored to/from the active tab's
-    // ViewState slot at the tab-swap boundary in active_views.cpp
-    // (same pattern as viewport/zoom/playhead).
+    // backing store lives in ViewState::trim. Excluded from undo/redo.
+    // Mirrored to/from the active tab's ViewState slot at the tab-swap
+    // boundary in active_views.cpp (same pattern as viewport/zoom/playhead).
+    // Trim is a region authored purely by the Ctrl+Alt pointer gestures, the
+    // bare-x set/clear, and the Ctrl+Alt+wheel end-move — it is NOT part of the
+    // selection system (no bound selection, no Tab stop, no Delete arm).
     TrimState trim;
-
-    // Transient selection of the trim boundary stems. A separate
-    // selection channel from the marker sets (selected_markers /
-    // phase_reset_selected) — the two groups are orthogonal and can be
-    // co-selected. Not persisted to .settings; defaults false and resets on
-    // file load. Which group the group-acting keyboard gestures (Delete, the
-    // Alt+Left/Right nudge) target is decided by last_sel_group; the pointer
-    // drags are hit-area-routed and never consult it.
-    bool   trim_begin_selected = false;
-    bool   trim_end_selected   = false;
-    // Which trim bound was most recently selected by a selecting gesture.
-    // 0 = none, 'B' = begin, 'E' = end. Drives the trim-group Alt+Left/Right
-    // nudge and Delete routing (which bound they act on), the Tab-cycle
-    // landing, and the playhead sync onto the focused bound.
-    char   last_selected_trim  = 0;
 
     // Bottom-strip command prompt. Active only when a close / re-detect
     // gesture fires while a confirmation is required. Originally
@@ -989,18 +946,13 @@ inline bool any_pointer_gesture_active(const AppState& app) {
            app.editor_text_drag.active;
 }
 
-// SelectionSnapshot movers: capture the live selection/group state at drag
-// begin, restore it wholesale at cancellation. One place enumerates the fields,
-// so DragState and TrimDragState can never fall out of sync with each other or
-// with a future selection field.
+// SelectionSnapshot movers: capture the live marker selection at drag begin,
+// restore it wholesale at cancellation. One place enumerates the fields, so a
+// future selection field cannot be forgotten.
 inline SelectionSnapshot capture_selection_snapshot(const AppState& app) {
     SelectionSnapshot s;
     s.selected_markers     = app.selected_markers;
     s.last_selected_marker = app.last_selected_marker;
-    s.trim_begin_selected  = app.trim_begin_selected;
-    s.trim_end_selected    = app.trim_end_selected;
-    s.last_selected_trim   = app.last_selected_trim;
-    s.last_sel_group       = app.last_sel_group;
     return s;
 }
 
@@ -1008,10 +960,6 @@ inline void restore_selection_snapshot(AppState& app,
                                        const SelectionSnapshot& s) {
     app.selected_markers     = s.selected_markers;
     app.last_selected_marker = s.last_selected_marker;
-    app.trim_begin_selected  = s.trim_begin_selected;
-    app.trim_end_selected    = s.trim_end_selected;
-    app.last_selected_trim   = s.last_selected_trim;
-    app.last_sel_group       = s.last_sel_group;
 }
 
 // Restore ascending time_frame order after a mutation that may have
@@ -1105,10 +1053,10 @@ int64_t live_total_frames(const AppState& a, const GuiAudio& audio);
 
 // Live-domain playhead clamp — the single spelling of the playhead domain
 // ruling: the playhead rests in [0, total - 1] of its LIVE view's domain,
-// everywhere, after any gesture. Both marker columns wall at total - 1, so
-// a sync onto a marker is in-domain by construction; trim end is the one
-// legal endpoint at total (an exclusive bound), and a sync onto it
-// deliberately rests the playhead at total - 1. Every playhead write
+// everywhere, after any gesture. All authored positions — both marker columns
+// and both trim bounds — wall at total - 1, so every sync onto one is in-domain
+// by construction; the clamp is the load-lenient runtime guard for persisted
+// scratch values, not a source-view authored-position concern. Every playhead write
 // funnels through here: Viewport::move_playhead_to (the gesture route),
 // and the non-gesture live-ization routes a persisted or stashed value
 // takes into the live fields — the source load's tab snapshots, the
@@ -1139,9 +1087,8 @@ inline int64_t clamp_playhead_to_live_domain(int64_t frame,
 // clamped into the playhead's [0, total - 1] live domain. Every equality or
 // landing compare between a STORED AUTHORED position (a marker or trim bound)
 // and the playhead MUST go through this image — the forward/inverse map pair is
-// not a round trip on compressed target segments, and the trim end's exclusive
-// EOF wall (frame total) forward-maps outside the playhead domain, so comparing
-// raw or inverse-mapped frames is the recurring defect class this helper kills.
+// not a round trip on compressed target segments, so comparing raw or
+// inverse-mapped frames is the recurring defect class this helper kills.
 inline int64_t playhead_image_of_authored_frame(const AppState& a,
                                                 const GuiAudio& audio,
                                                 int64_t authored_frame) {
@@ -1197,11 +1144,14 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 enum class TrimHit { None, Begin, End };
 
 // hit_test_trim_boundary: return which set trim boundary's painted
-// column is within kMarkerHitHalfPx of `mouse_x`, or None. AUTHORING views —
-// the active tab's live pair. Walks the same warp_frame_map as
-// hit_test_marker_line in target view so the hit lands on the visually-drawn
-// stem. Trim is project-level, and applies in both 'W' and 'P' views. When
-// both bounds are within reach, the nearer wins.
+// column is within kMarkerHitHalfPx of `mouse_x` AND lies within the visible
+// strip, or None. AUTHORING views — the active tab's live pair. Visible columns
+// only (mirroring hit_test_marker_line): a bound painted outside the strip is
+// not a candidate; the halo governs reach around a visible column. Walks the
+// same warp_frame_map as hit_test_marker_line in target view so the hit lands
+// on the visually-drawn stem. Trim is project-level, and applies in both 'W'
+// and 'P' views. When both bounds are within reach, the nearer wins. Consumed
+// by the Ctrl+Alt trim routing's waveform single-drag arm.
 TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
                                int mouse_x);
 

@@ -222,12 +222,10 @@ struct StemCache {
 
     // Trim boundary stems share this cache. The begin/end frame
     // positions ride fp_trim_begin / fp_trim_end above; these capture the
-    // project has-set + selected bits so the cache rebuilds when a bound
-    // appears/disappears or its selection toggles.
+    // project has-set bits so the cache rebuilds when a bound
+    // appears/disappears.
     bool      fp_trim_has_begin              = false;
     bool      fp_trim_has_end                = false;
-    bool      fp_trim_begin_selected         = false;
-    bool      fp_trim_end_selected           = false;
 
     void destroy_surface() {
         if (surface) {
@@ -295,8 +293,6 @@ struct FlagCache {
     int64_t   fp_trim_end                 = 0;
     bool      fp_trim_has_begin           = false;
     bool      fp_trim_has_end             = false;
-    bool      fp_trim_begin_selected      = false;
-    bool      fp_trim_end_selected        = false;
 
     void destroy_surface() {
         if (surface) {
@@ -448,8 +444,6 @@ private:
         int64_t end            = 0;
         bool    has_begin      = false;
         bool    has_end        = false;
-        bool    begin_selected = false;
-        bool    end_selected   = false;
     };
     DisplayedTrim compute_displayed_trim() const;
 

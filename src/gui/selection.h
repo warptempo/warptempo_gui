@@ -38,9 +38,4 @@ struct Selection {
     void prune_live_selection();
     void sync_playhead_to_last_selected(bool edge_follow = false);
     void jump_playhead_to(int64_t target_sample);
-    // Select the active tab's trim bound ('B' or 'E') alone (group Trim),
-    // dropping any marker selection. Used by Home / End after they move the
-    // playhead to the trim region's bounds. No-op when the bound is not set.
-    // Does not move the playhead — the caller does.
-    void select_trim_bound(char which);
 };

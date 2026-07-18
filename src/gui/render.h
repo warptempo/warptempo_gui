@@ -481,16 +481,13 @@ void render_trim_stems(cairo_t* cr,
                        long long viewport_end_sample,
                        const TrimRange& trim,
                        bool has_begin,
-                       bool begin_selected,
                        bool has_end,
-                       bool end_selected,
                        cairo_surface_t* ink_plate = nullptr);
 
 // Draws the begin/end trim-boundary flag chips in the upper top row.
 // Each set bound (gated by `has_begin` / `has_end`) paints a single-glyph
 // chip — `b` for begin, `e` for end — capping its stem as one continuous
-// unit. Chip color mirrors the stem exactly: kTrimMarker, or kSelected when
-// that bound is selected. The chip's bottom edge sits at
+// unit. Chip color is kTrimMarker, matching the stem. The chip's bottom edge sits at
 // flag_chip_bottom_y(waveform_area, ChipRow::Upper); `waveform_area` is the
 // real waveform rect (the chip's vertical anchor is derived from its top
 // edge, the same convention the stem renderer uses). Column placement matches
@@ -506,9 +503,7 @@ void render_trim_flags(cairo_t* cr,
                        double font_size,
                        const TrimRange& trim,
                        bool has_begin,
-                       bool begin_selected,
-                       bool has_end,
-                       bool end_selected);
+                       bool has_end);
 
 // Editor overlay used by the top-flag editor. When `marker_index >= 0`
 // and matches a flag the renderer is about to draw, that flag's text is

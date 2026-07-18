@@ -142,13 +142,13 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
                 : static_cast<size_t>(src_sample);
             ms = std::nearbyint(map_source_to_target(q, *target_warp_frame_map));
         }
-        // No viewport gate: the kMarkerHitHalfPx halo is the single reach
-        // test, uniform with markers. A bound up to kMarkerHitHalfPx past
-        // either strip edge is grabbable from the nearest onscreen pixels.
-        // The motivating case is the at-EOF end bound, which rests exactly one
-        // pixel past the last visible column at maximum scroll; the gate made
-        // it unreachable. b_px may be negative or >= the strip width.
+        // Visible columns only (mirroring hit_test_marker_line): a bound whose
+        // painted column falls outside the strip [0, area.w - 1] is not a
+        // candidate — return a beyond-halo distance so it never wins. The
+        // kMarkerHitHalfPx halo governs reach AROUND a visible column but does
+        // not extend the strip.
         const int b_px = static_cast<int>(std::nearbyint((ms - vp) / spp));
+        if (b_px < 0 || b_px >= area.w) return kMarkerHitHalfPx + 1;
         return std::abs(b_px - click_rel_x);
     };
 

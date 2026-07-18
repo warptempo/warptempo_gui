@@ -788,8 +788,6 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     const DisplayedTrim dtrim   = compute_displayed_trim();
     const bool trim_has_begin   = dtrim.has_begin;
     const bool trim_has_end     = dtrim.has_end;
-    const bool trim_begin_sel   = dtrim.begin_selected;
-    const bool trim_end_sel     = dtrim.end_selected;
     const int64_t trim_begin    = dtrim.begin;
     const int64_t trim_end      = dtrim.end;
 
@@ -810,9 +808,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         stem_cache.fp_active_markers_view     == mv &&
         stem_cache.fp_selection_hash          == sel_hash &&
         stem_cache.fp_trim_has_begin          == trim_has_begin &&
-        stem_cache.fp_trim_has_end            == trim_has_end &&
-        stem_cache.fp_trim_begin_selected     == trim_begin_sel &&
-        stem_cache.fp_trim_end_selected       == trim_end_sel;
+        stem_cache.fp_trim_has_end            == trim_has_end;
 
     if (matches) return;
 
@@ -874,17 +870,15 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     }
 
     // Trim boundary stems, painted in both 'W' and 'P' views. Positions are
-    // the displayed-domain trim frames (already translated); the has-set /
-    // selected bits decide which stems draw and in what color. Painted BEFORE
-    // the regular marker stems so that where a trim bound and a regular marker
-    // share a column the regular stem (painted last on this shared surface)
-    // sits in front; the taller trim stem reads as "underneath," reachable by
-    // its hotkey.
+    // the displayed-domain trim frames (already translated); the has-set bits
+    // decide which stems draw. Painted BEFORE the regular marker stems so that
+    // where a trim bound and a regular marker share a column the regular stem
+    // (painted last on this shared surface) sits in front; the taller trim stem
+    // reads as "underneath," reachable by its hotkey.
     render_trim_stems(
         ccr, local_area, vp_start, vp_end,
         trim_struct,
-        trim_has_begin, trim_begin_sel,
-        trim_has_end, trim_end_sel,
+        trim_has_begin, trim_has_end,
         wf_cache.surface);
 
     if (mv == 'P') {
@@ -921,8 +915,6 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     stem_cache.fp_selection_hash            = sel_hash;
     stem_cache.fp_trim_has_begin            = trim_has_begin;
     stem_cache.fp_trim_has_end              = trim_has_end;
-    stem_cache.fp_trim_begin_selected       = trim_begin_sel;
-    stem_cache.fp_trim_end_selected         = trim_end_sel;
 
     // Invalidate the stem region. Viewport-driven invalidations
     // already cover this strip, but pure marker-store edits (warp_gen /
@@ -1016,9 +1008,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_trim_begin              == dtrim.begin &&
         flag_cache.fp_trim_end                == dtrim.end &&
         flag_cache.fp_trim_has_begin          == dtrim.has_begin &&
-        flag_cache.fp_trim_has_end            == dtrim.has_end &&
-        flag_cache.fp_trim_begin_selected     == dtrim.begin_selected &&
-        flag_cache.fp_trim_end_selected       == dtrim.end_selected;
+        flag_cache.fp_trim_has_end            == dtrim.has_end;
 
     if (matches) return;
 
@@ -1102,8 +1092,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         ccr, local_top_strip, waveform_area(app),
         vp_start, vp_end, flag_font_size_px(),
         TrimRange{dtrim.begin, dtrim.end},
-        dtrim.has_begin, dtrim.begin_selected,
-        dtrim.has_end, dtrim.end_selected);
+        dtrim.has_begin, dtrim.has_end);
 
     cairo_destroy(ccr);
 
@@ -1124,8 +1113,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_trim_end                = dtrim.end;
     flag_cache.fp_trim_has_begin          = dtrim.has_begin;
     flag_cache.fp_trim_has_end            = dtrim.has_end;
-    flag_cache.fp_trim_begin_selected     = dtrim.begin_selected;
-    flag_cache.fp_trim_end_selected       = dtrim.end_selected;
 
     gui.invalidate_region(top_strip.x, top_strip.y,
                           top_strip.w, top_strip.h);

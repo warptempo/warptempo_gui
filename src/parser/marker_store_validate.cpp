@@ -41,7 +41,7 @@ std::optional<std::string> first_past_eof_wall_defect(
             return std::string(name) + " trim begin past end of audio at " +
                    format_timestamp(t.begin_frame / sr_d);
         }
-        if (t.has_end && t.end_frame > total_frames) {
+        if (t.has_end && t.end_frame > total_frames - 1) {
             return std::string(name) + " trim end past end of audio at " +
                    format_timestamp(t.end_frame / sr_d);
         }

@@ -10,16 +10,15 @@
 
 // Trim gestures (architect-ruled hardfail model; the full ruling sits at the
 // TrimState store in app_state.h): begin and end are authored named roles.
-// Every gesture clamps each bound to its own absolute walls — begin from
-// frame 0 to EOF-1, end from frame 0 to EOF exactly (end-at-EOF is a valid
-// render, so the GUI must represent it). There are no partner walls: a bound
-// crosses its partner freely during any gesture — but crossed/equal can no
-// longer REST: every trim commit runs auto_clear_crossed_trim (below), so a
-// commit landing on or across the partner destroys both bounds. The
-// per-bound wall split (begin EOF-1 vs end EOF) is a recorded
-// trim-vs-marker asymmetry — it replaces the older no-walls asymmetry, now
-// dead — sitting beside the marker nudges' single EOF wall. Every wall
-// check is a plain integer compare — literally the load guard's comparison.
+// Every gesture clamps each bound to its absolute walls — frame 0 to EOF-1,
+// the same wall both marker columns hold. All authored positions (both marker
+// columns and both trim bounds) share the inclusive [0, total-1] domain — the
+// end bound's old exclusive-at-total wall is retired. There are no partner
+// walls: a bound crosses its partner freely during any gesture — but
+// crossed/equal can no longer REST: every trim commit runs
+// auto_clear_crossed_trim (below), so a commit landing on or across the
+// partner destroys both bounds. Every wall check is a plain integer compare —
+// literally the load guard's comparison.
 // The zero floor is subsumed by the walls but remains the reason the floor
 // exists at all: a negative position is unrepresentable in the authored
 // frame form the .settings file persists (parse_authored_frame rejects
@@ -54,10 +53,11 @@ void GuiInputHandler::handle_trim_set_begin_autoset() {
         std::max<int64_t>(
             1, samples_visible(app, audio) / kTrimAutosetVisibleDivisor);
 
-    // Per-bound absolute walls: begin at frame EOF-1, end at frame EOF.
+    // Absolute walls: both bounds clamp to frame EOF-1 (the unified authored
+    // domain [0, total-1]).
     const int64_t total = audio.total_frames();
     const int64_t begin_wall_frame = total - 1;
-    const int64_t end_wall_frame   = total;
+    const int64_t end_wall_frame   = total - 1;
 
     // Store the exact frame — trim bounds are whole source frames held in
     // int64_t like marker positions; the .settings writer persists the exact
@@ -77,9 +77,9 @@ void GuiInputHandler::handle_trim_set_begin_autoset() {
         source_frame_to_active_domain(app, audio, cand_src);
     int64_t end_active = begin_active + offset;
     // Partner (end) placement clamp: [0, end's own wall mapped through
-    // source_frame_to_active_domain] — the same per-bound wall (frame EOF)
-    // every trim gesture holds. The mapping is monotone, so the active-domain
-    // clamp matches the source-domain wall.
+    // source_frame_to_active_domain] — the unified wall (frame EOF-1) every
+    // trim gesture holds. The mapping is monotone, so the active-domain clamp
+    // matches the source-domain wall.
     const int64_t end_wall_active =
         source_frame_to_active_domain(app, audio, end_wall_frame);
     if (end_active < 0)               end_active = 0;
@@ -94,21 +94,15 @@ void GuiInputHandler::handle_trim_set_begin_autoset() {
     // playhead against playback's domain offset — this same begin mapped to
     // target frames — so a playhead off the bound's frame can land a sample
     // short of the buffer start (playback.domain_begin()) and Space no-ops.
-    // Playhead domain clamp through clamp_playhead_to_live_domain (the
-    // domain ruling): a pin onto trim end at total rests at total - 1.
+    // Playhead domain clamp through playhead_image_of_authored_frame (the
+    // domain ruling).
     app.playhead_cursor_sample =
         playhead_image_of_authored_frame(app, audio, app.trim.begin_frame);
 
-    app.trim_begin_selected = true;
-    app.trim_end_selected   = true;
-    app.last_selected_trim  = 'B';
-    app.last_sel_group      = LastSelGroup::Trim;
-
     // The autoset is a commit: the partner (end) clamp at the tail wall, or a
     // target-view domain round-trip that compresses the offset below one
-    // source frame, can land the pair equal, and equal cannot rest. Runs after
-    // the selection flags above so the cleared state wins, before the
-    // invalidations below so the repaint shows it.
+    // source frame, can land the pair equal, and equal cannot rest. Runs before
+    // the invalidations below so the repaint shows the cleared state.
     auto_clear_crossed_trim();
 
     viewport.invalidate_waveform_area();
@@ -116,19 +110,6 @@ void GuiInputHandler::handle_trim_set_begin_autoset() {
     target_render.trigger();
 }
 
-
-void GuiInputHandler::handle_trim_unset(TrimSide side) {
-    bool&    this_has   = (side == TrimSide::Begin) ? app.trim.has_begin   : app.trim.has_end;
-    int64_t& this_bound = (side == TrimSide::Begin) ? app.trim.begin_frame : app.trim.end_frame;
-    bool&    this_sel   = (side == TrimSide::Begin) ? app.trim_begin_selected : app.trim_end_selected;
-    if (!this_has) return;
-    this_has   = false;
-    this_bound = 0;
-    this_sel     = false;  // an unset bound can't stay selected
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
-    target_render.trigger();
-}
 
 // The clear-both field resets, shared verbatim by handle_trim_clear_both (the
 // x key's clear arm) and the crossed-commit auto-clear (auto_clear_crossed_trim)
@@ -139,9 +120,6 @@ void GuiInputHandler::clear_trim_bounds() {
     app.trim.has_end        = false;
     app.trim.begin_frame    = 0;
     app.trim.end_frame      = 0;
-    app.trim_begin_selected = false;
-    app.trim_end_selected   = false;
-    app.last_selected_trim  = 0;
 }
 
 // Architect ruling (2026-07-15): crossed/equal trim bounds cannot REST —
@@ -180,17 +158,14 @@ void GuiInputHandler::handle_trim_clear_both() {
 // against each bound's playhead_image_of_authored_frame — exactly the value
 // every click / Tab-cycle / drag-pin onto a bound assigns the playhead —
 // because the forward/inverse pair is not a round trip on compressed target
-// segments and the end bound's exclusive EOF wall (frame total) maps outside
-// the playhead's [0, total-1] domain. "on the bound" therefore means "at the
-// position landing on the bound
-// puts the playhead", reachable by construction. The inside test uses the
+// segments, so "on the bound" means "at the position landing on the bound puts
+// the playhead", reachable by construction. The inside test uses the
 // UNCLAMPED images (strict betweenness; the edges belong to the coincidence
 // arm), needs BOTH bounds (an area). In source view the forward map is
-// identity, so the begin compare is the exact integer compare and a playhead
-// resting at total - 1 counts as on an end bound at the EOF wall (its closest
-// reachable frame). A single set bound clears only by that coincidence, any
-// other position autosets over it. Clearing routes through
-// handle_trim_clear_both so the one clear+repaint tail is shared.
+// identity, so the begin compare is the exact integer compare. A single set
+// bound clears only by that coincidence, any other position autosets over it.
+// Clearing routes through handle_trim_clear_both so the one clear+repaint tail
+// is shared.
 void GuiInputHandler::handle_trim_x() {
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
     const int64_t ph = app.playhead_cursor_sample;
@@ -214,35 +189,6 @@ void GuiInputHandler::handle_trim_x() {
 }
 
 // --- Trim boundary mouse gestures ---------------------------------------
-
-void GuiInputHandler::select_trim_boundary(TrimHit which, bool additive) {
-    if (which == TrimHit::None) return;
-    bool& this_sel  = (which == TrimHit::Begin) ? app.trim_begin_selected
-                                                : app.trim_end_selected;
-    bool& other_sel = (which == TrimHit::Begin) ? app.trim_end_selected
-                                                : app.trim_begin_selected;
-    const char which_char = (which == TrimHit::Begin) ? 'B' : 'E';
-    if (additive) {
-        // Toggle this bound's membership; leave the other bound as-is.
-        this_sel = !this_sel;
-        app.last_selected_trim = this_sel ? which_char : 0;
-    } else {
-        // Single-select within the trim group: this bound on, other off.
-        this_sel  = true;
-        other_sel = false;
-        app.last_selected_trim = which_char;
-        // A fresh sole selection in the trim group drops marker selection —
-        // orthogonal groups, but a single-select in one clears the other
-        // (the symmetric counterpart of set_single_selection clearing trim).
-        if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
-            app.selected_markers.clear();
-            app.last_selected_marker = -1;
-            viewport.invalidate_top_strip();
-        }
-    }
-    app.last_sel_group = LastSelGroup::Trim;
-    viewport.invalidate_waveform_area();
-}
 
 bool GuiInputHandler::trim_mouse_x_to_active_frame(int mouse_x,
                                                    int64_t& out_frame) {
@@ -291,11 +237,6 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
     app.trim_drag.orig_begin_frame = app.trim.begin_frame;
     app.trim_drag.orig_end_frame   = app.trim.end_frame;
     app.trim_drag.pre_drag_playhead_sample = app.playhead_cursor_sample;
-    // Pre-drag selection/group snapshot for the Esc/Ctrl+Q cancellation
-    // restore: first motion collapses the selection onto the grabbed bound (and
-    // the pair re-sets the partner), erasing marker selection and setting
-    // last_sel_group = Trim, so cancel puts it back wholesale.
-    app.trim_drag.pre_drag_selection = capture_selection_snapshot(app);
     // Grab anchor: each arm captures exactly what its motion path consumes —
     // the pair path reads anchor_active_frame (active-domain, for the rigid
     // both-bounds delta); the single-bound path reads anchor_frame (source-
@@ -312,12 +253,9 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
         if (trim_mouse_x_to_source_frame(mouse_x, anchor))
             app.trim_drag.anchor_frame = anchor;
     }
-    // The press only captures drag state — selection and the group tag are
-    // deferred to the first real motion (the single path's first-motion
-    // collapse, the pair path's first-motion selection in update_trim_drag),
-    // mirroring the marker drag. A press that never moves leaves selection,
-    // group routing, and last_selected_trim untouched, so the
-    // no-motion-commits-nothing rule covers the bookkeeping too.
+    // The press only captures drag state; trim drags never touch selection at
+    // all (trim is not part of the selection system). A press that never moves
+    // commits nothing.
 }
 
 void GuiInputHandler::update_trim_drag(int mouse_x) {
@@ -336,10 +274,11 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         int64_t df = cur_active - app.trim_drag.anchor_active_frame;
         // Keep the grabbed bound — and the playhead pinned to it — inside the
         // visible pixel span, matching the playhead's own first/last-visible
-        // clamp. Applied before the clip clamp so trim validity (0 / EOF) wins
-        // in the rare case the window is wider than the viewport. This also
-        // self-corrects a blind offscreen-halo grab: a bound grabbed up to
-        // kMarkerHitHalfPx past an edge snaps into view on the first motion.
+        // clamp. Applied before the clip clamp so trim validity (the 0 / EOF-1
+        // walls) wins in the rare case the window is wider than the viewport.
+        // The grab can only begin on a visible bound (hit_test_trim_boundary
+        // gates to visible columns), so this is a live tracking clamp, not a
+        // correction for an offscreen grab.
         const GuiRect area = waveform_area(app);
         const int64_t first_vis = app.viewport_start_sample;
         const int64_t last_vis  = app.viewport_start_sample +
@@ -347,18 +286,17 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         const int64_t grabbed = app.trim_drag.is_begin ? ob : oe;
         if (grabbed + df < first_vis) df = first_vis - grabbed;
         if (grabbed + df > last_vis)  df = last_vis  - grabbed;
-        // Wall the rigid delta so BOTH bounds respect their own absolute
-        // walls: floor 0 on each and per-bound ceilings — begin at frame
-        // EOF-1, end at frame EOF — mapped through source_frame_to_active_
-        // domain (monotone, so the active-domain clamp matches the source-
-        // domain wall). Only the grabbed bound is viewport-clamped (above);
-        // this wall clamp binds the partner too, so the partner no longer
-        // slides past EOF under the rigid delta. Crossing stays free (no
-        // partner wall).
+        // Wall the rigid delta so BOTH bounds respect their absolute walls:
+        // floor 0 on each and a shared ceiling at frame EOF-1 — mapped through
+        // source_frame_to_active_domain (monotone, so the active-domain clamp
+        // matches the source-domain wall). Only the grabbed bound is
+        // viewport-clamped (above); this wall clamp binds the partner too, so
+        // the partner no longer slides past EOF under the rigid delta. Crossing
+        // stays free (no partner wall).
         const int64_t begin_wall_active =
             source_frame_to_active_domain(app, audio, audio.total_frames() - 1);
         const int64_t end_wall_active =
-            source_frame_to_active_domain(app, audio, audio.total_frames());
+            source_frame_to_active_domain(app, audio, audio.total_frames() - 1);
         if (ob + df < 0)                 df = -ob;
         if (oe + df < 0)                 df = -oe;
         if (ob + df > begin_wall_active) df = begin_wall_active - ob;
@@ -372,26 +310,12 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         if (nb < 0) nb = 0;
         if (ne < 0) ne = 0;
         if (app.trim.begin_frame != nb || app.trim.end_frame != ne) {
-            const bool first_motion = !app.trim_drag.moved;
             app.trim.begin_frame = nb;
             app.trim.end_frame   = ne;
             app.trim_drag.moved    = true;
-            // First-motion selection, the pair sibling of the single path's
-            // first-motion collapse: the non-additive helper focuses the
-            // grabbed bound (dropping marker selection and setting the Trim
-            // group, the one shared rule), then the partner flag is re-set
-            // because a pair drag's subject is both bounds.
-            if (first_motion) {
-                select_trim_boundary(
-                    app.trim_drag.is_begin ? TrimHit::Begin : TrimHit::End,
-                    /*additive=*/false);
-                (app.trim_drag.is_begin ? app.trim_end_selected
-                                        : app.trim_begin_selected) = true;
-            }
             const int64_t grabbed_src = app.trim_drag.is_begin ? nb : ne;
             // Playhead domain clamp through clamp_playhead_to_live_domain
-            // (the domain ruling): a grabbed end riding at total pins the
-            // playhead to total - 1.
+            // (the domain ruling).
             app.playhead_cursor_sample = clamp_playhead_to_live_domain(
                 source_frame_to_active_domain(app, audio, grabbed_src),
                 app, audio);
@@ -424,10 +348,10 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     // through the last fully-visible pixel) so the drag can't push it
     // offscreen, where its precise location would be hidden. The cursor column
     // is already viewport-bound, but a grab a few pixels off the stem can
-    // trail the bound past the edge; this makes the bound itself exact. This is
-    // also what makes a blind offscreen-halo grab self-correcting: a bound
-    // grabbed up to kMarkerHitHalfPx past an edge snaps into the visible strip
-    // on the first motion. The bounds are active-domain while src_frame is
+    // trail the bound past the edge; this makes the bound itself exact. The
+    // grab can only begin on a visible bound (hit_test_trim_boundary gates to
+    // visible columns), so this is a live tracking clamp, not a correction for
+    // an offscreen grab. The bounds are active-domain while src_frame is
     // source, so inverse-translate the edges — monotonic, so the source clamp
     // matches the active-pixel one.
     const auto vb = viewport_marker_bounds(app, audio);
@@ -438,15 +362,12 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
 
     // Structural wall, applied AFTER the viewport clamp so the wall wins
     // where both bind (matching the marker-drag model where structural walls
-    // compose with the viewport gate): begin clamps to frame EOF-1, end to
-    // frame EOF exactly (end-at-EOF is a valid render). No partner wall — the
-    // bound crosses its partner freely and rests wherever released. The floor
-    // 0 is already held by the viewport clamp (the visible strip starts at or
-    // after frame 0), so the 0.0 format-representability floor holds by
-    // construction here.
-    const int64_t wall_hi = app.trim_drag.is_begin
-        ? audio.total_frames() - 1
-        : audio.total_frames();
+    // compose with the viewport gate): both bounds clamp to frame EOF-1, the
+    // unified authored domain. No partner wall — the bound crosses its partner
+    // freely and rests wherever released. The floor 0 is already held by the
+    // viewport clamp (the visible strip starts at or after frame 0), so the 0.0
+    // format-representability floor holds by construction here.
+    const int64_t wall_hi = audio.total_frames() - 1;
     if (src_frame > wall_hi) src_frame = wall_hi;
     // Mid-gesture tracking value: int64 throughout (the store cannot hold a
     // fractional frame), but pointer-derived, not column-canonical — the
@@ -456,22 +377,8 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     int64_t& field = app.trim_drag.is_begin ? app.trim.begin_frame
                                             : app.trim.end_frame;
     if (field != new_frame) {
-        const bool first_motion = !app.trim_drag.moved;
         field = new_frame;
         app.trim_drag.moved = true;
-        // First-motion selection collapse: a real drag focuses the whole
-        // selection on the dragged bound. Delegated to select_trim_boundary
-        // (non-additive) — the same helper a trim click uses — so the rule
-        // (select the dragged bound, drop the opposite bound AND any
-        // warp/phase-reset marker selection, make Trim the active group)
-        // lives in one place. Motion-gated: a click without motion selects
-        // nothing and mutates nothing, so only a real drag focuses the
-        // dragged bound.
-        if (first_motion) {
-            select_trim_boundary(
-                app.trim_drag.is_begin ? TrimHit::Begin : TrimHit::End,
-                /*additive=*/false);
-        }
         // Track the playhead on the dragged bound for the whole drag,
         // mirroring the warp marker-drag tracking in the motion handler
         // (right after apply_drag_motion): set app.playhead_cursor_sample
@@ -491,8 +398,7 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         // The invalidate_waveform_area below repaints the playhead
         // columns along with the moved trim shading.
         // Playhead domain clamp through clamp_playhead_to_live_domain (the
-        // domain ruling): an end dragged to total pins the playhead to
-        // total - 1.
+        // domain ruling).
         app.playhead_cursor_sample = clamp_playhead_to_live_domain(
             source_frame_to_active_domain(app, audio, new_frame), app, audio);
         viewport.invalidate_waveform_area();
@@ -526,8 +432,8 @@ void GuiInputHandler::commit_trim_drag() {
         // (e.g. a trim grab immediately after a tempo commit); inside that
         // window stored-equals-shown holds only transiently, converging when
         // the rebuild lands — the same displayed-vs-live nuance the nudge and
-        // wheel anchors share. The per-bound absolute walls
-        // — begin 0..EOF-1, end 0..EOF exactly, plain integer compares —
+        // wheel anchors share. The absolute walls
+        // — both bounds 0..EOF-1, plain integer compares —
         // re-apply AFTER the snap so the walls win over the pixel grid and a
         // wall-clamped release rests exactly on its wall. Degenerate paint
         // geometry (no strip width / zoom, unloaded audio) skips the snap and
@@ -552,14 +458,12 @@ void GuiInputHandler::commit_trim_drag() {
                              audio.total_frames() - 1);
             snap_moved_bound(app.trim.end_frame,
                              app.trim_drag.orig_end_frame,
-                             audio.total_frames());
+                             audio.total_frames() - 1);
             // Keep the playhead pinned to the grabbed bound across the snap,
             // exactly as the motion handler pinned it all drag: a direct set
             // (no move_playhead_to, so no scroll), recomputing the same value
             // when the snap was a no-op. Playhead domain clamp through
-            // clamp_playhead_to_live_domain (the domain ruling): trim end is
-            // legal at total — an exclusive bound — so a commit releasing the
-            // end on the total deliberately rests the playhead at total - 1.
+            // playhead_image_of_authored_frame (the domain ruling).
             const int64_t grabbed_src = app.trim_drag.is_begin
                 ? app.trim.begin_frame : app.trim.end_frame;
             app.playhead_cursor_sample =
@@ -575,115 +479,6 @@ void GuiInputHandler::commit_trim_drag() {
         target_render.trigger();
     }
     app.trim_drag = TrimDragState{};
-}
-
-void GuiInputHandler::delete_selected_trim() {
-    if (app.trim_begin_selected && app.trim.has_begin) {
-        handle_trim_unset(TrimSide::Begin);
-    }
-    if (app.trim_end_selected && app.trim.has_end) {
-        handle_trim_unset(TrimSide::End);
-    }
-    app.trim_begin_selected = false;
-    app.trim_end_selected   = false;
-}
-
-// Alt+Left / Alt+Right on the trim group. The sibling of
-// nudge_selected_markers: pixel-column-anchored, exactly one painted
-// column per press — the bound's currently painted column (the trim stem
-// painter's own math) steps to the adjacent column and that column's
-// time commits through snap_authored_frame, so the stored bound is a
-// whole source frame; the one-column-per-press guarantee and its numeric
-// rationale live in the comment at nudge_selected_markers. Each bound
-// clamps to its own absolute walls — begin to frame EOF-1, end to frame
-// EOF (floor 0 on both); this per-bound wall split is the current
-// recorded trim-vs-marker asymmetry (marker nudges keep a single EOF
-// wall, total frames minus one source frame). The integer walls win over
-// the pixel grid, so a wall-clamped press rests exactly on its wall.
-// There is still no partner wall — the bound crosses its partner freely —
-// but each press is a commit, so a press landing on or across the partner
-// destroys both bounds (auto_clear_crossed_trim).
-void GuiInputHandler::nudge_selected_trim(int direction) {
-    if (app.loading || audio.total_frames() <= 0) return;
-    const int sr = audio.sample_rate();
-    if (sr <= 0) return;
-    // The nudge moves the playhead onto the bound; stop playback first.
-    playback_lifecycle.stop_playback_if_playing();
-
-    // Fine-tuning collapse, mirroring the marker nudge's collapse to the
-    // focused marker: the nudge acts on ONE bound. The focused bound is the
-    // one app.last_selected_trim names when that bound is selected and set;
-    // otherwise the sole selected-and-set bound; otherwise there is nothing
-    // to nudge.
-    const bool begin_ok = app.trim_begin_selected && app.trim.has_begin;
-    const bool end_ok   = app.trim_end_selected   && app.trim.has_end;
-    TrimHit which = TrimHit::None;
-    if (app.last_selected_trim == 'B' && begin_ok)      which = TrimHit::Begin;
-    else if (app.last_selected_trim == 'E' && end_ok)   which = TrimHit::End;
-    else if (begin_ok && !end_ok)                       which = TrimHit::Begin;
-    else if (end_ok && !begin_ok)                       which = TrimHit::End;
-    else return;
-    // Collapse the selection to the focused bound via the same helper click
-    // and drag use — it single-selects this bound, drops marker selection,
-    // and keeps group Trim.
-    select_trim_boundary(which, /*additive=*/false);
-
-    int64_t& field = (which == TrimHit::Begin) ? app.trim.begin_frame
-                                               : app.trim.end_frame;
-    const int64_t cur = field;
-    if (current_samples_per_pixel(app, audio) <= 0.0) return;
-
-    // Marker-identical pixel anchoring (nudge_selected_markers' exact
-    // shape): read the bound's currently painted column, target the
-    // adjacent column, and commit that column's time — source view:
-    // viewport start plus column times samples-per-pixel; target view:
-    // the column's target-domain time inverse-mapped through the display
-    // context's cached map — through snap_authored_frame (inside
-    // authored_frame_at_column).
-    const auto& map = *active_display_context(app, audio).warp_frame_map;
-    const int c = painted_column_of_source_frame(
-        app, audio, static_cast<double>(cur), map);
-    int64_t proposed = authored_frame_at_column(app, audio, c + direction, map);
-
-    // Per-bound absolute walls (mirroring nudge_selected_markers' EOF wall
-    // in shape — total frames minus one source frame — but clamping in
-    // both views, where the marker nudge refuses in target view): begin
-    // walls at frame EOF-1, end at frame EOF exactly — plain integer
-    // compares, the load guard's own comparison, applied AFTER the column
-    // snap so the walls win over the pixel grid. The zero floor is
-    // the walls' lower end, kept for representability; there is still no
-    // partner wall (see the function-head comment).
-    const int64_t wall = (which == TrimHit::Begin)
-        ? audio.total_frames() - 1
-        : audio.total_frames();
-    if (proposed < 0)    proposed = 0;
-    if (proposed > wall) proposed = wall;
-    if (proposed == cur) return;
-
-    // Trim is gesture-owned and excluded from undo/redo history (as with every
-    // other trim gesture; see handle_trim_clear_both).
-    field = proposed;
-
-    // Each press is a commit: a press landing the bound on or across its
-    // partner destroys both bounds (crossed/equal cannot rest; ruling at
-    // auto_clear_crossed_trim). Before the invalidations so the repaint
-    // shows the cleared state.
-    auto_clear_crossed_trim();
-
-    // The same invalidation set the trim drag's motion branch emits.
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
-    target_render.trigger();
-
-    // No viewport gate, mirroring the marker nudge (drags viewport-clamp the
-    // grabbed item; nudges do not). Track the playhead onto the bound's clamped
-    // landing image (playhead_image_of_authored_frame — the same chokepoint the
-    // pointer landings share) through move_playhead_to's edge-follow path — at
-    // most one pixel of scroll, keeping the bound just inside the edge.
-    // `proposed` rather than `field`: the auto-clear may have zeroed the store,
-    // and the playhead should rest where the nudge actually landed.
-    viewport.move_playhead_to(
-        playhead_image_of_authored_frame(app, audio, proposed));
 }
 
 void GuiInputHandler::wheel_move_trim_end(GuiMouseButton button, int count) {
@@ -714,9 +509,9 @@ void GuiInputHandler::wheel_move_trim_end(GuiMouseButton button, int count) {
     // kTrimEndWheelDivisor magnitude, expressed as whole pixel
     // columns per detent so each detent's painted move is exact
     // and no sub-column residue accumulates across detents. The
-    // end bound clamps to its own absolute walls — floor 0,
-    // ceiling the end wall at frame EOF exactly (end-at-EOF is a
-    // valid render); plain integer compares, the load
+    // end bound clamps to its absolute walls — floor 0,
+    // ceiling at frame EOF-1 (the unified authored domain);
+    // plain integer compares, the load
     // guard's own comparison, applied AFTER the column snap so
     // the walls win over the pixel grid. There is no
     // partner wall — the end bound crosses the begin bound freely
@@ -740,7 +535,7 @@ void GuiInputHandler::wheel_move_trim_end(GuiMouseButton button, int count) {
     int64_t v = authored_frame_at_column(
         app, audio, c + static_cast<int>(dcols), map);
     if (v < 0) v = 0;
-    const int64_t end_wall = audio.total_frames();
+    const int64_t end_wall = audio.total_frames() - 1;
     if (v > end_wall) v = end_wall;
     app.trim.end_frame = v;
     // Commit auto-clear (ruling at auto_clear_crossed_trim), before
@@ -751,64 +546,72 @@ void GuiInputHandler::wheel_move_trim_end(GuiMouseButton button, int count) {
     target_render.trigger();
 }
 
-void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool move_single,
-                                                 bool move_both, bool shift,
-                                                 bool scrub, int mouse_x) {
-    // The caller consumes a trim press only for recognized gestures: an
-    // Alt-exact reposition-drag (move_single), a Ctrl+Alt move-both-bounds
-    // drag (move_both), or a plain / Shift select. The caller filters every
-    // unrecognized combo upstream, so move_single / move_both / shift fully
-    // partition the recognized gestures and the else-branch is that plain-or-
-    // Shift select. `scrub` (true from a waveform press, false from a top-strip
-    // click) decides whether the select arm also continues into the playhead
-    // drag — see the arm below.
-    if (which == TrimHit::None) return;
-    // Read-only refusal on the movement chords, the trim sibling of the
-    // marker Alt+drag refusal in on_button_press: in a read-only tab the
-    // trim drag never enters flight (app.trim_drag.active stays false, so
-    // motion / release / Escape all short-circuit), making a bound
-    // selectable but not moveable — exactly a marker's read-only behavior.
-    // Trim bounds were deliberately moveable in read-only while trim was one
-    // unified setting across both tabs; with per-tab trim that rationale is
-    // gone, so the mobility is revoked. The plain / Shift select branch
-    // below still runs: a click on a bound focuses it and scrubs, mirroring
-    // plain marker clicks, which select in read-only.
-    if ((move_single || move_both) && active_view_state(app).read_only) return;
-    if (move_both) {
-        begin_trim_drag(which, mouse_x, /*both=*/true);
+// Ctrl+Alt left press: trim's only pointer gesture, routed purely by trim
+// geometry. Markers are transparent to the chord (the caller consults no
+// marker hit test), and trim bounds are transparent to every OTHER chord (the
+// plain-press path never consults trim). Read-only refusal lives at the caller
+// (a silent return before this runs). The three gestures:
+//   WAVEFORM: a press within kMarkerHitHalfPx of a SET bound's painted column
+//     (visible columns only, via hit_test_trim_boundary) begins that bound's
+//     single drag. Else, with BOTH bounds set and the press column strictly
+//     between the two bound columns, the pair drag begins on the column-nearer
+//     bound (which feeds the grabbed-bound viewport clamp and playhead pin).
+//     Else no-op.
+//   TOP STRIP: a chip-rect hit (hit_test_trim_chip) begins that bound's single
+//     drag; else the same strictly-between pair rule; else no-op.
+// A lone set bound arms only its halo/chip single drag — no pair arm. Trim
+// drags never touch selection.
+void GuiInputHandler::route_trim_ctrl_alt_press(int mouse_x, int mouse_y,
+                                                bool inside_top) {
+    if (audio.total_frames() <= 0) return;
+    const double spp = current_samples_per_pixel(app, audio);
+    if (spp <= 0.0) return;
+    const bool has_b = app.trim.has_begin;
+    const bool has_e = app.trim.has_end;
+    if (!has_b && !has_e) return;
+
+    const GuiRect area = waveform_area(app);
+    const int click_rel_x = mouse_x - area.x;
+    const double vp = static_cast<double>(app.viewport_start_sample);
+    // Painted rel-x column of a set bound — the same forward-map + column math
+    // hit_test_trim_boundary uses, so routing agrees with the painted stems.
+    const GuiDisplayContext& ctx = active_display_context(app, audio);
+    const std::vector<WarpFrameMapSegment>* map =
+        ctx.warp_frame_map->empty() ? nullptr : ctx.warp_frame_map;
+    auto bound_col = [&](int64_t frame) -> int {
+        double ms = static_cast<double>(frame);
+        if (map) {
+            const size_t q = (frame < 0) ? static_cast<size_t>(0)
+                                         : static_cast<size_t>(frame);
+            ms = std::nearbyint(map_source_to_target(q, *map));
+        }
+        return static_cast<int>(std::nearbyint((ms - vp) / spp));
+    };
+    const int bcol = has_b ? bound_col(app.trim.begin_frame) : 0;
+    const int ecol = has_e ? bound_col(app.trim.end_frame)   : 0;
+
+    // Single-drag hit: the waveform uses the visible-column halo test; the top
+    // strip uses the chip rect.
+    const TrimHit single = inside_top
+        ? hit_test_trim_chip(app, audio, mouse_x, mouse_y)
+        : hit_test_trim_boundary(app, audio, mouse_x);
+    if (single != TrimHit::None) {
+        begin_trim_drag(single, mouse_x);
         return;
     }
-    if (move_single) {
-        begin_trim_drag(which, mouse_x);
-        return;
-    }
-    // Plain / Shift select arm. A trim bound behaves EXACTLY like a marker:
-    // select the bound and move the playhead onto its clamped landing image
-    // (playhead_image_of_authored_frame) — the one value every consumer here
-    // shares, so cursor and reseek agree and an end bound at the exclusive EOF
-    // wall lands on the reachable total - 1 (reseeking there, not stopping past
-    // the range). In the waveform (scrub)
-    // it also reseeks live playback when the position changed, overrides follow,
-    // and arms the playhead-drag scrub — the subsequent motion is the ordinary
-    // playhead drag (marker-snap magnet, playhead only, no selection change).
-    // The reposition-drag branches above are grabs and intentionally do not
-    // move the playhead, matching the marker reposition drag. The top-strip
-    // caller passes
-    // scrub=false, mirroring top-strip marker clicks (that press already stopped
-    // playback), so a top-strip bound click stays selection + playhead move. The
-    // hit-test that routed here only fires when the boundary exists, so
-    // trim_begin/end_frame is set.
-    const bool    was_playing       = playback.is_playing();
-    const int64_t playhead_at_entry = app.playhead_cursor_sample;
-    select_trim_boundary(which, /*additive=*/shift);
-    const int64_t src_sample = (which == TrimHit::Begin) ? app.trim.begin_frame
-                                                         : app.trim.end_frame;
-    const int64_t sample = playhead_image_of_authored_frame(app, audio, src_sample);
-    viewport.move_playhead_to(sample);
-    if (scrub) {
-        if (was_playing && sample != playhead_at_entry)
-            playback_lifecycle.reseek_keeping_alive(sample);
-        if (was_playing) app.follow_overridden_for_session = true;
-        app.playhead_drag.active = true;
+
+    // Pair drag: both set and the press strictly between the two bound columns
+    // (waveform stem span or top-strip inter-chip span; the geometry test is
+    // the same). No lone-bound pair arm — the strict-between span needs both
+    // columns.
+    if (has_b && has_e) {
+        const int lo = std::min(bcol, ecol);
+        const int hi = std::max(bcol, ecol);
+        if (click_rel_x > lo && click_rel_x < hi) {
+            const TrimHit nearer =
+                (std::abs(bcol - click_rel_x) <= std::abs(ecol - click_rel_x))
+                    ? TrimHit::Begin : TrimHit::End;
+            begin_trim_drag(nearer, mouse_x, /*both=*/true);
+        }
     }
 }

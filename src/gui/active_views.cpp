@@ -39,10 +39,6 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
     // Lockstep with switch_active_tab_view_to's pull block: adding a per-tab
     // live-mirror field means updating this push, that pull, and ViewState.
     t.trim                = app.trim;
-    t.trim_begin_selected = app.trim_begin_selected;
-    t.trim_end_selected   = app.trim_end_selected;
-    t.last_selected_trim  = app.last_selected_trim;
-    t.last_sel_group      = app.last_sel_group;
 }
 
 // Returns the active AUTHORING tab's ViewState slot — the slot that holds
@@ -124,10 +120,6 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // per-tab live-mirror field means updating that push, this pull, and
     // ViewState.
     app.trim                = target.trim;
-    app.trim_begin_selected = target.trim_begin_selected;
-    app.trim_end_selected   = target.trim_end_selected;
-    app.last_selected_trim  = target.last_selected_trim;
-    app.last_sel_group      = target.last_sel_group;
     clamp_viewport_start(app, audio);
     // One-shot discrete jump (Ctrl+Tab A/B switch): the entering tab restores a
     // different viewport / zoom / playhead, so render the plate synchronously
