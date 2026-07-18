@@ -139,16 +139,15 @@ void GuiFlagEditor::exit_top_flag_edit_no_commit() {
 // (enter_top_flag_edit, enter_bpm_edit) own the kind-specific eligibility
 // gates and seed-text builders, then delegate here. `iter_grammar` widens
 // the FlagPayload editor's accepted vocabulary/cap for the inline
-// iteration bracket. `text_left_x < 0` falls back to
-// flag_pending_text_left_x(app, audio, idx) — that path serves the
-// top-flag editor whose layout is computed on the fly; the popup
-// editors get the value from the click hit-test and pass it in.
+// iteration bracket. The cursor's text-left origin is always computed on
+// the fly via flag_pending_text_left_x(app, audio, idx); `click_x < 0`
+// means there is no click to position the cursor from (the BPM entry
+// always passes that — the bottom-strip editor has no click positioning).
 void GuiFlagEditor::enter_text_edit(int idx,
                                     text_editor::Kind kind,
                                     std::string locked_prefix,
                                     std::string initial_pending,
                                     double click_x,
-                                    double text_left_x,
                                     bool iter_grammar) {
     if (idx < 0) return;
     const auto& mv = app.warpmarkers.markers();
@@ -164,9 +163,7 @@ void GuiFlagEditor::enter_text_edit(int idx,
         // preserve pending text and any in-progress state.
         if (click_x >= 0.0) {
             const double advance = monospace_advance();
-            const double text_left = (text_left_x >= 0.0)
-                ? text_left_x
-                : flag_pending_text_left_x(app, audio, idx);
+            const double text_left = flag_pending_text_left_x(app, audio, idx);
             if (advance > 0.0 && text_left >= 0.0) {
                 app.top_flag_editor.cursor_pos =
                     text_editor::byte_index_from_click_x(
@@ -208,9 +205,7 @@ void GuiFlagEditor::enter_text_edit(int idx,
 
     if (click_x >= 0.0) {
         const double advance = monospace_advance();
-        const double text_left = (text_left_x >= 0.0)
-            ? text_left_x
-            : flag_pending_text_left_x(app, audio, idx);
+        const double text_left = flag_pending_text_left_x(app, audio, idx);
         if (advance > 0.0 && text_left >= 0.0) {
             app.top_flag_editor.cursor_pos =
                 text_editor::byte_index_from_click_x(
@@ -242,7 +237,6 @@ void GuiFlagEditor::enter_top_flag_edit(int idx, double click_x) {
         this->build_locked_prefix(mv[idx]),
         flag_text_iter(mv, idx, iter_on),
         click_x,
-        /*text_left_x=*/-1.0,
         /*iter_grammar=*/iter_on);
 }
 
@@ -563,8 +557,7 @@ void GuiFlagEditor::wipe_bpm_state() {
 // Reuses top_flag_editor with Kind::BpmBracket so the keyboard vocabulary
 // swaps to digits + `@`/`,`/`[`/`]`; the bottom-strip paint branch supplies
 // the visible "bpm: " prefix, so the editor's locked_prefix stays "".
-void GuiFlagEditor::enter_bpm_edit(int idx, double click_x,
-                                   double text_left_x) {
+void GuiFlagEditor::enter_bpm_edit(int idx) {
     if (idx < 0) return;
     if (!app.bpm_mode_enabled) return;
     const auto& mv = app.warpmarkers.markers();
@@ -575,8 +568,7 @@ void GuiFlagEditor::enter_bpm_edit(int idx, double click_x,
         text_editor::Kind::BpmBracket,
         /*locked_prefix=*/"",
         format_bpm_bracket_text(mv[idx]),
-        click_x,
-        text_left_x);
+        /*click_x=*/-1.0);
     // enter_text_edit's tail invalidates the top strip, but the BPM editor
     // draws in the bottom strip. Invalidate it so the freshly opened editor
     // actually paints.

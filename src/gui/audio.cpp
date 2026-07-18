@@ -15,7 +15,6 @@
 #include <cstring>
 #include <expected>
 #include <filesystem>
-#include <functional>
 #include <limits>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -131,17 +130,16 @@ void reset_levels(std::array<GuiAudio::PyramidLevel, 3>& levels) {
     }
 }
 
-// Streaming pyramid build. Pulls source samples through `source` in
-// kStreamFramesPerChunk-frame chunks, accumulating level-1 (stride 32) pairs
-// directly. Levels 2 and 3 fold from level 1 in memory. Buffers are sized
-// from `total_frames`; if `source` returns 0 early the trailing buffer is
-// truncated so pair_count reflects the actual data.
+// Pyramid build over the fully-loaded in-memory sample buffer. Reads
+// `samples` (interleaved, `channels` per frame) in place, accumulating
+// level-1 (stride 32) pairs directly. Levels 2 and 3 fold from level 1 in
+// memory. The on_progress callback pumps the compositor during load and is
+// invoked at roughly kStreamFramesPerChunk-frame boundaries.
 //
 // `channels` is the source's interleaved channel count; `render_channels` is
-// the number of output channels in the cache (1 or 2; <= channels).
-using FrameIterator = std::function<int64_t(float*, int64_t)>;
-
-void build_pyramid_streaming(const FrameIterator& source,
+// always 2 (stereo-only sources; the .peaks format field keeps its 1-or-2
+// grammar for format identity).
+void build_pyramid_streaming(const float* samples,
                              int64_t total_frames,
                              int channels,
                              int render_channels,
@@ -156,7 +154,6 @@ void build_pyramid_streaming(const FrameIterator& source,
         out[0].pairs[ch].reserve(static_cast<size_t>(2 * pc1_hint));
     }
 
-    std::vector<float> chunk(static_cast<size_t>(kStreamFramesPerChunk) * channels);
     std::vector<float> cur_min(static_cast<size_t>(render_channels));
     std::vector<float> cur_max(static_cast<size_t>(render_channels));
     int64_t in_window = 0;
@@ -171,37 +168,30 @@ void build_pyramid_streaming(const FrameIterator& source,
         }
     };
 
-    int64_t frames_done = 0;
     const int64_t prog_denom = total_frames > 0 ? total_frames : 1;
-    while (frames_done < total_frames) {
-        const int64_t want =
-            std::min<int64_t>(kStreamFramesPerChunk, total_frames - frames_done);
-        const int64_t got = source(chunk.data(), want);
-        if (got <= 0) break;
-
-        for (int64_t f = 0; f < got; f++) {
-            const float* p = &chunk[f * channels];
-            if (in_window == 0) {
-                for (int ch = 0; ch < render_channels; ch++) {
-                    cur_min[ch] = p[ch];
-                    cur_max[ch] = p[ch];
-                }
-            } else {
-                for (int ch = 0; ch < render_channels; ch++) {
-                    const float v = p[ch];
-                    if (v < cur_min[ch]) cur_min[ch] = v;
-                    if (v > cur_max[ch]) cur_max[ch] = v;
-                }
+    int64_t next_progress = kStreamFramesPerChunk;
+    for (int64_t f = 0; f < total_frames; f++) {
+        const float* p = &samples[f * channels];
+        if (in_window == 0) {
+            for (int ch = 0; ch < render_channels; ch++) {
+                cur_min[ch] = p[ch];
+                cur_max[ch] = p[ch];
             }
-            in_window++;
-            if (in_window == kStrides[0]) flush_window();
+        } else {
+            for (int ch = 0; ch < render_channels; ch++) {
+                const float v = p[ch];
+                if (v < cur_min[ch]) cur_min[ch] = v;
+                if (v > cur_max[ch]) cur_max[ch] = v;
+            }
         }
-        frames_done += got;
+        in_window++;
+        if (in_window == kStrides[0]) flush_window();
 
-        if (on_progress) {
-            const float p = kLevel1Share *
-                static_cast<float>(frames_done) / static_cast<float>(prog_denom);
-            on_progress(p);
+        if (on_progress && f + 1 == next_progress) {
+            const float pr = kLevel1Share *
+                static_cast<float>(f + 1) / static_cast<float>(prog_denom);
+            on_progress(pr);
+            next_progress += kStreamFramesPerChunk;
         }
     }
     flush_window();  // tail (may cover < kStrides[0] frames)
@@ -488,7 +478,11 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
 
     const int next_channels        = info->channels;
     const int next_sample_rate     = info->sample_rate;
-    const int next_render_channels = std::min(next_channels, 2);
+    // Sources are stereo-only: GuiFileLoader::load_file (the sole caller of
+    // this function) refuses channels != 2 before load runs, so next_channels
+    // is always 2 and render_channels is 2. The .peaks format's
+    // render_channels byte stays for format identity.
+    const int next_render_channels = 2;
     RenderFileIdentity next_load_identity;
     if (!stat_file_identity(path, next_load_identity)) {
         std::fprintf(stderr,
@@ -535,19 +529,8 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
 
     if (on_progress) on_progress(0.0f);
 
-    // Cache miss: stream the fresh sample buffer through the shared pyramid builder.
-    int64_t pos = 0;
-    auto in_memory_iter = [&](float* out, int64_t want) -> int64_t {
-        const int64_t avail = next_total_frames - pos;
-        const int64_t n     = std::min<int64_t>(want, avail);
-        if (n <= 0) return 0;
-        std::memcpy(out,
-                    next_samples.data() + pos * next_channels,
-                    static_cast<size_t>(n) * next_channels * sizeof(float));
-        pos += n;
-        return n;
-    };
-    build_pyramid_streaming(in_memory_iter, next_total_frames, next_channels,
+    // Cache miss: build the pyramid over the fresh in-memory sample buffer.
+    build_pyramid_streaming(next_samples.data(), next_total_frames, next_channels,
                             next_render_channels, on_progress, next_levels);
 
     // Persist the pyramid for next time. Failure is non-fatal — `levels_` is

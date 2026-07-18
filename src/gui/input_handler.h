@@ -501,8 +501,9 @@ private:
     // relative to renders/ and, on Enter, adopts that render's frozen sidecar
     // recipe as the new authoring baseline through adopt_render_entry.
     //
-    // open_commit_editor: bare `'` opener (no-op with no source or over render
-    // view; refuses to open over an empty renders/). commit_editor_autocomplete:
+    // open_commit_editor: bare `'` opener (no-op with no source loaded or a
+    // running/parked render; refuses to open over an empty renders/).
+    // commit_editor_autocomplete:
     // bare-Tab longest-common-prefix completion over the entry identifiers.
     // commit_editor_commit: resolve the pending to exactly one entry and adopt.
     // commit_editor_exit_no_commit: Esc / Ctrl+Q teardown. handle_commit_editor_key:

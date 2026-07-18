@@ -2,7 +2,6 @@
 
 #include <jack/jack.h>
 
-#include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -30,7 +29,9 @@
 // between callback invocations is picked up on the next fill; the speed
 // stays constant within one fill, avoiding mid-buffer rate artefacts.
 
-constexpr int kMaxJackOutputPorts = 64;
+// Sources are stereo-only (the channels != 2 load refusal), so playback runs
+// exactly two output ports.
+constexpr int kJackOutputPorts = 2;
 
 static_assert(std::is_same_v<jack_default_audio_sample_t, float>,
               "JACK default audio sample type must be float");
@@ -39,7 +40,7 @@ struct GuiPlayback::Impl {
     jack_client_t* client = nullptr;
     bool           client_active = false;
     std::atomic<uint32_t> jack_rate{0};
-    std::array<jack_port_t*, kMaxJackOutputPorts> ports{};
+    std::array<jack_port_t*, kJackOutputPorts> ports{};
 
     // Borrowed source buffer.
     const float* samples       = nullptr;
@@ -200,8 +201,10 @@ int process_callback(jack_nframes_t nframes, void* arg) {
         return 0;
     }
 
-    std::array<float*, kMaxJackOutputPorts> channel_buffers{};
-    const int channel_count = std::min(impl->channels, kMaxJackOutputPorts);
+    std::array<float*, kJackOutputPorts> channel_buffers{};
+    // init refuses channels != 2, so a live client always has exactly the two
+    // stereo ports; channel_count == impl->channels == 2.
+    const int channel_count = impl->channels;
     for (int c = 0; c < channel_count; ++c) {
         channel_buffers[c] = static_cast<float*>(
             jack_port_get_buffer(impl->ports[c], nframes));
@@ -258,11 +261,11 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
     impl_->jack_rate.store(0, std::memory_order_relaxed);
     impl_->ports.fill(nullptr);
 
-    if (channels <= 0 || channels > kMaxJackOutputPorts) {
+    if (channels != 2) {
         std::fprintf(stderr,
             "warptempo_gui: unsupported channel count for jack playback "
-            "(channels=%d, max=%d); playback disabled.\n",
-            channels, kMaxJackOutputPorts);
+            "(channels=%d, stereo sources only); playback disabled.\n",
+            channels);
         impl_->samples       = nullptr;
         impl_->total_frames  = 0;
         impl_->domain_offset = 0;

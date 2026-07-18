@@ -51,7 +51,7 @@ struct WaveformJob {
     // surface). The worker only writes pixels; the cache lifecycle owns
     // destroy/recreate.
     cairo_surface_t* surface = nullptr;
-    int channel_count = 0;     // 1 for mono, 2 for stereo
+    int channel_count = 0;     // always 2 (stereo-only sources)
 
     // Audio handle the render reads (see lifetime invariant above). Always
     // main.cpp's single long-lived source audio — the one GuiAudio for the
