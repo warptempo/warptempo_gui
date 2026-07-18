@@ -212,6 +212,11 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.playhead_drag = PlayheadDragState{};
     app.trim_drag = TrimDragState{};
     app.scroll_drag = ScrollDragState{};
+    // Event-synchronized hit geometry: drop the previous file's displayed
+    // target map so a grab before the first target publish never lands on the
+    // old file's coordinate system (cold — the selector falls back to the live
+    // map). Ruling at displayed_or_live_target_map.
+    app.displayed_target_warp_frame_map.clear();
     // Project trim is not cleared implicitly by the fresh-ViewState assignment
     // (it lives on AppState now). Reset it explicitly before the initial-playhead
     // read: this is construction-state for the no-.settings / first-open path.

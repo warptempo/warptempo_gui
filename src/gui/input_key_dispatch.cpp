@@ -366,20 +366,15 @@ void GuiInputHandler::cancel_active_drags() {
     if (app.trim_drag.active) {
         // Trim motion mutates app.trim live but keeps the pre-drag
         // bounds in orig_begin/orig_end, so restore them before clearing
-        // the gesture.
+        // the gesture. Trim cancel restores the BOUNDS ONLY: unlike the marker
+        // arm above (which tracks and restores its grabbed marker's playhead),
+        // a trim drag never touches the playhead — like the trim wheel, the
+        // gesture is playhead-independent — so there is nothing to restore or
+        // resync there.
         if (app.trim_drag.moved) {
             app.trim.begin_frame = app.trim_drag.orig_begin_frame;
             app.trim.end_frame   = app.trim_drag.orig_end_frame;
         }
-        // Restore the pre-drag playhead, the trim sibling of the marker arm
-        // above: motion pinned the playhead onto the grabbed bound, so Esc
-        // puts it back where it started. Deliberately unclamped (a previously-
-        // resting in-domain value). Only a TOP-STRIP trim press stops playback;
-        // a waveform Ctrl+Alt grab leaves playback alive under the follow
-        // override, so the predictor resync here is live, not a symmetry no-op.
-        // Trim drags do not touch selection, so there is nothing to restore.
-        app.playhead_cursor_sample = app.trim_drag.pre_drag_playhead_sample;
-        if (playback.is_playing()) playback.resync_predictor();
         app.trim_drag = TrimDragState{};
         viewport.invalidate_waveform_area();
         viewport.invalidate_top_strip();

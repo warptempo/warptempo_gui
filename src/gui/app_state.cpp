@@ -50,6 +50,21 @@ void remap_marker_indices_after_reorder(AppState& app,
 // references are now explicit arguments. The kMarkerHitHalfPx constant
 // resolves through app_state.h.
 
+// Event-synchronized hit map (ruling at the declaration in app_state.h): in
+// target view with a warm displayed map, the item hit tests decide against the
+// map the last completed waveform job painted with; otherwise the live display
+// context's map (source view = its identity/empty map, target-view cold = the
+// live map until the first publish).
+const std::vector<WarpFrameMapSegment>&
+displayed_or_live_target_map(const AppState& app, const GuiAudio& audio) {
+    const GuiDisplayContext& ctx = active_display_context(app, audio);
+    if (ctx.domain == GuiDisplayDomain::TargetLive &&
+        !app.displayed_target_warp_frame_map.empty()) {
+        return app.displayed_target_warp_frame_map;
+    }
+    return *ctx.warp_frame_map;
+}
+
 int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
                          int mouse_x) {
     const GuiRect area = waveform_area(app);
@@ -67,15 +82,15 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     // mouse_x lands on the visually-drawn stem, not the marker's source-
     // frame position. compute_flag_hit_rects already does this on the
     // top strip; this mirrors that for the waveform-area marker line.
-    // The active display context owns the composite view rule: its map is
-    // the live target map in target view, and empty (identity) in source
-    // view or when the target map cannot build.
-    // Hit tests read the LIVE display context; the painted stems lag it by the
-    // worker's publish latency after a map-changing commit — the accepted
-    // live-vs-painted window recorded at route_trim_ctrl_alt_press.
-    const GuiDisplayContext& ctx = active_display_context(app, audio);
+    // The map is the one the pixels were painted with (WYSIWYG grabs):
+    // displayed_or_live_target_map returns the completed target job's displayed
+    // map when warm, and the live display context's identity/empty map in
+    // source view. This closes the live-vs-painted window for the marker hit
+    // (event synchronization — the ruling at that selector).
+    const std::vector<WarpFrameMapSegment>& dmap =
+        displayed_or_live_target_map(app, audio);
     const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
-        ctx.warp_frame_map->empty() ? nullptr : ctx.warp_frame_map;
+        dmap.empty() ? nullptr : &dmap;
     for (int i = 0; i < n; ++i) {
         int64_t src_sample =
             (app.active_markers_view == 'P')
@@ -129,11 +144,14 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 
     // Same translation as hit_test_marker_line: trim is stored
     // source-domain, painted at map_source_to_target columns in the mapped
-    // views. The context's map is empty (identity) in source view and the
-    // live map in target view.
-    const GuiDisplayContext& ctx = active_display_context(app, audio);
+    // views. The map is the pixels' own via displayed_or_live_target_map
+    // (event-synchronized hit geometry — the ruling at that selector): empty
+    // (identity) in source view, the completed target job's displayed map when
+    // warm in target view.
+    const std::vector<WarpFrameMapSegment>& dmap =
+        displayed_or_live_target_map(app, audio);
     const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
-        ctx.warp_frame_map->empty() ? nullptr : ctx.warp_frame_map;
+        dmap.empty() ? nullptr : &dmap;
 
     auto bound_dist = [&](int64_t frame, bool present) -> int {
         if (!present) return kMarkerHitHalfPx + 1;
@@ -194,12 +212,14 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     const double vp = static_cast<double>(app.viewport_start_sample);
 
     // Same translation as hit_test_trim_boundary so the chip column lands
-    // where the stem (and chip) are painted in the mapped views: the
-    // context's map is empty (identity) in source view and the live map in
-    // target view.
-    const GuiDisplayContext& ctx = active_display_context(app, audio);
+    // where the stem (and chip) are painted in the mapped views: the map is
+    // the pixels' own via displayed_or_live_target_map (event-synchronized hit
+    // geometry — the ruling at that selector), empty (identity) in source view
+    // and the completed target job's displayed map when warm in target view.
+    const std::vector<WarpFrameMapSegment>& dmap =
+        displayed_or_live_target_map(app, audio);
     const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
-        ctx.warp_frame_map->empty() ? nullptr : ctx.warp_frame_map;
+        dmap.empty() ? nullptr : &dmap;
 
     // Build the same visible, sorted candidate list render_trim_flags paints.
     // The painter culls a bound whose column is outside the viewport, then
@@ -274,16 +294,14 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
         static_cast<int64_t>(std::nearbyint(spp * area.w));
     // The mapped views' flags paint at translated positions
     // (compute_flag_hit_rects with a non-null warp_frame_map), so hit-test
-    // must walk the same warp_frame_map. The active display context is the
-    // base: its map is empty (identity) in source view, and in target view it
-    // is the memoized target map paint also walks — stable for a drag's
-    // lifetime, so hit-rect positions match the mid-drag paint.
-    const GuiDisplayContext& ctx = active_display_context(app, audio);
-    const std::vector<WarpFrameMapSegment>* tmap_arg = nullptr;
-    if (ctx.domain == GuiDisplayDomain::TargetLive &&
-        !ctx.warp_frame_map->empty()) {
-        tmap_arg = ctx.warp_frame_map;
-    }
+    // must walk the same warp_frame_map — the pixels' own via
+    // displayed_or_live_target_map (event-synchronized hit geometry — the
+    // ruling at that selector): empty (identity) in source view, the completed
+    // target job's displayed map when warm in target view.
+    const std::vector<WarpFrameMapSegment>& dmap =
+        displayed_or_live_target_map(app, audio);
+    const std::vector<WarpFrameMapSegment>* tmap_arg =
+        dmap.empty() ? nullptr : &dmap;
     DragOverlay drag_overlay_storage;
     const DragOverlay* drag_overlay = nullptr;
     if (app.drag.active) {

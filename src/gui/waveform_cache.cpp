@@ -398,6 +398,12 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // so the next maybe_rebuild_stem_cache reads the same coordinate
     // system the just-blitted waveform pixels were rendered against.
     std::swap(wf_cache.fp_warp_frame_map,     wf_cache.pending_fp_warp_frame_map);
+    // Event-synchronized hit geometry: mirror the just-published map into the
+    // AppState slot the item hit tests read (displayed_or_live_target_map), so
+    // a grab lands on exactly these pixels. A source-view publish stamps the
+    // empty map (cold — the selector falls back to the live map). Ruling at the
+    // selector.
+    app.displayed_target_warp_frame_map = wf_cache.fp_warp_frame_map;
 
     // Invalidate the waveform area so the next paint blits the new
     // pixels. Matches the rect Viewport::invalidate_waveform_area uses.
@@ -509,6 +515,11 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.fp_target       = in.is_target;
     wf_cache.fp_warp_frame_map_hash = in.warp_frame_map_hash;
     wf_cache.fp_warp_frame_map      = in.warp_frame_map;
+    // Event-synchronized hit geometry: mirror the published map into the
+    // AppState slot the item hit tests read (displayed_or_live_target_map). A
+    // source-view publish stamps empty (cold — live-map fallback). Ruling at
+    // the selector.
+    app.displayed_target_warp_frame_map = in.warp_frame_map;
 
     wf_cache.pending_fp_vp_start     = in.vp_start;
     wf_cache.pending_fp_vp_end       = in.vp_end;

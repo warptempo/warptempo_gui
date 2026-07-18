@@ -341,19 +341,18 @@ struct TrimDragState {
 
     // Ctrl+Alt move-both-bounds drag: both bounds translate together by
     // the same delta in the active (on-screen) domain, preserving the gap
-    // as it appears under warp. `is_begin` names the grabbed bound — both
-    // move, but the grabbed one is what the viewport clamp keeps in view and
-    // what the playhead pins to during motion, so it is load-bearing, not
-    // cosmetic.
+    // as it appears under warp. The pair has no grabbed-bound notion — both
+    // bounds are the subject, it has no viewport clamp, and it never moves the
+    // playhead; `is_begin` is Begin by construction (the router arms it so) and
+    // is read only by the single-bound path, which uses it to name the one
+    // bound that moves. No pre-drag playhead capture: trim drags never touch
+    // the playhead, so an Esc/Ctrl+Q cancel has nothing to restore there (the
+    // recorded difference from the marker DragState, which tracks and restores
+    // its grabbed marker's playhead).
     bool    both                 = false;
     int64_t orig_begin_frame   = 0;
     int64_t orig_end_frame     = 0;
     int64_t anchor_active_frame  = 0;
-    // Active-domain playhead captured at begin_trim_drag for the Esc / Ctrl+Q
-    // cancellation restore — the marker DragState::pre_drag_playhead_sample's
-    // trim sibling. Motion pins the playhead onto the grabbed bound; Esc puts
-    // it back here.
-    int64_t pre_drag_playhead_sample = 0;
 };
 
 // Alt+drag on empty waveform: continuous 1:1 grab-pan of the viewport,
@@ -648,6 +647,15 @@ struct AppState {
     // Memoized target-view warp_frame_map (see warp_frame_map_view.h). Mutable: consulted and
     // refreshed from const hit-test paths.
     mutable TargetWarpFrameMapCache target_warp_frame_map_cache;
+
+    // The warp_frame_map the last COMPLETED target-view waveform job painted
+    // with: copied from the job's fp_warp_frame_map at the publish site,
+    // cleared at source load and on waveform-cache teardown. The item hit tests
+    // read it through displayed_or_live_target_map so what you grab is what you
+    // see (event-synchronized hit geometry — the ruling at that selector).
+    // Empty = cold (no target job has published yet); the selector then falls
+    // back to the live display map.
+    std::vector<WarpFrameMapSegment> displayed_target_warp_frame_map;
 
     // Alt+drag state. Not reset across file loads — explicitly cleared
     // there and on button release / Escape.
@@ -1168,6 +1176,25 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 // presses; the stem elsewhere still routes through hit_test_trim_boundary.
 TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y);
+
+// displayed_or_live_target_map: the warp_frame_map the item hit tests decide
+// against — the map the on-screen pixels were painted with, so a grab lands on
+// what is drawn (WYSIWYG grabs). In target view with a non-empty displayed map
+// (app.displayed_target_warp_frame_map, published at waveform completion) it
+// returns that map; otherwise the live display context's map (source view =
+// the live context's identity/empty map, unchanged semantics; target-view cold
+// = the live map until the first publish).
+//
+// EVENT-SYNC RULING: hit DECISIONS read the pixels' map, so hit geometry flips
+// at the exact instant the drawing flips, at any refresh rate. Gesture
+// MECHANICS — anchors, walls, motion translation, the release snap, the
+// x-coincidence images — stay on the LIVE map: the display converges to live
+// within the publish interval, and once the pick is made everything downstream
+// is uniformly live. Synchronizing by TIME (a delay) was rejected — the true
+// lag varies through zero with worker load and refresh rate, so any constant
+// would invert the skew in the common fast-publish case.
+const std::vector<WarpFrameMapSegment>&
+displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 
 // Promoted from a lambda in main(). True iff the warp marker
 // at `idx` is hover-popup-eligible — i.e. its rect doesn't already
