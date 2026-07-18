@@ -1002,7 +1002,7 @@ int main(int argc, char** argv) {
     // during shutdown cannot touch the dismantled cache. Idempotent; the
     // destructor's later call is then a no-op.
     async_renderer.shutdown();
-    // Remove this process's render-cache directory and free the RAM tier.
+    // Remove this process's render-cache directory.
     render_cache.shutdown();
     return 0;
 }

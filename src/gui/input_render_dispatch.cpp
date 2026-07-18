@@ -226,7 +226,7 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
                 // ensure_ready() may fill from the shared cache when the
                 // just-rendered fingerprint is already registered, or
                 // render the current target state if the state changed or
-                // a longer-than-RAM-tier entry is still registering on the
+                // the freshly rendered entry is still registering on the
                 // writer thread. That miss is benign; if finalize_render_run
                 // just launched a pending target render, leave it alone.
                 target_render.ensure_ready();

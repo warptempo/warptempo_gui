@@ -502,8 +502,6 @@ void RenderCache::shutdown() {
     join_writer();
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        ram_.clear();
-        ram_bytes_ = 0;
         disk_index_.clear();
         disk_bytes_ = 0;
     }
@@ -534,22 +532,6 @@ bool RenderCache::lookup(const std::vector<uint8_t>& fp,
         return false;
     }
     const uint64_t h = fnv1a64(fp);
-
-    std::vector<char> ram_blob;
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (auto it = ram_.find(h); it != ram_.end()) {
-            RamEntry& e = it->second;
-            if (e.fingerprint == fp && e.channels == channels &&
-                e.sample_rate == sample_rate) {
-                e.seq = ++lru_seq_;
-                ram_blob = e.blob;
-            }
-        }
-    }
-    if (!ram_blob.empty()) {
-        return decode_wav_blob_to_float(ram_blob, channels, sample_rate, out);
-    }
 
     DiskEntry candidate;
     bool have_candidate = false;
@@ -596,26 +578,14 @@ bool RenderCache::lookup(const std::vector<uint8_t>& fp,
 }
 
 bool RenderCache::publish_wav(const std::vector<uint8_t>& fp,
-                              int channels, int sample_rate,
+                              int /*channels*/, int /*sample_rate*/,
                               const std::string& staging_path) {
+    // The disk-tier publish confirms via the .fingerprint sidecar (the
+    // fingerprint already binds sample rate), then byte-copies the entry, so
+    // the channels/sample_rate arguments — kept for signature symmetry with
+    // lookup — are unused here.
     if (!enabled_) return false;
     const uint64_t h = fnv1a64(fp);
-
-    std::vector<char> ram_blob;
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (auto it = ram_.find(h); it != ram_.end()) {
-            RamEntry& e = it->second;
-            if (e.fingerprint == fp && e.channels == channels &&
-                e.sample_rate == sample_rate) {
-                e.seq = ++lru_seq_;
-                ram_blob = e.blob;
-            }
-        }
-    }
-    if (!ram_blob.empty()) {
-        return write_bytes_to_path(staging_path, ram_blob);
-    }
 
     DiskEntry candidate;
     bool have_candidate = false;
@@ -714,16 +684,6 @@ void RenderCache::insert(const std::vector<uint8_t>& fp,
     }
 
     const uint64_t h = fnv1a64(fp);
-    const uint64_t bytes = static_cast<uint64_t>(blob.size());
-    const int64_t ram_tier_frames =
-        static_cast<int64_t>(sample_rate) * kRamTierMaxSeconds;
-    const bool to_ram =
-        frame_count <= ram_tier_frames && bytes <= kRamBudgetBytes;
-    if (to_ram) {
-        insert_ram(h, fp, blob, channels, sample_rate);
-        return;
-    }
-
     insert_disk(h, fp, blob, frame_count);
 }
 
@@ -756,41 +716,6 @@ void RenderCache::insert_master_floats(
     job.frame_count = frame_count;
     job.cancel_token = std::move(cancel_token);
     start_writer_job(std::move(job));
-}
-
-bool RenderCache::insert_ram(uint64_t h, const std::vector<uint8_t>& fp,
-                             const std::vector<char>& blob,
-                             int channels, int sample_rate) {
-    const uint64_t bytes = static_cast<uint64_t>(blob.size());
-
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (auto it = ram_.find(h); it != ram_.end()) {
-        ram_bytes_ -= static_cast<uint64_t>(it->second.blob.size());
-        ram_.erase(it);
-    }
-    if (bytes > kRamBudgetBytes) return false; // pathological single entry; skip
-
-    evict_ram_until(kRamBudgetBytes - bytes);
-
-    RamEntry e;
-    e.fingerprint = fp;
-    e.blob        = blob;
-    e.channels    = channels;
-    e.sample_rate = sample_rate;
-    e.seq         = ++lru_seq_;
-    ram_[h]       = std::move(e);
-    ram_bytes_   += bytes;
-    return true;
-}
-
-void RenderCache::evict_ram_until(uint64_t target_max) {
-    while (ram_bytes_ > target_max && !ram_.empty()) {
-        auto victim = ram_.begin();
-        for (auto it = ram_.begin(); it != ram_.end(); ++it)
-            if (it->second.seq < victim->second.seq) victim = it;
-        ram_bytes_ -= static_cast<uint64_t>(victim->second.blob.size());
-        ram_.erase(victim);
-    }
 }
 
 bool RenderCache::insert_disk(uint64_t h, const std::vector<uint8_t>& fp,
@@ -869,27 +794,16 @@ void RenderCache::start_writer_job(WriterJob job) {
             job.blob = std::move(encoded);
 
             // Post-encode cancellation re-check, before anything publishes:
-            // the RAM insert, the disk-index mutation, and the pair write
-            // all come after this point. The token is created per dispatch
-            // and never reset, so this load names exactly the dispatching
-            // session; a cancel landing anywhere before this point —
+            // the disk-index mutation and the pair write all come after this
+            // point. The token is created per dispatch and never reset, so
+            // this load names exactly the dispatching session; a cancel
+            // landing anywhere before this point —
             // including the window between the handoff's pre-launch check
             // and this thread's start — drops the entry silently
             // (consistent with the pre-launch drop), and a cancel landing
             // after it completes the write, which is the accepted
             // late-cancel tail, now bounded by this check.
             if (job.cancel_token && job.cancel_token->load()) {
-                return;
-            }
-
-            const uint64_t bytes = static_cast<uint64_t>(job.blob.size());
-            const int64_t ram_tier_frames =
-                static_cast<int64_t>(job.sample_rate) * kRamTierMaxSeconds;
-            const bool to_ram =
-                job.frame_count <= ram_tier_frames && bytes <= kRamBudgetBytes;
-            if (to_ram) {
-                insert_ram(job.h, job.fp, job.blob,
-                           job.channels, job.sample_rate);
                 return;
             }
 
@@ -1010,26 +924,6 @@ bool encode_pcm24_wav_blob(const std::vector<float>& samples,
     ok = writer->close();
     if (!ok) return false;
     out_blob = std::move(blob);
-    return true;
-}
-
-bool decode_wav_blob_to_float(const std::vector<char>& blob,
-                              int expected_channels,
-                              int expected_sample_rate,
-                              std::vector<float>& out_samples) {
-    if (blob.empty() || expected_channels <= 0 || expected_sample_rate <= 0) {
-        return false;
-    }
-    const std::span<const char> bytes(blob.data(), blob.size());
-    auto info = wav_probe(bytes);
-    if (!info) return false;
-    if (info->channels != expected_channels ||
-        info->sample_rate != expected_sample_rate) {
-        return false;
-    }
-    auto tmp = wav_read_full(bytes);
-    if (!tmp) return false;
-    out_samples = std::move(*tmp);
     return true;
 }
 

@@ -28,8 +28,6 @@ struct FileCloser {
 
 using FilePtr = std::unique_ptr<FILE, FileCloser>;
 
-enum class SourceKind { File, Memory };
-
 std::string implausible_alloc_message(uint64_t bytes)
 {
     const uint64_t mib =
@@ -39,44 +37,26 @@ std::string implausible_alloc_message(uint64_t bytes)
 }
 
 struct ByteSource {
-    SourceKind kind = SourceKind::Memory;
     FILE* file = nullptr;
-    std::span<const char> memory;
-    uint64_t cursor = 0;
 
     bool read(void* out, size_t size)
     {
-        if (kind == SourceKind::File) {
-            return std::fread(out, 1, size, file) == size;
-        }
-        if (cursor + size > memory.size()) return false;
-        std::memcpy(out, memory.data() + cursor, size);
-        cursor += size;
-        return true;
+        return std::fread(out, 1, size, file) == size;
     }
 
     bool seek(uint64_t offset)
     {
-        if (kind == SourceKind::File) {
-            return std::fseek(file, static_cast<long>(offset), SEEK_SET) == 0;
-        }
-        if (offset > memory.size()) return false;
-        cursor = offset;
-        return true;
+        return std::fseek(file, static_cast<long>(offset), SEEK_SET) == 0;
     }
 
     uint64_t tell() const
     {
-        if (kind == SourceKind::File) {
-            const long pos = std::ftell(file);
-            return pos < 0 ? 0 : static_cast<uint64_t>(pos);
-        }
-        return cursor;
+        const long pos = std::ftell(file);
+        return pos < 0 ? 0 : static_cast<uint64_t>(pos);
     }
 
     uint64_t size()
     {
-        if (kind == SourceKind::Memory) return memory.size();
         const long old = std::ftell(file);
         if (old < 0) return 0;
         if (std::fseek(file, 0, SEEK_END) != 0) return 0;
@@ -313,9 +293,8 @@ std::expected<WavLayout, std::string> parse_wav_layout(ByteSource& src)
         // guard above already matched it against the physical size).
         // Chunk CONTENT past EOF refused at the top of the loop, so an
         // overshooting `next` here can only be that absent final pad —
-        // end the walk at the physical EOF instead of stepping past it
-        // (the memory source refuses past-end seeks, so this clamp also
-        // keeps the two byte sources in agreement).
+        // end the walk at the physical EOF instead of stepping past it,
+        // so the final seek lands exactly on EOF rather than off the end.
         if (next > file_size) next = file_size;
         if (!src.seek(next)) {
             return std::unexpected("failed to skip wav chunk");
@@ -420,14 +399,6 @@ void decode_wav_samples(const unsigned char* raw, WavSampleFormat format,
     }
 }
 
-std::expected<ByteSource, std::string> memory_source(std::span<const char> bytes)
-{
-    ByteSource src;
-    src.kind = SourceKind::Memory;
-    src.memory = bytes;
-    return src;
-}
-
 void append_u16(std::vector<unsigned char>& v, uint16_t x)
 {
     v.push_back(static_cast<unsigned char>(x & 0xff));
@@ -471,17 +442,8 @@ std::expected<WavInfo, std::string> wav_probe(const std::string& path)
             append_errno_detail("failed to open wav file", err));
     }
     ByteSource src;
-    src.kind = SourceKind::File;
     src.file = f.get();
     auto parsed = parse_wav_layout(src);
-    if (!parsed) return std::unexpected(parsed.error());
-    return parsed->info;
-}
-
-std::expected<WavInfo, std::string> wav_probe(std::span<const char> bytes)
-{
-    auto src = memory_source(bytes);
-    auto parsed = parse_wav_layout(*src);
     if (!parsed) return std::unexpected(parsed.error());
     return parsed->info;
 }
@@ -495,14 +457,6 @@ wav_read_full(const std::string& path, WavInfo* info_out)
 }
 
 std::expected<std::vector<float>, std::string>
-wav_read_full(std::span<const char> bytes, WavInfo* info_out)
-{
-    auto info = wav_probe(bytes);
-    if (!info) return std::unexpected(info.error());
-    return wav_read_range(bytes, 0, info->frames, info_out);
-}
-
-std::expected<std::vector<float>, std::string>
 wav_read_range(const std::string& path, int64_t begin_frame, int64_t end_frame,
                WavInfo* info_out)
 {
@@ -513,17 +467,8 @@ wav_read_range(const std::string& path, int64_t begin_frame, int64_t end_frame,
             append_errno_detail("failed to open wav file", err));
     }
     ByteSource src;
-    src.kind = SourceKind::File;
     src.file = f.get();
     return read_range_from_source(src, begin_frame, end_frame, info_out);
-}
-
-std::expected<std::vector<float>, std::string>
-wav_read_range(std::span<const char> bytes, int64_t begin_frame,
-               int64_t end_frame, WavInfo* info_out)
-{
-    auto src = memory_source(bytes);
-    return read_range_from_source(*src, begin_frame, end_frame, info_out);
 }
 
 WavWriter::WavWriter(WavWriter&& other) noexcept

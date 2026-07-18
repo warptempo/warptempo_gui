@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <expected>
-#include <span>
 #include <string>
 #include <vector>
 
@@ -51,19 +50,13 @@ bool wav_exceeds_riff_limits(uint64_t header_span, uint64_t data_bytes,
 bool wav_projected_exceeds_riff_limits(int channels, uint64_t frames);
 
 std::expected<WavInfo, std::string> wav_probe(const std::string& path);
-std::expected<WavInfo, std::string> wav_probe(std::span<const char> bytes);
 
 std::expected<std::vector<float>, std::string>
 wav_read_full(const std::string& path, WavInfo* info_out = nullptr);
-std::expected<std::vector<float>, std::string>
-wav_read_full(std::span<const char> bytes, WavInfo* info_out = nullptr);
 
 std::expected<std::vector<float>, std::string>
 wav_read_range(const std::string& path, int64_t begin_frame, int64_t end_frame,
                WavInfo* info_out = nullptr);
-std::expected<std::vector<float>, std::string>
-wav_read_range(std::span<const char> bytes, int64_t begin_frame,
-               int64_t end_frame, WavInfo* info_out = nullptr);
 
 // Call close() explicitly and check its result. The destructor closes only as a
 // last resort and swallows errors by design.
