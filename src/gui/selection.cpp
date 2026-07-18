@@ -27,7 +27,7 @@ void Selection::set_single_selection(int idx) {
     if (idx >= 0) app.selected_markers.insert(idx);
     app.last_selected_marker = (idx >= 0) ? idx : -1;
     // A marker-selecting gesture makes Markers the group that
-    // Delete / Ctrl+drag act on.
+    // Delete / Alt+drag act on.
     app.last_sel_group = LastSelGroup::Markers;
     // A fresh single-select in the marker group drops any trim-boundary
     // selection — the two groups are orthogonal, but selecting a marker as
@@ -379,7 +379,7 @@ void Selection::sync_playhead_to_last_selected(bool edge_follow) {
     const int64_t target_sample =
         source_frame_to_active_domain(app, audio, src_sample);
     if (edge_follow) {
-        // Ctrl+Left/Right marker nudge: the marker stepped one pixel, so move
+        // Alt+Left/Right marker nudge: the marker stepped one pixel, so move
         // the playhead to it through the same edge-follow path bare Left/Right
         // uses (move_playhead_to), scrolling the viewport at most one pixel to
         // keep the marker just inside the edge. The default path keeps

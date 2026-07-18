@@ -421,9 +421,8 @@ private:
 
     // Shared wheel handler for source and target view; on_wheel is
     // its only caller. Exact-match modifiers: plain = zoom, Alt = pan (10% of
-    // the visible span per detent), Ctrl = nudge the focused warp marker's base
-    // tempo by 0.01 per detent. Any other combination (Shift+wheel,
-    // Ctrl+Alt+wheel, ...) no-ops.
+    // the visible span per detent), Ctrl+Alt = trim-end move. Every other
+    // combination (Shift+wheel, Ctrl+wheel, ...) no-ops.
     void handle_wheel(GuiMouseButton button, int count, bool ctrl, bool shift,
                       bool alt, bool inside_waveform, bool inside_top);
 
@@ -547,11 +546,11 @@ private:
 
     // Mouse gestures on the trim boundary stems. on_press routes a
     // waveform-area press that misses every marker but lands on a trim
-    // boundary here. Ctrl or Alt begins a single-bound drag; +Shift begins a
+    // boundary here. Alt begins a single-bound drag; Ctrl+Alt begins a
     // move-both-bounds drag; plain/Shift selects within the trim group. All
     // update app.last_sel_group = Trim.
-    void handle_trim_boundary_press(TrimHit which, bool move_mod, bool shift,
-                                    int mouse_x);
+    void handle_trim_boundary_press(TrimHit which, bool move_single,
+                                    bool move_both, bool shift, int mouse_x);
     void select_trim_boundary(TrimHit which, bool additive);
     void begin_trim_drag(TrimHit which, int mouse_x, bool both = false);
     void update_trim_drag(int mouse_x);   // motion: writes the live store
@@ -570,7 +569,7 @@ private:
     // handle_trim_unset) and clears the trim-selected flags.
     void delete_selected_trim();
 
-    // Ctrl+Left / Ctrl+Right on the trim group: nudge the focused bound by
+    // Alt+Left / Alt+Right on the trim group: nudge the focused bound by
     // one whole-frame pixel-anchored column at the current zoom, exactly
     // like nudge_selected_markers (painted column steps by one, the new
     // column's time commits through snap_authored_frame). direction: -1
@@ -582,11 +581,11 @@ private:
     // partner destroys both bounds (auto_clear_crossed_trim).
     void nudge_selected_trim(int direction);
 
-    // Ctrl+wheel trim-end move: the pixel-anchored end-bound gesture, the
+    // Ctrl+Alt+wheel trim-end move: the pixel-anchored end-bound gesture, the
     // only authoring gesture the wheel dispatcher owns, shape-shared with
-    // nudge_selected_trim. handle_wheel routes here once the begin trim bound
-    // is last-selected with both bounds set; the op itself refuses in
-    // read-only and no-ops on unusable audio/zoom state.
+    // nudge_selected_trim. handle_wheel routes here unconditionally on the
+    // Ctrl+Alt chord; the op itself refuses in read-only, no-ops on unusable
+    // audio/zoom state, and refuses when no end bound is set.
     void wheel_move_trim_end(GuiMouseButton button, int count);
 
     // Bare `t` toggle: flip app.active_audio_view between Source and Target.
@@ -601,10 +600,10 @@ private:
     // Apply a new GUI font size (points), running the shared live sequence:
     // assign app.font_size, push it to the renderer (set_gui_font_size_pt),
     // full-window invalidate, then the resize-path geometry-and-cache rebuild.
-    // Both callers gate the no-op case before calling (the Ctrl+Shift+=/-
-    // step's constructive clamp, the settings editor's same-value gate), so
-    // this assumes a real change. Shared by the font-size gesture and the
-    // settings editor's `font_size=` commit.
+    // The settings editor's `font_size=` commit is the sole caller and gates
+    // the no-op case before calling (its same-value gate), so this assumes a
+    // real change (the file-load path pushes font_size straight through
+    // set_gui_font_size_pt, not through here).
     void apply_font_size(double pt);
 
     // Source-view read-only allowlist. Returns true if key+mods is NOT on the

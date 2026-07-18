@@ -253,8 +253,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              the scrub and Home/End entries.
     //   - Up/Down (no mods)      → zoom in/out
     //   - =/- (no mods)          → zoom symbol-key alias
-    //   - Ctrl+Shift+=/-         → step GUI font size (display preference,
-    //                              not an authoring mutation)
     //   - 0 (no mods)            → fit ↔ snap-zoom toggle
     //   - f (no mods)            → follow mode toggle
     //   - c (no mods)            → center+snap-zoom on playhead
@@ -466,16 +464,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // IsoLeftTab cycle marker focus.
     if (handle_tab_switch_keys(key, mods)) return;
 
-    // Tempo nudge. Ctrl+Up / Ctrl+Down only. Bare `=` / `-` were the
-    // previous binding; they now zoom (see below) so the keyboard has
-    // a symbol-key alias for the bare Up/Down zoom chord. No view guard
-    // here — adjust_tempo_cents returns at once unless the warp view is
-    // active, so Ctrl+arrows are an inert (still consumed) no-op in
-    // phase-reset view.
-    if (ctrl && !shift && !alt && key == GuiKeys::Up) {
+    // Tempo nudge. Alt+Up / Alt+Down only. No view guard here —
+    // adjust_tempo_cents returns at once unless the warp view is active, so
+    // Alt+arrows are an inert (still consumed) no-op in phase-reset view. Bare
+    // `=` / `-` are the symbol-key alias for the bare Up/Down zoom chord (see
+    // below).
+    if (alt && !shift && !ctrl && key == GuiKeys::Up) {
         warpops.adjust_tempo_cents(+1); return;
     }
-    if (ctrl && !shift && !alt && key == GuiKeys::Down) {
+    if (alt && !shift && !ctrl && key == GuiKeys::Down) {
         warpops.adjust_tempo_cents(-1); return;
     }
     if (key == GuiKeys::Equal && !shift && !ctrl && !alt) {
@@ -485,35 +482,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         viewport.zoom_out(); return;
     }
 
-    // Ctrl+Shift+= / Ctrl+Shift+- step the GUI font size by one point. A
-    // display-preference gesture: silent (no stderr per press, so held-key repeat
-    // does not spam the log), deliberately no undo-history entry and no
-    // target render (font_size is not engine input and not authoring state),
-    // persisted on the next Ctrl+S through the existing .settings writer. The
-    // clamp is constructive, GTK-picker style: std::clamp into [6, 72] so a
-    // fractional legacy value loaded from .settings steps to the exact bound,
-    // then further steps no-op there. When the step would not change the
-    // value (already at a bound) the chord is a consumed silent no-op — no
-    // invalidate, no rebuild. On a real change the same live sequence the
-    // resize path uses runs in order: assign app.font_size,
-    // set_gui_font_size_pt, full-window invalidate_all, then the resize-path
-    // geometry-and-cache rebuild. Alt is excluded from the guard. Shift+=
-    // arrives as GuiKeys::Equal with mods.shift set, the same level-0-keysym
-    // convention the Shift+Semicolon settings opener and the bare Equal/Minus
-    // zoom aliases rely on.
-    if ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
-        ctrl && shift && !alt) {
-        const double delta = (key == GuiKeys::Equal) ? +1.0 : -1.0;
-        const double next  = std::clamp(app.font_size + delta, 6.0, 72.0);
-        if (next == app.font_size) return;
-        apply_font_size(next);
-        return;
-    }
-
     // x sets the begin trim at the playhead and autosets end half of the
     // visible span away.
     // Shift+x clears both bounds. The end bound keeps its mouse operations
-    // (Ctrl+drag single, Ctrl+Shift+drag pair, select+Delete).
+    // (Alt+drag single, Ctrl+Alt+drag pair, select+Delete).
     // Plain Ctrl+x is cut (text_editor.cpp) and stays unbound here.
     if (!ctrl && !shift && !alt && key == GuiKeys::X) {
         handle_trim_set_begin_autoset();
@@ -548,11 +520,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Ctrl+Left / Ctrl+Right: nudge the last-selected group by one pixel of
-    // time. Routes like Delete and Ctrl+wheel — a last-selected trim bound
-    // (Trim group) nudges the bound; otherwise the marker/phase-reset nudge
-    // runs.
-    if (ctrl && !shift && !alt && key == GuiKeys::Left) {
+    // Alt+Left / Alt+Right: nudge the last-selected group by one pixel of
+    // time. Routes like Delete — a last-selected trim bound (Trim group)
+    // nudges the bound; otherwise the marker/phase-reset nudge runs.
+    if (alt && !shift && !ctrl && key == GuiKeys::Left) {
         if (app.last_sel_group == LastSelGroup::Trim) {
             if ((app.trim_begin_selected && app.trim.has_begin) ||
                 (app.trim_end_selected && app.trim.has_end)) {
@@ -564,7 +535,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         else                        warpops.nudge_selected_markers(-1);
         return;
     }
-    if (ctrl && !shift && !alt && key == GuiKeys::Right) {
+    if (alt && !shift && !ctrl && key == GuiKeys::Right) {
         if (app.last_sel_group == LastSelGroup::Trim) {
             if ((app.trim_begin_selected && app.trim.has_begin) ||
                 (app.trim_end_selected && app.trim.has_end)) {
@@ -700,28 +671,13 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
     // burst size. count == 1 reproduces the single-detent behavior.
     if (count < 1) count = 1;
     // Strict modifier matching: each wheel chord is an exact match.
-    if (ctrl && !shift && !alt) {
-        // Ctrl+wheel: when the begin trim bound is last-selected (both bounds
-        // set), move the end bound through wheel_move_trim_end (input_trim.cpp,
-        // beside nudge_selected_trim whose pixel-anchoring shape it shares).
-        // Otherwise nudge the focused warp marker's tempo below.
-        if (app.last_sel_group == LastSelGroup::Trim &&
-            app.last_selected_trim == 'B' &&
-            app.trim.has_begin && app.trim.has_end) {
-            wheel_move_trim_end(button, count);
-            return;
-        }
-        if (active_view_state(app).read_only) return;
-        // Tempo nudge applies to warp markers only — phase-reset mode has no
-        // tempo. Mirror the Ctrl+Up / Ctrl+Down keyboard guard so Ctrl+wheel
-        // is a no-op here instead of nudging the warp marker that happens to
-        // sit at the phase-reset selection's index, which silently corrupted
-        // an unrelated warp marker and fired a spurious target render.
-        if (app.active_markers_view == 'P') return;
-        const int64_t delta_cents =
-            (button == GuiMouseButton::WheelUp ? -1 : +1) *
-            static_cast<int64_t>(count);
-        warpops.adjust_tempo_cents(delta_cents);
+    if (ctrl && alt && !shift) {
+        // Ctrl+Alt+wheel moves the trim-end bound: a pixel-anchored end-move,
+        // shape-shared with nudge_selected_trim. Selection-free — the gesture
+        // always targets the end bound, so there is no last-selected gate
+        // here; wheel_move_trim_end owns the read-only and no-end-bound
+        // refusals.
+        wheel_move_trim_end(button, count);
         return;
     }
     if (alt && !ctrl && !shift) {
@@ -750,13 +706,13 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // editor and the BpmBracket reuse of top_flag_editor, the same predicate
     // the keyboard gate uses). The top-strip flag editor is deliberately
     // NOT modal — commands punch through it on the keyboard, so wheel zoom,
-    // Alt+wheel pan, and Ctrl+wheel authoring punch through it too.
+    // Alt+wheel pan, and the Ctrl+Alt+wheel end-move punch through it too.
     //
     // A wheel event during ANY active pointer gesture is ignored, matching
     // on_button_press and the keyboard's drag-modal gate. The playhead
     // scrub is included: the keyboard gate swallows every authoring chord
-    // mid-scrub, so the wheel's authoring routes (Ctrl+wheel tempo, the
-    // trim-end move) and viewport changes must not slip through either.
+    // mid-scrub, so the wheel's authoring route (the Ctrl+Alt+wheel end-move)
+    // and viewport changes must not slip through either.
     // The editor-text drag is included: the wheel's authoring routes and
     // viewport changes must not fire under a held text-selection drag either
     // (a wheel can emit axis events while the primary button stays held), so
@@ -789,11 +745,11 @@ int GuiInputHandler::wheel_context(int x, int y) const {
 void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
                                GuiInputState mods) {
     // Command-adjacency bump (see on_key). The platform delivers one on_wheel
-    // per pointer frame carrying the net detent count, and the Ctrl+wheel tempo
-    // path calls adjust_tempo_cents once with that summed delta, so one wheel
-    // frame is one command and one bump — a burst of same-frame detents is a
-    // single command, distinct wheel frames are consecutive commands that
-    // coalesce.
+    // per pointer frame carrying the net detent count, and each wheel route
+    // applies that net count in a single call (zoom / pan / the end-move all
+    // take the summed count), so one wheel frame is one command and one bump —
+    // a burst of same-frame detents is a single command, distinct wheel frames
+    // are consecutive commands that coalesce.
     ++app.command_seq;
     const int ctx = wheel_context(x, y);
     if (ctx < 0) return;

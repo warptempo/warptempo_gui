@@ -810,8 +810,8 @@ void iterate_visible_flags_impl(
       - static_cast<double>(monospace_row_h())
       + monospace_row_baseline_offset();
 
-    // Candidates iterate in VISUAL x order, not store order. During a
-    // Ctrl+drag the store is frozen (positions come from the DragOverlay),
+    // Candidates iterate in VISUAL x order, not store order. During an
+    // Alt+drag the store is frozen (positions come from the DragOverlay),
     // so once the dragged chip crosses a neighbor the store walk's
     // ascending-x assumption is false and the greedy pack below would keep
     // eliding the wrong chip — the dragged marker's flag vanished until
@@ -1228,8 +1228,8 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
 
 namespace {
     // Current GUI font size, in points. Set by set_gui_font_size_pt from
-    // the two application points (file load, the Ctrl+Shift+= / Ctrl+Shift+-
-    // font-size hotkeys); every derived pixel quantity (text px size, scale
+    // the two application points (file load, the settings-editor font_size
+    // commit); every derived pixel quantity (text px size, scale
     // factor, scaled pads, triangle height) reads it through the accessors
     // below.
     double g_font_size_pt = kDefaultFontSizePt;

@@ -153,8 +153,8 @@ void GuiInputHandler::clear_trim_bounds() {
 // compare end_frame <= begin_frame, run only when both bounds are set, and
 // only at COMMIT — mid-gesture crossing stays free (nothing pops
 // mid-gesture; update_trim_drag never calls this). Every trim commit site —
-// the x autoset, the drag release, the nudge press, the trim-end Ctrl+wheel
-// — calls this after its mutation and before its invalidations, so the
+// the x autoset, the drag release, the nudge press, the Ctrl+Alt+wheel
+// end-move — calls this after its mutation and before its invalidations, so the
 // repaint shows the cleared state.
 void GuiInputHandler::auto_clear_crossed_trim() {
     if (app.trim.has_begin && app.trim.has_end &&
@@ -399,8 +399,9 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         // (non-additive) — the same helper a trim click uses — so the rule
         // (select the dragged bound, drop the opposite bound AND any
         // warp/phase-reset marker selection, make Trim the active group)
-        // lives in one place. Motion-gated so a Ctrl/Alt+click without motion
-        // is left to commit_trim_drag's no-motion toggle branch.
+        // lives in one place. Motion-gated: a click without motion selects
+        // nothing and mutates nothing, so only a real drag focuses the
+        // dragged bound.
         if (first_motion) {
             select_trim_boundary(
                 app.trim_drag.is_begin ? TrimHit::Begin : TrimHit::End,
@@ -506,12 +507,6 @@ void GuiInputHandler::commit_trim_drag() {
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         target_render.trigger();
-    } else if (!app.trim_drag.both) {
-        // A Ctrl/Alt+press with no motion is a click: toggle the boundary's
-        // selection (additive — coexists with marker selection).
-        const TrimHit which = app.trim_drag.is_begin ? TrimHit::Begin
-                                                      : TrimHit::End;
-        select_trim_boundary(which, /*additive=*/true);
     }
     app.trim_drag = TrimDragState{};
 }
@@ -527,7 +522,7 @@ void GuiInputHandler::delete_selected_trim() {
     app.trim_end_selected   = false;
 }
 
-// Ctrl+Left / Ctrl+Right on the trim group. The sibling of
+// Alt+Left / Alt+Right on the trim group. The sibling of
 // nudge_selected_markers: pixel-column-anchored, exactly one painted
 // column per press — the bound's currently painted column (the trim stem
 // painter's own math) steps to the adjacent column and that column's
@@ -630,6 +625,10 @@ void GuiInputHandler::wheel_move_trim_end(GuiMouseButton button, int count) {
     // rationale is gone, so the bound refuses exactly like the marker tempo
     // nudge, a silent no-op).
     if (active_view_state(app).read_only) return;
+    // The Ctrl+Alt+wheel entry is selection-free, so this owns the no-end-bound
+    // refusal: moving a nonexistent bound would write the stale end_frame
+    // field. A lone end bound is movable, so has_begin is not required.
+    if (!app.trim.has_end) return;
     const int sr = audio.sample_rate();
     if (audio.total_frames() <= 0 || sr <= 0) return;
     const double spp = current_samples_per_pixel(app, audio);
@@ -685,17 +684,18 @@ void GuiInputHandler::wheel_move_trim_end(GuiMouseButton button, int count) {
     target_render.trigger();
 }
 
-void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool move_mod,
-                                                 bool shift, int mouse_x) {
-    // The caller consumes a trim press only for recognized gestures: a Ctrl-
-    // or Alt-exact reposition-drag, a Ctrl+Shift / Alt+Shift move-both-bounds
-    // drag, or a plain / Shift select+navigate. The caller folds Alt into
-    // `move_mod` — Alt mirrors Ctrl on the trim path — and filters the combined
-    // Ctrl+Alt chords upstream, so `move_mod` / `shift` fully partition the
-    // recognized gestures and the else-branch is a plain-or-Shift select.
+void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool move_single,
+                                                 bool move_both, bool shift,
+                                                 int mouse_x) {
+    // The caller consumes a trim press only for recognized gestures: an
+    // Alt-exact reposition-drag (move_single), a Ctrl+Alt move-both-bounds
+    // drag (move_both), or a plain / Shift select+navigate. The caller filters
+    // every unrecognized combo upstream, so move_single / move_both / shift
+    // fully partition the recognized gestures and the else-branch is a
+    // plain-or-Shift select.
     if (which == TrimHit::None) return;
     // Read-only refusal on the movement chords, the trim sibling of the
-    // marker Ctrl/Alt+drag refusal in on_button_press: in a read-only tab the
+    // marker Alt+drag refusal in on_button_press: in a read-only tab the
     // trim drag never enters flight (app.trim_drag.active stays false, so
     // motion / release / Escape all short-circuit), making a bound
     // selectable but not moveable — exactly a marker's read-only behavior.
@@ -704,21 +704,21 @@ void GuiInputHandler::handle_trim_boundary_press(TrimHit which, bool move_mod,
     // gone, so the mobility is revoked. The plain / Shift select+navigate
     // branch below still runs: a click on a bound focuses it, mirroring
     // plain marker clicks, which select in read-only.
-    if (move_mod && active_view_state(app).read_only) return;
-    if (move_mod && shift) {
+    if ((move_single || move_both) && active_view_state(app).read_only) return;
+    if (move_both) {
         begin_trim_drag(which, mouse_x, /*both=*/true);
         return;
     }
-    if (move_mod) {
+    if (move_single) {
         begin_trim_drag(which, mouse_x);
         return;
     }
     select_trim_boundary(which, /*additive=*/shift);
     // Mirror the marker flag/stem click: a plain or Shift click on a trim
     // boundary moves the playhead cursor to that boundary, so trim flags
-    // navigate exactly like marker flags. The move_mod branch above is a
-    // reposition-drag grab and intentionally does not move the playhead,
-    // matching the marker reposition drag. The hit-test that routed here only
+    // navigate exactly like marker flags. The reposition-drag branches above
+    // are grabs and intentionally do not move the playhead, matching the
+    // marker reposition drag. The hit-test that routed here only
     // fires when the boundary exists, so trim_begin/end_frame is set.
     const int64_t src_sample = (which == TrimHit::Begin) ? app.trim.begin_frame
                                                          : app.trim.end_frame;

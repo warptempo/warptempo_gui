@@ -51,7 +51,7 @@ constexpr int kZoomTableSize    = kMaxNumericLevel + 1;
 // truth — do not inline the divisor at either site.
 constexpr int64_t kViewportLeadDivisor = 10;
 
-// Ctrl+wheel end-move step as a divisor of samples_visible.
+// Ctrl+Alt+wheel end-move step as a divisor of samples_visible.
 constexpr int64_t kTrimEndWheelDivisor = 10;
 
 // Hoisted from main.cpp's anonymous namespace so the hit_test_*
@@ -99,7 +99,7 @@ struct UndoEntry {
     bool                      affects_persistence  = true;
 };
 
-// Ctrl+drag state. `active` gates motion handling; the rest captures the
+// Alt+drag state. `active` gates motion handling; the rest captures the
 // pre-drag snapshot so Escape can restore positions and clamps can be
 // evaluated without re-scanning the marker list on every motion event.
 //
@@ -309,12 +309,12 @@ struct EditorTextDragState {
 };
 
 // Which selection group the most recent selecting gesture
-// targeted. Group-acting gestures (Delete, Ctrl+drag) act on exactly one
+// targeted. Group-acting gestures (Delete, Alt+drag) act on exactly one
 // group, chosen by this tag. Set to Trim when a click/gesture lands on a
 // trim boundary, Markers when it lands on a marker.
 enum class LastSelGroup { Markers, Trim };
 
-// Ctrl+drag of a trim boundary stem. Parallel to DragState but motion mutates
+// Alt+drag of a trim boundary stem. Parallel to DragState but motion mutates
 // the active tab's live trim mirror directly (no overlay); release triggers a
 // target render when the bound moved. Trim is excluded from undo/redo.
 // Session-only.
@@ -341,7 +341,7 @@ struct TrimDragState {
     int64_t anchor_active_frame  = 0;
 };
 
-// Ctrl+drag on empty waveform: continuous 1:1 grab-pan of the viewport,
+// Alt+drag on empty waveform: continuous 1:1 grab-pan of the viewport,
 // driven by pointer motion, panning by the exact per-event pixel delta.
 struct ScrollDragState {
     bool   active   = false;
@@ -526,9 +526,9 @@ struct AppState {
     // GUI-wide monospace text size in points (the font_size setting; 6..72,
     // default 11). A display preference, not engine input and not authoring
     // state: persisted on Ctrl+S like playback_speed, applied at file load
-    // and stepped by the Ctrl+Shift+= / Ctrl+Shift+- hotkeys, and pushed to
-    // the renderer's file-scope state via set_gui_font_size_pt at each of
-    // those application points.
+    // and set through the settings editor (`:font_size=`, no hotkey), and
+    // pushed to the renderer's file-scope state via set_gui_font_size_pt at
+    // each of those application points.
     double  font_size               = 11.0;
 
     // GUI-kind launch preference: the external audio player the `l`
@@ -640,7 +640,7 @@ struct AppState {
     // refreshed from const hit-test paths.
     mutable TargetWarpFrameMapCache target_warp_frame_map_cache;
 
-    // Ctrl+drag state. Not reset across file loads — explicitly cleared
+    // Alt+drag state. Not reset across file loads — explicitly cleared
     // there and on button release / Escape.
     DragState     drag;
 
@@ -648,11 +648,11 @@ struct AppState {
     // release, Escape, and file load.
     PlayheadDragState playhead_drag;
 
-    // Ctrl+drag of a trim boundary stem. Cleared on button
+    // Alt+drag of a trim boundary stem. Cleared on button
     // release, Escape, and file load.
     TrimDragState trim_drag;
 
-    // Ctrl+drag on empty waveform (stepped viewport scroll). Cleared on
+    // Alt+drag on empty waveform (stepped viewport scroll). Cleared on
     // button release and file load.
     ScrollDragState scroll_drag;
 
@@ -661,7 +661,7 @@ struct AppState {
     EditorTextDragState editor_text_drag;
 
     // Which selection group the last selecting gesture targeted.
-    // Drives Delete / Ctrl+drag group dispatch. Session-only.
+    // Drives Delete / Alt+drag group dispatch. Session-only.
     LastSelGroup last_sel_group = LastSelGroup::Markers;
 
     // Hover-popup state. See HoverPopupState above.
@@ -751,14 +751,14 @@ struct AppState {
     // selection channel from the marker sets (selected_markers /
     // phase_reset_selected) — the two groups are orthogonal and can be
     // co-selected. Not persisted to .settings; defaults false and resets on
-    // file load. Which group a group-acting gesture (Delete, Ctrl+drag)
+    // file load. Which group a group-acting gesture (Delete, Alt+drag)
     // targets is decided by last_sel_group.
     bool   trim_begin_selected = false;
     bool   trim_end_selected   = false;
     // Which trim bound was most recently selected by a selecting gesture.
-    // 0 = none, 'B' = begin, 'E' = end. Drives Ctrl+wheel end-move: when
-    // begin is the last-selected trim bound the wheel moves the end bound
-    // rather than nudging the focused warp marker's tempo.
+    // 0 = none, 'B' = begin, 'E' = end. Drives the trim-group Alt+Left/Right
+    // nudge and Delete routing (which bound they act on), the Tab-cycle
+    // landing, and the playhead sync onto the focused bound.
     char   last_selected_trim  = 0;
 
     // Bottom-strip command prompt. Active only when a close / re-detect

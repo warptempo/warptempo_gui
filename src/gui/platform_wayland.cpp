@@ -1204,7 +1204,7 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // Capability loss need not be preceded by keyboard.leave. Drop both
         // repeat and the cached modifier projection here so pointer input
         // delivered while no keyboard exists cannot inherit a phantom chord
-        // from the last keyboard event (for example Ctrl+wheel authoring).
+        // from the last keyboard event (for example the Ctrl+Alt+wheel end-move).
         repeat_key_ = 0;
         mod_ctrl_ = mod_shift_ = mod_alt_ = false;
 

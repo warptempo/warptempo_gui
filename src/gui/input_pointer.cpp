@@ -262,13 +262,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // on its marker line.
         int hit = -1;
         bool in_click_region = false;
-        // A trim-boundary press is consumed for its recognized gestures: a
-        // Ctrl- or Alt-exact reposition-drag, a Ctrl+Shift / Alt+Shift
-        // move-both-bounds drag, or a plain / Shift select+navigate. Alt
-        // mirrors Ctrl on this path, folded into the reposition-modifier
-        // argument at the call sites; only the combined Ctrl+Alt chords are
-        // unrecognized and fall through to the strict-guard no-op below.
-        const bool trim_gesture = !(ctrl && alt);
+        // A trim-boundary press is consumed for an Alt-exact reposition-drag, a
+        // Ctrl+Alt move-both-bounds drag, or a plain / Shift select+navigate;
+        // every other combination is unrecognized and falls through to the
+        // strict-guard no-op below.
+        const bool trim_single = alt && !ctrl && !shift;
+        const bool trim_pair   = ctrl && alt && !shift;
+        const bool trim_gesture = trim_single || trim_pair || (!ctrl && !alt);
         if (inside_waveform) {
             hit = hit_test_marker_line(app, audio, x);
             // A waveform press that misses every marker but lands
@@ -277,7 +277,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             if (hit < 0) {
                 const TrimHit th = hit_test_trim_boundary(app, audio, x);
                 if (th != TrimHit::None && trim_gesture) {
-                    handle_trim_boundary_press(th, ctrl || alt, shift, x);
+                    handle_trim_boundary_press(th, trim_single, trim_pair, shift, x);
                     if (app.trim_drag.active && was_playing)
                         app.follow_overridden_for_session = true;
                     return;
@@ -303,7 +303,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                        ? chip
                                        : hit_test_trim_boundary(app, audio, x);
                 if (th != TrimHit::None && trim_gesture) {
-                    handle_trim_boundary_press(th, ctrl || alt, shift, x);
+                    handle_trim_boundary_press(th, trim_single, trim_pair, shift, x);
                     if (app.trim_drag.active && was_playing)
                         app.follow_overridden_for_session = true;
                     return;
@@ -315,12 +315,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (!in_click_region) return;
 
         if (alt && !ctrl && !shift) {
-            // Alt+drag (exact) is hit-area-dependent. On a marker stem or flag
-            // (hit >= 0) it begins the marker reposition drag, identical to the
-            // Ctrl+drag route below, read-only refusing identically (a silent
-            // return, the drag never enters flight); elsewhere on the waveform
-            // it pans (a stepped scroll-drag). The marker-drag arm overrides
-            // follow when playing; the pan does not.
+            // Alt+drag (exact) is the marker reposition gesture (the mouse
+            // counterpart of the Alt+Left / Alt+Right nudge), hit-area-
+            // dependent. On a marker stem or flag (hit >= 0) it begins the
+            // reposition drag, read-only refusing with a silent return (the
+            // drag never enters flight); elsewhere on the waveform it pans (a
+            // stepped scroll-drag). The marker-drag arm overrides follow when
+            // playing; the pan does not.
             if (hit >= 0) {
                 if (active_view_state(app).read_only) {
                     return;
@@ -347,35 +348,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
 
-        if (ctrl && !alt && !shift && hit >= 0) {
-            // Ctrl+drag (exact) on a marker repositions it (the mouse
-            // counterpart of the Ctrl+Left / Ctrl+Right nudge). Alt+drag on a
-            // marker begins the same reposition (the branch above); both
-            // routes share begin_drag. Ctrl on empty waveform is not a gesture
-            // and no-ops at the strict guard below. The marker drag mutates
-            // marker positions, so read-only refuses the drag-begin (app.drag.
-            // active never enters flight state; motion / release / Escape paths
-            // all short-circuit on !app.drag.active).
-            if (active_view_state(app).read_only) {
-                return;
-            }
-            // begin_drag preserves the multi-selection if `hit` is in
-            // it, else collapses to just `hit`. Motion decides whether
-            // it actually becomes a drag vs. a plain click.
-            const bool was_playing_ctrl = playback.is_playing();
-            marker_drag.begin_drag(hit, x);
-            if (was_playing_ctrl)
-                app.follow_overridden_for_session = true;
-            return;
-        }
-
-        // Strict modifier matching: Alt-exact and Ctrl-exact are hit-routed
-        // above (marker reposition on a marker, trim gestures on a bound — Alt
-        // additionally pans on empty waveform). The remaining combinations —
-        // Ctrl on empty, Ctrl+Alt, Shift+Alt on empty, Ctrl+Shift on a marker,
-        // ... — are not recognized waveform gestures and no-op here. Only the
-        // plain or Shift-modified base press proceeds (Shift adjusts the
-        // selection).
+        // Strict modifier matching: Alt-exact is hit-routed above (marker
+        // reposition on a marker, trim gestures on a bound, pan on empty
+        // waveform) and Ctrl+Alt-exact is a trim-bound-only gesture (consumed
+        // at the trim path; on a marker or empty waveform it falls through to
+        // here). Every other modifier combination no-ops here. Only the plain
+        // or Shift-modified base press proceeds (Shift adjusts the selection).
         if (ctrl || alt) return;
 
         // Plain or Shift press. In the waveform area this starts a

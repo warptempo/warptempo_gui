@@ -219,7 +219,7 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 // only if the markers actually moved. Motion tracked the playhead onto
 // the grabbed marker's proposed position; commit finishes that tracking
 // by syncing the playhead onto the committed column-snapped position via
-// sync_playhead_to_last_selected — the same call the Ctrl+Left/Right
+// sync_playhead_to_last_selected — the same call the Alt+Left/Right
 // nudges end with — so drag and nudge, documented as keyboard/mouse
 // counterparts, leave identical marker/playhead state (both columns,
 // both views; the sync forward-translates through the live post-commit

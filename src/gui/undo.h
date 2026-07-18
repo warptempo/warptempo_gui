@@ -13,8 +13,8 @@
 struct GuiTargetRender;
 
 // Rapid-gesture undo coalescing. A burst of eligible keyboard gestures — warp
-// / phase-reset nudges (Ctrl+Left/Right) and tempo cent steps (Ctrl+Up/Down
-// and Ctrl+wheel) — that land within kGestureCoalesceMs of each other on the
+// / phase-reset nudges (Alt+Left/Right) and tempo cent steps (Alt+Up/Down;
+// no wheel route) — that land within kGestureCoalesceMs of each other on the
 // SAME gesture-kind AS CONSECUTIVE COMMANDS collapses into ONE undo entry: the
 // burst's first press pushes the pre-burst snapshot and every continuation
 // press SKIPS its own push, so a single Ctrl+Z reverts the whole burst. The

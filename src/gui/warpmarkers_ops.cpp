@@ -359,8 +359,8 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     // (app.command_seq, bumped once at the on_key / on_wheel dispatch entry
     // that reached this handler), so it is order-independent of the
     // focus-collapse below; it just has to run before record_gesture stamps
-    // this command. Both the Ctrl+Up/Down and the Ctrl+wheel routes reach here
-    // with kind TempoStep, so a burst mixing the two coalesces as intended.
+    // this command. Alt+Up/Down is the only route reaching here with kind
+    // TempoStep, so a burst of tempo steps coalesces as intended.
     const bool merge = undo.coalesce_gesture(GestureKind::TempoStep);
     // Fine-tuning op: collapse the selection to the focused marker.
     app.selected_markers.clear();
@@ -462,7 +462,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
 void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
     // Nudges move the playhead (via sync_playhead_to_last_selected).
-    // Stop playback first — Ctrl+Left/Right is the only caller path.
+    // Stop playback first — Alt+Left/Right is the only caller path.
     playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
