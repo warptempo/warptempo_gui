@@ -528,14 +528,15 @@ void GuiInputHandler::wheel_move_trim_end(GuiMouseButton button, int count) {
 // drags never touch selection.
 //
 // The bound columns come from displayed_or_live_target_map — the map the
-// on-screen stems/chips were painted with — so a Ctrl+Alt hit lands on what is
-// drawn: the routing decision flips at the exact instant the pixels flip (the
-// event-sync ruling at that selector). What was the open live-vs-painted window
-// for item hits is CLOSED here. Two narrow seams remain ACCEPTED: the
-// COLD-STATE fallback (first paint, a view toggle, or just after load, where
-// the displayed map is empty and the live map serves until the first publish),
-// and the playhead-placement clicks (column-based, out of scope by ruling — a
-// far subtler seam).
+// on-screen stems/chips were painted with (advanced when the STEM/FLAG item
+// caches adopt a rebuild, not at the earlier plate publish) — so a Ctrl+Alt hit
+// lands on what is drawn: the routing decision flips at the exact instant the
+// item pixels flip (the event-sync ruling at that selector). What was the open
+// live-vs-painted window for item hits is CLOSED here. Two narrow seams remain
+// ACCEPTED: the COLD-STATE fallback (first paint, a view toggle, or just after
+// load, where the displayed map is empty and the live map serves until the
+// first item-cache adoption), and the playhead-placement clicks (column-based,
+// out of scope by ruling — a far subtler seam).
 void GuiInputHandler::route_trim_ctrl_alt_press(int mouse_x, int mouse_y,
                                                 bool inside_top) {
     if (audio.total_frames() <= 0) return;
@@ -549,9 +550,10 @@ void GuiInputHandler::route_trim_ctrl_alt_press(int mouse_x, int mouse_y,
     const int click_rel_x = mouse_x - area.x;
     const double vp = static_cast<double>(app.viewport_start_sample);
     // Painted rel-x column of a set bound — the same forward-map + column math
-    // hit_test_trim_boundary uses, on the pixels' own map via
-    // displayed_or_live_target_map (event-synchronized hit geometry — the
-    // ruling at that selector), so routing agrees with the painted stems.
+    // hit_test_trim_boundary uses, on the item pixels' own map via
+    // displayed_or_live_target_map (the map the stem/flag item caches baked;
+    // event-synchronized hit geometry — the ruling at that selector), so
+    // routing agrees with the painted stems.
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
     const std::vector<WarpFrameMapSegment>* map =

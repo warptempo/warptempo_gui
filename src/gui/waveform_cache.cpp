@@ -398,12 +398,11 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // so the next maybe_rebuild_stem_cache reads the same coordinate
     // system the just-blitted waveform pixels were rendered against.
     std::swap(wf_cache.fp_warp_frame_map,     wf_cache.pending_fp_warp_frame_map);
-    // Event-synchronized hit geometry: mirror the just-published map into the
-    // AppState slot the item hit tests read (displayed_or_live_target_map), so
-    // a grab lands on exactly these pixels. A source-view publish stamps the
-    // empty map (cold — the selector falls back to the live map). Ruling at the
-    // selector.
-    app.displayed_target_warp_frame_map = wf_cache.fp_warp_frame_map;
+    // The event-sync hit-map mirror does NOT happen here: this is the PLATE
+    // publish, but the aimed-at item pixels (stem/flag caches) adopt this map
+    // only when maybe_rebuild_stem_cache / maybe_rebuild_flag_cache run at the
+    // tick. Mirroring at that item-cache boundary keeps the hit geometry in
+    // step with the pixels the user actually grabs (ruling at the selector).
 
     // Invalidate the waveform area so the next paint blits the new
     // pixels. Matches the rect Viewport::invalidate_waveform_area uses.
@@ -515,11 +514,12 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.fp_target       = in.is_target;
     wf_cache.fp_warp_frame_map_hash = in.warp_frame_map_hash;
     wf_cache.fp_warp_frame_map      = in.warp_frame_map;
-    // Event-synchronized hit geometry: mirror the published map into the
-    // AppState slot the item hit tests read (displayed_or_live_target_map). A
-    // source-view publish stamps empty (cold — live-map fallback). Ruling at
-    // the selector.
-    app.displayed_target_warp_frame_map = in.warp_frame_map;
+    // The event-sync hit-map mirror does NOT happen here: this synchronous
+    // rebuild publishes the plate fingerprint, but the item caches (stems/flags)
+    // adopt this map only when maybe_rebuild_stem_cache / maybe_rebuild_flag_cache
+    // run — this same tick, but after. Mirroring at that item-cache boundary
+    // keeps the hit geometry in step with the aimed-at pixels (ruling at the
+    // selector).
 
     wf_cache.pending_fp_vp_start     = in.vp_start;
     wf_cache.pending_fp_vp_end       = in.vp_end;
@@ -927,6 +927,21 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     stem_cache.fp_trim_has_begin            = trim_has_begin;
     stem_cache.fp_trim_has_end              = trim_has_end;
 
+    // Event-synchronized hit geometry: the item pixels just rebuilt, so advance
+    // the hit map to match. In target view mirror the map these stems baked
+    // (wf_cache.fp_warp_frame_map, the same map tmap_arg fed the painter); in
+    // source view the stems show mapless geometry, so clear the slot to the
+    // cold live-map fallback. maybe_rebuild_flag_cache runs in the same tick and
+    // writes the same value (both caches consume wf_cache.fp_warp_frame_map), so
+    // this is a per-item mirror, not a once-after-both site — last writer wins,
+    // and mirroring where each item rebuild runs means the slot changes exactly
+    // when the item pixels change, even when only one of the two rebuilds.
+    // Ruling at the selector.
+    if (is_target)
+        app.displayed_target_warp_frame_map = wf_cache.fp_warp_frame_map;
+    else
+        app.displayed_target_warp_frame_map.clear();
+
     // Invalidate the stem region. Viewport-driven invalidations
     // already cover this strip, but pure marker-store edits (warp_gen /
     // phase_gen bumps) don't pass through the viewport's invalidator —
@@ -1124,6 +1139,17 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_trim_end                = dtrim.end;
     flag_cache.fp_trim_has_begin          = dtrim.has_begin;
     flag_cache.fp_trim_has_end            = dtrim.has_end;
+
+    // Event-synchronized hit geometry, the flag/chip twin of the stem-cache
+    // mirror: these flags/chips just rebuilt, so advance the hit map to the map
+    // they baked (target view) or clear it to the cold live-map fallback
+    // (source view). Same value the stem rebuild writes this tick; per-item so
+    // the slot changes exactly when the aimed-at pixels change. Ruling at the
+    // selector.
+    if (is_target)
+        app.displayed_target_warp_frame_map = wf_cache.fp_warp_frame_map;
+    else
+        app.displayed_target_warp_frame_map.clear();
 
     gui.invalidate_region(top_strip.x, top_strip.y,
                           top_strip.w, top_strip.h);

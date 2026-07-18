@@ -52,9 +52,9 @@ void remap_marker_indices_after_reorder(AppState& app,
 
 // Event-synchronized hit map (ruling at the declaration in app_state.h): in
 // target view with a warm displayed map, the item hit tests decide against the
-// map the last completed waveform job painted with; otherwise the live display
-// context's map (source view = its identity/empty map, target-view cold = the
-// live map until the first publish).
+// map the STEM/FLAG item caches last baked (not the earlier plate publish);
+// otherwise the live display context's map (source view = its identity/empty
+// map, target-view cold = the live map until the first item-cache adoption).
 const std::vector<WarpFrameMapSegment>&
 displayed_or_live_target_map(const AppState& app, const GuiAudio& audio) {
     const GuiDisplayContext& ctx = active_display_context(app, audio);
@@ -82,9 +82,9 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
     // mouse_x lands on the visually-drawn stem, not the marker's source-
     // frame position. compute_flag_hit_rects already does this on the
     // top strip; this mirrors that for the waveform-area marker line.
-    // The map is the one the pixels were painted with (WYSIWYG grabs):
-    // displayed_or_live_target_map returns the completed target job's displayed
-    // map when warm, and the live display context's identity/empty map in
+    // The map is the one the item pixels were painted with (WYSIWYG grabs):
+    // displayed_or_live_target_map returns the map the stem/flag item caches
+    // baked when warm, and the live display context's identity/empty map in
     // source view. This closes the live-vs-painted window for the marker hit
     // (event synchronization — the ruling at that selector).
     const std::vector<WarpFrameMapSegment>& dmap =
@@ -144,9 +144,9 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 
     // Same translation as hit_test_marker_line: trim is stored
     // source-domain, painted at map_source_to_target columns in the mapped
-    // views. The map is the pixels' own via displayed_or_live_target_map
+    // views. The map is the item pixels' own via displayed_or_live_target_map
     // (event-synchronized hit geometry — the ruling at that selector): empty
-    // (identity) in source view, the completed target job's displayed map when
+    // (identity) in source view, the map the stem/flag item caches baked when
     // warm in target view.
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
@@ -213,9 +213,9 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 
     // Same translation as hit_test_trim_boundary so the chip column lands
     // where the stem (and chip) are painted in the mapped views: the map is
-    // the pixels' own via displayed_or_live_target_map (event-synchronized hit
-    // geometry — the ruling at that selector), empty (identity) in source view
-    // and the completed target job's displayed map when warm in target view.
+    // the item pixels' own via displayed_or_live_target_map (event-synchronized
+    // hit geometry — the ruling at that selector), empty (identity) in source
+    // view and the map the stem/flag item caches baked when warm in target view.
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
     const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
@@ -294,10 +294,10 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
         static_cast<int64_t>(std::nearbyint(spp * area.w));
     // The mapped views' flags paint at translated positions
     // (compute_flag_hit_rects with a non-null warp_frame_map), so hit-test
-    // must walk the same warp_frame_map — the pixels' own via
+    // must walk the same warp_frame_map — the item pixels' own via
     // displayed_or_live_target_map (event-synchronized hit geometry — the
-    // ruling at that selector): empty (identity) in source view, the completed
-    // target job's displayed map when warm in target view.
+    // ruling at that selector): empty (identity) in source view, the map the
+    // stem/flag item caches baked when warm in target view.
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
     const std::vector<WarpFrameMapSegment>* tmap_arg =

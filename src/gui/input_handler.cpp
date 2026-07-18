@@ -855,6 +855,15 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         app.active_audio_view              = 'S';
     }
 
+    // Event-synchronized hit geometry: the live view just flipped, so the
+    // displayed hit map's previous contents describe the OTHER view's last item
+    // pixels. Clear it to the cold live-map fallback for the one tick until the
+    // item caches (stems/flags) adopt the new view's map — the recorded
+    // cold-state seam, not a new one. This is the sole gesture toggle
+    // chokepoint (the `t` key and the settings-editor `active_audio_view=`
+    // commit both route here). Ruling at the selector.
+    app.displayed_target_warp_frame_map.clear();
+
     // The S/T toggle translates the active tab's live playhead across the
     // domain flip; the inactive tab's stored playhead must translate too, or
     // a later Ctrl+Tab loads a stale-domain position that gets read in the

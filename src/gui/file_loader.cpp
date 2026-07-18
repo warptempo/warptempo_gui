@@ -24,6 +24,13 @@
 void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     app.engine_settings = sf.engine;
     app.follow_mode         = sf.follow;
+    // Event-synchronized hit geometry: this routine (re)establishes the live
+    // view from settings — the source-load and `'` adopt paths both call it —
+    // so drop any displayed hit map from the previous file/session. It reflects
+    // the OTHER file's last target item pixels; clearing yields the cold
+    // live-map fallback until the new view's item caches adopt (the recorded
+    // cold-state seam). Ruling at the selector.
+    app.displayed_target_warp_frame_map.clear();
     app.active_audio_view   = sf.active_audio_view;
     app.active_markers_view = sf.active_markers_view;
     app.active_tab_view     = sf.active_tab_view;
@@ -212,11 +219,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.playhead_drag = PlayheadDragState{};
     app.trim_drag = TrimDragState{};
     app.scroll_drag = ScrollDragState{};
-    // Event-synchronized hit geometry: drop the previous file's displayed
-    // target map so a grab before the first target publish never lands on the
-    // old file's coordinate system (cold — the selector falls back to the live
-    // map). Ruling at displayed_or_live_target_map.
-    app.displayed_target_warp_frame_map.clear();
+    // (The displayed hit map is cleared in apply_settings_engine_and_prefs,
+    // the shared load+adopt view-establishment routine, not here.)
     // Project trim is not cleared implicitly by the fresh-ViewState assignment
     // (it lives on AppState now). Reset it explicitly before the initial-playhead
     // read: this is construction-state for the no-.settings / first-open path.

@@ -648,13 +648,18 @@ struct AppState {
     // refreshed from const hit-test paths.
     mutable TargetWarpFrameMapCache target_warp_frame_map_cache;
 
-    // The warp_frame_map the last COMPLETED target-view waveform job painted
-    // with: copied from the job's fp_warp_frame_map at the publish site,
-    // cleared at source load and on waveform-cache teardown. The item hit tests
-    // read it through displayed_or_live_target_map so what you grab is what you
-    // see (event-synchronized hit geometry — the ruling at that selector).
-    // Empty = cold (no target job has published yet); the selector then falls
-    // back to the live display map.
+    // The warp_frame_map the last target-view ITEM caches (stem/flag) baked —
+    // the map the marker/trim stems, flags, and chips the user aims at are
+    // actually painted with. Lifecycle: WRITTEN at item-cache adoption
+    // (maybe_rebuild_stem_cache / maybe_rebuild_flag_cache when a rebuild runs
+    // in target view); CLEARED at source load and `'` adopt (through
+    // apply_settings_engine_and_prefs), at a view toggle
+    // (handle_active_audio_view_toggle), and by any source-view item rebuild
+    // (which shows mapless geometry). Shutdown is terminal — no teardown clear.
+    // The item hit tests read it through displayed_or_live_target_map so what
+    // you grab is what you see (event-synchronized hit geometry — the ruling at
+    // that selector). Empty = cold (no target item cache has adopted yet); the
+    // selector then falls back to the live display map.
     std::vector<WarpFrameMapSegment> displayed_target_warp_frame_map;
 
     // Alt+drag state. Not reset across file loads — explicitly cleared
@@ -1178,21 +1183,23 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y);
 
 // displayed_or_live_target_map: the warp_frame_map the item hit tests decide
-// against — the map the on-screen pixels were painted with, so a grab lands on
-// what is drawn (WYSIWYG grabs). In target view with a non-empty displayed map
-// (app.displayed_target_warp_frame_map, published at waveform completion) it
-// returns that map; otherwise the live display context's map (source view =
-// the live context's identity/empty map, unchanged semantics; target-view cold
-// = the live map until the first publish).
+// against — the map the aimed-at item pixels (marker/trim stems, flags, chips)
+// were painted with, so a grab lands on what is drawn (WYSIWYG grabs). In
+// target view with a non-empty displayed map (app.displayed_target_warp_frame_map,
+// advanced when the STEM/FLAG item caches adopt a rebuild, not at the plate
+// publish) it returns that map; otherwise the live display context's map
+// (source view = the live context's identity/empty map, unchanged semantics;
+// target-view cold = the live map until the first item-cache adoption).
 //
 // EVENT-SYNC RULING: hit DECISIONS read the pixels' map, so hit geometry flips
-// at the exact instant the drawing flips, at any refresh rate. Gesture
-// MECHANICS — anchors, walls, motion translation, the release snap, the
-// x-coincidence images — stay on the LIVE map: the display converges to live
-// within the publish interval, and once the pick is made everything downstream
-// is uniformly live. Synchronizing by TIME (a delay) was rejected — the true
-// lag varies through zero with worker load and refresh rate, so any constant
-// would invert the skew in the common fast-publish case.
+// at the exact instant the item pixels flip — the STEM/FLAG cache publication,
+// not the earlier plate publish (the plate can lead the item caches by up to
+// one tick). Gesture MECHANICS — anchors, walls, motion translation, the
+// release snap, the x-coincidence images — stay on the LIVE map: the display
+// converges to live within the rebuild interval, and once the pick is made
+// everything downstream is uniformly live. Synchronizing by TIME (a delay) was
+// rejected — the true lag varies through zero with worker load and refresh
+// rate, so any constant would invert the skew in the common fast-publish case.
 const std::vector<WarpFrameMapSegment>&
 displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 
