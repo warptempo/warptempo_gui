@@ -12,7 +12,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <limits>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -112,7 +111,7 @@ void GuiWarpMarkersOps::drop_marker_at_playhead() {
                 /*scale=*/std::nullopt);
 }
 
-// `Shift+S` (W view): drop an explicit owner that copies the immediate-prior
+// `Alt+S` (W view): drop an explicit owner that copies the immediate-prior
 // marker's effective tempo (base x scale), via the shared resolver also
 // used by the hover popup.
 // Exception: when the prior marker is a label ref, the copy is skipped and a
@@ -153,9 +152,7 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     // the parser resolver normalizes whatever arrangement remains at
     // render/preview time (a missing frame-0 owner gets the silent 1.00
     // seed; a dangling ref becomes a plain 1.00 owner with one stderr line
-    // per timestamp), so the GUI allows every state. Shift+Delete
-    // (force_delete_selected_marker) remains the cascade convenience for
-    // taking a def's refs along with it.
+    // per timestamp), so the GUI allows every state.
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(mv.size())) {
             std::fprintf(stderr,
@@ -171,75 +168,6 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     // Delete in descending order so earlier indices stay valid.
     for (auto it = app.selected_markers.rbegin();
          it != app.selected_markers.rend(); ++it) {
-        app.warpmarkers.remove_marker(*it);
-    }
-    app.selected_markers.clear();
-    app.last_selected_marker = -1;
-    undo.push_undo_warp(std::move(pre_state), hint_last);
-    undo.recompute_dirty();
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
-    // Same discrete-warp_frame_map-change class as drop_marker (see comment
-    // there): re-warp synchronously in target view.
-    if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
-    target_render.trigger();
-}
-
-// Shift+Delete variant. Auto-cascades label_refs of any selected def
-// into the deletion batch, so the user doesn't have to hand-pick each
-// ref before deleting the def. The cascade is a convenience, not a
-// guard: plain Delete on a def is equally legal and simply leaves its
-// refs dangling (loads fine; the resolver normalizes each to a plain
-// 1.00 owner at render/preview time). Any marker — including one at
-// time 0 — may be in the batch; the resolver normalizes the remaining
-// arrangement, so nothing gates the gesture.
-void GuiWarpMarkersOps::force_delete_selected_marker() {
-    if (app.selected_markers.empty()) return;
-    const auto& mv = app.warpmarkers.markers();
-
-    std::set<int> expanded = app.selected_markers;
-    for (int idx : app.selected_markers) {
-        if (idx < 0 || idx >= static_cast<int>(mv.size())) {
-            std::fprintf(stderr,
-                "warptempo_gui: delete rejected: stale selection index\n");
-            return;
-        }
-        if (mv[idx].label_def.empty()) continue;
-        for (size_t i = 0; i < mv.size(); ++i) {
-            if (!mv[i].label_ref.empty() &&
-                mv[i].label_ref == mv[idx].label_def) {
-                expanded.insert(static_cast<int>(i));
-            }
-        }
-    }
-
-    std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
-    int hint_last = app.last_selected_marker;
-    {
-        // Prefer focusing undo on the label_def that drove the cascade.
-        // Refs were pulled into `expanded` automatically; the def is the
-        // action's subject. Search the original selection (not the
-        // expanded batch) so only an explicitly selected def wins.
-        int def_hint = -1;
-        const bool last_is_def =
-            app.last_selected_marker >= 0 &&
-            app.last_selected_marker < static_cast<int>(mv.size()) &&
-            !mv[app.last_selected_marker].label_def.empty() &&
-            app.selected_markers.count(app.last_selected_marker);
-        if (last_is_def) {
-            def_hint = app.last_selected_marker;
-        } else {
-            for (int idx : app.selected_markers) {
-                if (idx >= 0 && idx < static_cast<int>(mv.size()) &&
-                    !mv[idx].label_def.empty()) {
-                    def_hint = idx;   // app.selected_markers is a std::set,
-                    break;            // so iteration is ascending — lowest wins
-                }
-            }
-        }
-        if (def_hint >= 0) hint_last = def_hint;
-    }
-    for (auto it = expanded.rbegin(); it != expanded.rend(); ++it) {
         app.warpmarkers.remove_marker(*it);
     }
     app.selected_markers.clear();

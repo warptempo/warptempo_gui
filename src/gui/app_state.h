@@ -733,7 +733,7 @@ struct AppState {
 
     // Typed engine settings. The live authoring store: settings editor
     // commits, .settings file load, the BPM-sweep scale commit, and the
-    // Shift+. render-commit (adopt_render_entry, a full engine-settings
+    // `'` render-commit (adopt_render_entry, a full engine-settings
     // adopt) all mutate fields of this struct directly. Carried by
     // RenderRequest at dispatch; serialized to .settings on Ctrl+S.
     // Default-constructed before any source load.
@@ -783,7 +783,7 @@ struct AppState {
     text_editor::State settings_editor;
     bool settings_editor_blink_last = false;
 
-    // Render-commit prompt editor. Opens on `Shift+.` from an authoring view,
+    // Render-commit prompt editor. Opens on bare `'` from an authoring view,
     // takes a render entry's identifier relative to renders/
     // (`<batch_dir>/<basename>` or a globally-unique bare basename), and on
     // Enter adopts that render's frozen sidecar recipe as the new authoring
@@ -887,7 +887,7 @@ struct AppState {
     // GuiRendersDir::enumerate_render_entries. Just the three path fields;
     // a render entry's sidecar set (.warpmarkers / .phaseresetmarkers /
     // .settings) is written ONCE at queue/dispatch and never touched again.
-    // Consumed by the `l` listen-to-renders launcher and the Shift+. commit
+    // Consumed by the `l` listen-to-renders launcher and the `'` commit
     // editor (adopt_render_entry).
     struct RenderEntry {
         std::filesystem::path batch_folder;     // <source_parent>/renders/<i>_<tag>
@@ -1057,7 +1057,7 @@ int64_t live_total_frames(const AppState& a, const GuiAudio& audio);
 // Ctrl+Tab restore, and the render-entry adopt's tab bands — so an
 // arbitrary non-negative persisted int64 (the settings schema is
 // load-lenient on view scratch) rests in-domain BEFORE any translation
-// arithmetic (the S/T toggle's double->int64 conversion, Shift+Space's
+// arithmetic (the S/T toggle's double->int64 conversion, Alt+Space's
 // launch offset) can consume it. The clamp reads live_total_frames — the
 // active display context's domain total, source-frame total in source view
 // and target-frame total (cached at `t`-toggle) in target view — so it

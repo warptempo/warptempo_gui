@@ -33,7 +33,7 @@ bool create_if_missing(const std::filesystem::path& p,
 // viewport / zoom / playhead scratch, the read-only flag, and the trim pair.
 // The selection and trim-selection fields take their ViewState defaults (a
 // parsed band carries no selection). One home for the band-to-ViewState
-// field mapping; the sole caller is the Shift+. render-commit
+// field mapping; the sole caller is the `'` render-commit
 // (adopt_render_entry) full-inheritance commit.
 ViewState view_state_from_settings_tab(const SettingsFileTab& t);
 

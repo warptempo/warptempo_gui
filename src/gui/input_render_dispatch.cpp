@@ -306,7 +306,7 @@ void GuiInputHandler::dispatch_next_batch_entry() {
                 batch_.label.c_str(), batch_.rendered, total);
         }
         // A finished batch just leaves its artifacts on disk; nothing
-        // auto-opens. The user presses `l` to listen or Shift+. to commit an
+        // auto-opens. The user presses `l` to listen or `'` to commit an
         // entry by name.
         batch_.active = false;
         batch_.reqs.clear();
@@ -364,7 +364,7 @@ static std::string format_bpm_descriptor(int beats, double bpm,
 // (base_tempo, scale) per cell and rendering one `.wav` per cell into
 // `<source_parent>/renders/<N>_bpm/`. The per-cell engine
 // values land in the per-entry `.settings` sidecar's engine block (written
-// by do_render); the Shift+. render-commit (adopt_render_entry) adopts them
+// by do_render); the `'` render-commit (adopt_render_entry) adopts them
 // when committing a BPM cell. The
 // substantive difference from the iter render handler is per-cell
 // mutation of cell_settings.scale, in addition to per-cell marker mutation.
@@ -497,7 +497,7 @@ bool GuiInputHandler::render_bpm_sweep() {
         EngineSettings cell_settings = app.engine_settings;
         cell_settings.scale = computed->scale;
         // Provenance descriptor for this cell's per-entry .settings; promoted
-        // verbatim into the source .settings on the Shift+. render-commit
+        // verbatim into the source .settings on the `'` render-commit
         // (adopt_render_entry).
         cell_settings.bpm =
             format_bpm_descriptor(

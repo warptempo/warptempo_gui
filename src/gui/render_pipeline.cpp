@@ -346,14 +346,14 @@ RenderOutcome do_render(const RenderRequest& req,
             note_created(tm_path, existed);
 
             // `.settings` sidecar: the SAME standard whole-file schema a
-            // source carries, so the Shift+. render-commit (adopt_render_entry)
+            // source carries, so the `'` render-commit (adopt_render_entry)
             // adopts it with plain load semantics.
             {
                 // The commit tab (named by active_tab_view) seeds the
                 // queue/dispatch-moment position that built this render
                 // (req.authoring's captured view keys), on the TARGET axis.
                 // This file is written ONCE here and never touched again: the
-                // Shift+. commit (adopt_render_entry) reads the whole frozen
+                // `'` commit (adopt_render_entry) reads the whole frozen
                 // file back as the session, so these keys land in the committed
                 // target view THROUGH the file — the commit adopts the file,
                 // never a separate live latch. Those keys are captured on
@@ -510,7 +510,7 @@ RenderOutcome do_render(const RenderRequest& req,
             return RenderOutcome::Failed;
         }
         // The fingerprint plus the commit-critical sidecars just
-        // (re)published above are the whole reuse condition: the Shift+.
+        // (re)published above are the whole reuse condition: the `'`
         // commit derives everything it adopts from the snapshot set, so there
         // is nothing else the entry needs on disk.
         return finish_success("reused_up_to_date");

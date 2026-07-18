@@ -487,12 +487,12 @@ private:
     // of `key=` from the key's current stored value.
     bool handle_settings_editor_key(GuiKey key, GuiInputState mods);
 
-    // Render-commit prompt (Shift+.). A bottom-strip modal editor, structural
+    // Render-commit prompt (bare `'`). A bottom-strip modal editor, structural
     // sibling of the settings editor: it takes a render entry's identifier
     // relative to renders/ and, on Enter, adopts that render's frozen sidecar
     // recipe as the new authoring baseline through adopt_render_entry.
     //
-    // open_commit_editor: Shift+. opener (no-op with no source or over render
+    // open_commit_editor: bare `'` opener (no-op with no source or over render
     // view; refuses to open over an empty renders/). commit_editor_autocomplete:
     // bare-Tab longest-common-prefix completion over the entry identifiers.
     // commit_editor_commit: resolve the pending to exactly one entry and adopt.
@@ -516,22 +516,30 @@ private:
     // Side-parameterized helpers shared by the trim entry points below.
     enum class TrimSide { Begin, End };
 
-    // Plain x: set the begin bound at the playhead (exact int64 frame)
-    // and autoset the end bound half of the visible span later. Only the
-    // autoset PARTNER (end) is placement-clamped to [0, live EOF] in the active
-    // domain — a choice of where to put the bound the user did not position,
-    // not a wall (see the definition in input_trim.cpp). Begin-only: the x key
-    // is the sole caller.
+    // Bare x, context-aware: playhead exactly on either set bound or strictly
+    // inside a fully-set trim pair clears both bounds; anywhere else sets begin
+    // at the playhead and autosets end. Source-domain exact frame comparison
+    // (the walls'/load-guard's own compare); "inside" needs both bounds,
+    // strictly between. The sole dispatch entry for the x key; it calls
+    // handle_trim_set_begin_autoset / handle_trim_clear_both.
+    void handle_trim_x();
+
+    // Set the begin bound at the playhead (exact int64 frame) and autoset the
+    // end bound half of the visible span later. Only the autoset PARTNER (end)
+    // is placement-clamped to [0, live EOF] in the active domain — a choice of
+    // where to put the bound the user did not position, not a wall (see the
+    // definition in input_trim.cpp). Begin-only: handle_trim_x's set arm is the
+    // sole caller.
     void handle_trim_set_begin_autoset();
 
-    // Shift+x: clear both trim bounds unconditionally. Silent no-op when
-    // neither bound is set.
+    // Clear both trim bounds unconditionally. Silent no-op when neither bound
+    // is set. The caller is handle_trim_x's clear arm.
     void handle_trim_clear_both();
 
-    // Field-reset core shared by Shift+x (handle_trim_clear_both) and the
-    // crossed-commit auto-clear below: unset both bounds, zero both frames,
-    // drop both trim selections and last_selected_trim. No invalidation and
-    // no trigger — callers own their repaint tail. One implementation so
+    // Field-reset core shared by handle_trim_clear_both (the x key's clear arm)
+    // and the crossed-commit auto-clear below: unset both bounds, zero both
+    // frames, drop both trim selections and last_selected_trim. No invalidation
+    // and no trigger — callers own their repaint tail. One implementation so
     // the two clears can never drift.
     void clear_trim_bounds();
 

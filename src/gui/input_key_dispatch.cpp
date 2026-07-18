@@ -81,8 +81,8 @@ bool spawn_audio_player(const std::string& player,
 // Source-view read-only allowlist. True when key+mods is not on the allowlist
 // and should be dropped.
 // Authoring-mutation chords are blocked here at the gate, not admitted for a
-// deeper owner refusal: undo/redo (Ctrl+Z / Ctrl+Shift+Z), the trim gestures
-// (x / Shift+X), Delete, and every propagate command all drop at this gate.
+// deeper owner refusal: undo/redo (Ctrl+Z / Ctrl+Shift+Z), the trim gesture
+// (x), Delete, and every propagate command all drop at this gate.
 // Ctrl+S (save) is likewise NOT on the allowlist: read-only means no save, so
 // it drops here like the authoring chords. Gesture-owned state changed in a
 // locked tab (the read-only flag, trim, view state, font size, playback speed)
@@ -145,7 +145,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // tab (Ctrl+Tab) — accepted for gate legibility, so that authoring
     // mutations stop uniformly at the gate. The target-tab peek in undo.cpp
     // survives as a backstop for entries that outlive a mid-history lock.
-    // The trim gestures (x / Shift+X), Delete, and the propagate copy/paste
+    // The trim gesture (x), Delete, and the propagate copy/paste
     // chords are likewise absent (blocked here).
     return !(is_o || is_play_pause || is_scrub ||
              is_home_end || is_page_updown ||
@@ -396,7 +396,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // `<N>.wav` inside that folder. Because the target is a batch folder,
     // do_render writes the FULL entry sidecar set (.warpmarkers /
     // .phaseresetmarkers / .settings / .fingerprint), so each misc cell is a
-    // first-class `l`-auditionable, `Shift+.`-adoptable entry. Repeat presses
+    // first-class `l`-auditionable, `'`-adoptable entry. Repeat presses
     // with unchanged state are DELIBERATE — each is an explicit command that
     // produces one more cell; identical bytes come cheap from do_render's reuse
     // rungs (render_cache, then the on-disk artifact against its .fingerprint).
@@ -645,7 +645,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
                 // in the one integer-cents domain, so the sum is plain
                 // integer addition and the cell sidecar's N.NN spelling
                 // re-parses to exactly this value — render-entry promotion
-                // (Shift+.) stays closed under the grammar by type.
+                // (the `'` commit) stays closed under the grammar by type.
                 cell_warp_markers[mi].tempo_cents =
                     base_warp_markers[mi].tempo_cents +
                     per_marker_delta_cents[k][indices[k]];
@@ -709,13 +709,13 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 // so the id is unique by filesystem construction; Tab autocomplete then
 // discriminates on the short leading batch-folder name instead of deep value
 // decimals inside near-identical cell basenames, and the painted
-// `commit: ./renders/<id>` line is the entry's real on-disk path. The Shift+.
+// `commit: ./renders/<id>` line is the entry's real on-disk path. The `'`
 // commit editor resolves the typed identifier against these strings.
 static std::string render_entry_id(const AppState::RenderEntry& e) {
     return e.batch_folder.filename().string() + "/" + e.basename + ".wav";
 }
 
-// -- Standalone render-entry adoption (the Shift+. commit editor) --------
+// -- Standalone render-entry adoption (the `'` commit editor) --------
 //
 // Adopt render entry `e`'s frozen sidecar recipe as the new authoring
 // baseline, view-agnostic: callable from source OR target authoring view. It
@@ -732,7 +732,7 @@ static std::string render_entry_id(const AppState::RenderEntry& e) {
 bool GuiInputHandler::adopt_render_entry(
         const AppState::RenderEntry& e) {
     // Self-guard on the standalone mutator: a successful adopt wipes renders/,
-    // which must never race a batch publishing into it. The Shift+. opener
+    // which must never race a batch publishing into it. The `'` opener
     // already refuses on this same condition, so the keyboard route never
     // reaches here; this backstop protects any other caller.
     if (app.queue_running || app.pending_archival.armed) return false;
@@ -918,7 +918,7 @@ bool GuiInputHandler::adopt_render_entry(
     return true;
 }
 
-// Open the Shift+. render-commit prompt. No-op with no source loaded. An empty
+// Open the `'` render-commit prompt. No-op with no source loaded. An empty
 // renders/ reports a one-line bottom-strip status and does not open. Stops
 // playback only when the modal actually opens (after every guard), so a
 // refused open leaves a listening session running.

@@ -26,7 +26,7 @@ enum class RenderOutcome { Success, Failed, Cancelled };
 // Authoring-state snapshot captured at dispatch time. Sole consumer: the
 // per-entry `.settings` writer inside do_render, which composes the
 // standard whole-file schema from these fields (the commit tab's trim and
-// identity plus the session prefs) so the Shift+. render-commit
+// identity plus the session prefs) so the `'` render-commit
 // (adopt_render_entry) can adopt the entry with plain load semantics. The
 // trim fields duplicate the request's own trim
 // on purpose: the request trim feeds the engine, this block feeds the

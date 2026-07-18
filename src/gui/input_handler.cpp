@@ -171,7 +171,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (handle_settings_editor_key(key, mods)) return;
     }
 
-    // Render-commit prompt editor (`Shift+.` opener). Same modal shape as the
+    // Render-commit prompt editor (bare `'` opener). Same modal shape as the
     // settings editor block above; the two are mutually exclusive in practice
     // (each opener no-ops while the other owns the keyboard). Routed before the
     // queue/drag/playhead Esc handlers so Esc cancels the edit first.
@@ -223,18 +223,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         }
         // A playhead scrub is a navigation gesture, so it alone lets the
-        // two set-marker actions through: bare `s` and Shift+S fall
-        // through to the S handler below to drop a marker / phase reset
-        // at the scrubbed playhead. Ctrl+S (save) stays swallowed, and
-        // the position-editing drags (marker, trim, scroll) swallow
-        // these too — dropping a marker mid-marker-drag would fight the
-        // gesture. The four drag states are mutually exclusive, so
-        // playhead_only is belt-and-suspenders that keeps the intent
-        // explicit.
+        // set-marker actions through: bare `s` and Alt+S fall through to the
+        // S handler below to drop a marker / phase reset at the scrubbed
+        // playhead. Ctrl+S (save) stays swallowed, and the position-editing
+        // drags (marker, trim, scroll) swallow these too — dropping a marker
+        // mid-marker-drag would fight the gesture. The four drag states are
+        // mutually exclusive, so playhead_only is belt-and-suspenders that
+        // keeps the intent explicit.
         const bool playhead_only =
             app.playhead_drag.active && !app.drag.active &&
             !app.trim_drag.active && !app.scroll_drag.active;
-        if (!(playhead_only && !ctrl && !alt && key == GuiKeys::S)) {
+        if (!(playhead_only && !ctrl && key == GuiKeys::S)) {
             return;
         }
     }
@@ -270,7 +269,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // writable tab.
     // Authoring-mutation chords are BLOCKED at this gate, not admitted for a
     // deeper refusal: the marker / tempo / phase-reset drop / nudge /
-    // status-toggle chords, the trim gestures (x / Shift+x), Delete, the
+    // status-toggle chords, the trim gesture (x), Delete, the
     // propagate copy/paste (Ctrl+P and the Ctrl+Alt+P pair), and undo/redo
     // (Ctrl+Z / Ctrl+Shift+Z) all drop here. This gate is the ONLY read-only
     // guard on the keyboard path; the surviving deeper checks each cover a
@@ -325,18 +324,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Render-trigger chords: Ctrl+Alt+R single render, Ctrl+Alt+Shift+R
     // miscellaneous render, Ctrl+Alt+I iteration sweep. (The render-commit
-    // chord is Shift+., handled separately below.)
+    // opener is bare `'`, handled separately below.)
     if (handle_render_dispatch_keys(key, mods)) return;
 
-    // Shift+Space in actual target view, phase-reset mode: non-destructive
+    // Alt+Space in actual target view, phase-reset mode: non-destructive
     // audition of the OLA/Hann synthesis lead-in. Launches the playback scanner
     // N/2 output samples AHEAD of the resting playhead (full-scale point of a
     // reset dropped at the playhead) without moving the cursor, so stop snaps
     // the scanner back to where it was. Placed BEFORE the modifier-independent
-    // is_play_pause_key block, which would otherwise swallow Shift+Space and run
+    // is_play_pause_key block, which would otherwise swallow Alt+Space and run
     // a plain toggle. Restricted to Space (not Return/KpEnter). Source view and
     // warp mode fall through to the normal toggle below.
-    if (key == GuiKeys::Space && shift && !ctrl && !alt &&
+    if (key == GuiKeys::Space && alt && !ctrl && !shift &&
         app.active_markers_view == 'P' &&
         app.active_audio_view == 'T') {
         // Mirror the plain-Space target gate: refuse Space-to-play while a
@@ -401,26 +400,26 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // The platform boundary case-folds letters and delivers the
     // unshifted GuiKey, so a Shift+letter press arrives as the lowercase
     // GuiKeys::* with mods.shift set — disambiguate via the `shift` bool.
-    if (key == GuiKeys::S && !alt) {
-        if (ctrl && !shift)              save_ops.save();
-        else if (!ctrl && !shift &&
+    if (key == GuiKeys::S) {
+        // bare `s` = plain drop, Alt+S = augmented drop; the same bare/Alt
+        // plain/augmented split in both views. In P view the augmented drop is
+        // the target-view lead-in reset — a reset dropped N/2 before the
+        // playhead so its lead-in output reaches full scale at the playhead
+        // (the perceived transient). It exists only in target view, where the
+        // output-domain overlay/lead-in it aligns to lives, so source-view
+        // Alt+S in P mode stays a no-op (falls through). In W view bare `s`
+        // drops a plain neutral 1.00 owner and Alt+S drops an augmented owner
+        // that copies the immediate-prior marker's effective tempo. Ctrl+S
+        // saves; a Shift-modified `s` is unbound (a consumed no-op here).
+        if (ctrl && !shift && !alt)              save_ops.save();
+        else if (!ctrl && !shift && !alt &&
                  app.active_markers_view == 'P') phase_resets.drop_phase_reset_at_playhead();
-        // Shift+S in actual target view, phase-reset mode: drop a reset N/2
-        // before the playhead so its lead-in output reaches full scale at the
-        // playhead (the perceived transient). Target view only — the output-
-        // domain overlay/lead-in this aligns to does not exist in source view,
-        // where Shift+S in P-mode stays a no-op (falls through).
-        else if (!ctrl && shift &&
+        else if (alt && !ctrl && !shift &&
                  app.active_markers_view == 'P' &&
-                 app.active_audio_view == 'T')
-            phase_resets.drop_phase_reset_lead_in_at_playhead();
-        // Warp view: bare `s` drops a plain neutral 1.00 owner, Shift+S
-        // drops an augmented owner that copies the immediate-prior
-        // marker's effective tempo — the same bare/Shift plain/augmented
-        // split as the phase-reset branches above.
-        else if (!ctrl && !shift &&
+                 app.active_audio_view == 'T')   phase_resets.drop_phase_reset_lead_in_at_playhead();
+        else if (!ctrl && !shift && !alt &&
                  app.active_markers_view == 'W') warpops.drop_marker_at_playhead();
-        else if (!ctrl && shift &&
+        else if (alt && !ctrl && !shift &&
                  app.active_markers_view == 'W') warpops.drop_copy_previous_at_playhead();
         return;
     }
@@ -440,7 +439,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         else                        warpops.toggle_disabled();
         return;
     }
-    if (key == GuiKeys::Delete && !ctrl && !alt) {
+    if (key == GuiKeys::Delete && !ctrl && !alt && !shift) {
         // Delete acts on the group named by last_sel_group. With
         // a trim boundary last-selected, clear the selected bound(s) and
         // leave markers untouched; otherwise the marker-delete runs. No
@@ -455,8 +454,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             phase_resets.delete_selected_phase_reset();
             return;
         }
-        if (shift) warpops.force_delete_selected_marker();
-        else       warpops.delete_selected_marker();
+        warpops.delete_selected_marker();
         return;
     }
 
@@ -482,40 +480,36 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         viewport.zoom_out(); return;
     }
 
-    // x sets the begin trim at the playhead and autosets end half of the
-    // visible span away.
-    // Shift+x clears both bounds. The end bound keeps its mouse operations
-    // (Alt+drag single, Ctrl+Alt+drag pair, select+Delete).
-    // Plain Ctrl+x is cut (text_editor.cpp) and stays unbound here.
+    // x is context-aware: on or inside a set trim it clears both bounds,
+    // elsewhere it sets begin at the playhead and autosets end half of the
+    // visible span away. The end bound keeps its mouse operations (Alt+drag
+    // single, Ctrl+Alt+drag pair, select+Delete). Plain Ctrl+x is cut
+    // (text_editor.cpp) and stays unbound here.
     if (!ctrl && !shift && !alt && key == GuiKeys::X) {
-        handle_trim_set_begin_autoset();
-        return;
-    }
-    if (shift && !ctrl && !alt && key == GuiKeys::X) {
-        handle_trim_clear_both();
+        handle_trim_x();
         return;
     }
 
-    // `:` opens the settings prompt in the bottom strip. Keyboard-only
+    // Bare `;` opens the settings prompt in the bottom strip. Keyboard-only
     // (no click analogue). The active-editor block at the top of on_key
     // routes subsequent keystrokes; opening here just primes the State.
     // The settings editor is a modal bottom-strip surface: stop playback
     // at its open. Space is inside the modal blocked set, so playback
     // cannot restart until the editor closes.
-    if (key == GuiKeys::Semicolon && shift && !ctrl && !alt) {
+    if (key == GuiKeys::Semicolon && !shift && !ctrl && !alt) {
         playback_lifecycle.stop_playback_if_playing();
         settings_editor.open();
         return;
     }
 
-    // `Shift+.` opens the render-commit prompt in the bottom strip: commit a
+    // Bare `'` opens the render-commit prompt in the bottom strip: commit a
     // chosen render as the new authoring baseline by NAME. Keyboard-only. A
     // modal bottom-strip surface. open_commit_editor owns the no-source /
     // empty-renders guards AND the playback stop: playback halts only when the
     // modal actually opens, so a refused open leaves a listening session
     // undisturbed (once open, Space is inside the modal blocked set, so
     // playback cannot restart until the editor closes).
-    if (key == GuiKeys::Period && shift && !ctrl && !alt) {
+    if (key == GuiKeys::Apostrophe && !shift && !ctrl && !alt) {
         open_commit_editor();
         return;
     }

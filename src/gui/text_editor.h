@@ -48,7 +48,7 @@ constexpr int kMaxPendingCharsBpm = 60;
 // and persists unchanged, and can be shortened, but the editor will not grow
 // any pending past the cap.
 constexpr int kMaxPendingCharsSettings = 1024;
-// Render-commit prompt (Shift+.). Holds a render entry's identifier relative
+// Render-commit prompt (bare `'`). Holds a render entry's identifier relative
 // to renders/ — `<batch_dir>/<basename>` (e.g. `1_iterations/01`) or a
 // bare basename. Program-written batch/entry names are short; 256 is a
 // generous ceiling for the relative path a user types or Tab-completes.

@@ -36,7 +36,7 @@ struct GuiPlaybackLifecycle {
     // launch_offset shifts the SCANNER's launch position (and the play() launch
     // bound) forward in the active paint domain WITHOUT moving the resting
     // cursor, so stop snaps the scanner back onto the unmoved cursor. Non-zero
-    // only for the target-view Shift+Space audition (start from cursor + N/2);
+    // only for the target-view Alt+Space audition (start from cursor + N/2);
     // the default 0 keeps plain Space and every other caller byte-identical.
     // The offset is applied only in the target-view branch; the offset launch
     // is re-validated against the target buffer's domain, so an offset landing

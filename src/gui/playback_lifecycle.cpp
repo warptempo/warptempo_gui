@@ -108,7 +108,7 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         // buffer" — not domain math; the domain range policy follows.)
         if (app.target_buffer_frames <= 0) return;
         // Launch = cursor + launch_offset. The offset is 0 for plain Space and
-        // +N/2 for the Shift+Space lead-in audition; the resting cursor is never
+        // +N/2 for the Alt+Space lead-in audition; the resting cursor is never
         // moved either way, so stop snaps the scanner back onto it. Validate the
         // OFFSET launch (not the bare cursor) against the bound target buffer's
         // target-domain extent: a launch outside it — including cursor + N/2 at

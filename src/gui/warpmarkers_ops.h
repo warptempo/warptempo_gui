@@ -55,7 +55,6 @@ struct GuiWarpMarkersOps {
     void drop_marker_at_playhead();
     void drop_copy_previous_at_playhead();
     void delete_selected_marker();
-    void force_delete_selected_marker();
     void toggle_inherits();
     void toggle_disabled();
     // Steps the focused marker's tempo by `delta_cents` integer cents (one

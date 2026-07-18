@@ -39,10 +39,10 @@ namespace {
 constexpr int64_t kTrimAutosetVisibleDivisor = 2;
 }
 
-// Plain x. Sets the begin bound at the playhead and autosets the end bound
-// half of the visible span LATER. Begin-only by construction: the sole caller
-// is the x key (input_handler.cpp), which always places begin and pushes end
-// later, so there is no side parameter — the partner is always End.
+// Sets the begin bound at the playhead and autosets the end bound half of the
+// visible span LATER. Begin-only by construction: the sole caller is
+// handle_trim_x's set arm, which always places begin and pushes end later, so
+// there is no side parameter — the partner is always End.
 void GuiInputHandler::handle_trim_set_begin_autoset() {
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
 
@@ -131,10 +131,10 @@ void GuiInputHandler::handle_trim_unset(TrimSide side) {
     target_render.trigger();
 }
 
-// The clear-both field resets, shared verbatim by Shift+x
-// (handle_trim_clear_both) and the crossed-commit auto-clear
-// (auto_clear_crossed_trim) so the two clears can never drift. Fields only:
-// no invalidation, no trigger — callers own their repaint tail.
+// The clear-both field resets, shared verbatim by handle_trim_clear_both (the
+// x key's clear arm) and the crossed-commit auto-clear (auto_clear_crossed_trim)
+// so the two clears can never drift. Fields only: no invalidation, no trigger —
+// callers own their repaint tail.
 void GuiInputHandler::clear_trim_bounds() {
     app.trim.has_begin      = false;
     app.trim.has_end        = false;
@@ -163,8 +163,9 @@ void GuiInputHandler::auto_clear_crossed_trim() {
     }
 }
 
-// Shift+x: clear both trim bounds unconditionally. Silent no-op when neither
-// bound is set. Trim is gesture-owned and excluded from undo/redo history.
+// Clear both trim bounds unconditionally. Silent no-op when neither bound is
+// set. The caller is handle_trim_x's clear arm. Trim is gesture-owned and
+// excluded from undo/redo history.
 void GuiInputHandler::handle_trim_clear_both() {
     if (app.trim.has_begin || app.trim.has_end) {
         clear_trim_bounds();
@@ -172,6 +173,28 @@ void GuiInputHandler::handle_trim_clear_both() {
         viewport.invalidate_timestamp_area();
         target_render.trigger();
     }
+}
+
+// Bare x, context-aware. Playhead exactly on either set bound, or strictly
+// inside a fully-set trim pair, clears both bounds; anywhere else sets begin at
+// the playhead and autosets end. The comparison is in the SOURCE domain — exact
+// integer frame equality, the walls'/load-guard's own compare — after mapping
+// the active-domain playhead back to a source frame. "inside" needs BOTH bounds
+// (an area), strictly between them; a single set bound clears only by exact
+// coincidence, and any other position autosets over it. Clearing routes through
+// handle_trim_clear_both so the one clear+repaint tail is shared.
+void GuiInputHandler::handle_trim_x() {
+    if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
+    const int64_t ph_src =
+        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
+    const bool on_bound =
+        (app.trim.has_begin && ph_src == app.trim.begin_frame) ||
+        (app.trim.has_end   && ph_src == app.trim.end_frame);
+    const bool inside =
+        app.trim.has_begin && app.trim.has_end &&
+        ph_src > app.trim.begin_frame && ph_src < app.trim.end_frame;
+    if (on_bound || inside) { handle_trim_clear_both(); return; }
+    handle_trim_set_begin_autoset();
 }
 
 // --- Trim boundary mouse gestures ---------------------------------------

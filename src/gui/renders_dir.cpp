@@ -9,7 +9,7 @@
 
 // Renders-folder enumeration: the flat list of valid render entries under
 // <source_parent>/renders/, plus the per-entry .settings path helper. The `l`
-// launcher and the Shift+. commit editor call them.
+// launcher and the `'` commit editor call them.
 
 // Enumerate the flat render-entry list under <source_parent>/renders/.
 // Returns an empty vector if no source path is set or if the renders root
@@ -88,7 +88,7 @@ GuiRendersDir::enumerate_render_entries() {
 // The entry's <basename>.settings path, beside its wav. The .settings snapshot
 // is frozen at dispatch (the dispatch writer writes it once, seeding the
 // queue/dispatch-moment tab/zoom/viewport/playhead/W-P) and never rewritten;
-// the Shift+. commit reads it to inherit that queue-moment recipe wholesale.
+// the `'` commit reads it to inherit that queue-moment recipe wholesale.
 std::filesystem::path GuiRendersDir::settings_path(
         const AppState::RenderEntry& e) {
     return e.batch_folder / (e.basename + ".settings");
