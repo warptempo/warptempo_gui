@@ -20,6 +20,9 @@ struct RenderFileIdentity {
 // Render fingerprints identify the source by size and mtime only. Folding in
 // content identity would bump the fingerprint content version and invalidate
 // every archival sidecar, so size and mtime are the source trust boundary.
+// Distinct from ArtifactStatIdentity below: this is the PERSISTED recipe-key
+// identity of the SOURCE, serialized into the fingerprint (the coarseness is
+// deliberate and version-load-bearing); the two are never interconverted.
 bool stat_file_identity(const std::string& path, RenderFileIdentity& out);
 
 // Full stat identity of an on-disk file at a single instant: device, inode,
@@ -28,6 +31,9 @@ bool stat_file_identity(const std::string& path, RenderFileIdentity& out);
 // exact wav object the sidecar validated (the TOCTOU guard: atomic
 // publication of each file does not make the wav/sidecar pair atomic across
 // concurrent GUI/CLI processes).
+// Distinct from RenderFileIdentity above: this is the EPHEMERAL TOCTOU race
+// token on an OUTPUT wav, re-compared after the read/copy and never
+// serialized; the two are never interconverted.
 struct ArtifactStatIdentity {
     uint64_t dev      = 0;
     uint64_t inode    = 0;

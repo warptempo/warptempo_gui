@@ -53,15 +53,16 @@ std::string render_staging_path(const std::string& final_path);
 // fallback that catches the not-yet-written output that will land on the
 // source. An empty source path yields nullopt.
 //
-// Four boundary callers refuse a collision at their own surface: the settings
-// editor at commit (the colliding state is GUI-uncommittable), the GUI loader
-// and the warptempo_cli loader at load (a hand-edited sidecar composing the
-// output onto the source is adversarial — refused first-error, stderr-only, in
-// both products so a file set is loadable in both or neither), and the
-// Shift+. render-commit pre-mutation guard (a hand-edited entry .settings that
-// composes onto the source aborts before the first marker or AppState
-// mutation). Separately, the render worker is the breach backstop: it composes
-// batch-folder paths too and keeps its own exists-gated check.
+// Three boundary callers refuse a collision at their own surface: the settings
+// editor at commit (the colliding state is GUI-uncommittable), and the GUI
+// loader and the warptempo_cli loader at load (a hand-edited sidecar composing
+// the output onto the source is adversarial — refused first-error, stderr-only,
+// in both products so a file set is loadable in both or neither). The Shift+.
+// render-commit adopt needs no check of its own: entry sidecars are trusted,
+// written once from an already-checked live store. Separately, the render
+// worker is the breach backstop — its own inode-level check, not this
+// predicate: it composes batch-folder paths too and covers write-time races
+// only the worker can see, keeping its own exists-gated check.
 std::optional<std::filesystem::path> render_output_source_collision(
     const EngineSettings& es,
     const std::string& source_audio_path);

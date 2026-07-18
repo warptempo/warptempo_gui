@@ -1,10 +1,10 @@
 #include "synthesis.h"
 #include <algorithm>
-#include <cassert>
 #include <condition_variable>
 #include <cmath>
 #include <complex>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -646,7 +646,16 @@ void Synthesis::synthesize_full(
         std::vector<float> inter(static_cast<size_t>(out_frames) * channels);
         for (int ch = 0; ch < channels; ++ch) {
             const std::vector<float>& m = mono[ch];
-            assert(static_cast<int64_t>(m.size()) >= out_frames);
+            // Always-on (not an assert — Release is the shipped build);
+            // breach-only — the emission accounting upstream sizes the buffer,
+            // so a breach here would be a silent buffer overrun, the class the
+            // engine owns loudly.
+            if (static_cast<int64_t>(m.size()) < out_frames) {
+                std::fprintf(stderr,
+                             "warptempo_gui: synthesis output buffer shorter "
+                             "than the frame emission; internal breach\n");
+                std::abort();
+            }
             for (int64_t f = 0; f < out_frames; ++f)
                 inter[static_cast<size_t>(f) * channels + ch] = m[static_cast<size_t>(f)];
         }
