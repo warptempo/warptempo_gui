@@ -264,8 +264,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         bool in_click_region = false;
         // A trim-boundary press is consumed only for its recognized gestures:
         // a Ctrl-exact reposition-drag, a Ctrl+Shift move-both-bounds drag, or
-        // a plain / Shift select+navigate. Alt is reserved for panning
-        // (Alt+drag over a trim stem pans, ignoring the boundary). Any other
+        // a plain / Shift select+navigate. Alt is never a trim gesture: it is
+        // routed by the marker hit test, and a trim stem is not a marker stem,
+        // so Alt+drag over a trim stem pans (ignoring the boundary). Any other
         // unrecognized combo falls through to no-op at the strict guard below.
         const bool trim_gesture = !alt;
         if (inside_waveform) {
@@ -314,14 +315,30 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (!in_click_region) return;
 
         if (alt && !ctrl && !shift) {
-            // Alt+drag (exact) pans the viewport — a stepped scroll-drag on the
-            // waveform, regardless of whether the press landed on a marker, so a
-            // pan never grabs a marker. No-op in the top strip; the scroll
-            // happens on motion. The scroll-drag only moves the viewport, so it
-            // is allowed in read-only. It deliberately does NOT override follow
-            // mode: a pan during playback moves the view along with the audio
-            // rather than signaling a stop, unlike the marker / trim / playhead
-            // drags, which override follow for the session.
+            // Alt+drag (exact) is hit-area-dependent. On a marker stem or flag
+            // (hit >= 0) in a writable tab it begins the marker reposition
+            // drag, identical to the Ctrl+drag route below; elsewhere on the
+            // waveform it pans (a stepped scroll-drag). Read-only tabs take the
+            // pan arm everywhere: the marker-drag arm is a mutation gesture and
+            // does not exist there, keeping Alt fully navigation-class in
+            // read-only (no per-stem dead zone). The marker-drag arm mirrors
+            // Ctrl and overrides follow when playing; the pan does not.
+            if (hit >= 0 && !active_view_state(app).read_only) {
+                // begin_drag preserves the multi-selection if `hit` is in it,
+                // else collapses to just `hit`. Motion decides whether it
+                // actually becomes a drag vs. a plain click.
+                const bool was_playing_alt = playback.is_playing();
+                marker_drag.begin_drag(hit, x);
+                if (was_playing_alt)
+                    app.follow_overridden_for_session = true;
+                return;
+            }
+            // Pan: a no-op in the top strip; the scroll happens on motion. The
+            // scroll-drag only moves the viewport, so it is allowed in
+            // read-only. It deliberately does NOT override follow mode: a pan
+            // during playback moves the view along with the audio rather than
+            // signaling a stop, unlike the marker / trim / playhead drags,
+            // which override follow for the session.
             if (inside_waveform) {
                 app.scroll_drag.active = true;
                 app.scroll_drag.last_x = x;
@@ -331,12 +348,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
         if (ctrl && !alt && !shift && hit >= 0) {
             // Ctrl+drag (exact) on a marker repositions it (the mouse
-            // counterpart of the Ctrl+Left / Ctrl+Right nudge). Ctrl is the
-            // marker modifier; panning is Alt+drag. Ctrl on empty waveform is
-            // not a gesture and no-ops at the strict guard below. The marker
-            // drag mutates marker positions, so read-only refuses the
-            // drag-begin (app.drag.active never enters flight state; motion /
-            // release / Escape paths all short-circuit on !app.drag.active).
+            // counterpart of the Ctrl+Left / Ctrl+Right nudge). Alt+drag on a
+            // marker begins the same reposition (the branch above); both
+            // routes share begin_drag. Ctrl on empty waveform is not a gesture
+            // and no-ops at the strict guard below. The marker drag mutates
+            // marker positions, so read-only refuses the drag-begin (app.drag.
+            // active never enters flight state; motion / release / Escape paths
+            // all short-circuit on !app.drag.active).
             if (active_view_state(app).read_only) {
                 return;
             }
@@ -350,11 +368,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
 
-        // Strict modifier matching: pan is Alt-exact and marker reposition is
-        // Ctrl-exact (both handled above). Any remaining modifier combination
-        // — Ctrl on empty, Ctrl+Alt, Shift+Alt, Ctrl+Shift, ... — is not a
-        // recognized waveform gesture and no-ops here. Only the plain or
-        // Shift-modified base press proceeds (Shift adjusts the selection).
+        // Strict modifier matching: Alt-exact is hit-routed (marker drag on a
+        // marker in a writable tab, else pan) and Ctrl-exact on a marker
+        // repositions it (both handled above). Any remaining modifier
+        // combination — Ctrl on empty, Ctrl+Alt, Shift+Alt, Ctrl+Shift, ... —
+        // is not a recognized waveform gesture and no-ops here. Only the plain
+        // or Shift-modified base press proceeds (Shift adjusts the selection).
         if (ctrl || alt) return;
 
         // Plain or Shift press. In the waveform area this starts a
@@ -553,7 +572,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         viewport.clear_hover_popup();
         return;
     }
-    // Ctrl+drag on empty waveform: continuous 1:1 viewport pan. Each motion
+    // Alt+drag on empty waveform: continuous 1:1 viewport pan. Each motion
     // event pans by its per-event pixel delta, nearbyint(dx * samples-per-
     // pixel). The viewport snaps to whole pixels in clamp_viewport_start
     // (reached through scroll_viewport), so a per-event pan re-anchored by that
