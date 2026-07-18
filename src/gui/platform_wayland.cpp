@@ -1429,6 +1429,9 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
     if (key == kLeftClickKey &&
         !(text_editor_active_probe_ && text_editor_active_probe_())) {
         if (!synth_left_held_ && pointer_focused_) {
+            // The synthesized button is a button: this press is a context event
+            // that kills an armed key repeat (layer 1), same as a physical one.
+            repeat_key_ = 0;
             const bool was_held = pointer_left_held_;   // logical, synth is false
             synth_left_held_    = true;
             synth_left_keycode_ = xkb_keycode;
@@ -1445,14 +1448,15 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
     // the application probe under the pre-dispatch context (evaluated before
     // deliver_key runs, so a press that opens an editor is judged pre-open):
     // only held-step gestures and editor typing repeat; every edge-triggered
-    // command is one-shot. An ineligible press disarms any armed repeat. A
-    // repeat acts only while BOTH the press-time eligibility still holds under
-    // the live modifiers AND the arm-time editor context is unchanged — each
-    // fire recomputes modifier bits and codepoint live and revalidates both, so
-    // an editor opening/closing mid-hold (any route, the synthesized `e` click
-    // included), a prompt opening, or a pointer gesture starting all disarm at
-    // the next fire rather than acting in a context that never admitted the
-    // press. The arm-time editor context is captured here for that comparison.
+    // command is one-shot, and an ineligible press disarms any armed repeat.
+    // The repeat contract is two layers: (1) the stored intent dies on ANY
+    // other input event — a different key press re-arms or disarms here via
+    // press-time eligibility, and any pointer-button press (physical or the
+    // synthesized `e`) or wheel emission clears repeat_key_ outright at the
+    // platform input chokepoints; (2) each fire additionally re-checks the
+    // level conditions (eligibility under the live modifiers, and the
+    // editor-active flag still matching its arm-time value). The arm-time
+    // editor flag is captured here for layer (2).
     const bool repeat_ok =
         repeat_eligible_probe_ && repeat_eligible_probe_(key, mods);
     const bool editor_ctx =
@@ -1546,10 +1550,12 @@ void GuiPlatform::maybe_fire_repeat() {
     GuiInputState mods = current_mods();
     if (xkb_state_)
         mods.codepoint = xkb_state_key_get_utf32(xkb_state_, repeat_keycode_);
-    // Revalidate before delivering: a repeat acts only while the press-time
-    // eligibility still holds under the live modifiers AND the editor-context
-    // identity is unchanged. A context change (editor opened/closed, prompt up,
-    // pointer gesture started) or lost eligibility disarms with no fire.
+    // Layer (2) of the repeat contract — layer (1), the event-edge disarms, has
+    // already killed the hold for any intervening pointer-button press or wheel
+    // emission and re-armed/disarmed it for any key press. Re-check the level
+    // conditions before delivering: the press-time eligibility must still hold
+    // under the live modifiers and the editor-active flag must still match its
+    // arm-time value. A mismatch or lost eligibility disarms with no fire.
     const bool editor_ctx =
         text_editor_active_probe_ && text_editor_active_probe_();
     if (editor_ctx != repeat_editor_ctx_ ||
@@ -1616,6 +1622,14 @@ void GuiPlatform::on_pointer_button(uint32_t /*serial*/, uint32_t /*time*/,
     if (!translate_pointer_button(button, mb)) return;
 
     const bool pressed = (state == WL_POINTER_BUTTON_STATE_PRESSED);
+
+    // Any pointer-button press is a context event that kills an armed key
+    // repeat (layer 1 of the repeat contract): the held key's stored intent
+    // must not survive into what the click establishes (a new drag, selection,
+    // or editor focus). Unconditional on the press edge, even when the
+    // left-button logical-edge model swallows this event below — re-pressing
+    // the held key re-arms cleanly.
+    if (pressed) repeat_key_ = 0;
 
     // Left button rides the logical edge model shared with the kLeftClickKey
     // synthesized hold: deliver a press only on the 0->1 edge of
@@ -1782,6 +1796,10 @@ void GuiPlatform::on_pointer_frame() {
         ++steps;
     }
     if (steps > 0 && on_wheel_) {
+        // A wheel emission is a context event that kills an armed key repeat
+        // (layer 1); mere sub-detent accumulation performs no action and does
+        // not disarm.
+        repeat_key_ = 0;
         on_wheel_(dir, steps, pointer_x_, pointer_y_, current_mods());
     }
 

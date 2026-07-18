@@ -261,9 +261,9 @@ void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
                  const std::vector<size_t>& removed,
                  int64_t rightmost) {
             // Prefer the op's subject when it is itself one of the removed
-            // markers, so a cascaded label_def force-delete lands the playhead
-            // on the def rather than the rightmost-in-time ref the cascade
-            // pulled in.
+            // markers, so a multi-selection delete lands the playhead on the
+            // subject the hint names rather than the rightmost-in-time marker
+            // the batch removed.
             const int hi = entry.hint_last_selected;
             for (const size_t i : removed) {
                 if (static_cast<int>(i) == hi) return bef[i].time_frame;

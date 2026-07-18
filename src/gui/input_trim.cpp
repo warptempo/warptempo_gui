@@ -96,9 +96,8 @@ void GuiInputHandler::handle_trim_set_begin_autoset() {
     // short of the buffer start (playback.domain_begin()) and Space no-ops.
     // Playhead domain clamp through clamp_playhead_to_live_domain (the
     // domain ruling): a pin onto trim end at total rests at total - 1.
-    app.playhead_cursor_sample = clamp_playhead_to_live_domain(
-        source_frame_to_active_domain(app, audio, app.trim.begin_frame),
-        app, audio);
+    app.playhead_cursor_sample =
+        playhead_image_of_authored_frame(app, audio, app.trim.begin_frame);
 
     app.trim_begin_selected = true;
     app.trim_end_selected   = true;
@@ -178,12 +177,12 @@ void GuiInputHandler::handle_trim_clear_both() {
 // Bare x, context-aware. Playhead exactly on either set bound, or strictly
 // inside a fully-set trim pair, clears both bounds; anywhere else sets begin at
 // the playhead and autosets end. The coincidence test compares the playhead
-// against each bound's forward-mapped active-domain image CLAMPED through
-// clamp_playhead_to_live_domain — exactly the value every click / Tab-cycle /
-// drag-pin onto a bound assigns the playhead — because the forward/inverse pair
-// is not a round trip on compressed target segments and the end bound's
-// exclusive EOF wall (frame total) maps outside the playhead's [0, total-1]
-// domain. "on the bound" therefore means "at the position landing on the bound
+// against each bound's playhead_image_of_authored_frame — exactly the value
+// every click / Tab-cycle / drag-pin onto a bound assigns the playhead —
+// because the forward/inverse pair is not a round trip on compressed target
+// segments and the end bound's exclusive EOF wall (frame total) maps outside
+// the playhead's [0, total-1] domain. "on the bound" therefore means "at the
+// position landing on the bound
 // puts the playhead", reachable by construction. The inside test uses the
 // UNCLAMPED images (strict betweenness; the edges belong to the coincidence
 // arm), needs BOTH bounds (an area). In source view the forward map is
@@ -204,9 +203,9 @@ void GuiInputHandler::handle_trim_x() {
                                                    app.trim.end_frame);
     const bool on_bound =
         (app.trim.has_begin &&
-         ph == clamp_playhead_to_live_domain(begin_active, app, audio)) ||
+         ph == playhead_image_of_authored_frame(app, audio, app.trim.begin_frame)) ||
         (app.trim.has_end &&
-         ph == clamp_playhead_to_live_domain(end_active, app, audio));
+         ph == playhead_image_of_authored_frame(app, audio, app.trim.end_frame));
     const bool inside =
         app.trim.has_begin && app.trim.has_end &&
         ph > begin_active && ph < end_active;
@@ -295,13 +294,8 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
     // Pre-drag selection/group snapshot for the Esc/Ctrl+Q cancellation
     // restore: first motion collapses the selection onto the grabbed bound (and
     // the pair re-sets the partner), erasing marker selection and setting
-    // last_sel_group = Trim, so cancel puts all six back.
-    app.trim_drag.pre_drag_selected_markers      = app.selected_markers;
-    app.trim_drag.pre_drag_last_selected_marker  = app.last_selected_marker;
-    app.trim_drag.pre_drag_trim_begin_selected   = app.trim_begin_selected;
-    app.trim_drag.pre_drag_trim_end_selected     = app.trim_end_selected;
-    app.trim_drag.pre_drag_last_selected_trim    = app.last_selected_trim;
-    app.trim_drag.pre_drag_last_sel_group        = app.last_sel_group;
+    // last_sel_group = Trim, so cancel puts it back wholesale.
+    app.trim_drag.pre_drag_selection = capture_selection_snapshot(app);
     // Grab anchor: each arm captures exactly what its motion path consumes —
     // the pair path reads anchor_active_frame (active-domain, for the rigid
     // both-bounds delta); the single-bound path reads anchor_frame (source-
@@ -490,9 +484,11 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         // so the bound carries no deformation: new_frame (source-domain)
         // maps straight to the playhead, inverse-translated to target-domain
         // in target view. No predictor resync and no scanner-sample sync,
-        // both matching the marker-drag block — trim drag stopped playback at
-        // begin, so the scanner is inactive and a play reseeks from the
-        // cursor. The invalidate_waveform_area below repaints the playhead
+        // both matching the marker-drag block — a waveform grab can leave
+        // playback alive (only a top-strip press stops it), and under the
+        // split-playhead model the scanner advances independently while motion
+        // moves only the display cursor, so motion neither reseeks nor resyncs.
+        // The invalidate_waveform_area below repaints the playhead
         // columns along with the moved trim shading.
         // Playhead domain clamp through clamp_playhead_to_live_domain (the
         // domain ruling): an end dragged to total pins the playhead to
@@ -566,9 +562,8 @@ void GuiInputHandler::commit_trim_drag() {
             // end on the total deliberately rests the playhead at total - 1.
             const int64_t grabbed_src = app.trim_drag.is_begin
                 ? app.trim.begin_frame : app.trim.end_frame;
-            app.playhead_cursor_sample = clamp_playhead_to_live_domain(
-                source_frame_to_active_domain(app, audio, grabbed_src),
-                app, audio);
+            app.playhead_cursor_sample =
+                playhead_image_of_authored_frame(app, audio, grabbed_src);
         }
         // The release is the commit: a bound released on or across its
         // partner destroys both bounds (crossed/equal cannot rest; ruling at

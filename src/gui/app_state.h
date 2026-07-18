@@ -106,6 +106,21 @@ struct UndoEntry {
 // lands on a trim boundary, Markers when it lands on a marker.
 enum class LastSelGroup { Markers, Trim };
 
+// The selection/group state a pointer drag's first-motion collapse rewrites,
+// captured wholesale at drag begin and restored wholesale at cancellation —
+// one struct so a future selection field cannot be forgotten in one of the
+// copies (the per-field enumeration was the recurring leak). Moved only by
+// capture_selection_snapshot / restore_selection_snapshot (declared below
+// AppState, where its members are complete).
+struct SelectionSnapshot {
+    std::set<int> selected_markers;
+    int           last_selected_marker = -1;
+    bool          trim_begin_selected  = false;
+    bool          trim_end_selected    = false;
+    char          last_selected_trim   = 0;
+    LastSelGroup  last_sel_group       = LastSelGroup::Markers;
+};
+
 // Alt+drag state. `active` gates motion handling; the rest captures the
 // pre-drag snapshot so Escape can restore positions and clamps can be
 // evaluated without re-scanning the marker list on every motion event.
@@ -162,12 +177,7 @@ struct DragState {
     // extended to selection): first motion collapses the selection onto the
     // grabbed marker (set_single_selection), so cancel puts the whole
     // selection/group state back.
-    std::set<int>          pre_drag_selected_markers;
-    int                    pre_drag_last_selected_marker = -1;
-    bool                   pre_drag_trim_begin_selected  = false;
-    bool                   pre_drag_trim_end_selected    = false;
-    char                   pre_drag_last_selected_trim   = 0;
-    LastSelGroup           pre_drag_last_sel_group       = LastSelGroup::Markers;
+    SelectionSnapshot      pre_drag_selection;
     // Index of the marker that was clicked to start the drag. Used to track
     // the playhead during motion so the audio cursor follows the grabbed
     // marker as it moves.
@@ -363,12 +373,7 @@ struct TrimDragState {
     // selection onto the grabbed bound (select_trim_boundary, plus the pair's
     // partner re-set), erasing marker selection and setting last_sel_group =
     // Trim, so cancel puts the whole selection/group state back.
-    std::set<int> pre_drag_selected_markers;
-    int           pre_drag_last_selected_marker = -1;
-    bool          pre_drag_trim_begin_selected  = false;
-    bool          pre_drag_trim_end_selected    = false;
-    char          pre_drag_last_selected_trim   = 0;
-    LastSelGroup  pre_drag_last_sel_group       = LastSelGroup::Markers;
+    SelectionSnapshot pre_drag_selection;
 };
 
 // Alt+drag on empty waveform: continuous 1:1 grab-pan of the viewport,
@@ -989,6 +994,31 @@ inline bool any_pointer_gesture_active(const AppState& app) {
            app.editor_text_drag.active;
 }
 
+// SelectionSnapshot movers: capture the live selection/group state at drag
+// begin, restore it wholesale at cancellation. One place enumerates the fields,
+// so DragState and TrimDragState can never fall out of sync with each other or
+// with a future selection field.
+inline SelectionSnapshot capture_selection_snapshot(const AppState& app) {
+    SelectionSnapshot s;
+    s.selected_markers     = app.selected_markers;
+    s.last_selected_marker = app.last_selected_marker;
+    s.trim_begin_selected  = app.trim_begin_selected;
+    s.trim_end_selected    = app.trim_end_selected;
+    s.last_selected_trim   = app.last_selected_trim;
+    s.last_sel_group       = app.last_sel_group;
+    return s;
+}
+
+inline void restore_selection_snapshot(AppState& app,
+                                       const SelectionSnapshot& s) {
+    app.selected_markers     = s.selected_markers;
+    app.last_selected_marker = s.last_selected_marker;
+    app.trim_begin_selected  = s.trim_begin_selected;
+    app.trim_end_selected    = s.trim_end_selected;
+    app.last_selected_trim   = s.last_selected_trim;
+    app.last_sel_group       = s.last_sel_group;
+}
+
 // Restore ascending time_frame order after a mutation that may have
 // moved markers past their neighbors (shift, nudge, drag commit). The
 // marker stores are always sorted by time_frame at rest; mutations
@@ -1107,6 +1137,21 @@ inline int64_t clamp_playhead_to_live_domain(int64_t frame,
     if (frame < 0) return 0;
     if (frame >= total) return total - 1;
     return frame;
+}
+
+// The playhead position that landing on an authored frame produces: the
+// authored source frame forward-mapped into the active (displayed) domain, then
+// clamped into the playhead's [0, total - 1] live domain. Every equality or
+// landing compare between a STORED AUTHORED position (a marker or trim bound)
+// and the playhead MUST go through this image — the forward/inverse map pair is
+// not a round trip on compressed target segments, and the trim end's exclusive
+// EOF wall (frame total) forward-maps outside the playhead domain, so comparing
+// raw or inverse-mapped frames is the recurring defect class this helper kills.
+inline int64_t playhead_image_of_authored_frame(const AppState& a,
+                                                const GuiAudio& audio,
+                                                int64_t authored_frame) {
+    return clamp_playhead_to_live_domain(source_frame_to_active_domain(
+        a, audio, authored_frame), a, audio);
 }
 
 int     max_valid_numeric_level(int waveform_width_px,

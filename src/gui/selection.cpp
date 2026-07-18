@@ -143,24 +143,19 @@ void Selection::cycle_selection(bool forward) {
     // source_frame_to_active_domain exactly as the marker frames are. The
     // group-order comment below (begin bound, end bound, then markers; the
     // half-open [begin, end) rationale) applies to the authoring views.
-    auto bound_frame = [&](char which) -> int64_t {
-        const int64_t src_f = (which == 'B') ? app.trim.begin_frame
-                                             : app.trim.end_frame;
-        return source_frame_to_active_domain(app, audio, src_f);
-    };
     const bool has_b = app.trim.has_begin;
     const bool has_e = app.trim.has_end;
-    const int64_t bf = has_b ? bound_frame('B') : 0;
-    const int64_t ef = has_e ? bound_frame('E') : 0;
     // Walk positions: a stop's position in the walk is where landing on it puts
-    // the playhead, which every landing clamps through
-    // clamp_playhead_to_live_domain. An end bound at source total maps to a raw
-    // image past the playhead's [0, total - 1] domain, so it walks at its
-    // clamped frame total - 1, not the raw image the scan could never match.
-    // bf_w / ef_w are those clamped positions, used in every comparison below;
-    // raw bf / ef only feed this clamp.
-    const int64_t bf_w = has_b ? clamp_playhead_to_live_domain(bf, app, audio) : 0;
-    const int64_t ef_w = has_e ? clamp_playhead_to_live_domain(ef, app, audio) : 0;
+    // the playhead — playhead_image_of_authored_frame of the bound (the forward
+    // map clamped into the playhead domain). An end bound at source total maps
+    // to a raw image past the playhead's [0, total - 1] domain, so it walks at
+    // its clamped landing frame total - 1, not the raw image the scan could
+    // never match. bf_w / ef_w are those landing positions, used in every
+    // comparison below.
+    const int64_t bf_w = has_b
+        ? playhead_image_of_authored_frame(app, audio, app.trim.begin_frame) : 0;
+    const int64_t ef_w = has_e
+        ? playhead_image_of_authored_frame(app, audio, app.trim.end_frame) : 0;
 
     // Group order within one active-domain frame, forward: begin bound, end
     // bound, then markers by ascending index; backward is the exact reverse

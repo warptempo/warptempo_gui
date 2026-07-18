@@ -160,13 +160,8 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     d.pre_drag_playhead_sample = app.playhead_cursor_sample;
     // Pre-drag selection/group snapshot for the Esc/Ctrl+Q cancellation
     // restore: first motion collapses the selection onto the grabbed marker,
-    // and that collapse is part of the gesture, so cancel restores all six.
-    d.pre_drag_selected_markers      = app.selected_markers;
-    d.pre_drag_last_selected_marker  = app.last_selected_marker;
-    d.pre_drag_trim_begin_selected   = app.trim_begin_selected;
-    d.pre_drag_trim_end_selected     = app.trim_end_selected;
-    d.pre_drag_last_selected_trim    = app.last_selected_trim;
-    d.pre_drag_last_sel_group        = app.last_sel_group;
+    // and that collapse is part of the gesture, so cancel restores it wholesale.
+    d.pre_drag_selection = capture_selection_snapshot(app);
     app.drag = std::move(d);
     viewport.clear_hover_popup();
     return true;

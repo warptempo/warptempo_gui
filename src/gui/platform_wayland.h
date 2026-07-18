@@ -282,10 +282,14 @@ private:
     // repeat_period_us_ is the compositor-advertised inter-repeat interval
     // (1_000_000 / rate), in microseconds.
     // Zero rate means "no repeat" and is honored — held keys do not repeat.
-    // repeat_editor_ctx_ is the arm-time editor-active context (from
-    // text_editor_active_probe_): each fire revalidates it so an editor opening
-    // or closing mid-hold disarms rather than acting in a context that never
-    // admitted the press.
+    // repeat_editor_ctx_ is the arm-time editor-active flag (from
+    // text_editor_active_probe_); each fire re-checks that the live flag still
+    // matches it. This boolean is sufficient because the editor target/session
+    // can only change via a key or pointer-button event, and both kill the hold
+    // outright — a key press re-arms or disarms via press-time eligibility, and
+    // any pointer-button press or wheel emission clears repeat_key_ at the
+    // platform input chokepoints — so no armed hold can straddle a target
+    // change.
     GuiKey        repeat_key_       = 0;
     uint32_t      repeat_keycode_   = 0;
     bool          repeat_editor_ctx_ = false;

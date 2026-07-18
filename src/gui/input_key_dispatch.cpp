@@ -356,12 +356,7 @@ void GuiInputHandler::cancel_active_drags() {
         // Restore the pre-drag selection/group snapshot: the first-motion
         // collapse onto the grabbed marker is part of the gesture and dies with
         // the cancel.
-        app.selected_markers     = app.drag.pre_drag_selected_markers;
-        app.last_selected_marker = app.drag.pre_drag_last_selected_marker;
-        app.trim_begin_selected  = app.drag.pre_drag_trim_begin_selected;
-        app.trim_end_selected    = app.drag.pre_drag_trim_end_selected;
-        app.last_selected_trim   = app.drag.pre_drag_last_selected_trim;
-        app.last_sel_group       = app.drag.pre_drag_last_sel_group;
+        restore_selection_snapshot(app, app.drag.pre_drag_selection);
         if (playback.is_playing()) playback.resync_predictor();
         app.drag = DragState{};
         viewport.invalidate_waveform_area();
@@ -379,20 +374,15 @@ void GuiInputHandler::cancel_active_drags() {
         // Restore the pre-drag playhead, the trim sibling of the marker arm
         // above: motion pinned the playhead onto the grabbed bound, so Esc
         // puts it back where it started. Deliberately unclamped (a previously-
-        // resting in-domain value). The resync line is inert insurance here —
-        // trim drags stop playback at begin — kept for symmetry with the
-        // marker arm.
+        // resting in-domain value). Only a TOP-STRIP trim press stops playback;
+        // a waveform Alt / Ctrl+Alt grab leaves playback alive under the follow
+        // override, so the predictor resync here is live, not a symmetry no-op.
         app.playhead_cursor_sample = app.trim_drag.pre_drag_playhead_sample;
         // Restore the pre-drag selection/group snapshot: the first-motion
         // collapse erased marker selection and pointed last_sel_group at Trim;
         // that collapse dies with the cancel, so follow-up Delete / Alt-arrows
         // do not target the abandoned bound.
-        app.selected_markers     = app.trim_drag.pre_drag_selected_markers;
-        app.last_selected_marker = app.trim_drag.pre_drag_last_selected_marker;
-        app.trim_begin_selected  = app.trim_drag.pre_drag_trim_begin_selected;
-        app.trim_end_selected    = app.trim_drag.pre_drag_trim_end_selected;
-        app.last_selected_trim   = app.trim_drag.pre_drag_last_selected_trim;
-        app.last_sel_group       = app.trim_drag.pre_drag_last_sel_group;
+        restore_selection_snapshot(app, app.trim_drag.pre_drag_selection);
         if (playback.is_playing()) playback.resync_predictor();
         app.trim_drag = TrimDragState{};
         viewport.invalidate_waveform_area();
