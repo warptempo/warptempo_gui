@@ -619,8 +619,8 @@ RenderOutcome do_render(const RenderRequest& req,
         }
 
         // Rung: render cache. A confirmed hit publishes the canonical wav
-        // bytes by direct byte I/O: RAM dumps the blob, disk copies the entry
-        // file after sidecar confirmation. No sample conversion occurs.
+        // bytes by byte-copying the disk entry file after sidecar
+        // confirmation; no sample conversion occurs.
         if (req.render_cache->publish_wav(fingerprint, source_channels_probe,
                                           static_cast<int>(sample_rate),
                                           staging_output_path)) {
