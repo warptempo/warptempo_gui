@@ -132,14 +132,8 @@ RenderOutcome do_render(const RenderRequest& req,
     auto resolved_warp_markers =
         resolve_warp_markers_for_render(slice_to_warp_markers(req.warp_markers),
                                         sample_rate, total_frames);
-    if (!resolved_warp_markers) {
-        std::fprintf(stderr,
-            "warptempo_gui: render error: %s\n",
-            resolved_warp_markers.error().c_str());
-        return RenderOutcome::Failed;
-    }
     auto rfull = build_warp_frame_map(
-        *resolved_warp_markers, scale, sample_rate, total_frames);
+        resolved_warp_markers, scale, sample_rate, total_frames);
     if (!rfull) {
         std::fprintf(stderr,
             "warptempo_gui: render error: map build failed: %s\n",
@@ -497,7 +491,7 @@ RenderOutcome do_render(const RenderRequest& req,
     source_identity.mtime = req.source_load_mtime;
     const std::vector<uint8_t> fingerprint = render_fingerprint(
         req.source_audio_path, source_identity,
-        static_cast<int>(sample_rate), *resolved_warp_markers,
+        static_cast<int>(sample_rate), resolved_warp_markers,
         phase_reset_source_frames,
         req.engine_settings,
         req.has_trim_begin, req.trim_begin_frame,

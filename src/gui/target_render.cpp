@@ -36,16 +36,15 @@ std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
     auto phase_reset_source_frames = build_phase_reset_source_frames(
         slice_to_phase_reset_markers(app.phaseresetmarkers.markers()),
         audio.sample_rate(), audio.total_frames());
-    // The resolver is infallible (its std::expected is signature symmetry with
-    // build_warp_frame_map — zero unexpected returns), and the phase-reset
-    // assembly's only refusal (a past-EOF reset) cannot reach a live store:
-    // gesture walls clamp to total-1 and a past-EOF sidecar is adversarial
-    // load-fatal. So the live fingerprint is always well-formed; .value()
-    // makes a breach loud (bad_expected_access -> terminate) rather than
-    // silently degrading.
+    // The resolver above returns a plain vector — a total normalizer with no
+    // error arm — so it needs no unwrap. The phase-reset assembly keeps its
+    // std::expected: its only refusal (a past-EOF reset) cannot reach a live
+    // store (gesture walls clamp to total-1 and a past-EOF sidecar is
+    // adversarial load-fatal), so .value() makes a breach loud
+    // (bad_expected_access -> terminate) rather than silently degrading.
     return render_fingerprint(
         app.source_audio_path, source_identity, audio.sample_rate(),
-        resolved_warp_markers.value(), phase_reset_source_frames.value(),
+        resolved_warp_markers, phase_reset_source_frames.value(),
         app.engine_settings,
         app.trim.has_begin, app.trim.begin_frame,
         app.trim.has_end,   app.trim.end_frame);

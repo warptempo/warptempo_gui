@@ -253,11 +253,7 @@ int main(int argc, char** argv) {
     // prepost trimmer's translated maps derived from this one below. ---
     auto resolved = resolve_warp_markers_for_render(markers, sample_rate,
                                                     total_frames);
-    if (!resolved) {
-        std::fprintf(stderr, "warptempo_cli: %s\n", resolved.error().c_str());
-        return 1;
-    }
-    auto r = build_warp_frame_map(*resolved,
+    auto r = build_warp_frame_map(resolved,
                                   es.scale, sample_rate, total_frames);
     if (!r) {
         std::fprintf(stderr,

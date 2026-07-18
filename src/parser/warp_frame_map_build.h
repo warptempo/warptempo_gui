@@ -66,16 +66,22 @@ struct MarkerEffective {
 // the first violated condition (a concise lowercase reason; callers add their
 // own context prefix). Does not log. Failure conditions, in check order:
 // invalid source audio metadata (sample_rate <= 0 or total_frames <= 0),
-// src_frame > total_frames, src_frame - prev_src_frame < 1 (unreachable
-// from the resolver, whose coincidence collapse guarantees >= 1-frame
-// spacing; kept as the map-artifact contract guard for hand-assembled
-// input), tempo <= 0
-// (a zero or negative effective product divides by zero or flips sign in the
-// segment arithmetic; reachable — the ruled async-stderr backstop for the
-// sweep batches' per-cell computed tempo mutations), and — in Pass 2,
-// after all of the above — a label ref with no matching label def (an
-// internal tripwire: the resolver normalizes dangling refs first, so only
-// hand-assembled input reaches it).
+// src_frame > total_frames (the past-EOF wall — column-symmetric with
+// build_phase_reset_source_frames by ruling, and a loud breach backstop for
+// hand-assembled input), src_frame - prev_src_frame < 1 (unreachable from
+// the resolver, whose coincidence collapse guarantees >= 1-frame spacing;
+// kept because the engine validates strict ascent but NOT the >= 1-frame
+// gap, so a sub-frame segment is the one map defect that would render
+// silently wrong bytes), tempo <= 0 (a zero or negative effective product
+// divides by zero or flips sign in the segment arithmetic; reachable — the
+// ruled async-stderr backstop for the sweep batches' per-cell computed tempo
+// mutations, and the one site that can NAME the non-positive tempo, which
+// the engine's own "not strictly ascending" refusal cannot), and — in Pass
+// 2, after all of the above — a label ref with no matching label def
+// (unreachable from the resolver, which normalizes dangling refs first;
+// kept because the engine never consumes refs, so a breach would be a raw
+// failed map-lookup rather than a loud refusal — the guard buys
+// deterministic loudness).
 // Builds the full untrimmed map unconditionally; trim is applied downstream
 // by the prepost trimmer (plan_trim translates this map into the cut's
 // coordinates), never here. Scale participates here and not in
@@ -159,10 +165,15 @@ std::vector<bool> warp_markers_render_keep_mask(
 // survivors, a survivor at frame 0, no ref-terminated walks, every ref
 // resolvable and in-band — yields the identical resolved list the
 // pre-normalization filter produced, so build_warp_frame_map's output is
-// byte-for-byte unchanged for such input. The std::expected return shape
-// is shared with the map builder's callers; the normalization itself
-// produces no errors. sample_rate feeds only the stderr timestamps;
-// total_frames only the envelope check's last-segment distance.
+// byte-for-byte unchanged for such input. Returns a PLAIN std::vector: this
+// is a TOTAL NORMALIZER, infallible by design — every ambiguous state
+// resolves and the stderr line is the only signal, so there is no error to
+// report. build_warp_frame_map keeps its std::expected because it is a
+// different KIND of function, a partial compiler whose error arm has real
+// producers (the sweep's unbracketed per-cell tempo can drive a non-positive
+// product) plus the kept breach guards; the two signatures rightly differ.
+// sample_rate feeds only the stderr timestamps; total_frames only the
+// envelope check's last-segment distance.
 // Stages 1-3 live in one shared projection function
 // (normalized_surviving_markers, internal to warp_frame_map_build.cpp):
 // the resolver runs it with the stderr lines on, and the display side
@@ -173,7 +184,7 @@ std::vector<bool> warp_markers_render_keep_mask(
 // label_ref_implied_effective_tempo helper the display's band verdict
 // uses, in one fixed operation order, because the envelope edges are
 // inclusive and IEEE-reassociated equivalents can disagree exactly there.
-std::expected<std::vector<MarkerForRender>, std::string>
+std::vector<MarkerForRender>
 resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
                                 long sample_rate, long total_frames);
 

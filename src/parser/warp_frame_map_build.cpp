@@ -2,7 +2,6 @@
 #include "time_format.h"   // format_timestamp
 #include "value_format.h"  // format_value_double
 
-#include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <expected>
@@ -187,7 +186,7 @@ std::vector<WarpMarker> normalized_surviving_markers(
 
 }  // namespace
 
-std::expected<std::vector<MarkerForRender>, std::string>
+std::vector<MarkerForRender>
 resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
                                 long sample_rate, long total_frames) {
     // Normalization pipeline: stages 1-5 build a normalized WarpMarker
@@ -880,16 +879,22 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
             ? static_cast<double>(markers[i + 1].time_frame)
             : static_cast<double>(total_frames);
 
+        // Past-EOF wall: a marker time past the source end. Column-symmetric
+        // with build_phase_reset_source_frames' own wall by ruling, and a loud
+        // breach backstop for hand-assembled input — unreachable from a live
+        // store, where the gesture walls clamp to total-1 and a past-EOF
+        // sidecar is adversarial load-fatal.
         if (src_frame > static_cast<double>(total_frames)) {
             return std::unexpected("marker time exceeds source length at marker "
                                    + std::to_string(i));
         }
         // Sub-frame segments are unreachable from the resolver: its
         // exact-coincidence collapse guarantees >= 1-frame spacing between
-        // resolved markers (positions are whole frames). The check survives
-        // as the map-artifact contract guard (strictly ascending source
-        // column) at the sole producer, for hand-assembled marker lists that
-        // reach the build directly.
+        // resolved markers (positions are whole frames). Kept because the
+        // engine validates strict ascent but NOT the >= 1-frame gap, so a
+        // sub-frame segment is the one map defect that would render silently
+        // wrong bytes; the guard is the loud refusal for hand-assembled marker
+        // lists that reach the build directly.
         if (src_frame - src_f_prev < 1.0) {
             return std::unexpected("marker segment < 1 frame at marker "
                                    + std::to_string(i));
@@ -900,34 +905,24 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
 
         if (is_numeric) {
             double tempo_val = effective_tempo(m);
-            // The bracketed value vocabulary holds every AUTHORED product
-            // (tempo * marker scale) in [1/8, 8] with bounded, exact
-            // anchors. The sweep batches' computed per-cell tempo mutations
-            // are the one wider route: a delta can push the product to
-            // (kTempoMaxCents + kIterDeltaMaxCents) cents times kScaleMax or
-            // drive a cell tempo non-positive, and this builder
-            // is that path's ruled async-stderr backstop — the tempo <= 0
-            // guard is exactly where such a cell refuses. The divisor check
-            // and the finite/strictly-advancing anchor chokepoint in pass 2
-            // are unreachable from authored input; all are kept as loud
-            // refusals guarding the map artifact contract (finite, strictly
-            // ascending values on both columns) at the sole producer, since
-            // the cache-dir framemap pair ships the artifact without any
-            // engine pass.
+            // tempo <= 0 is the one REACHABLE refusal in this builder. Every
+            // AUTHORED product (tempo * marker scale) stays in [1/8, 8] by the
+            // value brackets, so a GUI/CLI marker never trips it; the sweep
+            // batches' per-cell tempo mutations are deliberately unbracketed
+            // and CAN drive a cell's effective product non-positive, and this
+            // builder is that path's ruled async-stderr backstop. The engine
+            // would also reject the resulting map, but only as "not strictly
+            // ascending" — naming the non-positive tempo here is what an async
+            // batch cell's stderr needs to be actionable.
             if (tempo_val <= 0.0) {
                 return std::unexpected("tempo " +
                                        format_value_double(tempo_val, 2)
                                        + " <= 0 at marker " + std::to_string(i));
             }
-            // The divisor is the product against the settings scale — the
-            // value the division actually uses — refused in its own right.
+            // Divisor positivity needs no separate guard: tempo_val > 0 above
+            // and the settings scale is bracketed to [0.5, 2], so the product
+            // is finite and strictly positive.
             const double divisor = tempo_val * scale;
-            if (!std::isfinite(divisor) || divisor <= 0.0) {
-                return std::unexpected("tempo-scale product " +
-                                       format_value_double(divisor, 0)
-                                       + " is not a positive finite value at marker "
-                                       + std::to_string(i));
-            }
 
             double delta_src = src_frame - src_f_prev;
             double delta_tgt = delta_src / divisor;
@@ -958,10 +953,12 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
             // Internal tripwire, unreachable from program input: the
             // resolver normalizes dangling refs into plain 1.00 owners
             // before the build, so every ref arriving here has a def among
-            // the resolved markers. Kept as the loud refusal for
-            // hand-assembled marker lists reaching the build directly.
-            // Definition uniqueness is load-enforced, so a found entry is
-            // the one definition.
+            // the resolved markers. Kept because the engine never consumes
+            // refs — a breach would surface as a raw failed map-lookup
+            // (undefined behavior), not a loud refusal — so this guard buys
+            // deterministic loudness for hand-assembled marker lists reaching
+            // the build directly. Definition uniqueness is load-enforced, so
+            // a found entry is the one definition.
             const auto lbl_it = label_cache.find(m.label_ref);
             if (lbl_it == label_cache.end()) {
                 return std::unexpected("label ref has no matching label def: '"
@@ -975,9 +972,9 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
             target_frame = tgt_f_prev + lbl.delta_tgt;
         } else {
             double tempo_val = effective_tempo(m);
-            // Pass 1 already walked every numeric marker and returned first on
-            // any non-positive or non-finite divisor, so the named local here
-            // is the vetted product the segment arithmetic divides by.
+            // Pass 1 already refused any non-positive tempo, and the settings
+            // scale is bracketed to [0.5, 2], so the divisor here is the
+            // vetted positive-finite product the segment arithmetic divides by.
             const double divisor = tempo_val * scale;
             double delta_src = src_frame - src_f_prev;
             target_frame = tgt_f_prev + (delta_src / divisor);
@@ -985,21 +982,13 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
 
         // Emission chokepoint: every segment flavor converges here (numeric,
         // label ref via the cached delta; passes resolve to numeric owners
-        // before this builder runs). The source column's strict ascent is
-        // guaranteed by pass 1's sub-frame and past-EOF refusals; the target
-        // column's finite/strictly-advancing check is the same kept loud
-        // refusal — unreachable while anchors stay bounded and exact under the
-        // bracketed vocabulary, but the map artifact contract is enforced here
-        // at the sole producer.
-        if (!std::isfinite(target_frame)) {
-            return std::unexpected("target anchor is not finite at marker "
-                                   + std::to_string(i));
-        }
-        if (target_frame <= tgt_f_prev) {
-            return std::unexpected("target span vanishes at marker "
-                                   + std::to_string(i));
-        }
-
+        // before this builder runs). The target column needs no finite /
+        // strictly-advancing guard: the divisors are finite and positive (the
+        // tempo and scale brackets above) and the source column strictly
+        // ascends (pass 1's sub-frame and past-EOF refusals), so each span is
+        // a positive finite increment. A breach of that is a program bug and
+        // lands on the engine's own loud init validators (strict ascent +
+        // finiteness) over this same in-process map, in both binaries.
         out.push_back({src_frame, target_frame});
 
         src_f_prev = src_frame;
