@@ -262,13 +262,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // on its marker line.
         int hit = -1;
         bool in_click_region = false;
-        // A trim-boundary press is consumed only for its recognized gestures:
-        // a Ctrl-exact reposition-drag, a Ctrl+Shift move-both-bounds drag, or
-        // a plain / Shift select+navigate. Alt is never a trim gesture: it is
-        // routed by the marker hit test, and a trim stem is not a marker stem,
-        // so Alt+drag over a trim stem pans (ignoring the boundary). Any other
-        // unrecognized combo falls through to no-op at the strict guard below.
-        const bool trim_gesture = !alt;
+        // A trim-boundary press is consumed for its recognized gestures: a
+        // Ctrl- or Alt-exact reposition-drag, a Ctrl+Shift / Alt+Shift
+        // move-both-bounds drag, or a plain / Shift select+navigate. Alt
+        // mirrors Ctrl on this path, folded into the reposition-modifier
+        // argument at the call sites; only the combined Ctrl+Alt chords are
+        // unrecognized and fall through to the strict-guard no-op below.
+        const bool trim_gesture = !(ctrl && alt);
         if (inside_waveform) {
             hit = hit_test_marker_line(app, audio, x);
             // A waveform press that misses every marker but lands
@@ -277,7 +277,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             if (hit < 0) {
                 const TrimHit th = hit_test_trim_boundary(app, audio, x);
                 if (th != TrimHit::None && trim_gesture) {
-                    handle_trim_boundary_press(th, ctrl, shift, x);
+                    handle_trim_boundary_press(th, ctrl || alt, shift, x);
                     if (app.trim_drag.active && was_playing)
                         app.follow_overridden_for_session = true;
                     return;
@@ -303,7 +303,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                        ? chip
                                        : hit_test_trim_boundary(app, audio, x);
                 if (th != TrimHit::None && trim_gesture) {
-                    handle_trim_boundary_press(th, ctrl, shift, x);
+                    handle_trim_boundary_press(th, ctrl || alt, shift, x);
                     if (app.trim_drag.active && was_playing)
                         app.follow_overridden_for_session = true;
                     return;
@@ -316,14 +316,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
         if (alt && !ctrl && !shift) {
             // Alt+drag (exact) is hit-area-dependent. On a marker stem or flag
-            // (hit >= 0) in a writable tab it begins the marker reposition
-            // drag, identical to the Ctrl+drag route below; elsewhere on the
-            // waveform it pans (a stepped scroll-drag). Read-only tabs take the
-            // pan arm everywhere: the marker-drag arm is a mutation gesture and
-            // does not exist there, keeping Alt fully navigation-class in
-            // read-only (no per-stem dead zone). The marker-drag arm mirrors
-            // Ctrl and overrides follow when playing; the pan does not.
-            if (hit >= 0 && !active_view_state(app).read_only) {
+            // (hit >= 0) it begins the marker reposition drag, identical to the
+            // Ctrl+drag route below, read-only refusing identically (a silent
+            // return, the drag never enters flight); elsewhere on the waveform
+            // it pans (a stepped scroll-drag). The marker-drag arm overrides
+            // follow when playing; the pan does not.
+            if (hit >= 0) {
+                if (active_view_state(app).read_only) {
+                    return;
+                }
                 // begin_drag preserves the multi-selection if `hit` is in it,
                 // else collapses to just `hit`. Motion decides whether it
                 // actually becomes a drag vs. a plain click.
@@ -368,12 +369,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
 
-        // Strict modifier matching: Alt-exact is hit-routed (marker drag on a
-        // marker in a writable tab, else pan) and Ctrl-exact on a marker
-        // repositions it (both handled above). Any remaining modifier
-        // combination — Ctrl on empty, Ctrl+Alt, Shift+Alt, Ctrl+Shift, ... —
-        // is not a recognized waveform gesture and no-ops here. Only the plain
-        // or Shift-modified base press proceeds (Shift adjusts the selection).
+        // Strict modifier matching: Alt-exact and Ctrl-exact are hit-routed
+        // above (marker reposition on a marker, trim gestures on a bound — Alt
+        // additionally pans on empty waveform). The remaining combinations —
+        // Ctrl on empty, Ctrl+Alt, Shift+Alt on empty, Ctrl+Shift on a marker,
+        // ... — are not recognized waveform gestures and no-op here. Only the
+        // plain or Shift-modified base press proceeds (Shift adjusts the
+        // selection).
         if (ctrl || alt) return;
 
         // Plain or Shift press. In the waveform area this starts a

@@ -547,10 +547,10 @@ private:
 
     // Mouse gestures on the trim boundary stems. on_press routes a
     // waveform-area press that misses every marker but lands on a trim
-    // boundary here. Ctrl begins a single-bound drag; Ctrl+Shift begins a
+    // boundary here. Ctrl or Alt begins a single-bound drag; +Shift begins a
     // move-both-bounds drag; plain/Shift selects within the trim group. All
     // update app.last_sel_group = Trim.
-    void handle_trim_boundary_press(TrimHit which, bool ctrl, bool shift,
+    void handle_trim_boundary_press(TrimHit which, bool move_mod, bool shift,
                                     int mouse_x);
     void select_trim_boundary(TrimHit which, bool additive);
     void begin_trim_drag(TrimHit which, int mouse_x, bool both = false);
