@@ -165,10 +165,6 @@ EngineResult run_warptempo_engine(const EngineParams& p,
 
     init_fftw_threads(audio_stft);
 
-    auto& lp = audio_stft.limiter_params;
-    lp.ceiling_dbfs         = p.limiter_ceiling_dbfs;
-    lp.tolerance_db         = p.limiter_tolerance_db;
-
     // Buffer-out only: the output buffer is the engine's sole sink; encode
     // lives orchestrator-side in the prepost chain.
     if (p.output_buffer == nullptr) {
@@ -313,7 +309,7 @@ EngineResult run_warptempo_engine(const EngineParams& p,
               << " phase resets\n";
 
     // Pass 2: synthesis (clean render) into the caller-owned output buffer.
-    // synthesize_full applies no attenuation; the spectral limiter (Pass 3
+    // process_to_buffer applies no attenuation; the spectral limiter (Pass 3
     // below) then runs in place on this buffer.
     synthesis.process_to_buffer(audio_stft, p.output_buffer);
     // Pass boundaries check the raw flag alongside cancellation_observed: a

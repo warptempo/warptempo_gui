@@ -30,9 +30,6 @@ struct EngineParams {
 
     std::vector<WarpFrameMapSegment> warp_frame_map;  // rounded + precise breakpoints
 
-    double limiter_ceiling_dbfs       = -0.3;   // spectral
-    double limiter_tolerance_db       = 0.01;
-
     // Phase reset position list. Each entry is an exact double position in
     // the engine's origin-centered query domain, produced by the parser's
     // derivation (phase_reset_frame_map_build.h) — trimmed renders carry the

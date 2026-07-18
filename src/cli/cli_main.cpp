@@ -381,8 +381,8 @@ int main(int argc, char** argv) {
     ep.source_frame_schedule = trim_plan
         ? &trim_plan->pre.source_frame_schedule
         : nullptr;
-    // limiter_ceiling_dbfs / tolerance stay at EngineParams defaults —
-    // do_render inherits them too. The spectral limiter always runs.
+    // The spectral limiter always runs with its fixed constants
+    // (kSpectralLimiter* in engine/limiter.h) — no per-call parameterization.
 
     // Projection refusal, orchestrator-side before the engine allocates
     // (refuse-before-cost), same shape as do_render's wav branch.

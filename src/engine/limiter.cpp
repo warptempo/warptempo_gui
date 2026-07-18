@@ -217,13 +217,11 @@ All allocations are function-local and freed at every return; nothing persists
 across renders.
 */
 void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
-    auto& lp = stft.limiter_params;
-
     const int channels    = stft.channels;
     const int sample_rate  = stft.src_info.samplerate;
     const int64_t render_frames = static_cast<int64_t>(render.size()) / channels;
 
-    const double ceiling = std::pow(10.0, lp.ceiling_dbfs / 20.0);
+    const double ceiling = std::pow(10.0, kSpectralLimiterCeilingDbfs / 20.0);
 
     // Direct-bypass scan over the untouched input render (one linear read
     // before any limiter-local allocation): an already-compliant deliverable
@@ -387,10 +385,10 @@ void Limiter::process(AudioSTFT& stft, std::vector<float>& render) {
     std::vector<std::vector<double>> gain_map(
         num_frames_lim, std::vector<double>(num_bands, 1.0));
 
-    const double tol_amp_hi = std::pow(10.0, (lp.ceiling_dbfs + lp.tolerance_db) / 20.0);
-    const double tol_amp_lo = std::pow(10.0, (lp.ceiling_dbfs - lp.tolerance_db) / 20.0);
-    const double band3_hi   = std::pow(10.0, (lp.ceiling_dbfs + 3.0 * lp.tolerance_db) / 20.0);
-    const double band3_lo   = std::pow(10.0, (lp.ceiling_dbfs - 3.0 * lp.tolerance_db) / 20.0);
+    const double tol_amp_hi = std::pow(10.0, (kSpectralLimiterCeilingDbfs + kSpectralLimiterToleranceDb) / 20.0);
+    const double tol_amp_lo = std::pow(10.0, (kSpectralLimiterCeilingDbfs - kSpectralLimiterToleranceDb) / 20.0);
+    const double band3_hi   = std::pow(10.0, (kSpectralLimiterCeilingDbfs + 3.0 * kSpectralLimiterToleranceDb) / 20.0);
+    const double band3_lo   = std::pow(10.0, (kSpectralLimiterCeilingDbfs - 3.0 * kSpectralLimiterToleranceDb) / 20.0);
 
     // -- Initial identity reconstruction -> meas_ola (pre coords) --
     std::vector<float> meas_ola;

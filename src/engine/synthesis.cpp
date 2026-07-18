@@ -66,11 +66,8 @@ void radix_sort_magnitudes(const double* mag, int K,
 
 }  // namespace
 
-void Synthesis::synthesize_full(
-    AudioSTFT& stft,
-    std::function<void(const float*, size_t)> write_cb,
-    bool show_progress,
-    const char* pass_label) {
+void Synthesis::process_to_buffer(AudioSTFT& stft,
+                                  std::vector<float>* output_buffer) {
     const int N          = stft.N;
     const int Mfft       = stft.M;
     const int R_s        = stft.R_s;
@@ -580,11 +577,13 @@ void Synthesis::synthesize_full(
 
             // Progress is reported by channel 0 only; with channels running
             // concurrently it is approximate, which is fine (cosmetic).
-            if (show_progress && ch == 0 && wcount > 0 &&
+            if (ch == 0 && wcount > 0 &&
                 (frame_idx % progress_stride) == 0) {
                 int pct = static_cast<int>((frame_idx * 100LL) / wcount);
                 if (pct != last_pct) {
-                    std::cout << "\r" << pass_label << pct << "%" << std::flush;
+                    std::cout << "\r"
+                              << "[pass 2/3] synthesis........................ "
+                              << pct << "%" << std::flush;
                     last_pct = pct;
                 }
             }
@@ -636,12 +635,12 @@ void Synthesis::synthesize_full(
         }
     }
 
-    if (show_progress) std::cout << "\r" << pass_label << "100%\n";
+    std::cout << "\r"
+              << "[pass 2/3] synthesis........................ 100%\n";
 
-    // Interleave the per-channel mono streams and emit in one write_cb call.
-    // All channels emit out_frames samples; the downstream write_cb is
-    // order-preserving and chunk-agnostic, so a single call is equivalent to
-    // any chunking.
+    // Interleave the per-channel mono streams and append them to the caller's
+    // buffer in one emission. All channels emit out_frames samples; the append
+    // is a single contiguous insert.
     if (out_frames > 0) {
         std::vector<float> inter(static_cast<size_t>(out_frames) * channels);
         for (int ch = 0; ch < channels; ++ch) {
@@ -659,22 +658,10 @@ void Synthesis::synthesize_full(
             for (int64_t f = 0; f < out_frames; ++f)
                 inter[static_cast<size_t>(f) * channels + ch] = m[static_cast<size_t>(f)];
         }
-        write_cb(inter.data(), static_cast<size_t>(out_frames));
+        // Append the full interleaved emit to the caller-owned buffer. The
+        // spectral limiter (Pass 3) then runs in the engine after synthesis,
+        // in place on this buffer.
+        output_buffer->insert(output_buffer->end(), inter.data(),
+                              inter.data() + inter.size());
     }
-}
-
-void Synthesis::process_to_buffer(AudioSTFT& stft,
-                                  std::vector<float>* output_buffer) {
-    const int channels = stft.channels;
-    auto append_to_buffer = [output_buffer, channels](const float* buf,
-                                                      size_t n_frames) {
-        output_buffer->insert(
-            output_buffer->end(), buf,
-            buf + n_frames * static_cast<size_t>(channels));
-    };
-    // The spectral limiter (Pass 3) runs in the engine after synthesis, in
-    // place on this buffer — process_to_buffer always does the plain append.
-    synthesize_full(stft, append_to_buffer,
-                    /*show_progress=*/true,
-                    /*pass_label=*/"[pass 2/3] synthesis........................ ");
 }

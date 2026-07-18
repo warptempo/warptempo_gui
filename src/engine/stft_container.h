@@ -19,11 +19,6 @@ struct PhaseResetPlacement {
     int synth_frame;
 };
 
-struct LimiterParams {
-    double ceiling_dbfs          = -0.3;
-    double tolerance_db          = 0.01;
-};
-
 struct SourceInfo {
     int     samplerate = 0;
     int     channels   = 0;
@@ -150,9 +145,6 @@ struct AudioSTFT {
     // that frame's analysis window centers at the authored reset.
     std::vector<PhaseResetPlacement> phase_reset_placements;
 
-    // Spectral limiter
-    LimiterParams limiter_params;
-
     // Per-synthesis-frame source read schedule, evaluated once in
     // engine.cpp and reused by every pass. source_frame_positions[m] is the
     // source read position for synthesis frame m -- map_target_to_source
@@ -176,10 +168,10 @@ struct AudioSTFT {
     // last anchor on every path (llrint of warp_frame_map.back().tgt_frame; a
     // cap that rounds to zero is refused at init). The synthesizer truncates
     // its emitted stream to this many samples so render length equals the
-    // map's target length; synthesize_full reads it as resolved.
+    // map's target length; process_to_buffer reads it as resolved.
     int64_t emit_sample_cap = 0;
 
-    // Optional cancellation hook. When non-null, synthesize_full checks
+    // Optional cancellation hook. When non-null, the synthesis pass checks
     // cancel_flag->load() at the top of every frame iteration; if true, it
     // sets cancellation_observed and returns early. Limiter::process checks
     // the flag through its pre-queue and per-peak phases the same way, and
