@@ -202,7 +202,15 @@ void GuiWarpMarkersOps::toggle_inherits() {
     app.selected_markers.insert(app.last_selected_marker);
     const auto& mv_const = app.warpmarkers.markers();
     std::vector<GuiWarpMarker> proposed = mv_const;
-    // Single-marker resolve via the canonical parser walk (slice once).
+    // Single-marker resolve via marker_effective (slice once) — the
+    // projection-aware walk, NOT the raw backward walk. Freezing a pass into
+    // an owner must land the value hover shows and the render produces:
+    // under a coincident-stack collapse the nearest prior owner is a member
+    // of a 2+-survivor exact-frame group, which the render replaces with one
+    // plain 1.00 owner, so the raw walk's authored member value (e.g. 150)
+    // would silently change the rendered bytes. marker_effective resolves a
+    // surviving un-collapsed pass against that same projection, keeping the
+    // freeze lossless (resolve_inherited_tempo's contract).
     const std::vector<WarpMarker> resolved_src = slice_to_warp_markers(mv_const);
     bool changed = false;
     for (int idx : app.selected_markers) {
@@ -214,13 +222,20 @@ void GuiWarpMarkersOps::toggle_inherits() {
             m.tempo_cents    = 100;
             m.tempo_scale.reset();
         } else if (m.tempo_inherits) {
-            const int64_t resolved_cents =
-                resolve_inherited_tempo(resolved_src, idx);
-            const std::optional<double> resolved_scale =
-                resolve_inherited_tempo_scale(resolved_src, idx);
+            const MarkerEffective eff =
+                marker_effective(resolved_src, idx, audio.total_frames());
             m.tempo_inherits = false;
-            m.tempo_cents    = resolved_cents;
-            m.tempo_scale    = resolved_scale;
+            // base_cents == 0 is marker_effective's "could not resolve"; from
+            // a pass it is unreachable (resolve_inherited_tempo returns 100 or
+            // a bracketed owner value, never 0), so this mirrors the raw
+            // walk's no-owner {100, nullopt} fallback defensively.
+            if (eff.base_cents != 0) {
+                m.tempo_cents = eff.base_cents;
+                m.tempo_scale = eff.scale;
+            } else {
+                m.tempo_cents = 100;
+                m.tempo_scale.reset();
+            }
         } else {
             m.tempo_inherits = true;
             m.tempo_cents    = 100;
@@ -295,7 +310,14 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     app.selected_markers.insert(app.last_selected_marker);
     const auto& mv_const = app.warpmarkers.markers();
     std::vector<GuiWarpMarker> proposed = mv_const;
-    // Single-marker resolve via the canonical parser walk (slice once).
+    // Single-marker resolve via marker_effective (slice once) — the
+    // projection-aware walk, NOT the raw backward walk. Alt+Up/Down freezes a
+    // pass to owning at the nudged value, so its starting tempo/scale must be
+    // the value hover shows and the render produces: under a coincident-stack
+    // collapse the raw walk would seed the freeze from a collapsed group
+    // member's authored tempo, silently diverging from the projection's 1.00
+    // owner. marker_effective resolves a surviving un-collapsed pass against
+    // that same projection, keeping the freeze lossless.
     const std::vector<WarpMarker> resolved_src = slice_to_warp_markers(mv_const);
     bool changed = false;
     for (int idx : app.selected_markers) {
@@ -305,8 +327,17 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
         int64_t               start_cents;
         std::optional<double> start_scale;
         if (m.tempo_inherits) {
-            start_cents = resolve_inherited_tempo(resolved_src, idx);
-            start_scale = resolve_inherited_tempo_scale(resolved_src, idx);
+            const MarkerEffective eff =
+                marker_effective(resolved_src, idx, audio.total_frames());
+            // base_cents == 0 ("could not resolve") is unreachable from a
+            // pass; mirror the raw walk's {100, nullopt} no-owner fallback.
+            if (eff.base_cents != 0) {
+                start_cents = eff.base_cents;
+                start_scale = eff.scale;
+            } else {
+                start_cents = 100;
+                start_scale = std::nullopt;
+            }
         } else {
             start_cents = m.tempo_cents;
             start_scale = m.tempo_scale;
