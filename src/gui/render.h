@@ -145,11 +145,11 @@ double flag_font_size_px();
 // Flag chip internal padding around the text glyph bounding box, split per
 // axis so the two can be tuned independently. Both are the single source of
 // truth for their axis — every chip renderer and the hit-rect computation must
-// read these, never a literal. Each is the authored value (2 / 0) scaled by
+// read these, never a literal. Each is the authored value (1 / -1) scaled by
 // gui_font_scale() and rounded with std::nearbyint so it stays an integer:
 // the aliased plus-point-five sharp-edge convention for 1 px strokes and
 // integer-edged rects keeps holding at every size. At scale 1 each equals
-// its authored value by identity (nearbyint(2*1) == 2, nearbyint(0*1) == 0).
+// its authored value by identity (nearbyint(1*1) == 1, nearbyint(-1*1) == -1).
 //
 // flag_pad_x_px sets chip WIDTH: the painted fill and the hit rect both span
 // glyph_advance + 2*flag_pad_x_px() + 2*kChipOutlinePx (the outline ring sits
@@ -157,9 +157,16 @@ double flag_font_size_px();
 //
 // flag_pad_y_px sets chip HEIGHT via the row metric: the row height is
 // font (ascent+descent) + 2*flag_pad_y_px() + 2*kChipOutlinePx, and the
-// baseline offset is flag_pad_y_px() + kChipOutlinePx + ascent.
-inline double flag_pad_x_px() { return std::nearbyint(2.0 * gui_font_scale()); }
-inline double flag_pad_y_px() { return std::nearbyint(0.0 * gui_font_scale()); }
+// baseline offset is flag_pad_y_px() + kChipOutlinePx + ascent. The authored
+// pad_y is NEGATIVE (-1) by deliberate design: the measured cairo font band
+// (ascent+descent) carries internal leading, so at pad_y = -1 the row metric
+// is round(font_height - 2) + 2*kChipOutlinePx = font_height at scale 1 — the
+// outline ring overlaps the band's outermost row (top and bottom), eating the
+// empty leading, not glyph ink. The cursor and selection highlight (which span
+// the band) are clamped to the fill interior so they stay inside the ring;
+// only the antialiased glyph text may reach into those blank leading rows.
+inline double flag_pad_x_px() { return std::nearbyint(1.0 * gui_font_scale()); }
+inline double flag_pad_y_px() { return std::nearbyint(-1.0 * gui_font_scale()); }
 
 // The solid outline ring outside the chip padding: part of the chip rect and
 // the row metric (a chip is outline + pad + glyph ink). The single width knob;
@@ -167,6 +174,14 @@ inline double flag_pad_y_px() { return std::nearbyint(0.0 * gui_font_scale()); }
 // derived surface (strip heights, stem overhang, baseline solves, hit rects)
 // tracks it automatically.
 inline constexpr int kChipOutlinePx = 1;
+
+// The glyph-run inset from a chip's left edge: the outline ring plus the left
+// inner pad (kChipOutlinePx + flag_pad_x_px()). The ONE value every chip
+// anchor/caret site uses to place the glyph origin relative to the chip's left
+// edge (= the marker's pixel column, where flag_chip_rect's r.x lands). Every
+// renderer passes anchor_x = text_left + flag_glyph_inset_px() and back-derives
+// the chip edge via EditorTextBox::hl_pad, so paint and hit share one geometry.
+inline double flag_glyph_inset_px() { return kChipOutlinePx + flag_pad_x_px(); }
 
 // Sole authored value for the flag chip's vertical anchor: the offset from
 // the waveform area's top edge up to the regular flag rect's painted bottom
@@ -256,11 +271,11 @@ inline int playhead_half_px() { return playhead_triangle_h_px() - 1; }
 // measure and are overwritten immediately). on_resize can fire before the
 // first redraw measures the real font; these seed the geometry so it is sane
 // (never a negative waveform) until init_monospace_grid_metrics overwrites
-// them. The 0.0 term is the authored flag_pad_y_px value at scale 1, the 1.0
-// term is kChipOutlinePx (18 + 2*0 + 2*1 = 20; baseline 0.0 + 1.0 + 14.0).
-constexpr int    kRowHFallbackPx       = 20;
+// them. The -1.0 term is the authored flag_pad_y_px value at scale 1, the 1.0
+// term is kChipOutlinePx (round(18 - 2) + 2*1 = 18; baseline -1.0 + 1.0 + 14.0).
+constexpr int    kRowHFallbackPx       = 18;
 constexpr double kRowBaselineOffFallbackPx =
-    0.0 + 1.0 + 14.0;
+    -1.0 + 1.0 + 14.0;
 
 // Forward declaration: defined with its full doc comment below. Needed here
 // because flag_chip_bottom_y / stem_cache_overhang_px (inlines) read it.
@@ -305,12 +320,14 @@ inline double flag_chip_bottom_y(const GuiRect& waveform_area, ChipRow row) {
 //
 // The returned rect is the TOTAL chip footprint INCLUDING the outline ring: it
 // grows by kChipOutlinePx on every side relative to the padded glyph box. The
-// fill insets by kChipOutlinePx inside it (render_editor_text_box); text_left
-// remains the FILL's left edge = the marker's pixel column, and the outline
-// ring extends kChipOutlinePx left of that column. The vertical growth is
-// carried by monospace_row_h() / monospace_row_baseline_offset() (which now
-// bake the outline in), so r.y / r.h below are unchanged — the top lifts and
-// the height grows automatically.
+// fill insets by kChipOutlinePx inside it (render_editor_text_box). text_left is
+// the CHIP's left edge = the marker's pixel column: r.x = round(text_left), so
+// the ring's leftmost column IS the marker column (capping the stem) and the
+// fill starts one pixel right of it. The glyph run sits kChipOutlinePx +
+// flag_pad_x_px() (= flag_glyph_inset_px()) inside the chip edge. The vertical
+// growth is carried by monospace_row_h() / monospace_row_baseline_offset()
+// (which now bake the outline in), so r.y / r.h below are unchanged — the top
+// lifts and the height grows automatically.
 //
 // Width is computed from the cached per-character monospace advance
 // (monospace_advance(), measured once on the real paint surface at startup),
@@ -321,10 +338,11 @@ inline double flag_chip_bottom_y(const GuiRect& waveform_area, ChipRow row) {
 // identical at paint and hit, with zero surface dependence.
 //
 // Inputs:
-//   text_left   - glyph paint x, already snapped to the marker's integer pixel
-//                 column by the caller. Chip left edge = round(text_left); the
-//                 flag_pad_x_px() left inner pad is folded into where the caller
-//                 places text_left vs. the glyph origin (see consumers).
+//   text_left   - the chip's left edge, already snapped to the marker's integer
+//                 pixel column by the caller. Chip left edge = round(text_left);
+//                 the glyph run sits flag_glyph_inset_px() (ring + left inner
+//                 pad) to the right of it, folded into where the caller places
+//                 the glyph origin vs. text_left (see consumers).
 //   glyph_count - number of glyphs in the chip's text (== text.length() for the
 //                 ASCII chip strings). Width = round(count*advance + 2*pad).
 //   baseline_y  - the text baseline y the caller solved for its row (Lower row
@@ -341,7 +359,7 @@ inline GuiRect flag_chip_rect(double text_left, size_t glyph_count,
     const double advance =
         static_cast<double>(glyph_count) * monospace_advance();
     GuiRect r;
-    r.x = static_cast<int>(std::round(text_left)) - kChipOutlinePx;
+    r.x = static_cast<int>(std::round(text_left));
     r.y = static_cast<int>(std::round(
               baseline_y - monospace_row_baseline_offset()));
     r.w = static_cast<int>(std::round(advance + 2.0 * pad))
@@ -407,7 +425,11 @@ struct EditorTextBox {
     double               baseline_y      = 0.0;
     std::string          prefix;            // optional; "" = none
     std::string          text;              // editable content
-    double               hl_pad           = flag_pad_x_px();
+    // The glyph-run inset from the chip's left edge (ring + left inner pad =
+    // flag_glyph_inset_px()). render_editor_text_box back-derives the chip edge
+    // as editable_left - hl_pad, so hl_pad must equal the inset the caller used
+    // to place anchor_x for the fill rect and the glyph run to coincide.
+    double               hl_pad           = flag_glyph_inset_px();
     GuiColor             fill             = kMarker;
     GuiColor             text_color       = kText;
     bool                 has_selection    = false;
@@ -762,9 +784,9 @@ double monospace_row_baseline_offset();
 void init_monospace_grid_metrics(cairo_t* cr);
 
 // Returns the on-screen x where the given marker's flag pending text
-// starts, in pixels. Includes the flag_pad_x_px() left inner pad so
-// the returned value matches where pending text actually paints
-// (cairo_move_to(cr, e.text_left + hl_pad, ...) at render.cpp:620).
+// starts, in pixels. Includes the flag_glyph_inset_px() glyph inset (ring +
+// left inner pad) so the returned value matches where pending text actually
+// paints (the renderers move_to at text_left + flag_glyph_inset_px()).
 // Returns -1.0 if the marker is not currently visible in the
 // viewport. Direct computation -- does not require a cairo context.
 double flag_pending_text_left_x(

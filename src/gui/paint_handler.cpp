@@ -42,7 +42,11 @@ static void render_bottom_strip_editor(cairo_t* cr,
     box.baseline_y      = baseline_y;
     box.prefix          = prefix;
     box.text            = ed.pending;
-    box.hl_pad          = flag_pad_x_px();
+    // hl_pad is the glyph inset (ring + pad); anchor_x here is the caller-solved
+    // glyph origin, so this back-derivation keeps the invisible ring geometry
+    // consistent with the chip renderers even though the box body reads as plain
+    // light text on the dark strip.
+    box.hl_pad          = flag_glyph_inset_px();
     // The normal-state ring and fill are both the background color, so the box
     // body is the same as a chip's but invisible — light text on dark bg; the
     // red flash colors match a parse-fail chip.

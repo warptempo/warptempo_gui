@@ -537,7 +537,7 @@ void render_trim_flags(cairo_t* cr,
                            CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cr, font_size);
 
-    const double hl_pad = flag_pad_x_px();
+    const double hl_pad = flag_glyph_inset_px();
 
     // Chip bottom = the UPPER-row chip bottom; solve baseline_y exactly as
     // iterate_visible_flags_impl does for the lower row, one row higher. The
@@ -637,9 +637,9 @@ void render_trim_flags(cairo_t* cr,
     // trim bounds are unselectable by ruling, so there is no selected/unselected
     // two-pass split here — a single reverse pass is the whole occlusion order).
     // The chips ring like the marker chips (one uniform kTrimMarkerOutline —
-    // trim has no selected/parse-fail states), so the fill's left edge sits at
-    // the bound's painted column and the ring takes the extra kChipOutlinePx.
-    // render_editor_text_box sizes each chip from the shared flag_chip_rect
+    // trim has no selected/parse-fail states), so the ring's left column sits on
+    // the bound's painted column (capping the stem) and the fill starts one pixel
+    // right. render_editor_text_box sizes each chip from the shared flag_chip_rect
     // helper (glyph count * monospace_advance() plus padding), the same width
     // every flag path uses.
     for (auto it = chips.rbegin(); it != chips.rend(); ++it) {
@@ -698,34 +698,53 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     const double glyph_top   = s.baseline_y - ascent;
     const double glyph_h     = ascent + descent;
 
+    // Chip rect (fill + ring) from the single source of truth (flag_chip_rect),
+    // so the painted chip and the hit rect are the same rectangle. chip_text_left
+    // is the chip's left edge = editable_left - hl_pad (the renderers pass
+    // anchor_x = text_left + flag_glyph_inset_px(); prefix-bearing editors have
+    // their editable text begin past the prefix, and the fill still covers
+    // exactly the editable glyph run, which is what the chip rect measures).
+    const double chip_text_left = editable_left - s.hl_pad;
+    const GuiRect fr =
+        flag_chip_rect(chip_text_left, s.text.length(), s.baseline_y);
+
     // Snap the shared glyph ink band to integer pixel rows once, so the
     // selection highlight (step 4) and the cursor (step 5) both fill crisp
     // integer-edged rectangles with antialiasing off — the same anti-aliased-
     // tip defect corrected in render_waveform. Glyph text (steps 2-3) keeps
     // antialiasing and is untouched.
-    const int band_y0 = static_cast<int>(std::lround(glyph_top));
-    const int band_y1 = static_cast<int>(std::lround(glyph_top + glyph_h));
+    //
+    // The band is CLAMPED to the fill interior [fr.y + kChipOutlinePx,
+    // fr.y + fr.h - kChipOutlinePx]: with the negative pad_y the ring now
+    // overlaps the band's outermost rows, so an unclamped cursor/highlight rect
+    // would punch through the ring top and bottom. Clamping keeps both inside
+    // the ring (the standing rule). The antialiased glyph text and the selection
+    // substring repaint are NOT clamped — their extreme leading rows are blank,
+    // the ring paints first, and only these filled rects could otherwise show
+    // through it.
+    int band_y0 = static_cast<int>(std::lround(glyph_top));
+    int band_y1 = static_cast<int>(std::lround(glyph_top + glyph_h));
+    const int band_lo = fr.y + kChipOutlinePx;
+    const int band_hi = fr.y + fr.h - kChipOutlinePx;
+    band_y0 = std::clamp(band_y0, band_lo, band_hi);
+    band_y1 = std::clamp(band_y1, band_lo, band_hi);
     const int band_h  = (band_y1 > band_y0) ? (band_y1 - band_y0) : 1;
 
-    // 1. Solid fill behind the editable region, from the single source of
-    //    truth (flag_chip_rect), so the painted chip and the hit rect are the
-    //    same rectangle. text_left is the glyph paint x = editable_left -
-    //    hl_pad (the renderers pass anchor_x = text_left + flag_pad_x_px(); prefix-
-    //    bearing editors have their editable text begin past the prefix, and
-    //    the fill still covers exactly the editable glyph run, which is what
-    //    the chip rect measures).
-    const double chip_text_left = editable_left - s.hl_pad;
-    const GuiRect fr =
-        flag_chip_rect(chip_text_left, s.text.length(), s.baseline_y);
+    // 1. Solid fill behind the editable region: the full rect (the outline ring)
+    //    in s.outline, then the inner rect inset by kChipOutlinePx on every side
+    //    in s.fill. fr already includes the ring (flag_chip_rect), so the ring is
+    //    the outer kChipOutlinePx band left exposed. The glyph ink band (and thus
+    //    cursor/selection) is clamped inside the ring above. The bottom-strip
+    //    editors pass kBackground for both, so their ring is invisible and the
+    //    box reads as light text on the strip.
+    //
+    //    Both fills paint with antialiasing OFF: integer-edged rects, the same
+    //    crisp-edge convention as steps 4/5 and render_waveform — the default AA
+    //    softened the ring edges. The surrounding cairo_save/restore brackets the
+    //    AA state.
     if (fr.w > 0 && fr.h > 0) {
         cairo_save(cr);
-        // Fill the full rect (the outline ring) in s.outline, then the inner
-        // rect inset by kChipOutlinePx on every side in s.fill. fr already
-        // includes the ring (flag_chip_rect), so the ring is the outer
-        // kChipOutlinePx band left exposed. The glyph ink band (and thus
-        // cursor/selection) sits inside the padding inside the ring by
-        // construction. The bottom-strip editors pass kBackground for both, so
-        // their ring is invisible and the box reads as light text on the strip.
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
         cairo_set_source_rgb(cr, s.outline.r, s.outline.g, s.outline.b);
         cairo_rectangle(cr, fr.x, fr.y, fr.w, fr.h);
         cairo_fill(cr);
@@ -813,8 +832,8 @@ namespace {
 // non-empty text, in ascending painted-x order (equal columns tie-break by
 // ascending store index via the stable sort below). There is no elision:
 // overlapping chips occlude instead. `text_left` is snapped to the marker's
-// integer pixel column so the FILL's left edge coincides with the
-// marker/playhead column (the outline ring extends kChipOutlinePx past it).
+// integer pixel column so the CHIP's left edge (the ring column) coincides with
+// the marker/playhead column (the fill starts kChipOutlinePx right of it).
 // `get_flag_text(i)` returns the marker's flag
 // payload; an empty return is the "this marker has no visible flag" signal.
 // The chip advance is the cached monospace arithmetic (glyph count times
@@ -1007,7 +1026,7 @@ void render_flags(cairo_t* cr,
                            CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cr, font_size);
 
-    const double hl_pad = flag_pad_x_px();
+    const double hl_pad = flag_glyph_inset_px();
 
     // Collect emit args during the ascending-x iterate pass, then paint in TWO
     // reverse passes keyed on selection: the UNSELECTED emits in reverse
@@ -1083,7 +1102,7 @@ void render_one_editor_flag(
                            CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cr, font_size);
 
-    const double hl_pad = flag_pad_x_px();
+    const double hl_pad = flag_glyph_inset_px();
 
     iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
                                viewport_start_sample, viewport_end_sample,
@@ -1248,7 +1267,7 @@ void render_phase_reset_flags(cairo_t* cr,
                            CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cr, font_size);
 
-    const double hl_pad = flag_pad_x_px();
+    const double hl_pad = flag_glyph_inset_px();
 
     // Collect-then-paint in TWO reverse passes keyed on selection, mirroring
     // render_flags: the UNSELECTED emits in reverse, then the SELECTED emits in
@@ -1439,5 +1458,5 @@ double flag_pending_text_left_x(
         (ms - static_cast<double>(vp_start)) / samples_per_pixel;
     const double text_left =
         static_cast<double>(area.x) + std::nearbyint(x_raw);
-    return text_left + flag_pad_x_px();
+    return text_left + flag_glyph_inset_px();
 }
