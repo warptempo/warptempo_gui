@@ -635,21 +635,23 @@ void render_trim_flags(cairo_t* cr,
     // (and, at an equal column, `b` over `e` per the tie-break above) lands on
     // top. The b/e chips are outside the selection z-order (recorded asymmetry:
     // trim bounds are unselectable by ruling, so there is no selected/unselected
-    // two-pass split here — a single reverse pass is the whole occlusion order)
-    // and, for now, outside the outline ring too (draw_outline stays off here —
-    // the ring is marker-chip-only, so the trim chips paint a full-rect orange
-    // fill).
+    // two-pass split here — a single reverse pass is the whole occlusion order).
+    // The chips ring like the marker chips (one uniform kTrimMarkerOutline —
+    // trim has no selected/parse-fail states), so the fill's left edge sits at
+    // the bound's painted column and the ring takes the extra kChipOutlinePx.
     // render_editor_text_box sizes each chip from the shared flag_chip_rect
     // helper (glyph count * monospace_advance() plus padding), the same width
     // every flag path uses.
     for (auto it = chips.rbegin(); it != chips.rend(); ++it) {
         EditorTextBox box;
-        box.anchor_x    = it->text_left + hl_pad;
-        box.baseline_y  = baseline_y;
-        box.text        = it->glyph;
-        box.hl_pad      = hl_pad;
-        box.fill        = kTrimMarker;
-        box.text_color  = kText;
+        box.anchor_x     = it->text_left + hl_pad;
+        box.baseline_y   = baseline_y;
+        box.text         = it->glyph;
+        box.hl_pad       = hl_pad;
+        box.fill         = kTrimMarker;
+        box.text_color   = kText;
+        box.draw_outline = true;
+        box.outline      = kTrimMarkerOutline;
         render_editor_text_box(cr, box);
     }
 
@@ -719,8 +721,8 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     if (fr.w > 0 && fr.h > 0) {
         cairo_save(cr);
         if (s.draw_outline) {
-            // Marker chips: fill the full rect (the outline ring) in
-            // s.outline, then the inner rect inset by kChipOutlinePx on every
+            // Marker and trim b/e chips: fill the full rect (the outline ring)
+            // in s.outline, then the inner rect inset by kChipOutlinePx on every
             // side in s.fill. fr already includes the ring (flag_chip_rect), so
             // the ring is the outer kChipOutlinePx band left exposed. The
             // glyph ink band (and thus cursor/selection) sits inside the
@@ -734,8 +736,8 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
                             fr.h - 2 * kChipOutlinePx);
             cairo_fill(cr);
         } else {
-            // Bottom-strip editors and trim b/e chips: no ring, the fill spans
-            // the full rect (which still grew with the metric).
+            // Bottom-strip editors: no ring, the fill spans the full rect
+            // (which still grew with the metric).
             cairo_set_source_rgb(cr, s.fill.r, s.fill.g, s.fill.b);
             cairo_rectangle(cr, fr.x, fr.y, fr.w, fr.h);
             cairo_fill(cr);

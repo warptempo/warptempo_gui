@@ -101,12 +101,13 @@ inline constexpr GuiColor kAccent           = hex(0xBF332E);
 inline constexpr GuiColor kText             = hex(0xFCFCFC);  // Breeze paper white
 
 // The chip outline palette — a darker, more saturated sibling of each fill
-// (kMarker / kSelected / kAccent). Painted as the solid 1px outline ring
-// around a marker chip (see EditorTextBox::draw_outline / kChipOutlinePx);
+// (kMarker / kSelected / kAccent / kTrimMarker). Painted as the solid 1px
+// outline ring around a chip (see EditorTextBox::draw_outline / kChipOutlinePx);
 // these are the tuning knobs.
 inline constexpr GuiColor kMarkerOutline    = hex(0x3A0E54);
 inline constexpr GuiColor kSelectedOutline  = hex(0x11405F);
 inline constexpr GuiColor kAccentOutline    = hex(0x521310);
+inline constexpr GuiColor kTrimMarkerOutline = hex(0x7A3A00);
 
 // Trim boundary stem color (#F67400 orange). Distinct from
 // kMarker, kSelected, the teal cursor, and the yellow scanner. A set
@@ -398,9 +399,7 @@ inline int stem_cache_overhang_px() {
 // outline ring around a marker chip. The cursor and the selection highlight
 // span the glyph ink band, which sits inside the padding inside the outline,
 // so both stay within the ring whenever visible. Off (the fill spans the full
-// rect, no ring) for the bottom-strip editors and the trim b/e chips (the trim
-// exclusion is a recorded asymmetry at render_trim_flags, alongside the
-// hover-scope note there).
+// rect, no ring) for the bottom-strip editors.
 struct EditorTextBox {
     double               anchor_x        = 0.0;
     double               baseline_y      = 0.0;
