@@ -86,13 +86,13 @@ inline constexpr GuiColor kWaveformDimmed   = hex(0x4D6378);
 // greenish by contrast against the surrounding blue-cast dark; a color in the
 // kWaveform / kSelected hue family preserves the background's blue cast
 // instead of neutralizing it. A tinted source lifts less per alpha unit than
-// white (the per-channel add is alpha times source-minus-dest), so the alpha
-// is set to keep the overall lift at least as strong as a plain-white overlay
-// at 0.07, with a slight intended bump. Both values tuned by eye on the panel.
+// white (the per-channel add is alpha times source-minus-dest). Both values
+// tuned by eye on the panel.
 inline constexpr GuiColor kPhaseResetOverlay      = hex(0xB8D4F0);
-inline constexpr double    kPhaseResetOverlayAlpha = 0.10;
+inline constexpr double    kPhaseResetOverlayAlpha = 0.05;
 // The trim pair-drag band's fill alpha — shares the overlay's COLOR
-// (kPhaseResetOverlay) but is fainter (half the overlay's own wash).
+// (kPhaseResetOverlay) but has an independently tuned alpha (currently equal
+// to the overlay's).
 inline constexpr double    kTrimPairBandAlpha      = 0.05;
 
 inline constexpr GuiColor kMarker           = hex(0x9145AD);
@@ -503,10 +503,11 @@ void render_trim_stems(cairo_t* cr,
 // occupies the upper chip box's vertical band (flag_chip_bottom_y(...,
 // ChipRow::Upper) minus monospace_row_h(), down to flag_chip_bottom_y) and
 // shares the phase reset overlay's color (kPhaseResetOverlay) but has its own
-// fainter alpha (kTrimPairBandAlpha, half the overlay's wash), over the strip
-// background. It spans the two bounds' columns unconditionally (independent of
-// the chips' viewport cull) clamped into the mapped waveform width, so it still paints
-// across the visible part when a chip is offscreen.
+// independently tuned alpha (kTrimPairBandAlpha, currently equal to the
+// overlay's), over the strip background. It spans the two bounds' columns
+// unconditionally (independent of the chips' viewport cull) clamped into the
+// mapped waveform width, so it still paints across the visible part when a chip
+// is offscreen.
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
                        GuiRect waveform_area,

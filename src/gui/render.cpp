@@ -554,8 +554,8 @@ void render_trim_flags(cairo_t* cr,
     // two chips — the visual affordance of the Alt pair-drag's top-strip
     // inter-chip grab band (the span strictly between the two b/e chips). Its
     // fill shares the phase reset overlay's color (kPhaseResetOverlay) but has
-    // its own fainter alpha (kTrimPairBandAlpha, half the overlay's wash) over
-    // the top-strip background.
+    // its own independently tuned alpha (kTrimPairBandAlpha, currently equal to
+    // the overlay's) over the top-strip background.
     // Painted BEFORE the chip-box loop so the b/e chips overpaint it and it
     // reads as filling the span between them. Both columns are computed
     // unconditionally with add_chip's own x_raw math (NOT via add_chip, whose
