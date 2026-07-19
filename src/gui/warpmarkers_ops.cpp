@@ -185,10 +185,17 @@ void GuiWarpMarkersOps::delete_selected_marker() {
 // Ctrl+N: convert each selected marker's tempo source. Cache-free —
 // the only stored state on a pass marker is `tempo_inherits = true`
 // plus inert defaults. Three input cases per marker:
-//   - owning   → pass: inert defaults; label_def preserved.
+//   - owning   → pass: inert defaults; label_def preserved; iter bracket
+//                cleared (the pass is iter-ineligible).
 //   - pass     → owning: freeze the resolved tempo/scale at this moment;
 //                label_def preserved.
-//   - label_ref → pass: clear the ref; inert defaults.
+//   - label_ref → pass: clear the ref; inert defaults; iter bracket cleared
+//                (the pass is iter-ineligible).
+// Eligibility LOSS (both → pass cases) clears the iter bracket so a hidden
+// bracket cannot resurrect through a later pass → owner freeze against a
+// different frozen base; undo is the sanctioned restore route (this gesture
+// pushes a pre-state snapshot carrying the fields). Tempo changes never clear
+// (the adjust_tempo_cents symmetry).
 // The first marker is togglable like any other: a pass at frame 0 is
 // normalized by the parser resolver at render/preview time (the
 // inheritance walk falls back to tempo 1.00 when no owner precedes it) —
@@ -221,6 +228,8 @@ void GuiWarpMarkersOps::toggle_inherits() {
             m.tempo_inherits = true;
             m.tempo_cents    = 100;
             m.tempo_scale.reset();
+            m.iter_start_cents.reset();
+            m.iter_end_cents.reset();
         } else if (m.tempo_inherits) {
             const MarkerEffective eff =
                 marker_effective(resolved_src, idx, audio.total_frames());
@@ -240,6 +249,8 @@ void GuiWarpMarkersOps::toggle_inherits() {
             m.tempo_inherits = true;
             m.tempo_cents    = 100;
             m.tempo_scale.reset();
+            m.iter_start_cents.reset();
+            m.iter_end_cents.reset();
         }
         changed = true;
     }
