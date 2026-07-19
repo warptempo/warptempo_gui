@@ -322,7 +322,9 @@ struct EditorTextDragState {
     bool active = false;
 };
 
-// Ctrl+Alt drag of a trim boundary stem (trim's only pointer gesture).
+// Alt drag of a trim boundary stem/chip (the pointer trim gesture, arming
+// after the Alt+drag branch's marker hit test misses; the Ctrl+Alt+wheel
+// end-move is the trim wheel gesture).
 // Parallel to DragState but motion mutates the active tab's live trim mirror
 // directly (no overlay); release triggers a target render when the bound
 // moved. Trim is excluded from undo/redo. Session-only.
@@ -339,7 +341,8 @@ struct TrimDragState {
     // initial snap. See DragState::anchor_mouse_time_frame.
     double anchor_frame     = 0.0;
 
-    // Ctrl+Alt move-both-bounds drag: both bounds translate together by
+    // Alt (top-strip inter-chip span) move-both-bounds drag: both bounds
+    // translate together by
     // the same delta in the active (on-screen) domain, preserving the gap
     // as it appears under warp. The pair has no grabbed-bound notion — both
     // bounds are the subject, it has no viewport clamp, and it never moves the
@@ -692,7 +695,7 @@ struct AppState {
     // release, Escape, and file load.
     PlayheadDragState playhead_drag;
 
-    // Ctrl+Alt drag of a trim boundary stem. Cleared on button
+    // Alt drag of a trim boundary stem/chip. Cleared on button
     // release, Escape, and file load.
     TrimDragState trim_drag;
 
@@ -783,9 +786,10 @@ struct AppState {
     // backing store lives in ViewState::trim. Excluded from undo/redo.
     // Mirrored to/from the active tab's ViewState slot at the tab-swap
     // boundary in active_views.cpp (same pattern as viewport/zoom/playhead).
-    // Trim is a region authored purely by the Ctrl+Alt pointer gestures, the
-    // bare-x set/clear, and the Ctrl+Alt+wheel end-move — it is NOT part of the
-    // selection system (no bound selection, no Tab stop, no Delete arm).
+    // Trim is a region authored purely by the Alt pointer drags (single-bound
+    // stem/chip, top-strip inter-chip pair), the bare-x set/clear, and the
+    // Ctrl+Alt+wheel end-move — it is NOT part of the selection system (no
+    // bound selection, no Tab stop, no Delete arm).
     TrimState trim;
 
     // Bottom-strip command prompt. Active only when a close / re-detect
@@ -1188,7 +1192,7 @@ enum class TrimHit { None, Begin, End };
 // same warp_frame_map as hit_test_marker_line in target view so the hit lands
 // on the visually-drawn stem. Trim is project-level, and applies in both 'W'
 // and 'P' views. When both bounds are within reach, the nearer wins. Consumed
-// by the Ctrl+Alt trim routing's waveform single-drag arm.
+// by the Alt trim routing's waveform single-drag arm.
 TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
                                int mouse_x);
 

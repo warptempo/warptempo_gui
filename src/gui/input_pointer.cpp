@@ -254,28 +254,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Clicks in iter/BPM mode route through the consolidated
         // flag/marker hit-test below.
 
-        // Ctrl+Alt is trim's ONLY pointer gesture, routed purely by trim
-        // geometry — markers are transparent to it (a marker stem or flag
-        // standing in a trim zone does not block the route; no marker hit test
-        // is consulted). Read-only refuses (all arms, silent). Ctrl+Alt with no
-        // trim geometry — over a marker, empty waveform, or empty top strip, or
-        // outside the strips — is a strict no-op. The follow override fires only
-        // when a drag actually armed and playback was live at press time (a
-        // top-strip press has already stopped playback, so was_playing is the
-        // pre-stop snapshot captured up top).
-        if (ctrl && alt && !shift) {
-            if (!inside_waveform && !inside_top) return;
-            if (active_view_state(app).read_only) return;
-            route_trim_ctrl_alt_press(x, y, inside_top);
-            if (app.trim_drag.active && was_playing)
-                app.follow_overridden_for_session = true;
-            return;
-        }
-
         // Consolidated hit-test across waveform (marker line) and top
         // strip (flag rect). A flag click behaves exactly like a click
-        // on its marker line. Trim bounds are transparent to every chord but
-        // Ctrl+Alt (handled above), so no trim hit test runs here.
+        // on its marker line. Trim bounds are transparent to PLAIN and SHIFT
+        // presses (a click over a bound is an ordinary waveform click); the Alt
+        // branch below consults the trim hit tests only after this marker hit
+        // test misses, so no trim hit test runs on the plain/Shift path.
         int hit = -1;
         bool in_click_region = false;
         if (inside_waveform) {
@@ -289,13 +273,21 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (!in_click_region) return;
 
         if (alt && !ctrl && !shift) {
-            // Alt+drag (exact) is the marker reposition gesture (the mouse
-            // counterpart of the Alt+Left / Alt+Right nudge), hit-area-
-            // dependent. On a marker stem or flag (hit >= 0) it begins the
-            // reposition drag, read-only refusing with a silent return (the
-            // drag never enters flight); elsewhere on the waveform it pans (a
-            // stepped scroll-drag). The marker-drag arm overrides follow when
-            // playing; the pan does not.
+            // Alt+drag (exact) is hit-area-dependent. In precedence order:
+            //   1. Marker stem (waveform) or flag (top strip), hit >= 0 → the
+            //      marker reposition drag (the mouse counterpart of the
+            //      Alt+Left / Alt+Right nudge). A marker within its halo BEATS a
+            //      trim stem in the same halo — markers are the denser primary
+            //      objects, and a contested bound still has its upper-row chip
+            //      as an unambiguous handle.
+            //   2. Trim geometry (stem/chip single hit, or the top-strip span
+            //      strictly between the two chips) → that bound's / the pair's
+            //      drag, via route_trim_alt_press. The router CLAIMS the press
+            //      (no pan fallback) whenever it lands on trim geometry.
+            //   3. Empty waveform → pan (a stepped scroll-drag).
+            // Read-only refuses the marker AND trim arms silently, each with no
+            // pan fallback. The marker/trim arms override follow when playing;
+            // the pan does not.
             if (hit >= 0) {
                 if (active_view_state(app).read_only) {
                     return;
@@ -306,6 +298,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 const bool was_playing_alt = playback.is_playing();
                 marker_drag.begin_drag(hit, x);
                 if (was_playing_alt)
+                    app.follow_overridden_for_session = true;
+                return;
+            }
+            // Trim: the marker hit test missed, so consult the trim hit tests.
+            // A claimed press (trim geometry, armed or read-only-refused) ends
+            // here — no pan fallback. The follow override fires only when a drag
+            // actually armed and playback was live at press time (a top-strip
+            // press has already stopped playback, so was_playing is the
+            // pre-stop snapshot captured up top).
+            if (route_trim_alt_press(x, y, inside_top)) {
+                if (app.trim_drag.active && was_playing)
                     app.follow_overridden_for_session = true;
                 return;
             }
@@ -322,12 +325,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
 
-        // Strict modifier matching: Ctrl+Alt (the trim gesture) is handled
-        // above and Alt-exact is hit-routed above (marker reposition on a
-        // marker, pan on empty waveform). Every other modifier combination —
-        // Ctrl on empty, Ctrl+Shift, Shift+Alt, ... — no-ops here. Only the
-        // plain or Shift-modified base press proceeds (Shift adjusts the
-        // selection).
+        // Strict modifier matching: Alt-exact is hit-routed above (marker
+        // reposition or trim arm on a hit, pan on empty waveform). Ctrl+Alt is
+        // no longer a pointer gesture — it falls here into the strict no-op (the
+        // Ctrl+Alt+wheel trim-end move is a wheel gesture, unaffected). Every
+        // other modifier combination — Ctrl on empty, Ctrl+Shift, Shift+Alt, ...
+        // — no-ops here too. Only the plain or Shift-modified base press
+        // proceeds (Shift adjusts the selection).
         if (ctrl || alt) return;
 
         // Plain or Shift press. In the waveform area this starts a

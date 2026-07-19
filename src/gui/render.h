@@ -493,7 +493,7 @@ void render_trim_stems(cairo_t* cr,
 // edge, the same convention the stem renderer uses). Column placement matches
 // render_trim_stems against the same viewport — `trim.begin` / `trim.end` are
 // already in the displayed domain, so no further translation happens here.
-// The chip has NO editable payload; it is a Ctrl+Alt grab target only (trim is
+// The chip has NO editable payload; it is an Alt grab target only (trim is
 // outside the selection system) and is never a text_editor target.
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,

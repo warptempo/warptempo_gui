@@ -476,11 +476,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // x is context-aware: on or inside a set trim it clears both bounds,
     // elsewhere it sets begin at the playhead and autosets end half of the
-    // visible span away. Trim's only pointer route is Ctrl+Alt (single via a
-    // stem/chip hit, pair via a press strictly between the two bound columns),
-    // and Ctrl+Alt+wheel moves the end; trim is outside the selection system,
-    // so there is no Delete arm. Plain Ctrl+x is cut (text_editor.cpp) and
-    // stays unbound here.
+    // visible span away. Trim's pointer routes are the Alt press (single via a
+    // stem/chip hit, pair via a top-strip press strictly between the two bound
+    // columns) and the Ctrl+Alt+wheel end-move; trim is outside the selection
+    // system, so there is no Delete arm. Plain Ctrl+x is cut (text_editor.cpp)
+    // and stays unbound here.
     if (!ctrl && !shift && !alt && key == GuiKeys::X) {
         handle_trim_x();
         return;
@@ -512,8 +512,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Alt+Left / Alt+Right: nudge the selected markers / phase resets by one
     // pixel of time. Trim is not part of the selection system, so the nudge
-    // never acts on a bound (Ctrl+Alt+wheel is trim's end-move, Ctrl+Alt+drag
-    // its reposition).
+    // never acts on a bound (Ctrl+Alt+wheel is trim's end-move, the Alt press-
+    // drag its stem/chip reposition).
     if (alt && !shift && !ctrl && key == GuiKeys::Left) {
         if (app.active_markers_view == 'P') phase_resets.nudge_selected_phase_resets(-1);
         else                        warpops.nudge_selected_markers(-1);

@@ -556,13 +556,16 @@ private:
     // invalidations, so the repaint shows the cleared state.
     void auto_clear_crossed_trim();
 
-    // Ctrl+Alt left press: trim's only pointer gesture, routed purely by trim
-    // geometry (markers are transparent; the caller consults no marker hit test
-    // and refuses read-only up front). A waveform stem-halo / top-strip chip hit
-    // begins that bound's single drag; a press strictly between two set bounds'
-    // columns begins the pair drag on the column-nearer bound; else no-op. Trim
-    // drags never touch selection.
-    void route_trim_ctrl_alt_press(int mouse_x, int mouse_y, bool inside_top);
+    // Alt left press trim routing, consulted by the Alt+drag branch AFTER its
+    // marker hit test misses (markers beat trim). Returns true iff the press
+    // landed on trim geometry (a waveform stem-halo / top-strip chip single hit,
+    // or the top-strip span strictly between two set bounds' columns) — armed or
+    // read-only-refused — so the caller claims the press with no pan fallback;
+    // false lets the caller fall through to the pan. Read-only claims without
+    // arming. The waveform between-region does NOT pair-drag (it stays pan); the
+    // pair handle is the top-strip inter-chip span. Trim drags never touch
+    // selection.
+    bool route_trim_alt_press(int mouse_x, int mouse_y, bool inside_top);
     void begin_trim_drag(TrimHit which, int mouse_x, bool both = false);
     void update_trim_drag(int mouse_x);   // motion: writes the live store
     // mouse_x → source-domain frame double, the single conversion both the
