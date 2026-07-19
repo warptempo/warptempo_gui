@@ -556,14 +556,15 @@ void render_trim_flags(cairo_t* cr,
     // the shared overlay wash (kOverlay / kOverlayAlpha, the same pair the phase
     // reset overlay paints with) over the top-strip background, PLUS a 1px
     // ring in the band's own color pair at ring strength (kOverlay at
-    // kOverlayOutlineAlpha, not the trim chips' ring color) drawn inside the
-    // band's own edges — the ring eats the outermost band pixels, growing the
-    // rect nothing (layout unchanged). Painted BEFORE the chip-box loop so the
-    // b/e chips overpaint the wash and the ring's ends, so the band reads as
-    // spanning between them and the ring's top/bottom edges visually connect the
-    // two chips' rings. Both columns are computed unconditionally with add_chip's
-    // own x_raw math (NOT via add_chip, whose viewport cull must not suppress the
-    // block: with one or both chips offscreen it still spans the visible part).
+    // kOverlayOutlineAlpha, not the trim chips' ring color): the top/bottom
+    // edges run along the wash's own outer rows, while the two vertical edges
+    // are visibility-aware and sit BESIDE the chips (detailed at the ring
+    // block below). Painted BEFORE the chip-box loop so the b/e chips overpaint
+    // the wash and the ring's ends, so the band reads as spanning between them
+    // and the ring's top/bottom edges visually connect the two chips' rings.
+    // Both columns are computed unconditionally with add_chip's own x_raw math
+    // (NOT via add_chip, whose viewport cull must not suppress the block: with
+    // one or both chips offscreen it still spans the visible part).
     if (has_begin && has_end && waveform_area.w > 0) {
         auto col_of = [&](int64_t frame) {
             const double x_raw =
@@ -572,14 +573,19 @@ void render_trim_flags(cairo_t* cr,
             return static_cast<int>(std::nearbyint(x_raw));
         };
         // min/max spans the pair either way — mid-gesture the displayed domain
-        // can invert begin/end. Clamp each end into the mapped waveform width
-        // (the width the chips map against); an empty span (both bounds off the
-        // same side collapse to one clamped column) skips the fill.
+        // can invert begin/end, so "left bound" / "right bound" are BY COLUMN,
+        // not b/e identity (the sort already treats them positionally). col_l /
+        // col_r are the UNCLAMPED columns (the vertical ring edges key off them
+        // and their true offscreen distance; named to avoid shadowing the
+        // cairo_t* cr parameter); lo/hi are their clamps into the mapped
+        // waveform width (the width the chips map against), spanning the
+        // wash/top/bottom over the visible part. An empty span (both bounds off
+        // the same side collapse to one clamped column) skips the fill.
         const int wmax = waveform_area.w - 1;
-        const int lo = std::clamp(std::min(col_of(trim.begin), col_of(trim.end)),
-                                  0, wmax);
-        const int hi = std::clamp(std::max(col_of(trim.begin), col_of(trim.end)),
-                                  0, wmax);
+        const int col_l = std::min(col_of(trim.begin), col_of(trim.end));
+        const int col_r = std::max(col_of(trim.begin), col_of(trim.end));
+        const int lo = std::clamp(col_l, 0, wmax);
+        const int hi = std::clamp(col_r, 0, wmax);
         if (hi > lo) {
             // Vertical band = the upper chip box: from its top
             // (flag_chip_bottom_y minus monospace_row_h()) to its bottom
@@ -595,16 +601,32 @@ void render_trim_flags(cairo_t* cr,
                             static_cast<double>(hi - lo),
                             chip_bottom - chip_top);
             cairo_fill(cr);
-            // Ring: a 1px border along the same rect's four edges, drawn
-            // INSIDE its outer 1px band (four integer-edged 1px rectangle
-            // fills, AA off — the house crisp-edge convention shared with the
-            // chip rings). The ring is the band's own color pair at ring
-            // strength — kOverlay at kOverlayOutlineAlpha, not the chip ring
-            // color — so the band reads as one self-consistent affordance
-            // rather than borrowing the trim chips' orange. A degenerate
-            // narrow band (rw of 1-2 px) just overdraws harmlessly. The rect
-            // is the wash's own: left/width from the integer chip columns,
-            // top/bottom snapped to the chip box.
+            // Ring: 1px edges in the band's own color pair at ring strength
+            // (kOverlay at kOverlayOutlineAlpha, not the trim chips' orange —
+            // so the band reads as one self-consistent affordance), AA off
+            // (the house crisp-edge convention shared with the chip rings).
+            //
+            // TOP/BOTTOM span the CLAMPED band [lo, hi] as before — their
+            // under-chip parts are overpainted by the b/e chips and their
+            // to-the-border parts run unframed, both already correct.
+            //
+            // The two VERTICAL edges are VISIBILITY-AWARE and sit BESIDE the
+            // chips (not at the bound columns, where the chip's own ring would
+            // overpaint them): each paints exactly when its bound is onscreen
+            // and abuts its chip's inner side, so the frame reads as spanning
+            // chip-to-chip. An offscreen bound gets NO vertical edge (the band
+            // runs to the screen border unframed). The chip footprint is
+            // [col, col + chip_w) — chip_w is the 1-glyph b/e chip width, taken
+            // from flag_chip_rect (x-independent), so the verticals are placed
+            // relative to the chips' footprints.
+            //
+            // RIGHT-SIDE ASYMMETRY: the right edge additionally paints when the
+            // end bound is exactly 1px offscreen (col_r == wmax + 1, landing on
+            // wmax) — the end-at-EOF, viewport-flush-right state, where the band
+            // genuinely ends at the screen border and deserves its frame. No
+            // left twin: that flush-past-the-edge state exists only on the
+            // right (the viewport clamps flush-right, never flush-left).
+            const int chip_w = flag_chip_rect(0.0, 1, baseline_y).w;
             const int rx = top_strip_area.x + lo;
             const int rw = hi - lo;
             const int ry = static_cast<int>(std::nearbyint(chip_top));
@@ -616,8 +638,29 @@ void render_trim_flags(cairo_t* cr,
                                       kOverlayOutlineAlpha);
                 cairo_rectangle(cr, rx, ry, rw, 1);                 // top
                 cairo_rectangle(cr, rx, ry + rh - 1, rw, 1);        // bottom
-                cairo_rectangle(cr, rx, ry, 1, rh);                 // left
-                cairo_rectangle(cr, rx + rw - 1, ry, 1, rh);        // right
+                // Left vertical: left bound visible (0 <= col_l <= wmax), at
+                // the first column right of the left chip's footprint
+                // (col_l + chip_w), abutting the chip's right ring. Skipped when
+                // that column lands at or past the right edge's column
+                // (col_r - 1) — a band narrower than the chip. Column clamped
+                // into [0, wmax] defensively (col_l + chip_w can exceed wmax
+                // when the right bound is far offscreen).
+                if (col_l >= 0 && col_l <= wmax && col_l + chip_w < col_r - 1) {
+                    const int lvx =
+                        top_strip_area.x + std::clamp(col_l + chip_w, 0, wmax);
+                    cairo_rectangle(cr, lvx, ry, 1, rh);            // left
+                }
+                // Right vertical: right bound onscreen OR exactly 1px offscreen
+                // (col_r <= wmax + 1), at the column just left of its chip's
+                // ring column (col_r - 1); at col_r == wmax + 1 this lands on
+                // wmax, the last onscreen column (the EOF flush-right carve-out).
+                // Evaluated independently of the left side (col_l < 0 with col_r
+                // visible keeps a right edge). Column clamped into [0, wmax].
+                if (col_r <= wmax + 1) {
+                    const int rvx =
+                        top_strip_area.x + std::clamp(col_r - 1, 0, wmax);
+                    cairo_rectangle(cr, rvx, ry, 1, rh);            // right
+                }
                 cairo_fill(cr);
                 cairo_restore(cr);
             }
