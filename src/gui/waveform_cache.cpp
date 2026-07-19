@@ -1015,16 +1015,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_target = app.top_flag_editor.target;
     }
 
-    // Hovered (popped-to-top) chip index, into the ACTIVE view's marker list.
-    // Clamp an out-of-range index to -1 (tolerated staleness: a store edit
-    // under a stationary pointer can leave the pop pointing past the list until
-    // the next motion/viewport recompute — cosmetic z-order only).
-    const size_t active_list_size =
-        (mv == 'P') ? app.phaseresetmarkers.markers().size()
-                    : app.warpmarkers.markers().size();
-    int hovered = app.hovered_flag_marker;
-    if (hovered >= static_cast<int>(active_list_size)) hovered = -1;
-
     // Displayed-domain trim state for the b/e chips (shared helper,
     // same values the stem cache paints its stems at).
     const DisplayedTrim dtrim = compute_displayed_trim();
@@ -1044,7 +1034,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_active_markers_view     == mv &&
         flag_cache.fp_flag_editor_target      == flag_target &&
         flag_cache.fp_iteration_mode_enabled  == iter_on &&
-        flag_cache.fp_hovered_flag            == hovered &&
         flag_cache.fp_trim_begin              == dtrim.begin &&
         flag_cache.fp_trim_end                == dtrim.end &&
         flag_cache.fp_trim_has_begin          == dtrim.has_begin &&
@@ -1110,8 +1099,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             flag_font_size_px(),
             app.selected_markers,
             tmap_arg,
-            drag_overlay,
-            hovered);
+            drag_overlay);
     } else {
         render_flags(ccr, local_top_strip, wave_w,
                      app.warpmarkers.markers(),
@@ -1121,8 +1109,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                      cache_overlay,
                      tmap_arg,
                      drag_overlay,
-                     iter_on,
-                     hovered);
+                     iter_on);
     }
 
     // The b/e trim chips cap their stems in the upper top row. Painted
@@ -1151,7 +1138,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_active_markers_view     = mv;
     flag_cache.fp_flag_editor_target      = flag_target;
     flag_cache.fp_iteration_mode_enabled  = iter_on;
-    flag_cache.fp_hovered_flag            = hovered;
     flag_cache.fp_trim_begin              = dtrim.begin;
     flag_cache.fp_trim_end                = dtrim.end;
     flag_cache.fp_trim_has_begin          = dtrim.has_begin;

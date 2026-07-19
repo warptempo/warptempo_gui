@@ -633,10 +633,11 @@ void render_trim_flags(cairo_t* cr,
     // Overlapping chips occlude rather than elide (as the marker/phase-reset
     // flags do). Paint the sorted list in REVERSE order so the leftmost chip
     // (and, at an equal column, `b` over `e` per the tie-break above) lands on
-    // top. The b/e chips are outside the hover pop-to-top scope (recorded
-    // asymmetry: two chips of the same subject, no hovered index) and, for
-    // now, outside the outline ring too (draw_outline stays off here — the
-    // ring is marker-chip-only, so the trim chips paint a full-rect orange
+    // top. The b/e chips are outside the selection z-order (recorded asymmetry:
+    // trim bounds are unselectable by ruling, so there is no selected/unselected
+    // two-pass split here — a single reverse pass is the whole occlusion order)
+    // and, for now, outside the outline ring too (draw_outline stays off here —
+    // the ring is marker-chip-only, so the trim chips paint a full-rect orange
     // fill).
     // render_editor_text_box sizes each chip from the shared flag_chip_rect
     // helper (glyph count * monospace_advance() plus padding), the same width
@@ -829,13 +830,15 @@ namespace {
 // without one.
 //
 // Occlusion model: the emit order is ascending x. The painters paint the
-// collected list in REVERSE, so the leftmost (and, on an equal column, the
-// lowest store index) chip lands on top; the hit walk runs FORWARD, so the
-// first containing rect is the topmost-painted chip. Consistency invariant
-// across the paint and hit paths: topmost = the hovered chip if one is
-// popped (render_flags / render_phase_reset_flags paint it last, hit_test_flag
-// returns it first), else the leftmost chip (lowest index on ties). The two
-// walks resolve overlap in exactly that order.
+// collected list in TWO REVERSE passes keyed on selection — unselected first,
+// then selected — so a selected chip lands above every unselected one and,
+// within each class, the leftmost (lowest store index on an equal column) lands
+// on top; the hit walk runs FORWARD in two matching passes (selected first,
+// then unconditional). Consistency invariant across the paint and hit paths:
+// topmost = the leftmost SELECTED chip when any selected chip contains the
+// point, else the leftmost chip (lowest index on ties). The paint's two reverse
+// passes and the hit's two forward passes resolve overlap in exactly that
+// order.
 template <typename MarkerVec, typename FlagTextFn, typename Emit>
 void iterate_visible_flags_impl(
     GuiRect top_strip_area,
@@ -1000,8 +1003,7 @@ void render_flags(cairo_t* cr,
                   const FlagEditorOverlay& editor,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map,
                   const DragOverlay* drag_overlay,
-                  bool iteration_on,
-                  int hovered_index) {
+                  bool iteration_on) {
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (sample_rate <= 0) return;
@@ -1014,15 +1016,16 @@ void render_flags(cairo_t* cr,
 
     const double hl_pad = flag_pad_x_px();
 
-    // Collect emit args during the ascending-x iterate pass, then paint the
-    // collected list in REVERSE order. Reverse paint IS the occlusion order:
-    // the leftmost (lowest-index on ties) chip lands on top, each righter chip
-    // occluded by its earlier neighbors — in every state, static or editing.
-    // (When an editor's pending text grows past its original flag width into
-    // the right neighbor's territory, the editor's bg-fill and text likewise
-    // occlude the right neighbor.) `hovered_index`, if >= 0, is lifted out of
-    // the reverse sweep and painted LAST so the hovered chip pops above the
-    // whole stack.
+    // Collect emit args during the ascending-x iterate pass, then paint in TWO
+    // reverse passes keyed on selection: the UNSELECTED emits in reverse
+    // (rightmost first), then the SELECTED emits in reverse. So every selected
+    // chip lands above every unselected one, and within each class the leftmost
+    // (lowest-index on ties) paints last = on top, each righter chip occluded by
+    // its earlier neighbors. (When an editor's pending text grows past its
+    // original flag width into the right neighbor's territory, the editor's
+    // bg-fill and text likewise occlude the right neighbor.) Selection drives
+    // the flag-cache fingerprint (fp_selection_hash), so a selection change
+    // rebuilds the cache and this z-order follows.
     struct FlagEmit {
         int                  i;
         double               text_left;
@@ -1050,26 +1053,14 @@ void render_flags(cairo_t* cr,
             emits.push_back({i, text_left, baseline_y, text});
         });
 
-    for (auto it = emits.rbegin(); it != emits.rend(); ++it) {
-        if (it->i == hovered_index) continue;  // popped chip paints last
-        paint_one_flag_with_overlay(cr, it->i, it->text_left, it->baseline_y,
-                                    it->text, selected_set, editor,
-                                    hl_pad);
-    }
-    // Paint the hovered chip on top of the stack. Absent from `emits` means it
-    // was culled offscreen (or skip-guarded as the editor target, above) —
-    // nothing to do. The editor skip-guard keeps precedence: the editor target
-    // never paints into the cache, hovered or not.
-    if (hovered_index >= 0) {
-        for (const FlagEmit& e : emits) {
-            if (e.i == hovered_index) {
-                paint_one_flag_with_overlay(cr, e.i, e.text_left, e.baseline_y,
-                                            e.text, selected_set, editor,
-                                            hl_pad);
-                break;
-            }
-        }
-    }
+    auto paint_emit = [&](const FlagEmit& e) {
+        paint_one_flag_with_overlay(cr, e.i, e.text_left, e.baseline_y,
+                                    e.text, selected_set, editor, hl_pad);
+    };
+    for (auto it = emits.rbegin(); it != emits.rend(); ++it)
+        if (!selected_set.count(it->i)) paint_emit(*it);
+    for (auto it = emits.rbegin(); it != emits.rend(); ++it)
+        if (selected_set.count(it->i)) paint_emit(*it);
 
     cairo_restore(cr);
 }
@@ -1141,9 +1132,10 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     // flag_chip_rect helper, the same one render_editor_text_box fills, so the
     // painted chip and this hit rect are the same rectangle by construction.
     // One rect per VISIBLE chip (no elision), emitted in ascending-x order, so
-    // overlapping chips yield overlapping rects; the caller's FORWARD walk
-    // resolves an overlap to the first-containing rect = the topmost-painted
-    // chip.
+    // overlapping chips yield overlapping rects; the caller (hit_test_flag)
+    // resolves an overlap with two forward passes mirroring the painters' two
+    // reverse passes — the leftmost SELECTED containing rect, else the leftmost
+    // containing rect = the topmost-painted chip.
     iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
                                viewport_start_sample, viewport_end_sample,
                                warp_frame_map, drag_overlay,
@@ -1253,8 +1245,7 @@ void render_phase_reset_flags(cairo_t* cr,
                             double font_size,
                             const std::set<int>& selected_set,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map,
-                            const DragOverlay* drag_overlay,
-                            int hovered_index) {
+                            const DragOverlay* drag_overlay) {
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (sample_rate <= 0) return;
@@ -1267,11 +1258,13 @@ void render_phase_reset_flags(cairo_t* cr,
 
     const double hl_pad = flag_pad_x_px();
 
-    // Collect-then-reverse-paint, mirroring render_flags: reverse paint is the
-    // occlusion order (leftmost, lowest-index on ties, on top), and
-    // `hovered_index` if >= 0 is painted LAST so the hovered chip pops above
-    // the stack. With no per-flag editor every visible flag paints straight
-    // into the cache.
+    // Collect-then-paint in TWO reverse passes keyed on selection, mirroring
+    // render_flags: the UNSELECTED emits in reverse, then the SELECTED emits in
+    // reverse, so every selected chip lands above every unselected one and
+    // within each class the leftmost (lowest-index on ties) paints last = on
+    // top. Selection drives the flag-cache fingerprint (fp_selection_hash), so a
+    // selection change rebuilds the cache and this z-order follows. With no
+    // per-flag editor every visible flag paints straight into the cache.
     struct PhaseResetEmit {
         int                  i;
         double               text_left;
@@ -1290,22 +1283,14 @@ void render_phase_reset_flags(cairo_t* cr,
             emits.push_back({i, text_left, baseline_y, text});
         });
 
-    for (auto it = emits.rbegin(); it != emits.rend(); ++it) {
-        if (it->i == hovered_index) continue;  // popped chip paints last
+    auto paint_emit = [&](const PhaseResetEmit& e) {
         paint_one_phase_reset_flag(
-            cr, it->i, it->text_left, it->baseline_y, it->text,
-            selected_set, hl_pad);
-    }
-    if (hovered_index >= 0) {
-        for (const PhaseResetEmit& e : emits) {
-            if (e.i == hovered_index) {
-                paint_one_phase_reset_flag(
-                    cr, e.i, e.text_left, e.baseline_y, e.text,
-                    selected_set, hl_pad);
-                break;
-            }
-        }
-    }
+            cr, e.i, e.text_left, e.baseline_y, e.text, selected_set, hl_pad);
+    };
+    for (auto it = emits.rbegin(); it != emits.rend(); ++it)
+        if (!selected_set.count(it->i)) paint_emit(*it);
+    for (auto it = emits.rbegin(); it != emits.rend(); ++it)
+        if (selected_set.count(it->i)) paint_emit(*it);
 
     cairo_restore(cr);
 }

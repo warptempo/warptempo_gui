@@ -325,23 +325,21 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
             tmap_arg, drag_overlay,
             app.iteration_mode_enabled);
     }
-    // Sticky top-of-stack priority: the popped (hovered) chip is painted above
-    // the whole stack, so it is what the user sees and clicks (WYSIWYG). While
-    // the pointer stays inside its rect it keeps winning the hit — without this
-    // the ascending-x walk would flip the hit to the leftmost overlapping chip
-    // and flicker as the pointer moves through the overlap. Deliberately
-    // visible to every consumer (selection clicks, Alt+drag grabs, editor caret
-    // clicks).
-    if (app.hovered_flag_marker >= 0) {
-        for (const auto& r : rects) {
-            if (r.marker_index == app.hovered_flag_marker &&
-                mouse_x >= r.x && mouse_x < r.x + r.w &&
-                mouse_y >= r.y && mouse_y < r.y + r.h) {
-                return r.marker_index;
-            }
+    // Mirror of the painters' two-pass z-order (render_flags /
+    // render_phase_reset_flags): selected chips paint above unselected, and
+    // within each class the leftmost paints on top. So walk the rects TWICE —
+    // first the first-containing rect whose marker is selected, else the
+    // first-containing rect unconditionally. rects are emitted ascending-x, so
+    // each forward pass resolves to that class's leftmost = topmost. WYSIWYG for
+    // every consumer (selection clicks, Alt+drag grabs, editor caret clicks, the
+    // hover popup's target): the topmost-painted chip is what a click grabs.
+    for (const auto& r : rects) {
+        if (mouse_x >= r.x && mouse_x < r.x + r.w &&
+            mouse_y >= r.y && mouse_y < r.y + r.h &&
+            app.selected_markers.count(r.marker_index)) {
+            return r.marker_index;
         }
     }
-    // Forward walk = ascending-x = topmost-painted first among the rest.
     for (const auto& r : rects) {
         if (mouse_x >= r.x && mouse_x < r.x + r.w &&
             mouse_y >= r.y && mouse_y < r.y + r.h) {

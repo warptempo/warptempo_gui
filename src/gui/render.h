@@ -104,9 +104,9 @@ inline constexpr GuiColor kText             = hex(0xFCFCFC);  // Breeze paper wh
 // (kMarker / kSelected / kAccent). Painted as the solid 1px outline ring
 // around a marker chip (see EditorTextBox::draw_outline / kChipOutlinePx);
 // these are the tuning knobs.
-inline constexpr GuiColor kMarkerOutline    = hex(0x611C84);
-inline constexpr GuiColor kSelectedOutline  = hex(0x1D6FA5);
-inline constexpr GuiColor kAccentOutline    = hex(0x801F1C);
+inline constexpr GuiColor kMarkerOutline    = hex(0x3A0E54);
+inline constexpr GuiColor kSelectedOutline  = hex(0x11405F);
+inline constexpr GuiColor kAccentOutline    = hex(0x521310);
 
 // Trim boundary stem color (#F67400 orange). Distinct from
 // kMarker, kSelected, the teal cursor, and the yellow scanner. A set
@@ -597,15 +597,14 @@ struct FlagEditorOverlay {
 // the only disabled signal lives in the marker stem (handled by
 // `render_markers`).
 // `warp_frame_map`: same displayed-axis translation as render_markers (the
-// live map in target view). Chips are collected in ascending painted-x order
-// and painted in reverse, so in target view the occlusion z-order is applied
-// against post-translation positions.
+// live map in target view). Chips are collected in ascending painted-x order,
+// so in target view the occlusion z-order is applied against post-translation
+// positions. Painting is two reverse passes keyed on `selected_set` — selected
+// chips above unselected, leftmost on top within each class (see render.cpp).
 // `waveform_width` is the EFFECTIVE waveform width (waveform_area.w), the
 // column-mapping denominator; chips share the marker stems' samples-per-pixel
 // so they stay column-aligned with the stems below them at every window width
 // (it differs from top_strip_area.w only at a non-multiple-of-16 window).
-// `hovered_index`, if >= 0, is the marker index popped to the top of the
-// stack (painted last); -1 leaves the plain leftmost-on-top occlusion order.
 void render_flags(cairo_t* cr,
                   GuiRect top_strip_area,
                   int waveform_width,
@@ -618,8 +617,7 @@ void render_flags(cairo_t* cr,
                   const FlagEditorOverlay& editor = {},
                   const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                   const DragOverlay* drag_overlay = nullptr,
-                  bool iteration_on = false,
-                  int hovered_index = -1);
+                  bool iteration_on = false);
 
 // Paints ONE flag — the FlagPayload-editor target — with the
 // live pending text, selection swap, and blinking cursor. Same column
@@ -655,8 +653,10 @@ void render_one_editor_flag(
 // Same column placement as render_flags, without drawing — returns the
 // screen-coord rects of the flags that would be rendered (one per visible
 // chip, no elision, so overlapping chips yield overlapping rects). The caller
-// hit-tests them with a FORWARD walk, resolving an overlap to the first-
-// containing rect = the topmost-painted chip. No cairo context is needed: the chip
+// (hit_test_flag) resolves an overlap with two forward passes mirroring the
+// painters' two reverse passes — the leftmost SELECTED containing rect, else
+// the leftmost containing rect = the topmost-painted chip. No cairo context is
+// needed: the chip
 // width comes from the cached monospace advance (glyph count times
 // monospace_advance()), which is exact for the ASCII monospace chip strings.
 // `warp_frame_map` mirrors render_flags so the two stay in sync. In target
@@ -699,9 +699,9 @@ void render_phaseresetmarkers(cairo_t* cr,
 // no parse-fail state. Trim membership has no effect — flags always
 // paint full-brightness.
 // `waveform_width` is the effective waveform width (see render_flags), the
-// column-mapping denominator shared with the phase-reset stems.
-// `hovered_index`, if >= 0, is the phase-reset index popped to the top of the
-// stack (painted last); -1 leaves the plain leftmost-on-top occlusion order.
+// column-mapping denominator shared with the phase-reset stems. Painting is two
+// reverse passes keyed on `selected_set` — selected chips above unselected,
+// leftmost on top within each class (see render.cpp).
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
                             int waveform_width,
@@ -712,8 +712,7 @@ void render_phase_reset_flags(cairo_t* cr,
                             double font_size,
                             const std::set<int>& selected_set,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
-                            const DragOverlay* drag_overlay = nullptr,
-                            int hovered_index = -1);
+                            const DragOverlay* drag_overlay = nullptr);
 
 // `waveform_width` is the effective waveform width (see compute_flag_hit_rects).
 std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(

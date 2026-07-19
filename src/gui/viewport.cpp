@@ -401,35 +401,22 @@ void Viewport::follow_scroll_if_needed() {
     }
 }
 
-// Reset only the hover POPUP fields. If the popup was visible, invalidate the
+// Reset the hover popup state. If the popup was visible, invalidate the
 // bottom strip so the next paint erases it (the hover readout lives in
-// bottom_upper_row_area). Leaves app.hovered_flag_marker (the chip pop)
-// untouched — the recompute's view/iter branch relies on that.
-void Viewport::clear_hover_popup_fields() {
+// bottom_upper_row_area). Safe to call from any path.
+void Viewport::clear_hover_popup() {
     const bool was_visible = app.hover_popup.visible;
     app.hover_popup = HoverPopupState{};
     if (was_visible) invalidate_timestamp_area();
 }
 
-// Reset the hover popup AND the chip pop. Safe to call from any path. No new
-// damage for the pop reset: the flag-cache fingerprint carries
-// app.hovered_flag_marker, so the next tick rebuild picks the change up and
-// invalidates the top strip itself.
-void Viewport::clear_hover_popup() {
-    clear_hover_popup_fields();
-    app.hovered_flag_marker = -1;
-}
-
 // Re-evaluate hover at the cursor's last on_motion coordinates. The single
-// hover implementation: on_motion's no-gesture path delegates here, and
+// hover-popup implementation: on_motion's no-gesture path delegates here, and
 // viewport mutations (zoom, scroll, center, playhead-driven viewport shift)
 // call it so a stationary cursor's hover state tracks the rects that just slid
-// under it. Two products: (1) the chip pop-to-top (app.hovered_flag_marker),
-// computed in every authoring marker view and in iter mode; (2) the flag-hover
-// popup (hover_popup), warp-view non-iter only. Hard suppression set (prompt,
-// any_pointer_gesture_active — the five pointer drags — the three text editors,
-// render queue) clears BOTH and returns; a non-warp view or iter mode clears
-// only the popup and keeps the pop.
+// under it. Suppression set: prompt, any_pointer_gesture_active (the five
+// pointer drags), the three text editors, render queue, non-warp marker view,
+// and iter mode — each clears the popup.
 void Viewport::recompute_hover_at_cursor() {
     if (app.last_mouse_x < 0 || app.last_mouse_y < 0) return;
     if (app.prompt.active ||
@@ -441,39 +428,16 @@ void Viewport::recompute_hover_at_cursor() {
         clear_hover_popup();
         return;
     }
-
-    const int x = app.last_mouse_x;
-    const int y = app.last_mouse_y;
-
-    // Chip pop-to-top: the marker under the pointer's flag chip (top strip) or,
-    // failing that, its stem (waveform area) pops above the flag stack. Runs in
-    // every authoring marker view ('W' and 'P') and in iter mode — the popup
-    // suppression below does not apply to the pop. hit_test_flag already builds
-    // the target map internally, so this is view-agnostic. No damage call here:
-    // the flag-cache fingerprint carries app.hovered_flag_marker and the next
-    // rebuild picks it up.
-    const int flag_hit = hit_test_flag(app, audio, x, y);
-    int pop = flag_hit;
-    if (pop < 0) {
-        const GuiRect wa = waveform_area(app);
-        if (x >= wa.x && x < wa.x + wa.w && y >= wa.y && y < wa.y + wa.h)
-            pop = hit_test_marker_line(app, audio, x);
-    }
-    app.hovered_flag_marker = pop;
-
-    // The popup itself is warp-view, non-iter only; a stem hover pops the chip
-    // but never opens the popup (flag-hover-only). Clear only the popup FIELDS
-    // here, not the pop state just written.
     if (app.active_markers_view != 'W' || app.iteration_mode_enabled) {
-        clear_hover_popup_fields();
+        clear_hover_popup();
         return;
     }
     // Target view's hover popup runs the same way as
     // source view's. hit_test_flag builds the target_warp_frame_map
     // internally when active_audio_view == Target so the flag rects it
     // walks match what paint_handler renders at translated columns.
-    // Reuses flag_hit from the pop computation above.
-    const int hit = flag_hit;
+    const int hit = hit_test_flag(app, audio,
+                                  app.last_mouse_x, app.last_mouse_y);
     if (hit != app.hover_popup.marker_index) {
         // No dwell: recompute cached_text once, derive visible from it,
         // damage the readout area when the old popup was showing or the
