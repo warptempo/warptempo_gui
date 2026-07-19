@@ -429,13 +429,26 @@ void GuiFlagEditor::commit_top_flag_edit() {
         }
     }
 
-    // Apply the parsed iteration bracket. Session-only; nullopt
-    // bounds clear the sweep. The accepted live-vector assignment bumps
-    // the warp generation, so the flag cache repaints the bracket
-    // regardless of whether the canonical fields moved.
+    // Apply the parsed iteration bracket. Session-only; nullopt bounds
+    // clear the sweep. The accepted live-vector assignment bumps the warp
+    // generation, so the flag cache repaints the bracket regardless of
+    // whether the canonical fields moved.
+    //
+    // Invariant: an INELIGIBLE committed marker never keeps a bracket. A
+    // bracket exists only while iteration mode paints it and its owner is
+    // iter-eligible; a commit that makes the marker ineligible (a pass, or
+    // a &ref) clears both bounds unconditionally — regardless of
+    // iter_grammar, so a mode-off pass conversion of an undo-restored
+    // bracketed owner also drops the fields. This mirrors Ctrl+N's
+    // owner->pass / ref->pass eligibility-loss clears; undo is the sole
+    // sanctioned route that resurrects a cleared bracket.
     if (iter_grammar) {
         m.iter_start_cents = iter_lo;
         m.iter_end_cents   = iter_hi;
+    }
+    if (!iter_popup_eligible_marker(m)) {
+        m.iter_start_cents.reset();
+        m.iter_end_cents.reset();
     }
 
     // Did any serialized field change? Cascade renames imply a label_def
@@ -449,16 +462,18 @@ void GuiFlagEditor::commit_top_flag_edit() {
         m.disabled       != before.disabled ||
         n_refs_renamed > 0;
 
-    // Did the session-only iteration bracket move? optional<int64_t>
-    // equality: two bounds are equal when both are nullopt or when the
-    // held cents compare equal. A bracket-only edit does not mark dirty
-    // (iter values are session-only), but it is still a real undoable
-    // change — the snapshot restores the iter values — so its push must
-    // not be skipped.
+    // Did the session-only iteration bracket move? Compare the ACTUAL
+    // final fields, not the parsed input: this is correct on every path,
+    // including an ineligibility clear that resets the bounds on a commit
+    // whose canonical fields did not move (the mode-off pass conversion).
+    // optional<int64_t> equality: two bounds are equal when both are
+    // nullopt or when the held cents compare equal. A bracket-only edit
+    // does not mark dirty (iter values are session-only), but it is still a
+    // real undoable change — the snapshot restores the iter values — so its
+    // push must not be skipped.
     const bool bracket_changed =
-        iter_grammar &&
-        (iter_lo != before.iter_start_cents ||
-         iter_hi != before.iter_end_cents);
+        m.iter_start_cents != before.iter_start_cents ||
+        m.iter_end_cents   != before.iter_end_cents;
 
     // An undo entry represents a state change, not a gesture. A commit
     // that moves neither a canonical field nor the bracket is a no-op:
