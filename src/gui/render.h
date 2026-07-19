@@ -69,14 +69,16 @@ inline constexpr GuiColor kWaveform         = hex(0x8CBFE6);
 // (still clearly a waveform, just faded). Tune by eye/ear in the car loop.
 inline constexpr GuiColor kWaveformDimmed   = hex(0x4D6378);
 
-// Phase reset overlay fill. A flat translucent rectangle spanning forward
-// in target time from the focused phase reset marker — the stretch of
-// output immediately following the reset over which the re-seeded phase
-// takes hold before normal propagation resumes — composited at a small
-// alpha so it lifts whatever it covers (background, waveform, and
-// already-dimmed out-of-trim pixels alike) — polarity-opposite to the
-// out-of-trim dim, which darkens. GuiColor carries no alpha, so the alpha
-// is the separate constexpr double below.
+// Shared overlay wash, used by BOTH the phase reset overlay (waveform /
+// target view) and the trim pair-drag chip-row band (top strip). A flat
+// translucent fill composited at a small alpha so it lifts whatever it
+// covers (background, waveform, and already-dimmed out-of-trim pixels alike)
+// — polarity-opposite to the out-of-trim dim, which darkens. The phase reset
+// overlay is a rectangle spanning forward in target time from the focused
+// phase reset marker — the stretch of output immediately following the reset
+// over which the re-seeded phase takes hold before normal propagation
+// resumes. GuiColor carries no alpha, so the alpha is the separate constexpr
+// double below.
 //
 // Flat fill, not a plate-masked recolor: a recolor was tried and rejected
 // because it goes invisible on the silent stretches where phase resets often
@@ -88,12 +90,8 @@ inline constexpr GuiColor kWaveformDimmed   = hex(0x4D6378);
 // instead of neutralizing it. A tinted source lifts less per alpha unit than
 // white (the per-channel add is alpha times source-minus-dest). Both values
 // tuned by eye on the panel.
-inline constexpr GuiColor kPhaseResetOverlay      = hex(0xB8D4F0);
-inline constexpr double    kPhaseResetOverlayAlpha = 0.05;
-// The trim pair-drag band's fill alpha — shares the overlay's COLOR
-// (kPhaseResetOverlay) but has an independently tuned alpha (currently equal
-// to the overlay's).
-inline constexpr double    kTrimPairBandAlpha      = 0.05;
+inline constexpr GuiColor kOverlay      = hex(0xB8D4F0);
+inline constexpr double    kOverlayAlpha = 0.05;
 
 inline constexpr GuiColor kMarker           = hex(0x9145AD);
 inline constexpr GuiColor kSelected         = hex(0x3DAEE9);  // Breeze blue
@@ -502,12 +500,11 @@ void render_trim_stems(cairo_t* cr,
 // chips — the visual affordance of the Alt pair-drag's chip-row grab band. It
 // occupies the upper chip box's vertical band (flag_chip_bottom_y(...,
 // ChipRow::Upper) minus monospace_row_h(), down to flag_chip_bottom_y) and
-// shares the phase reset overlay's color (kPhaseResetOverlay) but has its own
-// independently tuned alpha (kTrimPairBandAlpha, currently equal to the
-// overlay's), over the strip background. It spans the two bounds' columns
-// unconditionally (independent of the chips' viewport cull) clamped into the
-// mapped waveform width, so it still paints across the visible part when a chip
-// is offscreen.
+// uses the shared overlay wash (kOverlay / kOverlayAlpha, the same pair the
+// phase reset overlay paints with), over the strip background. It spans the
+// two bounds' columns unconditionally (independent of the chips' viewport cull)
+// clamped into the mapped waveform width, so it still paints across the visible
+// part when a chip is offscreen.
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
                        GuiRect waveform_area,

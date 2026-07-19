@@ -360,9 +360,9 @@ void GuiPaintHandler::paint_phase_reset_overlay(
     // already-dimmed out-of-trim pixels — that layering is intended).
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_source_rgba(cr, kPhaseResetOverlay.r,
-                          kPhaseResetOverlay.g, kPhaseResetOverlay.b,
-                          kPhaseResetOverlayAlpha);
+    cairo_set_source_rgba(cr, kOverlay.r,
+                          kOverlay.g, kOverlay.b,
+                          kOverlayAlpha);
     cairo_rectangle(cr, x0, y_top, x1 - x0, y_bottom - y_top);
     cairo_fill(cr);
     cairo_restore(cr);
