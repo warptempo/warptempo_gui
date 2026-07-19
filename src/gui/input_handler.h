@@ -443,10 +443,12 @@ private:
                       bool over_trim_row);
 
     // Tab / Shift+Tab / IsoLeftTab dispatch: cycle marker focus, then stop
-    // playback, move the playhead onto the newly focused marker, and recenter
-    // the viewport at the current zoom. Mode-aware: reads from
-    // phaseresetmarkers in 'P' mode, warpmarkers otherwise.
-    void cycle_marker_focus_with_recenter(bool forward);
+    // playback and move the playhead onto the newly focused marker. Recenters
+    // the viewport on it at the current zoom ONLY under follow mode
+    // (app.follow_mode); with follow off the playhead still moves but the
+    // screen stays put. Mode-aware: reads from phaseresetmarkers in 'P' mode,
+    // warpmarkers otherwise.
+    void cycle_marker_focus(bool forward);
 
     // Esc-cancel handlers: while a render or queued batch is in flight, Esc
     // cancels it. Returns true if it consumed the key (on_key then returns).

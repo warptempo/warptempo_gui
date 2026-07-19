@@ -1365,27 +1365,28 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // opposite tab. Composes bare Tab and Ctrl+Tab so the user can
     // march paired tabs forward in lockstep with one chord.
     if (ctrl && shift && !alt && key == GuiKeys::Tab) {
-        cycle_marker_focus_with_recenter(true);
+        cycle_marker_focus(true);
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
-        cycle_marker_focus_with_recenter(true);
+        cycle_marker_focus(true);
         target_render.trigger();
         return true;
     }
 
-    // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus and recenter on the
-    // focused marker at the current zoom. The Ctrl+Tab branch above runs first and
+    // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus onto the next/prev
+    // marker, moving the playhead to it (and recentering on it at the current
+    // zoom under follow mode only). The Ctrl+Tab branch above runs first and
     // returns, so Ctrl+Tab is consumed before reaching here; the explicit
     // !ctrl guards below ensure Ctrl+Shift+Tab does not slip into the
     // cycle path either. Alt-strict everywhere: an Alt held makes the chord
     // an unbound no-op rather than falling into the cycle.
     if (!ctrl && !alt && key == GuiKeys::Tab && !shift) {
-        cycle_marker_focus_with_recenter(true);  return true;
+        cycle_marker_focus(true);  return true;
     }
     if (!ctrl && !alt && key == GuiKeys::Tab && shift)  {
-        cycle_marker_focus_with_recenter(false); return true;
+        cycle_marker_focus(false); return true;
     }
     if (!ctrl && !alt && key == GuiKeys::IsoLeftTab)    {
-        cycle_marker_focus_with_recenter(false); return true;
+        cycle_marker_focus(false); return true;
     }
 
     return false;
