@@ -188,14 +188,14 @@ void GuiTargetRender::dispatch_render_now() {
         // Reuse skips do_render, whose trim-plan block owns the fallback
         // line on fresh dispatches — so the ruled one-line-per-resolve
         // signal prints here instead. This rung cannot see plan_trim's
-        // error string; the span case is the only refusal a resting live
-        // store can reach (crossed/equal cannot rest, past-EOF is
-        // adversarial load-fatal), so the wording below is exactly the line
-        // validate_trim_frames produces for it.
+        // error string; the verdict names which fallback (lone bound or
+        // sub-sample span — the two a resting live store can reach; crossed/
+        // equal cannot rest, past-EOF is adversarial load-fatal), so the
+        // reason below matches the orchestrators' vocabulary byte-for-byte.
         if (verdict.trim_fell_back) {
             std::fprintf(stderr,
-                "warptempo_gui: trim target span rounds below one output "
-                "sample; rendering untrimmed\n");
+                "warptempo_gui: %s; rendering untrimmed\n",
+                verdict.fallback_reason);
         }
         complete_successful_buffer();
         return;
@@ -237,11 +237,12 @@ void GuiTargetRender::dispatch_render_now() {
             dispatched_buffer_start_frame_ = verdict.start_frame;
             // Reuse skips do_render's trim-plan block; print the fallback
             // signal here — same rationale as the cache rung above (this
-            // is the only other pre-do_render return).
+            // is the only other pre-do_render return). The verdict names the
+            // fallback reason (lone bound or sub-sample span).
             if (verdict.trim_fell_back) {
                 std::fprintf(stderr,
-                    "warptempo_gui: trim target span rounds below one "
-                    "output sample; rendering untrimmed\n");
+                    "warptempo_gui: %s; rendering untrimmed\n",
+                    verdict.fallback_reason);
             }
             complete_successful_buffer();
             std::fprintf(stderr,
@@ -388,51 +389,51 @@ GuiTargetRender::compute_buffer_start_frame_for(
     bool has_begin, int64_t begin_frame,
     bool has_end, int64_t end_frame) const {
     // Buffer frame 0 corresponds to target frame 0 for a full-song render;
-    // with a SURVIVING trim begin, buffer[0] IS llrint(T_b) by construction
-    // — the post_trim crop cut the render at exactly the authored begin's
-    // target image (T_b = the authored begin frame through the map, exact
-    // doubles, the trimmer's own formula) — so the anchor is that same
-    // llrint(T_b) in full-target coordinates and the exact authored
-    // begin/end display falls out.
+    // with a SURVIVING trim (both bounds set, span >= 1 sample), buffer[0]
+    // IS llrint(T_b) by construction — the post_trim crop cut the render at
+    // exactly the authored begin's target image (T_b = the authored begin
+    // frame through the map, exact doubles, the trimmer's own formula) — so
+    // the anchor is that same llrint(T_b) in full-target coordinates and the
+    // exact authored begin/end display falls out.
     //
-    // Survival verdict (do_render decoupling; rationale at the struct in
-    // target_render.h): a trim plan_trim refuses renders the FULL, untrimmed
-    // buffer, so its anchor is 0, not llrint(T_b), and trim_fell_back
-    // carries that outcome to the reuse rungs' diagnostic. The render is
-    // trimmed iff llrint(T_e) - llrint(T_b) >= 1 (validate_trim_frames'
-    // span rule, the only refusal reachable from a live store —
-    // crossed/equal cannot rest and past-EOF is adversarial load-fatal; a
-    // crossed pair would fail this same compare anyway, T being monotone).
-    // The bound-unset defaults — begin 0, end total — are
-    // validate_trim_frames' own, so an end-only trim reaches the same
-    // verdict do_render's plan does. Callers pass the trim pair the
-    // produced samples embody and stamp the result at production time, so
-    // no buffer-frames gate: the buffer may still be empty at the stamp.
-    if ((has_begin || has_end) &&
+    // Survival verdict (orchestrator decoupling; rationale at the struct in
+    // target_render.h). Two reachable fallbacks render the FULL, untrimmed
+    // buffer with anchor 0, mirroring do_render / the CLI:
+    //   - a LONE bound (exactly one of begin/end set) — GUI-legal but prepost
+    //     dead weight, so the orchestrators render untrimmed; and
+    //   - a SUB-SAMPLE span for a set pair: llrint(T_e) - llrint(T_b) < 1
+    //     (validate_trim_frames' span rule; crossed/equal cannot rest and
+    //     past-EOF is adversarial load-fatal, so this is the only pair
+    //     refusal reachable from a live store — a crossed pair would fail
+    //     this same compare anyway, T being monotone).
+    // trim_fell_back carries either outcome to the reuse rungs' diagnostic,
+    // and fallback_reason names which one so the printed line matches the
+    // orchestrators' vocabulary. Callers pass the trim pair the produced
+    // samples embody and stamp the result at production time, so no
+    // buffer-frames gate: the buffer may still be empty at the stamp.
+    if (has_begin && has_end &&
         audio.sample_rate() > 0 && audio.total_frames() > 0) {
         const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames())).warp_frame_map;
-        const double begin_source_frame =
-            (!has_begin || begin_frame < 0) ? 0.0
-                                            : static_cast<double>(begin_frame);
-        const double end_source_frame = has_end
-            ? static_cast<double>(end_frame)
-            : static_cast<double>(audio.total_frames());
         const int64_t t_begin = std::llrint(map_source_to_target(
-            begin_source_frame, target_warp_frame_map));
+            static_cast<double>(begin_frame), target_warp_frame_map));
         const int64_t t_end = std::llrint(map_source_to_target(
-            end_source_frame < 0.0 ? 0.0 : end_source_frame,
-            target_warp_frame_map));
+            static_cast<double>(end_frame), target_warp_frame_map));
         if (t_end - t_begin < 1) {
-            return {0, true};  // fallback: the FULL deliverable, anchor 0
+            // Fallback: the FULL deliverable, anchor 0.
+            return {0, true,
+                    "trim target span rounds below one output sample"};
         }
-        // Begin unset anchors at 0 (the surviving window starts at the
-        // domain origin); a set begin anchors at its target image — the
-        // same llrint(T_b) expression as ever, bit-identical.
-        return {has_begin ? t_begin : 0, false};
+        // Begin is guaranteed set on this path, so the anchor is its target
+        // image — the same llrint(T_b) expression as ever, bit-identical.
+        return {t_begin, false, nullptr};
     }
-    return {0, false};
+    if (has_begin || has_end) {
+        // Lone bound: render untrimmed, anchor 0.
+        return {0, true, "trim bound set without its partner"};
+    }
+    return {0, false, nullptr};
 }
 
 void GuiTargetRender::ensure_ready() {

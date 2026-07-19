@@ -147,20 +147,27 @@ private:
     // worker's plan — so compute_buffer_start_frame_for re-derives the
     // survival test from the same exact-double images through the same map,
     // once, and the anchor and the diagnostic both consume that single
-    // result (no second arithmetic implementation).
+    // result (no second arithmetic implementation). fallback_reason names
+    // WHICH fallback the reuse-rung diagnostic reports — a lone bound or a
+    // sub-sample span — so its line mirrors the orchestrators' vocabulary
+    // byte-for-byte; it points at a string literal (static lifetime), set
+    // alongside trim_fell_back, and stays null when the render is trimmed or
+    // full.
     struct BufferStartVerdict {
-        int64_t start_frame = 0;
-        bool    trim_fell_back = false;
+        int64_t     start_frame = 0;
+        bool        trim_fell_back = false;
+        const char* fallback_reason = nullptr;
     };
 
     // Compute the verdict above for an explicit trim pair. Takes BOTH
-    // bounds because it must mirror do_render's ambiguous-trim fallback: a
-    // trim whose target span rounds below one output sample renders the
-    // FULL deliverable, so the anchor is 0 then, not the begin's target
-    // image (rule mirror at the definition). No buffer-frames gate: callers
-    // stamp the origin at production time, when the buffer may still be
-    // empty. The stamp rests in dispatched_buffer_start_frame_ below and
-    // travels to GuiPlayback with each bind.
+    // bounds because it must mirror the orchestrators' ambiguous-trim
+    // fallbacks: a lone bound (exactly one set) renders the FULL deliverable,
+    // and so does a pair whose target span rounds below one output sample —
+    // the anchor is 0 in both, not the begin's target image (rule mirror at
+    // the definition). No buffer-frames gate: callers stamp the origin at
+    // production time, when the buffer may still be empty. The stamp rests in
+    // dispatched_buffer_start_frame_ below and travels to GuiPlayback with
+    // each bind.
     BufferStartVerdict compute_buffer_start_frame_for(bool has_begin,
                                                       int64_t begin_frame,
                                                       bool has_end,

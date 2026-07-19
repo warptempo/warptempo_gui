@@ -433,37 +433,40 @@ RenderOutcome do_render(const RenderRequest& req,
         return RenderOutcome::Success;
     };
 
-    // Trim plan. plan_trim validates the authored bounds
-    // first — validate_trim_frames stays the sole author of the
-    // trim-validity vocabulary — then derives the source cut, the
-    // translated maps, and the output crop in one computation. A refusal is
-    // NOT a render failure: ambiguous trim falls back to the full,
-    // untrimmed deliverable with one stderr line (the reachable case is the
-    // target span rounding below one output sample — legal whole-frame
-    // bounds under a fast tempo; crossed/equal cannot rest after the commit
-    // and load auto-clears, and past-EOF is adversarial load-fatal).
-    // trim_plan stays unset then, and every downstream RENDER stage (source
-    // view, engine maps/schedule, crop, projection) keys on
-    // trim_plan — never on "a bound was set" — so the fallback render is
-    // byte-identical to a no-trim render of the same recipe. The plan is
-    // computed here, AHEAD of the fingerprint up-to-date and reuse returns
-    // below, precisely so that fallback line prints once per dispatch even
-    // when the deliverable is already current — a repeat dispatch of a
-    // fallback recipe must still surface the signal that its visible trim
-    // bounds produced an untrimmed deliverable. The fingerprint below and
-    // the entry .settings recipe record keep the request's trim bounds
-    // unchanged on purpose: under the fallback that recipe genuinely
+    // Trim plan. The trimmer requires the pair; the lone-bound rule is
+    // orchestrator-owned because the trimmer no longer knows lone bounds exist
+    // (architect ruling: a lone bound is GUI-legal but prepost dead weight).
+    // Only the pair reaches plan_trim, which validates the bounds first —
+    // validate_trim_frames stays the sole author of the trim-validity
+    // vocabulary — then derives the source cut, the translated maps, and the
+    // output crop in one computation. A refusal is NOT a render failure:
+    // ambiguous trim falls back to the full, untrimmed deliverable with one
+    // stderr line. Two reachable fallbacks: a lone bound (exactly one of
+    // begin/end set — GUI-legal, authorable per-bound and loadable from a
+    // .settings), and the pair's target span rounding below one output sample
+    // (legal whole-frame bounds under a fast tempo). Crossed/equal cannot rest
+    // after the commit and load auto-clears, and past-EOF is adversarial
+    // load-fatal. trim_plan stays unset under either fallback, and every
+    // downstream RENDER stage (source view, engine maps/schedule, crop,
+    // projection) keys on trim_plan — never on "a bound was set" — so the
+    // fallback render is byte-identical to a no-trim render of the same
+    // recipe. The plan is computed here, AHEAD of the fingerprint up-to-date
+    // and reuse returns below, precisely so that fallback line prints once per
+    // dispatch even when the deliverable is already current — a repeat
+    // dispatch of a fallback recipe must still surface the signal that its
+    // visible trim bounds produced an untrimmed deliverable. The fingerprint
+    // below and the entry .settings recipe record keep the request's trim
+    // bounds unchanged on purpose: under the fallback that recipe genuinely
     // renders the full bytes, so the attestation stays honest. The fallback
     // recipe therefore fingerprints differently from the equivalent explicit
     // no-trim recipe and misses that recipe's cache and artifacts — accepted
-    // conservatism (architect 2026-07-17): reuse serves common recipes only,
-    // and over-inclusion can only cost a redundant re-render, never reuse
-    // wrong bytes.
+    // conservatism (architect 2026-07-17), covering the lone case identically:
+    // reuse serves common recipes only, and over-inclusion can only cost a
+    // redundant re-render, never reuse wrong bytes.
     std::optional<TrimPlan> trim_plan;
-    if (req.has_trim_begin || req.has_trim_end) {
+    if (req.has_trim_begin && req.has_trim_end) {
         auto plan = plan_trim(full_warp_frame_map, full_phase_reset_frame_map,
-                              req.has_trim_begin, req.trim_begin_frame,
-                              req.has_trim_end, req.trim_end_frame,
+                              req.trim_begin_frame, req.trim_end_frame,
                               static_cast<int64_t>(total_frames),
                               N_fft, R_s);
         if (!plan) {
@@ -475,6 +478,13 @@ RenderOutcome do_render(const RenderRequest& req,
         } else {
             trim_plan = std::move(*plan);
         }
+    } else if (req.has_trim_begin || req.has_trim_end) {
+        // Lone bound: render untrimmed with one stderr line. The body starts
+        // with "trim " to match the trim-fallback vocabulary; it is
+        // byte-identical to the CLI's line (only the product prefix differs).
+        std::fprintf(stderr,
+            "warptempo_gui: trim bound set without its partner; "
+            "rendering untrimmed\n");
     }
 
     // The fingerprint's source identity is built directly from the request's

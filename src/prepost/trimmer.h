@@ -17,7 +17,7 @@
 // sample (the derivation lives at plan_trim in trimmer.cpp).
 //
 // Pipeline shape: parser (builds the FULL warp frame map and the FULL phase
-// reset frame map, knows nothing of trim) -> pre_trim when a bound is set
+// reset frame map, knows nothing of trim) -> pre_trim when the pair is set
 // (validate-or-refuse; cut audio view + translated maps) -> engine (analysis,
 // PGHI, synthesis, the spectral limiter, emits its map's extent) ->
 // post_trim (crop to the exact authored window) -> peak limiter -> encode to
@@ -58,11 +58,15 @@ struct TrimPlan {
 };
 
 // Render-boundary trim validation — the sole author of the trim-validity
-// vocabulary. Authored bounds arrive as whole int64_t source frames — the
-// authored domain itself; unset begin is 0, unset end is total_frames — and
-// widen exactly into the double map arithmetic at one point inside the
-// trimmer. Refusals, in check order: end at or before begin (e_src <=
-// b_src); begin at or past the source end (b_src >= total_frames); end past
+// vocabulary. The trimmer requires the pair: both bounds are set by contract,
+// so a lone bound (exactly one of begin/end) never reaches here — the
+// orchestrators gate the lone case and fall back to an untrimmed render
+// upstream, because a lone bound is GUI-legal but dead weight for the
+// trimmer (architect ruling: lone is GUI-legal, prepost dead weight).
+// Authored bounds arrive as whole int64_t source frames — the authored domain
+// itself — and widen exactly into the double map arithmetic at one point
+// inside the trimmer. Refusals, in check order: end at or before begin (e_src
+// <= b_src); begin at or past the source end (b_src >= total_frames); end past
 // the source end (e_src > total_frames); target span rounding below one
 // sample (llrint(T_e) - llrint(T_b) < 1, the spans' exact double images
 // through the full map). NOTHING else refuses — a one-frame fady trim
@@ -75,8 +79,7 @@ struct TrimPlan {
 // trim-validity vocabulary. plan_trim calls this first, so callers routing
 // through plan_trim need no separate call.
 std::expected<void, std::string> validate_trim_frames(
-    bool has_begin, int64_t begin_frame,
-    bool has_end,   int64_t end_frame,
+    int64_t begin_frame, int64_t end_frame,
     int64_t total_frames,
     const std::vector<WarpFrameMapSegment>& full_warp_frame_map);
 
@@ -98,8 +101,7 @@ std::expected<void, std::string> validate_trim_frames(
 std::expected<TrimPlan, std::string> plan_trim(
     const std::vector<WarpFrameMapSegment>& full_warp_frame_map,
     const std::vector<double>& full_phase_reset_frame_map,
-    bool has_begin, int64_t begin_frame,
-    bool has_end,   int64_t end_frame,
+    int64_t begin_frame, int64_t end_frame,
     int64_t total_frames,
     int N, int R_s);
 
