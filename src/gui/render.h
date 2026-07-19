@@ -136,11 +136,11 @@ double flag_font_size_px();
 // Flag chip internal padding around the text glyph bounding box, split per
 // axis so the two can be tuned independently. Both are the single source of
 // truth for their axis — every chip renderer and the hit-rect computation must
-// read these, never a literal. Each is the authored value (4 / 2) scaled by
+// read these, never a literal. Each is the authored value (3 / 1) scaled by
 // gui_font_scale() and rounded with std::nearbyint so it stays an integer:
 // the aliased plus-point-five sharp-edge convention for 1 px strokes and
 // integer-edged rects keeps holding at every size. At scale 1 each equals
-// its authored value by identity (nearbyint(4*1) == 4, nearbyint(2*1) == 2).
+// its authored value by identity (nearbyint(3*1) == 3, nearbyint(1*1) == 1).
 //
 // flag_pad_x_px sets chip WIDTH: the painted fill and the hit rect both span
 // glyph_advance + 2*flag_pad_x_px(), and the elision pack uses it as the
@@ -149,8 +149,8 @@ double flag_font_size_px();
 // flag_pad_y_px sets chip HEIGHT via the row metric: the row height is
 // font (ascent+descent) + 2*flag_pad_y_px(), and the baseline offset is
 // flag_pad_y_px() + ascent.
-inline double flag_pad_x_px() { return std::nearbyint(4.0 * gui_font_scale()); }
-inline double flag_pad_y_px() { return std::nearbyint(2.0 * gui_font_scale()); }
+inline double flag_pad_x_px() { return std::nearbyint(3.0 * gui_font_scale()); }
+inline double flag_pad_y_px() { return std::nearbyint(1.0 * gui_font_scale()); }
 
 // Sole authored value for the flag chip's vertical anchor: the offset from
 // the waveform area's top edge up to the regular flag rect's painted bottom
@@ -240,10 +240,10 @@ inline int playhead_half_px() { return playhead_triangle_h_px() - 1; }
 // measure and are overwritten immediately). on_resize can fire before the
 // first redraw measures the real font; these seed the geometry so it is sane
 // (never a negative waveform) until init_monospace_grid_metrics overwrites
-// them. The 2.0 term is the authored flag_pad_y_px value at scale 1.
-constexpr int    kRowHFallbackPx       = 22;
+// them. The 1.0 term is the authored flag_pad_y_px value at scale 1.
+constexpr int    kRowHFallbackPx       = 20;
 constexpr double kRowBaselineOffFallbackPx =
-    2.0 + 14.0;
+    1.0 + 14.0;
 
 // Forward declaration: defined with its full doc comment below. Needed here
 // because flag_chip_bottom_y / stem_cache_overhang_px (inlines) read it.
