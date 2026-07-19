@@ -356,11 +356,16 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // editor caret clicks, the hover popup's target): the topmost-painted chip
     // is what a click grabs.
     //
-    // Accepted edge: an all-deleted pending ("" text) is skipped by the shared
-    // empty-text cull in iterate_visible_flags_impl, so the painted empty
-    // editor box has no hit rect — a click inside it takes the not-on-a-flag
-    // path and exits the editor without commit; a transient slip state, not
-    // worth a special case.
+    // An all-deleted pending ("" text) still paints a zero-glyph box (ring +
+    // fill + cursor) above the stack, and now keeps its rect: the cull runs on
+    // the marker's committed text and the pending substitution is at the rect
+    // WIDTH (compute_flag_hit_rects), so the empty pending yields the same
+    // zero-glyph box in hit as in paint. Pass zero claims a click inside it,
+    // which the caret gate resolves as a click on the editing target — the
+    // caret repositions (position 0) and the editor stays open, matching the
+    // visibly-on-top empty box; a click OUTSIDE every rect still exits the
+    // editor through the not-on-a-flag path. Paint and hit agree in every
+    // pending state.
     if (editor_target >= 0) {
         for (const auto& r : rects) {
             if (r.marker_index == editor_target &&

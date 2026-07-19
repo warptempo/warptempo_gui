@@ -1206,7 +1206,9 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     int sample_rate,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay,
-    FlagTextFn&& get_flag_text) {
+    FlagTextFn&& get_flag_text,
+    int editor_target = -1,
+    const std::string* editor_pending = nullptr) {
     std::vector<FlagHitRect> out;
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return out;
     if (viewport_end_sample <= viewport_start_sample) return out;
@@ -1227,8 +1229,21 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
         std::forward<FlagTextFn>(get_flag_text),
         [&](int i, double text_left, double baseline_y,
             const std::string& text) {
+            // The cull and the emission set now mirror the paint side exactly:
+            // paint enters iterate_visible_flags_impl with the marker's
+            // committed text (so the shared empty-text cull runs on committed
+            // text) and substitutes editor.pending as draw_text in
+            // paint_one_flag_with_overlay; hit likewise culls on committed
+            // text and substitutes pending at the RECT WIDTH here, never at the
+            // cull. So a zero-glyph pending yields the same zero-glyph box —
+            // ring + 2*pad wide — in both paint and hit, keeping the all-deleted
+            // pending's box clickable instead of tunneling to an occluded chip.
+            const size_t glyph_count =
+                (editor_pending && i == editor_target)
+                    ? editor_pending->length()
+                    : text.length();
             const GuiRect cr_rect =
-                flag_chip_rect(text_left, text.length(), baseline_y);
+                flag_chip_rect(text_left, glyph_count, baseline_y);
             FlagHitRect r;
             r.marker_index = i;
             r.x = cr_rect.x;
@@ -1259,14 +1274,9 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
         viewport_start_sample, viewport_end_sample,
         sample_rate, warp_frame_map, drag_overlay,
         [&](int i) -> std::string {
-            // The live FlagPayload editor's pending text replaces the committed
-            // payload for width purposes, so the hit rect matches the chip the
-            // editor actually paints (render_one_editor_flag paints pending
-            // above the cache). Only the editor's own flag is overridden; every
-            // other flag keeps its committed text.
-            if (editor_pending && i == editor_target) return *editor_pending;
             return flag_text_iter(markers, i, iteration_on);
-        });
+        },
+        editor_target, editor_pending);
 }
 
 // ---------- Phase reset marker rendering ----------

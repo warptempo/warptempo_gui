@@ -697,15 +697,19 @@ void render_one_editor_flag(
 // clickable rect coincides with the painted chip.
 // `editor_target` / `editor_pending`: when the live FlagPayload editor is
 // active, its variable-width pending text replaces the committed payload for
-// WIDTH purposes on that one flag (render_one_editor_flag paints the pending
-// text above the cache, so its chip is wider/narrower than the committed
-// text), so the hit rect matches the chip the editor actually paints — clicks
-// on a grown pending's exposed extension hit the editor, and a shrunken
-// pending stops the old long rect from covering a newly-exposed neighbor. When
-// `editor_pending` is non-null, the get_flag_text for i == editor_target
-// returns *editor_pending instead of the committed flag text. Defaults leave
-// the committed-text behavior unchanged. The phase-reset variant needs no such
-// params (there is no per-flag editor in P view).
+// that one flag's RECT WIDTH — the substitution is at the width, never at the
+// cull. The cull runs on the marker's COMMITTED text (the paint mirror:
+// iterate_visible_flags_impl enters with committed text and
+// paint_one_flag_with_overlay substitutes editor.pending as draw_text), so a
+// flag with committed text stays emitted regardless of its pending, and the
+// emitted rect is sized to the pending width. So the hit rect matches the chip
+// the editor actually paints — clicks on a grown pending's exposed extension
+// hit the editor, a shrunken pending stops the old long rect from covering a
+// newly-exposed neighbor, and an EMPTY (all-deleted) pending keeps its
+// zero-glyph box's rect (ring + 2*pad wide) clickable instead of tunneling to
+// an occluded chip. Defaults leave the committed-text width unchanged. The
+// phase-reset variant needs no such params (there is no per-flag editor in P
+// view).
 std::vector<FlagHitRect> compute_flag_hit_rects(
     GuiRect top_strip_area,
     int waveform_width,
