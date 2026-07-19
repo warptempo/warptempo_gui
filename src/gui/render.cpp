@@ -550,16 +550,19 @@ void render_trim_flags(cairo_t* cr,
       - static_cast<double>(monospace_row_h())
       + monospace_row_baseline_offset();
 
-    // With both bounds set, a solid block fills the chip-row span between the
-    // two chips — the visual affordance of the Alt pair-drag's top-strip
-    // inter-chip grab band (the span strictly between the two b/e chips). Its
-    // fill uses the shared overlay wash (kOverlay / kOverlayAlpha, the same pair
-    // the phase reset overlay paints with) over the top-strip background.
-    // Painted BEFORE the chip-box loop so the b/e chips overpaint it and it
-    // reads as filling the span between them. Both columns are computed
-    // unconditionally with add_chip's own x_raw math (NOT via add_chip, whose
-    // viewport cull must not suppress the block: with one or both chips
-    // offscreen it still spans the visible part).
+    // With both bounds set, a band fills the chip-row span between the two
+    // chips — the visual affordance of the Alt pair-drag's top-strip inter-chip
+    // grab band (the span strictly between the two b/e chips). The affordance is
+    // the shared overlay wash (kOverlay / kOverlayAlpha, the same pair the phase
+    // reset overlay paints with) over the top-strip background, PLUS a 1px
+    // kTrimMarkerOutline ring (the trim chips' ring color) drawn inside the
+    // band's own edges — the ring eats the outermost band pixels, growing the
+    // rect nothing (layout unchanged). Painted BEFORE the chip-box loop so the
+    // b/e chips overpaint the wash and the ring's ends, so the band reads as
+    // spanning between them and the ring's top/bottom edges visually connect the
+    // two chips' rings. Both columns are computed unconditionally with add_chip's
+    // own x_raw math (NOT via add_chip, whose viewport cull must not suppress the
+    // block: with one or both chips offscreen it still spans the visible part).
     if (has_begin && has_end && waveform_area.w > 0) {
         auto col_of = [&](int64_t frame) {
             const double x_raw =
@@ -591,6 +594,28 @@ void render_trim_flags(cairo_t* cr,
                             static_cast<double>(hi - lo),
                             chip_bottom - chip_top);
             cairo_fill(cr);
+            // Ring: a 1px kTrimMarkerOutline border along the same rect's four
+            // edges, drawn INSIDE its outer 1px band (four integer-edged 1px
+            // rectangle fills, AA off — the house crisp-edge convention shared
+            // with the chip rings). A degenerate narrow band (rw of 1-2 px) just
+            // overdraws harmlessly. The rect is the wash's own: left/width from
+            // the integer chip columns, top/bottom snapped to the chip box.
+            const int rx = top_strip_area.x + lo;
+            const int rw = hi - lo;
+            const int ry = static_cast<int>(std::nearbyint(chip_top));
+            const int rh = static_cast<int>(std::nearbyint(chip_bottom)) - ry;
+            if (rw > 0 && rh > 0) {
+                cairo_save(cr);
+                cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+                cairo_set_source_rgb(cr, kTrimMarkerOutline.r,
+                                     kTrimMarkerOutline.g, kTrimMarkerOutline.b);
+                cairo_rectangle(cr, rx, ry, rw, 1);                 // top
+                cairo_rectangle(cr, rx, ry + rh - 1, rw, 1);        // bottom
+                cairo_rectangle(cr, rx, ry, 1, rh);                 // left
+                cairo_rectangle(cr, rx + rw - 1, ry, 1, rh);        // right
+                cairo_fill(cr);
+                cairo_restore(cr);
+            }
         }
     }
 
