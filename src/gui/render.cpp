@@ -550,14 +550,15 @@ void render_trim_flags(cairo_t* cr,
       - static_cast<double>(monospace_row_h())
       + monospace_row_baseline_offset();
 
-    // With both bounds set, a 1px horizontal connector joins the two chips at
-    // chip-center height, stroked BEFORE the chip-box loop so the chips
-    // overpaint its ends and it reads as running between them. It is the
-    // visual affordance of the Alt pair-drag's top-strip inter-chip grab
-    // region (the span strictly between the two b/e chips). Both columns are
-    // computed unconditionally with add_chip's own x_raw math (NOT via
-    // add_chip, whose viewport cull must not suppress the line: with one or
-    // both chips offscreen the connector still spans the visible part).
+    // With both bounds set, a 1px horizontal connector runs between the two
+    // chips along the window's topmost pixel row (architect-chosen position):
+    // the flag cache's top-strip origin equals the screen origin (0,0), so
+    // device row 0 is the window's top edge. It is the visual affordance of
+    // the Alt pair-drag's top-strip inter-chip grab region (the span strictly
+    // between the two b/e chips). Both columns are computed unconditionally
+    // with add_chip's own x_raw math (NOT via add_chip, whose viewport cull
+    // must not suppress the line: with one or both chips offscreen the
+    // connector still spans the visible part).
     if (has_begin && has_end && waveform_area.w > 0) {
         auto col_of = [&](int64_t frame) {
             const double x_raw =
@@ -575,18 +576,13 @@ void render_trim_flags(cairo_t* cr,
         const int hi = std::clamp(std::max(col_of(trim.begin), col_of(trim.end)),
                                   0, wmax);
         if (hi > lo) {
-            // Center on the upper chip box (bottom = flag_chip_bottom_y Upper,
-            // height monospace_row_h()), banker's-rounded; +0.5 across the
-            // line's thin (vertical) axis, aliased like the stems' 1px lines.
-            const double row = std::nearbyint(
-                flag_chip_bottom_y(waveform_area, ChipRow::Upper)
-              - static_cast<double>(monospace_row_h()) / 2.0);
+            // Device row 0 is the window's topmost pixel row; stroke at 0.5
+            // across the line's thin (vertical) axis, the 1px crisp-line
+            // convention, aliased like the stems' 1px lines.
             cairo_set_source_rgb(cr, kTrimMarker.r, kTrimMarker.g, kTrimMarker.b);
             cairo_set_line_width(cr, 1.0);
-            cairo_move_to(cr, static_cast<double>(top_strip_area.x + lo),
-                          row + 0.5);
-            cairo_line_to(cr, static_cast<double>(top_strip_area.x + hi),
-                          row + 0.5);
+            cairo_move_to(cr, static_cast<double>(top_strip_area.x + lo), 0.5);
+            cairo_line_to(cr, static_cast<double>(top_strip_area.x + hi), 0.5);
             cairo_stroke(cr);
         }
     }
