@@ -635,8 +635,9 @@ void render_trim_flags(cairo_t* cr,
     // (and, at an equal column, `b` over `e` per the tie-break above) lands on
     // top. The b/e chips are outside the hover pop-to-top scope (recorded
     // asymmetry: two chips of the same subject, no hovered index) and, for
-    // now, outside the right-edge drop shadow too (right_shadow stays off
-    // here — the shadow is marker-chip-only).
+    // now, outside the outline ring too (draw_outline stays off here — the
+    // ring is marker-chip-only, so the trim chips paint a full-rect orange
+    // fill).
     // render_editor_text_box sizes each chip from the shared flag_chip_rect
     // helper (glyph count * monospace_advance() plus padding), the same width
     // every flag path uses.
@@ -682,12 +683,15 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     // glyph ink band (ascent-to-descent), no vertical padding. The band is
     // recovered from the two cached monospace metrics (exact inverses of how
     // init_monospace_grid_metrics built them: g_row_baseline_off = flag_pad_y_px()
-    // + ascent, g_row_h = round(font_height + 2*flag_pad_y_px())). The round() on
-    // the row height can leak a sub-pixel into the derived descent; that is
-    // cosmetically irrelevant here and saves adding a new metric accessor.
+    // + kChipOutlinePx + ascent, g_row_h = round(font_height + 2*flag_pad_y_px())
+    // + 2*kChipOutlinePx). The round() on the row height can leak a sub-pixel
+    // into the derived descent; that is cosmetically irrelevant here and saves
+    // adding a new metric accessor.
     const double bg_h        = static_cast<double>(monospace_row_h());
-    const double ascent      = monospace_row_baseline_offset() - flag_pad_y_px();
-    const double font_height = bg_h - 2.0 * flag_pad_y_px();
+    const double ascent      = monospace_row_baseline_offset() - flag_pad_y_px()
+                             - kChipOutlinePx;
+    const double font_height = bg_h - 2.0 * flag_pad_y_px()
+                             - 2.0 * kChipOutlinePx;
     const double descent     = font_height - ascent;
     const double glyph_top   = s.baseline_y - ascent;
     const double glyph_h     = ascent + descent;
@@ -713,9 +717,28 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
         flag_chip_rect(chip_text_left, s.text.length(), s.baseline_y);
     if (fr.w > 0 && fr.h > 0) {
         cairo_save(cr);
-        cairo_set_source_rgb(cr, s.fill.r, s.fill.g, s.fill.b);
-        cairo_rectangle(cr, fr.x, fr.y, fr.w, fr.h);
-        cairo_fill(cr);
+        if (s.draw_outline) {
+            // Marker chips: fill the full rect (the outline ring) in
+            // s.outline, then the inner rect inset by kChipOutlinePx on every
+            // side in s.fill. fr already includes the ring (flag_chip_rect), so
+            // the ring is the outer kChipOutlinePx band left exposed. The
+            // glyph ink band (and thus cursor/selection) sits inside the
+            // padding inside the ring by construction.
+            cairo_set_source_rgb(cr, s.outline.r, s.outline.g, s.outline.b);
+            cairo_rectangle(cr, fr.x, fr.y, fr.w, fr.h);
+            cairo_fill(cr);
+            cairo_set_source_rgb(cr, s.fill.r, s.fill.g, s.fill.b);
+            cairo_rectangle(cr, fr.x + kChipOutlinePx, fr.y + kChipOutlinePx,
+                            fr.w - 2 * kChipOutlinePx,
+                            fr.h - 2 * kChipOutlinePx);
+            cairo_fill(cr);
+        } else {
+            // Bottom-strip editors and trim b/e chips: no ring, the fill spans
+            // the full rect (which still grew with the metric).
+            cairo_set_source_rgb(cr, s.fill.r, s.fill.g, s.fill.b);
+            cairo_rectangle(cr, fr.x, fr.y, fr.w, fr.h);
+            cairo_fill(cr);
+        }
         cairo_restore(cr);
     }
 
@@ -784,25 +807,6 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
         cairo_restore(cr);
     }
 
-    // 6. Right-edge drop shadow (marker chips only): a 1px vertical
-    //    kBackground line at kChipShadowAlpha spanning the full step-1 chip
-    //    rect height, at the column just past its right edge (fr.x + fr.w),
-    //    with AA off (the integer-rect convention steps 4/5 use). Over bare
-    //    background this composites bg-over-bg to bg (invisible); over an
-    //    occluded neighbor chip it darkens the fill, a per-chip separation
-    //    cue. Paint-only: the hit rect is unchanged (flag_chip_rect knows
-    //    nothing of the shadow), and the glyph/selection/cursor steps never
-    //    reach this column, so ordering after them is cosmetic-neutral.
-    if (s.right_shadow && fr.w > 0 && fr.h > 0) {
-        cairo_save(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgba(cr, kBackground.r, kBackground.g,
-                              kBackground.b, kChipShadowAlpha);
-        cairo_rectangle(cr, fr.x + fr.w, fr.y, 1, fr.h);
-        cairo_fill(cr);
-        cairo_restore(cr);
-    }
-
     cairo_restore(cr);
 }
 
@@ -814,8 +818,9 @@ namespace {
 // non-empty text, in ascending painted-x order (equal columns tie-break by
 // ascending store index via the stable sort below). There is no elision:
 // overlapping chips occlude instead. `text_left` is snapped to the marker's
-// integer pixel column so the flag's left edge coincides with the
-// marker/playhead column. `get_flag_text(i)` returns the marker's flag
+// integer pixel column so the FILL's left edge coincides with the
+// marker/playhead column (the outline ring extends kChipOutlinePx past it).
+// `get_flag_text(i)` returns the marker's flag
 // payload; an empty return is the "this marker has no visible flag" signal.
 // The chip advance is the cached monospace arithmetic (glyph count times
 // monospace_advance()), not a per-flag cairo_text_extents — for the ASCII
@@ -953,11 +958,13 @@ void paint_one_flag_with_overlay(
     const std::string draw_text = is_editing ? editor.pending : text;
 
     // Fill table: parse-fail > selected > default(kMarker).
-    // Trim membership no longer dims the chip.
+    // Trim membership no longer dims the chip. The outline mirrors the fill
+    // table with each color's darker sibling.
     GuiColor fill_col;
-    if (is_parse_fail)      fill_col = kAccent;
-    else if (is_selected)   fill_col = kSelected;
-    else                    fill_col = kMarker;
+    GuiColor outline_col;
+    if (is_parse_fail)      { fill_col = kAccent;   outline_col = kAccentOutline;   }
+    else if (is_selected)   { fill_col = kSelected; outline_col = kSelectedOutline; }
+    else                    { fill_col = kMarker;   outline_col = kMarkerOutline;   }
 
     EditorTextBox box;
     box.anchor_x        = text_left + hl_pad;
@@ -971,7 +978,11 @@ void paint_one_flag_with_overlay(
     box.selection_end   = editor.selection_end;
     box.cursor_visible  = is_editing && editor.cursor_visible;
     box.cursor_pos      = editor.cursor_pos;
-    box.right_shadow    = true;
+    // The live editor flag routes through here and keeps its outline while
+    // editing; the pending fill and the ring grow with the rect, cursor/
+    // selection still inside — deliberate.
+    box.draw_outline    = true;
+    box.outline         = outline_col;
     render_editor_text_box(cr, box);
 }
 
@@ -1204,7 +1215,8 @@ void paint_one_phase_reset_flag(
     box.hl_pad          = hl_pad;
     box.fill            = is_selected ? kSelected : kMarker;
     box.text_color      = kText;
-    box.right_shadow    = true;
+    box.draw_outline    = true;
+    box.outline         = is_selected ? kSelectedOutline : kMarkerOutline;
     render_editor_text_box(cr, box);
 }
 
@@ -1391,9 +1403,13 @@ void init_monospace_grid_metrics(cairo_t* cr) {
     cairo_font_extents_t fe;
     cairo_font_extents(cr, &fe);
     const double font_height = fe.ascent + fe.descent;
+    // The chip height IS the row metric, and the outline ring sits outside the
+    // padding, so both formulas add 2*kChipOutlinePx / kChipOutlinePx: the row
+    // is font_height + 2*flag_pad_y_px() + 2*kChipOutlinePx tall, and the
+    // baseline drops by flag_pad_y_px() + kChipOutlinePx + ascent from the top.
     g_row_h = static_cast<int>(std::nearbyint(
-        font_height + 2.0 * flag_pad_y_px()));
-    g_row_baseline_off = flag_pad_y_px() + fe.ascent;
+        font_height + 2.0 * flag_pad_y_px())) + 2 * kChipOutlinePx;
+    g_row_baseline_off = flag_pad_y_px() + kChipOutlinePx + fe.ascent;
     cairo_restore(cr);
     g_measured_font_px = px;
 }

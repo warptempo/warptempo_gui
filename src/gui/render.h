@@ -93,18 +93,20 @@ inline constexpr GuiColor kWaveformDimmed   = hex(0x4D6378);
 inline constexpr GuiColor kOverlay      = hex(0xB8D4F0);
 inline constexpr double    kOverlayAlpha = 0.05;
 
-// The marker chips' right-edge drop-shadow strength — the line paints in
-// kBackground at this alpha (see EditorTextBox right_shadow), invisible over
-// bare background by construction (bg over bg), a darkening cue over an
-// occluded neighbor chip; this constant is the single tuning knob.
-inline constexpr double    kChipShadowAlpha = 0.5;
-
 inline constexpr GuiColor kMarker           = hex(0x9145AD);
 inline constexpr GuiColor kSelected         = hex(0x3DAEE9);  // Breeze blue
 inline constexpr GuiColor kPlayheadScanner  = hex(0xF2D959);
 inline constexpr GuiColor kPlayheadCursor   = hex(0x1ABC9C);  // green cursor
 inline constexpr GuiColor kAccent           = hex(0xBF332E);
 inline constexpr GuiColor kText             = hex(0xFCFCFC);  // Breeze paper white
+
+// The chip outline palette — a darker, more saturated sibling of each fill
+// (kMarker / kSelected / kAccent). Painted as the solid 1px outline ring
+// around a marker chip (see EditorTextBox::draw_outline / kChipOutlinePx);
+// these are the tuning knobs.
+inline constexpr GuiColor kMarkerOutline    = hex(0x611C84);
+inline constexpr GuiColor kSelectedOutline  = hex(0x1D6FA5);
+inline constexpr GuiColor kAccentOutline    = hex(0x801F1C);
 
 // Trim boundary stem color (#F67400 orange). Distinct from
 // kMarker, kSelected, the teal cursor, and the yellow scanner. A set
@@ -149,13 +151,21 @@ double flag_font_size_px();
 // its authored value by identity (nearbyint(2*1) == 2, nearbyint(0*1) == 0).
 //
 // flag_pad_x_px sets chip WIDTH: the painted fill and the hit rect both span
-// glyph_advance + 2*flag_pad_x_px().
+// glyph_advance + 2*flag_pad_x_px() + 2*kChipOutlinePx (the outline ring sits
+// outside the padding).
 //
 // flag_pad_y_px sets chip HEIGHT via the row metric: the row height is
-// font (ascent+descent) + 2*flag_pad_y_px(), and the baseline offset is
-// flag_pad_y_px() + ascent.
+// font (ascent+descent) + 2*flag_pad_y_px() + 2*kChipOutlinePx, and the
+// baseline offset is flag_pad_y_px() + kChipOutlinePx + ascent.
 inline double flag_pad_x_px() { return std::nearbyint(2.0 * gui_font_scale()); }
 inline double flag_pad_y_px() { return std::nearbyint(0.0 * gui_font_scale()); }
+
+// The solid outline ring outside the chip padding: part of the chip rect and
+// the row metric (a chip is outline + pad + glyph ink). The single width knob;
+// baked into flag_chip_rect and the monospace row/baseline metrics so every
+// derived surface (strip heights, stem overhang, baseline solves, hit rects)
+// tracks it automatically.
+inline constexpr int kChipOutlinePx = 1;
 
 // Sole authored value for the flag chip's vertical anchor: the offset from
 // the waveform area's top edge up to the regular flag rect's painted bottom
@@ -245,10 +255,11 @@ inline int playhead_half_px() { return playhead_triangle_h_px() - 1; }
 // measure and are overwritten immediately). on_resize can fire before the
 // first redraw measures the real font; these seed the geometry so it is sane
 // (never a negative waveform) until init_monospace_grid_metrics overwrites
-// them. The 0.0 term is the authored flag_pad_y_px value at scale 1.
-constexpr int    kRowHFallbackPx       = 18;
+// them. The 0.0 term is the authored flag_pad_y_px value at scale 1, the 1.0
+// term is kChipOutlinePx (18 + 2*0 + 2*1 = 20; baseline 0.0 + 1.0 + 14.0).
+constexpr int    kRowHFallbackPx       = 20;
 constexpr double kRowBaselineOffFallbackPx =
-    0.0 + 14.0;
+    0.0 + 1.0 + 14.0;
 
 // Forward declaration: defined with its full doc comment below. Needed here
 // because flag_chip_bottom_y / stem_cache_overhang_px (inlines) read it.
@@ -291,6 +302,15 @@ inline double flag_chip_bottom_y(const GuiRect& waveform_area, ChipRow row) {
 // their fill rect AND their hit rect from this one function, so the two cannot
 // drift.
 //
+// The returned rect is the TOTAL chip footprint INCLUDING the outline ring: it
+// grows by kChipOutlinePx on every side relative to the padded glyph box. The
+// fill insets by kChipOutlinePx inside it (render_editor_text_box); text_left
+// remains the FILL's left edge = the marker's pixel column, and the outline
+// ring extends kChipOutlinePx left of that column. The vertical growth is
+// carried by monospace_row_h() / monospace_row_baseline_offset() (which now
+// bake the outline in), so r.y / r.h below are unchanged — the top lifts and
+// the height grows automatically.
+//
 // Width is computed from the cached per-character monospace advance
 // (monospace_advance(), measured once on the real paint surface at startup),
 // NOT from a per-call cairo_text_extents — that was the residual edge bug:
@@ -320,10 +340,11 @@ inline GuiRect flag_chip_rect(double text_left, size_t glyph_count,
     const double advance =
         static_cast<double>(glyph_count) * monospace_advance();
     GuiRect r;
-    r.x = static_cast<int>(std::round(text_left));
+    r.x = static_cast<int>(std::round(text_left)) - kChipOutlinePx;
     r.y = static_cast<int>(std::round(
               baseline_y - monospace_row_baseline_offset()));
-    r.w = static_cast<int>(std::round(advance + 2.0 * pad));
+    r.w = static_cast<int>(std::round(advance + 2.0 * pad))
+        + 2 * kChipOutlinePx;
     r.h = monospace_row_h();
     return r;
 }
@@ -371,12 +392,15 @@ inline int stem_cache_overhang_px() {
 // range with `text_color` and repaints the selected substring in `fill`
 // for contrast.
 //
-// When `right_shadow` is set, a final paint step draws a 1px vertical
-// kBackground line at kChipShadowAlpha spanning the chip rect's full height
-// at the column just past its right edge (x = rect.x + rect.w) — the
-// marker-chip drop shadow. Off for the bottom-strip editors and the trim b/e
-// chips (the trim exclusion is a recorded asymmetry at render_trim_flags,
-// alongside the hover-scope note there).
+// When `draw_outline` is set, step 1 paints the outer kChipOutlinePx band of
+// the chip rect (flag_chip_rect, which now includes the ring) in `outline`,
+// then fills the inner rect inset by kChipOutlinePx in `fill` — the solid
+// outline ring around a marker chip. The cursor and the selection highlight
+// span the glyph ink band, which sits inside the padding inside the outline,
+// so both stay within the ring whenever visible. Off (the fill spans the full
+// rect, no ring) for the bottom-strip editors and the trim b/e chips (the trim
+// exclusion is a recorded asymmetry at render_trim_flags, alongside the
+// hover-scope note there).
 struct EditorTextBox {
     double               anchor_x        = 0.0;
     double               baseline_y      = 0.0;
@@ -390,7 +414,8 @@ struct EditorTextBox {
     int                  selection_end    = 0;
     bool                 cursor_visible   = false;
     int                  cursor_pos       = 0;
-    bool                 right_shadow     = false;
+    bool                 draw_outline     = false;
+    GuiColor             outline          = kMarker;
 };
 void render_editor_text_box(cairo_t* cr, const EditorTextBox& s);
 
@@ -717,13 +742,15 @@ std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
 double monospace_advance();
 
 // Fixed-pixel row height for the strip grid, measured from cairo_font_extents
-// (ascent + descent) at flag_font_size_px() plus 2*flag_pad_y_px().
-// Returns kRowHFallbackPx until init_monospace_grid_metrics has measured the
-// real font. The vertical twin of monospace_advance(); consumed by the
-// strip/row geometry helpers (which have no cairo context of their own).
+// (ascent + descent) at flag_font_size_px() plus 2*flag_pad_y_px() plus
+// 2*kChipOutlinePx (the chip height IS the row metric, so the outline ring is
+// baked in here). Returns kRowHFallbackPx until init_monospace_grid_metrics
+// has measured the real font. The vertical twin of monospace_advance();
+// consumed by the strip/row geometry helpers (which have no cairo context of
+// their own).
 int monospace_row_h();
 
-// Baseline offset from a row rect's top edge: flag_pad_y_px()
+// Baseline offset from a row rect's top edge: flag_pad_y_px() + kChipOutlinePx
 // + font ascent. baseline_y = row.y + monospace_row_baseline_offset() centers
 // the text in the row the same way the flag chip sits in the top strip.
 double monospace_row_baseline_offset();
