@@ -91,6 +91,9 @@ inline constexpr GuiColor kWaveformDimmed   = hex(0x4D6378);
 // at 0.07, with a slight intended bump. Both values tuned by eye on the panel.
 inline constexpr GuiColor kPhaseResetOverlay      = hex(0xB8D4F0);
 inline constexpr double    kPhaseResetOverlayAlpha = 0.10;
+// The trim pair-drag band's fill alpha — shares the overlay's COLOR
+// (kPhaseResetOverlay) but is fainter (half the overlay's own wash).
+inline constexpr double    kTrimPairBandAlpha      = 0.05;
 
 inline constexpr GuiColor kMarker           = hex(0x9145AD);
 inline constexpr GuiColor kSelected         = hex(0x3DAEE9);  // Breeze blue
@@ -499,8 +502,8 @@ void render_trim_stems(cairo_t* cr,
 // chips — the visual affordance of the Alt pair-drag's chip-row grab band. It
 // occupies the upper chip box's vertical band (flag_chip_bottom_y(...,
 // ChipRow::Upper) minus monospace_row_h(), down to flag_chip_bottom_y) and
-// shares BOTH the phase reset overlay's color (kPhaseResetOverlay) and its
-// alpha (kPhaseResetOverlayAlpha) — the same translucent wash, over the strip
+// shares the phase reset overlay's color (kPhaseResetOverlay) but has its own
+// fainter alpha (kTrimPairBandAlpha, half the overlay's wash), over the strip
 // background. It spans the two bounds' columns unconditionally (independent of
 // the chips' viewport cull) clamped into the mapped waveform width, so it still paints
 // across the visible part when a chip is offscreen.
