@@ -93,6 +93,12 @@ inline constexpr GuiColor kWaveformDimmed   = hex(0x4D6378);
 inline constexpr GuiColor kOverlay      = hex(0xB8D4F0);
 inline constexpr double    kOverlayAlpha = 0.05;
 
+// The marker chips' right-edge drop-shadow strength — the line paints in
+// kBackground at this alpha (see EditorTextBox right_shadow), invisible over
+// bare background by construction (bg over bg), a darkening cue over an
+// occluded neighbor chip; this constant is the single tuning knob.
+inline constexpr double    kChipShadowAlpha = 0.5;
+
 inline constexpr GuiColor kMarker           = hex(0x9145AD);
 inline constexpr GuiColor kSelected         = hex(0x3DAEE9);  // Breeze blue
 inline constexpr GuiColor kPlayheadScanner  = hex(0xF2D959);
@@ -364,6 +370,13 @@ inline int stem_cache_overhang_px() {
 // color and `text_color` is kText. The selection swap fills the selected
 // range with `text_color` and repaints the selected substring in `fill`
 // for contrast.
+//
+// When `right_shadow` is set, a final paint step draws a 1px vertical
+// kBackground line at kChipShadowAlpha spanning the chip rect's full height
+// at the column just past its right edge (x = rect.x + rect.w) — the
+// marker-chip drop shadow. Off for the bottom-strip editors and the trim b/e
+// chips (the trim exclusion is a recorded asymmetry at render_trim_flags,
+// alongside the hover-scope note there).
 struct EditorTextBox {
     double               anchor_x        = 0.0;
     double               baseline_y      = 0.0;
@@ -377,6 +390,7 @@ struct EditorTextBox {
     int                  selection_end    = 0;
     bool                 cursor_visible   = false;
     int                  cursor_pos       = 0;
+    bool                 right_shadow     = false;
 };
 void render_editor_text_box(cairo_t* cr, const EditorTextBox& s);
 

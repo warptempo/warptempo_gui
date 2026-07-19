@@ -634,7 +634,9 @@ void render_trim_flags(cairo_t* cr,
     // flags do). Paint the sorted list in REVERSE order so the leftmost chip
     // (and, at an equal column, `b` over `e` per the tie-break above) lands on
     // top. The b/e chips are outside the hover pop-to-top scope (recorded
-    // asymmetry: two chips of the same subject, no hovered index).
+    // asymmetry: two chips of the same subject, no hovered index) and, for
+    // now, outside the right-edge drop shadow too (right_shadow stays off
+    // here — the shadow is marker-chip-only).
     // render_editor_text_box sizes each chip from the shared flag_chip_rect
     // helper (glyph count * monospace_advance() plus padding), the same width
     // every flag path uses.
@@ -778,6 +780,25 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
         cairo_set_source_rgb(cr,
             s.text_color.r, s.text_color.g, s.text_color.b);
         cairo_rectangle(cr, cur_col, band_y0, 1, band_h);
+        cairo_fill(cr);
+        cairo_restore(cr);
+    }
+
+    // 6. Right-edge drop shadow (marker chips only): a 1px vertical
+    //    kBackground line at kChipShadowAlpha spanning the full step-1 chip
+    //    rect height, at the column just past its right edge (fr.x + fr.w),
+    //    with AA off (the integer-rect convention steps 4/5 use). Over bare
+    //    background this composites bg-over-bg to bg (invisible); over an
+    //    occluded neighbor chip it darkens the fill, a per-chip separation
+    //    cue. Paint-only: the hit rect is unchanged (flag_chip_rect knows
+    //    nothing of the shadow), and the glyph/selection/cursor steps never
+    //    reach this column, so ordering after them is cosmetic-neutral.
+    if (s.right_shadow && fr.w > 0 && fr.h > 0) {
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_set_source_rgba(cr, kBackground.r, kBackground.g,
+                              kBackground.b, kChipShadowAlpha);
+        cairo_rectangle(cr, fr.x + fr.w, fr.y, 1, fr.h);
         cairo_fill(cr);
         cairo_restore(cr);
     }
@@ -950,6 +971,7 @@ void paint_one_flag_with_overlay(
     box.selection_end   = editor.selection_end;
     box.cursor_visible  = is_editing && editor.cursor_visible;
     box.cursor_pos      = editor.cursor_pos;
+    box.right_shadow    = true;
     render_editor_text_box(cr, box);
 }
 
@@ -1182,6 +1204,7 @@ void paint_one_phase_reset_flag(
     box.hl_pad          = hl_pad;
     box.fill            = is_selected ? kSelected : kMarker;
     box.text_color      = kText;
+    box.right_shadow    = true;
     render_editor_text_box(cr, box);
 }
 
