@@ -557,14 +557,15 @@ private:
     void auto_clear_crossed_trim();
 
     // Alt left press trim routing, consulted by the Alt+drag branch AFTER its
-    // marker hit test misses (markers beat trim). Returns true iff the press
-    // landed on trim geometry (a waveform stem-halo / top-strip chip single hit,
-    // or the top-strip span strictly between two set bounds' columns) — armed or
-    // read-only-refused — so the caller claims the press with no pan fallback;
-    // false lets the caller fall through to the pan. Read-only claims without
-    // arming. The waveform between-region does NOT pair-drag (it stays pan); the
-    // pair handle is the top-strip inter-chip span. Trim drags never touch
-    // selection.
+    // marker hit test misses (markers beat trim). Every trim drag requires the
+    // FULL pair set; a lone bound is gesture-inert (transparent to the press).
+    // Returns true iff both bounds are set AND the press landed on trim geometry
+    // (a waveform stem-halo / top-strip chip single hit, or the top-strip span
+    // strictly between the two bounds' columns) — armed or read-only-refused —
+    // so the caller claims the press with no pan fallback; false lets the caller
+    // fall through to the pan. Read-only claims without arming. The waveform
+    // between-region does NOT pair-drag (it stays pan); the pair handle is the
+    // top-strip inter-chip span. Trim drags never touch selection.
     bool route_trim_alt_press(int mouse_x, int mouse_y, bool inside_top);
     void begin_trim_drag(TrimHit which, int mouse_x, bool both = false);
     void update_trim_drag(int mouse_x);   // motion: writes the live store
@@ -583,7 +584,8 @@ private:
     // Ctrl+Alt+wheel trim-end move: the pixel-anchored end-bound gesture, the
     // only authoring gesture the wheel dispatcher owns. handle_wheel routes here
     // unconditionally on the Ctrl+Alt chord; the op itself refuses in read-only,
-    // no-ops on unusable audio/zoom state, and refuses when no end bound is set.
+    // no-ops on unusable audio/zoom state, and refuses unless BOTH bounds are
+    // set (like every trim gesture — a lone bound is gesture-inert).
     // The end bound clamps to the unified authored wall at frame EOF-1.
     void wheel_move_trim_end(GuiMouseButton button, int count);
 

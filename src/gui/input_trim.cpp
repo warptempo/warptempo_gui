@@ -225,10 +225,10 @@ bool GuiInputHandler::trim_mouse_x_to_source_frame(int mouse_x,
 void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
     if (which == TrimHit::None) return;
     const bool is_begin = (which == TrimHit::Begin);
-    if (is_begin ? !app.trim.has_begin : !app.trim.has_end) {
-        return;
-    }
-    if (both && !(app.trim.has_begin && app.trim.has_end)) return;
+    // Any trim drag — single or pair — requires BOTH bounds set: a lone bound
+    // is gesture-inert. The router already gates on the full pair, so this is
+    // the structural backstop.
+    if (!(app.trim.has_begin && app.trim.has_end)) return;
     app.trim_drag.active       = true;
     app.trim_drag.is_begin     = is_begin;
     app.trim_drag.both         = both;
@@ -452,10 +452,12 @@ void GuiInputHandler::wheel_move_trim_end(GuiMouseButton button, int count) {
     // rationale is gone, so the bound refuses exactly like the marker tempo
     // nudge, a silent no-op).
     if (active_view_state(app).read_only) return;
-    // The Ctrl+Alt+wheel entry is selection-free, so this owns the no-end-bound
-    // refusal: moving a nonexistent bound would write the stale end_frame
-    // field. A lone end bound is movable, so has_begin is not required.
-    if (!app.trim.has_end) return;
+    // The Ctrl+Alt+wheel entry is selection-free, so this owns the trim
+    // presence refusal: moving a nonexistent bound would write the stale
+    // end_frame field. The end-move, like every trim gesture, requires the
+    // FULL pair set; a lone bound is gesture-inert, so both has_begin and
+    // has_end are required.
+    if (!(app.trim.has_begin && app.trim.has_end)) return;
     const int sr = audio.sample_rate();
     if (audio.total_frames() <= 0 || sr <= 0) return;
     const double spp = current_samples_per_pixel(app, audio);
@@ -512,10 +514,13 @@ void GuiInputHandler::wheel_move_trim_end(GuiMouseButton button, int count) {
 }
 
 // Alt left press trim routing, consulted by the Alt+drag branch AFTER its
-// marker hit test misses. Returns true iff the press landed on trim geometry (a
-// single-bound hit, or the top-strip pair region with both bounds set) — armed
-// or not — so the caller CLAIMS the press (no pan fallback); false lets the
-// caller fall through to the pan. Markers BEAT trim: the caller runs the marker
+// marker hit test misses. Every trim drag requires the FULL pair set; a lone
+// bound is gesture-inert — transparent to the press, which falls through to
+// pan/no-op like a plain press over a bound. Returns true iff both bounds are
+// set AND the press landed on trim geometry (a stem/chip single-bound hit, or
+// the top-strip inter-chip pair region) — armed or not — so the caller CLAIMS
+// the press (no pan fallback); false lets the caller fall through to the pan.
+// Markers BEAT trim: the caller runs the marker
 // hit test first, so a marker within its halo standing in a trim zone wins (the
 // contested bound still has its dedicated upper-row chip as an unambiguous
 // handle). Trim bounds are transparent to every OTHER chord (the plain/Shift
@@ -528,12 +533,12 @@ void GuiInputHandler::wheel_move_trim_end(GuiMouseButton button, int count) {
 //     and a trim span can cover the whole view); the pair handle is the
 //     top-strip span between the chips. So an unclaimed waveform press pans.
 //   TOP STRIP: a chip-rect hit (hit_test_trim_chip) begins that bound's single
-//     drag; else, with BOTH bounds set and the press column strictly between
-//     the two bound columns, the pair drag begins — both bounds are the subject
-//     (no grabbed-bound notion; the pair has no viewport clamp and, like every
-//     trim gesture, never moves the playhead).
-// A lone set bound arms only its halo/chip single drag — no pair arm. Trim
-// drags never touch selection.
+//     drag; else, the press column strictly between the two bound columns
+//     begins the pair drag — both bounds are the subject (no grabbed-bound
+//     notion; the pair has no viewport clamp and, like every trim gesture,
+//     never moves the playhead).
+// Both arms presuppose the full pair (the gate above): a lone bound arms
+// nothing — it is gesture-inert. Trim drags never touch selection.
 //
 // The pair-region bound columns come from displayed_or_live_target_map — the
 // map the on-screen chips were painted with on the LAST COMMITTED frame (the
@@ -552,9 +557,11 @@ bool GuiInputHandler::route_trim_alt_press(int mouse_x, int mouse_y,
     if (audio.total_frames() <= 0) return false;
     const double spp = current_samples_per_pixel(app, audio);
     if (spp <= 0.0) return false;
-    const bool has_b = app.trim.has_begin;
-    const bool has_e = app.trim.has_end;
-    if (!has_b && !has_e) return false;
+    // Every trim drag needs the full pair set. With a lone bound, trim
+    // contributes NO pointer geometry at all — the press is transparent and
+    // falls through to the caller's pan/no-op, exactly like a plain press over
+    // a bound.
+    if (!(app.trim.has_begin && app.trim.has_end)) return false;
 
     // Single-drag hit: the waveform uses the visible-column halo test; the top
     // strip uses the chip rect. Both surfaces keep their single arms.
@@ -569,15 +576,15 @@ bool GuiInputHandler::route_trim_alt_press(int mouse_x, int mouse_y,
         return true;
     }
 
-    // Pair drag: TOP STRIP ONLY — both bounds set and the press strictly
-    // between the two chips' columns. The strictly-between span needs both
-    // columns (no lone-bound pair arm). The pair has no grabbed-bound notion —
+    // Pair drag: TOP STRIP ONLY — the press strictly between the two chips'
+    // columns (both bounds are guaranteed set by the gate above). The pair has
+    // no grabbed-bound notion —
     // both bounds are the subject, so it always arms as Begin structurally
     // (there is no nearer-bound pick, and the gesture never moves the playhead).
     // The bound columns use the same forward-map + column math
     // hit_test_trim_boundary uses, on the painted items' own map (the
     // displayed_or_live_target_map ruling above), computed only on this path.
-    if (inside_top && has_b && has_e) {
+    if (inside_top) {
         const GuiRect area = waveform_area(app);
         const int click_rel_x = mouse_x - area.x;
         const double vp = static_cast<double>(app.viewport_start_sample);

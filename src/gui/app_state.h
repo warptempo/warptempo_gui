@@ -1184,21 +1184,25 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // Which trim boundary, if any, a waveform-area click lands on.
 enum class TrimHit { None, Begin, End };
 
-// hit_test_trim_boundary: return which set trim boundary's painted
+// hit_test_trim_boundary: return which trim boundary's painted
 // column is within kMarkerHitHalfPx of `mouse_x` AND lies within the visible
-// strip, or None. AUTHORING views — the active tab's live pair. Visible columns
-// only (mirroring hit_test_marker_line): a bound painted outside the strip is
-// not a candidate; the halo governs reach around a visible column. Walks the
-// same warp_frame_map as hit_test_marker_line in target view so the hit lands
-// on the visually-drawn stem. Trim is project-level, and applies in both 'W'
-// and 'P' views. When both bounds are within reach, the nearer wins. Consumed
-// by the Alt trim routing's waveform single-drag arm.
+// strip, or None. Early-outs to None unless the FULL pair is set — the sole
+// consumer routes here only then (a lone bound is gesture-inert), so both
+// bounds are guaranteed present. AUTHORING views — the active tab's live pair.
+// Visible columns only (mirroring hit_test_marker_line): a bound painted
+// outside the strip is not a candidate; the halo governs reach around a visible
+// column. Walks the same warp_frame_map as hit_test_marker_line in target view
+// so the hit lands on the visually-drawn stem. Trim is project-level, and
+// applies in both 'W' and 'P' views. When both bounds are within reach, the
+// nearer wins. Consumed by the Alt trim routing's waveform single-drag arm.
 TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
                                int mouse_x);
 
 // hit_test_trim_chip: like hit_test_trim_boundary, but tests the press against
-// each set bound's painted CHIP RECT in the upper top row rather than the stem
-// column. The chip glyph ("b"/"e") is drawn hl_pad to the right of the bound's
+// each bound's painted CHIP RECT in the upper top row rather than the stem
+// column. Same both-bounds-required early-out as hit_test_trim_boundary (the
+// sole consumer routes here only with the full pair set; a lone bound is
+// gesture-inert). The chip glyph ("b"/"e") is drawn hl_pad to the right of the bound's
 // column, so a column-only test misses clicks on the visible chip. The rect
 // mirrors regular-flag hit geometry (flag_chip_rect, the shared chip-rect
 // helper): x = round(text_left), w = round(glyph_advance + 2*flag_pad_x_px()),

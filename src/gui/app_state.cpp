@@ -128,10 +128,10 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
 TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
                                int mouse_x) {
     // Trim bounds hit-test like markers in the AUTHORING views, against
-    // the active A/B tab's live bounds.
-    const bool has_begin = app.trim.has_begin;
-    const bool has_end   = app.trim.has_end;
-    if (!has_begin && !has_end) return TrimHit::None;
+    // the active A/B tab's live bounds. The sole consumer (route_trim_alt_press)
+    // routes here only with the FULL pair set — a lone bound is gesture-inert —
+    // so both bounds are guaranteed present past this early-out.
+    if (!(app.trim.has_begin && app.trim.has_end)) return TrimHit::None;
     const int64_t begin_frame = app.trim.begin_frame;
     const int64_t end_frame   = app.trim.end_frame;
 
@@ -154,8 +154,7 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
     const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
         dmap.empty() ? nullptr : &dmap;
 
-    auto bound_dist = [&](int64_t frame, bool present) -> int {
-        if (!present) return kMarkerHitHalfPx + 1;
+    auto bound_dist = [&](int64_t frame) -> int {
         const int64_t src_sample = frame;
         double ms = static_cast<double>(src_sample);
         if (target_warp_frame_map) {
@@ -174,8 +173,8 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
         return std::abs(b_px - click_rel_x);
     };
 
-    const int db = bound_dist(begin_frame, has_begin);
-    const int de = bound_dist(end_frame, has_end);
+    const int db = bound_dist(begin_frame);
+    const int de = bound_dist(end_frame);
     const bool begin_ok = db <= kMarkerHitHalfPx;
     const bool end_ok   = de <= kMarkerHitHalfPx;
     if (begin_ok && end_ok) return (db <= de) ? TrimHit::Begin : TrimHit::End;
@@ -187,10 +186,10 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
 TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y) {
     // Same bound sourcing as hit_test_trim_boundary: the active A/B tab's live
-    // bounds in the AUTHORING views. Only set bounds are testable.
-    const bool has_begin = app.trim.has_begin;
-    const bool has_end   = app.trim.has_end;
-    if (!has_begin && !has_end) return TrimHit::None;
+    // bounds in the AUTHORING views. The sole consumer (route_trim_alt_press)
+    // routes here only with the FULL pair set — a lone bound is gesture-inert —
+    // so both bounds are guaranteed present past this early-out.
+    if (!(app.trim.has_begin && app.trim.has_end)) return TrimHit::None;
     const int64_t begin_frame = app.trim.begin_frame;
     const int64_t end_frame   = app.trim.end_frame;
 
@@ -235,8 +234,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
         TrimHit which;
     };
     std::vector<TrimChipHit> chips;
-    auto add_chip = [&](int64_t frame, bool present, TrimHit which) {
-        if (!present) return;
+    auto add_chip = [&](int64_t frame, TrimHit which) {
         const int64_t src_sample = frame;
         double ms = static_cast<double>(src_sample);
         if (target_warp_frame_map) {
@@ -262,8 +260,8 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
         chips.push_back({text_left, cr_rect, which});
     };
 
-    add_chip(begin_frame, has_begin, TrimHit::Begin);
-    add_chip(end_frame,   has_end,   TrimHit::End);
+    add_chip(begin_frame, TrimHit::Begin);
+    add_chip(end_frame,   TrimHit::End);
     std::sort(chips.begin(), chips.end(),
               [](const TrimChipHit& a, const TrimChipHit& b) {
                   if (a.text_left != b.text_left)
