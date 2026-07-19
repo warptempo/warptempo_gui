@@ -123,6 +123,23 @@ void GuiWarpMarkersOps::drop_marker_at_playhead() {
 // Falls back to base 1.0 / no typed scale if there is no prior marker
 // (possible: the store may be empty or the playhead may sit before the
 // first marker — marker zero is an ordinary, deletable marker).
+//
+// Copy-previous is PROJECTION TRUTH end to end: the copied value is the tempo
+// that RENDERS after the prior marker, not the marker's authored member value.
+// marker_effective's OWNER path deliberately returns the marker's own authored
+// fields (the ruled authored-display split for coincident group members), so
+// when the prior is an owner inside a 2+-survivor exact-frame group the render
+// replaces the whole group with one plain enabled 1.00 owner (no labels) while
+// marker_effective would still hand back e.g. 2.00 — a copy that would change
+// the rendered bytes. So a prior that is a member of a collapsed coincident
+// stack contributes the collapse's 1.00 (base 100 / no scale, the no-prior
+// fallback and exactly the synthetic owner the resolver seeds), skipping
+// marker_effective; the members' own hovers keep their authored readouts (the
+// ruled display split). The group predicate mirrors the resolver's stage-2
+// collapse: 2+ SURVIVORS sharing one exact int64 frame (effective_disabled is
+// the shared cascade survival test; disabled and cascade-disabled members do
+// not count). prev_idx itself survives by construction of find_immediate_prior,
+// so one OTHER surviving index at its frame makes the group.
 void GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
     if (audio.sample_rate() <= 0) return;
     const int64_t src_frame =
@@ -133,10 +150,28 @@ void GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
     int64_t               base_cents = 100;
     std::optional<double> scale;
     if (prev_idx >= 0 && mv[prev_idx].label_ref.empty()) {
-        const MarkerEffective eff = marker_effective(
-            slice_to_warp_markers(mv), prev_idx, audio.total_frames());
-        base_cents = eff.base_cents;
-        scale      = eff.scale;
+        // Is prev_idx inside a 2+-survivor exact-frame group the render
+        // collapses to one plain 1.00 owner? Exact integer frame compares —
+        // coincidence IS frame equality in the authored domain.
+        const int64_t prev_frame = mv[prev_idx].time_frame;
+        bool collapsed_group = false;
+        for (int j = 0; j < static_cast<int>(mv.size()); ++j) {
+            if (j != prev_idx && mv[j].time_frame == prev_frame &&
+                !effective_disabled(mv, j)) {
+                collapsed_group = true;
+                break;
+            }
+        }
+        // Collapsed group: keep base_cents/scale at the synthetic 1.00 owner's
+        // values (the no-prior fallback). Otherwise resolve the prior's
+        // projection value (pass/ref/owner, incl. the frame-0 seed and
+        // label-ref fallbacks) through marker_effective.
+        if (!collapsed_group) {
+            const MarkerEffective eff = marker_effective(
+                slice_to_warp_markers(mv), prev_idx, audio.total_frames());
+            base_cents = eff.base_cents;
+            scale      = eff.scale;
+        }
     }
     drop_marker(t, /*inherit=*/false, base_cents, scale);
 }
