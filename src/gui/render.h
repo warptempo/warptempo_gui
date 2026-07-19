@@ -499,9 +499,10 @@ void render_trim_stems(cairo_t* cr,
 // chips — the visual affordance of the Alt pair-drag's chip-row grab band. It
 // occupies the upper chip box's vertical band (flag_chip_bottom_y(...,
 // ChipRow::Upper) minus monospace_row_h(), down to flag_chip_bottom_y) and
-// shares the phase reset overlay's color (kPhaseResetOverlay), painted OPAQUE.
-// It spans the two bounds' columns unconditionally (independent of the chips'
-// viewport cull) clamped into the mapped waveform width, so it still paints
+// shares BOTH the phase reset overlay's color (kPhaseResetOverlay) and its
+// alpha (kPhaseResetOverlayAlpha) — the same translucent wash, over the strip
+// background. It spans the two bounds' columns unconditionally (independent of
+// the chips' viewport cull) clamped into the mapped waveform width, so it still paints
 // across the visible part when a chip is offscreen.
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,

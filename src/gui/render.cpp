@@ -553,8 +553,9 @@ void render_trim_flags(cairo_t* cr,
     // With both bounds set, a solid block fills the chip-row span between the
     // two chips — the visual affordance of the Alt pair-drag's top-strip
     // inter-chip grab band (the span strictly between the two b/e chips). Its
-    // color is shared with the phase reset overlay (kPhaseResetOverlay) but the
-    // fill is OPAQUE here (a solid block, not the overlay's translucent wash).
+    // fill shares BOTH the phase reset overlay's color (kPhaseResetOverlay) and
+    // its alpha (kPhaseResetOverlayAlpha) — the same translucent wash, here over
+    // the top-strip background.
     // Painted BEFORE the chip-box loop so the b/e chips overpaint it and it
     // reads as filling the span between them. Both columns are computed
     // unconditionally with add_chip's own x_raw math (NOT via add_chip, whose
@@ -584,8 +585,8 @@ void render_trim_flags(cairo_t* cr,
                 flag_chip_bottom_y(waveform_area, ChipRow::Upper);
             const double chip_top =
                 chip_bottom - static_cast<double>(monospace_row_h());
-            cairo_set_source_rgb(cr, kPhaseResetOverlay.r, kPhaseResetOverlay.g,
-                                 kPhaseResetOverlay.b);
+            cairo_set_source_rgba(cr, kPhaseResetOverlay.r, kPhaseResetOverlay.g,
+                                  kPhaseResetOverlay.b, kPhaseResetOverlayAlpha);
             cairo_rectangle(cr, static_cast<double>(top_strip_area.x + lo),
                             chip_top,
                             static_cast<double>(hi - lo),
