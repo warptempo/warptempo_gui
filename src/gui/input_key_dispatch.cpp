@@ -206,10 +206,13 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
                mods.codepoint >= 0x20 && mods.codepoint <= 0x7e;
     }
     // Global dispatch: only the continuous step gestures repeat — bare
-    // Left/Right scrub, bare PageUp/PageDown, bare Equal/Minus zoom, and the
-    // Alt-exact Left/Right/Up/Down nudges and tempo steps. Every letter,
-    // toggle, opener, Ctrl / Ctrl+Alt chord, Space, Home/End, and Delete is
-    // one-shot.
+    // Left/Right scrub, bare PageUp/PageDown, bare Equal/Minus zoom, the
+    // Alt-exact Left/Right/Up/Down nudges and tempo steps, and the
+    // marker-focus cycle (bare Tab / Shift+Tab / IsoLeftTab) plus the
+    // Ctrl+Shift+Tab march (the ONE repeating Ctrl chord — a continuous step
+    // gesture like the cycle it composes, not a one-shot command; Ctrl+Tab,
+    // the A/B switch, stays one-shot). Every letter, toggle, opener, other
+    // Ctrl / Ctrl+Alt chord, Space, Home/End, and Delete is one-shot.
     if (!mods.ctrl && !mods.shift && !mods.alt &&
         (key == GuiKeys::Left || key == GuiKeys::Right ||
          key == GuiKeys::PageUp || key == GuiKeys::PageDown ||
@@ -218,6 +221,15 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     if (mods.alt && !mods.ctrl && !mods.shift &&
         (key == GuiKeys::Left || key == GuiKeys::Right ||
          key == GuiKeys::Up || key == GuiKeys::Down))
+        return true;
+    // Marker-focus cycle keys auto-advance while held (fast marker walking):
+    // bare Tab and Shift+Tab both cycle, and IsoLeftTab cycles shift-agnostic
+    // (mirroring the dispatch arm), all requiring no ctrl/alt.
+    if (!mods.ctrl && !mods.alt &&
+        (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab))
+        return true;
+    // Ctrl+Shift+Tab exactly (the lockstep marker march) repeats too.
+    if (mods.ctrl && mods.shift && !mods.alt && key == GuiKeys::Tab)
         return true;
     return false;
 }
