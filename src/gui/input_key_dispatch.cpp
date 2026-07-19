@@ -1385,8 +1385,8 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     }
 
     // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus onto the next/prev
-    // marker, moving the playhead to it (and recentering on it at the current
-    // zoom under follow mode only). The Ctrl+Tab branch above runs first and
+    // marker, moving the playhead to it and recentering on it at the current
+    // zoom (always — follow mode does not gate it). The Ctrl+Tab branch above runs first and
     // returns, so Ctrl+Tab is consumed before reaching here; the explicit
     // !ctrl guards below ensure Ctrl+Shift+Tab does not slip into the
     // cycle path either. Alt-strict everywhere: an Alt held makes the chord

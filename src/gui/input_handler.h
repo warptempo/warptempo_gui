@@ -449,10 +449,9 @@ private:
                       bool over_trim_row);
 
     // Tab / Shift+Tab / IsoLeftTab dispatch: cycle marker focus, then stop
-    // playback and move the playhead onto the newly focused marker. Recenters
-    // the viewport on it at the current zoom ONLY under follow mode
-    // (app.follow_mode); with follow off the playhead still moves but the
-    // screen stays put. Mode-aware: reads from phaseresetmarkers in 'P' mode,
+    // playback and move the playhead onto the newly focused marker. Always
+    // recenters the viewport on it at the current zoom — follow mode does not
+    // gate the cycle. Mode-aware: reads from phaseresetmarkers in 'P' mode,
     // warpmarkers otherwise.
     void cycle_marker_focus(bool forward);
 

@@ -453,8 +453,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // Tab family: Ctrl+Tab / Ctrl+Shift+Tab switch tabs; Tab / Shift+Tab /
-    // IsoLeftTab cycle marker focus (recentering the viewport under follow
-    // mode only).
+    // IsoLeftTab cycle marker focus (always recentering the viewport on the
+    // focused marker).
     if (handle_tab_switch_keys(key, mods)) return;
 
     // Tempo nudge. Alt+Up / Alt+Down only. No view guard here —
@@ -553,8 +553,8 @@ void GuiInputHandler::cycle_marker_focus(bool forward) {
     else         selection.select_prev_marker();
 
     // The walk is markers-only (trim is not a cycle stop). The playhead moves
-    // to the focused marker's source frame unconditionally; the viewport only
-    // recenters on it under follow mode (below).
+    // to the focused marker's source frame unconditionally, and the viewport
+    // always recenters on it (below) — follow mode does not gate the cycle.
     int64_t src_sample = 0;
     {
         const int idx = app.last_selected_marker;
@@ -596,29 +596,26 @@ void GuiInputHandler::cycle_marker_focus(bool forward) {
     }
 
     // Center the viewport on the focused marker at the current zoom — Tab
-    // leaves the zoom level alone. Follow mode only: with follow off the
-    // cycle still selects and moves the playhead, but the screen stays put
-    // (an offscreen focused marker stays offscreen). When it fires,
-    // center_viewport_on_playhead is the SOLE viewport write in this path:
-    // it reads the cursor we just set and scrolls once to center it,
-    // emitting one coherent set of waveform + top-strip damage against the
-    // final viewport.
-    if (app.follow_mode) {
-        // center_viewport_on_playhead routes through kick_waveform_sync (whose
-        // installed callback IS force_synchronous_waveform_rebuild) inside its
-        // own moved guard, so a recenter that scrolls already gets its one
-        // synchronous rebuild here — no second call in this function's tail. The
-        // unmoved / follow-off paths need none.
-        viewport.center_viewport_on_playhead();
-    }
+    // leaves the zoom level alone. This recenter is unconditional: follow
+    // mode does not gate the cycle (architect 2026-07-19, reversing the
+    // earlier follow-only rule). center_viewport_on_playhead is the SOLE
+    // viewport write in this path: it reads the cursor we just set and
+    // scrolls once to center it, emitting one coherent set of waveform +
+    // top-strip damage against the final viewport.
+    // center_viewport_on_playhead routes through kick_waveform_sync (whose
+    // installed callback IS force_synchronous_waveform_rebuild) inside its
+    // own moved guard, so a recenter that scrolls already gets its one
+    // synchronous rebuild here — no second call in this function's tail. The
+    // unmoved path (EOF-clamped no-op) needs none.
+    viewport.center_viewport_on_playhead();
 
-    // The viewport did not move when it was already clamped at EOF (follow
-    // on, center_viewport_on_playhead a no-op) or whenever follow is off
-    // (no recenter attempted). In either no-move case the cursor's column
-    // change still needs its own invalidation — mirror move_playhead_to's
-    // no-scroll branch. When the viewport did move, the playhead columns
-    // are already inside the waveform-area damage center emitted, so only
-    // invalidate columns in the unmoved case to avoid a redundant rect.
+    // The viewport did not move when it was already clamped at EOF
+    // (center_viewport_on_playhead a no-op). In that no-move case the
+    // cursor's column change still needs its own invalidation — mirror
+    // move_playhead_to's no-scroll branch. When the viewport did move, the
+    // playhead columns are already inside the waveform-area damage center
+    // emitted, so only invalidate columns in the unmoved case to avoid a
+    // redundant rect.
     if (app.viewport_start_sample == old_vp) {
         const double new_px = playhead_pixel_x(app, audio);
         viewport.invalidate_playhead_columns(old_px, new_px);
