@@ -188,10 +188,12 @@ void GuiTargetRender::dispatch_render_now() {
         // Reuse skips do_render, whose trim-plan block owns the fallback
         // line on fresh dispatches — so the ruled one-line-per-resolve
         // signal prints here instead. This rung cannot see plan_trim's
-        // error string; the verdict names which fallback (lone bound or
-        // sub-sample span — the two a resting live store can reach; crossed/
-        // equal cannot rest, past-EOF is adversarial load-fatal), so the
-        // reason below matches the orchestrators' vocabulary byte-for-byte.
+        // error string; the verdict names which fallback (the completed
+        // (0, 0) crossed case — reachable only via a lone END at frame 0 —
+        // or a sub-sample span; a set pair can never rest crossed/equal since
+        // commit and load auto-clear, and past-EOF is adversarial
+        // load-fatal), so the reason below matches the orchestrators'
+        // vocabulary byte-for-byte.
         if (verdict.trim_fell_back) {
             std::fprintf(stderr,
                 "warptempo_gui: %s; rendering untrimmed\n",
@@ -238,7 +240,8 @@ void GuiTargetRender::dispatch_render_now() {
             // Reuse skips do_render's trim-plan block; print the fallback
             // signal here — same rationale as the cache rung above (this
             // is the only other pre-do_render return). The verdict names the
-            // fallback reason (lone bound or sub-sample span).
+            // fallback reason (the completed (0, 0) crossed case or a
+            // sub-sample span).
             if (verdict.trim_fell_back) {
                 std::fprintf(stderr,
                     "warptempo_gui: %s; rendering untrimmed\n",
@@ -295,11 +298,12 @@ void GuiTargetRender::dispatch_render_now() {
     // Buffer-output route. do_render skips the on-disk rename, sidecar
     // writes, and the peak-pyramid sidecar; synth samples append into
     // *output_buffer instead. The post-engine chain runs in place on the
-    // buffer: the post_trim crop when a trim PLAN exists (a set pair that
-    // validated — a lone bound never attempts a plan; the orchestrators gate
-    // it to the untrimmed fallback upstream), and the always-on spectral +
-    // peak limited chain — the target-view preview gets the same cropping
-    // and limiting as the disk path.
+    // buffer: the post_trim crop when a trim PLAN exists (a plan exists for
+    // any set bound whose — possibly completed — window validated; a lone
+    // bound completes to its extreme at the render boundary and plans that
+    // window like any pair), and the always-on spectral + peak limited
+    // chain — the target-view preview gets the same cropping and limiting
+    // as the disk path.
     req.output_buffer = &app.target_buffer;
     // The process's single RenderCache (this struct's own member, wired from
     // main.cpp). do_render uses it on this path only to queue the writer-thread

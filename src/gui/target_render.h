@@ -174,13 +174,15 @@ private:
 
     // Compute the verdict above for an explicit trim pair. Takes BOTH
     // bounds because it must mirror the orchestrators' ambiguous-trim
-    // fallbacks: a lone bound (exactly one set) renders the FULL deliverable,
-    // and so does a pair whose target span rounds below one output sample —
-    // the anchor is 0 in both, not the begin's target image (rule mirror at
-    // the definition). No buffer-frames gate: callers stamp the origin at
-    // production time, when the buffer may still be empty. The stamp rests in
-    // dispatched_buffer_start_frame_ below and travels to GuiPlayback with
-    // each bind.
+    // fallbacks: a lone bound completes to its extreme and renders that
+    // window like any pair, so only the two reachable refusals still render
+    // the FULL deliverable — the completed (0, 0) crossed case (a lone END
+    // at frame 0) and a (possibly completed) pair whose target span rounds
+    // below one output sample — anchor 0 in both, not the begin's target
+    // image (rule mirror at the definition). No buffer-frames gate: callers
+    // stamp the origin at production time, when the buffer may still be
+    // empty. The stamp rests in dispatched_buffer_start_frame_ below and
+    // travels to GuiPlayback with each bind.
     BufferStartVerdict compute_buffer_start_frame_for(bool has_begin,
                                                       int64_t begin_frame,
                                                       bool has_end,
