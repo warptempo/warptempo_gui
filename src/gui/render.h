@@ -93,6 +93,12 @@ inline constexpr GuiColor kWaveformDimmed   = hex(0x4D6378);
 inline constexpr GuiColor kOverlay      = hex(0xB8D4F0);
 inline constexpr double    kOverlayAlpha = 0.05;
 
+// The pair-drag band's ring strength — the ring paints in kOverlay at this
+// alpha (the band's own hue, stronger than the kOverlayAlpha wash), the
+// outline-palette relationship (a brighter sibling of the fill) expressed
+// in alpha; the tuning knob.
+inline constexpr double    kOverlayOutlineAlpha = 0.30;
+
 inline constexpr GuiColor kMarker           = hex(0x9145AD);
 inline constexpr GuiColor kSelected         = hex(0x3DAEE9);  // Breeze blue
 inline constexpr GuiColor kPlayheadScanner  = hex(0xF2D959);

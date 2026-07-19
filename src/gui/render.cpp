@@ -555,7 +555,8 @@ void render_trim_flags(cairo_t* cr,
     // grab band (the span strictly between the two b/e chips). The affordance is
     // the shared overlay wash (kOverlay / kOverlayAlpha, the same pair the phase
     // reset overlay paints with) over the top-strip background, PLUS a 1px
-    // kTrimMarkerOutline ring (the trim chips' ring color) drawn inside the
+    // ring in the band's own color pair at ring strength (kOverlay at
+    // kOverlayOutlineAlpha, not the trim chips' ring color) drawn inside the
     // band's own edges — the ring eats the outermost band pixels, growing the
     // rect nothing (layout unchanged). Painted BEFORE the chip-box loop so the
     // b/e chips overpaint the wash and the ring's ends, so the band reads as
@@ -594,12 +595,16 @@ void render_trim_flags(cairo_t* cr,
                             static_cast<double>(hi - lo),
                             chip_bottom - chip_top);
             cairo_fill(cr);
-            // Ring: a 1px kTrimMarkerOutline border along the same rect's four
-            // edges, drawn INSIDE its outer 1px band (four integer-edged 1px
-            // rectangle fills, AA off — the house crisp-edge convention shared
-            // with the chip rings). A degenerate narrow band (rw of 1-2 px) just
-            // overdraws harmlessly. The rect is the wash's own: left/width from
-            // the integer chip columns, top/bottom snapped to the chip box.
+            // Ring: a 1px border along the same rect's four edges, drawn
+            // INSIDE its outer 1px band (four integer-edged 1px rectangle
+            // fills, AA off — the house crisp-edge convention shared with the
+            // chip rings). The ring is the band's own color pair at ring
+            // strength — kOverlay at kOverlayOutlineAlpha, not the chip ring
+            // color — so the band reads as one self-consistent affordance
+            // rather than borrowing the trim chips' orange. A degenerate
+            // narrow band (rw of 1-2 px) just overdraws harmlessly. The rect
+            // is the wash's own: left/width from the integer chip columns,
+            // top/bottom snapped to the chip box.
             const int rx = top_strip_area.x + lo;
             const int rw = hi - lo;
             const int ry = static_cast<int>(std::nearbyint(chip_top));
@@ -607,8 +612,8 @@ void render_trim_flags(cairo_t* cr,
             if (rw > 0 && rh > 0) {
                 cairo_save(cr);
                 cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-                cairo_set_source_rgb(cr, kTrimMarkerOutline.r,
-                                     kTrimMarkerOutline.g, kTrimMarkerOutline.b);
+                cairo_set_source_rgba(cr, kOverlay.r, kOverlay.g, kOverlay.b,
+                                      kOverlayOutlineAlpha);
                 cairo_rectangle(cr, rx, ry, rw, 1);                 // top
                 cairo_rectangle(cr, rx, ry + rh - 1, rw, 1);        // bottom
                 cairo_rectangle(cr, rx, ry, 1, rh);                 // left
