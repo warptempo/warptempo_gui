@@ -353,20 +353,12 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
         m.tempo_inherits = false;
         m.tempo_cents    = cents;
         m.tempo_scale    = start_scale;
-        // A tempo step changes the very base tempo an iteration bracket was
-        // committed against, so it clears this marker's bracket in the same
-        // proposed write — nullopt is the identical cleared state a blank
-        // marker holds. Because this rides the same undo entry the tempo
-        // change pushes below (the pre-state snapshot carries the iter
-        // fields), one Ctrl+Z restores tempo and bracket together. Done
-        // regardless of whether iteration mode is currently on: a bracket
-        // can only exist mode-off via an explicit undo restore, and
-        // clearing is the safe direction — silently keeping an invisible
-        // bracket under a changed tempo is exactly the pathway this closes.
-        if (m.iter_start_cents.has_value() || m.iter_end_cents.has_value()) {
-            m.iter_start_cents.reset();
-            m.iter_end_cents.reset();
-        }
+        // The tempo step leaves this marker's iteration bracket untouched,
+        // exactly like the flag editor's manual tempo commit: a later tempo
+        // change under a live bracket is deliberately not re-gated (symmetry
+        // between the two tempo-authoring surfaces wins; staleness is
+        // accepted, backstopped by build_warp_frame_map's refusals and the
+        // strict promote parse at the ' adopt).
         changed = true;
     }
     if (!changed) return;
@@ -374,9 +366,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     const int              hint_last = app.last_selected_marker;
     app.warpmarkers.markers_mut() = std::move(proposed);
     // Coalesce a rapid tempo-step burst: continuation presses skip the
-    // redundant push so one Ctrl+Z reverts the whole burst (the first entry's
-    // pre-state also carries any iteration bracket this step clears, so the
-    // bracket is restored together with the tempo).
+    // redundant push so one Ctrl+Z reverts the whole burst.
     if (merge) undo.note_coalesced_commit();
     else       undo.push_undo_warp(std::move(pre_state), hint_last);
     undo.record_gesture(GestureKind::TempoStep);
