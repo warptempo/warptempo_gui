@@ -158,14 +158,17 @@ namespace {
 // Shared post-restore selection + playhead rule for both marker lists. After a
 // marker swap, classify before -> after as add / remove / same-count and set
 // the selection (and, where appropriate, the playhead) to the touched markers.
-// `fields_differ` is the same-count in-place-edit predicate;
+// `fields_differ` is the ROW EQUALITY basis: !fields_differ(a, b) means the two
+// rows are identical, which the same-count branch uses for identity matching;
 // `remove_target_frame` chooses the playhead target among the removed markers
 // (warp refines toward the op's subject, phase-reset takes the rightmost).
-// Authored times are whole int64 source frames, so matching is EXACT integer
-// multiset consumption — no epsilon, no double widening, no re-rounding — and
-// multiplicity-aware: when one of two exactly coincident markers is
-// added/removed, each before-row match consumes exactly one after-row, so the
-// touched member of the tie is still identified.
+// All three branches consume by exact multiset matching — no epsilon, no double
+// widening, no re-rounding — and multiplicity-aware, each before-row matching
+// at most one after-row: add / remove match on the whole-int64-source-frame
+// time (`time_frame`), same-count matches on the FULL row (every field, via
+// !fields_differ). So a crossing drag that reorders the store still flags only
+// the changed row, and when one of two exactly coincident markers is touched,
+// the tie's moved member is still identified.
 template <class M, class FieldsDiffer, class RemoveTargetFrame>
 void apply_post_restore_rules_impl(AppState& app, Selection& selection,
                                    const UndoEntry& entry,
@@ -221,10 +224,37 @@ void apply_post_restore_rules_impl(AppState& app, Selection& selection,
         app.selected_markers.clear();
         app.last_selected_marker = -1;
         return;
-    } else {  // same count: flag any in-place edit
+    } else {  // same count: identity-based row matching
+        // A crossing drag reorders the store (reorder_markers_by_time), so
+        // before and after are a permutation plus one changed row: comparing
+        // before[i] vs after[i] POSITIONALLY would flag every passed-over
+        // marker (each sits at a shifted index and differs from its
+        // counterpart). Match by identity instead, mirroring the add/remove
+        // branches: an after-row is untouched iff it exactly equals some
+        // not-yet-consumed before-row, each before-row consumed at most once.
+        // The unmatched after-rows are the touched set.
+        //
+        // Plain O(n^2) consume (a used[] flag over `before`, inner scan with
+        // !fields_differ) rather than a std::multiset: marker lists are small,
+        // and this avoids inventing a strict ordering over the mixed field
+        // tuple (label strings, doubles) a multiset key would need.
+        //
+        // Consequences: a pure permutation with no field change (a stable-sort
+        // tie reorder) matches every row and yields an empty touched set — no
+        // selection change, correct; a multi-marker drag flags exactly the
+        // moved set; coincident equal rows are handled by the one-match-per-row
+        // consumption exactly like the add/remove branches.
+        std::vector<char> used(before.size(), 0);
         for (size_t i = 0; i < after.size(); ++i) {
-            if (fields_differ(after[i], before[i]))
-                target_set.insert(static_cast<int>(i));
+            bool matched = false;
+            for (size_t j = 0; j < before.size(); ++j) {
+                if (!used[j] && !fields_differ(after[i], before[j])) {
+                    used[j] = 1;  // consume: one match per row
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) target_set.insert(static_cast<int>(i));
         }
         want_playhead_jump = !target_set.empty();
     }
