@@ -99,6 +99,18 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     // against the full-domain viewport with no wrong-domain leak.
     int64_t start;
     int64_t end;
+    // Looping audition verdict, LAUNCH-CAPTURED here (computed once, before the
+    // view split) exactly like end_sample: when trim is set (a lone bound
+    // defines a window under the completion semantics), the audition loops — on
+    // reaching the end the audio callback wraps back to the window begin and
+    // keeps playing until the user stops it (Space/Esc/any stop route). Mid-
+    // session trim edits do NOT alter the running session (mirroring how a trim
+    // edit never moves the running end_sample); the next launch picks up the
+    // new state. The per-arm loop start is set below and stashed in
+    // app.playback_loop_start_sample so the click-keep-alive reseek preserves
+    // this session's captured verdict.
+    const bool loop = app.trim.has_begin || app.trim.has_end;
+    int64_t loop_start = -1;
     if (app.active_audio_view == 'T') {
         // Target view: the target buffer is the live playback source.
         // Refuse if no successful target render has populated it yet
@@ -136,6 +148,11 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         start = app.playhead_cursor_sample + launch_offset;
         if (start < playback.domain_begin()) return;
         end   = playback.domain_end();
+        // Target view: the bound buffer IS the trim window under the
+        // completion semantics, so the loop start is the buffer's domain
+        // begin. `loop` is false when trim is unset even though a buffer
+        // domain always exists — no loop then.
+        if (loop) loop_start = playback.domain_begin();
     } else {
         end = viewport.trim_end_sample();
         // Space requires at least TWO playable frames of remainder: a
@@ -161,6 +178,9 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         if (app.playhead_cursor_sample < viewport.trim_begin_sample()) return;
         // Cursor is now guaranteed in [trim_begin, trim_end).
         start = app.playhead_cursor_sample;
+        // Source view: loop back to the completed trim begin — the same value
+        // the lower Space gate compares against (0 for a lone end).
+        if (loop) loop_start = viewport.trim_begin_sample();
     }
     // Scanner launch = the validated cursor position, in the paint domain
     // in every view (see the comment above `start`).
@@ -173,7 +193,11 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     viewport.follow_scroll_if_needed();
     const bool force_one_x = (app.active_audio_view == 'T');
     playback.set_speed(force_one_x ? 1.0f : app.playback_speed);
-    playback.play(start, end);
+    // Stash the captured loop start for the click-keep-alive reseek to reuse
+    // (play() decides the real looping window; -1 means this session does not
+    // loop). Must be set before play() so a reseek issued right after sees it.
+    app.playback_loop_start_sample = loop_start;
+    playback.play(start, end, loop_start);
 }
 
 // Click-keep-alive: reseek a live playback session to `sample` without the
@@ -205,7 +229,11 @@ void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
             stop_playback_if_playing();
             return;
         }
-        playback.play(sample, playback.domain_end());
+        // Preserve the running session's launch-captured loop verdict: a
+        // looping audition stays looping across a click-keep-alive reseek
+        // (the window is unchanged; only the immediate resume point moves).
+        playback.play(sample, playback.domain_end(),
+                      app.playback_loop_start_sample);
         return;
     }
     // Source view: enforce the trim window with in-range-only semantics,
@@ -223,7 +251,11 @@ void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
         stop_playback_if_playing();
         return;
     }
-    playback.play(sample, viewport.trim_end_sample());
+    // Preserve the running session's launch-captured loop verdict (see the
+    // target arm above): the looping window is unchanged, only the resume
+    // point moves.
+    playback.play(sample, viewport.trim_end_sample(),
+                  app.playback_loop_start_sample);
 }
 
 // Set follow mode (contract at the header declaration). Shared by the bare-`f`

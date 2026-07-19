@@ -946,6 +946,27 @@ int main(int argc, char** argv) {
         if (app.loading || audio.total_frames() <= 0) return;
         if (!playback.is_playing()) return;
 
+        // Loop wrap: a looping audition (trim set, launch-captured in
+        // toggle_playback) wrapped its read position back to the window
+        // begin. That is a backward cursor jump the free-running predictor
+        // cannot see (it clamps its prediction to end_sample, so cursor() holds
+        // at the window end and never reveals the wrap), so resync the
+        // predictor to the wrapped audio cursor here — the ruled resync event
+        // for the wrap (playback.h head comment). Detected via the audio
+        // thread's monotonic wrap counter rather than a cursor snapshot for
+        // exactly that reason. The normal scanner advance below then reads the
+        // post-resync cursor() (now at the window begin) and invalidates the
+        // old->new column span for the backward jump. Looping no longer needs
+        // follow mode: the resync and invalidation run regardless, and the
+        // advance's follow_scroll_if_needed() simply no-ops when follow is off
+        // (the scanner may wrap to an offscreen column — normal follow-off
+        // playback, nothing else assumes follow-on for the loop).
+        const uint64_t wrap_seq = playback.loop_wrap_seq();
+        if (wrap_seq != app.playback_loop_wrap_seen) {
+            app.playback_loop_wrap_seen = wrap_seq;
+            playback.resync_predictor();
+        }
+
         // Read the predictor at paint time. The predictor is continuous
         // in wall time, so this gives the freshest possible position
         // right before paint consumes the damage list. Under the

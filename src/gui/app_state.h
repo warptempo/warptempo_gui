@@ -534,6 +534,18 @@ struct AppState {
     bool    playhead_scanner_endpoint_painted = false;
     float   playback_speed          = 0.7f;
 
+    // Looping audition (trim set, launch-captured at toggle_playback).
+    // `playback_loop_start_sample` is the domain-coordinate loop start decided
+    // ONCE at the play launch (-1 = this session does not loop); the
+    // click-keep-alive reseek threads it back through play() so a mid-session
+    // trim edit cannot alter the running session's loop verdict.
+    // `playback_loop_wrap_seen` is the last loop_wrap_seq() the per-redraw
+    // drive observed; a change means the audio callback wrapped and the drive
+    // resyncs the predictor. It is never reset (loop_wrap_seq is monotonic and
+    // never reset either), so it stays valid across sessions.
+    int64_t  playback_loop_start_sample = -1;
+    uint64_t playback_loop_wrap_seen    = 0;
+
     // GUI-wide monospace text size in points (the font_size setting; 6..72,
     // default 11). A display preference, not engine input and not authoring
     // state: persisted on Ctrl+S like playback_speed, applied at file load

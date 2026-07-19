@@ -43,8 +43,19 @@
 // sync_playhead_to_last_selected (live nudges and undo/redo restores),
 // set_playback_speed, follow-mode off-to-on, marker-drag hover,
 // follow-scroll auto-shift, horizontal pan via scroll_viewport
-// (Alt+wheel and PageUp/PageDown), and viewport recenter via
-// center_viewport_on_playhead (C key).
+// (Alt+wheel and PageUp/PageDown), viewport recenter via
+// center_viewport_on_playhead (C key), and the LOOP WRAP. The loop wrap is
+// an event of acceptable visible discontinuity: when a looping audition
+// (trim set, launch-captured — see play()'s loop_start_sample)
+// reaches the window end, the audio callback re-anchors the read position
+// back to the loop start (a raw cut, clicks accepted by ruling). That is a
+// backward cursor jump the free-running predictor cannot see, so the
+// main-thread drive resyncs the predictor to the wrapped audio cursor at the
+// wrap; without it the scanner would march past the window end while the
+// audio loops. The wrap is detected via loop_wrap_seq() (a wrap counter the
+// audio thread publishes), NOT by comparing predicted cursor() snapshots:
+// cursor() clamps the free-running prediction to end_sample while playing, so
+// it holds at the window end and never reveals the backward jump on its own.
 //
 // Two alternatives were considered and rejected. A free-running predictor
 // with no resync is insufficient for medium-zoom playback
@@ -82,11 +93,18 @@ public:
               int64_t total_frames, int64_t domain_offset);
 
     // Begin playback at `start_sample`, stopping when the cursor reaches or
-    // passes `end_sample` (exclusive). Both are DOMAIN coordinates of the
-    // bound buffer; the domain offset is subtracted here, before the internal
-    // buffer-local clamps and early-return checks. Safe to call while
-    // already playing — the previous run is torn down cleanly first.
-    void play(int64_t start_sample, int64_t end_sample);
+    // passes `end_sample` (exclusive) — UNLESS `loop_start_sample` is >= 0, in
+    // which case reaching `end_sample` WRAPS the read position back to
+    // `loop_start_sample` and playback continues indefinitely until stop().
+    // All three are DOMAIN coordinates of the bound buffer; the domain offset
+    // is subtracted here, before the internal buffer-local clamps and
+    // early-return checks. `loop_start_sample` defaults to -1 (no looping);
+    // when set it is translated and clamped like the bounds, and looping is
+    // disabled defensively if the resulting buffer-local loop start is not at
+    // least 2 frames before end. Safe to call while already playing — the
+    // previous run is torn down cleanly first.
+    void play(int64_t start_sample, int64_t end_sample,
+              int64_t loop_start_sample = -1);
 
     // Stop playback and block until any in-flight audio callback has exited,
     // normally within about two JACK periods. If callbacks stop arriving
@@ -114,6 +132,15 @@ public:
     // plus the bound buffer's domain offset.
     bool    is_playing() const;
     int64_t cursor()     const;
+
+    // Monotonic count of loop wraps performed by the audio callback since the
+    // device came up (never reset — a looping audition bumps it once per wrap).
+    // The main-thread drive polls this each redraw and, on a change, treats it
+    // as a resync event (playback.h head comment): a wrap is a backward cursor
+    // jump the free-running predictor cannot see. Acquire load, paired with the
+    // audio thread's release bump, so a reader that observes a bump also
+    // observes the post-wrap cursor store that preceded it.
+    uint64_t loop_wrap_seq() const;
 
     // The bound buffer's domain extent, for call-site range policy:
     // domain_begin() is the domain offset (the domain coordinate of buffer
