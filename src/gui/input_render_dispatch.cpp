@@ -222,13 +222,21 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
             }
             finalize_render_run();
             if (success && app.active_audio_view == 'T' &&
-                !target_render.is_updating()) {
-                // ensure_ready() may fill from the shared cache when the
-                // just-rendered fingerprint is already registered, or
-                // render the current target state if the state changed or
-                // the freshly rendered entry is still registering on the
-                // writer thread. That miss is benign; if finalize_render_run
-                // just launched a pending target render, leave it alone.
+                !target_render.is_updating() &&
+                (target_render.is_dirty() || app.target_buffer_frames <= 0)) {
+                // Re-establish the target buffer only when it is actually
+                // stale or empty/cold. An archival render never touches
+                // target_buffer, so a clean, bound buffer needs no
+                // re-establishment: calling ensure_ready() there would trip
+                // its defensive stop and cut an in-progress target audition
+                // for a fully redundant rebind of the same buffer at the same
+                // anchor. When re-establishment IS wanted, ensure_ready() may
+                // fill from the shared cache when the just-rendered
+                // fingerprint is already registered, or render the current
+                // target state if the state changed or the freshly rendered
+                // entry is still registering on the writer thread. That miss
+                // is benign; if finalize_render_run just launched a pending
+                // target render, is_updating() is true and we leave it alone.
                 target_render.ensure_ready();
             }
         });

@@ -96,6 +96,14 @@ struct GuiTargetRender {
         return pending_ || in_flight_;
     }
 
+    // True iff app.target_buffer is potentially stale relative to the current
+    // engine input (set by trigger() on any output-affecting mutation, cleared
+    // after the completion rebind). Consulted by the archival on_done tail to
+    // decide whether the target buffer actually needs re-establishing.
+    bool is_dirty() const {
+        return is_dirty_;
+    }
+
     // Rebind the playback device's borrowed sample buffer to source.wav.
     // Called when the user toggles target → source. Asserts playback is
     // stopped; callers (the toggle handler) stop playback before calling.
