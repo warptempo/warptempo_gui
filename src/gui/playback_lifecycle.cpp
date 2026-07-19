@@ -122,15 +122,36 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         // cannot (the offset is 0 or +N/2 at both call sites and domain_end
         // is a modest buffer extent), and a cursor that passes the check
         // bounds the sum below domain_end(). Same verdicts as summing first
-        // wherever the sum was defined.
+        // wherever the sum was defined. The extra `- 1` is the two-frame
+        // remainder gate (rationale at the source arm below): a launch whose
+        // start would leave fewer than two frames before domain_end() no-ops.
+        // It does not change the overflow shape — the check still runs on the
+        // cursor against the shifted bound before the sum is formed — and
+        // domain_end() - launch_offset - 1 cannot underflow into surprise:
+        // domain_end() >= 0 and launch_offset is 0 or +N/2, so a tiny buffer
+        // only drives the difference negative, which merely makes the no-op
+        // FIRE (the safe direction).
         if (app.playhead_cursor_sample >=
-            playback.domain_end() - launch_offset) return;
+            playback.domain_end() - launch_offset - 1) return;
         start = app.playhead_cursor_sample + launch_offset;
         if (start < playback.domain_begin()) return;
         end   = playback.domain_end();
     } else {
         end = viewport.trim_end_sample();
-        if (app.playhead_cursor_sample >= end) return;
+        // Space requires at least TWO playable frames of remainder: a
+        // remainder of one (or less) no-ops silently, joining the "nothing
+        // to audition" family. A one-frame session is an isolated impulse —
+        // the audible pop — so playing from the End landing spot (End lands
+        // the playhead at end - 1) is degenerate, and End+Space is a common
+        // slip of the hand this product caters to for non-adversarial use.
+        // The End landing frame (end - 1) therefore now no-ops, and a
+        // one-frame trim window (begin == end - 1) is Space-inert (its render
+        // still works: the trimmer's one-frame-fady-trim latitude is a RENDER
+        // latitude, not an audition one). Deliberate near-end plays stay
+        // admitted — End, then Left a few times, then Space plays — and
+        // start-of-play clicks are normal DAW behaviour, so no fade/ramp/
+        // declick machinery is added (considered and REJECTED by ruling).
+        if (app.playhead_cursor_sample >= end - 1) return;
         // Cursor outside the trim region (either side) is a silent no-op.
         // For unset trim, trim_begin_sample() is 0, so this never bites.
         // A crossed or equal pair cannot rest — every commit and load
