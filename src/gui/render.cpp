@@ -550,6 +550,47 @@ void render_trim_flags(cairo_t* cr,
       - static_cast<double>(monospace_row_h())
       + monospace_row_baseline_offset();
 
+    // With both bounds set, a 1px horizontal connector joins the two chips at
+    // chip-center height, stroked BEFORE the chip-box loop so the chips
+    // overpaint its ends and it reads as running between them. It is the
+    // visual affordance of the Alt pair-drag's top-strip inter-chip grab
+    // region (the span strictly between the two b/e chips). Both columns are
+    // computed unconditionally with add_chip's own x_raw math (NOT via
+    // add_chip, whose viewport cull must not suppress the line: with one or
+    // both chips offscreen the connector still spans the visible part).
+    if (has_begin && has_end && waveform_area.w > 0) {
+        auto col_of = [&](int64_t frame) {
+            const double x_raw =
+                (static_cast<double>(frame) -
+                 static_cast<double>(viewport_start_sample)) / samples_per_pixel;
+            return static_cast<int>(std::nearbyint(x_raw));
+        };
+        // min/max spans the pair either way — mid-gesture the displayed domain
+        // can invert begin/end. Clamp each end into the mapped waveform width
+        // (the width the chips map against); an empty span (both bounds off the
+        // same side collapse to one clamped column) skips the stroke.
+        const int wmax = waveform_area.w - 1;
+        const int lo = std::clamp(std::min(col_of(trim.begin), col_of(trim.end)),
+                                  0, wmax);
+        const int hi = std::clamp(std::max(col_of(trim.begin), col_of(trim.end)),
+                                  0, wmax);
+        if (hi > lo) {
+            // Center on the upper chip box (bottom = flag_chip_bottom_y Upper,
+            // height monospace_row_h()), banker's-rounded; +0.5 across the
+            // line's thin (vertical) axis, aliased like the stems' 1px lines.
+            const double row = std::nearbyint(
+                flag_chip_bottom_y(waveform_area, ChipRow::Upper)
+              - static_cast<double>(monospace_row_h()) / 2.0);
+            cairo_set_source_rgb(cr, kTrimMarker.r, kTrimMarker.g, kTrimMarker.b);
+            cairo_set_line_width(cr, 1.0);
+            cairo_move_to(cr, static_cast<double>(top_strip_area.x + lo),
+                          row + 0.5);
+            cairo_line_to(cr, static_cast<double>(top_strip_area.x + hi),
+                          row + 0.5);
+            cairo_stroke(cr);
+        }
+    }
+
     // Column placement mirrors render_trim_stems / render_flags: text_left at
     // the bound's integer pixel column, chip extends right via the shared
     // text-box primitive. Color is kTrimMarker (the stem's), so chip and stem
