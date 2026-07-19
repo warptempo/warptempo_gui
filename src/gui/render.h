@@ -100,14 +100,14 @@ inline constexpr GuiColor kPlayheadCursor   = hex(0x1ABC9C);  // green cursor
 inline constexpr GuiColor kAccent           = hex(0xBF332E);
 inline constexpr GuiColor kText             = hex(0xFCFCFC);  // Breeze paper white
 
-// The chip outline palette — a darker, more saturated sibling of each fill
+// The chip outline palette — a brighter sibling of each fill
 // (kMarker / kSelected / kAccent / kTrimMarker). Painted as the solid 1px
 // outline ring around a chip (see EditorTextBox::outline / kChipOutlinePx);
 // these are the tuning knobs.
-inline constexpr GuiColor kMarkerOutline    = hex(0x3A0E54);
-inline constexpr GuiColor kSelectedOutline  = hex(0x11405F);
-inline constexpr GuiColor kAccentOutline    = hex(0x521310);
-inline constexpr GuiColor kTrimMarkerOutline = hex(0x7A3A00);
+inline constexpr GuiColor kMarkerOutline    = hex(0xC178E0);
+inline constexpr GuiColor kSelectedOutline  = hex(0x7DCDF7);
+inline constexpr GuiColor kAccentOutline    = hex(0xE5655F);
+inline constexpr GuiColor kTrimMarkerOutline = hex(0xFFA040);
 
 // Trim boundary stem color (#F67400 orange). Distinct from
 // kMarker, kSelected, the teal cursor, and the yellow scanner. A set
