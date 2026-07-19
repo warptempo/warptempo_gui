@@ -60,9 +60,9 @@ struct TrimPlan {
 // Render-boundary trim validation — the sole author of the trim-validity
 // vocabulary. The trimmer requires the pair: both bounds are set by contract,
 // so a lone bound (exactly one of begin/end) never reaches here — the
-// orchestrators gate the lone case and fall back to an untrimmed render
-// upstream, because a lone bound is GUI-legal but dead weight for the
-// trimmer (architect ruling: lone is GUI-legal, prepost dead weight).
+// orchestrators COMPLETE a lone bound to its extreme at the render boundary
+// (missing begin -> 0, missing end -> total) before calling, so the trimmer
+// still always receives the pair (architect ruling 2026-07-19).
 // Authored bounds arrive as whole int64_t source frames — the authored domain
 // itself — and widen exactly into the double map arithmetic at one point
 // inside the trimmer. Refusals, in check order: end at or before begin (e_src

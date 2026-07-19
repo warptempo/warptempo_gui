@@ -307,20 +307,28 @@ int main(int argc, char** argv) {
         }
     }
 
-    // --- trim plan. The trimmer requires the pair; the lone-bound rule is
-    // orchestrator-owned (the trimmer no longer knows lone bounds exist). Only
-    // the pair reaches plan_trim, which validates the bounds first
-    // (validate_trim_frames stays the sole author of the trim-validity
-    // vocabulary). A refusal is NOT a render failure: ambiguous trim falls
-    // back to the full, untrimmed deliverable with one stderr line —
-    // trim_plan stays unset and every downstream stage keys on trim_plan,
-    // so the fallback render is byte-identical to a no-trim render of the
-    // same recipe (identical to do_render's wav-arm fallback). ---
+    // --- trim plan. The trimmer requires the pair, and the orchestrators
+    // COMPLETE a lone bound to its extreme at this render boundary before
+    // calling: a missing begin becomes 0, a missing end becomes total_frames
+    // (the full source frame count, not total-1). (0, X) trims the tail at X;
+    // (X, total) trims the head at X (validate_trim_frames accepts e_src ==
+    // total). So any set bound reaches plan_trim, which validates the
+    // (possibly completed) pair first (validate_trim_frames stays the sole
+    // author of the trim-validity vocabulary). A refusal is NOT a render
+    // failure: an unhonorable window falls back to the full, untrimmed
+    // deliverable with one stderr line — trim_plan stays unset and every
+    // downstream stage keys on trim_plan, so the fallback render is
+    // byte-identical to a no-trim render of the same recipe (identical to
+    // do_render's wav-arm fallback). The lone→untrimmed fallback class is
+    // gone; the reachable refusals are (a) a lone END at frame 0 completing to
+    // (0, 0), and (b) a target span rounding below one output sample. ---
     std::optional<TrimPlan> trim_plan;
-    if (trim.has_begin && trim.has_end) {
+    if (trim.has_begin || trim.has_end) {
+        const int64_t b = trim.has_begin ? trim.begin_frame : 0;
+        const int64_t e = trim.has_end
+            ? trim.end_frame : static_cast<int64_t>(total_frames);
         auto plan = plan_trim(full_warp_frame_map, full_phase_reset_frame_map,
-                              trim.begin_frame, trim.end_frame,
-                              static_cast<int64_t>(total_frames),
+                              b, e, static_cast<int64_t>(total_frames),
                               N_fft, R_s);
         if (!plan) {
             // plan.error() strings all begin with "trim ..." (the
@@ -331,13 +339,6 @@ int main(int argc, char** argv) {
         } else {
             trim_plan = std::move(*plan);
         }
-    } else if (trim.has_begin || trim.has_end) {
-        // Lone bound: render untrimmed with one stderr line. The message BODY
-        // is byte-identical to do_render's wav-arm lone-bound line (only the
-        // product prefix differs), so the two products' stderr agrees.
-        std::fprintf(stderr,
-            "warptempo_cli: trim bound set without its partner; "
-            "rendering untrimmed\n");
     }
 
     // --- load the full source; trimmed renders read an offset+length view

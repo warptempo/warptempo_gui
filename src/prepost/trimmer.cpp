@@ -14,7 +14,8 @@ std::expected<void, std::string> validate_trim_frames(
         int64_t total_frames,
         const std::vector<WarpFrameMapSegment>& full_warp_frame_map) {
     // Both bounds are set by contract (the trimmer requires the pair; the
-    // orchestrators fall back untrimmed on a lone bound). The authored bounds
+    // orchestrators complete a lone bound to its extreme before calling). The
+    // authored bounds
     // widen exactly to doubles — every int64 in range is exactly
     // representable at these magnitudes, audio frame counts far below 2^53.
     const double total = static_cast<double>(total_frames);

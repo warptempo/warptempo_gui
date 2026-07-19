@@ -391,49 +391,59 @@ GuiTargetRender::compute_buffer_start_frame_for(
     bool has_begin, int64_t begin_frame,
     bool has_end, int64_t end_frame) const {
     // Buffer frame 0 corresponds to target frame 0 for a full-song render;
-    // with a SURVIVING trim (both bounds set, span >= 1 sample), buffer[0]
-    // IS llrint(T_b) by construction — the post_trim crop cut the render at
-    // exactly the authored begin's target image (T_b = the authored begin
-    // frame through the map, exact doubles, the trimmer's own formula) — so
-    // the anchor is that same llrint(T_b) in full-target coordinates and the
-    // exact authored begin/end display falls out.
+    // for every SURVIVING trim window buffer[0] IS llrint(T_b) by construction
+    // — the post_trim crop cut the render at exactly the (possibly completed)
+    // begin's target image (T_b = that begin frame through the map, exact
+    // doubles, the trimmer's own formula) — so the anchor is that same
+    // llrint(T_b) in full-target coordinates and the exact authored begin/end
+    // display falls out. A lone bound is COMPLETED to its extreme here, exactly
+    // as the orchestrators do at the render boundary: a missing begin becomes 0
+    // (so a lone end anchors 0 because its completed T_b = 0), a missing end
+    // becomes total_frames (a lone begin anchors its own T_b). The completion
+    // lives only at the render boundary; the store keeps the authored lone
+    // bound.
     //
     // Survival verdict (orchestrator decoupling; rationale at the struct in
     // target_render.h). Two reachable fallbacks render the FULL, untrimmed
     // buffer with anchor 0, mirroring do_render / the CLI:
-    //   - a LONE bound (exactly one of begin/end set) — GUI-legal but prepost
-    //     dead weight, so the orchestrators render untrimmed; and
-    //   - a SUB-SAMPLE span for a set pair: llrint(T_e) - llrint(T_b) < 1
-    //     (validate_trim_frames' span rule; crossed/equal cannot rest and
-    //     past-EOF is adversarial load-fatal, so this is the only pair
-    //     refusal reachable from a live store — a crossed pair would fail
-    //     this same compare anyway, T being monotone).
+    //   - "trim end at or before trim begin": reachable only via a lone END at
+    //     frame 0 completing to (0, 0) (a set pair can never rest crossed/equal:
+    //     commit and load auto-clear); and
+    //   - a SUB-SAMPLE span: llrint(T_e) - llrint(T_b) < 1 (validate_trim_frames'
+    //     span rule), for a set pair or a completed lone window under a fast
+    //     tempo. Past-EOF is adversarial load-fatal.
     // trim_fell_back carries either outcome to the reuse rungs' diagnostic,
     // and fallback_reason names which one so the printed line matches the
     // orchestrators' vocabulary. Callers pass the trim pair the produced
     // samples embody and stamp the result at production time, so no
     // buffer-frames gate: the buffer may still be empty at the stamp.
-    if (has_begin && has_end &&
+    if ((has_begin || has_end) &&
         audio.sample_rate() > 0 && audio.total_frames() > 0) {
+        const int64_t b = has_begin ? begin_frame : 0;
+        const int64_t e = has_end ? end_frame : audio.total_frames();
         const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames())).warp_frame_map;
         const int64_t t_begin = std::llrint(map_source_to_target(
-            static_cast<double>(begin_frame), target_warp_frame_map));
+            static_cast<double>(b), target_warp_frame_map));
         const int64_t t_end = std::llrint(map_source_to_target(
-            static_cast<double>(end_frame), target_warp_frame_map));
+            static_cast<double>(e), target_warp_frame_map));
+        // Mirror validate_trim_frames' check ORDER: e <= b before the span rule,
+        // so fallback_reason matches the orchestrator's printed vocabulary for
+        // the completed-(0, 0) case (T monotone means e <= b implies the span
+        // check would also fire, but with the wrong reason string). Exact
+        // source-domain integer compare.
+        if (e <= b) {
+            return {0, true, "trim end at or before trim begin"};
+        }
         if (t_end - t_begin < 1) {
             // Fallback: the FULL deliverable, anchor 0.
             return {0, true,
                     "trim target span rounds below one output sample"};
         }
-        // Begin is guaranteed set on this path, so the anchor is its target
-        // image — the same llrint(T_b) expression as ever, bit-identical.
+        // The anchor is the (completed) begin's target image — llrint(T_b),
+        // bit-identical to the set-pair expression.
         return {t_begin, false, nullptr};
-    }
-    if (has_begin || has_end) {
-        // Lone bound: render untrimmed, anchor 0.
-        return {0, true, "trim bound set without its partner"};
     }
     return {0, false, nullptr};
 }

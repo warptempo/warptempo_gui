@@ -148,18 +148,21 @@ private:
     // (no-trim) render; with a surviving trim, the trim-begin source frame
     // mapped through the target-view warp_frame_map (the engine renders
     // only the trim range, so buffer frame 0 is the trim's target-frame
-    // start). trim_fell_back is true for EITHER fallback: a lone bound (only
-    // one of begin/end set, so no plan is ever attempted) or a surviving
-    // pair whose plan refuses (the sub-sample-span case) — either way the
-    // render is the FULL, untrimmed deliverable. This verdict is the one
-    // GUI-thread read that must mirror the orchestrators' own gate-then-
-    // refusal outcome, and it cannot see the worker's plan — so
+    // start). A lone bound is COMPLETED to its extreme at the render boundary
+    // — (0, X) or (X, total) — and renders its window like any pair, so a lone
+    // bound no longer forces a fallback; trim_fell_back is true for one of the
+    // two reachable refusal fallbacks: "trim end at or before trim begin"
+    // (reachable exactly via a lone END at frame 0 completing to (0, 0)) or a
+    // surviving pair/completed window whose target span rounds below one output
+    // sample — either way the render is the FULL, untrimmed deliverable. This
+    // verdict is the one GUI-thread read that must mirror the orchestrators' own
+    // completion-then-refusal outcome, and it cannot see the worker's plan — so
     // compute_buffer_start_frame_for re-derives the
     // survival test from the same exact-double images through the same map,
     // once, and the anchor and the diagnostic both consume that single
     // result (no second arithmetic implementation). fallback_reason names
-    // WHICH fallback the reuse-rung diagnostic reports — a lone bound or a
-    // sub-sample span — so its line mirrors the orchestrators' vocabulary
+    // WHICH fallback the reuse-rung diagnostic reports — the crossed (0, 0) case
+    // or a sub-sample span — so its line mirrors the orchestrators' vocabulary
     // byte-for-byte; it points at a string literal (static lifetime), set
     // alongside trim_fell_back, and stays null when the render is trimmed or
     // full.
