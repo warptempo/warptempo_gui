@@ -184,11 +184,14 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
 // playback's public API speaks in every view. Called from the PRESS handlers
 // only (input_pointer.cpp) during a playhead-drag when playback was alive at
 // press time — the motion handlers do not call it.
+// Both arms carry the same two-frame remainder gate as toggle_playback (see
+// the rationale at its source arm): a reseek that would leave fewer than two
+// playable frames is out of range, so a live-playback click at the last frame
+// stops cleanly instead of playing a one-frame impulse — symmetric with Space.
 // An out-of-range position in any arm falls back to a MANUAL stop with
 // immediate scanner teardown (stop_playback_if_playing), never the natural-end
-// scanner flash. No follow-scroll at the reseek site: the user's click is a
-// positional intent that takes precedence over visual centering (unlike
-// Space's start-of-listening).
+// scanner flash. No follow-scroll at the reseek site: the reseek repositions
+// without recentering the viewport.
 //
 // stop_playback_if_playing clears follow_overridden_for_session, but every
 // caller sets it back to true immediately AFTER this returns (having already
@@ -198,7 +201,7 @@ void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
     if (app.active_audio_view == 'T') {
         if (app.target_buffer_frames <= 0) { stop_playback_if_playing(); return; }
         if (sample < playback.domain_begin() ||
-            sample >= playback.domain_end()) {
+            sample >= playback.domain_end() - 1) {
             stop_playback_if_playing();
             return;
         }
@@ -216,7 +219,7 @@ void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
     // start_sample returns early WITHOUT clearing the playing flag) at its
     // only reseek exposure.
     if (sample < viewport.trim_begin_sample() ||
-        sample >= viewport.trim_end_sample()) {
+        sample >= viewport.trim_end_sample() - 1) {
         stop_playback_if_playing();
         return;
     }
