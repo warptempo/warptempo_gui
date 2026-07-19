@@ -534,10 +534,11 @@ void GuiInputHandler::wheel_move_trim_end(GuiMouseButton button, int count) {
 //     top-strip span between the chips. So an unclaimed waveform press pans.
 //   TOP STRIP: a chip-rect hit (hit_test_trim_chip) begins that bound's single
 //     drag; else, a press within the upper (chip) row band — top_upper_row_area,
-//     the band the two connector lines bracket — with its column strictly
-//     between the two bound columns begins the pair drag. The pair handle is
-//     the chip-ROW inter-chip span, NOT the whole strip height: a top-strip
-//     press below the chip row (the marker flag row) is not claimed and falls
+//     the band the translucent overlay block spans between the two chips —
+//     with its column strictly between the two bound columns begins the pair
+//     drag. The pair handle is the chip-ROW inter-chip span, NOT the whole
+//     strip height: a top-strip press below the chip row (the marker flag
+//     row) is not claimed and falls
 //     through to the caller's no-op. Both bounds are the subject (no
 //     grabbed-bound notion; the pair has no viewport clamp and, like every trim
 //     gesture, never moves the playhead).
@@ -582,10 +583,11 @@ bool GuiInputHandler::route_trim_alt_press(int mouse_x, int mouse_y,
 
     // Pair drag: the CHIP ROW ONLY — a press whose y lies in the top-strip
     // upper-row band (top_upper_row_area, the exact band hit_test_trim_chip
-    // y-gates on and the band the two connector lines bracket) and whose column
-    // is strictly between the two chips' columns (both bounds guaranteed set by
-    // the gate above). A top-strip press BELOW that band — the marker flag row —
-    // is not the pair handle: it falls through to the caller's top-strip no-op,
+    // y-gates on and the band the translucent overlay block spans between the
+    // two chips) and whose column is strictly between the two chips' columns
+    // (both bounds guaranteed set by the gate above). A top-strip press BELOW
+    // that band — the marker flag row — is not the pair handle: it falls
+    // through to the caller's top-strip no-op,
     // so the flag row is no longer covered by the trim pair region. The pair has
     // no grabbed-bound notion —
     // both bounds are the subject, so it always arms as Begin structurally

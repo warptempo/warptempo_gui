@@ -140,11 +140,13 @@ private:
     // (no-trim) render; with a surviving trim, the trim-begin source frame
     // mapped through the target-view warp_frame_map (the engine renders
     // only the trim range, so buffer frame 0 is the trim's target-frame
-    // start). trim_fell_back is true iff a trim bound was set but the plan
-    // refuses, so the render is the FULL, untrimmed deliverable. This
-    // verdict is the one GUI-thread read that must distinguish "a trim
-    // bound was set" from "a trim plan exists", and it cannot see the
-    // worker's plan — so compute_buffer_start_frame_for re-derives the
+    // start). trim_fell_back is true for EITHER fallback: a lone bound (only
+    // one of begin/end set, so no plan is ever attempted) or a surviving
+    // pair whose plan refuses (the sub-sample-span case) — either way the
+    // render is the FULL, untrimmed deliverable. This verdict is the one
+    // GUI-thread read that must mirror the orchestrators' own gate-then-
+    // refusal outcome, and it cannot see the worker's plan — so
+    // compute_buffer_start_frame_for re-derives the
     // survival test from the same exact-double images through the same map,
     // once, and the anchor and the diagnostic both consume that single
     // result (no second arithmetic implementation). fallback_reason names
