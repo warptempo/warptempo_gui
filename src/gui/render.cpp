@@ -550,15 +550,20 @@ void render_trim_flags(cairo_t* cr,
       - static_cast<double>(monospace_row_h())
       + monospace_row_baseline_offset();
 
-    // With both bounds set, a 1px horizontal connector runs between the two
-    // chips along the window's topmost pixel row (architect-chosen position):
-    // the flag cache's top-strip origin equals the screen origin (0,0), so
-    // device row 0 is the window's top edge. It is the visual affordance of
-    // the Alt pair-drag's top-strip inter-chip grab region (the span strictly
-    // between the two b/e chips). Both columns are computed unconditionally
-    // with add_chip's own x_raw math (NOT via add_chip, whose viewport cull
-    // must not suppress the line: with one or both chips offscreen the
-    // connector still spans the visible part).
+    // With both bounds set, TWO 1px horizontal connectors run between the two
+    // chips, bracketing the chip row: one along the window's topmost pixel row
+    // (device row 0 — the flag cache's top-strip origin equals the screen
+    // origin (0,0), so device row 0 is the window's top edge) and one along the
+    // chip box's bottom pixel row. Together they bracket the Alt pair-drag's
+    // grab band, whose y-gate is exactly the chip row (top_upper_row_area) — the
+    // span strictly between the two b/e chips. The chip box bottom is
+    // flag_chip_bottom_y(..., ChipRow::Upper), so its bottommost pixel row
+    // centers at that minus 0.5. Both are stroked before the chip-box loop, so
+    // the chips overpaint where they stand and each line reads as connecting a
+    // chip edge. Both columns are computed unconditionally with add_chip's own
+    // x_raw math (NOT via add_chip, whose viewport cull must not suppress the
+    // lines: with one or both chips offscreen the connectors still span the
+    // visible part).
     if (has_begin && has_end && waveform_area.w > 0) {
         auto col_of = [&](int64_t frame) {
             const double x_raw =
@@ -569,20 +574,31 @@ void render_trim_flags(cairo_t* cr,
         // min/max spans the pair either way — mid-gesture the displayed domain
         // can invert begin/end. Clamp each end into the mapped waveform width
         // (the width the chips map against); an empty span (both bounds off the
-        // same side collapse to one clamped column) skips the stroke.
+        // same side collapse to one clamped column) skips the strokes. The
+        // geometry (lo/hi span, color, width) is shared: two strokes, one
+        // computation.
         const int wmax = waveform_area.w - 1;
         const int lo = std::clamp(std::min(col_of(trim.begin), col_of(trim.end)),
                                   0, wmax);
         const int hi = std::clamp(std::max(col_of(trim.begin), col_of(trim.end)),
                                   0, wmax);
         if (hi > lo) {
-            // Device row 0 is the window's topmost pixel row; stroke at 0.5
-            // across the line's thin (vertical) axis, the 1px crisp-line
-            // convention, aliased like the stems' 1px lines.
+            // Stroke each line at its row center's +0.5 (the 1px crisp-line
+            // convention, aliased like the stems' 1px lines): device row 0 for
+            // the top line, and the chip box's bottommost pixel row —
+            // flag_chip_bottom_y minus one, so its center is
+            // flag_chip_bottom_y - 0.5 — for the bottom line.
+            const double bottom_y =
+                flag_chip_bottom_y(waveform_area, ChipRow::Upper) - 0.5;
             cairo_set_source_rgb(cr, kTrimMarker.r, kTrimMarker.g, kTrimMarker.b);
             cairo_set_line_width(cr, 1.0);
             cairo_move_to(cr, static_cast<double>(top_strip_area.x + lo), 0.5);
             cairo_line_to(cr, static_cast<double>(top_strip_area.x + hi), 0.5);
+            cairo_stroke(cr);
+            cairo_move_to(cr, static_cast<double>(top_strip_area.x + lo),
+                          bottom_y);
+            cairo_line_to(cr, static_cast<double>(top_strip_area.x + hi),
+                          bottom_y);
             cairo_stroke(cr);
         }
     }

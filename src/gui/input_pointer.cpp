@@ -328,7 +328,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Strict modifier matching: Alt-exact is hit-routed above (marker
         // reposition or trim arm on a hit, pan on empty waveform). Ctrl+Alt is
         // no longer a pointer gesture — it falls here into the strict no-op (the
-        // Ctrl+Alt+wheel trim-end move is a wheel gesture, unaffected). Every
+        // Alt+wheel chip-row trim-end move is a wheel gesture, unaffected). Every
         // other modifier combination — Ctrl on empty, Ctrl+Shift, Shift+Alt, ...
         // — no-ops here too. Only the plain or Shift-modified base press
         // proceeds (Shift adjusts the selection).

@@ -51,7 +51,7 @@ constexpr int kZoomTableSize    = kMaxNumericLevel + 1;
 // truth — do not inline the divisor at either site.
 constexpr int64_t kViewportLeadDivisor = 10;
 
-// Ctrl+Alt+wheel end-move step as a divisor of samples_visible.
+// Alt+wheel chip-row end-move step as a divisor of samples_visible.
 constexpr int64_t kTrimEndWheelDivisor = 10;
 
 // Hoisted from main.cpp's anonymous namespace so the hit_test_*
@@ -323,7 +323,7 @@ struct EditorTextDragState {
 };
 
 // Alt drag of a trim boundary stem/chip (the pointer trim gesture, arming
-// after the Alt+drag branch's marker hit test misses; the Ctrl+Alt+wheel
+// after the Alt+drag branch's marker hit test misses; the Alt+wheel chip-row
 // end-move is the trim wheel gesture).
 // Parallel to DragState but motion mutates the active tab's live trim mirror
 // directly (no overlay); release triggers a target render when the bound
@@ -787,8 +787,8 @@ struct AppState {
     // Mirrored to/from the active tab's ViewState slot at the tab-swap
     // boundary in active_views.cpp (same pattern as viewport/zoom/playhead).
     // Trim is a region authored purely by the Alt pointer drags (single-bound
-    // stem/chip, top-strip inter-chip pair), the bare-x set/clear, and the
-    // Ctrl+Alt+wheel end-move — it is NOT part of the selection system (no
+    // stem/chip, chip-row inter-chip pair), the bare-x set/clear, and the
+    // Alt+wheel chip-row end-move — it is NOT part of the selection system (no
     // bound selection, no Tab stop, no Delete arm).
     TrimState trim;
 

@@ -495,12 +495,14 @@ void render_trim_stems(cairo_t* cr,
 // already in the displayed domain, so no further translation happens here.
 // The chip has NO editable payload; it is an Alt grab target only (trim is
 // outside the selection system) and is never a text_editor target.
-// With BOTH bounds set, a 1px kTrimMarker connector runs between the two chips
-// along the window's topmost pixel row (device row 0, architect-chosen
-// position) — the visual affordance of the Alt pair-drag's top-strip
-// inter-chip grab region. It spans the two bounds' columns unconditionally
-// (independent of the chips' viewport cull) clamped into the mapped waveform
-// width, so it still paints across the visible part when a chip is offscreen.
+// With BOTH bounds set, TWO 1px kTrimMarker connectors run between the two
+// chips — one along the window's topmost pixel row (device row 0) and one along
+// the chip box's bottom pixel row (flag_chip_bottom_y(..., ChipRow::Upper) minus
+// one, stroked at that minus 0.5). Together they bracket the Alt pair-drag's
+// grab band, which the router y-gates to the chip row (top_upper_row_area). Each
+// spans the two bounds' columns unconditionally (independent of the chips'
+// viewport cull) clamped into the mapped waveform width, so they still paint
+// across the visible part when a chip is offscreen.
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
                        GuiRect waveform_area,
