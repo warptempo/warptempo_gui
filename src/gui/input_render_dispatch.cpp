@@ -222,7 +222,7 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
             }
             finalize_render_run();
             if (success && app.active_audio_view == 'T' &&
-                !target_render.is_updating() &&
+                !target_render.is_updating() && !async_renderer.is_busy() &&
                 (target_render.is_dirty() || app.target_buffer_frames <= 0)) {
                 // Re-establish the target buffer only when it is actually
                 // stale or empty/cold. An archival render never touches
@@ -237,6 +237,15 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
                 // entry is still registering on the writer thread. That miss
                 // is benign; if finalize_render_run just launched a pending
                 // target render, is_updating() is true and we leave it alone.
+                // The busy gate closes the parked-command race: finalize's pump
+                // runs first and offers the beat to a parked archival command,
+                // which sets neither pending_ nor in_flight_, so is_updating()
+                // cannot see it. Without the busy check ensure_ready's trigger
+                // would kill that explicit command in favor of this derived
+                // preview, inverting the priority the pump just enforced. The
+                // buffer re-establishment happens through the launched session's
+                // own completion path (an archival completion re-runs this tail;
+                // a preview completion rebinds itself).
                 target_render.ensure_ready();
             }
         });
