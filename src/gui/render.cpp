@@ -650,7 +650,6 @@ void render_trim_flags(cairo_t* cr,
         box.hl_pad       = hl_pad;
         box.fill         = kTrimMarker;
         box.text_color   = kText;
-        box.draw_outline = true;
         box.outline      = kTrimMarkerOutline;
         render_editor_text_box(cr, box);
     }
@@ -720,28 +719,21 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
         flag_chip_rect(chip_text_left, s.text.length(), s.baseline_y);
     if (fr.w > 0 && fr.h > 0) {
         cairo_save(cr);
-        if (s.draw_outline) {
-            // Marker and trim b/e chips: fill the full rect (the outline ring)
-            // in s.outline, then the inner rect inset by kChipOutlinePx on every
-            // side in s.fill. fr already includes the ring (flag_chip_rect), so
-            // the ring is the outer kChipOutlinePx band left exposed. The
-            // glyph ink band (and thus cursor/selection) sits inside the
-            // padding inside the ring by construction.
-            cairo_set_source_rgb(cr, s.outline.r, s.outline.g, s.outline.b);
-            cairo_rectangle(cr, fr.x, fr.y, fr.w, fr.h);
-            cairo_fill(cr);
-            cairo_set_source_rgb(cr, s.fill.r, s.fill.g, s.fill.b);
-            cairo_rectangle(cr, fr.x + kChipOutlinePx, fr.y + kChipOutlinePx,
-                            fr.w - 2 * kChipOutlinePx,
-                            fr.h - 2 * kChipOutlinePx);
-            cairo_fill(cr);
-        } else {
-            // Bottom-strip editors: no ring, the fill spans the full rect
-            // (which still grew with the metric).
-            cairo_set_source_rgb(cr, s.fill.r, s.fill.g, s.fill.b);
-            cairo_rectangle(cr, fr.x, fr.y, fr.w, fr.h);
-            cairo_fill(cr);
-        }
+        // Fill the full rect (the outline ring) in s.outline, then the inner
+        // rect inset by kChipOutlinePx on every side in s.fill. fr already
+        // includes the ring (flag_chip_rect), so the ring is the outer
+        // kChipOutlinePx band left exposed. The glyph ink band (and thus
+        // cursor/selection) sits inside the padding inside the ring by
+        // construction. The bottom-strip editors pass kBackground for both, so
+        // their ring is invisible and the box reads as light text on the strip.
+        cairo_set_source_rgb(cr, s.outline.r, s.outline.g, s.outline.b);
+        cairo_rectangle(cr, fr.x, fr.y, fr.w, fr.h);
+        cairo_fill(cr);
+        cairo_set_source_rgb(cr, s.fill.r, s.fill.g, s.fill.b);
+        cairo_rectangle(cr, fr.x + kChipOutlinePx, fr.y + kChipOutlinePx,
+                        fr.w - 2 * kChipOutlinePx,
+                        fr.h - 2 * kChipOutlinePx);
+        cairo_fill(cr);
         cairo_restore(cr);
     }
 
@@ -986,7 +978,6 @@ void paint_one_flag_with_overlay(
     // The live editor flag routes through here and keeps its outline while
     // editing; the pending fill and the ring grow with the rect, cursor/
     // selection still inside — deliberate.
-    box.draw_outline    = true;
     box.outline         = outline_col;
     render_editor_text_box(cr, box);
 }
@@ -1209,7 +1200,6 @@ void paint_one_phase_reset_flag(
     box.hl_pad          = hl_pad;
     box.fill            = is_selected ? kSelected : kMarker;
     box.text_color      = kText;
-    box.draw_outline    = true;
     box.outline         = is_selected ? kSelectedOutline : kMarkerOutline;
     render_editor_text_box(cr, box);
 }

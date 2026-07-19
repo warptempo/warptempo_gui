@@ -102,7 +102,7 @@ inline constexpr GuiColor kText             = hex(0xFCFCFC);  // Breeze paper wh
 
 // The chip outline palette — a darker, more saturated sibling of each fill
 // (kMarker / kSelected / kAccent / kTrimMarker). Painted as the solid 1px
-// outline ring around a chip (see EditorTextBox::draw_outline / kChipOutlinePx);
+// outline ring around a chip (see EditorTextBox::outline / kChipOutlinePx);
 // these are the tuning knobs.
 inline constexpr GuiColor kMarkerOutline    = hex(0x3A0E54);
 inline constexpr GuiColor kSelectedOutline  = hex(0x11405F);
@@ -393,13 +393,15 @@ inline int stem_cache_overhang_px() {
 // range with `text_color` and repaints the selected substring in `fill`
 // for contrast.
 //
-// When `draw_outline` is set, step 1 paints the outer kChipOutlinePx band of
-// the chip rect (flag_chip_rect, which now includes the ring) in `outline`,
-// then fills the inner rect inset by kChipOutlinePx in `fill` — the solid
-// outline ring around a marker chip. The cursor and the selection highlight
-// span the glyph ink band, which sits inside the padding inside the outline,
-// so both stay within the ring whenever visible. Off (the fill spans the full
-// rect, no ring) for the bottom-strip editors.
+// Step 1 always paints the outer kChipOutlinePx band of the chip rect
+// (flag_chip_rect, which includes the ring) in `outline`, then fills the inner
+// rect inset by kChipOutlinePx in `fill` — the solid outline ring around the
+// box. The chips pass their state-dependent outline siblings; the bottom-strip
+// editors pass kBackground for BOTH ring and fill (an invisible ring — the box
+// reads as light text on the dark strip) and kAccent/kAccentOutline when
+// red-flashing, exactly a parse-fail chip's colors. The cursor and the
+// selection highlight span the glyph ink band, which sits inside the padding
+// inside the outline, so both stay within the ring whenever visible.
 struct EditorTextBox {
     double               anchor_x        = 0.0;
     double               baseline_y      = 0.0;
@@ -413,7 +415,6 @@ struct EditorTextBox {
     int                  selection_end    = 0;
     bool                 cursor_visible   = false;
     int                  cursor_pos       = 0;
-    bool                 draw_outline     = false;
     GuiColor             outline          = kMarker;
 };
 void render_editor_text_box(cairo_t* cr, const EditorTextBox& s);

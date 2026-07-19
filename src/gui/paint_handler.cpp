@@ -43,7 +43,11 @@ static void render_bottom_strip_editor(cairo_t* cr,
     box.prefix          = prefix;
     box.text            = ed.pending;
     box.hl_pad          = flag_pad_x_px();
-    box.fill            = ed.red ? kAccent : kBackground;
+    // The normal-state ring and fill are both the background color, so the box
+    // body is the same as a chip's but invisible — light text on dark bg; the
+    // red flash colors match a parse-fail chip.
+    box.fill            = ed.red ? kAccent        : kBackground;
+    box.outline         = ed.red ? kAccentOutline : kBackground;
     box.text_color      = kText;
     box.has_selection   = text_editor::has_selection(ed);
     box.selection_start = text_editor::selection_start(ed);
