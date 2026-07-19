@@ -604,6 +604,11 @@ void GuiInputHandler::cycle_marker_focus(bool forward) {
     // emitting one coherent set of waveform + top-strip damage against the
     // final viewport.
     if (app.follow_mode) {
+        // center_viewport_on_playhead routes through kick_waveform_sync (whose
+        // installed callback IS force_synchronous_waveform_rebuild) inside its
+        // own moved guard, so a recenter that scrolls already gets its one
+        // synchronous rebuild here — no second call in this function's tail. The
+        // unmoved / follow-off paths need none.
         viewport.center_viewport_on_playhead();
     }
 
@@ -619,17 +624,6 @@ void GuiInputHandler::cycle_marker_focus(bool forward) {
         viewport.invalidate_playhead_columns(old_px, new_px);
     }
     viewport.invalidate_timestamp_area();
-
-    // Discrete jump: render the waveform synchronously and publish the
-    // displayed fingerprint now, so this tick's stem/flag caches rebuild
-    // once against the final viewport instead of blinking across the
-    // async worker's rebuild window. The worker stays the path for
-    // continuous gestures; we just don't route this one-shot jump through
-    // it. Gated on the viewport actually having moved: with no jump (follow
-    // off, or already centered at EOF) there is nothing to rebuild.
-    if (app.viewport_start_sample != old_vp) {
-        paint_handler.force_synchronous_waveform_rebuild();
-    }
 }
 
 // Shared wheel handler. Verbatim from the lambda at the original

@@ -310,6 +310,21 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // This two-way branch chain is the sole hit-rect builder: the chip
     // paint and this hit test share flag_chip_rect, so the rects computed
     // here are exactly the painted chip geometry.
+    //
+    // In the warp branch, the live FlagPayload editor paints its target flag
+    // with the variable-width PENDING text above the cache
+    // (render_one_editor_flag), so the hit rect must size to the pending, not
+    // the committed payload. Feed the editor's target/pending to
+    // compute_flag_hit_rects (mirror of the flag-cache skip-guard condition in
+    // paint_handler.cpp) so the rect matches the painted chip.
+    int editor_target = -1;
+    const std::string* editor_pending = nullptr;
+    if (app.active_markers_view != 'P' &&
+        text_editor::is_active(app.top_flag_editor) &&
+        app.top_flag_editor.kind == text_editor::Kind::FlagPayload) {
+        editor_target  = app.top_flag_editor.target;
+        editor_pending = &app.top_flag_editor.pending;
+    }
     std::vector<FlagHitRect> rects;
     if (app.active_markers_view == 'P') {
         rects = compute_phase_reset_flag_hit_rects(
@@ -323,16 +338,38 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
             top, area.w, app.warpmarkers.markers(),
             vp_start, vp_end, audio.sample_rate(),
             tmap_arg, drag_overlay,
-            app.iteration_mode_enabled);
+            app.iteration_mode_enabled,
+            editor_target, editor_pending);
     }
-    // Mirror of the painters' two-pass z-order (render_flags /
-    // render_phase_reset_flags): selected chips paint above unselected, and
-    // within each class the leftmost paints on top. So walk the rects TWICE —
-    // first the first-containing rect whose marker is selected, else the
-    // first-containing rect unconditionally. rects are emitted ascending-x, so
-    // each forward pass resolves to that class's leftmost = topmost. WYSIWYG for
-    // every consumer (selection clicks, Alt+drag grabs, editor caret clicks, the
-    // hover popup's target): the topmost-painted chip is what a click grabs.
+    // Mirror of the painters' z-order (render_flags / render_phase_reset_flags
+    // plus the editor flag). The editor flag paints LAST — above the whole
+    // stack, selected included (render_one_editor_flag runs after the cache
+    // blit) — so a pass ZERO resolves it first: when an editor target was
+    // passed, its rect wins if it contains the point, before the selected pass
+    // and the general pass. Then the two-pass z-order: selected chips paint
+    // above unselected, and within each class the leftmost paints on top. So
+    // walk the remaining rects TWICE — first the first-containing rect whose
+    // marker is selected, else the first-containing rect unconditionally. rects
+    // are emitted ascending-x, so each forward pass resolves to that class's
+    // leftmost = topmost. Topmost = editor target > selected leftmost >
+    // leftmost. WYSIWYG for every consumer (selection clicks, Alt+drag grabs,
+    // editor caret clicks, the hover popup's target): the topmost-painted chip
+    // is what a click grabs.
+    //
+    // Accepted edge: an all-deleted pending ("" text) is skipped by the shared
+    // empty-text cull in iterate_visible_flags_impl, so the painted empty
+    // editor box has no hit rect — a click inside it takes the not-on-a-flag
+    // path and exits the editor without commit; a transient slip state, not
+    // worth a special case.
+    if (editor_target >= 0) {
+        for (const auto& r : rects) {
+            if (r.marker_index == editor_target &&
+                mouse_x >= r.x && mouse_x < r.x + r.w &&
+                mouse_y >= r.y && mouse_y < r.y + r.h) {
+                return r.marker_index;
+            }
+        }
+    }
     for (const auto& r : rects) {
         if (mouse_x >= r.x && mouse_x < r.x + r.w &&
             mouse_y >= r.y && mouse_y < r.y + r.h &&

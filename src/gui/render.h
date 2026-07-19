@@ -695,6 +695,17 @@ void render_one_editor_flag(
 // `waveform_width` is the effective waveform width (see render_flags): the
 // hit rects must use the SAME column-mapping denominator as the paint so the
 // clickable rect coincides with the painted chip.
+// `editor_target` / `editor_pending`: when the live FlagPayload editor is
+// active, its variable-width pending text replaces the committed payload for
+// WIDTH purposes on that one flag (render_one_editor_flag paints the pending
+// text above the cache, so its chip is wider/narrower than the committed
+// text), so the hit rect matches the chip the editor actually paints — clicks
+// on a grown pending's exposed extension hit the editor, and a shrunken
+// pending stops the old long rect from covering a newly-exposed neighbor. When
+// `editor_pending` is non-null, the get_flag_text for i == editor_target
+// returns *editor_pending instead of the committed flag text. Defaults leave
+// the committed-text behavior unchanged. The phase-reset variant needs no such
+// params (there is no per-flag editor in P view).
 std::vector<FlagHitRect> compute_flag_hit_rects(
     GuiRect top_strip_area,
     int waveform_width,
@@ -704,7 +715,9 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     int sample_rate,
     const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
     const DragOverlay* drag_overlay = nullptr,
-    bool iteration_on = false);
+    bool iteration_on = false,
+    int editor_target = -1,
+    const std::string* editor_pending = nullptr);
 
 // Phase reset marker analogues. Same pixel layout as the warp
 // versions; the visual differences are which list is drawn (phase resets

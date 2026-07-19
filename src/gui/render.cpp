@@ -1048,7 +1048,7 @@ void paint_one_flag_with_overlay(
 
     // Fill table: parse-fail > selected > default(kMarker).
     // Trim membership no longer dims the chip. The outline mirrors the fill
-    // table with each color's darker sibling.
+    // table with each color's brighter sibling.
     GuiColor fill_col;
     GuiColor outline_col;
     if (is_parse_fail)      { fill_col = kAccent;   outline_col = kAccentOutline;   }
@@ -1252,11 +1252,19 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     int sample_rate,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay,
-    bool iteration_on) {
+    bool iteration_on,
+    int editor_target,
+    const std::string* editor_pending) {
     return compute_flag_hit_rects_impl(top_strip_area, waveform_width, markers,
         viewport_start_sample, viewport_end_sample,
         sample_rate, warp_frame_map, drag_overlay,
-        [&](int i) {
+        [&](int i) -> std::string {
+            // The live FlagPayload editor's pending text replaces the committed
+            // payload for width purposes, so the hit rect matches the chip the
+            // editor actually paints (render_one_editor_flag paints pending
+            // above the cache). Only the editor's own flag is overridden; every
+            // other flag keeps its committed text.
+            if (editor_pending && i == editor_target) return *editor_pending;
             return flag_text_iter(markers, i, iteration_on);
         });
 }

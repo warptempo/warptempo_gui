@@ -1178,16 +1178,22 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
 // hit_test_flag: scan the active chip rects in the top strip and return the
 // marker index under (mouse_x, mouse_y), or -1. Rects cover every visible chip
 // and may overlap; the walk resolves an overlap to the topmost-painted chip.
-// Mirror of the painters' two-pass z-order (render_flags /
-// render_phase_reset_flags): the SELECTED chips paint above the unselected, and
-// within each class the leftmost paints on top. So the walk runs twice — first
-// the first-containing rect whose marker is selected, else the first-containing
-// rect unconditionally (rects are emitted ascending-x, so each pass resolves to
-// that class's leftmost = topmost). Deliberately visible to every consumer
-// (selection clicks, Alt+drag grabs, editor caret clicks, the hover popup's
-// target): the topmost-painted chip is what the user sees, so it is what a
-// click grabs (WYSIWYG). Works in both 'W' and 'P' authoring views (each
-// column's own chip list).
+// Mirror of the painters' z-order (render_flags / render_phase_reset_flags plus
+// the live editor flag). When a FlagPayload editor is active in W view its
+// target flag paints LAST — above the whole stack, selected included
+// (render_one_editor_flag runs after the cache blit) and sized to the
+// variable-width PENDING text — so a pass ZERO resolves the editor target
+// first: its rect wins if it contains the point, before the rest. Then the
+// two-pass z-order over the remaining rects: the SELECTED chips paint above the
+// unselected, and within each class the leftmost paints on top. So the walk
+// runs twice — first the first-containing rect whose marker is selected, else
+// the first-containing rect unconditionally (rects are emitted ascending-x, so
+// each pass resolves to that class's leftmost = topmost). Priority overall:
+// topmost = editor target > selected leftmost > leftmost. Deliberately visible
+// to every consumer (selection clicks, Alt+drag grabs, editor caret clicks, the
+// hover popup's target): the topmost-painted chip is what the user sees, so it
+// is what a click grabs (WYSIWYG). Works in both 'W' and 'P' authoring views
+// (each column's own chip list).
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
 

@@ -285,7 +285,20 @@ void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
                 || a.tempo_cents    != b.tempo_cents
                 || a.tempo_scale    != b.tempo_scale
                 || a.label_def      != b.label_def
-                || a.label_ref      != b.label_ref;
+                || a.label_ref      != b.label_ref
+                // Session-only iter/bpm fields ride undo snapshots too, and row
+                // identity means the WHOLE struct: an iteration-bracket-only or
+                // bpm-only undo mutates only these, so omitting them would leave
+                // the same-count matcher finding no touched row and stranding
+                // the selection. Every GuiWarpMarker field beyond the serialized
+                // seven above.
+                || a.iter_start_cents != b.iter_start_cents
+                || a.iter_end_cents   != b.iter_end_cents
+                || a.bpm_owner        != b.bpm_owner
+                || a.bpm_beats        != b.bpm_beats
+                || a.bpm_lo           != b.bpm_lo
+                || a.bpm_hi           != b.bpm_hi
+                || a.bpm_endpoint     != b.bpm_endpoint;
         },
         [&entry](const std::vector<GuiWarpMarker>& bef,
                  const std::vector<size_t>& removed,
