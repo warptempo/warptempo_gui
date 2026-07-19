@@ -283,6 +283,13 @@ struct FlagCache {
     // above, so they need no separate hash here.)
     bool      fp_iteration_mode_enabled   = false;
 
+    // The marker whose chip is popped to the top of the stack under the
+    // pointer (app.hovered_flag_marker, clamped to the active view's list).
+    // Popping changes the painted z-order without bumping any generation, so
+    // it must be part of the cache identity (same treatment as
+    // fp_iteration_mode_enabled above).
+    int       fp_hovered_flag             = -1;
+
     // The begin/end trim flag chips ride this cache (they live in
     // top_upper_row_area, inside top_strip_area). Their pixels depend on the
     // displayed-domain bound positions, whether each bound is set, and each

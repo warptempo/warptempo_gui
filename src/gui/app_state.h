@@ -710,6 +710,20 @@ struct AppState {
     // Hover-popup state. See HoverPopupState above.
     HoverPopupState   hover_popup;
 
+    // The marker whose chip is popped to the top of the flag stack while the
+    // pointer rests over its stem (waveform) or flag chip (top strip). Index
+    // into the ACTIVE column's marker list (warp list in 'W', phase-reset list
+    // in 'P'), or -1 for none. Single writer: Viewport::recompute_hover_at_cursor;
+    // cleared alongside the popup by Viewport::clear_hover_popup, so every
+    // existing suppression / gesture-begin / editor-open / view-switch clear
+    // site resets the pop too. Consumed by hit_test_flag (sticky top-of-stack
+    // hit priority) and the flag-cache rebuild (paint z-order). Staleness is
+    // tolerated: a store edit with a stationary pointer may pop the wrong chip
+    // until the next motion/viewport recompute — cosmetic z-order only, the
+    // same staleness class as the popup; the cache rebuild clamps an
+    // out-of-range index to -1.
+    int               hovered_flag_marker = -1;
+
     // Cursor screen position from the last on_motion event. Used by
     // recompute_hover_at_cursor() to re-evaluate hover after a viewport
     // mutation (when the cursor is stationary but rects have shifted). -1
@@ -1175,9 +1189,15 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
                          int mouse_x);
 
-// hit_test_flag: scan the active flag-pack rects in the top strip and
-// return the marker index under (mouse_x, mouse_y), or -1. Returns -1
-// in the phase reset sub-view (no flag rects there).
+// hit_test_flag: scan the active chip rects in the top strip and return the
+// marker index under (mouse_x, mouse_y), or -1. Rects cover every visible chip
+// and may overlap; the walk resolves an overlap to the topmost-painted chip —
+// the hovered/popped chip first (sticky top-of-stack priority via
+// app.hovered_flag_marker), else the first-containing rect in ascending-x
+// order (= leftmost on top). Deliberately visible to every consumer (selection
+// clicks, Alt+drag grabs, editor caret clicks): the popped chip is what the
+// user sees on top, so it is what a click grabs (WYSIWYG). Works in both 'W'
+// and 'P' authoring views (each column's own chip list).
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
 

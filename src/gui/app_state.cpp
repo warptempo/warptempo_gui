@@ -223,11 +223,10 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 
     // Build the same visible, sorted candidate list render_trim_flags paints.
     // The painter culls a bound whose column is outside the viewport, then
-    // greedily elides the right chip when two chip rectangles overlap. Hit
-    // testing must consume that final visible list: considering both raw
-    // rectangles lets a click on the one painted chip grab the elided bound,
-    // while considering an off-viewport rectangle makes an unpainted chip
-    // reachable at the strip edge.
+    // reverse-paints so the leftmost chip (b over e at an equal column) lands
+    // on top. Hit testing walks the same sorted list FORWARD and returns the
+    // first chip whose rect contains mouse_x = the topmost-painted chip, so a
+    // click on the visible overlap grabs the chip the user sees on top.
     struct TrimChipHit {
         double  text_left;
         GuiRect rect;
@@ -266,15 +265,15 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
               [](const TrimChipHit& a, const TrimChipHit& b) {
                   if (a.text_left != b.text_left)
                       return a.text_left < b.text_left;
+                  // Same tie-break as render_trim_flags' sort: b before e, so
+                  // b is the topmost chip at an equal column and the forward
+                  // walk below returns it first.
                   return a.which == TrimHit::Begin && b.which == TrimHit::End;
               });
 
-    const double hl_pad = flag_pad_x_px();
-    double rightmost_right_edge = -1e18;
+    // Forward walk = ascending-x = topmost-painted first. The first chip whose
+    // [rect.x, rect.x + w) contains mouse_x is the one the user sees on top.
     for (const TrimChipHit& chip : chips) {
-        if (chip.text_left < rightmost_right_edge + hl_pad) continue;
-        rightmost_right_edge =
-            chip.text_left + monospace_advance() + hl_pad;
         if (mouse_x >= chip.rect.x &&
             mouse_x < chip.rect.x + chip.rect.w) {
             return chip.which;
@@ -326,6 +325,23 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
             tmap_arg, drag_overlay,
             app.iteration_mode_enabled);
     }
+    // Sticky top-of-stack priority: the popped (hovered) chip is painted above
+    // the whole stack, so it is what the user sees and clicks (WYSIWYG). While
+    // the pointer stays inside its rect it keeps winning the hit — without this
+    // the ascending-x walk would flip the hit to the leftmost overlapping chip
+    // and flicker as the pointer moves through the overlap. Deliberately
+    // visible to every consumer (selection clicks, Alt+drag grabs, editor caret
+    // clicks).
+    if (app.hovered_flag_marker >= 0) {
+        for (const auto& r : rects) {
+            if (r.marker_index == app.hovered_flag_marker &&
+                mouse_x >= r.x && mouse_x < r.x + r.w &&
+                mouse_y >= r.y && mouse_y < r.y + r.h) {
+                return r.marker_index;
+            }
+        }
+    }
+    // Forward walk = ascending-x = topmost-painted first among the rest.
     for (const auto& r : rects) {
         if (mouse_x >= r.x && mouse_x < r.x + r.w &&
             mouse_y >= r.y && mouse_y < r.y + r.h) {

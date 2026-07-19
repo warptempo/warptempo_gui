@@ -136,21 +136,20 @@ double flag_font_size_px();
 // Flag chip internal padding around the text glyph bounding box, split per
 // axis so the two can be tuned independently. Both are the single source of
 // truth for their axis — every chip renderer and the hit-rect computation must
-// read these, never a literal. Each is the authored value (3 / 1) scaled by
+// read these, never a literal. Each is the authored value (2 / 0) scaled by
 // gui_font_scale() and rounded with std::nearbyint so it stays an integer:
 // the aliased plus-point-five sharp-edge convention for 1 px strokes and
 // integer-edged rects keeps holding at every size. At scale 1 each equals
-// its authored value by identity (nearbyint(3*1) == 3, nearbyint(1*1) == 1).
+// its authored value by identity (nearbyint(2*1) == 2, nearbyint(0*1) == 0).
 //
 // flag_pad_x_px sets chip WIDTH: the painted fill and the hit rect both span
-// glyph_advance + 2*flag_pad_x_px(), and the elision pack uses it as the
-// inter-chip touch threshold.
+// glyph_advance + 2*flag_pad_x_px().
 //
 // flag_pad_y_px sets chip HEIGHT via the row metric: the row height is
 // font (ascent+descent) + 2*flag_pad_y_px(), and the baseline offset is
 // flag_pad_y_px() + ascent.
-inline double flag_pad_x_px() { return std::nearbyint(3.0 * gui_font_scale()); }
-inline double flag_pad_y_px() { return std::nearbyint(1.0 * gui_font_scale()); }
+inline double flag_pad_x_px() { return std::nearbyint(2.0 * gui_font_scale()); }
+inline double flag_pad_y_px() { return std::nearbyint(0.0 * gui_font_scale()); }
 
 // Sole authored value for the flag chip's vertical anchor: the offset from
 // the waveform area's top edge up to the regular flag rect's painted bottom
@@ -240,10 +239,10 @@ inline int playhead_half_px() { return playhead_triangle_h_px() - 1; }
 // measure and are overwritten immediately). on_resize can fire before the
 // first redraw measures the real font; these seed the geometry so it is sane
 // (never a negative waveform) until init_monospace_grid_metrics overwrites
-// them. The 1.0 term is the authored flag_pad_y_px value at scale 1.
-constexpr int    kRowHFallbackPx       = 20;
+// them. The 0.0 term is the authored flag_pad_y_px value at scale 1.
+constexpr int    kRowHFallbackPx       = 18;
 constexpr double kRowBaselineOffFallbackPx =
-    1.0 + 14.0;
+    0.0 + 14.0;
 
 // Forward declaration: defined with its full doc comment below. Needed here
 // because flag_chip_bottom_y / stem_cache_overhang_px (inlines) read it.
@@ -559,15 +558,15 @@ struct FlagEditorOverlay {
 // the only disabled signal lives in the marker stem (handled by
 // `render_markers`).
 // `warp_frame_map`: same displayed-axis translation as render_markers (the
-// live map in target view). The greedy pack and elision still walk
-// left-to-right, so in target view the pack rule
-// is applied against post-translation positions (a region the warp_frame_map
-// stretches may un-elide flags that were elided in source view; a region the
-// warp_frame_map compresses may elide flags that were visible there).
+// live map in target view). Chips are collected in ascending painted-x order
+// and painted in reverse, so in target view the occlusion z-order is applied
+// against post-translation positions.
 // `waveform_width` is the EFFECTIVE waveform width (waveform_area.w), the
 // column-mapping denominator; chips share the marker stems' samples-per-pixel
 // so they stay column-aligned with the stems below them at every window width
 // (it differs from top_strip_area.w only at a non-multiple-of-16 window).
+// `hovered_index`, if >= 0, is the marker index popped to the top of the
+// stack (painted last); -1 leaves the plain leftmost-on-top occlusion order.
 void render_flags(cairo_t* cr,
                   GuiRect top_strip_area,
                   int waveform_width,
@@ -580,14 +579,15 @@ void render_flags(cairo_t* cr,
                   const FlagEditorOverlay& editor = {},
                   const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                   const DragOverlay* drag_overlay = nullptr,
-                  bool iteration_on = false);
+                  bool iteration_on = false,
+                  int hovered_index = -1);
 
 // Paints ONE flag — the FlagPayload-editor target — with the
-// live pending text, selection swap, and blinking cursor. Same greedy-
-// pack and elision rules as render_flags so the flag lands at the same
-// pixel column the cache rendered the other flags at. `editor.marker_
-// index` selects which flag emits paint; non-matching emit_indices are
-// skipped. Intended caller path: in on_redraw, after the flag-cache
+// live pending text, selection swap, and blinking cursor. Same column
+// placement as render_flags (the editor flag always emits when visible) so
+// the flag lands at the same pixel column the cache rendered the other flags
+// at. `editor.marker_index` selects which flag emits paint; non-matching
+// emit_indices are skipped. Intended caller path: in on_redraw, after the flag-cache
 // blit, when overlay.marker_index >= 0 and the active marker-view
 // admits FlagPayload editing (not 'P'). The flag-
 // cache itself passes the editor target into the skip-guard inside
@@ -613,9 +613,11 @@ void render_one_editor_flag(
     const DragOverlay* drag_overlay = nullptr,
     bool iteration_on = false);
 
-// Same greedy-pack and elision logic as render_flags, without drawing —
-// returns the screen-coord rects of the flags that would be rendered. The
-// caller uses these for hit-testing. No cairo context is needed: the chip
+// Same column placement as render_flags, without drawing — returns the
+// screen-coord rects of the flags that would be rendered (one per visible
+// chip, no elision, so overlapping chips yield overlapping rects). The caller
+// hit-tests them with a FORWARD walk, resolving an overlap to the first-
+// containing rect = the topmost-painted chip. No cairo context is needed: the chip
 // width comes from the cached monospace advance (glyph count times
 // monospace_advance()), which is exact for the ASCII monospace chip strings.
 // `warp_frame_map` mirrors render_flags so the two stay in sync. In target
@@ -659,6 +661,8 @@ void render_phaseresetmarkers(cairo_t* cr,
 // paint full-brightness.
 // `waveform_width` is the effective waveform width (see render_flags), the
 // column-mapping denominator shared with the phase-reset stems.
+// `hovered_index`, if >= 0, is the phase-reset index popped to the top of the
+// stack (painted last); -1 leaves the plain leftmost-on-top occlusion order.
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
                             int waveform_width,
@@ -669,7 +673,8 @@ void render_phase_reset_flags(cairo_t* cr,
                             double font_size,
                             const std::set<int>& selected_set,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
-                            const DragOverlay* drag_overlay = nullptr);
+                            const DragOverlay* drag_overlay = nullptr,
+                            int hovered_index = -1);
 
 // `waveform_width` is the effective waveform width (see compute_flag_hit_rects).
 std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(

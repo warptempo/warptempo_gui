@@ -108,9 +108,17 @@ struct Viewport {
     void invalidate_top_strip();
     void invalidate_all();
 
-    // Reset the hover popup state. If the popup was visible, invalidate
-    // the top strip so the next paint erases it. Safe to call from any
-    // path.
+    // Reset only the hover POPUP fields (HoverPopupState). If the popup was
+    // visible, invalidate the readout area so the next paint erases it. Does
+    // NOT touch app.hovered_flag_marker (the chip pop) — used by the
+    // recompute's view/iter branch, which has just written the pop state and
+    // must not clobber it.
+    void clear_hover_popup_fields();
+
+    // Reset the hover popup AND the chip pop (app.hovered_flag_marker). Safe to
+    // call from any path; every suppression / gesture-begin / editor-open /
+    // view-switch clear site routes here, so the pop clears wherever the popup
+    // does.
     void clear_hover_popup();
 
     // Recompute the hover state at the cursor's last on_motion position.
