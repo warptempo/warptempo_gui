@@ -208,6 +208,36 @@ void GuiInputHandler::finalize_render_run() {
     target_render.maybe_dispatch_pending();
 }
 
+void GuiInputHandler::maybe_reestablish_target_buffer() {
+    if (app.active_audio_view == 'T' &&
+        !target_render.is_updating() && !async_renderer.is_busy() &&
+        (target_render.is_dirty() || app.target_buffer_frames <= 0)) {
+        // Re-establish the target buffer only when it is actually
+        // stale or empty/cold. An archival render never touches
+        // target_buffer, so a clean, bound buffer needs no
+        // re-establishment: calling ensure_ready() there would trip
+        // its defensive stop and cut an in-progress target audition
+        // for a fully redundant rebind of the same buffer at the same
+        // anchor. When re-establishment IS wanted, ensure_ready() may
+        // fill from the shared cache when the just-rendered
+        // fingerprint is already registered, or render the current
+        // target state if the state changed or the freshly rendered
+        // entry is still registering on the writer thread. That miss
+        // is benign; if finalize_render_run just launched a pending
+        // target render, is_updating() is true and we leave it alone.
+        // The busy gate closes the parked-command race: finalize's pump
+        // runs first and offers the beat to a parked archival command,
+        // which sets neither pending_ nor in_flight_, so is_updating()
+        // cannot see it. Without the busy check ensure_ready's trigger
+        // would kill that explicit command in favor of this derived
+        // preview, inverting the priority the pump just enforced. The
+        // buffer re-establishment happens through the launched session's
+        // own completion path (an archival completion re-runs this helper;
+        // a preview completion rebinds itself).
+        target_render.ensure_ready();
+    }
+}
+
 void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
     app.queue_cancel_requested = false;
     app.queue_running          = true;
@@ -221,33 +251,9 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
                 std::fprintf(stderr, "warptempo_gui: render cancelled\n");
             }
             finalize_render_run();
-            if (success && app.active_audio_view == 'T' &&
-                !target_render.is_updating() && !async_renderer.is_busy() &&
-                (target_render.is_dirty() || app.target_buffer_frames <= 0)) {
-                // Re-establish the target buffer only when it is actually
-                // stale or empty/cold. An archival render never touches
-                // target_buffer, so a clean, bound buffer needs no
-                // re-establishment: calling ensure_ready() there would trip
-                // its defensive stop and cut an in-progress target audition
-                // for a fully redundant rebind of the same buffer at the same
-                // anchor. When re-establishment IS wanted, ensure_ready() may
-                // fill from the shared cache when the just-rendered
-                // fingerprint is already registered, or render the current
-                // target state if the state changed or the freshly rendered
-                // entry is still registering on the writer thread. That miss
-                // is benign; if finalize_render_run just launched a pending
-                // target render, is_updating() is true and we leave it alone.
-                // The busy gate closes the parked-command race: finalize's pump
-                // runs first and offers the beat to a parked archival command,
-                // which sets neither pending_ nor in_flight_, so is_updating()
-                // cannot see it. Without the busy check ensure_ready's trigger
-                // would kill that explicit command in favor of this derived
-                // preview, inverting the priority the pump just enforced. The
-                // buffer re-establishment happens through the launched session's
-                // own completion path (an archival completion re-runs this tail;
-                // a preview completion rebinds itself).
-                target_render.ensure_ready();
-            }
+            // On success, re-establish a cold/stale target buffer (see
+            // maybe_reestablish_target_buffer for the full rationale).
+            if (success) maybe_reestablish_target_buffer();
         });
 }
 
@@ -329,6 +335,12 @@ void GuiInputHandler::dispatch_next_batch_entry() {
         batch_.reqs.clear();
         batch_.reqs.shrink_to_fit();
         finalize_render_run();
+        // The parked-batch route suppresses the first render's success tail
+        // via the busy gate, so the batch's own terminal must re-establish a
+        // cold buffer, exactly like a single archival success. A cancelled
+        // batch stays symmetric with the single Cancelled outcome and never
+        // re-establishes (Esc means the user took control; any edit re-previews).
+        if (!cancelled) maybe_reestablish_target_buffer();
         return;
     }
 

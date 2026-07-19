@@ -341,6 +341,12 @@ private:
     // strip. The summary log is the caller's concern.
     void finalize_render_run();
 
+    // Re-establish a cold/stale target buffer after a successful archival
+    // completion. Shared by the single-archival success tail and the batch
+    // terminal (see the definition for the full rationale). Internal gates
+    // make the call safe in every worker/view state.
+    void maybe_reestablish_target_buffer();
+
     // Dispatch a single archival render (the Ctrl+Alt+R shape) on an idle
     // worker: source-directory naming (empty batch_folder/basename inside
     // do_render), session bookkeeping, and an on_done that finalizes the
