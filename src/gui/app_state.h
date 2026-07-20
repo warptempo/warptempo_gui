@@ -147,8 +147,8 @@ struct DragState {
     double              delta_min = -std::numeric_limits<double>::infinity();
     double              delta_max =  std::numeric_limits<double>::infinity();
     bool                moved = false;
-    // No per-drag map copy: mid-drag target-view translation (paint, playhead
-    // tracking, commit snapping, the waveform job's owned snapshot) reads the
+    // No per-drag map copy: mid-drag target-view translation (paint,
+    // commit snapping, the waveform job's owned snapshot) reads the
     // memoized display map — active_display_context /
     // target_view_warp_frame_map_cached — directly. That cache is keyed on the
     // marker-store generation + scale (+ sample rate + total frames), and
@@ -379,7 +379,7 @@ struct TrimDragState {
     // bound that moves. No pre-drag playhead capture: trim drags never touch
     // the playhead, so an Esc/Ctrl+Q cancel has nothing to restore there (the
     // recorded difference from the marker DragState, which tracks and restores
-    // its grabbed marker's playhead).
+    // its grabbed marker's selection).
     bool    both                 = false;
     int64_t orig_begin_frame   = 0;
     int64_t orig_end_frame     = 0;

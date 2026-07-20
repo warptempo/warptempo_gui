@@ -61,7 +61,7 @@ struct GuiFlagEditor {
     // public wrappers handle their kind-specific eligibility gates
     // and seed-text builders, then delegate here for the rest:
     // same-target re-click (cursor recompute), target-switching
-    // (selection + playhead + editor reseat), initial cursor
+    // (selection + editor reseat), initial cursor
     // positioning, hover-popup clear, top-strip invalidate.
     // The cursor's text-left origin is computed on the fly via
     // flag_pending_text_left_x(app, audio, idx); a negative `click_x`

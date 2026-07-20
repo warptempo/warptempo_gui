@@ -55,7 +55,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     // Match drop_marker: re-affirm the playhead on the new phase reset. The
-    // playhead-drop create path (`p`) authors at the playhead, so this is a
+    // playhead-drop create path (`s`) authors at the playhead, so this is a
     // no-op there; the target-view lead-in create path (Alt+S) authors N/2
     // BEFORE the playhead, so the playhead lands on the seeded reset. This is a
     // drop consequence (the reset is created for the playhead), not a selection

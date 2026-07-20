@@ -256,11 +256,11 @@ struct GuiInputHandler {
 
     // Stop all four pointer drag gestures. A marker or trim drag is stopped
     // before its deferred commit, so live state returns to pre-drag (including
-    // the tracked playhead for a marker drag); a strip drag just ends where it
-    // is; a region drag is cancelled and the region restored to its pre-drag
-    // snapshot. No-op when no drag is active. Callers: the drag-modal escape
-    // hatches in on_key, and the WM-close callback in main.cpp (both cancel
-    // before raising the close prompt).
+    // the restored SelectionSnapshot for a marker drag); a strip drag just ends
+    // where it is; a region drag is cancelled and the region restored to its
+    // pre-drag snapshot. No-op when no drag is active. Callers: the drag-modal
+    // escape hatches in on_key, and the WM-close callback in main.cpp (both
+    // cancel before raising the close prompt).
     void cancel_active_drags();
 
     // Arm the plain left-drag region-select gesture at a press. `anchor_frame`

@@ -2,9 +2,7 @@
 
 #include "audio.h"
 #include "warp_frame_map_view.h"
-#include "warp_frame_map.h"
 
-#include <algorithm>
 #include <cstdint>
 #include <set>
 #include <vector>

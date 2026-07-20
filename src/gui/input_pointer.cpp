@@ -596,7 +596,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // press cannot yet know whether it becomes a click or a drag arm (and
         // the Esc-restore snapshot in pre_region must keep capturing the
         // pre-press region). The press already did its own press-time work
-        // (selection, playhead, reseek) regardless.
+        // (playhead placement, reseek) regardless — the waveform press is
+        // marker-blind, so no selection touch there.
         const bool moved = app.region_drag.moved;
         app.region_drag = RegionDragState{};
         if (!moved && app.region.active) {
