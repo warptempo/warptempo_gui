@@ -347,9 +347,10 @@ bool GuiInputHandler::handle_escape_cancels(GuiKey key) {
 // Esc during a pointer drag stops the gesture. Marker and trim drags
 // are stopped before their deferred commit, so their pending change is
 // discarded and the live state returns to pre-drag — positions AND (marker
-// drag only) the selection/group state (the first-motion selection collapse
-// is part of the gesture and dies with it); neither drag moves the playhead,
-// so there is no playhead to restore in either. A strip drag applies its
+// drag only) the marker selection captured at drag begin (the arming press
+// single-selected the grabbed marker, so that is what a cancel restores);
+// neither drag moves the playhead, so there is no playhead to restore in
+// either. A strip drag applies its
 // motion continuously, so stopping just ends it where it is; a region drag is
 // cancelled and the region restored to how it rested at arm (the pre-drag
 // snapshot). A live editor-text drag is FINALIZED, not cancelled — selection-
@@ -362,9 +363,9 @@ void GuiInputHandler::cancel_active_drags() {
         // DragOverlay), so no marker revert is needed. The drag never moved
         // the playhead, so there is nothing to restore there either — a cancel
         // just drops the pending marker move and the SelectionSnapshot.
-        // Restore the pre-drag selection/group snapshot: the first-motion
-        // collapse onto the grabbed marker is part of the gesture and dies with
-        // the cancel.
+        // Restore the marker selection captured at drag begin (the arming press
+        // single-selected the grabbed marker, so this is {hit}) — a cancel
+        // reverts the drag's position change, not the click's selection.
         restore_selection_snapshot(app, app.drag.pre_drag_selection);
         app.drag = DragState{};
         viewport.invalidate_waveform_area();
@@ -417,6 +418,11 @@ void GuiInputHandler::cancel_active_drags() {
     // surviving as a keyboard-swallowing ghost until a later pointer motion
     // notices the lost button.
     if (app.editor_text_drag.active) finalize_editor_text_drag();
+    // A pending marker drag (a flag press whose reposition never began) is just
+    // disarmed: the press already single-selected its marker (a committed click,
+    // not part of the pending gesture), so there is nothing to revert.
+    if (app.pending_marker_drag.active)
+        app.pending_marker_drag = PendingMarkerDrag{};
 }
 
 // Render-trigger chords. See the declaration for the chord list.

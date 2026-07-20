@@ -8,9 +8,11 @@
 class GuiAudio;
 struct GuiTargetRender;
 
-// Marker reposition drag — the single Alt+drag fine-tuning gesture,
-// shared by the warp and phase reset views and dispatched on
-// app.active_markers_view (begin) and app.drag.drag_mode (commit). It
+// Marker reposition drag — the single plain-flag-drag fine-tuning gesture
+// (a plain flag press single-selects and arms it; motion past the shared
+// threshold begins the move), shared by the warp and phase reset views and
+// dispatched on app.active_markers_view (begin) and app.drag.drag_mode
+// (commit). It
 // lives in its own translation unit because it is the one cross-kind
 // gesture: the per-kind authoring and selection-shift operations stay in
 // GuiWarpMarkersOps and GuiPhaseResetMarkersOps. Under the frozen-coord

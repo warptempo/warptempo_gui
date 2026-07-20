@@ -338,13 +338,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             }
         }
 
-        // Top-strip clicks stop playback first: they can open the iter/
-        // bpm/flag editors and continuing audio during text editing is
-        // the wrong default. Waveform clicks keep playback alive — the
-        // per-press reseek to the click sample happens at the playhead-
-        // drag press sites below, gated on was_playing && sample !=
-        // playhead_at_entry. Capture the entry state up front so all
-        // four downstream branches see the same snapshot.
+        // Top-strip clicks stop playback first: they select markers and can
+        // retarget an open flag editor, and continuing audio during authoring /
+        // text editing is the wrong default. Waveform clicks keep playback
+        // alive — the per-press reseek to the click sample happens at the
+        // playhead-drag press site below, gated on was_playing && sample !=
+        // playhead_at_entry. Capture the entry state up front so the downstream
+        // branches see the same snapshot.
         const bool was_playing = playback.is_playing();
         const int64_t playhead_at_entry = app.playhead_cursor_sample;
         if (inside_top) playback_lifecycle.stop_playback_if_playing();
@@ -382,58 +382,35 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Only presses inside the waveform or the top strip do anything.
         if (!inside_waveform && !inside_top) return;
 
-        // Flag/marker hit test, computed ONLY on the path that consumes it. The
-        // TOP-STRIP flag hit feeds both the Alt flag-reposition arm and the
-        // plain/Shift flag-click branches, so it is resolved once here. The
-        // WAVEFORM marker-line hit serves ONLY the Alt marker-reposition route,
-        // so it is deferred into that branch — the plain and Shift waveform
-        // presses are marker-blind and run no marker scan at all. Trim bounds are
-        // transparent to PLAIN and SHIFT presses (a click over a bound is an
-        // ordinary waveform click); the Alt branch consults the trim hit tests
-        // only after the waveform marker hit misses, so no trim hit test runs on
-        // the plain/Shift path either.
+        // Flag hit test, computed ONLY on the path that consumes it. The
+        // TOP-STRIP flag hit feeds the plain/Shift flag-click branches (plain =
+        // single-select + arm the pending marker drag, Shift = toggle
+        // membership), so it is resolved once here. The WAVEFORM is
+        // marker-blind — a plain press is playhead placement + region-drag arm,
+        // a Shift press a no-op — so no marker scan runs on the waveform at all
+        // (the invisible stem is not a grab target). Trim bounds are transparent
+        // to PLAIN and SHIFT presses (a click over a bound is an ordinary
+        // waveform click); only the Alt branch consults the trim hit tests, so
+        // no trim hit test runs on the plain/Shift path either.
         int hit = -1;
         if (inside_top) hit = hit_test_flag(app, audio, x, y);
 
         if (alt && !ctrl && !shift) {
-            // Alt+drag (exact) is hit-area-dependent. In precedence order:
-            //   1. Marker stem (waveform) or flag (top strip), hit >= 0 → the
-            //      marker reposition drag (the mouse counterpart of the
-            //      Alt+Left / Alt+Right nudge). A marker within its halo BEATS a
-            //      trim stem in the same halo — markers are the denser primary
-            //      objects, and a contested bound still has its upper-row chip
-            //      as an unambiguous handle.
-            //   2. Trim geometry (stem/chip single hit, or the top-strip span
+            // Alt+drag (exact) is TRIM-ONLY. The marker reposition arm retired
+            // — the plain flag press/drag owns marker moves now (select at
+            // press, begin_drag past the shared threshold) — and the invisible
+            // waveform stem is no longer a grab target, so no marker hit test
+            // runs here. Precedence:
+            //   1. Trim geometry (stem/chip single hit, or the top-strip span
             //      strictly between the two chips) → that bound's / the pair's
             //      drag, via route_trim_alt_press. The router CLAIMS the press
-            //      (no pan fallback) whenever it lands on trim geometry.
-            //   3. Empty waveform → nothing (pan lives on the strip rows now,
-            //      claimed by the plain left press above; Alt over empty
-            //      waveform falls through).
-            // Read-only refuses the marker AND trim arms silently. The
-            // marker/trim arms override follow when playing.
-            // Resolve the waveform marker-line hit here — this Alt route is its
-            // only consumer; the top-strip flag hit was resolved up front.
-            if (inside_waveform) hit = hit_test_marker_line(app, audio, x);
-            if (hit >= 0) {
-                if (active_view_state(app).read_only) {
-                    return;
-                }
-                // begin_drag preserves the multi-selection if `hit` is in it,
-                // else collapses to just `hit`. Motion decides whether it
-                // actually becomes a drag vs. a plain click.
-                const bool was_playing_alt = playback.is_playing();
-                marker_drag.begin_drag(hit, x);
-                if (was_playing_alt)
-                    app.follow_overridden_for_session = true;
-                return;
-            }
-            // Trim: the marker hit test missed, so consult the trim hit tests.
-            // A claimed press (trim geometry, armed or read-only-refused) ends
-            // here — no pan fallback. The follow override fires only when a drag
-            // actually armed and playback was live at press time (a top-strip
-            // press has already stopped playback, so was_playing is the
-            // pre-stop snapshot captured up top).
+            //      (no fallback) whenever it lands on trim geometry.
+            //   2. Empty waveform → nothing (pan lives on the strip rows now,
+            //      claimed by the plain left press above).
+            // Read-only refuses the trim arm silently. The follow override fires
+            // only when a drag actually armed and playback was live at press
+            // time (a top-strip press has already stopped playback, so
+            // was_playing is the pre-stop snapshot captured up top).
             if (route_trim_alt_press(x, y, inside_top)) {
                 if (app.trim_drag.active && was_playing)
                     app.follow_overridden_for_session = true;
@@ -444,47 +421,45 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
 
-        // Strict modifier matching: Alt-exact is hit-routed above (marker
-        // reposition or trim arm on a hit, nothing on empty waveform — pan is a
-        // strip-row gesture now). Ctrl+Alt is
-        // no longer a pointer gesture — it falls here into the strict no-op. Every
-        // other modifier combination — Ctrl on empty, Ctrl+Shift, Shift+Alt, ...
-        // — no-ops here too. Only the plain or Shift-modified base press
-        // proceeds (Shift adjusts the selection).
+        // Strict modifier matching: Alt-exact is hit-routed above (trim arm on
+        // trim geometry, nothing on empty waveform — pan is a strip-row gesture
+        // now). Ctrl+Alt is no longer a pointer gesture — it falls here into the
+        // strict no-op. Every other modifier combination — Ctrl on empty,
+        // Ctrl+Shift, Shift+Alt, ... — no-ops here too. Only the plain or
+        // Shift-modified base press proceeds (Shift adjusts the selection).
         if (ctrl || alt) return;
 
         // Plain or Shift press. In the waveform area a plain press places the
         // playhead at the clicked column and arms the region-select drag,
         // touching NO marker state (marker-blind); a Shift press on the waveform
-        // is a strict no-op. In the top strip (flag click) a W-view plain click
-        // enters the warp canonical-line editor (single-select, no playhead);
-        // Shift+click toggles multi-select membership only (no playhead). A
-        // P-view plain click single-selects only (no playhead), falling through
-        // to the selection block below; phase resets have no per-flag editor.
+        // is a strict no-op. In the top strip (flag click) selection is the
+        // whole interface, BOTH views: a plain click single-selects and ARMS a
+        // pending marker drag (moves the marker if the pointer crosses the
+        // threshold, else a pure click); Shift+click toggles multi-select
+        // membership only. Neither moves the playhead — only the Tab family and
+        // `c` land the playhead on a marker.
         if (inside_top) {
             if (hit >= 0) {
-                if (!shift && app.active_markers_view != 'P') {
-                    // Plain click on a W-view flag enters the warp
-                    // canonical-line editor (which single-selects its target;
-                    // it no longer moves the playhead). Read-only refuses the
-                    // open (silent no-op). Shift+click keeps the multi-select
-                    // toggle below; the Alt reposition-drag was handled by the
-                    // branch above.
-                    if (active_view_state(app).read_only) {
-                        return;
+                if (shift) {
+                    // Shift+click toggles membership; it never arms a drag.
+                    // Allowed in read-only (selection is navigation).
+                    selection.toggle_selection_membership(hit);
+                } else {
+                    // Plain flag click single-selects (both views; W's
+                    // click-to-edit is retired — the editor now opens on Enter).
+                    // Selection is navigation, allowed in read-only. A writable
+                    // tab additionally arms the pending marker drag; read-only
+                    // selects but never arms (marker mutation refused), so the
+                    // press stays a pure click there.
+                    selection.set_single_selection(hit);
+                    if (!active_view_state(app).read_only) {
+                        app.pending_marker_drag = PendingMarkerDrag{};
+                        app.pending_marker_drag.active  = true;
+                        app.pending_marker_drag.marker  = hit;
+                        app.pending_marker_drag.press_x = x;
+                        app.pending_marker_drag.press_y = y;
                     }
-                    flag_editor.enter_top_flag_edit(
-                        hit, static_cast<double>(x));
-                    arm_editor_text_drag_on_open();
-                    return;
                 }
-                // P-view plain click and any Shift+click fall here.
-                // Selection ONLY — the playhead is left where it is (flag
-                // clicks are selection/toggle, never a playhead move; only the
-                // Tab family and `c` land the playhead on a marker). Allowed in
-                // read-only (no marker mutation).
-                if (shift) selection.toggle_selection_membership(hit);
-                else       selection.set_single_selection(hit);
             }
             return;
         }
@@ -608,6 +583,14 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     }
     if (app.trim_drag.active) {
         commit_trim_drag();
+        return;
+    }
+    if (app.pending_marker_drag.active) {
+        // The pending marker drag never crossed the threshold: a pure flag
+        // click. The press already single-selected its marker, so there is
+        // nothing to commit — just disarm. (A crossed pending became app.drag
+        // and commits through the branch below.)
+        app.pending_marker_drag = PendingMarkerDrag{};
         return;
     }
     if (!app.drag.active) return;
@@ -749,6 +732,42 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         app.region.b_frame = far_frame;
         viewport.invalidate_waveform_area();
         return;
+    }
+    // Pending marker drag (armed by a plain flag press): the marker was
+    // single-selected at press; the reposition begins only once the pointer
+    // travels past the shared Chebyshev threshold. Handled before the hover
+    // fallthrough below and after the other drag branches (a pending drag and
+    // any other pointer gesture are mutually exclusive — the arming press does
+    // no other work). A lost button before the crossing ends it as a plain
+    // click.
+    if (app.pending_marker_drag.active) {
+        if (!mods.primary_button_held) {   // button lost -> just the click
+            app.pending_marker_drag = PendingMarkerDrag{};
+            viewport.clear_hover_popup();
+            return;
+        }
+        if (std::max(std::abs(mouse_x - app.pending_marker_drag.press_x),
+                     std::abs(mouse_y - app.pending_marker_drag.press_y)) <
+                kDragMovedThresholdPx) {
+            return;   // still a click; leave the pending armed, do nothing
+        }
+        // Threshold crossed: begin the drag anchored at the PRESS column so the
+        // marker tracks the pointer 1:1, this first apply folding the whole
+        // press->crossing delta (the strip/region catch-up pattern). begin_drag
+        // captures the pre-drag snapshot / selection / walls now — exact, since
+        // nothing mutated the store between press and crossing — and sets
+        // app.drag.active. Fall through (no return) so this same motion event
+        // applies the first delta through the marker-drag branch below.
+        const int marker  = app.pending_marker_drag.marker;
+        const int press_x = app.pending_marker_drag.press_x;
+        app.pending_marker_drag = PendingMarkerDrag{};
+        if (!marker_drag.begin_drag(marker, press_x)) {
+            viewport.clear_hover_popup();
+            return;   // begin refused (bad index / no audio): drop the gesture
+        }
+        // No follow override needed: the marker drag always begins from a
+        // top-strip flag press, which already stopped playback (see the
+        // top-strip stop above), so there is no live playhead to chase.
     }
     if (!app.drag.active) {
         // No active gesture: hover recomputation is owned by

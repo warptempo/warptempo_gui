@@ -66,65 +66,6 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio) {
     return *ctx.warp_frame_map;
 }
 
-int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
-                         int mouse_x) {
-    const GuiRect area = waveform_area(app);
-    const double spp = current_samples_per_pixel(app, audio);
-    if (spp <= 0.0) return -1;
-    const int click_rel_x = mouse_x - area.x;
-    const double vp = static_cast<double>(app.viewport_start_sample);
-    int best_hit = -1;
-    int best_dist = kMarkerHitHalfPx + 1;
-    const int n = (app.active_markers_view == 'P')
-        ? static_cast<int>(app.phaseresetmarkers.markers().size())
-        : static_cast<int>(app.warpmarkers.markers().size());
-    // The mapped views paint marker stems at map_source_to_target
-    // translated positions; the hit test must walk the same warp_frame_map so
-    // mouse_x lands on the visually-drawn stem, not the marker's source-
-    // frame position. compute_flag_hit_rects already does this on the
-    // top strip; this mirrors that for the waveform-area marker line.
-    // The map is the one the item pixels were painted with (WYSIWYG grabs):
-    // displayed_or_live_target_map returns the map the stem/flag item caches
-    // baked when warm, and the live display context's identity/empty map in
-    // source view. This closes the live-vs-painted window for the marker hit
-    // (event synchronization — the ruling at that selector).
-    const std::vector<WarpFrameMapSegment>& dmap =
-        displayed_or_live_target_map(app, audio);
-    const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
-        dmap.empty() ? nullptr : &dmap;
-    for (int i = 0; i < n; ++i) {
-        int64_t src_sample =
-            (app.active_markers_view == 'P')
-                ? app.phaseresetmarkers.markers()[i].time_frame
-                : app.warpmarkers.markers()[i].time_frame;
-        double ms = static_cast<double>(src_sample);
-        if (target_warp_frame_map) {
-            const size_t q = (src_sample < 0)
-                ? static_cast<size_t>(0)
-                : static_cast<size_t>(src_sample);
-            ms = std::nearbyint(map_source_to_target(q, *target_warp_frame_map));
-        }
-        // Visible columns only: a marker whose painted column falls outside the
-        // strip [0, area.w - 1] is not a hit candidate. The kMarkerHitHalfPx
-        // halo governs reach AROUND a visible column (a click up to
-        // kMarkerHitHalfPx from a visible stem still grabs it), but does not
-        // extend the strip — an offscreen stem is unreachable.
-        const int m_px = static_cast<int>(std::nearbyint((ms - vp) / spp));
-        if (m_px < 0 || m_px >= area.w) continue;
-        const int d = std::abs(m_px - click_rel_x);
-        // Nearest wins; an exact distance tie (legal now that markers may
-        // overlap exactly) goes to the higher index via <=. The stem
-        // painters walk the store in ascending index order, so the later
-        // equal-time marker paints last and sits visually on top — the
-        // tie-break picks the marker the user sees.
-        if (d <= kMarkerHitHalfPx && d <= best_dist) {
-            best_dist = d;
-            best_hit  = i;
-        }
-    }
-    return best_hit;
-}
-
 TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
                                int mouse_x) {
     // Trim bounds hit-test like markers in the AUTHORING views, against
@@ -143,7 +84,7 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
     const int click_rel_x = mouse_x - area.x;
     const double vp = static_cast<double>(app.viewport_start_sample);
 
-    // Same translation as hit_test_marker_line: trim is stored
+    // Marker-style column translation: trim is stored
     // source-domain, painted at map_source_to_target columns in the mapped
     // views. The map is the item pixels' own via displayed_or_live_target_map
     // (event-synchronized hit geometry — the ruling at that selector): empty
@@ -163,9 +104,9 @@ TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
                 : static_cast<size_t>(src_sample);
             ms = std::nearbyint(map_source_to_target(q, *target_warp_frame_map));
         }
-        // Visible columns only (mirroring hit_test_marker_line): a bound whose
-        // painted column falls outside the strip [0, area.w - 1] is not a
-        // candidate — return a beyond-halo distance so it never wins. The
+        // Visible columns only: a bound whose painted column falls outside the
+        // strip [0, area.w - 1] is not a candidate — return a beyond-halo
+        // distance so it never wins. The
         // kMarkerHitHalfPx halo governs reach AROUND a visible column but does
         // not extend the strip.
         const int b_px = static_cast<int>(std::nearbyint((ms - vp) / spp));
@@ -352,9 +293,9 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // marker is selected, else the first-containing rect unconditionally. rects
     // are emitted ascending-x, so each forward pass resolves to that class's
     // leftmost = topmost. Topmost = editor target > selected leftmost >
-    // leftmost. WYSIWYG for every consumer (selection clicks, Alt+drag grabs,
-    // editor caret clicks, the hover popup's target): the topmost-painted chip
-    // is what a click grabs.
+    // leftmost. WYSIWYG for every consumer (selection clicks, plain flag-drag
+    // reposition grabs, editor caret clicks, the hover popup's target): the
+    // topmost-painted chip is what a click grabs.
     //
     // An all-deleted pending ("" text) still paints a zero-glyph box (ring +
     // fill + cursor) above the stack, and now keeps its rect: the cull runs on

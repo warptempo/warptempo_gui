@@ -208,10 +208,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // This single gate is why no downstream hotkey needs its own
     // drag guard: Tab, undo, `t`, and the rest never see a key mid-drag.
     // The editor text-selection drag has its own modal gate above
-    // the text-editor handlers; the four pointer drags here are mutually
-    // exclusive with it.
+    // the text-editor handlers; the pointer gestures here — the marker /
+    // trim / strip / region drags and the pending marker drag (a flag press
+    // held before its reposition begins) — are mutually exclusive with it.
     if (app.drag.active || app.trim_drag.active ||
-        app.strip_drag.active || app.region_drag.active) {
+        app.strip_drag.active || app.region_drag.active ||
+        app.pending_marker_drag.active) {
         if (key == GuiKeys::Escape) {
             cancel_active_drags();
             return;
@@ -346,7 +348,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Space / Return / KpEnter is modifier-independent.
+    // Space is the sole playback toggle, modifier-independent (Return / keypad
+    // Enter are NOT playback keys — they open the flag editor, handled just
+    // below).
     if (is_play_pause_key(key)) {
         // Target-view playback gating: refuse Space-to-play while a
         // target render is in flight (current is stale by
@@ -363,6 +367,27 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             if (app.target_buffer_frames <= 0) return;
         }
         playback_lifecycle.toggle_playback();
+        return;
+    }
+
+    // Bare Return / KpEnter opens the flag editor on the focused marker — the
+    // click-to-edit replacement (Enter is already the editor's commit key, so
+    // the open/commit round-trip is symmetric). While any editor is open the
+    // editor blocks above consume Enter first (commit), so this is reached only
+    // with no editor active. Repair the focus first, then: a focused warp
+    // marker (last_selected_marker >= 0) in W view opens its canonical-line
+    // editor with the caret at end (the natural keyboard default — no click_x,
+    // so text_editor::enter seats the caret past the last character). P view
+    // (phase resets have no per-flag editor) and no focused marker are no-ops.
+    // Read-only already dropped Return at the allowlist gate above (the editor
+    // is an authoring surface — the old click-to-edit refused read-only too).
+    // Modifier-strict: only the plain, unmodified press binds.
+    if ((key == GuiKeys::Return || key == GuiKeys::KpEnter) &&
+        !ctrl && !shift && !alt) {
+        selection.repair_last_selected();
+        if (app.last_selected_marker >= 0 && app.active_markers_view != 'P') {
+            flag_editor.enter_top_flag_edit(app.last_selected_marker);
+        }
         return;
     }
 
@@ -696,7 +721,8 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // The editor-text drag is included: viewport changes must not fire under a
     // held text-selection drag either (a wheel can emit axis events while the
     // primary button stays held), so this gate is any_pointer_gesture_active,
-    // all five gestures.
+    // every gesture — the pending marker drag included, so a wheel cannot pan
+    // or zoom the viewport out from under a flag press before its drag begins.
     if (app.prompt.active) return -1;
     if (modal_bottom_strip_editor_active()) return -1;
     if (app.loading || audio.total_frames() <= 0) return -1;

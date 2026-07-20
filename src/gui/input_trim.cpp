@@ -391,18 +391,16 @@ void GuiInputHandler::commit_trim_drag() {
     app.trim_drag = TrimDragState{};
 }
 
-// Alt left press trim routing, consulted by the Alt+drag branch AFTER its
-// marker hit test misses. Every trim drag requires the FULL pair set; a lone
+// Alt left press trim routing — the sole thing the Alt+drag branch arms (the
+// marker reposition arm retired; the plain flag press/drag owns marker moves).
+// Every trim drag requires the FULL pair set; a lone
 // bound is gesture-inert — transparent to the press, which falls through to
 // the caller's no-op (an unclaimed Alt press over the waveform has no effect;
 // pan lives on the strip rows' plain press). Returns true iff both bounds are
 // set AND the press landed on trim geometry (a stem/chip single-bound hit, or
 // the top-strip inter-chip pair region) — armed or not — so the caller CLAIMS
 // the press (no fallback); false lets the caller fall through to its no-op.
-// Markers BEAT trim: the caller runs the marker
-// hit test first, so a marker within its halo standing in a trim zone wins (the
-// contested bound still has its dedicated upper-row chip as an unambiguous
-// handle). Trim bounds are transparent to every OTHER chord (the plain/Shift
+// Trim bounds are transparent to every OTHER chord (the plain/Shift
 // press path never consults trim). Read-only claims WITHOUT arming (a silent
 // return, no fallback). The three arms:
 //   WAVEFORM: a press within kMarkerHitHalfPx of a SET bound's painted column

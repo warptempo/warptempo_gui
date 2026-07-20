@@ -36,10 +36,12 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     };
 
     // Drag is a single-marker fine-tuning gesture: it always moves only the
-    // grabbed marker, regardless of the current selection — each marker is
-    // placed deliberately, and group drag does more harm than good. The
-    // selection collapse to {hit} is deferred until motion is observed, so a
-    // click without a drag leaves the selection untouched.
+    // grabbed marker, regardless of any prior multi-selection — each marker is
+    // placed deliberately, and group drag does more harm than good. The arming
+    // flag press already single-selected the grabbed marker (the click), so the
+    // selection is {hit} before the drag begins; apply_drag_motion re-asserts
+    // that on first motion so the "a real drag focuses the grabbed marker" rule
+    // stays with the drag machinery.
     std::set<int> drag_set;
     drag_set.insert(hit);
 
@@ -111,8 +113,9 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // active-domain while the delta lives in source frames, so
     // inverse-translate the edges; the domain map is monotonic, so the
     // source clamp matches the active-pixel clamp. The grabbed marker is
-    // on-screen at grab (hit_test_marker_line reports only visible-column
-    // stems), so these bounds bracket delta = 0. vp_lo_src <= vp_hi_src always,
+    // on-screen at grab (the arming flag press hit hit_test_flag, which reports
+    // only visible chips, so the marker's column is within the viewport), so
+    // these bounds bracket delta = 0. vp_lo_src <= vp_hi_src always,
     // so [delta_min, delta_max] does not invert from this pair.
     {
         const auto vb = viewport_marker_bounds(app, audio);
@@ -143,10 +146,11 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     d.pre_drag_last_selected = app.last_selected_marker;
     d.hit_marker             = hit;
     // Pre-drag marker selection snapshot for the Esc/Ctrl+Q cancellation
-    // restore: first motion collapses the selection onto the grabbed marker,
-    // and that collapse is part of the gesture, so cancel restores it wholesale.
-    // The playhead needs no such capture — the drag never moves it, so a cancel
-    // has nothing to put back.
+    // restore: the arming press single-selected the grabbed marker, so this
+    // captures {hit}, and a cancel restores exactly that (Esc reverts the drag's
+    // position change, not the click's committed selection). The playhead needs
+    // no such capture — the drag never moves it, so a cancel has nothing to put
+    // back.
     d.pre_drag_selection = capture_selection_snapshot(app);
     app.drag = std::move(d);
     viewport.clear_hover_popup();
@@ -191,12 +195,13 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     if (any_changed) {
         const bool first_motion = !app.drag.moved;
         app.drag.moved = true;
-        // Selection collapse on the press-to-motion edge: once a drag is
-        // real, focus the whole selection on the single grabbed marker.
-        // Delegated to Selection::set_single_selection — the same helper a
-        // marker click uses — so the rule (drop the rest of the marker
-        // selection) lives in one place. Deferred to first motion so a click
-        // without a drag leaves selection untouched.
+        // Selection focus on the press-to-motion edge: re-assert the single
+        // selection on the grabbed marker. The arming flag press already
+        // single-selected it, so this is normally a no-op; it lives here so the
+        // "a real drag focuses the grabbed marker" rule stays with the drag
+        // machinery regardless of how the drag was armed. Delegated to
+        // Selection::set_single_selection — the same helper a marker click uses
+        // — so the rule lives in one place.
         if (first_motion) {
             selection.set_single_selection(app.drag.hit_marker);
         }
@@ -253,7 +258,7 @@ void MarkerDragOps::commit_drag() {
     for (size_t k = 0; k < app.drag.moveable_times.size(); ++k) {
         const double proposed = app.drag.moveable_times[k];
         // Only positions the drag actually moved snap; an untouched
-        // position keeps its stored value bit-exact, so an Alt+click
+        // position keeps its stored value bit-exact, so a flag click
         // without motion (and a wander that returns exactly to its
         // origin) commits nothing.
         if (k < app.drag.original_times.size() &&

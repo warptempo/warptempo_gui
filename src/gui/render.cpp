@@ -1117,8 +1117,8 @@ void iterate_visible_flags_impl(
       - static_cast<double>(monospace_row_h())
       + monospace_row_baseline_offset();
 
-    // Candidates iterate in VISUAL x order, not store order. During an
-    // Alt+drag the store is frozen (positions come from the DragOverlay),
+    // Candidates iterate in VISUAL x order, not store order. During a
+    // marker drag the store is frozen (positions come from the DragOverlay),
     // so once the dragged chip crosses a neighbor the store walk's
     // ascending-x assumption is false. Collect the visible candidates with
     // their overlay-effective paint positions and stable-sort by position;

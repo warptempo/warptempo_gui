@@ -593,8 +593,9 @@ private:
     // invalidations, so the repaint shows the cleared state.
     void auto_clear_crossed_trim();
 
-    // Alt left press trim routing, consulted by the Alt+drag branch AFTER its
-    // marker hit test misses (markers beat trim). Every trim drag requires the
+    // Alt left press trim routing — the sole thing the Alt+drag branch arms
+    // (the marker reposition arm retired; plain flag press/drag owns marker
+    // moves). Every trim drag requires the
     // FULL pair set; a lone bound is gesture-inert (transparent to the press).
     // Returns true iff both bounds are set AND the press landed on trim geometry
     // (a waveform stem-halo / top-strip chip single hit, or the top-strip span

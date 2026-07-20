@@ -117,7 +117,8 @@ struct SelectionSnapshot {
     int           last_selected_marker = -1;
 };
 
-// Alt+drag state. `active` gates motion handling; the rest captures the
+// Marker reposition drag state (begun by a plain flag drag past the shared
+// threshold). `active` gates motion handling; the rest captures the
 // pre-drag snapshot so Escape can restore positions and clamps can be
 // evaluated without re-scanning the marker list on every motion event.
 //
@@ -168,14 +169,15 @@ struct DragState {
     // Pre-drag last_selected for the undo hint; carried onto the entry at commit.
     int                    pre_drag_last_selected = -1;
     // Pre-drag marker selection snapshot, captured at begin_drag for the
-    // Esc / Ctrl+Q cancellation restore: first motion collapses the selection
-    // onto the grabbed marker (set_single_selection), so cancel puts the
-    // marker selection back. The drag never moves the playhead, so there is no
-    // playhead capture to pair with this — a cancel leaves the playhead alone.
+    // Esc / Ctrl+Q cancellation restore: the arming flag press single-selected
+    // the grabbed marker, so this captures {hit} and a cancel restores exactly
+    // that. The drag never moves the playhead, so there is no playhead capture
+    // to pair with this — a cancel leaves the playhead alone.
     SelectionSnapshot      pre_drag_selection;
-    // Index of the marker that was clicked to start the drag. Used at first
-    // motion to collapse the selection onto the grabbed marker
-    // (set_single_selection); the drag does not move the playhead.
+    // Index of the marker whose flag press started the drag. Re-asserted as the
+    // single selection at first motion (set_single_selection) — normally a
+    // no-op, since the arming press already single-selected it; the drag does
+    // not move the playhead.
     int                    hit_marker           = -1;
     // Which list this drag operates on. The motion / commit
     // handlers dispatch on this so a drag started in phase reset view
@@ -351,8 +353,27 @@ struct EditorTextDragState {
     bool active = false;
 };
 
-// Alt drag of a trim boundary stem/chip (the pointer trim gesture, arming
-// after the Alt+drag branch's marker hit test misses).
+// Pending marker-reposition drag, armed by a PLAIN (unmodified) flag press.
+// The press single-selects its marker immediately (the click), then arms
+// this pending state instead of the drag itself: only once the pointer
+// travels past the shared kDragMovedThresholdPx (Chebyshev from the press)
+// does begin_drag run and the marker-drag machinery take over. Deferring
+// begin_drag to the crossing keeps its pre-drag snapshot / selection capture
+// / wall math exact — nothing mutates the store between press and crossing —
+// and lets a sub-threshold press-release stay a pure click. Session-only,
+// never serialized. Cleared on the crossing (begin_drag takes over), on
+// release / lost button before the crossing, on cancel, and on file load.
+// Shift never arms it, and a read-only tab never arms it (marker mutation is
+// refused there — the select still lands).
+struct PendingMarkerDrag {
+    bool active   = false;
+    int  marker   = -1;   // marker index to reposition (active view's list)
+    int  press_x  = 0;    // press position (window px): the gate + drag anchor
+    int  press_y  = 0;
+};
+
+// Alt drag of a trim boundary stem/chip (the pointer trim gesture — the
+// Alt+drag branch is now trim-only, so this is the sole thing it arms).
 // Parallel to DragState but motion mutates the active tab's live trim mirror
 // directly (no overlay); release triggers a target render when the bound
 // moved. Trim is excluded from undo/redo. Session-only.
@@ -793,13 +814,19 @@ struct AppState {
     std::vector<WarpFrameMapSegment> staged_displayed_target_warp_frame_map;
     bool staged_displayed_valid = false;
 
-    // Alt+drag state. Not reset across file loads — explicitly cleared
-    // there and on button release / Escape.
+    // Marker reposition drag state. Not reset across file loads — explicitly
+    // cleared there and on button release / Escape.
     DragState     drag;
 
     // Region-select drag state (plain left-drag). Cleared on button release,
     // Escape, and file load.
     RegionDragState region_drag;
+
+    // Pending marker-reposition drag, armed by a plain flag press (the marker
+    // is single-selected at press; the drag begins only past the threshold).
+    // Cleared on the threshold crossing, on button release / lost button, on
+    // Escape/close (cancel_active_drags), and on file load.
+    PendingMarkerDrag pending_marker_drag;
 
     // The resting region-select span (session-only). Cleared on file load, the
     // A/B tab switch, the S/T audio-view switch, and Esc.
@@ -1097,16 +1124,19 @@ inline int64_t snap_authored_frame(double frame) {
     return static_cast<int64_t>(std::nearbyint(frame));
 }
 
-// The single query for "some pointer gesture is in flight" — an Alt marker
-// drag, a trim drag, a strip-row zoom/pan drag, a region-select drag, or an
-// editor text drag. Consumed by the wheel_context predicate (on_wheel's
-// completed-detent gate and the platform's per-frame sub-detent
-// accumulator probe both route through it), the gate that must never fire
-// mid-gesture: the "nothing pops mid-gesture" boundary.
+// The single query for "some pointer gesture is in flight" — a marker
+// reposition drag, a trim drag, a strip-row zoom/pan drag, a region-select
+// drag, an editor text drag, or a pending marker drag armed by a flag press
+// (button held, watching for the threshold). Consumed by the wheel_context
+// predicate (on_wheel's completed-detent gate and the platform's per-frame
+// sub-detent accumulator probe both route through it), the gate that must
+// never fire mid-gesture: the "nothing pops mid-gesture" boundary. The pending
+// marker drag is included so a wheel cannot shift the viewport out from under
+// the press before the drag begins.
 inline bool any_pointer_gesture_active(const AppState& app) {
     return app.drag.active || app.trim_drag.active ||
            app.strip_drag.active || app.region_drag.active ||
-           app.editor_text_drag.active;
+           app.editor_text_drag.active || app.pending_marker_drag.active;
 }
 
 // SelectionSnapshot movers: capture the live marker selection at drag begin,
@@ -1283,12 +1313,6 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // and pull in cairo + paint_handler.h for the popup-rect math; the
 // signatures stay free of cairo so the header keeps a clean include list.
 //
-// hit_test_marker_line: scan the active list (phase resets in 'P' mode; warp
-// markers otherwise) and return the index whose pixel column is within
-// kMarkerHitHalfPx of `mouse_x`, or -1 if no marker line is within reach.
-int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
-                         int mouse_x);
-
 // hit_test_flag: scan the active chip rects in the top strip and return the
 // marker index under (mouse_x, mouse_y), or -1. Rects cover every visible chip
 // and may overlap; the walk resolves an overlap to the topmost-painted chip.
@@ -1304,10 +1328,10 @@ int hit_test_marker_line(const AppState& app, const GuiAudio& audio,
 // the first-containing rect unconditionally (rects are emitted ascending-x, so
 // each pass resolves to that class's leftmost = topmost). Priority overall:
 // topmost = editor target > selected leftmost > leftmost. Deliberately visible
-// to every consumer (selection clicks, Alt+drag grabs, editor caret clicks, the
-// hover popup's target): the topmost-painted chip is what the user sees, so it
-// is what a click grabs (WYSIWYG). Works in both 'W' and 'P' authoring views
-// (each column's own chip list).
+// to every consumer (selection clicks, plain flag-drag reposition grabs, editor
+// caret clicks, the hover popup's target): the topmost-painted chip is what the
+// user sees, so it is what a click grabs (WYSIWYG). Works in both 'W' and 'P'
+// authoring views (each column's own chip list).
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
 
@@ -1319,10 +1343,10 @@ enum class TrimHit { None, Begin, End };
 // strip, or None. Early-outs to None unless the FULL pair is set — the sole
 // consumer routes here only then (a lone bound is gesture-inert), so both
 // bounds are guaranteed present. AUTHORING views — the active tab's live pair.
-// Visible columns only (mirroring hit_test_marker_line): a bound painted
-// outside the strip is not a candidate; the halo governs reach around a visible
-// column. Walks the same warp_frame_map as hit_test_marker_line in target view
-// so the hit lands on the visually-drawn stem. Trim is project-level, and
+// Visible columns only: a bound painted outside the strip is not a candidate;
+// the halo governs reach around a visible column. Walks the display
+// warp_frame_map in target view so the hit lands on the visually-drawn stem.
+// Trim is project-level, and
 // applies in both 'W' and 'P' views. When both bounds are within reach, the
 // nearer wins. Consumed by the Alt trim routing's waveform single-drag arm.
 TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
