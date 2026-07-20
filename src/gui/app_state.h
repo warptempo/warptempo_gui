@@ -424,8 +424,20 @@ struct StripDoubleClickCandidate {
 // Double-click window and positional slack (architect-tunable). Two motionless
 // plain clicks in the same strip row inside this time and pixel distance are a
 // double-click.
-constexpr int64_t kDoubleClickMs      = 400;
+constexpr int64_t kDoubleClickMs      = 500;
 constexpr int     kDoubleClickSlackPx = 8;
+
+// Chebyshev pixel distance a strip press must travel before it becomes a DRAG
+// (architect-tunable). Under pointer capture the relative-pointer stream
+// delivers every sub-pixel sensor tick as a motion event, so a physical click
+// almost always rocks the sensor a count or two; without this gate that jitter
+// would mark every click as moved and starve double-click detection. A motion
+// event below the threshold is ignored outright (moved stays false, no apply,
+// the drag stays armed); the first event AT the threshold folds the whole
+// accumulated dx because last_x still sits at press_x, and the zoom axis reads
+// absolute dy regardless — so the catch-up jump never exceeds the real hand
+// motion.
+constexpr int     kStripDragMovedThresholdPx = 3;
 
 // Hover popup state. A popup-eligible warp marker (pass marker or
 // label_ref) under the cursor shows a bottom-strip readout of its

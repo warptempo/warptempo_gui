@@ -8,6 +8,7 @@
 #include "text_editor.h"
 #include "warpmarkers.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -691,6 +692,21 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // no double-click candidate and drops any pending one.
             app.strip_double_click = StripDoubleClickCandidate{};
             end_strip_pointer_capture();
+            return;
+        }
+        // Sub-pixel capture jitter must not promote a click to a drag: while the
+        // press has not yet become a drag, apply nothing until the pointer has
+        // travelled at least the Chebyshev threshold from the press, leaving the
+        // drag armed but unmoved. The gate decides only WHETHER the press becomes
+        // a drag — once moved, it never re-engages, so dragging back near the
+        // anchor mid-drag has no dead zone. At the crossing event last_x still
+        // sits at press_x, so the first apply folds the whole accumulated dx and
+        // the zoom axis reads the absolute dy — the catch-up never exceeds the
+        // real hand motion.
+        if (!app.strip_drag.moved &&
+            std::max(std::abs(mouse_x - app.strip_drag.press_x),
+                     std::abs(mouse_y - app.strip_drag.press_y)) <
+                kStripDragMovedThresholdPx) {
             return;
         }
         app.strip_drag.moved = true;
