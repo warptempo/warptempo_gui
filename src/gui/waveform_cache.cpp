@@ -501,11 +501,10 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
         in.vp_start, in.vp_end,
         in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
 
-    // Publish the displayed fingerprint NOW so this same tick's
-    // maybe_rebuild_stem_cache / maybe_rebuild_flag_cache read the
-    // current viewport. Keep pending_fp_* in lockstep so the next
-    // maybe_enqueue_waveform_render sees no diff and does not
-    // re-dispatch the same target on the worker.
+    // Publish the displayed fingerprint NOW so the stem/flag rebuilds at
+    // the tail of this function read the current viewport. Keep pending_fp_*
+    // in lockstep so the next maybe_enqueue_waveform_render sees no diff and
+    // does not re-dispatch the same target on the worker.
     wf_cache.fp_vp_start     = in.vp_start;
     wf_cache.fp_vp_end       = in.vp_end;
     wf_cache.fp_area_w       = in.area_w;
@@ -514,14 +513,6 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.fp_target       = in.is_target;
     wf_cache.fp_warp_frame_map_hash = in.warp_frame_map_hash;
     wf_cache.fp_warp_frame_map      = in.warp_frame_map;
-    // The event-sync hit-map advance does NOT happen here: this synchronous
-    // rebuild publishes the plate fingerprint, but the item caches (stems/flags)
-    // rebuild against this map only when maybe_rebuild_stem_cache /
-    // maybe_rebuild_flag_cache run — this same tick, but after — and the hit map
-    // advances only when the paint pass commits that rebuild. The rebuilds
-    // stage; on_redraw promotes at the committing frame (the two-phase commit —
-    // ruling at the selector).
-
     wf_cache.pending_fp_vp_start     = in.vp_start;
     wf_cache.pending_fp_vp_end       = in.vp_end;
     wf_cache.pending_fp_area_w       = in.area_w;
@@ -532,6 +523,26 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
 
     const GuiRect a = waveform_area(app);
     gui.invalidate_region(0, 0, app.width, a.y + a.h);
+
+    // Rebuild the overlay caches inline, against the fingerprint just
+    // published. Without this the plate leads its overlays: the run loop
+    // services the wl_display fd (the input event AND the frame callback that
+    // paints) before the timerfd tick that would run the on_tick dirty-check,
+    // so the paint blits the fresh plate over stem/flag/chip/triangle caches
+    // that are one or more ticks stale — and during a zoom key-repeat or wheel
+    // torrent the plate leads the overlays by the whole gesture. Doing the
+    // rebuilds here makes plate, fingerprint, stem cache, flag cache, and the
+    // staged displayed hit map all commit before the next paint — the
+    // same-frame consistency every kick_waveform_sync caller expects (zoom,
+    // Home/End, center-on-playhead, tab/view swaps, drops/deletes/commits,
+    // undo/redo). Both rebuilds are fingerprint-guarded, so they are cheap
+    // no-ops when the caches already match. The two functions also stage the
+    // event-sync displayed hit map (promoted when on_redraw commits the
+    // rebuild — the two-phase commit, ruling at the selector); running them
+    // here closes the hit-test staleness window that otherwise lasts until the
+    // next tick.
+    maybe_rebuild_stem_cache();
+    maybe_rebuild_flag_cache();
 }
 
 // -- Incremental pan (shift-and-strip) -----------------------------------
@@ -615,13 +626,11 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
     // guarantees a correct frame (the rare fast-flick case), and keeps the
     // inline strip work strictly bounded to at most a window width.
     if (delta_px >= plate_w || delta_px <= -plate_w) {
-        force_synchronous_waveform_rebuild();
-        // force_synchronous_waveform_rebuild publishes the fingerprint but
-        // leaves the stem / flag rebuild to a later tick; do it now so the
-        // fast-flick frame is fully consistent rather than relying on an
+        // force_synchronous_waveform_rebuild rebuilds the stem and flag
+        // caches inline at its tail, so the fast-flick frame is already fully
+        // consistent — plate and overlays commit together, no reliance on an
         // on_tick that may not run before the next paint.
-        maybe_rebuild_stem_cache();
-        maybe_rebuild_flag_cache();
+        force_synchronous_waveform_rebuild();
         return;
     }
 
@@ -689,9 +698,7 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
     // lockstep with the plate. Without this they lag until the next on_tick
     // dirty-check, and a continuous drag shows the markers and their dim
     // trailing the waveform by a step. Both rebuilds are fingerprint-guarded
-    // and cheap; this mirrors force_synchronous_waveform_rebuild, which
-    // likewise publishes the fingerprint so the same-tick stem/flag rebuild
-    // reads the new viewport.
+    // and cheap; this is the same inline rebuild the synchronous path runs.
     maybe_rebuild_stem_cache();
     maybe_rebuild_flag_cache();
 
