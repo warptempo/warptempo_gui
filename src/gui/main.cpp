@@ -328,6 +328,18 @@ int64_t live_total_frames(const AppState& a, const GuiAudio& audio) {
     return active_display_context(a, audio).domain_total_frames;
 }
 
+double clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level) {
+    // The one owner of the level-bounds pair. No live frames (loading states) →
+    // return the level untouched: effective_max_zoom_level collapses to kMinZoom
+    // on a zero total, and stomping the level the load path is mid-assignment
+    // would be wrong. Otherwise clamp into [kMinZoom, per-file ceiling].
+    const int64_t total = live_total_frames(a, audio);
+    if (total <= 0) return level;
+    return std::clamp(level, kMinZoom,
+                      effective_max_zoom_level(waveform_area(a).w, total,
+                                               audio.sample_rate()));
+}
+
 int64_t samples_visible(const AppState& a, const GuiAudio& audio) {
     const GuiRect area = waveform_area(a);
     const double spp = samples_per_pixel_at(
@@ -353,6 +365,17 @@ std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
 }
 
 void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
+    // Level ceiling (the chokepoint): every zoom write funnels through this
+    // function immediately after assigning zoom_level — the same single-funnel
+    // argument that placed the viewport grid snap below — so a per-file ceiling
+    // assigned above (0/c full-out, the settings editor's active zoom commit,
+    // the Ctrl+Tab band restore, a fresh short project's second tab) can never
+    // rest above the effective ceiling. The scattered tick/on_resize reclamps
+    // that used to own this were the leaking surface; they now only trigger and
+    // delegate here. Clamped BEFORE samples_visible below so `visible` reflects
+    // the final level. clamp_zoom_level no-ops while loading.
+    a.zoom_level = clamp_zoom_level(a, audio, a.zoom_level);
+
     const int64_t visible = samples_visible(a, audio);
     const int64_t total   = live_total_frames(a, audio);
     if (visible >= total) {
@@ -819,19 +842,15 @@ int main(int argc, char** argv) {
             const int64_t lt = live_total_frames(app, audio);
             if (app.last_tick_live_total != lt) {
                 app.last_tick_live_total = lt;
-                bool changed = false;
-                const GuiRect area = waveform_area(app);
-                const double max_l = effective_max_zoom_level(
-                    area.w, lt, audio.sample_rate());
-                const double clamped = std::min(app.zoom_level, max_l);
-                if (clamped != app.zoom_level) {
-                    app.zoom_level = clamped;
-                    changed = true;
-                }
-                const int64_t old_vp = app.viewport_start_sample;
+                // The level ceiling and the viewport clamp both live in
+                // clamp_viewport_start now; the tick keeps only its TRIGGER role
+                // (a live-total change must repair geometry without user input)
+                // and detects movement for the discrete-rebuild side effects.
+                const double  old_zoom = app.zoom_level;
+                const int64_t old_vp   = app.viewport_start_sample;
                 clamp_viewport_start(app, audio);
-                if (app.viewport_start_sample != old_vp) changed = true;
-                if (changed) {
+                if (app.zoom_level != old_zoom ||
+                    app.viewport_start_sample != old_vp) {
                     viewport.invalidate_waveform_area();
                     viewport.invalidate_timestamp_area();
                     viewport.kick_waveform_sync();

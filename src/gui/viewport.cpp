@@ -182,6 +182,13 @@ void Viewport::move_playhead_pixels(int delta_px) {
 // share exactly the same logic.
 void Viewport::apply_zoom_change(double new_zoom_level) {
     if (audio.total_frames() <= 0) return;
+    // Pre-clamp the requested level to the per-file window so (a) a c/0 request
+    // at a short file's ceiling is a TRUE no-op (equal after clamp → early
+    // return) rather than assign-then-revert, and (b) the centering `visible`
+    // below is computed at the FINAL level. clamp_viewport_start re-applies the
+    // identical clamp as the chokepoint; this only sharpens the no-op detection
+    // and the centering math here.
+    new_zoom_level = clamp_zoom_level(app, audio, new_zoom_level);
     if (new_zoom_level == app.zoom_level) return;
 
     // Capture the scanner's pre-reflow pixel-x under the OLD viewport so

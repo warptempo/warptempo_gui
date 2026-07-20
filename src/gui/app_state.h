@@ -1236,6 +1236,12 @@ inline int64_t playhead_image_of_authored_frame(const AppState& a,
 double  effective_max_zoom_level(int waveform_width_px,
                                  int64_t total_frames,
                                  int sample_rate);
+// Clamp a requested zoom level into the per-file window [kMinZoom, effective
+// per-file ceiling]. The single owner of the level-bounds pair, shared by the
+// clamp_viewport_start chokepoint and apply_zoom_change's pre-clamp. A no-op
+// while loading (no live frames), so it cannot stomp a level the load path is
+// mid-assignment.
+double  clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level);
 std::pair<long long, long long> compute_trim_samples(
     const AppState& a, long long total_frames);
 GuiRect timestamp_invalidate_rect(const AppState& a);

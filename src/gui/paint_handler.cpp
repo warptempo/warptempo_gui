@@ -802,17 +802,13 @@ void GuiPaintHandler::on_resize(int w, int h) {
     app.height = h;
     if (app.loading || audio.total_frames() <= 0) return;
 
-    // A zoom level valid at the old width may show more samples than the file
-    // at the new width — clamp down to the per-file effective ceiling (full
-    // zoom-out, whole song visible; clamp_viewport_start parks the start at 0).
-    // live_total_frames returns the warp_frame_map-derived deformed total in
-    // target view so the ceiling is consistent with the deformed timeline's
-    // length.
-    const double max_l = effective_max_zoom_level(
-        waveform_area(app).w, live_total_frames(app, audio), audio.sample_rate());
-    if (app.zoom_level > max_l) {
-        app.zoom_level = max_l;
-        if (playback.is_playing()) playback.resync_predictor();
-    }
+    // A zoom level valid at the old width may exceed the per-file effective
+    // ceiling at the new width. The level ceiling and the viewport clamp both
+    // live in clamp_viewport_start now; the resize keeps only its TRIGGER role
+    // and delegates. When the level actually moved the reflow changed spp under
+    // the playback predictor, so re-anchor it.
+    const double old_zoom = app.zoom_level;
     clamp_viewport_start(app, audio);
+    if (app.zoom_level != old_zoom && playback.is_playing())
+        playback.resync_predictor();
 }
