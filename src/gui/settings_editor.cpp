@@ -199,6 +199,15 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             viewport.apply_zoom_change(v);
         } else {
             if (v == band.zoom_level) { unchanged(); return true; }
+            // Stored verbatim, unclamped against today's per-file effective
+            // ceiling: the ceiling is width- and domain-dependent (a narrower
+            // window raises it; target view computes it against the deformed
+            // total), and this parked band activates later under whatever
+            // width and view are live then, so a store-time clamp against the
+            // current context could destroy a value honorable at activation.
+            // Parked zoom is display-scratch like the persisted
+            // viewport/playhead fields -- clamp_viewport_start's level-clamp
+            // is the sole owner of honoring it, at tab-in.
             band.zoom_level = v;
         }
         applied(); return true;

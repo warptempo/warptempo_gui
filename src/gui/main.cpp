@@ -378,7 +378,9 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     // rest above the effective ceiling. The scattered tick/on_resize reclamps
     // that used to own this were the leaking surface; they now only trigger and
     // delegate here. Clamped BEFORE samples_visible below so `visible` reflects
-    // the final level. clamp_zoom_level no-ops while loading.
+    // the final level. clamp_zoom_level no-ops while loading. Parked (inactive-
+    // tab) ViewState bands deliberately store zoom requests verbatim and are
+    // governed here only once they go live -- at Ctrl+Tab restore or tab-in.
     a.zoom_level = clamp_zoom_level(a, audio, a.zoom_level);
 
     const int64_t visible = samples_visible(a, audio);
