@@ -807,10 +807,10 @@ void GuiPaintHandler::on_resize(int w, int h) {
     // live_total_frames returns the warp_frame_map-derived deformed total in
     // target view so the cap is consistent with the deformed timeline's
     // length.
-    const int max_num = max_valid_numeric_level(
+    const double max_l = max_valid_zoom_level(
         waveform_area(app).w, live_total_frames(app, audio), audio.sample_rate());
     if (app.zoom_level != kFitFileLevel) {
-        if (max_num < 0 || app.zoom_level > max_num) {
+        if (max_l < kMinNumericLevel || app.zoom_level > max_l) {
             app.zoom_level = kFitFileLevel;
             app.viewport_start_sample = 0;
             if (playback.is_playing()) playback.resync_predictor();

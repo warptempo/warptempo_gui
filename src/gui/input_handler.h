@@ -455,6 +455,15 @@ private:
     // warpmarkers otherwise.
     void cycle_marker_focus(bool forward);
 
+    // Jump the playhead directly onto the currently focused marker
+    // (app.last_selected_marker), stopping playback and recentering the
+    // viewport on it at the current zoom. Returns true when a marker was
+    // focused and the jump happened, false (leaving the playhead alone) when
+    // there is none. This is the shared jump tail of cycle_marker_focus (the
+    // Tab family) and the `c` gesture — the ONLY two routes that land the
+    // playhead exactly on a marker.
+    bool jump_playhead_to_focused_marker();
+
     // Esc-cancel handlers: while a render or queued batch is in flight, Esc
     // cancels it. Returns true if it consumed the key (on_key then returns).
     // Routed after the editor modal (which cancels an active edit on Esc

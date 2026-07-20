@@ -65,7 +65,7 @@ struct AuthoringSnapshot {
     // clamps them into the entry's own map domain before writing (a sweep
     // cell's rewritten markers can give the cell a shorter target axis).
     int64_t view_viewport_start_frame = 0;   // target-axis frames
-    int     view_zoom_level           = 0;   // persisted zoom vocabulary
+    double  view_zoom_level           = 0.0; // persisted zoom vocabulary
     int64_t view_playhead_frame       = 0;   // target-axis frames
 };
 

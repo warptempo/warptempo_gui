@@ -156,12 +156,13 @@ bool GuiFileLoader::load_file(const std::string& path) {
 
     app.playhead_cursor_sample       = 0;
     app.viewport_start_sample = 0;
-    const int max_num = max_valid_numeric_level(
+    const double max_l = max_valid_zoom_level(
         waveform_area(app).w, audio.total_frames(), audio.sample_rate());
     // Open at the 2.4 s snap level for normal files; fall back to the
-    // deepest available level for files too short to support it.
-    app.zoom_level = (max_num >= kSnapZoomLevel) ? kSnapZoomLevel
-                   : ((max_num >= 0) ? kMinNumericLevel : kFitFileLevel);
+    // deepest available level for files too short to support it, or fit-file
+    // when no numeric level is valid at all.
+    app.zoom_level = (max_l >= kSnapZoomLevel) ? kSnapZoomLevel
+                   : ((max_l >= kMinNumericLevel) ? kMinNumericLevel : kFitFileLevel);
     clamp_viewport_start(app, audio);
 
     // Reset playback bookkeeping; the device is brought up after markers

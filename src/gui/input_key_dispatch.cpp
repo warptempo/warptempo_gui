@@ -1431,8 +1431,17 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // editor's `follow=` commit.
         playback_lifecycle.set_follow_mode(!app.follow_mode);
         break;
-    case GuiKeys::C:      viewport.apply_zoom_change(kSnapZoomLevel);
-                    viewport.center_viewport_on_playhead();    break;
+    case GuiKeys::C:
+        // Snap to the ideal warp-authoring zoom (kSnapZoomLevel). When a
+        // marker is focused, first jump the playhead exactly onto it — the
+        // same jump the Tab family runs, after the same last-selected repair —
+        // then snap zoom and center on it; with no focused marker, keep the
+        // plain snap-and-center-on-playhead behavior.
+        selection.repair_last_selected();
+        jump_playhead_to_focused_marker();
+        viewport.apply_zoom_change(kSnapZoomLevel);
+        viewport.center_viewport_on_playhead();
+        break;
     case GuiKeys::Home:   playback_lifecycle.stop_playback_if_playing();
                     viewport.move_playhead_to(viewport.trim_begin_sample());
                     break;

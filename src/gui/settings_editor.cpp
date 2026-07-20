@@ -190,7 +190,10 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         applied(); return true;
     }
     if (suffix == "zoom") {
-        const int v = gv.i;
+        // validate_gui_setting already accepted the {0} u [1, 10] double
+        // vocabulary (fit-file sentinel or a numeric level exponent) and
+        // red-flashed anything else, 0.5 included; gv.d carries the level.
+        const double v = gv.d;
         if (active) {
             if (v == app.zoom_level) { unchanged(); return true; }
             viewport.apply_zoom_change(v);

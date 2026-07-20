@@ -31,18 +31,20 @@ class GuiAudio;
 // persisted zoom vocabulary the whole-settings schema enforces in both
 // products — and app_state.h re-exports them through the include above.
 //
-// Bare-digit keys are unbound for zoom: only `0` toggles between fit-file
-// and the snap level, and `C` jumps to snap zoom centered on the playhead.
-// Smaller numeric level = less file per window = more zoomed in; level 0 =
-// fit-file (most file possible). kMinNumericLevel is the deepest level
-// continuous manual zoom-in can reach (1.2 s); kSnapZoomLevel is the level
-// every snap/toggle gesture lands on (2.4 s, one step shallower).
-constexpr int kSnapZoomLevel    = 2;   // 2.4 s — snap zoom; manual
-                                       // zoom-in can go one step deeper to
-                                       // kMinNumericLevel (1.2 s)
-// Size of the ms-per-pixel table in main.cpp: one sentinel slot at index 0
-// plus the numeric levels.
-constexpr int kZoomTableSize    = kMaxNumericLevel + 1;
+// The zoom level is a real-valued exponent resting anywhere in
+// {kFitFileLevel} u [kMinNumericLevel, kMaxNumericLevel] (Ableton-style free
+// rest): manual zoom walks it by whole steps from its current, possibly
+// fractional, rung. Bare-digit keys are unbound for zoom: only `0` toggles
+// between fit-file and the snap level, and `C` jumps to snap zoom centered on
+// the playhead (or on the focused marker). Smaller numeric level = less file
+// per window = more zoomed in; level 0.0 = fit-file (most file possible).
+// kMinNumericLevel is the deepest zoom-in the manual walk can reach (1.2 s);
+// kSnapZoomLevel is the exact rest point every snap/toggle gesture lands on
+// (2.4 s, one step shallower), where the zoom-2 authoring-grid bit-exactness
+// claims hold.
+constexpr double kSnapZoomLevel = 2.0;  // 2.4 s — snap zoom; manual
+                                        // zoom-in can go one step deeper to
+                                        // kMinNumericLevel (1.2 s)
 
 // Viewport lead/overlap fraction, expressed as a divisor of the visible
 // span. Follow mode keeps this much of the window as lead context when it
@@ -475,7 +477,7 @@ struct TrimState {
 // AppState; these slots are the persistent snapshots.
 struct ViewState {
     int64_t viewport_start_sample      = 0;
-    int     zoom_level                 = 0;
+    double  zoom_level                 = 0.0;
     int64_t playhead_cursor_sample     = 0;
 
     std::set<int> warp_selected;
@@ -509,7 +511,7 @@ struct AppState {
     // to/from these fields only at view-switch boundaries (see active_views).
     // Do not collapse this into a projection — the duplication is the design.
     int64_t playhead_cursor_sample = 0;
-    int     zoom_level             = 0;
+    double  zoom_level             = 0.0;
     int64_t viewport_start_sample  = 0;
     bool    follow_mode            = true;
 
@@ -963,7 +965,7 @@ double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
 // that need a domain OTHER than the active display context's (e.g. the
 // dispatch-time snapshot clamping queue-moment view keys against a cell's own
 // map domain).
-double  samples_per_pixel_at(int zoom_level,
+double  samples_per_pixel_at(double zoom_level,
                              int waveform_width_px,
                              int64_t total_frames,
                              int sample_rate);
@@ -1156,9 +1158,9 @@ inline int64_t playhead_image_of_authored_frame(const AppState& a,
         a, audio, authored_frame), a, audio);
 }
 
-int     max_valid_numeric_level(int waveform_width_px,
-                                int64_t total_frames,
-                                int sample_rate);
+double  max_valid_zoom_level(int waveform_width_px,
+                             int64_t total_frames,
+                             int sample_rate);
 std::pair<long long, long long> compute_trim_samples(
     const AppState& a, long long total_frames);
 GuiRect timestamp_invalidate_rect(const AppState& a);

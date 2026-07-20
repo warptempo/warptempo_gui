@@ -3,6 +3,7 @@
 #include "app_state.h"
 #include "env_fingerprint.h"
 #include "frame_format.h"
+#include "value_format.h"
 
 #include <cerrno>
 #include <cstdio>
@@ -169,8 +170,12 @@ std::optional<std::string> format_nonengine_value(
                           static_cast<long long>(gui.tab_a.viewport_start_sample));
             return std::string(buf);
         case SettingKind::ZoomLevel_A:
-            std::snprintf(buf, sizeof(buf), "%d", gui.tab_a.zoom_level);
-            return std::string(buf);
+            // Zoom is a real-valued exponent: the min-0 shortest round-trip
+            // double form (format_value_double(v, 0)) is the ONE loadable
+            // spelling, matched byte-for-byte by validate_gui_setting's zoom
+            // arm. An integer rest (0 / 1..10) writes as its plain digits, so
+            // every historical .settings zoom re-serializes unchanged.
+            return format_value_double(gui.tab_a.zoom_level, 0);
         case SettingKind::Playhead_A:
             std::snprintf(buf, sizeof(buf), "%lld",
                           static_cast<long long>(gui.tab_a.playhead_cursor_sample));
@@ -180,8 +185,7 @@ std::optional<std::string> format_nonengine_value(
                           static_cast<long long>(gui.tab_b.viewport_start_sample));
             return std::string(buf);
         case SettingKind::ZoomLevel_B:
-            std::snprintf(buf, sizeof(buf), "%d", gui.tab_b.zoom_level);
-            return std::string(buf);
+            return format_value_double(gui.tab_b.zoom_level, 0);
         case SettingKind::Playhead_B:
             std::snprintf(buf, sizeof(buf), "%lld",
                           static_cast<long long>(gui.tab_b.playhead_cursor_sample));

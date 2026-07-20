@@ -552,20 +552,27 @@ void GuiInputHandler::cycle_marker_focus(bool forward) {
     if (forward) selection.select_next_marker();
     else         selection.select_prev_marker();
 
+    // The select above establishes the focused marker; the shared jump tail
+    // moves the playhead onto it and recenters. Byte-identical to the `c`
+    // gesture's marker jump.
+    jump_playhead_to_focused_marker();
+}
+
+bool GuiInputHandler::jump_playhead_to_focused_marker() {
     // The walk is markers-only (trim is not a cycle stop). The playhead moves
     // to the focused marker's source frame unconditionally, and the viewport
     // always recenters on it (below) — follow mode does not gate the cycle.
     int64_t src_sample = 0;
     {
         const int idx = app.last_selected_marker;
-        if (idx < 0) return;
+        if (idx < 0) return false;
         if (app.active_markers_view == 'P') {
             const auto& tv = app.phaseresetmarkers.markers();
-            if (idx >= static_cast<int>(tv.size())) return;
+            if (idx >= static_cast<int>(tv.size())) return false;
             src_sample = tv[idx].time_frame;
         } else {
             const auto& mv = app.warpmarkers.markers();
-            if (idx >= static_cast<int>(mv.size())) return;
+            if (idx >= static_cast<int>(mv.size())) return false;
             src_sample = mv[idx].time_frame;
         }
     }
@@ -621,6 +628,7 @@ void GuiInputHandler::cycle_marker_focus(bool forward) {
         viewport.invalidate_playhead_columns(old_px, new_px);
     }
     viewport.invalidate_timestamp_area();
+    return true;
 }
 
 // Shared wheel handler. Verbatim from the lambda at the original

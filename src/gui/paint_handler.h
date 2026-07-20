@@ -39,8 +39,8 @@ class GuiWaveformWorker;
 // -- Constants used by paint code ----------------------------------------
 //
 // Declared here so paint_handler.cpp can reach them. Other constants
-// (kMarkerHitHalfPx, kZoomMsPerPixel) are paint-handler-independent and
-// live in main.cpp's anonymous namespace; playhead_half_px() lives in
+// (kMarkerHitHalfPx) is paint-handler-independent and
+// lives in main.cpp's anonymous namespace; playhead_half_px() lives in
 // render.h. flag_font_size_px() lives in render.h so render.cpp can reach
 // it without pulling paint_handler.h into the lower-layer include graph.
 

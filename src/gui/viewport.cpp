@@ -180,7 +180,7 @@ void Viewport::move_playhead_pixels(int delta_px) {
 // Apply a zoom change. The numeric target is derived inside; this helper
 // handles the playhead-centered viewport recompute so zoom_in/zoom_out
 // share exactly the same logic.
-void Viewport::apply_zoom_change(int new_zoom_level) {
+void Viewport::apply_zoom_change(double new_zoom_level) {
     if (audio.total_frames() <= 0) return;
     if (new_zoom_level == app.zoom_level) return;
 
@@ -233,70 +233,76 @@ void Viewport::apply_zoom_change(int new_zoom_level) {
 }
 
 void Viewport::zoom_in() {
-    const int max_num = max_valid_numeric_level(
+    const double max_l = max_valid_zoom_level(
         waveform_area(app).w, live_total_frames(app, audio), audio.sample_rate());
-    if (max_num < 0) return; // no numeric level valid; only fit-file
+    if (max_l < kMinNumericLevel) return; // no numeric level valid; only fit-file
     if (app.zoom_level == kFitFileLevel) {
-        apply_zoom_change(max_num);
+        // From fit, enter the numeric domain at the shallowest valid
+        // (continuous) level — the whole-file numeric view.
+        apply_zoom_change(max_l);
     } else if (app.zoom_level > kMinNumericLevel) {
-        apply_zoom_change(app.zoom_level - 1);
+        // One whole level deeper from the current (possibly fractional) rung,
+        // clamped constructively at the zoom-in floor.
+        double target = app.zoom_level - 1.0;
+        if (target < kMinNumericLevel) target = kMinNumericLevel;
+        apply_zoom_change(target);
     } else {
         center_viewport_on_playhead();
     }
 }
 
 void Viewport::zoom_out() {
-    const int max_num = max_valid_numeric_level(
+    const double max_l = max_valid_zoom_level(
         waveform_area(app).w, live_total_frames(app, audio), audio.sample_rate());
     if (app.zoom_level == kFitFileLevel) return; // already fully out
-    if (max_num < 0 || app.zoom_level >= max_num) {
+    // One whole level shallower; stepping past the valid numeric ceiling (or
+    // losing every numeric level) drops to fit-file, keeping the fit transition.
+    const double target = app.zoom_level + 1.0;
+    if (max_l < kMinNumericLevel || target > max_l) {
         apply_zoom_change(kFitFileLevel);
     } else {
-        apply_zoom_change(app.zoom_level + 1);
+        apply_zoom_change(target);
     }
 }
 
 void Viewport::zoom_steps(int in_steps) {
     if (in_steps == 0) return;
     if (audio.total_frames() <= 0) return;
-    const int max_num = max_valid_numeric_level(
+    const double max_l = max_valid_zoom_level(
         waveform_area(app).w, live_total_frames(app, audio), audio.sample_rate());
 
     if (in_steps > 0) {
-        // Zoom in. Mirrors zoom_in(): no numeric level valid -> nothing to do.
-        if (max_num < 0) return;
-    } else {
-        // Zoom out. Mirrors zoom_out(): already fully out is a no-op; with no
-        // numeric level valid, the only target is fit-file.
-        if (app.zoom_level == kFitFileLevel) return;
-        if (max_num < 0) { apply_zoom_change(kFitFileLevel); return; }
-    }
-
-    // Linear ordinal over the zoom states, most-zoomed-out (fit = 0) to
-    // most-zoomed-in (numeric level 1 = max_num). A numeric level L maps to
-    // ordinal (max_num - L + 1); fit maps to 0. Single-step zoom_in/zoom_out
-    // are exactly +/-1 on this ordinal with clamping at both ends (zoom_in
-    // jumps fit -> max_num then decrements the level; zoom_out increments the
-    // level then jumps max_num -> fit), so a net detent count is a single
-    // clamped add. Clamp keeps the result inside [fit, level 1].
-    const int cur_ord = (app.zoom_level == kFitFileLevel)
-        ? 0 : (max_num - app.zoom_level + 1);
-    int new_ord = cur_ord + in_steps;
-    if (new_ord < 0)       new_ord = 0;
-    if (new_ord > max_num) new_ord = max_num;
-
-    const int target = (new_ord == 0) ? kFitFileLevel : (max_num - new_ord + 1);
-
-    if (target == app.zoom_level) {
-        // Net movement saturated with no level change. Match the single-step
-        // zoom_in() behavior of recentering on the playhead when a zoom-in is
-        // requested while already at the deepest numeric level.
-        if (in_steps > 0 && app.zoom_level == kMinNumericLevel) {
-            center_viewport_on_playhead();
+        // Zoom in by whole steps. Mirrors zoom_in(): no numeric level valid ->
+        // nothing to do. From fit the first step enters the numeric domain at
+        // the shallowest valid (continuous) level max_l, and each further step
+        // subtracts one whole level; from a numeric rest every step subtracts
+        // one. Clamp constructively into [kMinNumericLevel, max_l].
+        if (max_l < kMinNumericLevel) return;
+        double target = (app.zoom_level == kFitFileLevel)
+            ? max_l - static_cast<double>(in_steps - 1)
+            : app.zoom_level - static_cast<double>(in_steps);
+        if (target < kMinNumericLevel) target = kMinNumericLevel;
+        if (target > max_l)            target = max_l;
+        if (target == app.zoom_level) {
+            // Net movement saturated with no change. Match zoom_in()'s recenter
+            // on the playhead when a deeper zoom is asked at the deepest level.
+            if (app.zoom_level == kMinNumericLevel) center_viewport_on_playhead();
+            return;
         }
+        apply_zoom_change(target);
         return;
     }
-    apply_zoom_change(target);
+
+    // Zoom out by whole steps. Mirrors zoom_out(): already fully out is a no-op.
+    if (app.zoom_level == kFitFileLevel) return;
+    // in_steps < 0, so this adds |in_steps| whole levels. Stepping past the
+    // valid numeric ceiling (or losing every numeric level) drops to fit-file.
+    const double target = app.zoom_level - static_cast<double>(in_steps);
+    if (max_l < kMinNumericLevel || target > max_l) {
+        apply_zoom_change(kFitFileLevel);
+    } else {
+        apply_zoom_change(target);
+    }
 }
 
 void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {

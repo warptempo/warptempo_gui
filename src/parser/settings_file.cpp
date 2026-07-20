@@ -3,6 +3,7 @@
 #include "frame_format.h"
 #include "parse_text_util.h"
 #include "playback_speed_presets.h"
+#include "value_format.h"
 
 #include <cstdio>
 #include <expected>
@@ -131,13 +132,22 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
             return R(out);
         }
         if (suffix == "zoom") {
-            // Same canonical integer spelling, then the persisted zoom-level
-            // range (kFitFileLevel..kMaxNumericLevel), the writer's %d output.
-            int64_t v = 0;
-            if (!parse_authored_frame(value, v) ||
-                v < kFitFileLevel || v > kMaxNumericLevel)
+            // The zoom level is a real-valued exponent. One canonical spelling:
+            // the shortest round-trip double text the writer emits
+            // (format_value_double(v, 0), the min-0 gate the session-only
+            // bpm-bracket bounds also use), then the persisted vocabulary
+            // {kFitFileLevel} u [kMinNumericLevel, kMaxNumericLevel]. Every
+            // historical on-disk spelling ("0".."10", plain integers) is exactly
+            // its own min-0 shortest form, so old files load unchanged; a
+            // fractional rest writes e.g. "3.7" (or the full shortest-round-trip
+            // digits) and reloads bit-exactly.
+            double v = 0.0;
+            if (!parse_value_double(value, v) ||
+                format_value_double(v, 0) != value ||
+                !(v == kFitFileLevel ||
+                  (v >= kMinNumericLevel && v <= kMaxNumericLevel)))
                 return err("must be a zoom level");
-            out.i = static_cast<int>(v);
+            out.d = v;
             return R(out);
         }
         if (suffix == "read_only") {
@@ -306,7 +316,7 @@ std::expected<SettingsFile, std::string> read_settings_file(
             if (suffix == "viewport_start") {
                 tab->viewport_start = gv.i64;
             } else if (suffix == "zoom") {
-                tab->zoom = gv.i;
+                tab->zoom = gv.d;
             } else if (suffix == "playhead_cursor") {
                 tab->playhead = gv.i64;
             } else if (suffix == "read_only") {

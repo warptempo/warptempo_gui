@@ -27,7 +27,8 @@
 // so a file short of any one is hand-damaged and refuses.
 //
 // This schema owns the zoom-level range too: a zoom outside
-// kFitFileLevel..kMaxNumericLevel is refused here in both products. What
+// {kFitFileLevel} u [kMinNumericLevel, kMaxNumericLevel] is refused here in
+// both products. What
 // stays caller-side, ON TOP of this schema, is the audio-relative past-EOF
 // wall check on authored marker/trim positions, which needs the loaded
 // source's frame count this reader never sees: both loaders (GUI file_loader
@@ -42,16 +43,23 @@
 // makes its render plan fall back to rendering untrimmed.
 
 // The persisted zoom-level vocabulary, enforced by this schema in both
-// products. kFitFileLevel = 0 ("whole file visible", computed at zoom /
-// resize time, not stored as a fixed ms/pixel); numeric levels run
-// kMinNumericLevel..kMaxNumericLevel inclusive, each exactly 2x the
-// previous in ms-per-pixel (the table itself is GUI-side, in main.cpp;
-// app_state.h derives its table size from kMaxNumericLevel). The constants
-// live here rather than in the GUI so an out-of-vocabulary persisted zoom
-// refuses identically in the GUI and the CLI.
-constexpr int kFitFileLevel    = 0;
-constexpr int kMinNumericLevel = 1;
-constexpr int kMaxNumericLevel = 10;
+// products. The zoom LEVEL is a real-valued exponent that rests anywhere in
+// {kFitFileLevel} u [kMinNumericLevel, kMaxNumericLevel]: kFitFileLevel = 0.0
+// ("whole file visible", a MODE, computed at zoom / resize time, not a point
+// on the exponent curve — the open interval (0, 1) is unrepresentable at rest
+// and refused on disk), and numeric levels rest continuously over
+// [kMinNumericLevel, kMaxNumericLevel]. ms-per-pixel(level) =
+// 0.625 * 2^(level-1) (GUI-side, in main.cpp's samples_per_pixel_at), so an
+// integer level reproduces the historical 2x-per-step ladder exactly. The
+// constants live here rather than in the GUI so an out-of-vocabulary persisted
+// zoom refuses identically in the GUI and the CLI.
+//
+// kFitFileLevel is the fit-file SENTINEL: it is compared for and assigned only
+// as this literal constant (never derived), so the fit-file test stays an
+// exact double equality everywhere.
+constexpr double kFitFileLevel    = 0.0;
+constexpr double kMinNumericLevel = 1.0;
+constexpr double kMaxNumericLevel = 10.0;
 
 // One tab's trim in the .settings schema. Positions are whole source frames
 // (int64_t), decoded via parse_authored_frame (frame_format.h). A has_* of
@@ -69,7 +77,7 @@ struct SettingsTrim {
 // read-only flag, and the trim pair.
 struct SettingsFileTab {
     int64_t viewport_start = 0;
-    int     zoom           = 0;
+    double  zoom           = 0.0;
     int64_t playhead       = 0;
     bool    read_only      = false;
     SettingsTrim trim;
@@ -157,10 +165,9 @@ std::optional<std::expected<void, std::string>> try_engine_key(
 struct GuiSettingValue {
     bool        b    = false;   // follow, tab_X_read_only
     char        c    = 0;       // active_audio_view / _markers_view / _tab_view (S/T, W/P, A/B)
-    int         i    = 0;       // tab_X_zoom
     int64_t     i64  = 0;       // tab_X_viewport_start / _playhead_cursor / _trim_*
     float       f    = 0.0f;    // playback_speed
-    double      d    = 0.0;     // font_size
+    double      d    = 0.0;     // font_size, tab_X_zoom
     bool trim_unset  = false;   // tab_X_trim_*: the value was -1 (bound unset)
     std::string text;           // audio_player, the four *_hash keys
 };

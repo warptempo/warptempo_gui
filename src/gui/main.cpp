@@ -92,26 +92,12 @@ namespace {
 // kMarkerHitHalfPx lives in app_state.h so the hit_test_* free
 // functions and the GuiInputHandler mouse handler can reach it.
 
-// ms-per-pixel for each numeric zoom level. Level 1 is most zoomed in;
-// level 0 is the fit-file sentinel (table bypassed in samples_per_pixel_at).
-// Index N holds the ms/px for level N; each numeric step is exactly 2x the
-// previous. kZoomTableSize (in app_state.h) is the size of this table.
-constexpr double kZoomMsPerPixel[] = {
-    -1.0,    // [0]  fit-file sentinel
-     0.625,  // [1]  1.2 s  — deepest, manual zoom-in only.
-     1.25,   // [2]  2.4 s  — snap level (kSnapZoomLevel)
-     2.5,    // [3]  4.8 s
-     5.0,    // [4]  9.6 s
-    10.0,    // [5]  19.2 s
-    20.0,    // [6]  38.4 s
-    40.0,    // [7]  76.8 s
-    80.0,    // [8]  153.6 s
-   160.0,    // [9]  307.2 s
-   320.0,    // [10] 614.4 s
-};
-static_assert(sizeof(kZoomMsPerPixel) / sizeof(kZoomMsPerPixel[0])
-              == static_cast<size_t>(kZoomTableSize),
-              "kZoomMsPerPixel size must match kZoomTableSize");
+// ms-per-pixel is a continuous function of the zoom level (a real-valued
+// exponent): ms_per_px(level) = 0.625 * 2^(level - 1), computed directly in
+// samples_per_pixel_at. Level 1 is the deepest zoom-in (0.625 ms/px, 1.2 s);
+// each whole step is exactly 2x the previous, so the integer rungs reproduce
+// the historical ladder (0.625, 1.25, 2.5, ... 320 ms/px at levels 1..10)
+// bit-for-bit. Level 0.0 is the fit-file sentinel (bypassed below).
 
 // playhead_half_px() (half-width of the column invalidated around a playhead
 // position) now lives in render.h as a single shared inline accessor,
@@ -297,7 +283,7 @@ std::pair<long long, long long> compute_trim_samples(
     return {begin, end};
 }
 
-double samples_per_pixel_at(int zoom_level,
+double samples_per_pixel_at(double zoom_level,
                             int waveform_width_px,
                             int64_t total_frames,
                             int sample_rate) {
@@ -308,31 +294,34 @@ double samples_per_pixel_at(int zoom_level,
         if (spp < 1e-9) spp = 1e-9;
         return spp;
     }
-    // Documents the contract: the fit-file branch above must catch level 0;
-    // the -1.0 sentinel at kZoomMsPerPixel[0] would surface as garbage spp
-    // otherwise. Numeric levels are kMinNumericLevel..kMaxNumericLevel.
+    // Documents the contract: the fit-file branch above must catch level 0.0
+    // (its spp is total/width, not a point on the exponent curve). Numeric
+    // levels rest continuously over [kMinNumericLevel, kMaxNumericLevel];
+    // ms_per_px = 0.625 * 2^(level - 1).
     assert(zoom_level >= kMinNumericLevel &&
            zoom_level <= kMaxNumericLevel);
-    return kZoomMsPerPixel[zoom_level] *
+    return 0.625 * std::exp2(zoom_level - 1.0) *
            static_cast<double>(sample_rate) / 1000.0;
 }
 
-// Largest numeric level L (in [kMinNumericLevel, kMaxNumericLevel]) whose
-// samples_visible does not exceed total_frames. Returns -1 if even
-// kMinNumericLevel shows more than the file — in which case fit-file is the
-// only valid level.
-int max_valid_numeric_level(int waveform_width_px,
+// Largest real level L (in [kMinNumericLevel, kMaxNumericLevel]) whose
+// samples_visible does not exceed total_frames, as a CONTINUOUS bound.
+// samples_visible(L) = 0.625 * 2^(L-1) * sr/1000 * width <= total  solves to
+// L <= 1 + log2(total * 1000 / (0.625 * sr * width)); the result is capped at
+// kMaxNumericLevel (the zoom-out ceiling). A value below kMinNumericLevel means
+// even the deepest zoom-out shows more than the file, so fit-file is the only
+// valid state — callers treat "< kMinNumericLevel" the way the old integer form
+// treated its -1 return.
+double max_valid_zoom_level(int waveform_width_px,
                             int64_t total_frames,
                             int sample_rate) {
-    int best = -1;
-    for (int L = kMinNumericLevel; L <= kMaxNumericLevel; L++) {
-        const double spp =
-            samples_per_pixel_at(L, waveform_width_px, total_frames, sample_rate);
-        const double visible = spp * waveform_width_px;
-        if (visible <= static_cast<double>(total_frames)) best = L;
-        else break; // table is monotonic
-    }
-    return best;
+    if (waveform_width_px <= 0 || total_frames <= 0 || sample_rate <= 0)
+        return kMinNumericLevel - 1.0;  // degenerate: fit-file only
+    const double raw = 1.0 + std::log2(
+        static_cast<double>(total_frames) * 1000.0 /
+        (0.625 * static_cast<double>(sample_rate) *
+         static_cast<double>(waveform_width_px)));
+    return std::min(raw, kMaxNumericLevel);
 }
 
 int64_t live_total_frames(const AppState& a, const GuiAudio& audio) {
@@ -834,11 +823,11 @@ int main(int argc, char** argv) {
                 app.last_tick_live_total = lt;
                 bool changed = false;
                 const GuiRect area = waveform_area(app);
-                const int max_l = max_valid_numeric_level(
+                const double max_l = max_valid_zoom_level(
                     area.w, lt, audio.sample_rate());
-                if (app.zoom_level >= kMinNumericLevel) {
-                    const int clamped =
-                        (max_l < kMinNumericLevel) ? 0   // fit-file only
+                if (app.zoom_level >= kMinNumericLevel) {  // fit (0.0) excluded
+                    const double clamped =
+                        (max_l < kMinNumericLevel) ? kFitFileLevel
                                                    : std::min(app.zoom_level, max_l);
                     if (clamped != app.zoom_level) {
                         app.zoom_level = clamped;

@@ -87,7 +87,7 @@ struct Viewport {
     // Viewport mutators.
     void move_playhead_to(int64_t new_sample);
     void move_playhead_pixels(int delta_px);
-    void apply_zoom_change(int new_zoom_level);
+    void apply_zoom_change(double new_zoom_level);
     void zoom_in();
     void zoom_out();
     // Coalesced zoom: apply |in_steps| zoom levels in a single shot.
