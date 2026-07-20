@@ -6,7 +6,6 @@
 #include <set>
 
 class GuiAudio;
-class GuiPlayback;
 
 // Selection-cluster operations, extracted from main.cpp's inline
 // lambdas. The struct holds references to the long-lived state the methods
@@ -16,16 +15,13 @@ struct Selection {
     AppState&       app;
     const GuiAudio& audio;
     Viewport&       viewport;
-    GuiPlayback&    playback;
 
     Selection(AppState&       app_,
               const GuiAudio& audio_,
-              Viewport&       viewport_,
-              GuiPlayback&    playback_)
+              Viewport&       viewport_)
         : app(app_),
           audio(audio_),
-          viewport(viewport_),
-          playback(playback_) {}
+          viewport(viewport_) {}
 
     void repair_last_selected();
     void set_single_selection(int idx);
@@ -36,6 +32,4 @@ struct Selection {
     void select_next_marker();
     void select_prev_marker();
     void prune_live_selection();
-    void sync_playhead_to_last_selected();
-    void jump_playhead_to(int64_t target_sample);
 };

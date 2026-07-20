@@ -343,7 +343,8 @@ void MarkerDragOps::commit_drag() {
     // The playhead is left parked (see the header comment): the drag moves
     // the marker only, so a re-warped plate in target view lands without any
     // playhead move. Only the Tab family and `c` sync the playhead onto a
-    // marker; undo's own restore re-syncs via sync_playhead_to_last_selected.
+    // marker; undo/redo selects the touched marker but leaves the playhead
+    // parked too.
     // Same discrete-warp_frame_map-change class as drop_marker (see comment
     // there): the commit re-warps the plate, so render it synchronously
     // — the re-warped waveform and the parked playhead land in one frame.

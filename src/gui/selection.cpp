@@ -1,7 +1,6 @@
 #include "selection.h"
 
 #include "audio.h"
-#include "playback.h"
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
 
@@ -198,52 +197,4 @@ void Selection::prune_live_selection() {
                 ? -1
                 : *app.selected_markers.rbegin();
     }
-}
-
-// Land the playhead on the last-selected marker's displayed position. The
-// live marker gestures (nudge, drag) no longer call this — they leave the
-// playhead parked while the marker moves under it — so the sole caller is the
-// undo/redo restore, which lands the playhead on the marker its history entry
-// touched. Tab-family focus and `c` land the playhead on a marker through
-// jump_playhead_to_focused_marker (input_handler.cpp), not this path.
-void Selection::sync_playhead_to_last_selected() {
-    const int sr = audio.sample_rate();
-    if (sr <= 0) return;
-    const int last = app.last_selected_marker;
-    if (last < 0) return;
-
-    int64_t src_sample = 0;
-    if (app.active_markers_view == 'P') {
-        const auto& tv = app.phaseresetmarkers.markers();
-        if (last >= static_cast<int>(tv.size())) return;
-        src_sample = tv[last].time_frame;
-    } else {
-        const auto& mv = app.warpmarkers.markers();
-        if (last >= static_cast<int>(mv.size())) return;
-        src_sample = mv[last].time_frame;
-    }
-    // Target view: the marker time_frame is source-domain but the
-    // playhead is active-domain. Forward-translate so the playhead
-    // lands at the marker's displayed (target-frame) position.
-    const int64_t target_sample =
-        source_frame_to_active_domain(app, audio, src_sample);
-    jump_playhead_to(target_sample);
-}
-
-void Selection::jump_playhead_to(int64_t target_sample) {
-    // Playhead domain clamp through clamp_playhead_to_live_domain (the
-    // domain ruling): the playhead rests in [0, total - 1], the one inclusive
-    // authored domain every marker column and both trim bounds share.
-    target_sample = clamp_playhead_to_live_domain(target_sample, app, audio);
-    app.playhead_cursor_sample = target_sample;
-
-    const int64_t visible = samples_visible(app, audio);
-    const bool offscreen =
-        target_sample <  app.viewport_start_sample ||
-        target_sample >= app.viewport_start_sample + visible;
-    if (offscreen) {
-        app.viewport_start_sample = target_sample - visible / 2;
-        clamp_viewport_start(app, audio);
-    }
-    if (playback.is_playing()) playback.resync_predictor();
 }

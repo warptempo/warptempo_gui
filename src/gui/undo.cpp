@@ -1,12 +1,9 @@
 #include "undo.h"
 
-#include "audio.h"
 #include "target_render.h"
-#include "warp_frame_map_view.h"
 
 #include <algorithm>
 #include <chrono>
-#include <cmath>
 #include <cstdint>
 #include <set>
 #include <utility>
@@ -155,29 +152,26 @@ void Undo::note_coalesced_commit() {
 
 namespace {
 
-// Shared post-restore selection + playhead rule for both marker lists. After a
-// marker swap, classify before -> after as add / remove / same-count and set
-// the selection (and, where appropriate, the playhead) to the touched markers.
-// `fields_differ` is the ROW EQUALITY basis: !fields_differ(a, b) means the two
-// rows are identical, which the same-count branch uses for identity matching;
-// `remove_target_frame` chooses the playhead target among the removed markers
-// (warp refines toward the op's subject, phase-reset takes the rightmost).
-// All three branches consume by exact multiset matching — no epsilon, no double
-// widening, no re-rounding — and multiplicity-aware, each before-row matching
-// at most one after-row: add / remove match on the whole-int64-source-frame
-// time (`time_frame`), same-count matches on the FULL row (every field, via
-// !fields_differ). So a crossing drag that reorders the store still flags only
-// the changed row, and when one of two exactly coincident markers is touched,
-// the tie's moved member is still identified.
-template <class M, class FieldsDiffer, class RemoveTargetFrame>
-void apply_post_restore_rules_impl(AppState& app, Selection& selection,
+// Shared post-restore SELECTION rule for both marker lists. After a marker
+// swap, classify before -> after as add / remove / same-count and set the
+// selection to the touched markers. `fields_differ` is the ROW EQUALITY basis:
+// !fields_differ(a, b) means the two rows are identical, which the same-count
+// branch uses for identity matching. All three branches consume by exact
+// multiset matching — no epsilon, no double widening, no re-rounding — and
+// multiplicity-aware, each before-row matching at most one after-row: add /
+// remove match on the whole-int64-source-frame time (`time_frame`), same-count
+// matches on the FULL row (every field, via !fields_differ). So a crossing drag
+// that reorders the store still flags only the changed row, and when one of two
+// exactly coincident markers is touched, the tie's moved member is still
+// identified. Undo/redo NEVER moves the playhead or recenters the viewport —
+// see the selection tail below.
+template <class M, class FieldsDiffer>
+void apply_post_restore_rules_impl(AppState& app,
                                    const UndoEntry& entry,
                                    const std::vector<M>& before,
                                    const std::vector<M>& after,
-                                   FieldsDiffer  fields_differ,
-                                   RemoveTargetFrame remove_target_frame) {
+                                   FieldsDiffer  fields_differ) {
     std::set<int> target_set;
-    bool want_playhead_jump = false;
 
     if (after.size() > before.size()) {
         std::multiset<int64_t> before_frames;
@@ -190,37 +184,10 @@ void apply_post_restore_rules_impl(AppState& app, Selection& selection,
                 target_set.insert(static_cast<int>(i));
             }
         }
-        want_playhead_jump = !target_set.empty();
     } else if (after.size() < before.size()) {
-        const int sr = selection.audio.sample_rate();
-        if (sr > 0) {
-            std::multiset<int64_t> after_frames;
-            for (const auto& m : after) after_frames.insert(m.time_frame);
-            std::vector<size_t> removed;  // indices into `before`
-            for (size_t i = 0; i < before.size(); ++i) {
-                auto it = after_frames.find(before[i].time_frame);
-                if (it != after_frames.end()) {
-                    after_frames.erase(it);  // consume: one match per row
-                } else {
-                    removed.push_back(i);
-                }
-            }
-            if (!removed.empty()) {
-                int64_t rightmost = before[removed.front()].time_frame;
-                for (const size_t i : removed) {
-                    rightmost = std::max(rightmost, before[i].time_frame);
-                }
-                const int64_t src_frame =
-                    remove_target_frame(before, removed, rightmost);
-                // time_frame is source-domain; the playhead is active-domain.
-                // Forward-translate so the playhead lands at the restored
-                // marker's displayed position, mirroring
-                // Selection::sync_playhead_to_last_selected.
-                const int64_t target_sample = source_frame_to_active_domain(
-                    app, selection.audio, src_frame);
-                selection.jump_playhead_to(target_sample);
-            }
-        }
+        // A removal leaves no touched row to select — clear the selection. No
+        // playhead move: undo/redo never touches the playhead or viewport
+        // (ruling in the selection tail below).
         app.selected_markers.clear();
         app.last_selected_marker = -1;
         return;
@@ -256,7 +223,6 @@ void apply_post_restore_rules_impl(AppState& app, Selection& selection,
             }
             if (!matched) target_set.insert(static_cast<int>(i));
         }
-        want_playhead_jump = !target_set.empty();
     }
 
     if (target_set.empty()) return;
@@ -267,9 +233,9 @@ void apply_post_restore_rules_impl(AppState& app, Selection& selection,
     } else {
         app.last_selected_marker = *target_set.rbegin();
     }
-
-    if (!want_playhead_jump) return;
-    selection.sync_playhead_to_last_selected();
+    // Undo/redo shows its target by SELECTING the touched set above — the
+    // playhead and viewport stay parked (the Ableton behavior). Only the Tab
+    // family and `c` land the playhead on a marker.
 }
 
 }  // namespace
@@ -277,7 +243,7 @@ void apply_post_restore_rules_impl(AppState& app, Selection& selection,
 void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
                                          const std::vector<GuiWarpMarker>& before) {
     apply_post_restore_rules_impl(
-        app, selection, entry, before, app.warpmarkers.markers(),
+        app, entry, before, app.warpmarkers.markers(),
         [](const GuiWarpMarker& a, const GuiWarpMarker& b) {
             return a.time_frame     != b.time_frame
                 || a.disabled       != b.disabled
@@ -299,19 +265,6 @@ void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
                 || a.bpm_lo           != b.bpm_lo
                 || a.bpm_hi           != b.bpm_hi
                 || a.bpm_endpoint     != b.bpm_endpoint;
-        },
-        [&entry](const std::vector<GuiWarpMarker>& bef,
-                 const std::vector<size_t>& removed,
-                 int64_t rightmost) {
-            // Prefer the op's subject when it is itself one of the removed
-            // markers, so a multi-selection delete lands the playhead on the
-            // subject the hint names rather than the rightmost-in-time marker
-            // the batch removed.
-            const int hi = entry.hint_last_selected;
-            for (const size_t i : removed) {
-                if (static_cast<int>(i) == hi) return bef[i].time_frame;
-            }
-            return rightmost;
         });
 }
 
@@ -319,14 +272,10 @@ void Undo::apply_post_restore_rules_phase_reset(
         const UndoEntry& entry,
         const std::vector<GuiPhaseResetMarker>& before) {
     apply_post_restore_rules_impl(
-        app, selection, entry, before, app.phaseresetmarkers.markers(),
+        app, entry, before, app.phaseresetmarkers.markers(),
         [](const GuiPhaseResetMarker& a, const GuiPhaseResetMarker& b) {
             return a.time_frame != b.time_frame
                 || a.disabled   != b.disabled;
-        },
-        [](const std::vector<GuiPhaseResetMarker>&,
-           const std::vector<size_t>&, int64_t rightmost) {
-            return rightmost;
         });
 }
 
@@ -384,10 +333,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // destination cannot overflow.
     if (app.history.saved_valid) app.history.saved_distance += saved_distance_delta;
 
-    // Restore the originating A/B tab before the marker swap. The
-    // post-restore rules below call selection.jump_playhead_to(...),
-    // which writes app.playhead_cursor_sample / app.viewport_start_sample —
-    // those writes must land on the tab the action was authored on.
+    // Restore the originating A/B tab before the marker swap. The swap writes
+    // the live marker store and the post-restore rules write the tab-bound
+    // selection, so both must land on the tab the action was authored on.
     if (entry.tab != app.active_tab_view) {
         active_views.switch_active_tab_view_to(entry.tab);
     }
@@ -447,8 +395,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     recompute_dirty();
     viewport.invalidate_waveform_area();
     // One-shot discrete jump: undo/redo restored markers / phase resets /
-    // settings, changing the displayed plate (the target-view warp_frame_map, and the
-    // viewport when an offscreen-marker restore recenters). Render it
+    // settings, changing the displayed plate (the target-view warp_frame_map).
+    // The viewport stays parked — undo/redo never recenters. Render it
     // synchronously so the restored markers and the waveform land together. A
     // single keystroke, so bounded — the drag-time async-warp_frame_map policy is about
     // the marker-drag torrent, not discrete events. kick_waveform_sync's damage

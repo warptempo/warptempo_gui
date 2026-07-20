@@ -548,7 +548,7 @@ int main(int argc, char** argv) {
 
     Viewport viewport(app, audio, gui, playback);
     GuiPlaybackLifecycle playback_lifecycle(app, audio, gui, playback, viewport);
-    Selection selection(app, audio, viewport, playback);
+    Selection selection(app, audio, viewport);
     GuiAsyncRenderer async_renderer;
     if (!async_renderer.init()) {
         std::fprintf(stderr,
