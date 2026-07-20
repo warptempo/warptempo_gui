@@ -121,6 +121,25 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // struct ref. The four hit_test_* lambdas are now free functions taking
 // (app, audio, ...) explicit args. The handle_wheel lambda is now a
 // private method on this struct.
+void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
+    const StripDragState& sd = app.strip_drag;
+    double new_level = sd.press_level;
+    if (sd.zoom_axis && sd.press_level != kFitFileLevel) {
+        // Drag DOWN (y grows) lowers the level → zooms in; drag UP raises it →
+        // zooms out. Clamp into [kMinNumericLevel, shorter-file max]; the pan
+        // row and the fit-inert zoom press skip this and keep press_level.
+        new_level = sd.press_level -
+            static_cast<double>(y - sd.press_y) / kZoomStripPxPerLevel;
+        const double max_l = max_valid_zoom_level(
+            waveform_area(app).w, live_total_frames(app, audio),
+            audio.sample_rate());
+        const double hi = (max_l < kMinNumericLevel) ? kMinNumericLevel : max_l;
+        if (new_level < kMinNumericLevel) new_level = kMinNumericLevel;
+        if (new_level > hi)               new_level = hi;
+    }
+    viewport.apply_strip_drag_zoom(new_level, sd.anchor_sample, x, final_event);
+}
+
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                       GuiInputState mods) {
     // Command-adjacency bump (see on_key): a pointer button press is a discrete
@@ -213,6 +232,58 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // helper used by those writers.
 
     if (button == GuiMouseButton::Left) {
+        // Live strip rows (Ableton-style navigation), claimed ahead of the
+        // top-strip playback-stop and the click routing below. The top zoom row
+        // and the bottom pan row claim ONLY the plain unmodified left press
+        // inside their exact half-open row band; a modified press there is a
+        // strict no-op (nothing else lives on these rows). The claim is
+        // immediate — no motion threshold — and a motionless press-release
+        // commits nothing. Navigation-class like the wheel pan: allowed in
+        // read-only, never touches the playhead or selection, does not stop
+        // playback, and does not override follow. All modal gates (prompt,
+        // bottom-strip editors, the loading/empty guard) sit above this point,
+        // so a modal surface blocks the claim exactly as it blocks every other
+        // pointer target.
+        {
+            const GuiRect zoom_row = top_zoom_row_area(app);
+            const GuiRect pan_row  = bottom_pan_row_area(app);
+            const bool in_zoom_row =
+                x >= zoom_row.x && x < zoom_row.x + zoom_row.w &&
+                y >= zoom_row.y && y < zoom_row.y + zoom_row.h;
+            const bool in_pan_row =
+                x >= pan_row.x && x < pan_row.x + pan_row.w &&
+                y >= pan_row.y && y < pan_row.y + pan_row.h;
+            if (in_zoom_row || in_pan_row) {
+                if (ctrl || shift || alt) return;  // modified: strict no-op
+                const double spp = current_samples_per_pixel(app, audio);
+                app.strip_drag = StripDragState{};
+                app.strip_drag.active    = true;
+                app.strip_drag.zoom_axis = in_zoom_row;
+                app.strip_drag.press_y   = y;
+                // The song position painted under the press x, unclamped.
+                app.strip_drag.anchor_sample =
+                    static_cast<double>(app.viewport_start_sample) +
+                    static_cast<double>(x) * spp;
+                // Zoom row from fit: capture the fit-EQUIVALENT numeric exponent
+                // so the first vertical motion enters the numeric domain
+                // continuously (a clamp-induced jump at pathological widths is
+                // accepted); if no numeric level is admissible, stay at fit and
+                // the zoom axis is inert. Otherwise (numeric zoom, or any pan-row
+                // press) capture the level verbatim — the pan row never changes
+                // it.
+                if (in_zoom_row && app.zoom_level == kFitFileLevel) {
+                    const double max_l = max_valid_zoom_level(
+                        waveform_area(app).w, live_total_frames(app, audio),
+                        audio.sample_rate());
+                    app.strip_drag.press_level =
+                        (max_l < kMinNumericLevel) ? kFitFileLevel : max_l;
+                } else {
+                    app.strip_drag.press_level = app.zoom_level;
+                }
+                return;
+            }
+        }
+
         // Top-strip clicks stop playback first: they can open the iter/
         // bpm/flag editors and continuing audio during text editing is
         // the wrong default. Waveform clicks keep playback alive — the
@@ -284,10 +355,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             //      strictly between the two chips) → that bound's / the pair's
             //      drag, via route_trim_alt_press. The router CLAIMS the press
             //      (no pan fallback) whenever it lands on trim geometry.
-            //   3. Empty waveform → pan (a stepped scroll-drag).
-            // Read-only refuses the marker AND trim arms silently, each with no
-            // pan fallback. The marker/trim arms override follow when playing;
-            // the pan does not.
+            //   3. Empty waveform → nothing (pan lives on the strip rows now,
+            //      claimed by the plain left press above; Alt over empty
+            //      waveform falls through).
+            // Read-only refuses the marker AND trim arms silently. The
+            // marker/trim arms override follow when playing.
             if (hit >= 0) {
                 if (active_view_state(app).read_only) {
                     return;
@@ -312,21 +384,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     app.follow_overridden_for_session = true;
                 return;
             }
-            // Pan: a no-op in the top strip; the scroll happens on motion. The
-            // scroll-drag only moves the viewport, so it is allowed in
-            // read-only. It deliberately does NOT override follow mode: a pan
-            // during playback moves the view along with the audio rather than
-            // signaling a stop, unlike the marker / trim / playhead drags,
-            // which override follow for the session.
-            if (inside_waveform) {
-                app.scroll_drag.active = true;
-                app.scroll_drag.last_x = x;
-            }
+            // Empty waveform: nothing to arm. Pan is a strip-row gesture now,
+            // so an Alt press here just ends without effect.
             return;
         }
 
         // Strict modifier matching: Alt-exact is hit-routed above (marker
-        // reposition or trim arm on a hit, pan on empty waveform). Ctrl+Alt is
+        // reposition or trim arm on a hit, nothing on empty waveform — pan is a
+        // strip-row gesture now). Ctrl+Alt is
         // no longer a pointer gesture — it falls here into the strict no-op (the
         // Alt+wheel chip-row trim-end move is a wheel gesture, unaffected). Every
         // other modifier combination — Ctrl on empty, Ctrl+Shift, Shift+Alt, ...
@@ -457,8 +522,8 @@ void GuiInputHandler::arm_editor_text_drag_on_open() {
     app.editor_text_drag.active = true;
 }
 
-void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,
-                                        int /*y*/, GuiInputState /*mods*/) {
+void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
+                                        int y, GuiInputState /*mods*/) {
     if (app.prompt.active) return;
     // F2.1: a left release ending an editor-text drag finalizes the
     // selection (or collapses to a caret) before the modal swallow below.
@@ -469,9 +534,13 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int /*x*/,
     if (text_editor::is_active(app.settings_editor)) return;
     if (text_editor::is_active(app.commit_editor)) return;
     if (button != GuiMouseButton::Left) return;
-    if (app.scroll_drag.active) {
-        if (playback.is_playing()) playback.resync_predictor();
-        app.scroll_drag = ScrollDragState{};
+    if (app.strip_drag.active) {
+        // Terminating event: if the drag moved, re-derive the level/anchor at
+        // the release position and run the one synchronous rebuild (resync +
+        // kick_waveform_sync, inside apply_strip_drag_zoom's final path) so the
+        // rest state is exact. A motionless press-release finalizes nothing.
+        if (app.strip_drag.moved) apply_strip_drag_at(x, y, /*final_event=*/true);
+        app.strip_drag = StripDragState{};
         return;
     }
     if (app.playhead_drag.active) {
@@ -535,29 +604,22 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         viewport.clear_hover_popup();
         return;
     }
-    // Alt+drag on empty waveform: continuous 1:1 viewport pan. Each motion
-    // event pans by its per-event pixel delta, nearbyint(dx * samples-per-
-    // pixel). The viewport snaps to whole pixels in clamp_viewport_start
-    // (reached through scroll_viewport), so a per-event pan re-anchored by that
-    // snap tracks the cursor 1:1 without drift — no carried sample remainder.
-    // scroll_viewport drives the incremental shift-and-strip fast-path, so
-    // per-event work is a memmove plus a dx-wide strip render. The wheel keeps
-    // its quantized detent step; only the drag is continuous.
-    if (app.scroll_drag.active) {
+    // Strip-row zoom/pan drag: the pressed song position sticks to the pointer.
+    // The top zoom row also zooms around that point from vertical motion; the
+    // bottom pan row keeps the level fixed. Every motion event re-derives the
+    // level (zoom row) and re-anchors the viewport at the pointer, riding the
+    // ASYNC supersede slot (final_event=false) — a stale plate converging is
+    // accepted under the pointer torrent; the release runs the one synchronous
+    // rebuild. A lost button finalizes like release.
+    if (app.strip_drag.active) {
         if (!mods.primary_button_held) {     // button lost -> end like release
-            if (playback.is_playing()) playback.resync_predictor();
-            app.scroll_drag = ScrollDragState{};
+            if (app.strip_drag.moved)
+                apply_strip_drag_at(mouse_x, mouse_y, /*final_event=*/true);
+            app.strip_drag = StripDragState{};
             return;
         }
-        const double spp = current_samples_per_pixel(app, audio);
-        const int    dx  = mouse_x - app.scroll_drag.last_x;
-        app.scroll_drag.last_x = mouse_x;
-        const int64_t delta =
-            static_cast<int64_t>(std::nearbyint(static_cast<double>(dx) * spp));
-        if (delta != 0) {
-            // Grab-pan: drag right (dx>0) reveals earlier content, viewport moves left.
-            viewport.scroll_viewport(-delta, /*continuous=*/true);
-        }
+        app.strip_drag.moved = true;
+        apply_strip_drag_at(mouse_x, mouse_y, /*final_event=*/false);
         viewport.clear_hover_popup();
         return;
     }

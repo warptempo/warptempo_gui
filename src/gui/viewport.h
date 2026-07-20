@@ -88,6 +88,17 @@ struct Viewport {
     void move_playhead_to(int64_t new_sample);
     void move_playhead_pixels(int delta_px);
     void apply_zoom_change(double new_zoom_level);
+    // Strip-row drag zoom/pan: set the level and anchor the pressed song
+    // position (anchor_sample, frames) under the pointer's current x
+    // (anchor_x, window px), rather than centering on the playhead the way
+    // apply_zoom_change does. Never touches the playhead or selection.
+    // Mid-gesture events pass final=false and ride the ASYNC supersede slot (a
+    // stale plate converging is accepted under the pointer torrent); the
+    // terminating event passes final=true and runs the one synchronous rebuild
+    // so the rest state is exact. A pan-row drag passes new_zoom_level equal to
+    // the level captured at press, so only the viewport moves.
+    void apply_strip_drag_zoom(double new_zoom_level, double anchor_sample,
+                               int anchor_x, bool final);
     void zoom_in();
     void zoom_out();
     // Coalesced zoom: apply |in_steps| zoom levels in a single shot.

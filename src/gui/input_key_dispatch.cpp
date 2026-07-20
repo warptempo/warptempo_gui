@@ -392,9 +392,19 @@ void GuiInputHandler::cancel_active_drags() {
         viewport.invalidate_top_strip();
         viewport.invalidate_timestamp_area();
     }
-    // Scroll and playhead drags have already applied their motion, so
-    // stopping is just ending the gesture at its current position.
-    if (app.scroll_drag.active)   app.scroll_drag = ScrollDragState{};
+    // Strip-row and playhead drags have already applied their motion, so
+    // stopping is just ending the gesture at its current position — Esc is not
+    // a cancel here (a navigation gesture has nothing to restore). The strip
+    // drag rode the async slot per motion, so finalize the last-applied state
+    // with the one synchronous rebuild (resync + kick_waveform_sync) exactly as
+    // its release would, when it moved.
+    if (app.strip_drag.active) {
+        if (app.strip_drag.moved) {
+            if (playback.is_playing()) playback.resync_predictor();
+            viewport.kick_waveform_sync();
+        }
+        app.strip_drag = StripDragState{};
+    }
     if (app.playhead_drag.active) app.playhead_drag = PlayheadDragState{};
     // A live editor-text drag is FINALIZED, not cancelled: it is selection-only
     // with nothing to revert, so it collapses a no-motion anchor to a caret and

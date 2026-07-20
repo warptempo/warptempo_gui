@@ -232,6 +232,59 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     kick_waveform_sync();
 }
 
+void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample,
+                                     int anchor_x, bool final) {
+    if (audio.total_frames() <= 0) return;
+
+    // Capture the scanner's pre-reflow pixel-x under the OLD viewport (as
+    // apply_zoom_change does) so the next pre-paint damages the actually-painted
+    // column instead of leaving a ghost when the level changes under playback.
+    if (app.playhead_scanner_active) {
+        app.playhead_scanner_old_px_stash = scanner_pixel_x(app, audio);
+    }
+
+    app.zoom_level = new_zoom_level;
+
+    if (new_zoom_level == kFitFileLevel) {
+        // Fit-file (or a pan-row drag resting at fit): the whole song is
+        // visible, so the anchor cannot pin a column — the clamp holds start at
+        // 0 and the drag is inert on this axis.
+        app.viewport_start_sample = 0;
+    } else {
+        // Anchor the pressed song position under the pointer: pick the viewport
+        // start that paints anchor_sample at anchor_x, at the (possibly new)
+        // level. current_samples_per_pixel reads the level just assigned, so
+        // this is spp(new_level).
+        const double spp = current_samples_per_pixel(app, audio);
+        app.viewport_start_sample = static_cast<int64_t>(std::nearbyint(
+            anchor_sample - static_cast<double>(anchor_x) * spp));
+    }
+    clamp_viewport_start(app, audio);
+
+    invalidate_waveform_area();
+    invalidate_timestamp_area();
+    // Flags live in the top strip — rect positions change when the viewport
+    // scale or start changes.
+    const GuiRect ts = top_strip_area(app);
+    gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
+    // Rects shifted under the (possibly stationary) cursor — re-evaluate hover.
+    recompute_hover_at_cursor();
+
+    if (final) {
+        // The rest state: re-anchor the playback predictor once (like the
+        // continuous pan's release) and render the plate synchronously so the
+        // overlays cannot sit a frame ahead of the waveform.
+        if (playback.is_playing()) playback.resync_predictor();
+        kick_waveform_sync();
+    } else {
+        // Mid-gesture torrent: no per-event predictor resync (it keeps
+        // extrapolating smoothly for the drag's duration, re-anchored once at
+        // the final event) and only the async supersede slot — a stale plate
+        // converging is accepted while the pointer moves.
+        kick_waveform_render();
+    }
+}
+
 void Viewport::zoom_in() {
     const double max_l = max_valid_zoom_level(
         waveform_area(app).w, live_total_frames(app, audio), audio.sample_rate());

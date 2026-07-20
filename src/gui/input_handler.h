@@ -589,6 +589,14 @@ private:
     // fall through to the pan. Read-only claims without arming. The waveform
     // between-region does NOT pair-drag (it stays pan); the pair handle is the
     // top-strip inter-chip span. Trim drags never touch selection.
+    // Strip-row zoom/pan drag: recompute the level from the press state and the
+    // current pointer y (zoom row only, clamped into the numeric band and the
+    // shorter-file max), then anchor the pressed song position under the
+    // pointer's current x via Viewport::apply_strip_drag_zoom. `final_event` is
+    // true on the terminating event (release / button-lost) for the one
+    // synchronous rebuild; motion events pass false and ride the async slot.
+    void apply_strip_drag_at(int x, int y, bool final_event);
+
     bool route_trim_alt_press(int mouse_x, int mouse_y, bool inside_top);
     void begin_trim_drag(TrimHit which, int mouse_x, bool both = false);
     void update_trim_drag(int mouse_x);   // motion: writes the live store

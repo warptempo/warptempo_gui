@@ -223,7 +223,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.drag = DragState{};
     app.playhead_drag = PlayheadDragState{};
     app.trim_drag = TrimDragState{};
-    app.scroll_drag = ScrollDragState{};
+    app.strip_drag = StripDragState{};
     // (The displayed hit map is cleared in apply_settings_engine_and_prefs,
     // the shared load+adopt view-establishment routine, not here.)
     // Project trim is not cleared implicitly by the fresh-ViewState assignment

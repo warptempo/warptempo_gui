@@ -65,6 +65,12 @@ constexpr int64_t kTrimEndWheelDivisor = 10;
 // the render boundary, not at authoring time.
 constexpr int kMarkerHitHalfPx    = 4;
 
+// Vertical drag distance (px) that moves the zoom-strip drag by one continuous
+// level. The strip zoom drags DOWN to zoom in (deeper, lower level) and UP to
+// zoom out. Both this scale and that direction are architect-tunable on the
+// labwc pass.
+constexpr double kZoomStripPxPerLevel = 60.0;
+
 // Wholesale snapshot of the undo-tracked settings. Holds the typed
 // EngineSettings captured at undo-push time and restored on undo/redo.
 struct SettingsSnapshot {
@@ -360,12 +366,36 @@ struct TrimDragState {
     int64_t anchor_active_frame  = 0;
 };
 
-// Alt+drag on empty waveform: continuous 1:1 grab-pan of the viewport,
-// driven by pointer motion, panning by the exact per-event pixel delta.
-struct ScrollDragState {
-    bool   active   = false;
-    // Pointer x (px) at the previous motion event, seeded at the Alt press.
-    int    last_x   = 0;
+// Plain left-drag on a live strip row (Ableton-style navigation). ONE anchor
+// formula serves both axes: the song position painted under the press x sticks
+// to the pointer for the whole drag, so horizontal motion is a grab-pan and
+// vertical motion (top zoom row only) zooms around the point under the pointer.
+// Navigation-class: never touches the playhead or selection, allowed in
+// read-only, does not toggle or override follow. Cleared on button release /
+// button-lost and on file load; no Esc-restore (nothing to revert).
+struct StripDragState {
+    bool   active    = false;
+    // True once any motion event has applied a viewport/level change. A
+    // motionless press-release must commit nothing, so the terminating event
+    // finalizes (re-derives + synchronous rebuild) only when this is set — a
+    // fit-file zoom press captures a NUMERIC press_level, so re-deriving a
+    // zero-motion release would otherwise wrongly commit the fit→numeric jump.
+    bool   moved     = false;
+    // True for the top zoom row (vertical motion changes the level); false for
+    // the bottom pan row (level pinned for the whole drag).
+    bool   zoom_axis = false;
+    // Pointer position at the press (window px).
+    int    press_y   = 0;
+    // Continuous zoom level at the press. On the zoom row a fit-file press
+    // captures the fit-EQUIVALENT numeric exponent so the first vertical motion
+    // enters the numeric domain continuously; if the file admits no numeric
+    // level it stays kFitFileLevel and the zoom axis is inert. The pan row
+    // captures app.zoom_level verbatim (level never changes).
+    double press_level = 0.0;
+    // Song position (frames, double) painted under the press x at press time,
+    // unclamped — the viewport clamp owns legality. Held to the pointer's x for
+    // the whole drag.
+    double anchor_sample = 0.0;
 };
 
 // Hover popup state. A popup-eligible warp marker (pass marker or
@@ -713,9 +743,9 @@ struct AppState {
     // release, Escape, and file load.
     TrimDragState trim_drag;
 
-    // Alt+drag on empty waveform (continuous 1:1 grab-pan). Cleared on
+    // Plain left-drag on a live strip row (zoom/pan navigation). Cleared on
     // button release and file load.
-    ScrollDragState scroll_drag;
+    StripDragState strip_drag;
 
     // Mouse drag-to-select inside the active text editor. Cleared on
     // button release, on a lost button mid-drag, and on file load.
@@ -997,14 +1027,14 @@ inline int64_t snap_authored_frame(double frame) {
 }
 
 // The single query for "some pointer gesture is in flight" — an Alt marker
-// drag, a trim drag, a scroll drag, a playhead drag, or an editor text
-// drag. Consumed by the wheel_context predicate (on_wheel's
+// drag, a trim drag, a strip-row zoom/pan drag, a playhead drag, or an editor
+// text drag. Consumed by the wheel_context predicate (on_wheel's
 // completed-detent gate and the platform's per-frame sub-detent
 // accumulator probe both route through it), the gate that must never fire
 // mid-gesture: the "nothing pops mid-gesture" boundary.
 inline bool any_pointer_gesture_active(const AppState& app) {
     return app.drag.active || app.trim_drag.active ||
-           app.scroll_drag.active || app.playhead_drag.active ||
+           app.strip_drag.active || app.playhead_drag.active ||
            app.editor_text_drag.active;
 }
 

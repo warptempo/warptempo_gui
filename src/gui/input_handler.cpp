@@ -212,7 +212,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the text-editor handlers; the four position drags here are mutually
     // exclusive with it.
     if (app.drag.active || app.trim_drag.active ||
-        app.scroll_drag.active || app.playhead_drag.active) {
+        app.strip_drag.active || app.playhead_drag.active) {
         if (key == GuiKeys::Escape) {
             cancel_active_drags();
             return;
@@ -226,13 +226,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // set-marker actions through: bare `s` and Alt+S fall through to the
         // S handler below to drop a marker / phase reset at the scrubbed
         // playhead. Ctrl+S (save) stays swallowed, and the position-editing
-        // drags (marker, trim, scroll) swallow these too — dropping a marker
-        // mid-marker-drag would fight the gesture. The four drag states are
-        // mutually exclusive, so playhead_only is belt-and-suspenders that
-        // keeps the intent explicit.
+        // drags (marker, trim) swallow these too — dropping a marker
+        // mid-marker-drag would fight the gesture. The strip-row drag is
+        // navigation, but a set-marker mid-pan/zoom is still the wrong default,
+        // so it swallows too. The four drag states are mutually exclusive, so
+        // playhead_only is belt-and-suspenders that keeps the intent explicit.
         const bool playhead_only =
             app.playhead_drag.active && !app.drag.active &&
-            !app.trim_drag.active && !app.scroll_drag.active;
+            !app.trim_drag.active && !app.strip_drag.active;
         if (!(playhead_only && !ctrl && key == GuiKeys::S)) {
             return;
         }
