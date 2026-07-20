@@ -8,8 +8,10 @@
 #include "text_editor.h"
 #include "warpmarkers.h"
 
+#include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <string>
 #include <utility>
@@ -38,6 +40,14 @@
 // release finalizes. The only per-editor geometry the mouse path needs is
 // each editor's char-0 text origin; advance is the shared monospace cell.
 namespace {
+
+// CLOCK_MONOTONIC milliseconds — the time base for strip-row double-click
+// detection (steady_clock is CLOCK_MONOTONIC on this platform). Press-driven,
+// so the synthesized e-key button composes with it automatically.
+int64_t monotonic_ms() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
 
 // Active-domain playhead frame at click column `col`. SOURCE view: the exact
 // source grid (source_grid_position_at_column via painter q), matching marker
@@ -254,6 +264,34 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 y >= pan_row.y && y < pan_row.y + pan_row.h;
             if (in_zoom_row || in_pan_row) {
                 if (ctrl || shift || alt) return;  // modified: strict no-op
+                // Double-click detection, BEFORE arming the drag: a candidate
+                // seeded by the previous motionless press-release in the SAME
+                // row, within kDoubleClickMs and kDoubleClickSlackPx of the
+                // recorded x, consumes this press as a one-shot navigation
+                // action — no drag armed, no pointer capture, playhead and
+                // selection untouched, allowed in read-only (all modal gates sit
+                // above this claim). The zoom row jumps to full zoom-out (whole
+                // song); the pan row jumps to the working zoom recentered on the
+                // playhead (the trailing center covers apply_zoom_change's
+                // early-return when already at the working zoom, the same shape
+                // the c handler uses). The candidate's first click briefly
+                // captured and hid the cursor at its press and restored it at
+                // the motionless release; this second press never captures.
+                const StripDoubleClickCandidate& dc = app.strip_double_click;
+                if (dc.valid && dc.zoom_axis == in_zoom_row &&
+                    monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
+                    std::abs(x - dc.press_x) <= kDoubleClickSlackPx) {
+                    app.strip_double_click = StripDoubleClickCandidate{};
+                    if (in_zoom_row) {
+                        viewport.apply_zoom_change(effective_max_zoom_level(
+                            waveform_area(app).w, live_total_frames(app, audio),
+                            audio.sample_rate()));
+                    } else {
+                        viewport.apply_zoom_change(kWorkingZoomLevel);
+                        viewport.center_viewport_on_playhead();
+                    }
+                    return;
+                }
                 const double spp = current_samples_per_pixel(app, audio);
                 app.strip_drag = StripDragState{};
                 app.strip_drag.active    = true;
@@ -532,7 +570,18 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // the release position and run the one synchronous rebuild (resync +
         // kick_waveform_sync, inside apply_strip_drag_zoom's final path) so the
         // rest state is exact. A motionless press-release finalizes nothing.
-        if (app.strip_drag.moved) apply_strip_drag_at(x, y, /*final_event=*/true);
+        // Double-click seeding: a MOTIONLESS release records a candidate (this
+        // release x equals the press x); a release that MOVED records nothing
+        // and clears any candidate, so a drag can never seed the second click of
+        // a double-click.
+        if (app.strip_drag.moved) {
+            apply_strip_drag_at(x, y, /*final_event=*/true);
+            app.strip_double_click = StripDoubleClickCandidate{};
+        } else {
+            app.strip_double_click = StripDoubleClickCandidate{
+                .valid = true, .time_ms = monotonic_ms(),
+                .zoom_axis = app.strip_drag.zoom_axis, .press_x = x};
+        }
         app.strip_drag = StripDragState{};
         end_strip_pointer_capture();  // reappear the cursor at the press point
         return;
@@ -610,6 +659,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             if (app.strip_drag.moved)
                 apply_strip_drag_at(mouse_x, mouse_y, /*final_event=*/true);
             app.strip_drag = StripDragState{};
+            // An abnormal termination (button lost, not a clean release) seeds
+            // no double-click candidate and drops any pending one.
+            app.strip_double_click = StripDoubleClickCandidate{};
             end_strip_pointer_capture();
             return;
         }

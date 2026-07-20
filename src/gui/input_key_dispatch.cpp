@@ -404,6 +404,9 @@ void GuiInputHandler::cancel_active_drags() {
             viewport.kick_waveform_sync();
         }
         app.strip_drag = StripDragState{};
+        // A keyboard stop is not a clean release: it seeds no double-click
+        // candidate and drops any pending one.
+        app.strip_double_click = StripDoubleClickCandidate{};
         end_strip_pointer_capture();
     }
     if (app.playhead_drag.active) app.playhead_drag = PlayheadDragState{};

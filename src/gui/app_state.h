@@ -396,6 +396,27 @@ struct StripDragState {
     double anchor_sample = 0.0;
 };
 
+// Double-click detection on the live strip rows (Wayland delivers no
+// double-click event, so it is hand-rolled from two motionless plain clicks).
+// A strip drag that ends MOTIONLESS records this candidate at its release; the
+// NEXT plain strip-row press, if it lands in the SAME row within kDoubleClickMs
+// and kDoubleClickSlackPx of the recorded x, is consumed as the double-click
+// navigation action instead of arming a drag. A drag that MOVED records nothing
+// and clears any candidate. Cleared on file load beside strip_drag, and the
+// moment the action fires. Session-only.
+struct StripDoubleClickCandidate {
+    bool    valid     = false;
+    int64_t time_ms   = 0;      // CLOCK_MONOTONIC ms at the motionless release
+    bool    zoom_axis = false;  // which row (matches StripDragState::zoom_axis)
+    int     press_x   = 0;      // release x (== press x, the drag was motionless)
+};
+
+// Double-click window and positional slack (architect-tunable). Two motionless
+// plain clicks in the same strip row inside this time and pixel distance are a
+// double-click.
+constexpr int64_t kDoubleClickMs      = 400;
+constexpr int     kDoubleClickSlackPx = 8;
+
 // Hover popup state. A popup-eligible warp marker (pass marker or
 // label_ref) under the cursor shows a bottom-strip readout of its
 // resolved tempo. The motion and viewport-recompute handlers set
@@ -744,6 +765,11 @@ struct AppState {
     // Plain left-drag on a live strip row (zoom/pan navigation). Cleared on
     // button release and file load.
     StripDragState strip_drag;
+
+    // Double-click candidate seeded by a motionless strip-row press-release.
+    // Cleared on file load beside strip_drag and when the double-click action
+    // fires.
+    StripDoubleClickCandidate strip_double_click;
 
     // Mouse drag-to-select inside the active text editor. Cleared on
     // button release, on a lost button mid-drag, and on file load.
