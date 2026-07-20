@@ -1035,9 +1035,9 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
 // Mirrors maybe_rebuild_stem_cache: same wf_cache.fp_* coupling for the
 // displayed-viewport half of the fingerprint; same live-app-state reads
 // for the marker-driven half (with the selection hash added). The cache holds
-// EVERY flag shape and the b/e trim chips — the flag editor renders nothing in
-// the strip, so the editing target's flag is an ordinary cached shape (no
-// skip-guard).
+// EVERY flag shape and the b/e trim chips — the flag editor's text renders live
+// in the marker-text lane, not in this cache, so the editing target's flag is an
+// ordinary cached shape (no skip-guard).
 
 void GuiPaintHandler::maybe_rebuild_flag_cache() {
     if (app.loading || audio.total_frames() <= 0) return;

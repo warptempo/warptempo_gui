@@ -19,8 +19,8 @@
 #include <vector>
 
 // GuiInputHandler pointer-gesture handlers (on_button_press,
-// on_button_release, on_motion) and their two editor-text drag-lifecycle
-// helpers (arm_editor_text_drag_on_open, finalize_editor_text_drag), lifted
+// on_button_release, on_motion) and the editor-text drag finalizer
+// (finalize_editor_text_drag), lifted
 // verbatim from input_handler.cpp. The methods are declared on
 // GuiInputHandler in input_handler.h, and the platform layer's pointer
 // callbacks dispatch to them unchanged, so this is a pure definition move.
@@ -102,10 +102,13 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
             std::strlen(kBpmEditorPrefix) * adv;
         g.bottom_strip = true;
     } else if (text_editor::is_active(app.top_flag_editor)) {
-        // FlagPayload — top strip.
+        // FlagPayload — marker-text lane. text_left is the lane run's left
+        // edge (flag_pending_text_left_x); it is -1 only for an invalid editor
+        // target (a valid off-view marker still yields a clamped onscreen
+        // origin, so the caret math keeps working while the text stays visible).
         const double tl = flag_pending_text_left_x(
             app, audio, app.top_flag_editor.target);
-        if (tl < 0.0) return g;   // flag off-view: leave invalid
+        if (tl < 0.0) return g;   // invalid target: leave invalid
         g.ed = &app.top_flag_editor;
         g.text_left = tl;
     } else {
@@ -232,13 +235,19 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 in_region = x >= bs.x && x < bs.x + bs.w &&
                             y >= bs.y && y < bs.y + bs.h;
             } else {
-                const GuiRect top = top_strip_area(app);
-                const bool inside_top_strip =
-                    x >= top.x && x < top.x + top.w &&
-                    y >= top.y && y < top.y + top.h;
-                in_region = inside_top_strip &&
-                    hit_test_flag(app, audio, x, y) ==
-                        app.top_flag_editor.target;
+                // FlagPayload: the editable text lives in the marker-text lane,
+                // centered on the target marker's column. A press within the
+                // rendered run's x-extent (in the lane's y-band) repositions the
+                // caret and arms the drag; g.text_left is that run's left edge
+                // (flag_pending_text_left_x, the one caret-origin owner). A press
+                // on the marker's own flag or elsewhere is not the lane text, so
+                // it falls through to the no-op / discard handling below.
+                const GuiRect lane = top_marker_text_row_area(app);
+                const double run_w = static_cast<double>(
+                    app.top_flag_editor.pending.size()) * g.advance;
+                in_region = y >= lane.y && y < lane.y + lane.h &&
+                    static_cast<double>(x) >= g.text_left &&
+                    static_cast<double>(x) <= g.text_left + run_w;
             }
             if (in_region) {
                 set_editor_caret_from_x(g, x);
@@ -252,8 +261,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             }
             // A bottom-strip editor stays modal: a press outside its row is
             // swallowed without arming. A flag-editor press that isn't on the
-            // edited flag falls through to the existing target-switch / open /
-            // exit handling below.
+            // lane text falls through to the no-op (own flag) / discard
+            // (elsewhere) handling below.
             if (g.bottom_strip) return;
         }
     }
@@ -382,28 +391,27 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         const int64_t playhead_at_entry = app.playhead_cursor_sample;
         if (inside_top) playback_lifecycle.stop_playback_if_playing();
 
-        // Editor: mouse handling.
-        //   click inside top strip on the SAME flag being edited: re-position
-        //     the caret at the clicked byte (the same-target branch inside
-        //     enter_text_edit), keeping the pending text.
-        //   click anywhere else (a DIFFERENT flag, a non-flag top-strip spot, or
+        // Editor: mouse handling. The editable text lives in the marker-text
+        // lane now, not on the flag, so a press within the lane's rendered run
+        // already repositioned the caret and armed the drag above (the F2.1
+        // block) and returned. What reaches here is a press that is NOT the lane
+        // text:
+        //   press on the SAME marker's own flag: NO-OP — the text is not there
+        //     anymore, so it neither repositions the caret nor discards; swallow
+        //     it, leaving the editor open as-is.
+        //   press anywhere else (a DIFFERENT flag, a non-flag top-strip spot, or
         //     off the strip): DISCARD the open editor without committing — Esc's
         //     teardown exactly (pending dropped; Enter is the only commit route)
         //     — then fall through so the click routes through normal handling. A
         //     click on a different flag thereby single-selects that flag below,
         //     rather than retargeting the editor (the old retarget was a bug).
-        // The caret-reposition path never falls through (it returns); every
-        // discard path falls through to the normal flag hit-test / waveform
-        // handling below.
+        // The no-op path returns; every discard path falls through to the normal
+        // flag hit-test / waveform handling below.
         if (text_editor::is_active(app.top_flag_editor)) {
             const int hit_now = inside_top ? hit_test_flag(app, audio, x, y) : -1;
             if (inside_top && hit_now == app.top_flag_editor.target &&
                 app.active_markers_view != 'P') {
-                // Same flag: caret reposition only (enter_top_flag_edit routes to
-                // enter_text_edit's same-target branch).
-                flag_editor.enter_top_flag_edit(
-                    hit_now, static_cast<double>(x));
-                arm_editor_text_drag_on_open();
+                // The edited marker's own flag: no-op (swallow, editor untouched).
                 return;
             }
             // Different flag / non-flag / off-strip: discard (Esc teardown) and
@@ -533,17 +541,6 @@ void GuiInputHandler::finalize_editor_text_drag() {
     app.editor_text_drag.active = false;
 }
 
-void GuiInputHandler::arm_editor_text_drag_on_open() {
-    if (!text_editor::is_active(app.top_flag_editor)) return;
-    // The caret was set from the click x inside enter_top_flag_edit;
-    // a collapsed anchor (anchor == caret) becomes a real selection
-    // only once the pointer moves, and on_button_release collapses it
-    // back to a plain caret if the press never moved.
-    app.top_flag_editor.selection_anchor =
-        app.top_flag_editor.cursor_pos;
-    app.editor_text_drag.active = true;
-}
-
 void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
     app.region_drag = RegionDragState{};
     app.region_drag.active       = true;
@@ -665,8 +662,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             if (g.bottom_strip) viewport.invalidate_timestamp_area();
             else                viewport.invalidate_top_strip();
         }
-        // !g.valid (flag scrolled off-view mid-drag): no-op this frame,
-        // leaving the caret where it was.
+        // !g.valid (only an invalid editor target — the lane text stays
+        // onscreen even off-view): no-op this frame, leaving the caret put.
         viewport.clear_hover_popup();
         return;
     }
@@ -759,24 +756,24 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                     app.strip_drag.last_motion_ms = now;
                     return;
                 }
-                // Re-lock from the dominant axis of the accumulation (tie ->
-                // zoom, matching the initial crossing), then rebase so the
-                // gesture resumes continuously from the CURRENT state:
-                //  - Zoom: the level formula reads dy since press_y off
-                //    press_level; set press_level <- current level and press_y <-
-                //    lock_ref_y so the zoom continues from here without a jump
-                //    (this event folds only the threshold crossing, like the
-                //    initial crossing folds the accumulated dx).
-                //  - Pan: it is incremental via last_x; set last_x <- current x
+                // Rebase the FULL baseline set to the live state so whichever
+                // axis wins resumes with zero discontinuity — the axis choice
+                // only decides which of these subsequently varies:
+                //  - press_level <- current level: a Zoom phase reads dy off it;
+                //    a Pan phase pins the level to it (apply passes new_level =
+                //    press_level when Pan-locked), so a stale press_level would
+                //    snap the level back to the pre-stall baseline on the pan's
+                //    first apply (and drag the anchor-derived viewport with it).
+                //  - press_y <- lock_ref_y: the Zoom level formula reads dy since
+                //    press_y, so the zoom folds only the threshold crossing (like
+                //    the initial crossing folds the accumulated dx).
+                //  - last_x <- current x: a Pan phase is incremental via last_x,
                 //    so the stall gap does not fold in as a jump.
+                app.strip_drag.press_level = app.zoom_level;
+                app.strip_drag.press_y     = app.strip_drag.lock_ref_y;
+                app.strip_drag.last_x      = mouse_x;
                 app.strip_drag.locked_axis =
                     (ady >= adx) ? StripDragAxis::Zoom : StripDragAxis::Pan;
-                if (app.strip_drag.locked_axis == StripDragAxis::Zoom) {
-                    app.strip_drag.press_level = app.zoom_level;
-                    app.strip_drag.press_y     = app.strip_drag.lock_ref_y;
-                } else {
-                    app.strip_drag.last_x = mouse_x;
-                }
                 app.strip_drag.relocking = false;
             }
         }

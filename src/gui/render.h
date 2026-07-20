@@ -747,12 +747,25 @@ double monospace_row_baseline_offset();
 // the font state is restored on return.
 void init_monospace_grid_metrics(cairo_t* cr);
 
-// Returns the on-screen x reference for the given marker's flag-editor caret,
-// in pixels: the marker's pixel column plus the flag_glyph_inset_px() glyph
-// inset. The flag-editor text does not render in the strip in this design (it
-// moves to the marker-text lane later), so this is the caret click-to-byte
-// reference only. Returns -1.0 if the marker is not currently visible in the
-// viewport. Direct computation -- does not require a cairo context.
+// Left x (window pixels) of a transient text run of `glyph_count` monospace
+// glyphs shown in the marker-text lane over marker `marker_idx`'s painted
+// column. Both lane occupants — the hover popup and the flag editor — center
+// their run on the marker and clamp it fully onscreen within the lane (unlike
+// the flags, the lane text never hangs off an edge); this is that one
+// placement owner. Uses the painters' own column math against the active
+// display context's map (identity in source view, the live target map in
+// target view), so the run centers on the same column the flag paints. Returns
+// -1.0 for an invalid marker index; a valid off-view marker still returns a
+// clamped onscreen origin (the lane text is always visible). No cairo context.
+double lane_text_left_x(
+    const AppState& app, const GuiAudio& audio,
+    int marker_idx, size_t glyph_count);
+
+// The flag editor's caret / text-run origin owner: lane_text_left_x sized by
+// the flag editor's current pending text. The single reference the lane paint,
+// the click->byte caret math, and the editor-text drag all read, so what is
+// shown is where the caret lands. Returns -1.0 for an invalid marker index. No
+// cairo context.
 double flag_pending_text_left_x(
     const AppState& app, const GuiAudio& audio,
     int marker_idx);

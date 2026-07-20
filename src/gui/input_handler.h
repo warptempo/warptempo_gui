@@ -436,14 +436,6 @@ private:
     // flag is cleared regardless.
     void finalize_editor_text_drag();
 
-    // F2.1: after a mouse press opens (or switches) a flag editor, arm a
-    // selection drag with a collapsed anchor at the caret enter_top_flag_edit
-    // just placed from the click x, so the opening gesture itself can
-    // drag-select (web-address-bar behavior) instead of requiring a second
-    // press. No-op when the open was refused (editor not active, e.g.
-    // read-only), so a refused open changes nothing.
-    void arm_editor_text_drag_on_open();
-
     // Clipboard: handle a Copy/Cut/Paste editor action against editor `s`
     // using the internal session clipboard (AppState::text_clipboard; there is
     // no Wayland clipboard), and report whether it handled one. Copy and cut

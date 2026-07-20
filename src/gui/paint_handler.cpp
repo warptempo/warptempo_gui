@@ -71,13 +71,13 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
     // Flag annotations in the top strip. All flag pixels — the fixed-width
     // marker/phase-reset shapes and the b/e trim chips — live on
     // flag_cache.surface (rebuilt from on_tick via maybe_rebuild_flag_cache);
-    // this pass is a pure blit. The flag editor renders NOTHING in the strip in
-    // this design (its payload text moves to the marker-text lane later), so
-    // there is no per-frame live flag work; the editing target's flag paints as
-    // an ordinary selected shape in the cache. Like the other caches, the
-    // surface may be null on the very first paint after a load (before the first
-    // rebuild fires); the blit is skipped and the background shows through for
-    // that one frame.
+    // this pass is a pure blit. The flag shapes are textless; a marker's flag
+    // payload text (and the hover popup) surface in the marker-text lane, painted
+    // live per-frame in paint_marker_text_lane after this blit — the editing
+    // target's flag paints here as an ordinary selected shape. Like the other
+    // caches, the surface may be null on the very first paint after a load
+    // (before the first rebuild fires); the blit is skipped and the background
+    // shows through for that one frame.
     if (flag_cache.surface) {
         cairo_save(cr);
         cairo_rectangle(cr, top_strip.x, top_strip.y,
@@ -87,6 +87,87 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
                                  top_strip.x, top_strip.y);
         cairo_paint(cr);
         cairo_restore(cr);
+    }
+}
+
+// -- GuiPaintHandler::paint_marker_text_lane -----------------------------
+
+void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
+    // The marker-text lane (top lane 2, between the trim chips and the flags)
+    // hosts two transient text surfaces, ONE OCCUPANT AT A TIME: the FlagPayload
+    // flag editor beats the hover popup. The editor owns the lane while open —
+    // recompute_hover_at_cursor already clears the popup whenever any
+    // top_flag_editor is active, so the two never both want the lane, and the
+    // editor-first ordering below is the explicit backstop. Both surfaces paint
+    // live here (dynamic: per-keystroke editor, per-motion hover), after the
+    // flag-cache blit — no cache, the same live-overlay role the bottom strip's
+    // editor/hover paints had before the lane existed. Both center their
+    // monospace run over the target marker's painted column and clamp it fully
+    // onscreen (lane_text_left_x) on a kBackground fill behind the run with no
+    // border; the editor flashes that fill kAccent on an invalid commit.
+    const GuiRect lane      = top_marker_text_row_area(app);
+    const double  baseline  = lane.y + monospace_row_baseline_offset();
+    const double  advance   = monospace_advance();
+    if (advance <= 0.0) return;
+
+    if (text_editor::is_active(app.top_flag_editor) &&
+        app.top_flag_editor.kind == text_editor::Kind::FlagPayload) {
+        const text_editor::State& ed = app.top_flag_editor;
+        // The caret-origin owner supplies the run's left x, centered on the
+        // marker and clamped onscreen, so paint and the click->byte caret math
+        // share one origin.
+        const double left = flag_pending_text_left_x(app, audio, ed.target);
+        if (left < 0.0) return;   // invalid editor target
+        cairo_save(cr);
+        cairo_select_font_face(cr, "monospace",
+                               CAIRO_FONT_SLANT_NORMAL,
+                               CAIRO_FONT_WEIGHT_NORMAL);
+        cairo_set_font_size(cr, flag_font_size_px());
+        EditorTextBox box;
+        box.anchor_x        = left;
+        box.baseline_y      = baseline;
+        // The MM:SS.mmm| locked prefix is display-only and not shown in the
+        // lane — only the editable payload paints, centered on the marker.
+        box.prefix          = "";
+        box.text            = ed.pending;
+        box.hl_pad          = flag_glyph_inset_px();
+        // No visible border: ring and fill share the background color, so the
+        // box reads as light text on the strip; on an invalid commit both flash
+        // kAccent (the text stays kText and readable on it).
+        box.fill            = ed.red ? kAccent        : kBackground;
+        box.outline         = ed.red ? kAccentOutline : kBackground;
+        box.text_color      = kText;
+        box.has_selection   = text_editor::has_selection(ed);
+        box.selection_start = text_editor::selection_start(ed);
+        box.selection_end   = text_editor::selection_end(ed);
+        box.cursor_visible  = text_editor::cursor_visible_now(ed);
+        box.cursor_pos      = ed.cursor_pos;
+        render_editor_text_box(cr, box);
+        cairo_restore(cr);
+        return;
+    }
+
+    if (app.hover_popup.visible) {
+        // cached_text is the resolved-tempo string from
+        // compute_hover_popup_text; marker_index is a valid, popup-eligible warp
+        // marker whenever visible (recompute_hover_at_cursor's invariant).
+        const std::string& txt = app.hover_popup.cached_text;
+        if (txt.empty()) return;
+        const double left = lane_text_left_x(
+            app, audio, app.hover_popup.marker_index, txt.size());
+        if (left < 0.0) return;
+        // kBackground fill exactly behind the run (AA off for a crisp edge),
+        // then the text — the plain-text tier, no border, no caret.
+        const double run_w = static_cast<double>(txt.size()) * advance;
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_set_source_rgb(cr, kBackground.r, kBackground.g, kBackground.b);
+        cairo_rectangle(cr, left, static_cast<double>(lane.y),
+                        run_w, static_cast<double>(lane.h));
+        cairo_fill(cr);
+        cairo_restore(cr);
+        text_display::draw_line(cr, left, baseline, txt, kText,
+                                flag_font_size_px());
     }
 }
 
@@ -440,9 +521,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // (inner) row, letting the user keep their timestamp / S-T / W-P /
     // A-B bearings while typing. The upper row carries the transient /
     // modal chain in precedence order: prompt > queue > settings editor
-    // > BPM editor > hover readout. The prompt is a one-key-answer modal
+    // > BPM editor. The prompt is a one-key-answer modal
     // and owns the upper row; status stays visible under it (harmless
-    // context). Each row's baseline is derived from its row rect, not
+    // context). (The hover readout moved off this row to the marker-text lane —
+    // paint_marker_text_lane.) Each row's baseline is derived from its row rect, not
     // from the window bottom. (The former pan-strip row retired — pan lives on
     // the axis-locked top zoom row.)
     const GuiRect lower_row = bottom_lower_row_area(app);
@@ -551,13 +633,6 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                                    kBpmEditorPrefix,
                                    static_cast<double>(timestamp_pad_x()),
                                    upper_baseline);
-    } else if (app.hover_popup.visible) {
-        // The hover dwell renders below every modal/progress tier.
-        // cached_text is the resolved-tempo string from
-        // compute_hover_popup_text.
-        text_display::draw_line(
-            cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
-            app.hover_popup.cached_text, kText, flag_font_size_px());
     }
 }
 
@@ -620,6 +695,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
         if (rects_intersect(exposed, top_strip)) {
             paint_flag_annotations(cr, top_strip, sr);
+            // Marker-text lane (top row 2): the hover popup and the flag
+            // editor's live text, painted over the just-blitted flag cache —
+            // the same layering role the bottom strip's hover/editor paints had.
+            paint_marker_text_lane(cr);
             // Zoom-strip row (top row 0, at the window edge): painted on
             // top of the just-blitted flag cache, which is transparent over
             // this row (it carries no chips there). The ring is the row's

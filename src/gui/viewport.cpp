@@ -217,8 +217,8 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     invalidate_waveform_area();
     invalidate_timestamp_area();
     // Flags live in the top strip — rect positions change when the viewport
-    // scale changes. (The hover readout is left-anchored on the bottom strip,
-    // already covered by invalidate_timestamp_area above.)
+    // scale changes. (The hover readout renders in the top strip's marker-text
+    // lane, covered by this top-strip invalidation.)
     const GuiRect ts = top_strip_area(app);
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
     // Rects shifted under the (possibly stationary)
@@ -386,9 +386,9 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
     if (app.viewport_start_sample != old_vp) {
         invalidate_waveform_area();
         // Flag positions move with the viewport, so the top strip must
-        // repaint too. (The hover readout is left-anchored on the bottom
-        // strip; recompute_hover_at_cursor below damages it if the hit
-        // changes.)
+        // repaint too. (The hover readout renders in the top strip's marker-text
+        // lane, covered here; recompute_hover_at_cursor below re-damages it if
+        // the hit changes.)
         const GuiRect ts = top_strip_area(app);
         gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
         // Rects shifted under the (possibly
@@ -480,13 +480,13 @@ void Viewport::follow_scroll_if_needed() {
     }
 }
 
-// Reset the hover popup state. If the popup was visible, invalidate the
-// bottom strip so the next paint erases it (the hover readout lives in
-// bottom_upper_row_area). Safe to call from any path.
+// Reset the hover popup state. If the popup was visible, invalidate the top
+// strip so the next paint erases it (the hover readout renders in the
+// marker-text lane, top row 2). Safe to call from any path.
 void Viewport::clear_hover_popup() {
     const bool was_visible = app.hover_popup.visible;
     app.hover_popup = HoverPopupState{};
-    if (was_visible) invalidate_timestamp_area();
+    if (was_visible) invalidate_top_strip();
 }
 
 // Re-evaluate hover at the cursor's last on_motion coordinates. The single
@@ -533,6 +533,8 @@ void Viewport::recompute_hover_at_cursor() {
                       &app.hover_popup.copy_payload)
                 : std::string();
         app.hover_popup.visible = !app.hover_popup.cached_text.empty();
-        if (was_visible || app.hover_popup.visible) invalidate_timestamp_area();
+        // The popup renders in the marker-text lane (top strip); damage it when
+        // the old popup was showing or the new one will.
+        if (was_visible || app.hover_popup.visible) invalidate_top_strip();
     }
 }

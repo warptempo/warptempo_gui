@@ -1,6 +1,7 @@
 #include "render.h"
 #include "app_state.h"
 #include "audio.h"
+#include "gui_display_context.h"
 #include "time_format.h"
 #include "value_format.h"
 #include "warp_frame_map_view.h"
@@ -1363,57 +1364,47 @@ void init_monospace_grid_metrics(cairo_t* cr) {
     g_measured_font_px = px;
 }
 
-double flag_pending_text_left_x(
+double lane_text_left_x(
     const AppState& app, const GuiAudio& audio,
-    int marker_idx)
+    int marker_idx, size_t glyph_count)
 {
     const auto& mv = app.warpmarkers.markers();
     if (marker_idx < 0 ||
         marker_idx >= static_cast<int>(mv.size())) return -1.0;
-    // Effective waveform width (largest multiple of 16 not exceeding the
-    // window width): an off-view marker past the effective right edge sits in
-    // the inert gutter and must read as not-visible, not as gutter geometry.
-    // This maps a click x to a caret byte for the flag editor; the editor's
-    // text does not render in the strip this pass (it moves to the marker-text
-    // lane later), so the returned origin is the caret reference only.
+    const double advance = monospace_advance();
+    if (advance <= 0.0) return -1.0;
+    // The marker's painted pixel column (window coords) via the painters' own
+    // math (painted_column_of_source_frame) against the active display
+    // context's map — identity in source view, the live cached target map in
+    // target view — so the lane run centers on exactly the column the flag
+    // paints on.
+    const GuiDisplayContext& ctx = active_display_context(app, audio);
+    const int col = painted_column_of_source_frame(
+        app, audio, static_cast<double>(mv[marker_idx].time_frame),
+        *ctx.warp_frame_map);
     const GuiRect area = waveform_area(app);
-    if (area.w <= 0) return -1.0;
-    const double spp = current_samples_per_pixel(app, audio);
-    if (spp <= 0.0) return -1.0;
-    const int64_t vp_start = app.viewport_start_sample;
-    const int64_t vp_end = vp_start +
-        static_cast<int64_t>(std::nearbyint(spp * area.w));
-    // Target view: forward-translate the marker's source-frame through a
-    // freshly-built target-view warp_frame_map so the visible-range check and
-    // x-position math match where render_flags actually paints the flag.
-    // Empty / null warp_frame_map falls through to identity, matching the
-    // render-side helpers' convention. Not reachable mid-drag (begin_drag
-    // clears the editor; the click handler exits before any drag begins),
-    // so a fresh build here is correct — it returns the same target map the
-    // display cache would.
-    const int64_t src_sample = mv[marker_idx].time_frame;
-    double ms = static_cast<double>(src_sample);
-    if (app.active_audio_view == 'T') {
-        const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
-            app, audio.sample_rate(),
-            static_cast<long>(audio.total_frames())).warp_frame_map;
-        if (!target_warp_frame_map.empty()) {
-            const size_t src_frame = (src_sample < 0)
-                ? static_cast<size_t>(0)
-                : static_cast<size_t>(src_sample);
-            ms = std::nearbyint(map_source_to_target(src_frame, target_warp_frame_map));
-        }
+    const double center_x = static_cast<double>(area.x + col);
+    const double run_w = static_cast<double>(glyph_count) * advance;
+    // Center over the column, then clamp the whole run fully onscreen within
+    // the lane (unlike the flags, the lane text never hangs off an edge). A run
+    // wider than the lane pins to the left edge.
+    const GuiRect lane = top_marker_text_row_area(app);
+    const double min_left = static_cast<double>(lane.x);
+    const double max_left = static_cast<double>(lane.x + lane.w) - run_w;
+    double left = center_x - run_w / 2.0;
+    if (max_left <= min_left) {
+        left = min_left;
+    } else {
+        if (left < min_left) left = min_left;
+        if (left > max_left) left = max_left;
     }
-    if (ms <  static_cast<double>(vp_start)) return -1.0;
-    if (ms >= static_cast<double>(vp_end))   return -1.0;
-    const double samples_per_pixel =
-        static_cast<double>(vp_end - vp_start) /
-        static_cast<double>(area.w);
-    const double x_raw =
-        (ms - static_cast<double>(vp_start)) / samples_per_pixel;
-    // The caret origin is the marker's pixel column plus the glyph inset (ring
-    // + left inner pad), the same reference the flag editor's caret math uses.
-    const double text_left =
-        static_cast<double>(area.x) + std::nearbyint(x_raw);
-    return text_left + flag_glyph_inset_px();
+    return left;
+}
+
+double flag_pending_text_left_x(
+    const AppState& app, const GuiAudio& audio,
+    int marker_idx)
+{
+    return lane_text_left_x(app, audio, marker_idx,
+                            app.top_flag_editor.pending.size());
 }

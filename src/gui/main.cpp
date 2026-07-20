@@ -255,7 +255,8 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
 // Lane 0 is the zoom-strip row (a live drag surface painted as an empty ring, at
 // the window edge); lane 1 is the b/e trim-chip row; lane 2 is the marker-text
-// row (empty for now — the flag payload text lands here later); lane 3 is the
+// row (hosts the hover popup and the flag editor's live text, one at a time —
+// paint_marker_text_lane); lane 3 is the
 // flag row (the marker flag rectangles); lane 4 is the triangle row, whose
 // bottom edge is flush with the waveform area top and which holds the flags' and
 // the playhead's triangles.
@@ -281,7 +282,8 @@ GuiRect top_triangle_row_area(const AppState& a) {
 
 // Bottom strip lanes, counted up from the window bottom (index 0 = the window
 // edge). bottom_lower_row (outer, index 0) carries the always-on status line;
-// bottom_upper_row (inner, index 1) carries the modal/editor/queue/hover chain.
+// bottom_upper_row (inner, index 1) carries the modal/editor/queue chain (the
+// hover readout moved to the top strip's marker-text lane).
 // (The former pan-strip row retired — pan lives on the axis-locked top zoom
 // row.)
 GuiRect bottom_upper_row_area(const AppState& a) {

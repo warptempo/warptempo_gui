@@ -244,9 +244,10 @@ struct StemCache {
 // against wf_cache.fp_* (displayed-viewport inputs) plus marker-store
 // generations, drag-overlay hash, selection hash, and marker-view. The cache
 // holds ALL flag pixels (the fixed-width marker/phase-reset shapes and the b/e
-// trim chips); the paint pass is a pure blit. The flag editor renders nothing
-// in the strip in this design, so the editing target's flag paints as an
-// ordinary selected shape — no skip-guard, no per-frame live flag render.
+// trim chips); the paint pass is a pure blit. The flag editor's text renders
+// live in the marker-text lane, not in this cache, so the editing target's flag
+// paints here as an ordinary selected shape — no skip-guard, no per-frame live
+// flag render in the cache.
 //
 // The cache surface matches `top_strip_area(app)`: width = window width,
 // height = top_strip_height, origin (0,0). The blit at on_redraw time
@@ -465,6 +466,7 @@ private:
     // on_redraw paint passes. Each renders one strip/layer; on_redraw keeps
     // the rects_intersect gates and calls these in place.
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip, int sr);
+    void paint_marker_text_lane(cairo_t* cr);
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
     void paint_region_wash(cairo_t* cr, const GuiRect& area);
     void paint_phase_reset_overlay(cairo_t* cr, const GuiRect& area);

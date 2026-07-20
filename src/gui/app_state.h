@@ -558,8 +558,9 @@ constexpr int64_t kAxisRelockMs       = 180;
 constexpr int     kDragMovedThresholdPx = 3;
 
 // Hover popup state. A popup-eligible warp marker (pass marker or
-// label_ref) under the cursor shows a bottom-strip readout of its
-// resolved tempo. The motion and viewport-recompute handlers set
+// label_ref) under the cursor shows a readout of its resolved tempo,
+// rendered centered over the marker in the marker-text lane (top strip;
+// paint_marker_text_lane). The motion and viewport-recompute handlers set
 // `marker_index` and `cached_text` and derive `visible` the instant the
 // cursor lands on an eligible rect (no dwell); mutation paths / dismiss
 // conditions clear the whole struct.
