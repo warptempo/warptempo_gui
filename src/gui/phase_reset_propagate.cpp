@@ -278,8 +278,8 @@ void PhaseResetPropagate::paste_apply() {
             GuiPhaseResetMarker nm;
             // The rescaled position commits through snap_authored_frame —
             // a plain snap to the whole source frame, deliberately WITHOUT
-            // the pixel-column anchoring the nudges / drag commits /
-            // trim-end wheel apply: pasted positions are computed and
+            // the pixel-column anchoring the nudges / drag commits
+            // apply: pasted positions are computed and
             // view-independent, and quantizing them to whatever viewport
             // happens to be on screen would leak incidental view state
             // into authored data. Clamped after the snap to the column's

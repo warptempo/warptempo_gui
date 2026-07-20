@@ -55,9 +55,6 @@ constexpr double kWorkingZoomLevel = 2.0;  // 2.4 s — working zoom; manual
 // truth — do not inline the divisor at either site.
 constexpr int64_t kViewportLeadDivisor = 10;
 
-// Alt+wheel chip-row end-move step as a divisor of samples_visible.
-constexpr int64_t kTrimEndWheelDivisor = 10;
-
 // Hoisted from main.cpp's anonymous namespace so the hit_test_*
 // free functions (in app_state.cpp) and the GuiInputHandler mouse handler
 // (in input_handler.cpp) can reach them. Hit-test half-width only:
@@ -355,8 +352,7 @@ struct EditorTextDragState {
 };
 
 // Alt drag of a trim boundary stem/chip (the pointer trim gesture, arming
-// after the Alt+drag branch's marker hit test misses; the Alt+wheel chip-row
-// end-move is the trim wheel gesture).
+// after the Alt+drag branch's marker hit test misses).
 // Parallel to DragState but motion mutates the active tab's live trim mirror
 // directly (no overlay); release triggers a target render when the bound
 // moved. Trim is excluded from undo/redo. Session-only.
@@ -906,8 +902,8 @@ struct AppState {
     // Mirrored to/from the active tab's ViewState slot at the tab-swap
     // boundary in active_views.cpp (same pattern as viewport/zoom/playhead).
     // Trim is a region authored purely by the Alt pointer drags (single-bound
-    // stem/chip, chip-row inter-chip pair), the bare-x set/clear, and the
-    // Alt+wheel chip-row end-move — it is NOT part of the selection system (no
+    // stem/chip, chip-row inter-chip pair) and the bare-x set/clear/region-
+    // consume — it is NOT part of the selection system (no
     // bound selection, no Tab stop, no Delete arm).
     TrimState trim;
 
@@ -1085,7 +1081,7 @@ std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
 
 // The ONLY route by which a double becomes an authored position anywhere in
 // the tree: every gesture commit — nudge, drag release, the
-// trim gestures, the trim-end wheel, propagate paste — funnels its final
+// trim gestures, propagate paste — funnels its final
 // position through this before writing a marker time or trim bound, so
 // every store mutation commits a whole int64 frame (the field type makes a
 // fractional authored position unrepresentable). Banker's rounding

@@ -1276,7 +1276,7 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // Capability loss need not be preceded by keyboard.leave. Drop both
         // repeat and the cached modifier projection here so pointer input
         // delivered while no keyboard exists cannot inherit a phantom chord
-        // from the last keyboard event (for example the Alt+wheel end-move).
+        // from the last keyboard event (for example the Alt+wheel pan).
         repeat_key_ = 0;
         mod_ctrl_ = mod_shift_ = mod_alt_ = false;
         // The modifier state changed (all chords released) without a scroll
@@ -1580,12 +1580,9 @@ void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
 
     // A modifier-state change ends any continuous wheel chord session, so the
     // sub-detent remainder — bound to the old chord — is dropped outright,
-    // before a scroll frame that would re-probe. This is what keeps the
-    // Alt end-move (the top-strip chip-row wheel) honest: its read-only /
-    // no-end-bound refusals live
-    // downstream in wheel_move_trim_end, invisible to the scroll probe, and
-    // every state change that would flip those refusals (bare `x`, bare `o`)
-    // releases the chord first, clearing the remainder here.
+    // before a scroll frame that would re-probe. The wheel chords route
+    // differently by modifier (plain zoom vs Alt pan), so remainder accumulated
+    // under one chord must never assemble a detent under another.
     if (mod_ctrl_ != prev_ctrl || mod_shift_ != prev_shift ||
         mod_alt_ != prev_alt)
         scroll_accum_ = 0.0;
@@ -1815,13 +1812,9 @@ void GuiPlatform::on_pointer_frame() {
     // The context key binds remainder within one continuous chord session; a
     // modifier-state change clears scroll_accum_ outright at the modifiers
     // event (and at keyboard leave / capability loss), so remainder can never
-    // bridge a chord release. That is also what keeps the Alt end-move (the
-    // top-strip chip-row wheel)
-    // honest: its read-only / no-end-bound refusals live downstream in
-    // wheel_move_trim_end, where this probe cannot see them, and every state
-    // change that would flip those refusals (bare `x` creating a bound, bare
-    // `o` toggling read-only) requires releasing the chord first — clearing the
-    // remainder before the next same-chord motion can combine with it.
+    // bridge a chord release — the routing differs by chord (plain zoom vs Alt
+    // pan), so remainder grown under one must not complete a detent under
+    // another.
     //
     // Accepted: a remainder contributed in an accepted context, interrupted
     // by a modal that opens and closes with NO scroll frames in between,

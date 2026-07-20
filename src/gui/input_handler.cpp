@@ -466,13 +466,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         viewport.zoom_out(); return;
     }
 
-    // x is context-aware: on or inside a set trim it clears both bounds,
-    // elsewhere it sets begin at the playhead and autosets end half of the
-    // visible span away. Trim's pointer routes are the Alt press (single via a
-    // stem/chip hit, pair via a chip-row press strictly between the two bound
-    // columns) and the Alt+wheel chip-row end-move; trim is outside the selection
-    // system, so there is no Delete arm. Plain Ctrl+x is cut (text_editor.cpp)
-    // and stays unbound here.
+    // x is context-aware: a live region trims to it (consuming the region);
+    // otherwise on or inside a set trim it clears both bounds, and elsewhere it
+    // sets begin at the playhead and autosets end half of the visible span away.
+    // Trim's pointer routes are the Alt press (single via a stem/chip hit, pair
+    // via a chip-row press strictly between the two bound columns); trim is
+    // outside the selection system, so there is no Delete arm. Plain Ctrl+x is
+    // cut (text_editor.cpp) and stays unbound here.
     if (!ctrl && !shift && !alt && key == GuiKeys::X) {
         handle_trim_x();
         return;
@@ -504,8 +504,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Alt+Left / Alt+Right: nudge the selected markers / phase resets by one
     // pixel of time. Trim is not part of the selection system, so the nudge
-    // never acts on a bound (the Alt+wheel chip-row move is trim's end-move, the
-    // Alt press-drag its stem/chip reposition).
+    // never acts on a bound (trim's pointer route is the Alt press-drag on its
+    // stem/chip).
     if (alt && !shift && !ctrl && key == GuiKeys::Left) {
         if (app.active_markers_view == 'P') phase_resets.nudge_selected_phase_resets(-1);
         else                        warpops.nudge_selected_markers(-1);
@@ -641,8 +641,7 @@ void GuiInputHandler::run_zoom_toggle_command() {
 // helpers now resolve through this struct's reference members.
 void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
                                    bool ctrl, bool shift, bool alt,
-                                   bool inside_waveform, bool inside_top,
-                                   bool over_trim_row) {
+                                   bool inside_waveform, bool inside_top) {
     if (!inside_waveform && !inside_top) return;
     // `count` is the net detent count coalesced for this pointer frame
     // (always >= 1 from the platform). Each chord scales its single per-step
@@ -654,14 +653,8 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
     // no longer a wheel chord — it matches nothing here and the event is
     // swallowed.
     if (alt && !ctrl && !shift) {
-        if (over_trim_row) {
-            // Alt+wheel over the top-strip chip row moves the trim-end bound: a
-            // pixel-anchored end-move. The gesture always targets the end bound
-            // (trim has no selection), so there is no gate here;
-            // wheel_move_trim_end owns the read-only and no-end-bound refusals.
-            wheel_move_trim_end(button, count);
-            return;
-        }
+        // Alt+wheel pans everywhere over the waveform or top strip — the whole
+        // strip is one pan surface now (the chip-row trim-end move is retired).
         const int64_t step = std::max<int64_t>(
             1, samples_visible(app, audio) / kViewportLeadDivisor);
         viewport.scroll_viewport((button == GuiMouseButton::WheelUp ? -step : +step) * count);
@@ -686,28 +679,24 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // Only the bottom-strip modal surfaces swallow the wheel (the settings
     // editor and the BpmBracket reuse of top_flag_editor, the same predicate
     // the keyboard gate uses). The top-strip flag editor is deliberately
-    // NOT modal — commands punch through it on the keyboard, so wheel zoom,
-    // Alt+wheel pan, and the Alt+wheel chip-row end-move punch through it too.
+    // NOT modal — commands punch through it on the keyboard, so wheel zoom and
+    // Alt+wheel pan punch through it too.
     //
-    // The top strip splits into TWO regions because routing differs by row
-    // under Alt: the upper (chip) row runs the trim-end move, the rest pans.
-    // The platform's sub-detent remainder-attribution key is this probe value,
-    // so the chip row must be its OWN region or a detent assembled from
-    // flag-row motion could fire as an end-move over the chip row (violating
-    // the same-context attribution invariant at the accumulator). Accepted
-    // consequence: remainder no longer bridges the row boundary mid-gesture for
-    // ANY chord, zoom included — region-granular attribution, the documented
-    // model.
+    // The wheel routes by area only — the waveform and the top strip. Under Alt
+    // both pan and under no modifier the waveform zooms, so there is no row-wise
+    // split inside the top strip anymore (the chip-row trim-end move is retired,
+    // and with it the region that existed solely to keep the platform's
+    // sub-detent remainder attribution from bridging two diverging Alt routes).
+    // Fewer regions is strictly safer for the accumulator.
     //
     // A wheel event during ANY active pointer gesture is ignored, matching
     // on_button_press and the keyboard's drag-modal gate. The region drag
     // is included: the keyboard gate swallows every authoring chord
-    // mid-drag, so the wheel's authoring route (the Alt+wheel chip-row
-    // end-move) and viewport changes must not slip through either.
-    // The editor-text drag is included: the wheel's authoring routes and
-    // viewport changes must not fire under a held text-selection drag either
-    // (a wheel can emit axis events while the primary button stays held), so
-    // this gate is any_pointer_gesture_active, all five gestures.
+    // mid-drag, so viewport changes must not slip through either.
+    // The editor-text drag is included: viewport changes must not fire under a
+    // held text-selection drag either (a wheel can emit axis events while the
+    // primary button stays held), so this gate is any_pointer_gesture_active,
+    // all five gestures.
     if (app.prompt.active) return -1;
     if (modal_bottom_strip_editor_active()) return -1;
     if (app.loading || audio.total_frames() <= 0) return -1;
@@ -722,14 +711,7 @@ int GuiInputHandler::wheel_context(int x, int y) const {
         x >= top.x && x < top.x + top.w &&
         y >= top.y && y < top.y + top.h;
     if (inside_waveform) return 1;
-    if (inside_top) {
-        // The chip row (top_upper_row_area, the band hit_test_trim_chip and the
-        // Alt pair-drag y-gate on) is its own region 3; the rest of the top
-        // strip is 2. Alt+wheel over region 3 runs the trim-end move.
-        const GuiRect row = top_upper_row_area(app);
-        if (y >= row.y && y < row.y + row.h) return 3;
-        return 2;
-    }
+    if (inside_top) return 2;
     return 0;
 }
 
@@ -744,18 +726,17 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
                                GuiInputState mods) {
     // Command-adjacency bump (see on_key). The platform delivers one on_wheel
     // per pointer frame carrying the net detent count, and each wheel route
-    // applies that net count in a single call (zoom / pan / the end-move all
+    // applies that net count in a single call (zoom / pan both
     // take the summed count), so one wheel frame is one command and one bump —
     // a burst of same-frame detents is a single command, distinct wheel frames
     // are consecutive commands that coalesce.
     ++app.command_seq;
     const int ctx = wheel_context(x, y);
     if (ctx < 0) return;
-    // ctx: 1 waveform, 2 the rest of the top strip (the zoom row above the chip
-    // row and any band below it), 3 the chip row. The top strip is ctx 2 OR 3;
-    // the chip row alone routes the Alt+wheel end-move.
+    // ctx: 1 waveform, 2 the top strip. The waveform zooms (plain) or pans
+    // (Alt); the top strip pans (Alt).
     handle_wheel(dir, count, mods.ctrl, mods.shift, mods.alt,
-                 ctx == 1, ctx == 2 || ctx == 3, ctx == 3);
+                 ctx == 1, ctx == 2);
 }
 
 bool GuiInputHandler::apply_editor_clipboard(

@@ -130,7 +130,7 @@ void GuiInputHandler::clear_trim_bounds() {
 // compare end_frame <= begin_frame, run only when both bounds are set, and
 // only at COMMIT — mid-gesture crossing stays free (nothing pops
 // mid-gesture; update_trim_drag never calls this). Every trim commit site —
-// the x autoset, the Alt drag release, the Alt+wheel chip-row end-move, and
+// the x autoset, the x region-consume, the Alt drag release, and
 // the settings-editor `:trim_*=` commit — calls this after its mutation and
 // before its invalidations, so the repaint shows the cleared state.
 void GuiInputHandler::auto_clear_crossed_trim() {
@@ -152,7 +152,19 @@ void GuiInputHandler::handle_trim_clear_both() {
     }
 }
 
-// Bare x, context-aware. Playhead exactly on either set bound, or strictly
+// Bare x, context-aware. A LIVE region (the drag-painted span, active-domain
+// frames) OUTRANKS every positional rule below: x trims to the region and
+// CONSUMES it — begin at the span's lo, end at its hi, the trim wash/chips
+// taking over as the visual. The endpoints inverse-map to source frames through
+// active_domain_to_source_frame (identity in source view, the target-view
+// inverse the trim gestures already use, funnelling through snap_authored_frame
+// once), then clamp to the shared [0, total-1] walls. A span collapsing to
+// end <= begin after the snap destroys both bounds via auto_clear_crossed_trim
+// (the standing rule); the region still clears (the consume happened). A
+// read-only tab refuses silently WITHOUT consuming — nothing happened. With no
+// region, x keeps its context-aware behavior below.
+//
+// Playhead exactly on either set bound, or strictly
 // inside a fully-set trim pair, clears both bounds; anywhere else sets begin at
 // the playhead and autosets end. The coincidence test compares the playhead
 // against each bound's playhead_image_of_authored_frame — exactly the value
@@ -169,6 +181,41 @@ void GuiInputHandler::handle_trim_clear_both() {
 // is shared.
 void GuiInputHandler::handle_trim_x() {
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
+
+    if (app.region.active) {
+        // Read-only refuses like every trim gesture: silent, and the region
+        // survives (nothing happened).
+        if (active_view_state(app).read_only) return;
+        // Normalize the span at read time (endpoints rest in drag order), map
+        // each active-domain endpoint to a source frame — the map is monotone,
+        // so lo/hi order survives the inverse — and clamp to the walls.
+        const int64_t lo_active = std::min(app.region.a_frame, app.region.b_frame);
+        const int64_t hi_active = std::max(app.region.a_frame, app.region.b_frame);
+        const int64_t wall = audio.total_frames() - 1;
+        int64_t begin = active_domain_to_source_frame(app, audio, lo_active);
+        int64_t end   = active_domain_to_source_frame(app, audio, hi_active);
+        if (begin < 0)    begin = 0;
+        if (begin > wall) begin = wall;
+        if (end < 0)      end = 0;
+        if (end > wall)   end = wall;
+        app.trim.begin_frame = begin;
+        app.trim.has_begin   = true;
+        app.trim.end_frame   = end;
+        app.trim.has_end     = true;
+        // Consume the region: the trim chips/wash are now the visual. The
+        // consume happens even when the snap collapses the pair (cleared
+        // below) — the region is spent either way.
+        app.region = RegionState{};
+        // The shared trim commit tail (auto_clear_crossed_trim then the
+        // repaint/trigger), mirroring the autoset; the playhead is untouched
+        // (trim gestures never move it).
+        auto_clear_crossed_trim();
+        viewport.invalidate_waveform_area();
+        viewport.invalidate_timestamp_area();
+        target_render.trigger();
+        return;
+    }
+
     const int64_t ph = app.playhead_cursor_sample;
     int64_t begin_active = 0, end_active = 0;
     if (app.trim.has_begin)
@@ -394,8 +441,8 @@ void GuiInputHandler::commit_trim_drag() {
         // release-snap consequence (the constant-gap phrasing at TrimDragState
         // describes the mid-gesture active-domain motion).
         // The map is the display context's own — identity in source view,
-        // the live cached map in target view — as the trim-end wheel move
-        // anchors: markers freeze a pre-drag map because a
+        // the live cached map in target view: markers freeze a pre-drag map
+        // because a
         // warp drag deforms it, but trim never enters
         // build_target_view_warp_frame_map, so the live map is stable
         // across the drag. The trim stems paint
@@ -444,73 +491,6 @@ void GuiInputHandler::commit_trim_drag() {
         target_render.trigger();
     }
     app.trim_drag = TrimDragState{};
-}
-
-void GuiInputHandler::wheel_move_trim_end(GuiMouseButton button, int count) {
-    // Refused in read-only (the trim-end move was read-only-mobile while
-    // trim was one unified setting across both tabs; with per-tab trim that
-    // rationale is gone, so the bound refuses exactly like the marker tempo
-    // nudge, a silent no-op).
-    if (active_view_state(app).read_only) return;
-    // The Alt+wheel chip-row entry is selection-free, so this owns the trim
-    // presence refusal: moving a nonexistent bound would write the stale
-    // end_frame field. The end-move, like every trim gesture, requires the
-    // FULL pair set; a lone bound is gesture-inert, so both has_begin and
-    // has_end are required.
-    if (!(app.trim.has_begin && app.trim.has_end)) return;
-    const int sr = audio.sample_rate();
-    if (audio.total_frames() <= 0 || sr <= 0) return;
-    const double spp = current_samples_per_pixel(app, audio);
-    if (spp <= 0.0) return;
-    // Pixel-column-anchored end-move, marker-identical to the
-    // nudges (the derivation and the exact-painted-move rationale
-    // live at nudge_selected_markers): read the end bound's
-    // currently painted column, step it by the wheel's
-    // whole-column step, and commit that column's time — source
-    // view: viewport start plus column times samples-per-pixel;
-    // target view: the column's target-domain time inverse-mapped
-    // through the display context's cached map — through
-    // snap_authored_frame
-    // (inside authored_frame_at_column), so the stored bound is a
-    // whole source frame. The step keeps its samples_visible /
-    // kTrimEndWheelDivisor magnitude, expressed as whole pixel
-    // columns per detent so each detent's painted move is exact
-    // and no sub-column residue accumulates across detents. The
-    // end bound clamps to its absolute walls — floor 0,
-    // ceiling at frame EOF-1 (the unified authored domain);
-    // plain integer compares, the load
-    // guard's own comparison, applied AFTER the column snap so
-    // the walls win over the pixel grid. There is no
-    // partner wall — the end bound crosses the begin bound freely
-    // and the begin bound is untouched here — but each wheel frame
-    // is a commit, so a move landing the end on or before the
-    // begin destroys both bounds (auto_clear_crossed_trim). The
-    // zero floor is the walls' lower end, kept for
-    // representability — a negative position is unrepresentable in
-    // the authored frame form the .settings file persists.
-    const int64_t step = std::max<int64_t>(
-        1, samples_visible(app, audio) / kTrimEndWheelDivisor);
-    const int64_t step_cols = std::max<int64_t>(
-        1, static_cast<int64_t>(std::nearbyint(
-               static_cast<double>(step) / spp)));
-    const int64_t dcols =
-        (button == GuiMouseButton::WheelUp ? -step_cols : +step_cols) *
-        count;
-    const auto& map = *active_display_context(app, audio).warp_frame_map;
-    const int c = painted_column_of_source_frame(
-        app, audio, static_cast<double>(app.trim.end_frame), map);
-    int64_t v = authored_frame_at_column(
-        app, audio, c + static_cast<int>(dcols), map);
-    if (v < 0) v = 0;
-    const int64_t end_wall = audio.total_frames() - 1;
-    if (v > end_wall) v = end_wall;
-    app.trim.end_frame = v;
-    // Commit auto-clear (ruling at auto_clear_crossed_trim), before
-    // the invalidations so the repaint shows the cleared state.
-    auto_clear_crossed_trim();
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
-    target_render.trigger();
 }
 
 // Alt left press trim routing, consulted by the Alt+drag branch AFTER its

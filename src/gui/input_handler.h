@@ -248,10 +248,7 @@ struct GuiInputHandler {
 
     // The SINGLE wheel routing predicate. Returns -1 when the wheel is
     // swallowed at (x, y), else a region code: 1 inside the waveform area,
-    // 3 inside the top-strip chip row (top_upper_row_area), 2 elsewhere in the
-    // top strip, 0 outside both. The chip row is its own region so the
-    // platform's remainder-attribution key never bridges the row boundary (an
-    // Alt detent over the chip row runs the trim-end move). on_wheel's
+    // 2 inside the top strip, 0 outside both. on_wheel's
     // completed-detent gate and the platform's per-frame sub-detent accumulator
     // probe both consult it so the two surfaces can never drift.
     int wheel_context(int x, int y) const;
@@ -458,14 +455,12 @@ private:
 
     // Shared wheel handler for source and target view; on_wheel is
     // its only caller. Exact-match modifiers: plain = zoom, Alt = pan (10% of
-    // the visible span per detent) EXCEPT over the top-strip chip row
-    // (`over_trim_row`), where Alt = trim-end move. Ctrl+Alt is no longer a
-    // wheel chord — it, like every other combination (Shift+wheel, Ctrl+wheel,
-    // ...), no-ops. `inside_top` is true for both top-strip regions (chip row
-    // and below); `over_trim_row` narrows to the chip row.
+    // the visible span per detent) everywhere it is over the waveform or top
+    // strip. Ctrl+Alt is no longer a wheel chord — it, like every other
+    // combination (Shift+wheel, Ctrl+wheel, ...), no-ops. `inside_top` is true
+    // anywhere over the top strip.
     void handle_wheel(GuiMouseButton button, int count, bool ctrl, bool shift,
-                      bool alt, bool inside_waveform, bool inside_top,
-                      bool over_trim_row);
+                      bool alt, bool inside_waveform, bool inside_top);
 
     // Tab / Shift+Tab / IsoLeftTab dispatch: cycle marker focus, then stop
     // playback and move the playhead onto the newly focused marker. Always
@@ -642,15 +637,6 @@ private:
     // unusable.
     bool trim_mouse_x_to_active_frame(int mouse_x, int64_t& out_frame);
     void commit_trim_drag();               // release: trigger render if moved
-
-    // Alt+wheel trim-end move (over the top-strip chip row): the pixel-anchored
-    // end-bound gesture, the only authoring gesture the wheel dispatcher owns.
-    // handle_wheel routes here on the Alt chord when the pointer is over the
-    // chip row; the op itself refuses in read-only, no-ops on unusable
-    // audio/zoom state, and refuses unless BOTH bounds are set (like every trim
-    // gesture — a lone bound is gesture-inert).
-    // The end bound clamps to the unified authored wall at frame EOF-1.
-    void wheel_move_trim_end(GuiMouseButton button, int count);
 
     // Bare `t` toggle: flip app.active_audio_view between Source and Target.
     // Stops any current playback before switching domains. Source → Target
