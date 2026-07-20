@@ -381,8 +381,8 @@ void GuiInputHandler::cancel_active_drags() {
         // bounds in orig_begin/orig_end, so restore them before clearing
         // the gesture. Trim cancel restores the BOUNDS ONLY: unlike the marker
         // arm above (which tracks and restores its grabbed marker's playhead),
-        // a trim drag never touches the playhead — like the trim wheel, the
-        // gesture is playhead-independent — so there is nothing to restore or
+        // a trim drag never touches the playhead — the gesture is
+        // playhead-independent — so there is nothing to restore or
         // resync there.
         if (app.trim_drag.moved) {
             app.trim.begin_frame = app.trim_drag.orig_begin_frame;

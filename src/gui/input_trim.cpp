@@ -250,8 +250,8 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
             app.trim.begin_frame = nb;
             app.trim.end_frame   = ne;
             app.trim_drag.moved    = true;
-            // Trim drags never move the playhead — like the trim wheel, the
-            // gesture is playhead-independent. Motion updates the bounds and
+            // Trim drags never move the playhead — the gesture is
+            // playhead-independent. Motion updates the bounds and
             // repaints; the playhead stays where it is.
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
@@ -313,9 +313,9 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     if (field != new_frame) {
         field = new_frame;
         app.trim_drag.moved = true;
-        // Trim drags never move the playhead — like the trim wheel, the gesture
-        // is playhead-independent (a recorded difference from the marker drag,
-        // which tracks its grabbed marker). Motion updates the bound and
+        // Trim drags never move the playhead — the gesture is playhead-
+        // independent (a recorded difference from the marker drag, which
+        // tracks its grabbed marker). Motion updates the bound and
         // repaints; the playhead stays where it is.
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
@@ -347,8 +347,9 @@ void GuiInputHandler::commit_trim_drag() {
         // can LAG the live cache inside an async waveform-rebuild window
         // (e.g. a trim grab immediately after a tempo commit); inside that
         // window stored-equals-shown holds only transiently, converging when
-        // the rebuild lands — the same displayed-vs-live nuance the trim-end
-        // wheel anchor shares. The absolute walls
+        // the rebuild lands — the same displayed-vs-live nuance
+        // route_trim_alt_press's hit test (against displayed_or_live_target_map)
+        // shares. The absolute walls
         // — both bounds 0..EOF-1, plain integer compares —
         // re-apply AFTER the snap so the walls win over the pixel grid and a
         // wall-clamped release rests exactly on its wall. Degenerate paint
@@ -375,7 +376,7 @@ void GuiInputHandler::commit_trim_drag() {
             snap_moved_bound(app.trim.end_frame,
                              app.trim_drag.orig_end_frame,
                              audio.total_frames() - 1);
-            // Trim drags never move the playhead (like the trim wheel), so the
+            // Trim drags never move the playhead, so the
             // commit snaps the bounds only — there is no playhead pin/sync here.
         }
         // The release is the commit: a bound released on or across its
@@ -393,22 +394,24 @@ void GuiInputHandler::commit_trim_drag() {
 // Alt left press trim routing, consulted by the Alt+drag branch AFTER its
 // marker hit test misses. Every trim drag requires the FULL pair set; a lone
 // bound is gesture-inert — transparent to the press, which falls through to
-// pan/no-op like a plain press over a bound. Returns true iff both bounds are
+// the caller's no-op (an unclaimed Alt press over the waveform has no effect;
+// pan lives on the strip rows' plain press). Returns true iff both bounds are
 // set AND the press landed on trim geometry (a stem/chip single-bound hit, or
 // the top-strip inter-chip pair region) — armed or not — so the caller CLAIMS
-// the press (no pan fallback); false lets the caller fall through to the pan.
+// the press (no fallback); false lets the caller fall through to its no-op.
 // Markers BEAT trim: the caller runs the marker
 // hit test first, so a marker within its halo standing in a trim zone wins (the
 // contested bound still has its dedicated upper-row chip as an unambiguous
 // handle). Trim bounds are transparent to every OTHER chord (the plain/Shift
 // press path never consults trim). Read-only claims WITHOUT arming (a silent
-// return, no pan fallback). The three arms:
+// return, no fallback). The three arms:
 //   WAVEFORM: a press within kMarkerHitHalfPx of a SET bound's painted column
 //     (visible columns only, via hit_test_trim_boundary) begins that bound's
 //     single drag. The waveform between-region deliberately does NOT pair-drag
-//     under Alt — it stays the caller's pan (pan is Alt's core waveform gesture,
-//     and a trim span can cover the whole view); the pair handle is the
-//     top-strip span between the chips. So an unclaimed waveform press pans.
+//     under Alt — an unclaimed press there is simply inert (a trim span
+//     can cover the whole view, so pairing off the stem would swallow the
+//     whole surface); the pair handle is the top-strip span between the
+//     chips. So an unclaimed waveform press has no effect.
 //   TOP STRIP: a chip-rect hit (hit_test_trim_chip) begins that bound's single
 //     drag; else, a press within the upper (chip) row band — top_upper_row_area,
 //     the band the translucent overlay block spans between the two chips —
@@ -441,7 +444,7 @@ bool GuiInputHandler::route_trim_alt_press(int mouse_x, int mouse_y,
     if (spp <= 0.0) return false;
     // Every trim drag needs the full pair set. With a lone bound, trim
     // contributes NO pointer geometry at all — the press is transparent and
-    // falls through to the caller's pan/no-op, exactly like a plain press over
+    // falls through to the caller's no-op, exactly like a plain press over
     // a bound.
     if (!(app.trim.has_begin && app.trim.has_end)) return false;
 
@@ -451,7 +454,7 @@ bool GuiInputHandler::route_trim_alt_press(int mouse_x, int mouse_y,
         ? hit_test_trim_chip(app, audio, mouse_x, mouse_y)
         : hit_test_trim_boundary(app, audio, mouse_x);
     if (single != TrimHit::None) {
-        // Read-only claims the press but never arms (no pan fallback), exactly
+        // Read-only claims the press but never arms (no fallback), exactly
         // as the marker reposition arm refuses read-only.
         if (active_view_state(app).read_only) return true;
         begin_trim_drag(single, mouse_x);
@@ -496,7 +499,7 @@ bool GuiInputHandler::route_trim_alt_press(int mouse_x, int mouse_y,
             const int lo = std::min(bcol, ecol);
             const int hi = std::max(bcol, ecol);
             if (click_rel_x > lo && click_rel_x < hi) {
-                // Read-only claims the pair region but never arms (no pan
+                // Read-only claims the pair region but never arms (no
                 // fallback).
                 if (active_view_state(app).read_only) return true;
                 begin_trim_drag(TrimHit::Begin, mouse_x, /*both=*/true);

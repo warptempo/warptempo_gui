@@ -599,10 +599,12 @@ private:
     // Returns true iff both bounds are set AND the press landed on trim geometry
     // (a waveform stem-halo / top-strip chip single hit, or the top-strip span
     // strictly between the two bounds' columns) — armed or read-only-refused —
-    // so the caller claims the press with no pan fallback; false lets the caller
-    // fall through to the pan. Read-only claims without arming. The waveform
-    // between-region does NOT pair-drag (it stays pan); the pair handle is the
-    // top-strip inter-chip span. Trim drags never touch selection.
+    // so the caller claims the press with no fallback; false lets the caller
+    // fall through to its no-op (pan lives on the strip rows' plain press; an
+    // unclaimed Alt press over the waveform or top strip has no effect).
+    // Read-only claims without arming. The waveform between-region does NOT
+    // pair-drag (an unclaimed press there is simply inert); the pair handle is
+    // the top-strip inter-chip span. Trim drags never touch selection.
     // Strip-row zoom/pan drag, decoupled axes: zoom recomputes the level from
     // the press state and the current pointer y (zoom row only, clamped into
     // the numeric band and the shorter-file max) and always anchors the FIXED
