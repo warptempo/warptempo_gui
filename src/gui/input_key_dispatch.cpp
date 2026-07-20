@@ -390,10 +390,9 @@ void GuiInputHandler::cancel_active_drags() {
     }
     // The strip drag has already applied its motion, so stopping is just
     // ending the gesture at its current position — Esc is not a cancel here (a
-    // navigation gesture has nothing to restore). The strip drag rode the async
-    // slot per motion, so finalize the last-applied state with the one
-    // synchronous rebuild (resync + kick_waveform_sync) exactly as its release
-    // would, when it moved.
+    // navigation gesture has nothing to restore). Finalize the last-applied
+    // state with the one synchronous rebuild plus predictor resync (resync +
+    // kick_waveform_sync) exactly as its release would, when it moved.
     if (app.strip_drag.active) {
         if (app.strip_drag.moved) {
             if (playback.is_playing()) playback.resync_predictor();

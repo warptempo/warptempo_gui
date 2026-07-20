@@ -1883,6 +1883,20 @@ void GuiPlatform::on_pointer_frame() {
         on_wheel_(dir, steps, pointer_x_, pointer_y_, current_mods());
     }
 
+    // Deliver the frame's coalesced captured motion, if any (see
+    // on_relative_pointer_motion): one on_motion_ at the accumulated virtual
+    // position, dropping the intervening sensor ticks. Fired after the wheel
+    // drain, though a strip drag swallows wheels so the order is moot. A button
+    // event in this same frame was already dispatched at its arrival (button
+    // handlers are not deferred) and saw the final pointer_x_/y_, so a release
+    // that ends the drag has already finalized; this trailing on_motion_ then
+    // lands with the gesture inactive and only refreshes hover — both orders are
+    // safe. Uncaptured absolute motion is untouched (delivered live in
+    // on_pointer_motion; compositors already pace it at frame cadence).
+    if (frame_have_relmotion_ && on_motion_) {
+        on_motion_(pointer_x_, pointer_y_, current_mods());
+    }
+
     // Reset the per-frame scratch unconditionally — including motion-only
     // frames where no axis events arrived — so no partial delta leaks into
     // a later frame. scroll_accum_ is the only cross-frame carry.
@@ -1890,6 +1904,7 @@ void GuiPlatform::on_pointer_frame() {
     frame_axis_accum_ = 0.0;
     frame_have_v120_  = false;
     frame_have_axis_  = false;
+    frame_have_relmotion_ = false;
 }
 // ---------------------------------------------------------------------------
 // Strip-drag pointer capture
@@ -1988,14 +2003,20 @@ void GuiPlatform::on_relative_pointer_motion(double dx, double dy) {
     if (!pointer_captured_) return;
 
     // Advance the UNBOUNDED virtual position — no clamp to the window is what
-    // makes pan/zoom travel infinite — and deliver the rounded position through
-    // the same on_motion path an absolute motion uses. The gesture layer is
+    // makes pan/zoom travel infinite — and write the rounded position into
+    // pointer_x_/y_ so any button event dispatched later in the same frame
+    // already sees the final coordinates. The on_motion_ DELIVERY is deferred to
+    // the pointer-frame boundary (on_pointer_frame): a captured relative pointer
+    // fires one event per sensor tick (500-1000 Hz mice), and the strip drag now
+    // repaints synchronously per event, so delivering every tick would flood the
+    // repaint. Coalescing to one on_motion_ per frame (the same model the wheel
+    // uses) makes that synchronous repaint affordable. The gesture layer is
     // agnostic: it just sees coordinates that can now leave the window.
     virtual_pointer_x_ += dx;
     virtual_pointer_y_ += dy;
     pointer_x_ = static_cast<int>(std::lround(virtual_pointer_x_));
     pointer_y_ = static_cast<int>(std::lround(virtual_pointer_y_));
-    if (on_motion_) on_motion_(pointer_x_, pointer_y_, current_mods());
+    frame_have_relmotion_ = true;
 }
 
 void GuiPlatform::on_locked_pointer_locked() {

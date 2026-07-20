@@ -615,7 +615,8 @@ private:
     // to pure incremental pan. The anchor re-derives from the clamped viewport
     // each event via Viewport::apply_strip_drag_zoom. `final_event` is true on
     // the terminating event (release / button-lost) for the one synchronous
-    // rebuild; motion events pass false and ride the async slot.
+    // rebuild plus predictor resync; motion events pass false and repaint
+    // synchronously too (incremental pan or full rebuild, by what changed).
     void apply_strip_drag_at(int x, int y, bool final_event);
 
     bool route_trim_alt_press(int mouse_x, int mouse_y, bool inside_top);

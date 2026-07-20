@@ -300,6 +300,16 @@ private:
     bool   frame_have_v120_  = false; // a value120 event arrived this frame
     bool   frame_have_axis_  = false; // a legacy axis event arrived this frame
 
+    // Per-frame captured-motion coalescing. While pointer_captured_, each
+    // relative-motion event advances the virtual position (and pointer_x_/y_)
+    // immediately but DEFERS its on_motion_ delivery, setting this flag;
+    // on_pointer_frame() delivers exactly one on_motion_ at the accumulated
+    // position when set, then clears it — collapsing a 500-1000 Hz capture
+    // torrent to one gesture event per pointer frame so the strip drag's
+    // synchronous per-event repaint runs at frame cadence. Reset with the
+    // scroll scratch at the frame boundary.
+    bool   frame_have_relmotion_ = false;
+
     // Cursor (system theme, loaded once at init, kept for the process
     // lifetime). cursor_surface_ is a dedicated wl_surface that holds
     // the cursor image buffer; it is distinct from the main window

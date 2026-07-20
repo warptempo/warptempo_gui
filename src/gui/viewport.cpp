@@ -248,6 +248,13 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
         app.playhead_scanner_old_px_stash = scanner_pixel_x(app, audio);
     }
 
+    // The level applied by the previous event (or seeded at the press) — the
+    // basis for the mid-gesture repaint-path choice below. Captured before the
+    // assignment; clamp_viewport_start may re-clamp app.zoom_level, so the
+    // "did the level change this frame" test compares against the POST-clamp
+    // value at the tail.
+    const double prev_applied_level = app.zoom_level;
+
     app.zoom_level = new_zoom_level;
 
     // Anchor the song position at the FIXED press column: pick the viewport
@@ -278,11 +285,39 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
         if (playback.is_playing()) playback.resync_predictor();
         kick_waveform_sync();
     } else {
-        // Mid-gesture torrent: no per-event predictor resync (it keeps
-        // extrapolating smoothly for the drag's duration, re-anchored once at
-        // the final event) and only the async supersede slot — a stale plate
-        // converging is accepted while the pointer moves.
-        kick_waveform_render();
+        // Mid-gesture repaint is SYNCHRONOUS, path chosen by what changed this
+        // frame. No per-event predictor resync (it keeps extrapolating smoothly
+        // for the drag's duration, re-anchored once at the final event).
+        //
+        // The phase-1 design rode the async supersede slot per motion event on
+        // the theory that a synchronous repaint per relative-motion tick was
+        // unaffordable under a 500-1000 Hz mouse. labwc testing then showed the
+        // plate visibly HITCHING and "catching up" in bursts against the
+        // live-basis overlays (out-of-trim dim, region wash) that move every
+        // frame — the plate advanced only at worker-completion cadence, each
+        // completion already outdated. Two changes made the synchronous repaint
+        // affordable and are what this reversal rests on: the platform now
+        // COALESCES captured relative motion to at most one on_motion per
+        // pointer frame (so this runs at most once per frame, not per sensor
+        // tick), and force_synchronous_waveform_rebuild rebuilds the stem/flag
+        // caches inline. The async slot returns to the worker/preview system it
+        // was built for; strip drags no longer touch it mid-gesture.
+        if (app.zoom_level == prev_applied_level) {
+            // Level unchanged this frame (every pan-row event; a zoom-row event
+            // with pure horizontal motion, or one saturated at a wall): pure
+            // horizontal pan, so drive the incremental shift-and-strip fast path
+            // (memmove + dx-strip render + inline stem/flag rebuilds). It falls
+            // back to a full synchronous render on a too-large delta — the
+            // safety valve for fast flicks — and to the worker while a
+            // background render is busy. Pass the post-clamp viewport start.
+            kick_waveform_pan(app.viewport_start_sample);
+        } else {
+            // Level changed this frame: the whole plate rescales, so a full
+            // synchronous rebuild is unavoidable — the exact cost a keyboard
+            // zoom already pays per press, now capped at once per pointer frame
+            // by the platform's per-frame motion coalescing.
+            kick_waveform_sync();
+        }
     }
 }
 

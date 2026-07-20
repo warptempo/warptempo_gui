@@ -93,11 +93,14 @@ struct Viewport {
     // (window px), so zoom stays screen-anchored and decoupled from pan —
     // rather than centering on the playhead the way apply_zoom_change does.
     // Never touches the playhead or selection.
-    // Mid-gesture events pass final=false and ride the ASYNC supersede slot (a
-    // stale plate converging is accepted under the pointer torrent); the
-    // terminating event passes final=true and runs the one synchronous rebuild
-    // so the rest state is exact. A pan-row drag passes new_zoom_level equal to
-    // the level captured at press, so only the viewport moves.
+    // Mid-gesture events pass final=false and repaint SYNCHRONOUSLY, path chosen
+    // by what changed: level unchanged -> the incremental pan fast path; level
+    // changed -> one full synchronous rebuild for this frame. Affordable because
+    // the platform coalesces captured motion to at most one event per pointer
+    // frame. The terminating event passes final=true and runs the one
+    // synchronous rebuild plus the predictor resync so the rest state is exact.
+    // A pan-row drag passes new_zoom_level equal to the level captured at press,
+    // so only the viewport moves.
     void apply_strip_drag_zoom(double new_zoom_level, double anchor_sample,
                                int anchor_x, bool final);
     void zoom_in();

@@ -643,10 +643,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // FIXED press column while pan shifts what song content sits there. The top
     // zoom row zooms around that fixed column from vertical motion; the bottom
     // pan row keeps the level fixed and only pans. Every motion event re-derives
-    // the level (zoom row) and applies the incremental pan, riding the ASYNC
-    // supersede slot (final_event=false) — a stale plate converging is accepted
-    // under the pointer torrent; the release runs the one synchronous rebuild.
-    // A lost button finalizes like release.
+    // the level (zoom row) and applies the incremental pan; the repaint is
+    // SYNCHRONOUS (final_event=false — incremental pan when the level held, a
+    // full rebuild when it changed), affordable because the platform coalesces
+    // captured motion to one event per pointer frame. The release runs the one
+    // synchronous rebuild plus the predictor resync. A lost button finalizes
+    // like release.
     if (app.strip_drag.active) {
         if (!mods.primary_button_held) {     // button lost -> end like release
             if (app.strip_drag.moved)
