@@ -738,8 +738,9 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     ++app.command_seq;
     const int ctx = wheel_context(x, y);
     if (ctx < 0) return;
-    // ctx: 1 waveform, 2 top strip below the chip row, 3 the chip row. The top
-    // strip is ctx 2 OR 3; the chip row alone routes the Alt+wheel end-move.
+    // ctx: 1 waveform, 2 the rest of the top strip (the zoom row above the chip
+    // row and any band below it), 3 the chip row. The top strip is ctx 2 OR 3;
+    // the chip row alone routes the Alt+wheel end-move.
     handle_wheel(dir, count, mods.ctrl, mods.shift, mods.alt,
                  ctx == 1, ctx == 2 || ctx == 3, ctx == 3);
 }

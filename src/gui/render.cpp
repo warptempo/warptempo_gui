@@ -730,6 +730,28 @@ void render_trim_flags(cairo_t* cr,
     cairo_restore(cr);
 }
 
+void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width) {
+    // Inert full-width ring around a strip row's bounding box: 1px edges in
+    // kOverlay at ring strength (kOverlayOutlineAlpha), antialias off — the
+    // same crisp-edge style the trim pair-drag band's ring uses, with no wash
+    // fill. Spans the EFFECTIVE waveform width (x from the row's left edge),
+    // not the strip's full width, so the <=15px right gutter at a
+    // non-multiple-of-16 window stays outside the ring, matching every other
+    // grid-aligned surface.
+    if (row.w <= 0 || row.h <= 0 || waveform_width <= 0) return;
+    const int rw = std::min(waveform_width, row.w);
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    cairo_set_source_rgba(cr, kOverlay.r, kOverlay.g, kOverlay.b,
+                          kOverlayOutlineAlpha);
+    cairo_rectangle(cr, row.x, row.y, rw, 1);                 // top
+    cairo_rectangle(cr, row.x, row.y + row.h - 1, rw, 1);     // bottom
+    cairo_rectangle(cr, row.x, row.y, 1, row.h);              // left
+    cairo_rectangle(cr, row.x + rw - 1, row.y, 1, row.h);     // right
+    cairo_fill(cr);
+    cairo_restore(cr);
+}
+
 void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     cairo_save(cr);
     cairo_select_font_face(cr, "monospace",

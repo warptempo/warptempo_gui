@@ -448,8 +448,9 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
 // -- GuiPaintHandler::paint_bottom_strip ---------------------------------
 
 void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
-    // Bottom strip: two text rows of equal height mirroring
-    // the top strip. The status line lives on the lower (outer) row and
+    // Bottom strip: three rows of equal height mirroring the top strip — two
+    // text rows plus the inert pan-strip row nearest the waveform (painted as a
+    // ring below). The status line lives on the lower (outer) row and
     // paints UNCONDITIONALLY — it is no longer the trailing else of a
     // chain, so it stays visible while an editor is open on the upper
     // (inner) row, letting the user keep their timestamp / S-T / W-P /
@@ -461,6 +462,13 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // from the window bottom.
     const GuiRect lower_row = bottom_lower_row_area(app);
     const GuiRect upper_row = bottom_upper_row_area(app);
+
+    // Inert pan-strip row (bottom row 2, innermost, adjacent to the waveform):
+    // a full-width ring matching the top zoom-strip row. No content yet —
+    // gestures arrive in a later phase. Painted first so the text rows below
+    // (which sit at different y bands) are unaffected.
+    render_strip_row_ring(cr, bottom_pan_row_area(app), waveform_area(app).w);
+
     const double lower_baseline =
         lower_row.y + monospace_row_baseline_offset();
     const double upper_baseline =
@@ -638,6 +646,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
         if (rects_intersect(exposed, top_strip)) {
             paint_flag_annotations(cr, top_strip, sr);
+            // Inert zoom-strip row (top row 0, at the window edge): painted on
+            // top of the just-blitted flag cache, which is transparent over
+            // this row (it carries no chips there). No content yet — gestures
+            // arrive in a later phase.
+            render_strip_row_ring(cr, top_zoom_row_area(app),
+                                  waveform_area(app).w);
         }
 
         if (rects_intersect(exposed, area) ||

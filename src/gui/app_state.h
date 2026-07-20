@@ -945,9 +945,16 @@ int     strip_h(const AppState& a);
 GuiRect waveform_area(const AppState& a);
 GuiRect top_strip_area(const AppState& a);
 GuiRect bottom_strip_area(const AppState& a);
+// One shared row-rect helper for every strip row (see the layout contract at
+// its definition in main.cpp). row_from_window_edge indexes from the strip's
+// window edge, 0 = edge-most. The named row accessors below delegate to it.
+GuiRect strip_row_rect(const AppState& a, bool top_strip,
+                       int row_from_window_edge);
+GuiRect top_zoom_row_area(const AppState& a);
 GuiRect top_upper_row_area(const AppState& a);
 GuiRect bottom_upper_row_area(const AppState& a);
 GuiRect bottom_lower_row_area(const AppState& a);
+GuiRect bottom_pan_row_area(const AppState& a);
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);
 double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
 // The explicit-domain form of current_samples_per_pixel: spp at a zoom

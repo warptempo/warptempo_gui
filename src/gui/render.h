@@ -216,10 +216,10 @@ constexpr double kFlagBottomLiftPx = 0.0;
 // component tracks the one authored lift value.
 constexpr double kStemAboveWaveformPx = kFlagBottomLiftPx;
 
-// Fixed-pixel mirrored four-row strip grid. G is the single tunable
-// inter-row gap, shared between the two rows of each strip; it doubles as the
-// trim-flag-to-regular-flag distance. One named constant,
-// one place to change it. Now 0 — the two rows of each strip touch, and the
+// Fixed-pixel mirrored six-row strip grid (three rows per strip). G is the
+// single tunable inter-row gap between each adjacent row pair within a strip;
+// it doubles as the trim-flag-to-regular-flag distance. One named constant,
+// one place to change it. Now 0 — the three rows of each strip touch, and the
 // waveform-side and outer (window-edge) gaps (both kFlagBottomLiftPx, also 0)
 // vanish, so rows and strips pack tight against each other and the window
 // edges. Stays a compile-time zero under font_size scaling — zero is
@@ -580,6 +580,14 @@ void render_trim_flags(cairo_t* cr,
                        const TrimRange& trim,
                        bool has_begin,
                        bool has_end);
+
+// Paints an inert full-width ring around a single strip row's bounding box:
+// 1px edges in kOverlay at kOverlayOutlineAlpha, antialias off (the trim
+// pair-drag band's ring style, no wash fill). `waveform_width` is the effective
+// waveform width (waveform_area.w); the ring spans [row.x, row.x + width) so
+// the non-multiple-of-16 right gutter stays outside it. Used by the top
+// zoom-strip row and the bottom pan-strip row — both share the one layout.
+void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width);
 
 // Editor overlay used by the top-flag editor. When `marker_index >= 0`
 // and matches a flag the renderer is about to draw, that flag's text is
