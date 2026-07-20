@@ -720,8 +720,9 @@ void render_trim_flags(cairo_t* cr,
       + monospace_row_baseline_offset();
 
     // With both bounds set, a band fills the chip-row span between the two
-    // chips — the visual affordance of the Alt pair-drag's top-strip inter-chip
-    // grab band (the span strictly between the two b/e chips). The affordance is
+    // chips — the visual affordance of the pair (bridge) drag's top-strip
+    // inter-chip grab band (the span strictly between the two b/e chips). The
+    // affordance is
     // the shared overlay wash (kOverlay / kOverlayAlpha, the same pair the phase
     // reset overlay paints with) over the top-strip background, PLUS a 1px
     // ring in the band's own color pair at ring strength (kOverlay at

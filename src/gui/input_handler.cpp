@@ -209,11 +209,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // drag guard: Tab, undo, `t`, and the rest never see a key mid-drag.
     // The editor text-selection drag has its own modal gate above
     // the text-editor handlers; the pointer gestures here — the marker /
-    // trim / strip / region drags and the pending marker drag (a flag press
+    // trim / strip / region drags and the pending marker / trim drags (a press
     // held before its reposition begins) — are mutually exclusive with it.
     if (app.drag.active || app.trim_drag.active ||
         app.strip_drag.active || app.region_drag.active ||
-        app.pending_marker_drag.active) {
+        app.pending_marker_drag.active || app.pending_trim_drag.active) {
         if (key == GuiKeys::Escape) {
             cancel_active_drags();
             return;
@@ -493,11 +493,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // x branches on the highlight: a live region trims to it (overwriting any
     // existing bounds and consuming the highlight, so re-trimming needs a fresh
-    // drag); no region clears the trim. The playhead plays no part. Trim's pointer routes are the Alt press
-    // (single via a stem/chip hit, pair via a chip-row press strictly between
-    // the two bound columns); trim is outside the selection system, so there is
-    // no Delete arm. Plain Ctrl+x is cut (text_editor.cpp) and stays unbound
-    // here.
+    // drag); no region clears the trim. The playhead plays no part. Trim's
+    // pointer routes are the PLAIN chip-row press (single via a chip-rect hit,
+    // pair via a bridge press strictly between the two bound columns); trim is
+    // outside the selection system, so there is no Delete arm. Plain Ctrl+x is
+    // cut (text_editor.cpp) and stays unbound here.
     if (!ctrl && !shift && !alt && key == GuiKeys::X) {
         handle_trim_x();
         return;
@@ -529,8 +529,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Alt+Left / Alt+Right: nudge the selected markers / phase resets by one
     // pixel of time. Trim is not part of the selection system, so the nudge
-    // never acts on a bound (trim's pointer route is the Alt press-drag on its
-    // stem/chip).
+    // never acts on a bound (trim's pointer route is the plain chip-row
+    // press-drag on its chip / the inter-chip bridge).
     if (alt && !shift && !ctrl && key == GuiKeys::Left) {
         if (app.active_markers_view == 'P') phase_resets.nudge_selected_phase_resets(-1);
         else                        warpops.nudge_selected_markers(-1);

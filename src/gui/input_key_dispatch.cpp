@@ -422,6 +422,11 @@ void GuiInputHandler::cancel_active_drags() {
     // not part of the pending gesture), so there is nothing to revert.
     if (app.pending_marker_drag.active)
         app.pending_marker_drag = PendingMarkerDrag{};
+    // A pending trim drag (a chip-row press whose drag never began) is just
+    // disarmed: the press mutated nothing (trim has no click action), so there
+    // is nothing to revert.
+    if (app.pending_trim_drag.active)
+        app.pending_trim_drag = PendingTrimDrag{};
 }
 
 // Render-trigger chords. See the declaration for the chord list.

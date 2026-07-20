@@ -133,13 +133,27 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // (app, audio, ...) explicit args. The handle_wheel lambda is now a
 // private method on this struct.
 void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
-    // Decoupled axes, screen-anchored zoom: the zoom always anchors press_x
-    // (the FIXED initial-click column); pan shifts which song content sits at
-    // that column, and a later zoom expands/contracts around whatever rests
-    // there NOW. Deliberately un-Ableton (whose zoom anchor drifts with the
-    // pan). Both rows share this one path — the pan row pins the level, so the
-    // identical math degenerates to pure incremental pan.
+    // Decoupled axes, SONG-anchored zoom (Ableton's model). anchor_sample is
+    // the song position painted under press_x at the press, FIXED for the whole
+    // drag — never re-derived from the clamped viewport. As you pan it DRIFTS
+    // across the screen, and a zoom expands/contracts around wherever that song
+    // position currently sits (its CURRENT painted x), not around the press
+    // column. Both rows share this one path: the pan row pins the level, so the
+    // zoom re-anchor degenerates and the math is pure incremental pan.
+    //
+    // Recorded reversal: an earlier labwc pass replaced this with a
+    // SCREEN-anchored zoom (anchor_sample re-derived each event so it stayed
+    // pinned to the fixed press column, the zoom never drifting with the pan).
+    // Further use showed the song-anchored feel is the wanted one, so it was
+    // reversed back to here; losing track of an anchor dragged far offscreen is
+    // the accepted Ableton compromise.
     StripDragState& sd = app.strip_drag;
+    // Pre-zoom (old) level's spp: the pan increment and the anchor's current
+    // screen column are both computed at the level in force BEFORE this event's
+    // zoom. current_samples_per_pixel reads app.zoom_level, still the old level
+    // here (apply_strip_drag_zoom assigns the new one).
+    const double spp_old = current_samples_per_pixel(app, audio);
+
     double new_level = sd.press_level;
     if (sd.zoom_axis) {
         // Zoom axis: the ABSOLUTE dy since press. Drag DOWN (y grows) lowers
@@ -153,24 +167,31 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
         if (new_level < kMinZoom) new_level = kMinZoom;
         if (new_level > max_l)    new_level = max_l;
     }
-    // Pan axis: an INCREMENTAL grab-pan at the new level. dx moves the song
-    // position that must sit at press_x, with the grab sign (drag right pulls
-    // later content left under the fixed anchor).
-    const double spp = samples_per_pixel_at(
-        new_level, waveform_area(app).w, live_total_frames(app, audio),
-        audio.sample_rate());
-    sd.anchor_sample -= static_cast<double>(x - sd.last_x) * spp;
+
+    // (1) Incremental grab-pan at the old level: dx shifts the viewport with the
+    // grab sign (drag right pulls later content left under the hand). Read from
+    // the current (post-clamp) viewport_start each event so panning into a wall
+    // and back reverses symmetrically — no dead zone.
+    const double vp1 = static_cast<double>(app.viewport_start_sample) -
+        static_cast<double>(x - sd.last_x) * spp_old;
     sd.last_x = x;
-    // Apply at the FIXED press column (never the live x): the viewport entry
-    // point computes viewport_start = anchor - press_x·spp then clamps.
-    viewport.apply_strip_drag_zoom(new_level, sd.anchor_sample, sd.press_x,
+
+    // (2) The fractional screen column where the FIXED anchor_sample now sits
+    // under the panned viewport at the old level — it drifts as the pan moves.
+    // Passing this drifted column as the anchor x makes apply_strip_drag_zoom
+    // re-place the viewport so anchor_sample stays at that same column under the
+    // new level's spp: the zoom pivots around the anchor's current painted x.
+    // When the level is unchanged (every pan-row event, or a purely horizontal
+    // zoom-row event) spp is identical and the re-place is an identity that
+    // reproduces vp1, so this one formula serves both the pan and the zoom.
+    const double anchor_x = (sd.anchor_sample - vp1) / spp_old;
+
+    // (3) The viewport entry point (clamp chokepoint) sets the level, computes
+    // viewport_start = anchor_sample - anchor_x·spp(new_level), and clamps.
+    // anchor_sample is NOT touched afterwards — it stays the fixed press-time
+    // song position for the whole drag.
+    viewport.apply_strip_drag_zoom(new_level, sd.anchor_sample, anchor_x,
                                    final_event);
-    // Wall dead-zone elimination: re-derive anchor_sample from the CLAMPED
-    // viewport so panning into a wall and back reverses symmetrically, and the
-    // anchor always equals what is actually painted at press_x (the
-    // screen-anchor semantic). spp is unchanged by the apply (same level).
-    sd.anchor_sample = static_cast<double>(app.viewport_start_sample) +
-                       static_cast<double>(sd.press_x) * spp;
 }
 
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
@@ -243,8 +264,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     if (app.loading || audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
+    // The waveform BAND spans the full window width (top.w), not the effective
+    // width (area.w): the <=15 px inert right gutter counts as a waveform click
+    // by the user's lights, so a plain press there still reaches the waveform
+    // branch and clears the selection (it has no column to seat a playhead, so
+    // that is all it does). The gutter is 0 px at the deployment widths
+    // (1920/2560/3840 are multiples of 16), so this only matters off-deployment.
     const bool inside_waveform =
-        x >= area.x && x < area.x + area.w &&
+        x >= area.x && x < top.w &&
         y >= area.y && y < area.y + area.h;
     const bool inside_top =
         x >= top.x && x < top.x + top.w &&
@@ -315,12 +342,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 app.strip_drag.active    = true;
                 app.strip_drag.zoom_axis = in_zoom_row;
                 app.strip_drag.press_y   = y;
-                // The FIXED screen anchor column for the whole drag, and the
-                // last-x seed the incremental pan reads from.
+                // The press column: the drag-threshold reference and the last-x
+                // seed the incremental pan reads from. The zoom is song-anchored,
+                // so press_x is not a fixed screen anchor — the anchor drifts.
                 app.strip_drag.press_x   = x;
                 app.strip_drag.last_x    = x;
                 // The song position painted under press_x at press time,
-                // unclamped — the required-at-press_x anchor the drag maintains.
+                // unclamped and FIXED for the whole drag — the anchor the zoom
+                // pivots around (drifting across the screen as the pan moves).
                 app.strip_drag.anchor_sample =
                     static_cast<double>(app.viewport_start_sample) +
                     static_cast<double>(x) * spp;
@@ -350,30 +379,33 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (inside_top) playback_lifecycle.stop_playback_if_playing();
 
         // Editor: mouse handling.
-        //   click inside top strip on the editing target: re-position
-        //     cursor at the clicked byte (handled inside enter_*_edit)
-        //   click inside top strip on a different flag: switch target
-        //   click anywhere else: exit edit (no commit), then fall
-        //     through so the click routes through normal handling.
-        // A click in the top strip while a flag editor is active routes
-        // through the normal flag hit-test below.
+        //   click inside top strip on the SAME flag being edited: re-position
+        //     the caret at the clicked byte (the same-target branch inside
+        //     enter_text_edit), keeping the pending text.
+        //   click anywhere else (a DIFFERENT flag, a non-flag top-strip spot, or
+        //     off the strip): DISCARD the open editor without committing — Esc's
+        //     teardown exactly (pending dropped; Enter is the only commit route)
+        //     — then fall through so the click routes through normal handling. A
+        //     click on a different flag thereby single-selects that flag below,
+        //     rather than retargeting the editor (the old retarget was a bug).
+        // The caret-reposition path never falls through (it returns); every
+        // discard path falls through to the normal flag hit-test / waveform
+        // handling below.
         if (text_editor::is_active(app.top_flag_editor)) {
-            if (inside_top) {
-                const int hit_now = hit_test_flag(app, audio, x, y);
-                if (hit_now >= 0 && app.active_markers_view != 'P') {
-                    flag_editor.enter_top_flag_edit(
-                        hit_now, static_cast<double>(x));
-                    arm_editor_text_drag_on_open();
-                    return;
-                }
-                // Top strip click that isn't on a flag: exit and fall
-                // through to normal handling.
-                flag_editor.exit_top_flag_edit_no_commit();
-            } else {
-                flag_editor.exit_top_flag_edit_no_commit();
-                // Fall through so the click can drive a playhead
-                // drag, marker click, etc.
+            const int hit_now = inside_top ? hit_test_flag(app, audio, x, y) : -1;
+            if (inside_top && hit_now == app.top_flag_editor.target &&
+                app.active_markers_view != 'P') {
+                // Same flag: caret reposition only (enter_top_flag_edit routes to
+                // enter_text_edit's same-target branch).
+                flag_editor.enter_top_flag_edit(
+                    hit_now, static_cast<double>(x));
+                arm_editor_text_drag_on_open();
+                return;
             }
+            // Different flag / non-flag / off-strip: discard (Esc teardown) and
+            // fall through so the click drives normal handling (a different
+            // flag single-selects; a waveform click deselects + places playhead).
+            flag_editor.exit_top_flag_edit_no_commit();
         }
 
         // Clicks in iter/BPM mode route through the consolidated
@@ -385,60 +417,47 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Flag hit test, computed ONLY on the path that consumes it. The
         // TOP-STRIP flag hit feeds the plain/Shift flag-click branches (plain =
         // single-select + arm the pending marker drag, Shift = toggle
-        // membership), so it is resolved once here. The WAVEFORM is
-        // marker-blind — a plain press is playhead placement + region-drag arm,
-        // a Shift press a no-op — so no marker scan runs on the waveform at all
-        // (the invisible stem is not a grab target). Trim bounds are transparent
-        // to PLAIN and SHIFT presses (a click over a bound is an ordinary
-        // waveform click); only the Alt branch consults the trim hit tests, so
-        // no trim hit test runs on the plain/Shift path either.
+        // membership), so it is resolved once here. The WAVEFORM never SELECTS a
+        // marker — a plain press is deselect-all + playhead placement +
+        // region-drag arm, a Shift press a no-op — so no marker scan runs on the
+        // waveform at all (the invisible stem is not a grab target). Trim bounds
+        // are grabbed only by their top-strip chips / the inter-chip bridge on a
+        // PLAIN chip-row press (route_trim_chip_press below); a click over a
+        // bound's waveform stem is an ordinary waveform click (the stem grab
+        // retired), so no trim hit test runs on the waveform at all.
         int hit = -1;
         if (inside_top) hit = hit_test_flag(app, audio, x, y);
 
-        if (alt && !ctrl && !shift) {
-            // Alt+drag (exact) is TRIM-ONLY. The marker reposition arm retired
-            // — the plain flag press/drag owns marker moves now (select at
-            // press, begin_drag past the shared threshold) — and the invisible
-            // waveform stem is no longer a grab target, so no marker hit test
-            // runs here. Precedence:
-            //   1. Trim geometry (stem/chip single hit, or the top-strip span
-            //      strictly between the two chips) → that bound's / the pair's
-            //      drag, via route_trim_alt_press. The router CLAIMS the press
-            //      (no fallback) whenever it lands on trim geometry.
-            //   2. Empty waveform → nothing (pan lives on the strip rows now,
-            //      claimed by the plain left press above).
-            // Read-only refuses the trim arm silently. The follow override fires
-            // only when a drag actually armed and playback was live at press
-            // time (a top-strip press has already stopped playback, so
-            // was_playing is the pre-stop snapshot captured up top).
-            if (route_trim_alt_press(x, y, inside_top)) {
-                if (app.trim_drag.active && was_playing)
-                    app.follow_overridden_for_session = true;
-                return;
-            }
-            // Empty waveform: nothing to arm. Pan is a strip-row gesture now,
-            // so an Alt press here just ends without effect.
-            return;
-        }
-
-        // Strict modifier matching: Alt-exact is hit-routed above (trim arm on
-        // trim geometry, nothing on empty waveform — pan is a strip-row gesture
-        // now). Ctrl+Alt is no longer a pointer gesture — it falls here into the
-        // strict no-op. Every other modifier combination — Ctrl on empty,
-        // Ctrl+Shift, Shift+Alt, ... — no-ops here too. Only the plain or
-        // Shift-modified base press proceeds (Shift adjusts the selection).
+        // Strict modifier matching: Alt-exact is now a STRICT NO-OP everywhere
+        // (the Alt pointer trim route retired wholesale — trim's chip/bridge
+        // drags moved to the PLAIN chip-row press below, and the marker
+        // reposition arm already lives on the plain flag press). Ctrl+Alt, Ctrl,
+        // Ctrl+Shift, Shift+Alt, ... all no-op here too. Only a plain or
+        // Shift-modified base press proceeds (Shift adjusts the selection). The
+        // Alt+wheel pan and the Alt keyboard chords are untouched (separate
+        // handlers); pan lives on the strip rows' plain press, claimed above.
         if (ctrl || alt) return;
 
-        // Plain or Shift press. In the waveform area a plain press places the
-        // playhead at the clicked column and arms the region-select drag,
-        // touching NO marker state (marker-blind); a Shift press on the waveform
-        // is a strict no-op. In the top strip (flag click) selection is the
+        // Plain or Shift press. In the waveform area a plain press clears the
+        // marker selection (deselect-all), places the playhead at the clicked
+        // column, and arms the region-select drag — it never SELECTS a marker; a
+        // Shift press on the waveform is a strict no-op. In the top strip a plain
+        // CHIP-ROW press arms a trim chip/bridge drag (claimed ahead of the
+        // marker flag select); otherwise (flag click) selection is the
         // whole interface, BOTH views: a plain click single-selects and ARMS a
         // pending marker drag (moves the marker if the pointer crosses the
         // threshold, else a pure click); Shift+click toggles multi-select
         // membership only. Neither moves the playhead — only the Tab family and
         // `c` land the playhead on a marker.
         if (inside_top) {
+            // Plain unmodified chip-row press arms a trim chip/bridge drag,
+            // claimed BEFORE the marker flag single-select. The chip row and the
+            // marker flag row are disjoint y-bands, so this contends with
+            // nothing: a flag-row press yields no chip/bridge claim and falls to
+            // the flag handling. Shift never touches trim (a chip/bridge stays
+            // transparent to it) — it falls to the toggle. A claim (armed or
+            // read-only) returns without touching the selection.
+            if (!shift && route_trim_chip_press(x, y)) return;
             if (hit >= 0) {
                 if (shift) {
                     // Shift+click toggles membership; it never arms a drag.
@@ -464,17 +483,21 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
 
-        // Waveform-area press: pure playhead placement + region-drag arm,
-        // marker-blind. The press does NOT consult `hit` and touches NO marker
-        // state — it never selects a hit marker and never clears the selection
-        // (selection changes live on the flags, Tab, and the editing commands).
-        // A plain press drops the playhead at the clicked column (no marker
-        // snap — the 3px marker-snap magnet already died with the scrub in the
-        // prior phase, and this completes the waveform's marker-blindness),
-        // reseeks a live scanner to it, overrides follow, and arms the region
-        // drag; a Shift press is a strict no-op anywhere on the waveform.
+        // Waveform-area press: marker-blind for SELECTION (it never SELECTS a
+        // hit marker — the invisible stem is not a grab target), but a plain
+        // press CLEARS the selection (the deselect-all: a waveform click
+        // dismisses the marker selection, the Ableton behaviour). The press does
+        // NOT consult `hit`. Then it drops the playhead at the clicked column (no
+        // marker snap — the 3px marker-snap magnet already died with the scrub in
+        // the prior phase), reseeks a live scanner to it, overrides follow, and
+        // arms the region drag (a click-drag to highlight therefore also clears,
+        // since the same press covers both). A Shift press is a strict no-op
+        // anywhere on the waveform, selection included.
         {
             if (shift) return;
+            // The clear runs FIRST, before the gutter early-return below, so an
+            // inert-gutter click (no column to seat a playhead) still deselects.
+            selection.clear_selection();
             const int click_rel_x = x - area.x;
             if (click_rel_x < 0 || click_rel_x >= area.w) return;
             const int64_t sample =
@@ -571,8 +594,9 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // press cannot yet know whether it becomes a click or a drag arm (and
         // the Esc-restore snapshot in pre_region must keep capturing the
         // pre-press region). The press already did its own press-time work
-        // (playhead placement, reseek) regardless — the waveform press is
-        // marker-blind, so no selection touch there.
+        // (deselect-all, playhead placement, reseek) regardless — the waveform
+        // press never SELECTS a marker, and its deselect-all already fired at
+        // press.
         const bool moved = app.region_drag.moved;
         app.region_drag = RegionDragState{};
         if (!moved && app.region.active) {
@@ -583,6 +607,14 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     }
     if (app.trim_drag.active) {
         commit_trim_drag();
+        return;
+    }
+    if (app.pending_trim_drag.active) {
+        // The pending trim drag never crossed the threshold: a motionless
+        // chip-row press. Trim has no click action and the press mutated
+        // nothing, so there is nothing to commit — just disarm. (A crossed
+        // pending became app.trim_drag and commits through the branch above.)
+        app.pending_trim_drag = PendingTrimDrag{};
         return;
     }
     if (app.pending_marker_drag.active) {
@@ -598,8 +630,9 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 }
 
 // Motion handler. Drives the active pointer gesture: editor-text drag,
-// strip-row zoom/pan drag, trim drag, region-select drag, or marker
-// reposition drag; with no gesture it recomputes hover at the cursor. The
+// strip-row zoom/pan drag, trim drag (or a pending trim drag arming past the
+// threshold), region-select drag, or marker reposition drag (or a pending
+// marker drag); with no gesture it recomputes hover at the cursor. The
 // marker drag applies the pointer delta to the grabbed marker only — it does
 // NOT move the playhead (only the Tab family and `c` land the playhead on a
 // marker).
@@ -691,6 +724,38 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             commit_trim_drag();
             return;
         }
+        update_trim_drag(mouse_x);
+        return;
+    }
+    // Pending trim drag (armed by a plain chip-row press): the trim reposition
+    // begins only once the pointer travels past the shared Chebyshev threshold.
+    // A lost button before the crossing ends it as a motionless click (nothing
+    // committed). Placed after the trim_drag branch above: on the crossing this
+    // begins the drag AND applies its first update inline, so it does not fall
+    // back into that branch this event.
+    if (app.pending_trim_drag.active) {
+        viewport.clear_hover_popup();
+        if (!mods.primary_button_held) {   // button lost -> just the click
+            app.pending_trim_drag = PendingTrimDrag{};
+            return;
+        }
+        if (std::max(std::abs(mouse_x - app.pending_trim_drag.press_x),
+                     std::abs(mouse_y - app.pending_trim_drag.press_y)) <
+                kDragMovedThresholdPx) {
+            return;   // still a click; leave the pending armed, do nothing
+        }
+        // Threshold crossed: begin the trim drag anchored at the PRESS column so
+        // the bound(s) track from the grab, this first update folding the whole
+        // press->crossing delta (the marker-pending / strip catch-up pattern).
+        // begin_trim_drag captures the anchor at press_x now — exact, since
+        // nothing mutated the trim store between press and crossing — and sets
+        // app.trim_drag.active.
+        const bool is_begin = app.pending_trim_drag.is_begin;
+        const bool both     = app.pending_trim_drag.both;
+        const int  press_x  = app.pending_trim_drag.press_x;
+        app.pending_trim_drag = PendingTrimDrag{};
+        begin_trim_drag(is_begin ? TrimHit::Begin : TrimHit::End, press_x, both);
+        if (!app.trim_drag.active) return;  // begin refused (no pair / no audio)
         update_trim_drag(mouse_x);
         return;
     }

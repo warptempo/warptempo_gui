@@ -623,10 +623,11 @@ void render_trim_stems(cairo_t* cr,
 // edge, the same convention the stem renderer uses). Column placement matches
 // render_trim_stems against the same viewport — `trim.begin` / `trim.end` are
 // already in the displayed domain, so no further translation happens here.
-// The chip has NO editable payload; it is an Alt grab target only (trim is
-// outside the selection system) and is never a text_editor target.
+// The chip has NO editable payload; it is a plain-press grab target only (trim
+// is outside the selection system) and is never a text_editor target.
 // With BOTH bounds set, a solid block fills the chip-row band between the two
-// chips — the visual affordance of the Alt pair-drag's chip-row grab band. It
+// chips — the visual affordance of the pair (bridge) drag's chip-row grab band.
+// It
 // occupies the upper chip box's vertical band (flag_chip_bottom_y(...,
 // ChipRow::Upper) minus monospace_row_h(), down to flag_chip_bottom_y) and
 // uses the shared overlay wash (kOverlay / kOverlayAlpha, the same pair the

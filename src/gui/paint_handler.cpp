@@ -769,7 +769,7 @@ GuiPaintHandler::compute_displayed_trim() const {
     // Positions are the AUTHORED frames, per side, unclamped and unordered
     // (NOT compute_trim_samples, whose per-side [0, total] clamp serves
     // playback ranges): stems and chips paint at the authored spot — past
-    // EOF included — and the hit tests (hit_test_trim_boundary/_chip) test
+    // EOF included — and the hit test (hit_test_trim_chip) tests
     // the same authored positions, so paint and pick stay in agreement.
     // Bounds may be inverted mid-gesture (crossed cannot rest; this runs
     // per frame); the helper is position-only and needs no order (the

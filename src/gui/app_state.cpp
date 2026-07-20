@@ -66,69 +66,11 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio) {
     return *ctx.warp_frame_map;
 }
 
-TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
-                               int mouse_x) {
-    // Trim bounds hit-test like markers in the AUTHORING views, against
-    // the active A/B tab's live bounds. The sole consumer (route_trim_alt_press)
-    // routes here only with the FULL pair set — a lone bound is gesture-inert —
-    // so both bounds are guaranteed present past this early-out.
-    if (!(app.trim.has_begin && app.trim.has_end)) return TrimHit::None;
-    const int64_t begin_frame = app.trim.begin_frame;
-    const int64_t end_frame   = app.trim.end_frame;
-
-    const GuiRect area = waveform_area(app);
-    const double spp = current_samples_per_pixel(app, audio);
-    if (spp <= 0.0) return TrimHit::None;
-    const int sr = audio.sample_rate();
-    if (sr <= 0) return TrimHit::None;
-    const int click_rel_x = mouse_x - area.x;
-    const double vp = static_cast<double>(app.viewport_start_sample);
-
-    // Marker-style column translation: trim is stored
-    // source-domain, painted at map_source_to_target columns in the mapped
-    // views. The map is the item pixels' own via displayed_or_live_target_map
-    // (event-synchronized hit geometry — the ruling at that selector): empty
-    // (identity) in source view, the map the stem/flag item caches baked when
-    // warm in target view.
-    const std::vector<WarpFrameMapSegment>& dmap =
-        displayed_or_live_target_map(app, audio);
-    const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
-        dmap.empty() ? nullptr : &dmap;
-
-    auto bound_dist = [&](int64_t frame) -> int {
-        const int64_t src_sample = frame;
-        double ms = static_cast<double>(src_sample);
-        if (target_warp_frame_map) {
-            const size_t q = (src_sample < 0)
-                ? static_cast<size_t>(0)
-                : static_cast<size_t>(src_sample);
-            ms = std::nearbyint(map_source_to_target(q, *target_warp_frame_map));
-        }
-        // Visible columns only: a bound whose painted column falls outside the
-        // strip [0, area.w - 1] is not a candidate — return a beyond-halo
-        // distance so it never wins. The
-        // kMarkerHitHalfPx halo governs reach AROUND a visible column but does
-        // not extend the strip.
-        const int b_px = static_cast<int>(std::nearbyint((ms - vp) / spp));
-        if (b_px < 0 || b_px >= area.w) return kMarkerHitHalfPx + 1;
-        return std::abs(b_px - click_rel_x);
-    };
-
-    const int db = bound_dist(begin_frame);
-    const int de = bound_dist(end_frame);
-    const bool begin_ok = db <= kMarkerHitHalfPx;
-    const bool end_ok   = de <= kMarkerHitHalfPx;
-    if (begin_ok && end_ok) return (db <= de) ? TrimHit::Begin : TrimHit::End;
-    if (begin_ok) return TrimHit::Begin;
-    if (end_ok)   return TrimHit::End;
-    return TrimHit::None;
-}
-
 TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y) {
-    // Same bound sourcing as hit_test_trim_boundary: the active A/B tab's live
-    // bounds in the AUTHORING views. The sole consumer (route_trim_alt_press)
-    // routes here only with the FULL pair set — a lone bound is gesture-inert —
+    // Trim bounds hit-test in the AUTHORING views against the active A/B tab's
+    // live bounds. The sole consumer (route_trim_chip_press) routes here only
+    // with the FULL pair set — a lone bound is gesture-inert —
     // so both bounds are guaranteed present past this early-out.
     if (!(app.trim.has_begin && app.trim.has_end)) return TrimHit::None;
     const int64_t begin_frame = app.trim.begin_frame;
@@ -152,7 +94,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     if (sr <= 0) return TrimHit::None;
     const double vp = static_cast<double>(app.viewport_start_sample);
 
-    // Same translation as hit_test_trim_boundary so the chip column lands
+    // Column translation so the chip column lands
     // where the stem (and chip) are painted in the mapped views: the map is
     // the item pixels' own via displayed_or_live_target_map (event-synchronized
     // hit geometry — the ruling at that selector), empty (identity) in source

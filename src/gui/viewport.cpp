@@ -238,7 +238,7 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
 }
 
 void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample,
-                                     int anchor_x, bool final) {
+                                     double anchor_x, bool final) {
     if (audio.total_frames() <= 0) return;
 
     // Capture the scanner's pre-reflow pixel-x under the OLD viewport (as
@@ -257,8 +257,8 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
 
     app.zoom_level = new_zoom_level;
 
-    // Anchor the song position at the FIXED press column: pick the viewport
-    // start that paints anchor_sample at anchor_x (always press_x), at the
+    // Place the song position at anchor_x: pick the viewport start that paints
+    // anchor_sample at that (drifted, fractional) screen column, at the
     // (possibly new) level. current_samples_per_pixel reads the level just
     // assigned, so this is spp(new_level). At the effective ceiling the anchor
     // cannot pin a column
@@ -266,7 +266,7 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // branch parks the start at 0 and the drag is inert on this axis.
     const double spp = current_samples_per_pixel(app, audio);
     app.viewport_start_sample = static_cast<int64_t>(std::nearbyint(
-        anchor_sample - static_cast<double>(anchor_x) * spp));
+        anchor_sample - anchor_x * spp));
     clamp_viewport_start(app, audio);
 
     invalidate_waveform_area();

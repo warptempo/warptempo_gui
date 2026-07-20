@@ -50,7 +50,7 @@ void GuiInputHandler::clear_trim_bounds() {
 // compare end_frame <= begin_frame, run only when both bounds are set, and
 // only at COMMIT — mid-gesture crossing stays free (nothing pops
 // mid-gesture; update_trim_drag never calls this). Every trim commit site —
-// the x set-from-region, the Alt drag release, and the settings-editor
+// the x set-from-region, the chip/bridge drag release, and the settings-editor
 // `:trim_*=` commit — calls this after its mutation and before its
 // invalidations, so the repaint shows the cleared state.
 void GuiInputHandler::auto_clear_crossed_trim() {
@@ -281,11 +281,12 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     // Viewport clamp: keep the grabbed bound within the visible strip (pixel 0
     // through the last fully-visible pixel) so the drag can't push it
     // offscreen, where its precise location would be hidden. The cursor column
-    // is already viewport-bound, but a grab a few pixels off the stem can
+    // is already viewport-bound, but a grab a few pixels off the chip can
     // trail the bound past the edge; this makes the bound itself exact. The
-    // grab can only begin on a visible bound (hit_test_trim_boundary gates to
-    // visible columns), so this is a live tracking clamp, not a correction for
-    // an offscreen grab. The bounds are active-domain while src_frame is
+    // grab can only begin on a visible bound (hit_test_trim_chip tests the
+    // chip painted at a visible column), so this is a live tracking clamp, not a
+    // correction for an offscreen grab. The bounds are active-domain while
+    // src_frame is
     // source, so inverse-translate the edges — monotonic, so the source clamp
     // matches the active-pixel one.
     const auto vb = viewport_marker_bounds(app, audio);
@@ -348,7 +349,7 @@ void GuiInputHandler::commit_trim_drag() {
         // (e.g. a trim grab immediately after a tempo commit); inside that
         // window stored-equals-shown holds only transiently, converging when
         // the rebuild lands — the same displayed-vs-live nuance
-        // route_trim_alt_press's hit test (against displayed_or_live_target_map)
+        // route_trim_chip_press's hit test (against displayed_or_live_target_map)
         // shares. The absolute walls
         // — both bounds 0..EOF-1, plain integer compares —
         // re-apply AFTER the snap so the walls win over the pixel grid and a
@@ -391,119 +392,124 @@ void GuiInputHandler::commit_trim_drag() {
     app.trim_drag = TrimDragState{};
 }
 
-// Alt left press trim routing — the sole thing the Alt+drag branch arms (the
-// marker reposition arm retired; the plain flag press/drag owns marker moves).
-// Every trim drag requires the FULL pair set; a lone
-// bound is gesture-inert — transparent to the press, which falls through to
-// the caller's no-op (an unclaimed Alt press over the waveform has no effect;
-// pan lives on the strip rows' plain press). Returns true iff both bounds are
-// set AND the press landed on trim geometry (a stem/chip single-bound hit, or
-// the top-strip inter-chip pair region) — armed or not — so the caller CLAIMS
-// the press (no fallback); false lets the caller fall through to its no-op.
-// Trim bounds are transparent to every OTHER chord (the plain/Shift
-// press path never consults trim). Read-only claims WITHOUT arming (a silent
-// return, no fallback). The three arms:
-//   WAVEFORM: a press within kMarkerHitHalfPx of a SET bound's painted column
-//     (visible columns only, via hit_test_trim_boundary) begins that bound's
-//     single drag. The waveform between-region deliberately does NOT pair-drag
-//     under Alt — an unclaimed press there is simply inert (a trim span
-//     can cover the whole view, so pairing off the stem would swallow the
-//     whole surface); the pair handle is the top-strip span between the
-//     chips. So an unclaimed waveform press has no effect.
-//   TOP STRIP: a chip-rect hit (hit_test_trim_chip) begins that bound's single
-//     drag; else, a press within the upper (chip) row band — top_upper_row_area,
-//     the band the translucent overlay block spans between the two chips —
-//     with its column strictly between the two bound columns begins the pair
-//     drag. The pair handle is the chip-ROW inter-chip span, NOT the whole
-//     strip height: a top-strip press below the chip row (the marker flag
-//     row) is not claimed and falls
-//     through to the caller's no-op. Both bounds are the subject (no
-//     grabbed-bound notion; the pair has no viewport clamp and, like every trim
-//     gesture, never moves the playhead).
+// Plain chip-row press trim routing — the sole pointer route into a trim drag.
+// The Alt pointer gesture retired wholesale, and the waveform stem grab with it:
+// a bound is grabbed ONLY by its top-strip chip or the inter-chip bridge (the
+// chip was already the unambiguous handle), leaving the waveform purely
+// region/playhead. Arms a PendingTrimDrag rather than beginning the drag
+// outright — the pending+threshold pattern the marker flag uses: the press
+// CLAIMS the chip/bridge geometry, a motionless press-release commits nothing,
+// and only once the pointer crosses kDragMovedThresholdPx does begin_trim_drag
+// run and the existing single/pair drag machinery take over unchanged. Every
+// trim drag requires the FULL pair set; a lone bound is gesture-inert —
+// transparent to the press, which falls through to the caller's flag handling.
+// Returns true iff both bounds are set AND the press landed on trim chip
+// geometry (a chip-rect single-bound hit, or the chip-row inter-chip bridge
+// region) — armed or read-only-refused — so the caller CLAIMS the press (no
+// fallback); false lets the caller fall through. Trim bounds are transparent to
+// every OTHER chord (the caller gates this to the plain, unmodified press).
+// Read-only claims WITHOUT arming (a silent return, no fallback). The two arms:
+//   CHIP HIT: a chip-rect hit (hit_test_trim_chip, itself y-gated to the chip
+//     row) arms that bound's single drag.
+//   BRIDGE: else, a press whose y lies in the chip (upper) row band —
+//     top_upper_row_area, the band the translucent bridge block spans between
+//     the two chips — and whose column is strictly between the two chips'
+//     columns arms the pair drag. The bridge handle is the chip-ROW inter-chip
+//     span, NOT the whole strip height: a top-strip press below the chip row
+//     (the marker flag row) is not claimed and falls through to the caller's
+//     flag handling. Both bounds are the subject (no grabbed-bound notion; the
+//     pair has no viewport clamp and, like every trim gesture, never moves the
+//     playhead), so it always arms as Begin structurally.
 // Both arms presuppose the full pair (the gate above): a lone bound arms
 // nothing — it is gesture-inert. Trim drags never touch selection.
 //
-// The pair-region bound columns come from displayed_or_live_target_map — the
+// The bridge-region bound columns come from displayed_or_live_target_map — the
 // map the on-screen chips were painted with on the LAST COMMITTED frame (the
 // item rebuilds only STAGE; the paint pass PROMOTES at the committing frame, not
-// at the earlier plate publish) — so an Alt hit lands on what is drawn: the
-// routing decision flips at the exact instant the on-screen items flip (the
-// event-sync ruling at that selector). What was the open live-vs-painted window
-// for item hits is CLOSED to commit granularity. The remaining seams are all
-// ACCEPTED: commit-to-scanout plus human reaction (irreducible — input responds
-// to the previously presented frame), the COLD-STATE fallback (first paint, a
-// view toggle, or just after load, live map until the first committed target
-// frame), and the playhead-placement clicks (column-based, out of scope by
-// ruling — a far subtler seam).
-bool GuiInputHandler::route_trim_alt_press(int mouse_x, int mouse_y,
-                                           bool inside_top) {
+// at the earlier plate publish) — so a hit lands on what is drawn: the routing
+// decision flips at the exact instant the on-screen items flip (the event-sync
+// ruling at that selector). What was the open live-vs-painted window for item
+// hits is CLOSED to commit granularity. The remaining seams are all ACCEPTED:
+// commit-to-scanout plus human reaction (irreducible — input responds to the
+// previously presented frame), the COLD-STATE fallback (first paint, a view
+// toggle, or just after load, live map until the first committed target frame),
+// and the playhead-placement clicks (column-based, out of scope by ruling — a
+// far subtler seam).
+bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
     if (audio.total_frames() <= 0) return false;
     const double spp = current_samples_per_pixel(app, audio);
     if (spp <= 0.0) return false;
     // Every trim drag needs the full pair set. With a lone bound, trim
     // contributes NO pointer geometry at all — the press is transparent and
-    // falls through to the caller's no-op, exactly like a plain press over
-    // a bound.
+    // falls through to the caller's flag handling.
     if (!(app.trim.has_begin && app.trim.has_end)) return false;
 
-    // Single-drag hit: the waveform uses the visible-column halo test; the top
-    // strip uses the chip rect. Both surfaces keep their single arms.
-    const TrimHit single = inside_top
-        ? hit_test_trim_chip(app, audio, mouse_x, mouse_y)
-        : hit_test_trim_boundary(app, audio, mouse_x);
+    // Single-drag hit: the chip rect (hit_test_trim_chip, chip-row-gated).
+    const TrimHit single = hit_test_trim_chip(app, audio, mouse_x, mouse_y);
     if (single != TrimHit::None) {
-        // Read-only claims the press but never arms (no fallback), exactly
-        // as the marker reposition arm refuses read-only.
+        // Read-only claims the press but never arms (no fallback).
         if (active_view_state(app).read_only) return true;
-        begin_trim_drag(single, mouse_x);
+        arm_pending_trim_drag(single == TrimHit::Begin, /*both=*/false,
+                              mouse_x, mouse_y);
         return true;
     }
 
-    // Pair drag: the CHIP ROW ONLY — a press whose y lies in the top-strip
-    // upper-row band (top_upper_row_area, the exact band hit_test_trim_chip
-    // y-gates on and the band the translucent overlay block spans between the
-    // two chips) and whose column is strictly between the two chips' columns
-    // (both bounds guaranteed set by the gate above). A top-strip press BELOW
-    // that band — the marker flag row — is not the pair handle: it falls
-    // through to the caller's top-strip no-op,
-    // so the flag row is no longer covered by the trim pair region. The pair has
-    // no grabbed-bound notion —
-    // both bounds are the subject, so it always arms as Begin structurally
-    // (there is no nearer-bound pick, and the gesture never moves the playhead).
-    // The bound columns use the same forward-map + column math
-    // hit_test_trim_boundary uses, on the painted items' own map (the
-    // displayed_or_live_target_map ruling above), computed only on this path.
-    if (inside_top) {
-        const GuiRect row = top_upper_row_area(app);
-        if (mouse_y >= row.y && mouse_y < row.y + row.h) {
-            const GuiRect area = waveform_area(app);
-            const int click_rel_x = mouse_x - area.x;
-            const double vp = static_cast<double>(app.viewport_start_sample);
-            const std::vector<WarpFrameMapSegment>& dmap =
-                displayed_or_live_target_map(app, audio);
-            const std::vector<WarpFrameMapSegment>* map =
-                dmap.empty() ? nullptr : &dmap;
-            auto bound_col = [&](int64_t frame) -> int {
-                double ms = static_cast<double>(frame);
-                if (map) {
-                    const size_t q = (frame < 0) ? static_cast<size_t>(0)
-                                                 : static_cast<size_t>(frame);
-                    ms = std::nearbyint(map_source_to_target(q, *map));
-                }
-                return static_cast<int>(std::nearbyint((ms - vp) / spp));
-            };
-            const int bcol = bound_col(app.trim.begin_frame);
-            const int ecol = bound_col(app.trim.end_frame);
-            const int lo = std::min(bcol, ecol);
-            const int hi = std::max(bcol, ecol);
-            if (click_rel_x > lo && click_rel_x < hi) {
-                // Read-only claims the pair region but never arms (no
-                // fallback).
-                if (active_view_state(app).read_only) return true;
-                begin_trim_drag(TrimHit::Begin, mouse_x, /*both=*/true);
-                return true;
+    // Bridge (pair) drag: the CHIP ROW ONLY — a press whose y lies in the
+    // top-strip upper-row band (top_upper_row_area, the exact band
+    // hit_test_trim_chip y-gates on and the band the translucent bridge block
+    // spans between the two chips) and whose column is strictly between the two
+    // chips' columns (both bounds guaranteed set by the gate above). A top-strip
+    // press BELOW that band — the marker flag row — is not the bridge handle: it
+    // falls through to the caller's flag handling. The pair has no grabbed-bound
+    // notion — both bounds are the subject, so it always arms as Begin
+    // structurally (there is no nearer-bound pick, and the gesture never moves
+    // the playhead). The bound columns use the forward-map + column math on the
+    // painted items' own map (the displayed_or_live_target_map ruling above),
+    // computed only on this path.
+    const GuiRect row = top_upper_row_area(app);
+    if (mouse_y >= row.y && mouse_y < row.y + row.h) {
+        const GuiRect area = waveform_area(app);
+        const int click_rel_x = mouse_x - area.x;
+        const double vp = static_cast<double>(app.viewport_start_sample);
+        const std::vector<WarpFrameMapSegment>& dmap =
+            displayed_or_live_target_map(app, audio);
+        const std::vector<WarpFrameMapSegment>* map =
+            dmap.empty() ? nullptr : &dmap;
+        auto bound_col = [&](int64_t frame) -> int {
+            double ms = static_cast<double>(frame);
+            if (map) {
+                const size_t q = (frame < 0) ? static_cast<size_t>(0)
+                                             : static_cast<size_t>(frame);
+                ms = std::nearbyint(map_source_to_target(q, *map));
             }
+            return static_cast<int>(std::nearbyint((ms - vp) / spp));
+        };
+        const int bcol = bound_col(app.trim.begin_frame);
+        const int ecol = bound_col(app.trim.end_frame);
+        const int lo = std::min(bcol, ecol);
+        const int hi = std::max(bcol, ecol);
+        if (click_rel_x > lo && click_rel_x < hi) {
+            // Read-only claims the bridge region but never arms (no fallback).
+            if (active_view_state(app).read_only) return true;
+            arm_pending_trim_drag(/*is_begin=*/true, /*both=*/true,
+                                  mouse_x, mouse_y);
+            return true;
         }
     }
     return false;
+}
+
+// Arm the pending trim chip/bridge drag from a plain chip-row press. Mirrors
+// PendingMarkerDrag: nothing mutates the trim store yet — begin_trim_drag runs
+// only when on_motion sees the pointer cross kDragMovedThresholdPx from the
+// press. is_begin names the single bound (Begin for a bridge/pair drag); both
+// distinguishes the single vs the pair.
+void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
+                                            int press_x, int press_y) {
+    app.pending_trim_drag = PendingTrimDrag{};
+    app.pending_trim_drag.active   = true;
+    app.pending_trim_drag.is_begin = is_begin;
+    app.pending_trim_drag.both     = both;
+    app.pending_trim_drag.press_x  = press_x;
+    app.pending_trim_drag.press_y  = press_y;
 }

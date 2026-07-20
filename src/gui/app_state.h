@@ -318,8 +318,9 @@ struct RegionState {
 };
 
 // State for the plain (unmodified) left-drag region-select gesture on the
-// waveform. The PRESS keeps today's press-time behavior verbatim (selection,
-// playhead placement, live-playback reseek) and arms this drag; motion past
+// waveform. The PRESS does its press-time work (deselect-all, playhead
+// placement, live-playback reseek — it never SELECTS a marker) and arms this
+// drag; motion past
 // the shared press-becomes-drag threshold (kDragMovedThresholdPx) extends
 // app.region from the press frame to the pointer column. Below the threshold
 // the press did its press-time work already, and a sub-threshold press-release
@@ -372,11 +373,34 @@ struct PendingMarkerDrag {
     int  press_y  = 0;
 };
 
-// Alt drag of a trim boundary stem/chip (the pointer trim gesture — the
-// Alt+drag branch is now trim-only, so this is the sole thing it arms).
-// Parallel to DragState but motion mutates the active tab's live trim mirror
-// directly (no overlay); release triggers a target render when the bound
-// moved. Trim is excluded from undo/redo. Session-only.
+// Pending trim chip/bridge drag, armed by a PLAIN (unmodified) left press in the
+// top-strip CHIP ROW (a b/e chip rect, or the inter-chip bridge span). The
+// trim sibling of PendingMarkerDrag: the press CLAIMS the chip/bridge geometry
+// but arms only this pending state; begin_trim_drag runs (and the trim-drag
+// machinery takes over) only once the pointer crosses kDragMovedThresholdPx
+// (Chebyshev from the press). A sub-threshold press-release commits nothing
+// (trim has no click action). Deferring begin_trim_drag to the crossing keeps
+// its anchor capture exact — nothing mutates the trim store between press and
+// crossing. Requires the FULL bound pair (a lone bound is gesture-inert — the
+// router never arms one); a read-only tab claims the press but never arms.
+// Session-only, never serialized. Cleared on the crossing (begin_trim_drag
+// takes over), on release / lost button before the crossing, on cancel, and on
+// file load. `is_begin` names the single bound; `both` marks the pair (bridge)
+// drag, for which is_begin is Begin by construction.
+struct PendingTrimDrag {
+    bool active   = false;
+    bool is_begin = false;  // which bound the single drag targets (Begin if both)
+    bool both     = false;  // the inter-chip bridge (pair) drag
+    int  press_x  = 0;      // press position (window px): the gate + begin anchor
+    int  press_y  = 0;
+};
+
+// Trim boundary drag (the live trim pointer gesture). Armed from a PendingTrim-
+// Drag once the plain chip-row press crosses the threshold — a chip-rect hit
+// drags one bound, the inter-chip bridge drags the pair. Parallel to DragState
+// but motion mutates the active tab's live trim mirror directly (no overlay);
+// release triggers a target render when the bound moved. Trim is excluded from
+// undo/redo. Session-only.
 struct TrimDragState {
     bool active   = false;
     bool is_begin = false;   // which bound the cursor is dragging
@@ -390,8 +414,8 @@ struct TrimDragState {
     // initial snap. See DragState::anchor_mouse_time_frame.
     double anchor_frame     = 0.0;
 
-    // Alt (top-strip inter-chip span) move-both-bounds drag: both bounds
-    // translate together by
+    // Inter-chip bridge (top-strip chip-row span) move-both-bounds drag: both
+    // bounds translate together by
     // the same delta in the active (on-screen) domain, preserving the gap
     // as it appears under warp. The pair has no grabbed-bound notion — both
     // bounds are the subject, it has no viewport clamp, and it never moves the
@@ -407,10 +431,11 @@ struct TrimDragState {
     int64_t anchor_active_frame  = 0;
 };
 
-// Plain left-drag on a live strip row (Ableton-style navigation). ONE anchor
-// formula serves both axes: the song position painted under the press x sticks
-// to the pointer for the whole drag, so horizontal motion is a grab-pan and
-// vertical motion (top zoom row only) zooms around the point under the pointer.
+// Plain left-drag on a live strip row (Ableton-style navigation). ONE fixed
+// song anchor (captured under press_x at the press) serves both axes:
+// horizontal motion is an incremental grab-pan (the anchor drifts across the
+// screen), and vertical motion (top zoom row only) zooms around wherever that
+// anchored song position currently sits — the song-anchored, Ableton semantic.
 // Navigation-class: never touches the playhead or selection, allowed in
 // read-only, does not toggle or override follow. Cleared on button release /
 // button-lost and on file load; no Esc-restore (nothing to revert).
@@ -418,17 +443,18 @@ struct StripDragState {
     bool   active    = false;
     // True once any motion event has applied a viewport/level change. A
     // motionless press-release must commit nothing, so the terminating event
-    // finalizes (re-derives + synchronous rebuild) only when this is set.
+    // finalizes (one final apply + synchronous rebuild) only when this is set.
     bool   moved     = false;
     // True for the top zoom row (vertical motion changes the level); false for
     // the bottom pan row (level pinned for the whole drag).
     bool   zoom_axis = false;
     // Pointer position at the press (window px).
     int    press_y   = 0;
-    // The FIXED screen column the whole drag anchors to (window px, the press
-    // x). The axes are decoupled and zoom is SCREEN-anchored: a zoom always
-    // expands/contracts around this column, never drifting with the pan — a
-    // deliberate divergence from Ableton (whose zoom anchor rides the pan).
+    // The press column (window px). Used only as the drag-threshold reference
+    // (the Chebyshev gate that decides press-becomes-drag) and to seed
+    // anchor_sample / last_x at the claim. The zoom is SONG-anchored, not
+    // pinned to this column: the anchor drifts across the screen with the pan
+    // (Ableton), so press_x plays no part in the mid-drag anchor math.
     int    press_x   = 0;
     // The previous motion event's x (window px), seeded to press_x at the
     // claim. The pan increment reads dx = x - last_x each event so pan and zoom
@@ -438,10 +464,10 @@ struct StripDragState {
     // both the zoom and pan rows. The zoom row walks the one continuous domain
     // from wherever the level rests; the pan row never changes it.
     double press_level = 0.0;
-    // Song position (frames, double) required to sit at press_x, unclamped —
-    // the viewport clamp owns legality. Pan shifts it; after each apply it is
-    // re-derived from the CLAMPED viewport, so it always equals what is painted
-    // at press_x (also the screen-anchor semantic, and wall-symmetric).
+    // Song position (frames, double) painted under press_x at the press, FIXED
+    // for the whole drag — never re-derived. It DRIFTS across the screen as the
+    // pan moves the viewport, and a zoom pivots around wherever it currently
+    // sits (the song-anchored, Ableton semantic).
     double anchor_sample = 0.0;
 };
 
@@ -828,11 +854,17 @@ struct AppState {
     // Escape/close (cancel_active_drags), and on file load.
     PendingMarkerDrag pending_marker_drag;
 
+    // Pending trim chip/bridge drag, armed by a plain chip-row press (the
+    // trim-drag machinery begins only past the threshold). Cleared on the
+    // threshold crossing, on button release / lost button, on Escape/close
+    // (cancel_active_drags), and on file load.
+    PendingTrimDrag pending_trim_drag;
+
     // The resting region-select span (session-only). Cleared on file load, the
     // A/B tab switch, the S/T audio-view switch, and Esc.
     RegionState region;
 
-    // Alt drag of a trim boundary stem/chip. Cleared on button
+    // Live trim boundary drag (chip / inter-chip bridge). Cleared on button
     // release, Escape, and file load.
     TrimDragState trim_drag;
 
@@ -928,9 +960,9 @@ struct AppState {
     // backing store lives in ViewState::trim. Excluded from undo/redo.
     // Mirrored to/from the active tab's ViewState slot at the tab-swap
     // boundary in active_views.cpp (same pattern as viewport/zoom/playhead).
-    // Trim is a region authored purely by the Alt pointer drags (single-bound
-    // stem/chip, chip-row inter-chip pair) and the bare-x set/clear/region-
-    // consume — it is NOT part of the selection system (no
+    // Trim is a region authored purely by the plain chip-row pointer drags
+    // (single-bound chip, chip-row inter-chip bridge/pair) and the bare-x
+    // set/clear/region-consume — it is NOT part of the selection system (no
     // bound selection, no Tab stop, no Delete arm).
     TrimState trim;
 
@@ -1126,17 +1158,18 @@ inline int64_t snap_authored_frame(double frame) {
 
 // The single query for "some pointer gesture is in flight" — a marker
 // reposition drag, a trim drag, a strip-row zoom/pan drag, a region-select
-// drag, an editor text drag, or a pending marker drag armed by a flag press
+// drag, an editor text drag, or a pending marker / trim drag armed by a press
 // (button held, watching for the threshold). Consumed by the wheel_context
 // predicate (on_wheel's completed-detent gate and the platform's per-frame
 // sub-detent accumulator probe both route through it), the gate that must
 // never fire mid-gesture: the "nothing pops mid-gesture" boundary. The pending
-// marker drag is included so a wheel cannot shift the viewport out from under
-// the press before the drag begins.
+// drags are included so a wheel cannot shift the viewport out from under the
+// press before the drag begins.
 inline bool any_pointer_gesture_active(const AppState& app) {
     return app.drag.active || app.trim_drag.active ||
            app.strip_drag.active || app.region_drag.active ||
-           app.editor_text_drag.active || app.pending_marker_drag.active;
+           app.editor_text_drag.active || app.pending_marker_drag.active ||
+           app.pending_trim_drag.active;
 }
 
 // SelectionSnapshot movers: capture the live marker selection at drag begin,
@@ -1338,32 +1371,21 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // Which trim boundary, if any, a waveform-area click lands on.
 enum class TrimHit { None, Begin, End };
 
-// hit_test_trim_boundary: return which trim boundary's painted
-// column is within kMarkerHitHalfPx of `mouse_x` AND lies within the visible
-// strip, or None. Early-outs to None unless the FULL pair is set — the sole
-// consumer routes here only then (a lone bound is gesture-inert), so both
-// bounds are guaranteed present. AUTHORING views — the active tab's live pair.
-// Visible columns only: a bound painted outside the strip is not a candidate;
-// the halo governs reach around a visible column. Walks the display
-// warp_frame_map in target view so the hit lands on the visually-drawn stem.
-// Trim is project-level, and
-// applies in both 'W' and 'P' views. When both bounds are within reach, the
-// nearer wins. Consumed by the Alt trim routing's waveform single-drag arm.
-TrimHit hit_test_trim_boundary(const AppState& app, const GuiAudio& audio,
-                               int mouse_x);
-
-// hit_test_trim_chip: like hit_test_trim_boundary, but tests the press against
-// each bound's painted CHIP RECT in the upper top row rather than the stem
-// column. Same both-bounds-required early-out as hit_test_trim_boundary (the
-// sole consumer routes here only with the full pair set; a lone bound is
-// gesture-inert). The chip glyph ("b"/"e") is drawn hl_pad to the right of the bound's
-// column, so a column-only test misses clicks on the visible chip. The rect
-// mirrors regular-flag hit geometry (flag_chip_rect, the shared chip-rect
-// helper): x = round(text_left), w = round(glyph_advance +
+// hit_test_trim_chip: return which trim bound's painted CHIP RECT (in the upper
+// top row) contains the press, or None. Early-outs to None unless the FULL pair
+// is set — the sole consumer (route_trim_chip_press) routes here only then (a
+// lone bound is gesture-inert), so both bounds are guaranteed present.
+// AUTHORING views — the active tab's live pair, project-level in both 'W' and
+// 'P' views. The chip glyph ("b"/"e") is drawn hl_pad to the right of the
+// bound's column, so a column-only test would miss clicks on the visible chip.
+// The rect mirrors regular-flag hit geometry (flag_chip_rect, the shared
+// chip-rect helper): x = round(text_left), w = round(glyph_advance +
 // 2*flag_pad_x_px()) + 2*kChipOutlinePx (the outline ring is part of the rect),
-// with y/h from the row metrics; the same rect the renderers fill, so paint
-// and hit cannot drift. Tests both mouse_x and mouse_y. Used for upper-row
-// presses; the stem elsewhere still routes through hit_test_trim_boundary.
+// with y/h from the row metrics; the same rect the renderers fill, so paint and
+// hit cannot drift. Tests both mouse_x and mouse_y. Walks the display
+// warp_frame_map in target view so the hit lands on the visually-drawn chip.
+// The chip and the inter-chip bridge are the ONLY trim grab handles (the
+// waveform stem grab retired).
 TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y);
 

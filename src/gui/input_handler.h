@@ -593,33 +593,36 @@ private:
     // invalidations, so the repaint shows the cleared state.
     void auto_clear_crossed_trim();
 
-    // Alt left press trim routing — the sole thing the Alt+drag branch arms
-    // (the marker reposition arm retired; plain flag press/drag owns marker
-    // moves). Every trim drag requires the
-    // FULL pair set; a lone bound is gesture-inert (transparent to the press).
-    // Returns true iff both bounds are set AND the press landed on trim geometry
-    // (a waveform stem-halo / top-strip chip single hit, or the top-strip span
-    // strictly between the two bounds' columns) — armed or read-only-refused —
-    // so the caller claims the press with no fallback; false lets the caller
-    // fall through to its no-op (pan lives on the strip rows' plain press; an
-    // unclaimed Alt press over the waveform or top strip has no effect).
-    // Read-only claims without arming. The waveform between-region does NOT
-    // pair-drag (an unclaimed press there is simply inert); the pair handle is
-    // the top-strip inter-chip span. Trim drags never touch selection.
-    // Strip-row zoom/pan drag, decoupled axes: zoom recomputes the level from
-    // the press state and the current pointer y (zoom row only, clamped into
-    // the numeric band and the shorter-file max) and always anchors the FIXED
-    // press column (press_x); pan is an incremental grab at the current level
-    // that shifts which song content sits at that column. Both rows share
-    // this one path — the pan row pins the level, so the same math degenerates
-    // to pure incremental pan. The anchor re-derives from the clamped viewport
-    // each event via Viewport::apply_strip_drag_zoom. `final_event` is true on
-    // the terminating event (release / button-lost) for the one synchronous
+    // Plain chip-row press trim routing — the sole pointer route into a trim
+    // drag (the Alt pointer gesture retired wholesale, and the waveform stem
+    // grab with it; bounds are grabbed by their top-strip chips / the inter-chip
+    // bridge only). Arms a PendingTrimDrag (the pending+threshold pattern): the
+    // press CLAIMS the chip/bridge geometry, but the trim-drag machinery begins
+    // only once the pointer crosses kDragMovedThresholdPx. Every trim drag needs
+    // the FULL pair set; a lone bound is gesture-inert (transparent to the
+    // press). Returns true iff both bounds are set AND the press landed on trim
+    // chip geometry (a chip-rect single hit, or the chip-row inter-chip bridge
+    // span) — armed or read-only-refused — so the caller claims with no
+    // fallback; false lets the caller fall through to the marker flag handling.
+    // Read-only claims without arming. Trim drags never touch selection.
+    // Strip-row zoom/pan drag, decoupled axes, SONG-anchored: anchor_sample is
+    // the fixed press-time song position (captured under press_x); zoom
+    // recomputes the level from the press state and the current pointer y (zoom
+    // row only, clamped into the numeric band and the shorter-file max) and
+    // pivots around wherever that song position currently sits, while pan is an
+    // incremental grab at the old level that drifts it across the screen. Both
+    // rows share this one path — the pan row pins the level, so the same math
+    // degenerates to pure incremental pan. `final_event` is true on the
+    // terminating event (release / button-lost) for the one synchronous
     // rebuild plus predictor resync; motion events pass false and repaint
     // synchronously too (incremental pan or full rebuild, by what changed).
     void apply_strip_drag_at(int x, int y, bool final_event);
 
-    bool route_trim_alt_press(int mouse_x, int mouse_y, bool inside_top);
+    bool route_trim_chip_press(int mouse_x, int mouse_y);
+    // Arm the pending trim chip/bridge drag (pending+threshold): the begin runs
+    // only once on_motion crosses kDragMovedThresholdPx from the press.
+    void arm_pending_trim_drag(bool is_begin, bool both, int press_x,
+                               int press_y);
     void begin_trim_drag(TrimHit which, int mouse_x, bool both = false);
     void update_trim_drag(int mouse_x);   // motion: writes the live store
     // mouse_x → source-domain frame double, the single conversion both the

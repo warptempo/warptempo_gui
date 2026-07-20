@@ -88,11 +88,13 @@ struct Viewport {
     void move_playhead_to(int64_t new_sample);
     void move_playhead_pixels(int delta_px);
     void apply_zoom_change(double new_zoom_level);
-    // Strip-row drag zoom/pan: set the level and anchor the song position
-    // (anchor_sample, frames) at anchor_x — always the FIXED press column
-    // (window px), so zoom stays screen-anchored and decoupled from pan —
-    // rather than centering on the playhead the way apply_zoom_change does.
-    // Never touches the playhead or selection.
+    // Strip-row drag zoom/pan: set the level and place the song position
+    // (anchor_sample, frames) at anchor_x (the screen column, window px, in
+    // fractional pixels) — rather than centering on the playhead the way
+    // apply_zoom_change does. The caller (apply_strip_drag_at) supplies the
+    // DRIFTED column where the fixed press-time anchor currently sits, so zoom
+    // is song-anchored (it pivots around the anchor's current painted x), not
+    // screen-anchored. Never touches the playhead or selection.
     // Mid-gesture events pass final=false and repaint SYNCHRONOUSLY, path chosen
     // by what changed: level unchanged -> the incremental pan fast path; level
     // changed -> one full synchronous rebuild for this frame. Affordable because
@@ -102,7 +104,7 @@ struct Viewport {
     // A pan-row drag passes new_zoom_level equal to the level captured at press,
     // so only the viewport moves.
     void apply_strip_drag_zoom(double new_zoom_level, double anchor_sample,
-                               int anchor_x, bool final);
+                               double anchor_x, bool final);
     void zoom_in();
     void zoom_out();
     // Coalesced zoom: apply |in_steps| zoom levels in a single shot.
