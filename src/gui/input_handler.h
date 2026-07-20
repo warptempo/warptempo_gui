@@ -568,22 +568,20 @@ private:
     // returns true.
     bool adopt_render_entry(const AppState::RenderEntry& e);
 
-    // Bare x is a pure trim on/off toggle (no context-awareness): a set trim
-    // (either bound) clears both bounds (off); an unset trim under a live
-    // region trims to it, begin at the span's lo, end at its hi (on); unset
-    // with no region is a strict no-op. Every acting x clears the region
-    // highlight — it hands off to the trim (on) or vanishes with it (off), so
-    // re-trimming needs a fresh drag. Read-only refuses both directions
-    // silently, leaving the region untouched. The sole dispatch entry for the x
-    // key; the off branch calls handle_trim_clear_both.
+    // Bare x branches on the highlight (no context-awareness beyond that): a
+    // live region trims to it, begin at the span's lo, end at its hi,
+    // overwriting any existing bounds and consuming the highlight; no region
+    // clears the trim. Read-only refuses silently before anything, leaving the
+    // region untouched. The sole dispatch entry for the x key; the no-region
+    // branch calls handle_trim_clear_both.
     void handle_trim_x();
 
     // Clear both trim bounds unconditionally. Silent no-op when neither bound
-    // is set. The caller is handle_trim_x's clear arm.
+    // is set. The caller is handle_trim_x's no-region branch.
     void handle_trim_clear_both();
 
-    // Field-reset core shared by handle_trim_clear_both (the x key's clear arm)
-    // and the crossed-commit auto-clear below: unset both bounds, zero both
+    // Field-reset core shared by handle_trim_clear_both (the x key's no-region
+    // clear) and the crossed-commit auto-clear below: unset both bounds, zero both
     // frames. No invalidation and no trigger — callers own their repaint tail.
     // One implementation so the two clears can never drift.
     void clear_trim_bounds();

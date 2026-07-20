@@ -61,8 +61,8 @@ void GuiInputHandler::auto_clear_crossed_trim() {
 }
 
 // Clear both trim bounds unconditionally. Silent no-op when neither bound is
-// set. The caller is handle_trim_x's clear arm. Trim is gesture-owned and
-// excluded from undo/redo history.
+// set. The caller is handle_trim_x's no-region branch. Trim is gesture-owned
+// and excluded from undo/redo history.
 void GuiInputHandler::handle_trim_clear_both() {
     if (app.trim.has_begin || app.trim.has_end) {
         clear_trim_bounds();
@@ -72,18 +72,18 @@ void GuiInputHandler::handle_trim_clear_both() {
     }
 }
 
-// Bare x is a pure trim on/off toggle (the Ableton loop-toggle model), with no
-// context-awareness: the playhead plays no part, and there are no positional
-// rules. A SET trim (either bound) turns OFF — x clears both bounds. An UNSET
-// trim turns ON from a live region (the drag-painted span, active-domain
-// frames): begin at the span's lo, end at its hi. Unset with NO region → a
-// strict no-op. x CLEARS the region highlight on every press that ACTS: the ON
-// branch clears it after reading it (the trim chips/wash replace the highlight
-// as the visual), and the OFF branch clears any live region alongside the
-// bounds — the highlight either hands off to the trim or vanishes with it, so
-// re-trimming needs a fresh drag. The strict no-op (no trim, no region) touches
-// nothing, and read-only refuses BOTH directions silently (trim authoring),
-// leaving the region untouched.
+// Bare x branches on the HIGHLIGHT, not the trim (architect 2026-07-20), with no
+// context-awareness beyond that: the playhead plays no part, and there are no
+// positional rules. A live REGION (the drag-painted span, active-domain frames)
+// always TRIMS to it — begin at the span's lo, end at its hi — overwriting any
+// existing bounds (the new span simply replaces them; x re-trims even over an
+// existing trim), then consumes the highlight (the trim chips/wash replace it as
+// the visual, so re-trimming needs a fresh drag — Ableton persists its loop
+// region but we deliberately do not). NO region → x CLEARS the trim via
+// handle_trim_clear_both, whose has_begin||has_end guard makes no-trim a natural
+// no-op (nothing to clear, no highlight to clear either — the region is inactive
+// in this branch by definition). Read-only refuses silently BEFORE anything,
+// leaving the region untouched (trim authoring).
 //
 // Set-from-region: normalize the span at read time (endpoints rest in drag
 // order), inverse-map each active-domain endpoint to a source frame through
@@ -94,28 +94,22 @@ void GuiInputHandler::handle_trim_clear_both() {
 // destroys both bounds via auto_clear_crossed_trim (the standing rule); the
 // region is already cleared by then. The shared trim commit tail (auto_clear_crossed_trim
 // then the repaint/trigger) mirrors the other trim commits; the playhead is
-// untouched (trim gestures never move it). The OFF branch routes through
-// handle_trim_clear_both so the one clear+repaint tail is shared.
+// untouched (trim gestures never move it).
 void GuiInputHandler::handle_trim_x() {
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
-    // Both toggle directions are trim authoring: read-only refuses silently,
+    // x is trim authoring in both directions: read-only refuses silently,
     // and a resting region is left as it is.
     if (active_view_state(app).read_only) return;
 
-    // OFF: any set bound clears both, and a live region vanishes with them.
-    // handle_trim_clear_both owns the has_begin||has_end guard and the
-    // repaint/trigger tail; a bound is set here, so it always invalidates the
-    // waveform area — the region clear rides that repaint and needs no second
-    // invalidate.
-    if (app.trim.has_begin || app.trim.has_end) {
-        app.region = RegionState{};
+    // No live region → clear the trim. handle_trim_clear_both owns the
+    // has_begin||has_end guard and the repaint/trigger tail, so no-trim is a
+    // natural no-op; the region is inactive here by definition, nothing to clear.
+    if (!app.region.active) {
         handle_trim_clear_both();
         return;
     }
 
-    // ON: an unset trim under a live region trims to it; no region → no-op.
-    if (!app.region.active) return;
-
+    // Live region → trim to it, overwriting any existing bounds.
     const int64_t lo_active = std::min(app.region.a_frame, app.region.b_frame);
     const int64_t hi_active = std::max(app.region.a_frame, app.region.b_frame);
     const int64_t wall = audio.total_frames() - 1;
@@ -129,7 +123,7 @@ void GuiInputHandler::handle_trim_x() {
     app.trim.has_begin   = true;
     app.trim.end_frame   = end;
     app.trim.has_end     = true;
-    // The highlight hands off to the trim: clear the region after reading it
+    // The highlight hands off to the trim: consume the region after reading it
     // (the trim chips/wash replace it as the visual), so re-trimming needs a
     // fresh drag. The invalidate_waveform_area below repaints the removal.
     app.region = RegionState{};

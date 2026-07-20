@@ -303,16 +303,16 @@ struct UndoHistory {
 };
 
 // Session-only region selection — an Ableton-style arrangement span the user
-// paints by dragging on the waveform, used later by the trim on-toggle (bare
-// x). x CLEARS the highlight on every press that acts: the on-toggle trims to
-// the region and clears it (the trim chips/wash replace the highlight as the
-// visual), and the off-toggle clears any live region alongside the bounds — so
-// re-trimming always needs a fresh drag (the Ableton loop-toggle model). NEVER
-// serialized, and outside the selection and undo systems entirely (a transient
-// visual). Endpoints are ACTIVE-DOMAIN frames (source frames in source view,
-// target frames in target view), stored in drag order and normalized lo/hi at
-// READ time, so the span survives pan/zoom mid-drag and at rest. Cleared by any
-// acting x, on file load, the A/B tab switch, the S/T audio-view switch (the
+// paints by dragging on the waveform, consumed by bare x, which branches on
+// THIS highlight: a live region trims to it and clears it (the trim chips/wash
+// replace the highlight as the visual, so re-trimming needs a fresh drag —
+// Ableton persists its loop region but we deliberately do not); no region means
+// x clears the trim instead, and this highlight is inactive there by definition.
+// NEVER serialized, and outside the selection and undo systems entirely (a
+// transient visual). Endpoints are ACTIVE-DOMAIN frames (source frames in source
+// view, target frames in target view), stored in drag order and normalized
+// lo/hi at READ time, so the span survives pan/zoom mid-drag and at rest.
+// Cleared by a region-trimming x, on file load, the A/B tab switch, the S/T audio-view switch (the
 // domain changes under it), Esc (only when nothing higher-priority consumes the
 // Esc), and a motionless plain waveform click (the click dissolves the
 // highlight; at on_button_release). The W/P marker-column switch does NOT clear
