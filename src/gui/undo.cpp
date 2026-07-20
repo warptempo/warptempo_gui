@@ -60,6 +60,7 @@ void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state, int hint_last,
     e.phase_reset_snapshot = app.phaseresetmarkers.markers();
     e.settings           = capture_current_settings(app);
     e.op_mode            = 'W';
+    e.tab                = app.active_tab_view;
     e.hint_last_selected = hint_last;
     e.affects_persistence = affects_persistence;
     app.history.push(std::move(e));
@@ -73,6 +74,7 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     e.phase_reset_snapshot = std::move(pre_state);
     e.settings           = capture_current_settings(app);
     e.op_mode            = 'P';
+    e.tab                = app.active_tab_view;
     e.hint_last_selected = hint_last;
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
@@ -80,12 +82,13 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
 
 void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
                           std::vector<GuiPhaseResetMarker> phase_reset_pre,
-                          char op_mode, int hint_last) {
+                          char op_mode, int hint_last, char tab_override) {
     UndoEntry e;
     e.snapshot           = std::move(warp_pre);
     e.phase_reset_snapshot = std::move(phase_reset_pre);
     e.settings           = capture_current_settings(app);
     e.op_mode            = op_mode;
+    e.tab                = tab_override ? tab_override : app.active_tab_view;
     e.hint_last_selected = hint_last;
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
@@ -97,6 +100,7 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
     e.phase_reset_snapshot = app.phaseresetmarkers.markers();
     e.settings           = std::move(pre_state);
     e.op_mode            = 'S';
+    e.tab                = app.active_tab_view;
     e.hint_last_selected = app.last_selected_marker;
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
@@ -275,16 +279,23 @@ void Undo::apply_post_restore_rules_phase_reset(
         });
 }
 
-// True when do_undo / do_redo would actually act — a step is a silent no-op
-// only when the source stack is empty. There is NO read-only peek here:
-// read-only is a LIVE-TAB input gate, owned entirely by read_only_key_blocked,
-// which drops Ctrl+Z / Ctrl+Shift+Z when the active tab is locked. Undo applies
-// in place, mutating the SHARED marker store from the writable live tab — the
-// same store a fresh edit made there writes, which the other tab's read-only
-// never blocks. So a cross-tab entry (authored on the now-locked other tab) is
-// as undoable as any fresh edit, and no per-entry target-tab check remains.
+// True when do_undo / do_redo would actually act — the authoritative guard for
+// both, run on the source stack. Two ways a step is a silent no-op:
+//   - empty source stack;
+//   - the top entry's TARGET tab is currently read-only. When the ACTIVE tab
+//     is read-only Ctrl+Z / Ctrl+Shift+Z is already dropped at the keyboard gate
+//     (read_only_key_blocked); this catches the remaining cross-tab path — the
+//     active tab writable but the top entry targeting the OTHER, locked tab.
+//     Read-only is a reversible per-tab toggle, so honored-ness is decided by
+//     the target tab's state now, not when the action was recorded.
+// Each bail leaves the entry on the stack and the view unchanged, so unlocking
+// the tab makes the history reachable again with nothing lost.
 bool Undo::history_entry_actionable(const std::vector<UndoEntry>& stack) const {
-    return !stack.empty();
+    if (stack.empty()) return false;
+    const char tt = stack.back().tab;
+    const bool target_ro = (tt == 'B') ? app.tab_b.read_only
+                                        : app.tab_a.read_only;
+    return !target_ro;
 }
 
 // Direction-parameterized restore core shared by do_undo / do_redo, making the
@@ -308,6 +319,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     counter.phase_reset_snapshot = app.phaseresetmarkers.markers();
     counter.settings            = capture_current_settings(app);
     counter.op_mode             = entry.op_mode;
+    counter.tab                 = entry.tab;
     counter.hint_last_selected  = entry.hint_last_selected;
     counter.affects_persistence = entry.affects_persistence;
     std::vector<GuiWarpMarker>       before_w = counter.snapshot;
@@ -321,15 +333,12 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // destination cannot overflow.
     if (app.history.saved_valid) app.history.saved_distance += saved_distance_delta;
 
-    // Undo/redo applies in place, on the tab you stand in: the marker stores
-    // are SHARED across A/B tabs, so the reverted edit is visible from the live
-    // tab, and the touched-set selection the post-restore rules write lands in
-    // the live tab's (app-level) selection state. The playhead, viewport, zoom,
-    // and active tab all stay parked — only the Tab family and `c` land the
-    // playhead on a marker, and only Ctrl+Tab switches tabs. The entry carries
-    // no authoring-tab attribution at all: read-only is a live-tab input gate
-    // (read_only_key_blocked), and the shared store makes an in-place undo as
-    // legal as a fresh edit on the live tab.
+    // Restore the originating A/B tab before the marker swap. The swap writes
+    // the live marker store and the post-restore rules write the tab-bound
+    // selection, so both must land on the tab the action was authored on.
+    if (entry.tab != app.active_tab_view) {
+        active_views.switch_active_tab_view_to(entry.tab);
+    }
 
     // Restore engine settings before the marker swap. Marker entries get their
     // settings field populated from app at push time (carry-everywhere), so the
