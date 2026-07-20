@@ -135,15 +135,14 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_ctrl_q =
         (ctrl && !shift && !alt && key == GuiKeys::Q);
     // Ctrl+Z (undo) and Ctrl+Shift+Z (redo) are NOT on the allowlist: they
-    // drop at this gate. The old design admitted them because an undo entry
-    // may target the OTHER (writable) tab, deferring the real decision to
-    // do_undo / do_redo's per-entry target-tab peek. Under the gate-block,
-    // undoing from a read-only tab first requires switching to the writable
-    // tab (Ctrl+Tab) — accepted for gate legibility, so that authoring
-    // mutations stop uniformly at the gate. The target-tab peek in undo.cpp
-    // survives as a backstop for entries that outlive a mid-history lock.
-    // The trim gesture (x), Delete, and the propagate copy/paste
-    // chords are likewise absent (blocked here).
+    // drop at this gate, the SOLE read-only owner for undo/redo. Undo applies
+    // in place, mutating the SHARED marker store from the live tab — so a
+    // read-only live tab must block it exactly like a fresh edit, and undoing
+    // from a locked tab first requires switching to a writable tab (Ctrl+Tab).
+    // There is no per-entry target-tab peek in undo.cpp anymore: the store is
+    // shared, so a cross-tab entry is as undoable as any live-tab edit once the
+    // live tab is writable. The trim gesture (x), Delete, and the propagate
+    // copy/paste chords are likewise absent (blocked here).
     return !(is_o || is_play_pause || is_scrub ||
              is_home_end || is_page_updown ||
              is_zoom_symbol || is_zero ||
@@ -856,11 +855,11 @@ bool GuiInputHandler::adopt_render_entry(
         src_phase_resets = t.markers();
     }
 
-    // Every input is in hand and valid. Apply the recipe wholesale. The commit
-    // tab is the tab the entry was dispatched from; its view-state band carries
-    // the recipe trim that shaped this render.
-    const char commit_tab = settings->active_tab_view;
-
+    // Every input is in hand and valid. Apply the recipe wholesale. The
+    // dispatch tab (settings->active_tab_view) is the tab the entry was
+    // dispatched from; its view-state band carries the recipe trim that shaped
+    // this render, and the shared apply routine below installs it as the live
+    // active tab.
     std::vector<GuiWarpMarker>       warp_pre  = app.warpmarkers.markers();
     std::vector<GuiPhaseResetMarker> phase_reset_pre =
         app.phaseresetmarkers.markers();
@@ -889,7 +888,7 @@ bool GuiInputHandler::adopt_render_entry(
     // trim out of history.
     const char commit_marker_mode = app.active_markers_view;
     undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
-                        commit_marker_mode, hint_last, commit_tab);
+                        commit_marker_mode, hint_last);
     undo.recompute_dirty();
 
     const std::filesystem::path src(app.source_audio_path);
@@ -949,7 +948,7 @@ bool GuiInputHandler::adopt_render_entry(
         app.tab_b.playhead_cursor_sample, app, audio);
 
     // Activate the file's tab band. active_tab_view was just set by the shared
-    // routine (== commit_tab) and both bands are already the file's, so pull
+    // routine (== the dispatch tab) and both bands are already the file's, so pull
     // the live fields straight from the active band with no double-apply (NOT
     // switch_active_tab_view_to).
     {

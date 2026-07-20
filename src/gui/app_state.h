@@ -98,7 +98,6 @@ struct UndoEntry {
     std::vector<GuiPhaseResetMarker> phase_reset_snapshot;
     SettingsSnapshot          settings;
     char                      op_mode              = 'W';
-    char                      tab                  = 'A';
     int                       hint_last_selected   = -1;
     // False for an iteration-bracket-only snapshot. Iteration brackets are
     // session state and never serialize, so crossing such an entry must not
