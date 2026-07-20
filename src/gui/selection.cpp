@@ -200,7 +200,13 @@ void Selection::prune_live_selection() {
     }
 }
 
-void Selection::sync_playhead_to_last_selected(bool edge_follow) {
+// Land the playhead on the last-selected marker's displayed position. The
+// live marker gestures (nudge, drag) no longer call this — they leave the
+// playhead parked while the marker moves under it — so the sole caller is the
+// undo/redo restore, which lands the playhead on the marker its history entry
+// touched. Tab-family focus and `c` land the playhead on a marker through
+// jump_playhead_to_focused_marker (input_handler.cpp), not this path.
+void Selection::sync_playhead_to_last_selected() {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
     const int last = app.last_selected_marker;
@@ -221,17 +227,7 @@ void Selection::sync_playhead_to_last_selected(bool edge_follow) {
     // lands at the marker's displayed (target-frame) position.
     const int64_t target_sample =
         source_frame_to_active_domain(app, audio, src_sample);
-    if (edge_follow) {
-        // Alt+Left/Right marker nudge: the marker stepped one pixel, so move
-        // the playhead to it through the same edge-follow path bare Left/Right
-        // uses (move_playhead_to), scrolling the viewport at most one pixel to
-        // keep the marker just inside the edge. The default path keeps
-        // jump_playhead_to's center-on-offscreen, which suits a jump to a
-        // possibly-distant marker (undo, navigate) but is jarring for a nudge.
-        viewport.move_playhead_to(target_sample);
-    } else {
-        jump_playhead_to(target_sample);
-    }
+    jump_playhead_to(target_sample);
 }
 
 void Selection::jump_playhead_to(int64_t target_sample) {

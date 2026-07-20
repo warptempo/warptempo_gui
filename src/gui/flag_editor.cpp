@@ -177,19 +177,13 @@ void GuiFlagEditor::enter_text_edit(int idx,
         return;
     }
 
-    // Target-switching path. Centralize selection + playhead update
-    // here so every call path (in-edit-active switch and pre-edit
-    // plain click) keeps the marker-column outline and the rest of
-    // the UI in sync with the new editor target.
+    // Target-switching path. Single-select the new editor target so the
+    // marker-column outline follows it (every call path — in-edit-active
+    // switch, pre-edit plain click, and the BPM editor open — routes through
+    // here). The playhead is DELIBERATELY not moved: opening or retargeting a
+    // flag editor is a selection act, not a playhead move; only the Tab family
+    // and `c` land the playhead on a marker.
     selection.set_single_selection(idx);
-    {
-        const int64_t src_sample = mv[idx].time_frame;
-        // Target view: marker time_frame is source-domain; playhead
-        // is active-domain. Forward-translate so the playhead lands on
-        // the marker's displayed (target-frame) position.
-        const int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
-        viewport.move_playhead_to(sample);
-    }
 
     // Discard any prior edit silently before switching targets.
     if (text_editor::is_active(app.top_flag_editor) &&

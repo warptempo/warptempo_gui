@@ -379,12 +379,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Clicks in iter/BPM mode route through the consolidated
         // flag/marker hit-test below.
 
-        // Consolidated hit-test across waveform (marker line) and top
-        // strip (flag rect). A flag click behaves exactly like a click
-        // on its marker line. Trim bounds are transparent to PLAIN and SHIFT
-        // presses (a click over a bound is an ordinary waveform click); the Alt
-        // branch below consults the trim hit tests only after this marker hit
-        // test misses, so no trim hit test runs on the plain/Shift path.
+        // Marker/flag hit test. In the top strip this drives the flag-click
+        // selection / editor open below. In the waveform it serves ONLY the Alt
+        // routes (marker reposition drag) and the hover surfaces — the plain and
+        // Shift waveform presses are marker-blind (they never consult `hit`), so
+        // a waveform click no longer behaves like a flag click. Trim bounds are
+        // transparent to PLAIN and SHIFT presses (a click over a bound is an
+        // ordinary waveform click); the Alt branch below consults the trim hit
+        // tests only after this marker hit test misses, so no trim hit test runs
+        // on the plain/Shift path.
         int hit = -1;
         bool in_click_region = false;
         if (inside_waveform) {
@@ -453,21 +456,22 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (ctrl || alt) return;
 
         // Plain or Shift press. In the waveform area a plain press places the
-        // playhead and arms the region-select drag; a Shift press is a click
-        // only. In the top strip (flag click) a W-view plain click enters the
-        // warp canonical-line editor; Shift+click keeps the multi-select toggle
-        // + playhead move. A P-view plain click is navigation (single-select +
-        // playhead), falling through to the selection block below; phase resets
-        // have no per-flag editor.
+        // playhead at the clicked column and arms the region-select drag,
+        // touching NO marker state (marker-blind); a Shift press on the waveform
+        // is a strict no-op. In the top strip (flag click) a W-view plain click
+        // enters the warp canonical-line editor (single-select, no playhead);
+        // Shift+click toggles multi-select membership only (no playhead). A
+        // P-view plain click single-selects only (no playhead), falling through
+        // to the selection block below; phase resets have no per-flag editor.
         if (inside_top) {
             if (hit >= 0) {
                 if (!shift && app.active_markers_view != 'P') {
                     // Plain click on a W-view flag enters the warp
-                    // canonical-line editor (which owns the selection +
-                    // playhead update on its target-switching path).
-                    // Read-only refuses the open (silent no-op). Shift+click
-                    // keeps the multi-select toggle below; the Alt reposition-
-                    // drag was handled by the branch above.
+                    // canonical-line editor (which single-selects its target;
+                    // it no longer moves the playhead). Read-only refuses the
+                    // open (silent no-op). Shift+click keeps the multi-select
+                    // toggle below; the Alt reposition-drag was handled by the
+                    // branch above.
                     if (active_view_state(app).read_only) {
                         return;
                     }
@@ -477,77 +481,37 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     return;
                 }
                 // P-view plain click and any Shift+click fall here.
-                // Single-select is navigation, so it is allowed even in
+                // Selection ONLY — the playhead is left where it is (flag
+                // clicks are selection/toggle, never a playhead move; only the
+                // Tab family and `c` land the playhead on a marker). Allowed in
                 // read-only (no marker mutation).
                 if (shift) selection.toggle_selection_membership(hit);
                 else       selection.set_single_selection(hit);
-                int64_t src_sample;
-                if (app.active_markers_view == 'P') {
-                    src_sample = app.phaseresetmarkers.markers()[hit].time_frame;
-                } else {
-                    src_sample = app.warpmarkers.markers()[hit].time_frame;
-                }
-                // Land on the marker's clamped playhead image — the F1
-                // chokepoint every press-path landing routes through, so no
-                // consumer acts on a position the cursor did not land on.
-                const int64_t sample =
-                    playhead_image_of_authored_frame(app, audio, src_sample);
-                viewport.move_playhead_to(sample);
             }
             return;
         }
 
-        // Waveform-area press: place the playhead (press-time) and arm the
-        // region-select drag.
+        // Waveform-area press: pure playhead placement + region-drag arm,
+        // marker-blind. The press does NOT consult `hit` and touches NO marker
+        // state — it never selects a hit marker and never clears the selection
+        // (selection changes live on the flags, Tab, and the editing commands).
+        // A plain press drops the playhead at the clicked column (no marker
+        // snap — the 3px marker-snap magnet already died with the scrub in the
+        // prior phase, and this completes the waveform's marker-blindness),
+        // reseeks a live scanner to it, overrides follow, and arms the region
+        // drag; a Shift press is a strict no-op anywhere on the waveform.
         {
-            if (hit >= 0) {
-                // Press on a marker (within 3px). Selection is press-time-only:
-                // a plain press single-selects, a Shift press toggles membership
-                // (a click — Shift+drag is not a defined gesture).
-                if (!shift) {
-                    selection.set_single_selection(hit);
-                } else {
-                    selection.toggle_selection_membership(hit);
-                }
-                int64_t src_sample;
-                if (app.active_markers_view == 'P') {
-                    src_sample = app.phaseresetmarkers.markers()[hit].time_frame;
-                } else {
-                    src_sample = app.warpmarkers.markers()[hit].time_frame;
-                }
-                // The marker's clamped playhead image — the value the cursor and
-                // the reseek share, so a wall-adjacent marker reseeks to where
-                // the cursor lands instead of past the range.
-                const int64_t sample =
-                    playhead_image_of_authored_frame(app, audio, src_sample);
-                viewport.move_playhead_to(sample);
-                if (was_playing && sample != playhead_at_entry) {
-                    playback_lifecycle.reseek_keeping_alive(sample);
-                }
-                if (was_playing) app.follow_overridden_for_session = true;
-                // A plain press arms the region-select drag (anchored on the
-                // frame the press just placed the playhead at); a Shift press
-                // is a click only (no drag), so it does not arm.
-                if (!shift) arm_region_drag_at(sample, x, y);
-            } else {
-                // Press on empty waveform. Shift is a strict no-op (Shift is a
-                // selection-toggle click, undefined on empty space).
-                if (shift) return;
-                const int click_rel_x = x - area.x;
-                if (click_rel_x < 0 || click_rel_x >= area.w) {
-                    selection.clear_selection();
-                    return;
-                }
-                const int64_t sample =
-                    playhead_frame_at_click_column(app, audio, click_rel_x);
-                selection.clear_selection();
-                viewport.move_playhead_to(sample);
-                if (was_playing && sample != playhead_at_entry) {
-                    playback_lifecycle.reseek_keeping_alive(sample);
-                }
-                if (was_playing) app.follow_overridden_for_session = true;
-                arm_region_drag_at(sample, x, y);
+            if (shift) return;
+            const int click_rel_x = x - area.x;
+            if (click_rel_x < 0 || click_rel_x >= area.w) return;
+            const int64_t sample =
+                playhead_frame_at_click_column(app, audio, click_rel_x);
+            viewport.move_playhead_to(sample);
+            if (was_playing && sample != playhead_at_entry) {
+                playback_lifecycle.reseek_keeping_alive(sample);
             }
+            if (was_playing) app.follow_overridden_for_session = true;
+            arm_region_drag_at(sample, x, y);
         }
     }
     // Wheel events no longer reach on_button_press; they arrive coalesced
@@ -651,15 +615,12 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     marker_drag.commit_drag();
 }
 
-// Motion handler. Verbatim from the lambda at the original
-// main.cpp:1319; the operation-struct method calls (apply_drag_motion,
-// commit_drag, move_playhead_to, invalidate_top_strip,
-// invalidate_timestamp_area, invalidate_playhead_columns) are rewritten
-// to direct method calls on warpops / viewport. popup_eligible_marker
-// (now in app_state.{h,cpp}) takes `app` as its first argument; the
-// remaining free function calls (hit_test_marker_line, hit_test_flag,
-// compute_hover_popup_text, waveform_area, current_samples_per_pixel,
-// playhead_pixel_x, text_editor::is_active) keep their original spelling.
+// Motion handler. Drives the active pointer gesture: editor-text drag,
+// strip-row zoom/pan drag, trim drag, region-select drag, or marker
+// reposition drag; with no gesture it recomputes hover at the cursor. The
+// marker drag applies the pointer delta to the grabbed marker only — it does
+// NOT move the playhead (only the Tab family and `c` land the playhead on a
+// marker).
 void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // Record latest cursor coords so viewport mutators can re-evaluate hover
     // at the cursor's last position.
@@ -832,64 +793,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             static_cast<double>(mouse_x - area.x) * spp;
     }
     marker_drag.apply_drag_motion(mouse_frame - app.drag.anchor_mouse_time_frame);
-
-    // Track the playhead with the grabbed marker. The hit marker's
-    // proposed source-time lives in the drag overlay — under the
-    // frozen-coord regime apply_drag_motion does not mutate the live
-    // store during motion. In target view, forward-translate through
-    // the display context's target map (the same map paint walks during
-    // motion, stable for the drag's lifetime) so the playhead lands at the
-    // same screen column as the marker stem.
-    // Viewport is deliberately not followed — the user can pan manually
-    // if the drag runs past the edge. The commit completes this tracking
-    // by snapping the playhead onto the committed marker frame (commit_drag).
-    //
-    // Gated on app.drag.moved, read AFTER this event's apply_drag_motion
-    // call (that call is what latches moved on the first real position
-    // change): motion tracking engages only once the drag has actually
-    // moved a marker time, so a gesture that never moves anything —
-    // vertical-only pointer motion at a fixed x, or pushing outward
-    // against a wall that clamps the delta to zero — mutates no view
-    // state. moved latches on the first moving event and never clears, so
-    // tracking engages in that same event (no one-event lag) and keeps
-    // tracking through a wander back to the origin. This is the same moved
-    // gate the release synchronization (commit_drag) and the Esc-cancel
-    // playhead restore already apply — one consistent moved-not-net_changed
-    // story across all three.
-    if (!app.drag.moved) return;
-    const int hit_idx = app.drag.hit_marker;
-    int hit_pos = -1;
-    for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
-        if (app.drag.dragging_markers[k] == hit_idx) {
-            hit_pos = static_cast<int>(k);
-            break;
-        }
-    }
-    if (hit_pos >= 0 &&
-        static_cast<size_t>(hit_pos) < app.drag.moveable_times.size()) {
-        const int64_t ph_src = static_cast<int64_t>(std::nearbyint(
-            app.drag.moveable_times[hit_pos]));
-        // to_domain_frame decides Source-identity vs mapped forward-map off
-        // the active display context, so the call is unconditional: the
-        // display context's map translates in a mapped domain and is inert in
-        // the Source domain (the outer flag test was a duplicate of that
-        // internal short-circuit).
-        int64_t ph = to_domain_frame(
-            app, audio, ph_src,
-            *active_display_context(app, audio).warp_frame_map);
-        // Playhead domain clamp through clamp_playhead_to_live_domain (the
-        // domain ruling). With both marker walls at total - 1 the source-view
-        // value is already in domain; this closes the target-view case
-        // where to_domain_frame of a wall-resting marker rounds to the
-        // target total.
-        ph = clamp_playhead_to_live_domain(ph, app, audio);
-        if (ph != app.playhead_cursor_sample) {
-            const double old_px = playhead_pixel_x(app, audio);
-            app.playhead_cursor_sample = ph;
-            if (playback.is_playing()) playback.resync_predictor();
-            const double new_px = playhead_pixel_x(app, audio);
-            viewport.invalidate_playhead_columns(old_px, new_px);
-            viewport.invalidate_timestamp_area();
-        }
-    }
+    // The grabbed marker does NOT tow the playhead: a marker drag is a
+    // fine-tuning gesture, and the playhead stays parked wherever it was so an
+    // upstream audition point survives the move. Only the Tab family and `c`
+    // land the playhead on a marker. apply_drag_motion above already latched
+    // app.drag.moved and collapsed the selection onto the grabbed marker on the
+    // first real move; nothing further tracks here.
 }

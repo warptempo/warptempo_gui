@@ -54,8 +54,12 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    // Match drop_marker: move playhead to the new phase reset. When
-    // dropping at the current playhead, this is a no-op.
+    // Match drop_marker: re-affirm the playhead on the new phase reset. The
+    // playhead-drop create path (`p`) authors at the playhead, so this is a
+    // no-op there; the target-view lead-in create path (Alt+S) authors N/2
+    // BEFORE the playhead, so the playhead lands on the seeded reset. This is a
+    // drop consequence (the reset is created for the playhead), not a selection
+    // sync.
     const int64_t sample = source_frame_to_active_domain(app, audio, drop_frame);
     viewport.move_playhead_to(sample);
     target_render.trigger();
@@ -226,8 +230,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         m->time_frame = t_new;
     }
     // A nudge may cross a neighbor; restore time order and re-point
-    // the selection at the moved reset before the playhead sync
-    // reads last_selected below.
+    // the selection at the moved reset.
     remap_marker_indices_after_reorder(
         app, reorder_markers_by_time(app.phaseresetmarkers.markers_mut()));
     // Coalesce a rapid burst: the first press already pushed the pre-burst
@@ -237,7 +240,6 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     if (merge) undo.note_coalesced_commit();
     else       undo.push_undo_phase_reset(std::move(pre_state), hint_last);
     undo.record_gesture(GestureKind::PhaseResetNudge);
-    selection.sync_playhead_to_last_selected(/*edge_follow=*/true);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();

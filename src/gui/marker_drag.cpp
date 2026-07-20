@@ -142,10 +142,11 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     }
     d.pre_drag_last_selected = app.last_selected_marker;
     d.hit_marker             = hit;
-    d.pre_drag_playhead_sample = app.playhead_cursor_sample;
     // Pre-drag marker selection snapshot for the Esc/Ctrl+Q cancellation
     // restore: first motion collapses the selection onto the grabbed marker,
     // and that collapse is part of the gesture, so cancel restores it wholesale.
+    // The playhead needs no such capture — the drag never moves it, so a cancel
+    // has nothing to put back.
     d.pre_drag_selection = capture_selection_snapshot(app);
     app.drag = std::move(d);
     viewport.clear_hover_popup();
@@ -205,14 +206,12 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 }
 
 // Commit the current drag. Caller ensures drag was active. Sets dirty
-// only if the markers actually moved. Motion tracked the playhead onto
-// the grabbed marker's proposed position; commit finishes that tracking
-// by syncing the playhead onto the committed column-snapped position via
-// sync_playhead_to_last_selected — the same call the Alt+Left/Right
-// nudges end with — so drag and nudge, documented as keyboard/mouse
-// counterparts, leave identical marker/playhead state (both columns,
-// both views; the sync forward-translates through the live post-commit
-// map in target view).
+// only if the markers actually moved. The playhead is DELIBERATELY left
+// parked: the marker slides under it during motion and rests wherever the
+// release lands it, and the commit does not sync the playhead onto the
+// committed marker — drag and nudge, keyboard/mouse counterparts, both
+// leave the playhead where it was. Only the Tab family and `c` land the
+// playhead on a marker.
 //
 // Write-back step: the live store was untouched throughout motion (the
 // proposed positions lived in app.drag.moveable_times and paint read
@@ -325,14 +324,6 @@ void MarkerDragOps::commit_drag() {
     std::vector<GuiPhaseResetMarker> snap_t =
         std::move(app.drag.pre_drag_phase_reset_snapshot);
     const int                 hint_last = app.drag.pre_drag_last_selected;
-    // Capture the moved flag before the wholesale reset: a drag that
-    // engaged motion (even a wander back to the origin) tracked the
-    // playhead onto the marker during motion and must finish that tracking
-    // on release; an Alt+click without motion never engaged tracking and
-    // must leave the playhead alone. This gate is moved, not net_changed —
-    // a wander that returns to its origin still re-syncs (a no-op there,
-    // since the playhead already rests on the marker's own frame).
-    const bool                drag_moved = app.drag.moved;
     app.drag = DragState{};
     if (net_changed) {
         if (phase_reset) {
@@ -349,22 +340,13 @@ void MarkerDragOps::commit_drag() {
         viewport.invalidate_top_strip();
     }
     viewport.invalidate_waveform_area();
-    // Finish the motion handler's playhead tracking: sync the playhead
-    // onto the committed marker. The reorder/remap above kept
-    // app.last_selected_marker on the grabbed marker's new slot, so this
-    // reads the committed integer time_frame from the live store and, in
-    // target view, forward-translates through the live (post-commit) map —
-    // the playhead lands on the dragged marker itself, expressed through
-    // the new map. It runs BEFORE kick_waveform_sync so the re-warped
-    // plate and the moved
-    // playhead land in one frame. Pushes no history (like the nudge's
-    // sync); undo's own restore re-syncs via its sync_playhead_to_last_selected.
-    if (drag_moved) {
-        selection.sync_playhead_to_last_selected(/*edge_follow=*/true);
-    }
+    // The playhead is left parked (see the header comment): the drag moves
+    // the marker only, so a re-warped plate in target view lands without any
+    // playhead move. Only the Tab family and `c` sync the playhead onto a
+    // marker; undo's own restore re-syncs via sync_playhead_to_last_selected.
     // Same discrete-warp_frame_map-change class as drop_marker (see comment
     // there): the commit re-warps the plate, so render it synchronously
-    // — re-warped waveform and the moved playhead land in one frame.
+    // — the re-warped waveform and the parked playhead land in one frame.
     if (net_changed && !phase_reset && app.active_audio_view == 'T')
         viewport.kick_waveform_sync();
     if (net_changed) target_render.trigger();

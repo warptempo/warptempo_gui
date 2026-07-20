@@ -77,18 +77,6 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
     return c;
 }
 
-int64_t to_domain_frame(const AppState& app, const GuiAudio& audio,
-                        int64_t source_frame,
-                        const std::vector<WarpFrameMapSegment>& warp_frame_map) {
-    if (active_display_context(app, audio).domain ==
-        GuiDisplayDomain::Source) return source_frame;
-    const size_t q = (source_frame < 0)
-        ? static_cast<size_t>(0)
-        : static_cast<size_t>(source_frame);
-    return static_cast<int64_t>(
-        std::nearbyint(map_source_to_target(q, warp_frame_map)));
-}
-
 // Definition; the descriptive comment lives at the declaration in
 // warp_frame_map_view.h. Exposed (non-anonymous) so main.cpp's viewport snap
 // in clamp_viewport_start takes its `q` from the same source as the
@@ -190,15 +178,11 @@ const GuiDisplayContext& active_display_context(const AppState& app,
 // Translate through the active display context. A Source-domain context
 // is identity outright; the TargetLive domain inlines the forward / inverse
 // map math (map_source_to_target / map_target_to_source) against the
-// context's map. Inlining, not routing through to_domain_frame, is
-// deliberate here for a different reason than the domain predicate
-// (to_domain_frame now decides its own domain off the display context too):
-// these wrappers translate against the CONTEXT'S OWN map, while
-// to_domain_frame serves explicit maps (the mid-drag playhead-tracking site)
-// supplied by the caller. Keeping the two separate lets each own its
-// map source without re-selecting one. The empty-map path (the
-// unbuildable-target fallthrough) stays identity — map_source_to_target /
-// map_target_to_source are identity on an empty map.
+// context's OWN map. Sites translating against an explicit caller-supplied map
+// (a proposed pre-commit marker list) use the explicit-map pixel-anchoring
+// helpers instead. The empty-map path (the unbuildable-target fallthrough)
+// stays identity — map_source_to_target / map_target_to_source are identity on
+// an empty map.
 int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio,
                                       int64_t source_frame) {
     const GuiDisplayContext& ctx = active_display_context(app, audio);

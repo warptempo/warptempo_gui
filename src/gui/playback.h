@@ -40,8 +40,9 @@
 // visible discontinuity, never inside the audio callback. The set of
 // resync events: playhead jumps via move_playhead, zoom in/out via the shared
 // apply_zoom_change helper, the resize zoom-out reclamp,
-// sync_playhead_to_last_selected (live nudges and undo/redo restores),
-// set_playback_speed, follow-mode off-to-on, marker-drag hover,
+// sync_playhead_to_last_selected (undo/redo restores — live marker gestures no
+// longer sync the playhead),
+// set_playback_speed, follow-mode off-to-on,
 // follow-scroll auto-shift, horizontal pan via scroll_viewport
 // (Alt+wheel and PageUp/PageDown), viewport recenter via
 // center_viewport_on_playhead (C key), and the LOOP WRAP. The loop wrap is

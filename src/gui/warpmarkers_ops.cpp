@@ -83,8 +83,12 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
 
-    // Move the playhead to the new marker for consistency with click-
-    // to-select behavior. Done last so invalidations in the helper
+    // Re-affirm the playhead on the just-dropped marker. The drop is authored
+    // AT the playhead (drop_marker_at_playhead / the `s` command), so in source
+    // view this is a no-op; in target view it re-lands the playhead on the
+    // marker's displayed column, correcting the map round-trip. This is not a
+    // selection sync — the marker is created under the playhead, and the
+    // playhead simply stays there. Done last so invalidations in the helper
     // don't double-paint with the ones above.
     const int64_t sample = source_frame_to_active_domain(app, audio, drop_frame);
     viewport.move_playhead_to(sample);
@@ -456,8 +460,12 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
 // exact-frame ties to one 1.00 owner.
 void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
-    // Nudges move the playhead (via sync_playhead_to_last_selected).
-    // Stop playback first — Alt+Left/Right is the only caller path.
+    // Fine-tuning authoring gesture (Alt+Left/Right is the only caller path):
+    // stop playback first. The playhead is DELIBERATELY left parked — the
+    // marker steps under it, so an upstream audition point survives the nudge
+    // and a re-launch replays the approach into the moved marker. The playhead
+    // no longer syncs to the marker on any live gesture; only the Tab family
+    // and `c` land it on a marker.
     playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
@@ -518,8 +526,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     const int              hint_last = app.last_selected_marker;
     app.warpmarkers.markers_mut() = std::move(proposed);
     // A nudge may cross a neighbor; restore time order and re-point
-    // the selection at the moved marker before the playhead sync
-    // reads last_selected below.
+    // the selection at the moved marker.
     remap_marker_indices_after_reorder(
         app, reorder_markers_by_time(app.warpmarkers.markers_mut()));
     // Coalesce a rapid burst: the first press already pushed the pre-burst
@@ -529,7 +536,6 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     if (merge) undo.note_coalesced_commit();
     else       undo.push_undo_warp(std::move(pre_state), hint_last);
     undo.record_gesture(GestureKind::WarpNudge);
-    selection.sync_playhead_to_last_selected(/*edge_follow=*/true);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();

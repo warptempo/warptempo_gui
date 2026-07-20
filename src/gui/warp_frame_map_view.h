@@ -73,20 +73,7 @@ struct TargetWarpFrameMapCache {
 const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
     const AppState& app, int sample_rate, long total_frames);
 
-// Forward-translate a source-frame coordinate into the active display
-// domain's frame coordinates against a CALLER-SUPPLIED map. Source
-// domain: identity. TargetLive domain: `map_source_to_target` through
-// `warp_frame_map`. The domain decision comes from the active display
-// context (active_display_context), while the map stays the explicit one
-// the caller passes — its live purpose is explicit-map translation for the
-// mid-drag playhead tracking, which passes the display cache's map (the same
-// coordinate system paint walks). An empty map is identity
-// in the mapped domain. For live-map translation use
-// source_frame_to_active_domain below, which owns the context's own map.
 class GuiAudio;
-int64_t to_domain_frame(const AppState& app, const GuiAudio& audio,
-                        int64_t source_frame,
-                        const std::vector<WarpFrameMapSegment>& warp_frame_map);
 
 // Convenience wrappers that own the domain-check and the map selection for the
 // common case: translating a single coordinate between the stores' domain and
@@ -97,9 +84,10 @@ int64_t to_domain_frame(const AppState& app, const GuiAudio& audio,
 // every input / playhead boundary that translates against the live displayed
 // domain.
 //
-// NOT for sites translating against an explicit caller-supplied map — the
-// mid-drag playhead tracking, or a proposed (pre-commit) marker list. Those
-// keep calling to_domain_frame directly with their explicit map.
+// NOT for sites translating against an explicit caller-supplied map — a
+// proposed (pre-commit) marker list. Those use the explicit-map pixel-anchoring
+// helpers (painted_column_of_source_frame / authored_frame_at_column) with
+// their own map.
 int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio,
                                       int64_t source_frame);
 int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio,

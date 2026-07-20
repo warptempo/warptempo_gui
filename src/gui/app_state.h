@@ -167,23 +167,15 @@ struct DragState {
     std::vector<GuiPhaseResetMarker> pre_drag_phase_reset_snapshot;
     // Pre-drag last_selected for the undo hint; carried onto the entry at commit.
     int                    pre_drag_last_selected = -1;
-    // Active-domain playhead position captured at begin_drag. The
-    // motion handler tracks the playhead onto the grabbed marker's
-    // proposed position during the drag; Esc-cancel restores this so an
-    // abandoned drag leaves the playhead where it started. A normal
-    // release re-syncs the playhead onto the committed column-snapped
-    // marker position (commit_drag's sync_playhead_to_last_selected), so
-    // this captured value serves only the Esc-cancel restore.
-    int64_t                pre_drag_playhead_sample = 0;
     // Pre-drag marker selection snapshot, captured at begin_drag for the
-    // Esc / Ctrl+Q cancellation restore (the pre_drag_playhead_sample pattern
-    // extended to selection): first motion collapses the selection onto the
-    // grabbed marker (set_single_selection), so cancel puts the marker
-    // selection back.
+    // Esc / Ctrl+Q cancellation restore: first motion collapses the selection
+    // onto the grabbed marker (set_single_selection), so cancel puts the
+    // marker selection back. The drag never moves the playhead, so there is no
+    // playhead capture to pair with this — a cancel leaves the playhead alone.
     SelectionSnapshot      pre_drag_selection;
-    // Index of the marker that was clicked to start the drag. Used to track
-    // the playhead during motion so the audio cursor follows the grabbed
-    // marker as it moves.
+    // Index of the marker that was clicked to start the drag. Used at first
+    // motion to collapse the selection onto the grabbed marker
+    // (set_single_selection); the drag does not move the playhead.
     int                    hit_marker           = -1;
     // Which list this drag operates on. The motion / commit
     // handlers dispatch on this so a drag started in phase reset view
@@ -1251,20 +1243,6 @@ inline int64_t clamp_playhead_to_live_domain(int64_t frame,
     if (frame < 0) return 0;
     if (frame >= total) return total - 1;
     return frame;
-}
-
-// The playhead position that landing on an authored frame produces: the
-// authored source frame forward-mapped into the active (displayed) domain, then
-// clamped into the playhead's [0, total - 1] live domain. Every equality or
-// landing compare between a STORED AUTHORED position (a marker or trim bound)
-// and the playhead MUST go through this image — the forward/inverse map pair is
-// not a round trip on compressed target segments, so comparing raw or
-// inverse-mapped frames is the recurring defect class this helper kills.
-inline int64_t playhead_image_of_authored_frame(const AppState& a,
-                                                const GuiAudio& audio,
-                                                int64_t authored_frame) {
-    return clamp_playhead_to_live_domain(source_frame_to_active_domain(
-        a, audio, authored_frame), a, audio);
 }
 
 double  effective_max_zoom_level(int waveform_width_px,
