@@ -379,26 +379,21 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Clicks in iter/BPM mode route through the consolidated
         // flag/marker hit-test below.
 
-        // Marker/flag hit test. In the top strip this drives the flag-click
-        // selection / editor open below. In the waveform it serves ONLY the Alt
-        // routes (marker reposition drag) and the hover surfaces — the plain and
-        // Shift waveform presses are marker-blind (they never consult `hit`), so
-        // a waveform click no longer behaves like a flag click. Trim bounds are
-        // transparent to PLAIN and SHIFT presses (a click over a bound is an
-        // ordinary waveform click); the Alt branch below consults the trim hit
-        // tests only after this marker hit test misses, so no trim hit test runs
-        // on the plain/Shift path.
-        int hit = -1;
-        bool in_click_region = false;
-        if (inside_waveform) {
-            hit = hit_test_marker_line(app, audio, x);
-            in_click_region = true;
-        } else if (inside_top) {
-            hit = hit_test_flag(app, audio, x, y);
-            in_click_region = true;
-        }
+        // Only presses inside the waveform or the top strip do anything.
+        if (!inside_waveform && !inside_top) return;
 
-        if (!in_click_region) return;
+        // Flag/marker hit test, computed ONLY on the path that consumes it. The
+        // TOP-STRIP flag hit feeds both the Alt flag-reposition arm and the
+        // plain/Shift flag-click branches, so it is resolved once here. The
+        // WAVEFORM marker-line hit serves ONLY the Alt marker-reposition route,
+        // so it is deferred into that branch — the plain and Shift waveform
+        // presses are marker-blind and run no marker scan at all. Trim bounds are
+        // transparent to PLAIN and SHIFT presses (a click over a bound is an
+        // ordinary waveform click); the Alt branch consults the trim hit tests
+        // only after the waveform marker hit misses, so no trim hit test runs on
+        // the plain/Shift path either.
+        int hit = -1;
+        if (inside_top) hit = hit_test_flag(app, audio, x, y);
 
         if (alt && !ctrl && !shift) {
             // Alt+drag (exact) is hit-area-dependent. In precedence order:
@@ -417,6 +412,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             //      waveform falls through).
             // Read-only refuses the marker AND trim arms silently. The
             // marker/trim arms override follow when playing.
+            // Resolve the waveform marker-line hit here — this Alt route is its
+            // only consumer; the top-strip flag hit was resolved up front.
+            if (inside_waveform) hit = hit_test_marker_line(app, audio, x);
             if (hit >= 0) {
                 if (active_view_state(app).read_only) {
                     return;
