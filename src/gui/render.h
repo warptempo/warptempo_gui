@@ -196,9 +196,10 @@ inline constexpr int kChipOutlinePx = 1;
 // The glyph-run inset from a chip's left edge: the outline ring plus the left
 // inner pad (kChipOutlinePx + flag_pad_x_px()). The ONE value every chip
 // anchor/caret site uses to place the glyph origin relative to the chip's left
-// edge (= the marker's pixel column, where flag_chip_rect's r.x lands). Every
-// renderer passes anchor_x = text_left + flag_glyph_inset_px() and back-derives
-// the chip edge via EditorTextBox::hl_pad, so paint and hit share one geometry.
+// edge (where flag_chip_rect's r.x lands — for marker flags the centered,
+// edge-clamped position, not the marker column). Every renderer passes
+// anchor_x = text_left + flag_glyph_inset_px() and back-derives the chip edge
+// via EditorTextBox::hl_pad, so paint and hit share one geometry.
 inline double flag_glyph_inset_px() { return kChipOutlinePx + flag_pad_x_px(); }
 
 // Sole authored value for the flag chip's vertical anchor: the offset from
@@ -263,6 +264,24 @@ inline int playhead_triangle_h_px() {
 // file-scope state beside the grid metrics; regenerated when H changes.
 // Never null.
 cairo_surface_t* playhead_triangle_mask();
+
+// Height H (px) of the small marker-flag triangle: a purple, playhead-style
+// tip-down (▽) indicator whose tip marks a marker's authored frame at the
+// waveform top edge. Smaller than the playhead triangle (authored 6 vs 10) so
+// it reads as a subordinate frame tick rather than a second cursor; scaled by
+// gui_font_scale() and clamped to at least 2 so the mask always has a tip row
+// below a top row. The authored 6 is architect-tunable. Shares the triangle
+// mask shape (W = 2H-1, tip at column H-1) with the playhead so the two are
+// built by the same generator, differing only in H.
+inline int marker_triangle_h_px() {
+    const int h = static_cast<int>(std::nearbyint(6.0 * gui_font_scale()));
+    return h < 2 ? 2 : h;
+}
+
+// The cached cairo A8 mask surface for the marker triangle (W = 2H-1 by H,
+// binary alpha, tip-down, tip at column H-1). Its own cache slot in render.cpp,
+// beside the playhead's; regenerated when H changes. Never null.
+cairo_surface_t* marker_triangle_mask();
 
 // Waveform-internal top/bottom inset, in pixels. The drawn waveform samples
 // are confined to [area.y + waveform_inset_px(), area.y + area.h -
@@ -331,6 +350,22 @@ inline double flag_chip_bottom_y(const GuiRect& waveform_area, ChipRow row) {
     return lower - (static_cast<double>(monospace_row_h()) + kRowGapPx);
 }
 
+// Total chip width (px) for a glyph_count-glyph chip: the padded glyph advance
+// plus the outline ring on both sides. This is the ONE definition of a chip's
+// width — flag_chip_rect's r.w below AND the centering/edge-clamp math in
+// iterate_visible_flags_impl both read it, so the width a chip is centered and
+// clamped by is exactly the width it paints and hit-tests at, with no drift.
+// The advance is the cached monospace arithmetic (glyph count times
+// monospace_advance()), exact for the ASCII chip strings and independent of any
+// cairo context.
+inline int flag_chip_width_px(size_t glyph_count) {
+    const double pad = flag_pad_x_px();
+    const double advance =
+        static_cast<double>(glyph_count) * monospace_advance();
+    return static_cast<int>(std::round(advance + 2.0 * pad))
+        + 2 * kChipOutlinePx;
+}
+
 // Single source of truth for a flag chip's painted/hit rectangle. ALL chip
 // types — regular warp flags, phase-reset flags, and trim b/e chips — derive
 // their fill rect AND their hit rect from this one function, so the two cannot
@@ -339,30 +374,35 @@ inline double flag_chip_bottom_y(const GuiRect& waveform_area, ChipRow row) {
 // The returned rect is the TOTAL chip footprint INCLUDING the outline ring: it
 // grows by kChipOutlinePx on every side relative to the padded glyph box. The
 // fill insets by kChipOutlinePx inside it (render_editor_text_box). text_left is
-// the CHIP's left edge = the marker's pixel column: r.x = round(text_left), so
-// the ring's leftmost column IS the marker column (capping the stem) and the
-// fill starts one pixel right of it. The glyph run sits kChipOutlinePx +
-// flag_pad_x_px() (= flag_glyph_inset_px()) inside the chip edge. The vertical
-// growth is carried by monospace_row_h() / monospace_row_baseline_offset()
-// (which now bake the outline in), so r.y / r.h below are unchanged — the top
-// lifts and the height grows automatically.
+// the CHIP's left edge as the caller already positioned it: r.x = round(text_left).
+// For the MARKER flag rows (warp + phase reset) the caller centers the chip on
+// the marker's pixel column and edge-clamps it into the waveform width, so the
+// ring's left column is NOT the marker column — the marker's true frame is
+// carried by the separate triangle indicator, and the chip merely stays fully in
+// view. Trim b/e chips keep their own anchoring. The fill starts one pixel right
+// of the left edge, and the glyph run sits kChipOutlinePx + flag_pad_x_px()
+// (= flag_glyph_inset_px()) inside the chip edge. The vertical growth is carried
+// by monospace_row_h() / monospace_row_baseline_offset() (which now bake the
+// outline in), so r.y / r.h below are unchanged — the top lifts and the height
+// grows automatically.
 //
 // Width is computed from the cached per-character monospace advance
-// (monospace_advance(), measured once on the real paint surface at startup),
-// NOT from a per-call cairo_text_extents — that was the residual edge bug:
-// paint measured on the window surface, hit on a 1x1 scratch surface, and the
-// integer width diverged by 1px. Chip text is ASCII-only, so glyph_count is the
-// exact glyph count and glyph_count * monospace_advance() is the exact advance,
-// identical at paint and hit, with zero surface dependence.
+// (flag_chip_width_px -> monospace_advance(), measured once on the real paint
+// surface at startup), NOT from a per-call cairo_text_extents — that was the
+// residual edge bug: paint measured on the window surface, hit on a 1x1 scratch
+// surface, and the integer width diverged by 1px. Chip text is ASCII-only, so
+// glyph_count is the exact glyph count and glyph_count * monospace_advance() is
+// the exact advance, identical at paint and hit, with zero surface dependence.
 //
 // Inputs:
-//   text_left   - the chip's left edge, already snapped to the marker's integer
-//                 pixel column by the caller. Chip left edge = round(text_left);
-//                 the glyph run sits flag_glyph_inset_px() (ring + left inner
-//                 pad) to the right of it, folded into where the caller places
-//                 the glyph origin vs. text_left (see consumers).
+//   text_left   - the chip's left edge as the caller positioned it (centered +
+//                 edge-clamped for marker flags; the trim anchoring for b/e
+//                 chips). Chip left edge = round(text_left); the glyph run sits
+//                 flag_glyph_inset_px() (ring + left inner pad) to the right of
+//                 it, folded into where the caller places the glyph origin vs.
+//                 text_left (see consumers).
 //   glyph_count - number of glyphs in the chip's text (== text.length() for the
-//                 ASCII chip strings). Width = round(count*advance + 2*pad).
+//                 ASCII chip strings). Width = flag_chip_width_px(glyph_count).
 //   baseline_y  - the text baseline y the caller solved for its row (Lower row
 //                 for regular/phase-reset chips, Upper for trim). The box top is
 //                 baseline_y - monospace_row_baseline_offset(); the height is
@@ -373,15 +413,11 @@ inline double flag_chip_bottom_y(const GuiRect& waveform_area, ChipRow row) {
 // recomputes any edge.
 inline GuiRect flag_chip_rect(double text_left, size_t glyph_count,
                               double baseline_y) {
-    const double pad = flag_pad_x_px();
-    const double advance =
-        static_cast<double>(glyph_count) * monospace_advance();
     GuiRect r;
     r.x = static_cast<int>(std::round(text_left));
     r.y = static_cast<int>(std::round(
               baseline_y - monospace_row_baseline_offset()));
-    r.w = static_cast<int>(std::round(advance + 2.0 * pad))
-        + 2 * kChipOutlinePx;
+    r.w = flag_chip_width_px(glyph_count);
     r.h = monospace_row_h();
     return r;
 }
@@ -625,12 +661,12 @@ struct FlagEditorOverlay {
     bool        cursor_visible      = false;
 };
 
-// Draws flag annotations in `top_strip_area` above visible markers. Iterates
-// left-to-right and greedily skips any flag whose left edge would collide
-// with the previously-rendered flag's right edge (+ small pad). Flag text
-// is the canonical post-pipe payload: owned tempo `1.28`, owned+scale
-// `1.28*1.2345`, owned+def `1.28:a.01`, owned+scale+def `1.28*1.2345:a.01`,
-// inherit `pass`, label reference `a.01`.
+// Draws flag annotations in `top_strip_area` above visible markers. Each chip
+// is CENTERED over its marker's pixel column and edge-clamped fully into view
+// (see iterate_visible_flags_impl); there is no elision — overlapping chips
+// occlude instead. Flag text is the canonical post-pipe payload: owned tempo
+// `1.28`, owned+scale `1.28*1.2345`, owned+def `1.28:a.01`, owned+scale+def
+// `1.28*1.2345:a.01`, inherit `pass`, label reference `a.01`.
 //
 // Three-state model: each flag renders in one of three states.
 //   1. Not selected: text in `kText`, no background fill.
@@ -650,9 +686,12 @@ struct FlagEditorOverlay {
 // positions. Painting is two reverse passes keyed on `selected_set` — selected
 // chips above unselected, leftmost on top within each class (see render.cpp).
 // `waveform_width` is the EFFECTIVE waveform width (waveform_area.w), the
-// column-mapping denominator; chips share the marker stems' samples-per-pixel
-// so they stay column-aligned with the stems below them at every window width
-// (it differs from top_strip_area.w only at a non-multiple-of-16 window).
+// column-mapping denominator AND the edge-clamp bound; chips share the marker
+// stems' samples-per-pixel so a chip's centered position (before the edge clamp)
+// lands on the same column its stem rises at, at every window width (the width
+// differs from top_strip_area.w only at a non-multiple-of-16 window). Near an
+// edge the clamp detaches the chip from its column; the frame is then read from
+// the marker triangle, not the chip.
 void render_flags(cairo_t* cr,
                   GuiRect top_strip_area,
                   int waveform_width,
@@ -717,10 +756,12 @@ void render_one_editor_flag(
 // clickable rect coincides with the painted chip.
 // `editor_target` / `editor_pending`: when the live FlagPayload editor is
 // active, its variable-width pending text replaces the committed payload for
-// that one flag's RECT WIDTH — the substitution is at the width, never at the
-// cull. The cull runs on the marker's COMMITTED text (the paint mirror:
-// iterate_visible_flags_impl enters with committed text and
-// paint_one_flag_with_overlay substitutes editor.pending as draw_text), so a
+// that one flag's RECT WIDTH, and — since iterate_visible_flags_impl centers and
+// edge-clamps by that same width — for its CENTERING too, so the editing chip
+// grows symmetrically around its column as you type. The substitution is at the
+// width/centering, never at the cull: the cull runs on the marker's COMMITTED
+// text (the paint mirror: iterate_visible_flags_impl enters with committed text
+// and paint_one_flag_with_overlay substitutes editor.pending as draw_text), so a
 // flag with committed text stays emitted regardless of its pending, and the
 // emitted rect is sized to the pending width. So the hit rect matches the chip
 // the editor actually paints — clicks on a grown pending's exposed extension
@@ -827,11 +868,13 @@ double monospace_row_baseline_offset();
 void init_monospace_grid_metrics(cairo_t* cr);
 
 // Returns the on-screen x where the given marker's flag pending text
-// starts, in pixels. Includes the flag_glyph_inset_px() glyph inset (ring +
-// left inner pad) so the returned value matches where pending text actually
-// paints (the renderers move_to at text_left + flag_glyph_inset_px()).
-// Returns -1.0 if the marker is not currently visible in the
-// viewport. Direct computation -- does not require a cairo context.
+// starts, in pixels. Centers and edge-clamps the chip on the marker's column
+// exactly as iterate_visible_flags_impl does, using the live editor's PENDING
+// width, then adds the flag_glyph_inset_px() glyph inset (ring + left inner
+// pad) so the returned value matches where render_one_editor_flag actually
+// paints the pending glyphs (the renderers move_to at text_left +
+// flag_glyph_inset_px()). Returns -1.0 if the marker is not currently visible
+// in the viewport. Direct computation -- does not require a cairo context.
 double flag_pending_text_left_x(
     const AppState& app, const GuiAudio& audio,
     int marker_idx);
