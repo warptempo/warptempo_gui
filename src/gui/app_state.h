@@ -304,17 +304,19 @@ struct UndoHistory {
 
 // Session-only region selection — an Ableton-style arrangement span the user
 // paints by dragging on the waveform, used later by the trim on-toggle (bare
-// x). The x toggle trims to the region but does NOT consume it: the highlight
-// persists through the toggle, so x-off then x-on re-trims from the same span
-// (the Ableton loop-toggle model). NEVER serialized, and outside the selection
-// and undo systems entirely (a transient visual). Endpoints are ACTIVE-DOMAIN
-// frames (source frames in source view, target frames in target view), stored
-// in drag order and normalized lo/hi at READ time, so the span survives
-// pan/zoom mid-drag and at rest. Cleared on file load, the A/B tab switch, the
-// S/T audio-view switch (the domain changes under it), Esc (only when nothing
-// higher-priority consumes the Esc), and a motionless plain waveform click (the
-// click dissolves the highlight; at on_button_release). The W/P marker-column
-// switch does NOT clear it — the region is not marker-related.
+// x). x CLEARS the highlight on every press that acts: the on-toggle trims to
+// the region and clears it (the trim chips/wash replace the highlight as the
+// visual), and the off-toggle clears any live region alongside the bounds — so
+// re-trimming always needs a fresh drag (the Ableton loop-toggle model). NEVER
+// serialized, and outside the selection and undo systems entirely (a transient
+// visual). Endpoints are ACTIVE-DOMAIN frames (source frames in source view,
+// target frames in target view), stored in drag order and normalized lo/hi at
+// READ time, so the span survives pan/zoom mid-drag and at rest. Cleared by any
+// acting x, on file load, the A/B tab switch, the S/T audio-view switch (the
+// domain changes under it), Esc (only when nothing higher-priority consumes the
+// Esc), and a motionless plain waveform click (the click dissolves the
+// highlight; at on_button_release). The W/P marker-column switch does NOT clear
+// it — the region is not marker-related.
 struct RegionState {
     bool    active  = false;
     int64_t a_frame = 0;   // the press-anchor endpoint

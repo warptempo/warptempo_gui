@@ -467,9 +467,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // x is a pure trim on/off toggle: a set trim (either bound) clears both
-    // bounds (off); an unset trim under a live region trims to it (on), the
-    // region persisting through the toggle; unset with no region is a no-op.
-    // The playhead plays no part. Trim's pointer routes are the Alt press
+    // bounds (off); an unset trim under a live region trims to it (on); unset
+    // with no region is a no-op. Every acting x clears the region highlight —
+    // it hands off to the trim (on) or vanishes with it (off), so re-trimming
+    // needs a fresh drag. The playhead plays no part. Trim's pointer routes are the Alt press
     // (single via a stem/chip hit, pair via a chip-row press strictly between
     // the two bound columns); trim is outside the selection system, so there is
     // no Delete arm. Plain Ctrl+x is cut (text_editor.cpp) and stays unbound

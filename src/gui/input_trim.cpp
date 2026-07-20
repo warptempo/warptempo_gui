@@ -77,11 +77,13 @@ void GuiInputHandler::handle_trim_clear_both() {
 // rules. A SET trim (either bound) turns OFF — x clears both bounds. An UNSET
 // trim turns ON from a live region (the drag-painted span, active-domain
 // frames): begin at the span's lo, end at its hi. Unset with NO region → a
-// strict no-op. The region is NOT consumed: it persists through the toggle, so
-// x-off then x-on re-trims from the same highlight (the highlight outlives the
-// toggle — a plain motionless waveform click is what collapses it, at
-// on_button_release). Read-only refuses BOTH directions silently (trim
-// authoring), leaving the region untouched.
+// strict no-op. x CLEARS the region highlight on every press that ACTS: the ON
+// branch clears it after reading it (the trim chips/wash replace the highlight
+// as the visual), and the OFF branch clears any live region alongside the
+// bounds — the highlight either hands off to the trim or vanishes with it, so
+// re-trimming needs a fresh drag. The strict no-op (no trim, no region) touches
+// nothing, and read-only refuses BOTH directions silently (trim authoring),
+// leaving the region untouched.
 //
 // Set-from-region: normalize the span at read time (endpoints rest in drag
 // order), inverse-map each active-domain endpoint to a source frame through
@@ -90,7 +92,7 @@ void GuiInputHandler::handle_trim_clear_both() {
 // once) — the map is monotone, so lo/hi order survives — then clamp to the
 // shared [0, total-1] walls. A span collapsing to end <= begin after the snap
 // destroys both bounds via auto_clear_crossed_trim (the standing rule); the
-// region survives that too. The shared trim commit tail (auto_clear_crossed_trim
+// region is already cleared by then. The shared trim commit tail (auto_clear_crossed_trim
 // then the repaint/trigger) mirrors the other trim commits; the playhead is
 // untouched (trim gestures never move it). The OFF branch routes through
 // handle_trim_clear_both so the one clear+repaint tail is shared.
@@ -100,9 +102,13 @@ void GuiInputHandler::handle_trim_x() {
     // and a resting region is left as it is.
     if (active_view_state(app).read_only) return;
 
-    // OFF: any set bound clears both. handle_trim_clear_both owns the
-    // has_begin||has_end guard and the repaint/trigger tail.
+    // OFF: any set bound clears both, and a live region vanishes with them.
+    // handle_trim_clear_both owns the has_begin||has_end guard and the
+    // repaint/trigger tail; a bound is set here, so it always invalidates the
+    // waveform area — the region clear rides that repaint and needs no second
+    // invalidate.
     if (app.trim.has_begin || app.trim.has_end) {
+        app.region = RegionState{};
         handle_trim_clear_both();
         return;
     }
@@ -123,8 +129,10 @@ void GuiInputHandler::handle_trim_x() {
     app.trim.has_begin   = true;
     app.trim.end_frame   = end;
     app.trim.has_end     = true;
-    // The region is deliberately NOT cleared here — it persists through the
-    // toggle so x-off then x-on re-trims from the same highlight.
+    // The highlight hands off to the trim: clear the region after reading it
+    // (the trim chips/wash replace it as the visual), so re-trimming needs a
+    // fresh drag. The invalidate_waveform_area below repaints the removal.
+    app.region = RegionState{};
     auto_clear_crossed_trim();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();

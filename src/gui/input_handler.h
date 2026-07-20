@@ -570,10 +570,12 @@ private:
 
     // Bare x is a pure trim on/off toggle (no context-awareness): a set trim
     // (either bound) clears both bounds (off); an unset trim under a live
-    // region trims to it, begin at the span's lo, end at its hi (on), the
-    // region persisting through the toggle; unset with no region is a strict
-    // no-op. Read-only refuses both directions silently. The sole dispatch
-    // entry for the x key; the off branch calls handle_trim_clear_both.
+    // region trims to it, begin at the span's lo, end at its hi (on); unset
+    // with no region is a strict no-op. Every acting x clears the region
+    // highlight — it hands off to the trim (on) or vanishes with it (off), so
+    // re-trimming needs a fresh drag. Read-only refuses both directions
+    // silently, leaving the region untouched. The sole dispatch entry for the x
+    // key; the off branch calls handle_trim_clear_both.
     void handle_trim_x();
 
     // Clear both trim bounds unconditionally. Silent no-op when neither bound
