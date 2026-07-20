@@ -507,31 +507,43 @@ constexpr int     kDoubleClickSlackPx = 8;
 // of when it crosses, so the catch-up jump never exceeds the real hand motion.
 constexpr int     kDragMovedThresholdPx = 3;
 
-// Hover popup state. A popup-eligible warp marker (pass marker or
-// label_ref) under the cursor shows a readout of its resolved tempo,
-// rendered centered over the marker in the marker-text lane (top strip;
-// paint_marker_text_lane). The motion and viewport-recompute handlers set
-// `marker_index` and `cached_text` and derive `visible` the instant the
-// cursor lands on an eligible rect (no dwell); mutation paths / dismiss
-// conditions clear the whole struct.
+// Hover state, two surfaces driven by one hovered marker. Any marker under the
+// cursor — either column — shows its OWN value in the marker-text lane (top
+// strip; paint_marker_text_lane), and a pass/label_ref warp marker ALSO shows
+// its resolved tempo in the bottom strip's transient row (paint_bottom_strip).
+// The motion and viewport-recompute handlers set these fields the instant the
+// cursor lands on a flag rect (no dwell); mutation paths / dismiss conditions
+// clear the whole struct.
 //
-// `cached_text` is the readout's content string, computed once per
-// rect-entry (def lookup, frame-distance ratio) and read unchanged by
-// the paint path, so paint never repeats the math. `visible` is simply
-// whether `cached_text` is non-empty. Discarded on rect-exit; there is
-// no asynchronous work to cancel — a transition recomputes the text and
-// the prior result is dropped.
+// `lane_text` is the marker's own payload — the canonical flag line
+// (flag_text_iter) for a warp marker, the literal "phase reset" for a phase
+// reset marker — sized and centered by `source_frame` in the lane. `readout_text`
+// is the pass/ref resolved readout for the bottom strip (compute_hover_popup_text),
+// empty on owners and phase resets. Both are computed once per rect-entry and
+// read unchanged by the paint path, so paint never repeats the math. Discarded
+// on rect-exit; there is no asynchronous work to cancel — a transition
+// recomputes the text and the prior result is dropped.
 struct HoverPopupState {
     int         marker_index = -1;
-    bool        visible      = false;
-    std::string cached_text;
+    // The hovered marker's authored source frame, the lane run's centering
+    // origin (lane_text_left_x_at_frame) — column-agnostic, so the lane paint
+    // needs no knowledge of which store the marker came from.
+    int64_t     source_frame = 0;
+    std::string lane_text;
+    std::string readout_text;
     // The pasteable effective tempo value for the hovered marker, in the exact
     // form the flag editor accepts (base, plus "*scale" when a scale is
-    // present). Computed alongside cached_text at each rect-entry and copied to
-    // the clipboard by the Ctrl+C hover-copy binding while `visible`. Non-empty
-    // whenever `visible` is true (an empty cached_text means no popup, so the
-    // binding never fires with an unset payload).
+    // present). Computed alongside readout_text at each rect-entry and copied to
+    // the clipboard by the Ctrl+C hover-copy binding while a readout shows.
+    // Non-empty exactly when readout_text is (both are pass/ref only), so the
+    // binding never fires with an unset payload.
     std::string copy_payload;
+
+    // Whether either hover surface currently paints. Drives the damage decision
+    // at hover transitions and the clear path.
+    bool any_visible() const {
+        return !lane_text.empty() || !readout_text.empty();
+    }
 };
 
 // What action triggered the modal prompt; the activate-response dispatch

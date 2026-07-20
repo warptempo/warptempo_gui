@@ -147,14 +147,16 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
         return;
     }
 
-    if (app.hover_popup.visible) {
-        // cached_text is the resolved-tempo string from
-        // compute_hover_popup_text; marker_index is a valid, popup-eligible warp
-        // marker whenever visible (recompute_hover_at_cursor's invariant).
-        const std::string& txt = app.hover_popup.cached_text;
-        if (txt.empty()) return;
-        const double left = lane_text_left_x(
-            app, audio, app.hover_popup.marker_index, txt.size());
+    if (!app.hover_popup.lane_text.empty()) {
+        // lane_text is the hovered marker's OWN value — the canonical flag line
+        // for a warp marker, the literal "phase reset" for a phase reset marker
+        // (recompute_hover_at_cursor). source_frame centers the run on the
+        // marker's painted column, column-agnostic so this paint needs no
+        // knowledge of which store the marker came from.
+        const std::string& txt = app.hover_popup.lane_text;
+        const double left = lane_text_left_x_at_frame(
+            app, audio,
+            static_cast<double>(app.hover_popup.source_frame), txt.size());
         if (left < 0.0) return;
         // kBackground fill exactly behind the run (AA off for a crisp edge),
         // then the text — the plain-text tier, no border, no caret.
@@ -521,9 +523,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // (inner) row, letting the user keep their timestamp / S-T / W-P /
     // A-B bearings while typing. The upper row carries the transient /
     // modal chain in precedence order: prompt > queue > settings editor
-    // > BPM editor. The prompt is a one-key-answer modal
+    // > BPM editor > pass/ref hover readout. The prompt is a one-key-answer modal
     // and owns the upper row; status stays visible under it (harmless
-    // context). (The hover readout moved off this row to the marker-text lane —
+    // context). (The hover readout is the resolved-tempo string for a pass /
+    // label_ref marker; a marker's OWN value shows in the marker-text lane —
     // paint_marker_text_lane.) Each row's baseline is derived from its row rect, not
     // from the window bottom. (The former pan-strip row retired — pan lives on
     // the Alt+drag waveform grab.)
@@ -633,6 +636,15 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                                    kBpmEditorPrefix,
                                    static_cast<double>(timestamp_pad_x()),
                                    upper_baseline);
+    } else if (!app.hover_popup.readout_text.empty()) {
+        // The pass/ref resolved readout renders below every modal/progress tier.
+        // readout_text is the compute_hover_popup_text string (notice-free); it
+        // is non-empty only for a pass/label_ref warp marker
+        // (popup_eligible_marker), so owners and phase resets keep the strip
+        // clean while their own value shows in the marker-text lane.
+        text_display::draw_line(
+            cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
+            app.hover_popup.readout_text, kText, flag_font_size_px());
     }
 }
 

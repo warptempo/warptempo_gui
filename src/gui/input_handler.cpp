@@ -189,10 +189,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // and the two editor blocks (which return on their own Ctrl+C, keeping
     // the editor's copy-selection working while an editor owns input), so
     // reaching here means neither a modal nor an editor is active. Fires only
-    // while the popup is visible, in which case copy_payload is non-empty.
-    // Ctrl+C was otherwise unbound globally.
+    // while a pass/ref resolved readout is showing, in which case copy_payload
+    // is non-empty (owners and phase resets carry no payload). Ctrl+C was
+    // otherwise unbound globally.
     if (ctrl && !shift && !alt && key == GuiKeys::C &&
-        app.hover_popup.visible) {
+        !app.hover_popup.copy_payload.empty()) {
         app.text_clipboard = app.hover_popup.copy_payload;
         return;
     }

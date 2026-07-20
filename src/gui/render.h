@@ -761,6 +761,14 @@ double lane_text_left_x(
     const AppState& app, const GuiAudio& audio,
     int marker_idx, size_t glyph_count);
 
+// The frame-addressed core of lane_text_left_x: same placement math, but keyed
+// on a marker's authored source frame rather than a warp-store index, so the
+// phase-reset column's lane hover (which lives in a different store) shares one
+// placement owner with the warp column. The idx overload above delegates here.
+double lane_text_left_x_at_frame(
+    const AppState& app, const GuiAudio& audio,
+    double source_frame, size_t glyph_count);
+
 // The flag editor's caret / text-run origin owner: lane_text_left_x sized by
 // the flag editor's current pending text. The single reference the lane paint,
 // the click->byte caret math, and the editor-text drag all read, so what is

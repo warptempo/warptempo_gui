@@ -217,8 +217,9 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     invalidate_waveform_area();
     invalidate_timestamp_area();
     // Flags live in the top strip — rect positions change when the viewport
-    // scale changes. (The hover readout renders in the top strip's marker-text
-    // lane, covered by this top-strip invalidation.)
+    // scale changes. (The hovered marker's lane text renders in the top strip's
+    // marker-text lane, covered by this top-strip invalidation; the pass/ref
+    // resolved readout is covered by the bottom-strip invalidation above.)
     const GuiRect ts = top_strip_area(app);
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
     // Rects shifted under the (possibly stationary)
@@ -351,9 +352,10 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous,
     if (app.viewport_start_sample != old_vp) {
         invalidate_waveform_area();
         // Flag positions move with the viewport, so the top strip must
-        // repaint too. (The hover readout renders in the top strip's marker-text
-        // lane, covered here; recompute_hover_at_cursor below re-damages it if
-        // the hit changes.)
+        // repaint too. (The hovered marker's lane text renders in the top
+        // strip's marker-text lane, covered here; recompute_hover_at_cursor
+        // below re-damages both surfaces if the hit changes — the bottom-strip
+        // readout sits at a fixed screen position and needs damage only then.)
         const GuiRect ts = top_strip_area(app);
         gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
         // Rects shifted under the (possibly
@@ -448,22 +450,27 @@ void Viewport::follow_scroll_if_needed() {
     }
 }
 
-// Reset the hover popup state. If the popup was visible, invalidate the top
-// strip so the next paint erases it (the hover readout renders in the
-// marker-text lane, top row 2). Safe to call from any path.
+// Reset the hover state. If either surface was showing, invalidate both the top
+// strip (the marker-text lane) and the bottom strip (the pass/ref resolved
+// readout) so the next paint erases whichever was up. Safe to call from any path.
 void Viewport::clear_hover_popup() {
-    const bool was_visible = app.hover_popup.visible;
+    const bool was_visible = app.hover_popup.any_visible();
     app.hover_popup = HoverPopupState{};
-    if (was_visible) invalidate_top_strip();
+    if (was_visible) {
+        invalidate_top_strip();
+        invalidate_timestamp_area();
+    }
 }
 
 // Re-evaluate hover at the cursor's last on_motion coordinates. The single
-// hover-popup implementation: on_motion's no-gesture path delegates here, and
+// hover implementation: on_motion's no-gesture path delegates here, and
 // viewport mutations (zoom, scroll, center, playhead-driven viewport shift)
 // call it so a stationary cursor's hover state tracks the rects that just slid
 // under it. Suppression set: prompt, any_pointer_gesture_active (the pointer
-// drags), the three text editors, render queue, non-warp marker view,
-// and iter mode — each clears the popup.
+// drags), the three text editors, render queue — each clears both surfaces.
+// The marker view and iter mode are NOT suppressors: the lane shows every
+// hovered marker's own value on BOTH columns, and in iteration mode the warp
+// lane text carries the iter bracket exactly as the flag editor's seed does.
 void Viewport::recompute_hover_at_cursor() {
     if (app.last_mouse_x < 0 || app.last_mouse_y < 0) return;
     if (app.prompt.active ||
@@ -475,34 +482,53 @@ void Viewport::recompute_hover_at_cursor() {
         clear_hover_popup();
         return;
     }
-    if (app.active_markers_view != 'W' || app.iteration_mode_enabled) {
-        clear_hover_popup();
-        return;
-    }
-    // Target view's hover popup runs the same way as
-    // source view's. hit_test_flag builds the target_warp_frame_map
-    // internally when active_audio_view == Target so the flag rects it
-    // walks match what paint_handler renders at translated columns.
+    // Hover runs the same way in target view as in source view. hit_test_flag
+    // builds the target_warp_frame_map internally when active_audio_view ==
+    // Target so the flag rects it walks match what paint_handler renders at
+    // translated columns.
     const int hit = hit_test_flag(app, audio,
                                   app.last_mouse_x, app.last_mouse_y);
-    if (hit != app.hover_popup.marker_index) {
-        // No dwell: recompute cached_text once, derive visible from it,
-        // damage the readout area when the old popup was showing or the
-        // new one will. Empty cached_text when `hit` is not popup-eligible
-        // (paint then skips the readout and keeps the strip clean).
-        const bool was_visible = app.hover_popup.visible;
-        app.hover_popup.marker_index = hit;
-        app.hover_popup.copy_payload.clear();
-        app.hover_popup.cached_text =
-            popup_eligible_marker(app, hit)
-                ? compute_hover_popup_text(
-                      slice_to_warp_markers(app.warpmarkers.markers()), hit,
-                      audio.sample_rate(), audio.total_frames(),
-                      &app.hover_popup.copy_payload)
-                : std::string();
-        app.hover_popup.visible = !app.hover_popup.cached_text.empty();
-        // The popup renders in the marker-text lane (top strip); damage it when
-        // the old popup was showing or the new one will.
-        if (was_visible || app.hover_popup.visible) invalidate_top_strip();
+    if (hit == app.hover_popup.marker_index) return;
+
+    // No dwell: recompute both surfaces once. The LANE shows the hovered
+    // marker's own value regardless of eligibility — the canonical flag line
+    // for a warp marker (flag_text_iter, the one composer the flag paint,
+    // hit-rects, and the Enter editor seed all share, so lane and editor content
+    // always agree) or the literal "phase reset" for a phase reset marker. The
+    // BOTTOM readout keeps the pass/ref gate (popup_eligible_marker): owners and
+    // phase resets have nothing to resolve.
+    const bool was_visible = app.hover_popup.any_visible();
+    app.hover_popup.marker_index = hit;
+    app.hover_popup.source_frame = 0;
+    app.hover_popup.lane_text.clear();
+    app.hover_popup.readout_text.clear();
+    app.hover_popup.copy_payload.clear();
+    if (hit >= 0) {
+        if (app.active_markers_view == 'P') {
+            const auto& pv = app.phaseresetmarkers.markers();
+            if (hit < static_cast<int>(pv.size())) {
+                app.hover_popup.lane_text   = "phase reset";
+                app.hover_popup.source_frame = pv[hit].time_frame;
+            }
+        } else {
+            const auto& mv = app.warpmarkers.markers();
+            if (hit < static_cast<int>(mv.size())) {
+                app.hover_popup.lane_text =
+                    flag_text_iter(mv, hit, app.iteration_mode_enabled);
+                app.hover_popup.source_frame = mv[hit].time_frame;
+            }
+        }
+        if (popup_eligible_marker(app, hit)) {
+            app.hover_popup.readout_text = compute_hover_popup_text(
+                slice_to_warp_markers(app.warpmarkers.markers()), hit,
+                audio.sample_rate(), audio.total_frames(),
+                &app.hover_popup.copy_payload);
+        }
+    }
+    // The lane renders in the top strip, the readout in the bottom strip; damage
+    // both when either surface was showing or will show.
+    if (was_visible || app.hover_popup.any_visible()) {
+        invalidate_top_strip();
+        invalidate_timestamp_area();
     }
 }

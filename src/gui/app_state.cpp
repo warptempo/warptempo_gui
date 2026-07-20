@@ -244,14 +244,16 @@ bool popup_eligible_marker(const AppState& app, int idx) {
     const auto& mv = app.warpmarkers.markers();
     if (idx >= static_cast<int>(mv.size())) return false;
     const auto& m = mv[idx];
-    // Render resolution (resolve_warp_markers_for_render) drops disabled markers
+    // This gates the BOTTOM-STRIP resolved readout only — the marker-text lane
+    // shows every hovered marker's own value regardless of eligibility. Render
+    // resolution (resolve_warp_markers_for_render) drops disabled markers
     // outright and drops label refs whose definition is disabled (the
-    // cascade). The popup must not report a tempo the render never applies,
+    // cascade). The readout must not report a tempo the render never applies,
     // so eligibility mirrors both drops here: a disabled marker is
     // ineligible, and a ref to a disabled definition is ineligible. A ref
     // whose definition is missing entirely stays eligible —
     // compute_hover_popup_text already yields an empty string for that case
-    // and the display sites suppress empty popups, so it never surfaces a
+    // and the display sites suppress an empty readout, so it never surfaces a
     // stale tempo.
     if (m.disabled) return false;
     if (!m.label_ref.empty()) {

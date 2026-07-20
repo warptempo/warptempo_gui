@@ -1364,24 +1364,21 @@ void init_monospace_grid_metrics(cairo_t* cr) {
     g_measured_font_px = px;
 }
 
-double lane_text_left_x(
+double lane_text_left_x_at_frame(
     const AppState& app, const GuiAudio& audio,
-    int marker_idx, size_t glyph_count)
+    double source_frame, size_t glyph_count)
 {
-    const auto& mv = app.warpmarkers.markers();
-    if (marker_idx < 0 ||
-        marker_idx >= static_cast<int>(mv.size())) return -1.0;
     const double advance = monospace_advance();
     if (advance <= 0.0) return -1.0;
     // The marker's painted pixel column (window coords) via the painters' own
     // math (painted_column_of_source_frame) against the active display
     // context's map — identity in source view, the live cached target map in
     // target view — so the lane run centers on exactly the column the flag
-    // paints on.
+    // paints on. The frame is the marker's authored source frame; both marker
+    // columns translate through the same active-context map here.
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     const int col = painted_column_of_source_frame(
-        app, audio, static_cast<double>(mv[marker_idx].time_frame),
-        *ctx.warp_frame_map);
+        app, audio, source_frame, *ctx.warp_frame_map);
     const GuiRect area = waveform_area(app);
     const double center_x = static_cast<double>(area.x + col);
     const double run_w = static_cast<double>(glyph_count) * advance;
@@ -1399,6 +1396,18 @@ double lane_text_left_x(
         if (left > max_left) left = max_left;
     }
     return left;
+}
+
+double lane_text_left_x(
+    const AppState& app, const GuiAudio& audio,
+    int marker_idx, size_t glyph_count)
+{
+    const auto& mv = app.warpmarkers.markers();
+    if (marker_idx < 0 ||
+        marker_idx >= static_cast<int>(mv.size())) return -1.0;
+    return lane_text_left_x_at_frame(
+        app, audio, static_cast<double>(mv[marker_idx].time_frame),
+        glyph_count);
 }
 
 double flag_pending_text_left_x(
