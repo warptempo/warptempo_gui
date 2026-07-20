@@ -900,19 +900,27 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         trim_has_begin, trim_has_end,
         wf_cache.surface);
 
+    // The stem paints only for the active column's last-selected marker; the
+    // blue flag highlight still marks the whole selection. last_selected_marker
+    // indexes the active column's list (it swaps with the column on W/P switch),
+    // so it is passed straight through. It is folded into fp_selection_hash
+    // (hash_selection above), so the stem appears/disappears as last-selected
+    // moves within an unchanged set (e.g. Tab through a multi-selection).
     if (mv == 'P') {
         const auto& list = app.phaseresetmarkers.markers();
         render_phaseresetmarkers(
             ccr, local_area, list,
             vp_start, vp_end, sr,
-            app.selected_markers, tmap_arg, drag_overlay,
+            app.selected_markers, app.last_selected_marker,
+            tmap_arg, drag_overlay,
             wf_cache.surface);
     } else {
         const auto& list = app.warpmarkers.markers();
         render_markers(
             ccr, local_area, list,
             vp_start, vp_end, sr,
-            app.selected_markers, tmap_arg, drag_overlay,
+            app.selected_markers, app.last_selected_marker,
+            tmap_arg, drag_overlay,
             wf_cache.surface);
     }
 
