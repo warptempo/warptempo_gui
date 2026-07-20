@@ -288,30 +288,26 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 y >= pan_row.y && y < pan_row.y + pan_row.h;
             if (in_zoom_row || in_pan_row) {
                 if (ctrl || shift || alt) return;  // modified: strict no-op
-                // Double-click detection, BEFORE arming the drag: a candidate
-                // seeded by the previous motionless press-release in the SAME
-                // row, within kDoubleClickMs and kDoubleClickSlackPx of the
-                // recorded x, consumes this press as a one-shot navigation
-                // action — no drag armed, no pointer capture, playhead and
-                // selection untouched, allowed in read-only (all modal gates sit
-                // above this claim). The zoom row jumps to full zoom-out (whole
-                // song); the pan row runs the `c` command verbatim
-                // (run_working_zoom_command — the same repair/jump/working-zoom/
-                // recenter the c key runs). The candidate's first click briefly
-                // captured and hid the cursor at its press and restored it at
-                // the motionless release; this second press never captures.
+                // Double-click detection, BEFORE arming the drag — ZOOM ROW
+                // ONLY: a candidate seeded by the previous motionless zoom-row
+                // release, within kDoubleClickMs and kDoubleClickSlackPx of the
+                // recorded x, consumes this press as a one-shot zoom toggle — no
+                // drag armed, no pointer capture, playhead and selection
+                // untouched, allowed in read-only (all modal gates sit above
+                // this claim). The toggle is byte-identical to the bare `0` key
+                // (run_zoom_toggle_command): at the working zoom → full zoom-out
+                // (whole song); anywhere else → the working zoom. A pan-row
+                // press is never a second click (the check is gated on
+                // in_zoom_row), so the pan row has no double-click. The
+                // candidate's first click briefly captured and hid the cursor at
+                // its press and restored it at the motionless release; this
+                // second press never captures.
                 const StripDoubleClickCandidate& dc = app.strip_double_click;
-                if (dc.valid && dc.zoom_axis == in_zoom_row &&
+                if (in_zoom_row && dc.valid &&
                     monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
                     std::abs(x - dc.press_x) <= kDoubleClickSlackPx) {
                     app.strip_double_click = StripDoubleClickCandidate{};
-                    if (in_zoom_row) {
-                        viewport.apply_zoom_change(effective_max_zoom_level(
-                            waveform_area(app).w, live_total_frames(app, audio),
-                            audio.sample_rate()));
-                    } else {
-                        run_working_zoom_command();
-                    }
+                    run_zoom_toggle_command();
                     return;
                 }
                 const double spp = current_samples_per_pixel(app, audio);
@@ -598,17 +594,19 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // and the one synchronous rebuild (resync + kick_waveform_sync, inside
         // apply_strip_drag_zoom's final path) so the rest state is exact. A
         // motionless press-release finalizes nothing.
-        // Double-click seeding: a MOTIONLESS release records a candidate (this
-        // release x equals the press x); a release that MOVED records nothing
-        // and clears any candidate, so a drag can never seed the second click of
-        // a double-click.
+        // Double-click seeding: a MOTIONLESS ZOOM-ROW release records a
+        // candidate (this release x equals the press x); a release that MOVED
+        // records nothing and clears any candidate, so a drag can never seed the
+        // second click of a double-click. A motionless PAN-ROW release seeds
+        // nothing — the pan row has no double-click; it need not clear an
+        // existing candidate because the detection only runs for zoom-row
+        // presses.
         if (app.strip_drag.moved) {
             apply_strip_drag_at(x, y, /*final_event=*/true);
             app.strip_double_click = StripDoubleClickCandidate{};
-        } else {
+        } else if (app.strip_drag.zoom_axis) {
             app.strip_double_click = StripDoubleClickCandidate{
-                .valid = true, .time_ms = monotonic_ms(),
-                .zoom_axis = app.strip_drag.zoom_axis, .press_x = x};
+                .valid = true, .time_ms = monotonic_ms(), .press_x = x};
         }
         app.strip_drag = StripDragState{};
         end_strip_pointer_capture();  // reappear the cursor at the press point

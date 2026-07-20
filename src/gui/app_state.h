@@ -406,18 +406,17 @@ struct StripDragState {
     double anchor_sample = 0.0;
 };
 
-// Double-click detection on the live strip rows (Wayland delivers no
+// Double-click detection on the ZOOM row only (Wayland delivers no
 // double-click event, so it is hand-rolled from two motionless plain clicks).
-// A strip drag that ends MOTIONLESS records this candidate at its release; the
-// NEXT plain strip-row press, if it lands in the SAME row within kDoubleClickMs
-// and kDoubleClickSlackPx of the recorded x, is consumed as the double-click
-// navigation action instead of arming a drag. A drag that MOVED records nothing
-// and clears any candidate. Cleared on file load beside strip_drag, and the
-// moment the action fires. Session-only.
+// The pan row has no double-click. A motionless ZOOM-ROW drag records this
+// candidate at its release; the NEXT plain zoom-row press, if it lands within
+// kDoubleClickMs and kDoubleClickSlackPx of the recorded x, is consumed as the
+// zoom toggle instead of arming a drag. A drag that MOVED records nothing and
+// clears any candidate. Cleared on file load beside strip_drag, and the moment
+// the action fires. Session-only.
 struct StripDoubleClickCandidate {
     bool    valid     = false;
     int64_t time_ms   = 0;      // CLOCK_MONOTONIC ms at the motionless release
-    bool    zoom_axis = false;  // which row (matches StripDragState::zoom_axis)
     int     press_x   = 0;      // release x (== press x, the drag was motionless)
 };
 
@@ -788,7 +787,7 @@ struct AppState {
     // button release and file load.
     StripDragState strip_drag;
 
-    // Double-click candidate seeded by a motionless strip-row press-release.
+    // Double-click candidate seeded by a motionless zoom-row press-release.
     // Cleared on file load beside strip_drag and when the double-click action
     // fires.
     StripDoubleClickCandidate strip_double_click;

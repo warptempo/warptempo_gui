@@ -475,12 +475,13 @@ private:
     // playhead exactly on a marker.
     bool jump_playhead_to_focused_marker();
 
-    // The `c` key's working-zoom command, factored out so the pan-row
-    // double-click can invoke the SAME action: repair the last-selected
-    // marker, jump the playhead onto the focused marker when one exists, snap
-    // to the working zoom (kWorkingZoomLevel), and recenter on the playhead.
-    // The two call sites are byte-identical by construction.
-    void run_working_zoom_command();
+    // The bare `0` key and the zoom-row double-click are the SAME command,
+    // factored here so both invoke it byte-identically by construction: a
+    // toggle between the working zoom and full zoom-out. At the working zoom →
+    // full zoom-out (the per-file effective ceiling, whole song visible);
+    // anywhere else → the working zoom (kWorkingZoomLevel), centered on the
+    // playhead via apply_zoom_change.
+    void run_zoom_toggle_command();
 
     // Esc-cancel handlers: while a render or queued batch is in flight, Esc
     // cancels it. Returns true if it consumed the key (on_key then returns).

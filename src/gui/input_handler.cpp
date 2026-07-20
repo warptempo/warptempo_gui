@@ -369,19 +369,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Bare 0 toggles between the working zoom and full zoom-out. At the working
-    // zoom → full zoom-out (the per-file effective ceiling, whole song visible);
-    // anywhere else → the working zoom (2.4 s), centered on the playhead via
-    // apply_zoom_change. C remains the direct working-zoom-and-center gesture.
-    // Digits 1..9 are intentionally unbound.
+    // Bare 0 toggles between the working zoom and full zoom-out, the same
+    // command the zoom-row double-click runs. C remains the direct
+    // working-zoom-and-center gesture. Digits 1..9 are intentionally unbound.
     if (!ctrl && !alt && !shift && key == GuiKeys::Digit0) {
-        if (app.zoom_level == kWorkingZoomLevel) {
-            viewport.apply_zoom_change(effective_max_zoom_level(
-                waveform_area(app).w, live_total_frames(app, audio),
-                audio.sample_rate()));
-        } else {
-            viewport.apply_zoom_change(kWorkingZoomLevel);
-        }
+        run_zoom_toggle_command();
         return;
     }
 
@@ -633,15 +625,18 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
     return true;
 }
 
-void GuiInputHandler::run_working_zoom_command() {
-    // The `c` key and the pan-row double-click are the SAME command —
-    // byte-identical behavior by construction: repair the last-selected
-    // marker, jump the playhead onto the focused marker when one exists, snap
-    // to the working zoom, then recenter on the playhead.
-    selection.repair_last_selected();
-    jump_playhead_to_focused_marker();
-    viewport.apply_zoom_change(kWorkingZoomLevel);
-    viewport.center_viewport_on_playhead();
+void GuiInputHandler::run_zoom_toggle_command() {
+    // The bare `0` key and the zoom-row double-click are the SAME command —
+    // byte-identical by construction: at the working zoom → full zoom-out (the
+    // per-file effective ceiling, whole song visible); anywhere else → the
+    // working zoom, centered on the playhead via apply_zoom_change.
+    if (app.zoom_level == kWorkingZoomLevel) {
+        viewport.apply_zoom_change(effective_max_zoom_level(
+            waveform_area(app).w, live_total_frames(app, audio),
+            audio.sample_rate()));
+    } else {
+        viewport.apply_zoom_change(kWorkingZoomLevel);
+    }
 }
 
 // Shared wheel handler. Verbatim from the lambda at the original
