@@ -475,6 +475,13 @@ private:
     // playhead exactly on a marker.
     bool jump_playhead_to_focused_marker();
 
+    // The `c` key's working-zoom command, factored out so the pan-row
+    // double-click can invoke the SAME action: repair the last-selected
+    // marker, jump the playhead onto the focused marker when one exists, snap
+    // to the working zoom (kWorkingZoomLevel), and recenter on the playhead.
+    // The two call sites are byte-identical by construction.
+    void run_working_zoom_command();
+
     // Esc-cancel handlers: while a render or queued batch is in flight, Esc
     // cancels it. Returns true if it consumed the key (on_key then returns).
     // Routed after the editor modal (which cancels an active edit on Esc

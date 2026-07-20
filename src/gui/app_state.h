@@ -386,13 +386,23 @@ struct StripDragState {
     bool   zoom_axis = false;
     // Pointer position at the press (window px).
     int    press_y   = 0;
+    // The FIXED screen column the whole drag anchors to (window px, the press
+    // x). The axes are decoupled and zoom is SCREEN-anchored: a zoom always
+    // expands/contracts around this column, never drifting with the pan — a
+    // deliberate divergence from Ableton (whose zoom anchor rides the pan).
+    int    press_x   = 0;
+    // The previous motion event's x (window px), seeded to press_x at the
+    // claim. The pan increment reads dx = x - last_x each event so pan and zoom
+    // stay independent.
+    int    last_x    = 0;
     // Continuous zoom level at the press — always app.zoom_level verbatim, on
     // both the zoom and pan rows. The zoom row walks the one continuous domain
     // from wherever the level rests; the pan row never changes it.
     double press_level = 0.0;
-    // Song position (frames, double) painted under the press x at press time,
-    // unclamped — the viewport clamp owns legality. Held to the pointer's x for
-    // the whole drag.
+    // Song position (frames, double) required to sit at press_x, unclamped —
+    // the viewport clamp owns legality. Pan shifts it; after each apply it is
+    // re-derived from the CLAMPED viewport, so it always equals what is painted
+    // at press_x (also the screen-anchor semantic, and wall-symmetric).
     double anchor_sample = 0.0;
 };
 

@@ -88,10 +88,11 @@ struct Viewport {
     void move_playhead_to(int64_t new_sample);
     void move_playhead_pixels(int delta_px);
     void apply_zoom_change(double new_zoom_level);
-    // Strip-row drag zoom/pan: set the level and anchor the pressed song
-    // position (anchor_sample, frames) under the pointer's current x
-    // (anchor_x, window px), rather than centering on the playhead the way
-    // apply_zoom_change does. Never touches the playhead or selection.
+    // Strip-row drag zoom/pan: set the level and anchor the song position
+    // (anchor_sample, frames) at anchor_x — always the FIXED press column
+    // (window px), so zoom stays screen-anchored and decoupled from pan —
+    // rather than centering on the playhead the way apply_zoom_change does.
+    // Never touches the playhead or selection.
     // Mid-gesture events pass final=false and ride the ASYNC supersede slot (a
     // stale plate converging is accepted under the pointer torrent); the
     // terminating event passes final=true and runs the one synchronous rebuild

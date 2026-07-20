@@ -1451,10 +1451,8 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // it — the same jump the Tab family runs, after the same last-selected
         // repair — then set the working zoom and center on it; with no focused
         // marker, keep the plain working-zoom-and-center-on-playhead behavior.
-        selection.repair_last_selected();
-        jump_playhead_to_focused_marker();
-        viewport.apply_zoom_change(kWorkingZoomLevel);
-        viewport.center_viewport_on_playhead();
+        // Shared with the pan-row double-click (input_pointer.cpp).
+        run_working_zoom_command();
         break;
     case GuiKeys::Home:   playback_lifecycle.stop_playback_if_playing();
                     viewport.move_playhead_to(viewport.trim_begin_sample());

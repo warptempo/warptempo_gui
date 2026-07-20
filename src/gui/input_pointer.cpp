@@ -132,12 +132,18 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // (app, audio, ...) explicit args. The handle_wheel lambda is now a
 // private method on this struct.
 void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
-    const StripDragState& sd = app.strip_drag;
+    // Decoupled axes, screen-anchored zoom: the zoom always anchors press_x
+    // (the FIXED initial-click column); pan shifts which song content sits at
+    // that column, and a later zoom expands/contracts around whatever rests
+    // there NOW. Deliberately un-Ableton (whose zoom anchor drifts with the
+    // pan). Both rows share this one path — the pan row pins the level, so the
+    // identical math degenerates to pure incremental pan.
+    StripDragState& sd = app.strip_drag;
     double new_level = sd.press_level;
     if (sd.zoom_axis) {
-        // Drag DOWN (y grows) lowers the level → zooms in; drag UP raises it →
-        // zooms out. Clamp into [kMinZoom, effective per-file ceiling]; the pan
-        // row keeps press_level.
+        // Zoom axis: the ABSOLUTE dy since press. Drag DOWN (y grows) lowers
+        // the level → zooms in; drag UP raises it → zooms out. Clamp into
+        // [kMinZoom, effective per-file ceiling]; the pan row keeps press_level.
         new_level = sd.press_level -
             static_cast<double>(y - sd.press_y) / kZoomStripPxPerLevel;
         const double max_l = effective_max_zoom_level(
@@ -146,7 +152,24 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
         if (new_level < kMinZoom) new_level = kMinZoom;
         if (new_level > max_l)    new_level = max_l;
     }
-    viewport.apply_strip_drag_zoom(new_level, sd.anchor_sample, x, final_event);
+    // Pan axis: an INCREMENTAL grab-pan at the new level. dx moves the song
+    // position that must sit at press_x, with the grab sign (drag right pulls
+    // later content left under the fixed anchor).
+    const double spp = samples_per_pixel_at(
+        new_level, waveform_area(app).w, live_total_frames(app, audio),
+        audio.sample_rate());
+    sd.anchor_sample -= static_cast<double>(x - sd.last_x) * spp;
+    sd.last_x = x;
+    // Apply at the FIXED press column (never the live x): the viewport entry
+    // point computes viewport_start = anchor - press_x·spp then clamps.
+    viewport.apply_strip_drag_zoom(new_level, sd.anchor_sample, sd.press_x,
+                                   final_event);
+    // Wall dead-zone elimination: re-derive anchor_sample from the CLAMPED
+    // viewport so panning into a wall and back reverses symmetrically, and the
+    // anchor always equals what is actually painted at press_x (the
+    // screen-anchor semantic). spp is unchanged by the apply (same level).
+    sd.anchor_sample = static_cast<double>(app.viewport_start_sample) +
+                       static_cast<double>(sd.press_x) * spp;
 }
 
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
@@ -271,10 +294,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // action — no drag armed, no pointer capture, playhead and
                 // selection untouched, allowed in read-only (all modal gates sit
                 // above this claim). The zoom row jumps to full zoom-out (whole
-                // song); the pan row jumps to the working zoom recentered on the
-                // playhead (the trailing center covers apply_zoom_change's
-                // early-return when already at the working zoom, the same shape
-                // the c handler uses). The candidate's first click briefly
+                // song); the pan row runs the `c` command verbatim
+                // (run_working_zoom_command — the same repair/jump/working-zoom/
+                // recenter the c key runs). The candidate's first click briefly
                 // captured and hid the cursor at its press and restored it at
                 // the motionless release; this second press never captures.
                 const StripDoubleClickCandidate& dc = app.strip_double_click;
@@ -287,8 +309,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                             waveform_area(app).w, live_total_frames(app, audio),
                             audio.sample_rate()));
                     } else {
-                        viewport.apply_zoom_change(kWorkingZoomLevel);
-                        viewport.center_viewport_on_playhead();
+                        run_working_zoom_command();
                     }
                     return;
                 }
@@ -297,7 +318,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 app.strip_drag.active    = true;
                 app.strip_drag.zoom_axis = in_zoom_row;
                 app.strip_drag.press_y   = y;
-                // The song position painted under the press x, unclamped.
+                // The FIXED screen anchor column for the whole drag, and the
+                // last-x seed the incremental pan reads from.
+                app.strip_drag.press_x   = x;
+                app.strip_drag.last_x    = x;
+                // The song position painted under press_x at press time,
+                // unclamped — the required-at-press_x anchor the drag maintains.
                 app.strip_drag.anchor_sample =
                     static_cast<double>(app.viewport_start_sample) +
                     static_cast<double>(x) * spp;
@@ -566,10 +592,11 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     if (text_editor::is_active(app.commit_editor)) return;
     if (button != GuiMouseButton::Left) return;
     if (app.strip_drag.active) {
-        // Terminating event: if the drag moved, re-derive the level/anchor at
-        // the release position and run the one synchronous rebuild (resync +
-        // kick_waveform_sync, inside apply_strip_drag_zoom's final path) so the
-        // rest state is exact. A motionless press-release finalizes nothing.
+        // Terminating event: if the drag moved, run the same incremental apply
+        // with final=true (folding the release position's last pan increment)
+        // and the one synchronous rebuild (resync + kick_waveform_sync, inside
+        // apply_strip_drag_zoom's final path) so the rest state is exact. A
+        // motionless press-release finalizes nothing.
         // Double-click seeding: a MOTIONLESS release records a candidate (this
         // release x equals the press x); a release that MOVED records nothing
         // and clears any candidate, so a drag can never seed the second click of
@@ -647,13 +674,14 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         viewport.clear_hover_popup();
         return;
     }
-    // Strip-row zoom/pan drag: the pressed song position sticks to the pointer.
-    // The top zoom row also zooms around that point from vertical motion; the
-    // bottom pan row keeps the level fixed. Every motion event re-derives the
-    // level (zoom row) and re-anchors the viewport at the pointer, riding the
-    // ASYNC supersede slot (final_event=false) — a stale plate converging is
-    // accepted under the pointer torrent; the release runs the one synchronous
-    // rebuild. A lost button finalizes like release.
+    // Strip-row zoom/pan drag with decoupled axes: zoom is anchored to the
+    // FIXED press column while pan shifts what song content sits there. The top
+    // zoom row zooms around that fixed column from vertical motion; the bottom
+    // pan row keeps the level fixed and only pans. Every motion event re-derives
+    // the level (zoom row) and applies the incremental pan, riding the ASYNC
+    // supersede slot (final_event=false) — a stale plate converging is accepted
+    // under the pointer torrent; the release runs the one synchronous rebuild.
+    // A lost button finalizes like release.
     if (app.strip_drag.active) {
         if (!mods.primary_button_held) {     // button lost -> end like release
             if (app.strip_drag.moved)

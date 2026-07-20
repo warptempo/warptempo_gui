@@ -243,10 +243,11 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
 
     app.zoom_level = new_zoom_level;
 
-    // Anchor the pressed song position under the pointer: pick the viewport
-    // start that paints anchor_sample at anchor_x, at the (possibly new) level.
-    // current_samples_per_pixel reads the level just assigned, so this is
-    // spp(new_level). At the effective ceiling the anchor cannot pin a column
+    // Anchor the song position at the FIXED press column: pick the viewport
+    // start that paints anchor_sample at anchor_x (always press_x), at the
+    // (possibly new) level. current_samples_per_pixel reads the level just
+    // assigned, so this is spp(new_level). At the effective ceiling the anchor
+    // cannot pin a column
     // (the whole song is visible); clamp_viewport_start's visible >= total
     // branch parks the start at 0 and the drag is inert on this axis.
     const double spp = current_samples_per_pixel(app, audio);

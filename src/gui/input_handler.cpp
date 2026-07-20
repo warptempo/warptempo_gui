@@ -633,6 +633,17 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
     return true;
 }
 
+void GuiInputHandler::run_working_zoom_command() {
+    // The `c` key and the pan-row double-click are the SAME command —
+    // byte-identical behavior by construction: repair the last-selected
+    // marker, jump the playhead onto the focused marker when one exists, snap
+    // to the working zoom, then recenter on the playhead.
+    selection.repair_last_selected();
+    jump_playhead_to_focused_marker();
+    viewport.apply_zoom_change(kWorkingZoomLevel);
+    viewport.center_viewport_on_playhead();
+}
+
 // Shared wheel handler. Verbatim from the lambda at the original
 // main.cpp:1444 — only difference is the captured viewport / playhead
 // helpers now resolve through this struct's reference members.
