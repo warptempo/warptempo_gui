@@ -194,11 +194,10 @@ struct WaveformCache {
 //      overlay is hashed (not generation-counted) so future mutations
 //      of app.drag don't need to remember to bump a callsite counter.
 //
-// Surface height differs from WaveformCache's: stems emanate from the
-// flag rect's left outline (at screen y = area.y - kStemAboveWaveformPx)
-// and run down to area.y + area.h (waveform bottom). The cache surface
-// is sized to that full vertical extent; the blit positions it at screen
-// y = area.y - kStemAboveWaveformPx.
+// Surface matches the waveform area: stems now span the WAVEFORM AREA ONLY
+// (top at screen y = area.y, down to area.y + area.h — no strip overhang; the
+// flag+triangle structure above lives in the FlagCache). The cache surface is
+// waveform-height and the blit positions it at screen y = area.y.
 struct StemCache {
     cairo_surface_t* surface = nullptr;
     int              width   = 0;
@@ -243,17 +242,11 @@ struct StemCache {
 //
 // Mirrors StemCache's shape: synchronous main-thread rebuild fingerprinted
 // against wf_cache.fp_* (displayed-viewport inputs) plus marker-store
-// generations, drag-overlay hash, selection hash, marker-view, and the
-// active editor target. The cache holds ALL flag pixels (the steady-state
-// flag rects); on_redraw paints the FlagPayload editor's live pending
-// text/cursor on top per frame.
-//
-// fp_flag_editor_target — set to the marker index whose flag payload is
-// being edited (or -1). Drives the cache to SKIP painting that flag so
-// the live editor render in on_redraw owns those pixels entirely.
-// Without the skip, a pending text shrunk below the original flag's
-// width via backspace would leave the cache's original glyphs peeking
-// past the live render's narrower bg-fill.
+// generations, drag-overlay hash, selection hash, and marker-view. The cache
+// holds ALL flag pixels (the fixed-width marker/phase-reset shapes and the b/e
+// trim chips); the paint pass is a pure blit. The flag editor renders nothing
+// in the strip in this design, so the editing target's flag paints as an
+// ordinary selected shape — no skip-guard, no per-frame live flag render.
 //
 // The cache surface matches `top_strip_area(app)`: width = window width,
 // height = top_strip_height, origin (0,0). The blit at on_redraw time
@@ -275,13 +268,6 @@ struct FlagCache {
     uint64_t  fp_drag_overlay_hash        = 0;
     uint64_t  fp_selection_hash           = 0;
     char      fp_active_markers_view      = '\0';
-    int       fp_flag_editor_target       = -1;
-    // Iteration mode splices the inline bracket into eligible
-    // flags. Toggling `i` changes the painted text without bumping any
-    // generation, so it must be part of the cache identity. (Iter-value
-    // edits route through marker_mut and already bump the warp generation
-    // above, so they need no separate hash here.)
-    bool      fp_iteration_mode_enabled   = false;
 
     // The begin/end trim flag chips ride this cache (they live in
     // top_upper_row_area, inside top_strip_area). Their pixels depend on the

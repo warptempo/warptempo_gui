@@ -67,17 +67,17 @@ static void render_bottom_strip_editor(cairo_t* cr,
 
 void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
                                              const GuiRect& top_strip,
-                                             int sr) {
-    // Flag annotations in the top strip. The steady-state flag-rect pixels
-    // live on flag_cache.surface (rebuilt from on_tick via
-    // maybe_rebuild_flag_cache); this blits the cache, then paints the
-    // per-frame live work — the FlagPayload editor's pending text + cursor.
-    // Iteration ranges render inside the flags themselves, and the BPM
-    // editor and hover readout render in the bottom strip, so nothing in
-    // this pass is dark. Like the other caches, the
-    // surface may be null on the very first paint after a load (before the
-    // first rebuild fires); the blit is skipped and the background shows
-    // through for that one frame.
+                                             int /*sr*/) {
+    // Flag annotations in the top strip. All flag pixels — the fixed-width
+    // marker/phase-reset shapes and the b/e trim chips — live on
+    // flag_cache.surface (rebuilt from on_tick via maybe_rebuild_flag_cache);
+    // this pass is a pure blit. The flag editor renders NOTHING in the strip in
+    // this design (its payload text moves to the marker-text lane later), so
+    // there is no per-frame live flag work; the editing target's flag paints as
+    // an ordinary selected shape in the cache. Like the other caches, the
+    // surface may be null on the very first paint after a load (before the first
+    // rebuild fires); the blit is skipped and the background shows through for
+    // that one frame.
     if (flag_cache.surface) {
         cairo_save(cr);
         cairo_rectangle(cr, top_strip.x, top_strip.y,
@@ -87,73 +87,6 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
                                  top_strip.x, top_strip.y);
         cairo_paint(cr);
         cairo_restore(cr);
-    }
-
-    // Drag-time position overlay. Active for the duration of a ctrl-drag;
-    // non-null only when app.drag.active. Threaded into render_one_editor_flag
-    // so the editor flag tracks the dragged marker's proposed (moveable_times)
-    // position.
-    DragOverlay drag_overlay_storage;
-    const DragOverlay* drag_overlay = nullptr;
-    if (app.drag.active) {
-        drag_overlay_storage.indices = &app.drag.dragging_markers;
-        drag_overlay_storage.times   = &app.drag.moveable_times;
-        drag_overlay = &drag_overlay_storage;
-    }
-
-    // Displayed-viewport locals for live items that must align with the
-    // cached flag pixels. The cache renders against wf_cache.fp_*; the live
-    // editor flag and popup anchor math reads these *_disp locals so it
-    // agrees with the cache during the worker's 1-2 frame rebuild window
-    // (after a viewport gesture, before the worker's swap).
-    const int64_t  vp_start_disp = wf_cache.fp_vp_start;
-    const int64_t  vp_end_disp   = wf_cache.fp_vp_end;
-    const std::vector<WarpFrameMapSegment>* tmap_disp =
-        (wf_cache.fp_target && !wf_cache.fp_warp_frame_map.empty())
-            ? &wf_cache.fp_warp_frame_map : nullptr;
-
-    // Built once, threaded into the live render_one_editor_flag call below.
-    // Reads only app.top_flag_editor, which has no view-domain distinction.
-    FlagEditorOverlay overlay;
-    if (text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind ==
-            text_editor::Kind::FlagPayload) {
-        overlay.marker_index   = app.top_flag_editor.target;
-        overlay.pending        = app.top_flag_editor.pending;
-        overlay.cursor_pos     = app.top_flag_editor.cursor_pos;
-        overlay.is_red         = app.top_flag_editor.red;
-        overlay.cursor_visible =
-            text_editor::cursor_visible_now(
-                app.top_flag_editor);
-        overlay.has_selection =
-            text_editor::has_selection(
-                app.top_flag_editor);
-        overlay.selection_start =
-            text_editor::selection_start(
-                app.top_flag_editor);
-        overlay.selection_end =
-            text_editor::selection_end(
-                app.top_flag_editor);
-    }
-
-    // Live editor flag: only paints in W marker-view (the FlagPayload editor
-    // isn't available in the 'P' path). The cache leaves a hole over the editor
-    // target via the skip-guard in render_flags, so this fill is mandatory
-    // whenever overlay.marker_index >= 0 — otherwise that flag's pixels would
-    // be missing entirely.
-    if (overlay.marker_index >= 0 &&
-        app.active_markers_view != 'P') {
-        render_one_editor_flag(
-            cr, top_strip, waveform_area(app).w,
-            app.warpmarkers.markers(),
-            vp_start_disp, vp_end_disp, sr,
-            flag_font_size_px(),
-            app.selected_markers,
-            overlay,
-            tmap_disp,
-            drag_overlay,
-            app.iteration_mode_enabled &&
-                app.active_markers_view == 'W');
     }
 }
 
@@ -402,9 +335,9 @@ void GuiPaintHandler::paint_phase_reset_overlay(
     // Rectangle spans columns [left_col, right_col): the stem's own column
     // (left_col) sits under the rectangle, and the stems paint after the
     // overlay, so the stem stays crisp on top of the left seam. Vertical
-    // extent is the marker stem's exact span — the lower-row chip bottom
-    // down to the waveform bottom.
-    const double y_top = flag_chip_bottom_y(area, ChipRow::Lower);
+    // extent is the marker stem's exact span — the waveform top down to the
+    // waveform bottom.
+    const double y_top = static_cast<double>(area.y);
     const double y_bottom = static_cast<double>(area.y + area.h);
     double x0 = static_cast<double>(area.x + left_col);
     double x1 = static_cast<double>(area.x + right_col);
@@ -441,8 +374,8 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr,
     // rebuild fires); the blit is skipped and the background
     // shows through for that one frame. The surface's screen
     // origin is `marker_paint_rect.x, marker_paint_rect.y`
-    // (i.e. area.x, area.y - kStemAboveWaveformPx), matching
-    // the local-coord choice in maybe_rebuild_stem_cache.
+    // (i.e. area.x, area.y — the surface is waveform-height with no
+    // overhang), matching the local-coord choice in maybe_rebuild_stem_cache.
     if (stem_cache.surface) {
         cairo_save(cr);
         cairo_rectangle(cr,
@@ -501,10 +434,8 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
 // -- GuiPaintHandler::paint_bottom_strip ---------------------------------
 
 void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
-    // Bottom strip: three rows of equal height mirroring the top strip — two
-    // text rows plus the pan-strip row nearest the waveform (painted as a
-    // ring below). The status line lives on the lower (outer) row and
-    // paints UNCONDITIONALLY — it is no longer the trailing else of a
+    // Bottom strip: TWO text rows. The status line lives on the lower (outer)
+    // row and paints UNCONDITIONALLY — it is no longer the trailing else of a
     // chain, so it stays visible while an editor is open on the upper
     // (inner) row, letting the user keep their timestamp / S-T / W-P /
     // A-B bearings while typing. The upper row carries the transient /
@@ -512,16 +443,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // > BPM editor > hover readout. The prompt is a one-key-answer modal
     // and owns the upper row; status stays visible under it (harmless
     // context). Each row's baseline is derived from its row rect, not
-    // from the window bottom.
+    // from the window bottom. (The former pan-strip row retired — pan lives on
+    // the axis-locked top zoom row.)
     const GuiRect lower_row = bottom_lower_row_area(app);
     const GuiRect upper_row = bottom_upper_row_area(app);
-
-    // Pan-strip row (bottom row 2, innermost, adjacent to the waveform):
-    // a full-width ring matching the top zoom-strip row. The ring is the
-    // row's only paint; it is a live drag surface (see the strip-drag
-    // routing in input_pointer.cpp). Painted first so the text rows below
-    // (which sit at different y bands) are unaffected.
-    render_strip_row_ring(cr, bottom_pan_row_area(app), waveform_area(app).w);
 
     const double lower_baseline =
         lower_row.y + monospace_row_baseline_offset();
@@ -678,21 +603,13 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         }
 
         // Markers: vertical stems in the waveform area, beneath the
-        // playhead. Cairo's outer clip confines painting to `exposed`.
-        // Gate against the actual stem pixel range: stems emanate from the
-        // chip bottom at `area.y - stem_cache_overhang_px()` (the tallest is
-        // the upper-row trim stem) and run down to `area.y + area.h`. Must
-        // match the stem-cache surface height and origin in
-        // maybe_rebuild_stem_cache. Top-strip damage above the stems' tops
-        // (popup edits, hover popup, cursor blink) would otherwise pay for an
-        // empty marker pass.
-        const int stem_overhang = stem_cache_overhang_px();
-        const GuiRect marker_paint_rect{
-            area.x,
-            area.y - stem_overhang,
-            area.w,
-            area.h + stem_overhang
-        };
+        // playhead. Cairo's outer clip confines painting to `exposed`. Stems
+        // now span the WAVEFORM AREA ONLY (top at `area.y`, down to
+        // `area.y + area.h`) — no strip overhang; the flag+triangle structure
+        // above (the flag cache) supplies the connection. The paint rect is
+        // exactly the waveform area, matching the stem-cache surface height and
+        // origin in maybe_rebuild_stem_cache.
+        const GuiRect marker_paint_rect = area;
         if (rects_intersect(exposed, marker_paint_rect)) {
             // Over the plate and dim, under the stems: the phase reset
             // overlay lightens the span ahead of the focused phase reset,

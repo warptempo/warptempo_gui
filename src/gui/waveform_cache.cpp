@@ -841,14 +841,11 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     const GuiRect area = waveform_area(app);
     if (area.w <= 0 || area.h <= 0) return;
 
-    // Surface includes the stem overhang above the waveform — see the
-    // geometry note in StemCache's class comment. The overhang
-    // is the TALLER trim value (stem_cache_overhang_px = kStemAboveWaveformPx
-    // + row_h + gap) so the upper-row trim stem is not clipped at its top;
-    // marker stems land transparently lower in the same surface.
-    const int overhang = stem_cache_overhang_px();
+    // The stem surface is exactly the waveform area — stems no longer overhang
+    // above the waveform top (the flag+triangle structure above lives in the
+    // FlagCache). See the geometry note in StemCache's class comment.
     const int surface_w = area.w;
-    const int surface_h = area.h + overhang;
+    const int surface_h = area.h;
 
     // Displayed-viewport inputs: read from wf_cache.fp_*, not app state.
     const int64_t  vp_start     = wf_cache.fp_vp_start;
@@ -916,17 +913,13 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     cairo_paint(ccr);
     cairo_restore(ccr);
 
-    // Local rect translates the screen-coord stem geometry into the cache
-    // surface's coordinate system. Setting local.y = overhang puts the
-    // waveform top at that offset, so the TALLEST stem (the upper-row trim
-    // stem, top = local.y - kFlagBottomLiftPx - (row_h + gap)) lands at
-    // surface y = 0, marker stems (top = local.y - kFlagBottomLiftPx) land
-    // transparently lower, and y1 = overhang + area.h = surface_h. The blit
-    // at on_redraw time positions the surface at screen y = area.y - overhang
-    // so everything lands correctly.
+    // Local rect: the stem geometry translated into the cache surface's
+    // coordinate system, which is the waveform area with its top at y = 0.
+    // Both marker and trim stems span [0, area.h) — no overhang. The blit at
+    // on_redraw time positions the surface at screen y = area.y.
     const GuiRect local_area{
         0,
-        overhang,
+        0,
         surface_w,
         area.h
     };
@@ -957,8 +950,8 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     // the displayed-domain trim frames (already translated); the has-set bits
     // decide which stems draw. Painted BEFORE the regular marker stems so that
     // where a trim bound and a regular marker share a column the regular stem
-    // (painted last on this shared surface) sits in front; the taller trim stem
-    // reads as "underneath," reachable by its hotkey.
+    // (painted last on this shared surface) sits in front; the trim stem reads
+    // as "underneath," reachable by its chip.
     render_trim_stems(
         ccr, local_area, vp_start, vp_end,
         trim_struct,
@@ -976,7 +969,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         render_phaseresetmarkers(
             ccr, local_area, list,
             vp_start, vp_end, sr,
-            app.selected_markers, app.last_selected_marker,
+            app.last_selected_marker,
             tmap_arg, drag_overlay,
             wf_cache.surface);
     } else {
@@ -984,7 +977,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         render_markers(
             ccr, local_area, list,
             vp_start, vp_end, sr,
-            app.selected_markers, app.last_selected_marker,
+            app.last_selected_marker,
             tmap_arg, drag_overlay,
             wf_cache.surface);
     }
@@ -1032,7 +1025,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     // pixels. Idempotent against the waveform's own damage.
     gui.invalidate_region(
         0,
-        area.y - overhang,
+        area.y,
         app.width,
         surface_h);
 }
@@ -1041,11 +1034,10 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
 //
 // Mirrors maybe_rebuild_stem_cache: same wf_cache.fp_* coupling for the
 // displayed-viewport half of the fingerprint; same live-app-state reads
-// for the marker-driven half (with selection + editor target additions).
-// The cache holds every flag rect EXCEPT the FlagPayload-editor target
-// (skipped via the render_flags skip-guard so the live editor render in
-// on_redraw owns those pixels — keeps the cache fingerprint independent
-// of pending-text width and cursor blink).
+// for the marker-driven half (with the selection hash added). The cache holds
+// EVERY flag shape and the b/e trim chips — the flag editor renders nothing in
+// the strip, so the editing target's flag is an ordinary cached shape (no
+// skip-guard).
 
 void GuiPaintHandler::maybe_rebuild_flag_cache() {
     if (app.loading || audio.total_frames() <= 0) return;
@@ -1080,20 +1072,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                                      app.selected_markers,
                                      app.last_selected_marker);
     const char      mv         = app.active_markers_view;
-    // Iteration mode only affects warp-view flags.
-    const bool      iter_on    = app.iteration_mode_enabled &&
-                                 mv == 'W';
-
-    // FlagPayload editor target drives the skip-guard (cache leaves a
-    // hole for the live editor render to fill). The BpmBracket kind
-    // does not feed the cache fingerprint.
-    // FlagPayload (W view) drives the skip-guard: the cache leaves a hole for
-    // the live editor render to fill. P view has no per-flag editor.
-    int flag_target = -1;
-    if (text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind == text_editor::Kind::FlagPayload) {
-        flag_target = app.top_flag_editor.target;
-    }
 
     // Displayed-domain trim state for the b/e chips (shared helper,
     // same values the stem cache paints its stems at).
@@ -1112,8 +1090,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_drag_overlay_hash       == drag_hash &&
         flag_cache.fp_selection_hash          == sel_hash &&
         flag_cache.fp_active_markers_view     == mv &&
-        flag_cache.fp_flag_editor_target      == flag_target &&
-        flag_cache.fp_iteration_mode_enabled  == iter_on &&
         flag_cache.fp_trim_begin              == dtrim.begin &&
         flag_cache.fp_trim_end                == dtrim.end &&
         flag_cache.fp_trim_has_begin          == dtrim.has_begin &&
@@ -1164,19 +1140,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         drag_overlay = &drag_overlay_storage;
     }
 
-    // Cache overlay: marker_index activates the skip-guard for the
-    // FlagPayload editor target. Other fields stay defaulted — pending
-    // text, cursor state, selection range live in the live editor
-    // render only.
-    FlagEditorOverlay cache_overlay;
-    cache_overlay.marker_index        = flag_target;
-
     if (mv == 'P') {
         render_phase_reset_flags(
             ccr, local_top_strip, wave_w,
             app.phaseresetmarkers.markers(),
             vp_start, vp_end, sr,
-            flag_font_size_px(),
             app.selected_markers,
             tmap_arg,
             drag_overlay);
@@ -1184,22 +1152,19 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         render_flags(ccr, local_top_strip, wave_w,
                      app.warpmarkers.markers(),
                      vp_start, vp_end, sr,
-                     flag_font_size_px(),
                      app.selected_markers,
-                     cache_overlay,
                      tmap_arg,
-                     drag_overlay,
-                     iter_on);
+                     drag_overlay);
     }
 
-    // The b/e trim chips cap their stems in the upper top row. Painted
-    // in both 'W' and 'P' views (like the stems) in the AUTHORING views.
-    // The real waveform_area sets the upper-row chip bottom; the top strip's
-    // screen origin equals the cache surface origin (0,0), so local_top_strip
-    // and the real waveform rect need no translation.
+    // The b/e trim chips cap their stems in the trim-chip lane. Painted in both
+    // 'W' and 'P' views (like the stems). The real waveform_area locates the
+    // lanes and supplies the column-mapping width; the top strip's screen origin
+    // equals the cache surface origin (0,0), so local_top_strip and the real
+    // waveform rect need no translation.
     render_trim_flags(
         ccr, local_top_strip, waveform_area(app),
-        vp_start, vp_end, flag_font_size_px(),
+        vp_start, vp_end,
         TrimRange{dtrim.begin, dtrim.end},
         dtrim.has_begin, dtrim.has_end);
 
@@ -1216,8 +1181,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_drag_overlay_hash       = drag_hash;
     flag_cache.fp_selection_hash          = sel_hash;
     flag_cache.fp_active_markers_view     = mv;
-    flag_cache.fp_flag_editor_target      = flag_target;
-    flag_cache.fp_iteration_mode_enabled  = iter_on;
     flag_cache.fp_trim_begin              = dtrim.begin;
     flag_cache.fp_trim_end                = dtrim.end;
     flag_cache.fp_trim_has_begin          = dtrim.has_begin;

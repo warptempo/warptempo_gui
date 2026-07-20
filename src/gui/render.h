@@ -211,39 +211,19 @@ inline constexpr int kChipOutlinePx = 1;
 // via EditorTextBox::hl_pad, so paint and hit share one geometry.
 inline double flag_glyph_inset_px() { return kChipOutlinePx + flag_pad_x_px(); }
 
-// Sole authored value for the flag chip's vertical anchor: the offset from
-// the waveform area's top edge up to the regular flag rect's painted bottom
-// edge. Stays a compile-time zero under the font_size scaling — zero is
-// scale-invariant. Now 0 — the chip bottom is flush with the waveform area's top edge
-// (flag_chip_bottom_y(area, Lower) returns area.y exactly), so the regular
-// marker stem begins at the chip bottom = area top and runs straight down
-// with no overhang above the area. The constant survives as the lower-row
-// term of the stem-cache overhang (via kStemAboveWaveformPx, now 0) and as
-// the flag_chip_bottom_y Lower anchor (now identity); it is still consumed by
-// render_flags' baseline computation, the stem renderers, and the iter/BPM
-// popups in main.cpp that mirror the flag rect's vertical position. The
-// waveform-internal inset for the cursor triangle is a SEPARATE constant
-// introduced in geom-cursor, not a rename of this one.
+// The outer (window-edge) gap between each strip's edge-most lane and the
+// window edge, and the waveform-side gap between the innermost lane and the
+// waveform. Stays a compile-time zero under the font_size scaling — zero is
+// scale-invariant — so the lanes pack tight against the window edges and the
+// waveform. The constant survives so the gap reappears structurally if it is
+// ever un-zeroed (the strip lane-stack geometry in main.cpp carries it).
 constexpr double kFlagBottomLiftPx = 0.0;
 
-// The lower-row component of the stem-cache overhang: the distance from the
-// waveform top up to the regular (lower-row) flag chip's bottom edge. Now 0
-// (defined off kFlagBottomLiftPx, which is 0; a compile-time zero is
-// scale-invariant under font_size scaling): the lower-row stem no longer
-// overhangs above the waveform top — it begins at the chip bottom = area top.
-// The full stem-cache overhang is still the TALLER trim value (see
-// stem_cache_overhang_px, which adds one row + gap on top of this), since
-// trim stems reach up to the upper-row chip bottom and share the same cache
-// surface. Defined by derivation off kFlagBottomLiftPx so the lower-row
-// component tracks the one authored lift value.
-constexpr double kStemAboveWaveformPx = kFlagBottomLiftPx;
-
-// Fixed-pixel mirrored six-row strip grid (three rows per strip). G is the
-// single tunable inter-row gap between each adjacent row pair within a strip;
-// it doubles as the trim-flag-to-regular-flag distance. One named constant,
-// one place to change it. Now 0 — the three rows of each strip touch, and the
+// Fixed-pixel mirrored strip lane grid. G is the single tunable inter-lane gap
+// between each adjacent lane pair within a strip. One named constant, one
+// place to change it. Now 0 — the lanes of each strip touch, and the
 // waveform-side and outer (window-edge) gaps (both kFlagBottomLiftPx, also 0)
-// vanish, so rows and strips pack tight against each other and the window
+// vanish, so lanes and strips pack tight against each other and the window
 // edges. Stays a compile-time zero under font_size scaling — zero is
 // scale-invariant.
 constexpr double kRowGapPx = 0.0;
@@ -256,51 +236,64 @@ constexpr double kRowGapPx = 0.0;
 constexpr int kMinWindowWidthPx  = 640;
 constexpr int kMinWindowHeightPx = 480;
 
-// Height H (px) of the code-generated playhead triangle mask: the authored
-// value 10 scaled by gui_font_scale(), rounded with std::nearbyint, and
-// clamped to at least 2 so the mask always has a tip row below a top row.
-// The mask width is 2*H - 1 (odd by construction, so it centers exactly on
-// the 1 px cursor column). At scale 1 this is exactly 10, and the mask
-// reproduces the retired 19x10 PNG asset bit-for-bit. The half-width and
-// waveform inset below both derive from H, so the three can never drift.
+// Authored pixel geometry of a marker flag (architect spec), scaled by
+// gui_font_scale(), rounded with std::nearbyint, floored to a sane minimum.
+// The flag is a RECTANGLE two pixels taller than wide (a slight upright
+// rectangle) that carries a tip-down TRIANGLE directly beneath it; the tip
+// marks the frame. These are the values at the default font size.
+inline constexpr int kFlagWidthPx  = 17;
+inline constexpr int kFlagHeightPx = 19;
+
+// The flag rectangle's painted width / height for the current font size. The
+// TRIM b/e chips are textless rectangles of this exact width/height too. Both
+// carry a >= 5 px floor so a tiny font still leaves a usable, outline-able
+// shape.
+inline int flag_lane_w_px() {
+    const int w = static_cast<int>(std::nearbyint(
+        static_cast<double>(kFlagWidthPx) * gui_font_scale()));
+    return w < 5 ? 5 : w;
+}
+inline int flag_lane_h_px() {
+    const int h = static_cast<int>(std::nearbyint(
+        static_cast<double>(kFlagHeightPx) * gui_font_scale()));
+    return h < 5 ? 5 : h;
+}
+
+// Height H (px) of the code-generated tip-down triangle mask, SHARED by the
+// playhead cursor and every marker/trim flag (one mask builder). The mask
+// width is 2*H - 1 (odd by construction, so it centers exactly on the 1 px
+// column). H is DERIVED from the flag width so the triangle sits one pixel
+// inside each flag-rectangle edge: the flag triangle width kFlagWidthPx-2 = 15
+// gives H = (15+1)/2 = 8 at scale 1 (the odd-row rule — every triangle row is
+// odd, top row 15 down to a 1 px tip). Clamped to at least 2 so the mask
+// always has a tip row below a top row. The half-width below derives from H,
+// so the two can never drift.
 inline int playhead_triangle_h_px() {
-    const int h = static_cast<int>(std::nearbyint(10.0 * gui_font_scale()));
+    const int h = (flag_lane_w_px() - 1) / 2;
     return h < 2 ? 2 : h;
 }
 
-// The cached cairo A8 mask surface for the playhead triangle (W = 2H-1 by H,
+// The cached cairo A8 mask surface for the tip-down triangle (W = 2H-1 by H,
 // binary alpha, row y spanning columns y..W-1-y). Owned by render.cpp
-// file-scope state beside the grid metrics; regenerated when H changes.
-// Never null.
+// file-scope state beside the grid metrics; regenerated when H changes. The
+// same mask stamps the playhead cursor triangle and each marker/trim flag's
+// triangle (centered on the column, tip at the waveform top edge). Never null.
 cairo_surface_t* playhead_triangle_mask();
-
-// The cached cairo A8 mask surface for the marker/trim frame tick: the RIGHT
-// HALF of the playhead triangle (H x H, where H = playhead_triangle_h_px(), so
-// the same height as the playhead — there is no separate smaller sizing). The
-// left column is a solid vertical edge and the hypotenuse falls from the
-// top-right corner to the bottom-left tip; stamped with its left edge on a
-// marker's or trim bound's pixel column, it coincides exactly with the playhead
-// triangle's right half when the cursor sits on that column. Its own cache slot
-// in render.cpp, beside the playhead's; regenerated when H changes. Never null.
-cairo_surface_t* marker_half_triangle_mask();
 
 // Waveform-internal top/bottom inset, in pixels. The drawn waveform samples
 // are confined to [area.y + waveform_inset_px(), area.y + area.h -
-// waveform_inset_px()] so the cursor triangle has a clear band to sit in at
-// the top, and the waveform is symmetric about its area center. Equal to the
-// triangle mask height BY CONSTRUCTION (both are playhead_triangle_h_px()),
-// so the triangle exactly fills the top band, tip at the first sample row,
-// at every font_size. At scale 1 it is 10.
-// This is distinct from the strip gap constant kFlagBottomLiftPx (0) — a
-// waveform-internal margin that shares the triangle's height because that
-// is the invariant it protects.
+// waveform_inset_px()] so the waveform is symmetric about its area center and
+// the marker/trim stems have a clean stem-only band at the top before the
+// samples begin. Equal to the triangle mask height by construction. (The
+// cursor triangle no longer sits inside this band — it moved to its own
+// triangle lane above the waveform — so the former triangle-clearance
+// rationale retires; the symmetric-margin purpose remains.)
 inline int waveform_inset_px() { return playhead_triangle_h_px(); }
 
-// Half-width (px) of the playhead triangle's horizontal footprint, H - 1
-// (the mask is 2H-1 wide, centered on the cursor column); bounds the
-// playhead's off-screen cull and its invalidation strip. Single definition
-// shared by render.cpp (cull) and main.cpp (invalidation). At scale 1 it is
-// 9, identical to the former constant.
+// Half-width (px) of the tip-down triangle's horizontal footprint, H - 1
+// (the mask is 2H-1 wide, centered on the column); bounds the playhead's
+// off-screen cull and its invalidation strip. Single definition shared by
+// render.cpp (cull) and main.cpp (invalidation). At scale 1 it is 7.
 inline int playhead_half_px() { return playhead_triangle_h_px() - 1; }
 
 // Pre-first-paint fallback for the measured monospace row height and baseline
@@ -316,7 +309,7 @@ constexpr double kRowBaselineOffFallbackPx =
     -1.0 + 1.0 + 14.0;
 
 // Forward declaration: defined with its full doc comment below. Needed here
-// because flag_chip_bottom_y / stem_cache_overhang_px (inlines) read it.
+// because flag_chip_rect (inline) reads the row height.
 int monospace_row_h();
 // Forward declaration: defined with its full doc comment below. Needed here
 // because flag_chip_rect (inline) reads it.
@@ -324,32 +317,6 @@ double monospace_row_baseline_offset();
 // Forward declaration: defined with its full doc comment below. Needed here
 // because flag_chip_rect (inline) computes the chip width from it.
 double monospace_advance();
-
-// Which strip row a chip's bottom edge sits at. Lower is the regular
-// warp/phase-reset flag row (now flush with the waveform area top, since
-// kFlagBottomLiftPx is 0); Upper is the begin/end trim-flag row, one row + one
-// inter-row gap higher.
-enum class ChipRow { Lower, Upper };
-
-// The flag chip's painted bottom edge for the current layout. With
-// kFlagBottomLiftPx now 0, the regular (Lower) chip's bottom edge is flush
-// with the waveform area top. This is the single source of
-// truth that both the flag baseline solve and the stem renderers
-// (render_marker_stems_impl, render_trim_stems, render_trim_flags) read: the
-// stem is an extension of the flag, so its top originates here and runs down
-// to the waveform bottom. Length is whatever connects the chip bottom to the
-// waveform bottom.
-//
-// `row` selects which strip row the chip caps. Lower returns the waveform
-// area top exactly (regular flags/stems are flush, kFlagBottomLiftPx == 0).
-// Upper sits one row + one inter-row gap higher — the trim begin/end flags,
-// whose stems are therefore longer by that amount automatically.
-inline double flag_chip_bottom_y(const GuiRect& waveform_area, ChipRow row) {
-    const double lower =
-        static_cast<double>(waveform_area.y) - kFlagBottomLiftPx;
-    if (row == ChipRow::Lower) return lower;
-    return lower - (static_cast<double>(monospace_row_h()) + kRowGapPx);
-}
 
 // Total chip width (px) for a glyph_count-glyph chip: the padded glyph advance
 // plus the outline ring on both sides. This is the ONE definition of a chip's
@@ -365,19 +332,17 @@ inline int flag_chip_width_px(size_t glyph_count) {
         + 2 * kChipOutlinePx;
 }
 
-// Single source of truth for a flag chip's painted/hit rectangle. ALL chip
-// types — regular warp flags, phase-reset flags, and trim b/e chips — derive
-// their fill rect AND their hit rect from this one function, so the two cannot
-// drift.
+// Single source of truth for a text-box's painted/hit rectangle. The
+// bottom-strip editors (settings / bpm / render-commit) derive their fill rect
+// from this one function so paint and hit cannot drift. (Marker flags and trim
+// chips are now fixed-width geometric shapes — see paint_flag_shape — and no
+// longer route through here.)
 //
 // The returned rect is the TOTAL chip footprint INCLUDING the outline ring: it
 // grows by kChipOutlinePx on every side relative to the padded glyph box. The
 // fill insets by kChipOutlinePx inside it (render_editor_text_box). text_left is
-// the CHIP's left edge as the caller already positioned it: r.x = round(text_left).
-// For the MARKER flag rows (warp + phase reset) the caller left-anchors the chip
-// so its ring's left column sits on the marker's pixel column (no centering, no
-// edge clamp) — flag left edge, stem, and half-triangle left edge form one
-// vertical line. Trim b/e chips keep their own anchoring. The fill starts one
+// the box's left edge as the caller already positioned it: r.x = round(text_left).
+// The fill starts one
 // pixel right of the left edge, and the glyph run sits kChipOutlinePx + flag_pad_x_px()
 // (= flag_glyph_inset_px()) inside the chip edge. The vertical growth is carried
 // by monospace_row_h() / monospace_row_baseline_offset() (which now bake the
@@ -418,19 +383,6 @@ inline GuiRect flag_chip_rect(double text_left, size_t glyph_count,
     r.w = flag_chip_width_px(glyph_count);
     r.h = monospace_row_h();
     return r;
-}
-
-// Stem-cache surface overhang above the waveform top, in pixels. Sized for
-// the TALLER trim stem (whose top reaches the upper-row chip bottom), so the
-// single shared stem-cache surface holds both marker stems (originating at
-// the lower-row chip bottom) and trim stems without clipping. Marker stems
-// land transparently lower within the same surface; their absolute screen
-// position is unchanged. Used by maybe_rebuild_stem_cache (surface height,
-// local-area offset) and the on_redraw blit/gate, which must agree.
-inline int stem_cache_overhang_px() {
-    return static_cast<int>(kStemAboveWaveformPx)
-         + monospace_row_h()
-         + static_cast<int>(kRowGapPx);
 }
 
 // The former kFlagFontSize constant (11.0 * 96.0 / 72.0) is now the runtime
@@ -564,19 +516,20 @@ void render_playhead(cairo_t* cr,
 
 // Draws the LAST-SELECTED marker's vertical 1-pixel stem across `waveform_area`
 // when its resolved sample falls inside [viewport_start_sample,
-// viewport_end_sample), plus every marker's half-triangle frame tick at the
-// waveform top edge. The stem paints for exactly `last_selected` (the active
-// column's anchor index, or -1 for none) — no other marker grows a stem, though
-// the blue flag highlight still marks the whole selection. A stem paints
-// kSelected; a DISABLED last-selected marker dims stem+triangle together under
-// kDisabledMarkerAlpha as one group composite (so the stem does not read through
-// the translucent triangle), and its triangle is drawn ONCE, in the stem path.
-// The half-triangle (marker_half_triangle_mask, the right half of the playhead
-// triangle) paints for every marker, left-edge on its column, dimmed by the same
-// alpha when disabled. Effective disabled state is computed inline from the
-// marker list (a label reference inherits the disabled flag of its defining
-// marker). The out-of-trim sample-pixel dim (on_redraw's ATOP overlay,
-// kWaveformDimmed) is separate and does not touch stems.
+// viewport_end_sample). The stem spans the WAVEFORM AREA ONLY — top at
+// `waveform_area.y`, bottom at the waveform bottom — with no strip overhang;
+// the flag+triangle structure in the top strip provides the visual connection
+// above, the triangle tip touching the stem's start at the waveform top edge.
+// The stem paints for exactly `last_selected` (the active column's anchor
+// index, or -1 for none) — no other marker grows a stem, though the blue flag
+// highlight still marks the whole selection. A stem paints kSelected; a
+// DISABLED last-selected marker's stem dims plainly under kDisabledMarkerAlpha
+// (the marker's triangle lives in the flag structure now, a separate surface,
+// so the stem and triangle no longer share pixels and no group composite is
+// needed). Effective disabled state is computed inline from the marker list (a
+// label reference inherits the disabled flag of its defining marker). The
+// out-of-trim sample-pixel dim (on_redraw's ATOP overlay, kWaveformDimmed) is
+// separate and does not touch stems.
 // `warp_frame_map` (default null) shifts marker positioning into the mapped
 // display domain (target view's live map): each marker's source-frame position
 // is run through `map_source_to_target` before viewport clipping and column
@@ -587,7 +540,6 @@ void render_markers(cairo_t* cr,
                     long long viewport_start_sample,
                     long long viewport_end_sample,
                     int sample_rate,
-                    const std::set<int>& selected_set,
                     int last_selected,
                     const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                     const DragOverlay* drag_overlay = nullptr,
@@ -595,11 +547,11 @@ void render_markers(cairo_t* cr,
 
 // Draws the trim begin/end boundary stems. Each set bound (gated by
 // `has_begin` / `has_end`) paints a 1px vertical stem at its domain-frame
-// column, spanning the same vertical extent as marker stems (the flag chip's
-// bottom, via flag_chip_bottom_y, down to waveform bottom). Trim bounds carry
-// NO half-triangle frame tick (unlike markers): the tick read as disconnected
-// from the chips and Ableton's loop bounds carry none, so the stem+chip pair is
-// the whole waveform-side cue. Color is always kTrimMarker — trim has no
+// column, spanning the WAVEFORM AREA (top at `waveform_area.y`, down to the
+// waveform bottom) — the same extent as marker stems. Trim bounds carry NO
+// triangle frame tick (unlike markers): Ableton's loop bounds carry none, so
+// the stem+chip pair is the whole waveform-side cue. Color is always
+// kTrimMarker — trim has no
 // selected variant. `trim.begin` /
 // `trim.end` are in the displayed domain (already warp_frame_map-translated by the
 // caller), so no further translation happens here — the columns are placed
@@ -614,33 +566,30 @@ void render_trim_stems(cairo_t* cr,
                        bool has_end,
                        cairo_surface_t* ink_plate = nullptr);
 
-// Draws the begin/end trim-boundary flag chips in the upper top row.
-// Each set bound (gated by `has_begin` / `has_end`) paints a single-glyph
-// chip — `b` for begin, `e` for end — capping its stem as one continuous
-// unit. Chip color is kTrimMarker, matching the stem. The chip's bottom edge sits at
-// flag_chip_bottom_y(waveform_area, ChipRow::Upper); `waveform_area` is the
-// real waveform rect (the chip's vertical anchor is derived from its top
-// edge, the same convention the stem renderer uses). Column placement matches
-// render_trim_stems against the same viewport — `trim.begin` / `trim.end` are
-// already in the displayed domain, so no further translation happens here.
-// The chip has NO editable payload; it is a plain-press grab target only (trim
-// is outside the selection system) and is never a text_editor target.
-// With BOTH bounds set, a solid block fills the chip-row band between the two
-// chips — the visual affordance of the pair (bridge) drag's chip-row grab band.
-// It
-// occupies the upper chip box's vertical band (flag_chip_bottom_y(...,
-// ChipRow::Upper) minus monospace_row_h(), down to flag_chip_bottom_y) and
-// uses the shared overlay wash (kOverlay / kOverlayAlpha, the same pair the
-// phase reset overlay paints with), over the strip background. It spans the
-// two bounds' columns unconditionally (independent of the chips' viewport cull)
-// clamped into the mapped waveform width, so it still paints across the visible
-// part when a chip is offscreen.
+// Draws the begin/end trim-boundary chips in the TRIM CHIP LANE (top-strip
+// lane 1). Each set bound (gated by `has_begin` / `has_end`) paints a TEXTLESS
+// rectangle of the flag's exact width/height (flag_lane_w_px() x
+// flag_lane_h_px(), no glyph, no triangle — Ableton's loop bounds carry none),
+// centered on its bound column, capping its stem. Chip color is kTrimMarker
+// with a kTrimMarkerOutline border. `waveform_area` is the real waveform rect;
+// its top edge locates the lanes and its `.w` is the column-mapping
+// denominator. Column placement matches render_trim_stems against the same
+// viewport — `trim.begin` / `trim.end` are already in the displayed domain, so
+// no further translation happens here. The chip has NO editable payload; it is
+// a plain-press grab target only (trim is outside the selection system).
+// With BOTH bounds set, a wash band fills the trim-chip-lane span between the
+// two chips — the visual affordance of the pair (bridge) drag's grab band. It
+// occupies the trim-chip lane's vertical band and uses the shared overlay wash
+// (kOverlay / kOverlayAlpha, the same pair the phase reset overlay paints
+// with), over the strip background. It spans the two bounds' columns
+// unconditionally (independent of the chips' viewport cull) clamped into the
+// mapped waveform width, so it still paints across the visible part when a chip
+// is offscreen.
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
                        GuiRect waveform_area,
                        long long viewport_start_sample,
                        long long viewport_end_sample,
-                       double font_size,
                        const TrimRange& trim,
                        bool has_begin,
                        bool has_end);
@@ -650,62 +599,33 @@ void render_trim_flags(cairo_t* cr,
 // pair-drag band's ring style, no wash fill). `waveform_width` is the effective
 // waveform width (waveform_area.w); the ring spans [row.x, row.x + width) so
 // the non-multiple-of-16 right gutter stays outside it. Used by the top
-// zoom-strip row and the bottom pan-strip row — both share the one layout.
+// zoom-strip row (the sole live-drag ring row — the bottom pan row retired).
 void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width);
 
-// Editor overlay used by the top-flag editor. When `marker_index >= 0`
-// and matches a flag the renderer is about to draw, that flag's text is
-// replaced with `pending` and the background paints either kMarker (normal)
-// or kAccent (when `is_red` indicates parse failure). A 1px-wide cursor is
-// drawn at the x-position corresponding to `cursor_pos` (byte index into
-// `pending`). `cursor_visible` toggles the bar on/off for blink. Pass
-// marker_index = -1 to disable the overlay (normal rendering).
-struct FlagEditorOverlay {
-    int         marker_index        = -1;
-    std::string pending;
-    int         cursor_pos          = 0;
-    // Selection range within `pending`. When
-    // `has_selection` is true, the renderer paints a foreground/
-    // background swap over [selection_start, selection_end). The
-    // cursor continues to paint normally on top, producing the
-    // standard inverted-cursor look when the cursor sits inside the
-    // selection.
-    bool        has_selection       = false;
-    int         selection_start     = 0;
-    int         selection_end       = 0;
-    bool        is_red              = false;
-    bool        cursor_visible      = false;
-};
-
-// Draws flag annotations in `top_strip_area` above visible markers. Each chip
-// is LEFT-ANCHORED, its left edge on its marker's pixel column (see
-// iterate_visible_flags_impl); there is no elision — overlapping chips
-// occlude instead. Flag text is the canonical post-pipe payload: owned tempo
-// `1.28`, owned+scale `1.28*1.2345`, owned+def `1.28:a.01`, owned+scale+def
-// `1.28*1.2345:a.01`, inherit `pass`, label reference `a.01`.
+// Draws marker flags in `top_strip_area` above visible markers. Each flag is a
+// FIXED-WIDTH SHAPE centered on its marker's pixel column (see
+// iterate_visible_flags_impl): the flag_lane_w_px() x flag_lane_h_px()
+// rectangle in the FLAG LANE plus the tip-down triangle directly beneath it in
+// the TRIANGLE LANE, treated as one shape and filled in the marker's color
+// class. There is NO TEXT (the payload moves to the marker-text lane in a
+// later change). There is no elision — overlapping shapes occlude instead.
 //
-// Three-state model: each flag renders in one of three states.
-//   1. Not selected: text in `kText`, no background fill.
-//   2. Selected, editor not engaged: background fill in `kMarker`, text
-//      in `kText`. No cursor.
-//   3. Selected, editor engaged: state 2 plus a 1-px blinking cursor.
-// Parse-fail variant of state 2/3: fill is `kAccent` instead of `kMarker`.
-// Trim membership has no effect on flags — they always paint
-// full-brightness.
+// Color class:
+//   Not selected: fill kMarker, outline kMarkerOutline.
+//   Selected:     fill kSelected, outline kSelectedOutline.
+// A DISABLED marker's whole shape (rect + triangle + outline) dims under
+// kDisabledMarkerAlpha, the same single disabled cue applied to its stem in
+// `render_markers`. (Selection owns the COLOR class, disablement owns the
+// ALPHA.) Trim membership has no effect on flags.
 //
-// A disabled marker's chip dims under kDisabledMarkerAlpha (chip ring + fill +
-// glyphs together), the same single disabled cue applied to its half-triangle
-// and (for the last-selected marker) its stem in `render_markers`. The LIVE
-// editing flag is exempt — the active editing surface stays full opacity even
-// when its target is disabled.
 // `warp_frame_map`: same displayed-axis translation as render_markers (the
-// live map in target view). Chips are collected in ascending painted-x order,
+// live map in target view). Shapes are collected in ascending painted-x order,
 // so in target view the occlusion z-order is applied against post-translation
 // positions. Painting is two reverse passes keyed on `selected_set` — selected
-// chips above unselected, leftmost on top within each class (see render.cpp).
+// shapes above unselected, leftmost on top within each class (see render.cpp).
 // `waveform_width` is the EFFECTIVE waveform width (waveform_area.w), the
-// column-mapping denominator; chips share the marker stems' samples-per-pixel so
-// a chip's left-anchored left edge lands on the same column its stem rises at, at
+// column-mapping denominator; flags share the marker stems' samples-per-pixel so
+// a flag centered on its column lands over the column its stem rises at, at
 // every window width (the width differs from top_strip_area.w only at a
 // non-multiple-of-16 window).
 void render_flags(cairo_t* cr,
@@ -715,77 +635,25 @@ void render_flags(cairo_t* cr,
                   long long viewport_start_sample,
                   long long viewport_end_sample,
                   int sample_rate,
-                  double font_size,
                   const std::set<int>& selected_set,
-                  const FlagEditorOverlay& editor = {},
                   const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
-                  const DragOverlay* drag_overlay = nullptr,
-                  bool iteration_on = false);
-
-// Paints ONE flag — the FlagPayload-editor target — with the
-// live pending text, selection swap, and blinking cursor. Same column
-// placement as render_flags (the editor flag always emits when visible) so
-// the flag lands at the same pixel column the cache rendered the other flags
-// at. `editor.marker_index` selects which flag emits paint; non-matching
-// emit_indices are skipped. Intended caller path: in on_redraw, after the flag-cache
-// blit, when overlay.marker_index >= 0 and the active marker-view
-// admits FlagPayload editing (not 'P'). The flag-
-// cache itself passes the editor target into the skip-guard inside
-// render_flags so the cache leaves a transparent hole over the editor
-// target's column; this helper fills the hole with fresh pixels every
-// paint, owning the ephemeral cursor blink and pending-text width
-// changes without dragging the cache fingerprint.
-// `waveform_width` is the effective waveform width (see render_flags), the
-// column-mapping denominator, so the live editor flag lands at the same
-// column the cache rendered the other flags at.
-void render_one_editor_flag(
-    cairo_t* cr,
-    GuiRect top_strip_area,
-    int waveform_width,
-    const std::vector<GuiWarpMarker>& markers,
-    long long viewport_start_sample,
-    long long viewport_end_sample,
-    int sample_rate,
-    double font_size,
-    const std::set<int>& selected_set,
-    const FlagEditorOverlay& editor,
-    const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
-    const DragOverlay* drag_overlay = nullptr,
-    bool iteration_on = false);
+                  const DragOverlay* drag_overlay = nullptr);
 
 // Same column placement as render_flags, without drawing — returns the
-// screen-coord rects of the flags that would be rendered (one per visible
-// chip, no elision, so overlapping chips yield overlapping rects). The caller
+// screen-coord rects of the flag RECTANGLES that would be rendered (one per
+// visible flag; the triangle is not a hit target). One per visible flag, no
+// elision, so overlapping shapes yield overlapping rects. The caller
 // (hit_test_flag) resolves an overlap with two forward passes mirroring the
 // painters' two reverse passes — the leftmost SELECTED containing rect, else
-// the leftmost containing rect = the topmost-painted chip. No cairo context is
-// needed: the chip
-// width comes from the cached monospace advance (glyph count times
-// monospace_advance()), which is exact for the ASCII monospace chip strings.
+// the leftmost containing rect = the topmost-painted flag. No cairo context is
+// needed: the rect is the fixed flag width/height centered on the column.
 // `warp_frame_map` mirrors render_flags so the two stay in sync. In target
-// view the flags paint at translated positions, so this helper is
-// called with a non-null warp_frame_map and the hit-rects walk the same map
-// (see app_state's hit-test path): the live map in target view. In source view
-// it is null and positions are untranslated.
-// `waveform_width` is the effective waveform width (see render_flags): the
-// hit rects must use the SAME column-mapping denominator as the paint so the
-// clickable rect coincides with the painted chip.
-// `editor_target` / `editor_pending`: when the live FlagPayload editor is
-// active, its variable-width pending text replaces the committed payload for
-// that one flag's RECT WIDTH (the chip is left-anchored on its column, so only
-// its width grows to the right as you type). The substitution is at the width,
-// never at the cull: the cull runs on the marker's COMMITTED text (the paint
-// mirror: iterate_visible_flags_impl enters with committed text and
-// paint_one_flag_with_overlay substitutes editor.pending as draw_text), so a
-// flag with committed text stays emitted regardless of its pending, and the
-// emitted rect is sized to the pending width. So the hit rect matches the chip
-// the editor actually paints — clicks on a grown pending's exposed extension
-// hit the editor, a shrunken pending stops the old long rect from covering a
-// newly-exposed neighbor, and an EMPTY (all-deleted) pending keeps its
-// zero-glyph box's rect (ring + 2*pad wide) clickable instead of tunneling to
-// an occluded chip. Defaults leave the committed-text width unchanged. The
-// phase-reset variant needs no such params (there is no per-flag editor in P
-// view).
+// view the flags paint at translated positions, so this helper is called with a
+// non-null warp_frame_map and the hit-rects walk the same map (see app_state's
+// hit-test path). In source view it is null and positions are untranslated.
+// `waveform_width` is the effective waveform width (see render_flags): the hit
+// rects must use the SAME column-mapping denominator as the paint so the
+// clickable rect coincides with the painted flag.
 std::vector<FlagHitRect> compute_flag_hit_rects(
     GuiRect top_strip_area,
     int waveform_width,
@@ -794,10 +662,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     long long viewport_end_sample,
     int sample_rate,
     const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
-    const DragOverlay* drag_overlay = nullptr,
-    bool iteration_on = false,
-    int editor_target = -1,
-    const std::string* editor_pending = nullptr);
+    const DragOverlay* drag_overlay = nullptr);
 
 // Phase reset marker analogues. Same pixel layout as the warp
 // versions; the visual differences are which list is drawn (phase resets
@@ -811,20 +676,18 @@ void render_phaseresetmarkers(cairo_t* cr,
                               long long viewport_start_sample,
                               long long viewport_end_sample,
                               int sample_rate,
-                              const std::set<int>& selected_set,
                               int last_selected,
                               const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                               const DragOverlay* drag_overlay = nullptr,
                               cairo_surface_t* ink_plate = nullptr);
 
-// The phase-reset chip is an invariable single `p` (heap is the sole
-// engine, so there is no peak/heap/pass phase model to distinguish). Two
-// states only: default fill `kMarker`, selected fill `kSelected`. No editor,
-// no parse-fail state. Trim membership has no effect — flags always
-// paint full-brightness.
+// The phase-reset flag is the same fixed shape as a warp flag (rectangle +
+// triangle centered on the column), textless. Two states only: default fill
+// `kMarker`, selected fill `kSelected`; a disabled phase reset dims the whole
+// shape under kDisabledMarkerAlpha. Trim membership has no effect.
 // `waveform_width` is the effective waveform width (see render_flags), the
 // column-mapping denominator shared with the phase-reset stems. Painting is two
-// reverse passes keyed on `selected_set` — selected chips above unselected,
+// reverse passes keyed on `selected_set` — selected shapes above unselected,
 // leftmost on top within each class (see render.cpp).
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
@@ -833,7 +696,6 @@ void render_phase_reset_flags(cairo_t* cr,
                             long long viewport_start_sample,
                             long long viewport_end_sample,
                             int sample_rate,
-                            double font_size,
                             const std::set<int>& selected_set,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                             const DragOverlay* drag_overlay = nullptr);
@@ -852,9 +714,9 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
 // Iteration-aware flag text composer. Returns the
 // plain flag text when `iteration_on` is false or the marker is iter-
 // ineligible; otherwise splices the inline `+[lo, hi]` bracket after
-// the tempo. The single canonical composer for warp flag text — used
-// by render_flags / render_one_editor_flag / compute_flag_hit_rects and
-// to seed the flag editor in iteration mode.
+// the tempo. The single canonical composer for warp flag text — used to seed
+// the flag editor in iteration mode (the flags themselves are now textless
+// shapes; the payload text moves to the marker-text lane in a later change).
 std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
                            int idx, bool iteration_on);
 
@@ -885,14 +747,12 @@ double monospace_row_baseline_offset();
 // the font state is restored on return.
 void init_monospace_grid_metrics(cairo_t* cr);
 
-// Returns the on-screen x where the given marker's flag pending text
-// starts, in pixels. Left-anchors the chip's left edge on the marker's column
-// exactly as iterate_visible_flags_impl does, then adds the flag_glyph_inset_px()
-// glyph inset (ring + left inner pad) so the returned value matches where
-// render_one_editor_flag actually paints the pending glyphs (the renderers
-// move_to at text_left + flag_glyph_inset_px()). Returns -1.0 if the marker is
-// not currently visible in the viewport. Direct computation -- does not require a
-// cairo context.
+// Returns the on-screen x reference for the given marker's flag-editor caret,
+// in pixels: the marker's pixel column plus the flag_glyph_inset_px() glyph
+// inset. The flag-editor text does not render in the strip in this design (it
+// moves to the marker-text lane later), so this is the caret click-to-byte
+// reference only. Returns -1.0 if the marker is not currently visible in the
+// viewport. Direct computation -- does not require a cairo context.
 double flag_pending_text_left_x(
     const AppState& app, const GuiAudio& audio,
     int marker_idx);

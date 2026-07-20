@@ -85,9 +85,10 @@ namespace {
 // live where paint_handler.cpp can reach them; the constants
 // below are paint-handler-independent and stay file-local.
 
-// The strip/row geometry is a fixed-pixel mirrored grid derived from
-// monospace_row_h(), kRowGapPx, and kFlagBottomLiftPx (see the geometry
-// helpers below); nothing is window-proportional.
+// The strip/lane geometry is a fixed-pixel per-strip lane stack derived from
+// monospace_row_h(), flag_lane_h_px(), playhead_triangle_h_px(), kRowGapPx, and
+// kFlagBottomLiftPx (see the geometry helpers below); nothing is
+// window-proportional.
 
 // kMarkerHitHalfPx lives in app_state.h so the hit_test_* free
 // functions and the GuiInputHandler mouse handler can reach it.
@@ -134,16 +135,19 @@ namespace {
 // non-static: its explicit-domain form is called from input_render_dispatch.cpp
 // (the queue/dispatch view-anchor math), so it cannot be main-private.
 //
-// Fixed-pixel mirrored six-row grid. Top and bottom strips are equal
-// pixel height regardless of window size; the waveform flexes in the middle.
-// Each strip is three text rows of the cached row height monospace_row_h(),
-// packed tight: the inter-row gaps kRowGapPx (G, one between each adjacent row
-// pair) and the waveform-side and outer (window-edge) gaps (both
-// kFlagBottomLiftPx) are all 0, so strip_h is just 3*row_h, the three rows
-// touch, and the strips sit flush against the window edges and the waveform
-// area. All six rows share ONE layout — strip_row_rect below — so a row is a
-// pure index from its strip's window edge; a bottom row's y is the top row's y
-// flipped about the window midline (`h - <top row's y> - row_h`).
+// Per-strip lane stacks with per-lane heights (the former uniform-row contract
+// is superseded). Top and bottom strips now DIFFER in height; the waveform
+// flexes between them. The TOP strip is FIVE lanes (from the window edge
+// inward): zoom row (monospace_row_h()), trim-chip row (the flag height),
+// marker-text row (monospace_row_h()), flag row (the flag height), and the
+// triangle row (the triangle height) flush on the waveform. The BOTTOM strip is
+// TWO lanes: the status row (outer) and the editor/modal row (inner). The lanes
+// pack tight — the inter-lane gaps kRowGapPx and the outer/waveform-side gaps
+// kFlagBottomLiftPx are all 0 — but the derivation below keeps them explicit so
+// they reappear structurally if ever un-zeroed. ONE shared helper —
+// strip_row_rect — is the single geometry owner; every named accessor delegates
+// to it, so a lane is a pure index from its strip's window edge, and a bottom
+// lane's y is its inset flipped about the window midline.
 
 // Defensive backstop only: floor the window dims to the 640x480 minimum before
 // any geometry arithmetic so no code path can compute a negative/zero waveform,
@@ -153,34 +157,57 @@ static void clamp_dims(int& w, int& h) {
     if (h < kMinWindowHeightPx) h = kMinWindowHeightPx;
 }
 
-// outer_gap(0) + row_h + G(0) + row_h + G(0) + row_h + waveform_gap(0) =
-// 3*row_h. All gaps are now zero; the form below keeps the derivation explicit
-// so the gap terms reappear if any constant is un-zeroed. A three-row strip
-// carries N*row_h + (N-1)*kRowGapPx (the inter-row gaps) + 2*kFlagBottomLiftPx
-// (the outer and waveform-side gaps), N = 3. Dimension-independent.
-int strip_h(const AppState&) {
-    return 3 * monospace_row_h()
-         + 2 * static_cast<int>(kRowGapPx)
-         + 2 * static_cast<int>(kFlagBottomLiftPx);
+namespace {
+// Per-lane pixel heights, indexed from each strip's window edge inward. The top
+// strip's flag and trim-chip rows carry the flag height; its zoom and
+// marker-text rows carry the monospace row height; its innermost lane carries
+// the triangle height. Both bottom lanes are monospace rows.
+constexpr int kTopLaneCount    = 5;
+constexpr int kBottomLaneCount = 2;
+int top_lane_height(int lane) {
+    switch (lane) {
+        case 0: return monospace_row_h();        // zoom row
+        case 1: return flag_lane_h_px();         // trim-chip row
+        case 2: return monospace_row_h();        // marker-text row
+        case 3: return flag_lane_h_px();         // flag row
+        case 4: return playhead_triangle_h_px(); // triangle row (flush on waveform)
+        default: return 0;
+    }
 }
+int bottom_lane_height(int /*lane*/) {
+    return monospace_row_h();                    // status row, editor/modal row
+}
+int strip_total_h(bool top_strip) {
+    int sum = 2 * static_cast<int>(kFlagBottomLiftPx);  // outer + waveform-side gaps
+    const int lanes = top_strip ? kTopLaneCount : kBottomLaneCount;
+    for (int i = 0; i < lanes; ++i)
+        sum += top_strip ? top_lane_height(i) : bottom_lane_height(i);
+    sum += (lanes - 1) * static_cast<int>(kRowGapPx);   // inter-lane gaps
+    return sum;
+}
+} // namespace
+
+int top_strip_h(const AppState&)    { return strip_total_h(/*top_strip=*/true);  }
+int bottom_strip_h(const AppState&) { return strip_total_h(/*top_strip=*/false); }
 
 GuiRect top_strip_area(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
-    return GuiRect{0, 0, w, strip_h(a)};
+    return GuiRect{0, 0, w, top_strip_h(a)};
 }
 
 GuiRect bottom_strip_area(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
-    const int sh = strip_h(a);
+    const int sh = bottom_strip_h(a);
     return GuiRect{0, h - sh, w, sh};
 }
 
 GuiRect waveform_area(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
-    const int sh = strip_h(a);
+    const int top_h = top_strip_h(a);
+    const int bot_h = bottom_strip_h(a);
     // Effective waveform width: the largest multiple of the grid step not
     // exceeding the window width, leaving a <=15 px inert right gutter. The
     // step is 16 = 1600/gcd(44100,1600), the strictest step among standard
@@ -196,45 +223,42 @@ GuiRect waveform_area(const AppState& a) {
     // (never at 1920/2560/3840).
     constexpr int kGridStepPx = 16;
     const int effective_w = w - (w % kGridStepPx);
-    return GuiRect{0, sh, effective_w, h - 2 * sh};
+    return GuiRect{0, top_h, effective_w, h - top_h - bot_h};
 }
 
-// ONE shared layout contract for every strip row. All six rows — three per
-// strip — are interchangeable in layout terms: same height (monospace_row_h()),
-// full window width, and the same chip pad/outline metrics apply within any row.
-// A row is a pure index from its strip's window edge (0 = the edge-most row):
-// the outer gap kFlagBottomLiftPx sits between the window edge and row 0, and
-// each successive row is one row_h + one inter-row gap kRowGapPx further inward.
-// The top strip counts downward from y=0; the bottom strip mirrors it about the
-// window midline (a row's y becomes `h - inset - row_h`).
+// ONE shared layout contract for every strip lane — the single geometry owner.
+// A lane is a pure index from its strip's window edge (0 = the edge-most lane):
+// the outer gap kFlagBottomLiftPx sits between the window edge and lane 0, and
+// each successive lane is one prior-lane height + one inter-lane gap kRowGapPx
+// further inward. The top strip counts downward from y=0; the bottom strip
+// mirrors it about the window midline (`h - inset - lane_h`).
 //
-// Paint/hit agreement invariant: the trim-chip row is TOP row 1, and its rect
-// coincides EXACTLY with flag_chip_bottom_y(waveform_area, ChipRow::Upper) —
-// the anchor the b/e chips paint against and hit_test_trim_chip / the pair-drag
-// y-gate on. That anchor is waveform_area.y - kFlagBottomLiftPx - (row_h +
-// kRowGapPx); waveform_area.y == strip_h, so the Upper chip box top lands at
-// kFlagBottomLiftPx + (row_h + kRowGapPx) = strip_row_rect(top, 1).y. Because
-// this helper carries the same kFlagBottomLiftPx base and (row_h + kRowGapPx)
-// step, paint and hit cannot drift regardless of what the two gap constants are
-// set to — not merely because they are currently zero.
+// Paint/hit agreement invariant: the trim-chip row is TOP lane 1, and
+// hit_test_trim_chip / the pair-drag y-gate read top_upper_row_area(app), the
+// exact band render_trim_flags paints the b/e chips in. Because both derive
+// that band from this one helper, paint and hit cannot drift.
 GuiRect strip_row_rect(const AppState& a, bool top_strip,
-                       int row_from_window_edge) {
+                       int lane_from_window_edge) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
-    const int row_h = monospace_row_h();
-    const int inset = static_cast<int>(kFlagBottomLiftPx)
-                    + row_from_window_edge
-                          * (row_h + static_cast<int>(kRowGapPx));
-    const int y = top_strip ? inset : (h - inset - row_h);
-    return GuiRect{0, y, w, row_h};
+    int inset = static_cast<int>(kFlagBottomLiftPx);
+    for (int i = 0; i < lane_from_window_edge; ++i) {
+        inset += top_strip ? top_lane_height(i) : bottom_lane_height(i);
+        inset += static_cast<int>(kRowGapPx);
+    }
+    const int lane_h = top_strip ? top_lane_height(lane_from_window_edge)
+                                 : bottom_lane_height(lane_from_window_edge);
+    const int y = top_strip ? inset : (h - inset - lane_h);
+    return GuiRect{0, y, w, lane_h};
 }
 
-// Top strip rows, counted down from the window top (index 0 = the window edge).
-// Row 0 is the zoom-strip row (a live drag surface painted as an empty ring,
-// at the window edge); row 1 is the b/e trim-flag chip row; row 2 (implicit,
-// placed via flag_chip_bottom_y anchored at waveform_area.y) is the regular
-// warp/phase-reset flag chip row, whose bottom edge is flush with the waveform
-// area top.
+// Top strip lanes, counted down from the window top (index 0 = the window edge).
+// Lane 0 is the zoom-strip row (a live drag surface painted as an empty ring, at
+// the window edge); lane 1 is the b/e trim-chip row; lane 2 is the marker-text
+// row (empty for now — the flag payload text lands here later); lane 3 is the
+// flag row (the marker flag rectangles); lane 4 is the triangle row, whose
+// bottom edge is flush with the waveform area top and which holds the flags' and
+// the playhead's triangles.
 GuiRect top_zoom_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 0);
 }
@@ -243,21 +267,29 @@ GuiRect top_upper_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 1);
 }
 
-// Bottom strip rows, counted up from the window bottom (index 0 = the window
+GuiRect top_marker_text_row_area(const AppState& a) {
+    return strip_row_rect(a, /*top_strip=*/true, 2);
+}
+
+GuiRect top_flag_row_area(const AppState& a) {
+    return strip_row_rect(a, /*top_strip=*/true, 3);
+}
+
+GuiRect top_triangle_row_area(const AppState& a) {
+    return strip_row_rect(a, /*top_strip=*/true, 4);
+}
+
+// Bottom strip lanes, counted up from the window bottom (index 0 = the window
 // edge). bottom_lower_row (outer, index 0) carries the always-on status line;
-// bottom_upper_row (inner, index 1) carries the modal/editor/queue/hover chain;
-// bottom_pan_row (innermost, index 2, nearest the waveform) is the
-// pan-strip row (a live drag surface painted as an empty ring).
+// bottom_upper_row (inner, index 1) carries the modal/editor/queue/hover chain.
+// (The former pan-strip row retired — pan lives on the axis-locked top zoom
+// row.)
 GuiRect bottom_upper_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/false, 1);
 }
 
 GuiRect bottom_lower_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/false, 0);
-}
-
-GuiRect bottom_pan_row_area(const AppState& a) {
-    return strip_row_rect(a, /*top_strip=*/false, 2);
 }
 
 // Resolve the trim playback/navigation range from AppState's trim fields.
@@ -487,9 +519,9 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     return GuiRect{x0, y0, x1 - x0, y1 - y0};
 }
 
-// The status line, the transient/modal chain, and the pan-strip row occupy
-// the three rows of the bottom strip, so the invalidation region is the
-// whole bottom strip rect (all rows repaint together).
+// The status line and the transient/modal chain occupy the two rows of the
+// bottom strip, so the invalidation region is the whole bottom strip rect (both
+// rows repaint together).
 GuiRect timestamp_invalidate_rect(const AppState& a) {
     return bottom_strip_area(a);
 }

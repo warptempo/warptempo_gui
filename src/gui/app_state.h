@@ -1122,20 +1122,23 @@ struct AppState {
 
 // Geometry helpers — definitions live at file scope in main.cpp. Declared
 // here so viewport.cpp can call them.
-int     strip_h(const AppState& a);
+int     top_strip_h(const AppState& a);
+int     bottom_strip_h(const AppState& a);
 GuiRect waveform_area(const AppState& a);
 GuiRect top_strip_area(const AppState& a);
 GuiRect bottom_strip_area(const AppState& a);
-// One shared row-rect helper for every strip row (see the layout contract at
-// its definition in main.cpp). row_from_window_edge indexes from the strip's
-// window edge, 0 = edge-most. The named row accessors below delegate to it.
+// One shared lane-rect helper for every strip lane (see the layout contract at
+// its definition in main.cpp). lane_from_window_edge indexes from the strip's
+// window edge, 0 = edge-most. The named lane accessors below delegate to it.
 GuiRect strip_row_rect(const AppState& a, bool top_strip,
-                       int row_from_window_edge);
+                       int lane_from_window_edge);
 GuiRect top_zoom_row_area(const AppState& a);
 GuiRect top_upper_row_area(const AppState& a);
+GuiRect top_marker_text_row_area(const AppState& a);
+GuiRect top_flag_row_area(const AppState& a);
+GuiRect top_triangle_row_area(const AppState& a);
 GuiRect bottom_upper_row_area(const AppState& a);
 GuiRect bottom_lower_row_area(const AppState& a);
-GuiRect bottom_pan_row_area(const AppState& a);
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);
 double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
 // The explicit-domain form of current_samples_per_pixel: spp at a zoom level
@@ -1365,25 +1368,20 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // and pull in cairo + paint_handler.h for the popup-rect math; the
 // signatures stay free of cairo so the header keeps a clean include list.
 //
-// hit_test_flag: scan the active chip rects in the top strip and return the
-// marker index under (mouse_x, mouse_y), or -1. Rects cover every visible chip
-// and may overlap; the walk resolves an overlap to the topmost-painted chip.
-// Mirror of the painters' z-order (render_flags / render_phase_reset_flags plus
-// the live editor flag). When a FlagPayload editor is active in W view its
-// target flag paints LAST — above the whole stack, selected included
-// (render_one_editor_flag runs after the cache blit) and sized to the
-// variable-width PENDING text — so a pass ZERO resolves the editor target
-// first: its rect wins if it contains the point, before the rest. Then the
-// two-pass z-order over the remaining rects: the SELECTED chips paint above the
-// unselected, and within each class the leftmost paints on top. So the walk
-// runs twice — first the first-containing rect whose marker is selected, else
-// the first-containing rect unconditionally (rects are emitted ascending-x, so
-// each pass resolves to that class's leftmost = topmost). Priority overall:
-// topmost = editor target > selected leftmost > leftmost. Deliberately visible
-// to every consumer (selection clicks, plain flag-drag reposition grabs, editor
-// caret clicks, the hover popup's target): the topmost-painted chip is what the
-// user sees, so it is what a click grabs (WYSIWYG). Works in both 'W' and 'P'
-// authoring views (each column's own chip list).
+// hit_test_flag: scan the flag rectangles in the top strip and return the
+// marker index under (mouse_x, mouse_y), or -1. Rects are the fixed flag
+// rectangles (the triangle is not a hit target); they may overlap, and the walk
+// resolves an overlap to the topmost-painted flag. Mirror of the painters'
+// z-order (render_flags / render_phase_reset_flags): the SELECTED shapes paint
+// above the unselected, and within each class the leftmost paints on top. So
+// the walk runs twice — first the first-containing rect whose marker is
+// selected, else the first-containing rect unconditionally (rects are emitted
+// ascending-x, so each pass resolves to that class's leftmost = topmost).
+// Priority overall: topmost = selected leftmost > leftmost. Deliberately
+// visible to every consumer (selection clicks, plain flag-drag reposition grabs,
+// the hover popup's target): the topmost-painted flag is what the user sees, so
+// it is what a click grabs (WYSIWYG). Works in both 'W' and 'P' authoring views
+// (each column's own flag list).
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
 

@@ -76,9 +76,9 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     const int64_t begin_frame = app.trim.begin_frame;
     const int64_t end_frame   = app.trim.end_frame;
 
-    // The b/e chips fill top_upper_row_area exactly (the painted
-    // chip box top/height equal this row). A press outside that vertical band
-    // is not on a chip — the column-based stem test handles the rest.
+    // The b/e chips are flag-sized rectangles in the trim-chip lane
+    // (top_upper_row_area, whose height is the flag height). A press outside
+    // that vertical band is not on a chip.
     const GuiRect row = top_upper_row_area(app);
     if (mouse_y < row.y || mouse_y >= row.y + row.h) return TrimHit::None;
 
@@ -111,7 +111,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     // first chip whose rect contains mouse_x = the topmost-painted chip, so a
     // click on the visible overlap grabs the chip the user sees on top.
     struct TrimChipHit {
-        double  text_left;
+        double  center_x;
         GuiRect rect;
         TrimHit which;
     };
@@ -129,28 +129,31 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
             static_cast<int64_t>(std::nearbyint(spp * wave_w));
         if (ms < vp || ms >= static_cast<double>(vp_end)) return;
         const double x_raw = (ms - vp) / spp;
-        const double text_left =
+        const double center_x =
             static_cast<double>(top.x) + std::nearbyint(x_raw);
-        // Width from the cached monospace advance via the shared helper — no
-        // scratch-surface measurement (that was the residual edge drift: paint
-        // measured on the window surface, hit on a 1x1 scratch surface, and the
-        // integer width diverged by 1px). The glyph is one ASCII char ("b"/"e"),
-        // so the count is 1. baseline_y is irrelevant to the x/w this test uses
-        // (the vertical band was already checked via top_upper_row_area above),
-        // so pass 0.0 — only rx/rw are read.
-        const GuiRect cr_rect = flag_chip_rect(text_left, 1, 0.0);
-        chips.push_back({text_left, cr_rect, which});
+        // The chip is a fixed flag-sized rectangle CENTERED on the bound
+        // column, exactly as render_trim_flags paints it: rect left =
+        // center - flag_w/2, width flag_w. Only rx/rw are read here (the
+        // vertical band was checked via top_upper_row_area above).
+        const int flag_w = flag_lane_w_px();
+        GuiRect cr_rect;
+        cr_rect.x = static_cast<int>(std::round(center_x)) - flag_w / 2;
+        cr_rect.y = row.y;
+        cr_rect.w = flag_w;
+        cr_rect.h = row.h;
+        chips.push_back({center_x, cr_rect, which});
     };
 
     add_chip(begin_frame, TrimHit::Begin);
     add_chip(end_frame,   TrimHit::End);
     std::sort(chips.begin(), chips.end(),
               [](const TrimChipHit& a, const TrimChipHit& b) {
-                  if (a.text_left != b.text_left)
-                      return a.text_left < b.text_left;
-                  // Same tie-break as render_trim_flags' sort: b before e, so
-                  // b is the topmost chip at an equal column and the forward
-                  // walk below returns it first.
+                  if (a.center_x != b.center_x)
+                      return a.center_x < b.center_x;
+                  // Deterministic tie-break at an equal column: Begin first, so
+                  // the forward walk below returns it. The painted rectangles
+                  // are identical there, so occlusion is not visually
+                  // distinguishable; this only fixes which bound a click grabs.
                   return a.which == TrimHit::Begin && b.which == TrimHit::End;
               });
 
@@ -190,24 +193,10 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
         drag_overlay_storage.times   = &app.drag.moveable_times;
         drag_overlay = &drag_overlay_storage;
     }
-    // This two-way branch chain is the sole hit-rect builder: the chip
-    // paint and this hit test share flag_chip_rect, so the rects computed
-    // here are exactly the painted chip geometry.
-    //
-    // In the warp branch, the live FlagPayload editor paints its target flag
-    // with the variable-width PENDING text above the cache
-    // (render_one_editor_flag), so the hit rect must size to the pending, not
-    // the committed payload. Feed the editor's target/pending to
-    // compute_flag_hit_rects (mirror of the flag-cache skip-guard condition in
-    // paint_handler.cpp) so the rect matches the painted chip.
-    int editor_target = -1;
-    const std::string* editor_pending = nullptr;
-    if (app.active_markers_view != 'P' &&
-        text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind == text_editor::Kind::FlagPayload) {
-        editor_target  = app.top_flag_editor.target;
-        editor_pending = &app.top_flag_editor.pending;
-    }
+    // This two-way branch chain is the sole hit-rect builder: the flag paint
+    // and this hit test share the fixed flag rectangle (via
+    // compute_flag_hit_rects / iterate_visible_flags_impl), so the rects
+    // computed here are exactly the painted flag rectangles.
     std::vector<FlagHitRect> rects;
     if (app.active_markers_view == 'P') {
         rects = compute_phase_reset_flag_hit_rects(
@@ -215,49 +204,21 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
             vp_start, vp_end, audio.sample_rate(),
             tmap_arg, drag_overlay);
     } else {
-        // Warp hit-rects must track the bracketed flag width so
-        // clicks land on the iteration-mode chip.
         rects = compute_flag_hit_rects(
             top, area.w, app.warpmarkers.markers(),
             vp_start, vp_end, audio.sample_rate(),
-            tmap_arg, drag_overlay,
-            app.iteration_mode_enabled,
-            editor_target, editor_pending);
+            tmap_arg, drag_overlay);
     }
-    // Mirror of the painters' z-order (render_flags / render_phase_reset_flags
-    // plus the editor flag). The editor flag paints LAST — above the whole
-    // stack, selected included (render_one_editor_flag runs after the cache
-    // blit) — so a pass ZERO resolves it first: when an editor target was
-    // passed, its rect wins if it contains the point, before the selected pass
-    // and the general pass. Then the two-pass z-order: selected chips paint
-    // above unselected, and within each class the leftmost paints on top. So
-    // walk the remaining rects TWICE — first the first-containing rect whose
+    // Mirror of the painters' z-order (render_flags / render_phase_reset_flags):
+    // selected shapes paint above unselected, and within each class the leftmost
+    // paints on top. Walk the rects TWICE — first the first-containing rect whose
     // marker is selected, else the first-containing rect unconditionally. rects
     // are emitted ascending-x, so each forward pass resolves to that class's
-    // leftmost = topmost. Topmost = editor target > selected leftmost >
-    // leftmost. WYSIWYG for every consumer (selection clicks, plain flag-drag
-    // reposition grabs, editor caret clicks, the hover popup's target): the
-    // topmost-painted chip is what a click grabs.
-    //
-    // An all-deleted pending ("" text) still paints a zero-glyph box (ring +
-    // fill + cursor) above the stack, and now keeps its rect: the cull runs on
-    // the marker's committed text and the pending substitution is at the rect
-    // WIDTH (compute_flag_hit_rects), so the empty pending yields the same
-    // zero-glyph box in hit as in paint. Pass zero claims a click inside it,
-    // which the caret gate resolves as a click on the editing target — the
-    // caret repositions (position 0) and the editor stays open, matching the
-    // visibly-on-top empty box; a click OUTSIDE every rect still exits the
-    // editor through the not-on-a-flag path. Paint and hit agree in every
-    // pending state.
-    if (editor_target >= 0) {
-        for (const auto& r : rects) {
-            if (r.marker_index == editor_target &&
-                mouse_x >= r.x && mouse_x < r.x + r.w &&
-                mouse_y >= r.y && mouse_y < r.y + r.h) {
-                return r.marker_index;
-            }
-        }
-    }
+    // leftmost = topmost. Topmost = selected leftmost > leftmost. WYSIWYG for
+    // every consumer (selection clicks, plain flag-drag reposition grabs, the
+    // hover popup's target): the topmost-painted flag is what a click grabs. The
+    // flags are now fixed-width shapes, so there is no editor-pending width to
+    // track — the editing target's flag is an ordinary cached shape.
     for (const auto& r : rects) {
         if (mouse_x >= r.x && mouse_x < r.x + r.w &&
             mouse_y >= r.y && mouse_y < r.y + r.h &&
