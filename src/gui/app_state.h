@@ -431,14 +431,17 @@ struct TrimDragState {
     int64_t anchor_active_frame  = 0;
 };
 
-// Which axis a zoom-row strip drag locked to at the press-becomes-drag
-// crossing. The gesture commits to ONE axis for its whole life: the hand
-// cannot hold a pure horizontal (or vertical) line, and diagonal composition
-// tested poorly, so at the crossing the greater accumulated |dx| vs |dy| since
-// the press decides. Pan-locked pins the level and only pans (the pan row is
-// always this); Zoom-locked tracks vertical motion and ignores horizontal
-// motion (zoom row only). Undetermined until the crossing (defaults Pan, which
-// applies nothing before the drag moves).
+// Which axis a zoom-row strip drag is locked to for the current MOTION PHASE.
+// The lock commits to ONE axis (the hand cannot hold a pure horizontal or
+// vertical line, and diagonal composition tested poorly): at the crossing the
+// greater accumulated |dx| vs |dy| since the press decides. Pan-locked pins the
+// level and only pans (the pan row is always this); Zoom-locked tracks vertical
+// motion and ignores horizontal motion (zoom row only). The lock is NOT fixed
+// for the drag's whole life — a motion STALL (kAxisRelockMs quiet gap, button
+// held) releases it and the next accumulation re-locks from its dominant axis,
+// so the user can switch axes without re-clicking (zoom row only; the pan row
+// never re-arms). Undetermined until the crossing (defaults Pan, which applies
+// nothing before the drag moves).
 enum class StripDragAxis { Pan, Zoom };
 
 // Plain left-drag on a live strip row (Ableton-style navigation). ONE fixed
@@ -461,11 +464,12 @@ struct StripDragState {
     // drag locks to the zoom axis); false for the bottom pan row (always
     // pan-locked, the level pinned for the whole drag).
     bool   zoom_axis = false;
-    // The axis this drag locked to at the threshold crossing, fixed for its
-    // whole life. Undetermined (defaults Pan, harmless — nothing applies before
+    // The axis this drag is locked to for the CURRENT motion phase (not fixed
+    // for the drag's whole life — a stall re-arms it; see last_motion_ms /
+    // relocking). Undetermined (defaults Pan, harmless — nothing applies before
     // the crossing) until moved latches. The pan row always locks Pan; the zoom
-    // row locks Zoom when the press-to-crossing motion is vertical-dominant (a
-    // tie included, zoom being the row's headline act), else Pan.
+    // row locks Zoom when the accumulation is vertical-dominant (a tie included,
+    // zoom being the row's headline act), else Pan.
     StripDragAxis locked_axis = StripDragAxis::Pan;
     // Pointer position at the press (window px).
     int    press_y   = 0;
@@ -488,6 +492,24 @@ struct StripDragState {
     // pan moves the viewport, and a zoom pivots around wherever it currently
     // sits (the song-anchored, Ableton semantic).
     double anchor_sample = 0.0;
+    // Axis-lock STALL/RE-ARM tracking (zoom row only — the pan row never
+    // re-arms). The axis lock is per-MOTION-PHASE: a quiet gap of at least
+    // kAxisRelockMs with the button still held releases it so the user can
+    // switch pan/zoom axis mid-drag without re-clicking.
+    //
+    // CLOCK_MONOTONIC ms of the last motion delivery; the next motion event
+    // arriving more than kAxisRelockMs later re-arms the lock. 0 until the first
+    // post-crossing motion delivery.
+    int64_t last_motion_ms = 0;
+    // True while a re-armed lock is accumulating motion from (lock_ref_x,
+    // lock_ref_y) toward the threshold: the drag holds still (no pan/zoom
+    // applies) until the accumulation crosses kDragMovedThresholdPx, then the
+    // dominant axis re-locks and this clears.
+    bool   relocking = false;
+    // The pointer position (window px) the current relock accumulates from —
+    // reset to the pointer position at each detected stall.
+    int    lock_ref_x = 0;
+    int    lock_ref_y = 0;
 };
 
 // Double-click detection on the ZOOM row only (Wayland delivers no
@@ -509,6 +531,15 @@ struct StripDoubleClickCandidate {
 // double-click.
 constexpr int64_t kDoubleClickMs      = 500;
 constexpr int     kDoubleClickSlackPx = 8;
+
+// Motion-stall gap that RE-ARMS a zoom-row strip drag's axis lock
+// (architect-tunable). Once a drag has locked to pan or zoom, a quiet gap of
+// more than this long between motion deliveries — the button still held —
+// releases the lock; the next kDragMovedThresholdPx of accumulated motion
+// re-locks from its dominant axis (tie -> zoom), so the user can switch axes
+// mid-drag without re-clicking. The pan row never re-arms (it has no axis
+// choice).
+constexpr int64_t kAxisRelockMs       = 180;
 
 // Chebyshev pixel distance a press must travel before it becomes a DRAG
 // (architect-tunable), shared by two consumers. On the strip rows: under

@@ -138,8 +138,9 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     // drag — never re-derived from the clamped viewport. A pan-locked drag pans
     // and the anchor DRIFTS across the screen; a zoom-locked drag expands/
     // contracts around wherever that song position currently sits (its CURRENT
-    // painted x), not around the press column. The drag committed to one axis
-    // at the crossing (locked_axis): a pan-locked drag never changes the level,
+    // painted x), not around the press column. The drag is locked to one axis
+    // for the current motion phase (locked_axis, re-armed by a stall in
+    // on_motion — see kAxisRelockMs): a pan-locked drag never changes the level,
     // a zoom-locked drag never pans — diagonal pan+zoom composition is
     // deliberately not offered (the hand cannot hold a horizontal line, and
     // composing both tested poorly).
@@ -679,9 +680,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // position under press_x at the press — is FIXED for the whole drag and
     // never re-derived; a pan-locked drag DRIFTS it across the screen, a
     // zoom-locked drag pivots around wherever that song position currently sits.
-    // The gesture commits to one axis at the crossing: a zoom-locked drag
-    // derives the level from vertical motion (ignoring horizontal), a pan-locked
-    // drag pins the level and only pans (the bottom pan row is always this).
+    // The gesture locks to one axis at the crossing, per motion PHASE — a
+    // motion stall (kAxisRelockMs quiet gap, button held) releases the lock and
+    // the next accumulation re-locks from its dominant axis, so the user can
+    // switch axes mid-drag without re-clicking (zoom row only). A zoom-locked
+    // phase derives the level from vertical motion (ignoring horizontal), a
+    // pan-locked phase pins the level and only pans.
     // Each motion event applies the locked axis's effect; the repaint is
     // SYNCHRONOUS (final_event=false — incremental pan when the level held, a
     // full rebuild when it changed), affordable because the platform coalesces
@@ -699,11 +703,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             end_strip_pointer_capture();
             return;
         }
+        const int64_t now = monotonic_ms();
         // Sub-pixel capture jitter must not promote a click to a drag: while the
         // press has not yet become a drag, apply nothing until the pointer has
         // travelled at least the Chebyshev threshold from the press, leaving the
-        // drag armed but unmoved. The gate decides only WHETHER the press becomes
-        // a drag — once moved, it never re-engages, so dragging back near the
+        // drag armed but unmoved. This gate decides only WHETHER the press
+        // becomes a drag — once moved it never re-engages HERE (a stall re-arms a
+        // separate relock gate below, not this one), so dragging back near the
         // anchor mid-drag has no dead zone. At the crossing event last_x still
         // sits at press_x, so the first apply folds the whole accumulated dx and
         // a zoom-locked drag reads the absolute dy — the catch-up never exceeds
@@ -712,16 +718,18 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             std::max(std::abs(mouse_x - app.strip_drag.press_x),
                      std::abs(mouse_y - app.strip_drag.press_y)) <
                 kDragMovedThresholdPx) {
+            app.strip_drag.last_motion_ms = now;
             return;
         }
         if (!app.strip_drag.moved) {
-            // Crossing event: lock the gesture to ONE axis for its whole life
-            // (the hand cannot hold a pure line, and diagonal pan+zoom
-            // composition tested poorly). The pan row is always pan-locked; the
-            // zoom row compares the accumulated |dx| vs |dy| since the press and
-            // commits to the dominant one — vertical-dominant (a tie included,
-            // zoom being the row's headline act) locks ZOOM (horizontal motion
-            // ignored thereafter), else PAN (the level pinned like the pan row).
+            // Crossing event: lock the gesture to ONE axis for the current
+            // motion phase (the hand cannot hold a pure line, and diagonal
+            // pan+zoom composition tested poorly). The pan row is always
+            // pan-locked; the zoom row compares the accumulated |dx| vs |dy|
+            // since the press and commits to the dominant one — vertical-dominant
+            // (a tie included, zoom being the row's headline act) locks ZOOM
+            // (horizontal motion ignored thereafter), else PAN (the level pinned
+            // like the pan row).
             const int adx = std::abs(mouse_x - app.strip_drag.press_x);
             const int ady = std::abs(mouse_y - app.strip_drag.press_y);
             app.strip_drag.locked_axis =
@@ -729,7 +737,50 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                     ? StripDragAxis::Zoom
                     : StripDragAxis::Pan;
             app.strip_drag.moved = true;
+        } else if (app.strip_drag.zoom_axis) {
+            // Axis lock is per-MOTION-PHASE (zoom row only — the pan row has no
+            // axis choice and never re-arms). A quiet gap of more than
+            // kAxisRelockMs since the previous motion delivery, the button still
+            // held, RELEASES the lock so the user can switch axes without
+            // re-clicking: re-arm by resetting the lock reference to the current
+            // position and entering the relocking state.
+            if (!app.strip_drag.relocking &&
+                now - app.strip_drag.last_motion_ms > kAxisRelockMs) {
+                app.strip_drag.relocking  = true;
+                app.strip_drag.lock_ref_x = mouse_x;
+                app.strip_drag.lock_ref_y = mouse_y;
+            }
+            if (app.strip_drag.relocking) {
+                // Accumulate from the lock reference; below the threshold the
+                // drag holds still (it was stalled anyway) — apply nothing.
+                const int adx = std::abs(mouse_x - app.strip_drag.lock_ref_x);
+                const int ady = std::abs(mouse_y - app.strip_drag.lock_ref_y);
+                if (std::max(adx, ady) < kDragMovedThresholdPx) {
+                    app.strip_drag.last_motion_ms = now;
+                    return;
+                }
+                // Re-lock from the dominant axis of the accumulation (tie ->
+                // zoom, matching the initial crossing), then rebase so the
+                // gesture resumes continuously from the CURRENT state:
+                //  - Zoom: the level formula reads dy since press_y off
+                //    press_level; set press_level <- current level and press_y <-
+                //    lock_ref_y so the zoom continues from here without a jump
+                //    (this event folds only the threshold crossing, like the
+                //    initial crossing folds the accumulated dx).
+                //  - Pan: it is incremental via last_x; set last_x <- current x
+                //    so the stall gap does not fold in as a jump.
+                app.strip_drag.locked_axis =
+                    (ady >= adx) ? StripDragAxis::Zoom : StripDragAxis::Pan;
+                if (app.strip_drag.locked_axis == StripDragAxis::Zoom) {
+                    app.strip_drag.press_level = app.zoom_level;
+                    app.strip_drag.press_y     = app.strip_drag.lock_ref_y;
+                } else {
+                    app.strip_drag.last_x = mouse_x;
+                }
+                app.strip_drag.relocking = false;
+            }
         }
+        app.strip_drag.last_motion_ms = now;
         apply_strip_drag_at(mouse_x, mouse_y, /*final_event=*/false);
         viewport.clear_hover_popup();
         return;
