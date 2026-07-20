@@ -133,13 +133,16 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // (app, audio, ...) explicit args. The handle_wheel lambda is now a
 // private method on this struct.
 void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
-    // Decoupled axes, SONG-anchored zoom (Ableton's model). anchor_sample is
-    // the song position painted under press_x at the press, FIXED for the whole
-    // drag — never re-derived from the clamped viewport. As you pan it DRIFTS
-    // across the screen, and a zoom expands/contracts around wherever that song
-    // position currently sits (its CURRENT painted x), not around the press
-    // column. Both rows share this one path: the pan row pins the level, so the
-    // zoom re-anchor degenerates and the math is pure incremental pan.
+    // Axis-locked, SONG-anchored zoom (Ableton's model). anchor_sample is the
+    // song position painted under press_x at the press, FIXED for the whole
+    // drag — never re-derived from the clamped viewport. A pan-locked drag pans
+    // and the anchor DRIFTS across the screen; a zoom-locked drag expands/
+    // contracts around wherever that song position currently sits (its CURRENT
+    // painted x), not around the press column. The drag committed to one axis
+    // at the crossing (locked_axis): a pan-locked drag never changes the level,
+    // a zoom-locked drag never pans — diagonal pan+zoom composition is
+    // deliberately not offered (the hand cannot hold a horizontal line, and
+    // composing both tested poorly).
     //
     // Recorded reversal: an earlier labwc pass replaced this with a
     // SCREEN-anchored zoom (anchor_sample re-derived each event so it stayed
@@ -155,10 +158,11 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     const double spp_old = current_samples_per_pixel(app, audio);
 
     double new_level = sd.press_level;
-    if (sd.zoom_axis) {
-        // Zoom axis: the ABSOLUTE dy since press. Drag DOWN (y grows) lowers
-        // the level → zooms in; drag UP raises it → zooms out. Clamp into
-        // [kMinZoom, effective per-file ceiling]; the pan row keeps press_level.
+    if (sd.locked_axis == StripDragAxis::Zoom) {
+        // Zoom-locked: the level tracks the ABSOLUTE dy since press. Drag DOWN
+        // (y grows) lowers the level → zooms in; drag UP raises it → zooms out.
+        // Clamp into [kMinZoom, effective per-file ceiling]. A pan-locked drag
+        // keeps press_level.
         new_level = sd.press_level -
             static_cast<double>(y - sd.press_y) / kZoomStripPxPerLevel;
         const double max_l = effective_max_zoom_level(
@@ -168,22 +172,27 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
         if (new_level > max_l)    new_level = max_l;
     }
 
-    // (1) Incremental grab-pan at the old level: dx shifts the viewport with the
-    // grab sign (drag right pulls later content left under the hand). Read from
-    // the current (post-clamp) viewport_start each event so panning into a wall
-    // and back reverses symmetrically — no dead zone.
-    const double vp1 = static_cast<double>(app.viewport_start_sample) -
-        static_cast<double>(x - sd.last_x) * spp_old;
+    // (1) Incremental grab-pan at the old level, ONLY on a pan-locked drag: dx
+    // shifts the viewport with the grab sign (drag right pulls later content
+    // left under the hand). Read from the current (post-clamp) viewport_start
+    // each event so panning into a wall and back reverses symmetrically — no
+    // dead zone. A zoom-locked drag ignores horizontal motion (dx = 0), so the
+    // zoom pivots around the anchor's fixed press column.
+    double dx = 0.0;
+    if (sd.locked_axis == StripDragAxis::Pan)
+        dx = static_cast<double>(x - sd.last_x);
     sd.last_x = x;
+    const double vp1 = static_cast<double>(app.viewport_start_sample) -
+        dx * spp_old;
 
     // (2) The fractional screen column where the FIXED anchor_sample now sits
-    // under the panned viewport at the old level — it drifts as the pan moves.
+    // under the panned viewport at the old level — it drifts as a pan moves.
     // Passing this drifted column as the anchor x makes apply_strip_drag_zoom
     // re-place the viewport so anchor_sample stays at that same column under the
     // new level's spp: the zoom pivots around the anchor's current painted x.
-    // When the level is unchanged (every pan-row event, or a purely horizontal
-    // zoom-row event) spp is identical and the re-place is an identity that
-    // reproduces vp1, so this one formula serves both the pan and the zoom.
+    // When the level is unchanged (every pan-locked event, or a zoom-locked
+    // event that saturated a wall) spp is identical and the re-place is an
+    // identity that reproduces vp1.
     const double anchor_x = (sd.anchor_sample - vp1) / spp_old;
 
     // (3) The viewport entry point (clamp chokepoint) sets the level, computes
@@ -490,9 +499,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // NOT consult `hit`. Then it drops the playhead at the clicked column (no
         // marker snap — the 3px marker-snap magnet already died with the scrub in
         // the prior phase), reseeks a live scanner to it, overrides follow, and
-        // arms the region drag (a click-drag to highlight therefore also clears,
-        // since the same press covers both). A Shift press is a strict no-op
-        // anywhere on the waveform, selection included.
+        // arms the region drag — which also DISSOLVES any resting highlight at
+        // this mouse-down (arm_region_drag_at clears it after snapshotting the
+        // pre-press extent for an Esc-mid-drag restore), so the wash vanishes on
+        // press whether the gesture becomes a click or a fresh drag. A Shift
+        // press is a strict no-op anywhere on the waveform, selection included.
         {
             if (shift) return;
             // The clear runs FIRST, before the gutter early-return below, so an
@@ -544,8 +555,18 @@ void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
     app.region_drag.anchor_frame = anchor_frame;
     app.region_drag.press_x      = x;
     app.region_drag.press_y      = y;
-    // Snapshot the resting region so an Esc cancel of a live drag restores it.
+    // Snapshot the resting region BEFORE clearing it, so an Esc cancel of a
+    // live drag still restores the pre-press highlight.
     app.region_drag.pre_region   = app.region;
+    // Clear any resting region immediately at press: a plain waveform press
+    // dissolves an existing highlight on mouse-down (the wash repaints away
+    // now, not at release). A moved drag rebuilds a fresh region live; a
+    // motionless press-release simply leaves it cleared. pre_region above keeps
+    // the pre-press extent for the Esc-mid-drag restore.
+    if (app.region.active) {
+        app.region = RegionState{};
+        viewport.invalidate_waveform_area();
+    }
 }
 
 void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
@@ -587,22 +608,11 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     if (app.region_drag.active) {
         // The region is extended live during the drag (see on_motion); a drag
         // that moved rests the region at its final extent. A MOTIONLESS
-        // press-release (never crossed the threshold) is a plain waveform click
-        // — this drag arms only on a plain, unmodified waveform press — and
-        // COLLAPSES a resting region: the click dissolves the highlight, the
-        // wash repainting away. Decided here at release, not at press: the
-        // press cannot yet know whether it becomes a click or a drag arm (and
-        // the Esc-restore snapshot in pre_region must keep capturing the
-        // pre-press region). The press already did its own press-time work
-        // (deselect-all, playhead placement, reseek) regardless — the waveform
-        // press never SELECTS a marker, and its deselect-all already fired at
-        // press.
-        const bool moved = app.region_drag.moved;
+        // press-release (never crossed the threshold) needs no collapse here:
+        // the press already cleared any resting highlight at mouse-down (see
+        // arm_region_drag_at), so a plain click leaves the region cleared and
+        // there is nothing to do at release but disarm.
         app.region_drag = RegionDragState{};
-        if (!moved && app.region.active) {
-            app.region = RegionState{};
-            viewport.invalidate_waveform_area();
-        }
         return;
     }
     if (app.trim_drag.active) {
@@ -672,15 +682,15 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         viewport.clear_hover_popup();
         return;
     }
-    // Strip-row zoom/pan drag with decoupled axes, SONG-anchored zoom (the
-    // Ableton model; see apply_strip_drag_at). anchor_sample — the song position
-    // under press_x at the press — is FIXED for the whole drag and never
-    // re-derived; as the pan shifts it DRIFTS across the screen, and a zoom
-    // pivots around wherever that song position currently sits, not the press
-    // column. The top zoom row derives the level from vertical motion and pivots
-    // there; the bottom pan row pins the level and only pans (the zoom re-anchor
-    // then degenerates to pure incremental pan). Every motion event applies the
-    // pan increment and, on the zoom row, the re-derived level; the repaint is
+    // Strip-row zoom/pan drag, axis-locked at the crossing, SONG-anchored zoom
+    // (the Ableton model; see apply_strip_drag_at). anchor_sample — the song
+    // position under press_x at the press — is FIXED for the whole drag and
+    // never re-derived; a pan-locked drag DRIFTS it across the screen, a
+    // zoom-locked drag pivots around wherever that song position currently sits.
+    // The gesture commits to one axis at the crossing: a zoom-locked drag
+    // derives the level from vertical motion (ignoring horizontal), a pan-locked
+    // drag pins the level and only pans (the bottom pan row is always this).
+    // Each motion event applies the locked axis's effect; the repaint is
     // SYNCHRONOUS (final_event=false — incremental pan when the level held, a
     // full rebuild when it changed), affordable because the platform coalesces
     // captured motion to one event per pointer frame. The release runs the one
@@ -704,15 +714,30 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // a drag — once moved, it never re-engages, so dragging back near the
         // anchor mid-drag has no dead zone. At the crossing event last_x still
         // sits at press_x, so the first apply folds the whole accumulated dx and
-        // the zoom axis reads the absolute dy — the catch-up never exceeds the
-        // real hand motion.
+        // a zoom-locked drag reads the absolute dy — the catch-up never exceeds
+        // the real hand motion.
         if (!app.strip_drag.moved &&
             std::max(std::abs(mouse_x - app.strip_drag.press_x),
                      std::abs(mouse_y - app.strip_drag.press_y)) <
                 kDragMovedThresholdPx) {
             return;
         }
-        app.strip_drag.moved = true;
+        if (!app.strip_drag.moved) {
+            // Crossing event: lock the gesture to ONE axis for its whole life
+            // (the hand cannot hold a pure line, and diagonal pan+zoom
+            // composition tested poorly). The pan row is always pan-locked; the
+            // zoom row compares the accumulated |dx| vs |dy| since the press and
+            // commits to the dominant one — vertical-dominant (a tie included,
+            // zoom being the row's headline act) locks ZOOM (horizontal motion
+            // ignored thereafter), else PAN (the level pinned like the pan row).
+            const int adx = std::abs(mouse_x - app.strip_drag.press_x);
+            const int ady = std::abs(mouse_y - app.strip_drag.press_y);
+            app.strip_drag.locked_axis =
+                (app.strip_drag.zoom_axis && ady >= adx)
+                    ? StripDragAxis::Zoom
+                    : StripDragAxis::Pan;
+            app.strip_drag.moved = true;
+        }
         apply_strip_drag_at(mouse_x, mouse_y, /*final_event=*/false);
         viewport.clear_hover_popup();
         return;
@@ -780,7 +805,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (area.w <= 0) return;
         // Sub-threshold: the press has not yet become a drag. Below the shared
         // Chebyshev gate nothing extra happens — the press already did the
-        // click and any existing region stays as it rested. Once a drag,
+        // click and cleared any resting region at mouse-down. Once a drag,
         // always a drag (moved never re-engages).
         if (!app.region_drag.moved &&
             std::max(std::abs(mouse_x - app.region_drag.press_x),

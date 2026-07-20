@@ -308,9 +308,10 @@ struct UndoHistory {
 // lo/hi at READ time, so the span survives pan/zoom mid-drag and at rest.
 // Cleared by a region-trimming x, on file load, the A/B tab switch, the S/T audio-view switch (the
 // domain changes under it), Esc (only when nothing higher-priority consumes the
-// Esc), and a motionless plain waveform click (the click dissolves the
-// highlight; at on_button_release). The W/P marker-column switch does NOT clear
-// it — the region is not marker-related.
+// Esc), and a plain waveform PRESS (the press dissolves any resting highlight at
+// mouse-down, before it knows whether the gesture is a click or a fresh region
+// drag; at on_button_press via arm_region_drag_at). The W/P marker-column switch
+// does NOT clear it — the region is not marker-related.
 struct RegionState {
     bool    active  = false;
     int64_t a_frame = 0;   // the press-anchor endpoint
@@ -319,17 +320,17 @@ struct RegionState {
 
 // State for the plain (unmodified) left-drag region-select gesture on the
 // waveform. The PRESS does its press-time work (deselect-all, playhead
-// placement, live-playback reseek — it never SELECTS a marker) and arms this
-// drag; motion past
-// the shared press-becomes-drag threshold (kDragMovedThresholdPx) extends
-// app.region from the press frame to the pointer column. Below the threshold
-// the press did its press-time work already, and a sub-threshold press-release
-// COLLAPSES a resting region (a plain waveform click dissolves the highlight;
-// decided at on_button_release, not press). Only a plain, unmodified waveform
-// press arms (a Shift press is a click, Alt/Ctrl no-op earlier), so an armed
-// drag always signals a plain waveform press. A completed drag rests the region
-// on release; Esc cancels a live drag and restores the pre-drag region captured
-// here at arm (the marker drag's snapshot pattern — cheap, two ints).
+// placement, live-playback reseek — it never SELECTS a marker), DISSOLVES any
+// resting highlight at mouse-down (snapshotting the pre-press extent into
+// pre_region first), and arms this drag; motion past the shared
+// press-becomes-drag threshold (kDragMovedThresholdPx) extends app.region from
+// the press frame to the pointer column. A sub-threshold press-release is a
+// plain waveform click and simply disarms — the highlight already dissolved at
+// press, so there is no release-time collapse. Only a plain, unmodified
+// waveform press arms (a Shift press is a click, Alt/Ctrl no-op earlier), so an
+// armed drag always signals a plain waveform press. A completed drag rests the
+// region on release; Esc cancels a live drag and restores the pre-press region
+// captured here at arm (the marker drag's snapshot pattern — cheap, two ints).
 // Session-only, never undoable.
 struct RegionDragState {
     bool    active       = false;
@@ -337,9 +338,8 @@ struct RegionDragState {
     int     press_x      = 0;      // press position (window px), for the gate
     int     press_y      = 0;
     int64_t anchor_frame = 0;      // active-domain frame the press placed
-    // The region as it rested at arm; restored on an Esc cancel of a live
-    // drag. A motionless drag's snapshot equals the current region, so the
-    // restore is a no-op there.
+    // The region as it rested BEFORE the press dissolved it; restored on an Esc
+    // cancel of the gesture, bringing the pre-press highlight back.
     RegionState pre_region;
 };
 
@@ -431,23 +431,42 @@ struct TrimDragState {
     int64_t anchor_active_frame  = 0;
 };
 
+// Which axis a zoom-row strip drag locked to at the press-becomes-drag
+// crossing. The gesture commits to ONE axis for its whole life: the hand
+// cannot hold a pure horizontal (or vertical) line, and diagonal composition
+// tested poorly, so at the crossing the greater accumulated |dx| vs |dy| since
+// the press decides. Pan-locked pins the level and only pans (the pan row is
+// always this); Zoom-locked tracks vertical motion and ignores horizontal
+// motion (zoom row only). Undetermined until the crossing (defaults Pan, which
+// applies nothing before the drag moves).
+enum class StripDragAxis { Pan, Zoom };
+
 // Plain left-drag on a live strip row (Ableton-style navigation). ONE fixed
-// song anchor (captured under press_x at the press) serves both axes:
-// horizontal motion is an incremental grab-pan (the anchor drifts across the
-// screen), and vertical motion (top zoom row only) zooms around wherever that
-// anchored song position currently sits — the song-anchored, Ableton semantic.
-// Navigation-class: never touches the playhead or selection, allowed in
-// read-only, does not toggle or override follow. Cleared on button release /
-// button-lost and on file load; no Esc-restore (nothing to revert).
+// song anchor (captured under press_x at the press) drives the locked axis: a
+// pan-locked drag is an incremental grab-pan (the anchor drifts across the
+// screen), a zoom-locked drag zooms around wherever that anchored song position
+// currently sits — the song-anchored, Ableton semantic. The drag locks to a
+// single axis at the crossing (see StripDragAxis / locked_axis) rather than
+// composing pan and zoom diagonally. Navigation-class: never touches the
+// playhead or selection, allowed in read-only, does not toggle or override
+// follow. Cleared on button release / button-lost and on file load; no
+// Esc-restore (nothing to revert).
 struct StripDragState {
     bool   active    = false;
     // True once any motion event has applied a viewport/level change. A
     // motionless press-release must commit nothing, so the terminating event
     // finalizes (one final apply + synchronous rebuild) only when this is set.
     bool   moved     = false;
-    // True for the top zoom row (vertical motion changes the level); false for
-    // the bottom pan row (level pinned for the whole drag).
+    // True for the top zoom row (vertical motion CAN change the level, if the
+    // drag locks to the zoom axis); false for the bottom pan row (always
+    // pan-locked, the level pinned for the whole drag).
     bool   zoom_axis = false;
+    // The axis this drag locked to at the threshold crossing, fixed for its
+    // whole life. Undetermined (defaults Pan, harmless — nothing applies before
+    // the crossing) until moved latches. The pan row always locks Pan; the zoom
+    // row locks Zoom when the press-to-crossing motion is vertical-dominant (a
+    // tie included, zoom being the row's headline act), else Pan.
+    StripDragAxis locked_axis = StripDragAxis::Pan;
     // Pointer position at the press (window px).
     int    press_y   = 0;
     // The press column (window px). Used only as the drag-threshold reference
@@ -457,8 +476,8 @@ struct StripDragState {
     // (Ableton), so press_x plays no part in the mid-drag anchor math.
     int    press_x   = 0;
     // The previous motion event's x (window px), seeded to press_x at the
-    // claim. The pan increment reads dx = x - last_x each event so pan and zoom
-    // stay independent.
+    // claim. A pan-locked drag reads dx = x - last_x each event as its pan
+    // increment; a zoom-locked drag ignores horizontal motion entirely.
     int    last_x    = 0;
     // Continuous zoom level at the press — always app.zoom_level verbatim, on
     // both the zoom and pan rows. The zoom row walks the one continuous domain

@@ -593,14 +593,14 @@ void render_markers(cairo_t* cr,
                     const DragOverlay* drag_overlay = nullptr,
                     cairo_surface_t* ink_plate = nullptr);
 
-// Draws the trim begin/end boundary stems, plus a half-triangle frame tick at
-// each set bound's column (marker_half_triangle_mask, left edge on the column at
-// the waveform top edge, tinted kTrimMarker — trim has no selection or disabled
-// states, so the tick is always full opacity). Each set bound (gated by
+// Draws the trim begin/end boundary stems. Each set bound (gated by
 // `has_begin` / `has_end`) paints a 1px vertical stem at its domain-frame
 // column, spanning the same vertical extent as marker stems (the flag chip's
-// bottom, via flag_chip_bottom_y, down to waveform bottom). Color is
-// always kTrimMarker — trim has no selected variant. `trim.begin` /
+// bottom, via flag_chip_bottom_y, down to waveform bottom). Trim bounds carry
+// NO half-triangle frame tick (unlike markers): the tick read as disconnected
+// from the chips and Ableton's loop bounds carry none, so the stem+chip pair is
+// the whole waveform-side cue. Color is always kTrimMarker — trim has no
+// selected variant. `trim.begin` /
 // `trim.end` are in the displayed domain (already warp_frame_map-translated by the
 // caller), so no further translation happens here — the columns are placed
 // exactly like marker stems against the same viewport. View-independent: drawn

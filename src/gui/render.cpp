@@ -715,38 +715,6 @@ void render_trim_stems(cairo_t* cr,
     if (has_end)   paint_bound(trim.end);
 
     cairo_restore(cr);
-
-    // Half-triangle frame ticks at each set bound's column, tinted kTrimMarker
-    // (trim has no selection or disabled states — always full opacity). The same
-    // right-half playhead triangle as the markers: left edge on the bound column
-    // at the waveform top edge, so the triangle's vertical edge lines up with the
-    // trim stem. Clipped to the strip-width band so a bound near an edge shows its
-    // clipped footprint. Painted in a separate pass (its own save/clip) so the
-    // clip does not constrain the stem strokes above.
-    cairo_surface_t* tri = marker_half_triangle_mask();
-    const int tri_h = cairo_image_surface_get_height(tri);
-    cairo_save(cr);
-    cairo_rectangle(cr,
-                    static_cast<double>(waveform_area.x),
-                    static_cast<double>(waveform_area.y),
-                    static_cast<double>(waveform_area.w),
-                    static_cast<double>(tri_h));
-    cairo_clip(cr);
-    cairo_set_source_rgb(cr, kTrimMarker.r, kTrimMarker.g, kTrimMarker.b);
-    auto stamp_bound = [&](int64_t frame) {
-        const double ms = static_cast<double>(frame);
-        if (ms < static_cast<double>(viewport_start_sample)) return;
-        if (ms >= static_cast<double>(viewport_end_sample)) return;
-        const int icol = static_cast<int>(std::nearbyint(
-            (ms - static_cast<double>(viewport_start_sample)) /
-            samples_per_pixel));
-        cairo_mask_surface(cr, tri,
-                           static_cast<double>(waveform_area.x + icol),
-                           static_cast<double>(waveform_area.y));
-    };
-    if (has_begin) stamp_bound(trim.begin);
-    if (has_end)   stamp_bound(trim.end);
-    cairo_restore(cr);
 }
 
 void render_trim_flags(cairo_t* cr,
