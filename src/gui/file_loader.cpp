@@ -36,6 +36,13 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     app.displayed_target_warp_frame_map.clear();
     app.staged_displayed_target_warp_frame_map.clear();
     app.staged_displayed_valid = false;
+    // The resting selection region is view-domain scratch: its frame span reads
+    // against whichever view is live. This routine re-establishes the live view
+    // for BOTH the source load and the `'` adopt, so the clear lives here
+    // structurally — a per-caller clear leaked on the adopt path, where a
+    // source-view region survived into the forced target view and a later `x`
+    // overwrote the freshly adopted recipe trim with the stale span.
+    app.region = RegionState{};
     app.active_audio_view   = sf.active_audio_view;
     app.active_markers_view = sf.active_markers_view;
     app.active_tab_view     = sf.active_tab_view;
@@ -220,12 +227,14 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.active_markers_view    = 'W';
     app.drag = DragState{};
     app.region_drag = RegionDragState{};
-    app.region = RegionState{};
     app.trim_drag = TrimDragState{};
     app.strip_drag = StripDragState{};
     app.strip_double_click = StripDoubleClickCandidate{};
-    // (The displayed hit map is cleared in apply_settings_engine_and_prefs,
-    // the shared load+adopt view-establishment routine, not here.)
+    // (The displayed hit map AND the resting selection region are cleared in
+    // apply_settings_engine_and_prefs, the shared load+adopt view-establishment
+    // routine, not here. The live-pointer-drag scratch above stays load-only:
+    // adopt runs from the modal commit editor, where no pointer gesture can be
+    // live, so it needs no drag clears — only the view-domain region clear.)
     // Project trim is not cleared implicitly by the fresh-ViewState assignment
     // (it lives on AppState now). Reset it explicitly before the initial-playhead
     // read: this is construction-state for the no-.settings / first-open path.
