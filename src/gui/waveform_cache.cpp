@@ -641,8 +641,19 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
     if (delta_px == 0) {
         wf_cache.fp_vp_start         = in.vp_start;
         wf_cache.fp_vp_end           = in.vp_end;
-        wf_cache.pending_fp_vp_start = in.vp_start;
-        wf_cache.pending_fp_vp_end   = in.vp_end;
+        // Repair the COMPLETE pending fingerprint, not just the viewport — see
+        // the memmove publish below for the full render/cancel-loop rationale.
+        // A synchronous drain above may have poisoned pending_fp_area_w = -1;
+        // the plate's basis (area, target, warp_frame_map) is unchanged by a
+        // pure pan and equals in.* by the fallback gate, so these are the
+        // correct published values on every route.
+        wf_cache.pending_fp_vp_start    = in.vp_start;
+        wf_cache.pending_fp_vp_end      = in.vp_end;
+        wf_cache.pending_fp_area_w      = in.area_w;
+        wf_cache.pending_fp_area_h      = in.area_h;
+        wf_cache.pending_fp_target      = in.is_target;
+        wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
+        wf_cache.pending_fp_warp_frame_map      = in.warp_frame_map;
         // Plate bookkeeping advanced to the new viewport; bring the overlay
         // caches with it so stems / flags / dim do not lag the plate.
         maybe_rebuild_stem_cache();
@@ -714,13 +725,37 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
     // Advance the plate's viewport bookkeeping. fp_vp_start / disp_spp key the
     // live dim composite, markers, flags, and the cursor; pending_fp_* mirrors
     // it so the on_tick dirty-check sees the fingerprint already satisfied and
-    // does not redundantly re-render the whole window. Everything else
-    // (area, target, warp_frame_map) is unchanged by a pure pan and was
-    // verified equal to in.* by the fallback gate above.
+    // does not redundantly re-render the whole window.
+    //
+    // Repair the COMPLETE pending fingerprint, not just the viewport. In
+    // synchronous mode this event may have DRAINED a running worker job above
+    // (wait_until_idle cancels it), which lands on_waveform_render_done with
+    // ok==false and poisons pending_fp_area_w = -1 as the tick-retry marker. A
+    // viewport-only update would leave that poison in place: the next on_tick's
+    // fingerprint_differs test would trip and enqueue a redundant full render,
+    // which the next synchronous frame drains and cancels again, poisoning
+    // anew — a render/cancel loop that runs until release. Rewriting every
+    // pending_fp_* field (the same set force_synchronous_waveform_rebuild
+    // republishes) closes it: drain -> cancel-poison -> shift-repair -> the tick
+    // sees a satisfied fingerprint. The poison is only ever produced by the
+    // synchronous drain (wait_until_idle is the waveform worker's sole cancel
+    // route, called only from the two synchronous paths); the async caller
+    // falls back to the worker whenever a job is in flight, so it can never
+    // reach this clean-shift publish carrying a poison. The rewrite runs on
+    // both routes anyway because everything but the viewport (area, target,
+    // warp_frame_map) is unchanged by a pure pan and equals in.* by the
+    // fallback gate above — so these are the correct published values whether
+    // or not a poison was present, and the publish leaves a self-consistent
+    // fingerprint by construction.
     wf_cache.fp_vp_start         = in.vp_start;
     wf_cache.fp_vp_end           = in.vp_end;
     wf_cache.pending_fp_vp_start = in.vp_start;
     wf_cache.pending_fp_vp_end   = in.vp_end;
+    wf_cache.pending_fp_area_w   = in.area_w;
+    wf_cache.pending_fp_area_h   = in.area_h;
+    wf_cache.pending_fp_target   = in.is_target;
+    wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
+    wf_cache.pending_fp_warp_frame_map      = in.warp_frame_map;
 
     // The plate advanced synchronously in this event. Rebuild the stem and
     // flag caches now, against the just-published fingerprint, so the overlay

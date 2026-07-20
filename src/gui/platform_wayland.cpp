@@ -1286,12 +1286,18 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
 
         // Losing the keyboard is the hard end of the key stream: a held
         // synthesized-left button will never see its release. End it here on
-        // the logical 1->0 edge, the same tail as on_keyboard_leave.
+        // the logical 1->0 edge, the same tail as on_keyboard_leave. Flush the
+        // deferred motion FIRST, while synth_left_held_ still reads held, then
+        // clear it, then deliver — so the flushed motion observes the
+        // pre-release held state and takes the live-drag path (skipped when we
+        // do not deliver, since no OR 1->0 edge occurs).
         if (synth_left_held_) {
+            const bool deliver_release =
+                !pointer_left_held_ && on_button_release_;
+            if (deliver_release) flush_deferred_motion();
             synth_left_held_    = false;
             synth_left_keycode_ = 0;
-            if (!pointer_left_held_ && on_button_release_) {
-                flush_deferred_motion();
+            if (deliver_release) {
                 on_button_release_(GuiMouseButton::Left,
                                    pointer_x_, pointer_y_, current_mods());
             }
@@ -1316,7 +1322,6 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         wl_pointer_release(wl_pointer_);
         wl_pointer_ = nullptr;
         pointer_focused_   = false;
-        pointer_left_held_ = false;
 
         // Capability loss is the hard end of this wl_pointer event stream:
         // the protocol guarantees that no further events (and therefore no
@@ -1334,8 +1339,18 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // untouched so its later release delivers the single 1->0 edge, and
         // suppress the release here. This mirrors the keyboard-leave/capability
         // tails, which likewise hold the release while the OTHER source is held.
-        if (left_was_held && !synth_left_held_ && on_button_release_) {
-            flush_deferred_motion();
+        //
+        // Flush the deferred motion FIRST, while pointer_left_held_ still reads
+        // held, then clear the physical bit, then deliver — so the flushed
+        // motion observes the pre-release held state and takes the live-drag
+        // path, not the button-lost teardown (the same invariant as the
+        // ordinary physical release). Skipped when we do not deliver (no OR
+        // 1->0 edge): a flush would be harmless but is not needed.
+        const bool deliver_release =
+            left_was_held && !synth_left_held_ && on_button_release_;
+        if (deliver_release) flush_deferred_motion();
+        pointer_left_held_ = false;
+        if (deliver_release) {
             on_button_release_(GuiMouseButton::Left,
                                pointer_x_, pointer_y_, current_mods());
         }
@@ -1418,12 +1433,16 @@ void GuiPlatform::on_keyboard_leave(uint32_t /*serial*/,
     // A held synthesized-left button can never see its keycode-matched release
     // once keyboard focus is gone, so end it here on the logical 1->0 edge —
     // the same rationale as the pointer-capability-loss tail that ends a held
-    // physical button. A concurrent physical hold keeps the button down.
+    // physical button. A concurrent physical hold keeps the button down. Flush
+    // the deferred motion FIRST, while synth_left_held_ still reads held, then
+    // clear it, then deliver — the flushed motion observes the pre-release held
+    // state and takes the live-drag path (skipped when no OR 1->0 edge occurs).
     if (synth_left_held_) {
+        const bool deliver_release = !pointer_left_held_ && on_button_release_;
+        if (deliver_release) flush_deferred_motion();
         synth_left_held_    = false;
         synth_left_keycode_ = 0;
-        if (!pointer_left_held_ && on_button_release_) {
-            flush_deferred_motion();
+        if (deliver_release) {
             on_button_release_(GuiMouseButton::Left,
                                pointer_x_, pointer_y_, current_mods());
         }
@@ -1451,11 +1470,17 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
         // last known coordinates, the same convention as the
         // pointer-capability-loss tail). It fires only on the logical 1->0
         // edge, so a concurrent physical hold keeps the button down.
+        // Flush the deferred motion FIRST, while synth_left_held_ still reads
+        // held, then clear it, then deliver — so the flushed motion observes
+        // the pre-release held state and takes the live-drag path (skipped when
+        // a concurrent physical hold keeps the OR at 1, so no release delivers).
         if (synth_left_held_ && xkb_keycode == synth_left_keycode_) {
+            const bool deliver_release =
+                !pointer_left_held_ && on_button_release_;
+            if (deliver_release) flush_deferred_motion();
             synth_left_held_    = false;
             synth_left_keycode_ = 0;
-            if (!pointer_left_held_ && on_button_release_) {
-                flush_deferred_motion();
+            if (deliver_release) {
                 on_button_release_(GuiMouseButton::Left,
                                    pointer_x_, pointer_y_, current_mods());
             }
@@ -1746,13 +1771,45 @@ void GuiPlatform::on_pointer_button(uint32_t /*serial*/, uint32_t /*time*/,
     // edge, so a physical press during a synthesized hold (or vice versa)
     // never double-delivers. Non-left buttons never participate in the OR and
     // are delivered unchanged.
+    //
+    // The held bit crosses its transition on the correct side of the flush so
+    // the flushed motion always observes the PRE-RELEASE / POST-PRESS held
+    // state: on a press the bit is set first, so the flush (and the press it
+    // precedes) runs with the button reading held; on a release the flush runs
+    // FIRST, while the button still reads held, and only then does the bit
+    // clear. This is what makes the two release/motion delivery orders in one
+    // pointer frame converge — a flushed threshold-crossing motion routes
+    // through the normal live-drag path (threshold, moved latch, apply) instead
+    // of the button-lost teardown, so an unmoved-until-now fast drag commits and
+    // a fast zoom-row click seeds its double-click candidate.
     if (button == BTN_LEFT) {
         const bool was_held = pointer_left_held_ || synth_left_held_;
-        pointer_left_held_  = pressed;
-        const bool now_held = pointer_left_held_ || synth_left_held_;
-        if (now_held == was_held) return;   // no logical edge — swallow
+        const bool now_held = pressed || synth_left_held_;
+        if (now_held == was_held) {
+            pointer_left_held_ = pressed;   // keep the source bit current
+            return;                          // no logical edge — swallow
+        }
+        if (pressed) {
+            // 0->1 edge: set the held bit, then flush (button reads held), then
+            // deliver the press.
+            pointer_left_held_ = true;
+            if (on_button_press_) {
+                flush_deferred_motion();
+                on_button_press_(mb, pointer_x_, pointer_y_, current_mods());
+            }
+        } else {
+            // 1->0 edge: flush FIRST (button still reads held), then clear the
+            // bit, then deliver the release (which now reads button-up).
+            if (on_button_release_) flush_deferred_motion();
+            pointer_left_held_ = false;
+            if (on_button_release_) {
+                on_button_release_(mb, pointer_x_, pointer_y_, current_mods());
+            }
+        }
+        return;
     }
 
+    // Non-left buttons never participate in the logical-left OR.
     if (pressed) {
         if (on_button_press_) {
             flush_deferred_motion();

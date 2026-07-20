@@ -142,17 +142,17 @@ void fill_column_ink_runs(cairo_t* cr, int dest_x, int dest_y, int area_h,
 // everything else (viewport math, drag overlay, target translation, integer-pixel
 // snap) is identical for both marker kinds.
 //
-// When the last-selected marker is DISABLED it has both a stem and a
-// half-triangle, and a translucent triangle over a translucent stem would let
-// the stem read through the triangle body. So in that case this function draws
-// the stem AND the triangle OPAQUE into a cairo group and composites the group
-// once at kDisabledMarkerAlpha (the same group-composite render_editor_text_box
-// uses for a dimmed chip): the opaque triangle occludes the stem within its
-// outline and the pair dims uniformly with no internal see-through. The caller
-// then SKIPS this index in render_marker_triangles_impl (the triangle is already
-// drawn here). A full-opacity last-selected marker keeps independent draws — its
-// stem here (opaque) and its triangle in the triangle loop (opaque, on top) — no
-// see-through is possible, so no group is needed.
+// When the last-selected marker is DISABLED this function paints NOTHING: a
+// translucent triangle over a translucent stem would let the stem read through
+// the triangle body, so the stem and triangle must dim together as one composite
+// — and that composite has to land at the marker's ordinal z-slot among the
+// coincident selected triangles, not below the whole selected tier. So the
+// disabled last-selected stem + half-triangle group (plus its ink notch) is
+// painted by render_marker_triangles_impl at skip_index inside the selected
+// pass; here we simply skip it (no double-paint). A full-opacity last-selected
+// marker keeps independent draws — its stem here (opaque) and its triangle in
+// the triangle loop (opaque, on top) — no see-through is possible, so no group
+// is needed and it paints normally below.
 template <typename MarkerVec, typename IsVisuallyDisabled>
 void render_marker_stems_impl(
     cairo_t* cr,
@@ -208,38 +208,22 @@ void render_marker_stems_impl(
     // its color class is always kSelected (stem and triangle alike).
     const bool disabled = is_disabled(i);
 
+    // The disabled last-selected marker is painted entirely by the selected
+    // triangle pass (stem + triangle group + ink, at its ordinal z-slot). Draw
+    // nothing here so it is not double-painted.
+    if (disabled) return;
+
     cairo_save(cr);
     cairo_set_line_width(cr, 1.0);
     if (ink_plate) cairo_surface_flush(ink_plate);
 
-    if (disabled) {
-        // Group-composite: stem + half-triangle drawn OPAQUE into a cairo group,
-        // then painted once at kDisabledMarkerAlpha so the triangle body occludes
-        // the stem within its outline and the pair dims uniformly (no
-        // see-through). The triangle's left edge sits on the marker column at the
-        // waveform top edge, exactly as render_marker_triangles_impl places it —
-        // the caller skips this index there, so it is drawn only once.
-        cairo_push_group(cr);
-        cairo_set_source_rgb(cr, kSelected.r, kSelected.g, kSelected.b);
-        cairo_move_to(cr, x_px, y_stem_top);
-        cairo_line_to(cr, x_px, y1);
-        cairo_stroke(cr);
-        cairo_surface_t* tri = marker_half_triangle_mask();
-        cairo_mask_surface(cr, tri,
-                           static_cast<double>(waveform_area.x + icol),
-                           static_cast<double>(waveform_area.y));
-        cairo_pop_group_to_source(cr);
-        cairo_paint_with_alpha(cr, kDisabledMarkerAlpha);
-    } else {
-        cairo_set_source_rgb(cr, kSelected.r, kSelected.g, kSelected.b);
-        cairo_move_to(cr, x_px, y_stem_top);
-        cairo_line_to(cr, x_px, y1);
-        cairo_stroke(cr);
-    }
-    // The dark ink notch is painted at full opacity in both cases (over the
-    // dimmed stem too, matching the retired all-selected form): it sits in the
-    // waveform body rows, below the triangle's top band, so it never interacts
-    // with the composited triangle.
+    cairo_set_source_rgb(cr, kSelected.r, kSelected.g, kSelected.b);
+    cairo_move_to(cr, x_px, y_stem_top);
+    cairo_line_to(cr, x_px, y1);
+    cairo_stroke(cr);
+    // The dark ink notch is painted at full opacity over the stem: it sits in
+    // the waveform body rows, below the triangle's top band, so it never
+    // interacts with the (opaque) triangle drawn later in the selected pass.
     fill_column_ink_runs(cr, waveform_area.x, waveform_area.y,
                          waveform_area.h, ink_plate, icol);
 
@@ -250,30 +234,41 @@ void render_marker_stems_impl(
 // (marker_half_triangle_mask) at each marker's authored column. Called ONCE PER
 // SELECTION CLASS — `selected_class` picks which — so the caller can interleave
 // the stem loop between the two passes and reproduce the flags' selection
-// z-order: the UNSELECTED pass paints first, then the stem loop (its dimmed
-// last-selected stem+triangle GROUP lands in the selected tier, above the
-// unselected triangles), then the SELECTED pass on top. Within a class the loop
+// z-order: the UNSELECTED pass paints first, then the stem loop (the ENABLED
+// last-selected stem), then the SELECTED pass on top. Within a class the loop
 // iterates in REVERSE store order so the leftmost marker (lowest index on an
 // equal column) paints last = on top — matching render_flags' leftmost-on-top
 // convention, so a triangle and its flag agree at coincident stacks.
 //
 // A triangle paints for EVERY marker of the class regardless of enablement — it
-// is the honest frame carrier, present when the last-selected stem is not —
-// EXCEPT the one index named by `skip_index` (>= 0): that marker's stem loop
-// already drew its triangle inside a group composite (the disabled last-selected
-// case, where the stem must not read through the dimmed triangle), so drawing it
-// again here would double-paint. skip_index is always the last-selected marker
-// and therefore always in the SELECTED class, so the guard only ever fires in the
-// selected pass. A DISABLED marker's triangle dims under kDisabledMarkerAlpha
-// (the single disabled cue, shared with the flag and the stem). Its LEFT EDGE
-// sits on the marker's pixel column at the waveform top edge, so the
-// half-triangle's vertical edge, the stem, and the flag's left edge form one
-// vertical line; when the playhead cursor sits on the marker the playhead
-// triangle's right half coincides with this half-triangle exactly. A triangle
-// whose column falls outside the visible strip is culled by the viewport range,
-// and one near an edge shows only its clipped footprint. Column math and
-// target/drag translation match the stems exactly, so a triangle and its stem
-// share a column.
+// is the honest frame carrier, present when the last-selected stem is not. The
+// one index named by `skip_index` (>= 0) is the DISABLED last-selected marker:
+// its stem loop paints NOTHING, and at this marker's ordinal slot in the
+// reverse-order selected pass we paint its stem + half-triangle as a single
+// dimmed cairo GROUP (plus its ink notch) instead of a plain triangle stamp.
+// Painting the group here — rather than in the stem loop before the whole
+// selected pass — puts it at its correct z-slot among coincident selected
+// triangles (the flags' leftmost/lowest-index-on-top order); the group's stem
+// therefore rises above the triangles painted before it in the pass, consistent
+// with that convention. The group is ONE cairo group composited at
+// kDisabledMarkerAlpha so the dimmed stem cannot read through the dimmed
+// triangle body, and it is painted exactly once (the stem loop skips it), so no
+// double-paint. skip_index is always the last-selected marker, therefore always
+// in the SELECTED class, so the group branch only ever fires in the selected
+// pass (the class filter drops it in the unselected pass first).
+//
+// A DISABLED marker's plain triangle dims under kDisabledMarkerAlpha (the single
+// disabled cue, shared with the flag and the stem). Its LEFT EDGE sits on the
+// marker's pixel column at the waveform top edge, so the half-triangle's
+// vertical edge, the stem, and the flag's left edge form one vertical line; when
+// the playhead cursor sits on the marker the playhead triangle's right half
+// coincides with this half-triangle exactly. A triangle whose column falls
+// outside the visible strip is culled by the viewport range, and one near an
+// edge shows only its clipped footprint. Column math and target/drag translation
+// match the stems exactly, so a triangle and its stem share a column.
+//
+// group_y_stem_top / group_y1 / group_ink_plate carry the stem geometry and ink
+// source for the skip_index group only; they are unused when skip_index < 0.
 template <typename MarkerVec, typename IsSelected, typename IsVisuallyDisabled>
 void render_marker_triangles_impl(
     cairo_t* cr,
@@ -287,7 +282,10 @@ void render_marker_triangles_impl(
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay,
     bool selected_class,
-    int skip_index) {
+    int skip_index,
+    double group_y_stem_top,
+    double group_y1,
+    cairo_surface_t* group_ink_plate) {
     if (waveform_area.w <= 0 || waveform_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (sample_rate <= 0) return;
@@ -300,6 +298,8 @@ void render_marker_triangles_impl(
 
     cairo_surface_t* tri = marker_half_triangle_mask();
     const int img_h = cairo_image_surface_get_height(tri);
+    // The ink notch of the skip_index group reads the plate pixels directly.
+    if (group_ink_plate) cairo_surface_flush(group_ink_plate);
 
     cairo_save(cr);
     // Clip to the strip-width triangle band so a triangle near an edge shows its
@@ -315,7 +315,6 @@ void render_marker_triangles_impl(
     // class is painted; the caller runs the other class in a separate call.
     for (size_t idx = markers.size(); idx-- > 0; ) {
         const int i = static_cast<int>(idx);
-        if (i == skip_index) continue;
         if (is_selected(i) != selected_class) continue;
         const auto& m = markers[idx];
         // Effective time and target/drag translation exactly as the stem loop:
@@ -329,6 +328,46 @@ void render_marker_triangles_impl(
         const int icol = static_cast<int>(std::nearbyint(
             (ms - static_cast<double>(viewport_start_sample)) /
             samples_per_pixel));
+
+        if (i == skip_index) {
+            // The disabled last-selected marker's stem + half-triangle
+            // composite, painted here at its ordinal z-slot. The stem runs the
+            // FULL waveform height, so it must escape the triangle-band clip:
+            // reset the clip and re-establish a full-height, strip-width clip
+            // (edge-bleed guard for the triangle, no height truncation for the
+            // stem). reset_clip is safe because the stem-cache context this
+            // renders into carries no ambient clip; the nested save/restore
+            // restores the band clip for the remaining plain stamps.
+            const double x_px =
+                static_cast<double>(waveform_area.x) + icol + 0.5;
+            cairo_save(cr);
+            cairo_reset_clip(cr);
+            cairo_rectangle(cr,
+                            static_cast<double>(waveform_area.x),
+                            static_cast<double>(waveform_area.y),
+                            static_cast<double>(waveform_area.w),
+                            static_cast<double>(waveform_area.h));
+            cairo_clip(cr);
+            cairo_set_line_width(cr, 1.0);
+            cairo_push_group(cr);
+            cairo_set_source_rgb(cr, kSelected.r, kSelected.g, kSelected.b);
+            cairo_move_to(cr, x_px, group_y_stem_top);
+            cairo_line_to(cr, x_px, group_y1);
+            cairo_stroke(cr);
+            cairo_mask_surface(cr, tri,
+                               static_cast<double>(waveform_area.x + icol),
+                               static_cast<double>(waveform_area.y));
+            cairo_pop_group_to_source(cr);
+            cairo_paint_with_alpha(cr, kDisabledMarkerAlpha);
+            // Ink notch at full opacity, exactly as the enabled stem loop paints
+            // it: waveform-body rows below the triangle band, no interaction
+            // with the composited triangle.
+            fill_column_ink_runs(cr, waveform_area.x, waveform_area.y,
+                                 waveform_area.h, group_ink_plate, icol);
+            cairo_restore(cr);
+            continue;
+        }
+
         const GuiColor c = selected_class ? kSelected : kMarker;
         // A disabled marker's triangle dims under the shared disabled alpha
         // (the mask carries the source's alpha), otherwise it is opaque.
@@ -587,24 +626,31 @@ void render_markers(cairo_t* cr,
     // so skip that index in the SELECTED triangle pass to avoid a double-paint.
     //
     // Three ordered layers reproduce the flags' selection z-order: the UNSELECTED
-    // triangles paint first (bottom), then the stem loop — whose dimmed
-    // last-selected stem+triangle group thus lands in the selected tier, above
-    // the unselected triangles — then the SELECTED triangles on top. Selected
-    // triangles occlude unselected ones at coincident columns, matching how the
-    // flags stack.
+    // triangles paint first (bottom), then the stem loop (the ENABLED
+    // last-selected stem), then the SELECTED triangles on top. A DISABLED
+    // last-selected marker's stem+triangle group is painted by the selected
+    // triangle pass at that marker's ordinal slot (skip_index), so it stacks
+    // correctly among coincident selected triangles. Selected triangles occlude
+    // unselected ones at coincident columns, matching how the flags stack.
     const bool last_disabled =
         last_selected >= 0 &&
         last_selected < static_cast<int>(markers.size()) &&
         effective_disabled(markers, last_selected);
     const auto is_selected  = [&](int i) { return selected_set.count(i) > 0; };
     const auto is_disabled  = [&](int i) { return effective_disabled(markers, i); };
+    // Stem geometry for the skip_index group, identical to render_marker_stems_impl.
+    const double group_y_stem_top =
+        flag_chip_bottom_y(waveform_area, ChipRow::Lower);
+    const double group_y1 =
+        static_cast<double>(waveform_area.y + waveform_area.h);
     render_marker_triangles_impl(
         cr, waveform_area, markers,
         viewport_start_sample, viewport_end_sample,
         sample_rate, is_selected, is_disabled,
         warp_frame_map, drag_overlay,
         /*selected_class=*/false,
-        last_disabled ? last_selected : -1);
+        /*skip_index=*/-1,
+        group_y_stem_top, group_y1, ink_plate);
     render_marker_stems_impl(
         cr, waveform_area, markers,
         viewport_start_sample, viewport_end_sample,
@@ -616,7 +662,8 @@ void render_markers(cairo_t* cr,
         sample_rate, is_selected, is_disabled,
         warp_frame_map, drag_overlay,
         /*selected_class=*/true,
-        last_disabled ? last_selected : -1);
+        last_disabled ? last_selected : -1,
+        group_y_stem_top, group_y1, ink_plate);
 }
 
 void render_trim_stems(cairo_t* cr,
@@ -1587,24 +1634,31 @@ void render_phaseresetmarkers(cairo_t* cr,
     // warp render_markers note): the frame tick is the honest position, present
     // when the last-selected stem is not. A disabled phase reset's triangle
     // carries the disabled alpha (the bool read directly — no cascade). When the
-    // last-selected phase reset is disabled its triangle was composited with its
-    // stem, so skip that index in the SELECTED triangle pass to avoid a
-    // double-paint. Three ordered layers reproduce the flags' selection z-order:
-    // UNSELECTED triangles, then the stem loop (its dimmed last-selected group
-    // lands in the selected tier), then SELECTED triangles on top.
+    // last-selected phase reset is disabled its stem+triangle group is painted by
+    // the SELECTED triangle pass at that index's ordinal slot (skip_index), so it
+    // stacks correctly among coincident selected triangles and is drawn once.
+    // Three ordered layers reproduce the flags' selection z-order: UNSELECTED
+    // triangles, then the stem loop (the ENABLED last-selected stem), then
+    // SELECTED triangles on top.
     const bool last_disabled =
         last_selected >= 0 &&
         last_selected < static_cast<int>(phase_resets.size()) &&
         phase_resets[last_selected].disabled;
     const auto is_selected = [&](int i) { return selected_set.count(i) > 0; };
     const auto is_disabled = [&](int i) { return phase_resets[i].disabled; };
+    // Stem geometry for the skip_index group, identical to render_marker_stems_impl.
+    const double group_y_stem_top =
+        flag_chip_bottom_y(waveform_area, ChipRow::Lower);
+    const double group_y1 =
+        static_cast<double>(waveform_area.y + waveform_area.h);
     render_marker_triangles_impl(
         cr, waveform_area, phase_resets,
         viewport_start_sample, viewport_end_sample,
         sample_rate, is_selected, is_disabled,
         warp_frame_map, drag_overlay,
         /*selected_class=*/false,
-        last_disabled ? last_selected : -1);
+        /*skip_index=*/-1,
+        group_y_stem_top, group_y1, ink_plate);
     render_marker_stems_impl(
         cr, waveform_area, phase_resets,
         viewport_start_sample, viewport_end_sample,
@@ -1616,7 +1670,8 @@ void render_phaseresetmarkers(cairo_t* cr,
         sample_rate, is_selected, is_disabled,
         warp_frame_map, drag_overlay,
         /*selected_class=*/true,
-        last_disabled ? last_selected : -1);
+        last_disabled ? last_selected : -1,
+        group_y_stem_top, group_y1, ink_plate);
 }
 
 void render_phase_reset_flags(cairo_t* cr,
