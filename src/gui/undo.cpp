@@ -1,6 +1,8 @@
 #include "undo.h"
 
 #include "target_render.h"
+#include "warp_frame_map_view.h"  // source_frame_to_active_domain, for the
+                                  // offscreen-touched-marker viewport recenter
 
 #include <algorithm>
 #include <chrono>
@@ -163,10 +165,13 @@ namespace {
 // matches on the FULL row (every field, via !fields_differ). So a crossing drag
 // that reorders the store still flags only the changed row, and when one of two
 // exactly coincident markers is touched, the tie's moved member is still
-// identified. Undo/redo NEVER moves the playhead or recenters the viewport —
-// see the selection tail below.
+// identified. Undo/redo NEVER moves the playhead; it does scroll the viewport
+// so an offscreen touched marker becomes visible — see the selection tail below.
+// `audio` is needed there to translate the touched marker's source frame into
+// the active display domain for the visibility test.
 template <class M, class FieldsDiffer>
 void apply_post_restore_rules_impl(AppState& app,
+                                   const GuiAudio& audio,
                                    const UndoEntry& entry,
                                    const std::vector<M>& before,
                                    const std::vector<M>& after,
@@ -185,9 +190,10 @@ void apply_post_restore_rules_impl(AppState& app,
             }
         }
     } else if (after.size() < before.size()) {
-        // A removal leaves no touched row to select — clear the selection. No
-        // playhead move: undo/redo never touches the playhead or viewport
-        // (ruling in the selection tail below).
+        // A removal leaves no touched row to select — clear the selection.
+        // Nothing to show, so the viewport also stays put: the offscreen
+        // recenter in the selection tail below runs only when there is a
+        // surviving touched marker. The playhead never moves either.
         app.selected_markers.clear();
         app.last_selected_marker = -1;
         return;
@@ -233,9 +239,34 @@ void apply_post_restore_rules_impl(AppState& app,
     } else {
         app.last_selected_marker = *target_set.rbegin();
     }
-    // Undo/redo shows its target by SELECTING the touched set above — the
-    // playhead and viewport stay parked (the Ableton behavior). Only the Tab
-    // family and `c` land the playhead on a marker.
+
+    // Undo/redo shows its target: it SELECTS the touched set above, the entry's
+    // A/B tab was already restored before the swap (restore_history_entry), and
+    // here the viewport SCROLLS to bring the last-selected touched marker into
+    // view when — and only when — it is offscreen. An already-visible target is
+    // left exactly where it sits, so undo/redo of an in-view edit never jerks
+    // the viewport. The playhead NEVER moves: only the Tab family and `c` land
+    // the playhead on a marker (the Ableton behavior).
+    //
+    // The touched marker's time_frame is a whole SOURCE frame; the viewport
+    // lives in the active display domain (identity in source view, the target
+    // image in target view), so translate before comparing against the visible
+    // span [viewport_start, viewport_start + samples_visible). last_selected is
+    // an index in `after` (it came out of target_set, whose members index
+    // `after`), so this read is in-range.
+    const int64_t domain_frame = source_frame_to_active_domain(
+        app, audio, after[app.last_selected_marker].time_frame);
+    const int64_t visible = samples_visible(app, audio);
+    const int64_t start   = app.viewport_start_sample;
+    if (domain_frame < start || domain_frame >= start + visible) {
+        // Center on it, then re-establish the grid-snapped, clamped rest
+        // viewport through the one chokepoint. The waveform/timestamp
+        // invalidations and the sync kick this scroll needs are issued
+        // unconditionally by restore_history_entry after this call returns
+        // (they already fire for the marker change itself).
+        app.viewport_start_sample = domain_frame - visible / 2;
+        clamp_viewport_start(app, audio);
+    }
 }
 
 }  // namespace
@@ -243,7 +274,7 @@ void apply_post_restore_rules_impl(AppState& app,
 void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
                                          const std::vector<GuiWarpMarker>& before) {
     apply_post_restore_rules_impl(
-        app, entry, before, app.warpmarkers.markers(),
+        app, viewport.audio, entry, before, app.warpmarkers.markers(),
         [](const GuiWarpMarker& a, const GuiWarpMarker& b) {
             return a.time_frame     != b.time_frame
                 || a.disabled       != b.disabled
@@ -272,7 +303,7 @@ void Undo::apply_post_restore_rules_phase_reset(
         const UndoEntry& entry,
         const std::vector<GuiPhaseResetMarker>& before) {
     apply_post_restore_rules_impl(
-        app, entry, before, app.phaseresetmarkers.markers(),
+        app, viewport.audio, entry, before, app.phaseresetmarkers.markers(),
         [](const GuiPhaseResetMarker& a, const GuiPhaseResetMarker& b) {
             return a.time_frame != b.time_frame
                 || a.disabled   != b.disabled;
@@ -396,7 +427,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     viewport.invalidate_waveform_area();
     // One-shot discrete jump: undo/redo restored markers / phase resets /
     // settings, changing the displayed plate (the target-view warp_frame_map).
-    // The viewport stays parked — undo/redo never recenters. Render it
+    // The post-restore rules above may have scrolled the viewport to reveal an
+    // offscreen touched marker; these invalidations and the sync kick cover that
+    // scroll as well as the marker change (the playhead never moves). Render it
     // synchronously so the restored markers and the waveform land together. A
     // single keystroke, so bounded — the drag-time async-warp_frame_map policy is about
     // the marker-drag torrent, not discrete events. kick_waveform_sync's damage
