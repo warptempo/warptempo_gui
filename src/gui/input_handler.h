@@ -568,21 +568,13 @@ private:
     // returns true.
     bool adopt_render_entry(const AppState::RenderEntry& e);
 
-    // Bare x, context-aware: playhead exactly on either set bound or strictly
-    // inside a fully-set trim pair clears both bounds; anywhere else sets begin
-    // at the playhead and autosets end. Source-domain exact frame comparison
-    // (the walls'/load-guard's own compare); "inside" needs both bounds,
-    // strictly between. The sole dispatch entry for the x key; it calls
-    // handle_trim_set_begin_autoset / handle_trim_clear_both.
+    // Bare x is a pure trim on/off toggle (no context-awareness): a set trim
+    // (either bound) clears both bounds (off); an unset trim under a live
+    // region trims to it, begin at the span's lo, end at its hi (on), the
+    // region persisting through the toggle; unset with no region is a strict
+    // no-op. Read-only refuses both directions silently. The sole dispatch
+    // entry for the x key; the off branch calls handle_trim_clear_both.
     void handle_trim_x();
-
-    // Set the begin bound at the playhead (exact int64 frame) and autoset the
-    // end bound half of the visible span later. Only the autoset PARTNER (end)
-    // is placement-clamped to [0, live EOF] in the active domain — a choice of
-    // where to put the bound the user did not position, not a wall (see the
-    // definition in input_trim.cpp). Begin-only: handle_trim_x's set arm is the
-    // sole caller.
-    void handle_trim_set_begin_autoset();
 
     // Clear both trim bounds unconditionally. Silent no-op when neither bound
     // is set. The caller is handle_trim_x's clear arm.

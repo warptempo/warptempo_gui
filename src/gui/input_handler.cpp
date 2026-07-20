@@ -466,13 +466,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         viewport.zoom_out(); return;
     }
 
-    // x is context-aware: a live region trims to it (consuming the region);
-    // otherwise on or inside a set trim it clears both bounds, and elsewhere it
-    // sets begin at the playhead and autosets end half of the visible span away.
-    // Trim's pointer routes are the Alt press (single via a stem/chip hit, pair
-    // via a chip-row press strictly between the two bound columns); trim is
-    // outside the selection system, so there is no Delete arm. Plain Ctrl+x is
-    // cut (text_editor.cpp) and stays unbound here.
+    // x is a pure trim on/off toggle: a set trim (either bound) clears both
+    // bounds (off); an unset trim under a live region trims to it (on), the
+    // region persisting through the toggle; unset with no region is a no-op.
+    // The playhead plays no part. Trim's pointer routes are the Alt press
+    // (single via a stem/chip hit, pair via a chip-row press strictly between
+    // the two bound columns); trim is outside the selection system, so there is
+    // no Delete arm. Plain Ctrl+x is cut (text_editor.cpp) and stays unbound
+    // here.
     if (!ctrl && !shift && !alt && key == GuiKeys::X) {
         handle_trim_x();
         return;

@@ -625,11 +625,22 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         return;
     }
     if (app.region_drag.active) {
-        // The region is extended live during the drag (see on_motion); the
-        // release only ends the gesture. A sub-threshold press-release (never
-        // moved) leaves any existing region untouched — a click does not clear
-        // the region, and it did its press-time work already.
+        // The region is extended live during the drag (see on_motion); a drag
+        // that moved rests the region at its final extent. A MOTIONLESS
+        // press-release (never crossed the threshold) is a plain waveform click
+        // — this drag arms only on a plain, unmodified waveform press — and
+        // COLLAPSES a resting region: the click dissolves the highlight, the
+        // wash repainting away. Decided here at release, not at press: the
+        // press cannot yet know whether it becomes a click or a drag arm (and
+        // the Esc-restore snapshot in pre_region must keep capturing the
+        // pre-press region). The press already did its own press-time work
+        // (selection, playhead, reseek) regardless.
+        const bool moved = app.region_drag.moved;
         app.region_drag = RegionDragState{};
+        if (!moved && app.region.active) {
+            app.region = RegionState{};
+            viewport.invalidate_waveform_area();
+        }
         return;
     }
     if (app.trim_drag.active) {

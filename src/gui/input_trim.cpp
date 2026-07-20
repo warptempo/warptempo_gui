@@ -31,86 +31,6 @@
 // render time now means "render untrimmed" (do_render's fallback), not a
 // refused render.
 
-namespace {
-// x autoset places the far bound half of the visible span from the near bound:
-// samples_visible / kTrimAutosetVisibleDivisor. Independent of the wheel
-// divisor so the autoset span can be tuned on its own.
-constexpr int64_t kTrimAutosetVisibleDivisor = 2;
-}
-
-// Sets the begin bound at the playhead and autosets the end bound half of the
-// visible span LATER. Begin-only by construction: the sole caller is
-// handle_trim_x's set arm, which always places begin and pushes end later, so
-// there is no side parameter — the partner is always End.
-void GuiInputHandler::handle_trim_set_begin_autoset() {
-    if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
-
-    const int64_t cand_src =
-        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
-
-    // End is placed half the visible span LATER than begin.
-    const int64_t offset =
-        std::max<int64_t>(
-            1, samples_visible(app, audio) / kTrimAutosetVisibleDivisor);
-
-    // Absolute walls: both bounds clamp to frame EOF-1 (the unified authored
-    // domain [0, total-1]).
-    const int64_t total = audio.total_frames();
-    const int64_t begin_wall_frame = total - 1;
-    const int64_t end_wall_frame   = total - 1;
-
-    // Store the exact frame — trim bounds are whole source frames held in
-    // int64_t like marker positions; the .settings writer persists the exact
-    // value as integer text (frame_format.h), so a saved bound reloads
-    // bit-identically. The playhead is already an int64 frame, so the whole
-    // path is integer arithmetic — no double ever enters.
-    // Clamp begin to its own wall: the playhead normally sits inside the walls,
-    // so this is cheap insurance at the exact edge, keeping the autoset
-    // consistent with every other trim gesture.
-    int64_t begin_frame = cand_src;
-    if (begin_frame < 0)                begin_frame = 0;
-    if (begin_frame > begin_wall_frame) begin_frame = begin_wall_frame;
-    app.trim.begin_frame = begin_frame;
-    app.trim.has_begin   = true;
-
-    const int64_t begin_active =
-        source_frame_to_active_domain(app, audio, cand_src);
-    int64_t end_active = begin_active + offset;
-    // Partner (end) placement clamp: [0, end's own wall mapped through
-    // source_frame_to_active_domain] — the unified wall (frame EOF-1) every
-    // trim gesture holds. The mapping is monotone, so the active-domain clamp
-    // matches the source-domain wall.
-    const int64_t end_wall_active =
-        source_frame_to_active_domain(app, audio, end_wall_frame);
-    if (end_active < 0)               end_active = 0;
-    if (end_active > end_wall_active) end_active = end_wall_active;
-    app.trim.end_frame = active_domain_to_source_frame(app, audio, end_active);
-    app.trim.has_end   = true;
-
-    // Snap the playhead onto the frame of the begin bound just set at it. The
-    // bound stores an exact frame, so it can differ
-    // from the live playhead sample only in target view via the integer
-    // domain round trip. In target view the playback gate checks the
-    // playhead against playback's domain offset — this same begin mapped to
-    // target frames — so a playhead off the bound's frame can land a sample
-    // short of the buffer start (playback.domain_begin()) and Space no-ops.
-    // Playhead domain clamp through playhead_image_of_authored_frame (the
-    // domain ruling).
-    app.playhead_cursor_sample =
-        playhead_image_of_authored_frame(app, audio, app.trim.begin_frame);
-
-    // The autoset is a commit: the partner (end) clamp at the tail wall, or a
-    // target-view domain round-trip that compresses the offset below one
-    // source frame, can land the pair equal, and equal cannot rest. Runs before
-    // the invalidations below so the repaint shows the cleared state.
-    auto_clear_crossed_trim();
-
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
-    target_render.trigger();
-}
-
-
 // The clear-both field resets, shared verbatim by handle_trim_clear_both (the
 // x key's clear arm) and the crossed-commit auto-clear (auto_clear_crossed_trim)
 // so the two clears can never drift. Fields only: no invalidation, no trigger —
@@ -130,9 +50,9 @@ void GuiInputHandler::clear_trim_bounds() {
 // compare end_frame <= begin_frame, run only when both bounds are set, and
 // only at COMMIT — mid-gesture crossing stays free (nothing pops
 // mid-gesture; update_trim_drag never calls this). Every trim commit site —
-// the x autoset, the x region-consume, the Alt drag release, and
-// the settings-editor `:trim_*=` commit — calls this after its mutation and
-// before its invalidations, so the repaint shows the cleared state.
+// the x set-from-region, the Alt drag release, and the settings-editor
+// `:trim_*=` commit — calls this after its mutation and before its
+// invalidations, so the repaint shows the cleared state.
 void GuiInputHandler::auto_clear_crossed_trim() {
     if (app.trim.has_begin && app.trim.has_end &&
         app.trim.end_frame <= app.trim.begin_frame) {
@@ -152,88 +72,63 @@ void GuiInputHandler::handle_trim_clear_both() {
     }
 }
 
-// Bare x, context-aware. A LIVE region (the drag-painted span, active-domain
-// frames) OUTRANKS every positional rule below: x trims to the region and
-// CONSUMES it — begin at the span's lo, end at its hi, the trim wash/chips
-// taking over as the visual. The endpoints inverse-map to source frames through
+// Bare x is a pure trim on/off toggle (the Ableton loop-toggle model), with no
+// context-awareness: the playhead plays no part, and there are no positional
+// rules. A SET trim (either bound) turns OFF — x clears both bounds. An UNSET
+// trim turns ON from a live region (the drag-painted span, active-domain
+// frames): begin at the span's lo, end at its hi. Unset with NO region → a
+// strict no-op. The region is NOT consumed: it persists through the toggle, so
+// x-off then x-on re-trims from the same highlight (the highlight outlives the
+// toggle — a plain motionless waveform click is what collapses it, at
+// on_button_release). Read-only refuses BOTH directions silently (trim
+// authoring), leaving the region untouched.
+//
+// Set-from-region: normalize the span at read time (endpoints rest in drag
+// order), inverse-map each active-domain endpoint to a source frame through
 // active_domain_to_source_frame (identity in source view, the target-view
 // inverse the trim gestures already use, funnelling through snap_authored_frame
-// once), then clamp to the shared [0, total-1] walls. A span collapsing to
-// end <= begin after the snap destroys both bounds via auto_clear_crossed_trim
-// (the standing rule); the region still clears (the consume happened). A
-// read-only tab refuses silently WITHOUT consuming — nothing happened. With no
-// region, x keeps its context-aware behavior below.
-//
-// Playhead exactly on either set bound, or strictly
-// inside a fully-set trim pair, clears both bounds; anywhere else sets begin at
-// the playhead and autosets end. The coincidence test compares the playhead
-// against each bound's playhead_image_of_authored_frame — exactly the value
-// landing on a bound assigns the playhead (Home/End are the keyboard routes,
-// clicking the bound's column the pointer route; bounds are not Tab stops) —
-// because the forward/inverse pair is not a round trip on compressed target
-// segments, so "on the bound" means "at the position landing on the bound puts
-// the playhead", reachable by construction. The inside test uses the
-// UNCLAMPED images (strict betweenness; the edges belong to the coincidence
-// arm), needs BOTH bounds (an area). In source view the forward map is
-// identity, so the begin compare is the exact integer compare. A single set
-// bound clears only by that coincidence, any other position autosets over it.
-// Clearing routes through handle_trim_clear_both so the one clear+repaint tail
-// is shared.
+// once) — the map is monotone, so lo/hi order survives — then clamp to the
+// shared [0, total-1] walls. A span collapsing to end <= begin after the snap
+// destroys both bounds via auto_clear_crossed_trim (the standing rule); the
+// region survives that too. The shared trim commit tail (auto_clear_crossed_trim
+// then the repaint/trigger) mirrors the other trim commits; the playhead is
+// untouched (trim gestures never move it). The OFF branch routes through
+// handle_trim_clear_both so the one clear+repaint tail is shared.
 void GuiInputHandler::handle_trim_x() {
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
+    // Both toggle directions are trim authoring: read-only refuses silently,
+    // and a resting region is left as it is.
+    if (active_view_state(app).read_only) return;
 
-    if (app.region.active) {
-        // Read-only refuses like every trim gesture: silent, and the region
-        // survives (nothing happened).
-        if (active_view_state(app).read_only) return;
-        // Normalize the span at read time (endpoints rest in drag order), map
-        // each active-domain endpoint to a source frame — the map is monotone,
-        // so lo/hi order survives the inverse — and clamp to the walls.
-        const int64_t lo_active = std::min(app.region.a_frame, app.region.b_frame);
-        const int64_t hi_active = std::max(app.region.a_frame, app.region.b_frame);
-        const int64_t wall = audio.total_frames() - 1;
-        int64_t begin = active_domain_to_source_frame(app, audio, lo_active);
-        int64_t end   = active_domain_to_source_frame(app, audio, hi_active);
-        if (begin < 0)    begin = 0;
-        if (begin > wall) begin = wall;
-        if (end < 0)      end = 0;
-        if (end > wall)   end = wall;
-        app.trim.begin_frame = begin;
-        app.trim.has_begin   = true;
-        app.trim.end_frame   = end;
-        app.trim.has_end     = true;
-        // Consume the region: the trim chips/wash are now the visual. The
-        // consume happens even when the snap collapses the pair (cleared
-        // below) — the region is spent either way.
-        app.region = RegionState{};
-        // The shared trim commit tail (auto_clear_crossed_trim then the
-        // repaint/trigger), mirroring the autoset; the playhead is untouched
-        // (trim gestures never move it).
-        auto_clear_crossed_trim();
-        viewport.invalidate_waveform_area();
-        viewport.invalidate_timestamp_area();
-        target_render.trigger();
+    // OFF: any set bound clears both. handle_trim_clear_both owns the
+    // has_begin||has_end guard and the repaint/trigger tail.
+    if (app.trim.has_begin || app.trim.has_end) {
+        handle_trim_clear_both();
         return;
     }
 
-    const int64_t ph = app.playhead_cursor_sample;
-    int64_t begin_active = 0, end_active = 0;
-    if (app.trim.has_begin)
-        begin_active = source_frame_to_active_domain(app, audio,
-                                                     app.trim.begin_frame);
-    if (app.trim.has_end)
-        end_active = source_frame_to_active_domain(app, audio,
-                                                   app.trim.end_frame);
-    const bool on_bound =
-        (app.trim.has_begin &&
-         ph == playhead_image_of_authored_frame(app, audio, app.trim.begin_frame)) ||
-        (app.trim.has_end &&
-         ph == playhead_image_of_authored_frame(app, audio, app.trim.end_frame));
-    const bool inside =
-        app.trim.has_begin && app.trim.has_end &&
-        ph > begin_active && ph < end_active;
-    if (on_bound || inside) { handle_trim_clear_both(); return; }
-    handle_trim_set_begin_autoset();
+    // ON: an unset trim under a live region trims to it; no region → no-op.
+    if (!app.region.active) return;
+
+    const int64_t lo_active = std::min(app.region.a_frame, app.region.b_frame);
+    const int64_t hi_active = std::max(app.region.a_frame, app.region.b_frame);
+    const int64_t wall = audio.total_frames() - 1;
+    int64_t begin = active_domain_to_source_frame(app, audio, lo_active);
+    int64_t end   = active_domain_to_source_frame(app, audio, hi_active);
+    if (begin < 0)    begin = 0;
+    if (begin > wall) begin = wall;
+    if (end < 0)      end = 0;
+    if (end > wall)   end = wall;
+    app.trim.begin_frame = begin;
+    app.trim.has_begin   = true;
+    app.trim.end_frame   = end;
+    app.trim.has_end     = true;
+    // The region is deliberately NOT cleared here — it persists through the
+    // toggle so x-off then x-on re-trims from the same highlight.
+    auto_clear_crossed_trim();
+    viewport.invalidate_waveform_area();
+    viewport.invalidate_timestamp_area();
+    target_render.trigger();
 }
 
 // --- Trim boundary mouse gestures ---------------------------------------
@@ -262,7 +157,7 @@ bool GuiInputHandler::trim_mouse_x_to_source_frame(int mouse_x,
 
     // Target view: the cursor column is an active-domain frame; the trim
     // store is source-domain. Inverse-translate at the boundary, mirroring
-    // handle_trim_set_begin_autoset.
+    // handle_trim_x's set-from-region inverse.
     const int64_t src_frame =
         active_domain_to_source_frame(app, audio, domain_frame);
     out_frame = static_cast<double>(src_frame);

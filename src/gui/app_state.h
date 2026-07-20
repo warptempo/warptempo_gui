@@ -303,14 +303,18 @@ struct UndoHistory {
 };
 
 // Session-only region selection — an Ableton-style arrangement span the user
-// paints by dragging on the waveform, consumed later by the trim hotkey. NEVER
-// serialized, and outside the selection and undo systems entirely (a transient
-// visual). Endpoints are ACTIVE-DOMAIN frames (source frames in source view,
-// target frames in target view), stored in drag order and normalized lo/hi at
-// READ time, so the span survives pan/zoom mid-drag and at rest. Cleared on
-// file load, the A/B tab switch, the S/T audio-view switch (the domain changes
-// under it), and Esc (only when nothing higher-priority consumes the Esc). The
-// W/P marker-column switch does NOT clear it — the region is not marker-related.
+// paints by dragging on the waveform, used later by the trim on-toggle (bare
+// x). The x toggle trims to the region but does NOT consume it: the highlight
+// persists through the toggle, so x-off then x-on re-trims from the same span
+// (the Ableton loop-toggle model). NEVER serialized, and outside the selection
+// and undo systems entirely (a transient visual). Endpoints are ACTIVE-DOMAIN
+// frames (source frames in source view, target frames in target view), stored
+// in drag order and normalized lo/hi at READ time, so the span survives
+// pan/zoom mid-drag and at rest. Cleared on file load, the A/B tab switch, the
+// S/T audio-view switch (the domain changes under it), Esc (only when nothing
+// higher-priority consumes the Esc), and a motionless plain waveform click (the
+// click dissolves the highlight; at on_button_release). The W/P marker-column
+// switch does NOT clear it — the region is not marker-related.
 struct RegionState {
     bool    active  = false;
     int64_t a_frame = 0;   // the press-anchor endpoint
@@ -322,12 +326,14 @@ struct RegionState {
 // playhead placement, live-playback reseek) and arms this drag; motion past
 // the shared press-becomes-drag threshold (kDragMovedThresholdPx) extends
 // app.region from the press frame to the pointer column. Below the threshold
-// nothing extra happens — the press already did the click, and a sub-threshold
-// press-release leaves any existing region untouched (a click does not clear
-// the region). Only a plain press arms (a Shift press is a click). A completed
-// drag rests the region on release; Esc cancels a live drag and restores the
-// pre-drag region captured here at arm (the marker drag's snapshot pattern —
-// cheap, two ints). Session-only, never undoable.
+// the press did its press-time work already, and a sub-threshold press-release
+// COLLAPSES a resting region (a plain waveform click dissolves the highlight;
+// decided at on_button_release, not press). Only a plain, unmodified waveform
+// press arms (a Shift press is a click, Alt/Ctrl no-op earlier), so an armed
+// drag always signals a plain waveform press. A completed drag rests the region
+// on release; Esc cancels a live drag and restores the pre-drag region captured
+// here at arm (the marker drag's snapshot pattern — cheap, two ints).
+// Session-only, never undoable.
 struct RegionDragState {
     bool    active       = false;
     bool    moved        = false;  // crossed the threshold into a real drag
