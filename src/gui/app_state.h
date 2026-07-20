@@ -431,91 +431,52 @@ struct TrimDragState {
     int64_t anchor_active_frame  = 0;
 };
 
-// Which axis a zoom-row strip drag is locked to for the current MOTION PHASE.
-// The lock commits to ONE axis (the hand cannot hold a pure horizontal or
-// vertical line, and diagonal composition tested poorly): at the crossing the
-// greater accumulated |dx| vs |dy| since the press decides. Pan-locked pins the
-// level and only pans (the pan row is always this); Zoom-locked tracks vertical
-// motion and ignores horizontal motion (zoom row only). The lock is NOT fixed
-// for the drag's whole life — a motion STALL (kAxisRelockMs quiet gap, button
-// held) releases it and the next accumulation re-locks from its dominant axis,
-// so the user can switch axes without re-clicking (zoom row only; the pan row
-// never re-arms). Undetermined until the crossing (defaults Pan, which applies
-// nothing before the drag moves).
-enum class StripDragAxis { Pan, Zoom };
-
-// Plain left-drag on a live strip row (Ableton-style navigation). ONE fixed
-// song anchor (captured under press_x at the press) drives the locked axis: a
-// pan-locked drag is an incremental grab-pan (the anchor drifts across the
-// screen), a zoom-locked drag zooms around wherever that anchored song position
-// currently sits — the song-anchored, Ableton semantic. The drag locks to a
-// single axis at the crossing (see StripDragAxis / locked_axis) rather than
-// composing pan and zoom diagonally. Navigation-class: never touches the
+// Plain left-drag on the live zoom-strip row (Ableton-style navigation). The
+// row is ZOOM-ONLY: one fixed song anchor (the frame painted under press_x,
+// captured at the press) stays pinned to its press column for the whole drag,
+// and vertical motion drives the zoom level so the view expands/contracts
+// around that anchored song position. Horizontal motion is IGNORED (pan lives
+// on the Alt+drag waveform grab, not here). Navigation-class: never touches the
 // playhead or selection, allowed in read-only, does not toggle or override
 // follow. Cleared on button release / button-lost and on file load; no
 // Esc-restore (nothing to revert).
 struct StripDragState {
     bool   active    = false;
-    // True once any motion event has applied a viewport/level change. A
-    // motionless press-release must commit nothing, so the terminating event
-    // finalizes (one final apply + synchronous rebuild) only when this is set.
+    // True once any motion event has applied a zoom change. A motionless
+    // press-release must commit nothing, so the terminating event finalizes
+    // (one final apply + synchronous rebuild) only when this is set.
     bool   moved     = false;
-    // True for the top zoom row (vertical motion CAN change the level, if the
-    // drag locks to the zoom axis); false for the bottom pan row (always
-    // pan-locked, the level pinned for the whole drag).
-    bool   zoom_axis = false;
-    // The axis this drag is locked to for the CURRENT motion phase (not fixed
-    // for the drag's whole life — a stall re-arms it; see last_motion_ms /
-    // relocking). Undetermined (defaults Pan, harmless — nothing applies before
-    // the crossing) until moved latches. The pan row always locks Pan; the zoom
-    // row locks Zoom when the accumulation is vertical-dominant (a tie included,
-    // zoom being the row's headline act), else Pan.
-    StripDragAxis locked_axis = StripDragAxis::Pan;
-    // Pointer position at the press (window px).
+    // Pointer position at the press (window px). press_y is the zoom reference —
+    // the level tracks the absolute dy since press_y. press_x is the
+    // drag-threshold reference (the Chebyshev gate deciding press-becomes-drag)
+    // AND the fixed screen column the anchor stays pinned to: the zoom is
+    // song-anchored, but with no pan the anchor never leaves press_x.
     int    press_y   = 0;
-    // The press column (window px). Used only as the drag-threshold reference
-    // (the Chebyshev gate that decides press-becomes-drag) and to seed
-    // anchor_sample / last_x at the claim. The zoom is SONG-anchored, not
-    // pinned to this column: the anchor drifts across the screen with the pan
-    // (Ableton), so press_x plays no part in the mid-drag anchor math.
     int    press_x   = 0;
-    // The previous motion event's x (window px), seeded to press_x at the
-    // claim. A pan-locked drag reads dx = x - last_x each event as its pan
-    // increment; a zoom-locked drag ignores horizontal motion entirely.
-    int    last_x    = 0;
-    // Continuous zoom level at the press — always app.zoom_level verbatim, on
-    // both the zoom and pan rows. The zoom row walks the one continuous domain
-    // from wherever the level rests; the pan row never changes it.
+    // Continuous zoom level at the press — app.zoom_level verbatim. The drag
+    // walks the one continuous domain from wherever the level rests.
     double press_level = 0.0;
     // Song position (frames, double) painted under press_x at the press, FIXED
-    // for the whole drag — never re-derived. It DRIFTS across the screen as the
-    // pan moves the viewport, and a zoom pivots around wherever it currently
-    // sits (the song-anchored, Ableton semantic).
+    // for the whole drag — the anchor the zoom pivots around.
     double anchor_sample = 0.0;
-    // Axis-lock STALL/RE-ARM tracking (zoom row only — the pan row never
-    // re-arms). The axis lock is per-MOTION-PHASE: a quiet gap of at least
-    // kAxisRelockMs with the button still held releases it so the user can
-    // switch pan/zoom axis mid-drag without re-clicking.
-    //
-    // CLOCK_MONOTONIC ms of the last motion delivery; the next motion event
-    // arriving more than kAxisRelockMs later re-arms the lock. 0 until the first
-    // post-crossing motion delivery.
-    int64_t last_motion_ms = 0;
-    // True while a re-armed lock is accumulating motion from (lock_ref_x,
-    // lock_ref_y) toward the threshold: the drag holds still (no pan/zoom
-    // applies) until the accumulation crosses kDragMovedThresholdPx, then the
-    // dominant axis re-locks and this clears.
-    bool   relocking = false;
-    // The pointer position (window px) the current relock accumulates from —
-    // reset to the pointer position at each detected stall.
-    int    lock_ref_x = 0;
-    int    lock_ref_y = 0;
 };
 
-// Double-click detection on the ZOOM row only (Wayland delivers no
+// Alt+drag on the waveform: continuous 1:1 grab-pan of the viewport, driven by
+// pointer motion, panning by the exact per-event pixel delta. Navigation-class:
+// allowed in read-only, deliberately does NOT override follow, no pointer
+// capture (absolute motion, the viewport walls clamp naturally), never touches
+// the playhead or selection. Cleared on button release / lost button, on
+// Escape/close (cancel_active_drags), and on file load; no Esc-restore.
+struct ScrollDragState {
+    bool   active   = false;
+    // Pointer x (px) at the previous motion event, seeded at the Alt press.
+    int    last_x   = 0;
+};
+
+// Double-click detection on the zoom-strip row (Wayland delivers no
 // double-click event, so it is hand-rolled from two motionless plain clicks).
-// The pan row has no double-click. A motionless ZOOM-ROW drag records this
-// candidate at its release; the NEXT plain zoom-row press, if it lands within
+// A motionless ZOOM-ROW drag records this candidate at its release; the NEXT
+// plain zoom-row press, if it lands within
 // kDoubleClickMs and kDoubleClickSlackPx of the recorded x, is consumed as the
 // zoom toggle instead of arming a drag. A drag that MOVED records nothing and
 // clears any candidate. Cleared on file load beside strip_drag, and the moment
@@ -532,15 +493,6 @@ struct StripDoubleClickCandidate {
 constexpr int64_t kDoubleClickMs      = 500;
 constexpr int     kDoubleClickSlackPx = 8;
 
-// Motion-stall gap that RE-ARMS a zoom-row strip drag's axis lock
-// (architect-tunable). Once a drag has locked to pan or zoom, a quiet gap of
-// more than this long between motion deliveries — the button still held —
-// releases the lock; the next kDragMovedThresholdPx of accumulated motion
-// re-locks from its dominant axis (tie -> zoom), so the user can switch axes
-// mid-drag without re-clicking. The pan row never re-arms (it has no axis
-// choice).
-constexpr int64_t kAxisRelockMs       = 180;
-
 // Chebyshev pixel distance a press must travel before it becomes a DRAG
 // (architect-tunable), shared by two consumers. On the strip rows: under
 // pointer capture the relative-pointer stream delivers every sub-pixel sensor
@@ -551,10 +503,8 @@ constexpr int64_t kAxisRelockMs       = 180;
 // playhead placement. Both use the same latch shape — a motion event below the
 // threshold is ignored outright (moved stays false, no apply, the drag stays
 // armed); once a drag, always a drag, so dragging back near the anchor has no
-// dead zone. For the strip drag the first event AT the threshold folds the
-// whole accumulated dx because last_x still sits at press_x, and the zoom axis
-// reads absolute dy regardless — so the catch-up jump never exceeds the real
-// hand motion.
+// dead zone. The zoom-strip drag reads the absolute dy since press_y regardless
+// of when it crosses, so the catch-up jump never exceeds the real hand motion.
 constexpr int     kDragMovedThresholdPx = 3;
 
 // Hover popup state. A popup-eligible warp marker (pass marker or
@@ -928,6 +878,10 @@ struct AppState {
     // fires.
     StripDoubleClickCandidate strip_double_click;
 
+    // Alt+drag on the waveform (continuous 1:1 grab-pan). Cleared on button
+    // release / lost button, Escape (cancel_active_drags), and file load.
+    ScrollDragState scroll_drag;
+
     // Mouse drag-to-select inside the active text editor. Cleared on
     // button release, on a lost button mid-drag, and on file load.
     EditorTextDragState editor_text_drag;
@@ -1221,9 +1175,9 @@ inline int64_t snap_authored_frame(double frame) {
 // press before the drag begins.
 inline bool any_pointer_gesture_active(const AppState& app) {
     return app.drag.active || app.trim_drag.active ||
-           app.strip_drag.active || app.region_drag.active ||
-           app.editor_text_drag.active || app.pending_marker_drag.active ||
-           app.pending_trim_drag.active;
+           app.strip_drag.active || app.scroll_drag.active ||
+           app.region_drag.active || app.editor_text_drag.active ||
+           app.pending_marker_drag.active || app.pending_trim_drag.active;
 }
 
 // SelectionSnapshot movers: capture the live marker selection at drag begin,

@@ -526,7 +526,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // context). (The hover readout moved off this row to the marker-text lane —
     // paint_marker_text_lane.) Each row's baseline is derived from its row rect, not
     // from the window bottom. (The former pan-strip row retired — pan lives on
-    // the axis-locked top zoom row.)
+    // the Alt+drag waveform grab.)
     const GuiRect lower_row = bottom_lower_row_area(app);
     const GuiRect upper_row = bottom_upper_row_area(app);
 

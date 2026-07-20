@@ -571,14 +571,15 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
 // drifts.
 void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
                                                bool synchronous) {
-    // The mid-gesture guarantee (synchronous mode, the strip drag): no frame
-    // this event paints shows the plate from a basis older than the viewport.
-    // Every path that would otherwise leave the frame on a stale-basis plate —
-    // a busy worker, or a non-shift precondition failure — is resolved in-frame
-    // (drain-and-proceed, or a full synchronous rebuild) rather than deferred to
-    // the async worker. The async caller class (wheel pan, PageUp/PageDown) keeps
-    // the worker/enqueue fallbacks: those gestures are not the live-basis-overlay
-    // ride the strip drag is, and the on_tick backstop covers their drift.
+    // The mid-gesture guarantee (synchronous mode, the Alt+drag grab-pan): no
+    // frame this event paints shows the plate from a basis older than the
+    // viewport. Every path that would otherwise leave the frame on a stale-basis
+    // plate — a busy worker, or a non-shift precondition failure — is resolved
+    // in-frame (drain-and-proceed, or a full synchronous rebuild) rather than
+    // deferred to the async worker. The async caller class (wheel pan,
+    // PageUp/PageDown) keeps the worker/enqueue fallbacks: those gestures are not
+    // the live-basis-overlay ride the grab-pan is, and the on_tick backstop
+    // covers their drift.
     auto fall_back = [&]() {
         if (synchronous) force_synchronous_waveform_rebuild();
         else             maybe_enqueue_waveform_render();

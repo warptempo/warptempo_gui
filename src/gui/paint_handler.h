@@ -387,8 +387,8 @@ struct GuiPaintHandler {
     // PageUp/PageDown steps in scroll_viewport), every case that is not a clean
     // translate of the current plate — no plate, worker busy, drag, resize,
     // view/warp_frame_map change — defers to the async worker, and the on_tick
-    // backstop catches residual drift. When true (the strip drag's
-    // level-unchanged branch), the mid-gesture frame must never paint over a
+    // backstop catches residual drift. When true (the Alt+drag grab-pan, through
+    // scroll_viewport), the mid-gesture frame must never paint over a
     // stale-basis plate: a busy worker is DRAINED (wait_until_idle) rather than
     // deferred to, then the shift proceeds against the drained state, and every
     // remaining non-shift case falls back to force_synchronous_waveform_rebuild

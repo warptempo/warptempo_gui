@@ -231,6 +231,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.pending_trim_drag = PendingTrimDrag{};
     app.trim_drag = TrimDragState{};
     app.strip_drag = StripDragState{};
+    app.scroll_drag = ScrollDragState{};
     app.strip_double_click = StripDoubleClickCandidate{};
     // (The displayed hit map AND the resting selection region are cleared in
     // apply_settings_engine_and_prefs, the shared load+adopt view-establishment

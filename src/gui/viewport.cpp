@@ -241,6 +241,13 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
                                      double anchor_x, bool final) {
     if (audio.total_frames() <= 0) return;
 
+    // Mid-gesture wall-saturated NO-OP: the drag is zoom-only and song-anchored
+    // (no pan), so when the level does not change this frame the viewport would
+    // re-place to the identical start — nothing moves. Skip the apply and every
+    // invalidation rather than repaint an identical frame. The terminating event
+    // (final) still runs so the rest state re-anchors the predictor.
+    if (!final && new_zoom_level == app.zoom_level) return;
+
     // Capture the scanner's pre-reflow pixel-x under the OLD viewport (as
     // apply_zoom_change does) so the next pre-paint damages the actually-painted
     // column instead of leaving a ghost when the level changes under playback.
@@ -248,22 +255,14 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
         app.playhead_scanner_old_px_stash = scanner_pixel_x(app, audio);
     }
 
-    // The level applied by the previous event (or seeded at the press) — the
-    // basis for the mid-gesture repaint-path choice below. Captured before the
-    // assignment; clamp_viewport_start may re-clamp app.zoom_level, so the
-    // "did the level change this frame" test compares against the POST-clamp
-    // value at the tail.
-    const double prev_applied_level = app.zoom_level;
-
     app.zoom_level = new_zoom_level;
 
     // Place the song position at anchor_x: pick the viewport start that paints
-    // anchor_sample at that (drifted, fractional) screen column, at the
-    // (possibly new) level. current_samples_per_pixel reads the level just
-    // assigned, so this is spp(new_level). At the effective ceiling the anchor
-    // cannot pin a column
+    // anchor_sample at that fixed press column, at the new level.
+    // current_samples_per_pixel reads the level just assigned, so this is
+    // spp(new_level). At the effective ceiling the anchor cannot pin a column
     // (the whole song is visible); clamp_viewport_start's visible >= total
-    // branch parks the start at 0 and the drag is inert on this axis.
+    // branch parks the start at 0 and the drag is inert.
     const double spp = current_samples_per_pixel(app, audio);
     app.viewport_start_sample = static_cast<int64_t>(std::nearbyint(
         anchor_sample - anchor_x * spp));
@@ -278,51 +277,16 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // Rects shifted under the (possibly stationary) cursor — re-evaluate hover.
     recompute_hover_at_cursor();
 
-    if (final) {
-        // The rest state: re-anchor the playback predictor once (like the
-        // continuous pan's release) and render the plate synchronously so the
-        // overlays cannot sit a frame ahead of the waveform.
-        if (playback.is_playing()) playback.resync_predictor();
-        kick_waveform_sync();
-    } else {
-        // Mid-gesture repaint is SYNCHRONOUS, path chosen by what changed this
-        // frame. No per-event predictor resync (it keeps extrapolating smoothly
-        // for the drag's duration, re-anchored once at the final event).
-        //
-        // The phase-1 design rode the async supersede slot per motion event on
-        // the theory that a synchronous repaint per relative-motion tick was
-        // unaffordable under a 500-1000 Hz mouse. labwc testing then showed the
-        // plate visibly HITCHING and "catching up" in bursts against the
-        // live-basis overlays (out-of-trim dim, region wash) that move every
-        // frame — the plate advanced only at worker-completion cadence, each
-        // completion already outdated. Two changes made the synchronous repaint
-        // affordable and are what this reversal rests on: the platform now
-        // COALESCES captured relative motion to at most one on_motion per
-        // pointer frame (so this runs at most once per frame, not per sensor
-        // tick), and force_synchronous_waveform_rebuild rebuilds the stem/flag
-        // caches inline. The async slot returns to the worker/preview system it
-        // was built for; strip drags no longer touch it mid-gesture.
-        if (app.zoom_level == prev_applied_level) {
-            // Level unchanged this frame (every pan-row event; a zoom-row event
-            // with pure horizontal motion, or one saturated at a wall): pure
-            // horizontal pan, so drive the incremental shift-and-strip fast path
-            // in SYNCHRONOUS mode (memmove + dx-strip render + inline stem/flag
-            // rebuilds). Synchronous here is the mid-gesture coherence guarantee:
-            // a busy worker (a recent load / edit / follow update still
-            // rendering) is drained rather than deferred to, so this frame never
-            // advances the live viewport over a stale-basis plate — the desync
-            // this arc removed. It still falls back to a full synchronous render
-            // on a too-large delta (the fast-flick valve). Pass the post-clamp
-            // viewport start.
-            kick_waveform_pan(app.viewport_start_sample, /*synchronous=*/true);
-        } else {
-            // Level changed this frame: the whole plate rescales, so a full
-            // synchronous rebuild is unavoidable — the exact cost a keyboard
-            // zoom already pays per press, now capped at once per pointer frame
-            // by the platform's per-frame motion coalescing.
-            kick_waveform_sync();
-        }
-    }
+    // Rest state (final) re-anchors the playback predictor once, like the
+    // continuous pan's release; mid-gesture events do NOT resync (the predictor
+    // keeps extrapolating smoothly for the drag's duration). Either way the plate
+    // is rendered SYNCHRONOUSLY: a level-changed frame rescales the whole plate,
+    // so a full synchronous rebuild is unavoidable — the exact cost a keyboard
+    // zoom already pays per press, now capped at once per pointer frame by the
+    // platform's per-frame motion coalescing. (A level-UNCHANGED mid-gesture
+    // frame never reaches here — the wall-saturated no-op returned at the top.)
+    if (final && playback.is_playing()) playback.resync_predictor();
+    kick_waveform_sync();
 }
 
 void Viewport::zoom_in() {
@@ -378,7 +342,8 @@ void Viewport::zoom_steps(int in_steps) {
     apply_zoom_change(target);
 }
 
-void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
+void Viewport::scroll_viewport(int64_t delta_samples, bool continuous,
+                               bool synchronous) {
     if (audio.total_frames() <= 0) return;
     const int64_t old_vp = app.viewport_start_sample;
     app.viewport_start_sample += delta_samples;
@@ -404,8 +369,11 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
         // pure horizontal pan, so drive the incremental shift-and-strip
         // fast-path rather than a full worker re-render — this is what keeps
         // fast touchpad scroll continuous instead of leaping. Pass the
-        // post-clamp viewport start.
-        kick_waveform_pan(app.viewport_start_sample);
+        // post-clamp viewport start. `synchronous` selects the pan driver: the
+        // Alt+drag grab-pan passes true so a busy worker is DRAINED (never a
+        // mid-gesture frame over a stale-basis plate); the discrete pans
+        // (Alt+wheel, PageUp/PageDown) keep the default async routing.
+        kick_waveform_pan(app.viewport_start_sample, synchronous);
     }
 }
 
@@ -493,8 +461,8 @@ void Viewport::clear_hover_popup() {
 // hover-popup implementation: on_motion's no-gesture path delegates here, and
 // viewport mutations (zoom, scroll, center, playhead-driven viewport shift)
 // call it so a stationary cursor's hover state tracks the rects that just slid
-// under it. Suppression set: prompt, any_pointer_gesture_active (the five
-// pointer drags), the three text editors, render queue, non-warp marker view,
+// under it. Suppression set: prompt, any_pointer_gesture_active (the pointer
+// drags), the three text editors, render queue, non-warp marker view,
 // and iter mode — each clears the popup.
 void Viewport::recompute_hover_at_cursor() {
     if (app.last_mouse_x < 0 || app.last_mouse_y < 0) return;

@@ -87,10 +87,10 @@ public:
 
     // Strip-drag pointer capture (Ableton-style): hide and lock the cursor at
     // the press position, feed subsequent relative-pointer motion into the
-    // gesture as UNBOUNDED virtual coordinates so pan/zoom travel is infinite,
+    // gesture as UNBOUNDED virtual coordinates so zoom travel is infinite,
     // and reappear the cursor at the press position on release. Wired from
     // main.cpp into the input handler's strip-drag begin/end hooks; only the
-    // two strip rows call them. Both degrade to a silent no-op when the
+    // zoom-strip row calls them. Both degrade to a silent no-op when the
     // compositor advertises neither pointer-constraints nor relative-pointer
     // (the gesture then runs with clamped absolute motion, exactly as before).
     // begin is a guarded no-op when a capture is already active; end is
