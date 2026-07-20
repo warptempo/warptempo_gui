@@ -185,10 +185,15 @@ GuiRect waveform_area(const AppState& a) {
     // exceeding the window width, leaving a <=15 px inert right gutter. The
     // step is 16 = 1600/gcd(44100,1600), the strictest step among standard
     // sample rates (every standard rate's step divides 16), so at a
-    // multiple-of-16 width p·W is integral at every numeric zoom and painter
-    // samples-per-pixel equals the logical spp exactly — the grid the pixel-
-    // anchored commits and the migration tool both target. A gutter appears
-    // only at a non-multiple-of-16 width (never at 1920/2560/3840).
+    // multiple-of-16 width logical_spp·W is integral at every INTEGER zoom
+    // rung and painter samples-per-pixel equals the logical spp exactly there
+    // — the grid the pixel-anchored commits and the migration tool both
+    // target. A fractional rung (the continuous strip-drag zoom) has no such
+    // integral guarantee; painter_samples_per_pixel rides its own
+    // nearbyint(spp·W)/W quantization instead, so the authoring-grid
+    // bit-exactness claim above is scoped to the integer rungs, notably the
+    // working zoom. A gutter appears only at a non-multiple-of-16 width
+    // (never at 1920/2560/3840).
     constexpr int kGridStepPx = 16;
     const int effective_w = w - (w % kGridStepPx);
     return GuiRect{0, sh, effective_w, h - 2 * sh};
@@ -225,9 +230,9 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 }
 
 // Top strip rows, counted down from the window top (index 0 = the window edge).
-// Row 0 is the new zoom-strip row (inert paint surface, at the window edge);
-// row 1 is the b/e trim-flag chip row; row 2 (implicit, placed via
-// flag_chip_bottom_y anchored at waveform_area.y) is the regular
+// Row 0 is the zoom-strip row (a live drag surface painted as an empty ring,
+// at the window edge); row 1 is the b/e trim-flag chip row; row 2 (implicit,
+// placed via flag_chip_bottom_y anchored at waveform_area.y) is the regular
 // warp/phase-reset flag chip row, whose bottom edge is flush with the waveform
 // area top.
 GuiRect top_zoom_row_area(const AppState& a) {
@@ -241,8 +246,8 @@ GuiRect top_upper_row_area(const AppState& a) {
 // Bottom strip rows, counted up from the window bottom (index 0 = the window
 // edge). bottom_lower_row (outer, index 0) carries the always-on status line;
 // bottom_upper_row (inner, index 1) carries the modal/editor/queue/hover chain;
-// bottom_pan_row (innermost, index 2, nearest the waveform) is the new
-// pan-strip row (inert paint surface).
+// bottom_pan_row (innermost, index 2, nearest the waveform) is the
+// pan-strip row (a live drag surface painted as an empty ring).
 GuiRect bottom_upper_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/false, 1);
 }
@@ -480,8 +485,8 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     return GuiRect{x0, y0, x1 - x0, y1 - y0};
 }
 
-// The status line, the transient/modal chain, and the inert pan-strip row
-// occupy the three rows of the bottom strip, so the invalidation region is the
+// The status line, the transient/modal chain, and the pan-strip row occupy
+// the three rows of the bottom strip, so the invalidation region is the
 // whole bottom strip rect (all rows repaint together).
 GuiRect timestamp_invalidate_rect(const AppState& a) {
     return bottom_strip_area(a);
