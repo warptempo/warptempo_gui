@@ -672,11 +672,15 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         viewport.clear_hover_popup();
         return;
     }
-    // Strip-row zoom/pan drag with decoupled axes: zoom is anchored to the
-    // FIXED press column while pan shifts what song content sits there. The top
-    // zoom row zooms around that fixed column from vertical motion; the bottom
-    // pan row keeps the level fixed and only pans. Every motion event re-derives
-    // the level (zoom row) and applies the incremental pan; the repaint is
+    // Strip-row zoom/pan drag with decoupled axes, SONG-anchored zoom (the
+    // Ableton model; see apply_strip_drag_at). anchor_sample — the song position
+    // under press_x at the press — is FIXED for the whole drag and never
+    // re-derived; as the pan shifts it DRIFTS across the screen, and a zoom
+    // pivots around wherever that song position currently sits, not the press
+    // column. The top zoom row derives the level from vertical motion and pivots
+    // there; the bottom pan row pins the level and only pans (the zoom re-anchor
+    // then degenerates to pure incremental pan). Every motion event applies the
+    // pan increment and, on the zoom row, the re-derived level; the repaint is
     // SYNCHRONOUS (final_event=false — incremental pan when the level held, a
     // full rebuild when it changed), affordable because the platform coalesces
     // captured motion to one event per pointer frame. The release runs the one

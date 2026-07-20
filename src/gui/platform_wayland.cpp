@@ -1290,9 +1290,11 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         if (synth_left_held_) {
             synth_left_held_    = false;
             synth_left_keycode_ = 0;
-            if (!pointer_left_held_ && on_button_release_)
+            if (!pointer_left_held_ && on_button_release_) {
+                flush_deferred_motion();
                 on_button_release_(GuiMouseButton::Left,
                                    pointer_x_, pointer_y_, current_mods());
+            }
         }
     }
 
@@ -1333,6 +1335,7 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // suppress the release here. This mirrors the keyboard-leave/capability
         // tails, which likewise hold the release while the OTHER source is held.
         if (left_was_held && !synth_left_held_ && on_button_release_) {
+            flush_deferred_motion();
             on_button_release_(GuiMouseButton::Left,
                                pointer_x_, pointer_y_, current_mods());
         }
@@ -1419,9 +1422,11 @@ void GuiPlatform::on_keyboard_leave(uint32_t /*serial*/,
     if (synth_left_held_) {
         synth_left_held_    = false;
         synth_left_keycode_ = 0;
-        if (!pointer_left_held_ && on_button_release_)
+        if (!pointer_left_held_ && on_button_release_) {
+            flush_deferred_motion();
             on_button_release_(GuiMouseButton::Left,
                                pointer_x_, pointer_y_, current_mods());
+        }
     }
 }
 
@@ -1449,9 +1454,11 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
         if (synth_left_held_ && xkb_keycode == synth_left_keycode_) {
             synth_left_held_    = false;
             synth_left_keycode_ = 0;
-            if (!pointer_left_held_ && on_button_release_)
+            if (!pointer_left_held_ && on_button_release_) {
+                flush_deferred_motion();
                 on_button_release_(GuiMouseButton::Left,
                                    pointer_x_, pointer_y_, current_mods());
+            }
         }
         return;
     }
@@ -1517,9 +1524,11 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
             const bool was_held = pointer_left_held_;   // logical, synth is false
             synth_left_held_    = true;
             synth_left_keycode_ = xkb_keycode;
-            if (!was_held && on_button_press_)
+            if (!was_held && on_button_press_) {
+                flush_deferred_motion();
                 on_button_press_(GuiMouseButton::Left,
                                  pointer_x_, pointer_y_, current_mods());
+            }
         }
         return;
     }
@@ -1699,6 +1708,23 @@ void GuiPlatform::on_pointer_motion(uint32_t /*time*/,
     if (on_motion_) on_motion_(pointer_x_, pointer_y_, current_mods());
 }
 
+void GuiPlatform::flush_deferred_motion() {
+    // A captured strip drag defers its coalesced relative motion to the pointer-
+    // frame boundary (on_pointer_frame). But a wl_pointer.frame can carry both
+    // that motion and a button event, and button events are NOT deferred — they
+    // dispatch at arrival. Delivering the pending motion here, immediately before
+    // any button, guarantees the button handler runs against the latest
+    // accumulated position: a press -> threshold-crossing motion -> release inside
+    // one frame then reaches the release with StripDragState.moved already true,
+    // so the drag commits and a zoom-row release does not wrongly seed a
+    // double-click candidate. Clearing the flag means on_pointer_frame's trailing
+    // delivery does not double-fire the same motion.
+    if (frame_have_relmotion_ && on_motion_) {
+        on_motion_(pointer_x_, pointer_y_, current_mods());
+        frame_have_relmotion_ = false;
+    }
+}
+
 void GuiPlatform::on_pointer_button(uint32_t /*serial*/, uint32_t /*time*/,
                                     uint32_t button, uint32_t state) {
     GuiMouseButton mb;
@@ -1728,11 +1754,15 @@ void GuiPlatform::on_pointer_button(uint32_t /*serial*/, uint32_t /*time*/,
     }
 
     if (pressed) {
-        if (on_button_press_)
+        if (on_button_press_) {
+            flush_deferred_motion();
             on_button_press_(mb, pointer_x_, pointer_y_, current_mods());
+        }
     } else {
-        if (on_button_release_)
+        if (on_button_release_) {
+            flush_deferred_motion();
             on_button_release_(mb, pointer_x_, pointer_y_, current_mods());
+        }
     }
 }
 
@@ -1887,12 +1917,15 @@ void GuiPlatform::on_pointer_frame() {
     // on_relative_pointer_motion): one on_motion_ at the accumulated virtual
     // position, dropping the intervening sensor ticks. Fired after the wheel
     // drain, though a strip drag swallows wheels so the order is moot. A button
-    // event in this same frame was already dispatched at its arrival (button
-    // handlers are not deferred) and saw the final pointer_x_/y_, so a release
-    // that ends the drag has already finalized; this trailing on_motion_ then
-    // lands with the gesture inactive and only refreshes hover — both orders are
-    // safe. Uncaptured absolute motion is untouched (delivered live in
-    // on_pointer_motion; compositors already pace it at frame cadence).
+    // event in this same frame was ALREADY dispatched at its arrival (button
+    // handlers are not deferred), and each button-delivery site first calls
+    // flush_deferred_motion(), which delivers this pending motion and clears
+    // frame_have_relmotion_. So a release that ends the drag has already seen
+    // the motion and finalized before this point; the flag is then false here
+    // and this block is a no-op. It fires only when the frame carried motion but
+    // no button — the common case — refreshing hover / advancing the drag with
+    // one delivery per frame. Uncaptured absolute motion is untouched (delivered
+    // live in on_pointer_motion; compositors already pace it at frame cadence).
     if (frame_have_relmotion_ && on_motion_) {
         on_motion_(pointer_x_, pointer_y_, current_mods());
     }
@@ -2004,14 +2037,21 @@ void GuiPlatform::on_relative_pointer_motion(double dx, double dy) {
 
     // Advance the UNBOUNDED virtual position — no clamp to the window is what
     // makes pan/zoom travel infinite — and write the rounded position into
-    // pointer_x_/y_ so any button event dispatched later in the same frame
-    // already sees the final coordinates. The on_motion_ DELIVERY is deferred to
-    // the pointer-frame boundary (on_pointer_frame): a captured relative pointer
+    // pointer_x_/y_ so a button event dispatched later in the same frame already
+    // sees the final coordinates. The on_motion_ DELIVERY is deferred to the
+    // pointer-frame boundary (on_pointer_frame): a captured relative pointer
     // fires one event per sensor tick (500-1000 Hz mice), and the strip drag now
     // repaints synchronously per event, so delivering every tick would flood the
     // repaint. Coalescing to one on_motion_ per frame (the same model the wheel
     // uses) makes that synchronous repaint affordable. The gesture layer is
     // agnostic: it just sees coordinates that can now leave the window.
+    //
+    // The deferral is safe against a button in the SAME frame because every
+    // button-delivery site calls flush_deferred_motion() first: the pending
+    // motion is delivered before the button, so a fast press -> motion -> release
+    // inside one frame cannot reach the release with the drag's motion still
+    // undelivered (which would leave StripDragState.moved false and lose the
+    // gesture).
     virtual_pointer_x_ += dx;
     virtual_pointer_y_ += dy;
     pointer_x_ = static_cast<int>(std::lround(virtual_pointer_x_));

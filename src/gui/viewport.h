@@ -48,15 +48,23 @@ struct Viewport {
 
     // Incremental-pan kick: for a pure horizontal pan, drive the shift-and-
     // strip fast-path instead of the full worker re-render. Set from main.cpp
-    // to paint_handler.pan_waveform_incremental(new_vp_start); held as a
-    // std::function for the same no-compile-time-edge reason as the kick
+    // to paint_handler.pan_waveform_incremental(new_vp_start, synchronous); held
+    // as a std::function for the same no-compile-time-edge reason as the kick
     // above. When unset (before main.cpp wires it) kick_waveform_pan falls
     // back to the full worker kick, so the pan path stays correct either way.
     // The incremental path itself falls back to the worker for any non-pure-
     // pan case, and the on_tick backstop catches residual drift.
-    std::function<void(int64_t)> request_waveform_pan_;
-    void kick_waveform_pan(int64_t new_vp_start) {
-        if (request_waveform_pan_) request_waveform_pan_(new_vp_start);
+    //
+    // `synchronous` distinguishes the two pan drivers. Async (default): the wheel
+    // pan and PageUp/PageDown steps in scroll_viewport — a busy worker or any
+    // non-shift case defers to the worker, and the on_tick backstop catches the
+    // rest. Synchronous (true): the strip drag's level-unchanged branch — the
+    // mid-gesture frame must never paint over a stale-basis plate, so a busy
+    // worker is drained rather than deferred to, and a non-shift case falls back
+    // to a full synchronous rebuild instead of enqueue-and-return.
+    std::function<void(int64_t, bool)> request_waveform_pan_;
+    void kick_waveform_pan(int64_t new_vp_start, bool synchronous = false) {
+        if (request_waveform_pan_) request_waveform_pan_(new_vp_start, synchronous);
         else                       kick_waveform_render();
     }
 

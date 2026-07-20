@@ -247,21 +247,31 @@ void render_marker_stems_impl(
 }
 
 // Sibling of render_marker_stems_impl that stamps the marker half-triangle
-// (marker_half_triangle_mask) at each marker's authored column. The triangle
-// paints for EVERY marker regardless of selection or enablement — it is the
-// honest frame carrier, present when the last-selected stem is not — EXCEPT the
-// one index named by `skip_index` (>= 0): that marker's stem loop already drew
-// its triangle inside a group composite (the disabled last-selected case, where
-// the stem must not read through the dimmed triangle), so drawing it again here
-// would double-paint. A DISABLED marker's triangle dims under
-// kDisabledMarkerAlpha (the single disabled cue, shared with the flag and the
-// stem), so it takes both a selection predicate (color class) and an is_disabled
-// one (alpha). Its LEFT EDGE sits on the marker's pixel column at the waveform
-// top edge, so the half-triangle's vertical edge, the stem, and the flag's left
-// edge form one vertical line; when the playhead cursor sits on the marker the
-// playhead triangle's right half coincides with this half-triangle exactly. A
-// triangle whose column falls outside the visible strip is culled by the viewport
-// range, and one near an edge shows only its clipped footprint. Column math and
+// (marker_half_triangle_mask) at each marker's authored column. Called ONCE PER
+// SELECTION CLASS — `selected_class` picks which — so the caller can interleave
+// the stem loop between the two passes and reproduce the flags' selection
+// z-order: the UNSELECTED pass paints first, then the stem loop (its dimmed
+// last-selected stem+triangle GROUP lands in the selected tier, above the
+// unselected triangles), then the SELECTED pass on top. Within a class the loop
+// iterates in REVERSE store order so the leftmost marker (lowest index on an
+// equal column) paints last = on top — matching render_flags' leftmost-on-top
+// convention, so a triangle and its flag agree at coincident stacks.
+//
+// A triangle paints for EVERY marker of the class regardless of enablement — it
+// is the honest frame carrier, present when the last-selected stem is not —
+// EXCEPT the one index named by `skip_index` (>= 0): that marker's stem loop
+// already drew its triangle inside a group composite (the disabled last-selected
+// case, where the stem must not read through the dimmed triangle), so drawing it
+// again here would double-paint. skip_index is always the last-selected marker
+// and therefore always in the SELECTED class, so the guard only ever fires in the
+// selected pass. A DISABLED marker's triangle dims under kDisabledMarkerAlpha
+// (the single disabled cue, shared with the flag and the stem). Its LEFT EDGE
+// sits on the marker's pixel column at the waveform top edge, so the
+// half-triangle's vertical edge, the stem, and the flag's left edge form one
+// vertical line; when the playhead cursor sits on the marker the playhead
+// triangle's right half coincides with this half-triangle exactly. A triangle
+// whose column falls outside the visible strip is culled by the viewport range,
+// and one near an edge shows only its clipped footprint. Column math and
 // target/drag translation match the stems exactly, so a triangle and its stem
 // share a column.
 template <typename MarkerVec, typename IsSelected, typename IsVisuallyDisabled>
@@ -276,6 +286,7 @@ void render_marker_triangles_impl(
     IsVisuallyDisabled&& is_disabled,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay,
+    bool selected_class,
     int skip_index) {
     if (waveform_area.w <= 0 || waveform_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
@@ -299,13 +310,18 @@ void render_marker_triangles_impl(
                     static_cast<double>(waveform_area.w),
                     static_cast<double>(img_h));
     cairo_clip(cr);
-    for (size_t i = 0; i < markers.size(); ++i) {
-        if (static_cast<int>(i) == skip_index) continue;
-        const auto& m = markers[i];
+    // Reverse store order: rightmost first, leftmost last (on top), the
+    // leftmost-on-top convention render_flags paints under. Only this call's
+    // class is painted; the caller runs the other class in a separate call.
+    for (size_t idx = markers.size(); idx-- > 0; ) {
+        const int i = static_cast<int>(idx);
+        if (i == skip_index) continue;
+        if (is_selected(i) != selected_class) continue;
+        const auto& m = markers[idx];
         // Effective time and target/drag translation exactly as the stem loop:
         // the triangle and stem must land on the identical column.
         const double eff_time = drag_overlay
-            ? drag_overlay->effective_time(static_cast<int>(i), m.time_frame)
+            ? drag_overlay->effective_time(i, m.time_frame)
             : m.time_frame;
         const double ms = frame_to_paint_sample(eff_time, warp_frame_map);
         if (ms < static_cast<double>(viewport_start_sample)) continue;
@@ -313,11 +329,10 @@ void render_marker_triangles_impl(
         const int icol = static_cast<int>(std::nearbyint(
             (ms - static_cast<double>(viewport_start_sample)) /
             samples_per_pixel));
-        const GuiColor c = is_selected(static_cast<int>(i))
-            ? kSelected : kMarker;
+        const GuiColor c = selected_class ? kSelected : kMarker;
         // A disabled marker's triangle dims under the shared disabled alpha
         // (the mask carries the source's alpha), otherwise it is opaque.
-        if (is_disabled(static_cast<int>(i)))
+        if (is_disabled(i))
             cairo_set_source_rgba(cr, c.r, c.g, c.b, kDisabledMarkerAlpha);
         else
             cairo_set_source_rgb(cr, c.r, c.g, c.b);
@@ -562,15 +577,6 @@ void render_markers(cairo_t* cr,
                     const std::vector<WarpFrameMapSegment>* warp_frame_map,
                     const DragOverlay* drag_overlay,
                     cairo_surface_t* ink_plate) {
-    render_marker_stems_impl(
-        cr, waveform_area, markers,
-        viewport_start_sample, viewport_end_sample,
-        sample_rate, last_selected, warp_frame_map,
-        drag_overlay,
-        [&](int i) {
-            return effective_disabled(markers, i);
-        },
-        ink_plate);
     // Triangle indicators ride the same stem-cache surface (so damage and
     // fingerprints reuse the stem rebuild triggers) and paint for EVERY marker
     // regardless of selection — the frame tick is the marker's honest position,
@@ -578,18 +584,38 @@ void render_markers(cairo_t* cr,
     // carries the disabled alpha (effective_disabled walks the label_ref cascade,
     // the same predicate the stem loop uses). When the last-selected marker is
     // disabled its triangle was already composited with its stem in the stem loop,
-    // so skip that index here to avoid a double-paint.
+    // so skip that index in the SELECTED triangle pass to avoid a double-paint.
+    //
+    // Three ordered layers reproduce the flags' selection z-order: the UNSELECTED
+    // triangles paint first (bottom), then the stem loop — whose dimmed
+    // last-selected stem+triangle group thus lands in the selected tier, above
+    // the unselected triangles — then the SELECTED triangles on top. Selected
+    // triangles occlude unselected ones at coincident columns, matching how the
+    // flags stack.
     const bool last_disabled =
         last_selected >= 0 &&
         last_selected < static_cast<int>(markers.size()) &&
         effective_disabled(markers, last_selected);
+    const auto is_selected  = [&](int i) { return selected_set.count(i) > 0; };
+    const auto is_disabled  = [&](int i) { return effective_disabled(markers, i); };
     render_marker_triangles_impl(
         cr, waveform_area, markers,
         viewport_start_sample, viewport_end_sample,
-        sample_rate,
-        [&](int i) { return selected_set.count(i) > 0; },
-        [&](int i) { return effective_disabled(markers, i); },
+        sample_rate, is_selected, is_disabled,
         warp_frame_map, drag_overlay,
+        /*selected_class=*/false,
+        last_disabled ? last_selected : -1);
+    render_marker_stems_impl(
+        cr, waveform_area, markers,
+        viewport_start_sample, viewport_end_sample,
+        sample_rate, last_selected, warp_frame_map,
+        drag_overlay, is_disabled, ink_plate);
+    render_marker_triangles_impl(
+        cr, waveform_area, markers,
+        viewport_start_sample, viewport_end_sample,
+        sample_rate, is_selected, is_disabled,
+        warp_frame_map, drag_overlay,
+        /*selected_class=*/true,
         last_disabled ? last_selected : -1);
 }
 
@@ -1557,32 +1583,39 @@ void render_phaseresetmarkers(cairo_t* cr,
                               const std::vector<WarpFrameMapSegment>* warp_frame_map,
                               const DragOverlay* drag_overlay,
                               cairo_surface_t* ink_plate) {
-    render_marker_stems_impl(
-        cr, waveform_area, phase_resets,
-        viewport_start_sample, viewport_end_sample,
-        sample_rate, last_selected, warp_frame_map,
-        drag_overlay,
-        [&](int i) {
-            return phase_resets[i].disabled;
-        },
-        ink_plate);
     // Triangle indicators for every phase reset regardless of selection (see the
     // warp render_markers note): the frame tick is the honest position, present
     // when the last-selected stem is not. A disabled phase reset's triangle
     // carries the disabled alpha (the bool read directly — no cascade). When the
     // last-selected phase reset is disabled its triangle was composited with its
-    // stem, so skip that index to avoid a double-paint.
+    // stem, so skip that index in the SELECTED triangle pass to avoid a
+    // double-paint. Three ordered layers reproduce the flags' selection z-order:
+    // UNSELECTED triangles, then the stem loop (its dimmed last-selected group
+    // lands in the selected tier), then SELECTED triangles on top.
     const bool last_disabled =
         last_selected >= 0 &&
         last_selected < static_cast<int>(phase_resets.size()) &&
         phase_resets[last_selected].disabled;
+    const auto is_selected = [&](int i) { return selected_set.count(i) > 0; };
+    const auto is_disabled = [&](int i) { return phase_resets[i].disabled; };
     render_marker_triangles_impl(
         cr, waveform_area, phase_resets,
         viewport_start_sample, viewport_end_sample,
-        sample_rate,
-        [&](int i) { return selected_set.count(i) > 0; },
-        [&](int i) { return phase_resets[i].disabled; },
+        sample_rate, is_selected, is_disabled,
         warp_frame_map, drag_overlay,
+        /*selected_class=*/false,
+        last_disabled ? last_selected : -1);
+    render_marker_stems_impl(
+        cr, waveform_area, phase_resets,
+        viewport_start_sample, viewport_end_sample,
+        sample_rate, last_selected, warp_frame_map,
+        drag_overlay, is_disabled, ink_plate);
+    render_marker_triangles_impl(
+        cr, waveform_area, phase_resets,
+        viewport_start_sample, viewport_end_sample,
+        sample_rate, is_selected, is_disabled,
+        warp_frame_map, drag_overlay,
+        /*selected_class=*/true,
         last_disabled ? last_selected : -1);
 }
 

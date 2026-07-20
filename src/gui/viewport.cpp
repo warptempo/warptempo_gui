@@ -306,11 +306,15 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
             // Level unchanged this frame (every pan-row event; a zoom-row event
             // with pure horizontal motion, or one saturated at a wall): pure
             // horizontal pan, so drive the incremental shift-and-strip fast path
-            // (memmove + dx-strip render + inline stem/flag rebuilds). It falls
-            // back to a full synchronous render on a too-large delta — the
-            // safety valve for fast flicks — and to the worker while a
-            // background render is busy. Pass the post-clamp viewport start.
-            kick_waveform_pan(app.viewport_start_sample);
+            // in SYNCHRONOUS mode (memmove + dx-strip render + inline stem/flag
+            // rebuilds). Synchronous here is the mid-gesture coherence guarantee:
+            // a busy worker (a recent load / edit / follow update still
+            // rendering) is drained rather than deferred to, so this frame never
+            // advances the live viewport over a stale-basis plate — the desync
+            // this arc removed. It still falls back to a full synchronous render
+            // on a too-large delta (the fast-flick valve). Pass the post-clamp
+            // viewport start.
+            kick_waveform_pan(app.viewport_start_sample, /*synchronous=*/true);
         } else {
             // Level changed this frame: the whole plate rescales, so a full
             // synchronous rebuild is unavoidable — the exact cost a keyboard

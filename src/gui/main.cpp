@@ -648,7 +648,9 @@ int main(int argc, char** argv) {
     // continuous. Falls back to the worker for any non-pan case. See
     // Viewport::kick_waveform_pan and GuiPaintHandler::pan_waveform_incremental.
     viewport.request_waveform_pan_ =
-        [&](int64_t new_vp) { paint_handler.pan_waveform_incremental(new_vp); };
+        [&](int64_t new_vp, bool sync) {
+            paint_handler.pan_waveform_incremental(new_vp, sync);
+        };
 
     // One-shot discrete jumps route here instead of the async worker: render
     // the plate synchronously and publish the displayed fingerprint now so the

@@ -390,16 +390,24 @@ struct GuiPaintHandler {
     // for continuous gestures — those stay on the worker.
     void force_synchronous_waveform_rebuild();
 
-    // Incremental pan fast-path. For a pure horizontal pan (the only kind
-    // scroll_viewport produces), shift the live plate by the pixel delta and
-    // render only the newly exposed edge strip inline, instead of kicking a
-    // full worker re-render. new_vp_start is the post-clamp viewport start in
-    // the displayed domain. Wired from main.cpp into Viewport via the
-    // request_waveform_pan_ callback. Falls back to the worker / a synchronous
-    // full render for every case that is not a clean translate of the current
-    // plate (no plate, worker busy, drag, resize, view/warp_frame_map change,
-    // over-a-window flick); the on_tick backstop catches any residual drift.
-    void pan_waveform_incremental(int64_t new_vp_start);
+    // Incremental pan fast-path. For a pure horizontal pan, shift the live plate
+    // by the pixel delta and render only the newly exposed edge strip inline,
+    // instead of kicking a full worker re-render. new_vp_start is the post-clamp
+    // viewport start in the displayed domain. Wired from main.cpp into Viewport
+    // via the request_waveform_pan_ callback.
+    //
+    // `synchronous` picks the caller class. When false (the wheel pan and
+    // PageUp/PageDown steps in scroll_viewport), every case that is not a clean
+    // translate of the current plate — no plate, worker busy, drag, resize,
+    // view/warp_frame_map change — defers to the async worker, and the on_tick
+    // backstop catches residual drift. When true (the strip drag's
+    // level-unchanged branch), the mid-gesture frame must never paint over a
+    // stale-basis plate: a busy worker is DRAINED (wait_until_idle) rather than
+    // deferred to, then the shift proceeds against the drained state, and every
+    // remaining non-shift case falls back to force_synchronous_waveform_rebuild
+    // instead of enqueue-and-return. The over-a-window fast-flick fallback is a
+    // full synchronous rebuild in both modes.
+    void pan_waveform_incremental(int64_t new_vp_start, bool synchronous = false);
 
 private:
     // Waveform fingerprint inputs derived from current app state. This is

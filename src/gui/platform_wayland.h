@@ -413,6 +413,15 @@ private:
     void on_pointer_axis(uint32_t time, uint32_t axis, int32_t value);
     void on_pointer_axis_value120(uint32_t axis, int32_t value120);
     void on_pointer_frame();
+    // Deliver any captured relative motion that was deferred to the pointer-
+    // frame boundary (see on_relative_pointer_motion) before a button event is
+    // dispatched, so the button handler always sees the latest accumulated
+    // position. Idempotent — a no-op when no deferred motion is pending; clears
+    // the flag so on_pointer_frame's trailing delivery does not double-fire.
+    // Every button-delivery site (the wl_pointer button listener, the
+    // kLeftClickKey synth edges, and the keyboard-leave / capability-loss
+    // synth releases) calls this immediately before delivering.
+    void flush_deferred_motion();
 
     // -- Pointer-capture helpers --
     // Create relative_pointer_ once both wl_pointer_ and the manager exist

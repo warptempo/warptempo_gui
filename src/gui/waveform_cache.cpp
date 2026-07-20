@@ -569,15 +569,45 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
 // not a clean shift falls back to the worker (maybe_enqueue) or a synchronous
 // full render, and the on_tick dirty-check re-renders if the fingerprint ever
 // drifts.
-void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
-    const WaveformRenderInputs in = compute_waveform_render_inputs();
-    if (!in.valid) { maybe_enqueue_waveform_render(); return; }
+void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
+                                               bool synchronous) {
+    // The mid-gesture guarantee (synchronous mode, the strip drag): no frame
+    // this event paints shows the plate from a basis older than the viewport.
+    // Every path that would otherwise leave the frame on a stale-basis plate —
+    // a busy worker, or a non-shift precondition failure — is resolved in-frame
+    // (drain-and-proceed, or a full synchronous rebuild) rather than deferred to
+    // the async worker. The async caller class (wheel pan, PageUp/PageDown) keeps
+    // the worker/enqueue fallbacks: those gestures are not the live-basis-overlay
+    // ride the strip drag is, and the on_tick backstop covers their drift.
+    auto fall_back = [&]() {
+        if (synchronous) force_synchronous_waveform_rebuild();
+        else             maybe_enqueue_waveform_render();
+    };
 
-    // Fallbacks (section 5): anything that is not a clean translate of the
-    // live plate goes to the worker / full-render path.
+    const WaveformRenderInputs in = compute_waveform_render_inputs();
+    if (!in.valid) { fall_back(); return; }
+
+    // Synchronous mode drains a busy worker rather than deferring to it. Deferring
+    // (the async model) would leave THIS frame on the live plate, whose basis
+    // predates the viewport we are about to paint — the mid-gesture desync this
+    // path exists to prevent. wait_until_idle absorbs/discards the in-flight
+    // completion coherently (the same drain force_synchronous_waveform_rebuild
+    // relies on): after it the worker holds no reference to the cache surfaces and
+    // wf_cache.fp_* is mutually consistent with wf_cache.surface, whether the job
+    // published (swap + fp update) or was cancelled (no swap, fp unchanged). We
+    // then continue to the precondition gate against that drained state — the
+    // clean-shift case takes the fast path, the rest fall through to the full
+    // rebuild below.
+    if (synchronous && waveform_worker.is_busy()) {
+        waveform_worker.wait_until_idle();
+    }
+
+    // Fallbacks: anything that is not a clean translate of the live plate goes to
+    // the fall_back path (async: worker/enqueue; synchronous: full rebuild).
     //  - no plate yet (just after load)
-    //  - worker mid-render: leave it to the worker; superseding keeps the
-    //    latest viewport without racing a swap against our in-place shift
+    //  - worker mid-render: async leaves it to the worker (superseding keeps the
+    //    latest viewport without racing a swap against our in-place shift);
+    //    synchronous already drained above, so this only trips on a wait timeout
     //  - active drag: the plate is held still by the frozen-coordinate regime
     //    while the overlay repositions markers, so this is not a clean pan
     //  - dimension mismatch (resize since the plate was rendered)
@@ -591,7 +621,7 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
         wf_cache.height    != in.area_h ||
         wf_cache.fp_target       != in.is_target ||
         wf_cache.fp_warp_frame_map_hash != in.warp_frame_map_hash) {
-        maybe_enqueue_waveform_render();
+        fall_back();
         return;
     }
 
@@ -600,7 +630,7 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
     const int     plate_w      = wf_cache.fp_area_w;
     const double  disp_spp =
         static_cast<double>(old_vp_end - old_vp_start) / plate_w;
-    if (disp_spp <= 0.0) { maybe_enqueue_waveform_render(); return; }
+    if (disp_spp <= 0.0) { fall_back(); return; }
 
     const int delta_px = static_cast<int>(
         std::nearbyint(static_cast<double>(new_vp_start - old_vp_start) /
@@ -641,7 +671,7 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start) {
     unsigned char* data = cairo_image_surface_get_data(wf_cache.surface);
     const int stride     = cairo_image_surface_get_stride(wf_cache.surface);
     const int surf_h     = cairo_image_surface_get_height(wf_cache.surface);
-    if (!data) { maybe_enqueue_waveform_render(); return; }
+    if (!data) { fall_back(); return; }
 
     int strip_x = 0;
     int strip_w = 0;
