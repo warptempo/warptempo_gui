@@ -348,11 +348,12 @@ bool GuiInputHandler::handle_escape_cancels(GuiKey key) {
 // are stopped before their deferred commit, so their pending change is
 // discarded and the live state returns to pre-drag — positions, the pinned
 // playhead, AND the selection/group state (the first-motion selection collapse
-// is part of the gesture and dies with it); scroll and playhead drags apply
-// their motion continuously, so stopping just ends them where they are. A live
-// editor-text drag is FINALIZED, not cancelled — selection-only with nothing to
-// revert, it collapses to a caret as its release would. One verb across the
-// pointer drags: Esc means stop.
+// is part of the gesture and dies with it); a strip drag applies its motion
+// continuously, so stopping just ends it where it is; a region drag is
+// cancelled and the region restored to how it rested at arm (the pre-drag
+// snapshot). A live editor-text drag is FINALIZED, not cancelled — selection-
+// only with nothing to revert, it collapses to a caret as its release would.
+// One verb across the pointer drags: Esc means stop.
 void GuiInputHandler::cancel_active_drags() {
     if (app.drag.active) {
         // The live marker store was untouched during motion (proposed
@@ -392,12 +393,12 @@ void GuiInputHandler::cancel_active_drags() {
         viewport.invalidate_top_strip();
         viewport.invalidate_timestamp_area();
     }
-    // Strip-row and playhead drags have already applied their motion, so
-    // stopping is just ending the gesture at its current position — Esc is not
-    // a cancel here (a navigation gesture has nothing to restore). The strip
-    // drag rode the async slot per motion, so finalize the last-applied state
-    // with the one synchronous rebuild (resync + kick_waveform_sync) exactly as
-    // its release would, when it moved.
+    // The strip drag has already applied its motion, so stopping is just
+    // ending the gesture at its current position — Esc is not a cancel here (a
+    // navigation gesture has nothing to restore). The strip drag rode the async
+    // slot per motion, so finalize the last-applied state with the one
+    // synchronous rebuild (resync + kick_waveform_sync) exactly as its release
+    // would, when it moved.
     if (app.strip_drag.active) {
         if (app.strip_drag.moved) {
             if (playback.is_playing()) playback.resync_predictor();
@@ -409,7 +410,13 @@ void GuiInputHandler::cancel_active_drags() {
         app.strip_double_click = StripDoubleClickCandidate{};
         end_strip_pointer_capture();
     }
-    if (app.playhead_drag.active) app.playhead_drag = PlayheadDragState{};
+    // The region drag IS a cancel: unlike the strip drag it restores the region
+    // to how it rested at arm (the pre-drag snapshot), then ends the gesture.
+    if (app.region_drag.active) {
+        app.region = app.region_drag.pre_region;
+        app.region_drag = RegionDragState{};
+        viewport.invalidate_waveform_area();
+    }
     // A live editor-text drag is FINALIZED, not cancelled: it is selection-only
     // with nothing to revert, so it collapses a no-motion anchor to a caret and
     // repaints the owning strip exactly as its release would, instead of

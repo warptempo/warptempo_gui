@@ -219,7 +219,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.last_selected_marker = -1;
     app.active_markers_view    = 'W';
     app.drag = DragState{};
-    app.playhead_drag = PlayheadDragState{};
+    app.region_drag = RegionDragState{};
+    app.region = RegionState{};
     app.trim_drag = TrimDragState{};
     app.strip_drag = StripDragState{};
     app.strip_double_click = StripDoubleClickCandidate{};

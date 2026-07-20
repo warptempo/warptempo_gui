@@ -135,10 +135,10 @@ void Viewport::move_playhead_to(int64_t new_sample) {
         // One-shot discrete viewport shift (Home / End, navigate-to-marker, or
         // an arrow nudge that pushed the playhead past the edge). Render the
         // plate synchronously so the playhead / marker overlays do not land a
-        // frame ahead of the new viewport window. The one continuous caller —
-        // the playhead drag — clamps its target to the visible area and so
-        // never reaches this branch; the callers that do reach it are all
-        // discrete, so a full sync render here is bounded.
+        // frame ahead of the new viewport window. Click-drop callers land their
+        // target inside the visible strip and so never reach this branch; the
+        // callers that do reach it are all discrete, so a full sync render here
+        // is bounded.
         // kick_waveform_sync emits the same waveform-region damage
         // invalidate_waveform_area does, so the explicit call is left as a
         // harmless coalesced duplicate.

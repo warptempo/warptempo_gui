@@ -305,20 +305,42 @@ struct UndoHistory {
     }
 };
 
-// State for the plain/Shift left-button playhead-drag gesture. The drag
-// positions the playhead ONLY (with a 3px snap-to-marker magnet) and never
-// touches selection: selection changes only at press time (plain-press
-// single-select, Shift-press toggle, Tab). Only a plain press arms the drag; a
-// Shift press is a click. The gesture ends on release (or on Escape, which ends
-// at current position); release only resets the struct.
-//
-// Mouse-side click-keep-alive: a waveform-area press during playback
-// reseeks audio to the clicked sample (Reaper-style) instead of stopping.
-// Motion does NOT reseek — the scanner advances independently from the
-// click position via the predictor while the cursor moves freely with
-// the drag (split-playhead model).
-struct PlayheadDragState {
-    bool active                    = false;
+// Session-only region selection — an Ableton-style arrangement span the user
+// paints by dragging on the waveform, consumed later by the trim hotkey. NEVER
+// serialized, and outside the selection and undo systems entirely (a transient
+// visual). Endpoints are ACTIVE-DOMAIN frames (source frames in source view,
+// target frames in target view), stored in drag order and normalized lo/hi at
+// READ time, so the span survives pan/zoom mid-drag and at rest. Cleared on
+// file load, the A/B tab switch, the S/T audio-view switch (the domain changes
+// under it), and Esc (only when nothing higher-priority consumes the Esc). The
+// W/P marker-column switch does NOT clear it — the region is not marker-related.
+struct RegionState {
+    bool    active  = false;
+    int64_t a_frame = 0;   // the press-anchor endpoint
+    int64_t b_frame = 0;   // the far (pointer) endpoint
+};
+
+// State for the plain (unmodified) left-drag region-select gesture on the
+// waveform. The PRESS keeps today's press-time behavior verbatim (selection,
+// playhead placement, live-playback reseek) and arms this drag; motion past
+// the shared press-becomes-drag threshold (kDragMovedThresholdPx) extends
+// app.region from the press frame to the pointer column. Below the threshold
+// nothing extra happens — the press already did the click, and a sub-threshold
+// press-release leaves any existing region untouched (a click does not clear
+// the region). Only a plain press arms (a Shift press is a click). A completed
+// drag rests the region on release; Esc cancels a live drag and restores the
+// pre-drag region captured here at arm (the marker drag's snapshot pattern —
+// cheap, two ints). Session-only, never undoable.
+struct RegionDragState {
+    bool    active       = false;
+    bool    moved        = false;  // crossed the threshold into a real drag
+    int     press_x      = 0;      // press position (window px), for the gate
+    int     press_y      = 0;
+    int64_t anchor_frame = 0;      // active-domain frame the press placed
+    // The region as it rested at arm; restored on an Esc cancel of a live
+    // drag. A motionless drag's snapshot equals the current region, so the
+    // restore is a no-op there.
+    RegionState pre_region;
 };
 
 // F2.1: mouse drag-to-select inside the active text editor. Only one
@@ -426,17 +448,21 @@ struct StripDoubleClickCandidate {
 constexpr int64_t kDoubleClickMs      = 500;
 constexpr int     kDoubleClickSlackPx = 8;
 
-// Chebyshev pixel distance a strip press must travel before it becomes a DRAG
-// (architect-tunable). Under pointer capture the relative-pointer stream
-// delivers every sub-pixel sensor tick as a motion event, so a physical click
-// almost always rocks the sensor a count or two; without this gate that jitter
-// would mark every click as moved and starve double-click detection. A motion
-// event below the threshold is ignored outright (moved stays false, no apply,
-// the drag stays armed); the first event AT the threshold folds the whole
-// accumulated dx because last_x still sits at press_x, and the zoom axis reads
-// absolute dy regardless — so the catch-up jump never exceeds the real hand
-// motion.
-constexpr int     kStripDragMovedThresholdPx = 3;
+// Chebyshev pixel distance a press must travel before it becomes a DRAG
+// (architect-tunable), shared by two consumers. On the strip rows: under
+// pointer capture the relative-pointer stream delivers every sub-pixel sensor
+// tick as a motion event, so a physical click almost always rocks the sensor a
+// count or two; without this gate that jitter would mark every click as moved
+// and starve double-click detection. On the waveform: the same gate keeps a
+// click from becoming a micro-region, so a motionless click stays plain
+// playhead placement. Both use the same latch shape — a motion event below the
+// threshold is ignored outright (moved stays false, no apply, the drag stays
+// armed); once a drag, always a drag, so dragging back near the anchor has no
+// dead zone. For the strip drag the first event AT the threshold folds the
+// whole accumulated dx because last_x still sits at press_x, and the zoom axis
+// reads absolute dy regardless — so the catch-up jump never exceeds the real
+// hand motion.
+constexpr int     kDragMovedThresholdPx = 3;
 
 // Hover popup state. A popup-eligible warp marker (pass marker or
 // label_ref) under the cursor shows a bottom-strip readout of its
@@ -775,9 +801,13 @@ struct AppState {
     // there and on button release / Escape.
     DragState     drag;
 
-    // Playhead drag state (plain / Shift left-button). Cleared on button
-    // release, Escape, and file load.
-    PlayheadDragState playhead_drag;
+    // Region-select drag state (plain left-drag). Cleared on button release,
+    // Escape, and file load.
+    RegionDragState region_drag;
+
+    // The resting region-select span (session-only). Cleared on file load, the
+    // A/B tab switch, the S/T audio-view switch, and Esc.
+    RegionState region;
 
     // Alt drag of a trim boundary stem/chip. Cleared on button
     // release, Escape, and file load.
@@ -1072,14 +1102,14 @@ inline int64_t snap_authored_frame(double frame) {
 }
 
 // The single query for "some pointer gesture is in flight" — an Alt marker
-// drag, a trim drag, a strip-row zoom/pan drag, a playhead drag, or an editor
-// text drag. Consumed by the wheel_context predicate (on_wheel's
+// drag, a trim drag, a strip-row zoom/pan drag, a region-select drag, or an
+// editor text drag. Consumed by the wheel_context predicate (on_wheel's
 // completed-detent gate and the platform's per-frame sub-detent
 // accumulator probe both route through it), the gate that must never fire
 // mid-gesture: the "nothing pops mid-gesture" boundary.
 inline bool any_pointer_gesture_active(const AppState& app) {
     return app.drag.active || app.trim_drag.active ||
-           app.strip_drag.active || app.playhead_drag.active ||
+           app.strip_drag.active || app.region_drag.active ||
            app.editor_text_drag.active;
 }
 

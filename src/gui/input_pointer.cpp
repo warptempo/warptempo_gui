@@ -235,7 +235,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // editor). Mouse input does not interact with it beyond its own
         // click-to-cursor region; the session ends only through Esc or the
         // Enter dispatch path (`m` is just a typed character now). Swallow
-        // the press so it cannot drive a playhead drag / marker click / or
+        // the press so it cannot drive a region drag / marker click / or
         // tear the editor down through the top-strip flag-edit routine
         // below.
         return;
@@ -453,12 +453,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // proceeds (Shift adjusts the selection).
         if (ctrl || alt) return;
 
-        // Plain or Shift press. In the waveform area this starts a
-        // playhead-drag gesture. In the top strip (flag click) a W-view plain
-        // click enters the warp canonical-line editor; Shift+click keeps the
-        // multi-select toggle + playhead move. A P-view plain click is
-        // navigation (single-select + playhead), falling through to the
-        // selection block below; phase resets have no per-flag editor.
+        // Plain or Shift press. In the waveform area a plain press places the
+        // playhead and arms the region-select drag; a Shift press is a click
+        // only. In the top strip (flag click) a W-view plain click enters the
+        // warp canonical-line editor; Shift+click keeps the multi-select toggle
+        // + playhead move. A P-view plain click is navigation (single-select +
+        // playhead), falling through to the selection block below; phase resets
+        // have no per-flag editor.
         if (inside_top) {
             if (hit >= 0) {
                 if (!shift && app.active_markers_view != 'P') {
@@ -497,7 +498,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
 
-        // Waveform-area press: start playhead drag gesture.
+        // Waveform-area press: place the playhead (press-time) and arm the
+        // region-select drag.
         {
             if (hit >= 0) {
                 // Press on a marker (within 3px). Selection is press-time-only:
@@ -524,9 +526,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     playback_lifecycle.reseek_keeping_alive(sample);
                 }
                 if (was_playing) app.follow_overridden_for_session = true;
-                // A plain press arms the playhead scrub; a Shift press is a
-                // click only (no drag), so it does not arm.
-                if (!shift) app.playhead_drag.active = true;
+                // A plain press arms the region-select drag (anchored on the
+                // frame the press just placed the playhead at); a Shift press
+                // is a click only (no drag), so it does not arm.
+                if (!shift) arm_region_drag_at(sample, x, y);
             } else {
                 // Press on empty waveform. Shift is a strict no-op (Shift is a
                 // selection-toggle click, undefined on empty space).
@@ -544,7 +547,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     playback_lifecycle.reseek_keeping_alive(sample);
                 }
                 if (was_playing) app.follow_overridden_for_session = true;
-                app.playhead_drag.active = true;
+                arm_region_drag_at(sample, x, y);
             }
         }
     }
@@ -574,6 +577,16 @@ void GuiInputHandler::arm_editor_text_drag_on_open() {
     app.top_flag_editor.selection_anchor =
         app.top_flag_editor.cursor_pos;
     app.editor_text_drag.active = true;
+}
+
+void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
+    app.region_drag = RegionDragState{};
+    app.region_drag.active       = true;
+    app.region_drag.anchor_frame = anchor_frame;
+    app.region_drag.press_x      = x;
+    app.region_drag.press_y      = y;
+    // Snapshot the resting region so an Esc cancel of a live drag restores it.
+    app.region_drag.pre_region   = app.region;
 }
 
 void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
@@ -612,12 +625,12 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         end_strip_pointer_capture();  // reappear the cursor at the press point
         return;
     }
-    if (app.playhead_drag.active) {
-        // Selection is committed live during the drag (see on_motion); the
-        // release only ends the gesture. A click without a drag keeps the
-        // selection the press set, since no motion fired and this is a no-op
-        // on selection.
-        app.playhead_drag = PlayheadDragState{};
+    if (app.region_drag.active) {
+        // The region is extended live during the drag (see on_motion); the
+        // release only ends the gesture. A sub-threshold press-release (never
+        // moved) leaves any existing region untouched — a click does not clear
+        // the region, and it did its press-time work already.
+        app.region_drag = RegionDragState{};
         return;
     }
     if (app.trim_drag.active) {
@@ -704,7 +717,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (!app.strip_drag.moved &&
             std::max(std::abs(mouse_x - app.strip_drag.press_x),
                      std::abs(mouse_y - app.strip_drag.press_y)) <
-                kStripDragMovedThresholdPx) {
+                kDragMovedThresholdPx) {
             return;
         }
         app.strip_drag.moved = true;
@@ -727,55 +740,44 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     // Target-view motion authoring is unblocked. Fall through
-    // to source-view's drag / playhead-drag / hover handling; per-site
+    // to source-view's drag / region-drag / hover handling; per-site
     // translation (drag anchor capture, motion delta conversion, hit
     // tests) lives in the handlers below.
-    if (app.playhead_drag.active) {
+    if (app.region_drag.active) {
         viewport.clear_hover_popup();
         // Left button must still be held; if not, the release was lost —
-        // terminate the drag. Modifier changes mid-drag are ignored.
+        // end the gesture, resting the region at its current extent (as a
+        // clean release would). Modifier changes mid-drag are ignored.
         if (!mods.primary_button_held) {
-            app.playhead_drag = PlayheadDragState{};
+            app.region_drag = RegionDragState{};
             return;
         }
-        const int sr = audio.sample_rate();
-        if (sr <= 0) return;
         const GuiRect area = waveform_area(app);
-        const double spp = current_samples_per_pixel(app, audio);
-        if (spp <= 0.0) return;
-
-        // Marker snap test — uses the same 3px epsilon as marker hit-test.
-        // The snap is purely a playhead-positioning magnet; the drag moves the
-        // playhead only and never touches selection (selection is press-time-
-        // only).
-        const int hit = hit_test_marker_line(app, audio, mouse_x);
-        int64_t new_playhead;
-        if (hit >= 0) {
-            int64_t src_sample;
-            if (app.active_markers_view == 'P') {
-                src_sample = app.phaseresetmarkers.markers()[hit].time_frame;
-            } else {
-                src_sample = app.warpmarkers.markers()[hit].time_frame;
-            }
-            // Land on the snapped marker's clamped playhead image (the F1
-            // chokepoint): forward-translate the source frame to the displayed
-            // domain, then clamp into the playhead domain, so the
-            // new_playhead != cursor compare agrees with the value the cursor
-            // actually holds — a compressed final segment that rounds a
-            // wall-adjacent marker to the target total lands on the reachable
-            // total - 1 instead.
-            new_playhead = playhead_image_of_authored_frame(app, audio, src_sample);
-        } else {
-            // No marker within epsilon: playhead follows cursor freely.
-            int rel = mouse_x - area.x;
-            if (rel < 0) rel = 0;
-            if (rel >= area.w) rel = area.w - 1;
-            new_playhead = playhead_frame_at_click_column(app, audio, rel);
+        if (area.w <= 0) return;
+        // Sub-threshold: the press has not yet become a drag. Below the shared
+        // Chebyshev gate nothing extra happens — the press already did the
+        // click and any existing region stays as it rested. Once a drag,
+        // always a drag (moved never re-engages).
+        if (!app.region_drag.moved &&
+            std::max(std::abs(mouse_x - app.region_drag.press_x),
+                     std::abs(mouse_y - app.region_drag.press_y)) <
+                kDragMovedThresholdPx) {
+            return;
         }
-
-        if (new_playhead != app.playhead_cursor_sample) {
-            viewport.move_playhead_to(new_playhead);
-        }
+        app.region_drag.moved = true;
+        // Far endpoint at the pointer column, through the same click->frame
+        // basis as the anchor, clamped to the visible strip like the other
+        // drags' live tracking. Endpoints are active-domain frames, so the
+        // span survives pan/zoom mid-drag and at rest.
+        int rel = mouse_x - area.x;
+        if (rel < 0) rel = 0;
+        if (rel >= area.w) rel = area.w - 1;
+        const int64_t far_frame =
+            playhead_frame_at_click_column(app, audio, rel);
+        app.region.active  = true;
+        app.region.a_frame = app.region_drag.anchor_frame;
+        app.region.b_frame = far_frame;
+        viewport.invalidate_waveform_area();
         return;
     }
     if (!app.drag.active) {

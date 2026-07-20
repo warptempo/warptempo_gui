@@ -99,6 +99,18 @@ inline constexpr double    kOverlayAlpha = 0.05;
 // in alpha; the tuning knob.
 inline constexpr double    kOverlayOutlineAlpha = 0.30;
 
+// Region-select wash — the alpha brightening painted over the region span, the
+// visual counterpart of the out-of-trim dim (that darkens the samples; this
+// brightens the span, Ableton-style). A flat translucent fill (not a plate
+// masked recolor) over the full waveform height, composited AFTER the plate and
+// the out-of-trim dim, so a region inside a dimmed area lifts the dimmed pixels
+// — accepted, it stays visible. A lightened kWaveform tone, kept in the same
+// blue-cast hue family as kOverlay so the lift reads as brightening rather than
+// graying (see the kOverlay note). Both values architect-tunable on the labwc
+// pass; start subtle.
+inline constexpr GuiColor kRegionWash      = hex(0xC7DEF5);
+inline constexpr double    kRegionWashAlpha = 0.10;
+
 inline constexpr GuiColor kMarker           = hex(0x9145AD);
 inline constexpr GuiColor kSelected         = hex(0x3DAEE9);  // Breeze blue
 inline constexpr GuiColor kPlayheadScanner  = hex(0xF2D959);

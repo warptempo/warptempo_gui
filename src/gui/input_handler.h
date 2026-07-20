@@ -259,11 +259,19 @@ struct GuiInputHandler {
 
     // Stop all four pointer drag gestures. A marker or trim drag is stopped
     // before its deferred commit, so live state returns to pre-drag (including
-    // the tracked playhead for a marker drag); scroll and playhead drags just
-    // end where they are. No-op when no drag is active. Callers: the
-    // drag-modal escape hatches in on_key, and the WM-close callback in
-    // main.cpp (both cancel before raising the close prompt).
+    // the tracked playhead for a marker drag); a strip drag just ends where it
+    // is; a region drag is cancelled and the region restored to its pre-drag
+    // snapshot. No-op when no drag is active. Callers: the drag-modal escape
+    // hatches in on_key, and the WM-close callback in main.cpp (both cancel
+    // before raising the close prompt).
     void cancel_active_drags();
+
+    // Arm the plain left-drag region-select gesture at a press. `anchor_frame`
+    // is the active-domain frame the press just placed the playhead at; (x, y)
+    // is the press position for the press-becomes-drag threshold. Captures the
+    // pre-drag region for an Esc cancel. Only the two plain-press waveform sites
+    // call this; a Shift press is a click and does not arm.
+    void arm_region_drag_at(int64_t anchor_frame, int x, int y);
 
     // Pump half of the kill-and-park dispatch rule, reached through
     // GuiTargetRender's dispatch_pending_archival hook on every

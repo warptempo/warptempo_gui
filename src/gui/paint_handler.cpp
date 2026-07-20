@@ -236,6 +236,59 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     }
 }
 
+// -- GuiPaintHandler::paint_region_wash ----------------------------------
+
+// Paints the region-select span as a flat translucent brightening wash over
+// the full waveform height. Called from on_redraw right after
+// paint_waveform_plate, so it composites over the just-blitted plate AND the
+// out-of-trim dim (a region inside a dimmed area lifts the dimmed pixels —
+// accepted, it stays visible). Session-only, nothing persisted; not part of
+// the plate/stem/flag caches — a direct per-frame overlay like the phase reset
+// overlay and the out-of-trim dim, so no cache is involved. AA off on the edges
+// like the other overlay rects.
+void GuiPaintHandler::paint_region_wash(cairo_t* cr, const GuiRect& area) {
+    if (!app.region.active) return;
+    if (area.w <= 0 || area.h <= 0) return;
+
+    // Displayed-viewport recipe: the same fp_* fingerprint paint_playheads and
+    // paint_phase_reset_overlay use, so the wash stays locked to the blitted
+    // plate while the worker rebuilds against a viewport change.
+    const double spp = wf_cache.fp_area_w > 0
+        ? static_cast<double>(wf_cache.fp_vp_end - wf_cache.fp_vp_start) /
+          static_cast<double>(wf_cache.fp_area_w)
+        : current_samples_per_pixel(app, audio);
+    if (spp <= 0.0) return;
+    const double vp_start = static_cast<double>(wf_cache.fp_vp_start);
+
+    // Endpoints are active-domain frames stored in drag order; normalize to
+    // [lo, hi] at read time. The active-domain->column map is the plain
+    // viewport form (the endpoints already live in the displayed domain, so no
+    // warp map is walked — unlike the phase reset overlay, whose source-frame
+    // marker crosses to target first).
+    const int64_t lo = std::min(app.region.a_frame, app.region.b_frame);
+    const int64_t hi = std::max(app.region.a_frame, app.region.b_frame);
+    const int lo_col = static_cast<int>(std::nearbyint(
+        (static_cast<double>(lo) - vp_start) / spp));
+    const int hi_col = static_cast<int>(std::nearbyint(
+        (static_cast<double>(hi) - vp_start) / spp));
+
+    double x0 = static_cast<double>(area.x + lo_col);
+    double x1 = static_cast<double>(area.x + hi_col);
+    // Clamp to the visible strip; a span wholly offscreen paints nothing.
+    x0 = std::max(x0, static_cast<double>(area.x));
+    x1 = std::min(x1, static_cast<double>(area.x + area.w));
+    if (x1 <= x0) return;
+
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    cairo_set_source_rgba(cr, kRegionWash.r, kRegionWash.g, kRegionWash.b,
+                          kRegionWashAlpha);
+    cairo_rectangle(cr, x0, static_cast<double>(area.y),
+                    x1 - x0, static_cast<double>(area.h));
+    cairo_fill(cr);
+    cairo_restore(cr);
+}
+
 // -- GuiPaintHandler::paint_phase_reset_overlay ---------------------------
 
 // Paint-only overlay width: two synthesis hops of target/output time, the
@@ -619,6 +672,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
         if (rects_intersect(exposed, area)) {
             paint_waveform_plate(cr, area);
+            // Region-select wash: over the plate and the out-of-trim dim,
+            // under the phase reset overlay, stems, and playheads.
+            paint_region_wash(cr, area);
         }
 
         // Markers: vertical stems in the waveform area, beneath the

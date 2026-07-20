@@ -114,7 +114,7 @@ namespace {
 // unit from the GUI flag-text composer (flag_text_iter), which stays in
 // render.cpp over GuiWarpMarker.
 
-// UndoEntry, DragState, UndoHistory, PlayheadDragState,
+// UndoEntry, DragState, UndoHistory, RegionState, RegionDragState,
 // HoverPopupState, DialogTrigger, PromptState, ViewState, AppState live in
 // app_state.h, alongside the Viewport struct.
 

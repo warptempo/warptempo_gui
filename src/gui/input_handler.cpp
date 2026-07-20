@@ -206,13 +206,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Cancelling before the prompt goes up is what keeps a dismissed
     // prompt from leaving a stale drag that commits on the next motion.
     // This single gate is why no downstream hotkey needs its own
-    // drag guard: Tab, undo, `t`, and the rest never see a key mid-drag,
-    // the sole exception being the playhead-scrub set-marker carve-out
-    // below. The editor text-selection drag has its own modal gate above
-    // the text-editor handlers; the four position drags here are mutually
+    // drag guard: Tab, undo, `t`, and the rest never see a key mid-drag.
+    // The editor text-selection drag has its own modal gate above
+    // the text-editor handlers; the four pointer drags here are mutually
     // exclusive with it.
     if (app.drag.active || app.trim_drag.active ||
-        app.strip_drag.active || app.playhead_drag.active) {
+        app.strip_drag.active || app.region_drag.active) {
         if (key == GuiKeys::Escape) {
             cancel_active_drags();
             return;
@@ -222,21 +221,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             prompt.request_close();
             return;
         }
-        // A playhead scrub is a navigation gesture, so it alone lets the
-        // set-marker actions through: bare `s` and Alt+S fall through to the
-        // S handler below to drop a marker / phase reset at the scrubbed
-        // playhead. Ctrl+S (save) stays swallowed, and the position-editing
-        // drags (marker, trim) swallow these too — dropping a marker
-        // mid-marker-drag would fight the gesture. The strip-row drag is
-        // navigation, but a set-marker mid-pan/zoom is still the wrong default,
-        // so it swallows too. The four drag states are mutually exclusive, so
-        // playhead_only is belt-and-suspenders that keeps the intent explicit.
-        const bool playhead_only =
-            app.playhead_drag.active && !app.drag.active &&
-            !app.trim_drag.active && !app.strip_drag.active;
-        if (!(playhead_only && !ctrl && key == GuiKeys::S)) {
-            return;
-        }
+        return;
     }
 
     // Per-tab read-only keyboard gate: a permitted-keys allowlist that filters
@@ -315,6 +300,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Esc cancels an in-flight render / queued batch.
     if (handle_escape_cancels(key)) return;
+
+    // Esc with no higher-priority consumer clears a resting region-select span.
+    // Placed LAST in the Esc chain: a live pointer drag (cancelled at the
+    // drag-modal gate above), an open editor (closed in the editor blocks
+    // above), and an in-flight render/batch (cancelled just above) each win.
+    // Region select is a transient visual, so this clear runs in read-only too
+    // (the read-only allowlist admits Esc).
+    if (key == GuiKeys::Escape && app.region.active) {
+        app.region = RegionState{};
+        viewport.invalidate_waveform_area();
+        return;
+    }
 
     // Ctrl+Q: quit (via unsaved-work dialog when dirty).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) {
@@ -703,9 +700,9 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // model.
     //
     // A wheel event during ANY active pointer gesture is ignored, matching
-    // on_button_press and the keyboard's drag-modal gate. The playhead
-    // scrub is included: the keyboard gate swallows every authoring chord
-    // mid-scrub, so the wheel's authoring route (the Alt+wheel chip-row
+    // on_button_press and the keyboard's drag-modal gate. The region drag
+    // is included: the keyboard gate swallows every authoring chord
+    // mid-drag, so the wheel's authoring route (the Alt+wheel chip-row
     // end-move) and viewport changes must not slip through either.
     // The editor-text drag is included: the wheel's authoring routes and
     // viewport changes must not fire under a held text-selection drag either
@@ -907,6 +904,12 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     app.displayed_target_warp_frame_map.clear();
     app.staged_displayed_target_warp_frame_map.clear();
     app.staged_displayed_valid = false;
+
+    // The region-select span is in the ACTIVE display domain, which just
+    // flipped (source <-> target frames). Its endpoints are meaningless in the
+    // new domain, so clear it; the full-window invalidate at the tail repaints
+    // the waveform without the wash.
+    app.region = RegionState{};
 
     // The S/T toggle translates the active tab's live playhead across the
     // domain flip; the inactive tab's stored playhead must translate too, or
