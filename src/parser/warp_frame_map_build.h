@@ -280,7 +280,7 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx,
 // synthetic projection marker (source_idx -1), the suffix is dropped
 // entirely and the popup shows just the resolved tempo. A pass whose
 // inheritance walk terminated on a surviving enabled label ref reads
-// "= 1.00 (ctrl+c to copy)" — the render's fallback, with no provenance.
+// "= 1.00" — the render's fallback, with no provenance.
 // Label_ref markers emit
 // "~= BASE*COMBINED_SCALE (from DEF_BASE:LABEL @ TIME)" (BASE printed as a
 // tempo value via format_tempo_cents; COMBINED_SCALE = def_scale * multiplier
@@ -290,10 +290,10 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx,
 // inherited literal; DEF_BASE:LABEL and TIME describe the label-definition
 // marker). A label ref the render normalizes reads the exact literal it
 // renders as — "=" not "~=", nothing geometry-implied remains:
-// "= 1.00 (undefined label, ctrl+c to copy)" when its resolution basis has
+// "= 1.00 (undefined label)" when its resolution basis has
 // no definition (MarkerEffective::NormalizedReason::UndefinedLabel — a def
 // that died in a coincidence collapse counts as undefined, the render's
-// verdict), "= 1.00 (extreme label ratio, ctrl+c to copy)" when its
+// verdict), "= 1.00 (extreme label ratio)" when its
 // implied effective tempo lies outside the [0.125, 8.0] envelope
 // (NormalizedReason::ExtremeRatio); both copy "1.00". The parenthetical
 // comes from the reason field, never a raw-store re-search. A projection-
@@ -301,11 +301,7 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx,
 // own rule — so it reads out and classifies exactly as it renders. TIME is
 // formatted with format_timestamp
 // (time_format.h), the same mm:ss.mmm formatter the rest of the GUI uses.
-// The hover-copy hint is added to every qualifying readout. When the readout
-// carries a provenance parenthetical the hint folds inside it after a comma:
-// "(from SOURCE @ TIME, ctrl+c to copy)". When the readout has no provenance
-// (a first-marker pass, or one whose source is unresolvable) the hint is its
-// own trailing "(ctrl+c to copy)".
+// The popup text carries the readout content only.
 // Returns "" when the marker does not qualify (owning, malformed, or a
 // carve-out ref — a group member or effectively-disabled ref — whose raw
 // walk finds no surviving successor to bound a segment). GUI callers slice
@@ -317,7 +313,7 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx,
 // the serializer writes: format_tempo_cents(base_cents), plus
 // "*"+format_value_double(scale, 4) when a scale is present (omitted for a
 // pass whose scale is semantically 1, always included for a label ref). No
-// "= "/"~= " prefix, no provenance, no copy hint — just the value. It is the
+// "= "/"~= " prefix, no provenance — just the value. It is the
 // popup text's own value substring, so the two cannot drift. Left untouched
 // when the marker does not qualify (the function returns "" first).
 std::string compute_hover_popup_text(

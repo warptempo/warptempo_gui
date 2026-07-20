@@ -702,15 +702,9 @@ MarkerEffective marker_effective(
 std::string compute_hover_popup_text(
     const std::vector<WarpMarker>& mv, int idx, int sample_rate,
     long total_frames, std::string* copy_payload_out) {
-    // The hover-copy hint. A readout with no provenance carries it as its own
-    // trailing parenthetical (kCopyHint). A readout that already ends in a
-    // "(from ... @ TIME)" provenance parenthetical folds the hint inside that
-    // parenthetical after a comma via kCopyHintJoined, which replaces the
-    // provenance's closing ")". Either way the value the binding actually
-    // copies is copy_payload_out, set from the readout's own value substring
-    // below and independent of the hint's placement.
-    static constexpr const char* kCopyHint       = " (ctrl+c to copy)";
-    static constexpr const char* kCopyHintJoined = ", ctrl+c to copy)";
+    // The value the Ctrl+C binding copies is copy_payload_out, set from the
+    // readout's own value substring below; the popup text carries the readout
+    // content only.
     if (idx < 0 || idx >= static_cast<int>(mv.size())) return "";
     // sample_rate is display-only: it renders the provenance time as
     // format_timestamp(frame / sample_rate).
@@ -742,7 +736,7 @@ std::string compute_hover_popup_text(
         // and a pass whose visible prior is a synthetic projection marker —
         // a collapsed group's replacement owner or the frame-0 seed — which
         // no raw marker can honestly be named for.
-        if (eff.source_idx < 0) return out + kCopyHint;
+        if (eff.source_idx < 0) return out;
 
         // Provenance: the immediate prior marker's own resolved displayed
         // tempo (its base, or base*scale if it carries a typed scale) and its
@@ -753,7 +747,7 @@ std::string compute_hover_popup_text(
         const WarpMarker& src = mv[eff.source_idx];
         const MarkerEffective src_eff =
             marker_effective(mv, eff.source_idx, total_frames);
-        if (src_eff.base_cents == 0) return out + kCopyHint;
+        if (src_eff.base_cents == 0) return out;
 
         // The visible immediate prior is never an enabled label ref here:
         // were the first surviving prior a ref, the inheritance walk would
@@ -769,7 +763,7 @@ std::string compute_hover_popup_text(
         out += descriptor;
         out += " @ ";
         out += format_timestamp(src.time_frame / sr_d);
-        out += kCopyHintJoined;
+        out += ")";
         return out;
     }
 
@@ -792,8 +786,8 @@ std::string compute_hover_popup_text(
             if (copy_payload_out) *copy_payload_out = out.substr(2);
             out += (eff.reason ==
                     MarkerEffective::NormalizedReason::UndefinedLabel)
-                       ? " (undefined label, ctrl+c to copy)"
-                       : " (extreme label ratio, ctrl+c to copy)";
+                       ? " (undefined label)"
+                       : " (extreme label ratio)";
             return out;
         }
 
@@ -818,7 +812,7 @@ std::string compute_hover_popup_text(
         out += m.label_ref;
         out += " @ ";
         out += format_timestamp(def.time_frame / sr_d);
-        out += kCopyHintJoined;
+        out += ")";
         return out;
     }
 
