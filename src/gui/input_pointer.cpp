@@ -267,6 +267,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // the one continuous domain from wherever it rests, and the pan
                 // row never changes it.
                 app.strip_drag.press_level = app.zoom_level;
+                // Ableton-style pointer capture: hide and lock the cursor at
+                // the press so motion feeds the gesture as unbounded virtual
+                // coordinates (infinite pan/zoom travel). Self-guarding no-op
+                // on a degraded compositor. Every strip-drag exit path calls
+                // the matching end hook exactly once.
+                begin_strip_pointer_capture();
                 return;
             }
         }
@@ -528,6 +534,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // rest state is exact. A motionless press-release finalizes nothing.
         if (app.strip_drag.moved) apply_strip_drag_at(x, y, /*final_event=*/true);
         app.strip_drag = StripDragState{};
+        end_strip_pointer_capture();  // reappear the cursor at the press point
         return;
     }
     if (app.playhead_drag.active) {
@@ -603,6 +610,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             if (app.strip_drag.moved)
                 apply_strip_drag_at(mouse_x, mouse_y, /*final_event=*/true);
             app.strip_drag = StripDragState{};
+            end_strip_pointer_capture();
             return;
         }
         app.strip_drag.moved = true;

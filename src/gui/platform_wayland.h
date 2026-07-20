@@ -85,6 +85,20 @@ public:
     // GuiAsyncRenderer::on_completion_event).
     void set_worker_completion_fd(int fd, std::function<void()> on_event);
 
+    // Strip-drag pointer capture (Ableton-style): hide and lock the cursor at
+    // the press position, feed subsequent relative-pointer motion into the
+    // gesture as UNBOUNDED virtual coordinates so pan/zoom travel is infinite,
+    // and reappear the cursor at the press position on release. Wired from
+    // main.cpp into the input handler's strip-drag begin/end hooks; only the
+    // two strip rows call them. Both degrade to a silent no-op when the
+    // compositor advertises neither pointer-constraints nor relative-pointer
+    // (the gesture then runs with clamped absolute motion, exactly as before).
+    // begin is a guarded no-op when a capture is already active; end is
+    // idempotent, so every gesture exit path (release, lost button, cancel)
+    // may call it unconditionally.
+    void begin_pointer_capture();
+    void end_pointer_capture();
+
     // Parallel hookup for the GuiWaveformWorker's completion
     // eventfd. The poll set grows a fourth pollfd; on POLLIN the loop
     // reads the counter and invokes this callback (routes to
@@ -200,6 +214,35 @@ private:
     bool mod_ctrl_  = false;
     bool mod_shift_ = false;
     bool mod_alt_   = false;
+
+    // -- Pointer capture (pointer-constraints + relative-pointer) --
+    // Both managers are OPTIONAL: null when the compositor does not advertise
+    // them, and every capture entry point then degrades to a silent no-op.
+    // relative_pointer_ is created once alongside wl_pointer_ and destroyed
+    // with it; its motion events are consumed only while a capture is active.
+    // locked_pointer_ is non-null only for the duration of a captured gesture.
+    struct zwp_pointer_constraints_v1*      pointer_constraints_       = nullptr;
+    struct zwp_relative_pointer_manager_v1* relative_pointer_manager_  = nullptr;
+    struct zwp_relative_pointer_v1*         relative_pointer_          = nullptr;
+    struct zwp_locked_pointer_v1*           locked_pointer_            = nullptr;
+
+    // Virtual-pointer state, live only while pointer_captured_ is true. The
+    // virtual position is seeded from the absolute press position and then
+    // advances by each relative-motion delta WITHOUT clamping (unbounded
+    // travel); its rounded value is written into pointer_x_/pointer_y_ and
+    // delivered through on_motion_ exactly like an absolute motion. The
+    // restore point is the press position: the cursor reappears there when the
+    // lock is released.
+    bool   pointer_captured_   = false;
+    double virtual_pointer_x_  = 0.0;
+    double virtual_pointer_y_  = 0.0;
+    double capture_restore_x_  = 0.0;
+    double capture_restore_y_  = 0.0;
+
+    // Latest wl_pointer.enter serial. Tracked for wl_pointer.set_cursor: the
+    // theme-cursor set on enter and the NULL-surface hide at capture begin both
+    // require a recent enter serial.
+    uint32_t pointer_enter_serial_ = 0;
 
     // -- Pointer --
     struct wl_pointer* wl_pointer_ = nullptr;
@@ -360,4 +403,18 @@ private:
     void on_pointer_axis(uint32_t time, uint32_t axis, int32_t value);
     void on_pointer_axis_value120(uint32_t axis, int32_t value120);
     void on_pointer_frame();
+
+    // -- Pointer-capture helpers --
+    // Create relative_pointer_ once both wl_pointer_ and the manager exist
+    // (called from both on_seat_capabilities and init(), whichever wins the
+    // registry/seat ordering race); destroy it alongside the wl_pointer.
+    void create_relative_pointer_if_ready();
+    void destroy_relative_pointer();
+    // Release a live lock: apply the restore-position hint (release path) or
+    // skip it (compositor-revoked path), destroy the lock, restore the theme
+    // cursor, and drop virtual mode. Idempotent.
+    void release_pointer_lock(bool apply_restore_hint);
+    void on_relative_pointer_motion(double dx, double dy);
+    void on_locked_pointer_locked();
+    void on_locked_pointer_unlocked();
 };

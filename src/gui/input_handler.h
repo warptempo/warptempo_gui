@@ -167,6 +167,17 @@ struct GuiInputHandler {
     GuiTargetRender&         target_render;
     GuiPaintHandler&         paint_handler;
 
+    // Strip-drag pointer-capture hooks, seeded no-op and installed in main.cpp
+    // to GuiPlatform::begin_pointer_capture / end_pointer_capture (the same
+    // reverse-the-platform-boundary pattern as Viewport::kick_waveform_*).
+    // ONLY the two strip-row drags fire them: begin after the press claim arms,
+    // end on every strip-drag exit path (release, lost button, cancel). Both
+    // platform methods are self-guarding — begin no-ops when a capture is live
+    // or the compositor lacks the managers, end is idempotent — so a strip drag
+    // that never captured (degraded compositor) still calls end harmlessly.
+    std::function<void()> begin_strip_pointer_capture = []{};
+    std::function<void()> end_strip_pointer_capture   = []{};
+
     GuiInputHandler(AppState&                app_,
                     const GuiAudio&          audio_,
                     GuiPlatform&             gui_,

@@ -404,6 +404,7 @@ void GuiInputHandler::cancel_active_drags() {
             viewport.kick_waveform_sync();
         }
         app.strip_drag = StripDragState{};
+        end_strip_pointer_capture();
     }
     if (app.playhead_drag.active) app.playhead_drag = PlayheadDragState{};
     // A live editor-text drag is FINALIZED, not cancelled: it is selection-only

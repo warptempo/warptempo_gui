@@ -628,6 +628,14 @@ int main(int argc, char** argv) {
     viewport.request_waveform_sync_ =
         [&]() { paint_handler.force_synchronous_waveform_rebuild(); };
 
+    // Strip-drag pointer capture: the input handler's strip-row begin/end hooks
+    // drive the platform's cursor lock (pointer-constraints + relative-pointer).
+    // Both platform methods self-guard (begin no-ops when a capture is live or
+    // the compositor lacks the managers; end is idempotent), so the input layer
+    // stays agnostic to whether capture is available.
+    input_handler.begin_strip_pointer_capture = [&]() { gui.begin_pointer_capture(); };
+    input_handler.end_strip_pointer_capture   = [&]() { gui.end_pointer_capture(); };
+
     auto invalidate_timestamp_area   = [&]() { viewport.invalidate_timestamp_area(); };
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };

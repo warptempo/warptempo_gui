@@ -6,6 +6,8 @@
 #include <wayland-cursor.h>
 #include <xdg-shell-client-protocol.h>
 #include <xdg-decoration-unstable-v1-client-protocol.h>
+#include <pointer-constraints-unstable-v1-client-protocol.h>
+#include <relative-pointer-unstable-v1-client-protocol.h>
 #include <xkbcommon/xkbcommon.h>
 
 #include <linux/input-event-codes.h>
@@ -316,6 +318,28 @@ struct WaylandListeners {
     }
     static void pointer_axis_relative_direction(void*, struct wl_pointer*,
                                                 uint32_t, uint32_t) {}
+
+    // zwp_relative_pointer_v1
+    static void relative_motion(void* data, struct zwp_relative_pointer_v1*,
+                                uint32_t /*utime_hi*/, uint32_t /*utime_lo*/,
+                                wl_fixed_t dx, wl_fixed_t dy,
+                                wl_fixed_t /*dx_unaccel*/,
+                                wl_fixed_t /*dy_unaccel*/) {
+        // Feed the ACCELERATED delta (dx/dy, not the unaccelerated pair) so
+        // captured travel matches the normal pointer feel of the uncaptured
+        // gesture.
+        static_cast<GuiPlatform*>(data)->on_relative_pointer_motion(
+            wl_fixed_to_double(dx), wl_fixed_to_double(dy));
+    }
+
+    // zwp_locked_pointer_v1
+    static void locked_pointer_locked(void* data, struct zwp_locked_pointer_v1*) {
+        static_cast<GuiPlatform*>(data)->on_locked_pointer_locked();
+    }
+    static void locked_pointer_unlocked(void* data,
+                                        struct zwp_locked_pointer_v1*) {
+        static_cast<GuiPlatform*>(data)->on_locked_pointer_unlocked();
+    }
 };
 
 namespace {
@@ -402,6 +426,15 @@ const struct wl_pointer_listener s_pointer_listener = {
     WaylandListeners::pointer_axis_relative_direction,
 };
 
+const struct zwp_relative_pointer_v1_listener s_relative_pointer_listener = {
+    WaylandListeners::relative_motion,
+};
+
+const struct zwp_locked_pointer_v1_listener s_locked_pointer_listener = {
+    WaylandListeners::locked_pointer_locked,
+    WaylandListeners::locked_pointer_unlocked,
+};
+
 #pragma GCC diagnostic pop
 
 } // namespace
@@ -459,6 +492,21 @@ bool GuiPlatform::init(int width, int height, const char* title) {
                      "warptempo_gui: no wl_output advertised; "
                      "playback tick will use 60 hz fallback\n");
     }
+    if (!pointer_constraints_ || !relative_pointer_manager_) {
+        std::fprintf(stderr,
+                     "warptempo_gui: pointer capture unavailable "
+                     "(zwp_pointer_constraints_v1=%p "
+                     "zwp_relative_pointer_manager_v1=%p); strip drags run "
+                     "without cursor lock\n",
+                     (void*)pointer_constraints_,
+                     (void*)relative_pointer_manager_);
+    }
+
+    // The seat's capabilities event may have created wl_pointer_ during the
+    // roundtrips above; if the relative-pointer manager was bound in the same
+    // burst, create the relative pointer now (idempotent, no-op if already
+    // created by on_seat_capabilities or if either half is absent).
+    create_relative_pointer_if_ready();
 
     width_  = width;
     height_ = height;
@@ -546,6 +594,14 @@ void GuiPlatform::destroy_wayland_state() {
         wl_keyboard_release(wl_keyboard_);
         wl_keyboard_ = nullptr;
     }
+    // Release any live pointer lock and the relative pointer before the
+    // wl_pointer they depend on. No cursor restore at shutdown.
+    if (locked_pointer_) {
+        zwp_locked_pointer_v1_destroy(locked_pointer_);
+        locked_pointer_ = nullptr;
+    }
+    pointer_captured_ = false;
+    destroy_relative_pointer();
     if (wl_pointer_) {
         wl_pointer_release(wl_pointer_);
         wl_pointer_ = nullptr;
@@ -610,6 +666,14 @@ void GuiPlatform::destroy_wayland_state() {
 
     destroy_shm_pool();
 
+    if (pointer_constraints_) {
+        zwp_pointer_constraints_v1_destroy(pointer_constraints_);
+        pointer_constraints_ = nullptr;
+    }
+    if (relative_pointer_manager_) {
+        zwp_relative_pointer_manager_v1_destroy(relative_pointer_manager_);
+        relative_pointer_manager_ = nullptr;
+    }
     if (xdg_decoration_manager_) {
         zxdg_decoration_manager_v1_destroy(xdg_decoration_manager_);
         xdg_decoration_manager_ = nullptr;
@@ -1049,6 +1113,14 @@ void GuiPlatform::on_registry_global(struct wl_registry* r, uint32_t name,
     } else if (std::strcmp(interface, zxdg_decoration_manager_v1_interface.name) == 0) {
         xdg_decoration_manager_ = static_cast<struct zxdg_decoration_manager_v1*>(
             wl_registry_bind(r, name, &zxdg_decoration_manager_v1_interface, 1));
+    } else if (std::strcmp(interface, zwp_pointer_constraints_v1_interface.name) == 0) {
+        // Both pointer-capture managers are v1 and OPTIONAL: absence degrades
+        // strip drags to clamped absolute motion (see begin_pointer_capture).
+        pointer_constraints_ = static_cast<struct zwp_pointer_constraints_v1*>(
+            wl_registry_bind(r, name, &zwp_pointer_constraints_v1_interface, 1));
+    } else if (std::strcmp(interface, zwp_relative_pointer_manager_v1_interface.name) == 0) {
+        relative_pointer_manager_ = static_cast<struct zwp_relative_pointer_manager_v1*>(
+            wl_registry_bind(r, name, &zwp_relative_pointer_manager_v1_interface, 1));
     } else if (std::strcmp(interface, wl_output_interface.name) == 0) {
         // Bind only the first wl_output advertised. Multi-monitor is out of
         // scope here; the first output's refresh rate is used as
@@ -1227,7 +1299,17 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
     if (has_pointer && !wl_pointer_) {
         wl_pointer_ = wl_seat_get_pointer(wl_seat_);
         wl_pointer_add_listener(wl_pointer_, &s_pointer_listener, this);
+        // The relative pointer is created once alongside the wl_pointer (no-op
+        // when the manager is absent or the object already exists).
+        create_relative_pointer_if_ready();
     } else if (!has_pointer && wl_pointer_) {
+        // A held strip-drag capture ends here on the hard end of the pointer
+        // stream: restore the cursor and destroy the lock while wl_pointer_ is
+        // still valid. The gesture-layer synthesized release below reaches
+        // end_pointer_capture again, harmlessly (idempotent).
+        end_pointer_capture();
+        // The relative pointer depends on the wl_pointer; destroy it first.
+        destroy_relative_pointer();
         const bool left_was_held = pointer_left_held_;
         wl_pointer_release(wl_pointer_);
         wl_pointer_ = nullptr;
@@ -1584,6 +1666,7 @@ void GuiPlatform::on_pointer_enter(uint32_t serial,
     pointer_focused_ = true;
     pointer_x_ = wl_fixed_to_int(surface_x);
     pointer_y_ = wl_fixed_to_int(surface_y);
+    pointer_enter_serial_ = serial;
 
     // Hand the compositor our cursor surface so the standard arrow appears
     // over our window. wl_pointer.set_cursor with a NULL surface is the
@@ -1815,6 +1898,127 @@ void GuiPlatform::on_pointer_frame() {
     frame_have_v120_  = false;
     frame_have_axis_  = false;
 }
+// ---------------------------------------------------------------------------
+// Strip-drag pointer capture
+// ---------------------------------------------------------------------------
+
+void GuiPlatform::create_relative_pointer_if_ready() {
+    if (!relative_pointer_manager_ || !wl_pointer_ || relative_pointer_) return;
+    relative_pointer_ = zwp_relative_pointer_manager_v1_get_relative_pointer(
+        relative_pointer_manager_, wl_pointer_);
+    zwp_relative_pointer_v1_add_listener(relative_pointer_,
+                                         &s_relative_pointer_listener, this);
+}
+
+void GuiPlatform::destroy_relative_pointer() {
+    if (relative_pointer_) {
+        zwp_relative_pointer_v1_destroy(relative_pointer_);
+        relative_pointer_ = nullptr;
+    }
+}
+
+void GuiPlatform::begin_pointer_capture() {
+    // Guarded no-op when a capture is already active (a second strip-drag press
+    // cannot exist while the button is held, but the guard makes the contract
+    // explicit). Degraded compositor (either manager absent, so no relative
+    // pointer) leaves the gesture on clamped absolute motion.
+    if (pointer_captured_) return;
+    if (!pointer_constraints_ || !relative_pointer_ || !wl_pointer_ ||
+        !wl_surface_)
+        return;
+
+    // Seed the virtual position from the current absolute position and remember
+    // it as the restore point (the cursor reappears here on release).
+    virtual_pointer_x_ = static_cast<double>(pointer_x_);
+    virtual_pointer_y_ = static_cast<double>(pointer_y_);
+    capture_restore_x_ = virtual_pointer_x_;
+    capture_restore_y_ = virtual_pointer_y_;
+
+    // Hide the cursor. set_cursor with a NULL surface is the protocol's "hide"
+    // request; the tracked enter serial authorizes it.
+    wl_pointer_set_cursor(wl_pointer_, pointer_enter_serial_, nullptr, 0, 0);
+
+    // Lock the pointer at its current position. NULL region = surface input
+    // region; PERSISTENT so a transient focus wobble does not tear the lock out
+    // from under the gesture (we destroy it explicitly at gesture end).
+    locked_pointer_ = zwp_pointer_constraints_v1_lock_pointer(
+        pointer_constraints_, wl_surface_, wl_pointer_, nullptr,
+        ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT);
+    if (!locked_pointer_) {
+        // Creation failed: un-hide and stay uncaptured.
+        wl_pointer_set_cursor(wl_pointer_, pointer_enter_serial_,
+                              cursor_surface_, cursor_hotspot_x_,
+                              cursor_hotspot_y_);
+        return;
+    }
+    zwp_locked_pointer_v1_add_listener(locked_pointer_,
+                                       &s_locked_pointer_listener, this);
+    pointer_captured_ = true;
+}
+
+void GuiPlatform::end_pointer_capture() {
+    release_pointer_lock(/*apply_restore_hint=*/true);
+}
+
+void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
+    if (!pointer_captured_ && !locked_pointer_) return;  // idempotent
+
+    if (locked_pointer_) {
+        if (apply_restore_hint) {
+            // Return the cursor to the press position when the lock is
+            // destroyed. The hint is double-buffered against the constrained
+            // surface, so commit it before destroying the lock.
+            zwp_locked_pointer_v1_set_cursor_position_hint(
+                locked_pointer_,
+                wl_fixed_from_double(capture_restore_x_),
+                wl_fixed_from_double(capture_restore_y_));
+            if (wl_surface_) wl_surface_commit(wl_surface_);
+        }
+        zwp_locked_pointer_v1_destroy(locked_pointer_);
+        locked_pointer_ = nullptr;
+    }
+    pointer_captured_ = false;
+
+    // Restore the theme cursor (NULL-hide fallback when the theme is absent) at
+    // the tracked enter serial. Skipped when the wl_pointer is already gone
+    // (a pointer-capability loss releases it before this runs).
+    if (wl_pointer_) {
+        wl_pointer_set_cursor(wl_pointer_, pointer_enter_serial_,
+                              cursor_surface_, cursor_hotspot_x_,
+                              cursor_hotspot_y_);
+    }
+}
+
+void GuiPlatform::on_relative_pointer_motion(double dx, double dy) {
+    // Consumed only while a capture is active; ignored otherwise (a relative
+    // pointer exists for the process lifetime but only the strip drags lock).
+    if (!pointer_captured_) return;
+
+    // Advance the UNBOUNDED virtual position — no clamp to the window is what
+    // makes pan/zoom travel infinite — and deliver the rounded position through
+    // the same on_motion path an absolute motion uses. The gesture layer is
+    // agnostic: it just sees coordinates that can now leave the window.
+    virtual_pointer_x_ += dx;
+    virtual_pointer_y_ += dy;
+    pointer_x_ = static_cast<int>(std::lround(virtual_pointer_x_));
+    pointer_y_ = static_cast<int>(std::lround(virtual_pointer_y_));
+    if (on_motion_) on_motion_(pointer_x_, pointer_y_, current_mods());
+}
+
+void GuiPlatform::on_locked_pointer_locked() {
+    // The lock activated. Nothing to do — the cursor was hidden and the virtual
+    // position seeded at begin_pointer_capture.
+}
+
+void GuiPlatform::on_locked_pointer_unlocked() {
+    // Compositor revoked the lock (e.g. focus loss). Restore the cursor and
+    // drop virtual mode without the restore-position hint (the lock is already
+    // inactive). The gesture ends later through the normal button-release /
+    // lost-button paths, where end_pointer_capture is a harmless idempotent
+    // no-op.
+    release_pointer_lock(/*apply_restore_hint=*/false);
+}
+
 // ---------------------------------------------------------------------------
 // Setters (callbacks)
 // ---------------------------------------------------------------------------
