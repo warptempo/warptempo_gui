@@ -127,6 +127,14 @@ inline constexpr GuiColor kSelectedOutline  = hex(0x7DCDF7);
 inline constexpr GuiColor kAccentOutline    = hex(0xE5655F);
 inline constexpr GuiColor kTrimMarkerOutline = hex(0xFFA040);
 
+// Single dimming factor for a DISABLED marker, applied uniformly across its
+// flag (chip ring + fill + glyphs), its triangle, and its selection-revealed
+// stem. Stems now paint only for SELECTED markers, so omission can no longer
+// signal disablement — this alpha is the sole disabled cue. Selection controls
+// the color class (kSelected family) and the stem reveal; disablement controls
+// this alpha, and the two compose. Architect-tunable.
+inline constexpr double kDisabledMarkerAlpha = 0.45;
+
 // Trim boundary stem color (#F67400 orange). Distinct from
 // kMarker, kSelected, the teal cursor, and the yellow scanner. A set
 // trim begin/end always paints as a vertical stem in this one color —
@@ -493,7 +501,13 @@ struct EditorTextBox {
     int                  cursor_pos       = 0;
     GuiColor             outline          = kMarker;
 };
-void render_editor_text_box(cairo_t* cr, const EditorTextBox& s);
+// `alpha` (default opaque) dims the whole composited box uniformly — the
+// disabled-marker cue for a chip (flag). It is applied by rendering the box
+// into a group and compositing it with alpha, so the ring, fill, and glyphs
+// dim together. Every non-chip caller (bottom-strip editors, trim chips) leaves
+// it at 1.0 and paints byte-identically.
+void render_editor_text_box(cairo_t* cr, const EditorTextBox& s,
+                            double alpha = 1.0);
 
 // Screen-coord rect of one rendered flag, keyed back to its marker index.
 // Emitted in the same order flags appear left-to-right.
@@ -558,14 +572,17 @@ void render_playhead(cairo_t* cr,
                      bool draw_triangle = true,
                      cairo_surface_t* ink_plate = nullptr);
 
-// Draws vertical 1-pixel lines across `waveform_area` for each marker whose
-// resolved sample falls inside [viewport_start_sample, viewport_end_sample).
-// Effective disabled state is computed inline from the marker list (a label
-// reference inherits the disabled flag of its defining marker). Disabled
-// markers are skipped entirely. Selected markers paint kSelected, the rest
-// kMarker; marker stems do not dim — only the out-of-trim sample pixels
-// dim, via on_redraw's ATOP overlay (see kWaveformDimmed). The global
-// out-of-trim dim was retired and it stays retired for stems.
+// Draws each SELECTED marker's vertical 1-pixel stem across `waveform_area`
+// when its resolved sample falls inside [viewport_start_sample,
+// viewport_end_sample), plus every marker's small frame triangle at the
+// waveform top edge. Stems are selection-revealed: an unselected marker paints
+// no stem (its flag + triangle are its whole visual), and the stem machinery is
+// kept, not deleted. A selected stem paints kSelected; a selected DISABLED stem
+// dims under kDisabledMarkerAlpha. The triangle paints for every marker, dimmed
+// by the same alpha when disabled. Effective disabled state is computed inline
+// from the marker list (a label reference inherits the disabled flag of its
+// defining marker). The out-of-trim sample-pixel dim (on_redraw's ATOP overlay,
+// kWaveformDimmed) is separate and does not touch stems.
 // `warp_frame_map` (default null) shifts marker positioning into the mapped
 // display domain (target view's live map): each marker's source-frame position
 // is run through `map_source_to_target` before viewport clipping and column
@@ -677,9 +694,11 @@ struct FlagEditorOverlay {
 // Trim membership has no effect on flags — they always paint
 // full-brightness.
 //
-// Disabled markers render identically to enabled markers in the top strip;
-// the only disabled signal lives in the marker stem (handled by
-// `render_markers`).
+// A disabled marker's chip dims under kDisabledMarkerAlpha (chip ring + fill +
+// glyphs together), the same single disabled cue applied to its triangle and
+// its selection-revealed stem in `render_markers`. The LIVE editing flag is
+// exempt — the active editing surface stays full opacity even when its target
+// is disabled.
 // `warp_frame_map`: same displayed-axis translation as render_markers (the
 // live map in target view). Chips are collected in ascending painted-x order,
 // so in target view the occlusion z-order is applied against post-translation

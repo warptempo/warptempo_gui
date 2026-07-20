@@ -25,9 +25,9 @@ namespace {
 
 // Flag text mirrors the canonical line's PAYLOAD (post-pipe). All
 // metadata (b=/e=/#) is invisible in the rect; the `|` separator sits to
-// the left of the rect, anchoring it to the marker column. Disabled
-// markers are skipped entirely (no stem, no flag); color conveys
-// selection (kSelected), not disabled state.
+// the left of the rect, anchoring it to the marker column. Color conveys
+// selection (kSelected); a disabled marker still paints its flag, triangle,
+// and (selection-revealed) stem, dimmed under kDisabledMarkerAlpha.
 //
 // Variants:
 //   label_ref              → "a.42"
@@ -137,8 +137,7 @@ void fill_column_ink_runs(cairo_t* cr, int dest_x, int dest_y, int area_h,
 // the label_ref cascade via `effective_disabled`, phase resets read
 // `disabled` directly. That asymmetry is exposed here as a predicate
 // `is_disabled(i)`; everything else (viewport math, drag overlay, target
-// translation, two-pass in-trim/out-of-trim split, integer-pixel snap)
-// is identical for both marker kinds.
+// translation, integer-pixel snap) is identical for both marker kinds.
 template <typename MarkerVec, typename IsVisuallyDisabled>
 void render_marker_stems_impl(
     cairo_t* cr,
@@ -176,13 +175,17 @@ void render_marker_stems_impl(
     // per-column ink-run scans.
     if (ink_plate) cairo_surface_flush(ink_plate);
 
-    // Per-marker color picks {kMarker, kSelected} from selected_set.
-    // Disabled markers are skipped entirely (no stem). The out-of-trim
-    // dim was retired, so there is a single pass. Per-marker stroke
-    // is fine at editor marker counts; do not introduce batching without
-    // profiling.
+    // Stems are the SELECTED markers' emphasis: an unselected marker paints no
+    // stem at all (its centered flag + triangle are its whole visual), so the
+    // loop skips every unselected marker. The stem machinery is kept, not
+    // deleted — selection reveals it. A selected stem paints kSelected; a
+    // selected DISABLED stem paints kSelected dimmed by kDisabledMarkerAlpha (the
+    // triangle is every marker's frame carrier, the stem the selected marker's
+    // emphasis). The out-of-trim dim was retired, so there is a single pass.
+    // Per-marker stroke is fine at editor marker counts; do not introduce
+    // batching without profiling.
     for (size_t i = 0; i < markers.size(); ++i) {
-        if (is_disabled(static_cast<int>(i))) continue;
+        if (selected_set.count(static_cast<int>(i)) == 0) continue;
         const auto& m = markers[i];
         // Effective time: when a drag is active and this marker is
         // in the overlay, read its proposed time from the overlay
@@ -200,9 +203,13 @@ void render_marker_stems_impl(
             frame_to_paint_sample(eff_time, warp_frame_map);
         if (ms < static_cast<double>(viewport_start_sample)) continue;
         if (ms >= static_cast<double>(viewport_end_sample)) continue;
-        const GuiColor c = selected_set.count(static_cast<int>(i)) > 0
-            ? kSelected : kMarker;
-        cairo_set_source_rgb(cr, c.r, c.g, c.b);
+        // Only selected markers reach here, so the color is always kSelected;
+        // a disabled selected marker carries the disabled alpha.
+        if (is_disabled(static_cast<int>(i)))
+            cairo_set_source_rgba(cr, kSelected.r, kSelected.g, kSelected.b,
+                                  kDisabledMarkerAlpha);
+        else
+            cairo_set_source_rgb(cr, kSelected.r, kSelected.g, kSelected.b);
         const double x_raw =
             (ms - static_cast<double>(viewport_start_sample))
                 / samples_per_pixel;
@@ -219,18 +226,19 @@ void render_marker_stems_impl(
 }
 
 // Sibling of render_marker_stems_impl that stamps the small marker TRIANGLE
-// (marker_triangle_mask) at each marker's authored column. Unlike the stem loop
-// it does NOT skip disabled markers — the triangle marks the frame regardless
-// of enablement (the disabled-alpha treatment is a later concern), so it takes a
-// selection predicate but no is_disabled one. The triangle is the honest frame
-// carrier: its tip sits at the marker's pixel column at the waveform top edge,
-// UNCLAMPED, so a flag pushed off its column by the flag row's edge clamp still
-// shows the true position here. A triangle whose column falls outside the
-// visible strip is simply culled by the viewport range (the visible-strip
-// clamp), and one near an edge shows only its clipped footprint. Column math and
-// target/drag translation match the stems exactly, so a triangle and its stem
-// share a column.
-template <typename MarkerVec, typename IsSelected>
+// (marker_triangle_mask) at each marker's authored column. The triangle paints
+// for EVERY marker regardless of selection or enablement — it is the honest
+// frame carrier, present when the selection-revealed stem is not. A DISABLED
+// marker's triangle dims under kDisabledMarkerAlpha (the single disabled cue,
+// shared with the flag and the stem), so it takes both a selection predicate
+// (color class) and an is_disabled one (alpha). Its tip sits at the marker's
+// pixel column at the waveform top edge, UNCLAMPED, so a flag pushed off its
+// column by the flag row's edge clamp still shows the true position here. A
+// triangle whose column falls outside the visible strip is simply culled by the
+// viewport range (the visible-strip clamp), and one near an edge shows only its
+// clipped footprint. Column math and target/drag translation match the stems
+// exactly, so a triangle and its stem share a column.
+template <typename MarkerVec, typename IsSelected, typename IsVisuallyDisabled>
 void render_marker_triangles_impl(
     cairo_t* cr,
     GuiRect waveform_area,
@@ -239,6 +247,7 @@ void render_marker_triangles_impl(
     long long viewport_end_sample,
     int sample_rate,
     IsSelected&& is_selected,
+    IsVisuallyDisabled&& is_disabled,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay) {
     if (waveform_area.w <= 0 || waveform_area.h <= 0) return;
@@ -279,7 +288,12 @@ void render_marker_triangles_impl(
             samples_per_pixel));
         const GuiColor c = is_selected(static_cast<int>(i))
             ? kSelected : kMarker;
-        cairo_set_source_rgb(cr, c.r, c.g, c.b);
+        // A disabled marker's triangle dims under the shared disabled alpha
+        // (the mask carries the source's alpha), otherwise it is opaque.
+        if (is_disabled(static_cast<int>(i)))
+            cairo_set_source_rgba(cr, c.r, c.g, c.b, kDisabledMarkerAlpha);
+        else
+            cairo_set_source_rgb(cr, c.r, c.g, c.b);
         // Tip-down mask: its image-local tip column is img_w / 2 (= H - 1), so
         // placing the mask left at area.x + icol - img_w/2 puts the tip at the
         // marker column; top row at the waveform top edge, tip pointing down
@@ -531,14 +545,17 @@ void render_markers(cairo_t* cr,
         },
         ink_plate);
     // Triangle indicators ride the same stem-cache surface (so damage and
-    // fingerprints reuse the stem rebuild triggers) but paint for EVERY marker,
-    // disabled included — the disabled stem skip does not apply to the frame
-    // tick.
+    // fingerprints reuse the stem rebuild triggers) and paint for EVERY marker
+    // regardless of selection — the frame tick is the marker's honest position,
+    // present when the selection-revealed stem is not. A disabled marker's
+    // triangle carries the disabled alpha (effective_disabled walks the
+    // label_ref cascade, the same predicate the stem loop uses).
     render_marker_triangles_impl(
         cr, waveform_area, markers,
         viewport_start_sample, viewport_end_sample,
         sample_rate,
         [&](int i) { return selected_set.count(i) > 0; },
+        [&](int i) { return effective_disabled(markers, i); },
         warp_frame_map, drag_overlay);
 }
 
@@ -838,8 +855,14 @@ void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width) 
     cairo_restore(cr);
 }
 
-void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
+void render_editor_text_box(cairo_t* cr, const EditorTextBox& s, double alpha) {
     cairo_save(cr);
+    // When dimming (a disabled marker's chip), render the whole box into a
+    // group and composite it once with `alpha` so the ring, fill, and glyphs
+    // dim uniformly rather than per-element. At full opacity the group is
+    // skipped and the paint path is byte-identical to the undimmed form.
+    const bool dim = alpha < 1.0;
+    if (dim) cairo_push_group(cr);
     cairo_select_font_face(cr, "monospace",
                            CAIRO_FONT_SLANT_NORMAL,
                            CAIRO_FONT_WEIGHT_NORMAL);
@@ -1000,6 +1023,11 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
         cairo_rectangle(cr, cur_col, band_y0, 1, band_h);
         cairo_fill(cr);
         cairo_restore(cr);
+    }
+
+    if (dim) {
+        cairo_pop_group_to_source(cr);
+        cairo_paint_with_alpha(cr, alpha);
     }
 
     cairo_restore(cr);
@@ -1180,7 +1208,8 @@ void paint_one_flag_with_overlay(
     const std::string& text,
     const std::set<int>& selected_set,
     const FlagEditorOverlay& editor,
-    double hl_pad) {
+    double hl_pad,
+    bool is_disabled) {
     const bool is_selected = selected_set.count(i) > 0;
     const bool is_editing    = (i == editor.marker_index);
     const bool is_parse_fail = is_editing && editor.is_red;
@@ -1212,7 +1241,12 @@ void paint_one_flag_with_overlay(
     // editing; the pending fill and the ring grow with the rect, cursor/
     // selection still inside — deliberate.
     box.outline         = outline_col;
-    render_editor_text_box(cr, box);
+    // A disabled marker's chip dims under the shared disabled alpha, but the
+    // LIVE EDITING flag is never dimmed — the active editing surface stays full
+    // opacity even when its target is disabled (is_editing gates the alpha off).
+    const double alpha = (is_disabled && !is_editing)
+        ? kDisabledMarkerAlpha : 1.0;
+    render_editor_text_box(cr, box, alpha);
 }
 
 } // namespace
@@ -1282,7 +1316,8 @@ void render_flags(cairo_t* cr,
 
     auto paint_emit = [&](const FlagEmit& e) {
         paint_one_flag_with_overlay(cr, e.i, e.text_left, e.baseline_y,
-                                    e.text, selected_set, editor, hl_pad);
+                                    e.text, selected_set, editor, hl_pad,
+                                    effective_disabled(markers, e.i));
     };
     for (auto it = emits.rbegin(); it != emits.rend(); ++it)
         if (!selected_set.count(it->i)) paint_emit(*it);
@@ -1329,9 +1364,13 @@ void render_one_editor_flag(
         [&](int i, double text_left, double baseline_y,
             const std::string& text) {
             if (i != editor.marker_index) return;
+            // The live editing flag is the editor target; paint_one_flag_with_
+            // overlay gates the disabled alpha off while editing, so this passes
+            // the true disabled state and still renders full opacity.
             paint_one_flag_with_overlay(cr, i, text_left, baseline_y,
                                         text, selected_set, editor,
-                                        hl_pad);
+                                        hl_pad,
+                                        effective_disabled(markers, i));
         });
 
     cairo_restore(cr);
@@ -1436,7 +1475,9 @@ std::string phase_reset_flag_text(const GuiPhaseResetMarker&) {
 
 // Plain painter for a phase-reset flag. Two states only: selected fill
 // kSelected, otherwise default fill kMarker. There is no per-flag editor,
-// so no pending/cursor/selection/parse-fail handling.
+// so no pending/cursor/selection/parse-fail handling. A disabled phase reset's
+// chip dims under the shared disabled alpha (there is no editor exemption to
+// consider — phase reset has no per-flag editor).
 void paint_one_phase_reset_flag(
     cairo_t* cr,
     int i,
@@ -1444,7 +1485,8 @@ void paint_one_phase_reset_flag(
     double baseline_y,
     const std::string& text,
     const std::set<int>& selected_set,
-    double hl_pad) {
+    double hl_pad,
+    bool is_disabled) {
     const bool is_selected = selected_set.count(i) > 0;
 
     EditorTextBox box;
@@ -1455,7 +1497,8 @@ void paint_one_phase_reset_flag(
     box.fill            = is_selected ? kSelected : kMarker;
     box.text_color      = kText;
     box.outline         = is_selected ? kSelectedOutline : kMarkerOutline;
-    render_editor_text_box(cr, box);
+    render_editor_text_box(cr, box,
+                           is_disabled ? kDisabledMarkerAlpha : 1.0);
 }
 
 } // namespace
@@ -1479,14 +1522,16 @@ void render_phaseresetmarkers(cairo_t* cr,
             return phase_resets[i].disabled;
         },
         ink_plate);
-    // Triangle indicators for every phase reset, disabled included (see the
-    // warp render_markers note): the frame tick does not honor the stem's
-    // disabled skip.
+    // Triangle indicators for every phase reset regardless of selection (see the
+    // warp render_markers note): the frame tick is the honest position, present
+    // when the selection-revealed stem is not. A disabled phase reset's triangle
+    // carries the disabled alpha (the bool read directly — no cascade).
     render_marker_triangles_impl(
         cr, waveform_area, phase_resets,
         viewport_start_sample, viewport_end_sample,
         sample_rate,
         [&](int i) { return selected_set.count(i) > 0; },
+        [&](int i) { return phase_resets[i].disabled; },
         warp_frame_map, drag_overlay);
 }
 
@@ -1541,7 +1586,8 @@ void render_phase_reset_flags(cairo_t* cr,
 
     auto paint_emit = [&](const PhaseResetEmit& e) {
         paint_one_phase_reset_flag(
-            cr, e.i, e.text_left, e.baseline_y, e.text, selected_set, hl_pad);
+            cr, e.i, e.text_left, e.baseline_y, e.text, selected_set, hl_pad,
+            phase_resets[e.i].disabled);
     };
     for (auto it = emits.rbegin(); it != emits.rend(); ++it)
         if (!selected_set.count(it->i)) paint_emit(*it);
