@@ -12,6 +12,7 @@
 
 #include "audio_probe.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -156,13 +157,10 @@ bool GuiFileLoader::load_file(const std::string& path) {
 
     app.playhead_cursor_sample       = 0;
     app.viewport_start_sample = 0;
-    const double max_l = max_valid_zoom_level(
-        waveform_area(app).w, audio.total_frames(), audio.sample_rate());
-    // Open at the 2.4 s snap level for normal files; fall back to the
-    // deepest available level for files too short to support it, or fit-file
-    // when no numeric level is valid at all.
-    app.zoom_level = (max_l >= kSnapZoomLevel) ? kSnapZoomLevel
-                   : ((max_l >= kMinNumericLevel) ? kMinNumericLevel : kFitFileLevel);
+    // Open at the working zoom (2.4 s) for normal files; a file too short for
+    // it opens at its effective ceiling (whole-song-visible) instead.
+    app.zoom_level = std::min(kWorkingZoomLevel, effective_max_zoom_level(
+        waveform_area(app).w, audio.total_frames(), audio.sample_rate()));
     clamp_viewport_start(app, audio);
 
     // Reset playback bookkeeping; the device is brought up after markers
@@ -286,10 +284,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // past it), so the value is inside the playhead's [0, total - 1]
     // domain by construction (move_playhead_to holds the ruling).
     app.playhead_cursor_sample = viewport.trim_begin_sample();
-    if (app.zoom_level != kFitFileLevel) {
-        app.viewport_start_sample = app.playhead_cursor_sample;
-        clamp_viewport_start(app, audio);
-    }
+    app.viewport_start_sample = app.playhead_cursor_sample;
+    clamp_viewport_start(app, audio);
 
     // Seed both tabs with the freshly-computed default post-load state.
     // Parsed .settings values overwrite per-key below.

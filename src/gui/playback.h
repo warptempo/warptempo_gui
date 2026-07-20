@@ -39,7 +39,7 @@
 // (anchor_sample, anchor_ns) and re-anchored only at events of acceptable
 // visible discontinuity, never inside the audio callback. The set of
 // resync events: playhead jumps via move_playhead, zoom in/out via the shared
-// apply_zoom_change helper, the resize fit-file fallback,
+// apply_zoom_change helper, the resize zoom-out reclamp,
 // sync_playhead_to_last_selected (live nudges and undo/redo restores),
 // set_playback_speed, follow-mode off-to-on, marker-drag hover,
 // follow-scroll auto-shift, horizontal pan via scroll_viewport

@@ -194,20 +194,18 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
 
     app.zoom_level = new_zoom_level;
 
-    if (app.zoom_level == kFitFileLevel) {
-        app.viewport_start_sample = 0;
-    } else {
-        // Split-playhead: during playback zoom tracks the audio under
-        // review (scanner); otherwise tracks the launch point (cursor).
-        // The two are equal by invariant when the scanner is inactive,
-        // so this only matters during playback.
-        const int64_t target = app.playhead_scanner_active
-            ? app.playhead_scanner_sample
-            : app.playhead_cursor_sample;
-        const int64_t visible = samples_visible(app, audio);
-        app.viewport_start_sample = target - visible / 2;
-        clamp_viewport_start(app, audio);
-    }
+    // Split-playhead: during playback zoom tracks the audio under review
+    // (scanner); otherwise tracks the launch point (cursor). The two are equal
+    // by invariant when the scanner is inactive, so this only matters during
+    // playback. At the effective ceiling samples_visible == total, so
+    // clamp_viewport_start's visible >= total branch parks the start at 0
+    // (whole song visible) without any mode test.
+    const int64_t target = app.playhead_scanner_active
+        ? app.playhead_scanner_sample
+        : app.playhead_cursor_sample;
+    const int64_t visible = samples_visible(app, audio);
+    app.viewport_start_sample = target - visible / 2;
+    clamp_viewport_start(app, audio);
 
     invalidate_waveform_area();
     invalidate_timestamp_area();
@@ -245,20 +243,15 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
 
     app.zoom_level = new_zoom_level;
 
-    if (new_zoom_level == kFitFileLevel) {
-        // Fit-file (or a pan-row drag resting at fit): the whole song is
-        // visible, so the anchor cannot pin a column — the clamp holds start at
-        // 0 and the drag is inert on this axis.
-        app.viewport_start_sample = 0;
-    } else {
-        // Anchor the pressed song position under the pointer: pick the viewport
-        // start that paints anchor_sample at anchor_x, at the (possibly new)
-        // level. current_samples_per_pixel reads the level just assigned, so
-        // this is spp(new_level).
-        const double spp = current_samples_per_pixel(app, audio);
-        app.viewport_start_sample = static_cast<int64_t>(std::nearbyint(
-            anchor_sample - static_cast<double>(anchor_x) * spp));
-    }
+    // Anchor the pressed song position under the pointer: pick the viewport
+    // start that paints anchor_sample at anchor_x, at the (possibly new) level.
+    // current_samples_per_pixel reads the level just assigned, so this is
+    // spp(new_level). At the effective ceiling the anchor cannot pin a column
+    // (the whole song is visible); clamp_viewport_start's visible >= total
+    // branch parks the start at 0 and the drag is inert on this axis.
+    const double spp = current_samples_per_pixel(app, audio);
+    app.viewport_start_sample = static_cast<int64_t>(std::nearbyint(
+        anchor_sample - static_cast<double>(anchor_x) * spp));
     clamp_viewport_start(app, audio);
 
     invalidate_waveform_area();
@@ -286,76 +279,56 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
 }
 
 void Viewport::zoom_in() {
-    const double max_l = max_valid_zoom_level(
-        waveform_area(app).w, live_total_frames(app, audio), audio.sample_rate());
-    if (max_l < kMinNumericLevel) return; // no numeric level valid; only fit-file
-    if (app.zoom_level == kFitFileLevel) {
-        // From fit, enter the numeric domain at the shallowest valid
-        // (continuous) level — the whole-file numeric view.
-        apply_zoom_change(max_l);
-    } else if (app.zoom_level > kMinNumericLevel) {
+    if (app.zoom_level > kMinZoom) {
         // One whole level deeper from the current (possibly fractional) rung,
         // clamped constructively at the zoom-in floor.
         double target = app.zoom_level - 1.0;
-        if (target < kMinNumericLevel) target = kMinNumericLevel;
+        if (target < kMinZoom) target = kMinZoom;
         apply_zoom_change(target);
     } else {
+        // Already at the deepest zoom-in: recenter on the playhead.
         center_viewport_on_playhead();
     }
 }
 
 void Viewport::zoom_out() {
-    const double max_l = max_valid_zoom_level(
+    const double max_l = effective_max_zoom_level(
         waveform_area(app).w, live_total_frames(app, audio), audio.sample_rate());
-    if (app.zoom_level == kFitFileLevel) return; // already fully out
-    // One whole level shallower; stepping past the valid numeric ceiling (or
-    // losing every numeric level) drops to fit-file, keeping the fit transition.
-    const double target = app.zoom_level + 1.0;
-    if (max_l < kMinNumericLevel || target > max_l) {
-        apply_zoom_change(kFitFileLevel);
-    } else {
-        apply_zoom_change(target);
-    }
+    if (app.zoom_level >= max_l) return;  // already at the effective ceiling
+    // One whole level shallower, saturating at the effective per-file ceiling
+    // (there is nothing beyond it — full zoom-out is whole-song-visible).
+    double target = app.zoom_level + 1.0;
+    if (target > max_l) target = max_l;
+    apply_zoom_change(target);
 }
 
 void Viewport::zoom_steps(int in_steps) {
     if (in_steps == 0) return;
     if (audio.total_frames() <= 0) return;
-    const double max_l = max_valid_zoom_level(
+    const double max_l = effective_max_zoom_level(
         waveform_area(app).w, live_total_frames(app, audio), audio.sample_rate());
 
     if (in_steps > 0) {
-        // Zoom in by whole steps. Mirrors zoom_in(): no numeric level valid ->
-        // nothing to do. From fit the first step enters the numeric domain at
-        // the shallowest valid (continuous) level max_l, and each further step
-        // subtracts one whole level; from a numeric rest every step subtracts
-        // one. Clamp constructively into [kMinNumericLevel, max_l].
-        if (max_l < kMinNumericLevel) return;
-        double target = (app.zoom_level == kFitFileLevel)
-            ? max_l - static_cast<double>(in_steps - 1)
-            : app.zoom_level - static_cast<double>(in_steps);
-        if (target < kMinNumericLevel) target = kMinNumericLevel;
-        if (target > max_l)            target = max_l;
+        // Zoom in by whole steps: subtract one whole level per step, clamped
+        // constructively at the zoom-in floor.
+        double target = app.zoom_level - static_cast<double>(in_steps);
+        if (target < kMinZoom) target = kMinZoom;
         if (target == app.zoom_level) {
             // Net movement saturated with no change. Match zoom_in()'s recenter
             // on the playhead when a deeper zoom is asked at the deepest level.
-            if (app.zoom_level == kMinNumericLevel) center_viewport_on_playhead();
+            if (app.zoom_level == kMinZoom) center_viewport_on_playhead();
             return;
         }
         apply_zoom_change(target);
         return;
     }
 
-    // Zoom out by whole steps. Mirrors zoom_out(): already fully out is a no-op.
-    if (app.zoom_level == kFitFileLevel) return;
-    // in_steps < 0, so this adds |in_steps| whole levels. Stepping past the
-    // valid numeric ceiling (or losing every numeric level) drops to fit-file.
-    const double target = app.zoom_level - static_cast<double>(in_steps);
-    if (max_l < kMinNumericLevel || target > max_l) {
-        apply_zoom_change(kFitFileLevel);
-    } else {
-        apply_zoom_change(target);
-    }
+    // Zoom out by whole steps: add |in_steps| whole levels, saturating at the
+    // effective per-file ceiling.
+    if (app.zoom_level >= max_l) return;
+    double target = app.zoom_level - static_cast<double>(in_steps);
+    if (target > max_l) target = max_l;
+    apply_zoom_change(target);
 }
 
 void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {

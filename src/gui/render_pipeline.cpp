@@ -392,9 +392,9 @@ RenderOutcome do_render(const RenderRequest& req,
                 const ViewState& tab_a = commit_is_a ? commit_tab : other_tab;
                 const ViewState& tab_b = commit_is_a ? other_tab : commit_tab;
 
-                // Values 0 / kFitFileLevel / the typed live prefs all sit
-                // inside the strict schema's vocabularies by construction
-                // (kFitFileLevel is in the persisted zoom vocabulary,
+                // The view zoom / typed live prefs all sit inside the strict
+                // schema's vocabularies by construction (the live zoom rests in
+                // the persisted zoom vocabulary [kMinZoom, kMaxZoom],
                 // playback_speed is a live preset, font_size is the live
                 // clamped value), so the file strict-parses under
                 // read_settings_file — same writer, same canonical key order

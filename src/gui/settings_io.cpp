@@ -94,13 +94,13 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "tab_a_trim_end",              SettingKind::TrimEnd_A,            EngineField::Title,                   "-1" },
     { "tab_a_read_only",             SettingKind::ReadOnly_A,           EngineField::Title,                   "false" },
     { "tab_a_viewport_start",        SettingKind::ViewportStart_A,      EngineField::Title,                   "0" },
-    { "tab_a_zoom",                  SettingKind::ZoomLevel_A,          EngineField::Title,                   "0" },
+    { "tab_a_zoom",                  SettingKind::ZoomLevel_A,          EngineField::Title,                   "2" },
     { "tab_a_playhead_cursor",       SettingKind::Playhead_A,           EngineField::Title,                   "0" },
     { "tab_b_trim_begin",            SettingKind::TrimBegin_B,          EngineField::Title,                   "-1" },
     { "tab_b_trim_end",              SettingKind::TrimEnd_B,            EngineField::Title,                   "-1" },
     { "tab_b_read_only",             SettingKind::ReadOnly_B,           EngineField::Title,                   "false" },
     { "tab_b_viewport_start",        SettingKind::ViewportStart_B,      EngineField::Title,                   "0" },
-    { "tab_b_zoom",                  SettingKind::ZoomLevel_B,          EngineField::Title,                   "0" },
+    { "tab_b_zoom",                  SettingKind::ZoomLevel_B,          EngineField::Title,                   "2" },
     { "tab_b_playhead_cursor",       SettingKind::Playhead_B,           EngineField::Title,                   "0" },
     // Render-environment attestation, after the per-tab view-state section.
     // The writer emits the STORED in-memory values (never silently the
@@ -170,11 +170,11 @@ std::optional<std::string> format_nonengine_value(
                           static_cast<long long>(gui.tab_a.viewport_start_sample));
             return std::string(buf);
         case SettingKind::ZoomLevel_A:
-            // Zoom is a real-valued exponent: the min-0 shortest round-trip
-            // double form (format_value_double(v, 0)) is the ONE loadable
-            // spelling, matched byte-for-byte by validate_gui_setting's zoom
-            // arm. An integer rest (0 / 1..10) writes as its plain digits, so
-            // every historical .settings zoom re-serializes unchanged.
+            // Zoom is a real-valued exponent over the one continuous domain
+            // [kMinZoom, kMaxZoom]: the min-0 shortest round-trip double form
+            // (format_value_double(v, 0)) is the ONE loadable spelling, matched
+            // byte-for-byte by validate_gui_setting's zoom arm. An integer rest
+            // (1..17) writes as its plain digits.
             return format_value_double(gui.tab_a.zoom_level, 0);
         case SettingKind::Playhead_A:
             std::snprintf(buf, sizeof(buf), "%lld",

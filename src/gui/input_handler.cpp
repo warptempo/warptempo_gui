@@ -369,17 +369,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Bare 0 toggles between fit-file and the snap zoom level.
-    // From fit-file → kSnapZoomLevel (the 2.4 s snap level, centered on
-    // playhead via apply_zoom_change's numeric branch). From any numeric
-    // level → fit-file. So `0` toggles between fit-file and the 2.4 s snap
-    // level; C remains the direct snap-and-center gesture. Digits 1..9 are
-    // intentionally unbound.
+    // Bare 0 toggles between the working zoom and full zoom-out. At the working
+    // zoom → full zoom-out (the per-file effective ceiling, whole song visible);
+    // anywhere else → the working zoom (2.4 s), centered on the playhead via
+    // apply_zoom_change. C remains the direct working-zoom-and-center gesture.
+    // Digits 1..9 are intentionally unbound.
     if (!ctrl && !alt && !shift && key == GuiKeys::Digit0) {
-        if (app.zoom_level == kFitFileLevel) {
-            viewport.apply_zoom_change(kSnapZoomLevel);
+        if (app.zoom_level == kWorkingZoomLevel) {
+            viewport.apply_zoom_change(effective_max_zoom_level(
+                waveform_area(app).w, live_total_frames(app, audio),
+                audio.sample_rate()));
         } else {
-            viewport.apply_zoom_change(kFitFileLevel);
+            viewport.apply_zoom_change(kWorkingZoomLevel);
         }
         return;
     }
@@ -910,11 +911,11 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // the toggle (matching the active-tab invariant above), the viewport is
     // shifted by the same delta as the playhead rather than translated
     // independently — translating both endpoints separately through the
-    // nonlinear warp_frame_map was what caused the slide. At a fixed numeric zoom
-    // the samples-per-pixel is domain-invariant, so equal sample deltas map
-    // to equal pixel columns; at fit-file zoom the viewport is re-clamped to
-    // zero on the next tab activation anyway, so the shifted value is
-    // harmless. The active tab's own slot is left stale on purpose — it
+    // nonlinear warp_frame_map was what caused the slide. At a fixed zoom
+    // level the samples-per-pixel is domain-invariant, so equal sample deltas
+    // map to equal pixel columns; at the effective zoom-out ceiling the
+    // viewport is re-clamped to zero on the next tab activation anyway, so the
+    // shifted value is harmless. The active tab's own slot is left stale on purpose — it
     // resyncs at the next stash boundary.
     // Playhead domain clamp on the domain flip, both tabs, applied to each
     // translated value BEFORE its viewport delta / anchor math is computed

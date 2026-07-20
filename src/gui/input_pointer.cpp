@@ -124,18 +124,17 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     const StripDragState& sd = app.strip_drag;
     double new_level = sd.press_level;
-    if (sd.zoom_axis && sd.press_level != kFitFileLevel) {
+    if (sd.zoom_axis) {
         // Drag DOWN (y grows) lowers the level → zooms in; drag UP raises it →
-        // zooms out. Clamp into [kMinNumericLevel, shorter-file max]; the pan
-        // row and the fit-inert zoom press skip this and keep press_level.
+        // zooms out. Clamp into [kMinZoom, effective per-file ceiling]; the pan
+        // row keeps press_level.
         new_level = sd.press_level -
             static_cast<double>(y - sd.press_y) / kZoomStripPxPerLevel;
-        const double max_l = max_valid_zoom_level(
+        const double max_l = effective_max_zoom_level(
             waveform_area(app).w, live_total_frames(app, audio),
             audio.sample_rate());
-        const double hi = (max_l < kMinNumericLevel) ? kMinNumericLevel : max_l;
-        if (new_level < kMinNumericLevel) new_level = kMinNumericLevel;
-        if (new_level > hi)               new_level = hi;
+        if (new_level < kMinZoom) new_level = kMinZoom;
+        if (new_level > max_l)    new_level = max_l;
     }
     viewport.apply_strip_drag_zoom(new_level, sd.anchor_sample, x, final_event);
 }
@@ -264,22 +263,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 app.strip_drag.anchor_sample =
                     static_cast<double>(app.viewport_start_sample) +
                     static_cast<double>(x) * spp;
-                // Zoom row from fit: capture the fit-EQUIVALENT numeric exponent
-                // so the first vertical motion enters the numeric domain
-                // continuously (a clamp-induced jump at pathological widths is
-                // accepted); if no numeric level is admissible, stay at fit and
-                // the zoom axis is inert. Otherwise (numeric zoom, or any pan-row
-                // press) capture the level verbatim — the pan row never changes
-                // it.
-                if (in_zoom_row && app.zoom_level == kFitFileLevel) {
-                    const double max_l = max_valid_zoom_level(
-                        waveform_area(app).w, live_total_frames(app, audio),
-                        audio.sample_rate());
-                    app.strip_drag.press_level =
-                        (max_l < kMinNumericLevel) ? kFitFileLevel : max_l;
-                } else {
-                    app.strip_drag.press_level = app.zoom_level;
-                }
+                // Capture the level verbatim on both rows: the zoom row walks
+                // the one continuous domain from wherever it rests, and the pan
+                // row never changes it.
+                app.strip_drag.press_level = app.zoom_level;
                 return;
             }
         }

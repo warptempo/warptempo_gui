@@ -94,10 +94,12 @@ namespace {
 
 // ms-per-pixel is a continuous function of the zoom level (a real-valued
 // exponent): ms_per_px(level) = 0.625 * 2^(level - 1), computed directly in
-// samples_per_pixel_at. Level 1 is the deepest zoom-in (0.625 ms/px, 1.2 s);
-// each whole step is exactly 2x the previous, so the integer rungs reproduce
-// the historical ladder (0.625, 1.25, 2.5, ... 320 ms/px at levels 1..10)
-// bit-for-bit. Level 0.0 is the fit-file sentinel (bypassed below).
+// samples_per_pixel_at. The level rests anywhere in the one continuous domain
+// [kMinZoom, kMaxZoom] — no sentinel. Level 1 is the deepest zoom-in (0.625
+// ms/px, 1.2 s); each whole step is exactly 2x the previous, so the integer
+// rungs reproduce the historical ladder (0.625, 1.25, 2.5, ...) bit-for-bit,
+// and the fit-equivalent level (full zoom-out, whole song visible) is just the
+// point on the same curve where spp * width == total.
 
 // playhead_half_px() (half-width of the column invalidated around a playhead
 // position) now lives in render.h as a single shared inline accessor,
@@ -287,41 +289,37 @@ double samples_per_pixel_at(double zoom_level,
                             int waveform_width_px,
                             int64_t total_frames,
                             int sample_rate) {
-    if (zoom_level == kFitFileLevel) {
-        if (waveform_width_px <= 0) return 1.0;
-        double spp = static_cast<double>(total_frames) /
-                     static_cast<double>(waveform_width_px);
-        if (spp < 1e-9) spp = 1e-9;
-        return spp;
-    }
-    // Documents the contract: the fit-file branch above must catch level 0.0
-    // (its spp is total/width, not a point on the exponent curve). Numeric
-    // levels rest continuously over [kMinNumericLevel, kMaxNumericLevel];
-    // ms_per_px = 0.625 * 2^(level - 1).
-    assert(zoom_level >= kMinNumericLevel &&
-           zoom_level <= kMaxNumericLevel);
+    // One continuous domain, no sentinel: ms_per_px = 0.625 * 2^(level - 1).
+    // total_frames / waveform_width_px play no part — at the per-file effective
+    // ceiling the exponent already yields spp = total/width (whole song
+    // visible) by construction, so there is no fit-file special case.
+    (void)waveform_width_px;
+    (void)total_frames;
+    assert(zoom_level >= kMinZoom && zoom_level <= kMaxZoom);
     return 0.625 * std::exp2(zoom_level - 1.0) *
            static_cast<double>(sample_rate) / 1000.0;
 }
 
-// Largest real level L (in [kMinNumericLevel, kMaxNumericLevel]) whose
-// samples_visible does not exceed total_frames, as a CONTINUOUS bound.
-// samples_visible(L) = 0.625 * 2^(L-1) * sr/1000 * width <= total  solves to
-// L <= 1 + log2(total * 1000 / (0.625 * sr * width)); the result is capped at
-// kMaxNumericLevel (the zoom-out ceiling). A value below kMinNumericLevel means
-// even the deepest zoom-out shows more than the file, so fit-file is the only
-// valid state — callers treat "< kMinNumericLevel" the way the old integer form
-// treated its -1 return.
-double max_valid_zoom_level(int waveform_width_px,
-                            int64_t total_frames,
-                            int sample_rate) {
+// The per-file effective zoom-out ceiling: the continuous level at which
+// samples_visible == total_frames, clamped into [kMinZoom, kMaxZoom].
+// samples_visible(L) = 0.625 * 2^(L-1) * sr/1000 * width == total solves to
+// fit_level = 1 + log2(total * 1000 / (0.625 * sr * width)); full zoom-out
+// rests here (whole-song-visible, Ableton behavior). A degenerate tiny file
+// (fit_level < kMinZoom) collapses the range to the floor — clamp_viewport_start's
+// visible >= total branch owns that start = 0 display. Because kMaxZoom is
+// derived from audio_io's structural source caps (see settings_file.h), fit_level
+// is below kMaxZoom for every loadable file, so the clamp's upper edge is never
+// the binding one in practice.
+double effective_max_zoom_level(int waveform_width_px,
+                                int64_t total_frames,
+                                int sample_rate) {
     if (waveform_width_px <= 0 || total_frames <= 0 || sample_rate <= 0)
-        return kMinNumericLevel - 1.0;  // degenerate: fit-file only
-    const double raw = 1.0 + std::log2(
+        return kMinZoom;  // degenerate: collapse to the floor
+    const double fit = 1.0 + std::log2(
         static_cast<double>(total_frames) * 1000.0 /
         (0.625 * static_cast<double>(sample_rate) *
          static_cast<double>(waveform_width_px)));
-    return std::min(raw, kMaxNumericLevel);
+    return std::clamp(fit, kMinZoom, kMaxZoom);
 }
 
 int64_t live_total_frames(const AppState& a, const GuiAudio& audio) {
@@ -363,14 +361,6 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     }
     if (a.viewport_start_sample < 0) a.viewport_start_sample = 0;
     const int64_t max_start = total - visible;
-
-    // Fit-file: no grid (spp is total/width, not the marker grid) — clamp to
-    // the exact max_start as before.
-    if (a.zoom_level == kFitFileLevel) {
-        if (a.viewport_start_sample > max_start)
-            a.viewport_start_sample = max_start;
-        return;
-    }
 
     const double q = painter_samples_per_pixel(a, audio, waveform_area(a));
     if (q <= 0.0) {
@@ -823,16 +813,12 @@ int main(int argc, char** argv) {
                 app.last_tick_live_total = lt;
                 bool changed = false;
                 const GuiRect area = waveform_area(app);
-                const double max_l = max_valid_zoom_level(
+                const double max_l = effective_max_zoom_level(
                     area.w, lt, audio.sample_rate());
-                if (app.zoom_level >= kMinNumericLevel) {  // fit (0.0) excluded
-                    const double clamped =
-                        (max_l < kMinNumericLevel) ? kFitFileLevel
-                                                   : std::min(app.zoom_level, max_l);
-                    if (clamped != app.zoom_level) {
-                        app.zoom_level = clamped;
-                        changed = true;
-                    }
+                const double clamped = std::min(app.zoom_level, max_l);
+                if (clamped != app.zoom_level) {
+                    app.zoom_level = clamped;
+                    changed = true;
                 }
                 const int64_t old_vp = app.viewport_start_sample;
                 clamp_viewport_start(app, audio);

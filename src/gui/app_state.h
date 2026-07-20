@@ -26,25 +26,27 @@
 
 class GuiAudio;
 
-// Zoom level numbering: the range constants (kFitFileLevel,
-// kMinNumericLevel, kMaxNumericLevel) live in settings_file.h — the
-// persisted zoom vocabulary the whole-settings schema enforces in both
-// products — and app_state.h re-exports them through the include above.
+// Zoom level numbering: the range constants (kMinZoom, kMaxZoom) live in
+// settings_file.h — the persisted zoom vocabulary the whole-settings schema
+// enforces in both products — and app_state.h re-exports them through the
+// include above.
 //
-// The zoom level is a real-valued exponent resting anywhere in
-// {kFitFileLevel} u [kMinNumericLevel, kMaxNumericLevel] (Ableton-style free
-// rest): manual zoom walks it by whole steps from its current, possibly
-// fractional, rung. Bare-digit keys are unbound for zoom: only `0` toggles
-// between fit-file and the snap level, and `C` jumps to snap zoom centered on
-// the playhead (or on the focused marker). Smaller numeric level = less file
-// per window = more zoomed in; level 0.0 = fit-file (most file possible).
-// kMinNumericLevel is the deepest zoom-in the manual walk can reach (1.2 s);
-// kSnapZoomLevel is the exact rest point every snap/toggle gesture lands on
-// (2.4 s, one step shallower), where the zoom-2 authoring-grid bit-exactness
-// claims hold.
-constexpr double kSnapZoomLevel = 2.0;  // 2.4 s — snap zoom; manual
-                                        // zoom-in can go one step deeper to
-                                        // kMinNumericLevel (1.2 s)
+// The zoom level is a real-valued exponent resting anywhere in the ONE
+// continuous domain [kMinZoom, kMaxZoom] (Ableton-style free rest): manual zoom
+// walks it by whole steps from its current, possibly fractional, rung, and
+// zoom-out saturates at the per-file effective ceiling
+// (effective_max_zoom_level), where full zoom-out rests at whole-song-visible.
+// There is no fit-file mode and no sentinel level. Bare-digit keys are unbound
+// for zoom: only `0` toggles between the working zoom and full zoom-out, and
+// `C` jumps to the working zoom centered on the playhead (or on the focused
+// marker). Smaller level = less file per window = more zoomed in. kMinZoom is
+// the deepest zoom-in the manual walk can reach (1.2 s); kWorkingZoomLevel is
+// the fine-tuning rest point every snap/toggle gesture lands on (2.4 s, one
+// step shallower), where the working-zoom authoring-grid bit-exactness claims
+// hold.
+constexpr double kWorkingZoomLevel = 2.0;  // 2.4 s — working zoom; manual
+                                           // zoom-in can go one step deeper to
+                                           // kMinZoom (1.2 s)
 
 // Viewport lead/overlap fraction, expressed as a divisor of the visible
 // span. Follow mode keeps this much of the window as lead context when it
@@ -377,20 +379,16 @@ struct StripDragState {
     bool   active    = false;
     // True once any motion event has applied a viewport/level change. A
     // motionless press-release must commit nothing, so the terminating event
-    // finalizes (re-derives + synchronous rebuild) only when this is set — a
-    // fit-file zoom press captures a NUMERIC press_level, so re-deriving a
-    // zero-motion release would otherwise wrongly commit the fit→numeric jump.
+    // finalizes (re-derives + synchronous rebuild) only when this is set.
     bool   moved     = false;
     // True for the top zoom row (vertical motion changes the level); false for
     // the bottom pan row (level pinned for the whole drag).
     bool   zoom_axis = false;
     // Pointer position at the press (window px).
     int    press_y   = 0;
-    // Continuous zoom level at the press. On the zoom row a fit-file press
-    // captures the fit-EQUIVALENT numeric exponent so the first vertical motion
-    // enters the numeric domain continuously; if the file admits no numeric
-    // level it stays kFitFileLevel and the zoom axis is inert. The pan row
-    // captures app.zoom_level verbatim (level never changes).
+    // Continuous zoom level at the press — always app.zoom_level verbatim, on
+    // both the zoom and pan rows. The zoom row walks the one continuous domain
+    // from wherever the level rests; the pan row never changes it.
     double press_level = 0.0;
     // Song position (frames, double) painted under the press x at press time,
     // unclamped — the viewport clamp owns legality. Held to the pointer's x for
@@ -507,7 +505,7 @@ struct TrimState {
 // AppState; these slots are the persistent snapshots.
 struct ViewState {
     int64_t viewport_start_sample      = 0;
-    double  zoom_level                 = 0.0;
+    double  zoom_level                 = kWorkingZoomLevel;
     int64_t playhead_cursor_sample     = 0;
 
     std::set<int> warp_selected;
@@ -541,7 +539,7 @@ struct AppState {
     // to/from these fields only at view-switch boundaries (see active_views).
     // Do not collapse this into a projection — the duplication is the design.
     int64_t playhead_cursor_sample = 0;
-    double  zoom_level             = 0.0;
+    double  zoom_level             = kWorkingZoomLevel;
     int64_t viewport_start_sample  = 0;
     bool    follow_mode            = true;
 
@@ -989,12 +987,12 @@ GuiRect bottom_lower_row_area(const AppState& a);
 GuiRect bottom_pan_row_area(const AppState& a);
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);
 double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
-// The explicit-domain form of current_samples_per_pixel: spp at a zoom
-// level against a caller-chosen domain total (fit-file zoom divides the
-// total by the width; numeric levels are total-independent). For callers
-// that need a domain OTHER than the active display context's (e.g. the
-// dispatch-time snapshot clamping queue-moment view keys against a cell's own
-// map domain).
+// The explicit-domain form of current_samples_per_pixel: spp at a zoom level
+// against a caller-chosen domain total. The level fully determines spp
+// (total-independent — the total/width param pair is unused now that the
+// fit-file mode is gone, kept for the shared signature). For callers that need
+// a domain OTHER than the active display context's (e.g. the dispatch-time
+// snapshot clamping queue-moment view keys against a cell's own map domain).
 double  samples_per_pixel_at(double zoom_level,
                              int waveform_width_px,
                              int64_t total_frames,
@@ -1138,8 +1136,8 @@ double  scanner_pixel_x(const AppState& a, const GuiAudio& audio,
 // Active-domain total frame count. Source view returns audio.total_frames();
 // target view returns the deformed total derived from the warp_frame_map cache
 // (the forward-translated source length). Used by every viewport helper that needs the
-// "length of the timeline currently being viewed" — clamp, fit-file zoom,
-// and the numeric-level cap. Declared here so any TU touching the
+// "length of the timeline currently being viewed" — the viewport clamp and
+// the effective zoom-out ceiling. Declared here so any TU touching the
 // viewport math can reach it.
 int64_t live_total_frames(const AppState& a, const GuiAudio& audio);
 
@@ -1188,9 +1186,9 @@ inline int64_t playhead_image_of_authored_frame(const AppState& a,
         a, audio, authored_frame), a, audio);
 }
 
-double  max_valid_zoom_level(int waveform_width_px,
-                             int64_t total_frames,
-                             int sample_rate);
+double  effective_max_zoom_level(int waveform_width_px,
+                                 int64_t total_frames,
+                                 int sample_rate);
 std::pair<long long, long long> compute_trim_samples(
     const AppState& a, long long total_frames);
 GuiRect timestamp_invalidate_rect(const AppState& a);

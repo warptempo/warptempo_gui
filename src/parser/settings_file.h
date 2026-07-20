@@ -27,8 +27,7 @@
 // so a file short of any one is hand-damaged and refuses.
 //
 // This schema owns the zoom-level range too: a zoom outside
-// {kFitFileLevel} u [kMinNumericLevel, kMaxNumericLevel] is refused here in
-// both products. What
+// [kMinZoom, kMaxZoom] is refused here in both products. What
 // stays caller-side, ON TOP of this schema, is the audio-relative past-EOF
 // wall check on authored marker/trim positions, which needs the loaded
 // source's frame count this reader never sees: both loaders (GUI file_loader
@@ -44,22 +43,30 @@
 
 // The persisted zoom-level vocabulary, enforced by this schema in both
 // products. The zoom LEVEL is a real-valued exponent that rests anywhere in
-// {kFitFileLevel} u [kMinNumericLevel, kMaxNumericLevel]: kFitFileLevel = 0.0
-// ("whole file visible", a MODE, computed at zoom / resize time, not a point
-// on the exponent curve — the open interval (0, 1) is unrepresentable at rest
-// and refused on disk), and numeric levels rest continuously over
-// [kMinNumericLevel, kMaxNumericLevel]. ms-per-pixel(level) =
-// 0.625 * 2^(level-1) (GUI-side, in main.cpp's samples_per_pixel_at), so an
-// integer level reproduces the historical 2x-per-step ladder exactly. The
+// the ONE continuous domain [kMinZoom, kMaxZoom] — there is no sentinel and no
+// fit-file mode. Full zoom-out rests at whole-song-visible, the top of a
+// per-file effective ceiling; that ceiling is a GUI-runtime clamp
+// (effective_max_zoom_level) and is deliberately NOT schema-checked here:
+// persisted zoom is validated against the theoretical vocabulary only, and the
+// runtime reclamp owns the per-file ceiling — the same display-scratch
+// convention the persisted viewport/playhead values follow. ms-per-pixel(level)
+// = 0.625 * 2^(level-1) (GUI-side, in main.cpp's samples_per_pixel_at), so an
+// integer level reproduces the historical 2x-per-step ladder exactly, and the
+// exponent yields spp = total/width exactly at the fit-equivalent level. The
 // constants live here rather than in the GUI so an out-of-vocabulary persisted
 // zoom refuses identically in the GUI and the CLI.
-//
-// kFitFileLevel is the fit-file SENTINEL: it is compared for and assigned only
-// as this literal constant (never derived), so the fit-file test stays an
-// exact double equality everywhere.
-constexpr double kFitFileLevel    = 0.0;
-constexpr double kMinNumericLevel = 1.0;
-constexpr double kMaxNumericLevel = 10.0;
+constexpr double kMinZoom = 1.0;
+// kMaxZoom is DERIVED from audio_io's structural source caps, not invented. The
+// longest loadable source is bounded by the RIFF uint32 data-chunk size limit
+// (~4 GiB of PCM); the binding case is 24-bit stereo (6 bytes/frame) at the
+// 44100 Hz rate floor -> 4294967295 / 6 ~= 715.8 M frames ~= 16232 s. The
+// narrowest supported window is 640 px (kMinWindowWidthPx; waveform effective
+// width 640). kMaxZoom is the smallest whole level whose visible span covers
+// that worst case at that width: 0.625 * 2^(17-1) ms/px * 640 px = 26214.4 s
+// >= 16232 s, while level 16 gives 13107.2 s < 16232 s -- so 17 is minimal.
+// Consequence: for EVERY loadable file the fit level is below kMaxZoom by
+// construction, so full zoom-out always rests at whole-song-visible.
+constexpr double kMaxZoom = 17.0;
 
 // One tab's trim in the .settings schema. Positions are whole source frames
 // (int64_t), decoded via parse_authored_frame (frame_format.h). A has_* of
