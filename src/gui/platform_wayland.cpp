@@ -2091,21 +2091,21 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
 
     if (locked_pointer_) {
         if (apply_restore_hint) {
-            // Return the cursor to its drag-traveled x when the lock is
+            // Return the cursor to its raw drag-traveled x when the lock is
             // destroyed: virtual_pointer_x_ is the press x advanced by the
-            // drag's total x-travel, clamped to the window edge, while y stays
-            // frozen at the press row (capture_restore_y_). The cursor lands
-            // where the drag left it in x — the Ableton affordance shared by
-            // all three captured drags. The hint is surface-local, the same
-            // space as virtual_pointer_x_ and width_. It is double-buffered
-            // against the constrained surface, so commit it before destroying
-            // the lock.
-            const double restore_x = std::clamp(
-                virtual_pointer_x_, 0.0,
-                static_cast<double>(std::max(0, width_ - 1)));
+            // drag's total x-travel, passed unclamped, while y stays frozen at
+            // the press row (capture_restore_y_). The compositor clamps an
+            // off-window hint back on-screen at unlock, landing the cursor at
+            // the same x as the zoom stem (which sits at the anchor's clamped
+            // column) — the Ableton affordance shared by all three captured
+            // drags. An explicit clamp to the window width would instead pin
+            // the cursor to the window edge, past the stem. The hint is
+            // surface-local, the same space as virtual_pointer_x_, and is
+            // double-buffered against the constrained surface, so commit it
+            // before destroying the lock.
             zwp_locked_pointer_v1_set_cursor_position_hint(
                 locked_pointer_,
-                wl_fixed_from_double(restore_x),
+                wl_fixed_from_double(virtual_pointer_x_),
                 wl_fixed_from_double(capture_restore_y_));
             if (wl_surface_) wl_surface_commit(wl_surface_);
         }
