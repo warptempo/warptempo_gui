@@ -260,25 +260,33 @@ inline int flag_lane_h_px() {
     return h < 5 ? 5 : h;
 }
 
-// Height H (px) of the code-generated tip-down triangle mask, SHARED by the
-// playhead cursor and every marker/trim flag (one mask builder). The mask
-// width is 2*H - 1 (odd by construction, so it centers exactly on the 1 px
-// column). H is DERIVED from the flag width so the triangle sits one pixel
-// inside each flag-rectangle edge: the flag triangle width kFlagWidthPx-2 = 15
-// gives H = (15+1)/2 = 8 at scale 1 (the odd-row rule — every triangle row is
-// odd, top row 15 down to a 1 px tip). Clamped to at least 2 so the mask
-// always has a tip row below a top row. The half-width below derives from H,
-// so the two can never drift.
+// Height H (px) of the code-generated tip-down triangle, SHARED by the playhead
+// cursor and every marker/trim flag. The triangle width is 2*H - 1 (odd by
+// construction, so its tip centers exactly on the 1 px column). H is DERIVED
+// from the flag width so the widest triangle row is the flag rectangle's OWN
+// width: H = (kFlagWidthPx+1)/2 = 9 at scale 1 gives a top row of 2*9-1 = 17 =
+// kFlagWidthPx (the odd-row rule — every triangle row is odd, top row 17 down to
+// a 1 px tip). The slopes therefore leave the rectangle's exact bottom corners
+// and run continuously to the tip with NO inward step — geometrically this is
+// the former 15-wide top with its two 1-px corner insets replaced by chamfers
+// collinear with the slopes, so the overall marker width is unchanged and the
+// rect->triangle outline flows without a 90-degree jog. Clamped to at least 2 so
+// the triangle always has a tip row below a top row. The half-width below
+// derives from H, so the two can never drift.
 inline int playhead_triangle_h_px() {
-    const int h = (flag_lane_w_px() - 1) / 2;
+    const int h = (flag_lane_w_px() + 1) / 2;
     return h < 2 ? 2 : h;
 }
 
 // The cached cairo A8 mask surface for the tip-down triangle (W = 2H-1 by H,
-// binary alpha, row y spanning columns y..W-1-y). Owned by render.cpp
-// file-scope state beside the grid metrics; regenerated when H changes. The
-// same mask stamps the playhead cursor triangle and each marker/trim flag's
-// triangle (centered on the column, tip at the waveform top edge). Never null.
+// ANTIALIASED — the triangle path is filled with AA enabled so the two slopes
+// carry baked gray edge alphas). Owned by render.cpp file-scope state beside the
+// grid metrics; regenerated when H changes. Stamps the PLAYHEAD cursor triangle
+// (centered on the column, tip at the waveform top edge); the per-frame playhead
+// redraws take the cheap cached-mask stamp rather than a live path fill. The
+// marker/trim flags fill their own AA triangle path in paint_flag_shape (so fill
+// and outline blend as one shape); both are the identical 17-wide/H=9 geometry.
+// Never null.
 cairo_surface_t* playhead_triangle_mask();
 
 // Waveform-internal top/bottom inset, in pixels. The drawn waveform samples
@@ -294,7 +302,7 @@ inline int waveform_inset_px() { return playhead_triangle_h_px(); }
 // Half-width (px) of the tip-down triangle's horizontal footprint, H - 1
 // (the mask is 2H-1 wide, centered on the column); bounds the playhead's
 // off-screen cull and its invalidation strip. Single definition shared by
-// render.cpp (cull) and main.cpp (invalidation). At scale 1 it is 7.
+// render.cpp (cull) and main.cpp (invalidation). At scale 1 it is 8.
 inline int playhead_half_px() { return playhead_triangle_h_px() - 1; }
 
 // Pre-first-paint fallback for the measured monospace row height and baseline
@@ -514,6 +522,21 @@ void render_playhead(cairo_t* cr,
                      GuiColor color,
                      bool draw_triangle = true,
                      cairo_surface_t* ink_plate = nullptr);
+
+// Draws the strip-drag ANCHOR STEM: a 1-pixel vertical line at the drag's pivot
+// column `col` (window pixels within `area`, clamped here to [0, area.w-1]),
+// spanning the full waveform height like a marker stem, in kText. The anchor is
+// the clamped column the strip-drag math pins each event — edge-included, so an
+// edge-pinned anchor draws the stem exactly at the edge and the clamp becomes
+// visible (the Ableton affordance). Over waveform ink the same kBackground notch
+// overdraw the marker stems use (fill_column_ink_runs against `ink_plate`, the
+// displayed plate) recolors the crossing so the stem reads as a dark cut. The
+// vertical line is hard-aliased at the +0.5 half-pixel column. `ink_plate` may
+// be null (no notch).
+void render_strip_anchor_stem(cairo_t* cr,
+                              GuiRect area,
+                              int col,
+                              cairo_surface_t* ink_plate = nullptr);
 
 // Draws the LAST-SELECTED marker's vertical 1-pixel stem across `waveform_area`
 // when its resolved sample falls inside [viewport_start_sample,

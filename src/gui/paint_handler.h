@@ -472,5 +472,6 @@ private:
     void paint_phase_reset_overlay(cairo_t* cr, const GuiRect& area);
     void paint_marker_stems(cairo_t* cr, const GuiRect& marker_paint_rect);
     void paint_playheads(cairo_t* cr, const GuiRect& area);
+    void paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr, int sr);
 };

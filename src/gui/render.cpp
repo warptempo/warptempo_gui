@@ -226,24 +226,27 @@ void render_marker_stems_impl(
 // `center_x` (the item's pixel column). The shape is the fixed-width rectangle
 // in the flag lane [rx, flag_top, flag_w, rect_h] plus (when `with_triangle`)
 // the tip-down triangle in the triangle lane directly beneath it, tip on the
-// column at `tip_y` (= the waveform top edge). The two are ONE shape: the union
-// is filled in `fill`, and a 1px `outline` runs on the TRUE OUTSIDE only — rect
-// left/top/right, then from the rect's bottom corners INWARD to the triangle's
-// top corners and down the two slopes to the tip, so there is NO horizontal seam
-// where the rect meets the triangle (the 1px inset per side makes the transition
-// continuous). Axis-aligned edges use the +0.5 half-pixel convention for crisp
-// 1px lines; the two diagonal slopes stroke antialiased. Trim chips pass
-// with_triangle=false — a plain rectangle, no triangle (Ableton's loop bounds
-// carry none). `alpha` < 1 dims the whole shape as one cairo group (the disabled
-// cue). The triangle fill reuses the shared playhead_triangle_mask() so a flag's
-// triangle and the playhead's coincide bit-for-bit when the cursor sits on it.
+// column at `tip_y` (= the waveform top edge). The two are ONE shape: the
+// triangle's TOP is the rectangle's FULL width, so its slopes leave the rect's
+// exact bottom corners and run to the tip with NO inward step — the outline
+// flows continuously from the vertical sides straight into the diagonals (no
+// horizontal seam, no 90-degree jog). The rectangle fills crisp (AA off); the
+// triangle fills as an ANTIALIASED PATH whose base coincides with the rect's
+// hard bottom edge, so the two share the full-width boundary row with no gap and
+// the triangle's slope fill blends with the outline's slope stroke. The 1px
+// `outline` runs the TRUE OUTSIDE only. ALIASING: axis-aligned edges (rect
+// sides, top, base) use the +0.5 half-pixel convention for crisp 1px lines; the
+// two diagonal slopes antialias (the relaxed rule — only verticals/horizontals
+// are hard-aliased). Trim chips pass with_triangle=false — a plain rectangle, no
+// triangle (Ableton's loop bounds carry none). `alpha` < 1 dims the whole shape
+// as one cairo group (the disabled cue). The triangle is the identical geometry
+// the cached playhead mask stamps, so a flag's triangle and the playhead's
+// coincide when the cursor sits on it.
 void paint_flag_shape(cairo_t* cr, double center_x,
                       double flag_top_d, double tri_top_d, double tip_y_d,
                       GuiColor fill, GuiColor outline,
                       bool with_triangle, double alpha) {
     const int flag_w = flag_lane_w_px();
-    const int tri_h  = playhead_triangle_h_px();
-    const int tri_w  = 2 * tri_h - 1;
 
     const int cx     = static_cast<int>(std::round(center_x));
     const int rx     = cx - flag_w / 2;                 // rect left
@@ -251,15 +254,16 @@ void paint_flag_shape(cairo_t* cr, double center_x,
     const int ry     = static_cast<int>(std::round(flag_top_d));
     const int rb     = static_cast<int>(std::round(tri_top_d)); // rect bottom = tri top
     const int tbot   = static_cast<int>(std::round(tip_y_d));   // triangle lane bottom
-    const int tri_left  = cx - tri_w / 2;
-    const int tri_right = tri_left + tri_w;             // exclusive right edge
 
     cairo_save(cr);
     const bool dim = alpha < 1.0;
     if (dim) cairo_push_group(cr);
 
-    // Fill: rectangle (crisp, AA off) then, if present, the triangle via the
-    // shared tip-down mask stamped left-edge on tri_left, tip on the column.
+    // Fill: rectangle crisp (AA off) then, if present, the triangle as an AA path
+    // whose base is the rect's full-width bottom edge and whose apex is the
+    // bottom-center column. The base row coincides with the rect's hard bottom
+    // edge (rb), so the shared full-width boundary carries no gap or double-drawn
+    // seam.
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     cairo_set_source_rgb(cr, fill.r, fill.g, fill.b);
@@ -268,25 +272,27 @@ void paint_flag_shape(cairo_t* cr, double center_x,
     cairo_restore(cr);
     if (with_triangle) {
         cairo_set_source_rgb(cr, fill.r, fill.g, fill.b);
-        cairo_mask_surface(cr, playhead_triangle_mask(),
-                           static_cast<double>(tri_left),
-                           static_cast<double>(rb));
+        cairo_move_to(cr, static_cast<double>(rx),      static_cast<double>(rb));
+        cairo_line_to(cr, static_cast<double>(rx + rw), static_cast<double>(rb));
+        cairo_line_to(cr, cx + 0.5,                     static_cast<double>(tbot));
+        cairo_close_path(cr);
+        cairo_fill(cr);
     }
 
-    // Outline: the true outside as one closed polygon. Rect edges + (for a
-    // triangle-bearing flag) the 1px inward steps at the rect bottom corners
-    // and the two slopes to the tip. No horizontal seam across the full width.
+    // Outline: the true outside as one closed polygon. Rect edges, then (for a
+    // triangle-bearing flag) the two slopes directly from the rect's bottom
+    // corners to the tip — no step, no horizontal seam.
     cairo_set_source_rgb(cr, outline.r, outline.g, outline.b);
     cairo_set_line_width(cr, 1.0);
     cairo_move_to(cr, rx + 0.5,           ry + 0.5);          // top-left
     cairo_line_to(cr, rx + rw - 0.5,      ry + 0.5);          // top edge
     cairo_line_to(cr, rx + rw - 0.5,      rb - 0.5);          // right edge to rect bottom
     if (with_triangle) {
-        cairo_line_to(cr, tri_right - 0.5, rb - 0.5);         // step inward
         cairo_line_to(cr, cx + 0.5,        tbot - 0.5);       // right slope to tip
-        cairo_line_to(cr, tri_left + 0.5,  rb - 0.5);         // left slope up
+        cairo_line_to(cr, rx + 0.5,        rb - 0.5);         // left slope up
+    } else {
+        cairo_line_to(cr, rx + 0.5,        rb - 0.5);         // rect bottom edge
     }
-    cairo_line_to(cr, rx + 0.5,           rb - 0.5);          // rect bottom-left
     cairo_close_path(cr);                                     // up the left edge
     cairo_stroke(cr);
 
@@ -481,20 +487,19 @@ void render_playhead(cairo_t* cr,
         }
     }
 
-    // Inverted-triangle indicator: stamped from the code-generated A8 mask
-    // (playhead_triangle_mask()) so every pixel is explicit — alpha is
-    // strictly 0 or 255, no rasterizer ambiguity. The mask is 2H-1 x H
+    // Inverted-triangle indicator: stamped from the cached ANTIALIASED A8 mask
+    // (playhead_triangle_mask()) so the per-frame playhead redraw is a cheap
+    // blit with the slope edge alphas already baked in. The mask is 2H-1 x H
     // (odd width) with the tip at column index H-1 (image-local); integer
     // division places that tip column at `area.x + col`. The triangle sits in
     // the TRIANGLE LANE directly above the waveform (dst_y = area.y - H): its
     // top row is the lane top and its tip (bottom row) lands one pixel above
     // the waveform top edge, where the marker/trim stems begin. This is the
-    // SAME mask, same width, and same centered column as every marker/trim flag
-    // triangle, so when the cursor sits on a marker the two coincide
-    // bit-for-bit. Skipped for the scanner call (draw_triangle=false): the
-    // triangle belongs to the cursor exclusively under the split-playhead
-    // model. The clip band is the triangle lane; the vertical line above spans
-    // only the waveform area, so the two never overlap.
+    // same width and centered column as every marker/trim flag triangle, so when
+    // the cursor sits on a marker the two coincide. Skipped for the scanner call
+    // (draw_triangle=false): the triangle belongs to the cursor exclusively under
+    // the split-playhead model. The clip band is the triangle lane; the vertical
+    // line above spans only the waveform area, so the two never overlap.
     if (draw_triangle) {
         cairo_surface_t* triangle_surface = playhead_triangle_mask();
         const int img_w = cairo_image_surface_get_width(triangle_surface);
@@ -509,6 +514,30 @@ void render_playhead(cairo_t* cr,
         cairo_clip(cr);
         cairo_set_source_rgb(cr, color.r, color.g, color.b);
         cairo_mask_surface(cr, triangle_surface, dst_x, dst_y);
+    }
+    cairo_restore(cr);
+}
+
+void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col,
+                              cairo_surface_t* ink_plate) {
+    if (area.w <= 0 || area.h <= 0) return;
+    // The clamp is where the affordance lives: an anchor pushed to (or past) a
+    // song edge pins to the edge column, so the stem draws exactly there.
+    if (col < 0)          col = 0;
+    if (col >= area.w)    col = area.w - 1;
+
+    const double x_px = static_cast<double>(area.x) + col + 0.5;
+    cairo_save(cr);
+    cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
+    cairo_set_line_width(cr, 1.0);
+    cairo_move_to(cr, x_px, static_cast<double>(area.y));
+    cairo_line_to(cr, x_px, static_cast<double>(area.y + area.h));
+    cairo_stroke(cr);
+    // The dark ink notch: the same kBackground overdraw the marker stems apply
+    // where the column crosses opaque waveform ink.
+    if (ink_plate) {
+        cairo_surface_flush(ink_plate);
+        fill_column_ink_runs(cr, area.x, area.y, area.h, ink_plate, col);
     }
     cairo_restore(cr);
 }
@@ -1298,31 +1327,34 @@ void   set_gui_font_size_pt(double pt) { g_font_size_pt = pt; }
 double gui_font_scale()    { return g_font_size_pt / kDefaultFontSizePt; }
 double flag_font_size_px() { return g_font_size_pt * 96.0 / 72.0; }
 
-// Build a fresh A8 tip-down triangle mask of height h (W = 2h-1). Row y (0-based
-// from the top) spans columns y through W-1-y inclusive, so each row is two
-// pixels narrower than the one above, from full width W down to a single tip
-// pixel at column (W-1)/2 = h-1 in the bottom row. Alpha is strictly 0 or 255 —
-// the A8 buffer is filled directly, no rasterizer, no partial coverage. This is
-// the full tip-down triangle shared by the playhead cursor and every
-// marker/trim flag (at scale 1, H = 8, W = 15).
+// Build a fresh A8 tip-down triangle mask of height h (W = 2h-1). The triangle
+// is filled as an ANTIALIASED cairo path — full-width top edge [0, W] down to the
+// bottom-center apex (column (W-1)/2 = h-1) — so its two slopes carry baked gray
+// edge alphas (the relaxed aliasing rule: diagonals may antialias). This is the
+// tip-down triangle the playhead cursor stamps, the identical geometry the
+// marker/trim flags path-fill in paint_flag_shape (at scale 1, H = 9, W = 17).
 static cairo_surface_t* build_triangle_mask(int h) {
     const int w = 2 * h - 1;
     cairo_surface_t* s = cairo_image_surface_create(CAIRO_FORMAT_A8, w, h);
-    unsigned char* data = cairo_image_surface_get_data(s);
-    const int stride = cairo_image_surface_get_stride(s);
-    // The surface is created zeroed; only the opaque triangle interior is
-    // written.
-    for (int y = 0; y < h; ++y) {
-        for (int x = y; x <= w - 1 - y; ++x) {
-            data[y * stride + x] = 0xFF;
-        }
-    }
-    cairo_surface_mark_dirty(s);
+    cairo_t* cr = cairo_create(s);
+    // The surface is created transparent; fill the tip-down triangle path with
+    // antialiasing on. On an A8 target only the source alpha matters, so a solid
+    // alpha-1 source paints coverage 1 in the interior and the rasterizer's
+    // fractional coverage along the two slopes.
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    cairo_set_source_rgba(cr, 0.0, 0.0, 0.0, 1.0);
+    cairo_move_to(cr, 0.0, 0.0);
+    cairo_line_to(cr, static_cast<double>(w), 0.0);
+    cairo_line_to(cr, static_cast<double>(w) / 2.0, static_cast<double>(h));
+    cairo_close_path(cr);
+    cairo_fill(cr);
+    cairo_destroy(cr);
+    cairo_surface_flush(s);
     return s;
 }
 
-// Build (or return the cached) tip-down triangle mask for the current H. The
-// one mask serves the playhead cursor and every marker/trim flag triangle.
+// Build (or return the cached) antialiased tip-down triangle mask for the
+// current H, stamped by the playhead cursor's per-frame redraw.
 cairo_surface_t* playhead_triangle_mask() {
     const int h = playhead_triangle_h_px();
     if (g_playhead_triangle && g_playhead_triangle_h == h) {

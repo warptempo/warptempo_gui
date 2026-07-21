@@ -475,6 +475,34 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr,
     }
 }
 
+// -- GuiPaintHandler::paint_strip_drag_anchor ----------------------------
+
+// Paints the strip-drag anchor stem (the Ableton pivot affordance) at the
+// drag's current anchor column, full waveform height. Live only mid-gesture:
+// gated on the drag being active AND past the moved threshold, so a bare press
+// shows nothing and it vanishes the moment the drag ends (release/Esc/button
+// loss clear strip_drag before the next paint). The anchor column is recomputed
+// each frame from the persisted anchor_sample against the DISPLAYED viewport
+// (wf_cache.fp_*), the same basis paint_region_wash and paint_playheads use, so
+// the stem stays locked to the blitted plate while the worker rebuilds. The
+// anchor lives in the active display domain (viewport_start + col*spp), so no
+// warp map is walked. render_strip_anchor_stem clamps the column to the visible
+// edges — an edge-pinned anchor draws the clamp itself.
+void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) {
+    if (!app.strip_drag.active || !app.strip_drag.moved) return;
+    if (area.w <= 0 || area.h <= 0) return;
+
+    const double spp = wf_cache.fp_area_w > 0
+        ? static_cast<double>(wf_cache.fp_vp_end - wf_cache.fp_vp_start) /
+          static_cast<double>(wf_cache.fp_area_w)
+        : current_samples_per_pixel(app, audio);
+    if (spp <= 0.0) return;
+    const double vp_start = static_cast<double>(wf_cache.fp_vp_start);
+    const int col = static_cast<int>(std::nearbyint(
+        (app.strip_drag.anchor_sample - vp_start) / spp));
+    render_strip_anchor_stem(cr, area, col, wf_cache.surface);
+}
+
 // -- GuiPaintHandler::paint_playheads ------------------------------------
 
 void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
@@ -719,6 +747,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // zoom toggle.
             render_strip_row_ring(cr, top_zoom_row_area(app),
                                   waveform_area(app).w);
+        }
+
+        // Strip-drag anchor stem: over the plate/stems, under the playhead
+        // (which must never be occluded), in the waveform area only.
+        if (rects_intersect(exposed, area)) {
+            paint_strip_drag_anchor(cr, area);
         }
 
         if (rects_intersect(exposed, area) ||
