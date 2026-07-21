@@ -371,6 +371,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             if (target_render.is_updating()) return;
             if (app.target_buffer_frames <= 0) return;
         }
+        // With an active region, Space auditions from its LEFT bound — the
+        // smaller of the two active-domain endpoints, regardless of drag
+        // direction — because the point of the highlight is to hear its start.
+        // Only on the START edge (a Space that STOPS is untouched; a Space with
+        // no active region is untouched). move_playhead_to owns the
+        // active-domain clamp and the region frames are already active-domain,
+        // so the just-moved cursor is what toggle_playback reads as its start.
+        // The region sets ONLY the start: the trim loop verdict is still
+        // captured from app.trim inside toggle_playback, so region + trim loops
+        // the trim window as before and region + no trim plays through to the
+        // end with no loop.
+        if (!playback.is_playing() && app.region.active) {
+            viewport.move_playhead_to(
+                std::min(app.region.a_frame, app.region.b_frame));
+        }
         playback_lifecycle.toggle_playback();
         return;
     }
