@@ -2055,10 +2055,14 @@ void GuiPlatform::begin_pointer_capture() {
 
     // Seed the virtual position from the current absolute position and remember
     // the press row as the restore y (the cursor reappears at that row on
-    // release; its restore x rides the drag's traveled virtual_pointer_x_).
+    // release; its restore x rides the drag's traveled virtual_pointer_x_ unless
+    // a strip drag overrides it with its anchor-stem column). Each capture
+    // starts with no x override, so the alt-pan (no stem) falls back to the raw
+    // traveled x.
     virtual_pointer_x_ = static_cast<double>(pointer_x_);
     virtual_pointer_y_ = static_cast<double>(pointer_y_);
     capture_restore_y_ = virtual_pointer_y_;
+    capture_restore_x_override_.reset();
 
     // Hide the cursor. set_cursor with a NULL surface is the protocol's "hide"
     // request; the tracked enter serial authorizes it.
@@ -2086,26 +2090,37 @@ void GuiPlatform::end_pointer_capture() {
     release_pointer_lock(/*apply_restore_hint=*/true);
 }
 
+void GuiPlatform::set_capture_restore_x(double surface_x) {
+    // The active strip drag names the surface x its anchor stem paints at; the
+    // release restore uses it in place of the raw traveled virtual_pointer_x_.
+    // Ignored when no capture is live (nothing to restore).
+    if (!pointer_captured_) return;
+    capture_restore_x_override_ = surface_x;
+}
+
 void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
     if (!pointer_captured_ && !locked_pointer_) return;  // idempotent
 
     if (locked_pointer_) {
         if (apply_restore_hint) {
-            // Return the cursor to its raw drag-traveled x when the lock is
-            // destroyed: virtual_pointer_x_ is the press x advanced by the
-            // drag's total x-travel, passed unclamped, while y stays frozen at
-            // the press row (capture_restore_y_). The compositor clamps an
-            // off-window hint back on-screen at unlock, landing the cursor at
-            // the same x as the zoom stem (which sits at the anchor's clamped
-            // column) — the Ableton affordance shared by all three captured
-            // drags. An explicit clamp to the window width would instead pin
-            // the cursor to the window edge, past the stem. The hint is
-            // surface-local, the same space as virtual_pointer_x_, and is
+            // Return the cursor when the lock is destroyed, y frozen at the
+            // press row (capture_restore_y_). The x is the anchor-stem column
+            // the strip drag supplied (capture_restore_x_override_) when set —
+            // the edge-trick rebind pins the stem while the raw cursor travel
+            // keeps going, so restoring at the stem lands the cursor dead on it
+            // rather than past it. With no override (the alt-pan, which has no
+            // stem) the x is the raw drag-traveled virtual_pointer_x_, passed
+            // unclamped: the compositor clamps an off-window hint back on-screen
+            // at unlock (an explicit clamp to the window width would instead pin
+            // the cursor to the window edge). The hint is surface-local, the
+            // same space as virtual_pointer_x_ and the stem's surface x, and is
             // double-buffered against the constrained surface, so commit it
             // before destroying the lock.
+            const double restore_x =
+                capture_restore_x_override_.value_or(virtual_pointer_x_);
             zwp_locked_pointer_v1_set_cursor_position_hint(
                 locked_pointer_,
-                wl_fixed_from_double(virtual_pointer_x_),
+                wl_fixed_from_double(restore_x),
                 wl_fixed_from_double(capture_restore_y_));
             if (wl_surface_) wl_surface_commit(wl_surface_);
         }

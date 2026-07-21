@@ -177,6 +177,11 @@ struct GuiInputHandler {
     // that never captured (degraded compositor) still calls end harmlessly.
     std::function<void()> begin_strip_pointer_capture = []{};
     std::function<void()> end_strip_pointer_capture   = []{};
+    // Set the active capture's release-restore x to the anchor stem's surface
+    // x. apply_strip_drag_at fires it each event (the last wins at release) so
+    // the cursor reappears dead on the stem; the alt-pan never calls it, so its
+    // release keeps the raw traveled-x restore.
+    std::function<void(double)> set_strip_capture_restore_x = [](double){};
 
     GuiInputHandler(AppState&                app_,
                     const GuiAudio&          audio_,

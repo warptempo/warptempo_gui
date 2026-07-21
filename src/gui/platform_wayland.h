@@ -3,6 +3,7 @@
 #include <cairo/cairo.h>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -98,6 +99,15 @@ public:
     // may call it unconditionally.
     void begin_pointer_capture();
     void end_pointer_capture();
+
+    // Override the release-restore x for the active capture. The strip drags
+    // set this each event to the surface x of their anchor stem, so the cursor
+    // reappears dead on the stem's column (the edge-trick rebind pins the stem
+    // while the raw cursor travel keeps going, so the raw virtual_pointer_x_
+    // would land past it). begin_pointer_capture clears it, so a capture with
+    // no override set (the alt-pan, which has no stem) restores at the raw
+    // traveled virtual_pointer_x_.
+    void set_capture_restore_x(double surface_x);
 
     // Parallel hookup for the GuiWaveformWorker's completion
     // eventfd. The poll set grows a fourth pollfd; on POLLIN the loop
@@ -241,13 +251,15 @@ private:
     // advances by each relative-motion delta WITHOUT clamping (unbounded
     // travel); its rounded value is written into pointer_x_/pointer_y_ and
     // delivered through on_motion_ exactly like an absolute motion. On release
-    // the cursor reappears at the raw drag-traveled virtual_pointer_x_ (the
-    // compositor clamps an off-window hint on-screen at unlock), frozen in y at
-    // the press row (capture_restore_y_).
+    // the cursor reappears at capture_restore_x_override_ when a strip drag set
+    // it (the anchor stem's surface x), else at the raw drag-traveled
+    // virtual_pointer_x_ (the compositor clamps an off-window hint on-screen at
+    // unlock); y is always frozen at the press row (capture_restore_y_).
     bool   pointer_captured_   = false;
     double virtual_pointer_x_  = 0.0;
     double virtual_pointer_y_  = 0.0;
     double capture_restore_y_  = 0.0;
+    std::optional<double> capture_restore_x_override_;
 
     // Latest wl_pointer.enter serial. Tracked for wl_pointer.set_cursor: the
     // theme-cursor set on enter and the NULL-surface hide at capture begin both

@@ -154,7 +154,8 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
 
     // (2) The old spp is read from the LIVE level (never stored).
     const double spp_old = current_samples_per_pixel(app, audio);
-    const double W = static_cast<double>(waveform_area(app).w);
+    const GuiRect wf_area = waveform_area(app);
+    const double W = static_cast<double>(wf_area.w);
     const int64_t total = live_total_frames(app, audio);
 
     // (3) Pan at the old level, in the double domain: grab sign — drag right
@@ -208,6 +209,17 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
         sd.anchor_sample = vp + clamped_col * spp_old;
         anchor_col = clamped_col;
     }
+
+    // Drive the capture's release-restore x to the anchor stem's surface x — the
+    // identical column->x math render_strip_anchor_stem paints at (area.x +
+    // col + 0.5), so on release the cursor lands dead on the stem rather than at
+    // its raw traveled position (which the edge rebind leaves past a pinned
+    // stem). Fired every event; the last before release wins. A motionless
+    // strip press-release never reaches here, so its override stays unset and it
+    // restores at the press point.
+    if (set_strip_capture_restore_x)
+        set_strip_capture_restore_x(
+            static_cast<double>(wf_area.x) + anchor_col + 0.5);
 
     // (6) Apply: place anchor_sample at anchor_col under the new level's spp and
     // clamp. IDENTITY PROOFS: pure pan (dy=0) is EXACT — new_level == old, so

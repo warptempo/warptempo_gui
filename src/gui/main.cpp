@@ -726,6 +726,7 @@ int main(int argc, char** argv) {
     // stays agnostic to whether capture is available.
     input_handler.begin_strip_pointer_capture = [&]() { gui.begin_pointer_capture(); };
     input_handler.end_strip_pointer_capture   = [&]() { gui.end_pointer_capture(); };
+    input_handler.set_strip_capture_restore_x = [&](double sx) { gui.set_capture_restore_x(sx); };
 
     // Displayed-map promotion → same-frame hover refresh. on_redraw fires this
     // the instant it advances displayed_map_gen (before any painting), so the
