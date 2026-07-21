@@ -899,6 +899,12 @@ void GuiPlatform::paint_one_frame() {
         return;
     }
 
+    // in_redraw_ guards the paint loop below: on_redraw may re-enter
+    // invalidate_region (the displayed-map promotion's hover recompute), and
+    // appending to buf->pending — the vector this loop iterates — mid-loop would
+    // invalidate the range-for. invalidate_region holds such rects in
+    // deferred_damage_ while the flag is set; they are replayed after the loop.
+    in_redraw_ = true;
     cairo_t* cr = cairo_create(buf->surface);
     for (const DamageRect& d : buf->pending) {
         cairo_save(cr);
@@ -908,6 +914,7 @@ void GuiPlatform::paint_one_frame() {
         cairo_restore(cr);
     }
     cairo_destroy(cr);
+    in_redraw_ = false;
 
     for (const DamageRect& d : buf->pending) {
         wl_surface_damage_buffer(wl_surface_, d.x, d.y, d.w, d.h);
@@ -920,11 +927,32 @@ void GuiPlatform::paint_one_frame() {
     buf->pending.clear();
     damage_.clear();
 
+    // Replay any damage on_redraw declared re-entrantly. buf->pending and
+    // damage_ are cleared, so this re-runs invalidate_region cleanly (in_redraw_
+    // is now false) to queue the rects into every buffer's pending list and
+    // schedule the follow-up frame that paints them.
+    if (!deferred_damage_.empty()) {
+        std::vector<DamageRect> held;
+        held.swap(deferred_damage_);
+        for (const DamageRect& d : held)
+            invalidate_region(d.x, d.y, d.w, d.h);
+    }
+
     schedule_frame_callback();
 }
 
 void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
     if (w <= 0 || h <= 0) return;
+
+    // Re-entered from inside the on_redraw paint loop (the displayed-map
+    // promotion's hover recompute): hold the rect instead of appending to the
+    // buffer pending lists the loop is iterating. paint_one_frame replays
+    // deferred_damage_ after the loop, so the repaint lands on the next frame
+    // (the in-place hover state the promoting frame paints is already updated).
+    if (in_redraw_) {
+        append_coalesced_rect(deferred_damage_, DamageRect{x, y, w, h});
+        return;
+    }
 
     // Each surviving rect costs one on_redraw call downstream, so the
     // global damage signal and every per-buffer pending list use the same

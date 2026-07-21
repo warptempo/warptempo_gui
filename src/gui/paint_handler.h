@@ -9,6 +9,7 @@
 #include "warp_frame_map.h"   // WarpFrameMapSegment
 
 #include <cairo/cairo.h>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -325,6 +326,17 @@ struct GuiPaintHandler {
           flag_cache(flag_cache_),
           waveform_worker(waveform_worker_),
           gui(gui_) {}
+
+    // Installed hook (kick_waveform_* pattern), fired inside on_redraw the
+    // instant the displayed-map promotion advances displayed_map_gen — BEFORE
+    // any painting — and only when a promotion actually happened. main.cpp wires
+    // it to Viewport::recompute_hover_at_cursor so the just-promoted map's flag
+    // positions re-resolve the hover identity and rewrite lane_text/readout_text/
+    // copy_payload in-place, and every overlay this frame paints (and any Ctrl+C
+    // landing before the next tick) sees the new identity rather than the old
+    // map's. Held as a std::function to avoid a Viewport& member on the paint
+    // handler. Empty until wired.
+    std::function<void()> on_displayed_map_promoted;
 
     void on_redraw(cairo_t* cr, int x, int y, int w, int h);
     void on_resize(int w, int h);

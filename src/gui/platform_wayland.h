@@ -179,6 +179,16 @@ private:
     // additional damage without producing a spurious extra commit.
     bool in_pre_paint_ = false;
 
+    // True only while paint_one_frame is inside the on_redraw paint loop.
+    // on_redraw may re-enter invalidate_region (the displayed-map promotion's
+    // hover recompute), but that loop is iterating the current buffer's pending
+    // list — the same list invalidate_region appends to — so a push_back there
+    // would invalidate the range-for. While this flag is set, invalidate_region
+    // holds the rect in deferred_damage_ instead; paint_one_frame replays the
+    // held rects after the loop, so the damage lands on the next frame.
+    bool in_redraw_ = false;
+    std::vector<DamageRect> deferred_damage_;
+
     // The bound single wl_output's latest CURRENT mode, in millihertz.
     // Replaced on mode changes and cleared on output removal. Zero means no
     // output advertised a usable mode; detect_refresh_rate_ms() then falls

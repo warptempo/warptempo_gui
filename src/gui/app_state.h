@@ -1380,6 +1380,10 @@ double  effective_max_zoom_level(int waveform_width_px,
 // while loading (no live frames), so it cannot stomp a level the load path is
 // mid-assignment.
 double  clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level);
+// The rightmost on-grid viewport start (the flush-right rest). The single
+// right-wall owner, shared by the clamp_viewport_start chokepoint and the strip
+// drag's per-event pan clamp (apply_strip_drag_at) so both derive the same wall.
+int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio);
 std::pair<long long, long long> compute_trim_samples(
     const AppState& a, long long total_frames);
 GuiRect timestamp_invalidate_rect(const AppState& a);

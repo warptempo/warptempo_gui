@@ -757,12 +757,24 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // after the loop in GuiPlatform::paint_one_frame, so a press only ever reads
     // the last COMMITTED frame's geometry — that guarantee is unchanged. Bump
     // displayed_map_gen so a silent geometry change is visible to hover identity.
+    //
+    // Refresh the hover identity against the JUST-promoted map, still before any
+    // painting: the hook (recompute_hover_at_cursor, wired in main.cpp) hit-tests
+    // the new flag positions and re-stamps lane_text/readout_text/copy_payload,
+    // so the run/readout this frame paints — and any Ctrl+C landing after this
+    // frame but before the next tick — reads the new identity, not the old map's
+    // (the run could otherwise follow a marker to its new column though it is no
+    // longer under the cursor). No input dispatches mid-paint (single-threaded),
+    // so the recompute is safe here. The on_tick displayed_gen check remains the
+    // BACKSTOP for a promotion-free store mutation; this hook owns the
+    // promoting-frame case that the tick (running before the paint) cannot.
     if (app.staged_displayed_valid) {
         app.displayed_target_warp_frame_map =
             std::move(app.staged_displayed_target_warp_frame_map);
         app.staged_displayed_target_warp_frame_map.clear();
         app.staged_displayed_valid = false;
         ++app.displayed_map_gen;
+        if (on_displayed_map_promoted) on_displayed_map_promoted();
     }
 
     cairo_save(cr);

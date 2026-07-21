@@ -159,18 +159,23 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
 
     // (3) Pan at the old level, in the double domain: grab sign — drag right
     // (dx>0) reveals earlier content, so the viewport moves left. The result is
-    // WALL-CLAMPED here, at the old level, to the same song walls the downstream
-    // clamp_viewport_start enforces ([0, total − W·spp_old]): step (5) derives
-    // the anchor column and rebinds anchor_sample from vp, so both must see the
-    // viewport that will actually REST. Against the unclamped pan they would bind
-    // the anchor to a column past a saturated wall — a position the downstream
-    // clamp discards, leaving a stale off-screen anchor that only surfaces on the
-    // next zoom event. The grid snap is deliberately NOT reproduced (the wall
-    // clamp alone removes the failure class; the sub-pixel residue self-heals on
-    // the following event, exactly as step (5)'s live re-read does).
+    // WALL-CLAMPED here, at the old level, to the SAME right wall the downstream
+    // clamp_viewport_start rests at — the shared max_viewport_start_grid owner
+    // (the level mid-gesture is the live level, so it reads exactly the state the
+    // chokepoint would). step (5) derives the anchor column and rebinds
+    // anchor_sample from vp, so both must see the viewport that will actually
+    // REST. The earlier `total − W·spp_old` form sat up to a pixel short of the
+    // legal grid rest — pressing at the flush-right rest first pulled vp back to
+    // that off-grid wall, the anchor column clamped at W−1, and the edge rebind
+    // PERMANENTLY rewrote anchor_sample, so the at-wall no-op proof failed exactly
+    // at the legal rest; sharing the wall makes vp derive at the true rest and the
+    // no-op proof hold. The grid snap of arbitrary INTERIOR vp values is
+    // deliberately NOT reproduced (the sub-pixel residue there self-heals on the
+    // following event, exactly as step (5)'s live re-read does — only the WALL had
+    // to be exact because the edge rebind is a lasting mutation).
     double vp = static_cast<double>(app.viewport_start_sample) - dx * spp_old;
     const double vp_lo = 0.0;
-    const double vp_hi = std::max(0.0, static_cast<double>(total) - W * spp_old);
+    const double vp_hi = static_cast<double>(max_viewport_start_grid(app, audio));
     if (vp < vp_lo) vp = vp_lo;
     if (vp > vp_hi) vp = vp_hi;
 

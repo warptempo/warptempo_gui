@@ -404,6 +404,37 @@ std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
     return { lo, hi };
 }
 
+int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
+    // The rightmost ON-grid viewport start: the smallest painter-grid point
+    // >= max_start (= total - visible). Grid points g(k)=nearbyint(k*q) are
+    // strictly increasing at numeric zoom (q >> 1), so starting at
+    // floor(max_start/q) and stepping up finds it in O(1). Resting here shows
+    // <1 px of inert padding past EOF (subsumed in the last column; get_peak_range
+    // clamps past-EOF reads to silence), so the flush-right viewport is a true
+    // grid point — unlike the off-grid max_start it replaces, this keeps
+    // exact-grid marker commits and pixel anchoring simultaneously valid at
+    // maximum scroll.
+    //
+    // The ONE right-wall owner, shared by the resting clamp (clamp_viewport_start
+    // below) and the strip drag's per-event pan clamp (apply_strip_drag_at): both
+    // read the same live state, so a press at the flush-right rest derives its
+    // virtual viewport at exactly the rest. Degenerate branches: visible >= total
+    // (the whole song fits) → 0; q <= 0 (non-numeric zoom) → max(0, max_start).
+    const int64_t visible = samples_visible(a, audio);
+    const int64_t total   = live_total_frames(a, audio);
+    if (visible >= total) return 0;
+    const int64_t max_start = total - visible;
+    const double  q = painter_samples_per_pixel(a, audio, waveform_area(a));
+    if (q <= 0.0) return std::max<int64_t>(0, max_start);
+    int64_t k = static_cast<int64_t>(std::floor(max_start / q));
+    if (k < 0) k = 0;
+    auto grid = [q](int64_t kk) {
+        return static_cast<int64_t>(std::nearbyint(static_cast<double>(kk) * q));
+    };
+    while (grid(k) < max_start) ++k;
+    return grid(k);
+}
+
 void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     // Level ceiling (the chokepoint): every zoom write funnels through this
     // function immediately after assigning zoom_level — the same single-funnel
@@ -425,12 +456,16 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
         return;
     }
     if (a.viewport_start_sample < 0) a.viewport_start_sample = 0;
-    const int64_t max_start = total - visible;
+
+    // The rightmost on-grid rest, through the shared right-wall owner (the same
+    // wall the strip drag's pan clamp uses). max_viewport_start_grid re-derives
+    // visible/total/q and returns max(0, total-visible) when q is non-numeric.
+    const int64_t max_start_grid = max_viewport_start_grid(a, audio);
 
     const double q = painter_samples_per_pixel(a, audio, waveform_area(a));
     if (q <= 0.0) {
-        if (a.viewport_start_sample > max_start)
-            a.viewport_start_sample = max_start;
+        if (a.viewport_start_sample > max_start_grid)
+            a.viewport_start_sample = max_start_grid;
         return;
     }
 
@@ -441,26 +476,13 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     // aligned. The same painter spp authored_frame_at_column uses, so viewport grid
     // and marker grid are one grid.
     //
-    // Rightmost ON-grid viewport: the smallest grid point >= max_start. Grid
-    // points g(k)=nearbyint(k*q) are strictly increasing at numeric zoom
-    // (q >> 1), so starting at floor(max_start/q) and stepping up finds it in
-    // O(1). Resting here shows <1 px of inert padding past EOF (subsumed in
-    // the last column; get_peak_range clamps past-EOF reads to silence), so
-    // the flush-right viewport is a true grid point — unlike the off-grid
-    // max_start it replaces, this keeps exact-grid marker commits and pixel
-    // anchoring simultaneously valid at maximum scroll.
-    int64_t k = static_cast<int64_t>(std::floor(max_start / q));
-    if (k < 0) k = 0;
-    auto grid = [q](int64_t kk) {
-        return static_cast<int64_t>(std::nearbyint(static_cast<double>(kk) * q));
-    };
-    while (grid(k) < max_start) ++k;
-    const int64_t max_start_grid = grid(k);
-
     // Snap the viewport to its nearest grid point, then clamp into
     // [0, max_start_grid]. (Single clamp: do NOT also clamp to the off-grid
     // max_start first — that would pull a valid flush-right grid rest back
     // off-grid.)
+    auto grid = [q](int64_t kk) {
+        return static_cast<int64_t>(std::nearbyint(static_cast<double>(kk) * q));
+    };
     int64_t snapped = grid(static_cast<int64_t>(
         std::nearbyint(static_cast<double>(a.viewport_start_sample) / q)));
     if (snapped < 0)               snapped = 0;
@@ -703,6 +725,14 @@ int main(int argc, char** argv) {
     input_handler.begin_strip_pointer_capture = [&]() { gui.begin_pointer_capture(); };
     input_handler.end_strip_pointer_capture   = [&]() { gui.end_pointer_capture(); };
 
+    // Displayed-map promotion → same-frame hover refresh. on_redraw fires this
+    // the instant it advances displayed_map_gen (before any painting), so the
+    // hover run/readout this promoting frame paints — and any Ctrl+C before the
+    // next tick — resolve against the just-promoted map. The on_tick displayed_gen
+    // check stays as the backstop for promotion-free store mutations.
+    paint_handler.on_displayed_map_promoted =
+        [&]() { viewport.recompute_hover_at_cursor(); };
+
     auto invalidate_timestamp_area   = [&]() { viewport.invalidate_timestamp_area(); };
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };
@@ -915,17 +945,21 @@ int main(int argc, char** argv) {
         // waveform all snap together at the worker's completion swap.
         paint_handler.maybe_rebuild_flag_cache();
 
-        // Stationary-cursor hover refresh. A keyboard mutation (tempo step,
-        // Ctrl+N, nudge) changes the hovered marker's fields/position without a
-        // pointer-motion event, so nothing else re-reads the hover text; likewise
-        // a silent displayed-map promotion (bumps displayed_map_gen with no store
-        // change) can move the flag under the stationary cursor. When a hover is
-        // showing and either store's generation OR the displayed-map generation
-        // moved past what the hover cached, drive one recompute here — the shared
-        // per-frame route, not a per-mutation-site call — so the lane/readout
-        // refresh in the same frame the change paints. recompute_hover_at_cursor
-        // re-stamps all three, so this settles after one pass; a cleared hover
-        // (marker_index < 0) never trips it.
+        // Stationary-cursor hover refresh (the BACKSTOP). A keyboard mutation
+        // (tempo step, Ctrl+N, nudge) changes the hovered marker's fields/position
+        // without a pointer-motion event, so nothing else re-reads the hover text.
+        // A silent displayed-map promotion also moves the flag under the
+        // stationary cursor, but the promoting frame now refreshes hover itself
+        // (paint_handler.on_displayed_map_promoted, fired inside on_redraw before
+        // painting) — so the displayed_gen arm here only catches a promotion whose
+        // frame does not run this recompute (and re-stamps displayed_gen so the two
+        // routes settle together after one pass). When a hover is showing and
+        // either store's generation OR the displayed-map generation moved past what
+        // the hover cached, drive one recompute here — the shared per-frame route,
+        // not a per-mutation-site call — so the lane/readout refresh in the same
+        // frame the change paints. recompute_hover_at_cursor re-stamps all three,
+        // so this settles after one pass; a cleared hover (marker_index < 0) never
+        // trips it.
         if (app.hover_popup.marker_index >= 0 &&
             (app.hover_popup.warp_gen  != app.warpmarkers.generation() ||
              app.hover_popup.phase_gen != app.phaseresetmarkers.generation() ||
