@@ -574,12 +574,12 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // on playhead_scanner_active), then cursor (line + triangle).
     // The cursor draws over the scanner on overlap.
     //
-    // Under an active region the whole playhead dissolves — the scanner
-    // line is suppressed here alongside the cursor (suppressed below), so
-    // region playback shows nothing but the two split half-triangles and
-    // the wash: the audition issues from the region's left bound with no
-    // scanner line trailing it.
-    if (app.playhead_scanner_active && !app.region.active) {
+    // A region does NOT touch the scanner — only the CURSOR dissolves into
+    // the split half-triangles below. The scanner issues from and tracks the
+    // audition normally, so region playback shows the moving scanner line
+    // (launched from the region's left bound) alongside the two static split
+    // half-triangles and the wash.
+    if (app.playhead_scanner_active) {
         const double scan_px = scanner_pixel_x(app, audio,
                                                wf_cache.fp_vp_start,
                                                disp_spp);
@@ -596,8 +596,7 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // land exactly on the wash's left/right edges. Region endpoints are
     // active-domain frames already in the displayed domain, so their column is
     // the plain viewport transform (no warp map walked, matching the wash). The
-    // scanner line is suppressed above under the same gate, so a playing region
-    // shows only these two halves plus the wash.
+    // scanner is untouched — only the cursor splits.
     if (app.region.active) {
         if (disp_spp > 0.0) {
             const double vp_start =
