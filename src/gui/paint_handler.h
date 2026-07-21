@@ -11,6 +11,7 @@
 #include <cairo/cairo.h>
 #include <functional>
 #include <string>
+#include <utility>
 #include <vector>
 
 class GuiWaveformWorker;
@@ -100,6 +101,13 @@ struct WaveformCache {
     bool      fp_rendered    = false;
     bool      fp_target      = false;
     uint64_t  fp_warp_frame_map_hash = 0;
+    // Hash of the source-domain fallback-span set baked into the live plate's
+    // kAccent coloring. Marker edits that change which segments normalize (an
+    // undo of a ref rename, a label edit, a marker move) shift this without
+    // touching the viewport, so it joins the fingerprint to force a plate
+    // repaint. Source-domain, so it drives both views; the stem/flag caches do
+    // not paint the plate and carry no fallback-span field.
+    uint64_t  fp_fallback_spans_hash = 0;
 
     // Layered-paint: the warp_frame_map baked into the live waveform
     // pixels. The stem cache reads this to render target-view stems
@@ -125,6 +133,7 @@ struct WaveformCache {
     int       pending_fp_area_h      = 0;
     bool      pending_fp_target      = false;
     uint64_t  pending_fp_warp_frame_map_hash = 0;
+    uint64_t  pending_fp_fallback_spans_hash = 0;
 
     // The warp_frame_map the in-flight job is consuming. Set at
     // dispatch alongside the other pending_fp_*; swapped into fp_warp_frame_map
@@ -144,7 +153,13 @@ struct WaveformCache {
     int       supersede_area_h      = 0;
     bool      supersede_target      = false;
     uint64_t  supersede_warp_frame_map_hash = 0;
+    uint64_t  supersede_fallback_spans_hash = 0;
     std::vector<WarpFrameMapSegment> supersede_warp_frame_map;
+    // The fallback-span set the deferred job will paint with. Carried here (not
+    // just its hash) because the superseding job is built entirely from the
+    // supersede_* slot; the live/pending slots need no span vector since
+    // nothing reads the spans after the plate render.
+    std::vector<std::pair<int64_t, int64_t>> supersede_fallback_spans;
     // The superseding job always reads the one process-immortal source audio
     // (WaveformJob.audio), so the slot carries no audio pointer or keepalive —
     // the deferred redispatch just names &audio.
@@ -169,6 +184,7 @@ struct WaveformCache {
         pending_fp_area_w = -1;
         supersede = false;
         supersede_warp_frame_map.clear();
+        supersede_fallback_spans.clear();
         fp_warp_frame_map.clear();
         pending_fp_warp_frame_map.clear();
     }
@@ -423,10 +439,15 @@ private:
         int      area_h        = 0;
         bool     is_target     = false;
         uint64_t warp_frame_map_hash  = 0;
+        uint64_t fallback_spans_hash  = 0;
         int      channel_count = 0;
         // The translation map: the target-view map in target view, empty in
         // source view.
         std::vector<WarpFrameMapSegment> warp_frame_map;
+        // The source-domain fallback spans the plate colors kAccent. Owned
+        // snapshot (copied from the memoized cache) so the worker thread reads
+        // a stable set; source-domain, so the same set serves both views.
+        std::vector<std::pair<int64_t, int64_t>> fallback_spans;
         // The audio the plate reads from: always the one process-immortal
         // source audio. Set by compute_waveform_render_inputs; routed into
         // WaveformJob.audio and into the synchronous / pan render paths.

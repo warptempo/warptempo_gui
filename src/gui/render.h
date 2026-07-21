@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 class GuiAudio;
@@ -518,11 +519,18 @@ void render_background(cairo_t* cr, int x, int y, int w, int h);
 // `map_target_to_source` before the pyramid read, producing the
 // deformed-waveform display.
 //
-// The plate paints uniformly in `color` — it is trim-agnostic. The
-// out-of-trim dim is NOT baked here; on_redraw paints it as an ATOP
-// overlay over the blitted plate (see kWaveformDimmed and
+// The plate paints in `color` except where a column's SOURCE position falls
+// inside a fallback span (fallback_spans, source-domain, sorted,
+// non-overlapping), where it paints kAccent instead — the only per-column
+// color variation. A column is classified by its source range START (the
+// nearbyint of g0); a range straddling a span edge takes the start's verdict, a
+// one-column boundary blur accepted by ruling. Null / empty paints uniformly in
+// `color`, byte-identical to the pre-fallback plate. The plate stays
+// trim-agnostic: the out-of-trim dim is NOT baked here; on_redraw paints it as
+// an ATOP overlay over the blitted plate (see kWaveformDimmed and
 // compute_out_of_trim_rects), so a trim set/clear/drag never re-rasterizes
-// these pixels.
+// these pixels, and the dim recolors a kAccent column exactly as it recolors a
+// kWaveform one.
 void render_waveform(cairo_t* cr,
                      GuiRect area,
                      const GuiAudio& audio,
@@ -530,7 +538,9 @@ void render_waveform(cairo_t* cr,
                      long long viewport_start_sample,
                      long long viewport_end_sample,
                      GuiColor color,
-                     const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
+                     const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
+                     const std::vector<std::pair<int64_t, int64_t>>*
+                         fallback_spans = nullptr);
 
 // Draws a thin 1px vertical line across `area` at column `playhead_pixel_x`
 // (offset from area.x, float for subpixel centering). No-op if outside.

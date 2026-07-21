@@ -190,9 +190,26 @@ std::vector<bool> warp_markers_render_keep_mask(
 // label_ref_implied_effective_tempo helper the display's band verdict
 // uses, in one fixed operation order, because the envelope edges are
 // inclusive and IEEE-reassociated equivalents can disagree exactly there.
+//
+// normalized_fallback_frames, when non-null, is filled (sorted ascending)
+// with the authored frames of RESOLVED markers whose resolution PRINTED a
+// normalization stderr line: the exact-frame collapse survivor, a pass whose
+// inheritance walk terminated on a surviving enabled label ref, a dangling
+// label ref, and an extreme-ratio label ref. Each frame is pushed at the very
+// site that emits its line, so the flag and the print are structurally
+// inseparable — a frame appears in this vector IF AND ONLY IF its marker's
+// resolution emitted a normalization line. The silent frame-0 seed is a
+// documented default (it prints nothing) and is deliberately NOT reported.
+// Warp-only, with no phase-reset sibling: phase reset markers carry no tempo,
+// so their exact-equal collapse (build_phase_reset_source_frames) has nothing
+// to report — the normalization report is a warp-only surface, recorded here
+// in the naming-symmetry asymmetry style. Existing callers pass nothing and
+// are byte-for-byte unaffected.
 std::vector<MarkerForRender>
 resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
-                                long sample_rate, long total_frames);
+                                long sample_rate, long total_frames,
+                                std::vector<int64_t>* normalized_fallback_frames
+                                    = nullptr);
 
 // Backward inheritance walk over parser-domain markers: from `index`, scan
 // earlier markers for the nearest that OWNS its tempo — tempo_inherits ==

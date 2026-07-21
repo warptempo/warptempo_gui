@@ -378,7 +378,9 @@ void render_waveform(cairo_t* cr,
                      long long viewport_start_sample,
                      long long viewport_end_sample,
                      GuiColor color,
-                     const std::vector<WarpFrameMapSegment>* warp_frame_map) {
+                     const std::vector<WarpFrameMapSegment>* warp_frame_map,
+                     const std::vector<std::pair<int64_t, int64_t>>*
+                         fallback_spans) {
     if (area.w <= 0 || area.h <= 2) return;
     if (viewport_end_sample <= viewport_start_sample) return;
 
@@ -414,9 +416,15 @@ void render_waveform(cairo_t* cr,
     // anti-aliases (feathers) rather than snapping jaggedly to whole rows. The
     // side edges stay crisp because x is integer and the width is 1px (both
     // vertical edges land on pixel boundaries).
-    struct ColRect { int x; double y0, y1; };
+    // accent: this column's source position falls inside a fallback span, so
+    // it paints kAccent instead of `color`. Classified below by the column's
+    // source range START (s0), the whole-column verdict for a range straddling
+    // a span edge.
+    struct ColRect { int x; double y0, y1; bool accent; };
     std::vector<ColRect> rects;
     rects.reserve(static_cast<size_t>(area.w));
+
+    const bool have_spans = fallback_spans && !fallback_spans->empty();
 
     const double y_lo = area.y;
     const double y_hi = area.y + area.h;
@@ -445,6 +453,24 @@ void render_waveform(cairo_t* cr,
         long long       s1 = static_cast<long long>(std::nearbyint(g1));
         if (s1 <= s0) s1 = s0 + 1;
 
+        // Fallback classification: is s0 inside a span? Spans are sorted,
+        // non-overlapping [first, second) source-frame ranges — find the last
+        // span starting at or before s0 and test its end. Same source position
+        // s0 both views use (source view: identity g0; target view: the map's
+        // g0), so one set colors both plates.
+        bool accent = false;
+        if (have_spans) {
+            auto it = std::upper_bound(
+                fallback_spans->begin(), fallback_spans->end(), s0,
+                [](long long v, const std::pair<int64_t, int64_t>& p) {
+                    return v < p.first;
+                });
+            if (it != fallback_spans->begin() &&
+                s0 < (it - 1)->second) {
+                accent = true;
+            }
+        }
+
         const auto mm = audio.get_peak_range(channel, level, s0, s1);
         const double min_val = mm.first;
         const double max_val = mm.second;
@@ -459,7 +485,7 @@ void render_waveform(cairo_t* cr,
         if (y1 < y_lo) y1 = y_lo;
         if (y1 > y_hi) y1 = y_hi;
 
-        rects.push_back({area.x + i, y0, y1});
+        rects.push_back({area.x + i, y0, y1, accent});
         g_prev = g1;
     }
 
@@ -470,8 +496,24 @@ void render_waveform(cairo_t* cr,
     // columns seamless at their shared interior edges.
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
 
+    // Two color groups, each a single fill so adjacent same-color columns stay
+    // seamless at their shared interior edges (the aliasing relaxation the
+    // comment above describes). A genuine color boundary between a kWaveform and
+    // a kAccent column is a real edge, not a seam, and its vertical edge lands
+    // on an integer pixel boundary so it stays crisp. With no spans the accent
+    // pass draws nothing and the base pass is byte-identical to the historical
+    // single fill.
     cairo_set_source_rgb(cr, color.r, color.g, color.b);
     for (const auto& R : rects) {
+        if (R.accent) continue;
+        if (R.y1 <= R.y0) continue;
+        cairo_rectangle(cr, R.x, R.y0, 1, R.y1 - R.y0);
+    }
+    cairo_fill(cr);
+
+    cairo_set_source_rgb(cr, kAccent.r, kAccent.g, kAccent.b);
+    for (const auto& R : rects) {
+        if (!R.accent) continue;
         if (R.y1 <= R.y0) continue;
         cairo_rectangle(cr, R.x, R.y0, 1, R.y1 - R.y0);
     }

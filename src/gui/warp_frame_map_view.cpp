@@ -77,6 +77,55 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
     return c;
 }
 
+const WarpFallbackSpansCache& warp_fallback_spans_cached(
+    const AppState& app, int sample_rate, long total_frames) {
+    WarpFallbackSpansCache& c = app.warp_fallback_spans_cache;
+    const long long gen = app.warpmarkers.generation();
+    if (c.valid && c.markers_gen == gen &&
+        c.sample_rate == sample_rate && c.total_frames == total_frames) {
+        return c;
+    }
+
+    // Run the render resolver with its normalization report. This re-emits the
+    // resolver's stderr lines (the accepted double-stderr — see the header);
+    // memoization keeps it to a generation change, not per tick.
+    std::vector<int64_t> flagged;
+    const std::vector<MarkerForRender> resolved =
+        resolve_warp_markers_for_render(
+            slice_to_warp_markers(app.warpmarkers.markers()),
+            sample_rate, total_frames, &flagged);
+
+    // Each flagged (normalized) frame's span runs to the NEXT resolved marker's
+    // frame, or total_frames for the last. flagged is a sorted subset of the
+    // resolved frames (both strictly increasing), so one forward walk pairs
+    // them and the resulting spans are sorted and non-overlapping.
+    c.spans.clear();
+    c.spans.reserve(flagged.size());
+    size_t ri = 0;
+    for (int64_t f : flagged) {
+        while (ri < resolved.size() && resolved[ri].time_frame < f) ++ri;
+        const int64_t end =
+            (ri + 1 < resolved.size())
+                ? resolved[ri + 1].time_frame
+                : static_cast<int64_t>(total_frames);
+        c.spans.emplace_back(f, end);
+    }
+
+    uint64_t h = 0xcbf29ce484222325ULL;
+    for (const auto& s : c.spans) {
+        h ^= static_cast<uint64_t>(s.first);
+        h *= 0x100000001b3ULL;
+        h ^= static_cast<uint64_t>(s.second);
+        h *= 0x100000001b3ULL;
+    }
+    c.hash         = c.spans.empty() ? 0 : h;
+    c.markers_gen  = gen;
+    c.sample_rate  = sample_rate;
+    c.total_frames = total_frames;
+    c.valid        = true;
+    return c;
+}
+
 // Definition; the descriptive comment lives at the declaration in
 // warp_frame_map_view.h. Exposed (non-anonymous) so main.cpp's viewport snap
 // in clamp_viewport_start takes its `q` from the same source as the

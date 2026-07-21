@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <cstring>
 #include <set>
+#include <utility>
 #include <vector>
 
 // Waveform / marker / flag cache production. The off-screen surfaces
@@ -39,7 +40,8 @@ void render_waveform_to_cache_surface(
     const GuiAudio& audio,
     int64_t vp_start,
     int64_t vp_end,
-    const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null) {
+    const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null,
+    const std::vector<std::pair<int64_t, int64_t>>* fallback_spans_or_null) {
     if (!dest || area_w <= 0 || area_h <= 0) return;
 
     cairo_t* ccr = cairo_create(dest);
@@ -75,11 +77,13 @@ void render_waveform_to_cache_surface(
         render_waveform(ccr, ch0, audio, 0,
                         vp_start, vp_end,
                         kWaveform,
-                        warp_frame_map_or_null);
+                        warp_frame_map_or_null,
+                        fallback_spans_or_null);
         render_waveform(ccr, ch1, audio, 1,
                         vp_start, vp_end,
                         kWaveform,
-                        warp_frame_map_or_null);
+                        warp_frame_map_or_null,
+                        fallback_spans_or_null);
     }
     cairo_destroy(ccr);
 }
@@ -113,7 +117,8 @@ static void render_waveform_strip_to_cache_surface(
     const GuiAudio& audio,
     int64_t vp_start_full,
     int64_t vp_end_full,
-    const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null) {
+    const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null,
+    const std::vector<std::pair<int64_t, int64_t>>* fallback_spans_or_null) {
     if (!dest || area_w <= 0 || area_h <= 0) return;
     if (strip_w <= 0 || strip_x < 0 || strip_x + strip_w > area_w) return;
     if (vp_end_full <= vp_start_full) return;
@@ -150,10 +155,12 @@ static void render_waveform_strip_to_cache_surface(
         const GuiRect ch1{strip_x, waveform_inset_px() + ch_h, strip_w, ch_h};
         render_waveform(ccr, ch0, audio, 0,
                         strip_vp_start, strip_vp_end,
-                        kWaveform, warp_frame_map_or_null);
+                        kWaveform, warp_frame_map_or_null,
+                        fallback_spans_or_null);
         render_waveform(ccr, ch1, audio, 1,
                         strip_vp_start, strip_vp_end,
-                        kWaveform, warp_frame_map_or_null);
+                        kWaveform, warp_frame_map_or_null,
+                        fallback_spans_or_null);
     }
     cairo_restore(ccr);
     cairo_destroy(ccr);
@@ -197,14 +204,24 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     }
     const GuiAudio* audio_source = &audio;
 
+    // Fallback spans: the source-domain segments a normalized warp marker
+    // governs, colored kAccent by the plate. Read from the memoized cache
+    // (keyed on the warp generation), so the resolver — and its re-emitted
+    // stderr — runs only on a marker change, not on this per-tick snapshot.
+    // Source-domain, so the one set serves both views.
+    const WarpFallbackSpansCache& fbc = warp_fallback_spans_cached(
+        app, sr, static_cast<long>(audio.total_frames()));
+
     in.vp_start      = vp_start;
     in.vp_end        = vp_end;
     in.area_w        = area.w;
     in.area_h        = area.h;
     in.is_target     = is_target;
     in.warp_frame_map_hash  = target_warp_frame_map_hash;
+    in.fallback_spans_hash  = fbc.hash;
     in.channel_count = audio_source->render_channels();
     in.warp_frame_map       = std::move(target_warp_frame_map);
+    in.fallback_spans       = fbc.spans;   // owned snapshot for the worker
     in.audio         = audio_source;
     in.valid         = true;
     return in;
@@ -224,7 +241,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         int64_t fp_vp_s, int64_t fp_vp_e,
         int     fp_aw,   int     fp_ah,
         bool    fp_t,
-        uint64_t fp_h) -> bool {
+        uint64_t fp_h, uint64_t fp_spans_h) -> bool {
         if (fp_vp_s != in.vp_start)        return true;
         if (fp_vp_e != in.vp_end)          return true;
         if (fp_aw   != in.area_w)          return true;
@@ -232,6 +249,11 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         if (fp_t    != in.is_target)       return true;
         if (!drag_freeze) {
             if (fp_h  != in.warp_frame_map_hash)     return true;
+            // Marker-derived like the map hash: frozen through a target-view
+            // drag (the generation cannot bump mid-drag anyway), compared
+            // otherwise so a marker edit that changes the fallback spans with
+            // the viewport unchanged still forces a plate repaint.
+            if (fp_spans_h != in.fallback_spans_hash) return true;
         }
         return false;
     };
@@ -242,7 +264,8 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.pending_fp_area_w,
         wf_cache.pending_fp_area_h,
         wf_cache.pending_fp_target,
-        wf_cache.pending_fp_warp_frame_map_hash);
+        wf_cache.pending_fp_warp_frame_map_hash,
+        wf_cache.pending_fp_fallback_spans_hash);
 
     if (!diff_vs_pending) return;
 
@@ -259,6 +282,8 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.supersede_target      = in.is_target;
         wf_cache.supersede_warp_frame_map_hash = in.warp_frame_map_hash;
         wf_cache.supersede_warp_frame_map     = std::move(in.warp_frame_map);
+        wf_cache.supersede_fallback_spans_hash = in.fallback_spans_hash;
+        wf_cache.supersede_fallback_spans      = std::move(in.fallback_spans);
         return;
     }
 
@@ -289,6 +314,9 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // the original by move; the copy stays on the cache.
     wf_cache.pending_fp_warp_frame_map = in.warp_frame_map;
     job.warp_frame_map        = std::move(in.warp_frame_map);
+    // Fallback spans: no pending copy needed (nothing reads them after the
+    // render), so move straight into the job.
+    job.fallback_spans        = std::move(in.fallback_spans);
     job.surface        = wf_cache.pending_surface;
     job.channel_count  = in.channel_count;
     // The audio the worker reads: always the one process-immortal source audio.
@@ -300,6 +328,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     wf_cache.pending_fp_area_h      = in.area_h;
     wf_cache.pending_fp_target      = in.is_target;
     wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
+    wf_cache.pending_fp_fallback_spans_hash = in.fallback_spans_hash;
 
     waveform_worker.dispatch(std::move(job),
         [this](bool ok) { on_waveform_render_done(ok); });
@@ -312,6 +341,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
             "on next tick\n");
         wf_cache.supersede = false;
         wf_cache.supersede_warp_frame_map.clear();
+        wf_cache.supersede_fallback_spans.clear();
         // Make sure the next maybe_enqueue tick sees the live fingerprint
         // as dirty so we retry. Poison pending_fp_* with an impossible
         // area_w (-1) so the fingerprint comparison mismatches any valid
@@ -358,6 +388,9 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         // displayable copy for the post-completion stem rebuild.
         wf_cache.pending_fp_warp_frame_map = wf_cache.supersede_warp_frame_map;
         job.warp_frame_map        = std::move(wf_cache.supersede_warp_frame_map);
+        // Fallback spans ride the supersede slot straight into the deferred
+        // job; no pending copy (nothing reads them post-render).
+        job.fallback_spans        = std::move(wf_cache.supersede_fallback_spans);
         job.surface        = wf_cache.pending_surface;
         // The superseding job reads the one process-immortal source audio;
         // channel_count reads from it.
@@ -371,9 +404,11 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_area_h      = sh;
         wf_cache.pending_fp_target      = wf_cache.supersede_target;
         wf_cache.pending_fp_warp_frame_map_hash = wf_cache.supersede_warp_frame_map_hash;
+        wf_cache.pending_fp_fallback_spans_hash = wf_cache.supersede_fallback_spans_hash;
 
         wf_cache.supersede = false;
         wf_cache.supersede_warp_frame_map.clear();
+        wf_cache.supersede_fallback_spans.clear();
 
         waveform_worker.dispatch(std::move(job),
             [this](bool ok2) { on_waveform_render_done(ok2); });
@@ -394,6 +429,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     wf_cache.fp_rendered     = true;
     wf_cache.fp_target       = wf_cache.pending_fp_target;
     wf_cache.fp_warp_frame_map_hash = wf_cache.pending_fp_warp_frame_map_hash;
+    wf_cache.fp_fallback_spans_hash = wf_cache.pending_fp_fallback_spans_hash;
     // Publish the in-flight job's warp_frame_map to the displayed slot
     // so the next maybe_rebuild_stem_cache reads the same coordinate
     // system the just-blitted waveform pixels were rendered against.
@@ -476,6 +512,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     // re-dispatch an old one on a later tick.
     wf_cache.supersede = false;
     wf_cache.supersede_warp_frame_map.clear();
+    wf_cache.supersede_fallback_spans.clear();
 
     // Render into the LIVE surface directly. Reuse-or-recreate on
     // dimension mismatch, mirroring the dispatch path.
@@ -499,7 +536,8 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
         in.channel_count,
         *in.audio,
         in.vp_start, in.vp_end,
-        in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
+        in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map,
+        in.fallback_spans.empty() ? nullptr : &in.fallback_spans);
 
     // Publish the displayed fingerprint NOW so the stem/flag rebuilds at
     // the tail of this function read the current viewport. Keep pending_fp_*
@@ -512,6 +550,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.fp_rendered     = true;
     wf_cache.fp_target       = in.is_target;
     wf_cache.fp_warp_frame_map_hash = in.warp_frame_map_hash;
+    wf_cache.fp_fallback_spans_hash = in.fallback_spans_hash;
     wf_cache.fp_warp_frame_map      = in.warp_frame_map;
     wf_cache.pending_fp_vp_start     = in.vp_start;
     wf_cache.pending_fp_vp_end       = in.vp_end;
@@ -519,6 +558,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.pending_fp_area_h       = in.area_h;
     wf_cache.pending_fp_target       = in.is_target;
     wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
+    wf_cache.pending_fp_fallback_spans_hash = in.fallback_spans_hash;
     wf_cache.pending_fp_warp_frame_map      = in.warp_frame_map;
 
     const GuiRect a = waveform_area(app);
@@ -621,7 +661,8 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
         wf_cache.width     != in.area_w ||
         wf_cache.height    != in.area_h ||
         wf_cache.fp_target       != in.is_target ||
-        wf_cache.fp_warp_frame_map_hash != in.warp_frame_map_hash) {
+        wf_cache.fp_warp_frame_map_hash != in.warp_frame_map_hash ||
+        wf_cache.fp_fallback_spans_hash != in.fallback_spans_hash) {
         fall_back();
         return;
     }
@@ -654,6 +695,7 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
         wf_cache.pending_fp_area_h      = in.area_h;
         wf_cache.pending_fp_target      = in.is_target;
         wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
+        wf_cache.pending_fp_fallback_spans_hash = in.fallback_spans_hash;
         wf_cache.pending_fp_warp_frame_map      = in.warp_frame_map;
         // Plate bookkeeping advanced to the new viewport; bring the overlay
         // caches with it so stems / flags / dim do not lag the plate.
@@ -721,7 +763,8 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
         in.channel_count,
         *in.audio,
         in.vp_start, in.vp_end,
-        in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
+        in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map,
+        in.fallback_spans.empty() ? nullptr : &in.fallback_spans);
 
     // Advance the plate's viewport bookkeeping. fp_vp_start / disp_spp key the
     // live dim composite, markers, flags, and the cursor; pending_fp_* mirrors
@@ -756,6 +799,7 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
     wf_cache.pending_fp_area_h   = in.area_h;
     wf_cache.pending_fp_target   = in.is_target;
     wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
+    wf_cache.pending_fp_fallback_spans_hash = in.fallback_spans_hash;
     wf_cache.pending_fp_warp_frame_map      = in.warp_frame_map;
 
     // The plate advanced synchronously in this event. Rebuild the stem and

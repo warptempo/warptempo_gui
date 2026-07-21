@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 // Builds the target-view warp_frame_map from live warp markers plus scale, mirroring
@@ -71,6 +72,48 @@ struct TargetWarpFrameMapCache {
 // waveform worker receives its own copy via the job, never this
 // reference).
 const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
+    const AppState& app, int sample_rate, long total_frames);
+
+// Memoized source-domain "fallback spans": the wave segments whose warp
+// marker normalizes to the 1.00 fallback (the render resolver's collapse
+// survivors, ref-inheriting passes, dangling refs, and extreme-ratio refs),
+// painted kAccent in the plate. Each span runs from a normalized marker's
+// authored frame to the next resolved marker's frame (or total_frames for the
+// last), so the spans are sorted and non-overlapping. Keyed on the warp store
+// generation plus the audio identity (spans are scale-free — the resolver
+// takes no scale, and its envelope excludes settings scale by construction —
+// and view-free — spans are SOURCE-domain and serve both the source plate
+// directly and the target plate through the map).
+//
+// Building the entry runs resolve_warp_markers_for_render with its
+// normalization report out-param, which RE-EMITS the resolver's stderr lines.
+// This is a deliberate extra resolver run beyond the render path and the
+// target-view map cache (in target view a generation change now runs the
+// resolver twice — this cache and target_view_warp_frame_map_cached — the
+// accepted double-stderr consequence): per the "intended signal" ruling we do
+// not dedupe across resolves. Memoization keeps it to ONE run per generation
+// change rather than per paint tick — the same discipline
+// target_view_warp_frame_map_cached follows — so a resting ambiguous store
+// does not re-print every frame. Warp-only; phase resets carry no tempo and
+// have no fallback-span analog (recorded in the naming-symmetry style).
+struct WarpFallbackSpansCache {
+    bool      valid        = false;
+    long long markers_gen  = -1;
+    int       sample_rate  = 0;
+    long      total_frames = 0;
+    std::vector<std::pair<int64_t, int64_t>> spans;
+    // FNV-1a over the span pairs, computed at rebuild so the waveform-cache
+    // fingerprint reads it instead of rehashing per tick. Empty set hashes to
+    // the fixed value 0.
+    uint64_t  hash         = 0;
+};
+
+// Returns the fallback-span cache entry for the app's live warp store,
+// rebuilding (and re-running the resolver, re-emitting its stderr) only when
+// the key does not match. Same single-threaded-reference lifetime rule as
+// target_view_warp_frame_map_cached; the waveform worker gets its own copy via
+// the job.
+const WarpFallbackSpansCache& warp_fallback_spans_cached(
     const AppState& app, int sample_rate, long total_frames);
 
 class GuiAudio;
