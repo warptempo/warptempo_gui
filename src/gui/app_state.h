@@ -901,13 +901,14 @@ struct AppState {
     // refreshed from const hit-test paths.
     mutable TargetWarpFrameMapCache target_warp_frame_map_cache;
 
-    // Memoized source-domain fallback spans — the wave segments a normalized
-    // warp marker governs, painted kAccent in the plate (see
-    // warp_frame_map_view.h). Mutable: refreshed from the const waveform-input
-    // snapshot. Keyed on the warp store generation, so a resting ambiguous
-    // store runs the resolver (and re-emits its stderr) once per change, not
-    // per tick.
-    mutable WarpFallbackSpansCache warp_fallback_spans_cache;
+    // Memoized red-flag sets — the marker-store indices whose render resolves
+    // to the 1.00 normalization fallback, painted kAccent in their flags unless
+    // selected (see warp_frame_map_view.h). Mutable: refreshed from the const
+    // flag-cache build. Keyed on the respective store generation, so the
+    // classification runs once per change, not per tick, and freezes through a
+    // marker drag (the store mutates only at commit).
+    mutable WarpRedFlagCache warp_red_flag_cache;
+    mutable PhaseResetRedFlagCache phase_reset_red_flag_cache;
 
     // The warp_frame_map the LAST COMMITTED frame's target-view item pixels
     // (marker/trim stems, flags, chips) were painted with — the geometry the

@@ -10,7 +10,6 @@
 #include <mutex>
 #include <optional>
 #include <thread>
-#include <utility>
 #include <vector>
 // <memory> is intentionally not included: the job carries a raw GuiAudio*,
 // no shared_ptr (the source audio is process-immortal and needs no keepalive).
@@ -47,12 +46,6 @@ struct WaveformJob {
     // at job submission, so the worker never races a cache rebuild). Empty in
     // source view. The worker reads — never builds — this.
     std::vector<WarpFrameMapSegment> warp_frame_map;
-
-    // Source-domain fallback spans the plate colors kAccent (an owned copy
-    // taken at job submission from the memoized cache). Source-domain, so the
-    // same set is used in both views — the worker classifies each column by the
-    // source position it already computes. Empty when nothing normalizes.
-    std::vector<std::pair<int64_t, int64_t>> fallback_spans;
 
     // Surface to render into. Owned by the cache (the cache's pending-slot
     // surface). The worker only writes pixels; the cache lifecycle owns
@@ -158,9 +151,6 @@ private:
 //
 // Render runs on the worker thread; nothing in this function
 // touches main-thread cairo state.
-// fallback_spans_or_null (source-domain, sorted, non-overlapping) colors each
-// column kAccent when the source position it reads falls inside a span,
-// kWaveform otherwise. Null / empty paints the whole plate kWaveform.
 void render_waveform_to_cache_surface(
     cairo_surface_t* dest,
     int area_w,
@@ -169,6 +159,4 @@ void render_waveform_to_cache_surface(
     const GuiAudio& audio,
     int64_t vp_start,
     int64_t vp_end,
-    const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null,
-    const std::vector<std::pair<int64_t, int64_t>>* fallback_spans_or_null
-        = nullptr);
+    const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null);

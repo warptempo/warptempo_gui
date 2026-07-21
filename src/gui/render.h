@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <set>
 #include <string>
-#include <utility>
 #include <vector>
 
 class GuiAudio;
@@ -519,18 +518,11 @@ void render_background(cairo_t* cr, int x, int y, int w, int h);
 // `map_target_to_source` before the pyramid read, producing the
 // deformed-waveform display.
 //
-// The plate paints in `color` except where a column's SOURCE position falls
-// inside a fallback span (fallback_spans, source-domain, sorted,
-// non-overlapping), where it paints kAccent instead — the only per-column
-// color variation. A column is classified by its source range START (the
-// nearbyint of g0); a range straddling a span edge takes the start's verdict, a
-// one-column boundary blur accepted by ruling. Null / empty paints uniformly in
-// `color`, byte-identical to the pre-fallback plate. The plate stays
-// trim-agnostic: the out-of-trim dim is NOT baked here; on_redraw paints it as
-// an ATOP overlay over the blitted plate (see kWaveformDimmed and
+// The plate paints uniformly in `color` — it is trim-agnostic. The
+// out-of-trim dim is NOT baked here; on_redraw paints it as an ATOP
+// overlay over the blitted plate (see kWaveformDimmed and
 // compute_out_of_trim_rects), so a trim set/clear/drag never re-rasterizes
-// these pixels, and the dim recolors a kAccent column exactly as it recolors a
-// kWaveform one.
+// these pixels.
 void render_waveform(cairo_t* cr,
                      GuiRect area,
                      const GuiAudio& audio,
@@ -538,9 +530,7 @@ void render_waveform(cairo_t* cr,
                      long long viewport_start_sample,
                      long long viewport_end_sample,
                      GuiColor color,
-                     const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
-                     const std::vector<std::pair<int64_t, int64_t>>*
-                         fallback_spans = nullptr);
+                     const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
 
 // Draws a thin 1px vertical line across `area` at column `playhead_pixel_x`
 // (offset from area.x, float for subpixel centering). No-op if outside.
@@ -693,13 +683,16 @@ void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width);
 // hover and edited in the Enter flag editor). There is no elision — overlapping
 // shapes occlude instead.
 //
-// Color class:
-//   Not selected: fill kMarker, outline kMarkerOutline.
-//   Selected:     fill kSelected, outline kSelectedOutline.
+// Color class (`red_set` = the store indices whose render normalizes to the
+// 1.00 fallback, from warp_red_flag_set_cached):
+//   Selected:          fill kSelected, outline kSelectedOutline (wins).
+//   Red (in red_set):  fill kAccent,   outline kAccentOutline.
+//   Otherwise:         fill kMarker,   outline kMarkerOutline.
 // A DISABLED marker's whole shape (rect + triangle + outline) dims under
 // kDisabledMarkerAlpha, the same single disabled cue applied to its stem in
-// `render_markers`. (Selection owns the COLOR class, disablement owns the
-// ALPHA.) Trim membership has no effect on flags.
+// `render_markers`, applied on top of whichever color class. (Selection wins
+// the COLOR class over red, disablement owns the ALPHA.) Trim membership has no
+// effect on flags.
 //
 // `warp_frame_map`: same displayed-axis translation as render_markers (the
 // live map in target view). Shapes are collected in ascending painted-x order,
@@ -719,6 +712,7 @@ void render_flags(cairo_t* cr,
                   long long viewport_end_sample,
                   int sample_rate,
                   const std::set<int>& selected_set,
+                  const std::set<int>& red_set,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                   const DragOverlay* drag_overlay = nullptr);
 
@@ -765,9 +759,11 @@ void render_phaseresetmarkers(cairo_t* cr,
                               cairo_surface_t* ink_plate = nullptr);
 
 // The phase-reset flag is the same fixed shape as a warp flag (rectangle +
-// triangle centered on the column), textless. Two states only: default fill
-// `kMarker`, selected fill `kSelected`; a disabled phase reset dims the whole
-// shape under kDisabledMarkerAlpha. Trim membership has no effect.
+// triangle centered on the column), textless. Color class: selected fill
+// `kSelected` (wins), else red (in `red_set` — a coincident-collapse member
+// from phase_reset_red_flag_set_cached) fill `kAccent` with `kAccentOutline`,
+// else default fill `kMarker`; a disabled phase reset dims the whole shape
+// under kDisabledMarkerAlpha on top. Trim membership has no effect.
 // `waveform_width` is the effective waveform width (see render_flags), the
 // column-mapping denominator shared with the phase-reset stems. Painting is two
 // reverse passes keyed on `selected_set` — selected shapes above unselected,
@@ -780,6 +776,7 @@ void render_phase_reset_flags(cairo_t* cr,
                             long long viewport_end_sample,
                             int sample_rate,
                             const std::set<int>& selected_set,
+                            const std::set<int>& red_set,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                             const DragOverlay* drag_overlay = nullptr);
 

@@ -2,7 +2,6 @@
 #include "time_format.h"   // format_timestamp
 #include "value_format.h"  // format_value_double
 
-#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
@@ -100,16 +99,9 @@ namespace {
 // result: each entry is the normalized marker's index in `src`, or -1 for a
 // synthetic marker (a collapsed group's replacement 1.00 owner, or the
 // frame-0 seed) that corresponds to no single raw marker.
-//
-// When fallback_frames_out is non-null it receives (append) the frame of each
-// exact-frame collapse survivor, pushed inside the SAME emit_stderr guard that
-// prints the collapse line — so the raised flag and the printed line cannot
-// drift. Only meaningful on the render resolver's emit_stderr=true run; the
-// silent display run leaves it untouched.
 std::vector<WarpMarker> normalized_surviving_markers(
     const std::vector<WarpMarker>& src, long sample_rate, bool emit_stderr,
-    std::vector<int>* raw_index_out,
-    std::vector<int64_t>* fallback_frames_out) {
+    std::vector<int>* raw_index_out) {
     const double sr_d = static_cast<double>(sample_rate);
 
     // Stage 1 — filter to the survivors of warp_markers_render_keep_mask
@@ -161,11 +153,6 @@ std::vector<WarpMarker> normalized_surviving_markers(
                         format_timestamp(
                             static_cast<double>(owner.time_frame) / sr_d)
                             .c_str());
-                    // Structurally inseparable from the line above: the
-                    // collapse survivor's segment is painted red iff this
-                    // line printed.
-                    if (fallback_frames_out)
-                        fallback_frames_out->push_back(owner.time_frame);
                 }
             } else {
                 collapsed.push_back(norm[i]);
@@ -202,8 +189,7 @@ std::vector<WarpMarker> normalized_surviving_markers(
 
 std::vector<MarkerForRender>
 resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
-                                long sample_rate, long total_frames,
-                                std::vector<int64_t>* normalized_fallback_frames) {
+                                long sample_rate, long total_frames) {
     // Normalization pipeline: stages 1-5 build a normalized WarpMarker
     // intermediate, stage 6 emits MarkerForRender. Ambiguity resolves to
     // tempo 1.00 with one stderr line per affected timestamp, printed on
@@ -216,11 +202,8 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
 
     // Stages 1-3 — the shared projection above (survivor filter,
     // exact-coincidence collapse, frame-0 seed), with the stderr lines on.
-    // normalized_fallback_frames threads through so the collapse survivor's
-    // flag is raised beside its own print inside the projection.
     std::vector<WarpMarker> norm = normalized_surviving_markers(
-        src, sample_rate, /*emit_stderr=*/true, nullptr,
-        normalized_fallback_frames);
+        src, sample_rate, /*emit_stderr=*/true, nullptr);
 
     // Stage 4 — pass materialization through the ref-opaque inheritance
     // walk (resolve_inherited_tempo / resolve_inherited_tempo_scale below,
@@ -264,10 +247,6 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
                     "renders as tempo 1.00\n",
                     format_timestamp(
                         static_cast<double>(p.time_frame) / sr_d).c_str());
-                // Raised beside the print: this pass's segment paints red iff
-                // this line printed.
-                if (normalized_fallback_frames)
-                    normalized_fallback_frames->push_back(p.time_frame);
             }
         }
     }
@@ -337,11 +316,6 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
                 format_timestamp(
                     static_cast<double>(plain.time_frame) / sr_d).c_str(),
                 reason);
-            // Raised beside the print: this ref's segment paints red iff this
-            // line printed (dangling or extreme-ratio, the reason string
-            // distinguishes them in the line only).
-            if (normalized_fallback_frames)
-                normalized_fallback_frames->push_back(plain.time_frame);
         }
     }
 
@@ -363,16 +337,6 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
             m.tempo_scale = g.tempo_scale;
         }
         out.push_back(std::move(m));
-    }
-    // Frames were appended in stage order (collapse survivors, then
-    // ref-inheriting passes, then normalized refs), each stage internally
-    // ascending but interleaved across stages; sort once so the report is
-    // globally sorted as documented. Every pushed frame is a distinct resolved
-    // marker frame (post-collapse frames strictly increase, and each marker is
-    // reported by at most one stage), so no dedup is needed.
-    if (normalized_fallback_frames) {
-        std::sort(normalized_fallback_frames->begin(),
-                  normalized_fallback_frames->end());
     }
     return out;
 }
@@ -577,8 +541,7 @@ MarkerEffective marker_effective(
         // (suppressed) stderr timestamps, so 0 is fine here.
         std::vector<int> raw_index;
         const std::vector<WarpMarker> proj = normalized_surviving_markers(
-            mv, /*sample_rate=*/0, /*emit_stderr=*/false, &raw_index,
-            /*fallback_frames_out=*/nullptr);
+            mv, /*sample_rate=*/0, /*emit_stderr=*/false, &raw_index);
         int img = -1;
         for (size_t k = 0; k < proj.size(); ++k) {
             if (raw_index[k] == idx) {
@@ -601,6 +564,7 @@ MarkerEffective marker_effective(
             // attributing it to the ref would mislead — so it reports with
             // no visible source, mirroring the resolver's normalization.
             if (from_ref) {
+                r.from_ref   = true;
                 r.source_idx = -1;
                 return r;
             }
@@ -667,6 +631,7 @@ MarkerEffective marker_effective(
         // to the ref would mislead — so it reports with no visible source,
         // mirroring the resolver's normalization.
         if (from_ref) {
+            r.from_ref   = true;
             r.source_idx = -1;
             return r;
         }

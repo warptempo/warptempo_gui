@@ -378,9 +378,7 @@ void render_waveform(cairo_t* cr,
                      long long viewport_start_sample,
                      long long viewport_end_sample,
                      GuiColor color,
-                     const std::vector<WarpFrameMapSegment>* warp_frame_map,
-                     const std::vector<std::pair<int64_t, int64_t>>*
-                         fallback_spans) {
+                     const std::vector<WarpFrameMapSegment>* warp_frame_map) {
     if (area.w <= 0 || area.h <= 2) return;
     if (viewport_end_sample <= viewport_start_sample) return;
 
@@ -410,18 +408,13 @@ void render_waveform(cairo_t* cr,
     const double y_center = area.y + area.h * 0.5;
     const double half_h   = area.h * 0.5;
 
-    // Each column becomes a 1px-wide integer-row rectangle, painted hard
-    // (ANTIALIAS_NONE below) so the plate is binary and carries no per-frame AA
-    // coverage cost during live zoom/pan. The y endpoints snap to whole rows.
-    // accent: this column's source position falls inside a fallback span, so
-    // it paints kAccent instead of `color`. Classified below by the column's
-    // source range START (s0), the whole-column verdict for a range straddling
-    // a span edge.
-    struct ColRect { int x, y0, y1; bool accent; };
+    // Each column becomes a 1px-wide integer-row rectangle so the plate is
+    // binary: every pixel is either the color at full alpha or fully
+    // transparent, no antialiased tips. Per-column min/max extents stay raw
+    // and unsmoothed; only the y endpoints are snapped to whole pixel rows.
+    struct ColRect { int x, y0, y1; };
     std::vector<ColRect> rects;
     rects.reserve(static_cast<size_t>(area.w));
-
-    const bool have_spans = fallback_spans && !fallback_spans->empty();
 
     const int y_lo = area.y;
     const int y_hi = area.y + area.h;
@@ -450,31 +443,13 @@ void render_waveform(cairo_t* cr,
         long long       s1 = static_cast<long long>(std::nearbyint(g1));
         if (s1 <= s0) s1 = s0 + 1;
 
-        // Fallback classification: is s0 inside a span? Spans are sorted,
-        // non-overlapping [first, second) source-frame ranges — find the last
-        // span starting at or before s0 and test its end. Same source position
-        // s0 both views use (source view: identity g0; target view: the map's
-        // g0), so one set colors both plates.
-        bool accent = false;
-        if (have_spans) {
-            auto it = std::upper_bound(
-                fallback_spans->begin(), fallback_spans->end(), s0,
-                [](long long v, const std::pair<int64_t, int64_t>& p) {
-                    return v < p.first;
-                });
-            if (it != fallback_spans->begin() &&
-                s0 < (it - 1)->second) {
-                accent = true;
-            }
-        }
-
         const auto mm = audio.get_peak_range(channel, level, s0, s1);
         const double min_val = mm.first;
         const double max_val = mm.second;
 
         int y0 = static_cast<int>(std::lround(y_center - max_val * half_h));
         int y1 = static_cast<int>(std::lround(y_center - min_val * half_h));
-        // Any signal keeps at least one pixel so quiet material stays visible.
+        // Any signal keeps at least one pixel.
         if (y1 <= y0) y1 = y0 + 1;
         // Clamp to the waveform area's pixel rows.
         if (y0 < y_lo) y0 = y_lo;
@@ -482,30 +457,15 @@ void render_waveform(cairo_t* cr,
         if (y1 < y_lo) y1 = y_lo;
         if (y1 > y_hi) y1 = y_hi;
 
-        rects.push_back({area.x + i, y0, y1, accent});
+        rects.push_back({area.x + i, y0, y1});
         g_prev = g1;
     }
 
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
 
-    // Two color groups, each a single hard fill so adjacent same-color columns
-    // stay seamless at their shared interior edges. A genuine color boundary
-    // between a kWaveform and a kAccent column is a real edge, not a seam, and
-    // its vertical edge lands on an integer pixel boundary so it stays crisp.
-    // With no spans the accent pass draws nothing and the base pass is
-    // byte-identical to the historical single fill.
     cairo_set_source_rgb(cr, color.r, color.g, color.b);
     for (const auto& R : rects) {
-        if (R.accent) continue;
-        if (R.y1 <= R.y0) continue;
-        cairo_rectangle(cr, R.x, R.y0, 1, R.y1 - R.y0);
-    }
-    cairo_fill(cr);
-
-    cairo_set_source_rgb(cr, kAccent.r, kAccent.g, kAccent.b);
-    for (const auto& R : rects) {
-        if (!R.accent) continue;
         if (R.y1 <= R.y0) continue;
         cairo_rectangle(cr, R.x, R.y0, 1, R.y1 - R.y0);
     }
@@ -1227,6 +1187,7 @@ void render_flags(cairo_t* cr,
                   long long viewport_end_sample,
                   int sample_rate,
                   const std::set<int>& selected_set,
+                  const std::set<int>& red_set,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map,
                   const DragOverlay* drag_overlay) {
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
@@ -1256,9 +1217,13 @@ void render_flags(cairo_t* cr,
         });
 
     auto paint_emit = [&](const FlagEmit& e) {
+        // Color class priority: selection wins over red, red over default.
         const bool sel = selected_set.count(e.i) > 0;
-        const GuiColor fill    = sel ? kSelected : kMarker;
-        const GuiColor outline = sel ? kSelectedOutline : kMarkerOutline;
+        const bool red = !sel && red_set.count(e.i) > 0;
+        const GuiColor fill    = sel ? kSelected
+                               : red ? kAccent : kMarker;
+        const GuiColor outline = sel ? kSelectedOutline
+                               : red ? kAccentOutline : kMarkerOutline;
         const double alpha = effective_disabled(markers, e.i)
             ? kDisabledMarkerAlpha : 1.0;
         paint_flag_shape(cr, e.center_x, g.flag_top, g.tri_top, g.tip_y,
@@ -1366,6 +1331,7 @@ void render_phase_reset_flags(cairo_t* cr,
                             long long viewport_end_sample,
                             int sample_rate,
                             const std::set<int>& selected_set,
+                            const std::set<int>& red_set,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map,
                             const DragOverlay* drag_overlay) {
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
@@ -1393,9 +1359,13 @@ void render_phase_reset_flags(cairo_t* cr,
         });
 
     auto paint_emit = [&](const PhaseResetEmit& e) {
+        // Color class priority: selection wins over red, red over default.
         const bool sel = selected_set.count(e.i) > 0;
-        const GuiColor fill    = sel ? kSelected : kMarker;
-        const GuiColor outline = sel ? kSelectedOutline : kMarkerOutline;
+        const bool red = !sel && red_set.count(e.i) > 0;
+        const GuiColor fill    = sel ? kSelected
+                               : red ? kAccent : kMarker;
+        const GuiColor outline = sel ? kSelectedOutline
+                               : red ? kAccentOutline : kMarkerOutline;
         const double alpha = phase_resets[e.i].disabled
             ? kDisabledMarkerAlpha : 1.0;
         paint_flag_shape(cr, e.center_x, g.flag_top, g.tri_top, g.tip_y,

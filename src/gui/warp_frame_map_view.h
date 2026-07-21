@@ -5,8 +5,8 @@
 
 #include <cmath>
 #include <cstdint>
+#include <set>
 #include <string>
-#include <utility>
 #include <vector>
 
 // Builds the target-view warp_frame_map from live warp markers plus scale, mirroring
@@ -74,47 +74,61 @@ struct TargetWarpFrameMapCache {
 const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
     const AppState& app, int sample_rate, long total_frames);
 
-// Memoized source-domain "fallback spans": the wave segments whose warp
-// marker normalizes to the 1.00 fallback (the render resolver's collapse
-// survivors, ref-inheriting passes, dangling refs, and extreme-ratio refs),
-// painted kAccent in the plate. Each span runs from a normalized marker's
-// authored frame to the next resolved marker's frame (or total_frames for the
-// last), so the spans are sorted and non-overlapping. Keyed on the warp store
-// generation plus the audio identity (spans are scale-free — the resolver
-// takes no scale, and its envelope excludes settings scale by construction —
-// and view-free — spans are SOURCE-domain and serve both the source plate
-// directly and the target plate through the map).
+// Memoized RED-FLAG SET for the warp column: the marker-store indices whose
+// render resolves to the 1.00 normalization fallback, so their flags paint
+// kAccent (unless selected — selection wins). Two contributors, both computed
+// SILENTLY from the display path (no resolver run, no stderr, no
+// frozen-parser dependency): (1) the exact-frame COLLAPSE — a marker sharing
+// its frame with 2+ effectively-enabled markers (marker_effectively_disabled
+// for the enabled test, matching the render's survivor filter), every member
+// reddened, so a coincident stack reads as one red flag mirroring the render's
+// single stderr line; (2) a REF/PASS fallback via marker_effective — a
+// dangling label ref, an extreme-ratio label ref, or a pass whose inheritance
+// walk terminates on a surviving enabled ref, all of which resolve to
+// source_idx == -1. The frame-0 seed is synthetic (no marker) and never
+// reddens.
 //
-// Building the entry runs resolve_warp_markers_for_render with its
-// normalization report out-param, which RE-EMITS the resolver's stderr lines.
-// This is a deliberate extra resolver run beyond the render path and the
-// target-view map cache (in target view a generation change now runs the
-// resolver twice — this cache and target_view_warp_frame_map_cached — the
-// accepted double-stderr consequence): per the "intended signal" ruling we do
-// not dedupe across resolves. Memoization keeps it to ONE run per generation
-// change rather than per paint tick — the same discipline
-// target_view_warp_frame_map_cached follows — so a resting ambiguous store
-// does not re-print every frame. Warp-only; phase resets carry no tempo and
-// have no fallback-span analog (recorded in the naming-symmetry style).
-struct WarpFallbackSpansCache {
+// Keyed on the warp store generation plus the audio identity (total_frames
+// feeds marker_effective's last-segment envelope distance). It reads the
+// COMMITTED store (app.warpmarkers), NOT any mid-drag overlay: the marker drag
+// writes only app.drag.moveable_times and mutates app.warpmarkers wholesale at
+// commit (bumping the generation), so a red flag persists through a drag and
+// re-evaluates only at release — the "wait until commit" rule the
+// displayed-target-map already follows. Memoization keeps the classification
+// to ONE run per generation change rather than per paint tick, the same
+// discipline target_view_warp_frame_map_cached follows.
+struct WarpRedFlagCache {
     bool      valid        = false;
     long long markers_gen  = -1;
     int       sample_rate  = 0;
     long      total_frames = 0;
-    std::vector<std::pair<int64_t, int64_t>> spans;
-    // FNV-1a over the span pairs, computed at rebuild so the waveform-cache
-    // fingerprint reads it instead of rehashing per tick. Empty set hashes to
-    // the fixed value 0.
-    uint64_t  hash         = 0;
+    std::set<int> red;   // red warp-marker store indices
 };
 
-// Returns the fallback-span cache entry for the app's live warp store,
-// rebuilding (and re-running the resolver, re-emitting its stderr) only when
-// the key does not match. Same single-threaded-reference lifetime rule as
-// target_view_warp_frame_map_cached; the waveform worker gets its own copy via
-// the job.
-const WarpFallbackSpansCache& warp_fallback_spans_cached(
+// Returns the warp red-flag cache entry for the app's live warp store,
+// rebuilding only when the key does not match. Same single-threaded-reference
+// lifetime rule as target_view_warp_frame_map_cached; the flag cache reads the
+// set at build time (not per paint).
+const WarpRedFlagCache& warp_red_flag_set_cached(
     const AppState& app, int sample_rate, long total_frames);
+
+// Phase-reset sibling (the now-resolved naming symmetry): a coincident group
+// of 2+ effectively-enabled (not disabled) phase resets sharing one exact
+// frame reddens every member, mirroring build_phase_reset_source_frames'
+// exact-equal collapse (one stderr line per group at render). Phase resets
+// carry no tempo, labels, or inheritance, so collapse is their ONLY
+// normalization — there is no marker_effective analog. Keyed on the
+// phase-reset store generation alone (the same-frame count is independent of
+// sample rate and length); the same committed-store / drag-freeze rule as the
+// warp set.
+struct PhaseResetRedFlagCache {
+    bool      valid       = false;
+    long long markers_gen = -1;
+    std::set<int> red;   // red phase-reset store indices
+};
+
+const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
+    const AppState& app);
 
 class GuiAudio;
 

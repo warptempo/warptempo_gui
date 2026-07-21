@@ -6,6 +6,7 @@
 #include <bit>
 #include <cmath>
 #include <cstdint>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -77,52 +78,101 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
     return c;
 }
 
-const WarpFallbackSpansCache& warp_fallback_spans_cached(
+const WarpRedFlagCache& warp_red_flag_set_cached(
     const AppState& app, int sample_rate, long total_frames) {
-    WarpFallbackSpansCache& c = app.warp_fallback_spans_cache;
+    WarpRedFlagCache& c = app.warp_red_flag_cache;
     const long long gen = app.warpmarkers.generation();
     if (c.valid && c.markers_gen == gen &&
         c.sample_rate == sample_rate && c.total_frames == total_frames) {
         return c;
     }
 
-    // Run the render resolver with its normalization report. This re-emits the
-    // resolver's stderr lines (the accepted double-stderr — see the header);
-    // memoization keeps it to a generation change, not per tick.
-    std::vector<int64_t> flagged;
-    const std::vector<MarkerForRender> resolved =
-        resolve_warp_markers_for_render(
-            slice_to_warp_markers(app.warpmarkers.markers()),
-            sample_rate, total_frames, &flagged);
+    c.red.clear();
+    // Slice once — marker_effective and marker_effectively_disabled are
+    // parser-domain and read no GUI-only fields. This resolves the COMMITTED
+    // store, so a marker drag (which writes app.drag.moveable_times, not the
+    // store, until commit) shows no red-flag change until release.
+    const std::vector<WarpMarker> mv =
+        slice_to_warp_markers(app.warpmarkers.markers());
+    const int n = static_cast<int>(mv.size());
 
-    // Each flagged (normalized) frame's span runs to the NEXT resolved marker's
-    // frame, or total_frames for the last. flagged is a sorted subset of the
-    // resolved frames (both strictly increasing), so one forward walk pairs
-    // them and the resulting spans are sorted and non-overlapping.
-    c.spans.clear();
-    c.spans.reserve(flagged.size());
-    size_t ri = 0;
-    for (int64_t f : flagged) {
-        while (ri < resolved.size() && resolved[ri].time_frame < f) ++ri;
-        const int64_t end =
-            (ri + 1 < resolved.size())
-                ? resolved[ri + 1].time_frame
-                : static_cast<int64_t>(total_frames);
-        c.spans.emplace_back(f, end);
+    // Pass 1 — exact-frame collapse: the store is time-sorted, so a coincident
+    // group is a run of adjacent equal frames. A run whose enabled member count
+    // is 2+ collapses to one 1.00 owner in the render (marker_effectively_
+    // disabled is the survivor test), so redden every member of the run — the
+    // overlapping flags then read as one red flag, matching the render's single
+    // stderr line per group.
+    int i = 0;
+    while (i < n) {
+        int j = i + 1;
+        while (j < n && mv[j].time_frame == mv[i].time_frame) ++j;
+        int enabled = 0;
+        for (int k = i; k < j; ++k)
+            if (!marker_effectively_disabled(mv, static_cast<size_t>(k)))
+                ++enabled;
+        if (enabled >= 2)
+            for (int k = i; k < j; ++k) c.red.insert(k);
+        i = j;
     }
 
-    uint64_t h = 0xcbf29ce484222325ULL;
-    for (const auto& s : c.spans) {
-        h ^= static_cast<uint64_t>(s.first);
-        h *= 0x100000001b3ULL;
-        h ^= static_cast<uint64_t>(s.second);
-        h *= 0x100000001b3ULL;
+    // Pass 2 — ref/pass 1.00 fallback: marker_effective is the silent
+    // per-marker resolution the hover uses; it reports the render's
+    // normalization fallback as source_idx == -1. Three cases redden: a
+    // dangling label ref (reason UndefinedLabel), an extreme-ratio label ref
+    // (reason ExtremeRatio), and a PASS whose inheritance walk terminated on a
+    // surviving enabled ref (from_ref). A pass reddens ONLY when it
+    // inherits-from-a-ref: a benign pass that inherits a real 1.00 from a
+    // synthetic prior (the frame-0 seed or a collapsed-group owner) also
+    // carries source_idx -1 but reason None and from_ref false, and the render
+    // prints no line for it — so it is EXCLUDED. An owner resolves to its own
+    // index (>= 0), never caught here (a collapse-group owner is reddened by
+    // pass 1 instead). Effectively-disabled markers do not render and are
+    // excluded.
+    for (int k = 0; k < n; ++k) {
+        if (marker_effectively_disabled(mv, static_cast<size_t>(k))) continue;
+        const MarkerEffective me = marker_effective(mv, k, total_frames);
+        if (me.source_idx != -1) continue;
+        const bool ref_fallback =
+            me.reason == MarkerEffective::NormalizedReason::UndefinedLabel ||
+            me.reason == MarkerEffective::NormalizedReason::ExtremeRatio;
+        if (ref_fallback || me.from_ref)
+            c.red.insert(k);
     }
-    c.hash         = c.spans.empty() ? 0 : h;
+
     c.markers_gen  = gen;
     c.sample_rate  = sample_rate;
     c.total_frames = total_frames;
     c.valid        = true;
+    return c;
+}
+
+const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
+    const AppState& app) {
+    PhaseResetRedFlagCache& c = app.phase_reset_red_flag_cache;
+    const long long gen = app.phaseresetmarkers.generation();
+    if (c.valid && c.markers_gen == gen) return c;
+
+    c.red.clear();
+    // Exact-frame collapse, the phase-reset sibling of the warp resolver's
+    // stage-2 normalization (build_phase_reset_source_frames): disabled resets
+    // are skipped, and a run of 2+ enabled resets sharing one frame collapses
+    // to one event. The store is time-sorted, so a coincident group is a run of
+    // adjacent equal frames; redden every member of a run with 2+ enabled.
+    const std::vector<GuiPhaseResetMarker>& pr = app.phaseresetmarkers.markers();
+    const int n = static_cast<int>(pr.size());
+    int i = 0;
+    while (i < n) {
+        int j = i + 1;
+        while (j < n && pr[j].time_frame == pr[i].time_frame) ++j;
+        int enabled = 0;
+        for (int k = i; k < j; ++k) if (!pr[k].disabled) ++enabled;
+        if (enabled >= 2)
+            for (int k = i; k < j; ++k) c.red.insert(k);
+        i = j;
+    }
+
+    c.markers_gen = gen;
+    c.valid       = true;
     return c;
 }
 
