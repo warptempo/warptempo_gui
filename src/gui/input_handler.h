@@ -482,10 +482,13 @@ private:
     // apply_zoom_change.
     void run_zoom_toggle_command();
 
-    // The zoom-row DOUBLE-CLICK command. Shares run_zoom_toggle_command's
-    // recenter/no-op plumbing (apply_zoom_change) but DIVERGES: zoom-out wins at
-    // intermediate levels. At the full-out ceiling → the working zoom; at ANY
-    // other level (the working zoom included) → full zoom-out.
+    // The zoom-strip DOUBLE-CLICK command: ZOOM TO A SPAN, never the working
+    // zoom. Span priority — a live region (wins over trim) → a set trim
+    // (completed to its extremes, expressed in the active domain) → the whole
+    // song (full zoom-out). The region/trim span is framed with a 2.5%-per-side
+    // margin; the fit level and span-start are set through the clamp chokepoints
+    // via Viewport::apply_zoom_to_start (NOT apply_zoom_change — no playhead
+    // recenter). Idempotent: a second click with the viewport unchanged no-ops.
     void run_zoom_double_click_command();
 
     // Esc-cancel handlers: while a render or queued batch is in flight, Esc

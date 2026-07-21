@@ -301,6 +301,59 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     }
 }
 
+void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
+    if (audio.total_frames() <= 0) return;
+
+    // Pre-clamp the requested level to the per-file window. clamp_viewport_start
+    // re-applies the identical clamp as the chokepoint; this only sharpens the
+    // no-op detection below.
+    new_zoom_level = clamp_zoom_level(app, audio, new_zoom_level);
+
+    // Capture the scanner's pre-reflow pixel-x under the OLD viewport BEFORE any
+    // assignment (as apply_zoom_change does), but publish it to the stash only
+    // when the view actually moves — a no-op must leave no dangling ghost-repair
+    // state for the next pre-paint to consume.
+    const double scanner_old_px = app.playhead_scanner_active
+        ? scanner_pixel_x(app, audio)
+        : -1.0;
+
+    const double  old_level = app.zoom_level;
+    const int64_t old_start = app.viewport_start_sample;
+
+    // Set the level, then the start EXPLICITLY (the span's left edge, not a
+    // playhead recenter), and funnel through the two clamp chokepoints.
+    app.zoom_level = new_zoom_level;
+    app.viewport_start_sample = new_start;
+    clamp_viewport_start(app, audio);
+
+    // Idempotent no-op: the resting (level, start) this call would produce equals
+    // the current viewport, so nothing moved — return without repaint (the writes
+    // above put identical values back). A pan/zoom since the last framing makes
+    // them differ and this proceeds to re-frame.
+    if (app.viewport_start_sample == old_start &&
+        std::fabs(app.zoom_level - old_level) < 1e-9) {
+        return;
+    }
+
+    // Actually moving: publish the OLD-viewport scanner px so the next pre-paint
+    // repairs the ghost, exactly as apply_zoom_change does.
+    if (app.playhead_scanner_active)
+        app.playhead_scanner_old_px_stash = scanner_old_px;
+
+    invalidate_waveform_area();
+    invalidate_timestamp_area();
+    // Flags live in the top strip — rect positions change with the viewport.
+    const GuiRect ts = top_strip_area(app);
+    gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
+    // Rects shifted under the (possibly stationary) cursor — re-evaluate hover.
+    recompute_hover_at_cursor();
+    if (playback.is_playing()) playback.resync_predictor();
+    // A discrete one-shot viewport jump: render the plate synchronously and
+    // publish the displayed fingerprint now so the top-strip flags and the
+    // playhead column do not jump a frame ahead of the waveform.
+    kick_waveform_sync();
+}
+
 void Viewport::zoom_in() {
     if (app.zoom_level > kMinZoom) {
         // One whole level deeper from the current (possibly fractional) rung,

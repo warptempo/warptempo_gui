@@ -396,8 +396,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // in read-only (all modal gates sit above this claim). The
                 // surface tag (ZoomRow) means a flag / editor candidate can never
                 // consume here. The double-click DIVERGES from the bare `0` key:
-                // it runs run_zoom_double_click_command (zoom-out wins at
-                // intermediate levels), not run_zoom_toggle_command. The
+                // it runs run_zoom_double_click_command (zoom to the region /
+                // trim / whole-song span), not run_zoom_toggle_command. The
                 // candidate's first click briefly captured and hid the cursor at
                 // its press and restored it at the motionless release; this
                 // second press never captures.

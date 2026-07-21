@@ -112,6 +112,17 @@ struct Viewport {
     // synchronous rebuild plus the predictor resync so the rest state is exact.
     void apply_strip_drag_zoom(double new_zoom_level, double anchor_sample,
                                double anchor_x, bool final);
+    // Zoom-to-span apply: set the level AND the viewport start EXPLICITLY (the
+    // start is a framed span's left edge, NOT a playhead recenter — the sole
+    // difference from apply_zoom_change), then funnel both through the clamp
+    // chokepoints (the grid snap + range clamp every zoom/viewport write uses)
+    // and repaint exactly as apply_zoom_change does. IDEMPOTENT: if the resting
+    // (level, start) after clamping equals the current viewport, it is a true
+    // no-op — no repaint, and the scanner ghost-repair stash is left untouched —
+    // so a second identical framing does nothing, while any pan/zoom in between
+    // makes the target differ and this re-frames. The sole caller is the
+    // zoom-strip double-click (run_zoom_double_click_command).
+    void apply_zoom_to_start(double new_zoom_level, int64_t new_start);
     void zoom_in();
     void zoom_out();
     // Coalesced zoom: apply |in_steps| zoom levels in a single shot.
