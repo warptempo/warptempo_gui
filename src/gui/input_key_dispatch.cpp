@@ -421,10 +421,6 @@ void GuiInputHandler::cancel_active_drags() {
         app.region_drag = RegionDragState{};
         viewport.invalidate_waveform_area();
     }
-    // The scrub drag is navigation, not a cancel: Esc ends it at the current
-    // position (the playhead stays where the last motion put it — nothing to
-    // restore), like the strip/scroll pans.
-    if (app.scrub_drag.active) app.scrub_drag = ScrubDragState{};
     // A live editor-text drag is FINALIZED, not cancelled: it is selection-only
     // with nothing to revert, so it collapses a no-motion anchor to a caret and
     // repaints the owning strip exactly as its release would, instead of

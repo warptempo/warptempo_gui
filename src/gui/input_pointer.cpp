@@ -253,7 +253,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // and clear the shared field here, so ANY intervening press invalidates it.
     // The consume checks below read this snapshot; a motionless release re-seeds
     // a fresh candidate afterward. One closed instrumentation point — the clear
-    // covers every non-consuming press (a strip/scrub/chip arm, a modal swallow)
+    // covers every non-consuming press (a strip/region/chip arm, a modal swallow)
     // without a clear scattered on each path.
     const DoubleClickCandidate dc_at_press = app.double_click;
     app.double_click = DoubleClickCandidate{};
@@ -491,9 +491,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // single-select + arm the pending marker drag, Shift = toggle
         // membership), so it is resolved once here. The WAVEFORM never SELECTS a
         // marker — a plain press is deselect-all + playhead placement +
-        // scrub-drag arm, and a Shift press arms the region drag (handled in the
-        // modifier block above) — so no marker scan runs on the waveform at all
-        // (the invisible stem is not a grab target). Trim bounds
+        // region-drag arm, a Shift press a no-op — so no marker scan runs on the
+        // waveform at all (the invisible stem is not a grab target). Trim bounds
         // are grabbed only by their top-strip chips / the inter-chip bridge on a
         // PLAIN chip-row press (route_trim_chip_press below); a click over a
         // bound's waveform stem is an ordinary waveform click (the stem grab
@@ -555,28 +554,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
 
-        // Shift-exact left press on the waveform arms the REGION-select drag —
-        // region-only navigation: it does NOT clear the selection and does NOT
-        // move the playhead (the plain press owns those, now that a plain drag
-        // scrubs). It snapshots and dissolves any resting highlight at mouse-down
-        // and arms the drag anchored at the press column's active-domain frame;
-        // motion past the shared threshold extends the region, Esc restores the
-        // pre-press highlight. Allowed in read-only (a transient visual). A
-        // motionless Shift press-release is a no-op (the region machinery only
-        // acts on a real drag). In the gutter (no column) there is nothing to
-        // anchor, so it is inert. Gated on inside_waveform so a Shift press on the
-        // TOP STRIP falls through to the flag-membership toggle below (shift is
-        // the marker-select modifier there).
-        if (shift && !ctrl && !alt && inside_waveform) {
-            const int click_rel_x = x - area.x;
-            if (click_rel_x >= 0 && click_rel_x < area.w) {
-                const int64_t anchor =
-                    playhead_frame_at_click_column(app, audio, click_rel_x);
-                arm_region_drag_at(anchor, x, y);
-            }
-            return;
-        }
-
         // Strict modifier matching: the marker reposition arm lives on the plain
         // flag press and trim's chip/bridge drags on the plain chip-row press, so
         // every remaining modified combination — Ctrl+Alt (now a strict no-op),
@@ -586,17 +563,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // (separate handlers).
         if (ctrl || alt) return;
 
-        // Plain or Shift press. What reaches here on the WAVEFORM is only a plain
-        // press (a Shift waveform press armed the region drag above and returned):
-        // it clears the marker selection (deselect-all), places the playhead at
-        // the clicked column, and arms the scrub drag — it never SELECTS a marker.
-        // In the top strip a plain CHIP-ROW press arms a trim chip/bridge drag
-        // (claimed ahead of the marker flag select); otherwise (flag click)
-        // selection is the whole interface, BOTH views: a plain click
-        // single-selects and ARMS a pending marker drag (moves the marker if the
-        // pointer crosses the threshold, else a pure click); Shift+click toggles
-        // multi-select membership only. Neither moves the playhead — only the Tab
-        // family and `c` land the playhead on a marker.
+        // Plain or Shift press. In the waveform area a plain press clears the
+        // marker selection (deselect-all), places the playhead at the clicked
+        // column, and arms the region-select drag — it never SELECTS a marker; a
+        // Shift press on the waveform is a strict no-op. In the top strip a plain
+        // CHIP-ROW press arms a trim chip/bridge drag (claimed ahead of the
+        // marker flag select); otherwise (flag click) selection is the
+        // whole interface, BOTH views: a plain click single-selects and ARMS a
+        // pending marker drag (moves the marker if the pointer crosses the
+        // threshold, else a pure click); Shift+click toggles multi-select
+        // membership only. Neither moves the playhead — only the Tab family and
+        // `c` land the playhead on a marker.
         if (inside_top) {
             // Plain unmodified chip-row press arms a trim chip/bridge drag,
             // claimed BEFORE the marker flag single-select. The chip row and the
@@ -662,12 +639,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // NOT consult `hit`. Then it drops the playhead at the clicked column (no
         // marker snap — the 3px marker-snap magnet already died with the scrub in
         // the prior phase), reseeks a live scanner to it, overrides follow, and
-        // arms the SCRUB drag — which DISSOLVES any resting highlight at this
-        // mouse-down (arm_scrub_drag_at clears it), so the wash vanishes on press.
-        // Past the threshold the scrub places the playhead per motion event and
-        // stops playback at the crossing (see on_motion). A Shift waveform press
-        // never reaches here (it armed the region drag above and returned); the
-        // guard below is defensive.
+        // arms the region drag — which also DISSOLVES any resting highlight at
+        // this mouse-down (arm_region_drag_at clears it after snapshotting the
+        // pre-press extent for an Esc-mid-drag restore), so the wash vanishes on
+        // press whether the gesture becomes a click or a fresh drag. A Shift
+        // press is a strict no-op anywhere on the waveform, selection included.
         {
             if (shift) return;
             // The clear runs FIRST, before the gutter early-return below, so an
@@ -682,7 +658,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 playback_lifecycle.reseek_keeping_alive(sample);
             }
             if (was_playing) app.follow_overridden_for_session = true;
-            arm_scrub_drag_at(x, y);
+            arm_region_drag_at(sample, x, y);
         }
     }
     // Wheel events no longer reach on_button_press; they arrive coalesced
@@ -711,25 +687,11 @@ void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
     // Snapshot the resting region BEFORE clearing it, so an Esc cancel of a
     // live drag still restores the pre-press highlight.
     app.region_drag.pre_region   = app.region;
-    // Clear any resting region immediately at press: a Shift waveform press
+    // Clear any resting region immediately at press: a plain waveform press
     // dissolves an existing highlight on mouse-down (the wash repaints away
     // now, not at release). A moved drag rebuilds a fresh region live; a
     // motionless press-release simply leaves it cleared. pre_region above keeps
     // the pre-press extent for the Esc-mid-drag restore.
-    if (app.region.active) {
-        app.region = RegionState{};
-        viewport.invalidate_waveform_area();
-    }
-}
-
-void GuiInputHandler::arm_scrub_drag_at(int x, int y) {
-    app.scrub_drag = ScrubDragState{};
-    app.scrub_drag.active  = true;
-    app.scrub_drag.press_x = x;
-    app.scrub_drag.press_y = y;
-    // A plain waveform press dissolves any resting region highlight at
-    // mouse-down (the collapse the plain press always did), even though the
-    // scrub itself paints no wash.
     if (app.region.active) {
         app.region = RegionState{};
         viewport.invalidate_waveform_area();
@@ -809,14 +771,6 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         app.region_drag = RegionDragState{};
         return;
     }
-    if (app.scrub_drag.active) {
-        // Scrub is navigation: the playhead already rests where the last motion
-        // put it (and playback stopped at the gate crossing), so there is nothing
-        // to commit — just disarm. A motionless press-release is a plain waveform
-        // click; the press already placed the playhead.
-        app.scrub_drag = ScrubDragState{};
-        return;
-    }
     if (app.trim_drag.active) {
         commit_trim_drag();
         return;
@@ -851,8 +805,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 
 // Motion handler. Drives the active pointer gesture: editor-text drag,
 // strip-row zoom/pan drag, trim drag (or a pending trim drag arming past the
-// threshold), region-select drag, scrub drag, or marker reposition drag (or a
-// pending marker drag); with no gesture it recomputes hover at the cursor. The
+// threshold), region-select drag, or marker reposition drag (or a pending
+// marker drag); with no gesture it recomputes hover at the cursor. The
 // marker drag applies the pointer delta to the grabbed marker only — it does
 // NOT move the playhead (only the Tab family and `c` land the playhead on a
 // marker).
@@ -1048,41 +1002,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         app.region.a_frame = app.region_drag.anchor_frame;
         app.region.b_frame = far_frame;
         viewport.invalidate_waveform_area();
-        return;
-    }
-    // Scrub drag (armed by a plain waveform press): past the shared threshold,
-    // each motion event places the playhead at the pointer's column (clamped to
-    // the live domain by move_playhead_to), and the moment the gate crosses
-    // playback STOPS for real — no audio while scrubbing, no auto-resume at
-    // release. Navigation-class: no selection touch, no Esc-restore. A lost
-    // button ends it in place (the playhead stays).
-    if (app.scrub_drag.active) {
-        viewport.clear_hover_popup();
-        if (!mods.primary_button_held) {   // button lost -> end, playhead stays
-            app.scrub_drag = ScrubDragState{};
-            return;
-        }
-        const GuiRect area = waveform_area(app);
-        if (area.w <= 0) return;
-        // Sub-threshold: still a plain click (the press already placed the
-        // playhead). Once a drag, always a drag (moved never re-engages).
-        if (!app.scrub_drag.moved &&
-            std::max(std::abs(mouse_x - app.scrub_drag.press_x),
-                     std::abs(mouse_y - app.scrub_drag.press_y)) <
-                kDragMovedThresholdPx) {
-            return;
-        }
-        if (!app.scrub_drag.moved) {
-            // Crossing into a real scrub: stop playback for real (like Space) so
-            // no audio plays while scrubbing; there is no auto-resume at release.
-            app.scrub_drag.moved = true;
-            playback_lifecycle.stop_playback_if_playing();
-        }
-        int rel = mouse_x - area.x;
-        if (rel < 0) rel = 0;
-        if (rel >= area.w) rel = area.w - 1;
-        const int64_t frame = playhead_frame_at_click_column(app, audio, rel);
-        viewport.move_playhead_to(frame);
         return;
     }
     // Pending marker drag (armed by a plain flag press): the marker was

@@ -268,18 +268,13 @@ struct GuiInputHandler {
     // cancel before raising the close prompt).
     void cancel_active_drags();
 
-    // Arm the Shift left-drag region-select gesture at a press. `anchor_frame`
-    // is the active-domain frame under the press column; (x, y) is the press
-    // position for the press-becomes-drag threshold. Captures the pre-drag region
-    // for an Esc cancel and dissolves the resting region at mouse-down. Only the
-    // Shift-exact waveform press calls this.
+    // Arm the plain left-drag region-select gesture at a press. `anchor_frame`
+    // is the active-domain frame the press just placed the playhead at; (x, y)
+    // is the press position for the press-becomes-drag threshold. Captures the
+    // pre-drag region for an Esc cancel and dissolves the resting region at
+    // mouse-down. Only the plain waveform press calls this; a Shift press is a
+    // strict no-op and does not arm.
     void arm_region_drag_at(int64_t anchor_frame, int x, int y);
-
-    // Arm the plain left-drag SCRUB gesture at a press. (x, y) is the press
-    // position for the press-becomes-drag threshold. Dissolves any resting region
-    // highlight at mouse-down (the collapse the plain press always did); the
-    // scrub itself paints no wash. Only the plain waveform press calls this.
-    void arm_scrub_drag_at(int x, int y);
 
     // Pump half of the kill-and-park dispatch rule, reached through
     // GuiTargetRender's dispatch_pending_archival hook on every

@@ -210,16 +210,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // drag guard: Tab, undo, `t`, and the rest never see a key mid-drag.
     // The editor text-selection drag has its own modal gate above
     // the text-editor handlers; the pointer gestures here — the marker /
-    // trim / strip / region / scrub drags, the Alt+drag grab-pan (scroll_drag),
-    // and the pending marker / trim drags (a press held before its reposition
-    // begins) — are mutually exclusive with it. scroll_drag belongs on the list
-    // too: a live pan must swallow authoring keys, and Esc must route to
-    // cancel_active_drags (which ends it) rather than falling past to run a hotkey
-    // over a latched pan. scrub_drag likewise: a live scrub owns the keyboard, and
-    // Esc ends it (playhead stays).
+    // trim / strip / region drags, the Alt+drag grab-pan (scroll_drag), and the
+    // pending marker / trim drags (a press held before its reposition begins) —
+    // are mutually exclusive with it. scroll_drag belongs on the list too: a live
+    // pan must swallow authoring keys, and Esc must route to cancel_active_drags
+    // (which ends it) rather than falling past to run a hotkey over a latched pan.
     if (app.drag.active || app.trim_drag.active ||
         app.strip_drag.active || app.region_drag.active ||
-        app.scrub_drag.active || app.scroll_drag.active ||
+        app.scroll_drag.active ||
         app.pending_marker_drag.active || app.pending_trim_drag.active) {
         if (key == GuiKeys::Escape) {
             cancel_active_drags();

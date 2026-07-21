@@ -309,27 +309,26 @@ struct UndoHistory {
 // Cleared by a region-trimming x, on file load, the A/B tab switch, the S/T audio-view switch (the
 // domain changes under it), Esc (only when nothing higher-priority consumes the
 // Esc), and a plain waveform PRESS (the press dissolves any resting highlight at
-// mouse-down, before it knows whether the gesture is a click or a fresh scrub;
-// at on_button_press via arm_scrub_drag_at). The region gesture itself is armed
-// by a SHIFT-exact waveform press now (shift is the marker-select modifier, so
-// shift = select-region reads naturally; a plain drag scrubs the playhead). The
-// W/P marker-column switch does NOT clear it — the region is not marker-related.
+// mouse-down, before it knows whether the gesture is a click or a fresh region
+// drag; at on_button_press via arm_region_drag_at). The W/P marker-column switch
+// does NOT clear it — the region is not marker-related.
 struct RegionState {
     bool    active  = false;
     int64_t a_frame = 0;   // the press-anchor endpoint
     int64_t b_frame = 0;   // the far (pointer) endpoint
 };
 
-// State for the SHIFT-exact left-drag region-select gesture on the waveform.
-// Region-only: the arming press does NOT deselect, does NOT move the playhead —
-// it snapshots the resting region into pre_region, DISSOLVES it at mouse-down,
-// and arms this drag; motion past the shared press-becomes-drag threshold
-// (kDragMovedThresholdPx) extends app.region from the press frame to the pointer
-// column. A sub-threshold press-release is a no-op — the highlight already
-// dissolved at press, so there is no release-time collapse (a motionless
-// shift click simply disarms). Only a Shift-exact waveform press arms
-// (a plain drag scrubs the playhead instead — see ScrubDragState), so an armed
-// drag always signals a Shift waveform press. A completed drag rests the
+// State for the plain (unmodified) left-drag region-select gesture on the
+// waveform. The PRESS does its press-time work (deselect-all, playhead
+// placement, live-playback reseek — it never SELECTS a marker), DISSOLVES any
+// resting highlight at mouse-down (snapshotting the pre-press extent into
+// pre_region first), and arms this drag; motion past the shared
+// press-becomes-drag threshold (kDragMovedThresholdPx) extends app.region from
+// the press frame to the pointer column. A sub-threshold press-release is a
+// plain waveform click and simply disarms — the highlight already dissolved at
+// press, so there is no release-time collapse. Only a plain, unmodified
+// waveform press arms (a Shift press is a click, Alt/Ctrl no-op earlier), so an
+// armed drag always signals a plain waveform press. A completed drag rests the
 // region on release; Esc cancels a live drag and restores the pre-press region
 // captured here at arm (the marker drag's snapshot pattern — cheap, two ints).
 // Session-only, never undoable.
@@ -342,25 +341,6 @@ struct RegionDragState {
     // The region as it rested BEFORE the press dissolved it; restored on an Esc
     // cancel of the gesture, bringing the pre-press highlight back.
     RegionState pre_region;
-};
-
-// State for the plain (unmodified) left-drag SCRUB gesture on the waveform. The
-// PRESS does its press-time work (deselect-all, playhead placement, live-playback
-// reseek — it never SELECTS a marker) and DISSOLVES any resting region highlight
-// at mouse-down (the collapse the plain press always did), then arms this drag.
-// Motion past the shared press-becomes-drag threshold (kDragMovedThresholdPx)
-// SCRUBS: each event places the playhead at the pointer's column (clamped to the
-// live domain), and the moment the gate crosses playback STOPS for real (no
-// audio while scrubbing, no auto-resume at release). A sub-threshold press-release
-// is a plain waveform click (the press already placed the playhead). Navigation-
-// class: no Esc-restore (the playhead rests where the last motion put it), allowed
-// in read-only. Session-only, never undoable. Cleared on release / lost button,
-// Escape (cancel_active_drags), and file load.
-struct ScrubDragState {
-    bool active   = false;
-    bool moved    = false;  // crossed the threshold into a real scrub
-    int  press_x  = 0;      // press position (window px), for the gate
-    int  press_y  = 0;
 };
 
 // F2.1: mouse drag-to-select inside the active text editor. Only one
@@ -961,13 +941,9 @@ struct AppState {
     // cleared there and on button release / Escape.
     DragState     drag;
 
-    // Region-select drag state (Shift-exact left-drag). Cleared on button
-    // release, Escape, and file load.
-    RegionDragState region_drag;
-
-    // Scrub drag state (plain waveform left-drag). Cleared on button release,
+    // Region-select drag state (plain left-drag). Cleared on button release,
     // Escape, and file load.
-    ScrubDragState scrub_drag;
+    RegionDragState region_drag;
 
     // Pending marker-reposition drag, armed by a plain flag press (the marker
     // is single-selected at press; the drag begins only past the threshold).
@@ -1290,7 +1266,7 @@ inline int64_t snap_authored_frame(double frame) {
 
 // The single query for "some pointer gesture is in flight" — a marker
 // reposition drag, a trim drag, a strip-row zoom/pan drag, a region-select
-// drag, a scrub drag, an editor text drag, or a pending marker / trim drag
+// drag, an editor text drag, or a pending marker / trim drag
 // armed by a press (button held, watching for the threshold). Consumed by the wheel_context
 // predicate (on_wheel's completed-detent gate and the platform's per-frame
 // sub-detent accumulator probe both route through it), the gate that must
@@ -1300,8 +1276,7 @@ inline int64_t snap_authored_frame(double frame) {
 inline bool any_pointer_gesture_active(const AppState& app) {
     return app.drag.active || app.trim_drag.active ||
            app.strip_drag.active || app.scroll_drag.active ||
-           app.region_drag.active || app.scrub_drag.active ||
-           app.editor_text_drag.active ||
+           app.region_drag.active || app.editor_text_drag.active ||
            app.pending_marker_drag.active || app.pending_trim_drag.active;
 }
 
