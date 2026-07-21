@@ -408,16 +408,18 @@ void render_waveform(cairo_t* cr,
     const double y_center = area.y + area.h * 0.5;
     const double half_h   = area.h * 0.5;
 
-    // Each column becomes a 1px-wide integer-row rectangle so the plate is
-    // binary: every pixel is either the color at full alpha or fully
-    // transparent, no antialiased tips. Per-column min/max extents stay raw
-    // and unsmoothed; only the y endpoints are snapped to whole pixel rows.
-    struct ColRect { int x, y0, y1; };
+    // Each column becomes a 1px-wide vertical rectangle (min->max). The y
+    // endpoints stay FRACTIONAL doubles — the waveform-only relaxation of the
+    // crisp-edge aliasing rule — so the peak envelope's top/bottom silhouette
+    // anti-aliases (feathers) rather than snapping jaggedly to whole rows. The
+    // side edges stay crisp because x is integer and the width is 1px (both
+    // vertical edges land on pixel boundaries).
+    struct ColRect { int x; double y0, y1; };
     std::vector<ColRect> rects;
     rects.reserve(static_cast<size_t>(area.w));
 
-    const int y_lo = area.y;
-    const int y_hi = area.y + area.h;
+    const double y_lo = area.y;
+    const double y_hi = area.y + area.h;
 
     // Column i's left edge (f0) is column i-1's right edge (f1) — the same
     // expression yields the same double, so its translation is the same too.
@@ -447,11 +449,11 @@ void render_waveform(cairo_t* cr,
         const double min_val = mm.first;
         const double max_val = mm.second;
 
-        int y0 = static_cast<int>(std::lround(y_center - max_val * half_h));
-        int y1 = static_cast<int>(std::lround(y_center - min_val * half_h));
-        // Any signal keeps at least one pixel.
-        if (y1 <= y0) y1 = y0 + 1;
-        // Clamp to the waveform area's pixel rows.
+        double y0 = y_center - max_val * half_h;
+        double y1 = y_center - min_val * half_h;
+        // Any signal keeps at least one pixel so quiet material stays visible.
+        if (y1 - y0 < 1.0) y1 = y0 + 1.0;
+        // Clamp to the waveform area's pixel span.
         if (y0 < y_lo) y0 = y_lo;
         if (y0 > y_hi) y0 = y_hi;
         if (y1 < y_lo) y1 = y_lo;
@@ -462,7 +464,11 @@ void render_waveform(cairo_t* cr,
     }
 
     cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    // Waveform-only aliasing relaxation: antialias ON so the fractional top/
+    // bottom edges feather. The 1px-wide integer-x columns keep crisp vertical
+    // side edges; a single fill over all rects keeps adjacent full-coverage
+    // columns seamless at their shared interior edges.
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
 
     cairo_set_source_rgb(cr, color.r, color.g, color.b);
     for (const auto& R : rects) {
@@ -732,35 +738,51 @@ void render_trim_flags(cairo_t* cr,
     // suppress the band). A gap exists only when the begin chip sits fully left
     // of the end chip (wide-enough, non-inverted span); an inverted or narrow
     // trim shows no bridge, its chips simply overlap.
+    //
+    // Offscreen-border rule: a gap edge follows its chip offscreen. When a bound
+    // is IN the viewport its edge aligns with the drawn (clamped) chip; when it
+    // has scrolled OFFSCREEN the edge is taken from the bound's TRUE unclamped
+    // column (col_raw). The fill and ring are drawn at these raw positions with
+    // NO [0,W-1] clamp, so an offscreen-side edge lands past the viewport edge
+    // and is clipped by the cache surface: the wash fills flush to the edge (no
+    // chip-width gap) and that side's ring border goes offscreen with the chip
+    // rather than resting at the viewport edge. The top/bottom borders span the
+    // full raw width and are clipped to the visible portion. An end bound at
+    // EOF (T-1) stays in_viewport, so it uses the clamped column (a ~1px seam vs
+    // the raw column, accepted), preserving the visible EOF chip's connection.
     if (has_begin && has_end && waveform_area.w > 0) {
-        const int wmax = waveform_area.w - 1;
-        const int gap_lo_raw = begin_col + chip_w;       // begin chip inner edge
-        const int gap_hi_raw = end_col - chip_w + 1;     // end chip inner edge
-        if (gap_hi_raw > gap_lo_raw) {
-            const int lo = std::clamp(gap_lo_raw, 0, wmax);
-            const int hi = std::clamp(gap_hi_raw, 0, wmax);
-            if (hi > lo) {
-                cairo_set_source_rgba(cr, kOverlay.r, kOverlay.g,
-                                      kOverlay.b, kOverlayAlpha);
-                cairo_rectangle(cr, static_cast<double>(top_strip_area.x + lo),
-                                static_cast<double>(chip_top),
-                                static_cast<double>(hi - lo),
-                                static_cast<double>(chip_h));
-                cairo_fill(cr);
-                // 1px ring bordering the gap rect, AA off.
-                const int rx = top_strip_area.x + lo;
-                const int rw = hi - lo;
-                cairo_save(cr);
-                cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-                cairo_set_source_rgba(cr, kOverlay.r, kOverlay.g, kOverlay.b,
-                                      kOverlayOutlineAlpha);
-                cairo_rectangle(cr, rx, chip_top, rw, 1);              // top
-                cairo_rectangle(cr, rx, chip_top + chip_h - 1, rw, 1); // bottom
-                cairo_rectangle(cr, rx, chip_top, 1, chip_h);          // left
-                cairo_rectangle(cr, rx + rw - 1, chip_top, 1, chip_h); // right
-                cairo_fill(cr);
-                cairo_restore(cr);
-            }
+        auto col_raw = [&](int64_t frame) {
+            const double x_raw =
+                (static_cast<double>(frame) -
+                 static_cast<double>(viewport_start_sample)) / samples_per_pixel;
+            return static_cast<int>(std::nearbyint(x_raw));
+        };
+        const int gap_lo =
+            (in_viewport(trim.begin) ? begin_col : col_raw(trim.begin)) + chip_w;
+        const int gap_hi =
+            (in_viewport(trim.end) ? end_col : col_raw(trim.end)) - chip_w + 1;
+        if (gap_hi > gap_lo) {
+            cairo_set_source_rgba(cr, kOverlay.r, kOverlay.g,
+                                  kOverlay.b, kOverlayAlpha);
+            cairo_rectangle(cr, static_cast<double>(top_strip_area.x + gap_lo),
+                            static_cast<double>(chip_top),
+                            static_cast<double>(gap_hi - gap_lo),
+                            static_cast<double>(chip_h));
+            cairo_fill(cr);
+            // 1px ring bordering the gap rect, AA off. Drawn at the raw gap
+            // positions (no clamp) so an offscreen-side border is clipped away.
+            const int rx = top_strip_area.x + gap_lo;
+            const int rw = gap_hi - gap_lo;
+            cairo_save(cr);
+            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+            cairo_set_source_rgba(cr, kOverlay.r, kOverlay.g, kOverlay.b,
+                                  kOverlayOutlineAlpha);
+            cairo_rectangle(cr, rx, chip_top, rw, 1);              // top
+            cairo_rectangle(cr, rx, chip_top + chip_h - 1, rw, 1); // bottom
+            cairo_rectangle(cr, rx, chip_top, 1, chip_h);          // left
+            cairo_rectangle(cr, rx + rw - 1, chip_top, 1, chip_h); // right
+            cairo_fill(cr);
+            cairo_restore(cr);
         }
     }
 
