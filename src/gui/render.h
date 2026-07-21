@@ -104,17 +104,22 @@ inline constexpr double    kOverlayOutlineAlpha = 0.30;
 // brightens the span, Ableton-style). A flat translucent fill (not a plate
 // masked recolor) over the full waveform height, composited AFTER the plate and
 // the out-of-trim dim, so a region inside a dimmed area lifts the dimmed pixels
-// — accepted, it stays visible. A lightened kWaveform tone, kept in the same
-// blue-cast hue family as kOverlay so the lift reads as brightening rather than
-// graying (see the kOverlay note). Both values architect-tunable on the labwc
-// pass; start subtle.
-inline constexpr GuiColor kRegionWash      = hex(0xC7DEF5);
+// — accepted, it stays visible. Painted in kPlayheadCursorLight (the playhead
+// green lightened toward white) at this alpha, so the region reads as a lighter
+// tint of the same green the split playhead marks its bounds in. Architect-
+// tunable on the labwc pass; start subtle.
 inline constexpr double    kRegionWashAlpha = 0.10;
 
 inline constexpr GuiColor kMarker           = hex(0x9145AD);
 inline constexpr GuiColor kSelected         = hex(0x3DAEE9);  // Breeze blue
 inline constexpr GuiColor kPlayheadScanner  = hex(0xF2D959);
 inline constexpr GuiColor kPlayheadCursor   = hex(0x1ABC9C);  // green cursor
+// kPlayheadCursor blended ~55% toward white, per channel c' = round(c + 0.55*(255-c)):
+// 0x1A->0x98, 0xBC->0xE1, 0x9C->0xD2. A lighter tint of the playhead green,
+// used for the region-select wash (kRegionWashAlpha) so a live region reads as a
+// translucent brightening of the same green the split playhead marks its bounds
+// in — the wash and the split half-triangles share one hue.
+inline constexpr GuiColor kPlayheadCursorLight = hex(0x98E1D2);
 inline constexpr GuiColor kAccent           = hex(0xBF332E);
 inline constexpr GuiColor kText             = hex(0xFCFCFC);  // Breeze paper white
 
@@ -556,6 +561,27 @@ void render_playhead(cairo_t* cr,
                      GuiColor color,
                      bool draw_triangle = true,
                      cairo_surface_t* ink_plate = nullptr);
+
+// Draws the SPLIT playhead shown while a region-select is active: the normal
+// single cursor triangle dissolves and TWO half-triangles take its place, one on
+// each region bound. Both halves stamp the ONE cached playhead triangle mask
+// (playhead_triangle_mask(), 2H-1 wide, tip-down, full-height center column at
+// image index H-1) clipped to a half each — no new masks are built. left_col /
+// right_col are the region's bound columns relative to `area.x` (screen column =
+// area.x + col; left = the smaller, right = the larger). The LEFT half keeps mask
+// columns [0..center], blitted so the center column lands ON left_col — the
+// full-height edge sits on the bound and the slope flares LEFT, outside the
+// region. The RIGHT half keeps mask columns [center..2*center], center column on
+// right_col, slope flaring RIGHT. Same triangle lane and dst_y as the unsplit
+// playhead triangle, and each half is additionally clipped to the waveform's
+// horizontal span so a bound near an edge partial-renders instead of leaking. If
+// left_col == right_col the two halves reunite into the full triangle at that
+// column (the shared center column paints twice with the same opaque source).
+void render_split_playhead(cairo_t* cr,
+                           GuiRect area,
+                           int left_col,
+                           int right_col,
+                           GuiColor color);
 
 // Draws the strip-drag ANCHOR STEM: a 1-pixel vertical line at the drag's pivot
 // column `col` (window pixels within `area`, clamped here to [0, area.w-1]),

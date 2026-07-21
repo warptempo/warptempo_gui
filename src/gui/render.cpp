@@ -547,6 +547,55 @@ void render_playhead(cairo_t* cr,
     cairo_restore(cr);
 }
 
+void render_split_playhead(cairo_t* cr,
+                           GuiRect area,
+                           int left_col,
+                           int right_col,
+                           GuiColor color) {
+    if (area.w <= 0 || area.h <= 0) return;
+
+    // The one cached AA-baked tip-down mask (2H-1 wide, H tall). Its full-height
+    // column — the tip column — is image index center = H-1, dividing the mask
+    // into the left slope [0..center] and the right slope [center..2*center].
+    cairo_surface_t* mask = playhead_triangle_mask();
+    const int img_w  = cairo_image_surface_get_width(mask);
+    const int img_h  = cairo_image_surface_get_height(mask);
+    const int center = img_h - 1;
+
+    // Triangle lane: top row at the lane top, tip one pixel above the waveform
+    // top edge — identical to the unsplit playhead triangle.
+    const double dst_y   = static_cast<double>(area.y - img_h);
+    const double area_x0 = static_cast<double>(area.x);
+    const double area_x1 = static_cast<double>(area.x + area.w);
+
+    // Stamp one half: place the mask so its center column lands on `bound_col`,
+    // then clip to this half's image columns [first_img_col..last_img_col]
+    // (intersected with the waveform's horizontal span, so a bound near an edge
+    // partial-renders and never leaks past the area). The clip selects the half;
+    // the single mask blit supplies its baked slope alphas.
+    auto stamp_half = [&](int bound_col, int first_img_col, int last_img_col) {
+        const double dst_x =
+            static_cast<double>(area.x + bound_col - center);
+        double clip_x0 = dst_x + static_cast<double>(first_img_col);
+        double clip_x1 = dst_x + static_cast<double>(last_img_col + 1);
+        clip_x0 = std::max(clip_x0, area_x0);
+        clip_x1 = std::min(clip_x1, area_x1);
+        if (clip_x1 <= clip_x0) return;
+        cairo_save(cr);
+        cairo_rectangle(cr, clip_x0, dst_y,
+                        clip_x1 - clip_x0, static_cast<double>(img_h));
+        cairo_clip(cr);
+        cairo_set_source_rgb(cr, color.r, color.g, color.b);
+        cairo_mask_surface(cr, mask, dst_x, dst_y);
+        cairo_restore(cr);
+    };
+
+    // Left half: full-height edge on the left bound, slope flaring left.
+    stamp_half(left_col, 0, center);
+    // Right half: full-height edge on the right bound, slope flaring right.
+    stamp_half(right_col, center, img_w - 1);
+}
+
 void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col,
                               cairo_surface_t* ink_plate) {
     if (area.w <= 0 || area.h <= 0) return;

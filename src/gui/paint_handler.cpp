@@ -341,8 +341,8 @@ void GuiPaintHandler::paint_region_wash(cairo_t* cr, const GuiRect& area) {
 
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_source_rgba(cr, kRegionWash.r, kRegionWash.g, kRegionWash.b,
-                          kRegionWashAlpha);
+    cairo_set_source_rgba(cr, kPlayheadCursorLight.r, kPlayheadCursorLight.g,
+                          kPlayheadCursorLight.b, kRegionWashAlpha);
     cairo_rectangle(cr, x0, static_cast<double>(area.y),
                     x1 - x0, static_cast<double>(area.h));
     cairo_fill(cr);
@@ -581,9 +581,33 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
                         /*draw_triangle=*/false,
                         /*ink_plate=*/wf_cache.surface);
     }
-    render_playhead(cr, area, px_x, kPlayheadCursor,
-                    /*draw_triangle=*/true,
-                    /*ink_plate=*/wf_cache.surface);
+
+    // While a region-select is active the normal cursor playhead DISSOLVES —
+    // neither its 1px vertical line nor its single triangle paints — and the
+    // split playhead takes its place: two half-triangles, one on each region
+    // bound. The bound columns use the SAME displayed-viewport recipe (disp_spp
+    // + wf_cache.fp_vp_start) as paint_region_wash, so the halves' shared edges
+    // land exactly on the wash's left/right edges. Region endpoints are
+    // active-domain frames already in the displayed domain, so their column is
+    // the plain viewport transform (no warp map walked, matching the wash). The
+    // scanner is untouched — only the cursor splits.
+    if (app.region.active) {
+        if (disp_spp > 0.0) {
+            const double vp_start =
+                static_cast<double>(wf_cache.fp_vp_start);
+            const int64_t lo = std::min(app.region.a_frame, app.region.b_frame);
+            const int64_t hi = std::max(app.region.a_frame, app.region.b_frame);
+            const int lo_col = static_cast<int>(std::nearbyint(
+                (static_cast<double>(lo) - vp_start) / disp_spp));
+            const int hi_col = static_cast<int>(std::nearbyint(
+                (static_cast<double>(hi) - vp_start) / disp_spp));
+            render_split_playhead(cr, area, lo_col, hi_col, kPlayheadCursor);
+        }
+    } else {
+        render_playhead(cr, area, px_x, kPlayheadCursor,
+                        /*draw_triangle=*/true,
+                        /*ink_plate=*/wf_cache.surface);
+    }
 }
 
 // -- GuiPaintHandler::paint_bottom_strip ---------------------------------
