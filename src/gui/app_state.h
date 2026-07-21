@@ -1032,9 +1032,12 @@ struct AppState {
     // bottom strip.
     PromptState prompt;
 
-    // Top-flag text editor. Active only when editing a flag rect
-    // in warp view. The editor owns the keyboard while active and
-    // overlays a custom rect + cursor on top of render_flags.
+    // Shared text-editor state for two editors distinguished by Kind: the
+    // top-strip flag editor (Kind::FlagPayload — active when editing a warp
+    // marker's payload, its text run and caret painted live in the marker-text
+    // lane centered over the marker, not on the flags, which are textless
+    // shapes) and the bottom-strip BPM editor (Kind::BpmBracket). The editor
+    // owns the keyboard while active.
     text_editor::State top_flag_editor;
     // Last-painted cursor visibility, so the tick can detect a flip and
     // invalidate the top strip without redundant repaints.

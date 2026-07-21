@@ -825,11 +825,14 @@ void init_monospace_grid_metrics(cairo_t* cr);
 // column. Both lane occupants — the hover popup and the flag editor — center
 // their run on the marker and clamp it fully onscreen within the lane (unlike
 // the flags, the lane text never hangs off an edge); this is that one
-// placement owner. Uses the painters' own column math against the active
-// display context's map (identity in source view, the live target map in
-// target view), so the run centers on the same column the flag paints. Returns
-// -1.0 for an invalid marker index; a valid off-view marker still returns a
-// clamped onscreen origin (the lane text is always visible). No cairo context.
+// placement owner. Uses the painters' own column math against
+// displayed_or_live_target_map — the event-synchronized displayed basis the
+// flag pixels were painted with (identity/empty in source view; in target view
+// the map the last committed frame's flag cache baked, with the live map as the
+// cold-state fallback) — so the run centers on the same column the flag paints.
+// Returns -1.0 for an invalid marker index; a valid off-view marker still
+// returns a clamped onscreen origin (the lane text is always visible). No cairo
+// context.
 double lane_text_left_x(
     const AppState& app, const GuiAudio& audio,
     int marker_idx, size_t glyph_count);

@@ -273,9 +273,10 @@ struct FlagCache {
 
     // The begin/end trim flag chips ride this cache (they live in
     // top_upper_row_area, inside top_strip_area). Their pixels depend on the
-    // displayed-domain bound positions, whether each bound is set, and each
-    // bound's selected bit — none of which bump any marker generation, so
-    // they are part of the cache identity. Mirrors the StemCache fp_trim_*
+    // displayed-domain bound positions (fp_trim_begin / fp_trim_end) and
+    // whether each bound is set (fp_trim_has_begin / fp_trim_has_end) — trim
+    // carries no selected state, and none of these bump any marker generation,
+    // so they are part of the cache identity. Mirrors the StemCache fp_trim_*
     // fields so chip and stem rebuild on the same triggers.
     int64_t   fp_trim_begin               = 0;
     int64_t   fp_trim_end                 = 0;
