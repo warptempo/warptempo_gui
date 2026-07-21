@@ -410,24 +410,21 @@ void render_waveform(cairo_t* cr,
     const double y_center = area.y + area.h * 0.5;
     const double half_h   = area.h * 0.5;
 
-    // Each column becomes a 1px-wide vertical rectangle (min->max). The y
-    // endpoints stay FRACTIONAL doubles — the waveform-only relaxation of the
-    // crisp-edge aliasing rule — so the peak envelope's top/bottom silhouette
-    // anti-aliases (feathers) rather than snapping jaggedly to whole rows. The
-    // side edges stay crisp because x is integer and the width is 1px (both
-    // vertical edges land on pixel boundaries).
+    // Each column becomes a 1px-wide integer-row rectangle, painted hard
+    // (ANTIALIAS_NONE below) so the plate is binary and carries no per-frame AA
+    // coverage cost during live zoom/pan. The y endpoints snap to whole rows.
     // accent: this column's source position falls inside a fallback span, so
     // it paints kAccent instead of `color`. Classified below by the column's
     // source range START (s0), the whole-column verdict for a range straddling
     // a span edge.
-    struct ColRect { int x; double y0, y1; bool accent; };
+    struct ColRect { int x, y0, y1; bool accent; };
     std::vector<ColRect> rects;
     rects.reserve(static_cast<size_t>(area.w));
 
     const bool have_spans = fallback_spans && !fallback_spans->empty();
 
-    const double y_lo = area.y;
-    const double y_hi = area.y + area.h;
+    const int y_lo = area.y;
+    const int y_hi = area.y + area.h;
 
     // Column i's left edge (f0) is column i-1's right edge (f1) — the same
     // expression yields the same double, so its translation is the same too.
@@ -475,11 +472,11 @@ void render_waveform(cairo_t* cr,
         const double min_val = mm.first;
         const double max_val = mm.second;
 
-        double y0 = y_center - max_val * half_h;
-        double y1 = y_center - min_val * half_h;
+        int y0 = static_cast<int>(std::lround(y_center - max_val * half_h));
+        int y1 = static_cast<int>(std::lround(y_center - min_val * half_h));
         // Any signal keeps at least one pixel so quiet material stays visible.
-        if (y1 - y0 < 1.0) y1 = y0 + 1.0;
-        // Clamp to the waveform area's pixel span.
+        if (y1 <= y0) y1 = y0 + 1;
+        // Clamp to the waveform area's pixel rows.
         if (y0 < y_lo) y0 = y_lo;
         if (y0 > y_hi) y0 = y_hi;
         if (y1 < y_lo) y1 = y_lo;
@@ -490,19 +487,14 @@ void render_waveform(cairo_t* cr,
     }
 
     cairo_save(cr);
-    // Waveform-only aliasing relaxation: antialias ON so the fractional top/
-    // bottom edges feather. The 1px-wide integer-x columns keep crisp vertical
-    // side edges; a single fill over all rects keeps adjacent full-coverage
-    // columns seamless at their shared interior edges.
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
 
-    // Two color groups, each a single fill so adjacent same-color columns stay
-    // seamless at their shared interior edges (the aliasing relaxation the
-    // comment above describes). A genuine color boundary between a kWaveform and
-    // a kAccent column is a real edge, not a seam, and its vertical edge lands
-    // on an integer pixel boundary so it stays crisp. With no spans the accent
-    // pass draws nothing and the base pass is byte-identical to the historical
-    // single fill.
+    // Two color groups, each a single hard fill so adjacent same-color columns
+    // stay seamless at their shared interior edges. A genuine color boundary
+    // between a kWaveform and a kAccent column is a real edge, not a seam, and
+    // its vertical edge lands on an integer pixel boundary so it stays crisp.
+    // With no spans the accent pass draws nothing and the base pass is
+    // byte-identical to the historical single fill.
     cairo_set_source_rgb(cr, color.r, color.g, color.b);
     for (const auto& R : rects) {
         if (R.accent) continue;
