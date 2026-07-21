@@ -528,7 +528,7 @@ constexpr int     kDragMovedThresholdPx = 3;
 // motion follows) re-reads the hovered marker's current fields in place.
 //
 // `lane_text` is the marker's own payload — the canonical flag line
-// (flag_text_iter) for a warp marker, the literal "phase reset" for a phase
+// (flag_text_iter) for a warp marker, the literal "p" for a phase
 // reset marker — sized and centered by `source_frame` in the lane. `readout_text`
 // is the pass/ref resolved readout for the bottom strip (compute_hover_popup_text),
 // empty on owners and phase resets. Both are computed once per rect-entry (or
@@ -550,6 +550,15 @@ struct HoverPopupState {
     // follows the keyboard mutation.
     long long   warp_gen  = -1;
     long long   phase_gen = -1;
+    // The displayed-map generation (app.displayed_map_gen) captured at set time.
+    // The hovered marker's IDENTITY is resolved by hit_test_flag against the
+    // displayed flag positions, so when the displayed map advances (a promotion)
+    // the flag under a stationary cursor can change even though neither marker
+    // store mutated. Bundling the map generation into the short-circuit forces a
+    // re-read on the next recompute, and the on_tick repair fires on a map-gen
+    // mismatch too — so a silent promotion cannot leave the hover naming a marker
+    // whose flag moved away (and cannot leave a stale copy_payload).
+    long long   displayed_gen = -1;
     // The hovered marker's authored source frame, the lane run's centering
     // origin (lane_text_left_x_at_frame) — column-agnostic, so the lane paint
     // needs no knowledge of which store the marker came from.
@@ -877,6 +886,15 @@ struct AppState {
     // staged CLEAR (empty map, source view) from no-stage.
     std::vector<WarpFrameMapSegment> staged_displayed_target_warp_frame_map;
     bool staged_displayed_valid = false;
+
+    // Monotonic counter bumped once each time on_redraw PROMOTES a staged
+    // displayed map into displayed_target_warp_frame_map (the top-of-frame
+    // promotion). Every promotion — target-view map swap or source-view clear —
+    // advances it, so hover identity (HoverPopupState::displayed_gen) can detect
+    // a silent geometry change under a stationary cursor and refresh on the next
+    // tick. Never reset (shutdown is terminal); wrap is unreachable at any real
+    // frame rate.
+    long long displayed_map_gen = 0;
 
     // Marker reposition drag state. Not reset across file loads — explicitly
     // cleared there and on button release / Escape.

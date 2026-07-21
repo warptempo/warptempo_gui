@@ -154,11 +154,25 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
 
     // (2) The old spp is read from the LIVE level (never stored).
     const double spp_old = current_samples_per_pixel(app, audio);
+    const double W = static_cast<double>(waveform_area(app).w);
+    const int64_t total = live_total_frames(app, audio);
 
     // (3) Pan at the old level, in the double domain: grab sign — drag right
-    // (dx>0) reveals earlier content, so the viewport moves left.
-    const double vp = static_cast<double>(app.viewport_start_sample) -
-                      dx * spp_old;
+    // (dx>0) reveals earlier content, so the viewport moves left. The result is
+    // WALL-CLAMPED here, at the old level, to the same song walls the downstream
+    // clamp_viewport_start enforces ([0, total − W·spp_old]): step (5) derives
+    // the anchor column and rebinds anchor_sample from vp, so both must see the
+    // viewport that will actually REST. Against the unclamped pan they would bind
+    // the anchor to a column past a saturated wall — a position the downstream
+    // clamp discards, leaving a stale off-screen anchor that only surfaces on the
+    // next zoom event. The grid snap is deliberately NOT reproduced (the wall
+    // clamp alone removes the failure class; the sub-pixel residue self-heals on
+    // the following event, exactly as step (5)'s live re-read does).
+    double vp = static_cast<double>(app.viewport_start_sample) - dx * spp_old;
+    const double vp_lo = 0.0;
+    const double vp_hi = std::max(0.0, static_cast<double>(total) - W * spp_old);
+    if (vp < vp_lo) vp = vp_lo;
+    if (vp > vp_hi) vp = vp_hi;
 
     // (4) Zoom INCREMENTALLY off the live level: this event's dy applies to the
     // current level (drag DOWN, dy>0, lowers the level → zooms in). No press
@@ -167,20 +181,19 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     // before the level moved); this incremental form has none.
     double new_level = app.zoom_level - dy / kZoomStripPxPerLevel;
     const double max_l = effective_max_zoom_level(
-        waveform_area(app).w, live_total_frames(app, audio),
-        audio.sample_rate());
+        W, total, audio.sample_rate());
     if (new_level < kMinZoom) new_level = kMinZoom;
     if (new_level > max_l)    new_level = max_l;
 
-    // (5) The anchor's drifted column under the post-pan viewport, with the
-    // Ableton EDGE TRICK: clamp the column into [0, W-1] (the effective waveform
-    // width), and when the clamp engages REBIND anchor_sample to that edge
-    // pixel's frame — the zoom focus never leaves the screen; a pan that pushes
-    // it to an edge PINS it there and it becomes the edge's content. Deriving the
-    // column from the (unclamped) post-pan vp is what makes pure pan an exact
-    // identity (see below), and reading the live viewport each event is what lets
-    // a song-wall clamp self-heal on the following event.
-    const double W = static_cast<double>(waveform_area(app).w);
+    // (5) The anchor's drifted column under the wall-clamped post-pan viewport,
+    // with the Ableton EDGE TRICK: clamp the column into [0, W-1] (the effective
+    // waveform width), and when the clamp engages REBIND anchor_sample to that
+    // edge pixel's frame — the zoom focus never leaves the screen; a pan that
+    // pushes it to an edge PINS it there and it becomes the edge's content.
+    // Deriving the column from the wall-clamped vp is what makes pure pan an
+    // exact identity (see below) even at a saturated wall, and reading the live
+    // viewport each event is what lets the sub-pixel grid snap self-heal on the
+    // following event.
     double anchor_col = (sd.anchor_sample - vp) / spp_old;
     const double col_max = W > 0.0 ? W - 1.0 : 0.0;
     double clamped_col = anchor_col;
@@ -195,10 +208,14 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     // clamp. IDENTITY PROOFS: pure pan (dy=0) is EXACT — new_level == old, so
     // apply reproduces vp = anchor_sample - anchor_col·spp_old bit-for-bit (the
     // column was derived from that same vp), and the level-unchanged dispatch
-    // rides the synchronous incremental pan path. Pure zoom (dx=0) leaves the
-    // anchor's current (possibly edge-pinned) column fixed and pivots the rescale
-    // around it. A both-unchanged event (level and viewport identical after the
-    // clamp) is a true no-op the entry point skips.
+    // rides the synchronous incremental pan path. Off the walls the pan arithmetic
+    // is unchanged, so the identity holds as before; AT a wall the clamped vp
+    // equals the viewport that will rest, the anchor column re-derives against it
+    // consistently, and apply reproduces the wall value — a saturated pan is a
+    // true no-op. Pure zoom (dx=0) leaves the anchor's current (possibly
+    // edge-pinned) column fixed and pivots the rescale around it. A both-unchanged
+    // event (level and viewport identical after the clamp) is a true no-op the
+    // entry point skips.
     viewport.apply_strip_drag_zoom(new_level, sd.anchor_sample, anchor_col,
                                    final_event);
 }

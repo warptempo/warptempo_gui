@@ -917,16 +917,19 @@ int main(int argc, char** argv) {
 
         // Stationary-cursor hover refresh. A keyboard mutation (tempo step,
         // Ctrl+N, nudge) changes the hovered marker's fields/position without a
-        // pointer-motion event, so nothing else re-reads the hover text. When a
-        // hover is showing and either store's generation moved past what the
-        // hover cached, drive one recompute here — the shared per-frame route,
-        // not a per-mutation-site call — so the lane/readout refresh in the same
-        // frame the mutation paints. recompute_hover_at_cursor re-stamps the
-        // generations, so this settles after one pass; a cleared hover
+        // pointer-motion event, so nothing else re-reads the hover text; likewise
+        // a silent displayed-map promotion (bumps displayed_map_gen with no store
+        // change) can move the flag under the stationary cursor. When a hover is
+        // showing and either store's generation OR the displayed-map generation
+        // moved past what the hover cached, drive one recompute here — the shared
+        // per-frame route, not a per-mutation-site call — so the lane/readout
+        // refresh in the same frame the change paints. recompute_hover_at_cursor
+        // re-stamps all three, so this settles after one pass; a cleared hover
         // (marker_index < 0) never trips it.
         if (app.hover_popup.marker_index >= 0 &&
             (app.hover_popup.warp_gen  != app.warpmarkers.generation() ||
-             app.hover_popup.phase_gen != app.phaseresetmarkers.generation())) {
+             app.hover_popup.phase_gen != app.phaseresetmarkers.generation() ||
+             app.hover_popup.displayed_gen != app.displayed_map_gen)) {
             viewport.recompute_hover_at_cursor();
         }
 

@@ -95,21 +95,20 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
 
 void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
     // The marker-text lane (top lane 2, between the trim chips and the flags)
-    // hosts three text tiers, arbitrated in ONE lane: the FlagPayload flag editor
-    // beats everything (it owns the lane alone while open — recompute_hover_at_
-    // cursor already clears the popup whenever any top_flag_editor is active, and
-    // the editor-first return below is the explicit backstop); below it, every
-    // SELECTED marker's own value paints PERSISTENTLY (not just on hover); and the
-    // transient HOVER run for an unselected marker paints on TOP of the selection
-    // runs (a hovered selected marker is already shown, no double paint). All
-    // paint live here (per-keystroke editor, per-frame selection, per-motion
-    // hover), after the flag-cache blit — no cache, the live-overlay role the
-    // bottom strip's editor/hover paints had before the lane existed. Every run
-    // centers its monospace text over its marker's painted column and clamps it
-    // fully onscreen (lane_text_left_x) on a kBackground fill behind the run with
-    // no border; that fill is what makes one run occlude another, so the selection
-    // runs occlude by the flags' own z-order (leftmost on top). The editor flashes
-    // its fill kAccent on an invalid commit.
+    // shows AT MOST ONE run, arbitrated in this precedence: the FlagPayload flag
+    // editor beats everything (it owns the lane alone while open — recompute_
+    // hover_at_cursor already clears the popup whenever any top_flag_editor is
+    // active, and the editor-first return below is the explicit backstop); else
+    // the HOVERED marker's own value while a hover is showing; else the LAST-
+    // SELECTED marker's own value (the same last-selected notion the bottom-strip
+    // readout falls back to — here shown for ANY marker type, not only pass/ref);
+    // else nothing. All paint live here (per-keystroke editor, per-motion hover,
+    // per-frame last-selected), after the flag-cache blit — no cache, the
+    // live-overlay role the bottom strip's editor/hover paints had before the lane
+    // existed. The run centers its monospace text over its marker's painted column
+    // and clamps it fully onscreen (lane_text_left_x_at_frame) on a kBackground
+    // fill behind the run with no border. The editor flashes its fill kAccent on
+    // an invalid commit.
     const GuiRect lane      = top_marker_text_row_area(app);
     const double  baseline  = lane.y + monospace_row_baseline_offset();
     const double  advance   = monospace_advance();
@@ -152,12 +151,11 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
         return;
     }
 
-    // One-run painter shared by the selection and hover tiers: kBackground fill
-    // exactly behind the run (AA off for a crisp edge), then the text — the
-    // plain-text tier, no border, no caret. source_frame centers the run on the
-    // marker's painted column (lane_text_left_x_at_frame), column-agnostic so
-    // this needs no knowledge of which store the marker came from; a bad advance
-    // or clamp yields left<0 and skips.
+    // One-run painter: kBackground fill exactly behind the run (AA off for a
+    // crisp edge), then the text — no border, no caret. source_frame centers the
+    // run on the marker's painted column (lane_text_left_x_at_frame), column-
+    // agnostic so this needs no knowledge of which store the marker came from; a
+    // bad advance or clamp yields left<0 and skips.
     auto paint_run = [&](int64_t source_frame, const std::string& txt) {
         if (txt.empty()) return;
         const double left = lane_text_left_x_at_frame(
@@ -175,55 +173,48 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
                                 flag_font_size_px());
     };
 
-    // Persistent selection runs: each SELECTED marker in the active view shows
-    // its OWN value — flag_text_iter for a warp marker (the one composer the flag
-    // paint, hit-rects, hover, and the Enter editor seed all share), the literal
-    // "phase reset" for a phase reset marker. Each is culled to the visible strip
-    // by its painted column (an offscreen selection shows no run) and collected
-    // with that column, then painted in REVERSE column order so the leftmost
-    // lands on top — the flags' own leftmost-on-top occlusion, with the
-    // kBackground fill blocking the run beneath.
+    // Tier 1: the HOVERED marker's own value wins whenever a hover is showing.
+    // recompute_hover_at_cursor already composed lane_text (flag_text_iter for a
+    // warp marker, the "p" literal for a phase reset) and captured source_frame.
+    if (!app.hover_popup.lane_text.empty()) {
+        paint_run(app.hover_popup.source_frame, app.hover_popup.lane_text);
+        return;
+    }
+
+    // Tier 2: else the LAST-SELECTED marker's own value — the same last-selected
+    // notion the bottom readout falls back to, here shown for ANY marker type.
+    // Compose from the live store the same way the hover composer does:
+    // flag_text_iter for a warp marker (the one composer the flag paint, hit-
+    // rects, hover, and the Enter editor seed all share), the "p" literal for a
+    // phase reset. The index is validated against the active view's list, and the
+    // run culls to the visible strip by its painted column exactly as the flags do
+    // (lane_text_left_x_at_frame annotates PAINTED FLAG PIXELS, so a fully-
+    // offscreen marker — which paints no flag — shows no run; an edge-pinned run
+    // would orphan and read as annotating whatever flag sits near the edge). The
+    // bottom readout stays the position-free surface for an offscreen last-selected
+    // marker. The column basis is displayed_or_live_target_map, the same basis the
+    // flag/lane painters and hit tests use.
+    const int idx = app.last_selected_marker;
+    if (idx < 0) return;
+    int64_t     src_f;
+    std::string txt;
+    if (app.active_markers_view == 'P') {
+        const auto& pv = app.phaseresetmarkers.markers();
+        if (idx >= static_cast<int>(pv.size())) return;
+        src_f = pv[idx].time_frame;
+        txt   = "p";
+    } else {
+        const auto& mv = app.warpmarkers.markers();
+        if (idx >= static_cast<int>(mv.size())) return;
+        src_f = mv[idx].time_frame;
+        txt   = flag_text_iter(mv, idx, app.iteration_mode_enabled);
+    }
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
-    const int  wave_w = waveform_area(app).w;
-    const bool phase  = (app.active_markers_view == 'P');
-    struct LaneRun {
-        int         col;
-        int64_t     source_frame;
-        std::string text;
-    };
-    std::vector<LaneRun> runs;
-    const int n = phase
-        ? static_cast<int>(app.phaseresetmarkers.markers().size())
-        : static_cast<int>(app.warpmarkers.markers().size());
-    for (int idx : app.selected_markers) {
-        if (idx < 0 || idx >= n) continue;
-        int64_t     src_f;
-        std::string txt;
-        if (phase) {
-            txt   = "phase reset";
-            src_f = app.phaseresetmarkers.markers()[idx].time_frame;
-        } else {
-            const auto& mv = app.warpmarkers.markers();
-            txt   = flag_text_iter(mv, idx, app.iteration_mode_enabled);
-            src_f = mv[idx].time_frame;
-        }
-        const int col = painted_column_of_source_frame(
-            app, audio, static_cast<double>(src_f), map);
-        if (col < 0 || col >= wave_w) continue;
-        runs.push_back({col, src_f, std::move(txt)});
-    }
-    std::sort(runs.begin(), runs.end(),
-              [](const LaneRun& a, const LaneRun& b) { return a.col < b.col; });
-    for (auto it = runs.rbegin(); it != runs.rend(); ++it)
-        paint_run(it->source_frame, it->text);
-
-    // Transient hover run on TOP of the selection runs, unless the hovered marker
-    // is itself selected (already shown above — no double paint).
-    if (!app.hover_popup.lane_text.empty() &&
-        !app.selected_markers.count(app.hover_popup.marker_index)) {
-        paint_run(app.hover_popup.source_frame, app.hover_popup.lane_text);
-    }
+    const int col = painted_column_of_source_frame(
+        app, audio, static_cast<double>(src_f), map);
+    if (col < 0 || col >= waveform_area(app).w) return;
+    paint_run(src_f, txt);
 }
 
 // -- GuiPaintHandler::paint_waveform_plate -------------------------------
@@ -748,6 +739,32 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
 void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     init_monospace_grid_metrics(cr);
 
+    // Event-synchronized hit geometry, PROMOTE phase (ruling at the selector):
+    // done at the TOP of the frame, BEFORE any painting, so the caches this
+    // frame blits (stems/flags/chips are blit-only below) AND the overlays this
+    // frame paints on top of them (the marker-text lane, hover, selection, the
+    // playhead) all land on the SAME map — the one the committed items were
+    // built against. Promoting at the frame's END instead let the overlays paint
+    // against the OLD map on the very frame that first blit the rebuilt caches,
+    // then advanced the map silently with no further damage, so those overlay
+    // pixels could stay misplaced (and a stationary hover could keep naming a
+    // marker whose flag had moved away). Promote the staged value the last item
+    // rebuild left, once — staged_displayed_valid clears on the first damage rect
+    // of the frame, so the remaining rects are no-ops; idle frames with no staged
+    // value do nothing. A rebuild always invalidates its item region, so the
+    // committing frame's damage always includes the items. No input dispatches
+    // mid-loop (single-threaded) and the whole frame still commits atomically
+    // after the loop in GuiPlatform::paint_one_frame, so a press only ever reads
+    // the last COMMITTED frame's geometry — that guarantee is unchanged. Bump
+    // displayed_map_gen so a silent geometry change is visible to hover identity.
+    if (app.staged_displayed_valid) {
+        app.displayed_target_warp_frame_map =
+            std::move(app.staged_displayed_target_warp_frame_map);
+        app.staged_displayed_target_warp_frame_map.clear();
+        app.staged_displayed_valid = false;
+        ++app.displayed_map_gen;
+    }
+
     cairo_save(cr);
     cairo_rectangle(cr, x, y, w, h);
     cairo_clip(cr);
@@ -834,24 +851,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     }
 
     cairo_restore(cr);
-
-    // Event-synchronized hit geometry, PROMOTE phase (ruling at the selector):
-    // this frame has now blitted the current item caches (stems/flags/chips are
-    // blit-only above), so advance the hit map to what the frame commits.
-    // Promote the staged value the last item rebuild left, once — idle frames
-    // with no staged value do nothing. on_redraw runs once per damage rect, but
-    // the whole frame commits atomically after this loop in
-    // GuiPlatform::paint_one_frame, and a rebuild always invalidates its item
-    // region, so the committing frame's damage always includes the items:
-    // promoting on the first rect of that frame lands the slot on this frame's
-    // pixels. No input dispatches mid-loop (single-threaded), so a press only
-    // ever reads the last COMMITTED frame's geometry.
-    if (app.staged_displayed_valid) {
-        app.displayed_target_warp_frame_map =
-            std::move(app.staged_displayed_target_warp_frame_map);
-        app.staged_displayed_target_warp_frame_map.clear();
-        app.staged_displayed_valid = false;
-    }
 
     // Force any pending Cairo ops out to the X server. The subsequent flush
     // in GuiPlatform::dispatch_event is then a cheap no-op.
