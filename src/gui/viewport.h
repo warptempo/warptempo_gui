@@ -96,7 +96,12 @@ struct Viewport {
     // Viewport mutators.
     void move_playhead_to(int64_t new_sample);
     void move_playhead_pixels(int delta_px);
-    void apply_zoom_change(double new_zoom_level);
+    // resync_scanner re-anchors the playback predictor to the real audio cursor
+    // (a DISCRETE-jump drift correction). Default true so every external caller
+    // (the `0` toggle, settings `:zoom=`, tab/working-zoom restore) re-anchors;
+    // the incremental-zoom callers (zoom_in/zoom_out/zoom_steps) pass false so
+    // the smoothly-extrapolating scanner does not snap per `=`/`-`/wheel step.
+    void apply_zoom_change(double new_zoom_level, bool resync_scanner = true);
     // Strip-drag apply: set the level and place the song anchor (anchor_sample,
     // frames) at anchor_x (its drifted column, window px in fractional pixels) —
     // rather than centering on the playhead the way apply_zoom_change does. The
