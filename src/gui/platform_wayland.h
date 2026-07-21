@@ -240,13 +240,12 @@ private:
     // virtual position is seeded from the absolute press position and then
     // advances by each relative-motion delta WITHOUT clamping (unbounded
     // travel); its rounded value is written into pointer_x_/pointer_y_ and
-    // delivered through on_motion_ exactly like an absolute motion. The
-    // restore point is the press position: the cursor reappears there when the
-    // lock is released.
+    // delivered through on_motion_ exactly like an absolute motion. On release
+    // the cursor reappears at the drag-traveled virtual_pointer_x_ (clamped to
+    // the window edge), frozen in y at the press row (capture_restore_y_).
     bool   pointer_captured_   = false;
     double virtual_pointer_x_  = 0.0;
     double virtual_pointer_y_  = 0.0;
-    double capture_restore_x_  = 0.0;
     double capture_restore_y_  = 0.0;
 
     // Latest wl_pointer.enter serial. Tracked for wl_pointer.set_cursor: the

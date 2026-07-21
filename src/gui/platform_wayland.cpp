@@ -2054,10 +2054,10 @@ void GuiPlatform::begin_pointer_capture() {
         return;
 
     // Seed the virtual position from the current absolute position and remember
-    // it as the restore point (the cursor reappears here on release).
+    // the press row as the restore y (the cursor reappears at that row on
+    // release; its restore x rides the drag's traveled virtual_pointer_x_).
     virtual_pointer_x_ = static_cast<double>(pointer_x_);
     virtual_pointer_y_ = static_cast<double>(pointer_y_);
-    capture_restore_x_ = virtual_pointer_x_;
     capture_restore_y_ = virtual_pointer_y_;
 
     // Hide the cursor. set_cursor with a NULL surface is the protocol's "hide"
@@ -2091,12 +2091,21 @@ void GuiPlatform::release_pointer_lock(bool apply_restore_hint) {
 
     if (locked_pointer_) {
         if (apply_restore_hint) {
-            // Return the cursor to the press position when the lock is
-            // destroyed. The hint is double-buffered against the constrained
-            // surface, so commit it before destroying the lock.
+            // Return the cursor to its drag-traveled x when the lock is
+            // destroyed: virtual_pointer_x_ is the press x advanced by the
+            // drag's total x-travel, clamped to the window edge, while y stays
+            // frozen at the press row (capture_restore_y_). The cursor lands
+            // where the drag left it in x — the Ableton affordance shared by
+            // all three captured drags. The hint is surface-local, the same
+            // space as virtual_pointer_x_ and width_. It is double-buffered
+            // against the constrained surface, so commit it before destroying
+            // the lock.
+            const double restore_x = std::clamp(
+                virtual_pointer_x_, 0.0,
+                static_cast<double>(std::max(0, width_ - 1)));
             zwp_locked_pointer_v1_set_cursor_position_hint(
                 locked_pointer_,
-                wl_fixed_from_double(capture_restore_x_),
+                wl_fixed_from_double(restore_x),
                 wl_fixed_from_double(capture_restore_y_));
             if (wl_surface_) wl_surface_commit(wl_surface_);
         }
