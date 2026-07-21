@@ -1411,13 +1411,10 @@ enum class TrimHit { None, Begin, End };
 // is set — the sole consumer (route_trim_chip_press) routes here only then (a
 // lone bound is gesture-inert), so both bounds are guaranteed present.
 // AUTHORING views — the active tab's live pair, project-level in both 'W' and
-// 'P' views. The chip glyph ("b"/"e") is drawn hl_pad to the right of the
-// bound's column, so a column-only test would miss clicks on the visible chip.
-// The rect mirrors regular-flag hit geometry (flag_chip_rect, the shared
-// chip-rect helper): x = round(text_left), w = round(glyph_advance +
-// 2*flag_pad_x_px()) + 2*kChipOutlinePx (the outline ring is part of the rect),
-// with y/h from the row metrics; the same rect the renderers fill, so paint and
-// hit cannot drift. Tests both mouse_x and mouse_y. Walks the display
+// 'P' views. Each chip is a textless flag-sized rectangle (flag_lane_w_px()
+// wide) CENTERED on the bound's painted column, exactly what render_trim_flags
+// fills — this rect is built the same way (round(center_x) - flag_w/2), so
+// paint and hit cannot drift. Tests both mouse_x and mouse_y. Walks the display
 // warp_frame_map in target view so the hit lands on the visually-drawn chip.
 // The chip and the inter-chip bridge are the ONLY trim grab handles (the
 // waveform stem grab retired).

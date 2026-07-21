@@ -23,11 +23,12 @@
 
 namespace {
 
-// Flag text mirrors the canonical line's PAYLOAD (post-pipe). All
-// metadata (b=/e=/#) is invisible in the rect; the `|` separator sits to
-// the left of the rect, anchoring it to the marker column. Color conveys
-// selection (kSelected); a disabled marker still paints its flag, half-triangle,
-// and (for the last-selected marker) its stem, dimmed under kDisabledMarkerAlpha.
+// Flag text mirrors the canonical line's PAYLOAD (post-pipe); metadata
+// (b=/e=/#) never appears in it. The flag shape itself is textless — this is
+// the base composer flag_text_iter wraps, and every marker-text-lane surface
+// (the hover popup over an eligible pass/ref marker, and the Enter flag
+// editor's seeded initial text) routes through that wrapper, so what they
+// show mirrors this exactly.
 //
 // Variants:
 //   label_ref              → "a.42"

@@ -199,8 +199,8 @@ inline double flag_pad_y_px() { return std::nearbyint(-1.0 * gui_font_scale()); 
 // The solid outline ring outside the chip padding: part of the chip rect and
 // the row metric (a chip is outline + pad + glyph ink). The single width knob;
 // baked into flag_chip_rect and the monospace row/baseline metrics so every
-// derived surface (strip heights, stem overhang, baseline solves, hit rects)
-// tracks it automatically.
+// derived surface (strip heights, baseline solves, hit rects) tracks it
+// automatically.
 inline constexpr int kChipOutlinePx = 1;
 
 // The glyph-run inset from a chip's left edge: the outline ring plus the left
@@ -358,19 +358,19 @@ inline int flag_chip_width_px(size_t glyph_count) {
 // glyph_count is the exact glyph count and glyph_count * monospace_advance() is
 // the exact advance, identical at paint and hit, with zero surface dependence.
 //
-// Inputs:
-//   text_left   - the chip's left edge as the caller positioned it (left-anchored
-//                 on the marker column for marker flags; the trim anchoring for
-//                 b/e chips). Chip left edge = round(text_left); the glyph run sits
+// Inputs (sole caller today: render_editor_text_box, for the marker-text-lane
+// flag editor and the bottom-strip editors):
+//   text_left   - the box's left edge as the caller positioned it (back-derived
+//                 from the editable-text anchor via EditorTextBox::hl_pad).
+//                 Chip left edge = round(text_left); the glyph run sits
 //                 flag_glyph_inset_px() (ring + left inner pad) to the right of
 //                 it, folded into where the caller places the glyph origin vs.
 //                 text_left (see consumers).
-//   glyph_count - number of glyphs in the chip's text (== text.length() for the
-//                 ASCII chip strings). Width = flag_chip_width_px(glyph_count).
-//   baseline_y  - the text baseline y the caller solved for its row (Lower row
-//                 for regular/phase-reset chips, Upper for trim). The box top is
-//                 baseline_y - monospace_row_baseline_offset(); the height is
-//                 the full monospace_row_h() slot.
+//   glyph_count - number of glyphs in the box's text (== text.length()).
+//                 Width = flag_chip_width_px(glyph_count).
+//   baseline_y  - the text baseline y the caller solved for its row. The box
+//                 top is baseline_y - monospace_row_baseline_offset(); the
+//                 height is the full monospace_row_h() slot.
 //
 // Returns the integer GuiRect [x, y, w, h]; rounding happens here, once.
 // Consumers use the returned ints directly — no consumer re-rounds or
