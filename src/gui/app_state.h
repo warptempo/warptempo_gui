@@ -499,7 +499,9 @@ struct StripDragState {
 // pointer (begin_strip_pointer_capture, the same cursor-hide + lock the zoom
 // strip uses): while captured the platform delivers unbounded virtual
 // coordinates, so the pan travels infinitely while the viewport clamps at the
-// song walls; the cursor reappears at the press point on release. PAN-ONLY,
+// song walls; the cursor reappears at the raw traveled virtual_pointer_x_ (the
+// compositor clamps an off-window hint on-screen), y at the press row — the
+// pan sets no anchor-stem restore override, unlike the strip drags. PAN-ONLY,
 // though — no zoom axis and no anchor stem (the stem is the zoom pivot
 // affordance, gated on strip_drag.active). Navigation-class: allowed in
 // read-only, deliberately does NOT override follow, never touches the playhead
@@ -959,8 +961,8 @@ struct AppState {
     // cleared there and on button release / Escape.
     DragState     drag;
 
-    // Region-select drag state (Ctrl+Alt left-drag). Cleared on button release,
-    // Escape, and file load.
+    // Region-select drag state (Shift-exact left-drag). Cleared on button
+    // release, Escape, and file load.
     RegionDragState region_drag;
 
     // Scrub drag state (plain waveform left-drag). Cleared on button release,

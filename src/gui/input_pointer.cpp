@@ -249,6 +249,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // the keyboard.
     if (app.prompt.active) return;
 
+    // A double-click is two CONSECUTIVE clicks: snapshot the pending candidate
+    // and clear the shared field here, so ANY intervening press invalidates it.
+    // The consume checks below read this snapshot; a motionless release re-seeds
+    // a fresh candidate afterward. One closed instrumentation point — the clear
+    // covers every non-consuming press (a strip/scrub/chip arm, a modal swallow)
+    // without a clear scattered on each path.
+    const DoubleClickCandidate dc_at_press = app.double_click;
+    app.double_click = DoubleClickCandidate{};
+
     // F2.1: mouse drag-to-select inside the active text editor. A press on
     // the active editor's text region places the caret and arms a selection
     // drag (anchor == caret until the pointer moves). Resolved before the
@@ -285,12 +294,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // boundaries the editor's Ctrl+Left/Right use), arming no drag.
                 // The surface tag keeps it from consuming a flag / zoom-row
                 // candidate.
-                const DoubleClickCandidate& dc = app.double_click;
+                const DoubleClickCandidate& dc = dc_at_press;
                 if (dc.surface == DoubleClickSurface::EditorText &&
                     monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
                     std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
                     std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
-                    app.double_click = DoubleClickCandidate{};
                     const int idx = text_editor::byte_index_from_click_x(
                         static_cast<double>(x), g.text_left, g.advance,
                         static_cast<int>(g.ed->pending.size()));
@@ -393,11 +401,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // candidate's first click briefly captured and hid the cursor at
                 // its press and restored it at the motionless release; this
                 // second press never captures.
-                const DoubleClickCandidate& dc = app.double_click;
+                const DoubleClickCandidate& dc = dc_at_press;
                 if (dc.surface == DoubleClickSurface::ZoomRow &&
                     monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
                     std::abs(x - dc.press_x) <= kDoubleClickSlackPx) {
-                    app.double_click = DoubleClickCandidate{};
                     run_zoom_double_click_command();
                     return;
                 }
@@ -620,13 +627,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // and the press stays a plain second select. On a consumed
                     // open no pending drag is armed (the editor now owns input).
                     bool opened_editor = false;
-                    const DoubleClickCandidate& dc = app.double_click;
+                    const DoubleClickCandidate& dc = dc_at_press;
                     if (dc.surface == DoubleClickSurface::Flag &&
                         dc.target == hit &&
                         monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
                         std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
                         std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
-                        app.double_click = DoubleClickCandidate{};
                         if (app.active_markers_view != 'P' &&
                             !active_view_state(app).read_only) {
                             flag_editor.enter_top_flag_edit(hit);
@@ -775,7 +781,9 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
                 .target = -1};
         }
         app.strip_drag = StripDragState{};
-        end_strip_pointer_capture();  // reappear the cursor at the press point
+        // reappear the cursor at the anchor-stem column (y frozen at the press
+        // row) — the restore x override the drag set each event.
+        end_strip_pointer_capture();
         return;
     }
     if (app.scroll_drag.active) {
@@ -783,8 +791,9 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // there is nothing to finalize but the predictor. The continuous pan
         // deferred per-event resyncs, so re-anchor the predictor once here. The
         // pan captured the pointer at its arm, so end the capture (reappear the
-        // cursor at the press point); idempotent, so a degraded compositor that
-        // never captured is unharmed.
+        // cursor at the raw traveled virtual_pointer_x_, y frozen at the press
+        // row — the pan sets no anchor-stem override); idempotent, so a degraded
+        // compositor that never captured is unharmed.
         if (playback.is_playing()) playback.resync_predictor();
         app.scroll_drag = ScrollDragState{};
         end_strip_pointer_capture();
