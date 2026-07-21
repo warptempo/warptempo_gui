@@ -517,19 +517,34 @@ constexpr int     kDragMovedThresholdPx = 3;
 // strip; paint_marker_text_lane), and a pass/label_ref warp marker ALSO shows
 // its resolved tempo in the bottom strip's transient row (paint_bottom_strip).
 // The motion and viewport-recompute handlers set these fields the instant the
-// cursor lands on a flag rect (no dwell); mutation paths / dismiss conditions
-// clear the whole struct.
+// cursor lands on a flag rect (no dwell); dismiss conditions clear the whole
+// struct. A store mutation under a stationary cursor does NOT clear — the cached
+// generations go stale, and the recompute (driven by the on_tick refresh when no
+// motion follows) re-reads the hovered marker's current fields in place.
 //
 // `lane_text` is the marker's own payload — the canonical flag line
 // (flag_text_iter) for a warp marker, the literal "phase reset" for a phase
 // reset marker — sized and centered by `source_frame` in the lane. `readout_text`
 // is the pass/ref resolved readout for the bottom strip (compute_hover_popup_text),
-// empty on owners and phase resets. Both are computed once per rect-entry and
-// read unchanged by the paint path, so paint never repeats the math. Discarded
-// on rect-exit; there is no asynchronous work to cancel — a transition
-// recomputes the text and the prior result is dropped.
+// empty on owners and phase resets. Both are computed once per rect-entry (or
+// per in-place mutation of the hovered marker) and read unchanged by the paint
+// path, so paint never repeats the math. Discarded on rect-exit; there is no
+// asynchronous work to cancel — a transition recomputes the text and the prior
+// result is dropped.
 struct HoverPopupState {
     int         marker_index = -1;
+    // Marker-store generations captured at set time, one per column (the same
+    // counters the stem/flag caches fingerprint). marker_index alone identifies
+    // WHICH marker is hovered, but every derived field (lane_text, readout_text,
+    // copy_payload, source_frame) is read from that marker's CURRENT fields and
+    // position, so an in-place mutation under a stationary cursor — a tempo step,
+    // a Ctrl+N eligibility change, a nudge — would otherwise leave the cached
+    // text stale. The recompute short-circuit requires index AND both generations
+    // equal, so any store mutation forces a full re-read on the next recompute;
+    // the on_tick refresh drives that recompute even when no pointer motion
+    // follows the keyboard mutation.
+    long long   warp_gen  = -1;
+    long long   phase_gen = -1;
     // The hovered marker's authored source frame, the lane run's centering
     // origin (lane_text_left_x_at_frame) — column-agnostic, so the lane paint
     // needs no knowledge of which store the marker came from.

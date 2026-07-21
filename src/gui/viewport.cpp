@@ -497,9 +497,18 @@ void Viewport::recompute_hover_at_cursor() {
     // builds the target_warp_frame_map internally when active_audio_view ==
     // Target so the flag rects it walks match what paint_handler renders at
     // translated columns.
+    // Mutation-sensitive short-circuit: the same hovered marker with both stores
+    // unchanged needs no re-read. A store mutation (either column) bumps its
+    // generation, so an in-place edit of the hovered marker — tempo step, Ctrl+N,
+    // nudge — falls through here and re-reads fields, position, eligibility, and
+    // payload from the live store below, even though the hit index is unchanged.
+    const long long warp_gen  = app.warpmarkers.generation();
+    const long long phase_gen = app.phaseresetmarkers.generation();
     const int hit = hit_test_flag(app, audio,
                                   app.last_mouse_x, app.last_mouse_y);
-    if (hit == app.hover_popup.marker_index) return;
+    if (hit == app.hover_popup.marker_index &&
+        warp_gen  == app.hover_popup.warp_gen &&
+        phase_gen == app.hover_popup.phase_gen) return;
 
     // No dwell: recompute both surfaces once. The LANE shows the hovered
     // marker's own value regardless of eligibility — the canonical flag line
@@ -510,6 +519,11 @@ void Viewport::recompute_hover_at_cursor() {
     // phase resets have nothing to resolve.
     const bool was_visible = app.hover_popup.any_visible();
     app.hover_popup.marker_index = hit;
+    // Stamp the generations that produced this set (both columns, even when
+    // hit < 0), so the short-circuit and the on_tick refresh settle until the
+    // next real store change.
+    app.hover_popup.warp_gen  = warp_gen;
+    app.hover_popup.phase_gen = phase_gen;
     app.hover_popup.source_frame = 0;
     app.hover_popup.lane_text.clear();
     app.hover_popup.readout_text.clear();

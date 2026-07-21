@@ -915,6 +915,21 @@ int main(int argc, char** argv) {
         // waveform all snap together at the worker's completion swap.
         paint_handler.maybe_rebuild_flag_cache();
 
+        // Stationary-cursor hover refresh. A keyboard mutation (tempo step,
+        // Ctrl+N, nudge) changes the hovered marker's fields/position without a
+        // pointer-motion event, so nothing else re-reads the hover text. When a
+        // hover is showing and either store's generation moved past what the
+        // hover cached, drive one recompute here — the shared per-frame route,
+        // not a per-mutation-site call — so the lane/readout refresh in the same
+        // frame the mutation paints. recompute_hover_at_cursor re-stamps the
+        // generations, so this settles after one pass; a cleared hover
+        // (marker_index < 0) never trips it.
+        if (app.hover_popup.marker_index >= 0 &&
+            (app.hover_popup.warp_gen  != app.warpmarkers.generation() ||
+             app.hover_popup.phase_gen != app.phaseresetmarkers.generation())) {
+            viewport.recompute_hover_at_cursor();
+        }
+
         // Blink the editor cursor independently of playback. Compare the
         // current visibility against the last painted state and invalidate
         // the top strip when it flips. Cheap: top_strip is small.

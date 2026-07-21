@@ -128,12 +128,13 @@ inline constexpr GuiColor kAccentOutline    = hex(0xE5655F);
 inline constexpr GuiColor kTrimMarkerOutline = hex(0xFFA040);
 
 // Single dimming factor for a DISABLED marker, applied uniformly across its
-// flag (chip ring + fill + glyphs), its half-triangle, and — for the
-// last-selected marker — its stem. Stems paint only for the last-selected
-// marker, so omission can no longer signal disablement — this alpha is the sole
-// disabled cue. Selection controls the color class (kSelected family) and, for
-// the anchor, the stem reveal; disablement controls this alpha, and the two
-// compose. Architect-tunable.
+// whole unified textless shape — the rectangle fill, its single outside-only
+// outline ring, and the fused tip-down triangle (all drawn by paint_flag_shape)
+// — and, for the last-selected marker, its stem. Stems paint only for the
+// last-selected marker, so omission can no longer signal disablement — this
+// alpha is the sole disabled cue. Selection controls the color class (kSelected
+// family) and, for the anchor, the stem reveal; disablement controls this
+// alpha, and the two compose. Architect-tunable.
 inline constexpr double kDisabledMarkerAlpha = 0.45;
 
 // Trim boundary stem color (#F67400 orange). Distinct from
@@ -607,8 +608,9 @@ void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width);
 // iterate_visible_flags_impl): the flag_lane_w_px() x flag_lane_h_px()
 // rectangle in the FLAG LANE plus the tip-down triangle directly beneath it in
 // the TRIANGLE LANE, treated as one shape and filled in the marker's color
-// class. There is NO TEXT (the payload moves to the marker-text lane in a
-// later change). There is no elision — overlapping shapes occlude instead.
+// class. There is NO TEXT (the payload lives in the marker-text lane, shown on
+// hover and edited in the Enter flag editor). There is no elision — overlapping
+// shapes occlude instead.
 //
 // Color class:
 //   Not selected: fill kMarker, outline kMarkerOutline.

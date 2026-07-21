@@ -20,9 +20,10 @@
 // resolver and the engine path never see these GUI-only fields.
 struct GuiWarpMarker : WarpMarker {
     // Iteration mode. Session-only render-parameter scratchpad: never
-    // serialized, lost on app close, populated and edited inline via the
-    // iteration popup that appears above each owning marker's flag rect
-    // when iteration mode is on. Signed tempo deltas in integer cents —
+    // serialized, lost on app close, populated and edited through the marker-text
+    // lane — the bracket surfaces in the hover lane text and is authored in the
+    // Enter flag editor (the flags themselves are textless). Signed tempo deltas
+    // in integer cents —
     // the same integer-cents domain the tempo itself lives in, so the
     // sweep's per-cell base + delta is plain integer addition. nullopt
     // means "blank" (popup shows []); when set, both are set and
