@@ -118,6 +118,13 @@ inline constexpr GuiColor kPlayheadCursor   = hex(0x1ABC9C);  // green cursor
 inline constexpr GuiColor kAccent           = hex(0xBF332E);
 inline constexpr GuiColor kText             = hex(0xFCFCFC);  // Breeze paper white
 
+// The strip-drag anchor stem's grey — plainly dimmer than kText (#fcfcfc) and
+// clearly brighter than kBackground (#1a1a1f). The anchor stem is a transient
+// pivot affordance shown only mid-drag, so it reads as a muted guide rather than
+// competing with the crisp white marker/text ink. Dimmed by hue, not alpha; the
+// kBackground ink-notch overdraw where it crosses waveform samples is unchanged.
+inline constexpr GuiColor kStripAnchorStem  = hex(0x8C8C8C);
+
 // The chip outline palette — a brighter sibling of each fill
 // (kMarker / kSelected / kAccent / kTrimMarker). Painted as the solid 1px
 // outline ring around a chip (see EditorTextBox::outline / kChipOutlinePx);
@@ -250,8 +257,17 @@ inline constexpr int kFlagHeightPx = 19;
 // carry a >= 5 px floor so a tiny font still leaves a usable, outline-able
 // shape.
 inline int flag_lane_w_px() {
-    const int w = static_cast<int>(std::nearbyint(
+    int w = static_cast<int>(std::nearbyint(
         static_cast<double>(kFlagWidthPx) * gui_font_scale()));
+    // Force the scaled width ODD (bump an even result up by one). An odd flag
+    // width is the invariant that keeps the fused tip-down triangle's tip
+    // centered exactly on the marker's 1px column AND keeps the playhead mask
+    // width (2*playhead_triangle_h_px() - 1) equal to the flag width at every
+    // font size: with an even width, playhead_triangle_h_px() = (w+1)/2 rounds
+    // down and the mask comes out one pixel NARROWER than the flag (e.g. w=20
+    // -> H=10 -> mask 19), breaking the marker/playhead shape identity. The
+    // floor below stays odd (5).
+    if ((w & 1) == 0) ++w;
     return w < 5 ? 5 : w;
 }
 inline int flag_lane_h_px() {
@@ -276,6 +292,24 @@ inline int flag_lane_h_px() {
 inline int playhead_triangle_h_px() {
     const int h = (flag_lane_w_px() + 1) / 2;
     return h < 2 ? 2 : h;
+}
+
+// Half-width (px, measured from the triangle's vertical centerline) of the
+// shared tip-down flag/playhead triangle at `rows_below_base` pixel rows below
+// its BASE (top) edge. The base row spans the full flag width — half-width
+// flag_lane_w_px()/2 — and the triangle tapers LINEARLY to a zero-width tip
+// playhead_triangle_h_px() rows further down. This is the single owner of that
+// taper: paint_flag_shape derives the triangle's base corners and apex from it,
+// and hit_test_flag uses it to decide whether a point in the triangle lane is
+// inside the shape, so the painted slope and the clickable slope cannot drift.
+// Clamped to the [base, tip] span (0 above the base, 0 at/below the tip).
+inline double flag_triangle_half_width_at(double rows_below_base) {
+    const double H = static_cast<double>(playhead_triangle_h_px());
+    if (H <= 0.0) return 0.0;
+    double t = rows_below_base / H;   // 0 at the base, 1 at the tip
+    if (t < 0.0) t = 0.0;
+    if (t > 1.0) t = 1.0;
+    return (static_cast<double>(flag_lane_w_px()) / 2.0) * (1.0 - t);
 }
 
 // The cached cairo A8 mask surface for the tip-down triangle (W = 2H-1 by H,
@@ -525,7 +559,9 @@ void render_playhead(cairo_t* cr,
 
 // Draws the strip-drag ANCHOR STEM: a 1-pixel vertical line at the drag's pivot
 // column `col` (window pixels within `area`, clamped here to [0, area.w-1]),
-// spanning the full waveform height like a marker stem, in kText. The anchor is
+// spanning the full waveform height like a marker stem, in the dimmer-grey
+// kStripAnchorStem (a transient drag affordance, deliberately less loud than a
+// marker stem). The anchor is
 // the clamped column the strip-drag math pins each event — edge-included, so an
 // edge-pinned anchor draws the stem exactly at the edge and the clamp becomes
 // visible (the Ableton affordance). Over waveform ink the same kBackground notch

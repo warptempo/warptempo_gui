@@ -129,8 +129,13 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
             static_cast<int64_t>(std::nearbyint(spp * wave_w));
         if (ms < vp || ms >= static_cast<double>(vp_end)) return;
         const double x_raw = (ms - vp) / spp;
-        const double center_x =
-            static_cast<double>(top.x) + std::nearbyint(x_raw);
+        // Local column clamped into [0, W-1], byte-identical to
+        // render_trim_flags' col_of: the inclusive END wall T-1 at full zoom-out
+        // rounds to column W (one past the surface), so the clamp lands it on the
+        // last visible column. Begin/frame-0 maps to column 0 and is unaffected.
+        int local_col = static_cast<int>(std::nearbyint(x_raw));
+        if (wave_w > 0) local_col = std::clamp(local_col, 0, wave_w - 1);
+        const double center_x = static_cast<double>(top.x + local_col);
         // The chip is a fixed flag-sized rectangle EDGE-ANCHORED on the bound
         // column, exactly as render_trim_flags paints it: the begin chip's LEFT
         // edge sits on the column (rect left = col), the end chip's RIGHT edge
@@ -139,7 +144,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
         // above). A bound is an edge, not a point — the deliberate asymmetry vs
         // centered marker flags, so a bound at frame 0 / EOF is fully onscreen.
         const int flag_w = flag_lane_w_px();
-        const int col = static_cast<int>(std::round(center_x));
+        const int col = top.x + local_col;
         GuiRect cr_rect;
         cr_rect.x = (which == TrimHit::Begin) ? col : col - flag_w + 1;
         cr_rect.y = row.y;
@@ -213,10 +218,37 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
             vp_start, vp_end, audio.sample_rate(),
             tmap_arg, drag_overlay);
     }
+    // A point hits a flag when it lies inside the flag RECTANGLE (the emitted
+    // FlagHitRect) OR inside the fused tip-down TRIANGLE directly below it. The
+    // triangle shares the rect's center as its vertical centerline; its top edge
+    // is the rect bottom (r.y + r.h) and it tapers over playhead_triangle_h_px()
+    // rows to the tip. Half-width per row comes from flag_triangle_half_width_at
+    // — the SAME taper owner paint_flag_shape fills with — so the clickable slope
+    // matches the painted one. The queried pixel is tested at its center
+    // (+0.5, +0.5). The playhead triangle paints in the same lane but is not in
+    // `rects`, so it is never a hit target; the marker test covers the triangle
+    // even where the playhead visually overlaps it.
+    const int tri_h = playhead_triangle_h_px();
+    auto contains = [&](const FlagHitRect& r) -> bool {
+        if (mouse_x >= r.x && mouse_x < r.x + r.w &&
+            mouse_y >= r.y && mouse_y < r.y + r.h) {
+            return true;
+        }
+        if (tri_h <= 0) return false;
+        const double rb   = r.y + r.h;                       // triangle top
+        const double tbot = rb + static_cast<double>(tri_h); // tip row (exclusive)
+        const double py   = static_cast<double>(mouse_y) + 0.5;
+        if (py < rb || py >= tbot) return false;
+        const double hw  = flag_triangle_half_width_at(py - rb);
+        const double cxl = r.x + r.w / 2.0;                  // triangle centerline
+        const double px  = static_cast<double>(mouse_x) + 0.5;
+        return std::fabs(px - cxl) <= hw;
+    };
+
     // Mirror of the painters' z-order (render_flags / render_phase_reset_flags):
     // selected shapes paint above unselected, and within each class the leftmost
-    // paints on top. Walk the rects TWICE — first the first-containing rect whose
-    // marker is selected, else the first-containing rect unconditionally. rects
+    // paints on top. Walk the rects TWICE — first the first-containing shape whose
+    // marker is selected, else the first-containing shape unconditionally. rects
     // are emitted ascending-x, so each forward pass resolves to that class's
     // leftmost = topmost. Topmost = selected leftmost > leftmost. WYSIWYG for
     // every consumer (selection clicks, plain flag-drag reposition grabs, the
@@ -224,15 +256,12 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // flags are now fixed-width shapes, so there is no editor-pending width to
     // track — the editing target's flag is an ordinary cached shape.
     for (const auto& r : rects) {
-        if (mouse_x >= r.x && mouse_x < r.x + r.w &&
-            mouse_y >= r.y && mouse_y < r.y + r.h &&
-            app.selected_markers.count(r.marker_index)) {
+        if (contains(r) && app.selected_markers.count(r.marker_index)) {
             return r.marker_index;
         }
     }
     for (const auto& r : rects) {
-        if (mouse_x >= r.x && mouse_x < r.x + r.w &&
-            mouse_y >= r.y && mouse_y < r.y + r.h) {
+        if (contains(r)) {
             return r.marker_index;
         }
     }

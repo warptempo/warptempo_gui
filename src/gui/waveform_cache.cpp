@@ -1141,6 +1141,22 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         drag_overlay = &drag_overlay_storage;
     }
 
+    // Z-order rule: trim paints FIRST (behind the marker flags). The b/e trim
+    // chips cap their stems in the trim-chip lane, and each chip's strip-crossing
+    // stem segment runs down through the marker-text / flag / triangle lanes — so
+    // where that stem shares pixels with a marker flag the trim segment must lose.
+    // Painting it before render_flags/render_phase_reset_flags lets the marker
+    // flags overpaint it (markers over trim). Painted in both 'W' and 'P' views
+    // (like the stems). The real waveform_area locates the lanes and supplies the
+    // column-mapping width; the top strip's screen origin equals the cache surface
+    // origin (0,0), so local_top_strip and the real waveform rect need no
+    // translation.
+    render_trim_flags(
+        ccr, local_top_strip, waveform_area(app),
+        vp_start, vp_end,
+        TrimRange{dtrim.begin, dtrim.end},
+        dtrim.has_begin, dtrim.has_end);
+
     if (mv == 'P') {
         render_phase_reset_flags(
             ccr, local_top_strip, wave_w,
@@ -1157,17 +1173,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                      tmap_arg,
                      drag_overlay);
     }
-
-    // The b/e trim chips cap their stems in the trim-chip lane. Painted in both
-    // 'W' and 'P' views (like the stems). The real waveform_area locates the
-    // lanes and supplies the column-mapping width; the top strip's screen origin
-    // equals the cache surface origin (0,0), so local_top_strip and the real
-    // waveform rect need no translation.
-    render_trim_flags(
-        ccr, local_top_strip, waveform_area(app),
-        vp_start, vp_end,
-        TrimRange{dtrim.begin, dtrim.end},
-        dtrim.has_begin, dtrim.has_end);
 
     cairo_destroy(ccr);
 

@@ -274,6 +274,16 @@ void paint_flag_shape(cairo_t* cr, double center_x,
     const int rb     = static_cast<int>(std::round(tri_top_d)); // rect bottom = tri top
     const int tbot   = static_cast<int>(std::round(tip_y_d));   // triangle lane bottom
 
+    // Triangle centerline = the rect's own center, and its base half-width comes
+    // from the shared taper owner (flag_triangle_half_width_at at row 0 = the
+    // full flag half-width). Deriving the base corners/apex from these keeps the
+    // painted slope identical to hit_test_flag's triangle-lane slope. For the
+    // marker flags (center anchor + odd width) the centerline lands exactly on
+    // cx+0.5 and the base corners on rx / rx+rw, so the base shares the rect's
+    // hard bottom edge with no gap or double-drawn seam.
+    const double tri_cx    = static_cast<double>(rx) + rw / 2.0;
+    const double tri_bhalf = flag_triangle_half_width_at(0.0);
+
     cairo_save(cr);
     const bool dim = alpha < 1.0;
     if (dim) cairo_push_group(cr);
@@ -291,9 +301,9 @@ void paint_flag_shape(cairo_t* cr, double center_x,
     cairo_restore(cr);
     if (with_triangle) {
         cairo_set_source_rgb(cr, fill.r, fill.g, fill.b);
-        cairo_move_to(cr, static_cast<double>(rx),      static_cast<double>(rb));
-        cairo_line_to(cr, static_cast<double>(rx + rw), static_cast<double>(rb));
-        cairo_line_to(cr, cx + 0.5,                     static_cast<double>(tbot));
+        cairo_move_to(cr, tri_cx - tri_bhalf, static_cast<double>(rb));
+        cairo_line_to(cr, tri_cx + tri_bhalf, static_cast<double>(rb));
+        cairo_line_to(cr, tri_cx,             static_cast<double>(tbot));
         cairo_close_path(cr);
         cairo_fill(cr);
     }
@@ -307,7 +317,7 @@ void paint_flag_shape(cairo_t* cr, double center_x,
     cairo_line_to(cr, rx + rw - 0.5,      ry + 0.5);          // top edge
     cairo_line_to(cr, rx + rw - 0.5,      rb - 0.5);          // right edge to rect bottom
     if (with_triangle) {
-        cairo_line_to(cr, cx + 0.5,        tbot - 0.5);       // right slope to tip
+        cairo_line_to(cr, tri_cx,          tbot - 0.5);       // right slope to tip
         cairo_line_to(cr, rx + 0.5,        rb - 0.5);         // left slope up
     } else {
         cairo_line_to(cr, rx + 0.5,        rb - 0.5);         // rect bottom edge
@@ -547,7 +557,8 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col,
 
     const double x_px = static_cast<double>(area.x) + col + 0.5;
     cairo_save(cr);
-    cairo_set_source_rgb(cr, kText.r, kText.g, kText.b);
+    cairo_set_source_rgb(cr, kStripAnchorStem.r, kStripAnchorStem.g,
+                         kStripAnchorStem.b);
     cairo_set_line_width(cr, 1.0);
     cairo_move_to(cr, x_px, static_cast<double>(area.y));
     cairo_line_to(cr, x_px, static_cast<double>(area.y + area.h));
@@ -618,7 +629,14 @@ void render_trim_stems(cairo_t* cr,
         const double x_raw =
             (ms - static_cast<double>(viewport_start_sample))
                 / samples_per_pixel;
-        const int icol = static_cast<int>(std::nearbyint(x_raw));
+        // Clamp into the visible column range [0, W-1], matching render_trim_flags
+        // (col_of): the inclusive END wall T-1 at full zoom-out rounds to column W
+        // (one past the surface). Without the clamp this waveform stem segment
+        // would land offscreen at W while the strip-crossing segment/chip sit at
+        // the clamped W-1, breaking the one-column connection between them.
+        int icol = static_cast<int>(std::nearbyint(x_raw));
+        if (waveform_area.w > 0)
+            icol = std::clamp(icol, 0, waveform_area.w - 1);
         const double x_px = waveform_area.x + icol + 0.5;
         cairo_move_to(cr, x_px, y_stem_top);
         cairo_line_to(cr, x_px, y1);
@@ -678,7 +696,18 @@ void render_trim_flags(cairo_t* cr,
         const double x_raw =
             (static_cast<double>(frame) -
              static_cast<double>(viewport_start_sample)) / samples_per_pixel;
-        return static_cast<int>(std::nearbyint(x_raw));
+        const int c = static_cast<int>(std::nearbyint(x_raw));
+        // Clamp into the visible column range [0, W-1]. At full zoom-out the
+        // inclusive END wall T-1 rounds to column W (one past the surface); left
+        // unclamped, the right-edge-anchored end chip loses its bound-edge pixel
+        // and outline to the cache clip and its stems fall entirely offscreen.
+        // Clamping lands the wall on the last visible column so the chip stays
+        // fully visible and connected. Begin/frame-0 already maps to column 0 and
+        // is unaffected. hit_test_trim_chip clamps identically so paint and hit
+        // stay column-identical.
+        if (waveform_area.w > 0)
+            return std::clamp(c, 0, waveform_area.w - 1);
+        return c;
     };
     auto in_viewport = [&](int64_t frame) {
         const double ms = static_cast<double>(frame);
