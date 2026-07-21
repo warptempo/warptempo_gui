@@ -717,8 +717,10 @@ int main(int argc, char** argv) {
     viewport.request_waveform_sync_ =
         [&]() { paint_handler.force_synchronous_waveform_rebuild(); };
 
-    // Strip-drag pointer capture: the input handler's strip-row begin/end hooks
-    // drive the platform's cursor lock (pointer-constraints + relative-pointer).
+    // Pointer capture: the input handler's begin/end hooks drive the platform's
+    // cursor lock (pointer-constraints + relative-pointer). Shared by three
+    // waveform/strip gestures — the zoom-strip drag, the ctrl-exact waveform
+    // strip drag, and the alt-exact waveform pan — for infinite pan/zoom travel.
     // Both platform methods self-guard (begin no-ops when a capture is live or
     // the compositor lacks the managers; end is idempotent), so the input layer
     // stays agnostic to whether capture is available.

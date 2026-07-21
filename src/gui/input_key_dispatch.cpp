@@ -407,10 +407,12 @@ void GuiInputHandler::cancel_active_drags() {
     // The Alt+drag grab-pan has already applied its motion incrementally, so
     // stopping is just ending the gesture at its current position — Esc is not a
     // cancel here (navigation, nothing to restore). Re-anchor the predictor once,
-    // as its release does (the continuous pan deferred per-event resyncs).
+    // as its release does (the continuous pan deferred per-event resyncs), and
+    // end the pointer capture it took at its arm (idempotent).
     if (app.scroll_drag.active) {
         if (playback.is_playing()) playback.resync_predictor();
         app.scroll_drag = ScrollDragState{};
+        end_strip_pointer_capture();
     }
     // The region drag IS a cancel: unlike the strip drag it restores the region
     // to how it rested at arm (the pre-drag snapshot), then ends the gesture.

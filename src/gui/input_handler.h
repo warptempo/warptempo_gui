@@ -263,11 +263,11 @@ struct GuiInputHandler {
     // cancel before raising the close prompt).
     void cancel_active_drags();
 
-    // Arm the Ctrl+Alt left-drag region-select gesture at a press. `anchor_frame`
+    // Arm the Shift left-drag region-select gesture at a press. `anchor_frame`
     // is the active-domain frame under the press column; (x, y) is the press
     // position for the press-becomes-drag threshold. Captures the pre-drag region
     // for an Esc cancel and dissolves the resting region at mouse-down. Only the
-    // Ctrl+Alt-exact waveform press calls this.
+    // Shift-exact waveform press calls this.
     void arm_region_drag_at(int64_t anchor_frame, int x, int y);
 
     // Arm the plain left-drag SCRUB gesture at a press. (x, y) is the press

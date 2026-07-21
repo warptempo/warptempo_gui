@@ -405,11 +405,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 app.strip_drag.anchor_sample =
                     static_cast<double>(app.viewport_start_sample) +
                     static_cast<double>(x) * spp;
+                // Zoom-row origin: a motionless release seeds the ZoomRow
+                // double-click candidate (the ctrl-exact waveform arm sets this
+                // false so its release seeds nothing).
+                app.strip_drag.double_click_seed = true;
                 // Ableton-style pointer capture: hide and lock the cursor at
                 // the press so motion feeds the gesture as unbounded virtual
                 // coordinates (infinite pan/zoom travel). Self-guarding no-op
-                // on a degraded compositor. Every strip-drag exit path calls
-                // the matching end hook exactly once.
+                // on a degraded compositor. The capture is shared by three
+                // gestures (this zoom strip, the ctrl-exact waveform strip drag,
+                // and the alt-exact pan); every exit path of each calls the
+                // matching end hook exactly once (it is idempotent).
                 begin_strip_pointer_capture();
                 return;
             }
@@ -466,8 +472,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // single-select + arm the pending marker drag, Shift = toggle
         // membership), so it is resolved once here. The WAVEFORM never SELECTS a
         // marker — a plain press is deselect-all + playhead placement +
-        // scrub-drag arm, a Shift press a no-op — so no marker scan runs on the
-        // waveform at all (the invisible stem is not a grab target). Trim bounds
+        // scrub-drag arm, and a Shift press arms the region drag (handled in the
+        // modifier block above) — so no marker scan runs on the waveform at all
+        // (the invisible stem is not a grab target). Trim bounds
         // are grabbed only by their top-strip chips / the inter-chip bridge on a
         // PLAIN chip-row press (route_trim_chip_press below); a click over a
         // bound's waveform stem is an ordinary waveform click (the stem grab
@@ -475,67 +482,102 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         int hit = -1;
         if (inside_top) hit = hit_test_flag(app, audio, x, y);
 
-        // Alt-exact left press on the waveform arms the incremental grab-pan —
-        // the ONE Alt pointer gesture. Continuous 1:1 pan of the viewport by the
-        // per-event pixel delta (see on_motion). Navigation-class: allowed in
-        // read-only, never touches the playhead or selection. It deliberately
-        // does NOT override follow — a pan during playback moves the view along
-        // with the audio rather than signaling a stop, unlike the marker / trim /
-        // playhead gestures. No pointer capture (absolute motion, the viewport
-        // walls clamp naturally). A motionless Alt press-release commits nothing
-        // (the scroll happens on motion). Alt-exact anywhere else (the top strip
-        // included) is a strict no-op below.
+        // Alt-exact left press on the waveform arms the captured grab-pan — the
+        // ONE Alt pointer gesture. Continuous 1:1 pan of the viewport by the
+        // per-event pixel delta (see on_motion). It CAPTURES the pointer
+        // (begin_strip_pointer_capture, the same cursor-hide + lock the zoom
+        // strip uses) so the pan travels infinitely under unbounded virtual
+        // coordinates while the viewport clamps at the song walls — pan-only, no
+        // zoom axis and no anchor stem (the stem is the zoom pivot affordance,
+        // gated on strip_drag.active). Navigation-class: allowed in read-only,
+        // never touches the playhead or selection. It deliberately does NOT
+        // override follow — a pan during playback moves the view along with the
+        // audio rather than signaling a stop, unlike the marker / trim / playhead
+        // gestures. A motionless Alt press-release commits nothing but the brief
+        // cursor hide/reappear (the scroll happens on motion). Alt-exact anywhere
+        // else (the top strip included) is a strict no-op below.
         if (alt && !ctrl && !shift) {
             if (inside_waveform) {
                 app.scroll_drag = ScrollDragState{};
                 app.scroll_drag.active = true;
                 app.scroll_drag.last_x = x;
+                begin_strip_pointer_capture();
             }
             return;
         }
 
-        // Ctrl+Alt-exact left press on the waveform arms the REGION-select drag —
+        // Ctrl-exact left press on the waveform arms the dual-axis strip drag —
+        // the SAME gesture the zoom row arms (StripDragState / apply_strip_drag_at),
+        // triggered here for reach: it gets the cursor capture ("swallow"), the
+        // anchor stem, the edge clamp, and dual-axis zoom+pan for free. The arm is
+        // byte-identical to the zoom-row arm (anchor_sample from the click song
+        // position, press/last seeds, begin_strip_pointer_capture), diverging at
+        // ONE point — double_click_seed=false, so a motionless ctrl+waveform
+        // press-release seeds no ZoomRow double-click candidate (that affordance
+        // stays zoom-row-only). Navigation-class: allowed in read-only, never
+        // touches the playhead or selection. Ctrl-exact anywhere else (the top
+        // strip included) is a strict no-op below.
+        if (ctrl && !alt && !shift) {
+            if (inside_waveform) {
+                const double spp = current_samples_per_pixel(app, audio);
+                app.strip_drag = StripDragState{};
+                app.strip_drag.active  = true;
+                app.strip_drag.press_x = x;
+                app.strip_drag.press_y = y;
+                app.strip_drag.last_x  = x;
+                app.strip_drag.last_y  = y;
+                app.strip_drag.anchor_sample =
+                    static_cast<double>(app.viewport_start_sample) +
+                    static_cast<double>(x) * spp;
+                // Waveform origin: never seeds a zoom-row double-click candidate.
+                app.strip_drag.double_click_seed = false;
+                begin_strip_pointer_capture();
+            }
+            return;
+        }
+
+        // Shift-exact left press on the waveform arms the REGION-select drag —
         // region-only navigation: it does NOT clear the selection and does NOT
         // move the playhead (the plain press owns those, now that a plain drag
         // scrubs). It snapshots and dissolves any resting highlight at mouse-down
         // and arms the drag anchored at the press column's active-domain frame;
         // motion past the shared threshold extends the region, Esc restores the
         // pre-press highlight. Allowed in read-only (a transient visual). A
-        // motionless Ctrl+Alt press-release is a no-op (the region machinery only
+        // motionless Shift press-release is a no-op (the region machinery only
         // acts on a real drag). In the gutter (no column) there is nothing to
-        // anchor, so it is inert. Ctrl+Alt anywhere else (the top strip included)
-        // is a strict no-op below.
-        if (ctrl && alt && !shift) {
-            if (inside_waveform) {
-                const int click_rel_x = x - area.x;
-                if (click_rel_x >= 0 && click_rel_x < area.w) {
-                    const int64_t anchor =
-                        playhead_frame_at_click_column(app, audio, click_rel_x);
-                    arm_region_drag_at(anchor, x, y);
-                }
+        // anchor, so it is inert. Gated on inside_waveform so a Shift press on the
+        // TOP STRIP falls through to the flag-membership toggle below (shift is
+        // the marker-select modifier there).
+        if (shift && !ctrl && !alt && inside_waveform) {
+            const int click_rel_x = x - area.x;
+            if (click_rel_x >= 0 && click_rel_x < area.w) {
+                const int64_t anchor =
+                    playhead_frame_at_click_column(app, audio, click_rel_x);
+                arm_region_drag_at(anchor, x, y);
             }
             return;
         }
 
         // Strict modifier matching: the marker reposition arm lives on the plain
         // flag press and trim's chip/bridge drags on the plain chip-row press, so
-        // every remaining modified combination — Ctrl, Ctrl+Shift, Shift+Alt,
-        // Ctrl+Alt+Shift, ... — no-ops here. Only a plain or Shift-modified base
-        // press proceeds (Shift adjusts the selection). The Alt+wheel pan and the
-        // Alt keyboard chords are untouched (separate handlers).
+        // every remaining modified combination — Ctrl+Alt (now a strict no-op),
+        // Ctrl+Shift, Shift+Alt, Ctrl+Alt+Shift, ... — no-ops here. Only a plain
+        // or Shift-on-the-top-strip base press proceeds (Shift adjusts the flag
+        // selection). The Alt+wheel pan and the Alt keyboard chords are untouched
+        // (separate handlers).
         if (ctrl || alt) return;
 
-        // Plain or Shift press. In the waveform area a plain press clears the
-        // marker selection (deselect-all), places the playhead at the clicked
-        // column, and arms the scrub drag — it never SELECTS a marker; a
-        // Shift press on the waveform is a strict no-op. In the top strip a plain
-        // CHIP-ROW press arms a trim chip/bridge drag (claimed ahead of the
-        // marker flag select); otherwise (flag click) selection is the
-        // whole interface, BOTH views: a plain click single-selects and ARMS a
-        // pending marker drag (moves the marker if the pointer crosses the
-        // threshold, else a pure click); Shift+click toggles multi-select
-        // membership only. Neither moves the playhead — only the Tab family and
-        // `c` land the playhead on a marker.
+        // Plain or Shift press. What reaches here on the WAVEFORM is only a plain
+        // press (a Shift waveform press armed the region drag above and returned):
+        // it clears the marker selection (deselect-all), places the playhead at
+        // the clicked column, and arms the scrub drag — it never SELECTS a marker.
+        // In the top strip a plain CHIP-ROW press arms a trim chip/bridge drag
+        // (claimed ahead of the marker flag select); otherwise (flag click)
+        // selection is the whole interface, BOTH views: a plain click
+        // single-selects and ARMS a pending marker drag (moves the marker if the
+        // pointer crosses the threshold, else a pure click); Shift+click toggles
+        // multi-select membership only. Neither moves the playhead — only the Tab
+        // family and `c` land the playhead on a marker.
         if (inside_top) {
             // Plain unmodified chip-row press arms a trim chip/bridge drag,
             // claimed BEFORE the marker flag single-select. The chip row and the
@@ -605,8 +647,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // arms the SCRUB drag — which DISSOLVES any resting highlight at this
         // mouse-down (arm_scrub_drag_at clears it), so the wash vanishes on press.
         // Past the threshold the scrub places the playhead per motion event and
-        // stops playback at the crossing (see on_motion). A Shift press is a
-        // strict no-op anywhere on the waveform, selection included.
+        // stops playback at the crossing (see on_motion). A Shift waveform press
+        // never reaches here (it armed the region drag above and returned); the
+        // guard below is defensive.
         {
             if (shift) return;
             // The clear runs FIRST, before the gutter early-return below, so an
@@ -650,7 +693,7 @@ void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
     // Snapshot the resting region BEFORE clearing it, so an Esc cancel of a
     // live drag still restores the pre-press highlight.
     app.region_drag.pre_region   = app.region;
-    // Clear any resting region immediately at press: a Ctrl+Alt waveform press
+    // Clear any resting region immediately at press: a Shift waveform press
     // dissolves an existing highlight on mouse-down (the wash repaints away
     // now, not at release). A moved drag rebuilds a fresh region live; a
     // motionless press-release simply leaves it cleared. pre_region above keeps
@@ -706,11 +749,14 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // Double-click seeding: a MOTIONLESS zoom-row release records a
         // candidate (this release x equals the press x); a release that MOVED
         // records nothing and clears any candidate, so a drag can never seed the
-        // second click of a double-click.
+        // second click of a double-click. Only the ZOOM-ROW arm seeds
+        // (double_click_seed): a ctrl+waveform strip drag shares this branch but
+        // carries the double-click nowhere, so a motionless one commits and seeds
+        // nothing.
         if (app.strip_drag.moved) {
             apply_strip_drag_at(x, y, /*final_event=*/true);
             app.double_click = DoubleClickCandidate{};
-        } else {
+        } else if (app.strip_drag.double_click_seed) {
             app.double_click = DoubleClickCandidate{
                 .surface = DoubleClickSurface::ZoomRow,
                 .time_ms = monotonic_ms(), .press_x = x, .press_y = y,
@@ -723,9 +769,13 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     if (app.scroll_drag.active) {
         // Alt+drag grab-pan end: the pan applied incrementally during motion, so
         // there is nothing to finalize but the predictor. The continuous pan
-        // deferred per-event resyncs, so re-anchor the predictor once here.
+        // deferred per-event resyncs, so re-anchor the predictor once here. The
+        // pan captured the pointer at its arm, so end the capture (reappear the
+        // cursor at the press point); idempotent, so a degraded compositor that
+        // never captured is unharmed.
         if (playback.is_playing()) playback.resync_predictor();
         app.scroll_drag = ScrollDragState{};
+        end_strip_pointer_capture();
         return;
     }
     if (app.region_drag.active) {
@@ -870,6 +920,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (!mods.primary_button_held) {     // button lost -> end like release
             if (playback.is_playing()) playback.resync_predictor();
             app.scroll_drag = ScrollDragState{};
+            end_strip_pointer_capture();     // reappear the cursor (idempotent)
             return;
         }
         const double spp = current_samples_per_pixel(app, audio);

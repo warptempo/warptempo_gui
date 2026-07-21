@@ -311,7 +311,8 @@ struct UndoHistory {
 // Esc), and a plain waveform PRESS (the press dissolves any resting highlight at
 // mouse-down, before it knows whether the gesture is a click or a fresh scrub;
 // at on_button_press via arm_scrub_drag_at). The region gesture itself is armed
-// by a CTRL+ALT-exact waveform press now (a plain drag scrubs the playhead). The
+// by a SHIFT-exact waveform press now (shift is the marker-select modifier, so
+// shift = select-region reads naturally; a plain drag scrubs the playhead). The
 // W/P marker-column switch does NOT clear it — the region is not marker-related.
 struct RegionState {
     bool    active  = false;
@@ -319,16 +320,16 @@ struct RegionState {
     int64_t b_frame = 0;   // the far (pointer) endpoint
 };
 
-// State for the CTRL+ALT-exact left-drag region-select gesture on the waveform.
+// State for the SHIFT-exact left-drag region-select gesture on the waveform.
 // Region-only: the arming press does NOT deselect, does NOT move the playhead —
 // it snapshots the resting region into pre_region, DISSOLVES it at mouse-down,
 // and arms this drag; motion past the shared press-becomes-drag threshold
 // (kDragMovedThresholdPx) extends app.region from the press frame to the pointer
 // column. A sub-threshold press-release is a no-op — the highlight already
 // dissolved at press, so there is no release-time collapse (a motionless
-// Ctrl+Alt click simply disarms). Only a Ctrl+Alt-exact waveform press arms
+// shift click simply disarms). Only a Shift-exact waveform press arms
 // (a plain drag scrubs the playhead instead — see ScrubDragState), so an armed
-// drag always signals a Ctrl+Alt waveform press. A completed drag rests the
+// drag always signals a Shift waveform press. A completed drag rests the
 // region on release; Esc cancels a live drag and restores the pre-press region
 // captured here at arm (the marker drag's snapshot pattern — cheap, two ints).
 // Session-only, never undoable.
@@ -450,15 +451,17 @@ struct TrimDragState {
     int64_t anchor_active_frame  = 0;
 };
 
-// Plain left-drag on the live zoom-strip row (Ableton-style navigation). The
-// row is DUAL-AXIS, freely composed with no axis lock: vertical motion drives
-// the zoom level and horizontal motion pans the viewport, both applied per
-// motion event. The gesture is INCREMENTAL — each event reads the LIVE zoom
-// level and viewport (never a stored press baseline) and applies its own dx/dy
-// on top, so nothing goes stale across composed pan/zoom phases. One song
-// anchor (anchor_sample) is the focus the zoom pivots around; the pan re-derives
-// its drifted column each event, and the Ableton edge trick REBINDS the anchor
-// to the nearest visible pixel when a pan pushes its column offscreen (the focus
+// Dual-axis zoom/pan drag (Ableton-style navigation), armed by TWO surfaces: a
+// plain left-drag on the live zoom-strip row, and a CTRL-exact left-drag inside
+// the waveform (the same gesture, triggered on the waveform for reach). The
+// gesture is DUAL-AXIS, freely composed with no axis lock: vertical motion
+// drives the zoom level and horizontal motion pans the viewport, both applied
+// per motion event. It is INCREMENTAL — each event reads the LIVE zoom level and
+// viewport (never a stored press baseline) and applies its own dx/dy on top, so
+// nothing goes stale across composed pan/zoom phases. One song anchor
+// (anchor_sample) is the focus the zoom pivots around; the pan re-derives its
+// drifted column each event, and the Ableton edge trick REBINDS the anchor to
+// the nearest visible pixel when a pan pushes its column offscreen (the focus
 // pins to the edge it hits and becomes that edge's content). Navigation-class:
 // never touches the playhead or selection, allowed in read-only, does not toggle
 // or override follow. Cleared on button release / button-lost and on file load;
@@ -469,6 +472,12 @@ struct StripDragState {
     // press-release must commit nothing, so the terminating event finalizes
     // (one final apply + synchronous rebuild) only when this is set.
     bool   moved     = false;
+    // True for the zoom-row arm, FALSE for the ctrl-exact waveform arm. A
+    // motionless release seeds a ZoomRow double-click candidate only when this
+    // is set, so the zoom-bar double-click stays a zoom-row-only affordance — a
+    // ctrl+waveform press-release commits and seeds nothing. Every other
+    // release / motion-lost / cancel path is origin-agnostic (keys on `active`).
+    bool   double_click_seed = true;
     // Pointer position at the press (window px) — the drag-threshold reference
     // ONLY (the Chebyshev gate deciding press-becomes-drag). Not a zoom or pan
     // baseline: the incremental model reads no press level and no fixed column.
@@ -486,11 +495,18 @@ struct StripDragState {
 };
 
 // Alt+drag on the waveform: continuous 1:1 grab-pan of the viewport, driven by
-// pointer motion, panning by the exact per-event pixel delta. Navigation-class:
-// allowed in read-only, deliberately does NOT override follow, no pointer
-// capture (absolute motion, the viewport walls clamp naturally), never touches
-// the playhead or selection. Cleared on button release / lost button, on
-// Escape/close (cancel_active_drags), and on file load; no Esc-restore.
+// pointer motion, panning by the exact per-event pixel delta. It CAPTURES the
+// pointer (begin_strip_pointer_capture, the same cursor-hide + lock the zoom
+// strip uses): while captured the platform delivers unbounded virtual
+// coordinates, so the pan travels infinitely while the viewport clamps at the
+// song walls; the cursor reappears at the press point on release. PAN-ONLY,
+// though — no zoom axis and no anchor stem (the stem is the zoom pivot
+// affordance, gated on strip_drag.active). Navigation-class: allowed in
+// read-only, deliberately does NOT override follow, never touches the playhead
+// or selection. Every exit path (release, motion button-lost, cancel) calls
+// end_strip_pointer_capture (idempotent). Cleared on button release / lost
+// button, on Escape/close (cancel_active_drags), and on file load; no
+// Esc-restore.
 struct ScrollDragState {
     bool   active   = false;
     // Pointer x (px) at the previous motion event, seeded at the Alt press.
