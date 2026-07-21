@@ -263,12 +263,18 @@ struct GuiInputHandler {
     // cancel before raising the close prompt).
     void cancel_active_drags();
 
-    // Arm the plain left-drag region-select gesture at a press. `anchor_frame`
-    // is the active-domain frame the press just placed the playhead at; (x, y)
-    // is the press position for the press-becomes-drag threshold. Captures the
-    // pre-drag region for an Esc cancel. Only the two plain-press waveform sites
-    // call this; a Shift press is a click and does not arm.
+    // Arm the Ctrl+Alt left-drag region-select gesture at a press. `anchor_frame`
+    // is the active-domain frame under the press column; (x, y) is the press
+    // position for the press-becomes-drag threshold. Captures the pre-drag region
+    // for an Esc cancel and dissolves the resting region at mouse-down. Only the
+    // Ctrl+Alt-exact waveform press calls this.
     void arm_region_drag_at(int64_t anchor_frame, int x, int y);
+
+    // Arm the plain left-drag SCRUB gesture at a press. (x, y) is the press
+    // position for the press-becomes-drag threshold. Dissolves any resting region
+    // highlight at mouse-down (the collapse the plain press always did); the
+    // scrub itself paints no wash. Only the plain waveform press calls this.
+    void arm_scrub_drag_at(int x, int y);
 
     // Pump half of the kill-and-park dispatch rule, reached through
     // GuiTargetRender's dispatch_pending_archival hook on every
@@ -470,13 +476,17 @@ private:
     // playhead exactly on a marker.
     bool jump_playhead_to_focused_marker();
 
-    // The bare `0` key and the zoom-row double-click are the SAME command,
-    // factored here so both invoke it byte-identically by construction: a
-    // toggle between the working zoom and full zoom-out. At the working zoom →
-    // full zoom-out (the per-file effective ceiling, whole song visible);
-    // anywhere else → the working zoom (kWorkingZoomLevel), centered on the
-    // playhead via apply_zoom_change.
+    // The bare `0` key zoom TOGGLE: at the working zoom → full zoom-out (the
+    // per-file effective ceiling, whole song visible); anywhere else → the
+    // working zoom (kWorkingZoomLevel), centered on the playhead via
+    // apply_zoom_change.
     void run_zoom_toggle_command();
+
+    // The zoom-row DOUBLE-CLICK command. Shares run_zoom_toggle_command's
+    // recenter/no-op plumbing (apply_zoom_change) but DIVERGES: zoom-out wins at
+    // intermediate levels. At the full-out ceiling → the working zoom; at ANY
+    // other level (the working zoom included) → full zoom-out.
+    void run_zoom_double_click_command();
 
     // Esc-cancel handlers: while a render or queued batch is in flight, Esc
     // cancels it. Returns true if it consumed the key (on_key then returns).

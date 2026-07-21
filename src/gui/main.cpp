@@ -116,8 +116,8 @@ namespace {
 // render.cpp over GuiWarpMarker.
 
 // UndoEntry, DragState, UndoHistory, RegionState, RegionDragState,
-// HoverPopupState, DialogTrigger, PromptState, ViewState, AppState live in
-// app_state.h, alongside the Viewport struct.
+// ScrubDragState, HoverPopupState, DialogTrigger, PromptState, ViewState,
+// AppState live in app_state.h, alongside the Viewport struct.
 
 
 // The settings format / write helpers live in settings_io.{h,cpp} so

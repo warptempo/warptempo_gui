@@ -210,14 +210,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // drag guard: Tab, undo, `t`, and the rest never see a key mid-drag.
     // The editor text-selection drag has its own modal gate above
     // the text-editor handlers; the pointer gestures here — the marker /
-    // trim / strip / region drags, the Alt+drag grab-pan (scroll_drag), and the
-    // pending marker / trim drags (a press held before its reposition begins) —
-    // are mutually exclusive with it. scroll_drag belongs on the list too: a live
-    // pan must swallow authoring keys, and Esc must route to cancel_active_drags
-    // (which ends it) rather than falling past to run a hotkey over a latched pan.
+    // trim / strip / region / scrub drags, the Alt+drag grab-pan (scroll_drag),
+    // and the pending marker / trim drags (a press held before its reposition
+    // begins) — are mutually exclusive with it. scroll_drag belongs on the list
+    // too: a live pan must swallow authoring keys, and Esc must route to
+    // cancel_active_drags (which ends it) rather than falling past to run a hotkey
+    // over a latched pan. scrub_drag likewise: a live scrub owns the keyboard, and
+    // Esc ends it (playhead stays).
     if (app.drag.active || app.trim_drag.active ||
         app.strip_drag.active || app.region_drag.active ||
-        app.scroll_drag.active ||
+        app.scrub_drag.active || app.scroll_drag.active ||
         app.pending_marker_drag.active || app.pending_trim_drag.active) {
         if (key == GuiKeys::Escape) {
             cancel_active_drags();
@@ -396,8 +398,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Bare 0 toggles between the working zoom and full zoom-out, the same
-    // command the zoom-row double-click runs. C remains the direct
+    // Bare 0 toggles between the working zoom and full zoom-out
+    // (run_zoom_toggle_command). The zoom-row double-click deliberately DIVERGES
+    // from this (run_zoom_double_click_command — zoom-out wins at intermediate
+    // levels); the key keeps the plain toggle. C remains the direct
     // working-zoom-and-center gesture. Digits 1..9 are intentionally unbound.
     if (!ctrl && !alt && !shift && key == GuiKeys::Digit0) {
         run_zoom_toggle_command();
@@ -653,16 +657,35 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
 }
 
 void GuiInputHandler::run_zoom_toggle_command() {
-    // The bare `0` key and the zoom-row double-click are the SAME command —
-    // byte-identical by construction: at the working zoom → full zoom-out (the
-    // per-file effective ceiling, whole song visible); anywhere else → the
-    // working zoom, centered on the playhead via apply_zoom_change.
+    // The bare `0` key toggle: at the working zoom → full zoom-out (the per-file
+    // effective ceiling, whole song visible); anywhere else → the working zoom,
+    // centered on the playhead via apply_zoom_change. The zoom-row DOUBLE-CLICK
+    // deliberately DIVERGES from this (see run_zoom_double_click_command): the
+    // toggle here returns any non-working level to the working zoom, whereas the
+    // double-click lets zoom-out win at intermediate levels.
     if (app.zoom_level == kWorkingZoomLevel) {
         viewport.apply_zoom_change(effective_max_zoom_level(
             waveform_area(app).w, live_total_frames(app, audio),
             audio.sample_rate()));
     } else {
         viewport.apply_zoom_change(kWorkingZoomLevel);
+    }
+}
+
+void GuiInputHandler::run_zoom_double_click_command() {
+    // The zoom-row double-click, split from run_zoom_toggle_command so the bare
+    // `0` key keeps the old toggle. It DIVERGES deliberately: zoom-OUT wins at
+    // intermediate levels. At the full-out ceiling → the working zoom; at ANY
+    // other level (the working zoom included) → full zoom-out. Same
+    // apply_zoom_change plumbing (recenter on the playhead, pre-clamped no-op
+    // when the request equals the current level).
+    const double ceiling = effective_max_zoom_level(
+        waveform_area(app).w, live_total_frames(app, audio),
+        audio.sample_rate());
+    if (app.zoom_level == ceiling) {
+        viewport.apply_zoom_change(kWorkingZoomLevel);
+    } else {
+        viewport.apply_zoom_change(ceiling);
     }
 }
 

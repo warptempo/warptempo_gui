@@ -309,26 +309,26 @@ struct UndoHistory {
 // Cleared by a region-trimming x, on file load, the A/B tab switch, the S/T audio-view switch (the
 // domain changes under it), Esc (only when nothing higher-priority consumes the
 // Esc), and a plain waveform PRESS (the press dissolves any resting highlight at
-// mouse-down, before it knows whether the gesture is a click or a fresh region
-// drag; at on_button_press via arm_region_drag_at). The W/P marker-column switch
-// does NOT clear it — the region is not marker-related.
+// mouse-down, before it knows whether the gesture is a click or a fresh scrub;
+// at on_button_press via arm_scrub_drag_at). The region gesture itself is armed
+// by a CTRL+ALT-exact waveform press now (a plain drag scrubs the playhead). The
+// W/P marker-column switch does NOT clear it — the region is not marker-related.
 struct RegionState {
     bool    active  = false;
     int64_t a_frame = 0;   // the press-anchor endpoint
     int64_t b_frame = 0;   // the far (pointer) endpoint
 };
 
-// State for the plain (unmodified) left-drag region-select gesture on the
-// waveform. The PRESS does its press-time work (deselect-all, playhead
-// placement, live-playback reseek — it never SELECTS a marker), DISSOLVES any
-// resting highlight at mouse-down (snapshotting the pre-press extent into
-// pre_region first), and arms this drag; motion past the shared
-// press-becomes-drag threshold (kDragMovedThresholdPx) extends app.region from
-// the press frame to the pointer column. A sub-threshold press-release is a
-// plain waveform click and simply disarms — the highlight already dissolved at
-// press, so there is no release-time collapse. Only a plain, unmodified
-// waveform press arms (a Shift press is a click, Alt/Ctrl no-op earlier), so an
-// armed drag always signals a plain waveform press. A completed drag rests the
+// State for the CTRL+ALT-exact left-drag region-select gesture on the waveform.
+// Region-only: the arming press does NOT deselect, does NOT move the playhead —
+// it snapshots the resting region into pre_region, DISSOLVES it at mouse-down,
+// and arms this drag; motion past the shared press-becomes-drag threshold
+// (kDragMovedThresholdPx) extends app.region from the press frame to the pointer
+// column. A sub-threshold press-release is a no-op — the highlight already
+// dissolved at press, so there is no release-time collapse (a motionless
+// Ctrl+Alt click simply disarms). Only a Ctrl+Alt-exact waveform press arms
+// (a plain drag scrubs the playhead instead — see ScrubDragState), so an armed
+// drag always signals a Ctrl+Alt waveform press. A completed drag rests the
 // region on release; Esc cancels a live drag and restores the pre-press region
 // captured here at arm (the marker drag's snapshot pattern — cheap, two ints).
 // Session-only, never undoable.
@@ -341,6 +341,25 @@ struct RegionDragState {
     // The region as it rested BEFORE the press dissolved it; restored on an Esc
     // cancel of the gesture, bringing the pre-press highlight back.
     RegionState pre_region;
+};
+
+// State for the plain (unmodified) left-drag SCRUB gesture on the waveform. The
+// PRESS does its press-time work (deselect-all, playhead placement, live-playback
+// reseek — it never SELECTS a marker) and DISSOLVES any resting region highlight
+// at mouse-down (the collapse the plain press always did), then arms this drag.
+// Motion past the shared press-becomes-drag threshold (kDragMovedThresholdPx)
+// SCRUBS: each event places the playhead at the pointer's column (clamped to the
+// live domain), and the moment the gate crosses playback STOPS for real (no
+// audio while scrubbing, no auto-resume at release). A sub-threshold press-release
+// is a plain waveform click (the press already placed the playhead). Navigation-
+// class: no Esc-restore (the playhead rests where the last motion put it), allowed
+// in read-only. Session-only, never undoable. Cleared on release / lost button,
+// Escape (cancel_active_drags), and file load.
+struct ScrubDragState {
+    bool active   = false;
+    bool moved    = false;  // crossed the threshold into a real scrub
+    int  press_x  = 0;      // press position (window px), for the gate
+    int  press_y  = 0;
 };
 
 // F2.1: mouse drag-to-select inside the active text editor. Only one
@@ -478,18 +497,33 @@ struct ScrollDragState {
     int    last_x   = 0;
 };
 
-// Double-click detection on the zoom-strip row (Wayland delivers no
-// double-click event, so it is hand-rolled from two motionless plain clicks).
-// A motionless ZOOM-ROW drag records this candidate at its release; the NEXT
-// plain zoom-row press, if it lands within
-// kDoubleClickMs and kDoubleClickSlackPx of the recorded x, is consumed as the
-// zoom toggle instead of arming a drag. A drag that MOVED records nothing and
-// clears any candidate. Cleared on file load beside strip_drag, and the moment
-// the action fires. Session-only.
-struct StripDoubleClickCandidate {
-    bool    valid     = false;
+// The surface a double-click candidate belongs to. The surface tag is what keeps
+// the three double-click surfaces from cross-firing: a candidate seeded on one
+// surface can only be consumed by a press on the SAME surface (a zoom-row click
+// then a flag click within the window can never consume). None = no candidate.
+enum class DoubleClickSurface { None, ZoomRow, Flag, EditorText };
+
+// Double-click detection (Wayland delivers no double-click event, so it is
+// hand-rolled from two motionless plain clicks). A motionless click on a
+// double-click-bearing surface records this candidate at its release; the NEXT
+// plain press on the SAME surface, if it lands within kDoubleClickMs and
+// kDoubleClickSlackPx of the recorded position AND (for a flag) targets the same
+// marker, is consumed as that surface's double-click action instead of the
+// single-click action. A drag that MOVED records nothing and clears any
+// candidate. Surfaces:
+//   ZoomRow    -> the zoom-bar double-click zoom command (target unused; the
+//                 zoom row is thin, so only press_x slack is compared).
+//   Flag       -> opens the marker's flag editor (target = marker index; both
+//                 axes' slack compared).
+//   EditorText -> selects the word under the click in the active text editor
+//                 (target unused; both axes' slack compared).
+// Cleared on file load, and the moment an action fires. Session-only.
+struct DoubleClickCandidate {
+    DoubleClickSurface surface = DoubleClickSurface::None;
     int64_t time_ms   = 0;      // CLOCK_MONOTONIC ms at the motionless release
-    int     press_x   = 0;      // release x (== press x, the drag was motionless)
+    int     press_x   = 0;      // release x (== press x, the click was motionless)
+    int     press_y   = 0;      // release y (flag / editor 2D slack)
+    int     target    = -1;     // marker index for Flag; unused otherwise
 };
 
 // Double-click window and positional slack (architect-tunable). Two motionless
@@ -900,9 +934,13 @@ struct AppState {
     // cleared there and on button release / Escape.
     DragState     drag;
 
-    // Region-select drag state (plain left-drag). Cleared on button release,
+    // Region-select drag state (Ctrl+Alt left-drag). Cleared on button release,
     // Escape, and file load.
     RegionDragState region_drag;
+
+    // Scrub drag state (plain waveform left-drag). Cleared on button release,
+    // Escape, and file load.
+    ScrubDragState scrub_drag;
 
     // Pending marker-reposition drag, armed by a plain flag press (the marker
     // is single-selected at press; the drag begins only past the threshold).
@@ -928,10 +966,11 @@ struct AppState {
     // button release and file load.
     StripDragState strip_drag;
 
-    // Double-click candidate seeded by a motionless zoom-row press-release.
-    // Cleared on file load beside strip_drag and when the double-click action
-    // fires.
-    StripDoubleClickCandidate strip_double_click;
+    // Double-click candidate, shared by the zoom-row, flag, and editor-text
+    // surfaces (the surface tag prevents cross-firing). Seeded by a motionless
+    // press-release on a double-click-bearing surface; cleared on file load and
+    // when the double-click action fires.
+    DoubleClickCandidate double_click;
 
     // Alt+drag on the waveform (continuous 1:1 grab-pan). Cleared on button
     // release / lost button, Escape (cancel_active_drags), and file load.
@@ -1224,8 +1263,8 @@ inline int64_t snap_authored_frame(double frame) {
 
 // The single query for "some pointer gesture is in flight" — a marker
 // reposition drag, a trim drag, a strip-row zoom/pan drag, a region-select
-// drag, an editor text drag, or a pending marker / trim drag armed by a press
-// (button held, watching for the threshold). Consumed by the wheel_context
+// drag, a scrub drag, an editor text drag, or a pending marker / trim drag
+// armed by a press (button held, watching for the threshold). Consumed by the wheel_context
 // predicate (on_wheel's completed-detent gate and the platform's per-frame
 // sub-detent accumulator probe both route through it), the gate that must
 // never fire mid-gesture: the "nothing pops mid-gesture" boundary. The pending
@@ -1234,7 +1273,8 @@ inline int64_t snap_authored_frame(double frame) {
 inline bool any_pointer_gesture_active(const AppState& app) {
     return app.drag.active || app.trim_drag.active ||
            app.strip_drag.active || app.scroll_drag.active ||
-           app.region_drag.active || app.editor_text_drag.active ||
+           app.region_drag.active || app.scrub_drag.active ||
+           app.editor_text_drag.active ||
            app.pending_marker_drag.active || app.pending_trim_drag.active;
 }
 

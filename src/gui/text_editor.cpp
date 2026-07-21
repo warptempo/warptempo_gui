@@ -57,6 +57,31 @@ int byte_index_from_click_x(double click_x, double text_left_x,
     return std::clamp(idx, 0, pending_size);
 }
 
+void select_word_at(State& s, int pos) {
+    const int n = static_cast<int>(s.pending.size());
+    if (n <= 0) {
+        s.selection_anchor = -1;
+        s.cursor_pos = 0;
+        return;
+    }
+    pos = std::clamp(pos, 0, n);
+    // Reuse the Ctrl+Left/Right scanners: the word's end is the next boundary at
+    // or after pos, and its start is the boundary at or before that end. For a
+    // click inside a word this yields exactly that word's span (a click rounding
+    // onto a word's trailing separator selects the following word — the accepted
+    // edge bias of reusing the forward scanner rather than inventing a new one).
+    const int end   = next_word_boundary(s.pending, pos);
+    const int start = prev_word_boundary(s.pending, end);
+    if (end <= start) {
+        s.selection_anchor = -1;
+        s.cursor_pos = pos;
+        return;
+    }
+    s.selection_anchor = start;
+    s.cursor_pos       = end;
+    touch_blink(s);
+}
+
 std::string selected_text(const State& s) {
     if (!has_selection(s)) return std::string();
     const int a = selection_start(s);

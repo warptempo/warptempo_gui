@@ -192,4 +192,12 @@ bool cursor_visible_now(const State& s);
 int byte_index_from_click_x(double click_x, double text_left_x,
                             double advance, int pending_size);
 
+// Select the word under byte index `pos`, setting selection_anchor to the word
+// start and cursor_pos to the word end (an empty pending, or a pos with no word
+// on either side, leaves no selection). Reuses the SAME word-class boundary
+// scanners as Ctrl+Left/Right — there is no second word-boundary definition. The
+// double-click path in the input handler calls this after mapping the click x to
+// a byte index (byte_index_from_click_x).
+void select_word_at(State& s, int pos);
+
 } // namespace text_editor

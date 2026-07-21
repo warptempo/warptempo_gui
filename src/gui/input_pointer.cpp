@@ -268,6 +268,25 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     static_cast<double>(x) <= g.text_left + run_w;
             }
             if (in_region) {
+                // Double-click: a second click within the window on this
+                // editor's text selects the WORD under the click (the word-class
+                // boundaries the editor's Ctrl+Left/Right use), arming no drag.
+                // The surface tag keeps it from consuming a flag / zoom-row
+                // candidate.
+                const DoubleClickCandidate& dc = app.double_click;
+                if (dc.surface == DoubleClickSurface::EditorText &&
+                    monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
+                    std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
+                    std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
+                    app.double_click = DoubleClickCandidate{};
+                    const int idx = text_editor::byte_index_from_click_x(
+                        static_cast<double>(x), g.text_left, g.advance,
+                        static_cast<int>(g.ed->pending.size()));
+                    text_editor::select_word_at(*g.ed, idx);
+                    if (g.bottom_strip) viewport.invalidate_timestamp_area();
+                    else                viewport.invalidate_top_strip();
+                    return;
+                }
                 set_editor_caret_from_x(g, x);
                 // Collapsed anchor — extends to a real selection only if the
                 // pointer then moves.
@@ -352,21 +371,22 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // Double-click detection, BEFORE arming the drag: a candidate
                 // seeded by the previous motionless zoom-row release, within
                 // kDoubleClickMs and kDoubleClickSlackPx of the recorded x,
-                // consumes this press as a one-shot zoom toggle — no drag armed,
+                // consumes this press as a one-shot zoom command — no drag armed,
                 // no pointer capture, playhead and selection untouched, allowed
                 // in read-only (all modal gates sit above this claim). The
-                // toggle is byte-identical to the bare `0` key
-                // (run_zoom_toggle_command): at the working zoom → full zoom-out
-                // (whole song); anywhere else → the working zoom. The
+                // surface tag (ZoomRow) means a flag / editor candidate can never
+                // consume here. The double-click DIVERGES from the bare `0` key:
+                // it runs run_zoom_double_click_command (zoom-out wins at
+                // intermediate levels), not run_zoom_toggle_command. The
                 // candidate's first click briefly captured and hid the cursor at
                 // its press and restored it at the motionless release; this
                 // second press never captures.
-                const StripDoubleClickCandidate& dc = app.strip_double_click;
-                if (dc.valid &&
+                const DoubleClickCandidate& dc = app.double_click;
+                if (dc.surface == DoubleClickSurface::ZoomRow &&
                     monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
                     std::abs(x - dc.press_x) <= kDoubleClickSlackPx) {
-                    app.strip_double_click = StripDoubleClickCandidate{};
-                    run_zoom_toggle_command();
+                    app.double_click = DoubleClickCandidate{};
+                    run_zoom_double_click_command();
                     return;
                 }
                 const double spp = current_samples_per_pixel(app, audio);
@@ -446,7 +466,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // single-select + arm the pending marker drag, Shift = toggle
         // membership), so it is resolved once here. The WAVEFORM never SELECTS a
         // marker — a plain press is deselect-all + playhead placement +
-        // region-drag arm, a Shift press a no-op — so no marker scan runs on the
+        // scrub-drag arm, a Shift press a no-op — so no marker scan runs on the
         // waveform at all (the invisible stem is not a grab target). Trim bounds
         // are grabbed only by their top-strip chips / the inter-chip bridge on a
         // PLAIN chip-row press (route_trim_chip_press below); a click over a
@@ -474,17 +494,40 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
 
+        // Ctrl+Alt-exact left press on the waveform arms the REGION-select drag —
+        // region-only navigation: it does NOT clear the selection and does NOT
+        // move the playhead (the plain press owns those, now that a plain drag
+        // scrubs). It snapshots and dissolves any resting highlight at mouse-down
+        // and arms the drag anchored at the press column's active-domain frame;
+        // motion past the shared threshold extends the region, Esc restores the
+        // pre-press highlight. Allowed in read-only (a transient visual). A
+        // motionless Ctrl+Alt press-release is a no-op (the region machinery only
+        // acts on a real drag). In the gutter (no column) there is nothing to
+        // anchor, so it is inert. Ctrl+Alt anywhere else (the top strip included)
+        // is a strict no-op below.
+        if (ctrl && alt && !shift) {
+            if (inside_waveform) {
+                const int click_rel_x = x - area.x;
+                if (click_rel_x >= 0 && click_rel_x < area.w) {
+                    const int64_t anchor =
+                        playhead_frame_at_click_column(app, audio, click_rel_x);
+                    arm_region_drag_at(anchor, x, y);
+                }
+            }
+            return;
+        }
+
         // Strict modifier matching: the marker reposition arm lives on the plain
         // flag press and trim's chip/bridge drags on the plain chip-row press, so
-        // every remaining modified combination — Ctrl+Alt, Ctrl, Ctrl+Shift,
-        // Shift+Alt, ... — no-ops here. Only a plain or Shift-modified base press
-        // proceeds (Shift adjusts the selection). The Alt+wheel pan and the Alt
-        // keyboard chords are untouched (separate handlers).
+        // every remaining modified combination — Ctrl, Ctrl+Shift, Shift+Alt,
+        // Ctrl+Alt+Shift, ... — no-ops here. Only a plain or Shift-modified base
+        // press proceeds (Shift adjusts the selection). The Alt+wheel pan and the
+        // Alt keyboard chords are untouched (separate handlers).
         if (ctrl || alt) return;
 
         // Plain or Shift press. In the waveform area a plain press clears the
         // marker selection (deselect-all), places the playhead at the clicked
-        // column, and arms the region-select drag — it never SELECTS a marker; a
+        // column, and arms the scrub drag — it never SELECTS a marker; a
         // Shift press on the waveform is a strict no-op. In the top strip a plain
         // CHIP-ROW press arms a trim chip/bridge drag (claimed ahead of the
         // marker flag select); otherwise (flag click) selection is the
@@ -509,13 +552,38 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     selection.toggle_selection_membership(hit);
                 } else {
                     // Plain flag click single-selects (both views; W's
-                    // click-to-edit is retired — the editor now opens on Enter).
-                    // Selection is navigation, allowed in read-only. A writable
-                    // tab additionally arms the pending marker drag; read-only
-                    // selects but never arms (marker mutation refused), so the
-                    // press stays a pure click there.
+                    // click-to-edit is retired — the editor now opens on Enter or
+                    // this double-click). Selection is navigation, allowed in
+                    // read-only.
                     selection.set_single_selection(hit);
-                    if (!active_view_state(app).read_only) {
+                    // Double-click: a Flag candidate for the SAME marker within
+                    // the window opens the flag editor, exactly like Enter on the
+                    // focused marker (the click above already single-selected it).
+                    // The surface + target tag prevents any zoom-row / editor
+                    // candidate from consuming here. Read-only and P view (phase
+                    // resets have no per-flag editor) refuse silently, matching
+                    // Enter's allowlist / view refusal — the candidate is cleared
+                    // and the press stays a plain second select. On a consumed
+                    // open no pending drag is armed (the editor now owns input).
+                    bool opened_editor = false;
+                    const DoubleClickCandidate& dc = app.double_click;
+                    if (dc.surface == DoubleClickSurface::Flag &&
+                        dc.target == hit &&
+                        monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
+                        std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
+                        std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
+                        app.double_click = DoubleClickCandidate{};
+                        if (app.active_markers_view != 'P' &&
+                            !active_view_state(app).read_only) {
+                            flag_editor.enter_top_flag_edit(hit);
+                            opened_editor = true;
+                        }
+                    }
+                    // A writable tab arms the pending marker drag on a plain
+                    // single click; read-only selects but never arms (marker
+                    // mutation refused), and a double-click that opened the editor
+                    // never arms either.
+                    if (!opened_editor && !active_view_state(app).read_only) {
                         app.pending_marker_drag = PendingMarkerDrag{};
                         app.pending_marker_drag.active  = true;
                         app.pending_marker_drag.marker  = hit;
@@ -534,11 +602,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // NOT consult `hit`. Then it drops the playhead at the clicked column (no
         // marker snap — the 3px marker-snap magnet already died with the scrub in
         // the prior phase), reseeks a live scanner to it, overrides follow, and
-        // arms the region drag — which also DISSOLVES any resting highlight at
-        // this mouse-down (arm_region_drag_at clears it after snapshotting the
-        // pre-press extent for an Esc-mid-drag restore), so the wash vanishes on
-        // press whether the gesture becomes a click or a fresh drag. A Shift
-        // press is a strict no-op anywhere on the waveform, selection included.
+        // arms the SCRUB drag — which DISSOLVES any resting highlight at this
+        // mouse-down (arm_scrub_drag_at clears it), so the wash vanishes on press.
+        // Past the threshold the scrub places the playhead per motion event and
+        // stops playback at the crossing (see on_motion). A Shift press is a
+        // strict no-op anywhere on the waveform, selection included.
         {
             if (shift) return;
             // The clear runs FIRST, before the gutter early-return below, so an
@@ -553,7 +621,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 playback_lifecycle.reseek_keeping_alive(sample);
             }
             if (was_playing) app.follow_overridden_for_session = true;
-            arm_region_drag_at(sample, x, y);
+            arm_scrub_drag_at(x, y);
         }
     }
     // Wheel events no longer reach on_button_press; they arrive coalesced
@@ -582,11 +650,25 @@ void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
     // Snapshot the resting region BEFORE clearing it, so an Esc cancel of a
     // live drag still restores the pre-press highlight.
     app.region_drag.pre_region   = app.region;
-    // Clear any resting region immediately at press: a plain waveform press
+    // Clear any resting region immediately at press: a Ctrl+Alt waveform press
     // dissolves an existing highlight on mouse-down (the wash repaints away
     // now, not at release). A moved drag rebuilds a fresh region live; a
     // motionless press-release simply leaves it cleared. pre_region above keeps
     // the pre-press extent for the Esc-mid-drag restore.
+    if (app.region.active) {
+        app.region = RegionState{};
+        viewport.invalidate_waveform_area();
+    }
+}
+
+void GuiInputHandler::arm_scrub_drag_at(int x, int y) {
+    app.scrub_drag = ScrubDragState{};
+    app.scrub_drag.active  = true;
+    app.scrub_drag.press_x = x;
+    app.scrub_drag.press_y = y;
+    // A plain waveform press dissolves any resting region highlight at
+    // mouse-down (the collapse the plain press always did), even though the
+    // scrub itself paints no wash.
     if (app.region.active) {
         app.region = RegionState{};
         viewport.invalidate_waveform_area();
@@ -599,7 +681,18 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // F2.1: a left release ending an editor-text drag finalizes the
     // selection (or collapses to a caret) before the modal swallow below.
     if (button == GuiMouseButton::Left && app.editor_text_drag.active) {
+        const ActiveEditorText g = active_editor_text(app, audio);
         finalize_editor_text_drag();
+        // Double-click seeding: a MOTIONLESS release (a pure click that left a
+        // caret, no selection) seeds an editor-text candidate so a second click
+        // within the window selects the word under it. A drag that made a
+        // selection seeds nothing.
+        if (g.valid && !text_editor::has_selection(*g.ed)) {
+            app.double_click = DoubleClickCandidate{
+                .surface = DoubleClickSurface::EditorText,
+                .time_ms = monotonic_ms(), .press_x = x, .press_y = y,
+                .target = -1};
+        }
         return;
     }
     if (text_editor::is_active(app.settings_editor)) return;
@@ -616,10 +709,12 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // second click of a double-click.
         if (app.strip_drag.moved) {
             apply_strip_drag_at(x, y, /*final_event=*/true);
-            app.strip_double_click = StripDoubleClickCandidate{};
+            app.double_click = DoubleClickCandidate{};
         } else {
-            app.strip_double_click = StripDoubleClickCandidate{
-                .valid = true, .time_ms = monotonic_ms(), .press_x = x};
+            app.double_click = DoubleClickCandidate{
+                .surface = DoubleClickSurface::ZoomRow,
+                .time_ms = monotonic_ms(), .press_x = x, .press_y = y,
+                .target = -1};
         }
         app.strip_drag = StripDragState{};
         end_strip_pointer_capture();  // reappear the cursor at the press point
@@ -643,6 +738,14 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         app.region_drag = RegionDragState{};
         return;
     }
+    if (app.scrub_drag.active) {
+        // Scrub is navigation: the playhead already rests where the last motion
+        // put it (and playback stopped at the gate crossing), so there is nothing
+        // to commit — just disarm. A motionless press-release is a plain waveform
+        // click; the press already placed the playhead.
+        app.scrub_drag = ScrubDragState{};
+        return;
+    }
     if (app.trim_drag.active) {
         commit_trim_drag();
         return;
@@ -659,8 +762,16 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // The pending marker drag never crossed the threshold: a pure flag
         // click. The press already single-selected its marker, so there is
         // nothing to commit — just disarm. (A crossed pending became app.drag
-        // and commits through the branch below.)
+        // and commits through the branch below.) Seed a Flag double-click
+        // candidate for this marker so a second click within the window opens
+        // its flag editor; only a motionless pure click reaches here (a moved
+        // marker drag went through app.drag and seeds nothing).
+        const int m = app.pending_marker_drag.marker;
         app.pending_marker_drag = PendingMarkerDrag{};
+        app.double_click = DoubleClickCandidate{
+            .surface = DoubleClickSurface::Flag,
+            .time_ms = monotonic_ms(), .press_x = x, .press_y = y,
+            .target = m};
         return;
     }
     if (!app.drag.active) return;
@@ -669,8 +780,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 
 // Motion handler. Drives the active pointer gesture: editor-text drag,
 // strip-row zoom/pan drag, trim drag (or a pending trim drag arming past the
-// threshold), region-select drag, or marker reposition drag (or a pending
-// marker drag); with no gesture it recomputes hover at the cursor. The
+// threshold), region-select drag, scrub drag, or marker reposition drag (or a
+// pending marker drag); with no gesture it recomputes hover at the cursor. The
 // marker drag applies the pointer delta to the grabbed marker only — it does
 // NOT move the playhead (only the Tab family and `c` land the playhead on a
 // marker).
@@ -725,7 +836,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             app.strip_drag = StripDragState{};
             // An abnormal termination (button lost, not a clean release) seeds
             // no double-click candidate and drops any pending one.
-            app.strip_double_click = StripDoubleClickCandidate{};
+            app.double_click = DoubleClickCandidate{};
             end_strip_pointer_capture();
             return;
         }
@@ -867,6 +978,41 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         viewport.invalidate_waveform_area();
         return;
     }
+    // Scrub drag (armed by a plain waveform press): past the shared threshold,
+    // each motion event places the playhead at the pointer's column (clamped to
+    // the live domain by move_playhead_to), and the moment the gate crosses
+    // playback STOPS for real — no audio while scrubbing, no auto-resume at
+    // release. Navigation-class: no selection touch, no Esc-restore. A lost
+    // button ends it in place (the playhead stays).
+    if (app.scrub_drag.active) {
+        viewport.clear_hover_popup();
+        if (!mods.primary_button_held) {   // button lost -> end, playhead stays
+            app.scrub_drag = ScrubDragState{};
+            return;
+        }
+        const GuiRect area = waveform_area(app);
+        if (area.w <= 0) return;
+        // Sub-threshold: still a plain click (the press already placed the
+        // playhead). Once a drag, always a drag (moved never re-engages).
+        if (!app.scrub_drag.moved &&
+            std::max(std::abs(mouse_x - app.scrub_drag.press_x),
+                     std::abs(mouse_y - app.scrub_drag.press_y)) <
+                kDragMovedThresholdPx) {
+            return;
+        }
+        if (!app.scrub_drag.moved) {
+            // Crossing into a real scrub: stop playback for real (like Space) so
+            // no audio plays while scrubbing; there is no auto-resume at release.
+            app.scrub_drag.moved = true;
+            playback_lifecycle.stop_playback_if_playing();
+        }
+        int rel = mouse_x - area.x;
+        if (rel < 0) rel = 0;
+        if (rel >= area.w) rel = area.w - 1;
+        const int64_t frame = playhead_frame_at_click_column(app, audio, rel);
+        viewport.move_playhead_to(frame);
+        return;
+    }
     // Pending marker drag (armed by a plain flag press): the marker was
     // single-selected at press; the reposition begins only once the pointer
     // travels past the shared Chebyshev threshold. Handled before the hover
@@ -895,6 +1041,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         const int marker  = app.pending_marker_drag.marker;
         const int press_x = app.pending_marker_drag.press_x;
         app.pending_marker_drag = PendingMarkerDrag{};
+        // A moved marker drag drops any double-click candidate: this press is a
+        // drag, not the second click of a flag double-click.
+        app.double_click = DoubleClickCandidate{};
         if (!marker_drag.begin_drag(marker, press_x)) {
             viewport.clear_hover_popup();
             return;   // begin refused (bad index / no audio): drop the gesture
