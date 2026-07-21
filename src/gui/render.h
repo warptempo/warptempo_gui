@@ -569,10 +569,14 @@ void render_markers(cairo_t* cr,
                     const DragOverlay* drag_overlay = nullptr,
                     cairo_surface_t* ink_plate = nullptr);
 
-// Draws the trim begin/end boundary stems. Each set bound (gated by
-// `has_begin` / `has_end`) paints a 1px vertical stem at its domain-frame
-// column, spanning the WAVEFORM AREA (top at `waveform_area.y`, down to the
-// waveform bottom) — the same extent as marker stems. Trim bounds carry NO
+// Draws the WAVEFORM-AREA portion of the trim begin/end boundary stems. Each set
+// bound (gated by `has_begin` / `has_end`) paints a 1px vertical stem at its
+// domain-frame column, spanning the WAVEFORM AREA (top at `waveform_area.y`, down
+// to the waveform bottom). Unlike marker stems (waveform-only), the trim stem
+// ALSO has a strip-crossing segment above it — from the chip's bottom edge down
+// through the intervening lanes to the waveform top — painted by render_trim_flags
+// (top-strip pass); the two segments meet at `waveform_area.y` to form one
+// unbroken line at the bound column. Trim bounds carry NO
 // triangle frame tick (unlike markers): Ableton's loop bounds carry none, so
 // the stem+chip pair is the whole waveform-side cue. Color is always
 // kTrimMarker — trim has no
@@ -591,24 +595,32 @@ void render_trim_stems(cairo_t* cr,
                        cairo_surface_t* ink_plate = nullptr);
 
 // Draws the begin/end trim-boundary chips in the TRIM CHIP LANE (top-strip
-// lane 1). Each set bound (gated by `has_begin` / `has_end`) paints a TEXTLESS
-// rectangle of the flag's exact width/height (flag_lane_w_px() x
+// lane 1), plus the strip-crossing portion of their stems and the inter-chip
+// bridge band. Each set bound (gated by `has_begin` / `has_end`) paints a
+// TEXTLESS rectangle of the flag's exact width/height (flag_lane_w_px() x
 // flag_lane_h_px(), no glyph, no triangle — Ableton's loop bounds carry none),
-// centered on its bound column, capping its stem. Chip color is kTrimMarker
-// with a kTrimMarkerOutline border. `waveform_area` is the real waveform rect;
-// its top edge locates the lanes and its `.w` is the column-mapping
-// denominator. Column placement matches render_trim_stems against the same
-// viewport — `trim.begin` / `trim.end` are already in the displayed domain, so
-// no further translation happens here. The chip has NO editable payload; it is
-// a plain-press grab target only (trim is outside the selection system).
-// With BOTH bounds set, a wash band fills the trim-chip-lane span between the
-// two chips — the visual affordance of the pair (bridge) drag's grab band. It
-// occupies the trim-chip lane's vertical band and uses the shared overlay wash
-// (kOverlay / kOverlayAlpha, the same pair the phase reset overlay paints
-// with), over the strip background. It spans the two bounds' columns
-// unconditionally (independent of the chips' viewport cull) clamped into the
-// mapped waveform width, so it still paints across the visible part when a chip
-// is offscreen.
+// EDGE-ANCHORED on its bound column: the begin chip's LEFT edge on the column
+// (body rightward), the end chip's RIGHT edge on it (body leftward). A bound is
+// an EDGE, not a point — the deliberate asymmetry vs centered marker flags — so
+// a bound at frame 0 / EOF shows its chip fully onscreen. Chip color is
+// kTrimMarker with a kTrimMarkerOutline border. `waveform_area` is the real
+// waveform rect; its top edge locates the lanes and its `.w` is the
+// column-mapping denominator. Column placement matches render_trim_stems against
+// the same viewport — `trim.begin` / `trim.end` are already in the displayed
+// domain, so no further translation happens here. The chip has NO editable
+// payload; it is a plain-press grab target only (trim is outside the selection
+// system). Below each chip, a 1px stem segment runs from the chip's bottom edge
+// down to the waveform top, meeting the render_trim_stems waveform segment there
+// as one unbroken line at the bound column.
+// With BOTH bounds set, a wash band fills the GAP between the two edge-anchored
+// chips (begin chip's inner edge to end chip's inner edge) — the visual
+// affordance of the pair (bridge) drag's grab band. It occupies the trim-chip
+// lane's vertical band and uses the shared overlay wash (kOverlay /
+// kOverlayAlpha, the same pair the phase reset overlay paints with) with a 1px
+// ring around it, over the strip background. Columns are computed unconditionally
+// (independent of the chips' viewport cull) and clamped into the mapped waveform
+// width, so it still paints across the visible part when a chip is offscreen; a
+// gap shows only when the span is wide enough that the chips do not overlap.
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
                        GuiRect waveform_area,

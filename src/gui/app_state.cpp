@@ -131,13 +131,17 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
         const double x_raw = (ms - vp) / spp;
         const double center_x =
             static_cast<double>(top.x) + std::nearbyint(x_raw);
-        // The chip is a fixed flag-sized rectangle CENTERED on the bound
-        // column, exactly as render_trim_flags paints it: rect left =
-        // center - flag_w/2, width flag_w. Only rx/rw are read here (the
-        // vertical band was checked via top_upper_row_area above).
+        // The chip is a fixed flag-sized rectangle EDGE-ANCHORED on the bound
+        // column, exactly as render_trim_flags paints it: the begin chip's LEFT
+        // edge sits on the column (rect left = col), the end chip's RIGHT edge
+        // (rightmost pixel = col, so rect left = col - flag_w + 1). Only rx/rw
+        // are read here (the vertical band was checked via top_upper_row_area
+        // above). A bound is an edge, not a point — the deliberate asymmetry vs
+        // centered marker flags, so a bound at frame 0 / EOF is fully onscreen.
         const int flag_w = flag_lane_w_px();
+        const int col = static_cast<int>(std::round(center_x));
         GuiRect cr_rect;
-        cr_rect.x = static_cast<int>(std::round(center_x)) - flag_w / 2;
+        cr_rect.x = (which == TrimHit::Begin) ? col : col - flag_w + 1;
         cr_rect.y = row.y;
         cr_rect.w = flag_w;
         cr_rect.h = row.h;

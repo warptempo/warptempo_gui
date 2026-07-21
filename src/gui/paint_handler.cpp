@@ -8,6 +8,7 @@
 #include "warp_frame_map.h"
 #include "engine/engine_geometry.h"  // kRs
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <string>
@@ -94,17 +95,21 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
 
 void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
     // The marker-text lane (top lane 2, between the trim chips and the flags)
-    // hosts two transient text surfaces, ONE OCCUPANT AT A TIME: the FlagPayload
-    // flag editor beats the hover popup. The editor owns the lane while open —
-    // recompute_hover_at_cursor already clears the popup whenever any
-    // top_flag_editor is active, so the two never both want the lane, and the
-    // editor-first ordering below is the explicit backstop. Both surfaces paint
-    // live here (dynamic: per-keystroke editor, per-motion hover), after the
-    // flag-cache blit — no cache, the same live-overlay role the bottom strip's
-    // editor/hover paints had before the lane existed. Both center their
-    // monospace run over the target marker's painted column and clamp it fully
-    // onscreen (lane_text_left_x) on a kBackground fill behind the run with no
-    // border; the editor flashes that fill kAccent on an invalid commit.
+    // hosts three text tiers, arbitrated in ONE lane: the FlagPayload flag editor
+    // beats everything (it owns the lane alone while open — recompute_hover_at_
+    // cursor already clears the popup whenever any top_flag_editor is active, and
+    // the editor-first return below is the explicit backstop); below it, every
+    // SELECTED marker's own value paints PERSISTENTLY (not just on hover); and the
+    // transient HOVER run for an unselected marker paints on TOP of the selection
+    // runs (a hovered selected marker is already shown, no double paint). All
+    // paint live here (per-keystroke editor, per-frame selection, per-motion
+    // hover), after the flag-cache blit — no cache, the live-overlay role the
+    // bottom strip's editor/hover paints had before the lane existed. Every run
+    // centers its monospace text over its marker's painted column and clamps it
+    // fully onscreen (lane_text_left_x) on a kBackground fill behind the run with
+    // no border; that fill is what makes one run occlude another, so the selection
+    // runs occlude by the flags' own z-order (leftmost on top). The editor flashes
+    // its fill kAccent on an invalid commit.
     const GuiRect lane      = top_marker_text_row_area(app);
     const double  baseline  = lane.y + monospace_row_baseline_offset();
     const double  advance   = monospace_advance();
@@ -147,19 +152,17 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
         return;
     }
 
-    if (!app.hover_popup.lane_text.empty()) {
-        // lane_text is the hovered marker's OWN value — the canonical flag line
-        // for a warp marker, the literal "phase reset" for a phase reset marker
-        // (recompute_hover_at_cursor). source_frame centers the run on the
-        // marker's painted column, column-agnostic so this paint needs no
-        // knowledge of which store the marker came from.
-        const std::string& txt = app.hover_popup.lane_text;
+    // One-run painter shared by the selection and hover tiers: kBackground fill
+    // exactly behind the run (AA off for a crisp edge), then the text — the
+    // plain-text tier, no border, no caret. source_frame centers the run on the
+    // marker's painted column (lane_text_left_x_at_frame), column-agnostic so
+    // this needs no knowledge of which store the marker came from; a bad advance
+    // or clamp yields left<0 and skips.
+    auto paint_run = [&](int64_t source_frame, const std::string& txt) {
+        if (txt.empty()) return;
         const double left = lane_text_left_x_at_frame(
-            app, audio,
-            static_cast<double>(app.hover_popup.source_frame), txt.size());
+            app, audio, static_cast<double>(source_frame), txt.size());
         if (left < 0.0) return;
-        // kBackground fill exactly behind the run (AA off for a crisp edge),
-        // then the text — the plain-text tier, no border, no caret.
         const double run_w = static_cast<double>(txt.size()) * advance;
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -170,6 +173,56 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
         cairo_restore(cr);
         text_display::draw_line(cr, left, baseline, txt, kText,
                                 flag_font_size_px());
+    };
+
+    // Persistent selection runs: each SELECTED marker in the active view shows
+    // its OWN value — flag_text_iter for a warp marker (the one composer the flag
+    // paint, hit-rects, hover, and the Enter editor seed all share), the literal
+    // "phase reset" for a phase reset marker. Each is culled to the visible strip
+    // by its painted column (an offscreen selection shows no run) and collected
+    // with that column, then painted in REVERSE column order so the leftmost
+    // lands on top — the flags' own leftmost-on-top occlusion, with the
+    // kBackground fill blocking the run beneath.
+    const std::vector<WarpFrameMapSegment>& map =
+        displayed_or_live_target_map(app, audio);
+    const int  wave_w = waveform_area(app).w;
+    const bool phase  = (app.active_markers_view == 'P');
+    struct LaneRun {
+        int         col;
+        int64_t     source_frame;
+        std::string text;
+    };
+    std::vector<LaneRun> runs;
+    const int n = phase
+        ? static_cast<int>(app.phaseresetmarkers.markers().size())
+        : static_cast<int>(app.warpmarkers.markers().size());
+    for (int idx : app.selected_markers) {
+        if (idx < 0 || idx >= n) continue;
+        int64_t     src_f;
+        std::string txt;
+        if (phase) {
+            txt   = "phase reset";
+            src_f = app.phaseresetmarkers.markers()[idx].time_frame;
+        } else {
+            const auto& mv = app.warpmarkers.markers();
+            txt   = flag_text_iter(mv, idx, app.iteration_mode_enabled);
+            src_f = mv[idx].time_frame;
+        }
+        const int col = painted_column_of_source_frame(
+            app, audio, static_cast<double>(src_f), map);
+        if (col < 0 || col >= wave_w) continue;
+        runs.push_back({col, src_f, std::move(txt)});
+    }
+    std::sort(runs.begin(), runs.end(),
+              [](const LaneRun& a, const LaneRun& b) { return a.col < b.col; });
+    for (auto it = runs.rbegin(); it != runs.rend(); ++it)
+        paint_run(it->source_frame, it->text);
+
+    // Transient hover run on TOP of the selection runs, unless the hovered marker
+    // is itself selected (already shown above — no double paint).
+    if (!app.hover_popup.lane_text.empty() &&
+        !app.selected_markers.count(app.hover_popup.marker_index)) {
+        paint_run(app.hover_popup.source_frame, app.hover_popup.lane_text);
     }
 }
 
@@ -664,15 +717,29 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                                    kBpmEditorPrefix,
                                    static_cast<double>(timestamp_pad_x()),
                                    upper_baseline);
-    } else if (!app.hover_popup.readout_text.empty()) {
-        // The pass/ref resolved readout renders below every modal/progress tier.
-        // readout_text is the compute_hover_popup_text string (notice-free); it
-        // is non-empty only for a pass/label_ref warp marker
-        // (popup_eligible_marker), so owners and phase resets keep the strip
-        // clean while their own value shows in the marker-text lane.
-        text_display::draw_line(
-            cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
-            app.hover_popup.readout_text, kText, flag_font_size_px());
+    } else {
+        // The pass/ref resolved readout renders below every modal/progress tier,
+        // driven by BOTH hover and selection. Simple rule: the HOVERED marker's
+        // readout wins when present (compute_hover_popup_text, cached in
+        // hover_popup at recompute); else the LAST-SELECTED marker's, computed
+        // live here when it is an eligible pass/label_ref (popup_eligible_marker,
+        // itself 'W'-view + non-iteration only). One readout, hover wins. Owners
+        // and phase resets have nothing to resolve, so their strip stays clean
+        // while their own value shows in the marker-text lane. The live
+        // computation is the notice-free string (copy_payload is a hover-only
+        // concern, so no out-param here).
+        std::string readout = app.hover_popup.readout_text;
+        if (readout.empty() &&
+            popup_eligible_marker(app, app.last_selected_marker)) {
+            readout = compute_hover_popup_text(
+                slice_to_warp_markers(app.warpmarkers.markers()),
+                app.last_selected_marker, sr, audio.total_frames());
+        }
+        if (!readout.empty()) {
+            text_display::draw_line(
+                cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
+                readout, kText, flag_font_size_px());
+        }
     }
 }
 

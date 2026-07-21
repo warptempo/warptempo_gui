@@ -222,8 +222,11 @@ void render_marker_stems_impl(
     cairo_restore(cr);
 }
 
-// Fills and outlines ONE marker/phase-reset/trim flag SHAPE, centered on
-// `center_x` (the item's pixel column). The shape is the fixed-width rectangle
+// Fills and outlines ONE marker/phase-reset/trim flag SHAPE at `center_x` (the
+// item's pixel column). `anchor` places the rectangle relative to that column:
+// Center (markers/phase resets — straddles the column, may hang half offscreen)
+// or LeftEdge/RightEdge (trim chips — a bound is an edge, so its chip sits fully
+// to one side). The shape is the fixed-width rectangle
 // in the flag lane [rx, flag_top, flag_w, rect_h] plus (when `with_triangle`)
 // the tip-down triangle in the triangle lane directly beneath it, tip on the
 // column at `tip_y` (= the waveform top edge). The two are ONE shape: the
@@ -242,14 +245,30 @@ void render_marker_stems_impl(
 // as one cairo group (the disabled cue). The triangle is the identical geometry
 // the cached playhead mask stamps, so a flag's triangle and the playhead's
 // coincide when the cursor sits on it.
+// Horizontal anchor of the shape's rectangle relative to `center_x`'s column.
+// Center is the marker-flag default (and the playhead triangle). The edge modes
+// serve the trim chips: a bound is an EDGE, not a point, so its chip reads as an
+// edge handle sitting ON the bound column rather than straddling it — the begin
+// chip's LEFT edge on the column (body rightward), the end chip's RIGHT edge on
+// it (body leftward). This is the deliberate asymmetry vs marker flags, which
+// center and may hang half offscreen.
+enum class FlagHAnchor { Center, LeftEdge, RightEdge };
+
 void paint_flag_shape(cairo_t* cr, double center_x,
                       double flag_top_d, double tri_top_d, double tip_y_d,
                       GuiColor fill, GuiColor outline,
-                      bool with_triangle, double alpha) {
+                      bool with_triangle, double alpha,
+                      FlagHAnchor anchor = FlagHAnchor::Center) {
     const int flag_w = flag_lane_w_px();
 
     const int cx     = static_cast<int>(std::round(center_x));
-    const int rx     = cx - flag_w / 2;                 // rect left
+    // Rect left per anchor: Center straddles the column; LeftEdge puts the
+    // rect's left column ON it; RightEdge puts the rect's RIGHTMOST column on it
+    // (rx + flag_w - 1 == cx). cx is otherwise the triangle apex (Center only).
+    const int rx =
+        anchor == FlagHAnchor::LeftEdge  ? cx
+      : anchor == FlagHAnchor::RightEdge ? cx - flag_w + 1
+      :                                    cx - flag_w / 2;   // rect left
     const int rw     = flag_w;
     const int ry     = static_cast<int>(std::round(flag_top_d));
     const int rb     = static_cast<int>(std::round(tri_top_d)); // rect bottom = tri top
@@ -642,128 +661,147 @@ void render_trim_flags(cairo_t* cr,
     // and top-strip-local coords coincide (the top strip sits at y=0), so this
     // is exactly top_upper_row_area(app), the band the bridge hit test gates on.
     const int chip_w    = flag_lane_w_px();
-    const int chip_half = chip_w / 2;
     const int chip_top  = top_strip_area.y + monospace_row_h();
     const int chip_h    = flag_lane_h_px();
     const int chip_bottom = chip_top + chip_h;
+    // Waveform top edge in this (top-strip-local) coord system: the strip sits
+    // at y=0, so it is the strip's own height. The strip-crossing stem segment
+    // painted below runs from the chip's bottom edge down to here, where the
+    // waveform-area trim stem (render_trim_stems) continues to the waveform
+    // bottom — one unbroken 1px line at the bound column.
+    const int wave_top = top_strip_area.y + top_strip_area.h;
+
+    // Bound column (unclamped) and its viewport visibility. Columns are computed
+    // unconditionally so the wash band spans between them even when a chip is
+    // culled; chips and their stems draw only for a visible bound.
+    auto col_of = [&](int64_t frame) {
+        const double x_raw =
+            (static_cast<double>(frame) -
+             static_cast<double>(viewport_start_sample)) / samples_per_pixel;
+        return static_cast<int>(std::nearbyint(x_raw));
+    };
+    auto in_viewport = [&](int64_t frame) {
+        const double ms = static_cast<double>(frame);
+        return ms >= static_cast<double>(viewport_start_sample) &&
+               ms <  static_cast<double>(viewport_end_sample);
+    };
+    const int begin_col = col_of(trim.begin);
+    const int end_col   = col_of(trim.end);
 
     cairo_save(cr);
 
-    // With both bounds set, a wash band fills the trim-chip-lane span BETWEEN
-    // the two chip columns — the visual affordance of the pair (bridge) drag's
-    // inter-chip grab region (the span strictly between the two bound columns,
-    // exactly what route_trim_chip_press tests). The wash is the shared overlay
-    // pair (kOverlay / kOverlayAlpha, the same the phase reset overlay uses),
-    // plus a 1px ring at ring strength (kOverlay at kOverlayOutlineAlpha): the
-    // top/bottom edges run along the lane's own rows and the two vertical edges
-    // sit BESIDE the chips (each visible chip's inner edge). Painted BEFORE the
-    // chip rectangles so the chips overpaint the band's ends and it reads as
-    // spanning between them. Both columns are computed unconditionally (a chip's
-    // own viewport cull must not suppress the band when a chip is offscreen).
+    // With both bounds set, a wash band fills the trim-chip-lane GAP between the
+    // two edge-anchored chips: from the begin chip's inner (right) edge to the
+    // end chip's inner (left) edge. The chips edge-anchor ON their bound columns
+    // (begin left-edge, end right-edge, bodies facing inward), so this gap is the
+    // span the pair (bridge) drag grabs — route_trim_chip_press tests strictly
+    // between the two bound columns, and the chip single-hit consumes the chip
+    // pixels first, so the effective grab region equals this gap. The wash is the
+    // shared overlay pair (kOverlay / kOverlayAlpha, the phase reset overlay's
+    // pair) with a 1px ring at ring strength (kOverlayOutlineAlpha) around it.
+    // Columns are computed unconditionally (a chip's viewport cull must not
+    // suppress the band). A gap exists only when the begin chip sits fully left
+    // of the end chip (wide-enough, non-inverted span); an inverted or narrow
+    // trim shows no bridge, its chips simply overlap.
     if (has_begin && has_end && waveform_area.w > 0) {
-        auto col_of = [&](int64_t frame) {
-            const double x_raw =
-                (static_cast<double>(frame) -
-                 static_cast<double>(viewport_start_sample)) / samples_per_pixel;
-            return static_cast<int>(std::nearbyint(x_raw));
-        };
-        // Positional min/max: mid-gesture the displayed domain can invert
-        // begin/end, so "left"/"right" are BY COLUMN. col_l / col_r are the
-        // UNCLAMPED center columns; lo/hi are clamped into the mapped waveform
-        // width for the visible wash span.
         const int wmax = waveform_area.w - 1;
-        const int col_l = std::min(col_of(trim.begin), col_of(trim.end));
-        const int col_r = std::max(col_of(trim.begin), col_of(trim.end));
-        const int lo = std::clamp(col_l, 0, wmax);
-        const int hi = std::clamp(col_r, 0, wmax);
-        if (hi > lo) {
-            cairo_set_source_rgba(cr, kOverlay.r, kOverlay.g,
-                                  kOverlay.b, kOverlayAlpha);
-            cairo_rectangle(cr, static_cast<double>(top_strip_area.x + lo),
-                            static_cast<double>(chip_top),
-                            static_cast<double>(hi - lo),
-                            static_cast<double>(chip_h));
-            cairo_fill(cr);
-            // 1px ring, AA off. Top/bottom span the clamped band; the two
-            // vertical edges abut each visible chip's inner side (centered chip
-            // footprint [col - chip_half, col - chip_half + chip_w)). A right
-            // bound exactly 1px offscreen (col_r == wmax + 1, the EOF
-            // flush-right state) still gets its right edge, like before.
-            const int rx = top_strip_area.x + lo;
-            const int rw = hi - lo;
-            const int ry = chip_top;
-            const int rh = chip_h;
-            if (rw > 0 && rh > 0) {
+        const int gap_lo_raw = begin_col + chip_w;       // begin chip inner edge
+        const int gap_hi_raw = end_col - chip_w + 1;     // end chip inner edge
+        if (gap_hi_raw > gap_lo_raw) {
+            const int lo = std::clamp(gap_lo_raw, 0, wmax);
+            const int hi = std::clamp(gap_hi_raw, 0, wmax);
+            if (hi > lo) {
+                cairo_set_source_rgba(cr, kOverlay.r, kOverlay.g,
+                                      kOverlay.b, kOverlayAlpha);
+                cairo_rectangle(cr, static_cast<double>(top_strip_area.x + lo),
+                                static_cast<double>(chip_top),
+                                static_cast<double>(hi - lo),
+                                static_cast<double>(chip_h));
+                cairo_fill(cr);
+                // 1px ring bordering the gap rect, AA off.
+                const int rx = top_strip_area.x + lo;
+                const int rw = hi - lo;
                 cairo_save(cr);
                 cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
                 cairo_set_source_rgba(cr, kOverlay.r, kOverlay.g, kOverlay.b,
                                       kOverlayOutlineAlpha);
-                cairo_rectangle(cr, rx, ry, rw, 1);                 // top
-                cairo_rectangle(cr, rx, ry + rh - 1, rw, 1);        // bottom
-                // Left vertical: at the left chip's right (inner) edge, when the
-                // left bound is onscreen and the edge sits left of the right
-                // chip's inner edge.
-                const int left_inner  = col_l - chip_half + chip_w;
-                const int right_inner = col_r - chip_half;
-                if (col_l >= 0 && col_l <= wmax && left_inner < right_inner - 1) {
-                    const int lvx =
-                        top_strip_area.x + std::clamp(left_inner, 0, wmax);
-                    cairo_rectangle(cr, lvx, ry, 1, rh);            // left
-                }
-                // Right vertical: at the right chip's left (inner) edge minus 1,
-                // when the right bound is onscreen or exactly 1px offscreen.
-                if (col_r <= wmax + 1) {
-                    const int rvx =
-                        top_strip_area.x + std::clamp(right_inner - 1, 0, wmax);
-                    cairo_rectangle(cr, rvx, ry, 1, rh);            // right
-                }
+                cairo_rectangle(cr, rx, chip_top, rw, 1);              // top
+                cairo_rectangle(cr, rx, chip_top + chip_h - 1, rw, 1); // bottom
+                cairo_rectangle(cr, rx, chip_top, 1, chip_h);          // left
+                cairo_rectangle(cr, rx + rw - 1, chip_top, 1, chip_h); // right
                 cairo_fill(cr);
                 cairo_restore(cr);
             }
         }
     }
 
+    // Strip-crossing stem segment for each visible bound: from the chip's bottom
+    // edge down through the intervening lanes (marker text, flag, triangle) to
+    // the waveform top, where render_trim_stems continues it to the waveform
+    // bottom. The stem attaches at the bound column — the begin chip's leftmost
+    // edge and the end chip's rightmost edge — so the chip's anchored edge and
+    // its stem share one column and read as a single handle. Marker stems stay
+    // waveform-only; this strip-crossing gap-closing segment is TRIM-only. 1px,
+    // AA off (axis-aligned, +0.5), kTrimMarker.
+    {
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_set_source_rgb(cr, kTrimMarker.r, kTrimMarker.g, kTrimMarker.b);
+        cairo_set_line_width(cr, 1.0);
+        auto paint_strip_stem = [&](int64_t frame) {
+            if (!in_viewport(frame)) return;
+            const double x_px =
+                static_cast<double>(top_strip_area.x + col_of(frame)) + 0.5;
+            cairo_move_to(cr, x_px, static_cast<double>(chip_bottom));
+            cairo_line_to(cr, x_px, static_cast<double>(wave_top));
+            cairo_stroke(cr);
+        };
+        if (has_begin) paint_strip_stem(trim.begin);
+        if (has_end)   paint_strip_stem(trim.end);
+        cairo_restore(cr);
+    }
+
     // The b/e chips are TEXTLESS rectangles of the flag's exact width/height,
-    // centered on their bound columns, no triangle (Ableton's loop bounds carry
-    // none). Build the visible-bounds list sorted by painted column ascending;
-    // order is by position, NOT begin/end identity (target view or an inverted
-    // mid-gesture trim can reorder them).
+    // EDGE-ANCHORED on their bound columns (begin left-edge, end right-edge), no
+    // triangle (Ableton's loop bounds carry none). Deliberate asymmetry vs marker
+    // flags: a marker is a POINT (its flag centers and may hang half offscreen),
+    // a trim bound is an EDGE (its chip sits fully to one side, so a bound at
+    // frame 0 / EOF shows its chip fully onscreen). Build the visible list
+    // carrying each chip's bound column and role, sorted by column ascending.
     struct TrimChip {
-        double center_x;
+        int  col;
+        bool is_begin;
     };
     std::vector<TrimChip> chips;
-    auto add_chip = [&](int64_t frame) {
-        const double ms = static_cast<double>(frame);
-        if (ms < static_cast<double>(viewport_start_sample)) return;
-        if (ms >= static_cast<double>(viewport_end_sample)) return;
-        const double x_raw =
-            (ms - static_cast<double>(viewport_start_sample))
-                / samples_per_pixel;
-        const double center_x =
-            static_cast<double>(top_strip_area.x) + std::nearbyint(x_raw);
-        chips.push_back({center_x});
-    };
-    if (has_begin) add_chip(trim.begin);
-    if (has_end)   add_chip(trim.end);
+    if (has_begin && in_viewport(trim.begin))
+        chips.push_back({begin_col, true});
+    if (has_end && in_viewport(trim.end))
+        chips.push_back({end_col, false});
     std::sort(chips.begin(), chips.end(),
               [](const TrimChip& a, const TrimChip& b) {
-                  return a.center_x < b.center_x;
+                  if (a.col != b.col) return a.col < b.col;
+                  // Deterministic tie-break at an equal column: begin first, so
+                  // the reverse paint below lands it on top (mirrors the hit
+                  // test's forward-walk begin-first pick).
+                  return a.is_begin && !b.is_begin;
               });
 
     // Overlapping chips occlude rather than elide (as the marker flags do):
     // paint the sorted list in REVERSE order so the leftmost lands on top. Trim
-    // bounds are unselectable (recorded asymmetry), so there is no selected
-    // pass — one reverse pass is the whole occlusion order. Each chip is a plain
-    // kTrimMarker rectangle with a kTrimMarkerOutline border, no triangle
-    // (with_triangle = false); the bottom argument is unused for the rectangle
-    // shape.
+    // bounds are unselectable (recorded asymmetry), so there is no selected pass.
+    // Each chip is a plain kTrimMarker rectangle with a kTrimMarkerOutline
+    // border, no triangle; the bottom argument is unused for the rectangle shape.
     for (auto it = chips.rbegin(); it != chips.rend(); ++it) {
-        paint_flag_shape(cr, it->center_x,
+        const double center_x =
+            static_cast<double>(top_strip_area.x + it->col);
+        paint_flag_shape(cr, center_x,
                          static_cast<double>(chip_top),
                          static_cast<double>(chip_bottom),
                          static_cast<double>(chip_bottom),
                          kTrimMarker, kTrimMarkerOutline,
-                         /*with_triangle=*/false, /*alpha=*/1.0);
+                         /*with_triangle=*/false, /*alpha=*/1.0,
+                         it->is_begin ? FlagHAnchor::LeftEdge
+                                      : FlagHAnchor::RightEdge);
     }
 
     cairo_restore(cr);

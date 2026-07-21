@@ -24,6 +24,10 @@ void Selection::set_single_selection(int idx) {
     if (idx >= 0) app.selected_markers.insert(idx);
     app.last_selected_marker = (idx >= 0) ? idx : -1;
     viewport.invalidate_top_strip();
+    // The bottom-strip pass/ref readout now shows for the last-selected marker
+    // too (not only on hover), so a selection change damages the timestamp area
+    // like a hover change does — the marker-text lane rides the top-strip damage.
+    viewport.invalidate_timestamp_area();
 }
 
 void Selection::clear_selection() {
@@ -32,6 +36,7 @@ void Selection::clear_selection() {
     app.selected_markers.clear();
     app.last_selected_marker = -1;
     viewport.invalidate_top_strip();
+    viewport.invalidate_timestamp_area();
 }
 
 bool Selection::toggle_selection_membership(int idx) {
@@ -48,6 +53,7 @@ bool Selection::toggle_selection_membership(int idx) {
         added = false;
     }
     viewport.invalidate_top_strip();
+    viewport.invalidate_timestamp_area();
     return added;
 }
 

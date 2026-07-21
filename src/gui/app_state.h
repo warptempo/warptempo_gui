@@ -516,6 +516,11 @@ constexpr int     kDragMovedThresholdPx = 3;
 // cursor — either column — shows its OWN value in the marker-text lane (top
 // strip; paint_marker_text_lane), and a pass/label_ref warp marker ALSO shows
 // its resolved tempo in the bottom strip's transient row (paint_bottom_strip).
+// SELECTION now drives BOTH surfaces too (paint-side, not through this struct):
+// every selected marker shows its own value persistently in the lane, and the
+// last-selected pass/ref shows its readout in the bottom strip when no hover
+// readout wins. This struct stays the HOVER cache; the persistent selection runs
+// read the live store directly in the paint path.
 // The motion and viewport-recompute handlers set these fields the instant the
 // cursor lands on a flag rect (no dwell); dismiss conditions clear the whole
 // struct. A store mutation under a stationary cursor does NOT clear — the cached
@@ -1412,9 +1417,9 @@ enum class TrimHit { None, Begin, End };
 // lone bound is gesture-inert), so both bounds are guaranteed present.
 // AUTHORING views — the active tab's live pair, project-level in both 'W' and
 // 'P' views. Each chip is a textless flag-sized rectangle (flag_lane_w_px()
-// wide) CENTERED on the bound's painted column, exactly what render_trim_flags
-// fills — this rect is built the same way (round(center_x) - flag_w/2), so
-// paint and hit cannot drift. Tests both mouse_x and mouse_y. Walks the display
+// wide) EDGE-ANCHORED on the bound's painted column — the begin chip's LEFT edge
+// on it, the end chip's RIGHT edge on it — exactly what render_trim_flags fills,
+// this rect built the same way, so paint and hit cannot drift. Tests both mouse_x and mouse_y. Walks the display
 // warp_frame_map in target view so the hit lands on the visually-drawn chip.
 // The chip and the inter-chip bridge are the ONLY trim grab handles (the
 // waveform stem grab retired).

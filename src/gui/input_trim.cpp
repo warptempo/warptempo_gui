@@ -413,13 +413,18 @@ void GuiInputHandler::commit_trim_drag() {
 //     row) arms that bound's single drag.
 //   BRIDGE: else, a press whose y lies in the chip (upper) row band —
 //     top_upper_row_area, the band the translucent bridge block spans between
-//     the two chips — and whose column is strictly between the two chips'
-//     columns arms the pair drag. The bridge handle is the chip-ROW inter-chip
-//     span, NOT the whole strip height: a top-strip press below the chip row
-//     (the marker flag row) is not claimed and falls through to the caller's
-//     flag handling. Both bounds are the subject (no grabbed-bound notion; the
-//     pair has no viewport clamp and, like every trim gesture, never moves the
-//     playhead), so it always arms as Begin structurally.
+//     the two chips — and whose column is strictly between the two BOUND
+//     columns arms the pair drag. The chips edge-anchor ON their bound columns
+//     (begin left-edge, end right-edge, bodies facing inward), so this
+//     between-columns test is a superset of the visible gap; the CHIP HIT above
+//     is tested first and consumes the chip pixels, so the effective bridge grab
+//     equals the wash gap that render_trim_flags paints (paint and press match).
+//     The bridge handle is the chip-ROW inter-chip span, NOT the whole strip
+//     height: a top-strip press below the chip row (the marker flag row) is not
+//     claimed and falls through to the caller's flag handling. Both bounds are
+//     the subject (no grabbed-bound notion; the pair has no viewport clamp and,
+//     like every trim gesture, never moves the playhead), so it always arms as
+//     Begin structurally.
 // Both arms presuppose the full pair (the gate above): a lone bound arms
 // nothing — it is gesture-inert. Trim drags never touch selection.
 //
