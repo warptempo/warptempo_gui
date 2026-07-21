@@ -529,7 +529,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // label_ref marker; a marker's OWN value shows in the marker-text lane —
     // paint_marker_text_lane.) Each row's baseline is derived from its row rect, not
     // from the window bottom. (The former pan-strip row retired — pan lives on
-    // the Alt+drag waveform grab.)
+    // the Alt+drag waveform grab and the zoom strip's horizontal drag axis.)
     const GuiRect lower_row = bottom_lower_row_area(app);
     const GuiRect upper_row = bottom_upper_row_area(app);
 

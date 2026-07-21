@@ -135,29 +135,72 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // struct ref. The four hit_test_* lambdas are now free functions taking
 // (app, audio, ...) explicit args. The handle_wheel lambda is now a
 // private method on this struct.
-void GuiInputHandler::apply_strip_drag_at(int y, bool final_event) {
-    // Zoom-only, SONG-anchored zoom (Ableton's model). anchor_sample is the song
-    // position painted under press_x at the press, FIXED for the whole drag, and
-    // with no pan it stays pinned to press_x — so the anchor x passed below is
-    // simply press_x. The level tracks the ABSOLUTE dy since press: drag DOWN
-    // (y grows) lowers the level → zooms in; drag UP raises it → zooms out.
-    // Horizontal motion is ignored. Pan lives on the Alt+drag waveform grab.
+void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
+    // Dual-axis strip drag, INCREMENTAL (the v6 model). Every event reads the
+    // LIVE zoom level and viewport and applies its own dx/dy on top — there is no
+    // press baseline to go stale across composed pan/zoom phases (the earlier
+    // axis-lock model died of exactly that staleness). The song anchor
+    // (anchor_sample) is the zoom focus; the pan re-derives its drifted column
+    // each event and the edge trick rebinds it when it leaves the screen.
     StripDragState& sd = app.strip_drag;
-    double new_level = sd.press_level -
-        static_cast<double>(y - sd.press_y) / kZoomStripPxPerLevel;
+
+    // (1) Per-event deltas from the previous motion position. The crossing event
+    // folds the whole accumulated delta since the press (last_x/last_y were
+    // seeded there and no sub-threshold event advanced them).
+    const double dx = static_cast<double>(x - sd.last_x);
+    const double dy = static_cast<double>(y - sd.last_y);
+    sd.last_x = x;
+    sd.last_y = y;
+
+    // (2) The old spp is read from the LIVE level (never stored).
+    const double spp_old = current_samples_per_pixel(app, audio);
+
+    // (3) Pan at the old level, in the double domain: grab sign — drag right
+    // (dx>0) reveals earlier content, so the viewport moves left.
+    const double vp = static_cast<double>(app.viewport_start_sample) -
+                      dx * spp_old;
+
+    // (4) Zoom INCREMENTALLY off the live level: this event's dy applies to the
+    // current level (drag DOWN, dy>0, lowers the level → zooms in). No press
+    // baseline, so a wall reversal responds immediately — the older absolute-dy
+    // formula had a dead zone after a clamp (dy had to unwind all the way back
+    // before the level moved); this incremental form has none.
+    double new_level = app.zoom_level - dy / kZoomStripPxPerLevel;
     const double max_l = effective_max_zoom_level(
         waveform_area(app).w, live_total_frames(app, audio),
         audio.sample_rate());
     if (new_level < kMinZoom) new_level = kMinZoom;
     if (new_level > max_l)    new_level = max_l;
 
-    // The viewport entry point (clamp chokepoint) sets the level, computes
-    // viewport_start = anchor_sample - press_x·spp(new_level), and clamps, so
-    // anchor_sample stays painted at press_x under the new level's spp: the zoom
-    // pivots around the anchor's fixed press column. anchor_sample is never
-    // touched afterwards — it stays the fixed press-time song position.
-    viewport.apply_strip_drag_zoom(new_level, sd.anchor_sample,
-                                   static_cast<double>(sd.press_x), final_event);
+    // (5) The anchor's drifted column under the post-pan viewport, with the
+    // Ableton EDGE TRICK: clamp the column into [0, W-1] (the effective waveform
+    // width), and when the clamp engages REBIND anchor_sample to that edge
+    // pixel's frame — the zoom focus never leaves the screen; a pan that pushes
+    // it to an edge PINS it there and it becomes the edge's content. Deriving the
+    // column from the (unclamped) post-pan vp is what makes pure pan an exact
+    // identity (see below), and reading the live viewport each event is what lets
+    // a song-wall clamp self-heal on the following event.
+    const double W = static_cast<double>(waveform_area(app).w);
+    double anchor_col = (sd.anchor_sample - vp) / spp_old;
+    const double col_max = W > 0.0 ? W - 1.0 : 0.0;
+    double clamped_col = anchor_col;
+    if (clamped_col < 0.0)     clamped_col = 0.0;
+    if (clamped_col > col_max) clamped_col = col_max;
+    if (clamped_col != anchor_col) {
+        sd.anchor_sample = vp + clamped_col * spp_old;
+        anchor_col = clamped_col;
+    }
+
+    // (6) Apply: place anchor_sample at anchor_col under the new level's spp and
+    // clamp. IDENTITY PROOFS: pure pan (dy=0) is EXACT — new_level == old, so
+    // apply reproduces vp = anchor_sample - anchor_col·spp_old bit-for-bit (the
+    // column was derived from that same vp), and the level-unchanged dispatch
+    // rides the synchronous incremental pan path. Pure zoom (dx=0) leaves the
+    // anchor's current (possibly edge-pinned) column fixed and pivots the rescale
+    // around it. A both-unchanged event (level and viewport identical after the
+    // clamp) is a true no-op the entry point skips.
+    viewport.apply_strip_drag_zoom(new_level, sd.anchor_sample, anchor_col,
+                                   final_event);
 }
 
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
@@ -272,11 +315,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // motionless press-release commits nothing. Navigation-class like the
         // wheel pan: allowed in read-only, never touches the playhead or
         // selection, does not stop playback, and does not override follow. It is
-        // ZOOM-ONLY (vertical motion drives the level, horizontal motion is
-        // ignored — pan lives on the Alt+drag waveform grab). All modal gates
-        // (prompt, bottom-strip editors, the loading/empty guard) sit above this
-        // point, so a modal surface blocks the claim exactly as it blocks every
-        // other pointer target.
+        // DUAL-AXIS (vertical motion zooms, horizontal motion pans, freely
+        // composed — see apply_strip_drag_at). All modal gates (prompt,
+        // bottom-strip editors, the loading/empty guard) sit above this point, so
+        // a modal surface blocks the claim exactly as it blocks every other
+        // pointer target.
         {
             const GuiRect zoom_row = top_zoom_row_area(app);
             const bool in_zoom_row =
@@ -307,20 +350,19 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 const double spp = current_samples_per_pixel(app, audio);
                 app.strip_drag = StripDragState{};
                 app.strip_drag.active    = true;
-                app.strip_drag.press_y   = y;
-                // The press column: the drag-threshold reference AND the fixed
-                // screen column the anchor stays pinned to (the row is zoom-only,
-                // so the anchor never leaves press_x).
+                // The press position: the drag-threshold reference, and the seed
+                // for the incremental per-event deltas (last_x/last_y). Not a
+                // baseline — every event reads the live level and viewport.
                 app.strip_drag.press_x   = x;
-                // The song position painted under press_x at press time,
-                // unclamped and FIXED for the whole drag — the anchor the zoom
-                // pivots around (pinned to press_x, no pan).
+                app.strip_drag.press_y   = y;
+                app.strip_drag.last_x    = x;
+                app.strip_drag.last_y    = y;
+                // The song position painted under the press at press time — the
+                // anchor the zoom pivots around. Rebindable: a pan that drives
+                // its column offscreen re-pins it to the nearest visible pixel.
                 app.strip_drag.anchor_sample =
                     static_cast<double>(app.viewport_start_sample) +
                     static_cast<double>(x) * spp;
-                // Capture the level verbatim so the drag walks the one continuous
-                // domain from wherever it rests.
-                app.strip_drag.press_level = app.zoom_level;
                 // Ableton-style pointer capture: hide and lock the cursor at
                 // the press so motion feeds the gesture as unbounded virtual
                 // coordinates (infinite pan/zoom travel). Self-guarding no-op
@@ -551,7 +593,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // records nothing and clears any candidate, so a drag can never seed the
         // second click of a double-click.
         if (app.strip_drag.moved) {
-            apply_strip_drag_at(y, /*final_event=*/true);
+            apply_strip_drag_at(x, y, /*final_event=*/true);
             app.strip_double_click = StripDoubleClickCandidate{};
         } else {
             app.strip_double_click = StripDoubleClickCandidate{
@@ -646,19 +688,18 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         viewport.clear_hover_popup();
         return;
     }
-    // Zoom-strip drag, SONG-anchored zoom (the Ableton model; see
-    // apply_strip_drag_at). anchor_sample — the song position under press_x at
-    // the press — is FIXED for the whole drag and stays pinned to press_x (the
-    // row is zoom-only, no pan); the level tracks the absolute dy since press.
-    // The repaint is SYNCHRONOUS (final_event=false — a full rebuild when the
-    // level changed, a no-op when it did not), affordable because the platform
-    // coalesces captured motion to one event per pointer frame. The release runs
-    // the one synchronous rebuild plus the predictor resync. A lost button
-    // finalizes like release.
+    // Dual-axis strip drag (the incremental v6 model; see apply_strip_drag_at).
+    // Each event pans by its dx at the live level and zooms by its dy off the
+    // live level, pivoting the zoom around the (edge-rebindable) song anchor. The
+    // repaint is SYNCHRONOUS (final_event=false): a full rebuild when the level
+    // changed, the incremental pan fast-path when only the viewport moved, a true
+    // no-op when neither did — affordable because the platform coalesces captured
+    // motion to one event per pointer frame. The release runs the one synchronous
+    // rebuild plus the predictor resync. A lost button finalizes like release.
     if (app.strip_drag.active) {
         if (!mods.primary_button_held) {     // button lost -> end like release
             if (app.strip_drag.moved)
-                apply_strip_drag_at(mouse_y, /*final_event=*/true);
+                apply_strip_drag_at(mouse_x, mouse_y, /*final_event=*/true);
             app.strip_drag = StripDragState{};
             // An abnormal termination (button lost, not a clean release) seeds
             // no double-click candidate and drops any pending one.
@@ -671,9 +712,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // travelled at least the Chebyshev threshold from the press, leaving the
         // drag armed but unmoved. This gate decides only WHETHER the press
         // becomes a drag — once moved it never re-engages, so dragging back near
-        // the anchor mid-drag has no dead zone. The zoom reads the absolute dy
-        // since press_y regardless of when it crosses, so the catch-up never
-        // exceeds the real hand motion.
+        // the press mid-drag has no dead zone. last_x/last_y stay at the press
+        // until the crossing, so the crossing event folds the whole accumulated
+        // delta since the press and no travel is lost.
         if (!app.strip_drag.moved &&
             std::max(std::abs(mouse_x - app.strip_drag.press_x),
                      std::abs(mouse_y - app.strip_drag.press_y)) <
@@ -681,7 +722,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             return;
         }
         app.strip_drag.moved = true;
-        apply_strip_drag_at(mouse_y, /*final_event=*/false);
+        apply_strip_drag_at(mouse_x, mouse_y, /*final_event=*/false);
         viewport.clear_hover_popup();
         return;
     }

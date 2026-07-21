@@ -242,32 +242,37 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
                                      double anchor_x, bool final) {
     if (audio.total_frames() <= 0) return;
 
-    // Mid-gesture wall-saturated NO-OP: the drag is zoom-only and song-anchored
-    // (no pan), so when the level does not change this frame the viewport would
-    // re-place to the identical start — nothing moves. Skip the apply and every
-    // invalidation rather than repaint an identical frame. The terminating event
-    // (final) still runs so the rest state re-anchors the predictor.
-    if (!final && new_zoom_level == app.zoom_level) return;
+    const bool   level_changed = (new_zoom_level != app.zoom_level);
+    const int64_t old_vp       = app.viewport_start_sample;
 
     // Capture the scanner's pre-reflow pixel-x under the OLD viewport (as
     // apply_zoom_change does) so the next pre-paint damages the actually-painted
-    // column instead of leaving a ghost when the level changes under playback.
+    // column instead of leaving a ghost when the view changes under playback.
     if (app.playhead_scanner_active) {
         app.playhead_scanner_old_px_stash = scanner_pixel_x(app, audio);
     }
 
     app.zoom_level = new_zoom_level;
 
-    // Place the song position at anchor_x: pick the viewport start that paints
-    // anchor_sample at that fixed press column, at the new level.
-    // current_samples_per_pixel reads the level just assigned, so this is
-    // spp(new_level). At the effective ceiling the anchor cannot pin a column
-    // (the whole song is visible); clamp_viewport_start's visible >= total
+    // Place the song anchor at anchor_x: pick the viewport start that paints
+    // anchor_sample at that column, at the new level. current_samples_per_pixel
+    // reads the level just assigned, so this is spp(new_level); for a pure pan
+    // (level unchanged) it reproduces the caller's post-pan viewport exactly,
+    // recovered by nearbyint. At the effective ceiling the anchor cannot pin a
+    // column (the whole song is visible); clamp_viewport_start's visible >= total
     // branch parks the start at 0 and the drag is inert.
     const double spp = current_samples_per_pixel(app, audio);
     app.viewport_start_sample = static_cast<int64_t>(std::nearbyint(
         anchor_sample - anchor_x * spp));
     clamp_viewport_start(app, audio);
+    const bool vp_changed = (app.viewport_start_sample != old_vp);
+
+    // Mid-gesture true NO-OP: when the post-clamp level AND viewport are both
+    // unchanged this frame (a wall-saturated pan or zoom), nothing moves — skip
+    // the apply and every invalidation rather than repaint an identical frame.
+    // The terminating event (final) always proceeds so the rest state re-anchors
+    // the predictor and rebuilds the plate exactly.
+    if (!final && !level_changed && !vp_changed) return;
 
     invalidate_waveform_area();
     invalidate_timestamp_area();
@@ -280,14 +285,20 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
 
     // Rest state (final) re-anchors the playback predictor once, like the
     // continuous pan's release; mid-gesture events do NOT resync (the predictor
-    // keeps extrapolating smoothly for the drag's duration). Either way the plate
-    // is rendered SYNCHRONOUSLY: a level-changed frame rescales the whole plate,
-    // so a full synchronous rebuild is unavoidable — the exact cost a keyboard
-    // zoom already pays per press, now capped at once per pointer frame by the
-    // platform's per-frame motion coalescing. (A level-UNCHANGED mid-gesture
-    // frame never reaches here — the wall-saturated no-op returned at the top.)
-    if (final && playback.is_playing()) playback.resync_predictor();
-    kick_waveform_sync();
+    // keeps extrapolating smoothly for the drag's duration). Repaint dispatch:
+    // the terminating event and every level-CHANGED frame rescale the whole plate
+    // and take one SYNCHRONOUS full rebuild (the exact cost a keyboard zoom pays
+    // per press, capped at once per pointer frame by the platform's motion
+    // coalescing); a level-UNCHANGED but viewport-moved frame is a pure pan and
+    // rides the synchronous incremental shift-and-strip fast-path instead.
+    if (final) {
+        if (playback.is_playing()) playback.resync_predictor();
+        kick_waveform_sync();
+    } else if (level_changed) {
+        kick_waveform_sync();
+    } else {
+        kick_waveform_pan(app.viewport_start_sample, /*synchronous=*/true);
+    }
 }
 
 void Viewport::zoom_in() {

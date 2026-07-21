@@ -58,8 +58,9 @@ struct Viewport {
     // `synchronous` distinguishes the two pan drivers. Async (default): the wheel
     // pan and PageUp/PageDown steps in scroll_viewport — a busy worker or any
     // non-shift case defers to the worker, and the on_tick backstop catches the
-    // rest. Synchronous (true): the Alt+drag grab-pan (through scroll_viewport) —
-    // the mid-gesture frame must never paint over a stale-basis plate, so a busy
+    // rest. Synchronous (true): the Alt+drag grab-pan (through scroll_viewport)
+    // and the strip drag's pan-only frames (through apply_strip_drag_zoom) — the
+    // mid-gesture frame must never paint over a stale-basis plate, so a busy
     // worker is drained rather than deferred to, and a non-shift case falls back
     // to a full synchronous rebuild instead of enqueue-and-return.
     std::function<void(int64_t, bool)> request_waveform_pan_;
@@ -96,18 +97,19 @@ struct Viewport {
     void move_playhead_to(int64_t new_sample);
     void move_playhead_pixels(int delta_px);
     void apply_zoom_change(double new_zoom_level);
-    // Zoom-strip drag zoom: set the level and place the song position
-    // (anchor_sample, frames) at anchor_x (the fixed press column, window px, in
-    // fractional pixels) — rather than centering on the playhead the way
-    // apply_zoom_change does. The row is zoom-only (no pan), so the anchor stays
-    // pinned to its press column and the zoom pivots around that song position.
-    // Never touches the playhead or selection. A mid-gesture event (final=false)
-    // that does NOT change the level is a wall-saturated NO-OP and returns at the
-    // top without repainting; a level-changed event runs one full synchronous
-    // rebuild for this frame (affordable because the platform coalesces captured
-    // motion to at most one event per pointer frame). The terminating event
-    // (final=true) runs the one synchronous rebuild plus the predictor resync so
-    // the rest state is exact.
+    // Strip-drag apply: set the level and place the song anchor (anchor_sample,
+    // frames) at anchor_x (its drifted column, window px in fractional pixels) —
+    // rather than centering on the playhead the way apply_zoom_change does. The
+    // caller (apply_strip_drag_at) has already panned the viewport for this
+    // event; this places the anchor at the new level and clamps. For a pure pan
+    // (level unchanged) the placement reproduces the caller's post-pan viewport
+    // exactly. Never touches the playhead or selection. Repaint dispatch: a
+    // mid-gesture event (final=false) with the level AND viewport both unchanged
+    // after the clamp is a true NO-OP and returns without repainting; a
+    // level-changed event runs one full synchronous rebuild; a level-unchanged
+    // but viewport-moved event (a pure pan) rides the synchronous incremental pan
+    // fast-path. The terminating event (final=true) always runs the one
+    // synchronous rebuild plus the predictor resync so the rest state is exact.
     void apply_strip_drag_zoom(double new_zoom_level, double anchor_sample,
                                double anchor_x, bool final);
     void zoom_in();

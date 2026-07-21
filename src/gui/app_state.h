@@ -432,32 +432,37 @@ struct TrimDragState {
 };
 
 // Plain left-drag on the live zoom-strip row (Ableton-style navigation). The
-// row is ZOOM-ONLY: one fixed song anchor (the frame painted under press_x,
-// captured at the press) stays pinned to its press column for the whole drag,
-// and vertical motion drives the zoom level so the view expands/contracts
-// around that anchored song position. Horizontal motion is IGNORED (pan lives
-// on the Alt+drag waveform grab, not here). Navigation-class: never touches the
-// playhead or selection, allowed in read-only, does not toggle or override
-// follow. Cleared on button release / button-lost and on file load; no
-// Esc-restore (nothing to revert).
+// row is DUAL-AXIS, freely composed with no axis lock: vertical motion drives
+// the zoom level and horizontal motion pans the viewport, both applied per
+// motion event. The gesture is INCREMENTAL — each event reads the LIVE zoom
+// level and viewport (never a stored press baseline) and applies its own dx/dy
+// on top, so nothing goes stale across composed pan/zoom phases. One song
+// anchor (anchor_sample) is the focus the zoom pivots around; the pan re-derives
+// its drifted column each event, and the Ableton edge trick REBINDS the anchor
+// to the nearest visible pixel when a pan pushes its column offscreen (the focus
+// pins to the edge it hits and becomes that edge's content). Navigation-class:
+// never touches the playhead or selection, allowed in read-only, does not toggle
+// or override follow. Cleared on button release / button-lost and on file load;
+// no Esc-restore (nothing to revert).
 struct StripDragState {
     bool   active    = false;
-    // True once any motion event has applied a zoom change. A motionless
+    // True once any motion event has applied a change. A motionless
     // press-release must commit nothing, so the terminating event finalizes
     // (one final apply + synchronous rebuild) only when this is set.
     bool   moved     = false;
-    // Pointer position at the press (window px). press_y is the zoom reference —
-    // the level tracks the absolute dy since press_y. press_x is the
-    // drag-threshold reference (the Chebyshev gate deciding press-becomes-drag)
-    // AND the fixed screen column the anchor stays pinned to: the zoom is
-    // song-anchored, but with no pan the anchor never leaves press_x.
-    int    press_y   = 0;
+    // Pointer position at the press (window px) — the drag-threshold reference
+    // ONLY (the Chebyshev gate deciding press-becomes-drag). Not a zoom or pan
+    // baseline: the incremental model reads no press level and no fixed column.
     int    press_x   = 0;
-    // Continuous zoom level at the press — app.zoom_level verbatim. The drag
-    // walks the one continuous domain from wherever the level rests.
-    double press_level = 0.0;
-    // Song position (frames, double) painted under press_x at the press, FIXED
-    // for the whole drag — the anchor the zoom pivots around.
+    int    press_y   = 0;
+    // Pointer position at the previous motion event (window px), seeded at the
+    // press. Each event's dx/dy is the delta from here — dx pans, dy zooms.
+    int    last_x    = 0;
+    int    last_y    = 0;
+    // Song position (frames, double) the zoom pivots around — the frame under
+    // the press at the press, but REBINDABLE: when a pan drives its column off
+    // the effective waveform width, the edge trick pins it to the nearest
+    // onscreen pixel and rewrites this to that pixel's frame.
     double anchor_sample = 0.0;
 };
 
@@ -502,9 +507,9 @@ constexpr int     kDoubleClickSlackPx = 8;
 // click from becoming a micro-region, so a motionless click stays plain
 // playhead placement. Both use the same latch shape — a motion event below the
 // threshold is ignored outright (moved stays false, no apply, the drag stays
-// armed); once a drag, always a drag, so dragging back near the anchor has no
-// dead zone. The zoom-strip drag reads the absolute dy since press_y regardless
-// of when it crosses, so the catch-up jump never exceeds the real hand motion.
+// armed); once a drag, always a drag, so dragging back near the press has no
+// dead zone. The strip drag leaves last_x/last_y at the press until the crossing,
+// so the crossing event folds the whole accumulated delta and no travel is lost.
 constexpr int     kDragMovedThresholdPx = 3;
 
 // Hover state, two surfaces driven by one hovered marker. Any marker under the

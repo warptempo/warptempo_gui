@@ -597,15 +597,18 @@ private:
     // span) — armed or read-only-refused — so the caller claims with no
     // fallback; false lets the caller fall through to the marker flag handling.
     // Read-only claims without arming. Trim drags never touch selection.
-    // Zoom-strip drag, SONG-anchored zoom: anchor_sample is the fixed press-time
-    // song position (captured under press_x), which stays pinned to press_x for
-    // the whole drag (the row is zoom-only, no pan). Recomputes the level from
-    // the press state and the current pointer y (clamped into the numeric band
-    // and the shorter-file max) and pivots the zoom around that song position;
-    // horizontal motion is ignored. `final_event` is true on the terminating
-    // event (release / button-lost) for the one synchronous rebuild plus
-    // predictor resync; motion events pass false and repaint synchronously too.
-    void apply_strip_drag_at(int y, bool final_event);
+    // Dual-axis strip drag, INCREMENTAL: applies one motion event at (x, y).
+    // Reads the LIVE zoom level and viewport (never a stored press baseline),
+    // pans by the dx since the last event at the old level, zooms by the dy off
+    // the live level (clamped into the numeric band and the shorter-file max),
+    // and pivots the zoom around the song anchor — re-deriving the anchor's
+    // drifted column each event and rebinding it to the nearest visible pixel
+    // when a pan carries it offscreen (the edge trick). `final_event` is true on
+    // the terminating event (release / button-lost) for the one synchronous
+    // rebuild plus predictor resync; motion events pass false and repaint
+    // synchronously too (a full rebuild on a level change, the incremental pan
+    // fast-path on a pan-only frame).
+    void apply_strip_drag_at(int x, int y, bool final_event);
 
     bool route_trim_chip_press(int mouse_x, int mouse_y);
     // Arm the pending trim chip/bridge drag (pending+threshold): the begin runs

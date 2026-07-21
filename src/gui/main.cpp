@@ -285,7 +285,8 @@ GuiRect top_triangle_row_area(const AppState& a) {
 // bottom_upper_row (inner, index 1) carries the modal/editor/queue chain and,
 // below it, the pass/ref resolved hover readout (a marker's own value shows in
 // the top strip's marker-text lane).
-// (The former pan-strip row retired — pan lives on the Alt+drag waveform grab.)
+// (The former pan-strip row retired — pan lives on the Alt+drag waveform grab
+// and the zoom strip's horizontal drag axis.)
 GuiRect bottom_upper_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/false, 1);
 }
