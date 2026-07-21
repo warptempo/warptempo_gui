@@ -132,6 +132,17 @@ public:
     bool    is_playing() const;
     int64_t cursor()     const;
 
+    // Continuous (sub-frame) counterpart of cursor(): the pre-truncation
+    // extrapolated position as a double, in the SAME domain cursor() reports
+    // (the bound buffer's domain offset added once, no translation). cursor()
+    // returns floor(this) clamped to the window; the two agree exactly at the
+    // clamped window end. A pure reader with no side effects — cursor(), called
+    // alongside it on the main thread, owns the graph-suspended re-anchor. The
+    // scanner's DRAWN pixel is derived from this so a per-frame viewport rescale
+    // (a strip-drag zoom) slides it smoothly instead of stepping on integer
+    // frames; the integer cursor() stays the domain / change-detection anchor.
+    double  cursor_precise() const;
+
     // Monotonic count of loop wraps performed by the audio callback since the
     // device came up (never reset — a looping audition bumps it once per wrap).
     // The main-thread drive polls this each redraw and, on a change, treats it

@@ -113,6 +113,7 @@ void Viewport::move_playhead_to(int64_t new_sample) {
     // case the gesture callers funnel through here after stop.
     if (!app.playhead_scanner_active) {
         app.playhead_scanner_sample = new_sample;
+        app.playhead_scanner_precise = static_cast<double>(new_sample);
     }
 
     const int64_t vp_end = app.viewport_start_sample + visible;

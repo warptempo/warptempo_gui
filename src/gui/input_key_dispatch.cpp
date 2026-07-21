@@ -993,6 +993,7 @@ bool GuiInputHandler::adopt_render_entry(
 
     if (!app.playhead_scanner_active) {
         app.playhead_scanner_sample = app.playhead_cursor_sample;
+        app.playhead_scanner_precise = static_cast<double>(app.playhead_cursor_sample);
     }
     clamp_viewport_start(app, audio);
     viewport.clear_hover_popup();

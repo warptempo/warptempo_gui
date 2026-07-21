@@ -639,6 +639,7 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
     app.playhead_cursor_sample = sample;
     if (!app.playhead_scanner_active) {
         app.playhead_scanner_sample = sample;
+        app.playhead_scanner_precise = static_cast<double>(sample);
     }
 
     // Center the viewport on the focused marker at the current zoom — Tab

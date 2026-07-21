@@ -583,6 +583,46 @@ int64_t GuiPlayback::cursor() const {
     return predicted + off;
 }
 
+double GuiPlayback::cursor_precise() const {
+    if (!impl_) return 0.0;
+    // Mirrors cursor() branch-for-branch but returns the pre-truncation double
+    // and applies the same end/total clamps as doubles, so it agrees with
+    // cursor() exactly at the clamped window end and is floor()-consistent with
+    // it elsewhere (advance_samples >= 0 while playing forward). The domain
+    // offset is added once at each return, matching cursor()'s domain.
+    const double off = static_cast<double>(impl_->domain_offset);
+    if (!impl_->playing.load(std::memory_order_relaxed)) {
+        return static_cast<double>(
+                   impl_->cursor.load(std::memory_order_relaxed)) + off;
+    }
+    // Graph suspended: hold at the integer cursor exactly as cursor() reports.
+    // No re-anchor here — this is a side-effect-free reader; cursor(), called
+    // alongside it on the main thread, owns the continuous suspended re-anchor.
+    if (impl_->jack_rate.load(std::memory_order_relaxed) == 0) {
+        return static_cast<double>(
+                   impl_->cursor.load(std::memory_order_relaxed)) + off;
+    }
+    const int64_t a_sample = impl_->anchor_sample.load(std::memory_order_relaxed);
+    const int64_t a_ns     = impl_->anchor_ns.load(std::memory_order_relaxed);
+    if (a_ns == 0) return static_cast<double>(a_sample) + off;
+    const int64_t now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+    const int64_t elapsed_ns = now_ns - a_ns;
+    if (elapsed_ns <= 0) return static_cast<double>(a_sample) + off;
+    const double speed = static_cast<double>(
+        impl_->speed_x1000.load(std::memory_order_relaxed)) / 1000.0;
+    const int64_t sr = static_cast<int64_t>(impl_->source_rate);
+    const double advance_samples =
+        static_cast<double>(elapsed_ns) * 1e-9 * speed * static_cast<double>(sr);
+    double predicted = static_cast<double>(a_sample) + advance_samples;
+    const double end = static_cast<double>(
+        impl_->end_sample.load(std::memory_order_relaxed));
+    if (predicted > end) predicted = end;
+    const double total = static_cast<double>(impl_->total_frames);
+    if (predicted > total) predicted = total;
+    return predicted + off;
+}
+
 int64_t GuiPlayback::domain_begin() const {
     if (!impl_) return 0;
     return impl_->domain_offset;

@@ -22,6 +22,7 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     app.playhead_scanner_endpoint_painted = false;
     app.playhead_scanner_active = false;
     app.playhead_scanner_sample = app.playhead_cursor_sample;
+    app.playhead_scanner_precise = static_cast<double>(app.playhead_cursor_sample);
     viewport.invalidate_playhead_columns(scanner_px, cursor_px);
     viewport.invalidate_timestamp_area();
     app.follow_overridden_for_session = false;
@@ -30,6 +31,7 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
 void GuiPlaybackLifecycle::hold_natural_end_scanner(int64_t endpoint_sample) {
     const double old_px = scanner_pixel_x(app, audio);
     app.playhead_scanner_sample = endpoint_sample;
+    app.playhead_scanner_precise = static_cast<double>(endpoint_sample);
     app.playhead_scanner_active = true;
     app.playhead_scanner_restore_pending = true;
     app.playhead_scanner_endpoint_painted = false;
@@ -57,6 +59,7 @@ void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
     app.playhead_scanner_endpoint_painted = false;
     app.playhead_scanner_active = false;
     app.playhead_scanner_sample = app.playhead_cursor_sample;
+    app.playhead_scanner_precise = static_cast<double>(app.playhead_cursor_sample);
     app.follow_overridden_for_session = false;
 }
 
@@ -183,8 +186,12 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         if (loop) loop_start = viewport.trim_begin_sample();
     }
     // Scanner launch = the validated cursor position, in the paint domain
-    // in every view (see the comment above `start`).
+    // in every view (see the comment above `start`). Seed the continuous
+    // position too so the first paint (where the predictor's cur still equals
+    // start and the pre-paint hook early-returns) draws at the launch column
+    // rather than a stale precise value.
     app.playhead_scanner_sample = start;
+    app.playhead_scanner_precise = static_cast<double>(start);
     app.playhead_scanner_active = true;
     // If the cursor is offscreen at play press, left-edge-align the
     // viewport on the cursor before the scanner issues forth. Follow

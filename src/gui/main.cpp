@@ -506,7 +506,13 @@ double scanner_pixel_x(const AppState& a, const GuiAudio& audio,
                        int64_t vp_start, double spp) {
     (void)audio;
     if (spp <= 0.0) return -1.0;
-    return static_cast<double>(a.playhead_scanner_sample - vp_start) / spp;
+    // Drive the scanner's pixel from the CONTINUOUS predictor position
+    // (playhead_scanner_precise) rather than the quantized integer sample, so a
+    // per-frame viewport rescale during a strip-drag zoom slides the scanner
+    // smoothly instead of jittering on integer-frame steps. The line still
+    // paints as a hard 1px column at the rounded pixel; only its basis is
+    // continuous. The 2-arg overload below delegates here.
+    return (a.playhead_scanner_precise - static_cast<double>(vp_start)) / spp;
 }
 
 double scanner_pixel_x(const AppState& a, const GuiAudio& audio) {
@@ -1114,13 +1120,21 @@ int main(int argc, char** argv) {
         // (An old app-side bias field needed a target_buffer_frames > 0
         // guard here for exactly that skew.)
         const int64_t cur = playback.cursor();
+        // The integer cursor is the change-detection anchor: gate on it so a
+        // sub-frame advance that has not yet crossed an integer boundary adds no
+        // damage here (the stationary no-repaint case). A viewport change that
+        // moves the continuous pixel without changing cur is covered elsewhere —
+        // the strip-drag path invalidates the whole waveform area each frame, so
+        // the scanner repaints at its new continuous pixel through the normal
+        // paint even while this gate holds.
         if (cur == app.playhead_scanner_sample) return;
 
         // One-shot read of the viewport-mutation stash. When set, it
         // holds the scanner's last painted pixel-x under the OLD
         // viewport; the recomputed scanner_pixel_x against the new
         // viewport would point at a column the scanner was never
-        // painted at, leaving a ghost.
+        // painted at, leaving a ghost. old_px reads the still-current
+        // playhead_scanner_precise (the last painted continuous position).
         double old_px;
         if (app.playhead_scanner_old_px_stash >= 0.0) {
             old_px = app.playhead_scanner_old_px_stash;
@@ -1128,7 +1142,12 @@ int main(int argc, char** argv) {
         } else {
             old_px = scanner_pixel_x(app, audio);
         }
+        // Advance both fields: the integer sample (domain / change-detection)
+        // and the continuous position the scanner pixel is drawn from. new_px
+        // and the invalidated span are therefore computed from the continuous
+        // pixel, matching what paint draws.
         app.playhead_scanner_sample = cur;
+        app.playhead_scanner_precise = playback.cursor_precise();
         const double new_px  = scanner_pixel_x(app, audio);
 
         // invalidate_region during pre-paint appends to damage_ without
