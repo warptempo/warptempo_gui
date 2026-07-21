@@ -180,7 +180,7 @@ void Viewport::move_playhead_pixels(int delta_px) {
 // Apply a zoom change. The numeric target is derived inside; this helper
 // handles the playhead-centered viewport recompute so zoom_in/zoom_out
 // share exactly the same logic.
-void Viewport::apply_zoom_change(double new_zoom_level, bool resync_scanner) {
+void Viewport::apply_zoom_change(double new_zoom_level) {
     if (audio.total_frames() <= 0) return;
     // Pre-clamp the requested level to the per-file window so (a) a c/0 request
     // at a short file's ceiling is a TRUE no-op (equal after clamp → early
@@ -225,13 +225,7 @@ void Viewport::apply_zoom_change(double new_zoom_level, bool resync_scanner) {
     // Rects shifted under the (possibly stationary)
     // cursor — re-evaluate hover.
     recompute_hover_at_cursor();
-    // Re-anchor the playback predictor on a DISCRETE viewport jump only (the `0`
-    // toggle, settings `:zoom=`, tab/working-zoom restore — the default-true
-    // callers). The incremental `=`/`-`/wheel zoom passes resync_scanner=false:
-    // the predictor extrapolates a viewport-independent AUDIO sample, so a mere
-    // rescale needs no re-anchor, and resyncing per step would snap the smooth
-    // scanner to the quantized cursor each step (reads as jumpy).
-    if (resync_scanner && playback.is_playing()) playback.resync_predictor();
+    if (playback.is_playing()) playback.resync_predictor();
     // Reaching here means the zoom level changed (early-return above guards
     // the no-op case), so the waveform fingerprint differs. Zoom is a one-shot
     // discrete jump: render the plate synchronously and publish the displayed
@@ -366,7 +360,7 @@ void Viewport::zoom_in() {
         // clamped constructively at the zoom-in floor.
         double target = app.zoom_level - 1.0;
         if (target < kMinZoom) target = kMinZoom;
-        apply_zoom_change(target, /*resync_scanner=*/false);
+        apply_zoom_change(target);
     } else {
         // Already at the deepest zoom-in: recenter on the playhead.
         center_viewport_on_playhead();
@@ -381,7 +375,7 @@ void Viewport::zoom_out() {
     // (there is nothing beyond it — full zoom-out is whole-song-visible).
     double target = app.zoom_level + 1.0;
     if (target > max_l) target = max_l;
-    apply_zoom_change(target, /*resync_scanner=*/false);
+    apply_zoom_change(target);
 }
 
 void Viewport::zoom_steps(int in_steps) {
@@ -401,7 +395,7 @@ void Viewport::zoom_steps(int in_steps) {
             if (app.zoom_level == kMinZoom) center_viewport_on_playhead();
             return;
         }
-        apply_zoom_change(target, /*resync_scanner=*/false);
+        apply_zoom_change(target);
         return;
     }
 
@@ -410,7 +404,7 @@ void Viewport::zoom_steps(int in_steps) {
     if (app.zoom_level >= max_l) return;
     double target = app.zoom_level - static_cast<double>(in_steps);
     if (target > max_l) target = max_l;
-    apply_zoom_change(target, /*resync_scanner=*/false);
+    apply_zoom_change(target);
 }
 
 void Viewport::scroll_viewport(int64_t delta_samples, bool continuous,
