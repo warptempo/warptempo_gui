@@ -155,11 +155,13 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
     // crisp edge), then the text — no border, no caret. source_frame centers the
     // run on the marker's painted column (lane_text_left_x_at_frame), column-
     // agnostic so this needs no knowledge of which store the marker came from; a
-    // bad advance or clamp yields left<0 and skips.
-    auto paint_run = [&](int64_t source_frame, const std::string& txt) {
+    // bad advance or clamp yields left<0 and skips. source_frame is a DOUBLE so a
+    // mid-drag run can center on the grabbed marker's free proposed position (the
+    // same fractional basis the flag overlay paints through — see tier 2).
+    auto paint_run = [&](double source_frame, const std::string& txt) {
         if (txt.empty()) return;
         const double left = lane_text_left_x_at_frame(
-            app, audio, static_cast<double>(source_frame), txt.size());
+            app, audio, source_frame, txt.size());
         if (left < 0.0) return;
         const double run_w = static_cast<double>(txt.size()) * advance;
         cairo_save(cr);
@@ -209,12 +211,28 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
         src_f = mv[idx].time_frame;
         txt   = flag_text_iter(mv, idx, app.iteration_mode_enabled);
     }
+    // During an active marker drag whose grabbed marker IS this last-selected
+    // one, center the run on the live proposed position from moveable_times[0]
+    // (a free source-frame double, original + clamped delta) instead of the
+    // committed store frame — the store is not mutated until commit, so the run
+    // would otherwise lag at the pre-drag spot while the flag slides. Same
+    // displayed-map basis the flag overlay paints through, so text and flag stay
+    // in lockstep in both views. Drag-only: nudges mutate the store per press, so
+    // their runs already follow; the drag is single-marker, so moveable_times[0]
+    // is the grabbed marker's position. The payload text is unchanged during a
+    // drag — only the frame moves.
+    double display_src_f = static_cast<double>(src_f);
+    if (app.drag.active && !app.drag.dragging_markers.empty() &&
+        app.drag.dragging_markers[0] == idx &&
+        !app.drag.moveable_times.empty()) {
+        display_src_f = app.drag.moveable_times[0];
+    }
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
     const int col = painted_column_of_source_frame(
-        app, audio, static_cast<double>(src_f), map);
+        app, audio, display_src_f, map);
     if (col < 0 || col >= waveform_area(app).w) return;
-    paint_run(src_f, txt);
+    paint_run(display_src_f, txt);
 }
 
 // -- GuiPaintHandler::paint_waveform_plate -------------------------------
