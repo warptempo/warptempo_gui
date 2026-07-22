@@ -147,7 +147,7 @@ inline constexpr GuiColor kTrimMarkerOutline = hex(0xFFA040);
 // alpha is the sole disabled cue. Selection controls the color class (kSelected
 // family) and, for the anchor, the stem reveal; disablement controls this
 // alpha, and the two compose. Architect-tunable.
-inline constexpr double kDisabledMarkerAlpha = 0.45;
+inline constexpr double kDisabledMarkerAlpha = 0.25;
 
 // Trim boundary stem color (#F67400 orange). Distinct from
 // kMarker, kSelected, the teal cursor, and the yellow scanner. A set
