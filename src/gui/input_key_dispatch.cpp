@@ -1459,6 +1459,10 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
             selection.clear_selection();
             viewport.invalidate_waveform_area();
         }
+        // Navigation scrub: dissolve a resting region (the playhead is leaving
+        // its span). This dispatch site fires once per press; move_playhead_pixels
+        // is its only caller, so the clear cannot leak to a non-navigation path.
+        clear_region_highlight(app, viewport);
         viewport.move_playhead_pixels(-1);
         break;
     case GuiKeys::Right:
@@ -1467,6 +1471,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
             selection.clear_selection();
             viewport.invalidate_waveform_area();
         }
+        clear_region_highlight(app, viewport);
         viewport.move_playhead_pixels(+1);
         break;
     case GuiKeys::F:
@@ -1487,9 +1492,13 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         viewport.center_viewport_on_playhead();
         break;
     case GuiKeys::Home:   playback_lifecycle.stop_playback_if_playing();
+                    // Navigation jump to the trim-begin bound: dissolve a
+                    // resting region (its span is stale now the playhead jumps).
+                    clear_region_highlight(app, viewport);
                     viewport.move_playhead_to(viewport.trim_begin_sample());
                     break;
     case GuiKeys::End:    playback_lifecycle.stop_playback_if_playing();
+                    clear_region_highlight(app, viewport);
                     viewport.move_playhead_to(viewport.trim_end_sample() - 1);
                     break;
     default: break;

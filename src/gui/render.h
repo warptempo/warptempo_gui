@@ -889,8 +889,8 @@ double flag_pending_text_left_x(
     int marker_idx);
 
 // The marker-text lane's current NON-EDITOR run, arbitrated once so the paint
-// pass and the unified marker hit resolver (marker_hit_at in input_pointer.cpp
-// — the run is the marker's second hittable part beside its flag shape) read
+// pass and the unified marker hit resolver (marker_hit_at, below — the run is
+// the marker's second hittable part beside its flag shape) read
 // the SAME run and cannot drift.
 // Mirrors the precedence paint_marker_text_lane owns below the flag-editor
 // case: tier 1 the HOVERED marker's own value (hover_popup.lane_text at
@@ -917,3 +917,26 @@ struct LaneTextRun {
 // lane_text_left_x_at_frame(app, audio, source_frame, text.size()), a left<0
 // meaning the advance is not yet measured). No cairo context.
 LaneTextRun current_marker_lane_run(const AppState& app, const GuiAudio& audio);
+
+// The unified marker hit: the marker is ONE pointer item, hit either by its
+// FLAG SHAPE (hit_test_flag: the fixed rectangle plus the fused triangle,
+// topmost-painted wins) or by its RENDERED MARKER-TEXT LANE RUN (the run
+// current_marker_lane_run resolves — the ONE run arbitration the lane paint
+// also reads — when the point lands inside the run's screen rect, derived
+// exactly as paint derives it: lane_text_left_x_at_frame for the left edge,
+// glyph count times monospace_advance for the width, top_marker_text_row_area
+// for the y-band). `on_flag` records WHICH part was hit for the one asymmetry
+// the parts keep: the flag is the sole DRAG handle (a run press selects /
+// double-clicks / lands but never arms a reposition; the hover recompute reads
+// only .index, the surface not mattering to hover). index is the
+// active-column store index, -1 when neither part is under the point. Pure
+// geometry over app/audio (no cairo context); homed here beside
+// current_marker_lane_run so the press chain (input_pointer.cpp) and the hover
+// recompute (viewport.cpp) share one resolver.
+struct MarkerHit {
+    int  index   = -1;
+    bool on_flag = false;
+};
+
+MarkerHit marker_hit_at(const AppState& app, const GuiAudio& audio,
+                        int x, int y);

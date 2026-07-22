@@ -69,52 +69,6 @@ int64_t playhead_frame_at_click_column(const AppState& app,
         static_cast<int64_t>(std::nearbyint(static_cast<double>(col) * spp));
 }
 
-// The unified marker hit: the marker is ONE pointer item, hit either by its
-// FLAG SHAPE (hit_test_flag: the fixed rectangle plus the fused triangle,
-// topmost-painted wins) or by its RENDERED MARKER-TEXT LANE RUN (the run
-// current_marker_lane_run resolves — the ONE run arbitration the lane paint
-// also reads — when the press lands inside the run's screen rect, derived
-// exactly as paint derives it: lane_text_left_x_at_frame for the left edge,
-// glyph count times monospace_advance for the width, top_marker_text_row_area
-// for the y-band). `on_flag` records WHICH part was hit for the one asymmetry
-// the parts keep: the flag is the sole DRAG handle (a run press selects /
-// double-clicks / lands but never arms a reposition). index is the
-// active-column store index, -1 when neither part is under the point.
-struct MarkerHit {
-    int  index   = -1;
-    bool on_flag = false;
-};
-
-MarkerHit marker_hit_at(const AppState& app, const GuiAudio& audio,
-                        int x, int y) {
-    MarkerHit h;
-    // The flag lane and the marker-text lane are disjoint y-bands, so at most
-    // one of the two tests can hit; the flag test runs first only to settle
-    // on_flag directly.
-    const int flag = hit_test_flag(app, audio, x, y);
-    if (flag >= 0) {
-        h.index   = flag;
-        h.on_flag = true;
-        return h;
-    }
-    const LaneTextRun run = current_marker_lane_run(app, audio);
-    if (!run.valid) return h;
-    const double advance = monospace_advance();
-    if (advance <= 0.0) return h;
-    // left < 0 means the monospace advance is not yet measured — no run to hit.
-    const double left = lane_text_left_x_at_frame(
-        app, audio, run.source_frame, run.text.size());
-    if (left < 0.0) return h;
-    const GuiRect lane  = top_marker_text_row_area(app);
-    const double  run_w = static_cast<double>(run.text.size()) * advance;
-    if (y >= lane.y && y < lane.y + lane.h &&
-        static_cast<double>(x) >= left &&
-        static_cast<double>(x) <= left + run_w) {
-        h.index = run.marker_index;
-    }
-    return h;
-}
-
 // The active editor's resolved text geometry, valid only while exactly one
 // editor is active (and, for the flag editor, on-view). Press / motion /
 // release all resolve this so they agree on origin and which strip to
@@ -549,7 +503,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
         // Unified marker hit, computed ONLY on the path that consumes it. The
         // marker is ONE pointer item — flag shape OR rendered lane run
-        // (marker_hit_at above) — and the TOP-STRIP hit feeds the plain/Shift
+        // (marker_hit_at, the shared resolver in render.cpp the hover recompute
+        // also reads) — and the TOP-STRIP hit feeds the plain/Shift
         // marker-click branches (plain = single-select + double-click seed /
         // consume + arm the pending marker drag on the flag part, Shift = toggle
         // membership) and the alt-exact land below, so it is resolved once here.
@@ -638,6 +593,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     app.playhead_scanner_precise =
                         static_cast<double>(sample);
                 }
+                // Navigation land: dissolve a resting region — the playhead
+                // just jumped onto the marker, off any prior auditioning span.
+                clear_region_highlight(app, viewport);
                 viewport.invalidate_playhead_columns(
                     old_px, playhead_pixel_x(app, audio));
                 viewport.invalidate_timestamp_area();
@@ -844,11 +802,9 @@ void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
     // dissolves an existing highlight on mouse-down (the wash repaints away
     // now, not at release). A moved drag rebuilds a fresh region live; a
     // motionless press-release simply leaves it cleared. pre_region above keeps
-    // the pre-press extent for the Esc-mid-drag restore.
-    if (app.region.active) {
-        app.region = RegionState{};
-        viewport.invalidate_waveform_area();
-    }
+    // the pre-press extent for the Esc-mid-drag restore. Same dissolve shape as
+    // the navigation clears, so it shares clear_region_highlight.
+    clear_region_highlight(app, viewport);
 }
 
 void GuiInputHandler::on_button_release(GuiMouseButton button, int x,

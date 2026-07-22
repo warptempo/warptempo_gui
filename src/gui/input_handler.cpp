@@ -601,6 +601,17 @@ void GuiInputHandler::cycle_marker_focus(bool forward) {
     jump_playhead_to_focused_marker();
 }
 
+void clear_region_highlight(AppState& app, Viewport& viewport) {
+    // The clear+damage shape the existing region-clear sites use (Esc,
+    // end_region_drag_min_size_check): reset to a blank RegionState and damage
+    // the waveform area once. The wash and the split playhead repaint away and
+    // the cursor playhead returns under that same damage. Guarded so a call on
+    // the common no-region path costs nothing.
+    if (!app.region.active) return;
+    app.region = RegionState{};
+    viewport.invalidate_waveform_area();
+}
+
 bool GuiInputHandler::jump_playhead_to_focused_marker() {
     // The walk is markers-only (trim is not a cycle stop). The playhead moves
     // to the focused marker's source frame unconditionally, and the viewport
@@ -646,6 +657,12 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
         app.playhead_scanner_precise = static_cast<double>(sample);
     }
 
+    // Navigation jump: dissolve a resting region highlight (its span is stale
+    // now the playhead has left it, and the region would suppress the cursor
+    // playhead we just moved). Covers the whole Tab family and `c` through this
+    // one shared tail.
+    clear_region_highlight(app, viewport);
+
     // Center the viewport on the focused marker at the current zoom — Tab
     // leaves the zoom level alone. This recenter is unconditional: follow
     // mode does not gate the cycle (architect 2026-07-19, reversing the
@@ -682,6 +699,12 @@ void GuiInputHandler::run_zoom_toggle_command() {
     // deliberately DIVERGES from this (see run_zoom_double_click_command): the
     // toggle here returns any non-working level to the working zoom, whereas the
     // double-click zooms to the region / trim / whole-song span.
+    //
+    // Bare `0` recenters the view on the playhead (apply_zoom_change), so the
+    // region highlight is stale context — clear it (architect-listed
+    // explicitly). The zoom-strip double-click does NOT come through here, so
+    // its span-framing keeps any live region.
+    clear_region_highlight(app, viewport);
     if (app.zoom_level == kWorkingZoomLevel) {
         viewport.apply_zoom_change(effective_max_zoom_level(
             waveform_area(app).w, live_total_frames(app, audio),

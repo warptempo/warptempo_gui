@@ -547,25 +547,41 @@ void Viewport::recompute_hover_at_cursor() {
         clear_hover_popup();
         return;
     }
-    // Hover runs the same way in target view as in source view. hit_test_flag
-    // builds the target_warp_frame_map internally when active_audio_view ==
-    // Target so the flag rects it walks match what paint_handler renders at
-    // translated columns.
+    // Hover runs the same way in target view as in source view. marker_hit_at
+    // builds the target_warp_frame_map internally (via hit_test_flag and the
+    // lane-run resolver) when active_audio_view == Target so the flag rects and
+    // lane run it walks match what paint_handler renders at translated columns.
     // Mutation-sensitive short-circuit: the same hovered marker with both stores
     // unchanged needs no re-read. A store mutation (either column) bumps its
     // generation, so an in-place edit of the hovered marker — tempo step, Ctrl+N,
     // nudge — falls through here and re-reads fields, position, eligibility, and
     // payload from the live store below, even though the hit index is unchanged.
-    // The displayed-map generation joins the short-circuit: hit_test_flag
-    // resolves identity against the displayed flag positions, so a silent map
-    // promotion (which advances displayed_map_gen without a store mutation) can
-    // move the flag under a stationary cursor. Requiring the map generation to
-    // match forces a full re-read after a promotion.
+    // The displayed-map generation joins the short-circuit: marker_hit_at
+    // resolves identity against the displayed flag / run positions, so a silent
+    // map promotion (which advances displayed_map_gen without a store mutation)
+    // can move the flag under a stationary cursor. Requiring the map generation
+    // to match forces a full re-read after a promotion. These three keys are
+    // unchanged by the flag→lane widening: the hit is still one marker index and
+    // still depends only on the stores and the displayed map.
+    //
+    // The hover identity adopts the UNIFIED marker hit (flag shape OR the
+    // rendered lane run's rect), the same resolver the press chain reads, so
+    // moving the pointer off the flag up into the marker-text lane holds the
+    // hover instead of dropping it. STABILITY (no oscillation): the run's rect
+    // derives from the marker the run CURRENTLY shows (hover-else-last-selected,
+    // via current_marker_lane_run). Pointer over hovered-M's run → the resolver
+    // returns M (hover tier) — a fixed point, so the hover persists. Pointer
+    // entering the lane over the last-selected run with NO hover showing → the
+    // hover becomes that marker, but the run's text and frame are IDENTICAL
+    // under both tiers (same composition from the same store fields), so the
+    // rect does not move when the tier flips — one settle, no flicker. Only the
+    // marker index feeds hover; on_flag (the drag-handle asymmetry) is
+    // irrelevant here.
     const long long warp_gen  = app.warpmarkers.generation();
     const long long phase_gen = app.phaseresetmarkers.generation();
     const long long disp_gen  = app.displayed_map_gen;
-    const int hit = hit_test_flag(app, audio,
-                                  app.last_mouse_x, app.last_mouse_y);
+    const int hit = marker_hit_at(app, audio,
+                                  app.last_mouse_x, app.last_mouse_y).index;
     if (hit == app.hover_popup.marker_index &&
         warp_gen  == app.hover_popup.warp_gen &&
         phase_gen == app.hover_popup.phase_gen &&

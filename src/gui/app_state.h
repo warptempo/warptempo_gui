@@ -631,10 +631,10 @@ struct HoverPopupState {
     long long   warp_gen  = -1;
     long long   phase_gen = -1;
     // The displayed-map generation (app.displayed_map_gen) captured at set time.
-    // The hovered marker's IDENTITY is resolved by hit_test_flag against the
-    // displayed flag positions, so when the displayed map advances (a promotion)
-    // the flag under a stationary cursor can change even though neither marker
-    // store mutated. Bundling the map generation into the short-circuit forces a
+    // The hovered marker's IDENTITY is resolved by marker_hit_at (flag shape OR
+    // rendered lane run) against the displayed flag / run positions, so when the
+    // displayed map advances (a promotion) the flag under a stationary cursor can
+    // change even though neither marker store mutated. Bundling the map generation into the short-circuit forces a
     // re-read on the next recompute, and the on_tick repair fires on a map-gen
     // mismatch too — so a silent promotion cannot leave the hover naming a marker
     // whose flag moved away (and cannot leave a stale copy_payload).

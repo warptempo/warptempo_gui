@@ -1679,3 +1679,33 @@ LaneTextRun current_marker_lane_run(const AppState& app, const GuiAudio& audio)
     run.text         = std::move(txt);
     return run;
 }
+
+MarkerHit marker_hit_at(const AppState& app, const GuiAudio& audio,
+                        int x, int y) {
+    MarkerHit h;
+    // The flag lane and the marker-text lane are disjoint y-bands, so at most
+    // one of the two tests can hit; the flag test runs first only to settle
+    // on_flag directly.
+    const int flag = hit_test_flag(app, audio, x, y);
+    if (flag >= 0) {
+        h.index   = flag;
+        h.on_flag = true;
+        return h;
+    }
+    const LaneTextRun run = current_marker_lane_run(app, audio);
+    if (!run.valid) return h;
+    const double advance = monospace_advance();
+    if (advance <= 0.0) return h;
+    // left < 0 means the monospace advance is not yet measured — no run to hit.
+    const double left = lane_text_left_x_at_frame(
+        app, audio, run.source_frame, run.text.size());
+    if (left < 0.0) return h;
+    const GuiRect lane  = top_marker_text_row_area(app);
+    const double  run_w = static_cast<double>(run.text.size()) * advance;
+    if (y >= lane.y && y < lane.y + lane.h &&
+        static_cast<double>(x) >= left &&
+        static_cast<double>(x) <= left + run_w) {
+        h.index = run.marker_index;
+    }
+    return h;
+}

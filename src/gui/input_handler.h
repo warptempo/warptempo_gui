@@ -139,6 +139,26 @@ std::expected<std::vector<WarpFrameMapSegment>, std::string>
 validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
                            double scale, int sample_rate, long total_frames);
 
+// Dissolve a resting region-select highlight, damaging the waveform so the
+// wash and split playhead repaint away and the cursor playhead returns under
+// the same damage. A no-op when no region is active. Shared by the
+// playhead-jump NAVIGATION commands (architect ruling): any command that jumps
+// the playhead invalidates the auditioning span, and the region suppresses the
+// cursor playhead, so a parked highlight would hide the cursor at its new
+// position. Call sites: jump_playhead_to_focused_marker (the whole Tab family
+// plus `c` through the one tail), run_zoom_toggle_command (bare `0`), the bare
+// Left/Right playhead scrub, Home/End (the trim-bound jumps), and the alt-exact
+// marker-click land. DELIBERATELY NOT cleared: the region Space launch (the
+// region IS the launch point there), the coincident nudge/drag ride, marker
+// drops (`s`/Alt+S), undo/redo, and pure viewport moves (PageUp/PageDown, zoom
+// steps, pans). The plain waveform press (arm_region_drag_at) shares this
+// helper — same dissolve shape. The other pre-existing clear sites (Esc, file
+// load, Ctrl+Tab, and the S/T switch) keep their own in-place clears — Esc
+// weaves the reset into its key-guarded early return, and load / Ctrl+Tab /
+// S/T pair it with a domain flip or a full-window repaint rather than this
+// exact damage shape.
+void clear_region_highlight(AppState& app, Viewport& viewport);
+
 // -- GuiInputHandler ----------------------------------------------------
 //
 // The batch render runner lives on this struct as private helper methods
