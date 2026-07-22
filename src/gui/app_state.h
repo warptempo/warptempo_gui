@@ -357,8 +357,10 @@ struct EditorTextDragState {
 // Pending marker-reposition drag, armed by a PLAIN (unmodified) flag press.
 // The press single-selects its marker immediately (the click), then arms
 // this pending state instead of the drag itself: only once the pointer
-// travels past the shared kDragMovedThresholdPx (Chebyshev from the press)
-// does begin_drag run and the marker-drag machinery take over. Deferring
+// travels past kMarkerDragMovedThresholdPx (Chebyshev from the press; the
+// marker-specific gate, larger than the strip / region / trim
+// kDragMovedThresholdPx) does begin_drag run and the marker-drag machinery
+// take over. Deferring
 // begin_drag to the crossing keeps its pre-drag snapshot / selection capture
 // / wall math exact — nothing mutates the store between press and crossing —
 // and lets a sub-threshold press-release stay a pure click. Session-only,
@@ -543,6 +545,16 @@ constexpr int     kDoubleClickSlackPx = 8;
 // dead zone. The strip drag leaves last_x/last_y at the press until the crossing,
 // so the crossing event folds the whole accumulated delta and no travel is lost.
 constexpr int     kDragMovedThresholdPx = 3;
+
+// Markers use a LARGER grab threshold than the shared gate above: a plain
+// flag press must travel kMarkerDragMovedThresholdPx (Chebyshev from the
+// press) before it becomes a reposition drag, so a flag is easy to click
+// (select, or double-click to edit) without nudging it, and pixel-exact
+// fine-tuning stays on Alt+Left/Right rather than the drag — the Ableton
+// convention (markers get more grab slop than zoom / region). Only the
+// pending_marker_drag crossing reads this; strip / region / trim keep
+// kDragMovedThresholdPx.
+constexpr int     kMarkerDragMovedThresholdPx = 5;
 
 // Hover state, two surfaces driven by one hovered marker. Any marker under the
 // cursor — either column — shows its OWN value in the marker-text lane (top

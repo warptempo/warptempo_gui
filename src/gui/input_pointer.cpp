@@ -1006,7 +1006,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     }
     // Pending marker drag (armed by a plain flag press): the marker was
     // single-selected at press; the reposition begins only once the pointer
-    // travels past the shared Chebyshev threshold. Handled before the hover
+    // travels past the marker-specific Chebyshev threshold
+    // (kMarkerDragMovedThresholdPx, larger than the strip / region / trim
+    // gate). Handled before the hover
     // fallthrough below and after the other drag branches (a pending drag and
     // any other pointer gesture are mutually exclusive — the arming press does
     // no other work). A lost button before the crossing ends it as a plain
@@ -1019,7 +1021,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         }
         if (std::max(std::abs(mouse_x - app.pending_marker_drag.press_x),
                      std::abs(mouse_y - app.pending_marker_drag.press_y)) <
-                kDragMovedThresholdPx) {
+                kMarkerDragMovedThresholdPx) {
             return;   // still a click; leave the pending armed, do nothing
         }
         // Threshold crossed: begin the drag anchored at the PRESS column so the
