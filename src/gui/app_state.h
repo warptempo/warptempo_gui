@@ -554,7 +554,7 @@ constexpr int     kDragMovedThresholdPx = 3;
 // convention (markers get more grab slop than zoom / region). Only the
 // pending_marker_drag crossing reads this; strip / region / trim keep
 // kDragMovedThresholdPx.
-constexpr int     kMarkerDragMovedThresholdPx = 5;
+constexpr int     kMarkerDragMovedThresholdPx = 8;
 
 // Hover state, two surfaces driven by one hovered marker. Any marker under the
 // cursor — either column — shows its OWN value in the marker-text lane (top
