@@ -916,11 +916,15 @@ int main(int argc, char** argv) {
         paint_handler.maybe_enqueue_waveform_render();
 
         // Backstop: if the live-domain total changed under the current view
-        // (scale commit, tempo edit, marker move while target view is
-        // displayed), the current zoom level and viewport may sit outside
-        // the new bounds. Re-clamp both; when either actually moved, the
-        // displayed geometry changed discretely, so rebuild synchronously
-        // (same class as drop_marker — see warpmarkers_ops.cpp).
+        // the current zoom level and viewport may sit outside the new bounds.
+        // Re-clamp both; when either actually moved, the displayed geometry
+        // changed discretely, so rebuild synchronously (same class as
+        // drop_marker — see warpmarkers_ops.cpp). Synchronous edit tails (scale
+        // commit, tempo edit, marker move in target view) now pre-clamp through
+        // kick_waveform_sync and render final geometry in one shot, so this
+        // backstop finds their geometry already clamped (no movement, no second
+        // render) and remains the owner of ASYNCHRONOUS total changes — e.g. a
+        // preview completion that shifts the target total with no user command.
         {
             const int64_t lt = live_total_frames(app, audio);
             if (app.last_tick_live_total != lt) {

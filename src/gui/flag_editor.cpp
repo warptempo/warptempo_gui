@@ -509,11 +509,16 @@ void GuiFlagEditor::commit_top_flag_edit() {
     viewport.invalidate_timestamp_area();
     // Same discrete-warp_frame_map-change class as the drop / delete / nudge
     // edits (see drop_marker in warpmarkers_ops.cpp): a committed payload can
-    // change tempo / scale / label_def / label_ref, all map inputs, so re-warp
-    // synchronously in target view. Gated on store_changed by the early return
-    // above, exactly like the trigger — a no-op or iter-bracket-only commit
-    // (session state, not a map input) never reaches here.
-    if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
+    // change tempo / scale / label_def / label_ref / disabled, all map inputs,
+    // so re-warp synchronously in target view. Gated explicitly on
+    // canonical_changed (the map-input predicate) rather than store_changed: an
+    // iter-bracket-only commit reaches this point past the store_changed early
+    // return above, but the bracket is session-only scratch (not a map input),
+    // so its re-warp would be pixel-identical — skip the full synchronous
+    // rebuild. The trigger below keeps its store_changed gating (it re-derives
+    // identity-unchanged for the bracket and lands on the reuse rungs).
+    if (canonical_changed && app.active_audio_view == 'T')
+        viewport.kick_waveform_sync();
     target_render.trigger();
 }
 

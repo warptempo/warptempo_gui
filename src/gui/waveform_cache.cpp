@@ -211,14 +211,27 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
 }
 
 void GuiPaintHandler::maybe_enqueue_waveform_render() {
+    // Full dispatch freeze during the two displayed-basis gestures (marker
+    // drag, trim drag). Both freeze the displayed paint basis for the whole
+    // gesture (the DragState "no per-drag map copy" contract), so no waveform
+    // job may be DISPATCHED or PUBLISHED mid-gesture: on_waveform_render_done's
+    // completion-drop gate is the publication half, and this is the dispatch
+    // half. Freezing the whole enqueue (not just the warp_frame_map hash the
+    // former drag_freeze excluded) closes the drop-rewind-redispatch loop: a
+    // job for a viewport-follow / resize fingerprint dispatched just before the
+    // grab used to be dropped, rewound, then re-dispatched every tick because
+    // the vp/area fields still differed — wasted full renders all gesture long.
+    // Nothing that legitimately re-renders can occur mid-drag anyway: keys and
+    // wheels are gesture-gated, playback was stopped by the arming top-strip
+    // press so no follow scroll fires, and a compositor resize simply catches
+    // up at the first post-gesture tick. With no mid-drag dispatch the
+    // completion drop fires AT MOST ONCE (the one job in flight at the grab).
+    // The strip drag, alt-pan, and region drag are deliberately NOT here — they
+    // dispatch their own mid-gesture jobs and must keep rendering.
+    if (app.drag.active || app.trim_drag.active) return;
+
     WaveformRenderInputs in = compute_waveform_render_inputs();
     if (!in.valid) return;
-
-    // Drag-freeze gate: during a target-view drag the warp_frame_map-derived
-    // inputs are excluded from the dirty-detect comparison, so non-drag
-    // viewport changes (which would still update pending_fp_* if they
-    // happened) trigger a render but pure drag-motion does not.
-    const bool drag_freeze = in.is_target && app.drag.active;
 
     auto fingerprint_differs = [&](
         int64_t fp_vp_s, int64_t fp_vp_e,
@@ -230,9 +243,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         if (fp_aw   != in.area_w)          return true;
         if (fp_ah   != in.area_h)          return true;
         if (fp_t    != in.is_target)       return true;
-        if (!drag_freeze) {
-            if (fp_h  != in.warp_frame_map_hash)     return true;
-        }
+        if (fp_h    != in.warp_frame_map_hash) return true;
         return false;
     };
 
@@ -308,8 +319,8 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
 void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // Gesture-discard gate: a marker or trim drag freezes the displayed paint
     // basis for the whole gesture (the DragState "no per-drag map copy"
-    // contract). maybe_enqueue_waveform_render's drag-freeze gate already keeps
-    // a NEW map edit from being DISPATCHED mid-gesture, but a job dispatched (or
+    // contract). maybe_enqueue_waveform_render's full dispatch freeze keeps a
+    // NEW map edit from being DISPATCHED mid-gesture, but a job dispatched (or
     // parked in the supersede slot) BEFORE the drag began would still publish
     // its map HERE — the displayed basis would jump under a stationary pointer,
     // and every motion event re-reads it (apply_drag_motion, the trim drags, the
@@ -317,18 +328,17 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // publish, no item-cache stage, and CLEAR (never dispatch) the supersede
     // slot. Renders are repeatable — rewind pending_fp_* to the still-displayed
     // fp_* so the pending fingerprint again describes what is on screen; once the
-    // gesture ends and the drag-freeze gate reopens, the next
+    // gesture ends and the dispatch freeze reopens, the next
     // maybe_enqueue_waveform_render compares the current store's desired
     // fingerprint against that (== the displayed plate) and re-renders IFF the
     // plate is stale. Both a committed move (the store hash advanced) and a
     // no-op drag that left an EARLIER pending map edit unpublished (the desired
     // hash still differs from the displayed one) re-detect correctly; a
-    // genuinely up-to-date plate stays put. During the gesture pending_fp_* now
-    // equals the displayed (frozen, viewport-still) fingerprint, so the
-    // drag-freeze tick sees no diff and dispatches nothing further — this drop
-    // fires at most once per job already in flight at the grab. Gated on the
-    // marker/trim drags ALONE — the strip drag, alt-pan, and region drag
-    // dispatch their own mid-gesture jobs and must keep publishing.
+    // genuinely up-to-date plate stays put. Because the dispatch freeze enqueues
+    // NOTHING mid-gesture, this drop fires AT MOST ONCE — for the single job in
+    // flight at the grab; there is no drop-rewind-redispatch loop to sustain.
+    // Gated on the marker/trim drags ALONE — the strip drag, alt-pan, and region
+    // drag dispatch their own mid-gesture jobs and must keep publishing.
     if (app.drag.active || app.trim_drag.active) {
         wf_cache.supersede = false;
         wf_cache.supersede_warp_frame_map.clear();

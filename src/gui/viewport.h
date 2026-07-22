@@ -89,6 +89,22 @@ struct Viewport {
     // keystroke would tax the drag-time torrent the async path exists to absorb.
     std::function<void()> request_waveform_sync_;
     void kick_waveform_sync() {
+        // Render FINAL clamped geometry: reclamp through the one zoom/viewport
+        // chokepoint BEFORE the synchronous rebuild. A target-view map edit
+        // (tempo step, engine-scale commit, disable, nudge) can change the
+        // target total, hence the per-file effective zoom ceiling and the
+        // viewport walls; the edit tails call this at the OLD zoom/viewport, so
+        // without the reclamp the sync render paints stale geometry and the next
+        // tick's live-total backstop (main.cpp) has to re-clamp and render a
+        // SECOND time — a structural double synchronous render per press at full
+        // zoom-out. clamp_viewport_start clamps the level first (clamp_zoom_level)
+        // then snaps/clamps the viewport, and is IDEMPOTENT: for every caller that
+        // already clamped before kicking (the zoom paths, move_playhead_to,
+        // center-on-playhead, apply_zoom_to_start, the strip drag, undo, adopt,
+        // active_views, the settings editor, the tick backstop) it is a pure no-op.
+        // The tick backstop stays the owner of ASYNCHRONOUS total changes (a
+        // preview completion), which no edit tail drives.
+        clamp_viewport_start(app, audio);
         if (request_waveform_sync_) request_waveform_sync_();
         else                        kick_waveform_render();
     }
