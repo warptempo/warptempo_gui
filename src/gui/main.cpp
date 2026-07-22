@@ -946,6 +946,14 @@ int main(int argc, char** argv) {
                 const double  old_zoom = app.zoom_level;
                 const int64_t old_vp   = app.viewport_start_sample;
                 clamp_viewport_start(app, audio);
+                // Mirror kick_waveform_sync's repair (codex P2 fix): a total
+                // change can strand the resting playhead or a live region
+                // outside the new domain even when the geometry itself did not
+                // move, so repair unconditionally within the total-changed
+                // block, not behind the geometry-moved gate. Idempotent, so the
+                // second call inside kick_waveform_sync below (moved case) is a
+                // no-op.
+                viewport.clamp_display_state_to_live_domain();
                 if (app.zoom_level != old_zoom ||
                     app.viewport_start_sample != old_vp) {
                     viewport.invalidate_waveform_area();

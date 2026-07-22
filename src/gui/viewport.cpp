@@ -158,6 +158,55 @@ void Viewport::move_playhead_to(int64_t new_sample) {
     if (playback.is_playing()) playback.resync_predictor();
 }
 
+// Repair the LIVE display-state fields after a total-changing map edit. The
+// caller (kick_waveform_sync / the tick backstop) has already reclamped
+// zoom/viewport through clamp_viewport_start, so this reads the final geometry.
+// In SOURCE view the live total is the source total and never changes, so both
+// clamps below are structural no-ops there — no view branch needed. The helper
+// is idempotent and cheap (two compares when nothing is out of domain), which it
+// must be: kick_waveform_sync runs per cent step during a tempo drag.
+void Viewport::clamp_display_state_to_live_domain() {
+    if (audio.total_frames() <= 0) return;
+
+    // PLAYHEAD: keep the resting cursor playhead inside [0, live_total - 1] via
+    // the shared chokepoint (clamp_playhead_to_live_domain) — the same ruling
+    // every playhead write funnels through. A target-total shrink (e.g. an early
+    // slow segment dragged toward 4.00) can strand a parked playhead past the new
+    // EOF; this pulls it back to total - 1. On an actual move, damage the
+    // playhead columns and the timestamp readout the way move_playhead_to's
+    // playhead-only branch does (playhead_pixel_x reads app.playhead_cursor_sample,
+    // so old_px is captured before the write). No scanner write: the repair
+    // concerns the RESTING cursor only — every scanner read gates on
+    // playhead_scanner_active (the `? scanner : cursor` ternaries), so an inactive
+    // scanner's consumers read the cursor this just repaired, and an active
+    // scanner is the audio thread's to own; a map edit strands only the cursor.
+    const int64_t clamped =
+        clamp_playhead_to_live_domain(app.playhead_cursor_sample, app, audio);
+    if (clamped != app.playhead_cursor_sample) {
+        const double old_px = playhead_pixel_x(app, audio);
+        app.playhead_cursor_sample = clamped;
+        const double new_px = playhead_pixel_x(app, audio);
+        invalidate_playhead_columns(old_px, new_px);
+        invalidate_timestamp_area();
+    }
+
+    // REGION: a live region's endpoints are active-domain frames. If the domain
+    // shrank under it and either bound left [0, live_total - 1], CLEAR the
+    // highlight (writing app.region directly has precedent in active_views.cpp's
+    // S/T clear). CLEAR, not clamp, by design — the domain shifted under the wash,
+    // so a clamped span would misrepresent what the user selected; this is the
+    // S/T-switch precedent (codex P2 fix). A mid-drag shrink-then-grow that loses
+    // the region is accepted — the region is session scratch.
+    if (app.region.active) {
+        const int64_t total = live_total_frames(app, audio);
+        if (app.region.a_frame < 0 || app.region.a_frame >= total ||
+            app.region.b_frame < 0 || app.region.b_frame >= total) {
+            app.region = RegionState{};
+            invalidate_waveform_area();
+        }
+    }
+}
+
 void Viewport::move_playhead_pixels(int delta_px) {
     if (audio.total_frames() <= 0) return;
     const double spp = current_samples_per_pixel(app, audio);

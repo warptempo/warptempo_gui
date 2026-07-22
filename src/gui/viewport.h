@@ -112,6 +112,13 @@ struct Viewport {
         // for any future total-changing path that skips this reclamp — with
         // every edit tail synchronous now, no NAMED asynchronous case drives it.
         clamp_viewport_start(app, audio);
+        // Repair the resting playhead and any live region against the (possibly
+        // shrunk) live domain, AFTER the zoom/viewport reclamp so it reads the
+        // final geometry and its damage is covered by the rebuild's full-width
+        // damage below (codex P2 fix). Idempotent — a no-op when nothing left
+        // the domain — so the callers that already clamp their own playhead pay
+        // only two compares. The tick backstop mirrors this call.
+        clamp_display_state_to_live_domain();
         if (request_waveform_sync_) request_waveform_sync_();
         else                        kick_waveform_render();
     }
@@ -159,6 +166,18 @@ struct Viewport {
                          bool synchronous = false);
     void center_viewport_on_playhead();
     void follow_scroll_if_needed();
+
+    // Repair the LIVE display-state fields after a map edit that changed the
+    // active-domain total (a target-view tempo step / drag, the settings
+    // engine-scale commit, undo/redo — every total-changing warp-map edit).
+    // Clamps the resting cursor playhead back into [0, live_total - 1] through
+    // the shared clamp_playhead_to_live_domain chokepoint, and CLEARS a live
+    // region whose either bound left that domain. Called from kick_waveform_sync
+    // (the one chokepoint every total-changing sync tail funnels through) and
+    // mirrored in main.cpp's tick backstop; idempotent and cheap so a per-cent-
+    // step tempo drag pays nothing when nothing is out of domain. A structural
+    // no-op in source view (the source total never changes).
+    void clamp_display_state_to_live_domain();
 
     // Invalidation.
     void invalidate_waveform_area();
