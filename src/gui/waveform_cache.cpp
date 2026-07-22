@@ -512,11 +512,19 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 //   3. The async worker (maybe_enqueue_waveform_render) is the backstop for
 //      changes the user is not actively driving: resize, the launch file
 //      load, follow_scroll_if_needed during playback, and the on_tick safety
-//      net that catches residual fingerprint drift. Target-view marker drags
-//      are frozen during the drag (the display cache is stable under the
-//      frozen-coordinate regime) and the release commit re-warps and repaints
-//      synchronously through kick_waveform_sync (case 1 above) — the worker
-//      never touches a drag.
+//      net that catches residual fingerprint drift. The marker, trim, and
+//      tempo drags all freeze this worker's dispatch for the gesture's whole
+//      duration (the full-enqueue gate at maybe_enqueue_waveform_render, with
+//      on_waveform_render_done dropping the at-most-one job already in flight
+//      at the grab — see those two functions' own comments for the mechanics).
+//      The trim drag runs in either view and never touches the map, so
+//      freezing it costs no re-warp. The marker (reposition) drag runs only
+//      in its column's home view (W+source / P+target), likewise
+//      map-independent there. Off marker's home, in W+target, a plain flag
+//      drag is instead the TEMPO drag, which DOES re-warp — synchronously,
+//      PER CENT STEP, through kick_waveform_sync (case 1 above), not just
+//      once at release — so the worker stays frozen through every step for
+//      that reason, not because a drag is idle.
 //
 // This is NOT "make everything synchronous." Async earns its keep for the
 // touchpad torrent and for undriven / playback-adjacent changes; the rule is

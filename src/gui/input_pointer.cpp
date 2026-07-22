@@ -388,11 +388,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     if (app.tempo_drag.active) return;
     if (app.trim_drag.active) return;
 
-    // Target-view mouse authoring is unblocked. Fall through
-    // to the source-view handler; the input-to-source-frame boundary
-    // translation lives in the per-gesture writers (drag
-    // begin/motion, etc.) and in the active_domain_to_source_frame
-    // helper used by those writers.
+    // Mouse authoring is home-view gated like the keyboard: a plain flag
+    // press in W+target arms the TEMPO drag on an eligible marker instead
+    // of the reposition drag (marker_drag.tempo_drag_eligible; an
+    // ineligible press just selects) — the pointer half of the home-view
+    // binding's one tempo exception — while placement arming everywhere
+    // else is gated by active_column_authoring_allowed, off-home selecting
+    // but arming nothing. The click-playhead / region-drag family below is
+    // navigation, not authoring, and stays view-independent.
 
     if (button == GuiMouseButton::Left) {
         // Editor lifecycle, guard-free. A press in the editor's rendered lane
@@ -1118,10 +1121,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         update_trim_drag(mouse_x);
         return;
     }
-    // Target-view motion authoring is unblocked. Fall through
-    // to source-view's drag / region-drag / hover handling; per-site
-    // translation (drag anchor capture, motion delta conversion, hit
-    // tests) lives in the handlers below.
+    // Motion just continues whatever the press already armed — the
+    // home-view gate (active_column_authoring_allowed, plus the tempo
+    // drag's own eligibility check) ran once at arm time in
+    // on_button_press, so nothing here re-checks view or column; the
+    // region drag below is navigation, not authoring, and was never
+    // gated. Per-site translation (drag anchor capture, motion delta
+    // conversion, hit tests) lives in the handlers below.
     if (app.region_drag.active) {
         viewport.clear_hover_popup();
         // Left button must still be held; if not, the release was lost —

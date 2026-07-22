@@ -277,10 +277,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Target-view keyboard authoring is fully unblocked.
-    // Every binding source view honors runs in target view too; the
-    // input-to-source-frame boundary translation lives at the individual
-    // handlers (drop_marker_at_playhead, handle_trim_*, nudge_*, etc.).
+    // Keyboard authoring is HOME-VIEW gated, not view-blind: warp markers
+    // author in source view, phase resets in target view, via the one
+    // predicate active_column_authoring_allowed consulted at each
+    // individual handler below (marker drop, nudge, status toggle, flag
+    // editor open, etc.) beside the read-only check above — off home a
+    // handler still dispatches here but refuses silently, navigation-class.
+    // The two ruled exceptions: the Alt+Up/Down tempo step stays owner-only
+    // in target view, and the phase-reset propagate paste starts in source
+    // view and lands in target through the `t` toggle chokepoint.
 
     // Bare `t` toggles view-domain (S ↔ T). Placed before the marker /
     // phase reset edit handlers so the toggle wins over any future
