@@ -498,10 +498,12 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 //      full sync rebuild.
 //   3. The async worker (maybe_enqueue_waveform_render) is the backstop for
 //      changes the user is not actively driving: resize, the launch file
-//      load, target-view marker drags (frozen during the drag — the display
-//      cache is stable under the frozen-coordinate regime — and re-rendered on
-//      the worker at the release commit), follow_scroll_if_needed during playback, and
-//      the on_tick safety net that catches residual fingerprint drift.
+//      load, follow_scroll_if_needed during playback, and the on_tick safety
+//      net that catches residual fingerprint drift. Target-view marker drags
+//      are frozen during the drag (the display cache is stable under the
+//      frozen-coordinate regime) and the release commit re-warps and repaints
+//      synchronously through kick_waveform_sync (case 1 above) — the worker
+//      never touches a drag.
 //
 // This is NOT "make everything synchronous." Async earns its keep for the
 // touchpad torrent and for undriven / playback-adjacent changes; the rule is

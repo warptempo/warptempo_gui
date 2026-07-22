@@ -923,8 +923,12 @@ int main(int argc, char** argv) {
         // commit, tempo edit, marker move in target view) now pre-clamp through
         // kick_waveform_sync and render final geometry in one shot, so this
         // backstop finds their geometry already clamped (no movement, no second
-        // render) and remains the owner of ASYNCHRONOUS total changes — e.g. a
-        // preview completion that shifts the target total with no user command.
+        // render). live_total_frames is live-warp-map-derived, and every path
+        // that can change that map is now synchronous (edits) or self-clamping
+        // (load/adopt), so no NAMED asynchronous case remains — preview
+        // completion repaints the plate but never touches the live map. This
+        // stays cheap belt-and-braces insurance (a silent-wrong-geometry guard)
+        // for any future path that moves the total without clamping.
         {
             const int64_t lt = live_total_frames(app, audio);
             if (app.last_tick_live_total != lt) {

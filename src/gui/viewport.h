@@ -79,14 +79,16 @@ struct Viewport {
     // either way.
     //
     // Callers are the discrete, one-shot repositioning events: view swaps
-    // (tab / marker navigation), viewport recenters,
-    // undo/redo, and the structural target-view marker ops (drop / delete /
-    // commit_drag) whose warp_frame_map re-warp shifts the whole plate. Without the
-    // inline rebuild the overlays (playhead, markers, flags) land a frame ahead
-    // of the waveform, flashing. In-place fine-tune edits (nudge / jump /
-    // toggle-disabled / adjust_tempo_cents) deliberately omit it: they don't move the
-    // viewport, the async invalidate keeps pace, and a synchronous rebuild per
-    // keystroke would tax the drag-time torrent the async path exists to absorb.
+    // (tab / marker navigation), viewport recenters, undo/redo, and every
+    // discrete warp_frame_map edit in target view (drop / delete / commit_drag /
+    // nudge / toggle-disabled / adjust_tempo_cents / the flag-editor commit /
+    // the settings engine-scale commit / adopt) — each re-warps the map, so
+    // the plate and the overlays (playhead, markers, flags) must land in one
+    // frame with the reclamped geometry below, or the overlays jump a frame
+    // ahead of a stale plate. The ASYNC worker path is not a map-edit route:
+    // it serves viewport navigation (pan/follow/resize) and repaints the
+    // plate on preview completion, both undriven-by-a-discrete-edit cases the
+    // key-repeat-rate argument for staying async never applied to.
     std::function<void()> request_waveform_sync_;
     void kick_waveform_sync() {
         // Render FINAL clamped geometry: reclamp through the one zoom/viewport
@@ -102,8 +104,9 @@ struct Viewport {
         // already clamped before kicking (the zoom paths, move_playhead_to,
         // center-on-playhead, apply_zoom_to_start, the strip drag, undo, adopt,
         // active_views, the settings editor, the tick backstop) it is a pure no-op.
-        // The tick backstop stays the owner of ASYNCHRONOUS total changes (a
-        // preview completion), which no edit tail drives.
+        // The tick backstop (main.cpp) remains cheap belt-and-braces insurance
+        // for any future total-changing path that skips this reclamp — with
+        // every edit tail synchronous now, no NAMED asynchronous case drives it.
         clamp_viewport_start(app, audio);
         if (request_waveform_sync_) request_waveform_sync_();
         else                        kick_waveform_render();
