@@ -166,6 +166,11 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // event.
 void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
+    // Stop playback first. Playhead rule, symmetric with
+    // nudge_selected_markers (full rationale there): parked off the focused
+    // marker → stays parked (lead-in intent); exactly coincident at press
+    // time → RIDES the marker (the playhead_rides test below). The ride
+    // never lands the playhead onto a fresh marker.
     playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
@@ -189,6 +194,16 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(tv.size())) return;
     }
+    // Coincident-ride test against the PRE-move frame, through the same
+    // two-step Tab placement basis as the warp nudge (one spelling, both
+    // columns — a phase reset does not change the warp map, but the basis
+    // is identical anyway). Singleton selection, so one test suffices.
+    const bool playhead_rides =
+        app.playhead_cursor_sample ==
+        clamp_playhead_to_live_domain(
+            source_frame_to_active_domain(
+                app, audio, tv[app.last_selected_marker].time_frame),
+            app, audio);
     // The display context supplies the anchoring map: identity in source
     // view, the live cached map in target view — the same map the stem
     // painter reads, so the anchored column is the painted one. The
@@ -233,6 +248,15 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     // the selection at the moved reset.
     remap_marker_indices_after_reorder(
         app, reorder_markers_by_time(app.phaseresetmarkers.markers_mut()));
+    // Coincident ride: keep the playhead on the reset it sat on, through the
+    // post-mutation two-step basis (identical to the warp nudge's ride; the
+    // committed t_new is reorder-independent). move_playhead_to owns the
+    // clamp, scanner mirror, and invalidation.
+    if (playhead_rides && !proposals.empty()) {
+        viewport.move_playhead_to(
+            source_frame_to_active_domain(app, audio,
+                                          proposals.front().second));
+    }
     // Coalesce a rapid burst: the first press already pushed the pre-burst
     // snapshot, so a continuation press skips its redundant push and one
     // Ctrl+Z reverts the whole burst. Then re-record with the post-mutation

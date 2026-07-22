@@ -348,9 +348,11 @@ bool GuiInputHandler::handle_escape_cancels(GuiKey key) {
 // are stopped before their deferred commit, so their pending change is
 // discarded and the live state returns to pre-drag — positions AND (marker
 // drag only) the marker selection captured at drag begin (the arming press
-// single-selected the grabbed marker, so that is what a cancel restores);
-// neither drag moves the playhead, so there is no playhead to restore in
-// either. A strip drag applies its
+// single-selected the grabbed marker, so that is what a cancel restores).
+// The playhead restore is rides-only: a marker drag whose playhead RODE the
+// grabbed marker (exactly coincident at grab — see DragState) puts it back at
+// its grab-time position; a non-riding marker cancel and every trim cancel
+// touch no playhead at all. A strip drag applies its
 // motion continuously, so stopping just ends it where it is; a region drag is
 // cancelled and the region restored to how it rested at arm (the pre-drag
 // snapshot). A live editor-text drag is FINALIZED, not cancelled — selection-
@@ -360,13 +362,19 @@ void GuiInputHandler::cancel_active_drags() {
     if (app.drag.active) {
         // The live marker store was untouched during motion (proposed
         // positions lived in moveable_times, read by paint through
-        // DragOverlay), so no marker revert is needed. The drag never moved
-        // the playhead, so there is nothing to restore there either — a cancel
-        // just drops the pending marker move and the SelectionSnapshot.
+        // DragOverlay), so no marker revert is needed. A cancel drops the
+        // pending marker move, restores the SelectionSnapshot, and — when the
+        // playhead rode the grabbed marker — puts the playhead back at its
+        // grab-time position (the marker returns to its origin, so the
+        // coincident playhead returns with it; a non-riding cancel leaves the
+        // playhead alone).
         // Restore the marker selection captured at drag begin (the arming press
         // single-selected the grabbed marker, so this is {hit}) — a cancel
         // reverts the drag's position change, not the click's selection.
         restore_selection_snapshot(app, app.drag.pre_drag_selection);
+        if (app.drag.playhead_rides) {
+            viewport.move_playhead_to(app.drag.pre_ride_playhead_sample);
+        }
         app.drag = DragState{};
         viewport.invalidate_waveform_area();
         viewport.invalidate_top_strip();
@@ -375,10 +383,10 @@ void GuiInputHandler::cancel_active_drags() {
     if (app.trim_drag.active) {
         // Trim motion mutates app.trim live but keeps the pre-drag
         // bounds in orig_begin/orig_end, so restore them before clearing
-        // the gesture. Trim cancel restores the BOUNDS ONLY: like the marker
-        // arm above, a trim drag never touches the playhead — both gestures
-        // are playhead-independent now — so there is nothing to restore or
-        // resync there.
+        // the gesture. Trim cancel restores the BOUNDS ONLY: a trim drag
+        // never touches the playhead (no coincident-ride analog — trim
+        // bounds are outside the selection system), so there is nothing to
+        // restore or resync there.
         if (app.trim_drag.moved) {
             app.trim.begin_frame = app.trim_drag.orig_begin_frame;
             app.trim.end_frame   = app.trim_drag.orig_end_frame;

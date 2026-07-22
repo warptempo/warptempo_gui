@@ -181,8 +181,8 @@ void GuiFlagEditor::enter_text_edit(int idx,
     // marker-column outline follows it (every call path — in-edit-active
     // switch, pre-edit plain click, and the BPM editor open — routes through
     // here). The playhead is DELIBERATELY not moved: opening or retargeting a
-    // flag editor is a selection act, not a playhead move; only the Tab family
-    // and `c` land the playhead on a marker.
+    // flag editor is a selection act, not a playhead move; the land routes are
+    // the Tab family, `c`, and the alt-exact flag click.
     selection.set_single_selection(idx);
 
     // Discard any prior edit silently before switching targets.

@@ -472,8 +472,10 @@ private:
     // viewport on it at the current zoom. Returns true when a marker was
     // focused and the jump happened, false (leaving the playhead alone) when
     // there is none. This is the shared jump tail of cycle_marker_focus (the
-    // Tab family) and the `c` gesture — the ONLY two routes that land the
-    // playhead exactly on a marker.
+    // Tab family) and the `c` gesture; the alt-exact flag click is the third
+    // land-onto-marker route (its own direct write in on_button_press — same
+    // two-step placement basis, no viewport move). The nudge/drag ride only
+    // keeps an already-coincident playhead on its marker; it never lands one.
     bool jump_playhead_to_focused_marker();
 
     // The bare `0` key zoom TOGGLE: at the working zoom → full zoom-out (the

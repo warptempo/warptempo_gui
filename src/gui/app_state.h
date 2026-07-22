@@ -171,13 +171,25 @@ struct DragState {
     // Pre-drag marker selection snapshot, captured at begin_drag for the
     // Esc / Ctrl+Q cancellation restore: the arming flag press single-selected
     // the grabbed marker, so this captures {hit} and a cancel restores exactly
-    // that. The drag never moves the playhead, so there is no playhead capture
-    // to pair with this — a cancel leaves the playhead alone.
+    // that. The playhead's cancel restore is the ride pair below: a non-riding
+    // drag never touches the playhead, so only a riding cancel puts it back.
     SelectionSnapshot      pre_drag_selection;
+    // Coincident-ride ruling: a playhead EXACTLY on the grabbed marker at grab
+    // time (exact active-domain frame equality through the Tab placement basis
+    // — source_frame_to_active_domain then clamp_playhead_to_live_domain, so a
+    // Tab / `c` / alt+flag-click placement is coincident by construction)
+    // RIDES the marker through the drag: it stays on the marker so a later
+    // Space auditions FROM it. A playhead parked anywhere else is left alone —
+    // lead-in intent — and the ride never lands the playhead onto a fresh
+    // marker. Only the RESTING cursor playhead moves (a live scanner is
+    // untouched; move_playhead_to's scanner-inactive guard owns that).
+    bool                   playhead_rides = false;
+    // Cursor position at grab, for the Esc-cancel restore: the marker returns
+    // to its origin on cancel, so a ridden playhead returns with it.
+    int64_t                pre_ride_playhead_sample = 0;
     // Index of the marker whose flag press started the drag. Re-asserted as the
     // single selection at first motion (set_single_selection) — normally a
-    // no-op, since the arming press already single-selected it; the drag does
-    // not move the playhead.
+    // no-op, since the arming press already single-selected it.
     int                    hit_marker           = -1;
     // Which list this drag operates on. The motion / commit
     // handlers dispatch on this so a drag started in phase reset view
@@ -425,8 +437,9 @@ struct TrimDragState {
     // is read only by the single-bound path, which uses it to name the one
     // bound that moves. No pre-drag playhead capture: trim drags never touch
     // the playhead, so an Esc/Ctrl+Q cancel has nothing to restore there (the
-    // recorded difference from the marker DragState, which tracks and restores
-    // its grabbed marker's selection).
+    // recorded difference from the marker DragState, which restores its
+    // grabbed marker's selection and — rides-only — a playhead that rode the
+    // coincident marker).
     bool    both                 = false;
     int64_t orig_begin_frame   = 0;
     int64_t orig_end_frame     = 0;

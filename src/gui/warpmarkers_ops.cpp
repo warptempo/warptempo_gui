@@ -461,11 +461,18 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
 void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
     // Fine-tuning authoring gesture (Alt+Left/Right is the only caller path):
-    // stop playback first. The playhead is DELIBERATELY left parked — the
-    // marker steps under it, so an upstream audition point survives the nudge
-    // and a re-launch replays the approach into the moved marker. The playhead
-    // no longer syncs to the marker on any live gesture; only the Tab family
-    // and `c` land it on a marker.
+    // stop playback first. Playhead rule: when the playhead is parked anywhere
+    // OFF the focused marker (usually upstream), it stays parked — the marker
+    // steps under it, the audition point survives the nudge, and a re-launch
+    // replays the approach into the moved marker. When the playhead sits
+    // EXACTLY on the focused marker at press time (exact active-domain frame
+    // equality through the Tab placement basis — see playhead_rides below), it
+    // RIDES the marker: it steps with it so a later Space auditions FROM the
+    // marker. The ride only keeps the playhead on a marker it already sits on;
+    // it never lands it onto a fresh one (the land routes are the Tab family,
+    // `c`, and the alt-exact flag click). Coincidence is tested per press, so
+    // a lead-in nudge that walks the marker exactly onto the parked playhead
+    // begins riding on the NEXT press — accepted emergent behavior.
     playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
@@ -488,6 +495,19 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(mv.size())) return;
     }
+    // Coincident-ride test, against the PRE-move frame and PRE-move map: the
+    // playhead rides only when it sits EXACTLY on the focused marker's active-
+    // domain position, computed through the same two-step basis the Tab family
+    // places with (source_frame_to_active_domain then
+    // clamp_playhead_to_live_domain), so a Tab / `c` / alt+flag-click placement
+    // is coincident by construction — anything else means lead-in intent.
+    // The selection is a singleton (collapsed above), so one test suffices.
+    const bool playhead_rides =
+        app.playhead_cursor_sample ==
+        clamp_playhead_to_live_domain(
+            source_frame_to_active_domain(
+                app, audio, mv[app.last_selected_marker].time_frame),
+            app, audio);
     // The display context supplies the anchoring map: identity in source
     // view, the live cached map in target view — the same map the stem
     // painter reads, so the anchored column is the painted one. The
@@ -529,6 +549,20 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     // the selection at the moved marker.
     remap_marker_indices_after_reorder(
         app, reorder_markers_by_time(app.warpmarkers.markers_mut()));
+    // Coincident ride: keep the playhead on the marker it sat on. The
+    // committed frame (t_new, reorder-independent) maps through
+    // source_frame_to_active_domain AFTER the store mutation, so the
+    // generation-keyed display cache re-derives against the post-move map —
+    // in target view a warp nudge changes the map itself, and this is the
+    // post-commit basis. move_playhead_to owns the live-domain clamp, the
+    // scanner mirror (playback stopped above, scanner inactive), the
+    // invalidation, and the standard keep-visible viewport edge-align (a
+    // nudged marker is at most one column from a visible position).
+    if (playhead_rides && !proposals.empty()) {
+        viewport.move_playhead_to(
+            source_frame_to_active_domain(app, audio,
+                                          proposals.front().second));
+    }
     // Coalesce a rapid burst: the first press already pushed the pre-burst
     // snapshot, so a continuation press skips its redundant push and one
     // Ctrl+Z reverts the whole burst. Then re-record with the post-mutation
