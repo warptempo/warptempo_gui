@@ -359,6 +359,21 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     if (app.active_markers_view != 'W') return;
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
+    // architect ruling 2026-07-22: the Alt+Up/Down tempo step is the one warp
+    // authoring gesture that stays reachable off its source home (target view
+    // is exactly where you want to hear/see a tempo change). But there it is
+    // OWNER-ONLY: the focus-collapse target must already own an adjustable
+    // tempo, so a pass (tempo_inherits) or a label ref refuses silently — no
+    // freeze conversion, no undo entry, no dirty. Source view is UNCHANGED
+    // (the pass/ref-to-owner freeze below still applies). The owner test reads
+    // the marker's own authored fields, not the resolved projection: the
+    // question is whether this marker owns a tempo, which is payload.
+    if (app.active_audio_view == 'T') {
+        const auto& mv = app.warpmarkers.markers();
+        const int f = app.last_selected_marker;
+        if (f < 0 || f >= static_cast<int>(mv.size())) return;
+        if (mv[f].tempo_inherits || !mv[f].label_ref.empty()) return;
+    }
     // Undo-coalescing decision. coalesce_gesture keys off command adjacency
     // (app.command_seq, bumped once at the on_key / on_wheel dispatch entry
     // that reached this handler), so it is order-independent of the

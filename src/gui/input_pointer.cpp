@@ -689,12 +689,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // focused marker (the click above already single-selected it).
                     // The surface + target tag prevents any zoom-row / editor
                     // candidate from consuming here, and a candidate seeded on
-                    // one part consumes on the other — one surface. Read-only and
-                    // P view (phase resets have no per-flag editor) refuse
-                    // silently, matching Enter's allowlist / view refusal — the
-                    // candidate is cleared and the press stays a plain second
-                    // select. On a consumed open nothing is armed and no fresh
-                    // candidate seeds (the editor now owns input).
+                    // one part consumes on the other — one surface. Read-only,
+                    // P view (phase resets have no per-flag editor), and the
+                    // off-home column (active_column_authoring_allowed false —
+                    // the warp editor is source-view-only) refuse silently,
+                    // matching Enter's allowlist / view refusal — the candidate
+                    // is cleared and the press stays a plain second select. On a
+                    // consumed open nothing is armed and no fresh candidate
+                    // seeds (the editor now owns input).
                     bool opened_editor = false;
                     const DoubleClickCandidate& dc = dc_at_press;
                     if (dc.surface == DoubleClickSurface::Marker &&
@@ -703,7 +705,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
                         std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
                         if (app.active_markers_view != 'P' &&
-                            !active_view_state(app).read_only) {
+                            !active_view_state(app).read_only &&
+                            active_column_authoring_allowed(app)) {
                             // Every open route opens fully SELECTED (open-
                             // selected), so there is no clicked-glyph caret to
                             // seat — the flag-shape vs lane-run press are the
@@ -728,8 +731,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         // A writable tab arms the pending marker drag on a plain
                         // FLAG press only (the flag is the sole drag handle; the
                         // lane run selects but never arms); read-only selects
-                        // but never arms (marker mutation refused).
-                        if (mh.on_flag && !active_view_state(app).read_only) {
+                        // but never arms (marker mutation refused). A column away
+                        // from its home view (active_column_authoring_allowed
+                        // false) likewise selects but never arms — the same
+                        // read-only convention, marker motion being authoring.
+                        if (mh.on_flag && !active_view_state(app).read_only &&
+                            active_column_authoring_allowed(app)) {
                             app.pending_marker_drag = PendingMarkerDrag{};
                             app.pending_marker_drag.active  = true;
                             app.pending_marker_drag.marker  = hit;

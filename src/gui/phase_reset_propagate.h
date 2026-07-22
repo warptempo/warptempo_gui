@@ -5,8 +5,11 @@
 #include "undo.h"
 #include "viewport.h"
 
+#include <set>
+
 struct GuiTargetRender;
 struct GuiActiveViews;
+struct GuiInputHandler;
 
 // Copy/paste operations for the W-mode phase reset propagate feature.
 // Both methods operate on warp-marker selection in W-mode and mutate
@@ -30,6 +33,14 @@ struct PhaseResetPropagate {
     // The paste-confirm prompt is a modal surface; its open stops playback
     // through this lifecycle handle.
     GuiPlaybackLifecycle& playback_lifecycle;
+
+    // Back-pointer to the input handler, wired in main.cpp after both are
+    // constructed (the input handler holds this propagate by reference, so the
+    // dependency is a pointer set after construction, mirroring the settings
+    // editor's `input` back-wire). Reaches handle_active_audio_view_toggle so a
+    // completed paste can land in target view through the SAME chokepoint the
+    // `t` key uses.
+    GuiInputHandler*      input = nullptr;
 
     PhaseResetPropagate(AppState& app_, Viewport& viewport_, Undo& undo_,
                         GuiTargetRender& target_render_,
@@ -68,4 +79,10 @@ struct PhaseResetPropagate {
     // AppState::transient_status_message; a clean or empty run is
     // silent.
     void paste_state_apply();
+
+    // Shared end-of-paste tail for all three paste actions: land the completed
+    // paste in TARGET view (phase reset's home) with the newly created resets
+    // selected. `created` is the exact post-insert index set of the resets this
+    // paste materialized (empty for the no-materialize / state-only tails).
+    void land_paste_in_target_view(const std::set<int>& created);
 };

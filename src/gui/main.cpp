@@ -696,6 +696,12 @@ int main(int argc, char** argv) {
     // handle_active_audio_view_toggle / apply_font_size / auto_clear_crossed_trim
     // through it, so a `:`-typed GUI key funnels into the same gesture code.
     settings_editor.input = &input_handler;
+    // Same back-wire for the phase-reset propagate: its paste tail lands in
+    // target view through handle_active_audio_view_toggle, the chokepoint that
+    // lives on the input handler (constructed after the propagate, which the
+    // input handler holds by reference — the cycle is resolved with this
+    // pointer set).
+    phase_reset_propagate.input = &input_handler;
 
     // Viewport worker kick: any viewport mutation (pan/zoom/center/follow)
     // requests the new waveform immediately rather than waiting for the next

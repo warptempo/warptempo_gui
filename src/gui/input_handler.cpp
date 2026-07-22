@@ -409,7 +409,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if ((key == GuiKeys::Return || key == GuiKeys::KpEnter) &&
         !ctrl && !shift && !alt) {
         selection.repair_last_selected();
-        if (app.last_selected_marker >= 0 && app.active_markers_view != 'P') {
+        // The flag editor is a warp authoring surface (label/ref/tempo/iter),
+        // so it opens only in warp's home view: off home
+        // (active_column_authoring_allowed false) refuses silently, exactly
+        // like the P-view refusal already encoded in the condition.
+        if (app.last_selected_marker >= 0 && app.active_markers_view != 'P' &&
+            active_column_authoring_allowed(app)) {
             flag_editor.enter_top_flag_edit(app.last_selected_marker);
         }
         return;
@@ -453,8 +458,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // drops a plain neutral 1.00 owner and Alt+S drops an augmented owner
         // that copies the immediate-prior marker's effective tempo. Ctrl+S
         // saves; a Shift-modified `s` is unbound (a consumed no-op here).
-        if (ctrl && !shift && !alt)              save_ops.save();
-        else if (!ctrl && !shift && !alt &&
+        if (ctrl && !shift && !alt) { save_ops.save(); return; }
+        // Every remaining `s` arm is a marker drop (warp bare/Alt copy, phase
+        // bare/Alt lead-in) — home-view authoring. Off home refuses silently
+        // (consumed no-op), covering the warp Alt+S copy-drop that is otherwise
+        // reachable in target view. The Alt+S lead-in arm already requires
+        // P && T = phase's home, so the predicate is a no-op there.
+        if (!active_column_authoring_allowed(app)) return;
+        if (!ctrl && !shift && !alt &&
                  app.active_markers_view == 'P') phase_resets.drop_phase_reset_at_playhead();
         else if (alt && !ctrl && !shift &&
                  app.active_markers_view == 'P' &&
@@ -472,11 +483,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // from), so this no-ops in P view. Plain `n` and Shift+N are unbound.
     if (key == GuiKeys::N && ctrl && !alt && !shift) {
         if (app.active_markers_view == 'P') return;
+        // Warp authoring (not a ruled target-view exception): source home only.
+        if (!active_column_authoring_allowed(app)) return;
         warpops.toggle_inherits();
         return;
     }
     // Ctrl+D: toggle disabled (warp + phase reset). Plain `d` and Shift+D are unbound.
     if (key == GuiKeys::D && ctrl && !alt && !shift) {
+        // Status toggle authors the active column's store: home view only
+        // (the predicate maps W->source, P->target). Off home is a consumed
+        // no-op.
+        if (!active_column_authoring_allowed(app)) return;
         if (app.active_markers_view == 'P') phase_resets.toggle_phase_reset_disabled();
         else                        warpops.toggle_disabled();
         return;
@@ -487,6 +504,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // path's single guard, and no pointer path reaches the delete routines.
         // Trim is not part of the selection system, so Delete never acts on a
         // bound (bare x is trim's clear).
+        // Deletion authors the active column's store: home view only (the
+        // predicate maps W->source, P->target). Off home is a consumed no-op.
+        if (!active_column_authoring_allowed(app)) return;
         if (app.active_markers_view == 'P') {
             phase_resets.delete_selected_phase_reset();
             return;
@@ -559,11 +579,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // never acts on a bound (trim's pointer route is the plain chip-row
     // press-drag on its chip / the inter-chip bridge).
     if (alt && !shift && !ctrl && key == GuiKeys::Left) {
+        // Nudge authors the active column's store: home view only (W->source,
+        // P->target). Off home is a consumed no-op.
+        if (!active_column_authoring_allowed(app)) return;
         if (app.active_markers_view == 'P') phase_resets.nudge_selected_phase_resets(-1);
         else                        warpops.nudge_selected_markers(-1);
         return;
     }
     if (alt && !shift && !ctrl && key == GuiKeys::Right) {
+        if (!active_column_authoring_allowed(app)) return;
         if (app.active_markers_view == 'P') phase_resets.nudge_selected_phase_resets(+1);
         else                        warpops.nudge_selected_markers(+1);
         return;
@@ -981,6 +1005,16 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         prompt.open_error_notice(std::move(entry.error()));
         return;
     }
+
+    // The warp flag editor is a source-view-only authoring surface (the
+    // home-view binding rule, 2026-07-22). The S -> T toggle would strand a
+    // live one on a now-refusing target surface, so close it WITHOUT
+    // committing (the exact Esc teardown) before the flip proceeds. Guarded
+    // internally on an active editor, so this is a no-op when none is open.
+    // Only `t` and the settings-editor `active_audio_view=` commit route here
+    // into target view — Ctrl+Tab never changes active_audio_view — so this
+    // is the one place the toggle-into-target edge is handled.
+    if (entering_target) flag_editor.exit_top_flag_edit_no_commit();
 
     // Target-view playback is rebound to the rendered target buffer once it is
     // ready, and Space is gated while that buffer is unavailable or updating.

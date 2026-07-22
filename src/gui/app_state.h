@@ -1339,6 +1339,20 @@ inline bool any_pointer_gesture_active(const AppState& app) {
            app.pending_marker_drag.active || app.pending_trim_drag.active;
 }
 
+// architect ruling 2026-07-22: each marker column authors in its HOME view
+// only — warp markers in source view, phase resets in target view. In the
+// non-home view a column is display/navigation-only (selection, hover, Tab,
+// readouts all live; every placement/store mutation refuses silently,
+// navigation-class, exactly the read-only-tab convention). The two ruled
+// exceptions live at their sites: the target-view Alt+Up/Down tempo step
+// (owner-only there, adjust_tempo_cents) and the phase-reset propagate
+// (a warp-view gesture that authors phase resets; its paste lands in
+// target view).
+inline bool active_column_authoring_allowed(const AppState& app) {
+    return (app.active_markers_view == 'P') ? (app.active_audio_view == 'T')
+                                            : (app.active_audio_view == 'S');
+}
+
 // SelectionSnapshot movers: capture the live marker selection at drag begin,
 // restore it wholesale at cancellation. One place enumerates the fields, so a
 // future selection field cannot be forgotten.

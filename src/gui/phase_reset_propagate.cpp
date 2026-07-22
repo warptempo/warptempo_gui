@@ -2,12 +2,15 @@
 
 #include "active_views.h"
 #include "audio.h"
+#include "input_handler.h"
 #include "phase_reset_clipboard.h"
 #include "phaseresetmarkers.h"
 #include "target_render.h"
 #include "time_format.h"
 #include "warp_frame_map_view.h"
 #include "warpmarkers.h"
+
+#include <set>
 
 #include <algorithm>
 #include <cmath>
@@ -226,7 +229,8 @@ void PhaseResetPropagate::paste_apply() {
             app.transient_status_message = std::move(stop_message);
             viewport.invalidate_timestamp_area();
         }
-        active_views.switch_active_markers_view_to('P');
+        // Nothing materialized: land in target view with no new selection.
+        land_paste_in_target_view({});
         return;
     }
 
@@ -269,6 +273,13 @@ void PhaseResetPropagate::paste_apply() {
     // (equal-frame enabled resets collapse to one event, one stderr line
     // per collapsed timestamp), and insert_marker keeps the in-memory list
     // sorted.
+    // Track the exact final index of every reset this paste materializes, so
+    // the target-view landing can select precisely them. insert_marker keeps
+    // the store time-sorted and returns the insertion index; a later insert at
+    // index k shifts every earlier recorded index >= k by one, so adjust as we
+    // go rather than re-resolving by time (coincident resets would be
+    // ambiguous to match by value).
+    std::vector<int> created_indices;
     const int64_t reset_wall = target_render.audio.total_frames() - 1;
     for (size_t i = 0; i < matched; ++i) {
         const double dst_start = dest_blocks[i].start;
@@ -291,7 +302,11 @@ void PhaseResetPropagate::paste_apply() {
             nm.time_frame = std::clamp<int64_t>(snap_authored_frame(
                 dst_start + p.fractional_position * dst_dur), 0, reset_wall);
             nm.disabled     = p.disabled;
-            app.phaseresetmarkers.insert_marker(std::move(nm));
+            const int new_idx =
+                app.phaseresetmarkers.insert_marker(std::move(nm));
+            for (int& ci : created_indices)
+                if (ci >= new_idx) ++ci;
+            created_indices.push_back(new_idx);
         }
     }
 
@@ -332,10 +347,12 @@ void PhaseResetPropagate::paste_apply() {
         viewport.invalidate_timestamp_area();
     }
 
-    // Always switch to P view on a completed paste. The helper is a no-op
-    // when already in P, so calling unconditionally is safe and keeps the
-    // W↔P selection slot / hover popup / live selection in sync.
-    active_views.switch_active_markers_view_to('P');
+    // Land in target view (phase reset's home) with exactly the newly pasted
+    // resets selected, so the architect can inspect the paste by eye. The set
+    // was built with insert-time index adjustment above, so it names the final
+    // post-insert indices.
+    land_paste_in_target_view(
+        std::set<int>(created_indices.begin(), created_indices.end()));
 }
 
 void PhaseResetPropagate::paste_state_apply() {
@@ -462,8 +479,51 @@ void PhaseResetPropagate::paste_state_apply() {
         viewport.invalidate_timestamp_area();
     }
 
-    // Always switch to P view at the end of a completed paste-state run,
-    // including diverged/mismatched/no-change cases. The helper is a no-op
-    // when already in P.
+    // Land in target view (phase reset's home) at the end of a completed
+    // paste-state run, including diverged/mismatched/no-change cases. State
+    // paste creates no resets (it only flips disabled flags on existing ones),
+    // so there is no new selection to set — the empty set leaves the restored
+    // P-mode selection in place.
+    land_paste_in_target_view({});
+}
+
+// The architect inspects a propagate paste by eye instead of the old
+// Ctrl+Z/Ctrl+Shift+Z round-trip: propagate is the ONE authoring action that
+// starts in the warp (source) view and ends in target view. This tail is
+// shared by all three paste actions.
+//
+// Order — audio-view switch FIRST, then marker-view switch to P, then the
+// selection set:
+//   * handle_active_audio_view_toggle is the SAME chokepoint the `t` key runs
+//     (validate_target_view_entry, the S<->T re-express of playhead/viewport,
+//     the region clear, kick_waveform_sync, and target_render.ensure_ready all
+//     fire exactly once). It is a TOGGLE, so it is called only when the session
+//     is not already in target view.
+//   * switch_active_markers_view_to('P') swaps the W/P selection slots, prunes,
+//     and clears the hover popup — so the selection must be set AFTER it or the
+//     restored P-slot selection would clobber the new one.
+//   * handle_active_audio_view_toggle never touches the selection, so its
+//     placement is free; running it first keeps the heavier re-express (and its
+//     full-window invalidate) ahead of the lightweight mode swap and leaves
+//     every side effect (region clear, hover clear, selection slots) coherent.
+//
+// Invalidation: when the audio-view switch fires (session was in source view),
+// handle_active_audio_view_toggle already full-window-invalidates, so the tail
+// damage here is a harmless subset. When the session is already in target view
+// the audio switch is skipped and switch_active_markers_view_to invalidates
+// nothing itself, so the tail damage (top strip flags + waveform stems +
+// timestamp readout) is the only repaint covering the mode swap and the new
+// selection.
+void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created) {
+    if (input && app.active_audio_view != 'T') {
+        input->handle_active_audio_view_toggle();
+    }
     active_views.switch_active_markers_view_to('P');
+    if (!created.empty()) {
+        app.selected_markers     = created;
+        app.last_selected_marker = *created.rbegin();
+    }
+    viewport.invalidate_top_strip();
+    viewport.invalidate_waveform_area();
+    viewport.invalidate_timestamp_area();
 }

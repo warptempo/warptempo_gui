@@ -261,6 +261,10 @@ struct GuiInputHandler {
     // auto_clear_crossed_trim); the friendship lets the editor reach them
     // through its back-pointer without a parallel writer.
     friend struct GuiSettingsEditor;
+    // The propagate's paste tail lands in target view through the same
+    // handle_active_audio_view_toggle chokepoint; the friendship lets it
+    // reach that private method through its back-pointer.
+    friend struct PhaseResetPropagate;
 
     void on_key(GuiKey key, GuiInputState mods);
     void on_button_press(GuiMouseButton button, int x, int y, GuiInputState mods);

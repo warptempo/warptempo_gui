@@ -1292,6 +1292,12 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // so iteration popups appear or vanish in one frame.
     if (key == GuiKeys::I && !ctrl && !shift && !alt) {
         if (app.active_markers_view == 'W') {
+            // Iteration mode drives the warp flag editor's bracket authoring,
+            // so it toggles only in warp's home (source) view — both
+            // directions refuse silently off home (consumed no-op). An
+            // iteration mode already on when the user switches S->T simply
+            // persists (its authoring surfaces are gated anyway).
+            if (!active_column_authoring_allowed(app)) return true;
             const bool turning_on = !app.iteration_mode_enabled;
             if (!turning_on) {
                 // Turning iteration mode OFF wipes every marker's
@@ -1320,6 +1326,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // only exits are the editor's own: Esc, and Enter's dispatch tail).
     if (key == GuiKeys::M && !ctrl && !shift && !alt) {
         if (app.active_markers_view != 'W') return true;
+        // The bpm editor rewrites tempo through the derivation (not a ruled
+        // target-view exception), so it opens only in warp's home (source)
+        // view; off home is a consumed no-op.
+        if (!active_column_authoring_allowed(app)) return true;
         // Two-marker span gate. Exactly two markers must be selected; the
         // earlier owns, the later closes the span. Neither endpoint nor any
         // span-internal marker may be a label_ref — commit rewrites every
