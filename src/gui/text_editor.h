@@ -192,12 +192,19 @@ bool cursor_visible_now(const State& s);
 int byte_index_from_click_x(double click_x, double text_left_x,
                             double advance, int pending_size);
 
-// Select the word under byte index `pos`, setting selection_anchor to the word
-// start and cursor_pos to the word end (an empty pending, or a pos with no word
-// on either side, leaves no selection). Reuses the SAME word-class boundary
-// scanners as Ctrl+Left/Right — there is no second word-boundary definition. The
-// double-click path in the input handler calls this after mapping the click x to
-// a byte index (byte_index_from_click_x).
+// Select the maximal run of the clicked character's class under byte index
+// `pos`, setting selection_anchor to the run start and cursor_pos to its end
+// (an empty pending leaves no selection; a non-empty pending always selects at
+// least one character). This is a selection-specific classifier DISTINCT from
+// the Ctrl+Left/Right cursor-motion scanners — the desktop double-click
+// convention (select the clicked class's run, never crossing a class change)
+// differs from cursor-motion word-walking, and every toolkit (GTK/Qt/Kate/
+// Firefox) ships a tailored selection heuristic rather than reusing its motion
+// boundaries. Three classes, the Qt/Kate "programmer's word" variant: WORD is
+// [A-Za-z0-9_] plus any byte >= 0x80 (multibyte UTF-8 stays whole), WHITESPACE
+// is ' ' and '\t', PUNCTUATION is every other byte — so clicking `=`, `.`, or
+// `::` selects that punctuation run. The double-click path in the input handler
+// calls this after mapping the click x to a byte index (byte_index_from_click_x).
 void select_word_at(State& s, int pos);
 
 } // namespace text_editor

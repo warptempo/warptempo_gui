@@ -48,6 +48,26 @@ int next_word_boundary(const std::string& s, int pos) {
     return i;
 }
 
+// Character class for the double-click run selector (below). Three classes,
+// the Qt/Kate "programmer's word" convention: WORD is [A-Za-z0-9_] plus any
+// byte >= 0x80 (UTF-8 lead/continuation bytes classify as word so multibyte
+// characters stay whole — the free-text fields carry UTF-8); WHITESPACE is
+// ' ' and '\t'; PUNCTUATION is every other byte. Distinct from the
+// cursor-motion word class above (which excludes '_' and treats every
+// non-word byte as a separator to skip).
+enum class CharClass { Word, Whitespace, Punctuation };
+
+CharClass classify(char c) {
+    const unsigned char u = static_cast<unsigned char>(c);
+    if (u >= 0x80) return CharClass::Word;
+    if (u == ' ' || u == '\t') return CharClass::Whitespace;
+    if ((c >= '0' && c <= '9') ||
+        (c >= 'a' && c <= 'z') ||
+        (c >= 'A' && c <= 'Z') ||
+        c == '_') return CharClass::Word;
+    return CharClass::Punctuation;
+}
+
 } // namespace
 
 int byte_index_from_click_x(double click_x, double text_left_x,
@@ -65,18 +85,22 @@ void select_word_at(State& s, int pos) {
         return;
     }
     pos = std::clamp(pos, 0, n);
-    // Reuse the Ctrl+Left/Right scanners: the word's end is the next boundary at
-    // or after pos, and its start is the boundary at or before that end. For a
-    // click inside a word this yields exactly that word's span (a click rounding
-    // onto a word's trailing separator selects the following word — the accepted
-    // edge bias of reusing the forward scanner rather than inventing a new one).
-    const int end   = next_word_boundary(s.pending, pos);
-    const int start = prev_word_boundary(s.pending, end);
-    if (end <= start) {
-        s.selection_anchor = -1;
-        s.cursor_pos = pos;
-        return;
-    }
+    // Select the maximal run of the clicked character's class, never crossing a
+    // class change — the desktop double-click convention (GTK/Qt/Kate/Firefox),
+    // deliberately distinct from the Ctrl+Left/Right skip-separators scanners. A
+    // click on punctuation selects that punctuation run, not the following word.
+    // pos == n (click past the last glyph) has no character AT n, so classify by
+    // n-1 and select the trailing run.
+    const int probe = (pos == n) ? pos - 1 : pos;
+    const CharClass cls = classify(s.pending[static_cast<size_t>(probe)]);
+    int start = probe;
+    while (start > 0 &&
+           classify(s.pending[static_cast<size_t>(start - 1)]) == cls) --start;
+    int end = probe + 1;
+    while (end < n &&
+           classify(s.pending[static_cast<size_t>(end)]) == cls) ++end;
+    // A run is always at least one character when pending is non-empty, so the
+    // empty-selection arm above survives only for the empty-pending case.
     s.selection_anchor = start;
     s.cursor_pos       = end;
     touch_blink(s);
