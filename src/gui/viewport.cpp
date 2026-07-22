@@ -580,54 +580,110 @@ void Viewport::recompute_hover_at_cursor() {
     const long long warp_gen  = app.warpmarkers.generation();
     const long long phase_gen = app.phaseresetmarkers.generation();
     const long long disp_gen  = app.displayed_map_gen;
-    const int hit = marker_hit_at(app, audio,
-                                  app.last_mouse_x, app.last_mouse_y).index;
-    if (hit == app.hover_popup.marker_index &&
-        warp_gen  == app.hover_popup.warp_gen &&
-        phase_gen == app.hover_popup.phase_gen &&
-        disp_gen  == app.hover_popup.displayed_gen) return;
 
-    // No dwell: recompute both surfaces once. The LANE shows the hovered
-    // marker's own value regardless of eligibility — the canonical flag line
-    // for a warp marker (flag_text_iter, the one composer the flag paint,
-    // hit-rects, and the Enter editor seed all share, so lane and editor content
-    // always agree) or the literal "p" for a phase reset marker. The
-    // BOTTOM readout keeps the pass/ref gate (popup_eligible_marker): owners and
-    // phase resets have nothing to resolve.
+    // A store mutation or a silent map promotion invalidates the cached hover
+    // run that marker_hit_at resolves against: while a hover shows,
+    // current_marker_lane_run's Tier 1 serves hover_popup.lane_text /
+    // source_frame, so the first resolve below is judged against the OLD rect.
+    // On the pure-motion path these three keys still match the cache, the cache
+    // is accurate, and one resolve+recompose is the fixed point (unchanged
+    // cost). When any key differs the cache is stale, so the recompose must
+    // CONVERGE rather than latch a hover whose run shrank away from the cursor.
+    const bool cache_invalidated =
+        warp_gen  != app.hover_popup.warp_gen ||
+        phase_gen != app.hover_popup.phase_gen ||
+        disp_gen  != app.hover_popup.displayed_gen;
+
+    int hit = marker_hit_at(app, audio,
+                            app.last_mouse_x, app.last_mouse_y).index;
+    if (hit == app.hover_popup.marker_index && !cache_invalidated) return;
+
     const bool was_visible = app.hover_popup.any_visible();
-    app.hover_popup.marker_index = hit;
-    // Stamp the generations that produced this set (both columns, even when
-    // hit < 0), so the short-circuit and the on_tick refresh settle until the
-    // next real store change.
+
+    // Recompose both surfaces from a hit index INTO the live hover cache.
+    // current_marker_lane_run serves exactly this cached run as its Tier-1 hover
+    // run, so applying here is precisely what a re-resolve of marker_hit_at reads
+    // back. The LANE shows the hovered marker's own value regardless of
+    // eligibility — the canonical flag line for a warp marker (flag_text_iter,
+    // the one composer the flag paint, hit-rects, and the Enter editor seed all
+    // share, so lane and editor content always agree) or the literal "p" for a
+    // phase reset marker. The BOTTOM readout keeps the pass/ref gate
+    // (popup_eligible_marker): owners and phase resets have nothing to resolve.
+    auto apply_hit = [&](int h) {
+        app.hover_popup.marker_index = h;
+        app.hover_popup.source_frame = 0;
+        app.hover_popup.lane_text.clear();
+        app.hover_popup.readout_text.clear();
+        app.hover_popup.copy_payload.clear();
+        if (h >= 0) {
+            if (app.active_markers_view == 'P') {
+                const auto& pv = app.phaseresetmarkers.markers();
+                if (h < static_cast<int>(pv.size())) {
+                    app.hover_popup.lane_text    = "p";
+                    app.hover_popup.source_frame = pv[h].time_frame;
+                }
+            } else {
+                const auto& mv = app.warpmarkers.markers();
+                if (h < static_cast<int>(mv.size())) {
+                    app.hover_popup.lane_text =
+                        flag_text_iter(mv, h, app.iteration_mode_enabled);
+                    app.hover_popup.source_frame = mv[h].time_frame;
+                }
+            }
+            if (popup_eligible_marker(app, h)) {
+                app.hover_popup.readout_text = compute_hover_popup_text(
+                    slice_to_warp_markers(app.warpmarkers.markers()), h,
+                    audio.sample_rate(), audio.total_frames(),
+                    &app.hover_popup.copy_payload);
+            }
+        }
+    };
+
+    apply_hit(hit);
+
+    // Converge the resolve-recompose cycle when the cache was stale. The first
+    // resolve above ran against the pre-mutation run; re-resolve marker_hit_at
+    // against the freshly composed run and, while the resolved identity differs
+    // from what we just applied, re-apply — driving to a fixed point.
+    //
+    // Termination (bounded at 3 passes): each pass either reaches agreement
+    // (resolved index == the applied index → done) or strictly advances through
+    // the reachable states — stale-M (old rect) → none-or-another-marker (judged
+    // against M's NEW rect / the geometric flag test, both cache-independent) →
+    // the last-selected run. That last-selected run is a fixed point because
+    // current_marker_lane_run composes it identically under the hover tier and
+    // the last-selected tier (same store fields, same rect), so once a pass
+    // applies it the next resolve returns it unchanged. No cycle is possible:
+    // every transition replaces cached state with freshly composed state, and
+    // identical state resolves identically, so a hit the loop already visited
+    // cannot re-appear with a different follow-on. If the hard bound is somehow
+    // hit without agreement, clear the hover — never latch a stale one.
+    if (cache_invalidated) {
+        constexpr int kMaxHoverConvergePasses = 3;
+        int passes = 1;  // apply_hit(hit) above counts as the first pass
+        for (;;) {
+            const int rehit = marker_hit_at(app, audio,
+                                            app.last_mouse_x,
+                                            app.last_mouse_y).index;
+            if (rehit == app.hover_popup.marker_index) break;  // settled
+            if (passes >= kMaxHoverConvergePasses) {
+                apply_hit(-1);  // bound reached without agreement — drop, never latch
+                break;
+            }
+            apply_hit(rehit);
+            ++passes;
+        }
+    }
+
+    // Stamp the generations that produced this FINAL settled set (both columns,
+    // even when marker_index < 0), so the short-circuit and the on_tick refresh
+    // settle until the next real store change. The generations are loop-invariant
+    // (no store mutates inside this function), so stamping once after convergence
+    // matches every intermediate pass.
     app.hover_popup.warp_gen  = warp_gen;
     app.hover_popup.phase_gen = phase_gen;
     app.hover_popup.displayed_gen = disp_gen;
-    app.hover_popup.source_frame = 0;
-    app.hover_popup.lane_text.clear();
-    app.hover_popup.readout_text.clear();
-    app.hover_popup.copy_payload.clear();
-    if (hit >= 0) {
-        if (app.active_markers_view == 'P') {
-            const auto& pv = app.phaseresetmarkers.markers();
-            if (hit < static_cast<int>(pv.size())) {
-                app.hover_popup.lane_text   = "p";
-                app.hover_popup.source_frame = pv[hit].time_frame;
-            }
-        } else {
-            const auto& mv = app.warpmarkers.markers();
-            if (hit < static_cast<int>(mv.size())) {
-                app.hover_popup.lane_text =
-                    flag_text_iter(mv, hit, app.iteration_mode_enabled);
-                app.hover_popup.source_frame = mv[hit].time_frame;
-            }
-        }
-        if (popup_eligible_marker(app, hit)) {
-            app.hover_popup.readout_text = compute_hover_popup_text(
-                slice_to_warp_markers(app.warpmarkers.markers()), hit,
-                audio.sample_rate(), audio.total_frames(),
-                &app.hover_popup.copy_payload);
-        }
-    }
+
     // The lane renders in the top strip, the readout in the bottom strip; damage
     // both when either surface was showing or will show.
     if (was_visible || app.hover_popup.any_visible()) {

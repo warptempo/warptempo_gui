@@ -1486,6 +1486,14 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // it — the same jump the Tab family runs, after the same last-selected
         // repair — then set the working zoom and center on it; with no focused
         // marker, keep the plain working-zoom-and-center-on-playhead behavior.
+        // Clear the region here, unconditionally and up front: the no-focus arm
+        // never reaches jump_playhead_to_focused_marker's clear tail (that
+        // function early-returns with nothing focused), and a region drag clears
+        // the marker selection, so region-drag-then-`c` is exactly the no-focus
+        // path. HELP lists `c` in the clear set unconditionally. The focused arm
+        // then double-clears via the jump tail — a no-op, since the helper's
+        // !active guard returns immediately on the already-cleared region.
+        clear_region_highlight(app, viewport);
         selection.repair_last_selected();
         jump_playhead_to_focused_marker();
         viewport.apply_zoom_change(kWorkingZoomLevel);
