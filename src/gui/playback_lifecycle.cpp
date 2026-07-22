@@ -213,7 +213,7 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
 // target view against the bound buffer's [domain_begin(),
 // domain_end()). `sample` is a paint-domain coordinate, the same domain
 // playback's public API speaks in every view. Called from the waveform PRESS
-// handlers only (input_pointer.cpp) — the plain / Shift left press that places
+// handlers only (input_pointer.cpp) — the plain left press that places
 // the playhead — when playback was alive at press time; the motion handlers do
 // not call it (a region drag never moves the playhead).
 // Both arms carry the same two-frame remainder gate as toggle_playback (see

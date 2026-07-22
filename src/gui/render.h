@@ -574,9 +574,10 @@ void render_playhead(cairo_t* cr,
 // region. The RIGHT half keeps mask columns [center..2*center], center column on
 // right_col, slope flaring RIGHT. Same triangle lane and dst_y as the unsplit
 // playhead triangle, and each half is additionally clipped to the waveform's
-// horizontal span so a bound near an edge partial-renders instead of leaking. If
-// left_col == right_col the two halves reunite into the full triangle at that
-// column (the shared center column paints twice with the same opaque source).
+// horizontal span so a bound near an edge partial-renders instead of leaking.
+// left_col == right_col is handled as a special case that stamps the full mask
+// ONCE, yielding exactly the ordinary single cursor triangle (stamping the two
+// halves would double-composite the shared AA tip column under OVER).
 void render_split_playhead(cairo_t* cr,
                            GuiRect area,
                            int left_col,

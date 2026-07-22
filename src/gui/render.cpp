@@ -590,6 +590,16 @@ void render_split_playhead(cairo_t* cr,
         cairo_restore(cr);
     };
 
+    // Degenerate region (both bounds on one column): stamp the WHOLE mask once,
+    // centered on the bound. Stamping the two halves here would land both on the
+    // same dst_x and composite the shared center (tip) column twice under Cairo's
+    // OVER operator — its partially-covered AA pixels are not idempotent, so the
+    // tip would render more opaque than an ordinary cursor. One full stamp is
+    // byte-identical to the single cursor triangle.
+    if (left_col == right_col) {
+        stamp_half(left_col, 0, img_w - 1);
+        return;
+    }
     // Left half: full-height edge on the left bound, slope flaring left.
     stamp_half(left_col, 0, center);
     // Right half: full-height edge on the right bound, slope flaring right.
