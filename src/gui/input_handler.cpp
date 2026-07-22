@@ -382,6 +382,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // captured from app.trim inside toggle_playback, so region + trim loops
         // the trim window as before and region + no trim plays through to the
         // end with no loop.
+        // DELIBERATE (architect 2026-07-21): a region left bound outside a
+        // set trim's window trips toggle_playback's existing "playhead
+        // outside trim" no-op — a contradiction resolved by playing nothing,
+        // not by widening the window.
         if (!playback.is_playing() && app.region.active) {
             viewport.move_playhead_to(
                 std::min(app.region.a_frame, app.region.b_frame));
