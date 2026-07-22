@@ -408,9 +408,10 @@ struct PendingMarkerDrag {
 // press in W view + TARGET audio view — the pointer half of the home-view
 // binding's tempo exception (the keyboard half is the Alt+Up/Down step). The
 // press single-selects its marker (the click), verifies eligibility — the
-// marker has a predecessor in the time-sorted store that is an enabled tempo
-// OWNER by its own authored payload, at least one source frame earlier, and
-// NOT a member of a surviving coincident group (whose collapse to one 1.00
+// marker has a GROUP predecessor (the nearest marker at a strictly earlier
+// frame, walking past same-frame siblings — coincident groups drag as ONE, so
+// any member arms) that is an enabled tempo OWNER by its own authored payload
+// and NOT a member of a surviving coincident group (whose collapse to one 1.00
 // owner makes its authored tempo render-inert — the same normalization-red set
 // the flag painter uses is the test) — and arms this pending state; only past
 // kMarkerDragMovedThresholdPx (the SAME
@@ -423,8 +424,10 @@ struct PendingTempoDrag {
     bool active      = false;
     int  marker      = -1;   // dragged warp marker (its target image chases
                              // the pointer)
-    int  predecessor = -1;   // marker - 1: the enabled owner whose
-                             // tempo_cents the drag rewrites
+    int  predecessor = -1;   // the GROUP's predecessor (nearest strictly-
+                             // earlier frame, walked past same-frame siblings):
+                             // the enabled owner whose tempo_cents the drag
+                             // rewrites — not necessarily marker - 1
     int  press_x     = 0;    // press position (window px): the gate only (the
     int  press_y     = 0;    //   solve is absolute — pointer x -> tempo)
 };
@@ -460,7 +463,9 @@ struct TempoDragState {
     // drag's first-motion rule.
     bool moved       = false;
     int  marker      = -1;   // dragged warp marker
-    int  predecessor = -1;   // the owner being rewritten (marker - 1)
+    int  predecessor = -1;   // the owner being rewritten (the GROUP's
+                             // predecessor — nearest strictly-earlier frame,
+                             // not necessarily marker - 1)
     // Predecessor tempo at grab: the Esc-cancel restore value and the
     // net-change baseline for the end-of-gesture undo push.
     int64_t grab_cents = 100;

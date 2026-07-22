@@ -506,19 +506,36 @@ void MarkerDragOps::commit_drag() {
 // untouched by this gesture, but reading the truth is cheaper than proving a
 // cached copy can never go stale).
 
-bool MarkerDragOps::tempo_drag_eligible(int hit) const {
+int MarkerDragOps::tempo_drag_predecessor(int hit) const {
     const auto& mv = app.warpmarkers.markers();
-    if (hit <= 0 || hit >= static_cast<int>(mv.size())) return false;
-    // The predecessor is the marker immediately before `hit` in the
-    // time-sorted store. Eligibility reads its own AUTHORED payload — the
-    // question is whether this marker owns a rewritable tempo, which is
-    // payload, not the resolved projection (the owner-only rule the
-    // target-view Alt+Up/Down step already applies).
-    const GuiWarpMarker& p = mv[hit - 1];
-    if (p.disabled || p.tempo_inherits || !p.label_ref.empty()) return false;
-    // A zero-frame span (exact tie, legal at rest) makes the solve degenerate
-    // everywhere — no tempo moves the image — so it never arms.
-    if (mv[hit].time_frame - p.time_frame < 1) return false;
+    if (hit <= 0 || hit >= static_cast<int>(mv.size())) return -1;
+    // Coincident groups act as ONE draggable item (architect 2026-07-22):
+    // dragging ANY member of an exact-frame stack stretches against the
+    // GROUP's predecessor — the nearest marker at a STRICTLY earlier frame,
+    // found by walking backward past the equal-frame run of same-frame
+    // siblings (the store is time-sorted at rest, ties legal, so the run is
+    // adjacent). An exact-tie sibling is NEVER the predecessor, so every member
+    // of a stack arms identically (before this walk only the first-in-store
+    // member armed; the others died on the zero-span check against a sibling).
+    // No strictly-earlier marker (the dragged marker sits at the store's
+    // earliest frame) -> ineligible.
+    int j = hit - 1;
+    while (j >= 0 && mv[j].time_frame == mv[hit].time_frame) --j;
+    if (j < 0) return -1;
+    // The predecessor reads its own AUTHORED payload — the question is whether
+    // it owns a rewritable tempo, which is payload, not the resolved projection
+    // (the owner-only rule the target-view Alt+Up/Down step already applies).
+    const GuiWarpMarker& p = mv[j];
+    if (p.disabled || p.tempo_inherits || !p.label_ref.empty()) return -1;
+    // The source span mv[hit] - mv[j] is >= 1 BY CONSTRUCTION of the walk (j
+    // sits at a strictly-earlier frame), so the old explicit zero-span
+    // rejection is now structural — the degenerate solve can never arm, and an
+    // exact-tie sibling is never reached as the predecessor. When same-frame
+    // siblings sit AT the dragged marker's frame, the segment j -> that frame
+    // is owned by j (the resolver collapses the stack to one 1.00 owner at that
+    // frame), and the dragged marker's target image IS the collapse point's
+    // image, so the solve's L_src / T(P) relation stays exact.
+    //
     // A predecessor in a surviving coincident group owns no rendered segment:
     // the resolver collapses every exact-frame run of 2+ effectively-enabled
     // markers to ONE synthetic plain 1.00 owner, so rewriting the
@@ -536,8 +553,8 @@ bool MarkerDragOps::tempo_drag_eligible(int hit) const {
     const std::set<int>& red = warp_red_flag_set_cached(
         app, audio.sample_rate(),
         static_cast<long>(audio.total_frames())).red;
-    if (red.count(hit - 1)) return false;
-    return true;
+    if (red.count(j)) return -1;
+    return j;
 }
 
 // Begin the tempo drag at the threshold crossing. Captures the grab tempo,
@@ -547,14 +564,19 @@ bool MarkerDragOps::tempo_drag_eligible(int hit) const {
 // every command, pointer gestures are mutually exclusive). Returns false
 // (gesture dropped) only on a defensive eligibility re-check failure.
 bool MarkerDragOps::begin_tempo_drag(int hit) {
-    if (!tempo_drag_eligible(hit)) return false;
+    // The walk computes the GROUP's predecessor once; -1 is the ineligibility
+    // signal (a defensive re-check — the arm already ran the walk). Flowing the
+    // walked index here keeps predecessor == marker - 1 from being assumed
+    // anywhere downstream.
+    const int pred = tempo_drag_predecessor(hit);
+    if (pred < 0) return false;
     const auto& mv = app.warpmarkers.markers();
 
     TempoDragState d;
     d.active      = true;
     d.marker      = hit;
-    d.predecessor = hit - 1;
-    d.grab_cents  = mv[hit - 1].tempo_cents;
+    d.predecessor = pred;
+    d.grab_cents  = mv[pred].tempo_cents;
     d.pre_drag_snapshot      = mv;
     d.pre_drag_last_selected = app.last_selected_marker;
     // Pre-drag selection for the Esc / Ctrl+Q cancellation restore: the

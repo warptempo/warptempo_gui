@@ -390,7 +390,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
     // Mouse authoring is home-view gated like the keyboard: a plain flag
     // press in W+target arms the TEMPO drag on an eligible marker instead
-    // of the reposition drag (marker_drag.tempo_drag_eligible; an
+    // of the reposition drag (marker_drag.tempo_drag_predecessor; an
     // ineligible press just selects) — the pointer half of the home-view
     // binding's one tempo exception — while placement arming everywhere
     // else is gated by active_column_authoring_allowed, off-home selecting
@@ -743,14 +743,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         // of the home-view binding's tempo exception
                         // (architect 2026-07-22; the keyboard half is the
                         // owner-only Alt+Up/Down step), an Ableton-style
-                        // stretch that rewrites the PREDECESSOR's tempo. An
-                        // ineligible W+T press (first marker, non-owner
-                        // predecessor, zero-frame span, or a coincident-
-                        // collapsed predecessor whose tempo is render-inert —
-                        // marker_drag.tempo_drag_eligible), and the P column
-                        // off ITS home (P view in source view), select and arm
-                        // nothing — the silent read-only convention, marker
-                        // motion / tempo authoring being authoring.
+                        // stretch that rewrites the GROUP PREDECESSOR's tempo.
+                        // Coincident groups drag as ONE — dragging any member
+                        // stretches against the marker before the stack (the
+                        // walk in tempo_drag_predecessor). An ineligible W+T
+                        // press (marker at the store's earliest frame, non-owner
+                        // predecessor, or a coincident-collapsed predecessor
+                        // whose tempo is render-inert — tempo_drag_predecessor
+                        // returns -1), and the P column off ITS home (P view in
+                        // source view), select and arm nothing — the silent
+                        // read-only convention, marker motion / tempo authoring
+                        // being authoring.
                         if (mh.on_flag && !active_view_state(app).read_only) {
                             if (active_column_authoring_allowed(app)) {
                                 app.pending_marker_drag = PendingMarkerDrag{};
@@ -759,14 +762,21 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                 app.pending_marker_drag.press_x = x;
                                 app.pending_marker_drag.press_y = y;
                             } else if (app.active_markers_view == 'W' &&
-                                       app.active_audio_view == 'T' &&
-                                       marker_drag.tempo_drag_eligible(hit)) {
-                                app.pending_tempo_drag = PendingTempoDrag{};
-                                app.pending_tempo_drag.active      = true;
-                                app.pending_tempo_drag.marker      = hit;
-                                app.pending_tempo_drag.predecessor = hit - 1;
-                                app.pending_tempo_drag.press_x     = x;
-                                app.pending_tempo_drag.press_y     = y;
+                                       app.active_audio_view == 'T') {
+                                // The walk computes the group's predecessor
+                                // once; -1 means ineligible (arm nothing). The
+                                // walked index flows into the pending state, so
+                                // predecessor == marker - 1 is assumed nowhere.
+                                const int pred =
+                                    marker_drag.tempo_drag_predecessor(hit);
+                                if (pred >= 0) {
+                                    app.pending_tempo_drag = PendingTempoDrag{};
+                                    app.pending_tempo_drag.active      = true;
+                                    app.pending_tempo_drag.marker      = hit;
+                                    app.pending_tempo_drag.predecessor = pred;
+                                    app.pending_tempo_drag.press_x     = x;
+                                    app.pending_tempo_drag.press_y     = y;
+                                }
                             }
                         }
                     }

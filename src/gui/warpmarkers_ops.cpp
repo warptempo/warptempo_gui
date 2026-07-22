@@ -366,6 +366,23 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
         const int f = app.last_selected_marker;
         if (f < 0 || f >= static_cast<int>(mv.size())) return;
         if (mv[f].tempo_inherits || !mv[f].label_ref.empty()) return;
+        // A coincident-collapsed owner refuses too (architect 2026-07-22): a
+        // coincident group is treated as ONE marker in target view, and its
+        // members' authored tempos are render-inert — the resolver replaces
+        // every exact-frame group of 2+ effectively-enabled markers with one
+        // synthetic plain 1.00 owner. The stack is fixed at the source in warp
+        // (source) view, never adjusted from target view. Reuse the
+        // normalization-red set: it reddens (a) label-ref fallbacks, (b) passes
+        // from a ref, and (c) coincident-collapse members — the two payload
+        // checks just above have already rejected ref and pass, so for the
+        // payload-OWNER that remains, red-set membership is EXACTLY the
+        // coincident-collapse condition (the tempo-drag predecessor test's
+        // argument, second consumer). Silent, before any mutation — no freeze,
+        // no undo, no dirty, the shape of the ref/pass refusals above.
+        const std::set<int>& red = warp_red_flag_set_cached(
+            app, audio.sample_rate(),
+            static_cast<long>(audio.total_frames())).red;
+        if (red.count(f)) return;
     }
     // Undo-coalescing decision. coalesce_gesture keys off command adjacency
     // (app.command_seq, bumped once at the on_key / on_wheel dispatch entry

@@ -52,16 +52,22 @@ struct MarkerDragOps {
     // live store and re-warps synchronously, and the release only finalizes
     // (undo push + preview trigger on net change).
     //
-    // tempo_drag_eligible: store predicate — marker `hit` has a
-    // predecessor (hit - 1 in the time-sorted store) that is an enabled tempo
-    // OWNER by its own authored payload, sits at least one source frame
-    // earlier (an exact-tie predecessor spans zero source frames, so no tempo
-    // can move the dragged marker's image — the solve is degenerate
-    // everywhere and the press stays a plain select), and is NOT a
+    // tempo_drag_predecessor: store predicate + walk. Returns the GROUP's
+    // predecessor store index for a drag on marker `hit`, or -1 when
+    // ineligible. Coincident groups act as ONE item (architect 2026-07-22): the
+    // predecessor is the nearest marker at a STRICTLY earlier frame (walk
+    // backward past the equal-frame run of same-frame siblings), so dragging
+    // ANY member of a stack drags the stack as one. That predecessor must be an
+    // enabled tempo OWNER by its own authored payload and NOT itself a
     // coincident-collapse member (a surviving exact-frame group of 2+ enabled
-    // markers resolves to one synthetic 1.00 owner, so the predecessor's
-    // authored tempo is render-inert — tested via the normalization-red set).
-    bool tempo_drag_eligible(int hit) const;
+    // markers resolves to one synthetic 1.00 owner, so its authored tempo is
+    // render-inert — tested via the normalization-red set). The old zero-span
+    // rejection is now structural: the walk lands a strictly-earlier frame, so
+    // L_src >= 1 always. A marker FOLLOWING a stack still never arms — its
+    // predecessor IS a collapse member, caught by the red-set test; and a
+    // marker at the store's earliest frame (no strictly-earlier marker) returns
+    // -1.
+    int tempo_drag_predecessor(int hit) const;
     bool begin_tempo_drag(int hit);
     void apply_tempo_drag_motion(int mouse_x);
     void end_tempo_drag();     // release / lost button: finalize
