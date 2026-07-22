@@ -79,13 +79,17 @@ struct Viewport {
     // either way.
     //
     // Callers are the discrete, one-shot repositioning events: view swaps
-    // (tab / marker navigation), viewport recenters, undo/redo, and every
-    // discrete warp_frame_map edit in target view (drop / delete / commit_drag /
-    // nudge / toggle-disabled / adjust_tempo_cents / the flag-editor commit /
-    // the settings engine-scale commit / adopt) — each re-warps the map, so
-    // the plate and the overlays (playhead, markers, flags) must land in one
-    // frame with the reclamped geometry below, or the overlays jump a frame
-    // ahead of a stale plate. The ASYNC worker path is not a map-edit route:
+    // (tab / marker navigation), viewport recenters, undo/redo, adopt, and the
+    // warp_frame_map edits still reachable in target view — the Alt+Up/Down
+    // tempo step (adjust_tempo_cents, the one warp authoring gesture reachable
+    // off its source home) and the settings engine-scale commit — each re-warps
+    // the map, so the plate and the overlays (playhead, markers, flags) must
+    // land in one frame with the reclamped geometry below, or the overlays jump
+    // a frame ahead of a stale plate. The warp PLACEMENT edits (drop / delete /
+    // marker drag / nudge / Ctrl+N / Ctrl+D / the flag-editor commit) now author
+    // in warp's source home view (home-view binding, architect 2026-07-22),
+    // where the source waveform has no map-dependent plate — they no longer call
+    // this. The ASYNC worker path is not a map-edit route:
     // it serves viewport navigation (pan/follow/resize) and repaints the
     // plate on preview completion, both undriven-by-a-discrete-edit cases the
     // key-repeat-rate argument for staying async never applied to.
@@ -93,7 +97,7 @@ struct Viewport {
     void kick_waveform_sync() {
         // Render FINAL clamped geometry: reclamp through the one zoom/viewport
         // chokepoint BEFORE the synchronous rebuild. A target-view map edit
-        // (tempo step, engine-scale commit, disable, nudge) can change the
+        // (tempo step, engine-scale commit) can change the
         // target total, hence the per-file effective zoom ceiling and the
         // viewport walls; the edit tails call this at the OLD zoom/viewport, so
         // without the reclamp the sync render paints stale geometry and the next

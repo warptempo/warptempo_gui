@@ -499,18 +499,16 @@ void GuiFlagEditor::commit_top_flag_edit() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    // Same discrete-warp_frame_map-change class as the drop / delete / nudge
-    // edits (see drop_marker in warpmarkers_ops.cpp): a committed payload can
-    // change tempo / scale / label_def / label_ref / disabled, all map inputs,
-    // so re-warp synchronously in target view. Gated explicitly on
-    // canonical_changed (the map-input predicate) rather than store_changed: an
-    // iter-bracket-only commit reaches this point past the store_changed early
-    // return above, but the bracket is session-only scratch (not a map input),
-    // so its re-warp would be pixel-identical — skip the full synchronous
-    // rebuild. The trigger below keeps its store_changed gating (it re-derives
-    // identity-unchanged for the bracket and lands on the reuse rungs).
-    if (canonical_changed && app.active_audio_view == 'T')
-        viewport.kick_waveform_sync();
+    // No synchronous re-warp: the flag editor is a warp authoring surface that
+    // exists only in warp's SOURCE home view (the home-view binding, architect
+    // 2026-07-22 — both open routes gate on active_column_authoring_allowed, and
+    // the S->T toggle closes any open editor WITHOUT committing before entering
+    // target view), so a commit can never run with active_audio_view == 'T' and
+    // there is no displayed target plate to re-warp. The former canonical_changed
+    // sync branch was unreachable and is gone; canonical_changed survives as the
+    // undo push's affects_persistence gate above. The trigger keeps its
+    // store_changed gating (it re-derives identity-unchanged for an
+    // iter-bracket-only commit and lands on the reuse rungs).
     target_render.trigger();
 }
 

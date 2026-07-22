@@ -2,7 +2,6 @@
 
 #include "audio.h"
 #include "engine/engine_geometry.h"  // kN
-#include "gui_display_context.h"
 #include "target_render.h"
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
@@ -155,12 +154,14 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // authored_frame_at_column, so the anchored column is the painted one
 // and the committed value is a whole source frame.
 //
-// Wall semantics per view are unchanged, against this column's absolute
-// range (zero / total_frames - 1 — the single marker EOF wall both
-// columns now share; see drop_phase_reset_at_position for the ruling):
-// target view keeps the all-or-nothing silent refusal, source view keeps
-// the clamp (creep-to-the-wall), and the integer walls win over the
-// pixel grid.
+// Wall semantics are one regime now, against this column's absolute range
+// (zero / total_frames - 1 — the single marker EOF wall both columns share;
+// see drop_phase_reset_at_position for the ruling): this gesture runs in
+// phase reset's TARGET home view only (the home-view binding, architect
+// 2026-07-22), so the all-or-nothing silent refusal is unconditional — a
+// proposal leaving the range refuses wholesale. The integer walls win over
+// the pixel grid. (The old source-view clamp arm died with the binding —
+// there is no per-view refuse-vs-clamp split left.)
 // Crossing a neighbor is legal and goes through the reorder-and-remap
 // path below; the render boundary collapses an exact-equal group to one
 // event.
@@ -205,16 +206,15 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
                 app, audio, tv[app.last_selected_marker].time_frame),
             app, audio);
     // The anchoring map is the DISPLAYED paint basis —
-    // displayed_or_live_target_map, the SAME map the stem/flag painter reads
-    // (identity in source view) — so a press moves the reset by exactly the
-    // commanded pixel column against WHAT IS PAINTED, even inside a worker
-    // publish window where the displayed map lags the live one. Source view is
-    // identity, so the working-zoom authoring-grid bit-exactness claims (all
-    // source-view) are unaffected. The wall policy keys off the LIVE display
-    // context's domain instead (refuse-vs-clamp is a coordinate regime, not a
-    // map choice): a mapped domain refuses out-of-range, source view clamps.
-    const bool mapped_domain =
-        (active_display_context(app, audio).domain != GuiDisplayDomain::Source);
+    // displayed_or_live_target_map, the SAME map the stem/flag painter reads —
+    // so a press moves the reset by exactly the commanded pixel column against
+    // WHAT IS PAINTED, even inside a worker publish window where the displayed
+    // map lags the live one. Phase resets author in their TARGET home view only
+    // (the home-view binding, architect 2026-07-22), a mapped (non-identity)
+    // domain, so the wall policy is a single regime — the all-or-nothing silent
+    // refusal outside the absolute range — because target is the only view this
+    // gesture runs in; the former source-view clamp arm was unreachable under
+    // the home-view binding and is gone.
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
     const int64_t reset_wall = audio.total_frames() - 1;
@@ -225,13 +225,8 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
             app, audio, static_cast<double>(tv[idx].time_frame), map);
         int64_t t_new =
             authored_frame_at_column(app, audio, c + direction, map);
-        if (mapped_domain) {
-            // All-or-nothing silent refusal outside the absolute range.
-            if (t_new < 0 || t_new > reset_wall) return;
-        } else {
-            if (t_new < 0)          t_new = 0;
-            if (t_new > reset_wall) t_new = reset_wall;
-        }
+        // All-or-nothing silent refusal outside the absolute range.
+        if (t_new < 0 || t_new > reset_wall) return;
         proposals.emplace_back(idx, t_new);
     }
     bool any_changed = false;

@@ -372,10 +372,12 @@ void GuiInputHandler::commit_trim_drag() {
         // that (falling back to the live cache only when cold), so the release
         // column-snaps against WHAT IS PAINTED and stored equals shown even inside
         // an async waveform-rebuild window where the displayed map lags the live
-        // cache — the residual case now that every discrete warp-map edit re-warps
-        // synchronously in target view (drop / delete / nudge / tempo / Ctrl+N /
-        // Ctrl+D / flag commit all kick_waveform_sync): a worker job dispatched by
-        // a viewport change and still in flight across the grab, carrying the
+        // cache — the residual case now that the warp_frame_map edits reachable in
+        // target view all re-warp synchronously (the Alt+Up/Down tempo step, the
+        // settings engine-scale commit, and undo/redo all kick_waveform_sync;
+        // warp placement edits author in source view under the home-view binding,
+        // where the displayed map is identity): a worker job dispatched by a
+        // viewport change and still in flight across the grab, carrying the
         // then-current map. That is the same displayed basis route_trim_chip_press's
         // hit test and the drag mechanics above all read. The absolute walls
         // — both bounds 0..EOF-1, plain integer compares —

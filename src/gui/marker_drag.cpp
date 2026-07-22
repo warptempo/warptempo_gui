@@ -184,7 +184,13 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
 // mechanics stay on the live map" rule: the drag's contract is
 // pointer-lockstep with the painted flag, so its mechanics run on the
 // DISPLAYED map (the paint basis); the commit's store write and the ride's
-// final placement remain live-map (post-commit) territory. Walls stay
+// final placement remain live-map (post-commit) territory. The live consumer
+// of the non-identity case is the PHASE reset drag in target view: under the
+// home-view binding (architect 2026-07-22) a WARP marker drag authors in
+// source view, where the displayed map is identity and both hops degenerate
+// to orig + delta, while a phase reset drag authors in target view against a
+// real (non-identity) displayed map — where a live-map inverse would slip at
+// the slope ratio, and the displayed basis does not. Walls stay
 // integer source frames and win over everything: the proposed source value
 // clamps per marker into [orig + delta_min, orig + delta_max].
 //
@@ -336,8 +342,8 @@ void MarkerDragOps::commit_drag() {
     // source view), the same basis apply_drag_motion anchored the proposals
     // in, so stored-equals-shown holds at commit even inside a worker
     // publish window where displayed != live. The commit-time RIDE placement
-    // below stays on the LIVE map deliberately — placement truth after the
-    // re-warp, the Tab basis.
+    // below stays on the LIVE map deliberately — post-commit placement truth,
+    // the Tab basis.
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
     for (size_t k = 0; k < app.drag.moveable_times.size(); ++k) {
@@ -441,19 +447,25 @@ void MarkerDragOps::commit_drag() {
     viewport.invalidate_waveform_area();
     // Coincident ride, commit half (see the header comment): land the ridden
     // playhead on the committed frame through the two-step placement basis.
-    // The call runs AFTER the store write + reorder/remap and BEFORE the
-    // kick_waveform_sync below, so source_frame_to_active_domain reads the
-    // POST-commit map via the generation-keyed display cache and, in target
-    // view, the re-warped plate and the ridden playhead land in one frame. A
-    // non-riding drag leaves the playhead parked exactly as before.
+    // The call runs AFTER the store write + reorder/remap, so
+    // source_frame_to_active_domain reads the POST-commit map via the
+    // generation-keyed display cache — the shared Tab placement basis
+    // (post-commit truth). A warp marker drag authors in the source home view
+    // (home-view binding, architect 2026-07-22), where that call is identity, so
+    // the playhead lands on the committed frame directly; a phase reset drag in
+    // its target home maps through the post-commit map. A non-riding drag leaves
+    // the playhead parked exactly as before.
     if (playhead_rides) {
         viewport.move_playhead_to(
             source_frame_to_active_domain(app, audio, ridden_final_frame));
     }
-    // Same discrete-warp_frame_map-change class as drop_marker (see comment
-    // there): the commit re-warps the plate, so render it synchronously
-    // — the re-warped waveform and the playhead land in one frame.
-    if (net_changed && !phase_reset && app.active_audio_view == 'T')
-        viewport.kick_waveform_sync();
+    // No synchronous re-warp at commit: a marker drag can no longer change the
+    // displayed target plate. Warp marker drags author in warp's SOURCE home
+    // view only (the home-view binding, architect 2026-07-22 — the arming flag
+    // press gates on active_column_authoring_allowed, and the view cannot toggle
+    // mid-gesture since every key but Esc/Ctrl+Q is swallowed while a drag is
+    // active), where the source waveform has no map-dependent plate; and a phase
+    // reset drag never touches the warp map. So the only surviving effect is the
+    // view-independent target preview trigger below.
     if (net_changed) target_render.trigger();
 }

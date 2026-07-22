@@ -1,7 +1,6 @@
 #include "warpmarkers_ops.h"
 
 #include "audio.h"
-#include "gui_display_context.h"
 #include "warp_frame_map_build.h"
 #include "warp_frame_map_view.h"
 #include "target_render.h"
@@ -84,23 +83,20 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     viewport.invalidate_timestamp_area();
 
     // Re-affirm the playhead on the just-dropped marker. The drop is authored
-    // AT the playhead (drop_marker_at_playhead / the `s` command), so in source
-    // view this is a no-op; in target view it re-lands the playhead on the
-    // marker's displayed column, correcting the map round-trip. This is not a
-    // selection sync — the marker is created under the playhead, and the
-    // playhead simply stays there. Done last so invalidations in the helper
-    // don't double-paint with the ones above.
+    // AT the playhead (drop_marker_at_playhead / the `s` command) in warp's
+    // SOURCE home view (the home-view binding, architect 2026-07-22), where
+    // source_frame_to_active_domain is identity, so this is a no-op
+    // reaffirmation — the marker is created under the playhead and the playhead
+    // simply stays there. It is not a selection sync. Done last so invalidations
+    // in the helper don't double-paint with the ones above.
     const int64_t sample = source_frame_to_active_domain(app, audio, drop_frame);
     viewport.move_playhead_to(sample);
 
-    // Discrete warp_frame_map change while target view is displayed: the plate
-    // must re-warp. Route this one-shot jump through the synchronous
-    // rebuild — the same fix applied to tab cycling (Tab / Shift+Tab /
-    // Ctrl+Shift+Tab) — so the re-warped waveform,
-    // stems, flags, and playhead all land in one frame instead of
-    // flashing across the async worker's rebuild window. Source view
-    // skips it: marker edits don't change source-domain waveform pixels.
-    if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
+    // No synchronous re-warp: warp markers author in their source home view
+    // only (the home-view binding, architect 2026-07-22), where the source
+    // waveform pixels don't depend on the warp map, so there is no displayed
+    // target plate to re-warp. The target preview still invalidates — a
+    // source-view warp edit changes the rendered target buffer.
     target_render.trigger();
 }
 
@@ -215,9 +211,9 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    // Same discrete-warp_frame_map-change class as drop_marker (see comment
-    // there): re-warp synchronously in target view.
-    if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
+    // No synchronous re-warp: warp authoring lives in the source home view (see
+    // drop_marker), where the source waveform has no map-dependent plate to
+    // re-warp. The view-independent target preview trigger stays.
     target_render.trigger();
 }
 
@@ -301,11 +297,9 @@ void GuiWarpMarkersOps::toggle_inherits() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    // Same discrete-warp_frame_map-change class as drop_marker (see comment
-    // there): re-warp synchronously in target view so displayed == live at this
-    // command boundary. Warp column only — the Ctrl+N pass toggle mutates the
-    // warp store.
-    if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
+    // No synchronous re-warp: the Ctrl+N pass toggle authors the warp store in
+    // the source home view only (see drop_marker), where the source waveform
+    // has no map-dependent plate to re-warp. The target preview trigger stays.
     target_render.trigger();
 }
 
@@ -334,12 +328,11 @@ void GuiWarpMarkersOps::toggle_disabled() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    // Same discrete-warp_frame_map-change class as drop_marker (see comment
-    // there): re-warp synchronously in target view so displayed == live at this
-    // command boundary. This is the WARP column's disable toggle — the phase-
-    // reset sibling in phaseresetmarkers_ops.cpp does not change the warp map
-    // and takes no such sync.
-    if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
+    // No synchronous re-warp: this is the WARP column's disable toggle, which
+    // authors in the source home view only (see drop_marker), where the source
+    // waveform has no map-dependent plate to re-warp. The target preview trigger
+    // stays. (The phase-reset sibling in phaseresetmarkers_ops.cpp never touched
+    // the warp map and likewise takes no sync.)
     target_render.trigger();
 }
 
@@ -449,10 +442,13 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
-    // Same discrete-warp_frame_map-change class as drop_marker (see comment
-    // there): re-warp synchronously in target view so displayed == live at this
-    // command boundary, no divergence window for the displayed-basis gestures
-    // to ride out.
+    // Discrete warp_frame_map change that CAN run in target view: Alt+Up/Down is
+    // the one warp authoring gesture reachable off its source home (the ruled
+    // exception gated above), so it is now one of the few surviving target-view
+    // re-warp sites (with the settings engine-scale commit and undo/redo). When
+    // it runs in target view the plate must re-warp, so render synchronously so
+    // displayed == live at this command boundary, leaving no divergence window
+    // for the displayed-basis gestures (phase drags, trim drags) to ride out.
     if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
     target_render.trigger();
 }
@@ -479,13 +475,15 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
 // anchoring to the column grid re-derives the pixel phase every press,
 // so nothing accumulates.
 //
-// Wall semantics per view are unchanged: target view keeps the
-// all-or-nothing silent refusal when a proposal leaves the absolute
-// range (zero / the warp EOF wall — total_frames minus one source frame,
-// because build_warp_frame_map refuses sub-frame segments); source view
-// keeps the clamp (creep-to-the-wall), so the walls stay exactly
-// reachable by nudge — the walls win over the pixel grid, and every wall
-// is an integer frame, so a wall-clamped commit stays whole. Spacing is
+// Wall semantics are one regime now: this gesture runs in warp's SOURCE
+// home view only (the home-view binding, architect 2026-07-22), so the
+// clamp (creep-to-the-wall) is unconditional — a proposal leaving the
+// absolute range (zero / the warp EOF wall — total_frames minus one source
+// frame, because build_warp_frame_map refuses sub-frame segments) clamps to
+// the wall, so every wall stays exactly reachable by nudge. The walls win
+// over the pixel grid, and every wall is an integer frame, so a wall-clamped
+// commit stays whole. (The old target-view all-or-nothing refusal arm died
+// with the binding — there is no per-view refuse-vs-clamp split left.) Spacing is
 // not the GUI's concern: crossing a neighbor is legal and goes through
 // the reorder-and-remap path below; the render boundary collapses
 // exact-frame ties to one 1.00 owner.
@@ -540,16 +538,17 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
                 app, audio, mv[app.last_selected_marker].time_frame),
             app, audio);
     // The anchoring map is the DISPLAYED paint basis —
-    // displayed_or_live_target_map, the SAME map the stem/flag painter reads
-    // (identity in source view) — so a press moves the marker by exactly the
-    // commanded pixel column against WHAT IS PAINTED, even inside a worker
-    // publish window where the displayed map lags the live one. Source view is
-    // identity, so the working-zoom authoring-grid bit-exactness claims (all
-    // source-view) are unaffected. The wall policy keys off the LIVE display
-    // context's domain instead (refuse-vs-clamp is a coordinate regime, not a
-    // map choice): a mapped domain refuses out-of-range, source view clamps.
-    const bool mapped_domain =
-        (active_display_context(app, audio).domain != GuiDisplayDomain::Source);
+    // displayed_or_live_target_map, the SAME map the stem/flag painter reads —
+    // so a press moves the marker by exactly the commanded pixel column against
+    // WHAT IS PAINTED. Warp markers author in their SOURCE home view only (the
+    // home-view binding, architect 2026-07-22), so the displayed map is the
+    // empty identity map here and the shared painted_column / authored_frame
+    // helpers take it naturally; the working-zoom authoring-grid bit-exactness
+    // claims (all source-view) are unaffected. The wall policy is a single
+    // regime — the per-marker clamp (creep-to-the-wall), walls exactly reachable
+    // by nudge — because source is the only view this gesture runs in; the
+    // former mapped-domain all-or-nothing refusal arm was unreachable under the
+    // home-view binding and is gone.
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
     const int64_t warp_wall = audio.total_frames() - 1;
@@ -560,13 +559,8 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
             app, audio, static_cast<double>(mv[idx].time_frame), map);
         int64_t t_new =
             authored_frame_at_column(app, audio, c + direction, map);
-        if (mapped_domain) {
-            // All-or-nothing silent refusal outside the absolute range.
-            if (t_new < 0 || t_new > warp_wall) return;
-        } else {
-            if (t_new < 0)         t_new = 0;
-            if (t_new > warp_wall) t_new = warp_wall;
-        }
+        if (t_new < 0)         t_new = 0;
+        if (t_new > warp_wall) t_new = warp_wall;
         proposals.emplace_back(idx, t_new);
     }
     bool any_changed = false;
@@ -586,10 +580,12 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
         app, reorder_markers_by_time(app.warpmarkers.markers_mut()));
     // Coincident ride: keep the playhead on the marker it sat on. The
     // committed frame (t_new, reorder-independent) maps through
-    // source_frame_to_active_domain AFTER the store mutation, so the
-    // generation-keyed display cache re-derives against the post-move map —
-    // in target view a warp nudge changes the map itself, and this is the
-    // post-commit basis. move_playhead_to owns the live-domain clamp, the
+    // source_frame_to_active_domain AFTER the store mutation — the shared Tab
+    // placement basis (post-commit truth). Warp nudges author in the source
+    // home view (home-view binding, architect 2026-07-22), where that call is
+    // identity, so the playhead lands on the moved frame directly; the two-step
+    // basis is kept verbatim for symmetry with the phase nudge (which does map).
+    // move_playhead_to owns the live-domain clamp, the
     // scanner mirror (playback stopped above, scanner inactive), the
     // invalidation, and the standard keep-visible viewport edge-align (a
     // nudged marker is at most one column from a visible position).
@@ -608,13 +604,10 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    // Same discrete-warp_frame_map-change class as drop and delete (see
-    // drop_marker): re-warp synchronously in target view so displayed == live
-    // at every command boundary, leaving no divergence window for the
-    // displayed-basis gestures to ride out. Nudges arrive at key-repeat rate,
-    // but that per-repeat cost is the strip drag's per-pointer-frame cost
-    // (one full synchronous rebuild at 60 Hz), measured affordable — so the
-    // earlier key-repeat cost objection to syncing here is retired.
-    if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
+    // No synchronous re-warp: the nudge authors in warp's SOURCE home view only
+    // (the home-view binding, architect 2026-07-22), where the source waveform
+    // pixels don't depend on the warp map, so there is no displayed target plate
+    // to re-warp. The target preview still invalidates — a source-view warp edit
+    // changes the rendered target buffer — so the view-independent trigger stays.
     target_render.trigger();
 }
