@@ -314,8 +314,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             }
             if (in_region) {
                 // Double-click: a second click within the window on this
-                // editor's text selects the WORD under the click (the word-class
-                // boundaries the editor's Ctrl+Left/Right use), arming no drag.
+                // editor's text selects the RUN of the clicked character class
+                // (word / punctuation / whitespace) under the click — select_
+                // word_at's own classifier, not just a word — arming no drag.
                 // The surface tag keeps it from consuming a flag / zoom-row
                 // candidate.
                 const DoubleClickCandidate& dc = dc_at_press;
@@ -498,6 +499,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         //     alt-exact different-flag press discards then lands (already worked).
         // The no-op path returns; every discard / alt-own-flag path falls through
         // to the normal flag hit-test / waveform handling below.
+        // Set when this press click-away-discards the open flag editor: the
+        // press's lane-side meaning was "discard", so it must NOT also count as
+        // a lane double-click click (it neither seeds nor consumes a LaneText
+        // candidate — see the lane claim's gate below).
+        bool discarded_editor_this_press = false;
         if (text_editor::is_active(app.top_flag_editor)) {
             const bool alt_exact = alt && !ctrl && !shift;
             const int hit_now = inside_top ? hit_test_flag(app, audio, x, y) : -1;
@@ -515,6 +521,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // different flag single-selects; a waveform click deselects +
                 // places playhead).
                 flag_editor.exit_top_flag_edit_no_commit();
+                discarded_editor_this_press = true;
             }
         }
 
@@ -527,9 +534,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Marker-text-lane double-click: opens the flag editor on the run's
         // marker, exactly like Enter and the flag double-click. The lane band
         // (top lane 2) carries the one-value run painted between the trim chips
-        // and the flags; a plain press on that RENDERED run is a free surface
-        // today (it falls through every claim to the strict no-op below). Only
-        // the PLAIN unmodified press claims here; a modified press is left to the
+        // and the flags; a plain press on that RENDERED run is CLAIMED here (it
+        // seeds a LaneText candidate, then a second such press opens the editor).
+        // Only the PLAIN unmodified press claims; a modified press is left to the
         // branches below.
         //
         // Placed AFTER the flag-editor discard block (an open editor owns lane
@@ -541,8 +548,23 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // backstop) and BEFORE the flag hit-test consumption (the lane band is
         // disjoint from the flag lane, so the ordering is for clarity, not
         // correctness). The standing top-strip playback stop above already ran.
+        //
+        // The !discarded_editor_this_press gate: a press that click-away-
+        // discarded the editor this frame made any_text_editor_active() false,
+        // so it would otherwise reach here and seed a LaneText candidate — but
+        // its lane-side meaning was already "discard", not "lane click one". The
+        // concrete bug it prevents: an editor whose pending run is SHORTER than
+        // the committed text ("1.00" edited to "1") — a press outside the one-
+        // glyph pending run but inside the restored four-glyph committed run
+        // discards the editor above AND would seed here, so a second press there
+        // reopened the editor, the discard press double-counting as click one.
+        // Asymmetry vs the flag path (deliberate): a different-FLAG discard press
+        // still single-selects and seeds a Flag candidate below — the lane run
+        // visible while an editor is open IS the editor, so a lane double-click
+        // during an editor session has caret semantics (resolved in the F2.1
+        // block), not open-editor semantics; only the LANE claim is excluded.
         if (inside_top && !ctrl && !shift && !alt &&
-            !any_text_editor_active()) {
+            !any_text_editor_active() && !discarded_editor_this_press) {
             const LaneTextRun run = current_marker_lane_run(app, audio);
             const double advance = monospace_advance();
             // The run's screen rect, derived exactly as paint does: the caret-
@@ -893,8 +915,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         finalize_editor_text_drag();
         // Double-click seeding: a MOTIONLESS release (a pure click that left a
         // caret, no selection) seeds an editor-text candidate so a second click
-        // within the window selects the word under it. A drag that made a
-        // selection seeds nothing.
+        // within the window selects the clicked character class's run (word /
+        // punctuation / whitespace). A drag that made a selection seeds nothing.
         if (g.valid && !text_editor::has_selection(*g.ed)) {
             app.double_click = DoubleClickCandidate{
                 .surface = DoubleClickSurface::EditorText,

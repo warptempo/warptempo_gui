@@ -54,7 +54,11 @@ int next_word_boundary(const std::string& s, int pos) {
 // characters stay whole — the free-text fields carry UTF-8); WHITESPACE is
 // ' ' and '\t'; PUNCTUATION is every other byte. Distinct from the
 // cursor-motion word class above (which excludes '_' and treats every
-// non-word byte as a separator to skip).
+// non-word byte as a separator to skip). The >= 0x80 rule guarantees only that
+// a selection never SPLITS a multibyte character and keeps a correctly-probed
+// word whole; it does NOT correct a byte-shifted probe when non-ASCII earlier in
+// the line has already shifted the click-to-byte mapping (see
+// byte_index_from_click_x's accepted-limitation note).
 enum class CharClass { Word, Whitespace, Punctuation };
 
 CharClass classify(char c) {
@@ -70,6 +74,14 @@ CharClass classify(char c) {
 
 } // namespace
 
+// Monospace mapping: one glyph == one `advance`, and the returned index is a
+// BYTE offset. That equates byte to glyph, which holds only for ASCII — Cairo
+// renders a multibyte UTF-8 character as ONE glyph, so any non-ASCII byte earlier
+// in the line shifts every later click target (and the byte-derived highlight
+// geometry). Accepted limitation, no correction: the program-generated corpus is
+// ASCII, and non-ASCII is reachable only through user-created content (e.g. a
+// hand-renamed render entry). Pre-existing and shared by the caret path — the
+// click-to-caret site funnels through this same mapping with the identical shift.
 int byte_index_from_click_x(double click_x, double text_left_x,
                             double advance, int pending_size) {
     const double offset = click_x - text_left_x;
