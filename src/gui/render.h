@@ -889,7 +889,9 @@ double flag_pending_text_left_x(
     int marker_idx);
 
 // The marker-text lane's current NON-EDITOR run, arbitrated once so the paint
-// pass and the lane double-click hit test read the SAME run and cannot drift.
+// pass and the unified marker hit resolver (marker_hit_at in input_pointer.cpp
+// — the run is the marker's second hittable part beside its flag shape) read
+// the SAME run and cannot drift.
 // Mirrors the precedence paint_marker_text_lane owns below the flag-editor
 // case: tier 1 the HOVERED marker's own value (hover_popup.lane_text at
 // hover_popup.source_frame), else tier 2 the LAST-SELECTED marker's own value
@@ -909,9 +911,9 @@ struct LaneTextRun {
 };
 
 // Resolve the current marker-text-lane run (the non-editor arbitration above),
-// the single owner both paint_marker_text_lane and the lane double-click hit
-// test read so the painted run and the clickable run are one run. The run's
-// screen rect is derived by the caller exactly as paint does (left =
+// the single owner both paint_marker_text_lane and the unified marker hit
+// resolver read so the painted run and the clickable run are one run. The
+// run's screen rect is derived by the caller exactly as paint does (left =
 // lane_text_left_x_at_frame(app, audio, source_frame, text.size()), a left<0
 // meaning the advance is not yet measured). No cairo context.
 LaneTextRun current_marker_lane_run(const AppState& app, const GuiAudio& audio);

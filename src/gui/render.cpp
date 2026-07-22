@@ -1613,10 +1613,10 @@ double flag_pending_text_left_x(
 LaneTextRun current_marker_lane_run(const AppState& app, const GuiAudio& audio)
 {
     // The non-editor arbitration paint_marker_text_lane's tiers own, factored
-    // out verbatim so the paint pass and the lane double-click hit test agree on
-    // one run. The FlagPayload editor case is resolved by the callers before
-    // this point (it owns the lane alone); this covers only the hover / last-
-    // selected tiers.
+    // out verbatim so the paint pass and the unified marker hit resolver
+    // (marker_hit_at) agree on one run. The FlagPayload editor case is resolved
+    // by the callers before this point (it owns the lane alone); this covers
+    // only the hover / last-selected tiers.
     LaneTextRun run;
 
     // Tier 1: the HOVERED marker's own value wins whenever a hover is showing.

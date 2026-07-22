@@ -179,10 +179,10 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
     // marker's value, composed from the live store with the mid-drag
     // moveable_times substitution and the painted-column offscreen cull) are
     // resolved by the shared run resolver current_marker_lane_run — the ONE
-    // arbitration the lane double-click hit test also reads, so the painted run
-    // and the clickable run cannot drift. paint_run keeps its own txt.empty()
-    // and left<0 guards, so consuming the resolved run here is byte-identical to
-    // the inline tiers it replaced.
+    // arbitration the unified marker hit resolver (marker_hit_at) also reads,
+    // so the painted run and the clickable run cannot drift. paint_run keeps
+    // its own txt.empty() and left<0 guards, so consuming the resolved run here
+    // is byte-identical to the inline tiers it replaced.
     const LaneTextRun run = current_marker_lane_run(app, audio);
     if (run.valid) paint_run(run.source_frame, run.text);
 }

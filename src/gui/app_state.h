@@ -528,38 +528,38 @@ struct ScrollDragState {
 };
 
 // The surface a double-click candidate belongs to. The surface tag is what keeps
-// the four double-click surfaces from cross-firing: a candidate seeded on one
+// the three double-click surfaces from cross-firing: a candidate seeded on one
 // surface can only be consumed by a press on the SAME surface (a zoom-row click
-// then a flag click within the window can never consume). None = no candidate.
-enum class DoubleClickSurface { None, ZoomRow, Flag, EditorText, LaneText };
+// then a marker click within the window can never consume). None = no candidate.
+enum class DoubleClickSurface { None, ZoomRow, Marker, EditorText };
 
 // Double-click detection (Wayland delivers no double-click event, so it is
 // hand-rolled from two plain clicks). A click on a double-click-bearing surface
-// records this candidate (at a motionless release for every surface except
-// LaneText, which seeds at the PRESS — see below); the NEXT plain press on the
-// SAME surface, if it lands within kDoubleClickMs and kDoubleClickSlackPx of the
-// recorded position AND (for Flag / LaneText) targets the same marker, is
-// consumed as that surface's double-click action instead of the single-click
-// action. A drag that MOVED records nothing and clears any candidate. Surfaces:
+// records this candidate (at a motionless release for ZoomRow / EditorText; at
+// the PRESS for Marker — see below); the NEXT plain press on the SAME surface,
+// if it lands within kDoubleClickMs and kDoubleClickSlackPx of the recorded
+// position AND (for Marker) targets the same marker, is consumed as that
+// surface's double-click action instead of the single-click action. A drag that
+// MOVED records nothing and clears any candidate. Surfaces:
 //   ZoomRow    -> the zoom-bar double-click zoom command (target unused; the
 //                 zoom row is thin, so only press_x slack is compared).
-//   Flag       -> opens the marker's flag editor (target = marker index; both
-//                 axes' slack compared).
+//   Marker     -> opens the marker's flag editor (target = marker index; both
+//                 axes' slack compared). The marker is ONE pointer item: the hit
+//                 is its flag SHAPE or its rendered marker-text LANE RUN, and a
+//                 candidate seeded on one part consumes on the other. One seed
+//                 timing for the whole surface — the PRESS; a press that then
+//                 becomes a real marker drag drops the candidate at the
+//                 threshold crossing, so a moved drag never carries one.
 //   EditorText -> selects the clicked character class's RUN (word / punctuation
 //                 / whitespace) in the active text editor (target unused; both
 //                 axes' slack compared).
-//   LaneText   -> opens the marker's flag editor from a double-click on the
-//                 marker-text lane's rendered run (target = marker index; both
-//                 axes' slack compared). Unlike the other surfaces the lane arms
-//                 no gesture, so its candidate is seeded at the PRESS (not a
-//                 motionless release) — there is no drag that could false-seed.
 // Cleared on file load, and the moment an action fires. Session-only.
 struct DoubleClickCandidate {
     DoubleClickSurface surface = DoubleClickSurface::None;
     int64_t time_ms   = 0;      // CLOCK_MONOTONIC ms at the seeding press/release
-    int     press_x   = 0;      // seed x (== press x; motionless for all but LaneText)
-    int     press_y   = 0;      // seed y (flag / editor / lane 2D slack)
-    int     target    = -1;     // marker index for Flag / LaneText; unused otherwise
+    int     press_x   = 0;      // seed x (Marker seeds at the press; ZoomRow /
+    int     press_y   = 0;      //   EditorText at a motionless release)
+    int     target    = -1;     // marker index for Marker; unused otherwise
 };
 
 // Double-click window and positional slack (architect-tunable). Two motionless

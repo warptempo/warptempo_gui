@@ -69,6 +69,52 @@ int64_t playhead_frame_at_click_column(const AppState& app,
         static_cast<int64_t>(std::nearbyint(static_cast<double>(col) * spp));
 }
 
+// The unified marker hit: the marker is ONE pointer item, hit either by its
+// FLAG SHAPE (hit_test_flag: the fixed rectangle plus the fused triangle,
+// topmost-painted wins) or by its RENDERED MARKER-TEXT LANE RUN (the run
+// current_marker_lane_run resolves — the ONE run arbitration the lane paint
+// also reads — when the press lands inside the run's screen rect, derived
+// exactly as paint derives it: lane_text_left_x_at_frame for the left edge,
+// glyph count times monospace_advance for the width, top_marker_text_row_area
+// for the y-band). `on_flag` records WHICH part was hit for the one asymmetry
+// the parts keep: the flag is the sole DRAG handle (a run press selects /
+// double-clicks / lands but never arms a reposition). index is the
+// active-column store index, -1 when neither part is under the point.
+struct MarkerHit {
+    int  index   = -1;
+    bool on_flag = false;
+};
+
+MarkerHit marker_hit_at(const AppState& app, const GuiAudio& audio,
+                        int x, int y) {
+    MarkerHit h;
+    // The flag lane and the marker-text lane are disjoint y-bands, so at most
+    // one of the two tests can hit; the flag test runs first only to settle
+    // on_flag directly.
+    const int flag = hit_test_flag(app, audio, x, y);
+    if (flag >= 0) {
+        h.index   = flag;
+        h.on_flag = true;
+        return h;
+    }
+    const LaneTextRun run = current_marker_lane_run(app, audio);
+    if (!run.valid) return h;
+    const double advance = monospace_advance();
+    if (advance <= 0.0) return h;
+    // left < 0 means the monospace advance is not yet measured — no run to hit.
+    const double left = lane_text_left_x_at_frame(
+        app, audio, run.source_frame, run.text.size());
+    if (left < 0.0) return h;
+    const GuiRect lane  = top_marker_text_row_area(app);
+    const double  run_w = static_cast<double>(run.text.size()) * advance;
+    if (y >= lane.y && y < lane.y + lane.h &&
+        static_cast<double>(x) >= left &&
+        static_cast<double>(x) <= left + run_w) {
+        h.index = run.marker_index;
+    }
+    return h;
+}
+
 // The active editor's resolved text geometry, valid only while exactly one
 // editor is active (and, for the flag editor, on-view). Press / motion /
 // release all resolve this so they agree on origin and which strip to
@@ -275,9 +321,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
     // A double-click is two CONSECUTIVE clicks: snapshot the pending candidate
     // and clear the shared field here, so ANY intervening press invalidates it.
-    // The consume checks below read this snapshot; a motionless release re-seeds
-    // a fresh candidate afterward. One closed instrumentation point — the clear
-    // covers every non-consuming press (a strip/region/chip arm, a modal swallow)
+    // The consume checks below read this snapshot; each surface then re-seeds
+    // its own fresh candidate (ZoomRow / EditorText at a motionless release,
+    // Marker at the press). One closed instrumentation point — the clear covers
+    // every non-consuming press (a strip/region/chip arm, a modal swallow)
     // without a clear scattered on each path.
     const DoubleClickCandidate dc_at_press = app.double_click;
     app.double_click = DoubleClickCandidate{};
@@ -287,8 +334,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // drag (anchor == caret until the pointer moves). Resolved before the
     // per-editor modal swallows below so the gesture reaches the settings /
     // BPM bottom-strip editors too. A press outside the active editor's
-    // region falls through to the existing logic (target-switch, open-
-    // another-flag, modal swallow) unchanged.
+    // region falls through: the bottom-strip editors stay modal and swallow
+    // it, while the top flag editor closes guard-free below and the press
+    // then acts normally.
     if (button == GuiMouseButton::Left) {
         const ActiveEditorText g = active_editor_text(app, audio);
         if (g.valid) {
@@ -302,9 +350,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // centered on the target marker's column. A press within the
                 // rendered run's x-extent (in the lane's y-band) repositions the
                 // caret and arms the drag; g.text_left is that run's left edge
-                // (flag_pending_text_left_x, the one caret-origin owner). A press
-                // on the marker's own flag or elsewhere is not the lane text, so
-                // it falls through to the no-op / discard handling below.
+                // (flag_pending_text_left_x, the one caret-origin owner). Any
+                // OTHER press is a non-caret click, which closes the editor
+                // below and then routes normally (the guard-free lifecycle).
                 const GuiRect lane = top_marker_text_row_area(app);
                 const double run_w = static_cast<double>(
                     app.top_flag_editor.pending.size()) * g.advance;
@@ -317,7 +365,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // editor's text selects the RUN of the clicked character class
                 // (word / punctuation / whitespace) under the click — select_
                 // word_at's own classifier, not just a word — arming no drag.
-                // The surface tag keeps it from consuming a flag / zoom-row
+                // The surface tag keeps it from consuming a marker / zoom-row
                 // candidate.
                 const DoubleClickCandidate& dc = dc_at_press;
                 if (dc.surface == DoubleClickSurface::EditorText &&
@@ -343,8 +391,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             }
             // A bottom-strip editor stays modal: a press outside its row is
             // swallowed without arming. A flag-editor press that isn't on the
-            // lane text falls through to the no-op (own flag) / discard
-            // (elsewhere) handling below.
+            // lane text falls through to the guard-free close below.
             if (g.bottom_strip) return;
         }
     }
@@ -393,6 +440,23 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // helper used by those writers.
 
     if (button == GuiMouseButton::Left) {
+        // Editor lifecycle, guard-free. A press in the editor's rendered lane
+        // text already repositioned the caret / armed the text drag above (the
+        // F2.1 block) and returned; ANY other left press with the top flag
+        // editor open CLOSES it without committing — exactly Esc's teardown
+        // (pending dropped; Enter is the only commit route, so closing is cheap
+        // and non-destructive) — and then FALLS THROUGH so the press acts
+        // normally (arm a strip drag, select a marker, arm a marker drag, land,
+        // place the playhead, ...). Placed ahead of the zoom-row claim so the
+        // close really is unconditional. Consequence: a double-click on the
+        // open editor's own marker is close-then-reopen — the first click
+        // closes + selects + seeds a Marker candidate (+ arms the pending drag
+        // on the flag part, writable), and the second consumes into a fresh
+        // open. That IS the documented "double-click opens the editor"; there
+        // is no own-marker special case.
+        if (text_editor::is_active(app.top_flag_editor))
+            flag_editor.exit_top_flag_edit_no_commit();
+
         // Live top zoom-strip row (Ableton-style navigation), claimed ahead of
         // the top-strip playback-stop and the click routing below. It claims
         // ONLY the plain unmodified left press inside its exact half-open row
@@ -419,8 +483,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // consumes this press as a one-shot zoom command — no drag armed,
                 // no pointer capture, playhead and selection untouched, allowed
                 // in read-only (all modal gates sit above this claim). The
-                // surface tag (ZoomRow) means a flag / editor candidate can never
-                // consume here. The double-click DIVERGES from the bare `0` key:
+                // surface tag (ZoomRow) means a marker / editor candidate can
+                // never consume here. The double-click DIVERGES from the bare
+                // `0` key:
                 // it runs run_zoom_double_click_command (zoom to the region /
                 // trim / whole-song span), not run_zoom_toggle_command. The
                 // candidate's first click briefly captured and hid the cursor at
@@ -466,7 +531,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         }
 
         // Top-strip clicks stop playback first: they select markers and can
-        // retarget an open flag editor, and continuing audio during authoring /
+        // close an open flag editor, and continuing audio during authoring /
         // text editing is the wrong default. Waveform clicks keep playback
         // alive — the per-press reseek to the click sample happens at the
         // playhead-drag press site below, gated on was_playing && sample !=
@@ -476,190 +541,46 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         const int64_t playhead_at_entry = app.playhead_cursor_sample;
         if (inside_top) playback_lifecycle.stop_playback_if_playing();
 
-        // Editor: mouse handling. The editable text lives in the marker-text
-        // lane now, not on the flag, so a press within the lane's rendered run
-        // already repositioned the caret and armed the drag above (the F2.1
-        // block) and returned. What reaches here is a press that is NOT the lane
-        // text:
-        //   press on the SAME marker's own flag: three cases by modifier.
-        //     A NON-alt press is a NO-OP — the text is not there anymore, so it
-        //     neither repositions the caret nor discards; swallow it, leaving the
-        //     editor open as-is. An ALT-EXACT press instead falls THROUGH without
-        //     discarding: the alt branch below single-selects (already the
-        //     editor's own target, harmless) and seats the playhead on the marker,
-        //     the editor left open — alt+click's third land route reaching the
-        //     very flag being edited (the own-flag swallow would otherwise eat it
-        //     before the alt branch runs).
-        //   press anywhere else (a DIFFERENT flag, a non-flag top-strip spot, or
-        //     off the strip): DISCARD the open editor without committing — Esc's
-        //     teardown exactly (pending dropped; Enter is the only commit route)
-        //     — then fall through so the click routes through normal handling. A
-        //     click on a different flag thereby single-selects that flag below,
-        //     rather than retargeting the editor (the old retarget was a bug); an
-        //     alt-exact different-flag press discards then lands (already worked).
-        // The no-op path returns; every discard / alt-own-flag path falls through
-        // to the normal flag hit-test / waveform handling below.
-        // Set when this press click-away-discards the open flag editor: the
-        // press's lane-side meaning was "discard", so it must NOT also count as
-        // a lane double-click click (it neither seeds nor consumes a LaneText
-        // candidate — see the lane claim's gate below).
-        bool discarded_editor_this_press = false;
-        if (text_editor::is_active(app.top_flag_editor)) {
-            const bool alt_exact = alt && !ctrl && !shift;
-            const int hit_now = inside_top ? hit_test_flag(app, audio, x, y) : -1;
-            const bool own_flag = inside_top &&
-                                  hit_now == app.top_flag_editor.target &&
-                                  app.active_markers_view != 'P';
-            if (own_flag) {
-                // The edited marker's own flag: a non-alt press swallows (editor
-                // untouched); an alt-exact press skips BOTH the swallow and the
-                // discard and falls through to the alt land branch.
-                if (!alt_exact) return;
-            } else {
-                // Different flag / non-flag / off-strip: discard (Esc teardown)
-                // and fall through so the click drives normal handling (a
-                // different flag single-selects; a waveform click deselects +
-                // places playhead).
-                flag_editor.exit_top_flag_edit_no_commit();
-                discarded_editor_this_press = true;
-            }
-        }
-
-        // Clicks in iter/BPM mode route through the consolidated
-        // flag/marker hit-test below.
+        // Clicks in iter/BPM mode route through the unified marker
+        // hit-test below.
 
         // Only presses inside the waveform or the top strip do anything.
         if (!inside_waveform && !inside_top) return;
 
-        // Marker-text-lane double-click: opens the flag editor on the run's
-        // marker, exactly like Enter and the flag double-click. The lane band
-        // (top lane 2) carries the one-value run painted between the trim chips
-        // and the flags; a plain press on that RENDERED run is CLAIMED here (it
-        // seeds a LaneText candidate, then a second such press opens the editor).
-        // Only the PLAIN unmodified press claims; a modified press is left to the
-        // branches below.
-        //
-        // Placed AFTER the flag-editor discard block (an open editor owns lane
-        // clicks — the F2.1 caret path and the click-away discard resolve there
-        // first; a PLAIN press cannot reach here with a text editor still open,
-        // because an own-flag plain press swallowed above and a different-flag
-        // plain press discarded the editor above, and the bottom-strip editors
-        // already returned — the any_text_editor_active guard is the explicit
-        // backstop) and BEFORE the flag hit-test consumption (the lane band is
-        // disjoint from the flag lane, so the ordering is for clarity, not
-        // correctness). The standing top-strip playback stop above already ran.
-        //
-        // The !discarded_editor_this_press gate: a press that click-away-
-        // discarded the editor this frame made any_text_editor_active() false,
-        // so it would otherwise reach here and seed a LaneText candidate — but
-        // its lane-side meaning was already "discard", not "lane click one". The
-        // concrete bug it prevents: an editor whose pending run is SHORTER than
-        // the committed text ("1.00" edited to "1") — a press outside the one-
-        // glyph pending run but inside the restored four-glyph committed run
-        // discards the editor above AND would seed here, so a second press there
-        // reopened the editor, the discard press double-counting as click one.
-        // Asymmetry vs the flag path (deliberate): a different-FLAG discard press
-        // still single-selects and seeds a Flag candidate below — the lane run
-        // visible while an editor is open IS the editor, so a lane double-click
-        // during an editor session has caret semantics (resolved in the F2.1
-        // block), not open-editor semantics; only the LANE claim is excluded.
-        if (inside_top && !ctrl && !shift && !alt &&
-            !any_text_editor_active() && !discarded_editor_this_press) {
-            const LaneTextRun run = current_marker_lane_run(app, audio);
-            const double advance = monospace_advance();
-            // The run's screen rect, derived exactly as paint does: the caret-
-            // origin owner gives the left x (centered on the marker, clamped
-            // onscreen), the text size the width, and the lane the y-band. A
-            // left<0 means the monospace advance is not yet measured — no run to
-            // hit.
-            const double left = run.valid
-                ? lane_text_left_x_at_frame(
-                      app, audio, run.source_frame, run.text.size())
-                : -1.0;
-            if (run.valid && left >= 0.0 && advance > 0.0) {
-                const GuiRect lane = top_marker_text_row_area(app);
-                const double run_w =
-                    static_cast<double>(run.text.size()) * advance;
-                const bool in_run =
-                    y >= lane.y && y < lane.y + lane.h &&
-                    static_cast<double>(x) >= left &&
-                    static_cast<double>(x) <= left + run_w;
-                if (in_run) {
-                    // dc_at_press was snapshotted and cleared at the top of this
-                    // press: a matching LaneText candidate for the SAME marker
-                    // within the window CONSUMES as a double-click open. The
-                    // surface + target tag keeps a zoom-row / flag / editor
-                    // candidate from consuming here.
-                    const DoubleClickCandidate& dc = dc_at_press;
-                    if (dc.surface == DoubleClickSurface::LaneText &&
-                        dc.target == run.marker_index &&
-                        monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
-                        std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
-                        std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
-                        // Open the flag editor on the run's marker with the caret
-                        // seated at the clicked glyph — click_x = the press x, the
-                        // same screen-x convention the editor's own lane clicks
-                        // pass to byte_index_from_click_x. P view (phase resets
-                        // have no per-flag editor — the run reads "p") and read-
-                        // only tabs refuse silently, matching Enter and the flag
-                        // double-click; the candidate is already cleared, so a
-                        // refused press is a plain no-op.
-                        if (app.active_markers_view != 'P' &&
-                            !active_view_state(app).read_only) {
-                            flag_editor.enter_top_flag_edit(
-                                run.marker_index, static_cast<double>(x));
-                        }
-                        return;
-                    }
-                    // No candidate matched: SEED a LaneText candidate at this
-                    // PRESS and claim the press so it cannot fall through to the
-                    // waveform / strip handling below. The seed lives at the PRESS
-                    // (not a motionless release like the other surfaces) because
-                    // the lane arms NO gesture — there is no drag that could
-                    // false-seed it.
-                    app.double_click = DoubleClickCandidate{
-                        .surface = DoubleClickSurface::LaneText,
-                        .time_ms = monotonic_ms(),
-                        .press_x = x, .press_y = y,
-                        .target  = run.marker_index};
-                    return;
-                }
-            }
-            // A press in the lane BAND but outside the run's rect (or with no run
-            // showing) is a FULL no-op for this surface — it claims nothing and
-            // seeds nothing, falling through to the existing handling below (a
-            // strict no-op for a flagless top-strip spot).
-        }
+        // Unified marker hit, computed ONLY on the path that consumes it. The
+        // marker is ONE pointer item — flag shape OR rendered lane run
+        // (marker_hit_at above) — and the TOP-STRIP hit feeds the plain/Shift
+        // marker-click branches (plain = single-select + double-click seed /
+        // consume + arm the pending marker drag on the flag part, Shift = toggle
+        // membership) and the alt-exact land below, so it is resolved once here.
+        // The editor lifecycle block above already closed any open flag editor,
+        // so the lane run this resolves is the committed (non-editor) run. The
+        // WAVEFORM never SELECTS a marker — a plain press is deselect-all +
+        // playhead placement + region-drag arm, a Shift press a no-op — so no
+        // marker scan runs on the waveform at all (the invisible stem is not a
+        // grab target). Trim bounds are grabbed only by their top-strip chips /
+        // the inter-chip bridge on a PLAIN chip-row press (route_trim_chip_press
+        // below); a click over a bound's waveform stem is an ordinary waveform
+        // click (the stem grab retired), so no trim hit test runs on the
+        // waveform at all.
+        MarkerHit mh;
+        if (inside_top) mh = marker_hit_at(app, audio, x, y);
 
-        // Flag hit test, computed ONLY on the path that consumes it. The
-        // TOP-STRIP flag hit feeds the plain/Shift flag-click branches (plain =
-        // single-select + arm the pending marker drag, Shift = toggle
-        // membership) and the alt-exact flag-click land below, so it is
-        // resolved once here. The WAVEFORM never SELECTS a
-        // marker — a plain press is deselect-all + playhead placement +
-        // region-drag arm, a Shift press a no-op — so no marker scan runs on the
-        // waveform at all (the invisible stem is not a grab target). Trim bounds
-        // are grabbed only by their top-strip chips / the inter-chip bridge on a
-        // PLAIN chip-row press (route_trim_chip_press below); a click over a
-        // bound's waveform stem is an ordinary waveform click (the stem grab
-        // retired), so no trim hit test runs on the waveform at all.
-        int hit = -1;
-        if (inside_top) hit = hit_test_flag(app, audio, x, y);
-
-        // Alt-exact left press: on a top-strip marker FLAG it LANDS — the
-        // THIRD land-onto-marker route beside the Tab family and `c` — and on
-        // the waveform it arms the captured grab-pan; alt-exact anywhere else
-        // does nothing further HERE. On a flagless TOP-STRIP spot that "nothing"
-        // is not a strict no-op in the playback sense: the standing top-strip
-        // playback stop above (every top-strip press stops playback) has already
-        // run, so playback is halted even though no land/pan fires.
+        // Alt-exact left press: on a top-strip MARKER (flag shape or lane run —
+        // the one unified item) it LANDS — the THIRD land-onto-marker route
+        // beside the Tab family and `c` — and on the waveform it arms the
+        // captured grab-pan; alt-exact anywhere else does nothing further HERE.
+        // On a markerless TOP-STRIP spot that "nothing" is not a strict no-op in
+        // the playback sense: the standing top-strip playback stop above (every
+        // top-strip press stops playback) has already run, so playback is
+        // halted even though no land/pan fires.
         //
         // The LAND: single-select the hit marker (the plain-click selection
         // half) AND move the playhead exactly onto it, with NO viewport move —
         // the sole difference from Tab (which recenters) and `c` (which
         // re-zooms and recenters), so the view holds perfectly still while
         // the playhead seats. The action fires entirely AT THE PRESS and arms
-        // NOTHING — alt+drag from a flag is a strict no-op by architect
+        // NOTHING — alt+drag from a marker is a strict no-op by architect
         // ruling: subsequent motion with the button held is inert. Both
         // columns, both views; navigation-class (selection + playhead, no
         // authoring), so read-only tabs allow it.
@@ -677,7 +598,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // gestures. A motionless Alt press-release commits nothing but the brief
         // cursor hide/reappear (the scroll happens on motion).
         if (alt && !ctrl && !shift) {
-            if (inside_top && hit >= 0) {
+            if (inside_top && mh.index >= 0) {
+                const int hit = mh.index;
                 // Tab-family symmetry: a land route stops playback first (the
                 // top-strip stop above already ran, so this is a no-op here;
                 // the land stays self-contained).
@@ -764,8 +686,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // flag press and trim's chip/bridge drags on the plain chip-row press, so
         // every remaining modified combination — Ctrl+Alt (now a strict no-op),
         // Ctrl+Shift, Shift+Alt, Ctrl+Alt+Shift, ... — no-ops here. Only a plain
-        // or Shift-on-the-top-strip base press proceeds (Shift adjusts the flag
-        // selection). The Alt+wheel pan and the Alt keyboard chords are untouched
+        // or Shift-on-the-top-strip base press proceeds (Shift adjusts the
+        // marker selection). The Alt+wheel pan and the Alt keyboard chords are untouched
         // (separate handlers).
         if (ctrl || alt) return;
 
@@ -774,65 +696,92 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // column, and arms the region-select drag — it never SELECTS a marker; a
         // Shift press on the waveform is a strict no-op. In the top strip a plain
         // CHIP-ROW press arms a trim chip/bridge drag (claimed ahead of the
-        // marker flag select); otherwise (flag click) selection is the
-        // whole interface, BOTH views: a plain click single-selects and ARMS a
-        // pending marker drag (moves the marker if the pointer crosses the
-        // threshold, else a pure click); Shift+click toggles multi-select
-        // membership only. Neither moves the playhead — the land routes are
-        // the Tab family, `c`, and the alt-exact flag click above (and a drag
-        // only RIDES a playhead already exactly on the grabbed marker).
+        // marker select); otherwise (a marker click on EITHER part — flag shape
+        // or lane run) selection is the whole interface, BOTH views: a plain
+        // click single-selects and, on the FLAG part only, ARMS a pending marker
+        // drag (moves the marker if the pointer crosses the threshold, else a
+        // pure click); Shift+click toggles multi-select membership only. Neither
+        // moves the playhead — the land routes are the Tab family, `c`, and the
+        // alt-exact marker click above (and a drag only RIDES a playhead already
+        // exactly on the grabbed marker).
         if (inside_top) {
             // Plain unmodified chip-row press arms a trim chip/bridge drag,
-            // claimed BEFORE the marker flag single-select. The chip row and the
-            // marker flag row are disjoint y-bands, so this contends with
-            // nothing: a flag-row press yields no chip/bridge claim and falls to
-            // the flag handling. Shift never touches trim (a chip/bridge stays
-            // transparent to it) — it falls to the toggle. A claim (armed or
-            // read-only) returns without touching the selection.
+            // claimed BEFORE the marker single-select. The chip row, the marker
+            // text lane, and the flag lane are disjoint y-bands, so this
+            // contends with nothing: a marker-part press yields no chip/bridge
+            // claim and falls to the marker handling. Shift never touches trim
+            // (a chip/bridge stays transparent to it) — it falls to the toggle.
+            // A claim (armed or read-only) returns without touching the
+            // selection.
             if (!shift && route_trim_chip_press(x, y)) return;
-            if (hit >= 0) {
+            if (mh.index >= 0) {
+                const int hit = mh.index;
                 if (shift) {
                     // Shift+click toggles membership; it never arms a drag.
                     // Allowed in read-only (selection is navigation).
                     selection.toggle_selection_membership(hit);
                 } else {
-                    // Plain flag click single-selects (both views; W's
+                    // Plain marker click single-selects (both views; W's
                     // click-to-edit is retired — the editor now opens on Enter or
                     // this double-click). Selection is navigation, allowed in
                     // read-only.
                     selection.set_single_selection(hit);
-                    // Double-click: a Flag candidate for the SAME marker within
+                    // Double-click: a Marker candidate for the SAME index within
                     // the window opens the flag editor, exactly like Enter on the
                     // focused marker (the click above already single-selected it).
                     // The surface + target tag prevents any zoom-row / editor
-                    // candidate from consuming here. Read-only and P view (phase
-                    // resets have no per-flag editor) refuse silently, matching
-                    // Enter's allowlist / view refusal — the candidate is cleared
-                    // and the press stays a plain second select. On a consumed
-                    // open no pending drag is armed (the editor now owns input).
+                    // candidate from consuming here, and a candidate seeded on
+                    // one part consumes on the other — one surface. Read-only and
+                    // P view (phase resets have no per-flag editor) refuse
+                    // silently, matching Enter's allowlist / view refusal — the
+                    // candidate is cleared and the press stays a plain second
+                    // select. On a consumed open nothing is armed and no fresh
+                    // candidate seeds (the editor now owns input).
                     bool opened_editor = false;
                     const DoubleClickCandidate& dc = dc_at_press;
-                    if (dc.surface == DoubleClickSurface::Flag &&
+                    if (dc.surface == DoubleClickSurface::Marker &&
                         dc.target == hit &&
                         monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
                         std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
                         std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
                         if (app.active_markers_view != 'P' &&
                             !active_view_state(app).read_only) {
-                            flag_editor.enter_top_flag_edit(hit);
+                            // A consuming press on the LANE RUN seats the caret
+                            // at the clicked glyph (click_x = the press x, the
+                            // screen-x convention byte_index_from_click_x
+                            // takes); on the flag shape there is no glyph under
+                            // the press, so the caret takes the editor default.
+                            if (mh.on_flag)
+                                flag_editor.enter_top_flag_edit(hit);
+                            else
+                                flag_editor.enter_top_flag_edit(
+                                    hit, static_cast<double>(x));
                             opened_editor = true;
                         }
                     }
-                    // A writable tab arms the pending marker drag on a plain
-                    // single click; read-only selects but never arms (marker
-                    // mutation refused), and a double-click that opened the editor
-                    // never arms either.
-                    if (!opened_editor && !active_view_state(app).read_only) {
-                        app.pending_marker_drag = PendingMarkerDrag{};
-                        app.pending_marker_drag.active  = true;
-                        app.pending_marker_drag.marker  = hit;
-                        app.pending_marker_drag.press_x = x;
-                        app.pending_marker_drag.press_y = y;
+                    if (!opened_editor) {
+                        // SEED a Marker candidate at this PRESS — the one seed
+                        // timing for the whole marker surface (the release-time
+                        // seeding is retired). Press-seeding is safe for the
+                        // flag part because a press that becomes a real drag
+                        // drops the candidate at the threshold crossing (see
+                        // on_motion's pending-marker-drag branch).
+                        app.double_click = DoubleClickCandidate{
+                            .surface = DoubleClickSurface::Marker,
+                            .time_ms = monotonic_ms(),
+                            .press_x = x, .press_y = y,
+                            .target  = hit};
+                        // A writable tab arms the pending marker drag on a plain
+                        // FLAG press only (the flag is the sole drag handle; the
+                        // lane run selects but never arms); read-only selects
+                        // but never arms (marker mutation refused).
+                        if (mh.on_flag && !active_view_state(app).read_only) {
+                            app.pending_marker_drag = PendingMarkerDrag{};
+                            app.pending_marker_drag.active  = true;
+                            app.pending_marker_drag.marker  = hit;
+                            app.pending_marker_drag.press_x = x;
+                            app.pending_marker_drag.press_y = y;
+                        }
                     }
                 }
             }
@@ -842,8 +791,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Waveform-area press: marker-blind for SELECTION (it never SELECTS a
         // hit marker — the invisible stem is not a grab target), but a plain
         // press CLEARS the selection (the deselect-all: a waveform click
-        // dismisses the marker selection, the Ableton behaviour). The press does
-        // NOT consult `hit`. Then it drops the playhead at the clicked column (no
+        // dismisses the marker selection, the Ableton behaviour). The press
+        // consults no marker hit (marker_hit_at runs only for top-strip
+        // presses). Then it drops the playhead at the clicked column (no
         // marker snap — the 3px marker-snap magnet already died with the scrub in
         // the prior phase), reseeks a live scanner to it, overrides follow, and
         // arms the region drag — which also DISSOLVES any resting highlight at
@@ -995,18 +945,13 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     }
     if (app.pending_marker_drag.active) {
         // The pending marker drag never crossed the threshold: a pure flag
-        // click. The press already single-selected its marker, so there is
-        // nothing to commit — just disarm. (A crossed pending became app.drag
-        // and commits through the branch below.) Seed a Flag double-click
-        // candidate for this marker so a second click within the window opens
-        // its flag editor; only a motionless pure click reaches here (a moved
-        // marker drag went through app.drag and seeds nothing).
-        const int m = app.pending_marker_drag.marker;
+        // click. The press already single-selected its marker AND seeded the
+        // Marker double-click candidate (press-time seeding, the one timing
+        // for the whole marker surface), so there is nothing to commit or seed
+        // — just disarm. (A crossed pending became app.drag — dropping the
+        // candidate at the threshold crossing — and commits through the branch
+        // below.)
         app.pending_marker_drag = PendingMarkerDrag{};
-        app.double_click = DoubleClickCandidate{
-            .surface = DoubleClickSurface::Flag,
-            .time_ms = monotonic_ms(), .press_x = x, .press_y = y,
-            .target = m};
         return;
     }
     if (!app.drag.active) return;
@@ -1249,7 +1194,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         const int press_x = app.pending_marker_drag.press_x;
         app.pending_marker_drag = PendingMarkerDrag{};
         // A moved marker drag drops any double-click candidate: this press is a
-        // drag, not the second click of a flag double-click.
+        // drag, not a click of a marker double-click. The arming press seeded a
+        // Marker candidate (press-time seeding), so this clear is what keeps a
+        // moved drag from carrying one — the load-bearing half of seeding at
+        // the press.
         app.double_click = DoubleClickCandidate{};
         if (!marker_drag.begin_drag(marker, press_x)) {
             viewport.clear_hover_popup();
