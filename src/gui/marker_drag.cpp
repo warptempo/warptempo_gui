@@ -469,3 +469,277 @@ void MarkerDragOps::commit_drag() {
     // view-independent target preview trigger below.
     if (net_changed) target_render.trigger();
 }
+
+// -- Target-view tempo drag ----------------------------------------------
+//
+// The pointer half of the home-view binding's tempo exception (architect
+// 2026-07-22): in W view + target view a plain horizontal flag drag on a
+// marker whose predecessor owns its tempo stretches the preceding segment
+// Ableton-style, by rewriting that PREDECESSOR's tempo_cents. The dragged
+// marker's own payload is never touched.
+//
+// The forward relation, read off build_warp_frame_map (READ-ONLY, frozen):
+// the segment marker P owns runs from P's frame to the NEXT marker's frame,
+// and its target duration is
+//
+//     delta_tgt = delta_src / (effective_tempo(P) * settings_scale)
+//               = delta_src / (tempo_from_cents(P.tempo_cents)
+//                              * P.tempo_scale.value_or(1.0)
+//                              * settings_scale)
+//
+// (pass 2's `target_frame = tgt_f_prev + (delta_src / divisor)` with
+// `divisor = effective_tempo(m) * scale`). Tempo DIVIDES the source span, so
+// FASTER IS SHORTER: raising P's tempo pulls the dragged marker's image
+// left, lowering it pushes the image right.
+//
+// T(P)-constancy: P's own tempo cannot move P's own image. In pass 2,
+// iteration i consumes markers[i]'s tempo to emit the anchor at
+// markers[i+1]'s source frame — the anchor AT P's frame was emitted by the
+// PRECEDING iteration from upstream tempos only (or is the {0,0} seed). Only
+// P's tempo changes during this gesture (positions never move, no other
+// value is written), so every upstream segment — and with it T(P) — is
+// constant across the drag's steps. T(P) is still RECOMPUTED per motion
+// event from the live memoized map rather than cached as a double at grab:
+// it is one binary search, and re-deriving keeps the solve immune to any
+// upstream normalization surprise. L_src is likewise re-read from the live
+// store per event (two int64 loads; the store's frames are structurally
+// untouched by this gesture, but reading the truth is cheaper than proving a
+// cached copy can never go stale).
+
+bool MarkerDragOps::tempo_drag_eligible(int hit) const {
+    const auto& mv = app.warpmarkers.markers();
+    if (hit <= 0 || hit >= static_cast<int>(mv.size())) return false;
+    // The predecessor is the marker immediately before `hit` in the
+    // time-sorted store. Eligibility reads its own AUTHORED payload — the
+    // question is whether this marker owns a rewritable tempo, which is
+    // payload, not the resolved projection (the owner-only rule the
+    // target-view Alt+Up/Down step already applies).
+    const GuiWarpMarker& p = mv[hit - 1];
+    if (p.disabled || p.tempo_inherits || !p.label_ref.empty()) return false;
+    // A zero-frame span (exact tie, legal at rest) makes the solve degenerate
+    // everywhere — no tempo moves the image — so it never arms.
+    if (mv[hit].time_frame - p.time_frame < 1) return false;
+    return true;
+}
+
+// Begin the tempo drag at the threshold crossing. Captures the grab tempo,
+// the pre-drag store snapshot (the one undo entry's payload), the selection
+// snapshot, and the coincident-ride verdict — exact, since nothing mutates
+// the store between press and crossing (the drag-modal key gate swallows
+// every command, pointer gestures are mutually exclusive). Returns false
+// (gesture dropped) only on a defensive eligibility re-check failure.
+bool MarkerDragOps::begin_tempo_drag(int hit) {
+    if (!tempo_drag_eligible(hit)) return false;
+    const auto& mv = app.warpmarkers.markers();
+
+    TempoDragState d;
+    d.active      = true;
+    d.marker      = hit;
+    d.predecessor = hit - 1;
+    d.grab_cents  = mv[hit - 1].tempo_cents;
+    d.pre_drag_snapshot      = mv;
+    d.pre_drag_last_selected = app.last_selected_marker;
+    // Pre-drag selection for the Esc / Ctrl+Q cancellation restore: the
+    // arming press single-selected the dragged marker, so this captures
+    // {hit} (the marker-drag cancel shape).
+    d.pre_drag_selection = capture_selection_snapshot(app);
+    // Coincident-ride verdict, decided ONCE at grab against the DRAGGED
+    // marker through the Tab placement basis (source_frame_to_active_domain
+    // then clamp_playhead_to_live_domain) — the marker whose IMAGE this
+    // gesture moves, exactly the reposition drag's rule. The marker's source
+    // frame never changes here; each step re-lands the ridden playhead on the
+    // post-commit image.
+    d.playhead_rides =
+        app.playhead_cursor_sample ==
+        clamp_playhead_to_live_domain(
+            source_frame_to_active_domain(app, audio, mv[hit].time_frame),
+            app, audio);
+    d.pre_ride_playhead_sample = app.playhead_cursor_sample;
+    app.tempo_drag = std::move(d);
+    viewport.clear_hover_popup();
+    return true;
+}
+
+// One motion event: invert the pointer's target-domain position to the
+// predecessor tempo that places the dragged marker's image nearest it,
+// quantize to integer cents, clamp into the tempo bracket, and — when the
+// candidate differs from the stored value — commit it live with a
+// synchronous re-warp (the tempo-step precedent: every step is a committed
+// value edit with displayed == live restored synchronously at the step
+// boundary). Vertical motion is ignored; the solve is ABSOLUTE (pointer x ->
+// tempo), so no press anchor exists and the threshold-crossing event needs
+// no catch-up fold.
+void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
+    if (!app.tempo_drag.active) return;
+    const int sr = audio.sample_rate();
+    if (sr <= 0) return;
+    const auto& mv = app.warpmarkers.markers();
+    const int mi = app.tempo_drag.marker;
+    const int pi = app.tempo_drag.predecessor;
+    if (pi < 0 || mi <= pi || mi >= static_cast<int>(mv.size())) return;
+    const GuiRect area = waveform_area(app);
+    if (area.w <= 0) return;
+    const double spp = current_samples_per_pixel(app, audio);
+    if (spp <= 0.0) return;
+
+    // Desired target position under the pointer, through the CURRENT
+    // viewport (each step's sync re-warp reclamps zoom/viewport first, so
+    // the live viewport is always the painted one). The gesture takes no
+    // pointer capture; travel outside the window clamps to the visible
+    // strip, like the reposition drag's live tracking clamp.
+    int rel = mouse_x - area.x;
+    if (rel < 0)       rel = 0;
+    if (rel >= area.w) rel = area.w - 1;
+    const double t_des = static_cast<double>(app.viewport_start_sample) +
+                         static_cast<double>(rel) * spp;
+
+    // T(P) from the live memoized map — constant across the drag's steps
+    // (the constancy argument in the header comment), recomputed per event
+    // by choice. Live, not displayed: each step commits and re-warps
+    // synchronously, so displayed == live at every step boundary and the
+    // live cache IS the current paint basis (an empty-map cold fallback is
+    // identity, matching paint's own fallback).
+    const TargetWarpFrameMapCache& c = target_view_warp_frame_map_cached(
+        app, sr, static_cast<long>(audio.total_frames()));
+    const double t_pred = map_source_to_target(
+        static_cast<double>(mv[pi].time_frame), c.warp_frame_map);
+    const double span  = t_des - t_pred;
+    const double l_src = static_cast<double>(
+        mv[mi].time_frame - mv[pi].time_frame);   // >= 1 by eligibility
+    // The segment's scale composition exactly as the map build resolves it:
+    // the settings engine scale times the predecessor's own typed scale
+    // (effective_tempo's value_or(1.0) convention). Both factors are
+    // bracket-positive, so the divisor below is positive whenever span is.
+    const double s = app.engine_settings.scale *
+                     mv[pi].tempo_scale.value_or(1.0);
+
+    int64_t candidate;
+    if (!(span > 0.0)) {
+        // Pointer at or left of T(P): the solve degenerates — a positive
+        // source span can only shrink toward zero as tempo grows (faster is
+        // shorter, the slope convention above), so the zero/negative-span
+        // limit pins constructively to the bracket's MAX end.
+        candidate = kTempoMaxCents;
+    } else {
+        // Invert delta_tgt = L_src / (tempo * s) for tempo at span == T_des
+        // - T(P), then enter the integer-cents domain the way the bpm
+        // derivation does (compute_base_tempo_scale): nearbyint on the
+        // double cents count, bracket-clamped BEFORE the int64 cast so an
+        // overflowing count (a denormal span) can never reach the cast —
+        // the cents entry is a GUI-side gesture proposal funneling into the
+        // int64 store field, the value-domain sibling of
+        // snap_authored_frame. Constructive clamp, not refusal: far-right
+        // travel (tempo toward 0) pins to the MIN end, near-left to the MAX.
+        const double tempo   = l_src / (span * s);
+        const double cents_d = std::nearbyint(tempo * 100.0);
+        if (cents_d >= static_cast<double>(kTempoMaxCents)) {
+            candidate = kTempoMaxCents;
+        } else if (cents_d <= static_cast<double>(kTempoMinCents)) {
+            candidate = kTempoMinCents;
+        } else {
+            candidate = static_cast<int64_t>(cents_d);
+        }
+    }
+
+    // The both-unchanged skip: an event whose quantized candidate equals the
+    // stored value commits nothing — this is what makes the flag move in
+    // discrete cent-grid jumps (the Ableton snap; our grid is the cents
+    // grid) and bounds the sync-render cost to one per cent step.
+    if (candidate == mv[pi].tempo_cents) return;
+
+    GuiWarpMarker* p = app.warpmarkers.marker_mut(pi);
+    if (!p) return;
+    // Tempo only: no time change, so the store's ascending order is
+    // untouched and no reorder/remap runs. The predecessor's iteration
+    // bracket is left in place — tempo changes never clear a bracket, the
+    // standing rule both tempo-authoring surfaces follow.
+    p->tempo_cents = candidate;
+    const bool first_commit = !app.tempo_drag.moved;
+    app.tempo_drag.moved = true;
+    // First committed step: re-assert the single selection on the dragged
+    // marker (normally a no-op — the arming press already single-selected
+    // it), the reposition drag's first-motion rule kept with the drag
+    // machinery.
+    if (first_commit) selection.set_single_selection(mi);
+    // Synchronous re-warp, exactly adjust_tempo_cents' target-view tail:
+    // kick_waveform_sync reclamps zoom/viewport first (a tempo change moves
+    // the target total) and rebuilds plate + stem/flag caches inline, with
+    // full-width damage covering the top strip and waveform. Deliberately NO
+    // target_render.trigger() here — the preview fires ONCE at gesture end;
+    // per-cent triggers would kill/re-dispatch the render worker per step.
+    viewport.kick_waveform_sync();
+    // Coincident ride: re-land the resting cursor playhead on the marker's
+    // post-commit image (the live cache just rebuilt against the committed
+    // store — the Tab placement basis, post-commit truth). The image sits at
+    // the clamped pointer column, inside the visible strip, so this does not
+    // scroll; a live scanner is untouched (the arming top-strip press
+    // stopped playback; move_playhead_to's scanner-inactive guard is the
+    // belt-and-braces invariant).
+    if (app.tempo_drag.playhead_rides) {
+        viewport.move_playhead_to(
+            source_frame_to_active_domain(app, audio, mv[mi].time_frame));
+    }
+    // The sync render's damage stops at the waveform's bottom edge; the
+    // bottom strip is the one surface it does not cover (the dragged
+    // marker's pass/ref readout resolves through the predecessor, and a
+    // ridden playhead moves the timestamp).
+    viewport.invalidate_timestamp_area();
+}
+
+// Release / lost-button finalize. The final synchronous re-warp already ran
+// on the last committed step, so this only settles history: a NET change
+// (final cents != grab cents) pushes the ONE undo entry from the pre-drag
+// snapshot, recomputes dirty, and fires the deferred target preview trigger;
+// a drag that wandered back to its grab value (the store already holds
+// grab_cents — steps only write on change) pushes nothing. No GestureKind /
+// coalesce wiring: mouse drags are coalesce-ineligible by standing rule,
+// exactly like commit_drag above.
+void MarkerDragOps::end_tempo_drag() {
+    if (!app.tempo_drag.active) return;
+    const auto& mv = app.warpmarkers.markers();
+    const int pi = app.tempo_drag.predecessor;
+    const bool net_changed =
+        pi >= 0 && pi < static_cast<int>(mv.size()) &&
+        mv[pi].tempo_cents != app.tempo_drag.grab_cents;
+    std::vector<GuiWarpMarker> pre_state =
+        std::move(app.tempo_drag.pre_drag_snapshot);
+    const int hint_last = app.tempo_drag.pre_drag_last_selected;
+    app.tempo_drag = TempoDragState{};
+    if (net_changed) {
+        undo.push_undo_warp(std::move(pre_state), hint_last);
+        undo.recompute_dirty();
+        // The dirty dot and readouts live in the bottom strip; the flag/lane
+        // surfaces already repainted with the last step's sync render.
+        viewport.invalidate_timestamp_area();
+        target_render.trigger();
+    }
+}
+
+// Esc / Ctrl+Q cancel: restore the GRAB tempo (one store write + one
+// synchronous re-warp), the pre-drag SelectionSnapshot, and — rides-only —
+// the grab playhead, exactly the marker-drag cancel shape. No undo entry and
+// no preview trigger: the restored store equals the pre-drag state the last
+// trigger already previewed.
+void MarkerDragOps::cancel_tempo_drag() {
+    if (!app.tempo_drag.active) return;
+    restore_selection_snapshot(app, app.tempo_drag.pre_drag_selection);
+    const int pi = app.tempo_drag.predecessor;
+    bool restored = false;
+    if (pi >= 0 && pi < static_cast<int>(app.warpmarkers.markers().size()) &&
+        app.warpmarkers.markers()[pi].tempo_cents !=
+            app.tempo_drag.grab_cents) {
+        GuiWarpMarker* p = app.warpmarkers.marker_mut(pi);
+        if (p) {
+            p->tempo_cents = app.tempo_drag.grab_cents;
+            restored = true;
+        }
+    }
+    if (restored) viewport.kick_waveform_sync();
+    if (app.tempo_drag.playhead_rides) {
+        viewport.move_playhead_to(app.tempo_drag.pre_ride_playhead_sample);
+    }
+    app.tempo_drag = TempoDragState{};
+    viewport.invalidate_waveform_area();
+    viewport.invalidate_top_strip();
+    viewport.invalidate_timestamp_area();
+}

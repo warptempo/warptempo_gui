@@ -228,6 +228,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.drag = DragState{};
     app.region_drag = RegionDragState{};
     app.pending_marker_drag = PendingMarkerDrag{};
+    app.pending_tempo_drag = PendingTempoDrag{};
+    app.tempo_drag = TempoDragState{};
     app.pending_trim_drag = PendingTrimDrag{};
     app.trim_drag = TrimDragState{};
     app.strip_drag = StripDragState{};

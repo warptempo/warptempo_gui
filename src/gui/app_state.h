@@ -404,6 +404,75 @@ struct PendingMarkerDrag {
     int  press_y  = 0;
 };
 
+// Pending target-view TEMPO drag, armed by a PLAIN (unmodified) warp-flag
+// press in W view + TARGET audio view — the pointer half of the home-view
+// binding's tempo exception (the keyboard half is the Alt+Up/Down step). The
+// press single-selects its marker (the click), verifies eligibility — the
+// marker has a predecessor in the time-sorted store that is an enabled tempo
+// OWNER by its own authored payload, at least one source frame earlier — and
+// arms this pending state; only past kMarkerDragMovedThresholdPx (the SAME
+// marker grab threshold the reposition drag uses) does begin_tempo_drag run
+// and the tempo-drag machinery take over. An ineligible press single-selects
+// and arms nothing (the silent read-only convention). Session-only, never
+// serialized. Cleared on the crossing (begin_tempo_drag takes over), on
+// release / lost button before the crossing, on cancel, and on file load.
+struct PendingTempoDrag {
+    bool active      = false;
+    int  marker      = -1;   // dragged warp marker (its target image chases
+                             // the pointer)
+    int  predecessor = -1;   // marker - 1: the enabled owner whose
+                             // tempo_cents the drag rewrites
+    int  press_x     = 0;    // press position (window px): the gate only (the
+    int  press_y     = 0;    //   solve is absolute — pointer x -> tempo)
+};
+
+// Target-view tempo drag (Ableton-style stretch; architect 2026-07-22).
+// Horizontal flag motion on an eligible warp marker in W + target view
+// inverts the pointer's target-domain position to the PREDECESSOR's integer
+// tempo cents — the value that places the dragged marker's target image
+// nearest the pointer — and COMMITS it live per cent step: each changed
+// candidate writes the predecessor's tempo_cents into the live store (tempo
+// only — no time change, no reorder) and re-warps synchronously
+// (kick_waveform_sync, the tempo-step precedent), so the waveform squishes
+// and stretches under the pointer and displayed == live holds at every step
+// boundary. Deliberately NOT the DragState overlay model: there is no
+// proposed-position overlay and no frozen paint basis — the store IS the
+// live proposal — so the marker/trim dispatch-freeze gate includes this
+// gesture only to keep ASYNC waveform jobs from racing the per-step sync
+// renders (the sync path is unaffected). One undo entry per drag: the
+// pre-drag store snapshot pushes at gesture end iff the final cents differ
+// from grab_cents (mouse drags are coalesce-ineligible by standing rule).
+// Esc-cancel restores grab_cents (one store write + one sync), the
+// SelectionSnapshot, and — rides-only — the grab playhead. The coincident
+// ride follows the standing ruling: a playhead exactly on the dragged
+// marker at grab (Tab placement basis, decided once here) re-lands on the
+// marker's post-commit image each step (the marker's source frame never
+// moves; only its image does). Session-only; cleared on release / lost
+// button (end), Esc/close (cancel), and file load.
+struct TempoDragState {
+    bool active      = false;
+    // Latched at the first store write; end_tempo_drag needs no motion gate
+    // (the store compare against grab_cents is the net-change test) but the
+    // first write re-asserts the single selection, mirroring the reposition
+    // drag's first-motion rule.
+    bool moved       = false;
+    int  marker      = -1;   // dragged warp marker
+    int  predecessor = -1;   // the owner being rewritten (marker - 1)
+    // Predecessor tempo at grab: the Esc-cancel restore value and the
+    // net-change baseline for the end-of-gesture undo push.
+    int64_t grab_cents = 100;
+    // Full pre-drag warp store for the ONE undo entry per drag (the marker
+    // drag's capture shape), plus the selection snapshot for the Esc restore.
+    std::vector<GuiWarpMarker> pre_drag_snapshot;
+    int                pre_drag_last_selected = -1;
+    SelectionSnapshot  pre_drag_selection;
+    // Coincident-ride pair (see DragState): verdict decided once at grab
+    // through the Tab placement basis; the grab position feeds the
+    // rides-only cancel restore.
+    bool    playhead_rides           = false;
+    int64_t pre_ride_playhead_sample = 0;
+};
+
 // Pending trim chip/bridge drag, armed by a PLAIN (unmodified) left press in the
 // top-strip CHIP ROW (a b/e chip rect, or the inter-chip bridge span). The
 // trim sibling of PendingMarkerDrag: the press CLAIMS the chip/bridge geometry
@@ -548,7 +617,8 @@ enum class DoubleClickSurface { None, ZoomRow, Marker, EditorText };
 //                 is its flag SHAPE or its rendered marker-text LANE RUN, and a
 //                 candidate seeded on one part consumes on the other. One seed
 //                 timing for the whole surface — the PRESS; a press that then
-//                 becomes a real marker drag drops the candidate at the
+//                 becomes a real marker drag (the reposition drag, or the
+//                 target-view tempo drag) drops the candidate at the
 //                 threshold crossing, so a moved drag never carries one.
 //   EditorText -> selects the clicked character class's RUN (word / punctuation
 //                 / whitespace) in the active text editor (target unused; both
@@ -1010,6 +1080,18 @@ struct AppState {
     // Escape/close (cancel_active_drags), and on file load.
     PendingMarkerDrag pending_marker_drag;
 
+    // Pending target-view tempo drag, armed by a plain warp-flag press in W +
+    // target view on an eligible marker (the tempo-drag machinery begins only
+    // past the marker threshold). Cleared on the threshold crossing, on button
+    // release / lost button, on Escape/close (cancel_active_drags), and on
+    // file load.
+    PendingTempoDrag pending_tempo_drag;
+
+    // Live target-view tempo drag (per-cent live commits + synchronous
+    // re-warps). Ended on button release / lost button, cancelled on
+    // Escape/close (grab-tempo restore), and cleared on file load.
+    TempoDragState tempo_drag;
+
     // Pending trim chip/bridge drag, armed by a plain chip-row press (the
     // trim-drag machinery begins only past the threshold). Cleared on the
     // threshold crossing, on button release / lost button, on Escape/close
@@ -1324,8 +1406,9 @@ inline int64_t snap_authored_frame(double frame) {
 }
 
 // The single query for "some pointer gesture is in flight" — a marker
-// reposition drag, a trim drag, a strip-row zoom/pan drag, a region-select
-// drag, an editor text drag, or a pending marker / trim drag
+// reposition drag, a target-view tempo drag, a trim drag, a strip-row
+// zoom/pan drag, a region-select drag, an editor text drag, or a pending
+// marker / tempo / trim drag
 // armed by a press (button held, watching for the threshold). Consumed by the wheel_context
 // predicate (on_wheel's completed-detent gate and the platform's per-frame
 // sub-detent accumulator probe both route through it), the gate that must
@@ -1333,10 +1416,12 @@ inline int64_t snap_authored_frame(double frame) {
 // drags are included so a wheel cannot shift the viewport out from under the
 // press before the drag begins.
 inline bool any_pointer_gesture_active(const AppState& app) {
-    return app.drag.active || app.trim_drag.active ||
+    return app.drag.active || app.tempo_drag.active ||
+           app.trim_drag.active ||
            app.strip_drag.active || app.scroll_drag.active ||
            app.region_drag.active || app.editor_text_drag.active ||
-           app.pending_marker_drag.active || app.pending_trim_drag.active;
+           app.pending_marker_drag.active || app.pending_tempo_drag.active ||
+           app.pending_trim_drag.active;
 }
 
 // architect ruling 2026-07-22: each marker column authors in its HOME view

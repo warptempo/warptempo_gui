@@ -349,9 +349,12 @@ bool GuiInputHandler::handle_escape_cancels(GuiKey key) {
 // discarded and the live state returns to pre-drag — positions AND (marker
 // drag only) the marker selection captured at drag begin (the arming press
 // single-selected the grabbed marker, so that is what a cancel restores).
-// The playhead restore is rides-only: a marker drag whose playhead RODE the
-// grabbed marker (exactly coincident at grab — see DragState) puts it back at
-// its grab-time position; a non-riding marker cancel and every trim cancel
+// The target-view tempo drag committed its cent steps live, so its cancel
+// REVERTS: the grab tempo is written back with one synchronous re-warp, and
+// the selection snapshot restores like the marker drag's.
+// The playhead restore is rides-only: a marker or tempo drag whose playhead
+// RODE the marker (exactly coincident at grab — see DragState) puts it back at
+// its grab-time position; a non-riding cancel and every trim cancel
 // touch no playhead at all. A strip drag applies its
 // motion continuously, so stopping just ends it where it is; a region drag is
 // cancelled and the region restored to how it rested at arm (the pre-drag
@@ -380,6 +383,12 @@ void GuiInputHandler::cancel_active_drags() {
         viewport.invalidate_top_strip();
         viewport.invalidate_timestamp_area();
     }
+    // The tempo drag committed its cent steps into the LIVE store as it went
+    // (no overlay), so its cancel is a real revert: restore the grab tempo
+    // (one store write + one synchronous re-warp), the SelectionSnapshot, and
+    // — rides-only — the grab playhead. The body lives with the rest of the
+    // gesture's machinery (MarkerDragOps::cancel_tempo_drag).
+    if (app.tempo_drag.active) marker_drag.cancel_tempo_drag();
     if (app.trim_drag.active) {
         // Trim motion mutates app.trim live but keeps the pre-drag
         // bounds in orig_begin/orig_end, so restore them before clearing
@@ -440,6 +449,10 @@ void GuiInputHandler::cancel_active_drags() {
     // not part of the pending gesture), so there is nothing to revert.
     if (app.pending_marker_drag.active)
         app.pending_marker_drag = PendingMarkerDrag{};
+    // A pending tempo drag (a W+target flag press whose drag never began) is
+    // likewise just disarmed: nothing committed before the crossing.
+    if (app.pending_tempo_drag.active)
+        app.pending_tempo_drag = PendingTempoDrag{};
     // A pending trim drag (a chip-row press whose drag never began) is just
     // disarmed: the press mutated nothing (trim has no click action), so there
     // is nothing to revert.

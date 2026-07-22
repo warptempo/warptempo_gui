@@ -283,13 +283,17 @@ struct GuiInputHandler {
     int wheel_context(int x, int y) const;
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
-    // Stop all four pointer drag gestures. A marker or trim drag is stopped
+    // Stop every pointer drag gesture. A marker or trim drag is stopped
     // before its deferred commit, so live state returns to pre-drag (including
-    // the restored SelectionSnapshot for a marker drag); a strip drag just ends
+    // the restored SelectionSnapshot for a marker drag); a target-view tempo
+    // drag is REVERTED (its cent steps committed live — the grab tempo is
+    // written back with one synchronous re-warp, selection and a ridden
+    // playhead restored); a strip drag just ends
     // where it is; a region drag is cancelled and the region restored to its
     // pre-drag snapshot. No-op when no drag is active. Callers: the drag-modal
-    // escape hatches in on_key, and the WM-close callback in main.cpp (both
-    // cancel before raising the close prompt).
+    // escape hatches in on_key, and the WM-close and resize callbacks in
+    // main.cpp (close cancels before raising the prompt; resize cancels before
+    // the geometry rebuild).
     void cancel_active_drags();
 
     // Arm the plain left-drag region-select gesture at a press. `anchor_frame`

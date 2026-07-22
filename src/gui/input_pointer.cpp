@@ -385,6 +385,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // Defensive: a second press during a drag is ignored (left button
     // should still be held down for a drag to exist).
     if (app.drag.active) return;
+    if (app.tempo_drag.active) return;
     if (app.trim_drag.active) return;
 
     // Target-view mouse authoring is unblocked. Fall through
@@ -728,20 +729,41 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                             .time_ms = monotonic_ms(),
                             .press_x = x, .press_y = y,
                             .target  = hit};
-                        // A writable tab arms the pending marker drag on a plain
-                        // FLAG press only (the flag is the sole drag handle; the
+                        // A writable tab arms a pending drag on a plain FLAG
+                        // press only (the flag is the sole drag handle; the
                         // lane run selects but never arms); read-only selects
-                        // but never arms (marker mutation refused). A column away
-                        // from its home view (active_column_authoring_allowed
-                        // false) likewise selects but never arms — the same
-                        // read-only convention, marker motion being authoring.
-                        if (mh.on_flag && !active_view_state(app).read_only &&
-                            active_column_authoring_allowed(app)) {
-                            app.pending_marker_drag = PendingMarkerDrag{};
-                            app.pending_marker_drag.active  = true;
-                            app.pending_marker_drag.marker  = hit;
-                            app.pending_marker_drag.press_x = x;
-                            app.pending_marker_drag.press_y = y;
+                        // but never arms (marker mutation refused). WHICH drag
+                        // arms is the home-view split: in the column's home
+                        // view the press arms the marker REPOSITION drag; in W
+                        // view + TARGET view exactly, it instead arms the
+                        // TEMPO drag on an eligible marker — the pointer half
+                        // of the home-view binding's tempo exception
+                        // (architect 2026-07-22; the keyboard half is the
+                        // owner-only Alt+Up/Down step), an Ableton-style
+                        // stretch that rewrites the PREDECESSOR's tempo. An
+                        // ineligible W+T press (first marker, non-owner
+                        // predecessor, zero-frame span —
+                        // marker_drag.tempo_drag_eligible), and the P column
+                        // off ITS home (P view in source view), select and arm
+                        // nothing — the silent read-only convention, marker
+                        // motion / tempo authoring being authoring.
+                        if (mh.on_flag && !active_view_state(app).read_only) {
+                            if (active_column_authoring_allowed(app)) {
+                                app.pending_marker_drag = PendingMarkerDrag{};
+                                app.pending_marker_drag.active  = true;
+                                app.pending_marker_drag.marker  = hit;
+                                app.pending_marker_drag.press_x = x;
+                                app.pending_marker_drag.press_y = y;
+                            } else if (app.active_markers_view == 'W' &&
+                                       app.active_audio_view == 'T' &&
+                                       marker_drag.tempo_drag_eligible(hit)) {
+                                app.pending_tempo_drag = PendingTempoDrag{};
+                                app.pending_tempo_drag.active      = true;
+                                app.pending_tempo_drag.marker      = hit;
+                                app.pending_tempo_drag.predecessor = hit - 1;
+                                app.pending_tempo_drag.press_x     = x;
+                                app.pending_tempo_drag.press_y     = y;
+                            }
                         }
                     }
                 }
@@ -888,6 +910,23 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // click (end_region_drag_min_size_check).
         app.region_drag = RegionDragState{};
         end_region_drag_min_size_check(app, audio, viewport);
+        return;
+    }
+    if (app.tempo_drag.active) {
+        // Tempo-drag release: the final synchronous re-warp already ran on the
+        // last committed cent step, so the finalize only settles history (the
+        // one undo entry + dirty + the deferred preview trigger, net-change
+        // gated inside end_tempo_drag).
+        marker_drag.end_tempo_drag();
+        return;
+    }
+    if (app.pending_tempo_drag.active) {
+        // The pending tempo drag never crossed the threshold: a pure flag
+        // click. The press already single-selected its marker AND seeded the
+        // Marker double-click candidate (press-time seeding), so there is
+        // nothing to commit or seed — just disarm, exactly like the pending
+        // marker drag below.
+        app.pending_tempo_drag = PendingTempoDrag{};
         return;
     }
     if (app.trim_drag.active) {
@@ -1120,6 +1159,54 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         app.region.a_frame = app.region_drag.anchor_frame;
         app.region.b_frame = far_frame;
         viewport.invalidate_waveform_area();
+        return;
+    }
+    // Target-view tempo drag motion: each event re-solves the pointer's
+    // target position to a predecessor-tempo candidate and commits changed
+    // candidates live with a synchronous re-warp (apply_tempo_drag_motion —
+    // vertical motion is ignored there). A lost button finalizes like
+    // release, mirroring the marker-drag motion handler.
+    if (app.tempo_drag.active) {
+        viewport.clear_hover_popup();
+        if (!mods.primary_button_held) {
+            marker_drag.end_tempo_drag();
+            return;
+        }
+        marker_drag.apply_tempo_drag_motion(mouse_x);
+        return;
+    }
+    // Pending tempo drag (armed by a plain flag press in W + target view on
+    // an eligible marker): the tempo drag begins only once the pointer
+    // travels past the marker-specific Chebyshev threshold — the SAME
+    // kMarkerDragMovedThresholdPx grab slop the reposition drag uses. A lost
+    // button before the crossing ends it as a plain click. Placed after the
+    // tempo_drag branch above: on the crossing this begins the drag AND
+    // applies its first solve inline (the solve is absolute — pointer x ->
+    // tempo — so applying at the CURRENT x needs no press-anchor catch-up
+    // fold), and does not fall back into that branch this event.
+    if (app.pending_tempo_drag.active) {
+        if (!mods.primary_button_held) {   // button lost -> just the click
+            app.pending_tempo_drag = PendingTempoDrag{};
+            viewport.clear_hover_popup();
+            return;
+        }
+        if (std::max(std::abs(mouse_x - app.pending_tempo_drag.press_x),
+                     std::abs(mouse_y - app.pending_tempo_drag.press_y)) <
+                kMarkerDragMovedThresholdPx) {
+            return;   // still a click; leave the pending armed, do nothing
+        }
+        const int marker = app.pending_tempo_drag.marker;
+        app.pending_tempo_drag = PendingTempoDrag{};
+        // A moved tempo drag drops any double-click candidate: this press is
+        // a drag, not a click of a marker double-click — the same
+        // load-bearing clear the pending marker drag's crossing does (the
+        // arming press seeded a Marker candidate at press time).
+        app.double_click = DoubleClickCandidate{};
+        if (!marker_drag.begin_tempo_drag(marker)) {
+            viewport.clear_hover_popup();
+            return;   // begin refused (eligibility re-check): drop the gesture
+        }
+        marker_drag.apply_tempo_drag_motion(mouse_x);
         return;
     }
     // Pending marker drag (armed by a plain flag press): the marker was
