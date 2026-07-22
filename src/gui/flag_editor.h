@@ -38,7 +38,7 @@ struct GuiFlagEditor {
 
     std::string build_locked_prefix(const GuiWarpMarker& m);
     void exit_top_flag_edit_no_commit();
-    void enter_top_flag_edit(int idx, double click_x = -1.0);
+    void enter_top_flag_edit(int idx);
     void commit_top_flag_edit();
     void enter_bpm_edit(int idx);
     // Returns true iff the pending buffer parsed and committed (editor
@@ -60,16 +60,11 @@ struct GuiFlagEditor {
     // Shared core for the "enter editor on idx" flows. The
     // public wrappers handle their kind-specific eligibility gates
     // and seed-text builders, then delegate here for the rest:
-    // same-target re-click (cursor recompute), target-switching
-    // (selection + editor reseat), initial cursor
-    // positioning, hover-popup clear, top-strip invalidate.
-    // The cursor's text-left origin is computed on the fly via
-    // flag_pending_text_left_x(app, audio, idx); a negative `click_x`
-    // means there is no click to position the cursor from.
+    // target-switching (selection + editor reseat), open-selected
+    // seeding, hover-popup clear, top-strip invalidate.
     void enter_text_edit(int idx,
                          text_editor::Kind kind,
                          std::string locked_prefix,
                          std::string initial_pending,
-                         double click_x,
                          bool iter_grammar = false);
 };

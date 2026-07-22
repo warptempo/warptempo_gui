@@ -746,16 +746,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
                         if (app.active_markers_view != 'P' &&
                             !active_view_state(app).read_only) {
-                            // A consuming press on the LANE RUN seats the caret
-                            // at the clicked glyph (click_x = the press x, the
-                            // screen-x convention byte_index_from_click_x
-                            // takes); on the flag shape there is no glyph under
-                            // the press, so the caret takes the editor default.
-                            if (mh.on_flag)
-                                flag_editor.enter_top_flag_edit(hit);
-                            else
-                                flag_editor.enter_top_flag_edit(
-                                    hit, static_cast<double>(x));
+                            // Every open route opens fully SELECTED (open-
+                            // selected), so there is no clicked-glyph caret to
+                            // seat — the flag-shape vs lane-run press are the
+                            // same open. A specific caret spot is a click inside
+                            // the already-open editor (the F2.1 path).
+                            flag_editor.enter_top_flag_edit(hit);
                             opened_editor = true;
                         }
                     }

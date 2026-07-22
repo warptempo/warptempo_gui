@@ -135,11 +135,15 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
         box.prefix          = "";
         box.text            = ed.pending;
         box.hl_pad          = flag_glyph_inset_px();
-        // No visible border: ring and fill share the background color, so the
-        // box reads as light text on the strip; on an invalid commit both flash
-        // kAccent (the text stays kText and readable on it).
-        box.fill            = ed.red ? kAccent        : kBackground;
-        box.outline         = ed.red ? kAccentOutline : kBackground;
+        // The open editor paints like a SELECTED marker chip: kSelected fill +
+        // kSelectedOutline ring (the same pair a selected chip paints), so the
+        // box reads as "this marker, selected for editing" instead of an
+        // invisible bg-on-bg box. On an invalid commit both flash to kAccent —
+        // a color CHANGE on an already-visible box, not a box appearing from
+        // nowhere. Text stays kText and readable on kSelected (the same pairing
+        // a selected chip's context uses).
+        box.fill            = ed.red ? kAccent        : kSelected;
+        box.outline         = ed.red ? kAccentOutline : kSelectedOutline;
         box.text_color      = kText;
         box.has_selection   = text_editor::has_selection(ed);
         box.selection_start = text_editor::selection_start(ed);

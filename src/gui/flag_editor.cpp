@@ -139,15 +139,19 @@ void GuiFlagEditor::exit_top_flag_edit_no_commit() {
 // (enter_top_flag_edit, enter_bpm_edit) own the kind-specific eligibility
 // gates and seed-text builders, then delegate here. `iter_grammar` widens
 // the FlagPayload editor's accepted vocabulary/cap for the inline
-// iteration bracket. The cursor's text-left origin is always computed on
-// the fly via flag_pending_text_left_x(app, audio, idx); `click_x < 0`
-// means there is no click to position the cursor from (the BPM entry
-// always passes that — the bottom-strip editor has no click positioning).
+// iteration bracket. The live open routes are: Enter on the focused
+// marker, the marker double-click (both -> enter_top_flag_edit), and the
+// BPM editor open (enter_bpm_edit). Every route opens the editor with its
+// SEEDED content fully selected (open-selected) — typing replaces
+// wholesale, bare Left/Right collapse to the extremes — so there is no
+// clicked-glyph caret to seat; a specific caret spot is a click inside the
+// already-open editor (input_pointer's F2.1 path). A blank seed selects
+// nothing and rests at caret 0, the same rule degenerating for the
+// blank-seeded bottom editors.
 void GuiFlagEditor::enter_text_edit(int idx,
                                     text_editor::Kind kind,
                                     std::string locked_prefix,
                                     std::string initial_pending,
-                                    double click_x,
                                     bool iter_grammar) {
     if (idx < 0) return;
     const auto& mv = app.warpmarkers.markers();
@@ -159,30 +163,17 @@ void GuiFlagEditor::enter_text_edit(int idx,
         app.top_flag_editor.target == idx;
 
     if (same_target) {
-        // Re-click on the active editor: update cursor only,
-        // preserve pending text and any in-progress state.
-        if (click_x >= 0.0) {
-            const double advance = monospace_advance();
-            const double text_left = flag_pending_text_left_x(app, audio, idx);
-            if (advance > 0.0 && text_left >= 0.0) {
-                app.top_flag_editor.cursor_pos =
-                    text_editor::byte_index_from_click_x(
-                        click_x, text_left, advance,
-                        static_cast<int>(
-                            app.top_flag_editor.pending.size()));
-                app.top_flag_editor.selection_anchor = -1;
-            }
-        }
+        // Re-open on the active editor's own target: preserve pending
+        // text and any in-progress state, just repaint.
         viewport.invalidate_top_strip();
         return;
     }
 
     // Target-switching path. Single-select the new editor target so the
-    // marker-column outline follows it (every call path — in-edit-active
-    // switch, pre-edit plain click, and the BPM editor open — routes through
-    // here). The playhead is DELIBERATELY not moved: opening or retargeting a
-    // flag editor is a selection act, not a playhead move; the land routes are
-    // the Tab family, `c`, and the alt-exact flag click.
+    // marker-column outline follows it. The playhead is DELIBERATELY not
+    // moved: opening or retargeting a flag editor is a selection act, not a
+    // playhead move; the land routes are the Tab family, `c`, and the
+    // alt-exact flag click.
     selection.set_single_selection(idx);
 
     // Discard any prior edit silently before switching targets.
@@ -197,23 +188,25 @@ void GuiFlagEditor::enter_text_edit(int idx,
         kind,
         iter_grammar);
 
-    if (click_x >= 0.0) {
-        const double advance = monospace_advance();
-        const double text_left = flag_pending_text_left_x(app, audio, idx);
-        if (advance > 0.0 && text_left >= 0.0) {
-            app.top_flag_editor.cursor_pos =
-                text_editor::byte_index_from_click_x(
-                    click_x, text_left, advance,
-                    static_cast<int>(
-                        app.top_flag_editor.pending.size()));
-        }
+    // Open-selected: fully select the seeded content (mirrors Ctrl+A's
+    // anchor=0 / cursor=end assignments) so the first keystroke replaces it
+    // wholesale and bare Left/Right collapse to the extremes; a blank seed
+    // selects nothing and rests at caret 0. text_editor::enter already
+    // refreshed blink_epoch, so no touch_blink is needed here.
+    if (!app.top_flag_editor.pending.empty()) {
+        app.top_flag_editor.selection_anchor = 0;
+        app.top_flag_editor.cursor_pos =
+            static_cast<int>(app.top_flag_editor.pending.size());
+    } else {
+        app.top_flag_editor.selection_anchor = -1;
+        app.top_flag_editor.cursor_pos = 0;
     }
 
     viewport.clear_hover_popup();
     viewport.invalidate_top_strip();
 }
 
-void GuiFlagEditor::enter_top_flag_edit(int idx, double click_x) {
+void GuiFlagEditor::enter_top_flag_edit(int idx) {
     if (idx < 0) return;
     const auto& mv = app.warpmarkers.markers();
     if (idx >= static_cast<int>(mv.size())) return;
@@ -230,7 +223,6 @@ void GuiFlagEditor::enter_top_flag_edit(int idx, double click_x) {
         text_editor::Kind::FlagPayload,
         this->build_locked_prefix(mv[idx]),
         flag_text_iter(mv, idx, iter_on),
-        click_x,
         /*iter_grammar=*/iter_on);
 }
 
@@ -588,8 +580,7 @@ void GuiFlagEditor::enter_bpm_edit(int idx) {
         idx,
         text_editor::Kind::BpmBracket,
         /*locked_prefix=*/"",
-        format_bpm_bracket_text(mv[idx]),
-        /*click_x=*/-1.0);
+        format_bpm_bracket_text(mv[idx]));
     // enter_text_edit's tail invalidates the top strip, but the BPM editor
     // draws in the bottom strip. Invalidate it so the freshly opened editor
     // actually paints.

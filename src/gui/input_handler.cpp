@@ -400,9 +400,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // editor blocks above consume Enter first (commit), so this is reached only
     // with no editor active. Repair the focus first, then: a focused warp
     // marker (last_selected_marker >= 0) in W view opens its canonical-line
-    // editor with the caret at end (the natural keyboard default — no click_x,
-    // so text_editor::enter seats the caret past the last character). P view
-    // (phase resets have no per-flag editor) and no focused marker are no-ops.
+    // editor with the seeded content fully selected (open-selected, like every
+    // open route — the first keystroke replaces it). P view (phase resets have
+    // no per-flag editor) and no focused marker are no-ops.
     // Read-only already dropped Return at the allowlist gate above (the editor
     // is an authoring surface — the old click-to-edit refused read-only too).
     // Modifier-strict: only the plain, unmodified press binds.
