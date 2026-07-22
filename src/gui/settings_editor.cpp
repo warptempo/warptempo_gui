@@ -426,6 +426,15 @@ void GuiSettingsEditor::commit() {
 
     viewport.invalidate_timestamp_area();
     text_editor::deactivate(app.settings_editor);
+    // The engine scale is a warp-map input (build_warp_frame_map's slope
+    // product), so an engine commit that moved it re-warps the target-view
+    // plate. Same discrete-warp_frame_map-change class as the marker edits
+    // (see drop_marker in warpmarkers_ops.cpp): re-warp synchronously in target
+    // view so displayed == live at this command boundary. A non-scale engine
+    // key (provenance) leaves the plate unchanged, so the sync is a redundant
+    // bounded rebuild there — acceptable, matching the unconditional trigger
+    // beside it.
+    if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
     // The trigger is unconditional by ruling — rationale recorded at
     // GuiTargetRender::trigger. Under the full-recipe key every engine-settings
     // commit moves the fingerprint, provenance (title/bpm/notes/url/cover)

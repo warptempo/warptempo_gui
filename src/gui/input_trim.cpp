@@ -371,10 +371,13 @@ void GuiInputHandler::commit_trim_drag() {
         // stems are drawn with, and displayed_or_live_target_map returns exactly
         // that (falling back to the live cache only when cold), so the release
         // column-snaps against WHAT IS PAINTED and stored equals shown even inside
-        // an async waveform-rebuild window (e.g. a trim grab immediately after a
-        // tempo commit) where the displayed map lags the live cache — the same
-        // displayed basis route_trim_chip_press's hit test and the drag mechanics
-        // above all read. The absolute walls
+        // an async waveform-rebuild window where the displayed map lags the live
+        // cache — the residual case now that every discrete warp-map edit re-warps
+        // synchronously in target view (drop / delete / nudge / tempo / Ctrl+N /
+        // Ctrl+D / flag commit all kick_waveform_sync): a worker job dispatched by
+        // a viewport change and still in flight across the grab, carrying the
+        // then-current map. That is the same displayed basis route_trim_chip_press's
+        // hit test and the drag mechanics above all read. The absolute walls
         // — both bounds 0..EOF-1, plain integer compares —
         // re-apply AFTER the snap so the walls win over the pixel grid and a
         // wall-clamped release rests exactly on its wall. Degenerate paint

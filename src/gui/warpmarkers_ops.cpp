@@ -301,6 +301,11 @@ void GuiWarpMarkersOps::toggle_inherits() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    // Same discrete-warp_frame_map-change class as drop_marker (see comment
+    // there): re-warp synchronously in target view so displayed == live at this
+    // command boundary. Warp column only — the Ctrl+N pass toggle mutates the
+    // warp store.
+    if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
     target_render.trigger();
 }
 
@@ -329,6 +334,12 @@ void GuiWarpMarkersOps::toggle_disabled() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    // Same discrete-warp_frame_map-change class as drop_marker (see comment
+    // there): re-warp synchronously in target view so displayed == live at this
+    // command boundary. This is the WARP column's disable toggle — the phase-
+    // reset sibling in phaseresetmarkers_ops.cpp does not change the warp map
+    // and takes no such sync.
+    if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
     target_render.trigger();
 }
 
@@ -423,6 +434,11 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
+    // Same discrete-warp_frame_map-change class as drop_marker (see comment
+    // there): re-warp synchronously in target view so displayed == live at this
+    // command boundary, no divergence window for the displayed-basis gestures
+    // to ride out.
+    if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
     target_render.trigger();
 }
 
@@ -577,10 +593,13 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    // Unlike drop and delete, nudge does not route through
-    // kick_waveform_sync: nudges arrive at key-repeat rate, and a
-    // synchronous plate rebuild per repeat would cost up to the plate's
-    // worst-case render time per keypress; the one-frame async lag on
-    // a one-pixel map change is imperceptible.
+    // Same discrete-warp_frame_map-change class as drop and delete (see
+    // drop_marker): re-warp synchronously in target view so displayed == live
+    // at every command boundary, leaving no divergence window for the
+    // displayed-basis gestures to ride out. Nudges arrive at key-repeat rate,
+    // but that per-repeat cost is the strip drag's per-pointer-frame cost
+    // (one full synchronous rebuild at 60 Hz), measured affordable — so the
+    // earlier key-repeat cost objection to syncing here is retired.
+    if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
     target_render.trigger();
 }

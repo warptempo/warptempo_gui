@@ -507,6 +507,13 @@ void GuiFlagEditor::commit_top_flag_edit() {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    // Same discrete-warp_frame_map-change class as the drop / delete / nudge
+    // edits (see drop_marker in warpmarkers_ops.cpp): a committed payload can
+    // change tempo / scale / label_def / label_ref, all map inputs, so re-warp
+    // synchronously in target view. Gated on store_changed by the early return
+    // above, exactly like the trigger — a no-op or iter-bracket-only commit
+    // (session state, not a map input) never reaches here.
+    if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
     target_render.trigger();
 }
 
