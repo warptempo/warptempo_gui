@@ -354,9 +354,13 @@ struct RegionState {
 // press, so there is no release-time collapse. Only a plain, unmodified
 // waveform press arms (a Shift press is a click, Alt/Ctrl no-op earlier), so an
 // armed drag always signals a plain waveform press. A completed drag rests the
-// region on release; Esc cancels a live drag and restores the pre-press region
-// captured here at arm (the marker drag's snapshot pattern — cheap, two ints).
-// Session-only, never undoable.
+// region on release UNLESS its final on-screen span is under the same
+// kDragMovedThresholdPx gate — the gate latches once past the arm and never
+// re-engages, so a jitter drag could otherwise rest a sliver, which dissolves
+// like a click instead (end_region_drag_min_size_check, at both end points).
+// Esc cancels a live drag and restores the pre-press region captured here at
+// arm (the marker drag's snapshot pattern — cheap, two ints). Session-only,
+// never undoable.
 struct RegionDragState {
     bool    active       = false;
     bool    moved        = false;  // crossed the threshold into a real drag

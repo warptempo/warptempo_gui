@@ -126,6 +126,30 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
     g.ed->cursor_pos = idx;
 }
 
+// Region-drag end: dissolve a resting region whose on-screen span is under the
+// arm gate. The press-becomes-drag gate (kDragMovedThresholdPx) latches once
+// and never re-engages, so a hand-jitter drag that crosses the gate then
+// releases near the press — or wanders back toward it — can rest a sliver
+// region a pixel or two wide. That was never an intentional window: a
+// sub-threshold rest reads as a click, so it dissolves exactly as a plain
+// click's would, clearing the wash and the split playhead (the cursor playhead
+// returns when the region deactivates, which the same damage covers). Called
+// from both region-drag end points (release and button-lost). Only the REST is
+// gated — the live mid-drag extension paints slivers freely.
+void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
+                                    Viewport& viewport) {
+    if (!app.region.active) return;
+    const double spp = current_samples_per_pixel(app, audio);
+    if (spp <= 0.0) return;   // no geometry -> leave the region as-is
+    const double span_px =
+        std::abs(static_cast<double>(app.region.a_frame - app.region.b_frame)) /
+        spp;
+    if (span_px < kDragMovedThresholdPx) {
+        app.region = RegionState{};
+        viewport.invalidate_waveform_area();
+    }
+}
+
 } // namespace
 
 // Button-press handler. Verbatim from the lambda at the original
@@ -928,8 +952,11 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // press-release (never crossed the threshold) needs no collapse here:
         // the press already cleared any resting highlight at mouse-down (see
         // arm_region_drag_at), so a plain click leaves the region cleared and
-        // there is nothing to do at release but disarm.
+        // there is nothing to do at release but disarm. A jitter drag that
+        // crossed the gate but rests a sub-threshold sliver dissolves like a
+        // click (end_region_drag_min_size_check).
         app.region_drag = RegionDragState{};
+        end_region_drag_min_size_check(app, audio, viewport);
         return;
     }
     if (app.trim_drag.active) {
@@ -1133,9 +1160,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         viewport.clear_hover_popup();
         // Left button must still be held; if not, the release was lost —
         // end the gesture, resting the region at its current extent (as a
-        // clean release would). Modifier changes mid-drag are ignored.
+        // clean release would). Modifier changes mid-drag are ignored. A
+        // sub-threshold sliver rest dissolves like a click, exactly as the
+        // clean release branch does (end_region_drag_min_size_check).
         if (!mods.primary_button_held) {
             app.region_drag = RegionDragState{};
+            end_region_drag_min_size_check(app, audio, viewport);
             return;
         }
         const GuiRect area = waveform_area(app);
