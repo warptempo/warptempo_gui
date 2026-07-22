@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <utility>
 #include <vector>
 
 // kFlagBottomLiftPx now lives in render.h so the strip lane geometry in
@@ -1607,4 +1608,74 @@ double flag_pending_text_left_x(
 {
     return lane_text_left_x(app, audio, marker_idx,
                             app.top_flag_editor.pending.size());
+}
+
+LaneTextRun current_marker_lane_run(const AppState& app, const GuiAudio& audio)
+{
+    // The non-editor arbitration paint_marker_text_lane's tiers own, factored
+    // out verbatim so the paint pass and the lane double-click hit test agree on
+    // one run. The FlagPayload editor case is resolved by the callers before
+    // this point (it owns the lane alone); this covers only the hover / last-
+    // selected tiers.
+    LaneTextRun run;
+
+    // Tier 1: the HOVERED marker's own value wins whenever a hover is showing.
+    // recompute_hover_at_cursor already composed lane_text (flag_text_iter for a
+    // warp marker, the "p" literal for a phase reset) and captured the hovered
+    // marker's index and source_frame. No painted-column cull here — matching
+    // paint, a shown hover always paints (subject only to the caller's advance
+    // guard).
+    if (!app.hover_popup.lane_text.empty()) {
+        run.valid        = true;
+        run.marker_index = app.hover_popup.marker_index;
+        run.source_frame = static_cast<double>(app.hover_popup.source_frame);
+        run.text         = app.hover_popup.lane_text;
+        return run;
+    }
+
+    // Tier 2: else the LAST-SELECTED marker's own value, composed from the live
+    // store the same way the hover composer does — flag_text_iter for a warp
+    // marker, the "p" literal for a phase reset. The index is validated against
+    // the active view's list.
+    const int idx = app.last_selected_marker;
+    if (idx < 0) return run;
+    int64_t     src_f;
+    std::string txt;
+    if (app.active_markers_view == 'P') {
+        const auto& pv = app.phaseresetmarkers.markers();
+        if (idx >= static_cast<int>(pv.size())) return run;
+        src_f = pv[idx].time_frame;
+        txt   = "p";
+    } else {
+        const auto& mv = app.warpmarkers.markers();
+        if (idx >= static_cast<int>(mv.size())) return run;
+        src_f = mv[idx].time_frame;
+        txt   = flag_text_iter(mv, idx, app.iteration_mode_enabled);
+    }
+    // During an active marker drag whose grabbed marker IS this last-selected
+    // one, center the run on the live proposed position from moveable_times[0]
+    // (a free source-frame double) instead of the committed store frame — the
+    // store is not mutated until commit, so the run would otherwise lag at the
+    // pre-drag spot while the flag slides.
+    double display_src_f = static_cast<double>(src_f);
+    if (app.drag.active && !app.drag.dragging_markers.empty() &&
+        app.drag.dragging_markers[0] == idx &&
+        !app.drag.moveable_times.empty()) {
+        display_src_f = app.drag.moveable_times[0];
+    }
+    // Cull to the visible strip by the painted column exactly as the flags do
+    // (a fully-offscreen marker paints no flag, so it shows no run). The column
+    // basis is displayed_or_live_target_map, the same basis the flag/lane
+    // painters and hit tests use.
+    const std::vector<WarpFrameMapSegment>& map =
+        displayed_or_live_target_map(app, audio);
+    const int col = painted_column_of_source_frame(
+        app, audio, display_src_f, map);
+    if (col < 0 || col >= waveform_area(app).w) return run;
+
+    run.valid        = true;
+    run.marker_index = idx;
+    run.source_frame = display_src_f;
+    run.text         = std::move(txt);
+    return run;
 }

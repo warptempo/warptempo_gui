@@ -500,6 +500,91 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Only presses inside the waveform or the top strip do anything.
         if (!inside_waveform && !inside_top) return;
 
+        // Marker-text-lane double-click: opens the flag editor on the run's
+        // marker, exactly like Enter and the flag double-click. The lane band
+        // (top lane 2) carries the one-value run painted between the trim chips
+        // and the flags; a plain press on that RENDERED run is a free surface
+        // today (it falls through every claim to the strict no-op below). Only
+        // the PLAIN unmodified press claims here; a modified press is left to the
+        // branches below.
+        //
+        // Placed AFTER the flag-editor discard block (an open editor owns lane
+        // clicks — the F2.1 caret path and the click-away discard resolve there
+        // first; a PLAIN press cannot reach here with a text editor still open,
+        // because an own-flag plain press swallowed above and a different-flag
+        // plain press discarded the editor above, and the bottom-strip editors
+        // already returned — the any_text_editor_active guard is the explicit
+        // backstop) and BEFORE the flag hit-test consumption (the lane band is
+        // disjoint from the flag lane, so the ordering is for clarity, not
+        // correctness). The standing top-strip playback stop above already ran.
+        if (inside_top && !ctrl && !shift && !alt &&
+            !any_text_editor_active()) {
+            const LaneTextRun run = current_marker_lane_run(app, audio);
+            const double advance = monospace_advance();
+            // The run's screen rect, derived exactly as paint does: the caret-
+            // origin owner gives the left x (centered on the marker, clamped
+            // onscreen), the text size the width, and the lane the y-band. A
+            // left<0 means the monospace advance is not yet measured — no run to
+            // hit.
+            const double left = run.valid
+                ? lane_text_left_x_at_frame(
+                      app, audio, run.source_frame, run.text.size())
+                : -1.0;
+            if (run.valid && left >= 0.0 && advance > 0.0) {
+                const GuiRect lane = top_marker_text_row_area(app);
+                const double run_w =
+                    static_cast<double>(run.text.size()) * advance;
+                const bool in_run =
+                    y >= lane.y && y < lane.y + lane.h &&
+                    static_cast<double>(x) >= left &&
+                    static_cast<double>(x) <= left + run_w;
+                if (in_run) {
+                    // dc_at_press was snapshotted and cleared at the top of this
+                    // press: a matching LaneText candidate for the SAME marker
+                    // within the window CONSUMES as a double-click open. The
+                    // surface + target tag keeps a zoom-row / flag / editor
+                    // candidate from consuming here.
+                    const DoubleClickCandidate& dc = dc_at_press;
+                    if (dc.surface == DoubleClickSurface::LaneText &&
+                        dc.target == run.marker_index &&
+                        monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
+                        std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
+                        std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
+                        // Open the flag editor on the run's marker with the caret
+                        // seated at the clicked glyph — click_x = the press x, the
+                        // same screen-x convention the editor's own lane clicks
+                        // pass to byte_index_from_click_x. P view (phase resets
+                        // have no per-flag editor — the run reads "p") and read-
+                        // only tabs refuse silently, matching Enter and the flag
+                        // double-click; the candidate is already cleared, so a
+                        // refused press is a plain no-op.
+                        if (app.active_markers_view != 'P' &&
+                            !active_view_state(app).read_only) {
+                            flag_editor.enter_top_flag_edit(
+                                run.marker_index, static_cast<double>(x));
+                        }
+                        return;
+                    }
+                    // No candidate matched: SEED a LaneText candidate at this
+                    // PRESS and claim the press so it cannot fall through to the
+                    // waveform / strip handling below. The seed lives at the PRESS
+                    // (not a motionless release like the other surfaces) because
+                    // the lane arms NO gesture — there is no drag that could
+                    // false-seed it.
+                    app.double_click = DoubleClickCandidate{
+                        .surface = DoubleClickSurface::LaneText,
+                        .time_ms = monotonic_ms(),
+                        .press_x = x, .press_y = y,
+                        .target  = run.marker_index};
+                    return;
+                }
+            }
+            // A press in the lane BAND but outside the run's rect (or with no run
+            // showing) is a FULL no-op for this surface — it claims nothing and
+            // seeds nothing, falling through to the existing handling below (a
+            // strict no-op for a flagless top-strip spot).
+        }
+
         // Flag hit test, computed ONLY on the path that consumes it. The
         // TOP-STRIP flag hit feeds the plain/Shift flag-click branches (plain =
         // single-select + arm the pending marker drag, Shift = toggle

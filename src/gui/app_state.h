@@ -527,7 +527,7 @@ struct ScrollDragState {
 // the three double-click surfaces from cross-firing: a candidate seeded on one
 // surface can only be consumed by a press on the SAME surface (a zoom-row click
 // then a flag click within the window can never consume). None = no candidate.
-enum class DoubleClickSurface { None, ZoomRow, Flag, EditorText };
+enum class DoubleClickSurface { None, ZoomRow, Flag, EditorText, LaneText };
 
 // Double-click detection (Wayland delivers no double-click event, so it is
 // hand-rolled from two motionless plain clicks). A motionless click on a
@@ -543,6 +543,11 @@ enum class DoubleClickSurface { None, ZoomRow, Flag, EditorText };
 //                 axes' slack compared).
 //   EditorText -> selects the word under the click in the active text editor
 //                 (target unused; both axes' slack compared).
+//   LaneText   -> opens the marker's flag editor from a double-click on the
+//                 marker-text lane's rendered run (target = marker index; both
+//                 axes' slack compared). Unlike the other surfaces the lane arms
+//                 no gesture, so its candidate is seeded at the PRESS (not a
+//                 motionless release) — there is no drag that could false-seed.
 // Cleared on file load, and the moment an action fires. Session-only.
 struct DoubleClickCandidate {
     DoubleClickSurface surface = DoubleClickSurface::None;

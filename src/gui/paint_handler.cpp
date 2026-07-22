@@ -175,64 +175,16 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
                                 flag_font_size_px());
     };
 
-    // Tier 1: the HOVERED marker's own value wins whenever a hover is showing.
-    // recompute_hover_at_cursor already composed lane_text (flag_text_iter for a
-    // warp marker, the "p" literal for a phase reset) and captured source_frame.
-    if (!app.hover_popup.lane_text.empty()) {
-        paint_run(app.hover_popup.source_frame, app.hover_popup.lane_text);
-        return;
-    }
-
-    // Tier 2: else the LAST-SELECTED marker's own value — the same last-selected
-    // notion the bottom readout falls back to, here shown for ANY marker type.
-    // Compose from the live store the same way the hover composer does:
-    // flag_text_iter for a warp marker (the one composer the flag paint, hit-
-    // rects, hover, and the Enter editor seed all share), the "p" literal for a
-    // phase reset. The index is validated against the active view's list, and the
-    // run culls to the visible strip by its painted column exactly as the flags do
-    // (lane_text_left_x_at_frame annotates PAINTED FLAG PIXELS, so a fully-
-    // offscreen marker — which paints no flag — shows no run; an edge-pinned run
-    // would orphan and read as annotating whatever flag sits near the edge). The
-    // bottom readout stays the position-free surface for an offscreen last-selected
-    // marker. The column basis is displayed_or_live_target_map, the same basis the
-    // flag/lane painters and hit tests use.
-    const int idx = app.last_selected_marker;
-    if (idx < 0) return;
-    int64_t     src_f;
-    std::string txt;
-    if (app.active_markers_view == 'P') {
-        const auto& pv = app.phaseresetmarkers.markers();
-        if (idx >= static_cast<int>(pv.size())) return;
-        src_f = pv[idx].time_frame;
-        txt   = "p";
-    } else {
-        const auto& mv = app.warpmarkers.markers();
-        if (idx >= static_cast<int>(mv.size())) return;
-        src_f = mv[idx].time_frame;
-        txt   = flag_text_iter(mv, idx, app.iteration_mode_enabled);
-    }
-    // During an active marker drag whose grabbed marker IS this last-selected
-    // one, center the run on the live proposed position from moveable_times[0]
-    // (a free source-frame double, original + clamped delta) instead of the
-    // committed store frame — the store is not mutated until commit, so the run
-    // would otherwise lag at the pre-drag spot while the flag slides. Same
-    // displayed-map basis the flag overlay paints through, so text and flag stay
-    // in lockstep in both views. Drag-only: nudges mutate the store per press, so
-    // their runs already follow; the drag is single-marker, so moveable_times[0]
-    // is the grabbed marker's position. The payload text is unchanged during a
-    // drag — only the frame moves.
-    double display_src_f = static_cast<double>(src_f);
-    if (app.drag.active && !app.drag.dragging_markers.empty() &&
-        app.drag.dragging_markers[0] == idx &&
-        !app.drag.moveable_times.empty()) {
-        display_src_f = app.drag.moveable_times[0];
-    }
-    const std::vector<WarpFrameMapSegment>& map =
-        displayed_or_live_target_map(app, audio);
-    const int col = painted_column_of_source_frame(
-        app, audio, display_src_f, map);
-    if (col < 0 || col >= waveform_area(app).w) return;
-    paint_run(display_src_f, txt);
+    // Tiers 1 (the HOVERED marker's value) and 2 (else the LAST-SELECTED
+    // marker's value, composed from the live store with the mid-drag
+    // moveable_times substitution and the painted-column offscreen cull) are
+    // resolved by the shared run resolver current_marker_lane_run — the ONE
+    // arbitration the lane double-click hit test also reads, so the painted run
+    // and the clickable run cannot drift. paint_run keeps its own txt.empty()
+    // and left<0 guards, so consuming the resolved run here is byte-identical to
+    // the inline tiers it replaced.
+    const LaneTextRun run = current_marker_lane_run(app, audio);
+    if (run.valid) paint_run(run.source_frame, run.text);
 }
 
 // -- GuiPaintHandler::paint_waveform_plate -------------------------------
