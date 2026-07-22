@@ -423,11 +423,11 @@ struct PendingMarkerDrag {
 struct PendingTempoDrag {
     bool active      = false;
     int  marker      = -1;   // dragged warp marker (its target image chases
-                             // the pointer)
-    int  predecessor = -1;   // the GROUP's predecessor (nearest strictly-
-                             // earlier frame, walked past same-frame siblings):
-                             // the enabled owner whose tempo_cents the drag
-                             // rewrites — not necessarily marker - 1
+                             // the pointer); the GROUP's predecessor is NOT
+                             // held here — begin_tempo_drag re-walks it at the
+                             // crossing (the walk is O(stack length), trivially
+                             // cheap; nothing mutates the store between press
+                             // and crossing, so the re-walk is equivalent)
     int  press_x     = 0;    // press position (window px): the gate only (the
     int  press_y     = 0;    //   solve is absolute — pointer x -> tempo)
 };

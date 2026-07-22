@@ -475,11 +475,10 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
 //
 // Pixel-column-anchored: the press reads the marker's currently PAINTED
 // column (painted_column_of_source_frame — the stem painter's own math),
-// targets the adjacent column, takes that column's time (source view:
-// viewport start plus column times samples-per-pixel; target view: the
-// column's target-domain time inverse-mapped through the cached map), and
-// commits it through snap_authored_frame, so the stored value is a whole
-// source frame. The painted move is exactly one column per press,
+// targets the adjacent column, takes that column's time (viewport start plus
+// column times samples-per-pixel — this gesture runs only in warp's SOURCE
+// home view, so there is no target-domain inverse mapping), and commits it
+// through snap_authored_frame, so the stored value is a whole source frame. The painted move is exactly one column per press,
 // unconditionally: the whole-frame rounding error is bounded by
 // 0.5 / (source frames per target pixel) of a pixel, and with the
 // bracketed value vocabulary (tempo times both scales at least

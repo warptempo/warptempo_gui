@@ -763,17 +763,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                 app.pending_marker_drag.press_y = y;
                             } else if (app.active_markers_view == 'W' &&
                                        app.active_audio_view == 'T') {
-                                // The walk computes the group's predecessor
-                                // once; -1 means ineligible (arm nothing). The
-                                // walked index flows into the pending state, so
-                                // predecessor == marker - 1 is assumed nowhere.
-                                const int pred =
-                                    marker_drag.tempo_drag_predecessor(hit);
-                                if (pred >= 0) {
+                                // The walk is purely the eligibility test here
+                                // (>= 0 means armable); the crossing re-walks in
+                                // begin_tempo_drag, equivalent because nothing
+                                // mutates the store between press and crossing.
+                                if (marker_drag.tempo_drag_predecessor(hit)
+                                        >= 0) {
                                     app.pending_tempo_drag = PendingTempoDrag{};
                                     app.pending_tempo_drag.active      = true;
                                     app.pending_tempo_drag.marker      = hit;
-                                    app.pending_tempo_drag.predecessor = pred;
                                     app.pending_tempo_drag.press_x     = x;
                                     app.pending_tempo_drag.press_y     = y;
                                 }
