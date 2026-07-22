@@ -60,26 +60,18 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
         d.original_times.push_back(t_of(idx));
     }
 
-    // Anchor mouse position — computed at mouse_x in the waveform's X axis.
-    // Target view: the press position is in target-domain frames; the
-    // dragged markers' original_times are source-domain frames. Convert
-    // the anchor to source-domain at the boundary so the on_motion delta
-    // (mouse_frame - anchor_mouse_time_frame) lives in source frames.
+    // Anchor mouse position — computed at mouse_x in the waveform's X axis,
+    // as a plain ACTIVE-domain frame double (one expression, both views; no
+    // inverse map). The on_motion delta (mouse_frame -
+    // anchor_mouse_time_frame) therefore lives in active-domain frames, and
+    // apply_drag_motion carries it into the source domain through the
+    // DISPLAYED map's two hops, so the painted flag moves by exactly the
+    // pointer's travel.
     const GuiRect area = waveform_area(app);
     const double spp = current_samples_per_pixel(app, audio);
-    if (active_display_context(app, audio).domain != GuiDisplayDomain::Source) {
-        const int64_t anchor_frame_active =
-            app.viewport_start_sample +
-            static_cast<int64_t>(std::nearbyint(
-                static_cast<double>(mouse_x - area.x) * spp));
-        const int64_t anchor_frame_src =
-            active_domain_to_source_frame(app, audio, anchor_frame_active);
-        d.anchor_mouse_time_frame = static_cast<double>(anchor_frame_src);
-    } else {
-        d.anchor_mouse_time_frame =
-            static_cast<double>(app.viewport_start_sample) +
-            static_cast<double>(mouse_x - area.x) * spp;
-    }
+    d.anchor_mouse_time_frame =
+        static_cast<double>(app.viewport_start_sample) +
+        static_cast<double>(mouse_x - area.x) * spp;
 
     // Compute scalar delta_min / delta_max from the absolute range only:
     // zero on the left and the marker EOF wall on the right — total_frames
@@ -110,19 +102,24 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // to the visible strip so a mouse drag can't push it offscreen, where its
     // precise position would be hidden — on top of the absolute data walls
     // (delta_min/delta_max computed just above). viewport_marker_bounds is
-    // active-domain while the delta lives in source frames, so
-    // inverse-translate the edges; the domain map is monotonic, so the
-    // source clamp matches the active-pixel clamp. The grabbed marker is
+    // active-domain while the walls are source frames, so inverse-translate
+    // the edges through the DISPLAYED map (the paint basis the drag's
+    // mechanics run on; identity on source view's empty map); the map is
+    // monotonic, so the source clamp matches the active-pixel clamp. The
+    // grabbed marker is
     // on-screen at grab (the arming flag press hit hit_test_flag, which reports
-    // only visible chips, so the marker's column is within the viewport), so
-    // these bounds bracket delta = 0. vp_lo_src <= vp_hi_src always,
+    // only visible chips against the same displayed map, so the marker's
+    // painted column is within the viewport), so
+    // these bounds bracket the marker. vp_lo_src <= vp_hi_src always,
     // so [delta_min, delta_max] does not invert from this pair.
     {
         const auto vb = viewport_marker_bounds(app, audio);
-        const double vp_lo_src = static_cast<double>(
-            active_domain_to_source_frame(app, audio, vb.first));
-        const double vp_hi_src = static_cast<double>(
-            active_domain_to_source_frame(app, audio, vb.second));
+        const std::vector<WarpFrameMapSegment>& vdmap =
+            displayed_or_live_target_map(app, audio);
+        const double vp_lo_src =
+            map_target_to_source(static_cast<double>(vb.first), vdmap);
+        const double vp_hi_src =
+            map_target_to_source(static_cast<double>(vb.second), vdmap);
         const double orig_grabbed = static_cast<double>(t_of(hit));
         const double vp_lb = vp_lo_src - orig_grabbed;
         const double vp_ub = vp_hi_src - orig_grabbed;
@@ -132,8 +129,9 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
 
     d.moved = false;
     // Seed moveable_times from original_times (int64 frames widening into
-    // the free fractional mid-gesture domain). apply_drag_motion writes
-    // moveable_times[k] = original_times[k] + delta on every motion event.
+    // the free fractional mid-gesture domain). apply_drag_motion writes the
+    // displayed-map-anchored, wall-clamped proposal into moveable_times[k]
+    // on every motion event (the formula at its header).
     d.moveable_times.assign(d.original_times.begin(), d.original_times.end());
     // Capture the pre-drag list state for undo. Commit pushes the
     // active-mode snapshot only when the drag produced a net position
@@ -167,7 +165,29 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     return true;
 }
 
-// Apply a raw delta (mouse-derived) to the dragging markers, clamped.
+// Apply a raw ACTIVE-domain frame delta (mouse-derived: the pointer's
+// active-domain position minus the press anchor) to the dragging markers.
+// The proposal anchors in the DISPLAYED target domain — dmap =
+// displayed_or_live_target_map, the SAME map the DragOverlay flag painter
+// walks (empty / identity in source view, where the formula degenerates to
+// plain orig + delta):
+//
+//     proposed_src = map_target_to_source(
+//                        map_source_to_target(orig_src, dmap) + delta, dmap)
+//
+// The painter then shows the flag at fwd(proposed_src) = fwd(orig) + delta —
+// the original painted position plus exactly the pointer's travel — so the
+// flag tracks the pointer 1:1 BY CONSTRUCTION, under any map, stale or
+// fresh, at every song location (no live-map inverse, no slope-ratio slip
+// when displayed != live or when the pointer's image and the marker sit in
+// different segments). This is the one deliberate revision of the "gesture
+// mechanics stay on the live map" rule: the drag's contract is
+// pointer-lockstep with the painted flag, so its mechanics run on the
+// DISPLAYED map (the paint basis); the commit's store write and the ride's
+// final placement remain live-map (post-commit) territory. Walls stay
+// integer source frames and win over everything: the proposed source value
+// clamps per marker into [orig + delta_min, orig + delta_max].
+//
 // Writes proposed new times into app.drag.moveable_times — the live
 // marker store is NOT mutated. Paint reads moveable_times through the
 // DragOverlay so dragged markers paint at their proposed positions while the
@@ -185,18 +205,30 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
 // regardless of which markers surround it.
 void MarkerDragOps::apply_drag_motion(double raw_delta) {
     if (!app.drag.active) return;
-    double delta = raw_delta;
-    if (delta < app.drag.delta_min) delta = app.drag.delta_min;
-    if (delta > app.drag.delta_max) delta = app.drag.delta_max;
+    // The displayed (paint-basis) map, hoisted out of the loop: one lookup
+    // per motion event. Returns a reference to an existing vector, never
+    // builds one.
+    const std::vector<WarpFrameMapSegment>& dmap =
+        displayed_or_live_target_map(app, audio);
 
     bool any_changed = false;
     for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
-        // Full-precision frame double: mouse-derived fractional frames,
-        // clamped to the walls above. Mid-gesture positions are free —
-        // no grid, no snap — so the marker tracks the pointer exactly;
-        // commit_drag snaps the release to its painted column's whole
-        // frame.
-        const double new_t = app.drag.original_times[k] + delta;
+        // Full-precision frame doubles throughout: mid-gesture positions
+        // are free — no grid, no snap — so the marker tracks the pointer
+        // exactly; commit_drag snaps the release to its painted column's
+        // whole frame. Both hops are identity on source view's empty map
+        // (proposed = orig + raw_delta there, bit-for-bit).
+        const double orig = static_cast<double>(app.drag.original_times[k]);
+        const double proposed = map_target_to_source(
+            map_source_to_target(orig, dmap) + raw_delta, dmap);
+        // Per-marker wall clamp in the SOURCE domain (walls are integer
+        // source frames — delta_min/delta_max fold the absolute data walls
+        // with the grabbed marker's viewport clamp at begin_drag; the map is
+        // monotone, so clamping the source proposal clamps its painted
+        // position too).
+        double new_t = proposed;
+        if (new_t < orig + app.drag.delta_min) new_t = orig + app.drag.delta_min;
+        if (new_t > orig + app.drag.delta_max) new_t = orig + app.drag.delta_max;
         if (k >= app.drag.moveable_times.size()) continue;
         if (app.drag.moveable_times[k] == new_t) continue;
         app.drag.moveable_times[k] = new_t;
@@ -268,8 +300,8 @@ void MarkerDragOps::commit_drag() {
     // Commit-time column snap. Mid-gesture positions stay free and
     // fractional (apply_drag_motion); only the commit snaps. The released
     // position is snapped to the time of the pixel column it is PAINTED
-    // at — computed against the display cache's map (stable for the drag's
-    // lifetime), the exact coordinate system the overlay painted through — and
+    // at — computed against the DISPLAYED map, the exact coordinate system
+    // the overlay painted through — and
     // that column time funnels
     // through snap_authored_frame (inside authored_frame_at_column), so
     // the stored value is the whole frame of the shown column: stored
@@ -287,11 +319,15 @@ void MarkerDragOps::commit_drag() {
     const int64_t eof_wall = total - 1;
     std::vector<int64_t> committed;
     committed.reserve(app.drag.moveable_times.size());
-    // The map the overlay painted through: the display cache's map (empty /
-    // identity in source view, the memoized target map in target view), stable
-    // for the drag's lifetime, so stored-equals-shown holds at commit.
+    // The map the overlay painted through: displayed_or_live_target_map —
+    // the DISPLAYED map (converged == live at rest; empty / identity in
+    // source view), the same basis apply_drag_motion anchored the proposals
+    // in, so stored-equals-shown holds at commit even inside a worker
+    // publish window where displayed != live. The commit-time RIDE placement
+    // below stays on the LIVE map deliberately — placement truth after the
+    // re-warp, the Tab basis.
     const std::vector<WarpFrameMapSegment>& dmap =
-        *active_display_context(app, audio).warp_frame_map;
+        displayed_or_live_target_map(app, audio);
     for (size_t k = 0; k < app.drag.moveable_times.size(); ++k) {
         const double proposed = app.drag.moveable_times[k];
         // Only positions the drag actually moved snap; an untouched

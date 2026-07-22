@@ -122,10 +122,13 @@ struct SelectionSnapshot {
 // pre-drag snapshot so Escape can restore positions and clamps can be
 // evaluated without re-scanning the marker list on every motion event.
 //
-// `delta_min` / `delta_max` is a single scalar range for the uniformly-
-// applied delta: the intersection of each dragged marker's absolute
-// bounds (zero and the column's EOF wall) plus the grabbed marker's
-// viewport clamp. Neighbors do not bound a drag — markers may cross
+// `delta_min` / `delta_max` is a single scalar SOURCE-domain offset range:
+// the intersection of each dragged marker's absolute bounds (zero and the
+// column's EOF wall) plus the grabbed marker's viewport clamp.
+// apply_drag_motion clamps each marker's proposed source value into
+// [orig + delta_min, orig + delta_max] — walls win over the displayed-map
+// delta anchoring (the uniform-rate model at apply_drag_motion's header).
+// Neighbors do not bound a drag — markers may cross
 // freely, and commit reorders the store. Trim is purely cosmetic and
 // does not constrain edits.
 struct DragState {
@@ -142,16 +145,21 @@ struct DragState {
     // original_times at begin_drag; commit converts back to authored
     // frames through the pixel-anchoring snap.
     std::vector<double> moveable_times;
-    // Press position in source-frame doubles; the motion delta
-    // (mouse_frame - anchor) therefore lives in source frames.
+    // Press position in ACTIVE-domain frame doubles; the motion delta
+    // (mouse_frame - anchor) therefore lives in active-domain frames, and
+    // apply_drag_motion carries it into the source domain through the
+    // displayed map's two hops (the uniform-rate model at its header).
     double              anchor_mouse_time_frame = 0.0;
     double              delta_min = -std::numeric_limits<double>::infinity();
     double              delta_max =  std::numeric_limits<double>::infinity();
     bool                moved = false;
-    // No per-drag map copy: mid-drag target-view translation (paint,
-    // commit snapping, the waveform job's owned snapshot) reads the
-    // memoized display map — active_display_context /
-    // target_view_warp_frame_map_cached — directly. That cache is keyed on the
+    // No per-drag map copy: mid-drag target-view translation (paint, the
+    // motion proposals, commit snapping) reads the DISPLAYED map —
+    // displayed_or_live_target_map, falling back to the memoized live
+    // display map (active_display_context /
+    // target_view_warp_frame_map_cached) when cold. The displayed map is
+    // frozen for the drag's lifetime by the drag-freeze gate in
+    // maybe_enqueue_waveform_render, and the live cache is keyed on the
     // marker-store generation + scale (+ sample rate + total frames), and
     // nothing that changes either is reachable while a drag is in flight: the
     // frozen-coordinate regime keeps motion in the overlay (no generation

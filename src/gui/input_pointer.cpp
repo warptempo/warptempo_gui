@@ -1127,25 +1127,14 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     if (sr <= 0) return;
     const GuiRect area = waveform_area(app);
     const double spp = current_samples_per_pixel(app, audio);
-    // Target view: mouse-x → frames passes through
-    // active_domain_to_source_frame so
-    // the delta (mouse_frame - anchor_mouse_time_frame) is a source-
-    // frame value, matching the source-domain anchor begin_drag
-    // captured and the source-domain time_frame the apply path
-    // writes into.
-    double mouse_frame;
-    if (active_display_context(app, audio).domain != GuiDisplayDomain::Source) {
-        const int64_t mouse_frame_active =
-            app.viewport_start_sample +
-            static_cast<int64_t>(std::nearbyint(
-                static_cast<double>(mouse_x - area.x) * spp));
-        const int64_t mouse_frame_src =
-            active_domain_to_source_frame(app, audio, mouse_frame_active);
-        mouse_frame = static_cast<double>(mouse_frame_src);
-    } else {
-        mouse_frame = static_cast<double>(app.viewport_start_sample) +
-            static_cast<double>(mouse_x - area.x) * spp;
-    }
+    // The delta handed to apply_drag_motion is an ACTIVE-domain frame delta:
+    // mouse_frame is the pointer's plain active-domain position — one
+    // expression, both views, no inverse map anywhere in its derivation.
+    // The displayed-map hops that carry the delta into the source domain
+    // live inside apply_drag_motion, which anchors the proposal in the
+    // DISPLAYED target domain so the painted flag tracks the pointer 1:1.
+    const double mouse_frame = static_cast<double>(app.viewport_start_sample) +
+        static_cast<double>(mouse_x - area.x) * spp;
     marker_drag.apply_drag_motion(mouse_frame - app.drag.anchor_mouse_time_frame);
     // Playhead rule: a playhead parked OFF the grabbed marker stays parked —
     // an upstream audition point survives the move — while one exactly on the

@@ -186,7 +186,8 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
     // the pair path reads anchor_active_frame (active-domain, for the rigid
     // both-bounds delta); the single-bound path reads anchor_frame (source-
     // domain press position, motion applying the cursor's displacement from
-    // here, mirroring begin_drag's anchor_mouse_time_frame). A bad conversion
+    // here — anchor-relative like the marker drag, though that drag's anchor
+    // now lives in the active domain, see DragState). A bad conversion
     // leaves the anchor at 0; harmless since the same unusable state makes
     // update_trim_drag early-return too.
     if (both) {
