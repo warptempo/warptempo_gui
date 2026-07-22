@@ -456,28 +456,42 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // already repositioned the caret and armed the drag above (the F2.1
         // block) and returned. What reaches here is a press that is NOT the lane
         // text:
-        //   press on the SAME marker's own flag: NO-OP — the text is not there
-        //     anymore, so it neither repositions the caret nor discards; swallow
-        //     it, leaving the editor open as-is.
+        //   press on the SAME marker's own flag: three cases by modifier.
+        //     A NON-alt press is a NO-OP — the text is not there anymore, so it
+        //     neither repositions the caret nor discards; swallow it, leaving the
+        //     editor open as-is. An ALT-EXACT press instead falls THROUGH without
+        //     discarding: the alt branch below single-selects (already the
+        //     editor's own target, harmless) and seats the playhead on the marker,
+        //     the editor left open — alt+click's third land route reaching the
+        //     very flag being edited (the own-flag swallow would otherwise eat it
+        //     before the alt branch runs).
         //   press anywhere else (a DIFFERENT flag, a non-flag top-strip spot, or
         //     off the strip): DISCARD the open editor without committing — Esc's
         //     teardown exactly (pending dropped; Enter is the only commit route)
         //     — then fall through so the click routes through normal handling. A
         //     click on a different flag thereby single-selects that flag below,
-        //     rather than retargeting the editor (the old retarget was a bug).
-        // The no-op path returns; every discard path falls through to the normal
-        // flag hit-test / waveform handling below.
+        //     rather than retargeting the editor (the old retarget was a bug); an
+        //     alt-exact different-flag press discards then lands (already worked).
+        // The no-op path returns; every discard / alt-own-flag path falls through
+        // to the normal flag hit-test / waveform handling below.
         if (text_editor::is_active(app.top_flag_editor)) {
+            const bool alt_exact = alt && !ctrl && !shift;
             const int hit_now = inside_top ? hit_test_flag(app, audio, x, y) : -1;
-            if (inside_top && hit_now == app.top_flag_editor.target &&
-                app.active_markers_view != 'P') {
-                // The edited marker's own flag: no-op (swallow, editor untouched).
-                return;
+            const bool own_flag = inside_top &&
+                                  hit_now == app.top_flag_editor.target &&
+                                  app.active_markers_view != 'P';
+            if (own_flag) {
+                // The edited marker's own flag: a non-alt press swallows (editor
+                // untouched); an alt-exact press skips BOTH the swallow and the
+                // discard and falls through to the alt land branch.
+                if (!alt_exact) return;
+            } else {
+                // Different flag / non-flag / off-strip: discard (Esc teardown)
+                // and fall through so the click drives normal handling (a
+                // different flag single-selects; a waveform click deselects +
+                // places playhead).
+                flag_editor.exit_top_flag_edit_no_commit();
             }
-            // Different flag / non-flag / off-strip: discard (Esc teardown) and
-            // fall through so the click drives normal handling (a different
-            // flag single-selects; a waveform click deselects + places playhead).
-            flag_editor.exit_top_flag_edit_no_commit();
         }
 
         // Clicks in iter/BPM mode route through the consolidated
@@ -504,7 +518,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Alt-exact left press: on a top-strip marker FLAG it LANDS — the
         // THIRD land-onto-marker route beside the Tab family and `c` — and on
         // the waveform it arms the captured grab-pan; alt-exact anywhere else
-        // (a flagless top-strip spot included) is a strict no-op.
+        // does nothing further HERE. On a flagless TOP-STRIP spot that "nothing"
+        // is not a strict no-op in the playback sense: the standing top-strip
+        // playback stop above (every top-strip press stops playback) has already
+        // run, so playback is halted even though no land/pan fires.
         //
         // The LAND: single-select the hit marker (the plain-click selection
         // half) AND move the playhead exactly onto it, with NO viewport move —

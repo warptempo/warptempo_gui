@@ -306,6 +306,42 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
 }
 
 void GuiPaintHandler::on_waveform_render_done(bool ok) {
+    // Gesture-discard gate: a marker or trim drag freezes the displayed paint
+    // basis for the whole gesture (the DragState "no per-drag map copy"
+    // contract). maybe_enqueue_waveform_render's drag-freeze gate already keeps
+    // a NEW map edit from being DISPATCHED mid-gesture, but a job dispatched (or
+    // parked in the supersede slot) BEFORE the drag began would still publish
+    // its map HERE — the displayed basis would jump under a stationary pointer,
+    // and every motion event re-reads it (apply_drag_motion, the trim drags, the
+    // nudges). So drop the completed job WHOLESALE: no surface swap, no fp_*
+    // publish, no item-cache stage, and CLEAR (never dispatch) the supersede
+    // slot. Renders are repeatable — rewind pending_fp_* to the still-displayed
+    // fp_* so the pending fingerprint again describes what is on screen; once the
+    // gesture ends and the drag-freeze gate reopens, the next
+    // maybe_enqueue_waveform_render compares the current store's desired
+    // fingerprint against that (== the displayed plate) and re-renders IFF the
+    // plate is stale. Both a committed move (the store hash advanced) and a
+    // no-op drag that left an EARLIER pending map edit unpublished (the desired
+    // hash still differs from the displayed one) re-detect correctly; a
+    // genuinely up-to-date plate stays put. During the gesture pending_fp_* now
+    // equals the displayed (frozen, viewport-still) fingerprint, so the
+    // drag-freeze tick sees no diff and dispatches nothing further — this drop
+    // fires at most once per job already in flight at the grab. Gated on the
+    // marker/trim drags ALONE — the strip drag, alt-pan, and region drag
+    // dispatch their own mid-gesture jobs and must keep publishing.
+    if (app.drag.active || app.trim_drag.active) {
+        wf_cache.supersede = false;
+        wf_cache.supersede_warp_frame_map.clear();
+        wf_cache.pending_fp_vp_start            = wf_cache.fp_vp_start;
+        wf_cache.pending_fp_vp_end              = wf_cache.fp_vp_end;
+        wf_cache.pending_fp_area_w              = wf_cache.fp_area_w;
+        wf_cache.pending_fp_area_h              = wf_cache.fp_area_h;
+        wf_cache.pending_fp_target              = wf_cache.fp_target;
+        wf_cache.pending_fp_warp_frame_map_hash = wf_cache.fp_warp_frame_map_hash;
+        wf_cache.pending_fp_warp_frame_map      = wf_cache.fp_warp_frame_map;
+        return;
+    }
+
     if (!ok) {
         std::fprintf(stderr,
             "warptempo_gui: waveform worker reported failure; will retry "

@@ -219,8 +219,18 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         // whole frame. Both hops are identity on source view's empty map
         // (proposed = orig + raw_delta there, bit-for-bit).
         const double orig = static_cast<double>(app.drag.original_times[k]);
-        const double proposed = map_target_to_source(
-            map_source_to_target(orig, dmap) + raw_delta, dmap);
+        // Exact-zero short-circuit: at raw_delta == 0.0 the two-hop
+        // inv(fwd(orig)) is NOT IEEE-bitwise orig at interior map points, so a
+        // drag wandered exactly back to its press x would fail commit_drag's
+        // bit-exact `proposed == original_times[k]` untouched compare and
+        // column-snap — a real edit + undo entry from a no-op gesture. Returning
+        // orig verbatim restores that untouched contract; a sub-column NON-zero
+        // wander keeps the old two-hop value (which column-snaps to the origin's
+        // column at commit anyway).
+        const double proposed = (raw_delta == 0.0)
+            ? orig
+            : map_target_to_source(
+                  map_source_to_target(orig, dmap) + raw_delta, dmap);
         // Per-marker wall clamp in the SOURCE domain (walls are integer
         // source frames — delta_min/delta_max fold the absolute data walls
         // with the grabbed marker's viewport clamp at begin_drag; the map is
@@ -254,10 +264,12 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         // the SAME basis the DragOverlay paints the flag through, so the
         // playhead tracks the flag in lockstep (mid-motion is paint
         // coherence; commit_drag's two-step placement is the truth).
-        // move_playhead_to's scanner-inactive guard IS the "resting cursor
-        // only" ruling: playback may be live during a drag, and a live
-        // scanner is never touched. The motion-clamped proposal stays inside
-        // the visible strip, so no viewport scroll occurs.
+        // A marker drag can never run under live playback — the arming
+        // top-strip flag press stops playback — so the scanner is always
+        // inactive here; move_playhead_to's scanner-inactive guard is a
+        // belt-and-braces invariant, not a live-playback accommodation. The
+        // motion-clamped proposal stays inside the visible strip, so no
+        // viewport scroll occurs.
         if (app.drag.playhead_rides && !app.drag.moveable_times.empty()) {
             const double proposed = app.drag.moveable_times[0];
             int64_t sample;

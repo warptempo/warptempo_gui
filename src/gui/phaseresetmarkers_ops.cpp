@@ -204,15 +204,19 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
             source_frame_to_active_domain(
                 app, audio, tv[app.last_selected_marker].time_frame),
             app, audio);
-    // The display context supplies the anchoring map: identity in source
-    // view, the live cached map in target view — the same map the stem
-    // painter reads, so the anchored column is the painted one. The
-    // mapped-domain test that selects the map also keys the wall policy
-    // below: map selection and refuse-vs-clamp describe one coordinate
-    // regime.
-    const GuiDisplayContext& ctx = active_display_context(app, audio);
-    const bool mapped_domain = (ctx.domain != GuiDisplayDomain::Source);
-    const auto& map = *ctx.warp_frame_map;
+    // The anchoring map is the DISPLAYED paint basis —
+    // displayed_or_live_target_map, the SAME map the stem/flag painter reads
+    // (identity in source view) — so a press moves the reset by exactly the
+    // commanded pixel column against WHAT IS PAINTED, even inside a worker
+    // publish window where the displayed map lags the live one. Source view is
+    // identity, so the working-zoom authoring-grid bit-exactness claims (all
+    // source-view) are unaffected. The wall policy keys off the LIVE display
+    // context's domain instead (refuse-vs-clamp is a coordinate regime, not a
+    // map choice): a mapped domain refuses out-of-range, source view clamps.
+    const bool mapped_domain =
+        (active_display_context(app, audio).domain != GuiDisplayDomain::Source);
+    const std::vector<WarpFrameMapSegment>& map =
+        displayed_or_live_target_map(app, audio);
     const int64_t reset_wall = audio.total_frames() - 1;
     std::vector<std::pair<int, int64_t>> proposals;
     proposals.reserve(app.selected_markers.size());

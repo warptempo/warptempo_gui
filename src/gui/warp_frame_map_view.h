@@ -200,7 +200,8 @@ inline double source_grid_position_at_column(int64_t viewport_start,
 // then divide by the painters' samples-per-pixel — the visible span
 // nearbyint-quantized to whole samples over the strip width — and round
 // with the painters' std::nearbyint. `warp_frame_map` is the map the item is painted through:
-// the live cached map, stable for a drag's lifetime, at rest and at drag commit.
+// the DISPLAYED map (displayed_or_live_target_map — the event-synchronized paint
+// basis, falling back to the live cache when cold), at rest and at drag commit.
 // Ignored in the Source domain; an empty map in a mapped domain falls
 // back to identity, exactly like paint. Returns 0 when the strip has no
 // width (callers guard the degenerate geometry).

@@ -139,11 +139,12 @@ struct DragState {
     std::vector<int64_t> original_times;
     // Proposed new positions during motion (source-frame doubles — mid-
     // gesture positions are free and fractional), parallel
-    // to dragging_markers. Written by apply_drag_motion as
-    // original_times[k] + delta; consumed by paint via DragOverlay so the
-    // live marker store stays untouched until commit. Seeded from
-    // original_times at begin_drag; commit converts back to authored
-    // frames through the pixel-anchoring snap.
+    // to dragging_markers. Written by apply_drag_motion as the DISPLAYED-map
+    // proposal inv(fwd(orig) + active-domain delta) — the two-hop formula at
+    // apply_drag_motion's header (identity orig + delta in source view);
+    // consumed by paint via DragOverlay so the live marker store stays untouched
+    // until commit. Seeded from original_times at begin_drag; commit converts
+    // back to authored frames through the pixel-anchoring snap.
     std::vector<double> moveable_times;
     // Press position in ACTIVE-domain frame doubles; the motion delta
     // (mouse_frame - anchor) therefore lives in active-domain frames, and
@@ -158,8 +159,12 @@ struct DragState {
     // displayed_or_live_target_map, falling back to the memoized live
     // display map (active_display_context /
     // target_view_warp_frame_map_cached) when cold. The displayed map is
-    // frozen for the drag's lifetime by the drag-freeze gate in
-    // maybe_enqueue_waveform_render, and the live cache is keyed on the
+    // frozen for the drag's lifetime by TWO halves working together: the
+    // drag-freeze gate in maybe_enqueue_waveform_render suppresses any NEW
+    // dispatch, and on_waveform_render_done DROPS a job that was already in
+    // flight (or parked in the supersede slot) at the grab instead of publishing
+    // its map — so neither an in-flight nor a fresh render can swap the basis
+    // out from under a stationary pointer. The live cache is keyed on the
     // marker-store generation + scale (+ sample rate + total frames), and
     // nothing that changes either is reachable while a drag is in flight: the
     // frozen-coordinate regime keeps motion in the overlay (no generation

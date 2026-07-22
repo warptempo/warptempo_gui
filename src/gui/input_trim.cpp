@@ -158,11 +158,17 @@ bool GuiInputHandler::trim_mouse_x_to_source_frame(int mouse_x,
     if (!trim_mouse_x_to_active_frame(mouse_x, domain_frame)) return false;
 
     // Target view: the cursor column is an active-domain frame; the trim
-    // store is source-domain. Inverse-translate at the boundary, mirroring
-    // handle_trim_x's set-from-region inverse.
-    const int64_t src_frame =
-        active_domain_to_source_frame(app, audio, domain_frame);
-    out_frame = static_cast<double>(src_frame);
+    // store is source-domain. Inverse-translate at the boundary through the
+    // DISPLAYED paint basis (displayed_or_live_target_map — the SAME map the
+    // trim chips/stems are painted with; identity in source view), in full
+    // double precision like the marker drag's anchor, so the tracked bound
+    // stays locked to the pointer under any map, stale or fresh, and the
+    // release column-snap in commit_trim_drag owns the single
+    // fractional-to-authored rounding.
+    const std::vector<WarpFrameMapSegment>& dmap =
+        displayed_or_live_target_map(app, audio);
+    out_frame = map_target_to_source(
+        static_cast<double>(domain_frame), dmap);
     return true;
 }
 
@@ -211,12 +217,25 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     if (spp <= 0.0) return;
 
     if (app.trim_drag.both) {
+        // The DISPLAYED paint basis, hoisted for every translation this event —
+        // the SAME map the trim chips/stems are painted with (identity in source
+        // view), so the rigid pair tracks the pointer against WHAT IS PAINTED
+        // even inside a worker publish window where the displayed map lags the
+        // live one. map_source_to_target / map_target_to_source are the two hops
+        // (identity on an empty map); the active-domain intermediates
+        // nearbyint like source_frame_to_active_domain, and the source-authored
+        // results funnel through snap_authored_frame like
+        // active_domain_to_source_frame.
+        const std::vector<WarpFrameMapSegment>& dmap =
+            displayed_or_live_target_map(app, audio);
         int64_t cur_active = 0;
         if (!trim_mouse_x_to_active_frame(mouse_x, cur_active)) return;
-        const int64_t ob = source_frame_to_active_domain(
-            app, audio, app.trim_drag.orig_begin_frame);
-        const int64_t oe = source_frame_to_active_domain(
-            app, audio, app.trim_drag.orig_end_frame);
+        const int64_t ob = static_cast<int64_t>(std::nearbyint(
+            map_source_to_target(
+                static_cast<double>(app.trim_drag.orig_begin_frame), dmap)));
+        const int64_t oe = static_cast<int64_t>(std::nearbyint(
+            map_source_to_target(
+                static_cast<double>(app.trim_drag.orig_end_frame), dmap)));
         int64_t df = cur_active - app.trim_drag.anchor_active_frame;
         // No viewport clamp on the pair path: blind partner — and blind pair —
         // motion is deliberate. The offscreen ruling forbids blind GRABS (a
@@ -227,24 +246,27 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         //
         // Wall the rigid delta so BOTH bounds respect their absolute walls:
         // floor 0 on each and a shared ceiling at frame EOF-1 — mapped through
-        // source_frame_to_active_domain (monotone, so the active-domain clamp
-        // matches the source-domain wall). This binds both bounds, so neither
-        // slides past EOF under the rigid delta. Crossing stays free (no
-        // partner wall).
-        const int64_t begin_wall_active =
-            source_frame_to_active_domain(app, audio, audio.total_frames() - 1);
-        const int64_t end_wall_active =
-            source_frame_to_active_domain(app, audio, audio.total_frames() - 1);
+        // the displayed map (monotone, so the active-domain clamp matches the
+        // source-domain wall). This binds both bounds, so neither slides past
+        // EOF under the rigid delta. Crossing stays free (no partner wall).
+        const int64_t begin_wall_active = static_cast<int64_t>(std::nearbyint(
+            map_source_to_target(
+                static_cast<double>(audio.total_frames() - 1), dmap)));
+        const int64_t end_wall_active = static_cast<int64_t>(std::nearbyint(
+            map_source_to_target(
+                static_cast<double>(audio.total_frames() - 1), dmap)));
         if (ob + df < 0)                 df = -ob;
         if (oe + df < 0)                 df = -oe;
         if (ob + df > begin_wall_active) df = begin_wall_active - ob;
         if (oe + df > end_wall_active)   df = end_wall_active - oe;
-        // active_domain_to_source_frame already lands on whole int64 frames,
-        // so the path stays integer arithmetic end to end. These are
-        // mid-gesture tracking values; the release in commit_trim_drag snaps
-        // each moved bound to its painted column's authored time.
-        int64_t nb = active_domain_to_source_frame(app, audio, ob + df);
-        int64_t ne = active_domain_to_source_frame(app, audio, oe + df);
+        // snap_authored_frame lands each result on a whole int64 frame (the
+        // single fractional-to-authored route). These are mid-gesture tracking
+        // values; the release in commit_trim_drag snaps each moved bound to its
+        // painted column's authored time.
+        int64_t nb = snap_authored_frame(
+            map_target_to_source(static_cast<double>(ob + df), dmap));
+        int64_t ne = snap_authored_frame(
+            map_target_to_source(static_cast<double>(oe + df), dmap));
         if (nb < 0) nb = 0;
         if (ne < 0) ne = 0;
         if (app.trim.begin_frame != nb || app.trim.end_frame != ne) {
@@ -287,12 +309,16 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     // grab can only begin on a visible bound (hit_test_trim_chip tests the
     // chip painted at a visible column), so this is a live tracking clamp, not a
     // correction for an offscreen grab. The bounds are active-domain while
-    // src_frame is
-    // source, so inverse-translate the edges — monotonic, so the source clamp
-    // matches the active-pixel one.
+    // src_frame is source, so inverse-translate the edges through the DISPLAYED
+    // paint basis (the same map the tracked bound rode above; monotonic, so the
+    // source clamp matches the active-pixel one).
     const auto vb = viewport_marker_bounds(app, audio);
-    const int64_t vp_lo = active_domain_to_source_frame(app, audio, vb.first);
-    const int64_t vp_hi = active_domain_to_source_frame(app, audio, vb.second);
+    const std::vector<WarpFrameMapSegment>& dmap =
+        displayed_or_live_target_map(app, audio);
+    const int64_t vp_lo = snap_authored_frame(
+        map_target_to_source(static_cast<double>(vb.first), dmap));
+    const int64_t vp_hi = snap_authored_frame(
+        map_target_to_source(static_cast<double>(vb.second), dmap));
     if (src_frame < vp_lo) src_frame = vp_lo;
     if (src_frame > vp_hi) src_frame = vp_hi;
 
@@ -339,19 +365,16 @@ void GuiInputHandler::commit_trim_drag() {
         // pair's span may deform by up to one frame at release — an accepted
         // release-snap consequence (the constant-gap phrasing at TrimDragState
         // describes the mid-gesture active-domain motion).
-        // The map is the display context's own — identity in source view,
-        // the live cached map in target view: markers freeze a pre-drag map
-        // because a
-        // warp drag deforms it, but trim never enters
-        // build_target_view_warp_frame_map, so the live map is stable
-        // across the drag. The trim stems paint
-        // through the waveform cache's baked map (fp_warp_frame_map), which
-        // can LAG the live cache inside an async waveform-rebuild window
-        // (e.g. a trim grab immediately after a tempo commit); inside that
-        // window stored-equals-shown holds only transiently, converging when
-        // the rebuild lands — the same displayed-vs-live nuance
-        // route_trim_chip_press's hit test (against displayed_or_live_target_map)
-        // shares. The absolute walls
+        // The map is the DISPLAYED paint basis (displayed_or_live_target_map —
+        // identity in source view), the SAME map the trim stems paint through:
+        // the waveform cache's baked map (fp_warp_frame_map) is what the on-screen
+        // stems are drawn with, and displayed_or_live_target_map returns exactly
+        // that (falling back to the live cache only when cold), so the release
+        // column-snaps against WHAT IS PAINTED and stored equals shown even inside
+        // an async waveform-rebuild window (e.g. a trim grab immediately after a
+        // tempo commit) where the displayed map lags the live cache — the same
+        // displayed basis route_trim_chip_press's hit test and the drag mechanics
+        // above all read. The absolute walls
         // — both bounds 0..EOF-1, plain integer compares —
         // re-apply AFTER the snap so the walls win over the pixel grid and a
         // wall-clamped release rests exactly on its wall. Degenerate paint
@@ -361,7 +384,8 @@ void GuiInputHandler::commit_trim_drag() {
         const int sr = audio.sample_rate();
         if (sr > 0 && audio.total_frames() > 0 &&
             current_samples_per_pixel(app, audio) > 0.0) {
-            const auto& map = *active_display_context(app, audio).warp_frame_map;
+            const std::vector<WarpFrameMapSegment>& map =
+                displayed_or_live_target_map(app, audio);
             const auto snap_moved_bound = [&](int64_t& field, int64_t orig,
                                               int64_t wall) {
                 if (field == orig) return;  // untouched: bit-exact, no snap
