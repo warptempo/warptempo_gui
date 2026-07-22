@@ -519,6 +519,24 @@ bool MarkerDragOps::tempo_drag_eligible(int hit) const {
     // A zero-frame span (exact tie, legal at rest) makes the solve degenerate
     // everywhere — no tempo moves the image — so it never arms.
     if (mv[hit].time_frame - p.time_frame < 1) return false;
+    // A predecessor in a surviving coincident group owns no rendered segment:
+    // the resolver collapses every exact-frame run of 2+ effectively-enabled
+    // markers to ONE synthetic plain 1.00 owner, so rewriting the
+    // predecessor's tempo_cents would be render-inert (an undo entry and dirty
+    // state for zero image/audio motion). Reuse the normalization-red set as
+    // the test: it reddens (a) label-ref fallbacks, (b) passes inheriting from
+    // a ref, and (c) coincident-collapse members — but the payload checks
+    // above have ALREADY rejected pass and ref predecessors, so for the
+    // payload-OWNER predecessor here, red-set membership is EXACTLY the
+    // coincident-collapse condition. UX-coherent: a flag the user sees painted
+    // red never arms a tempo drag. Disabled-coincident stays armable — a
+    // disabled sibling drops from the enabled count before the collapse, so an
+    // enabled predecessor sharing a frame only with disabled markers keeps its
+    // real segment and is not red.
+    const std::set<int>& red = warp_red_flag_set_cached(
+        app, audio.sample_rate(),
+        static_cast<long>(audio.total_frames())).red;
+    if (red.count(hit - 1)) return false;
     return true;
 }
 

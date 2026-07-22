@@ -52,12 +52,15 @@ struct MarkerDragOps {
     // live store and re-warps synchronously, and the release only finalizes
     // (undo push + preview trigger on net change).
     //
-    // tempo_drag_eligible: pure store predicate — marker `hit` has a
+    // tempo_drag_eligible: store predicate — marker `hit` has a
     // predecessor (hit - 1 in the time-sorted store) that is an enabled tempo
-    // OWNER by its own authored payload and sits at least one source frame
+    // OWNER by its own authored payload, sits at least one source frame
     // earlier (an exact-tie predecessor spans zero source frames, so no tempo
     // can move the dragged marker's image — the solve is degenerate
-    // everywhere and the press stays a plain select).
+    // everywhere and the press stays a plain select), and is NOT a
+    // coincident-collapse member (a surviving exact-frame group of 2+ enabled
+    // markers resolves to one synthetic 1.00 owner, so the predecessor's
+    // authored tempo is render-inert — tested via the normalization-red set).
     bool tempo_drag_eligible(int hit) const;
     bool begin_tempo_drag(int hit);
     void apply_tempo_drag_motion(int mouse_x);

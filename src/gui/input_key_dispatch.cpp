@@ -597,6 +597,16 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         key == GuiKeys::I) {
         if (app.source_audio_path.empty()) return true;
         if (!app.iteration_mode_enabled) return true;
+        // Source-view only: the success tail below wipes every marker's iter
+        // bracket through wipe_iter_state (a warp-store authoring surface), so
+        // the dispatch is gated like the `i` toggle. A mode carried into T by
+        // the S->T toggle persists display-only — a target-view press is a
+        // consumed no-op (silent, the home-view refusal convention). Direct
+        // view compare, not active_column_authoring_allowed: the sweep acts on
+        // warp markers regardless of the active marker view (the dispatch never
+        // tested active_markers_view), so warp's home audio view is the whole
+        // gate.
+        if (app.active_audio_view != 'S') return true;
 
         // Dispatch validates nothing: the render worker's own resolve->build
         // chain is the tripwire surface (marker arrangements normalize to

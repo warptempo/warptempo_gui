@@ -742,7 +742,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         // owner-only Alt+Up/Down step), an Ableton-style
                         // stretch that rewrites the PREDECESSOR's tempo. An
                         // ineligible W+T press (first marker, non-owner
-                        // predecessor, zero-frame span —
+                        // predecessor, zero-frame span, or a coincident-
+                        // collapsed predecessor whose tempo is render-inert —
                         // marker_drag.tempo_drag_eligible), and the P column
                         // off ITS home (P view in source view), select and arm
                         // nothing — the silent read-only convention, marker

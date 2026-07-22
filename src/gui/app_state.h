@@ -409,8 +409,11 @@ struct PendingMarkerDrag {
 // binding's tempo exception (the keyboard half is the Alt+Up/Down step). The
 // press single-selects its marker (the click), verifies eligibility — the
 // marker has a predecessor in the time-sorted store that is an enabled tempo
-// OWNER by its own authored payload, at least one source frame earlier — and
-// arms this pending state; only past kMarkerDragMovedThresholdPx (the SAME
+// OWNER by its own authored payload, at least one source frame earlier, and
+// NOT a member of a surviving coincident group (whose collapse to one 1.00
+// owner makes its authored tempo render-inert — the same normalization-red set
+// the flag painter uses is the test) — and arms this pending state; only past
+// kMarkerDragMovedThresholdPx (the SAME
 // marker grab threshold the reposition drag uses) does begin_tempo_drag run
 // and the tempo-drag machinery take over. An ineligible press single-selects
 // and arms nothing (the silent read-only convention). Session-only, never
