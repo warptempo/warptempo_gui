@@ -402,8 +402,11 @@ void GuiInputHandler::cancel_active_drags() {
         // the gesture. Trim cancel restores the BOUNDS ONLY: a trim drag
         // never touches the playhead (no playhead-follow analog — trim
         // bounds are outside the selection system), so there is nothing to
-        // restore or resync there.
-        if (app.trim_drag.moved) {
+        // restore or resync there. R3: a bound-set-armed drag (set_click) also
+        // has the PRESS click-set to undo, so its restore runs UNCONDITIONALLY —
+        // orig_begin/orig_end are the pre-press pair, and even an unmoved drag
+        // must roll the click-set back to undo the whole gesture.
+        if (app.trim_drag.moved || app.trim_drag.set_click) {
             app.trim.begin_frame = app.trim_drag.orig_begin_frame;
             app.trim.end_frame   = app.trim_drag.orig_end_frame;
         }
@@ -478,12 +481,26 @@ void GuiInputHandler::cancel_active_drags() {
     if (app.pending_tempo_drag.active)
         app.pending_tempo_drag = PendingTempoDrag{};
     // A pending trim drag (a chip-row press whose drag never began) is just
-    // disarmed: the press mutated nothing — the trim-lane CLICK action (the
-    // R4.5 select+highlight sync) is deferred to the motionless release /
-    // lost-button paths, so an Esc here ABANDONS that deferred click rather
-    // than performing it, and there is nothing to revert.
-    if (app.pending_trim_drag.active)
-        app.pending_trim_drag = PendingTrimDrag{};
+    // disarmed: a PLAIN chip-drag pending mutated nothing — the trim-lane CLICK
+    // action (the R4.5 select+highlight sync) is deferred to the motionless
+    // release / lost-button paths, so an Esc here ABANDONS that deferred click
+    // rather than performing it, and there is nothing to revert. R3: a
+    // BOUND-SET-armed pending (set_click) already mutated a bound at the press,
+    // so an Esc undoes the whole gesture — restore the pre-press pair and re-sync
+    // the coupled highlight/selection to the rolled-back window.
+    if (app.pending_trim_drag.active) {
+        if (app.pending_trim_drag.set_click) {
+            app.trim.begin_frame = app.pending_trim_drag.preset_begin_frame;
+            app.trim.end_frame   = app.pending_trim_drag.preset_end_frame;
+            app.pending_trim_drag = PendingTrimDrag{};
+            viewport.invalidate_waveform_area();
+            viewport.invalidate_timestamp_area();
+            target_render.trigger();
+            sync_highlight_to_trim_window();
+        } else {
+            app.pending_trim_drag = PendingTrimDrag{};
+        }
+    }
 }
 
 // Render-trigger chords. See the declaration for the chord list.

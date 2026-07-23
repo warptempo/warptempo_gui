@@ -329,17 +329,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Esc cancels an in-flight render / queued batch.
     if (handle_escape_cancels(key)) return;
 
-    // Esc with no higher-priority consumer clears a resting region-select span.
-    // Placed LAST in the Esc chain: a live pointer drag (cancelled at the
-    // drag-modal gate above), an open editor (closed in the editor blocks
-    // above), and an in-flight render/batch (cancelled just above) each win.
-    // Region select is a transient visual, so this clear runs in read-only too
-    // (the read-only allowlist admits Esc).
-    if (key == GuiKeys::Escape && app.region.active) {
-        app.region = RegionState{};
-        viewport.invalidate_waveform_area();
-        return;
-    }
+    // R3 Esc ladder (architect 2026-07-23): the selection/region collapse rung,
+    // placed AFTER the higher-priority consumers — a live pointer drag (cancelled
+    // at the drag-modal gate above), an open editor (closed in the editor blocks
+    // above), and an in-flight render/batch (cancelled just above) each win — and
+    // in place of the old plain region clear. A singleton selection deselects +
+    // lands the playhead on the marker; a multi-select drops to the region at the
+    // selection extent + deselects; no selection with a live region collapses the
+    // region to its lo bound (clear + move the playhead there). All three are
+    // navigation-class, so this runs in read-only too (the allowlist admits Esc).
+    if (key == GuiKeys::Escape && handle_escape_selection_region()) return;
 
     // Ctrl+Q: quit (via unsaved-work dialog when dirty).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) {

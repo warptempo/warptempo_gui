@@ -994,71 +994,23 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         area.h
     };
     const TrimRange trim_struct{trim_begin, trim_end};
-    const int sr = audio.sample_rate();
 
-    // Target-view stems consume the displayed warp_frame_map (the one baked
-    // into the live waveform pixels), not a freshly-built one — keeps
-    // stem positions consistent with the displayed waveform during the
-    // worker's rebuild window.
-    const std::vector<WarpFrameMapSegment>* tmap_arg =
-        (is_target && !wf_cache.fp_warp_frame_map.empty())
-            ? &wf_cache.fp_warp_frame_map : nullptr;
-
-    // Drag overlay: pass through only when a drag is live. During a
-    // drag the fingerprint mismatches every tick on the drag-overlay
-    // hash alone (moveable_times[k] changes on every motion event), so
-    // this rebuild reads the live moveable_times each pass.
-    DragOverlay drag_overlay_storage;
-    const DragOverlay* drag_overlay = nullptr;
-    if (drag_active) {
-        drag_overlay_storage.indices = &app.drag.dragging_markers;
-        drag_overlay_storage.times   = &app.drag.moveable_times;
-        drag_overlay = &drag_overlay_storage;
-    }
-
-    // Trim boundary stems, painted in both 'W' and 'P' views. Positions are
-    // the displayed-domain trim frames (already translated); the has-set bits
-    // decide which stems draw. Painted BEFORE the regular marker stems so that
-    // where a trim bound and a regular marker share a column the regular stem
-    // (painted last on this shared surface) sits in front; the trim stem reads
-    // as "underneath," reachable by its chip.
+    // Trim boundary stems, painted in both 'W' and 'P' views — the ONLY stems the
+    // cache now carries. Positions are the displayed-domain trim frames (already
+    // translated); the has-set bits decide which stems draw. The MARKER stem is
+    // no longer cached: it became the HOVER-preview live overlay (paint_hover_stem
+    // — a per-frame, one-column paint over the plate, driven by the hovered marker
+    // rather than the selection; round 3, architect 2026-07-23), so a hover flick
+    // never rebuilds this cache. The marker-driven fingerprint keys
+    // (warp/phase generations, drag-overlay hash, drag-active, selection hash)
+    // survive above and merely over-invalidate this trim-only surface — harmless
+    // (two vertical lines re-render), and they still catch the displayed-trim
+    // changes those inputs can drive.
     render_trim_stems(
         ccr, local_area, vp_start, vp_end,
         trim_struct,
         trim_has_begin, trim_has_end,
         wf_cache.surface);
-
-    // The stem paints only for the active column's last-selected marker AND only
-    // when the selection is a SINGLETON (R6, architect 2026-07-23): a
-    // multi-select — e.g. a shift-range, a region drag, or the trim-bridge click
-    // — paints NO stem, so the lone stem no longer implies one anchor inside a
-    // larger set. The blue flag highlight still marks the whole selection
-    // (unchanged). The singleton gate collapses to -1 (which render_markers /
-    // render_phaseresetmarkers treat as "no stem") whenever the selection is
-    // empty or has 2+ members. last_selected_marker indexes the active column's
-    // list (it swaps with the column on W/P switch). Both the size and the
-    // last-selected index are folded into fp_selection_hash (hash_selection
-    // above), so the stem appears/disappears as the selection crosses the
-    // singleton boundary or last-selected moves within an unchanged singleton.
-    const int stem_last_selected =
-        (app.selected_markers.size() == 1) ? app.last_selected_marker : -1;
-    if (mv == 'P') {
-        const auto& list = app.phaseresetmarkers.markers();
-        render_phaseresetmarkers(
-            ccr, local_area, list,
-            vp_start, vp_end, sr,
-            stem_last_selected,
-            tmap_arg, drag_overlay,
-            wf_cache.surface);
-    } else {
-        const auto& list = app.warpmarkers.markers();
-        render_markers(
-            ccr, local_area, list,
-            vp_start, vp_end, sr,
-            stem_last_selected,
-            tmap_arg, drag_overlay,
-            wf_cache.surface);
-    }
 
     cairo_destroy(ccr);
 
@@ -1081,9 +1033,10 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
 
     // Event-synchronized hit geometry, STAGE phase: these OFFSCREEN stem pixels
     // just rebuilt, but the on-screen items change only when the paint pass
-    // blits this cache and commits the frame. So stage the map these stems baked
-    // (wf_cache.fp_warp_frame_map, the same map tmap_arg fed the painter, target
-    // view) or a clear (source view, mapless stems); on_redraw promotes it at
+    // blits this cache and commits the frame. So stage the displayed map
+    // (wf_cache.fp_warp_frame_map, the map the trim stems here and the flags are
+    // painted through, target view) or a clear (source view, mapless); on_redraw
+    // promotes it at
     // that committing frame. maybe_rebuild_flag_cache runs in the same tick and
     // stages the same value (both caches consume wf_cache.fp_warp_frame_map), so
     // this is a per-item stage, not a once-after-both site — last writer wins,

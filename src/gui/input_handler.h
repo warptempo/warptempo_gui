@@ -162,10 +162,12 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // steps, pans) — and the lower-half scrub press, which touches no region at
 // all. The plain upper-half waveform press (arm_region_drag_at) shares this
 // helper — same dissolve shape. The other pre-existing clear sites (Esc, file
-// load, Ctrl+Tab, and the S/T switch) keep their own in-place clears — Esc
-// weaves the reset into its key-guarded early return, and load / Ctrl+Tab /
-// S/T pair it with a domain flip or a full-window repaint rather than this
-// exact damage shape.
+// load, Ctrl+Tab, and the S/T switch) keep their own in-place clears — Esc's is
+// now the R3 ladder's item (c) (handle_escape_selection_region: with no
+// selection, a live region COLLAPSES TO ITS START — clear the region AND move
+// the playhead to its lo bound — rather than a plain clear), and load / Ctrl+Tab
+// / S/T pair the reset with a domain flip or a full-window repaint rather than
+// this exact damage shape.
 void clear_region_highlight(AppState& app, Viewport& viewport);
 
 // -- GuiInputHandler ----------------------------------------------------
@@ -742,6 +744,31 @@ private:
     // sync afterward. is_begin picks the bound: the ctrl chip-row click sets
     // begin, ctrl+shift sets end (R5).
     void set_trim_bound_at_click(bool is_begin, int mouse_x);
+
+    // The ctrl / ctrl+shift chip-row bound-set press (round 3, architect
+    // 2026-07-23): sets the bound at the clicked column (set_trim_bound_at_click,
+    // adjust-only + sync, above) AND, when the click-set kept a full writable
+    // pair, arms the single-bound trim drag on the just-set bound — so motion
+    // past the threshold drags it live exactly like a plain chip drag, while a
+    // motionless release rests the click-set as before. The PRE-PRESS pair is
+    // stashed in the pending so an Esc undoes the whole gesture (see
+    // PendingTrimDrag::set_click). Read-only / a missing pair / a crossed
+    // dissolve all leave nothing armed (the set itself already refused or
+    // dissolved). is_begin picks the bound (ctrl=begin, ctrl+shift=end).
+    void set_trim_bound_at_click_then_arm_drag(bool is_begin, int mouse_x,
+                                               int mouse_y);
+
+    // R3 Esc ladder (architect 2026-07-23): the selection/region collapse rung of
+    // the Escape chain — placed AFTER the drag / editor / render cancels and in
+    // place of the old plain region clear. Returns true iff it consumed the Esc:
+    //   singleton selection  -> deselect + land the playhead on the marker
+    //   multiple selection    -> rest the region at the selection extent, deselect
+    //   no selection, region  -> collapse the region to its lo bound (clear the
+    //                            region + move the playhead there)
+    // Defined in input_pointer.cpp beside land_playhead_on_marker /
+    // set_region_to_selection_extent (both file-local there). Navigation-class,
+    // read-only allowed.
+    bool handle_escape_selection_region();
 
     // One scrub ACT at an active-domain frame: kill-and-revive (architect
     // 2026-07-23 — scrub is not keep-alive but

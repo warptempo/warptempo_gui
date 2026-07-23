@@ -243,6 +243,55 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
 
 } // namespace
 
+// R3 Esc ladder (architect 2026-07-23): the selection/region collapse rung of
+// the Escape chain, placed after the drag / editor / render cancels and in place
+// of the old plain region clear. Defined here so it can reach the file-local
+// land_playhead_on_marker / set_region_to_selection_extent above. Returns true
+// iff it consumed the Esc. Navigation-class, read-only allowed.
+bool GuiInputHandler::handle_escape_selection_region() {
+    const size_t nsel = app.selected_markers.size();
+    if (nsel == 1) {
+        // (a) Singleton: deselect + land the playhead ON the marker. The
+        // playhead is usually already coincident (the re-coupling land put it
+        // there), so the land is a safety re-affirm; deselecting then flips the
+        // playhead form back to the green waveform focus. Land BEFORE the clear so
+        // the marker index is still resolvable.
+        const int idx = *app.selected_markers.begin();
+        land_playhead_on_marker(app, audio, viewport, idx);
+        selection.clear_selection();
+        // Full waveform damage: the deselect can un-show a wider WAVEFORM overlay
+        // than the playhead-column / top-strip damage above covers — the
+        // phase-reset lead-in overlay (P+target, a singleton-focus depiction that
+        // vanishes when the selection empties) and the hover-preview stem — so
+        // erase the whole plate span once.
+        viewport.invalidate_waveform_area();
+        return true;
+    }
+    if (nsel >= 2) {
+        // (b) Multiple: "drops to region". Ensure the region rests at the
+        // selection's [earliest, latest] extent (set_region_to_selection_extent
+        // requires 2+ and is idempotent when it already rests there — the
+        // click-made multi-selects already do), THEN deselect. The region
+        // survives the clear (clear_selection touches no region).
+        set_region_to_selection_extent(app, audio, viewport);
+        selection.clear_selection();
+        return true;
+    }
+    if (app.region.active) {
+        // (c) No selection, region active: the region COLLAPSES TO ITS START —
+        // the region is the stretched-out playhead, so collapsing lands the
+        // playhead at its lo bound. Clear the region and move the playhead there.
+        // Replaces today's plain region clear at the chain tail and applies to
+        // ALL regions (drag-formed included).
+        const int64_t lo = std::min(app.region.a_frame, app.region.b_frame);
+        app.region = RegionState{};
+        viewport.invalidate_waveform_area();
+        viewport.move_playhead_to(lo);
+        return true;
+    }
+    return false;
+}
+
 // One scrub ACT: kill-and-revive (architect 2026-07-23 — scrub is technically
 // not keep-alive but revive-if-needed-or-kill-and-revive). Every scrub act is
 // a FRESH session, never a positional seek inside the old one: a live session
@@ -827,7 +876,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             if (inside_top) {
                 const GuiRect chip_row = top_upper_row_area(app);
                 if (y >= chip_row.y && y < chip_row.y + chip_row.h) {
-                    set_trim_bound_at_click(/*is_begin=*/true, x);
+                    // R3: set the BEGIN bound AND arm the single-bound drag on it,
+                    // so motion drags it live (a motionless release rests the set).
+                    set_trim_bound_at_click_then_arm_drag(/*is_begin=*/true, x, y);
                     return;
                 }
             }
@@ -858,7 +909,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (ctrl && shift && !alt && inside_top) {
             const GuiRect chip_row = top_upper_row_area(app);
             if (y >= chip_row.y && y < chip_row.y + chip_row.h) {
-                set_trim_bound_at_click(/*is_begin=*/false, x);
+                // R3: set the END bound AND arm the single-bound drag on it.
+                set_trim_bound_at_click_then_arm_drag(/*is_begin=*/false, x, y);
                 return;
             }
         }
@@ -1707,9 +1759,26 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         const bool is_begin = app.pending_trim_drag.is_begin;
         const bool both     = app.pending_trim_drag.both;
         const int  press_x  = app.pending_trim_drag.press_x;
+        // R3: a bound-set-armed pending carries the PRE-PRESS pair — capture it
+        // before clearing the pending, so the drag's Esc-restore origin can undo
+        // the whole set+drag gesture.
+        const bool    set_click = app.pending_trim_drag.set_click;
+        const int64_t preset_begin = app.pending_trim_drag.preset_begin_frame;
+        const int64_t preset_end   = app.pending_trim_drag.preset_end_frame;
         app.pending_trim_drag = PendingTrimDrag{};
         begin_trim_drag(is_begin ? TrimHit::Begin : TrimHit::End, press_x, both);
         if (!app.trim_drag.active) return;  // begin refused (no pair / no audio)
+        if (set_click) {
+            // The drag BASE (orig_frame) stays the click-set value begin_trim_drag
+            // captured, so the bound tracks smoothly from the clicked column; only
+            // the Esc-restore origin (orig_begin/orig_end) moves back to the
+            // pre-press pair, so an Esc undoes the click-set too. set_click makes
+            // that restore unconditional (an unmoved drag still has the click-set
+            // to undo).
+            app.trim_drag.set_click        = true;
+            app.trim_drag.orig_begin_frame = preset_begin;
+            app.trim_drag.orig_end_frame   = preset_end;
+        }
         update_trim_drag(mouse_x);
         return;
     }

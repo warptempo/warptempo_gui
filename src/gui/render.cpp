@@ -133,96 +133,6 @@ void fill_column_ink_runs(cairo_t* cr, int dest_x, int dest_y, int area_h,
     cairo_fill(cr);
 }
 
-// Paints the LAST-SELECTED marker's stem, used by render_markers and
-// render_phaseresetmarkers. The stem is the last-selected marker's emphasis: it
-// paints for exactly `last_selected` (when valid, visible, and in this column's
-// list) and no other marker — the blue flag highlight still marks the whole
-// selection, but only its anchor grows a stem. The only meaningful difference
-// between the two callers is how visual-disability is computed: warp markers walk
-// the label_ref cascade via `effective_disabled`, phase resets read `disabled`
-// directly. That asymmetry is exposed here as a predicate `is_disabled(i)`;
-// everything else (viewport math, drag overlay, target translation, integer-pixel
-// snap) is identical for both marker kinds.
-//
-// The stem spans the WAVEFORM AREA ONLY (top at waveform_area.y, down to the
-// bottom) with no strip overhang — the flag+triangle structure above (a
-// separate cache surface) supplies the visual connection, its triangle tip
-// touching the stem's start. A DISABLED last-selected marker's stem is drawn as
-// a PLAIN dimmed line under kDisabledMarkerAlpha: the marker's triangle lives in
-// the flag structure now, so stem and triangle no longer share pixels and there
-// is no see-through class to guard against — the group/skip composite retired.
-template <typename MarkerVec, typename IsVisuallyDisabled>
-void render_marker_stems_impl(
-    cairo_t* cr,
-    GuiRect waveform_area,
-    const MarkerVec& markers,
-    long long viewport_start_sample,
-    long long viewport_end_sample,
-    int sample_rate,
-    int last_selected,
-    const std::vector<WarpFrameMapSegment>* warp_frame_map,
-    const DragOverlay* drag_overlay,
-    IsVisuallyDisabled&& is_disabled,
-    cairo_surface_t* ink_plate) {
-    if (waveform_area.w <= 0 || waveform_area.h <= 0) return;
-    if (viewport_end_sample <= viewport_start_sample) return;
-    if (sample_rate <= 0) return;
-    if (last_selected < 0 ||
-        last_selected >= static_cast<int>(markers.size())) return;
-
-    const double span = static_cast<double>(viewport_end_sample -
-                                            viewport_start_sample);
-    const double samples_per_pixel = span / static_cast<double>(waveform_area.w);
-    if (samples_per_pixel <= 0.0) return;
-
-    // Stem rises at the marker's pixel column and runs the full waveform area,
-    // top at waveform_area.y (where the flag structure's triangle tip touches)
-    // down to the waveform bottom.
-    const double y_stem_top = static_cast<double>(waveform_area.y);
-    const double y1 = static_cast<double>(waveform_area.y + waveform_area.h);
-
-    const int i = last_selected;
-    const auto& m = markers[i];
-    // Effective time: when a drag is active and this marker is in the overlay,
-    // read its proposed time from the overlay instead of the live store. The
-    // warp_frame_map passed in is the display cache's target map (stable for the
-    // drag's lifetime), the matching coordinate system for forward translation.
-    const double eff_time = drag_overlay
-        ? drag_overlay->effective_time(i, m.time_frame)
-        : m.time_frame;
-    // Translate per-marker source-frame to the displayed axis: map in target
-    // view (warp_frame_map non-null/non-empty), identity otherwise.
-    const double ms = frame_to_paint_sample(eff_time, warp_frame_map);
-    if (ms < static_cast<double>(viewport_start_sample)) return;
-    if (ms >= static_cast<double>(viewport_end_sample)) return;
-
-    const double x_raw =
-        (ms - static_cast<double>(viewport_start_sample)) / samples_per_pixel;
-    const int icol = static_cast<int>(std::nearbyint(x_raw));
-    const double x_px = waveform_area.x + icol + 0.5;
-    // The last-selected marker is by construction a member of the selection, so
-    // its stem color is always kSelected; a disabled one dims plainly.
-    const bool disabled = is_disabled(i);
-
-    cairo_save(cr);
-    cairo_set_line_width(cr, 1.0);
-    if (ink_plate) cairo_surface_flush(ink_plate);
-
-    if (disabled)
-        cairo_set_source_rgba(cr, kSelected.r, kSelected.g, kSelected.b,
-                              kDisabledMarkerAlpha);
-    else
-        cairo_set_source_rgb(cr, kSelected.r, kSelected.g, kSelected.b);
-    cairo_move_to(cr, x_px, y_stem_top);
-    cairo_line_to(cr, x_px, y1);
-    cairo_stroke(cr);
-    // The dark ink notch is painted at full opacity over the stem.
-    fill_column_ink_runs(cr, waveform_area.x, waveform_area.y,
-                         waveform_area.h, ink_plate, icol);
-
-    cairo_restore(cr);
-}
-
 // Fills and outlines ONE marker/phase-reset/trim flag SHAPE at `center_x` (the
 // item's pixel column). `anchor` places the rectangle relative to that column:
 // Center (markers/phase resets — straddles the column, may hang half offscreen)
@@ -636,31 +546,6 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col,
     cairo_restore(cr);
 }
 
-void render_markers(cairo_t* cr,
-                    GuiRect waveform_area,
-                    const std::vector<GuiWarpMarker>& markers,
-                    long long viewport_start_sample,
-                    long long viewport_end_sample,
-                    int sample_rate,
-                    int last_selected,
-                    const std::vector<WarpFrameMapSegment>* warp_frame_map,
-                    const DragOverlay* drag_overlay,
-                    cairo_surface_t* ink_plate) {
-    // Only the last-selected marker's stem lives on the waveform (stem-cache)
-    // surface now. Every marker's frame tick (its flag triangle) moved into the
-    // flag structure (flag cache, top strip), so the stem cache paints just the
-    // one stem. A disabled last-selected marker's stem dims plainly. The caller
-    // (maybe_rebuild_stem_cache) passes -1 for `last_selected` whenever the
-    // selection is not a SINGLETON (R6, architect 2026-07-23), so a multi-select
-    // paints no stem; here -1 simply means "no stem".
-    const auto is_disabled = [&](int i) { return effective_disabled(markers, i); };
-    render_marker_stems_impl(
-        cr, waveform_area, markers,
-        viewport_start_sample, viewport_end_sample,
-        sample_rate, last_selected, warp_frame_map,
-        drag_overlay, is_disabled, ink_plate);
-}
-
 void render_trim_stems(cairo_t* cr,
                        GuiRect waveform_area,
                        long long viewport_start_sample,
@@ -678,9 +563,9 @@ void render_trim_stems(cairo_t* cr,
     const double samples_per_pixel = span / static_cast<double>(waveform_area.w);
     if (samples_per_pixel <= 0.0) return;
 
-    // Same stem geometry as render_marker_stems_impl: the trim stem spans the
-    // waveform area, top at waveform_area.y (where its b/e chip's structure ends
-    // above) down to the waveform bottom.
+    // Stem geometry: the trim stem spans the waveform area, top at
+    // waveform_area.y (where its b/e chip's structure ends above) down to the
+    // waveform bottom — the same span the hover-preview marker stem uses.
     const double y_stem_top = static_cast<double>(waveform_area.y);
     const double y1 = static_cast<double>(waveform_area.y + waveform_area.h);
 
@@ -1367,28 +1252,6 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
 }
 
 // ---------- Phase reset marker rendering ----------
-
-void render_phaseresetmarkers(cairo_t* cr,
-                              GuiRect waveform_area,
-                              const std::vector<GuiPhaseResetMarker>& phase_resets,
-                              long long viewport_start_sample,
-                              long long viewport_end_sample,
-                              int sample_rate,
-                              int last_selected,
-                              const std::vector<WarpFrameMapSegment>* warp_frame_map,
-                              const DragOverlay* drag_overlay,
-                              cairo_surface_t* ink_plate) {
-    // Only the last-selected phase reset's stem lives on the waveform surface;
-    // every phase reset's frame tick (its flag triangle) moved into the flag
-    // structure (flag cache). A disabled last-selected stem dims plainly (the
-    // bool read directly — no cascade).
-    const auto is_disabled = [&](int i) { return phase_resets[i].disabled; };
-    render_marker_stems_impl(
-        cr, waveform_area, phase_resets,
-        viewport_start_sample, viewport_end_sample,
-        sample_rate, last_selected, warp_frame_map,
-        drag_overlay, is_disabled, ink_plate);
-}
 
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,

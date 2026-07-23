@@ -616,36 +616,11 @@ void render_strip_anchor_stem(cairo_t* cr,
                               int col,
                               cairo_surface_t* ink_plate = nullptr);
 
-// Draws the LAST-SELECTED marker's vertical 1-pixel stem across `waveform_area`
-// when its resolved sample falls inside [viewport_start_sample,
-// viewport_end_sample). The stem spans the WAVEFORM AREA ONLY — top at
-// `waveform_area.y`, bottom at the waveform bottom — with no strip overhang;
-// the flag+triangle structure in the top strip provides the visual connection
-// above, the triangle tip touching the stem's start at the waveform top edge.
-// The stem paints for exactly `last_selected` (the active column's anchor
-// index, or -1 for none) — no other marker grows a stem, though the blue flag
-// highlight still marks the whole selection. A stem paints kSelected; a
-// DISABLED last-selected marker's stem dims plainly under kDisabledMarkerAlpha
-// (the marker's triangle lives in the flag structure now, a separate surface,
-// so the stem and triangle no longer share pixels and no group composite is
-// needed). Effective disabled state is computed inline from the marker list (a
-// label reference inherits the disabled flag of its defining marker). The
-// out-of-trim sample-pixel dim (on_redraw's ATOP overlay, kWaveformDimmed) is
-// separate and does not touch stems.
-// `warp_frame_map` (default null) shifts marker positioning into the mapped
-// display domain (target view's live map): each marker's source-frame position
-// is run through `map_source_to_target` before viewport clipping and column
-// placement. Null warp_frame_map = identity.
-void render_markers(cairo_t* cr,
-                    GuiRect waveform_area,
-                    const std::vector<GuiWarpMarker>& markers,
-                    long long viewport_start_sample,
-                    long long viewport_end_sample,
-                    int sample_rate,
-                    int last_selected,
-                    const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
-                    const DragOverlay* drag_overlay = nullptr,
-                    cairo_surface_t* ink_plate = nullptr);
+// (The cached marker-stem renderers render_markers / render_phaseresetmarkers
+// are retired: the marker stem became a HOVER-preview live overlay,
+// GuiPaintHandler::paint_hover_stem, driven by the hovered marker rather than the
+// selection — round 3, architect 2026-07-23. The stem cache now carries only the
+// trim stems below.)
 
 // Draws the WAVEFORM-AREA portion of the trim begin/end boundary stems. Each set
 // bound (gated by `has_begin` / `has_end`) paints a 1px vertical stem at its
@@ -731,12 +706,11 @@ void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width);
 //   Red (in red_set):  fill kAccent,   outline kAccentOutline.
 //   Otherwise:         fill kMarker,   outline kMarkerOutline.
 // A DISABLED marker's whole shape (rect + triangle + outline) dims under
-// kDisabledMarkerAlpha, the same single disabled cue applied to its stem in
-// `render_markers`, applied on top of whichever color class. (Selection wins
+// kDisabledMarkerAlpha, applied on top of whichever color class. (Selection wins
 // the COLOR class over red, disablement owns the ALPHA.) Trim membership has no
 // effect on flags.
 //
-// `warp_frame_map`: same displayed-axis translation as render_markers (the
+// `warp_frame_map`: the displayed-axis translation the painters share (the
 // live map in target view). Shapes are collected in ascending painted-x order,
 // so in target view the occlusion z-order is applied against post-translation
 // positions. Painting is two reverse passes keyed on `selected_set` — selected
@@ -782,23 +756,6 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     int sample_rate,
     const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
     const DragOverlay* drag_overlay = nullptr);
-
-// Phase reset marker analogues. Same pixel layout as the warp
-// versions; the visual differences are which list is drawn (phase resets
-// instead of warp markers) and the supplied color set. `disabled` is taken
-// directly from each phase reset (no label-cascade like warp markers).
-// `last_selected` is the active column's anchor index (or -1), the sole marker
-// whose stem paints — same contract as render_markers.
-void render_phaseresetmarkers(cairo_t* cr,
-                              GuiRect waveform_area,
-                              const std::vector<GuiPhaseResetMarker>& phase_resets,
-                              long long viewport_start_sample,
-                              long long viewport_end_sample,
-                              int sample_rate,
-                              int last_selected,
-                              const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
-                              const DragOverlay* drag_overlay = nullptr,
-                              cairo_surface_t* ink_plate = nullptr);
 
 // The phase-reset flag is the same fixed shape as a warp flag (rectangle +
 // triangle centered on the column), textless. Color class: selected fill

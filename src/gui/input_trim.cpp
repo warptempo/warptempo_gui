@@ -189,6 +189,12 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
     app.trim_drag.is_begin     = is_begin;
     app.trim_drag.both         = both;
     app.trim_drag.moved        = false;
+    // Default: a plain chip drag. The bound-set crossing (input_pointer.cpp)
+    // sets this true AND overrides orig_begin/orig_end to the pre-press pair
+    // AFTER this call, so an Esc undoes the click-set too (R3). Reset here so a
+    // prior gesture's value can never leak (the struct is also fully reset at
+    // every drag end, so this is belt-and-braces).
+    app.trim_drag.set_click    = false;
     app.trim_drag.orig_frame = is_begin ? app.trim.begin_frame
                                           : app.trim.end_frame;
     app.trim_drag.orig_begin_frame = app.trim.begin_frame;
@@ -527,6 +533,39 @@ void GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     // The lane-click coupling: keep the highlight + selection agreeing with the
     // window (both bounds -> window; a dissolved/lone result -> cleared).
     sync_highlight_to_trim_window();
+}
+
+// Round 3 (architect 2026-07-23): the ctrl / ctrl+shift chip-row bound-set press
+// sets the bound at the click AND arms the single-bound trim drag on it, so
+// motion past the threshold drags it live (a motionless release rests the
+// click-set). Snapshot the PRE-PRESS pair first so an Esc undoes the whole
+// gesture — the click-set included — via the pending's preset_* -> the drag's
+// orig_* Esc-restore origin (see PendingTrimDrag / TrimDragState set_click). The
+// set itself owns the read-only / missing-pair refusal; the drag arms only when
+// the set kept a full writable pair.
+void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
+                                                            int mouse_x,
+                                                            int mouse_y) {
+    const bool had_pair    = app.trim.has_begin && app.trim.has_end;
+    const int64_t pre_begin = app.trim.begin_frame;
+    const int64_t pre_end   = app.trim.end_frame;
+    set_trim_bound_at_click(is_begin, mouse_x);
+    // Arm only when a full writable pair survived the set: read-only / a missing
+    // pair set nothing (had_pair false OR the set refused), and a crossed
+    // click-set dissolved both bounds (auto_clear_crossed_trim) leaving nothing
+    // to drag.
+    if (!had_pair) return;
+    if (active_view_state(app).read_only) return;
+    if (!(app.trim.has_begin && app.trim.has_end)) return;  // crossed -> dissolved
+    app.pending_trim_drag = PendingTrimDrag{};
+    app.pending_trim_drag.active            = true;
+    app.pending_trim_drag.is_begin          = is_begin;
+    app.pending_trim_drag.both              = false;
+    app.pending_trim_drag.press_x           = mouse_x;
+    app.pending_trim_drag.press_y           = mouse_y;
+    app.pending_trim_drag.set_click         = true;
+    app.pending_trim_drag.preset_begin_frame = pre_begin;
+    app.pending_trim_drag.preset_end_frame   = pre_end;
 }
 
 // Plain chip-row press trim routing — the sole pointer route into a trim drag.

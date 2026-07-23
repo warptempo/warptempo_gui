@@ -484,6 +484,13 @@ private:
     void paint_region_wash(cairo_t* cr, const GuiRect& area);
     void paint_phase_reset_overlay(cairo_t* cr, const GuiRect& area);
     void paint_marker_stems(cairo_t* cr, const GuiRect& marker_paint_rect);
+    // Hover-preview stem (round 3): a per-frame live overlay marking the HOVERED
+    // marker's column — "where the playhead would go if this marker is clicked".
+    // Driven by app.hover_popup.marker_index (the unified hover identity, both
+    // columns), independent of selection; painted grey through render_playhead's
+    // line-only form over the plate, out of the stem cache so a hover flick never
+    // rebuilds a cache.
+    void paint_hover_stem(cairo_t* cr, const GuiRect& area);
     void paint_playheads(cairo_t* cr, const GuiRect& area);
     void paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr, int sr);

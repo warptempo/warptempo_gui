@@ -356,6 +356,15 @@ void GuiPaintHandler::paint_phase_reset_overlay(
     // downstream is domain-agnostic.
     if (app.active_markers_view != 'P') return;
     if (area.w <= 0 || area.h <= 0) return;
+    // R3 suppression (architect 2026-07-23): the overlay depicts ONE focused
+    // reset's lead-in, a single-focus authoring aid. Suppress it when the state
+    // is about a SPAN rather than a single focus — a MULTI-select (2+ members) or
+    // an active region — where the overlay would clutter. (A singleton or empty
+    // selection with no region shows it as before; the states that toggle these
+    // conditions — the multi-select builders and every region former/clear — all
+    // damage the waveform, so the overlay's appear/disappear rides their damage.)
+    if (app.selected_markers.size() >= 2) return;
+    if (app.region.active) return;
 
     // Paint sample: the exact expression render.cpp's file-local
     // frame_to_paint_sample uses, so marker and overlay can never disagree.
@@ -491,6 +500,72 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr,
         cairo_paint(cr);
         cairo_restore(cr);
     }
+}
+
+// -- GuiPaintHandler::paint_hover_stem -----------------------------------
+
+// Hover-preview stem (round 3, architect 2026-07-23): the stem is a HOVER
+// PREVIEW ("where the playhead would go if this marker is clicked"), not a
+// selection decoration. It paints for the HOVERED marker only
+// (app.hover_popup.marker_index — the unified hover identity marker_hit_at
+// resolves, flag shape OR lane run), on whichever column is active (warp in W,
+// phase reset in P), regardless of the selection. It lives OUT of the stem cache
+// (which keys on selection) as a per-frame one-column overlay over the plate, so
+// a hover flick never rebuilds a cache; the stem cache now carries only the trim
+// stems. Hover is suppressed during every pointer gesture
+// (recompute_hover_at_cursor), so no preview stem shows mid-drag. Painted grey
+// (kPlayheadCursorFocusGrey — the marker-lane-focus playhead colour, so it
+// previews exactly the grey playhead a click lands; deliberately NOT the
+// selection blue) through render_playhead's line-only form (draw_triangle=false,
+// draw_line=true), which is the playhead-line pattern with the plate ink-notch
+// two-tone. Disabled markers are NOT dimmed here (the dimmed flag already conveys
+// disablement; the stem is a positional preview). The displayed paint basis
+// (fp_vp_start + disp_spp + the displayed map) matches paint_playheads / the
+// cached flags, so the stem lands on the flag's own column.
+void GuiPaintHandler::paint_hover_stem(cairo_t* cr, const GuiRect& area) {
+    if (area.w <= 0 || area.h <= 0) return;
+    const int idx = app.hover_popup.marker_index;
+    if (idx < 0) return;
+
+    int64_t frame = 0;
+    if (app.active_markers_view == 'P') {
+        const auto& pv = app.phaseresetmarkers.markers();
+        if (idx >= static_cast<int>(pv.size())) return;
+        frame = pv[idx].time_frame;
+    } else {
+        const auto& mv = app.warpmarkers.markers();
+        if (idx >= static_cast<int>(mv.size())) return;
+        frame = mv[idx].time_frame;
+    }
+
+    const double disp_spp = wf_cache.fp_area_w > 0
+        ? static_cast<double>(wf_cache.fp_vp_end - wf_cache.fp_vp_start) /
+          static_cast<double>(wf_cache.fp_area_w)
+        : current_samples_per_pixel(app, audio);
+    if (disp_spp <= 0.0) return;
+    const double vp_start = static_cast<double>(wf_cache.fp_vp_start);
+
+    // Forward-map the source frame to the displayed axis (identity in source
+    // view), the same shape render.cpp's frame_to_paint_sample uses.
+    double ms = std::nearbyint(static_cast<double>(frame));
+    if (app.active_audio_view == 'T') {
+        const std::vector<WarpFrameMapSegment>& dmap =
+            displayed_or_live_target_map(app, audio);
+        if (!dmap.empty()) {
+            const size_t q = frame < 0 ? static_cast<size_t>(0)
+                                       : static_cast<size_t>(frame);
+            ms = std::nearbyint(map_source_to_target(q, dmap));
+        }
+    }
+    const double px_x = (ms - vp_start) / disp_spp;
+
+    // render_playhead draws only the 1px line + plate ink-notch here
+    // (draw_triangle=false), which is exactly the stem; it column-culls px_x
+    // itself, so a stem off the visible strip paints nothing.
+    render_playhead(cr, area, px_x, kPlayheadCursorFocusGrey,
+                    /*draw_triangle=*/false,
+                    /*draw_line=*/true,
+                    /*ink_plate=*/wf_cache.surface);
 }
 
 // -- GuiPaintHandler::paint_strip_drag_anchor ----------------------------
@@ -866,6 +941,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // then the stems paint on top so the focused stem stays crisp.
             paint_phase_reset_overlay(cr, area);
             paint_marker_stems(cr, marker_paint_rect);
+            // Hover-preview stem over the plate + trim stems, under the flags and
+            // the playhead (round 3): the hovered marker's column, live per-frame
+            // (not cached).
+            paint_hover_stem(cr, area);
         }
 
         if (rects_intersect(exposed, top_strip)) {

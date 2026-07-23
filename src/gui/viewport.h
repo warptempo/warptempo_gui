@@ -183,6 +183,12 @@ struct Viewport {
     void invalidate_waveform_area();
     void invalidate_timestamp_area();
     void invalidate_playhead_columns(double old_px, double new_px);
+    // R3 hover-stem damage: the hover-preview stem (paint_hover_stem) is a live
+    // WAVEFORM overlay, but a hover change only damages the top strip / timestamp.
+    // Damage the given active-column marker's stem column (waveform height) so a
+    // hover moving between markers, or on/off one, repaints the stem instead of
+    // stranding a stale one. No-op when idx < 0 or the column is offscreen.
+    void invalidate_hover_stem_column(int idx, int64_t source_frame);
     void invalidate_top_strip();
     void invalidate_all();
 

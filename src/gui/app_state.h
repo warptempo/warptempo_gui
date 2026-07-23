@@ -528,6 +528,17 @@ struct PendingTrimDrag {
     bool both     = false;  // the inter-chip bridge (pair) drag
     int  press_x  = 0;      // press position (window px): the gate + begin anchor
     int  press_y  = 0;
+    // A bound-set-armed pending (a ctrl / ctrl+shift chip-row press): the press
+    // ALREADY set one bound at the clicked column (set_trim_bound_at_click, with
+    // its sync), then armed this pending so motion past the threshold drags the
+    // just-set bound live. preset_*_frame hold the PRE-PRESS pair so an Esc undoes
+    // the WHOLE gesture — the click-set included — not just the drag delta: the
+    // crossing copies them into TrimDragState::orig_*_frame (the Esc-restore
+    // origin), and a still-pending Esc restores them directly. False for a plain
+    // chip-drag pending, which mutated nothing at press.
+    bool    set_click          = false;
+    int64_t preset_begin_frame = 0;
+    int64_t preset_end_frame   = 0;
 };
 
 // Trim boundary drag (the live trim pointer gesture). Armed from a PendingTrim-
@@ -565,6 +576,14 @@ struct TrimDragState {
     int64_t orig_begin_frame   = 0;
     int64_t orig_end_frame     = 0;
     int64_t anchor_active_frame  = 0;
+    // This drag began from a bound-set chip-row press (ctrl / ctrl+shift): the
+    // press mutated a bound BEFORE the drag, so orig_begin/orig_end were
+    // overridden to the PRE-PRESS pair and an Esc-cancel restores them
+    // UNCONDITIONALLY (even an unmoved drag has the click-set to undo), unlike a
+    // plain chip drag whose restore is meaningful only when it moved. orig_frame
+    // (the single-bound drag base) stays the click-set value so the drag tracks
+    // smoothly from the clicked column.
+    bool    set_click            = false;
 };
 
 // Dual-axis zoom/pan drag (Ableton-style navigation), armed by TWO surfaces: a

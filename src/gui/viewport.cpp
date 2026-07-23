@@ -88,6 +88,27 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
     }
 }
 
+void Viewport::invalidate_hover_stem_column(int idx, int64_t source_frame) {
+    if (idx < 0) return;
+    if (audio.total_frames() <= 0) return;
+    const GuiRect area = waveform_area(app);
+    if (area.w <= 0) return;
+    // The stem's column, the painters' own math over the displayed map (live
+    // viewport — equal to the displayed viewport whenever hover shows, at rest).
+    const int col = painted_column_of_source_frame(
+        app, audio, static_cast<double>(source_frame),
+        displayed_or_live_target_map(app, audio));
+    if (col < 0 || col >= area.w) return;
+    // A narrow full-waveform-height band around the 1px stem (+AA slack).
+    constexpr int kStemPad = 2;
+    int x0 = area.x + col - kStemPad;
+    int x1 = area.x + col + kStemPad + 1;
+    if (x0 < area.x)              x0 = area.x;
+    if (x1 > area.x + area.w)     x1 = area.x + area.w;
+    if (x1 <= x0) return;
+    gui.invalidate_region(x0, area.y, x1 - x0, area.h);
+}
+
 // move_playhead_to: update playhead, keep viewport so playhead stays
 // visible. Invalidate only what changed. Clamps to the full audio
 // range; trim is purely cosmetic so the playhead is free to sit in
@@ -562,11 +583,17 @@ void Viewport::follow_scroll_if_needed() {
 // readout) so the next paint erases whichever was up. Safe to call from any path.
 void Viewport::clear_hover_popup() {
     const bool was_visible = app.hover_popup.any_visible();
+    // R3: erase the hover-preview stem (a live WAVEFORM overlay) when a hovered
+    // marker is being cleared — the top-strip damage below does not reach it.
+    // Captured before the reset; a no-op when nothing was hovered / offscreen.
+    const int     old_hover_idx   = app.hover_popup.marker_index;
+    const int64_t old_hover_frame = app.hover_popup.source_frame;
     app.hover_popup = HoverPopupState{};
     if (was_visible) {
         invalidate_top_strip();
         invalidate_timestamp_area();
     }
+    invalidate_hover_stem_column(old_hover_idx, old_hover_frame);
 }
 
 // Re-evaluate hover at the cursor's last on_motion coordinates. The single
@@ -641,6 +668,11 @@ void Viewport::recompute_hover_at_cursor() {
     if (hit == app.hover_popup.marker_index && !cache_invalidated) return;
 
     const bool was_visible = app.hover_popup.any_visible();
+    // R3 hover-stem damage inputs: the OLD hovered marker (its column loses its
+    // preview stem) captured before apply_hit overwrites the cache. The NEW
+    // column is damaged after settling below.
+    const int     old_hover_idx   = app.hover_popup.marker_index;
+    const int64_t old_hover_frame = app.hover_popup.source_frame;
 
     // Recompose both surfaces from a hit index INTO the live hover cache.
     // current_marker_lane_run serves exactly this cached run as its Tier-1 hover
@@ -732,4 +764,12 @@ void Viewport::recompute_hover_at_cursor() {
         invalidate_top_strip();
         invalidate_timestamp_area();
     }
+    // R3: the hover-preview stem lives in the WAVEFORM, which the top-strip damage
+    // above does not cover. Damage the OLD hovered marker's stem column (it loses
+    // its stem) and the NEW one's (it gains it) — no-ops when either is absent or
+    // offscreen. A pure motion within one marker's rect (old == new, both frames
+    // equal) redundantly damages the same column once; harmless.
+    invalidate_hover_stem_column(old_hover_idx, old_hover_frame);
+    invalidate_hover_stem_column(app.hover_popup.marker_index,
+                                 app.hover_popup.source_frame);
 }
