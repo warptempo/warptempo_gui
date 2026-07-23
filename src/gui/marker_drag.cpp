@@ -183,9 +183,11 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     d.pre_drag_selection = capture_selection_snapshot(app);
     // Playhead follows the GRABBED marker (see the ruling at DragState): a
     // single-marker press already landed the playhead on it; a group member's
-    // deferred press did not, so the first motion's focus + follow tows it onto
-    // the grabbed marker. Either way the pre-ride capture feeds the Esc-cancel
-    // restore (always applied).
+    // deferred press did not, so the mid-motion follow (apply_drag_motion) and
+    // commit_drag's unconditional land put the playhead on the grabbed marker
+    // (the crossing's focus transfer just below makes focus == grabbed from the
+    // outset). Either way the pre-ride capture feeds the Esc-cancel restore
+    // (always applied).
     d.pre_ride_playhead_sample = app.playhead_cursor_sample;
     // Region as it rests at grab, for the Esc-cancel restore. Only a group drag
     // can capture an ACTIVE region here — a single-marker press landed the
@@ -195,6 +197,32 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // group's extent; commit_drag re-derives it from the post-commit store.
     d.pre_drag_region = app.region;
     app.drag = std::move(d);
+    // Focus transfer at the THRESHOLD CROSSING, unconditionally (was: the first
+    // MOVED motion in apply_drag_motion). It MUST run after every pre-drag
+    // capture above — pre_drag_last_selected, pre_drag_selection,
+    // pre_ride_playhead_sample, pre_drag_region all record the PRE-transfer state
+    // so Esc and the undo hint restore the selection/focus/playhead/region the
+    // gesture started from — and after app.drag = std::move(d) so it mutates the
+    // live selection, not the moved-from local. A threshold-crossed drag is a
+    // REAL drag whether or not the walls let any proposal move, and commit_drag
+    // lands the playhead on the grabbed member regardless of net change; so "a
+    // real drag focuses the grabbed marker" belongs here, not behind
+    // any_changed. Behind any_changed a WALL-SATURATED drag (the shared delta
+    // clamps every proposal to a no-op — e.g. the focused member at the EOF wall,
+    // or the grabbed-only viewport clamp saturated) would never fire the transfer,
+    // stranding focus on the pre-drag marker while the playhead lands on the
+    // grabbed one, so the next nudge would tow the playhead off it. A
+    // single-marker drag re-asserts the single selection (a no-op — the arming
+    // press already single-selected and landed); a GROUP drag focuses the grabbed
+    // marker WITHOUT collapsing membership (focus_without_collapse — sets
+    // last_selected + dissolves the shift anchor, no size crossing so no size-2
+    // overlay damage), so the whole group stays selected and the lane-text run /
+    // bottom readout track the grabbed member.
+    if (app.drag.dragging_markers.size() <= 1) {
+        selection.set_single_selection(hit);
+    } else {
+        selection.focus_without_collapse(hit);
+    }
     viewport.clear_hover_popup();
     return true;
 }
@@ -292,25 +320,15 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         any_changed = true;
     }
     if (any_changed) {
-        const bool first_motion = !app.drag.moved;
         app.drag.moved = true;
-        // Selection focus on the press-to-motion edge. A SINGLE-marker drag
-        // re-asserts the single selection on the grabbed marker (normally a
-        // no-op — the arming press already single-selected it — kept here so
-        // the "a real drag focuses the grabbed marker" rule stays with the drag
-        // machinery). A GROUP drag must NOT collapse the multi-selection;
-        // instead it FOCUSES the grabbed marker without touching membership
-        // (Selection::focus_without_collapse — sets last_selected + dissolves
-        // the shift anchor, no size crossing so no size-2 overlay damage), so
-        // the whole group stays selected and the lane-text run / bottom readout
-        // track the grabbed member.
-        if (first_motion) {
-            if (app.drag.dragging_markers.size() <= 1) {
-                selection.set_single_selection(app.drag.hit_marker);
-            } else {
-                selection.focus_without_collapse(app.drag.hit_marker);
-            }
-        }
+        // Focus transfer to the grabbed marker no longer lives here: it runs at
+        // the THRESHOLD CROSSING in begin_drag, unconditionally. A wall-saturated
+        // drag (the group's shared delta clamps every proposal to a no-op — e.g.
+        // the focused member sits at the EOF wall) leaves any_changed false and
+        // would never reach this block, yet it is a real drag that commit lands
+        // the playhead for; deferring the focus to the first MOVED motion would
+        // strand focus on the pre-drag marker while the playhead lands on the
+        // grabbed one. See begin_drag.
         // Playhead follows the marker, mid-motion: slide the resting cursor
         // playhead to the GRABBED marker's live proposed position
         // (moveable_times[grabbed_k] — [0] for a single-marker drag). Target
@@ -386,9 +404,11 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 // marker UNCONDITIONALLY (architect 2026-07-23, reversing the 2026-07-20
 // decoupling) — the grabbed member (grabbed_k) is the follow / land target.
 // For a single-marker drag the arming click already landed the playhead on it;
-// for a GROUP drag the deferred press did not, so the drag's first motion tows
-// the playhead onto the grabbed member — either way it lands with the grabbed
-// marker here, so a later Space auditions FROM it. Every marker click is a land
+// for a GROUP drag the deferred press did not, so the mid-motion follow tows the
+// playhead onto the grabbed member — and this land runs regardless of net change
+// (a wall-saturated drag never towed it), so either way the playhead lands with
+// the grabbed marker here, matching its focus (transferred at the crossing in
+// begin_drag), and a later Space auditions FROM it. Every marker click is a land
 // route; Tab and `c` additionally recenter / re-zoom. The lead-in workflow
 // (parking the playhead upstream) is supplied by the coming scrub surface
 // instead.
@@ -877,8 +897,10 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     app.tempo_drag.moved = true;
     // First committed step: re-assert the single selection on the dragged
     // marker (normally a no-op — the arming press already single-selected
-    // it), the reposition drag's first-motion rule kept with the drag
-    // machinery.
+    // it). The tempo drag keeps its focus re-assert at the first COMMITTED
+    // step (this gesture is single-marker only, always the grabbed marker);
+    // the reposition drag now does its equivalent transfer at the threshold
+    // crossing in begin_drag instead.
     if (first_commit) selection.set_single_selection(mi);
     // Synchronous re-warp, exactly adjust_tempo_cents' target-view tail:
     // kick_waveform_sync reclamps zoom/viewport first (a tempo change moves

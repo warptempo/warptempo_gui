@@ -28,8 +28,9 @@ struct Selection {
     // Focus a marker WITHOUT changing membership: set it as last_selected and
     // dissolve the shift-range anchor (the selection-mutator anchor rule),
     // damaging the top strip + timestamp for the lane-text run / readout. The
-    // group marker drag's first motion uses this so the grabbed marker becomes
-    // the focus while the whole selection stays selected. No size crossing
+    // group marker drag uses this at the threshold crossing (begin_drag) so the
+    // grabbed marker becomes the focus while the whole selection stays selected.
+    // No size crossing
     // happens (membership untouched), so no focus-flip / size-2 overlay damage
     // is needed here.
     void focus_without_collapse(int idx);

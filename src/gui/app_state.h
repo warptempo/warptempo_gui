@@ -120,8 +120,9 @@ struct UndoEntry {
     std::vector<int>          touched_live;
 };
 
-// The marker selection state a marker drag's first-motion collapse rewrites,
-// captured wholesale at drag begin and restored wholesale at cancellation —
+// The marker selection state a marker drag's threshold-crossing focus transfer
+// rewrites, captured wholesale at drag begin (before that transfer) and restored
+// wholesale at cancellation —
 // one struct so a future selection field cannot be forgotten in one of the
 // copies (the per-field enumeration was the recurring leak). Moved only by
 // capture_selection_snapshot / restore_selection_snapshot (declared below
@@ -253,10 +254,11 @@ struct DragState {
     // 2026-07-20 decoupling): a single-marker arming click LANDS the playhead on
     // the grabbed marker (source_frame_to_active_domain then
     // clamp_playhead_to_live_domain), so it is coincident by construction; a
-    // group drag's deferred press does not land, so the first motion tows the
-    // playhead onto the grabbed member. Either way the drag tows it
-    // UNCONDITIONALLY — it stays on the grabbed marker through the motion so a
-    // later Space auditions FROM it. The lead-in workflow (parking
+    // group drag's deferred press does not land, so the mid-motion follow and
+    // commit_drag's unconditional land tow the playhead onto the grabbed member
+    // (the crossing focuses it from the outset). Either way the drag tows it
+    // UNCONDITIONALLY — it lands on the grabbed marker so a later Space auditions
+    // FROM it. The lead-in workflow (parking
     // the playhead upstream to audition the approach) that the decoupling
     // served is supplied by the scrub surface instead. Only the RESTING
     // cursor playhead moves — move_playhead_to writes the cursor field only, so
@@ -267,8 +269,10 @@ struct DragState {
     // Index of the marker whose flag press started the drag — the GRAB
     // reference for the whole gesture: the delta anchor, the playhead-follow /
     // land target, and (single-marker drag) the marker re-asserted as the
-    // single selection at first motion. A group drag focuses it without
-    // collapsing the membership (apply_drag_motion's first-motion arm).
+    // single selection at the THRESHOLD CROSSING (begin_drag). A group drag
+    // focuses it there without collapsing the membership. The transfer runs at
+    // the crossing, not at first moved motion, so a wall-saturated drag (no
+    // proposal moves) still focuses what it grabbed.
     int                    hit_marker           = -1;
     // hit_marker's SLOT in the parallel drag vectors (dragging_markers /
     // original_times / moveable_times), found by a linear scan at begin_drag.
@@ -534,8 +538,9 @@ struct TempoDragState {
     bool active      = false;
     // Latched at the first store write; end_tempo_drag needs no motion gate
     // (the store compare against grab_cents is the net-change test) but the
-    // first write re-asserts the single selection, mirroring the reposition
-    // drag's first-motion rule.
+    // first write re-asserts the single selection (the tempo drag is
+    // single-marker, so this stays at the first committed step; the reposition
+    // drag's equivalent transfer moved to the threshold crossing in begin_drag).
     bool moved       = false;
     int  marker      = -1;   // dragged warp marker
     int  predecessor = -1;   // the owner being rewritten (the GROUP's
