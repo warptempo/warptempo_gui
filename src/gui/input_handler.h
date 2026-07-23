@@ -147,10 +147,11 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // cursor playhead, so a parked highlight would hide the cursor at its new
 // position. Call sites: jump_playhead_to_focused_marker (the whole Tab family
 // plus `c` through the one tail), run_zoom_toggle_command (bare `0`), the bare
-// Left/Right playhead scrub, Home/End (the trim-bound jumps), the plain
-// marker-click land, and the ctrl toggle-REMOVE (which does not land, so it
-// calls this directly — every marker interaction drops the region under the
-// mutual-exclusivity rule). DELIBERATELY NOT cleared: the region Space launch (the
+// Left/Right playhead scrub, Home/End (the trim-bound jumps), the marker-click
+// land (plain / shift-range / ctrl toggle, all landing through
+// land_playhead_on_marker), and the ctrl toggle that EMPTIES the selection
+// (which lands nothing, so it calls this directly — every marker interaction
+// drops the region under the mutual-exclusivity rule). DELIBERATELY NOT cleared: the region Space launch (the
 // region IS the launch point there), the nudge/drag playhead follow, marker
 // drops (`s`/Alt+S), undo/redo, and pure viewport moves (PageUp/PageDown, zoom
 // steps, pans) — and the lower-half scrub press, which touches no region at

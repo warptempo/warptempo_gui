@@ -534,12 +534,15 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     // stop playback first. Playhead rule (architect 2026-07-23, reversing the
     // 2026-07-20 decoupling): the playhead FOLLOWS the focused marker through
     // the nudge — it steps with it so a later Space auditions FROM the marker.
-    // Most focus routes land the playhead on the marker already (a plain /
-    // shift-range / ctrl-add marker click, Tab, `c`); a focus set WITHOUT a
-    // land — a Ctrl+click toggle-REMOVE (focus repaired to another selected
-    // marker), undo/redo's touched-set selection — is towed onto the marker by
-    // the first nudge. The lead-in workflow (parking the playhead upstream to audition the approach)
-    // is supplied by the coming scrub surface instead.
+    // Some focus routes land the playhead on the FOCUSED marker already (a plain
+    // single-select marker click, Tab, `c`); a focus set whose land went
+    // ELSEWHERE or nowhere — a shift-range / ctrl marker click (which lands at
+    // the earliest SELECTED marker, diverging from the clicked focus unless it
+    // is the earliest; architect 2026-07-23), a Ctrl+click toggle-REMOVE (focus
+    // repaired to another selected marker), undo/redo's touched-set selection —
+    // is towed onto the focused marker by the first nudge. The lead-in workflow
+    // (parking the playhead upstream to audition the approach) is supplied by the
+    // coming scrub surface instead.
     playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;

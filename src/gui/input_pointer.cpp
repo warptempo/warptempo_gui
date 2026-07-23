@@ -153,8 +153,10 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // LANDS the playhead exactly onto marker `hit` (active column's store), with
 // NO viewport move — the sole difference from Tab (which recenters) and `c`
 // (which re-zooms and recenters), so the view holds perfectly still while the
-// playhead seats. Shared by the plain marker click, the shift range click, and
-// the ctrl toggle-ADD (a toggle-remove does NOT land). The two-step placement
+// playhead seats. Shared by the plain marker click (lands on ITS marker), the
+// shift range click, and the ctrl toggle click (both land at the EARLIEST
+// selected marker, `hit` = *selected_markers.begin(); an empty post-toggle
+// selection lands nothing). The two-step placement
 // basis the Tab family lands with (source_frame_to_active_domain then
 // clamp_playhead_to_live_domain), against the active column's store, so the
 // placement is exactly coincident for a subsequent nudge/drag ride. Direct
@@ -557,9 +559,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // marker-click branches (plain = single-select + land the playhead on
         // the marker + double-click seed / consume + arm the pending marker
         // drag on the flag part, Shift = file-manager inclusive RANGE select
-        // from the shift-held anchor to the clicked marker + land, Ctrl = the
-        // individual membership toggle + land-on-add), so it is resolved once
-        // here.
+        // from the shift-held anchor to the clicked marker + land at the
+        // earliest selected, Ctrl = the individual membership toggle + land at
+        // the earliest selected), so it is resolved once here.
         // The editor lifecycle block above already closed any open flag editor,
         // so the lane run this resolves is the committed (non-editor) run. The
         // WAVEFORM never SELECTS a marker — a plain press splits by half
@@ -608,8 +610,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         }
 
         // Ctrl-exact left press splits by surface. On a top-strip MARKER it is
-        // the individual membership toggle + land-on-add (the marker claim
-        // below). On the WAVEFORM it arms the dual-axis strip drag — the SAME
+        // the individual membership toggle + land at the earliest selected (the
+        // marker claim below). On the WAVEFORM it arms the dual-axis strip drag — the SAME
         // gesture the zoom row arms (StripDragState / apply_strip_drag_at),
         // triggered here for reach: it gets the cursor capture ("swallow"), the
         // anchor stem, the edge clamp, and dual-axis zoom+pan for free. That arm
@@ -626,22 +628,27 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // toggle (the former shift behavior) — this AMENDS the "Ctrl keeps
             // only the letter chords" rule for the one marker surface (architect
             // 2026-07-23). It arms no drag, seeds/consumes no double-click, opens
-            // no editor; a toggle that ADDS lands the playhead on the marker per
-            // the re-coupling invariant, a toggle-REMOVE repairs focus (inside
-            // toggle_selection_membership) and does NOT land. Read-only allowed
-            // (selection + playhead are navigation). The ctrl-exact WAVEFORM
-            // press keeps the zoom-strip drag below (different surface, no
-            // collision); ctrl-exact on a markerless top-strip spot stays a
-            // strict no-op (falls through to the return below). The standing
-            // top-strip press stop already halted playback above.
+            // no editor. Whether the toggle ADDED or REMOVED, the playhead lands
+            // at the EARLIEST selected marker afterward (*selected_markers.begin()
+            // — the set is index-ordered and markers rest time-sorted, so the
+            // smallest index is the earliest in time; architect 2026-07-23), so a
+            // Space auditions from the selection's start regardless of which
+            // marker was clicked. An emptied selection (the last member toggled
+            // off) lands nothing and just drops the region — the non-empty land
+            // dissolves the region itself, the empty branch keeps the explicit
+            // clear_region_highlight (every marker interaction drops the region,
+            // the mutual-exclusivity rule). Read-only allowed (selection +
+            // playhead are navigation). The ctrl-exact WAVEFORM press keeps the
+            // zoom-strip drag below (different surface, no collision); ctrl-exact
+            // on a markerless top-strip spot stays a strict no-op (falls through
+            // to the return below). The standing top-strip press stop already
+            // halted playback above.
             if (inside_top && mh.index >= 0) {
-                if (selection.toggle_selection_membership(mh.index))
-                    land_playhead_on_marker(app, audio, viewport, mh.index);
+                selection.toggle_selection_membership(mh.index);
+                if (!app.selected_markers.empty())
+                    land_playhead_on_marker(app, audio, viewport,
+                                            *app.selected_markers.begin());
                 else
-                    // A toggle-REMOVE does not land, so it misses
-                    // land_playhead_on_marker's region dissolve — but every
-                    // marker interaction still drops the region (the
-                    // mutual-exclusivity rule; architect 2026-07-23).
                     clear_region_highlight(app, viewport);
                 return;
             }
@@ -686,14 +693,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // FLAG part only — ARM a pending marker drag (moves the marker if the
         // pointer crosses the threshold, else a pure click). Shift+click: a
         // file-manager INCLUSIVE RANGE select from the shift-held anchor to the
-        // clicked marker (the range end = focus), which LANDS the playhead on
-        // that clicked end. The individual membership TOGGLE moved to Ctrl+click
-        // (the ctrl-exact marker claim in the earlier branch; a toggle-add lands,
-        // a toggle-remove repairs focus without landing). The plain / shift /
-        // ctrl-add land makes every such marker click a land route alongside the
-        // Tab family and `c` (which additionally recenter / re-zoom); the
-        // subsequent drag or nudge then tows the coincident playhead by
-        // construction.
+        // clicked marker (the range end = FOCUS), which LANDS the playhead at the
+        // range's EARLIEST member (not the clicked end — focus and land diverge).
+        // The individual membership TOGGLE moved to Ctrl+click (the ctrl-exact
+        // marker claim in the earlier branch; whether it adds or removes it lands
+        // at the earliest selected, an empty selection landing nothing). The
+        // plain / shift / ctrl land makes every such marker click a land route
+        // alongside the Tab family and `c` (which additionally recenter /
+        // re-zoom); the subsequent drag or nudge then tows the coincident
+        // playhead onto the FOCUSED marker by construction.
         if (inside_top) {
             // Plain unmodified chip-row press arms a trim chip/bridge drag,
             // claimed BEFORE the marker single-select. The chip row, the marker
@@ -713,15 +721,24 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // (selection becomes {hit}, hit the anchor + focus); each
                     // successive shift-click replaces the selection with the
                     // inclusive index range between the shift-held anchor and
-                    // hit (hit becomes the range end = focus). Ctrl+click is the
-                    // individual membership toggle (above). Both LAND the
-                    // playhead on the clicked marker per the re-coupling
-                    // invariant (a ctrl toggle-remove is the sole non-land — it
-                    // repairs focus instead). It arms no drag, seeds/consumes no
-                    // double-click, opens no editor. Allowed in read-only
-                    // (selection + playhead are navigation).
+                    // hit. The clicked marker becomes the range end = FOCUS
+                    // (last_selected), but the playhead LANDS at the range's
+                    // EARLIEST member (*selected_markers.begin() — smallest
+                    // index = earliest in time; architect 2026-07-23), so a
+                    // Space after a range select auditions from the range's
+                    // start. FOCUS and the land target thus DIVERGE here: the
+                    // unconditional nudge/drag follow then tows the playhead onto
+                    // the FOCUSED (clicked) range end as ever. On the anchoring
+                    // first click the selection is {hit}, so *begin() == hit and
+                    // the land is unchanged. Ctrl+click is the individual
+                    // membership toggle (above, landing at the earliest selected
+                    // too). It arms no drag, seeds/consumes no double-click, opens
+                    // no editor. Allowed in read-only (selection + playhead are
+                    // navigation).
                     selection.select_range_from_anchor(hit);
-                    land_playhead_on_marker(app, audio, viewport, hit);
+                    if (!app.selected_markers.empty())
+                        land_playhead_on_marker(app, audio, viewport,
+                                                *app.selected_markers.begin());
                 } else {
                     // Plain marker click single-selects (both views; W's
                     // click-to-edit is retired — the editor now opens on Enter or
