@@ -998,14 +998,15 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     // Trim boundary stems, painted in both 'W' and 'P' views — the ONLY stems the
     // cache now carries. Positions are the displayed-domain trim frames (already
     // translated); the has-set bits decide which stems draw. The MARKER stem is
-    // no longer cached: it became the HOVER-preview live overlay (paint_hover_stem
-    // — a per-frame, one-column paint over the plate, driven by the hovered marker
-    // rather than the selection; round 3, architect 2026-07-23), so a hover flick
-    // never rebuilds this cache. The marker-driven fingerprint keys
-    // (warp/phase generations, drag-overlay hash, drag-active, selection hash)
-    // survive above and merely over-invalidate this trim-only surface — harmless
-    // (two vertical lines re-render), and they still catch the displayed-trim
-    // changes those inputs can drive.
+    // no longer cached: it became the selected-marker live overlay
+    // (paint_selected_stem — a per-frame, one-column paint over the plate for the
+    // SINGLE selected marker while it is hovered / dragged / nudged; round 3,
+    // refined round 4, architect 2026-07-23), so an interaction never rebuilds
+    // this cache. The marker-driven fingerprint keys (warp/phase generations,
+    // drag-overlay hash, drag-active, selection hash) survive above and merely
+    // over-invalidate this trim-only surface — harmless (two vertical lines
+    // re-render), and they still catch the displayed-trim changes those inputs
+    // can drive.
     render_trim_stems(
         ccr, local_area, vp_start, vp_end,
         trim_struct,

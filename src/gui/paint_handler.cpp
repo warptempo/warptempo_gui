@@ -478,8 +478,8 @@ void GuiPaintHandler::paint_phase_reset_overlay(
 void GuiPaintHandler::paint_marker_stems(cairo_t* cr,
                                          const GuiRect& marker_paint_rect) {
     // stem_cache.surface now carries the TRIM stems only (the marker stem became
-    // the hover-preview live overlay paint_hover_stem — see maybe_rebuild_stem_
-    // cache), rebuilt synchronously from on_tick. The paint path is blit-only.
+    // the selected-marker live overlay paint_selected_stem — see maybe_rebuild_
+    // stem_cache), rebuilt synchronously from on_tick. The paint path is blit-only.
     // Like the waveform cache, this surface may be null on the
     // very first paint after a load (before the first stem
     // rebuild fires); the blit is skipped and the background
@@ -503,40 +503,63 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr,
     }
 }
 
-// -- GuiPaintHandler::paint_hover_stem -----------------------------------
+// -- GuiPaintHandler::paint_selected_stem --------------------------------
 
-// Hover-preview stem (round 3, architect 2026-07-23): the stem is a HOVER
-// PREVIEW ("where the playhead would go if this marker is clicked"), not a
-// selection decoration. It paints for the HOVERED marker only
-// (app.hover_popup.marker_index — the unified hover identity marker_hit_at
-// resolves, flag shape OR lane run), on whichever column is active (warp in W,
-// phase reset in P), regardless of the selection. It lives OUT of the stem cache
-// (which keys on selection) as a per-frame one-column overlay over the plate, so
-// a hover flick never rebuilds a cache; the stem cache now carries only the trim
-// stems. Hover is suppressed during every pointer gesture
-// (recompute_hover_at_cursor), so no preview stem shows mid-drag. Painted grey
-// (kPlayheadCursorFocusGrey — the marker-lane-focus playhead colour, so it
-// previews exactly the grey playhead a click lands; deliberately NOT the
-// selection blue) through render_playhead's line-only form (draw_triangle=false,
-// draw_line=true), which is the playhead-line pattern with the plate ink-notch
-// two-tone. Disabled markers are NOT dimmed here (the dimmed flag already conveys
-// disablement; the stem is a positional preview). The displayed paint basis
-// (fp_vp_start + disp_spp + the displayed map) matches paint_playheads / the
-// cached flags, so the stem lands on the flag's own column.
-void GuiPaintHandler::paint_hover_stem(cairo_t* cr, const GuiRect& area) {
+// Selected-marker stem (round 4, architect 2026-07-23): the stem marks where the
+// playhead sits/would land on the SINGLE selected marker, and shows ONLY while
+// the user is interacting with THAT marker. Visibility predicate:
+//   (0) exactly ONE marker selected (a multi-select paints no stem), and
+//   one of:
+//   (a) that marker is HOVERED (hover_popup.marker_index == the selected index),
+//   (b) a live marker DRAG grabs it (drag.active on the active column) — painted
+//       at the LIVE proposed position (moveable_times via the DragOverlay); the
+//       drag suppresses hover, so this arm cannot lean on (a), and
+//   (c) the NUDGE PIN is live — the last command was this marker's Alt+Left/Right
+//       nudge (command_seq == stem_pin_command_seq && stem_pin_marker == it).
+// Painted BLUE (kSelected — it marks the selected marker, like its flag; only the
+// playhead triangle is grey in marker-focus) through render_playhead's line-only
+// form (draw_triangle=false, draw_line=true) — the plate ink-notch two-tone reads
+// fine in any color (fill_column_ink_runs overdraws kBackground over opaque ink,
+// color-independent; the blue line shows over the gaps). It lives OUT of the stem
+// cache as a per-frame one-column overlay over the plate; a disabled marker is
+// not dimmed here (the flag conveys it). The displayed paint basis (fp_vp_start +
+// disp_spp + the displayed map) matches paint_playheads / the cached flags, so
+// the stem lands on the flag's own column; the drag arm reads the frozen
+// displayed map its proposal was computed against.
+void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
-    const int idx = app.hover_popup.marker_index;
+    // (0) A single selected marker, else no stem.
+    if (app.selected_markers.size() != 1) return;
+    const int idx = *app.selected_markers.begin();
     if (idx < 0) return;
 
-    int64_t frame = 0;
+    // Is this the active-column marker being dragged?
+    const bool drag_arm =
+        app.drag.active && app.drag.drag_mode == app.active_markers_view;
+    // Visibility arms (a) hover, (b) drag, (c) nudge pin.
+    const bool hover_arm = (app.hover_popup.marker_index == idx);
+    const bool nudge_arm = (app.stem_pin_marker == idx &&
+                            app.command_seq == app.stem_pin_command_seq);
+    if (!hover_arm && !drag_arm && !nudge_arm) return;
+
+    // The marker's effective time: the live store frame, or — under a drag that
+    // grabs it — the proposed mid-gesture position (a source-frame double) from
+    // the DragOverlay, so the stem tracks the flag 1:1 during the drag.
+    double eff_time = 0.0;
     if (app.active_markers_view == 'P') {
         const auto& pv = app.phaseresetmarkers.markers();
         if (idx >= static_cast<int>(pv.size())) return;
-        frame = pv[idx].time_frame;
+        eff_time = static_cast<double>(pv[idx].time_frame);
     } else {
         const auto& mv = app.warpmarkers.markers();
         if (idx >= static_cast<int>(mv.size())) return;
-        frame = mv[idx].time_frame;
+        eff_time = static_cast<double>(mv[idx].time_frame);
+    }
+    if (drag_arm) {
+        DragOverlay ov;
+        ov.indices = &app.drag.dragging_markers;
+        ov.times   = &app.drag.moveable_times;
+        eff_time = ov.effective_time(idx, eff_time);
     }
 
     const double disp_spp = wf_cache.fp_area_w > 0
@@ -546,15 +569,16 @@ void GuiPaintHandler::paint_hover_stem(cairo_t* cr, const GuiRect& area) {
     if (disp_spp <= 0.0) return;
     const double vp_start = static_cast<double>(wf_cache.fp_vp_start);
 
-    // Forward-map the source frame to the displayed axis (identity in source
-    // view), the same shape render.cpp's frame_to_paint_sample uses.
-    double ms = std::nearbyint(static_cast<double>(frame));
+    // Forward-map the (possibly fractional) source frame to the displayed axis
+    // (identity in source view), the same shape render.cpp's frame_to_paint_sample
+    // uses (nearbyint, then the map).
+    double ms = std::nearbyint(eff_time);
     if (app.active_audio_view == 'T') {
         const std::vector<WarpFrameMapSegment>& dmap =
             displayed_or_live_target_map(app, audio);
         if (!dmap.empty()) {
-            const size_t q = frame < 0 ? static_cast<size_t>(0)
-                                       : static_cast<size_t>(frame);
+            const size_t q = ms < 0.0 ? static_cast<size_t>(0)
+                                      : static_cast<size_t>(ms);
             ms = std::nearbyint(map_source_to_target(q, dmap));
         }
     }
@@ -563,7 +587,7 @@ void GuiPaintHandler::paint_hover_stem(cairo_t* cr, const GuiRect& area) {
     // render_playhead draws only the 1px line + plate ink-notch here
     // (draw_triangle=false), which is exactly the stem; it column-culls px_x
     // itself, so a stem off the visible strip paints nothing.
-    render_playhead(cr, area, px_x, kPlayheadCursorFocusGrey,
+    render_playhead(cr, area, px_x, kSelected,
                     /*draw_triangle=*/false,
                     /*draw_line=*/true,
                     /*ink_plate=*/wf_cache.surface);
@@ -942,10 +966,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // then the stems paint on top so the focused stem stays crisp.
             paint_phase_reset_overlay(cr, area);
             paint_marker_stems(cr, marker_paint_rect);
-            // Hover-preview stem over the plate + trim stems, under the flags and
-            // the playhead (round 3): the hovered marker's column, live per-frame
-            // (not cached).
-            paint_hover_stem(cr, area);
+            // Selected-marker stem over the plate + trim stems, under the flags
+            // and the playhead (round 4): the single selected marker's column,
+            // live per-frame (not cached), while it is hovered / dragged / nudged.
+            paint_selected_stem(cr, area);
         }
 
         if (rects_intersect(exposed, top_strip)) {

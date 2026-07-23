@@ -154,9 +154,9 @@ inline constexpr GuiColor kTrimMarkerOutline = hex(0xFFA040);
 // outline ring, and the fused tip-down triangle (all drawn by paint_flag_shape).
 // This alpha is the disabled cue on the FLAG; selection controls the color class
 // (kSelected family) and disablement this alpha, and the two compose. (The stem
-// no longer takes this alpha: it became the HOVER-preview live overlay
-// paint_hover_stem, which is a positional preview and deliberately does not dim
-// for a disabled marker — the dimmed flag already conveys disablement.)
+// no longer takes this alpha: it became the selected-marker live overlay
+// paint_selected_stem — a positional cue that deliberately does not dim for a
+// disabled marker, the dimmed flag already conveying disablement.)
 // Architect-tunable.
 inline constexpr double kDisabledMarkerAlpha = 0.25;
 
@@ -618,10 +618,10 @@ void render_strip_anchor_stem(cairo_t* cr,
                               cairo_surface_t* ink_plate = nullptr);
 
 // (The cached marker-stem renderers render_markers / render_phaseresetmarkers
-// are retired: the marker stem became a HOVER-preview live overlay,
-// GuiPaintHandler::paint_hover_stem, driven by the hovered marker rather than the
-// selection — round 3, architect 2026-07-23. The stem cache now carries only the
-// trim stems below.)
+// are retired: the marker stem became a live overlay,
+// GuiPaintHandler::paint_selected_stem — the SINGLE selected marker's stem, shown
+// while it is hovered / dragged / nudged — round 3, refined round 4, architect
+// 2026-07-23. The stem cache now carries only the trim stems below.)
 
 // Draws the WAVEFORM-AREA portion of the trim begin/end boundary stems. Each set
 // bound (gated by `has_begin` / `has_end`) paints a 1px vertical stem at its

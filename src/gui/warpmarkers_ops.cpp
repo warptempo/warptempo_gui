@@ -605,6 +605,11 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     // the selection at the moved marker.
     remap_marker_indices_after_reorder(
         app, reorder_markers_by_time(app.warpmarkers.markers_mut()));
+    // Stem NUDGE PIN: keep the moved marker's stem visible through the
+    // fine-tuning burst. Stamp the post-reorder focused index and the current
+    // command_seq; the pin dies at the next command (see AppState::stem_pin_*).
+    app.stem_pin_marker      = app.last_selected_marker;
+    app.stem_pin_command_seq = app.command_seq;
     // Playhead follows the marker: keep the playhead on the focused marker. The
     // committed frame (t_new, reorder-independent) maps through
     // source_frame_to_active_domain AFTER the store mutation — the shared Tab

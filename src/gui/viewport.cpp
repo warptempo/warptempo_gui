@@ -583,9 +583,10 @@ void Viewport::follow_scroll_if_needed() {
 // readout) so the next paint erases whichever was up. Safe to call from any path.
 void Viewport::clear_hover_popup() {
     const bool was_visible = app.hover_popup.any_visible();
-    // R3: erase the hover-preview stem (a live WAVEFORM overlay) when a hovered
-    // marker is being cleared — the top-strip damage below does not reach it.
-    // Captured before the reset; a no-op when nothing was hovered / offscreen.
+    // Erase the selected-marker stem's HOVER arm (a live WAVEFORM overlay) when a
+    // hovered marker is being cleared — the top-strip damage below does not reach
+    // it. Captured before the reset; a no-op when nothing was hovered / offscreen
+    // (or the cleared marker was not the selected one — a harmless over-damage).
     const int     old_hover_idx   = app.hover_popup.marker_index;
     const int64_t old_hover_frame = app.hover_popup.source_frame;
     app.hover_popup = HoverPopupState{};
@@ -668,9 +669,9 @@ void Viewport::recompute_hover_at_cursor() {
     if (hit == app.hover_popup.marker_index && !cache_invalidated) return;
 
     const bool was_visible = app.hover_popup.any_visible();
-    // R3 hover-stem damage inputs: the OLD hovered marker (its column loses its
-    // preview stem) captured before apply_hit overwrites the cache. The NEW
-    // column is damaged after settling below.
+    // Selected-stem hover-transition damage inputs: the OLD hovered marker (whose
+    // column may lose the stem's hover arm) captured before apply_hit overwrites
+    // the cache. The NEW column is damaged after settling below.
     const int     old_hover_idx   = app.hover_popup.marker_index;
     const int64_t old_hover_frame = app.hover_popup.source_frame;
 
@@ -764,11 +765,12 @@ void Viewport::recompute_hover_at_cursor() {
         invalidate_top_strip();
         invalidate_timestamp_area();
     }
-    // R3: the hover-preview stem lives in the WAVEFORM, which the top-strip damage
-    // above does not cover. Damage the OLD hovered marker's stem column (it loses
-    // its stem) and the NEW one's (it gains it) — no-ops when either is absent or
-    // offscreen. A pure motion within one marker's rect (old == new, both frames
-    // equal) redundantly damages the same column once; harmless.
+    // The selected-marker stem's HOVER arm lives in the WAVEFORM, which the
+    // top-strip damage above does not cover. Damage the OLD hovered marker's stem
+    // column (it may lose the stem) and the NEW one's (it may gain it) — no-ops
+    // when either is absent or offscreen, and a harmless over-damage when the
+    // marker is not the selected one. A pure motion within one marker's rect
+    // (old == new, both frames equal) redundantly damages the same column once.
     invalidate_hover_stem_column(old_hover_idx, old_hover_frame);
     invalidate_hover_stem_column(app.hover_popup.marker_index,
                                  app.hover_popup.source_frame);

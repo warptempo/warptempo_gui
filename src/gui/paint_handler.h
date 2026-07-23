@@ -178,8 +178,8 @@ struct WaveformCache {
 
 // -- Off-screen pixel cache for the TRIM stems --------------------------
 //
-// Carries the TRIM boundary stems only (the marker stem became the hover-preview
-// live overlay paint_hover_stem, out of any cache). Mirrors WaveformCache's
+// Carries the TRIM boundary stems only (the marker stem became the selected-
+// marker live overlay paint_selected_stem, out of any cache). Mirrors WaveformCache's
 // "live" side but with no pending/supersede plumbing — rebuilds are synchronous
 // on the main thread (sub-millisecond). The fingerprint is split into two halves:
 //   1. Displayed-viewport inputs (vp_start/vp_end/trim/target/warp_frame_map_hash/
@@ -484,13 +484,16 @@ private:
     void paint_region_wash(cairo_t* cr, const GuiRect& area);
     void paint_phase_reset_overlay(cairo_t* cr, const GuiRect& area);
     void paint_marker_stems(cairo_t* cr, const GuiRect& marker_paint_rect);
-    // Hover-preview stem (round 3): a per-frame live overlay marking the HOVERED
-    // marker's column — "where the playhead would go if this marker is clicked".
-    // Driven by app.hover_popup.marker_index (the unified hover identity, both
-    // columns), independent of selection; painted grey through render_playhead's
-    // line-only form over the plate, out of the stem cache so a hover flick never
-    // rebuilds a cache.
-    void paint_hover_stem(cairo_t* cr, const GuiRect& area);
+    // Selected-marker stem (round 4, architect 2026-07-23): a per-frame live
+    // overlay marking the SINGLE selected marker's column — where the playhead
+    // sits/would land on it — shown only during interaction with it: while it is
+    // HOVERED, while a live marker DRAG grabs it (at the proposed position), or
+    // right after its Alt+Left/Right NUDGE (the command-adjacency pin). Painted
+    // BLUE (kSelected — it marks the selected marker like its flag) through
+    // render_playhead's line-only form over the plate; out of the stem cache so
+    // interaction never rebuilds a cache. (Only the playhead triangle turns grey
+    // in marker-focus — see paint_playheads.)
+    void paint_selected_stem(cairo_t* cr, const GuiRect& area);
     void paint_playheads(cairo_t* cr, const GuiRect& area);
     void paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr, int sr);

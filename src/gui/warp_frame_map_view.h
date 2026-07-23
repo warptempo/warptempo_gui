@@ -194,8 +194,8 @@ inline double source_grid_position_at_column(int64_t viewport_start,
 //
 // painted_column_of_source_frame: the pixel column (offset from
 // waveform_area(app).x) the stem painters draw `source_frame` at,
-// computed with the painters' own math (render_trim_stems / the hover-preview
-// marker stem): nearbyint the frame; in the TargetLive domain
+// computed with the painters' own math (render_trim_stems / the selected-marker
+// stem paint_selected_stem): nearbyint the frame; in the TargetLive domain
 // forward-map it through `warp_frame_map` and nearbyint the map output;
 // then divide by the painters' samples-per-pixel — the visible span
 // nearbyint-quantized to whole samples over the strip width — and round

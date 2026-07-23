@@ -1112,6 +1112,23 @@ struct AppState {
     // never serialized.
     uint64_t      command_seq = 0;
 
+    // Selected-marker stem NUDGE PIN (round 4, architect 2026-07-23). The
+    // selected singleton's stem (paint_selected_stem) shows while THAT marker is
+    // hovered, dragged, OR just nudged; the nudge arm has no hover/drag to key
+    // on, so both Alt+Left/Right nudge handlers stamp these at commit —
+    // `stem_pin_marker` = the moved (focused) marker's post-reorder index,
+    // `stem_pin_command_seq` = the current command_seq. The pin is LIVE iff
+    // `command_seq == stem_pin_command_seq` (and stem_pin_marker == the selected
+    // index): any OTHER command bumps command_seq at its dispatch entry and kills
+    // the pin naturally — the command-adjacency pattern, no timer. The default
+    // stem_pin_marker = -1 never matches a real (>= 0) selection, so the
+    // startup command_seq == 0 == stem_pin_command_seq coincidence pins nothing.
+    // Accepted caveat: a pin that goes stale between paints leaves the stem drawn
+    // until the next damage — harmless, and each nudge press full-invalidates the
+    // waveform anyway. Session-only, never serialized.
+    int           stem_pin_marker      = -1;
+    uint64_t      stem_pin_command_seq = 0;
+
     // Active markers view: 'W' = warp markers, 'P' = phase reset markers.
     // Toggled by `p`. Determines which marker collection is visible / edited /
     // hit-tested and which color set is used for the playhead and selected

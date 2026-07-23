@@ -263,6 +263,11 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     // the selection at the moved reset.
     remap_marker_indices_after_reorder(
         app, reorder_markers_by_time(app.phaseresetmarkers.markers_mut()));
+    // Stem NUDGE PIN (symmetric with the warp nudge): keep the moved reset's stem
+    // visible through the fine-tuning burst. Post-reorder focused index + the
+    // current command_seq; the pin dies at the next command.
+    app.stem_pin_marker      = app.last_selected_marker;
+    app.stem_pin_command_seq = app.command_seq;
     // Playhead follows the marker: keep the playhead on the focused reset,
     // through the post-mutation two-step basis (identical to the warp nudge; the
     // committed t_new is reorder-independent). move_playhead_to owns the

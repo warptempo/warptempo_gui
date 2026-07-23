@@ -249,44 +249,49 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
 // land_playhead_on_marker / set_region_to_selection_extent above. Returns true
 // iff it consumed the Esc. Navigation-class, read-only allowed.
 bool GuiInputHandler::handle_escape_selection_region() {
-    const size_t nsel = app.selected_markers.size();
-    if (nsel == 1) {
-        // (a) Singleton: deselect + land the playhead ON the marker. The
-        // playhead is usually already coincident (the re-coupling land put it
-        // there), so the land is a safety re-affirm; deselecting then flips the
-        // playhead form back to the green waveform focus. Land BEFORE the clear so
-        // the marker index is still resolvable.
-        const int idx = *app.selected_markers.begin();
-        land_playhead_on_marker(app, audio, viewport, idx);
+    // DOWN-ONLY ladder (round 4, architect 2026-07-23): markers -> region ->
+    // playhead, and a region is already the LOWER rung, so an active region
+    // collapses STRAIGHT to the playhead — never into a subregion. This is why
+    // region.active is tested FIRST, regardless of selection: the old rung (b)
+    // re-derived the region from the selection extent, which SHRANK a drag-formed
+    // region (whose contained markers the coupling had selected) to the markers'
+    // subregion. Consequence (architect-flagged, cheap to re-rule): a click-made
+    // multi-selection rests with its extent region active (Direction B), so it now
+    // collapses to the playhead in ONE Esc rather than two.
+    if (app.region.active) {
+        // Region active: collapse to its start. The region is the stretched-out
+        // playhead, so clear it AND the selection (a drag-formed region's coupled
+        // selection dies with it) and land the playhead at the lo bound.
+        const int64_t lo = std::min(app.region.a_frame, app.region.b_frame);
+        app.region = RegionState{};
         selection.clear_selection();
-        // Full waveform damage: the deselect can un-show a wider WAVEFORM overlay
-        // than the playhead-column / top-strip damage above covers — the
-        // phase-reset lead-in overlay (P+target, a singleton-focus depiction that
-        // vanishes when the selection empties) and the hover-preview stem — so
-        // erase the whole plate span once.
         viewport.invalidate_waveform_area();
+        viewport.move_playhead_to(lo);
         return true;
     }
+    const size_t nsel = app.selected_markers.size();
     if (nsel >= 2) {
-        // (b) Multiple: "drops to region". Ensure the region rests at the
-        // selection's [earliest, latest] extent (set_region_to_selection_extent
-        // requires 2+ and is idempotent when it already rests there — the
-        // click-made multi-selects already do), THEN deselect. The region
-        // survives the clear (clear_selection touches no region).
+        // No region + MULTIPLE selected (a PROGRAMMATIC multi-select now — a
+        // click-made one always rests with its extent region, handled above):
+        // "drop to region". Set the region to the selection's [earliest, latest]
+        // extent, THEN deselect. The region survives the clear (clear_selection
+        // touches no region); a second Esc then collapses it to the playhead.
         set_region_to_selection_extent(app, audio, viewport);
         selection.clear_selection();
         return true;
     }
-    if (app.region.active) {
-        // (c) No selection, region active: the region COLLAPSES TO ITS START —
-        // the region is the stretched-out playhead, so collapsing lands the
-        // playhead at its lo bound. Clear the region and move the playhead there.
-        // Replaces today's plain region clear at the chain tail and applies to
-        // ALL regions (drag-formed included).
-        const int64_t lo = std::min(app.region.a_frame, app.region.b_frame);
-        app.region = RegionState{};
+    if (nsel == 1) {
+        // No region + SINGLETON: deselect + land the playhead ON the marker (the
+        // playhead is usually already coincident from the re-coupling land, so the
+        // land is a safety re-affirm; deselecting then flips the playhead form back
+        // to the green waveform focus). Land BEFORE the clear so the marker index
+        // is still resolvable. Full waveform damage: the deselect un-shows a wider
+        // WAVEFORM overlay than the playhead-column / top-strip damage covers — the
+        // phase-reset lead-in overlay (P+target) and the selected-marker stem.
+        const int idx = *app.selected_markers.begin();
+        land_playhead_on_marker(app, audio, viewport, idx);
+        selection.clear_selection();
         viewport.invalidate_waveform_area();
-        viewport.move_playhead_to(lo);
         return true;
     }
     return false;
