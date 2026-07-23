@@ -48,4 +48,15 @@ struct Selection {
     // `was_empty` is captured BEFORE the mutation; a no-op when emptiness is
     // unchanged (the common case: Tab within a non-empty set, a range shrink).
     void damage_playhead_if_focus_flipped(bool was_empty);
+
+    // R7 (round 3, architect 2026-07-23): the phase-reset lead-in overlay
+    // (paint_phase_reset_overlay) is SUPPRESSED while the selection has 2+
+    // members, so a selection-size change that CROSSES the 2 threshold flips its
+    // visibility. The overlay lives in the WAVEFORM but these mutators damage only
+    // the top strip / timestamp (+ the R6 playhead column), so a crossing needs
+    // waveform damage to paint/erase the overlay's forward span. It only shows in
+    // P + target view, so this gates there and damages the whole plate once on the
+    // crossing (bounded, rare). `old_size` is captured BEFORE the mutation; a
+    // no-op when the 2 threshold is not crossed.
+    void damage_overlay_on_size2_crossing(size_t old_size);
 };

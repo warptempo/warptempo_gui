@@ -410,6 +410,7 @@ void GuiInputHandler::cancel_active_drags() {
             app.trim.begin_frame = app.trim_drag.orig_begin_frame;
             app.trim.end_frame   = app.trim_drag.orig_end_frame;
         }
+        const bool was_set_click = app.trim_drag.set_click;
         app.trim_drag = TrimDragState{};
         viewport.invalidate_waveform_area();
         viewport.invalidate_top_strip();
@@ -418,6 +419,16 @@ void GuiInputHandler::cancel_active_drags() {
         // moving window; the bounds are back, so re-sync against the RESTORED
         // window (the highlight/selection follow the window back to its origin).
         sync_highlight_to_trim_window();
+        // A bound-set-armed drag (set_click) dispatched a target PREVIEW at the
+        // press for the click-set bounds (set_trim_bound_at_click's trigger), so
+        // supersede it with the restored pair's — exactly as the still-pending
+        // cancel path does. Crucial for the CROSSED case, where the click-set
+        // dissolved to a different (or no) window than the restored one: without
+        // this the preview stays bound to the cancelled click-set trim. Gated on
+        // set_click so an ordinary trim drag (which dispatches nothing before
+        // release) gains no spurious trigger; the reuse rungs absorb the common
+        // A->B->A shape cheaply.
+        if (was_set_click) target_render.trigger();
     }
     // The strip drag has already applied its motion, so stopping is just
     // ending the gesture at its current position — Esc is not a cancel here (a

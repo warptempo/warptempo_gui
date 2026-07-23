@@ -376,8 +376,9 @@ void GuiPaintHandler::paint_phase_reset_overlay(
         const int idx = app.last_selected_marker;
         if (idx < 0 || idx >= static_cast<int>(markers.size())) return;
         const auto& marker = markers[idx];
-        // Mirror the phase-reset stem renderer, which skips disabled markers
-        // entirely (render_phaseresetmarkers' is_disabled reads `disabled`).
+        // Skip a disabled focused reset — a disabled phase reset paints no
+        // overlay, reading its `disabled` bool directly (phase resets carry no
+        // label cascade).
         if (marker.disabled) return;
 
         // Map selection: the DISPLAYED paint basis (displayed_or_live_target_map
@@ -476,9 +477,9 @@ void GuiPaintHandler::paint_phase_reset_overlay(
 
 void GuiPaintHandler::paint_marker_stems(cairo_t* cr,
                                          const GuiRect& marker_paint_rect) {
-    // The marker stems live on stem_cache.surface,
-    // rebuilt synchronously from on_tick via
-    // maybe_rebuild_stem_cache. The paint path is blit-only.
+    // stem_cache.surface now carries the TRIM stems only (the marker stem became
+    // the hover-preview live overlay paint_hover_stem — see maybe_rebuild_stem_
+    // cache), rebuilt synchronously from on_tick. The paint path is blit-only.
     // Like the waveform cache, this surface may be null on the
     // very first paint after a load (before the first stem
     // rebuild fires); the blit is skipped and the background

@@ -176,12 +176,12 @@ struct WaveformCache {
     ~WaveformCache() { destroy_surface(); }
 };
 
-// -- Off-screen pixel cache for the marker stems ------------------------
+// -- Off-screen pixel cache for the TRIM stems --------------------------
 //
-// Mirrors WaveformCache's "live" side but with no pending/supersede plumbing
-// — stem rebuilds are synchronous on the main thread (sub-millisecond at
-// the marker counts the editor admits). The fingerprint is split into two
-// halves:
+// Carries the TRIM boundary stems only (the marker stem became the hover-preview
+// live overlay paint_hover_stem, out of any cache). Mirrors WaveformCache's
+// "live" side but with no pending/supersede plumbing — rebuilds are synchronous
+// on the main thread (sub-millisecond). The fingerprint is split into two halves:
 //   1. Displayed-viewport inputs (vp_start/vp_end/trim/target/warp_frame_map_hash/
 //      area dimensions): read from wf_cache.fp_*, NOT from
 //      current app state. This is how the stem layer snaps together with
@@ -189,15 +189,15 @@ struct WaveformCache {
 //      key off the same set of displayed-viewport values, which the
 //      waveform's swap callback publishes atomically.
 //   2. Marker-driven inputs (warpmarker/phase_reset generations, drag
-//      overlay hash/active, marker view): read live
-//      from app state. These have no waveform coupling, so the stem
-//      layer reacts to them immediately on the next tick. The drag
-//      overlay is hashed (not generation-counted) so future mutations
-//      of app.drag don't need to remember to bump a callsite counter.
+//      overlay hash/active, marker view, selection hash): read live from app
+//      state. These no longer drive any stem output (the trim stems are
+//      marker/selection-independent); they SURVIVE in the fingerprint and merely
+//      over-invalidate this trim-only surface — harmless (two lines re-render),
+//      and they still catch the displayed-trim positions those inputs can drive.
 //
-// Surface matches the waveform area: stems now span the WAVEFORM AREA ONLY
+// Surface matches the waveform area: the trim stems span the WAVEFORM AREA ONLY
 // (top at screen y = area.y, down to area.y + area.h — no strip overhang; the
-// flag+triangle structure above lives in the FlagCache). The cache surface is
+// chip structure above lives in the FlagCache). The cache surface is
 // waveform-height and the blit positions it at screen y = area.y.
 struct StemCache {
     cairo_surface_t* surface = nullptr;

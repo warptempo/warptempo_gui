@@ -151,12 +151,13 @@ inline constexpr GuiColor kTrimMarkerOutline = hex(0xFFA040);
 
 // Single dimming factor for a DISABLED marker, applied uniformly across its
 // whole unified textless shape — the rectangle fill, its single outside-only
-// outline ring, and the fused tip-down triangle (all drawn by paint_flag_shape)
-// — and, for the last-selected marker, its stem. Stems paint only for the
-// last-selected marker, so omission can no longer signal disablement — this
-// alpha is the sole disabled cue. Selection controls the color class (kSelected
-// family) and, for the anchor, the stem reveal; disablement controls this
-// alpha, and the two compose. Architect-tunable.
+// outline ring, and the fused tip-down triangle (all drawn by paint_flag_shape).
+// This alpha is the disabled cue on the FLAG; selection controls the color class
+// (kSelected family) and disablement this alpha, and the two compose. (The stem
+// no longer takes this alpha: it became the HOVER-preview live overlay
+// paint_hover_stem, which is a positional preview and deliberately does not dim
+// for a disabled marker — the dimmed flag already conveys disablement.)
+// Architect-tunable.
 inline constexpr double kDisabledMarkerAlpha = 0.25;
 
 // Trim boundary stem color (#F67400 orange). Distinct from
