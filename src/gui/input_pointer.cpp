@@ -243,6 +243,36 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
 
 } // namespace
 
+// The scanner scrub press body, shared by the waveform lower-half plain press
+// and the marker-text-lane plain press (R3.3, architect 2026-07-23). See the
+// declaration for the full contract. Both callers keep playback alive across
+// the press (the waveform lower half is not a top-strip press; the text-lane
+// scrub is exempted from the top-strip stop), so `was_playing` reflects the
+// live scanner and the playing->reseek path is reachable from either surface.
+void GuiInputHandler::arm_scrub_at(int click_rel_x, bool was_playing) {
+    const GuiRect area = waveform_area(app);
+    // Gutter / invalid column: no launch position exists, silent no-op.
+    if (click_rel_x < 0 || click_rel_x >= area.w) return;
+    const int64_t frame = clamp_playhead_to_live_domain(
+        playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
+    if (was_playing) {
+        // Click-keep-alive reseek, skipped when the frame equals the current
+        // scanner position (the no-op convention).
+        if (frame != app.playhead_scanner_sample)
+            playback_lifecycle.reseek_keeping_alive(frame);
+    } else {
+        // Outer is_updating gate, mirroring the two Space handlers: a NEW launch
+        // while a target update is in flight would audition the stale target
+        // buffer, which Space refuses — so the stopped scrub press refuses it
+        // too, silently.
+        if (!(app.active_audio_view == 'T' && target_render.is_updating()))
+            playback_lifecycle.scrub_launch_at(frame);
+    }
+    app.scrub_area_drag = ScrubAreaDragState{};
+    app.scrub_area_drag.active   = true;
+    app.scrub_area_drag.last_col = click_rel_x;
+}
+
 // Button-press handler. Verbatim from the lambda at the original
 // main.cpp:1483; the captured operation-struct lambdas (begin_drag,
 // drop_marker, drop_phase_reset_at_position, set_single_selection, etc.)
@@ -582,23 +612,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             }
         }
 
-        // Top-strip clicks stop playback first: they select markers and can
-        // close an open flag editor, and continuing audio during authoring /
-        // text editing is the wrong default. Waveform clicks keep playback
-        // alive — the per-press reseek to the click sample happens at the
-        // playhead-drag press site below, gated on was_playing && sample !=
-        // playhead_at_entry. Capture the entry state up front so the downstream
-        // branches see the same snapshot.
-        const bool was_playing = playback.is_playing();
-        const int64_t playhead_at_entry = app.playhead_cursor_sample;
-        if (inside_top) playback_lifecycle.stop_playback_if_playing();
-
-        // Clicks in iter/BPM mode route through the unified marker
-        // hit-test below.
-
-        // Only presses inside the waveform or the top strip do anything.
-        if (!inside_waveform && !inside_top) return;
-
         // Unified marker hit, computed ONLY on the path that consumes it. The
         // marker is ONE pointer item — flag shape OR rendered lane run
         // (marker_hit_at, the shared resolver in render.cpp the hover recompute
@@ -623,9 +636,39 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the inter-chip bridge on a PLAIN chip-row press (route_trim_chip_press
         // below); a click over a bound's waveform stem is an ordinary waveform
         // click (the stem grab retired), so no trim hit test runs on the
-        // waveform at all.
+        // waveform at all. Resolved BEFORE the top-strip stop below because the
+        // text-lane scrub exemption depends on it.
         MarkerHit mh;
         if (inside_top) mh = marker_hit_at(app, audio, x, y);
+
+        // Top-strip clicks stop playback first: they select markers and can
+        // close an open flag editor, and continuing audio during authoring /
+        // text editing is the wrong default. Waveform clicks keep playback
+        // alive — the per-press reseek to the click sample happens at the
+        // playhead-drag press site below, gated on was_playing && sample !=
+        // playhead_at_entry. Capture the entry state up front so the downstream
+        // branches see the same snapshot.
+        // ONE exemption: a plain press in the marker-text lane with no run under
+        // it is the text-lane scrub (R3.3) — a playback navigation, not
+        // authoring, so it keeps playback alive exactly like the waveform
+        // lower-half scrub, whose playing->reseek routing it shares. Every other
+        // top-strip press stops as before.
+        const bool was_playing = playback.is_playing();
+        const int64_t playhead_at_entry = app.playhead_cursor_sample;
+        bool text_lane_scrub_press = false;
+        if (inside_top && mh.index < 0 && !ctrl && !shift && !alt) {
+            const GuiRect text_lane = top_marker_text_row_area(app);
+            text_lane_scrub_press =
+                (y >= text_lane.y && y < text_lane.y + text_lane.h);
+        }
+        if (inside_top && !text_lane_scrub_press)
+            playback_lifecycle.stop_playback_if_playing();
+
+        // Clicks in iter/BPM mode route through the unified marker
+        // hit-test below.
+
+        // Only presses inside the waveform or the top strip do anything.
+        if (!inside_waveform && !inside_top) return;
 
         // Alt-exact left press: on the waveform it arms the captured grab-pan;
         // alt-exact anywhere else (a top-strip marker included) does nothing
@@ -705,6 +748,29 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 set_region_to_selection_extent(app, audio, viewport);
                 return;
             }
+            // Markerless top-strip ctrl-exact press splits by lane (architect
+            // 2026-07-23): the CHIP ROW sets the END trim bound at the click
+            // (R4.6 — the ctrl half of the shift-begin/ctrl-end pair;
+            // set_trim_bound_at_click refuses read-only silently and runs the
+            // coupling sync); an empty FLAG or TRIANGLE lane clears the marker
+            // selection (R3.2, navigation, read-only allowed). Any OTHER lane (the
+            // marker-text lane's empty spot, inter-lane gaps) stays a strict
+            // no-op, falling through to the return below. The zoom row (lane 0)
+            // was claimed above and never reaches here.
+            if (inside_top) {
+                const GuiRect chip_row = top_upper_row_area(app);
+                if (y >= chip_row.y && y < chip_row.y + chip_row.h) {
+                    set_trim_bound_at_click(/*is_begin=*/false, x);
+                    return;
+                }
+                const GuiRect flag_lane = top_flag_row_area(app);
+                const GuiRect tri_lane  = top_triangle_row_area(app);
+                if ((y >= flag_lane.y && y < flag_lane.y + flag_lane.h) ||
+                    (y >= tri_lane.y  && y < tri_lane.y  + tri_lane.h)) {
+                    selection.clear_selection();
+                    return;
+                }
+            }
             if (inside_waveform) {
                 const double spp = current_samples_per_pixel(app, audio);
                 app.strip_drag = StripDragState{};
@@ -756,15 +822,44 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // re-zoom); the subsequent drag or nudge then tows the coincident
         // playhead onto the FOCUSED marker by construction.
         if (inside_top) {
-            // Plain unmodified chip-row press arms a trim chip/bridge drag,
+            // The chip row (top_upper_row_area, lane 1) is trim's lane and is
             // claimed BEFORE the marker single-select. The chip row, the marker
-            // text lane, and the flag lane are disjoint y-bands, so this
-            // contends with nothing: a marker-part press yields no chip/bridge
-            // claim and falls to the marker handling. Shift never touches trim
-            // (a chip/bridge stays transparent to it) — it falls to the RANGE
-            // select. A claim (armed or read-only) returns without touching the
-            // selection.
-            if (!shift && route_trim_chip_press(x, y)) return;
+            // text lane, and the flag/triangle lanes are disjoint y-bands, so
+            // this contends with nothing: a marker-part press falls to the marker
+            // handling below. Two chip-row gestures (architect 2026-07-23): a
+            // SHIFT-exact click sets the BEGIN bound (R4.6); a PLAIN click either
+            // arms a chip/bridge drag or, on an unclaimed spot, selects +
+            // highlights the trim window (R4.5).
+            const GuiRect chip_row = top_upper_row_area(app);
+            const bool in_chip_row =
+                (y >= chip_row.y && y < chip_row.y + chip_row.h);
+            if (shift && in_chip_row) {
+                // R4.6: shift-exact chip-row click sets the BEGIN trim bound at
+                // the click (set_trim_bound_at_click refuses read-only silently
+                // and runs the coupling sync).
+                set_trim_bound_at_click(/*is_begin=*/true, x);
+                return;
+            }
+            if (!shift && in_chip_row) {
+                // Plain chip-row press (R4.5). Read-only cannot ARM a trim drag,
+                // but the select+highlight is navigation, so it runs directly
+                // there (route_trim_chip_press would claim-without-arming and
+                // skip it). In a writable tab a chip/bridge hit arms the drag (a
+                // motionless release then runs this same R4.5 click action at
+                // on_button_release), and an UNCLAIMED chip-row spot runs the
+                // R4.5 select+highlight now. With BOTH bounds set the window is
+                // taken; lone/no trim is a silent no-op. Either way the chip row
+                // consumes the press — it never falls to the marker handling.
+                if (active_view_state(app).read_only) {
+                    if (app.trim.has_begin && app.trim.has_end)
+                        sync_highlight_to_trim_window();
+                    return;
+                }
+                if (route_trim_chip_press(x, y)) return;
+                if (app.trim.has_begin && app.trim.has_end)
+                    sync_highlight_to_trim_window();
+                return;
+            }
             if (mh.index >= 0) {
                 const int hit = mh.index;
                 if (shift) {
@@ -902,6 +997,30 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                             }
                         }
                     }
+                }
+            } else if (!shift) {
+                // Empty top-strip spot — no marker run/flag under the point (the
+                // chip row already returned above). Plain-only (R3.1 / R3.3):
+                const GuiRect text_lane = top_marker_text_row_area(app);
+                if (y >= text_lane.y && y < text_lane.y + text_lane.h) {
+                    // R3.3: the marker-text lane is the play-from-here SCRUB. The
+                    // rendered run keeps precedence — a run hit resolved above as
+                    // mh.index >= 0, so this is reached only on an EMPTY text-lane
+                    // spot. Shares the waveform lower-half scrub body; playback
+                    // stayed alive via the text-lane-scrub stop exemption above,
+                    // so the playing->reseek routing is reachable. Touches no
+                    // selection (the scrub convention).
+                    arm_scrub_at(x - area.x, was_playing);
+                    return;
+                }
+                const GuiRect flag_lane = top_flag_row_area(app);
+                const GuiRect tri_lane  = top_triangle_row_area(app);
+                if ((y >= flag_lane.y && y < flag_lane.y + flag_lane.h) ||
+                    (y >= tri_lane.y  && y < tri_lane.y  + tri_lane.h)) {
+                    // R3.1: an empty flag or triangle lane click clears the
+                    // marker selection (navigation, read-only allowed).
+                    selection.clear_selection();
+                    return;
                 }
             }
             return;
@@ -1048,31 +1167,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // position exists there, unlike the upper half's
             // deselect-then-return.
             if (y >= area.y + area.h / 2) {
-                if (click_rel_x < 0 || click_rel_x >= area.w) return;
-                // The land's spelling: the click column's frame, clamped
-                // through clamp_playhead_to_live_domain for domain conformance.
-                const int64_t frame = clamp_playhead_to_live_domain(
-                    playhead_frame_at_click_column(app, audio, click_rel_x),
-                    app, audio);
-                if (was_playing) {
-                    if (frame != app.playhead_scanner_sample)
-                        playback_lifecycle.reseek_keeping_alive(frame);
-                } else {
-                    // Outer is_updating gate, mirroring the two Space
-                    // handlers' (input_handler.cpp): a NEW launch while a
-                    // target update is in flight would audition the previous
-                    // (stale) target buffer, which Space refuses — so the
-                    // stopped scrub press refuses it too, silently. The
-                    // reseek branch above stays ungated like the upper-half
-                    // click reseek: an already-live session keeps riding its
-                    // bound buffer, the gate protects only new launches.
-                    if (!(app.active_audio_view == 'T' &&
-                          target_render.is_updating()))
-                        playback_lifecycle.scrub_launch_at(frame);
-                }
-                app.scrub_area_drag = ScrubAreaDragState{};
-                app.scrub_area_drag.active   = true;
-                app.scrub_area_drag.last_col = click_rel_x;
+                // Shared scrub body (arm_scrub_at): gutter no-op, clamped frame
+                // from the column, playing->reseek / stopped->launch behind the
+                // is_updating gate, arm the scrub-area drag. The same body serves
+                // the marker-text-lane scrub (R3.3).
+                arm_scrub_at(click_rel_x, was_playing);
                 return;
             }
             // Upper half: the placement press. The clear runs FIRST, before
@@ -1181,6 +1280,16 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
                 .surface = DoubleClickSurface::ZoomRow,
                 .time_ms = monotonic_ms(), .press_x = x, .press_y = y,
                 .target = -1};
+        } else {
+            // R3.4: the click half of the ctrl-exact WAVEFORM surface (architect
+            // 2026-07-23) — motion is the zoom reach, a motionless click drops
+            // the marker selection. double_click_seed == false is the waveform
+            // origin (the zoom-row arm seeds true and took the branch above; the
+            // ctrl-exact waveform arm is the only false-seed strip drag), so this
+            // else reaches ONLY a motionless waveform strip press. Navigation
+            // (allowed in read-only). The zoom-row motionless release keeps its
+            // double-click seeding untouched above.
+            selection.clear_selection();
         }
         app.strip_drag = StripDragState{};
         // reappear the cursor at the anchor-stem column (y frozen at the press
@@ -1245,10 +1354,14 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     }
     if (app.pending_trim_drag.active) {
         // The pending trim drag never crossed the threshold: a motionless
-        // chip-row press. Trim has no click action and the press mutated
-        // nothing, so there is nothing to commit — just disarm. (A crossed
-        // pending became app.trim_drag and commits through the branch above.)
+        // chip/bridge press. Under the lane-click model that is the trim-lane
+        // CLICK (R4.5) — select + highlight the trim window. The pending only
+        // arms on the full pair (route_trim_chip_press gates it), so the window
+        // exists; the sync takes it. (A crossed pending became app.trim_drag and
+        // commits through the branch above; read-only never armed a pending, so
+        // this branch is writable-only — the read-only R4.5 click ran at press.)
         app.pending_trim_drag = PendingTrimDrag{};
+        sync_highlight_to_trim_window();
         return;
     }
     if (app.pending_marker_drag.active) {

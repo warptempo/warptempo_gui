@@ -278,6 +278,10 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
             // repaints; the playhead stays where it is.
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
+            // R7 live-sync: the highlight + selection track the moving window
+            // (both bounds stay set through the drag; the coupling helper
+            // normalizes crossed bounds and reselects the contained markers).
+            sync_highlight_to_trim_window();
         }
         return;
     }
@@ -347,6 +351,10 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         // repaints; the playhead stays where it is.
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
+        // R7 live-sync: the highlight + selection track the moving window (both
+        // bounds stay set through the single-bound drag; crossing is normalized
+        // in the coupling helper).
+        sync_highlight_to_trim_window();
     }
 }
 
@@ -418,8 +426,84 @@ void GuiInputHandler::commit_trim_drag() {
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         target_render.trigger();
+        // R7 release-sync: a surviving pair re-syncs against the snapped bounds;
+        // a dissolved pair (crossed commit) clears the region + selection (the
+        // window is gone) — the coupling helper owns both outcomes.
+        sync_highlight_to_trim_window();
     }
     app.trim_drag = TrimDragState{};
+}
+
+// The lane-click model's selection<->trim coupling (architect 2026-07-23). Both
+// bounds set -> the region highlight and the marker selection both take the trim
+// window: region = the window's active-domain extent (each source bound through
+// source_frame_to_active_domain, clamped to a playable frame like every other
+// region former), selection = the active-column markers contained in that same
+// active-domain span (select_contained_in_span, which owns the top-strip /
+// timestamp damage and clears the shift-range anchor). Bounds may be crossed
+// mid-drag, so normalize lo/hi (the map is monotone). Lone / no trim -> no window
+// -> clear both the region and the selection (the window is gone). Read-only-safe
+// (region + selection are navigation). The playhead is never touched.
+void GuiInputHandler::sync_highlight_to_trim_window() {
+    if (app.trim.has_begin && app.trim.has_end) {
+        const int64_t a = clamp_playhead_to_live_domain(
+            source_frame_to_active_domain(app, audio, app.trim.begin_frame),
+            app, audio);
+        const int64_t b = clamp_playhead_to_live_domain(
+            source_frame_to_active_domain(app, audio, app.trim.end_frame),
+            app, audio);
+        const int64_t lo = std::min(a, b);
+        const int64_t hi = std::max(a, b);
+        app.region.active  = true;
+        app.region.a_frame = lo;
+        app.region.b_frame = hi;
+        selection.select_contained_in_span(lo, hi);
+    } else {
+        app.region = RegionState{};
+        selection.clear_selection();
+    }
+    viewport.invalidate_waveform_area();
+}
+
+// R4.6: set ONE trim bound at the clicked column. The column maps to a source
+// frame through authored_frame_at_column over the DISPLAYED paint map — the same
+// release-snap basis commit_trim_drag uses (its snap_moved_bound goes
+// source_frame -> painted_column -> authored_frame; a click carries the column
+// directly). The absolute walls [0, total-1] apply after the snap, then the
+// shared crossed-commit auto-clear (a bound onto/across its partner dissolves
+// both). History-less like every trim mutation; the repaint + trigger tail
+// mirrors the drag release. Read-only refuses silently (trim authoring). The
+// coupling sync runs afterward against whatever the trim now is (both bounds ->
+// window highlight + contained selection; a dissolve / lone result -> cleared).
+void GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
+    if (active_view_state(app).read_only) return;   // trim authoring
+    if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
+    if (current_samples_per_pixel(app, audio) <= 0.0) return;
+    const GuiRect area = waveform_area(app);
+    if (area.w <= 0) return;
+    int col = mouse_x - area.x;
+    if (col < 0)         col = 0;
+    if (col >= area.w)   col = area.w - 1;
+    const std::vector<WarpFrameMapSegment>& dmap =
+        displayed_or_live_target_map(app, audio);
+    int64_t frame = authored_frame_at_column(app, audio, col, dmap);
+    const int64_t wall = audio.total_frames() - 1;
+    if (frame < 0)    frame = 0;
+    if (frame > wall) frame = wall;
+    if (is_begin) {
+        app.trim.begin_frame = frame;
+        app.trim.has_begin   = true;
+    } else {
+        app.trim.end_frame = frame;
+        app.trim.has_end   = true;
+    }
+    auto_clear_crossed_trim();
+    viewport.invalidate_waveform_area();
+    viewport.invalidate_timestamp_area();
+    target_render.trigger();
+    // The lane-click coupling: keep the highlight + selection agreeing with the
+    // window (both bounds -> window; a dissolved/lone result -> cleared).
+    sync_highlight_to_trim_window();
 }
 
 // Plain chip-row press trim routing — the sole pointer route into a trim drag.

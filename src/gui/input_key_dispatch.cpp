@@ -411,6 +411,10 @@ void GuiInputHandler::cancel_active_drags() {
         viewport.invalidate_waveform_area();
         viewport.invalidate_top_strip();
         viewport.invalidate_timestamp_area();
+        // R7 cancel-sync: the drag live-synced the highlight + selection to the
+        // moving window; the bounds are back, so re-sync against the RESTORED
+        // window (the highlight/selection follow the window back to its origin).
+        sync_highlight_to_trim_window();
     }
     // The strip drag has already applied its motion, so stopping is just
     // ending the gesture at its current position — Esc is not a cancel here (a
