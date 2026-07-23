@@ -999,8 +999,19 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // column to seat a playhead) still deselects.
             selection.clear_selection();
             if (click_rel_x < 0 || click_rel_x >= area.w) return;
-            const int64_t sample =
-                playhead_frame_at_click_column(app, audio, click_rel_x);
+            // Clamp the click column's frame into the live domain ONCE and
+            // pass that same clamped value to both the playhead move and the
+            // region arm: move_playhead_to clamps internally, but the region
+            // former stored the raw value. At a fractional flush-right zoom the
+            // painter-quantized wall (q = nearbyint(spp*W)/W) differs from the
+            // click conversion's current_samples_per_pixel, so the last visible
+            // column's frame can compute to domain_total — one past
+            // [0, domain_total-1], which the display-state validator then
+            // clears wholesale (the round-3 "viewport-bounded columns cannot
+            // reach the wall" claim is disproven; the formers all clamp now).
+            const int64_t sample = clamp_playhead_to_live_domain(
+                playhead_frame_at_click_column(app, audio, click_rel_x),
+                app, audio);
             viewport.move_playhead_to(sample);
             if (was_playing && sample != playhead_at_entry) {
                 playback_lifecycle.reseek_keeping_alive(sample);
@@ -1400,12 +1411,17 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // Far endpoint at the pointer column, through the same click->frame
         // basis as the anchor, clamped to the visible strip like the other
         // drags' live tracking. Endpoints are active-domain frames, so the
-        // span survives pan/zoom mid-drag and at rest.
+        // span survives pan/zoom mid-drag and at rest. Also clamped into the
+        // live domain: at a fractional flush-right zoom the painter-quantized
+        // wall differs from the click conversion, so the last visible column's
+        // frame can land at domain_total — one past [0, domain_total-1] — which
+        // the display-state validator would clear wholesale (same rule as the
+        // press-site anchor; the round-3 no-clamp provenance is disproven).
         int rel = mouse_x - area.x;
         if (rel < 0) rel = 0;
         if (rel >= area.w) rel = area.w - 1;
-        const int64_t far_frame =
-            playhead_frame_at_click_column(app, audio, rel);
+        const int64_t far_frame = clamp_playhead_to_live_domain(
+            playhead_frame_at_click_column(app, audio, rel), app, audio);
         app.region.active  = true;
         app.region.a_frame = app.region_drag.anchor_frame;
         app.region.b_frame = far_frame;

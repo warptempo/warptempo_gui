@@ -116,15 +116,19 @@ void PhaseResetPropagate::copy_from_selection() {
 
     // Section-based copy (architect 2026-07-23): each selected marker
     // contributes the block IT owns — from its time to the next store
-    // marker's time, or to the song end for the store-final marker. The set
-    // may be disjoint (one marker = one valid block; blocks are independent,
-    // the recorded asymmetry with the `m` sweep's contiguity requirement).
-    // Not routed through walk_named_blocks: the copy filters on the SELECTED
-    // set and on EFFECTIVE-enabled status (a disabled selected marker
-    // contributes no block), neither of which that shared destination walk
-    // expresses — a separate loop here, walk_named_blocks stays the
-    // paste-destination walk. std::set is ascending, so the blocks come out
-    // in time order.
+    // marker's time, or to the song end for the store-final marker. The caller
+    // has verified the selected set is a CONTIGUOUS run (codex round-4): the
+    // paste walks every labeled destination block in strict lockstep, so a
+    // disjoint clipboard would diverge at the first gap; contiguity is what
+    // keeps the two label sequences aligned (the copy gate mirrors the `m`
+    // sweep's). Unlabeled markers inside the run still contribute no block, and
+    // the paste's destination walk skips unlabeled markers identically, so the
+    // sequences stay aligned. Not routed through walk_named_blocks: the copy
+    // filters on the SELECTED set and on EFFECTIVE-enabled status (a disabled
+    // selected marker contributes no block), neither of which that shared
+    // destination walk expresses — a separate loop here, walk_named_blocks
+    // stays the paste-destination walk. std::set is ascending, so the blocks
+    // come out in time order.
     std::vector<DestBlock> src_blocks;
     for (int i : app.selected_markers) {
         if (i < 0 || i >= n) continue;
@@ -163,8 +167,21 @@ void PhaseResetPropagate::copy_from_selection() {
         // captured as part of this block; the fractional anchor stays at
         // the true marker time, so a lead-in reset gets a small negative
         // fractional_position and round-trips to the same lead-in offset.
+        // Song-end block (its extent ends at the song end): keep the shifted
+        // LOWER bound (lead-ins before the final marker still belong to it) but
+        // use the UNSHIFTED upper bound. The end guard exists to reassign the
+        // tail to the NEXT section's owner; at song end there is no next owner,
+        // so the guard would orphan the tail instead — the final block owns its
+        // section through the last frame. The capture follows the SOURCE
+        // block's own extent (a clipboard block captured at song end may later
+        // paste onto a non-final destination and vice versa; each side's window
+        // follows its own extent). Detected by extent-end == song_end_frame,
+        // exact and unique: interior blocks end at the next marker's time,
+        // which walls at total-1 < total = song_end_frame.
         const double lo = b.start - guard;
-        const double hi = std::max(lo, b.end - guard);
+        const double hi = (b.end == song_end_frame)
+                              ? static_cast<double>(b.end)
+                              : std::max(lo, b.end - guard);
         for (const auto& t : tv) {
             const double t_time = t.time_frame;
             if (t_time < lo)  continue;
@@ -210,8 +227,9 @@ void PhaseResetPropagate::paste_apply() {
     const int n = static_cast<int>(mv.size());
     if (anchor < 0 || anchor >= n) return;
 
+    const int64_t song_end_frame = target_render.audio.total_frames();
     std::vector<DestBlock> dest_blocks =
-        walk_named_blocks(mv, anchor, n, target_render.audio.total_frames());
+        walk_named_blocks(mv, anchor, n, song_end_frame);
 
     const auto& clip_blocks = app.phase_reset_clipboard.blocks();
 
@@ -266,8 +284,16 @@ void PhaseResetPropagate::paste_apply() {
     const double guard = kPhaseResetBoundaryGuardSeconds *
         static_cast<double>(target_render.audio.sample_rate());
     for (size_t i = 0; i < matched; ++i) {
+        // Song-end destination block: keep the shifted lower bound but use the
+        // UNSHIFTED upper bound — the end guard reassigns the tail to the next
+        // section's owner, and at song end there is no next owner, so the guard
+        // would orphan the final 100 ms instead. The clear window follows the
+        // DESTINATION block's own extent (a non-final destination paired with a
+        // song-end clipboard block still shifts; each side follows its own).
         const double lo = dest_blocks[i].start - guard;
-        const double hi = std::max(lo, dest_blocks[i].end - guard);
+        const double hi = (dest_blocks[i].end == song_end_frame)
+                              ? static_cast<double>(dest_blocks[i].end)
+                              : std::max(lo, dest_blocks[i].end - guard);
         out.erase(std::remove_if(out.begin(), out.end(),
             [lo, hi](const GuiPhaseResetMarker& m) {
                 return m.time_frame >= lo && m.time_frame < hi;
@@ -384,8 +410,9 @@ void PhaseResetPropagate::paste_state_apply() {
     const int n = static_cast<int>(mv.size());
     if (anchor < 0 || anchor >= n) return;
 
+    const int64_t song_end_frame = target_render.audio.total_frames();
     const std::vector<DestBlock> dest_blocks =
-        walk_named_blocks(mv, anchor, n, target_render.audio.total_frames());
+        walk_named_blocks(mv, anchor, n, song_end_frame);
     const auto& clip_blocks = app.phase_reset_clipboard.blocks();
 
     // Boundary guard: the seconds-domain authoring tolerance converted
@@ -439,10 +466,23 @@ void PhaseResetPropagate::paste_state_apply() {
         // past the compared range, the marker falls off — symmetrically
         // on both sides. Clamp hi >= lo so a pathologically tiny block
         // produces an empty window (count 0), not an inverted one.
+        // Song-end block: the UPPER bound is UNSHIFTED — the end guard
+        // reassigns the tail to the next section's owner, and at song end
+        // there is no next owner, so the guard would orphan the final 100 ms.
+        // Each side follows its OWN extent: the clipboard block and the
+        // destination block need not both be song-end (a song-end capture may
+        // pair with a non-final destination and vice versa), so dst_hi tests
+        // the destination extent and src_hi the source extent independently.
         const double dst_lo = dest_blocks[i].start - n_guard;
-        const double dst_hi = std::max(dst_lo, dest_blocks[i].end - n_guard);
+        const double dst_hi =
+            (dest_blocks[i].end == song_end_frame)
+                ? static_cast<double>(dest_blocks[i].end)
+                : std::max(dst_lo, dest_blocks[i].end - n_guard);
         const double src_lo = clip_blocks[i].source_start_frame - n_guard;
-        const double src_hi = std::max(src_lo, clip_blocks[i].source_end_frame - n_guard);
+        const double src_hi =
+            (clip_blocks[i].source_end_frame == song_end_frame)
+                ? static_cast<double>(clip_blocks[i].source_end_frame)
+                : std::max(src_lo, clip_blocks[i].source_end_frame - n_guard);
 
         // Windowed clipboard placements (migration applied). Globally
         // bucketed by source_frame so a near-end placement originally

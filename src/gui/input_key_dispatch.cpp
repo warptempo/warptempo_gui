@@ -1253,18 +1253,34 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // Ctrl+P: copy phase reset placements from the selected warp markers
     // into the session clipboard. Section-based (architect 2026-07-23):
     // each selected marker contributes the block it owns (marker to next
-    // store marker, the store-final marker's block to the song end), so one
-    // or more markers may be selected and the set need not be contiguous
-    // (copy blocks are independent — the recorded asymmetry with the `m`
-    // sweep, which requires a contiguous run). W-mode only; phase reset mode
-    // is a silent no-op. An empty selection in W-mode emits a one-line
-    // stderr nudge.
+    // store marker, the store-final marker's block to the song end). The set
+    // must be a CONTIGUOUS run (codex round-4): the paste walks every labeled
+    // destination block from the anchor and matches the clipboard in strict
+    // lockstep, so a disjoint clipboard (labeled blocks A, C with a labeled B
+    // unselected in the gap) would diverge at the first gap and never paste C.
+    // The clipboard carries no gap representation, so contiguity is what keeps
+    // the two label sequences aligned — the SAME gate the `m` sweep takes
+    // (extent == count). Unlabeled markers inside the run still contribute no
+    // block, and the paste's destination walk skips unlabeled markers
+    // identically, so the two label sequences stay aligned regardless.
+    // W-mode only; phase reset mode is a silent no-op. An empty or
+    // non-contiguous selection in W-mode emits a one-line stderr nudge.
     if (key == GuiKeys::P && ctrl && !shift && !alt) {
         if (app.active_markers_view != 'W') return true;
         if (app.selected_markers.empty()) {
             std::fprintf(stderr,
                 "warptempo_gui: phase_reset copy: select one or more warp "
                 "markers\n");
+            return true;
+        }
+        // Contiguity gate, same spelling as the `m` sweep: std::set is
+        // ascending, so a run [first .. last] is contiguous iff its extent
+        // equals its count.
+        if (*app.selected_markers.rbegin() - *app.selected_markers.begin() + 1
+                != static_cast<int>(app.selected_markers.size())) {
+            std::fprintf(stderr,
+                "warptempo_gui: phase_reset copy: select a contiguous run of "
+                "warp markers\n");
             return true;
         }
         phase_reset_propagate.copy_from_selection();
@@ -1354,9 +1370,11 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // the selected run's LAST section is INCLUDED. The gate requires a
     // NON-EMPTY, CONTIGUOUS run of selected markers with no label_ref in
     // [owner .. boundary marker] inclusive; any other selection is a silent
-    // no-op. A disabled UNSELECTED marker inside the span stays a legal
-    // in-span pass; a disabled OWNER is rejected (bpm_popup_eligible_marker
-    // now excludes disabled — a disabled owner was a render-inert rewrite).
+    // no-op. Under the contiguity rule every in-span marker IS selected, so a
+    // selected span-internal marker may be disabled and is still converted to a
+    // plain pass per sweep cell; a disabled OWNER is rejected
+    // (bpm_popup_eligible_marker now excludes disabled — a disabled owner was a
+    // render-inert rewrite).
     // There is no toggle-off branch: the bpm editor is a modal bottom-strip
     // surface, so while it is open `m` never reaches this dispatch — it is
     // just a typed character the bracket grammar rejects — and bpm mode never
@@ -1379,10 +1397,11 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         if (owner < 0 || last_sel >= n) return true;
         // Contiguity: the sweep writes ONE owner tempo over ONE contiguous
         // span, and the shift-range select produces exactly contiguous runs;
-        // a disjoint set has no single-span meaning here. (The COPY, whose
-        // blocks are independent, accepts disjoint sets — the recorded
-        // asymmetry.) std::set is ascending, so a run [owner .. last_sel] is
-        // contiguous iff its extent equals its count.
+        // a disjoint set has no single-span meaning here. The COPY takes the
+        // SAME contiguity gate (its paste walks labeled blocks in lockstep, so
+        // a gap would misalign the two label sequences). std::set is ascending,
+        // so a run [owner .. last_sel] is contiguous iff its extent equals its
+        // count.
         if (last_sel - owner + 1 != static_cast<int>(app.selected_markers.size()))
             return true;
         // boundary == last_sel + 1: one past the last selected marker. When
