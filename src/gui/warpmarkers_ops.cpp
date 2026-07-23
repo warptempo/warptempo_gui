@@ -206,8 +206,15 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     std::vector<int64_t> del_positions;
     del_positions.reserve(app.selected_markers.size());
     for (int idx : app.selected_markers) {
-        del_positions.push_back(
-            source_frame_to_active_domain(app, audio, mv[idx].time_frame));
+        // Clamp the forward-map image into the live domain: source-view
+        // identity means a legal marker clamps to itself here, so this is a
+        // no-op — the spelling matches the target-domain demote captures
+        // (input_pointer / phaseresetmarkers_ops, where an EOF item's image can
+        // round one past the wall) so all three region-endpoint captures read
+        // uniformly.
+        del_positions.push_back(clamp_playhead_to_live_domain(
+            source_frame_to_active_domain(app, audio, mv[idx].time_frame),
+            app, audio));
     }
     // Delete in descending order so earlier indices stay valid.
     for (auto it = app.selected_markers.rbegin();

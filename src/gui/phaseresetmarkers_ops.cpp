@@ -114,8 +114,14 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     std::vector<int64_t> del_positions;
     del_positions.reserve(app.selected_markers.size());
     for (int idx : app.selected_markers) {
-        del_positions.push_back(
-            source_frame_to_active_domain(app, audio, tv[idx].time_frame));
+        // Clamp the forward-map image into the live domain: region endpoints
+        // hold PLAYABLE frames only (the display-state validator rejects an
+        // endpoint >= total and clears the highlight), and an EOF reset's
+        // unclamped image can round one past the wall — the land's own helper
+        // keeps it a playable frame.
+        del_positions.push_back(clamp_playhead_to_live_domain(
+            source_frame_to_active_domain(app, audio, tv[idx].time_frame),
+            app, audio));
     }
     for (auto it = app.selected_markers.rbegin();
          it != app.selected_markers.rend(); ++it) {

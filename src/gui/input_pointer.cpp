@@ -561,7 +561,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // The editor lifecycle block above already closed any open flag editor,
         // so the lane run this resolves is the committed (non-editor) run. The
         // WAVEFORM never SELECTS a marker — a plain press is deselect-all +
-        // playhead placement + region-drag arm, a Shift press a no-op — so no
+        // playhead placement + region-drag arm, a Shift press FORMS a region
+        // (from the playhead, or a marker DEMOTE that clears the selection; see
+        // the waveform block below) — so no
         // marker scan runs on the waveform at all (the invisible stem is not a
         // grab target). Trim bounds are grabbed only by their top-strip chips /
         // the inter-chip bridge on a PLAIN chip-row press (route_trim_chip_press
@@ -856,9 +858,27 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // transient navigation; the demote's deselect is selection =
                 // navigation). ctrl/alt returned earlier, so this is
                 // shift-exact — a shift+modified combination never reaches here.
-                if (click_rel_x < 0 || click_rel_x >= area.w) return;
-                const int64_t click_frame =
-                    playhead_frame_at_click_column(app, audio, click_rel_x);
+                // The deselect runs FIRST, before the gutter early-return, so
+                // an inert-gutter shift+click (no column to form a region from)
+                // still drops the marker selection — every waveform click drops
+                // it, mirroring the plain branch's gutter clear.
+                if (click_rel_x < 0 || click_rel_x >= area.w) {
+                    selection.clear_selection();
+                    return;
+                }
+                // Region endpoints hold PLAYABLE live-domain frames only: the
+                // display-state validator (clamp_display_state_to_live_domain)
+                // defines an endpoint >= total as invalid and clears the whole
+                // highlight, and the forward map rounds unclamped, so an EOF
+                // item's image (a marker at total-1 under a fast map) can land
+                // one past the wall — clamping here through the land's own
+                // helper keeps every former inside the one region domain. The
+                // click_frame is clamped for the same conformance (the plain
+                // press path clamps it through move_playhead_to; the region
+                // former stored it raw).
+                const int64_t click_frame = clamp_playhead_to_live_domain(
+                    playhead_frame_at_click_column(app, audio, click_rel_x),
+                    app, audio);
                 int64_t endpoint = app.playhead_cursor_sample;
                 if (!app.selected_markers.empty()) {
                     // Demote: the region's far endpoint is the selected marker
@@ -879,8 +899,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                 continue;
                             src_frame = mv[idx].time_frame;
                         }
-                        const int64_t pos = source_frame_to_active_domain(
-                            app, audio, src_frame);
+                        // Clamp the forward-map image into the live domain (see
+                        // the click_frame comment above): an EOF marker's image
+                        // can round to total, which the display-state validator
+                        // rejects — the land's own helper keeps this endpoint a
+                        // playable frame.
+                        const int64_t pos = clamp_playhead_to_live_domain(
+                            source_frame_to_active_domain(app, audio, src_frame),
+                            app, audio);
                         const int64_t dist = pos > click_frame
                                                  ? pos - click_frame
                                                  : click_frame - pos;

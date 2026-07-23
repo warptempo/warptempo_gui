@@ -131,8 +131,10 @@ void Selection::select_range_from_anchor(int idx) {
 
 void Selection::sanitize_selection_after_restore(int n) {
     // A restore (undo/redo) dissolves the shift-range anchor — this is the
-    // route that closes the shift-held hole for Ctrl+Shift+Z, which arrives
-    // WITH shift so the dispatch-entry clear does not fire.
+    // route that closes the shift-held hole for Ctrl+Shift+Z: redo holds
+    // shift, so no shift falling edge fires (the platform falling-edge hook
+    // owns the release half of the anchor's lifetime), and this restore-path
+    // clear is what dissolves the anchor instead.
     app.shift_range_anchor = -1;
     std::set<int> cleaned;
     for (int idx : app.selected_markers) {
