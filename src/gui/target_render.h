@@ -89,9 +89,9 @@ struct GuiTargetRender {
 
     // True iff a target render is currently in flight (worker busy
     // with the target render's request) OR a target-render dispatch is
-    // pending behind the cancellation of a prior render. Used by
-    // toggle_playback in target view to refuse Space while an update is
-    // in progress.
+    // pending behind the cancellation of a prior render. Used by the two
+    // Space handlers (input_handler.cpp) in target view to refuse
+    // Space-to-play while an update is in progress.
     bool is_updating() const {
         return pending_ || in_flight_;
     }

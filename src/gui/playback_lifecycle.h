@@ -42,14 +42,26 @@ struct GuiPlaybackLifecycle {
     // is re-validated against the target buffer's domain, so an offset landing
     // at or past the buffer end is a silent no-op.
     void toggle_playback(int64_t launch_offset = 0);
+    // Scrub launch (the lower-half waveform scrub press, stopped case): launch
+    // the scanner from `frame`, an ABSOLUTE position in the active paint
+    // domain, leaving the resting cursor untouched — the pure audition entry.
+    // Delegates to the same launch body as toggle_playback's play edge, so
+    // the standing gates apply identically: a frame outside the trim window /
+    // target buffer domain, or one leaving fewer than two playable frames of
+    // remainder, is a silent no-op — exactly Space's conventions. A live
+    // session never launches (defensive; the scrub press routes live sessions
+    // to reseek_keeping_alive instead).
+    void scrub_launch_at(int64_t frame);
     void set_playback_speed(float s);
 
     // Reseek the active playback session to a new starting sample, keeping
     // audio alive. The sample is expressed in the active playhead domain
     // (source-domain in source view; target-domain in target view). Handles
     // the target-view target_buffer translation internally. Caller is
-    // responsible for the entry-state
-    // check (was_playing AND sample != playhead_at_entry); this function
+    // responsible for the entry-state check — playback alive AND the position
+    // actually moving (the placement press compares the sample against the
+    // entry playhead; the scrub press against the current scanner position;
+    // the scrub drag's motion re-scrub keys on a column change); this function
     // unconditionally reseeks when called. For target view, samples
     // outside the target buffer's range fall back to playback.stop() —
     // keep-alive intent is well-defined for in-range positions only.
@@ -63,4 +75,12 @@ struct GuiPlaybackLifecycle {
     // stopped (the settings editor is modal, so its open stopped playback) the
     // edge branch is inert and this is a plain field set.
     void set_follow_mode(bool desired);
+
+private:
+    // The shared launch body (contract at the definition): validate an
+    // absolute paint-domain launch position, capture the loop verdict, seed
+    // the scanner, and start the audio. Returns whether it launched. Callers
+    // (toggle_playback's play edge, scrub_launch_at) run the defensive
+    // scanner/override flag clears before delegating.
+    bool launch_playback_from(int64_t launch_pos);
 };

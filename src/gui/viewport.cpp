@@ -530,10 +530,11 @@ void Viewport::invalidate_all() {
 // Auto-follow during playback: when the scanner leaves the viewport,
 // scroll so the scanner lands ~10% into the new view, leaving room
 // ahead. Only the first move beyond vp_end triggers a scroll. Called
-// at play press too (right after the launch seed sets the scanner to the
-// launch cursor position), so the same landing rule left-edge-aligns the
-// viewport on the cursor if it was offscreen — so the scanner always issues
-// forth from a visible cursor.
+// at launch too (right after launch_playback_from's seed sets the scanner to
+// the launch position), so the same landing rule left-edge-aligns the
+// viewport on the launch position if it was offscreen — the scanner always
+// issues forth visible (Space's cursor launch can be offscreen; a scrub
+// click is a visible column already, so the launch call no-ops there).
 void Viewport::follow_scroll_if_needed() {
     const int64_t visible = samples_visible(app, audio);
     if (visible <= 0) return;

@@ -68,20 +68,13 @@ void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
 // snap-back, no separate stash; the cursor is the launch point by
 // definition under the split-playhead model).
 //
-// Target-view branch: the audio device is bound to app.target_buffer
-// (rebound by GuiTargetRender's completion path on Success, with the
-// buffer's domain offset travelling with the bind). The playhead in
-// target view is a full-target-frame coordinate, and playback's whole
-// public API speaks the bound buffer's domain (playback.h), so the
-// bounds pass straight through: [domain_begin(), domain_end()) is the
-// target buffer's full-target-frame extent and play() takes the
-// validated cursor position unchanged. Speed is forced to 1.0 here:
-// target view's whole purpose is that
-// audio plays the user's authored warp, so an extra speed multiplier
-// on top would defeat that purpose. The persistent app.playback_speed
-// is left untouched; toggling back to source view restores it naturally
-// because every launch re-applies from app.playback_speed (a speed set
-// while in target view only stores, taking effect at this launch site).
+// The play edge computes the launch position — cursor + launch_offset, the
+// offset non-zero only for the target-view Alt+Space lead-in — and delegates
+// to launch_playback_from, the shared launch body the scrub launch also
+// rides; the validation, loop-verdict capture, scanner seed, follow behavior,
+// and play() all live there. What stays HERE is the cursor-relative
+// arithmetic and its overflow-ordered pre-sum gate (a cursor-vs-shifted-bound
+// check that must run before the sum exists — see below).
 void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     if (playback.is_playing()) {
         playback.stop();
@@ -89,10 +82,99 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         return;
     }
     // Defensive: clear any stale override from an unhandled stop path so
-    // it can't survive into the new playback session.
+    // it can't survive into the new playback session. Runs before any
+    // launch validation (the pre-sum gate below included), so a refused
+    // launch still leaves these cleared; the shared launch body assumes
+    // its caller ran them (scrub_launch_at, the other caller, does too).
     app.follow_overridden_for_session = false;
     app.playhead_scanner_restore_pending = false;
     app.playhead_scanner_endpoint_painted = false;
+    int64_t launch_pos = app.playhead_cursor_sample;
+    if (app.active_audio_view == 'T') {
+        // Launch = cursor + launch_offset. The offset is 0 for plain Space and
+        // +N/2 for the Alt+Space lead-in audition; the resting cursor is never
+        // moved either way, so stop just deactivates the scanner and the
+        // cursor is right where it was left.
+        //
+        // The end check runs on the cursor against the offset-SHIFTED end,
+        // BEFORE the sum is formed: cursor + launch_offset can exceed int64
+        // for an extreme cursor value, while domain_end() - launch_offset
+        // cannot (the offset is 0 or +N/2 at both call sites and domain_end
+        // is a modest buffer extent), and a cursor that passes the check
+        // bounds the sum below domain_end(). Same verdicts as summing first
+        // wherever the sum was defined — and the launch body's own end check
+        // (launch_pos >= domain_end() - 1, the identical verdict once the sum
+        // exists) is therefore a pre-passed re-check for this caller, load-
+        // bearing only for the scrub entry. The extra `- 1` is the two-frame
+        // remainder gate (rationale at the launch body's source arm): a
+        // launch whose start would leave fewer than two frames before
+        // domain_end() no-ops. It does not change the overflow shape — the
+        // check still runs on the cursor against the shifted bound before the
+        // sum is formed — and domain_end() - launch_offset - 1 cannot
+        // underflow into surprise: domain_end() >= 0 and launch_offset is 0
+        // or +N/2, so a tiny buffer only drives the difference negative,
+        // which merely makes the no-op FIRE (the safe direction). The
+        // target-buffer populated check lives in the launch body; running
+        // this gate first is verdict-identical (both are pure silent refusals
+        // with no state written between them, and domain_end() is well-
+        // defined for whatever buffer is bound).
+        if (app.playhead_cursor_sample >=
+            playback.domain_end() - launch_offset - 1) return;
+        launch_pos = app.playhead_cursor_sample + launch_offset;
+    }
+    launch_playback_from(launch_pos);
+}
+
+// Scrub launch: start the scanner from `frame` — an absolute active-paint-
+// domain position (the scrub press hands it in already clamped to the live
+// domain) — with the resting cursor, selection, region, and follow all
+// untouched. The SCANNER, not the cursor, is what the gesture drives: the
+// scanner fields are meaningful only while active, and this is exactly the
+// launches-the-scanner-independently-of-the-cursor consumer that contract
+// anticipated. Riding the shared launch body makes a scrub launch
+// indistinguishable from a Space launch except for the start position, so
+// every standing gate applies (contract at the header declaration).
+void GuiPlaybackLifecycle::scrub_launch_at(int64_t frame) {
+    // Defensive: a live session never launches — the scrub press routes
+    // playing sessions to reseek_keeping_alive, so this guard only keeps a
+    // future caller from stacking play() over a live run.
+    if (playback.is_playing()) return;
+    // The same defensive clears toggle_playback's play edge runs (the launch
+    // body assumes its caller ran them): a stale override or endpoint-hold
+    // flag must not survive into the new session, and a refused launch
+    // leaves them cleared exactly as a refused Space does.
+    app.follow_overridden_for_session = false;
+    app.playhead_scanner_restore_pending = false;
+    app.playhead_scanner_endpoint_painted = false;
+    launch_playback_from(frame);
+}
+
+// The shared launch body: validate `launch_pos` — an ABSOLUTE position in the
+// active PAINT domain — against the active view's window, capture the loop
+// verdict, seed the scanner, and start the audio. Returns whether it
+// launched; every refusal is a silent no-op (the "nothing to audition"
+// family). Two callers: toggle_playback's play edge (cursor + launch_offset)
+// and scrub_launch_at (the clicked frame). This body never writes the
+// resting cursor — the scanner is the only playhead it touches, so a launch
+// is a pure scanner event and the cursor is untouched by construction.
+// Callers run the defensive scanner/override flag clears before delegating
+// (both do, so they precede validation exactly once either way).
+//
+// Target-view branch: the audio device is bound to app.target_buffer
+// (rebound by GuiTargetRender's completion path on Success, with the
+// buffer's domain offset travelling with the bind). The playhead in
+// target view is a full-target-frame coordinate, and playback's whole
+// public API speaks the bound buffer's domain (playback.h), so the
+// bounds pass straight through: [domain_begin(), domain_end()) is the
+// target buffer's full-target-frame extent and play() takes the
+// validated launch position unchanged. Speed is forced to 1.0 here:
+// target view's whole purpose is that
+// audio plays the user's authored warp, so an extra speed multiplier
+// on top would defeat that purpose. The persistent app.playback_speed
+// is left untouched; toggling back to source view restores it naturally
+// because every launch re-applies from app.playback_speed (a speed set
+// while in target view only stores, taking effect at this launch site).
+bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // Both `start` (playback.play()'s launch bound) and the scanner's
     // launch position below are in the active PAINT domain
     // (full-target-frame in target view; source-frame otherwise)
@@ -115,41 +197,28 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     int64_t loop_start = -1;
     if (app.active_audio_view == 'T') {
         // Target view: the target buffer is the live playback source.
-        // Refuse if no successful target render has populated it yet
-        // — Space's outer gate in input_handler.cpp already checks this,
-        // but stay defensive here so a future caller can't slip through.
-        // (Mode logic — "has a successful target render populated the
-        // buffer" — not domain math; the domain range policy follows.)
-        if (app.target_buffer_frames <= 0) return;
-        // Launch = cursor + launch_offset. The offset is 0 for plain Space and
-        // +N/2 for the Alt+Space lead-in audition; the resting cursor is never
-        // moved either way, so stop just deactivates the scanner and the cursor
-        // is right where it was left. Validate the
-        // OFFSET launch (not the bare cursor) against the bound target buffer's
-        // target-domain extent: a launch outside it — including cursor + N/2 at
-        // or past the buffer end — is a silent no-op, nothing to audition.
-        // Mirrors the "playhead at or past trim_end is a silent no-op" pattern
-        // below for source view.
-        //
-        // The end check runs on the cursor against the offset-SHIFTED end,
-        // BEFORE the sum is formed: cursor + launch_offset can exceed int64
-        // for an extreme cursor value, while domain_end() - launch_offset
-        // cannot (the offset is 0 or +N/2 at both call sites and domain_end
-        // is a modest buffer extent), and a cursor that passes the check
-        // bounds the sum below domain_end(). Same verdicts as summing first
-        // wherever the sum was defined. The extra `- 1` is the two-frame
-        // remainder gate (rationale at the source arm below): a launch whose
-        // start would leave fewer than two frames before domain_end() no-ops.
-        // It does not change the overflow shape — the check still runs on the
-        // cursor against the shifted bound before the sum is formed — and
-        // domain_end() - launch_offset - 1 cannot underflow into surprise:
-        // domain_end() >= 0 and launch_offset is 0 or +N/2, so a tiny buffer
-        // only drives the difference negative, which merely makes the no-op
-        // FIRE (the safe direction).
-        if (app.playhead_cursor_sample >=
-            playback.domain_end() - launch_offset - 1) return;
-        start = app.playhead_cursor_sample + launch_offset;
-        if (start < playback.domain_begin()) return;
+        // Refuse if no successful target render has populated it yet.
+        // Space's outer gate in input_handler.cpp already checks this for
+        // the toggle caller, but the check must live here: the scrub launch
+        // reaches this body with no outer gate, and a future caller can't
+        // slip through either. (Mode logic — "has a successful target render
+        // populated the buffer" — not domain math; the domain range policy
+        // follows.)
+        if (app.target_buffer_frames <= 0) return false;
+        // Validate the launch position against the bound target buffer's
+        // target-domain extent: a launch outside it — including a cursor +
+        // N/2 offset launch at or past the buffer end — is a silent no-op,
+        // nothing to audition. Mirrors the "playhead at or past trim_end is a
+        // silent no-op" pattern below for source view. The `- 1` is the
+        // two-frame remainder gate (rationale at the source arm below).
+        // launch_pos is an already-formed int64: toggle_playback's
+        // overflow-ordered pre-sum gate refuses before an undefined
+        // cursor + offset sum could reach here, and the scrub frame is a
+        // clamped live-domain value by construction — so this absolute-
+        // position compare needs no overflow ordering of its own.
+        if (launch_pos >= playback.domain_end() - 1) return false;
+        if (launch_pos < playback.domain_begin()) return false;
+        start = launch_pos;
         end   = playback.domain_end();
         // Target view: the bound buffer IS the trim window under the
         // completion semantics, so the loop start is the buffer's domain
@@ -158,34 +227,35 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         if (loop) loop_start = playback.domain_begin();
     } else {
         end = viewport.trim_end_sample();
-        // Space requires at least TWO playable frames of remainder: a
+        // A launch requires at least TWO playable frames of remainder: a
         // remainder of one (or less) no-ops silently, joining the "nothing
         // to audition" family. A one-frame session is an isolated impulse —
         // the audible pop — so playing from the End landing spot (End lands
-        // the playhead at end - 1) is degenerate, and End+Space is a common
-        // slip of the hand this product caters to for non-adversarial use.
-        // The End landing frame (end - 1) therefore now no-ops, and a
-        // one-frame trim window (begin == end - 1) is Space-inert (its render
+        // the playhead at end - 1, where Space's cursor launch would start)
+        // is degenerate, and End+Space is a common slip of the hand this
+        // product caters to for non-adversarial use. The End landing frame
+        // (end - 1) therefore no-ops — for a scrub click there too — and a
+        // one-frame trim window (begin == end - 1) is launch-inert (its render
         // still works: the trimmer's one-frame-fady-trim latitude is a RENDER
         // latitude, not an audition one). Deliberate near-end plays stay
         // admitted — End, then Left a few times, then Space plays — and
         // start-of-play clicks are normal DAW behaviour, so no fade/ramp/
         // declick machinery is added (considered and REJECTED by ruling).
-        if (app.playhead_cursor_sample >= end - 1) return;
-        // Cursor outside the trim region (either side) is a silent no-op.
-        // For unset trim, trim_begin_sample() is 0, so this never bites.
-        // A crossed or equal pair cannot rest — every commit and load
+        if (launch_pos >= end - 1) return false;
+        // A launch position outside the trim region (either side) is a silent
+        // no-op. For unset trim, trim_begin_sample() is 0, so this never
+        // bites. A crossed or equal pair cannot rest — every commit and load
         // auto-clears both bounds — so [begin, end) is well-formed
-        // whenever this runs; the two checks simply bound Space to the
+        // whenever this runs; the two checks simply bound the launch to the
         // resting trim window.
-        if (app.playhead_cursor_sample < viewport.trim_begin_sample()) return;
-        // Cursor is now guaranteed in [trim_begin, trim_end).
-        start = app.playhead_cursor_sample;
+        if (launch_pos < viewport.trim_begin_sample()) return false;
+        // The launch position is now guaranteed in [trim_begin, trim_end).
+        start = launch_pos;
         // Source view: loop back to the completed trim begin — the same value
-        // the lower Space gate compares against (0 for a lone end).
+        // the lower launch gate compares against (0 for a lone end).
         if (loop) loop_start = viewport.trim_begin_sample();
     }
-    // Scanner launch = the validated cursor position, in the paint domain
+    // Scanner launch = the validated launch position, in the paint domain
     // in every view (see the comment above `start`). Seed the continuous
     // position too so the first paint (where the predictor's cur still equals
     // start and the pre-paint hook early-returns) draws at the launch column
@@ -193,10 +263,12 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     app.playhead_scanner_sample = start;
     app.playhead_scanner_precise = static_cast<double>(start);
     app.playhead_scanner_active = true;
-    // If the cursor is offscreen at play press, left-edge-align the
-    // viewport on the cursor before the scanner issues forth. Follow
-    // mode's same-shape check is sufficient regardless of whether the
-    // user has follow mode toggled on, so always run it on press.
+    // If the launch position is offscreen at play press, left-edge-align the
+    // viewport on it before the scanner issues forth (Space launches from the
+    // possibly-offscreen cursor; a scrub click is a visible column by
+    // construction, so this no-ops there). Follow mode's same-shape check is
+    // sufficient regardless of whether the user has follow mode toggled on,
+    // so always run it on press.
     viewport.follow_scroll_if_needed();
     const bool force_one_x = (app.active_audio_view == 'T');
     playback.set_speed(force_one_x ? 1.0f : app.playback_speed);
@@ -205,18 +277,22 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     // loop). Must be set before play() so a reseek issued right after sees it.
     app.playback_loop_start_sample = loop_start;
     playback.play(start, end, loop_start);
+    return true;
 }
 
 // Click-keep-alive: reseek a live playback session to `sample` without the
-// stop-and-restart visual glitch. Both arms mirror toggle_playback's
+// stop-and-restart visual glitch. Both arms mirror the launch body's
+// (launch_playback_from's)
 // range policy: source view against [trim_begin_sample(), trim_end_sample()),
 // target view against the bound buffer's [domain_begin(),
 // domain_end()). `sample` is a paint-domain coordinate, the same domain
-// playback's public API speaks in every view. Called from the waveform PRESS
-// handlers only (input_pointer.cpp) — the plain left press that places
-// the playhead — when playback was alive at press time; the motion handlers do
-// not call it (a region drag never moves the playhead).
-// Both arms carry the same two-frame remainder gate as toggle_playback (see
+// playback's public API speaks in every view. Called from input_pointer.cpp
+// only, always with playback alive at call time: the upper-half plain
+// waveform press that places the playhead, the lower-half scrub press
+// (playing case), and the scrub drag's per-column motion re-scrub — the one
+// motion caller (a region drag never moves the playhead; the scrub drag
+// moves the SCANNER, which is this function's whole effect).
+// Both arms carry the same two-frame remainder gate as the launch body (see
 // the rationale at its source arm): a reseek that would leave fewer than two
 // playable frames is out of range, so a live-playback click at the last frame
 // stops cleanly instead of playing a one-frame impulse — symmetric with Space.
@@ -225,10 +301,13 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
 // scanner flash. No follow-scroll at the reseek site: the reseek repositions
 // without recentering the viewport.
 //
-// stop_playback_if_playing clears follow_overridden_for_session, but every
-// caller sets it back to true immediately AFTER this returns (having already
-// run move_playhead_to before), so the reset is a harmless transient — the
-// caller owns the override across the reseek.
+// stop_playback_if_playing clears follow_overridden_for_session. The
+// placement-press caller sets it back to true immediately AFTER this returns
+// (having already run move_playhead_to before), so the reset is a harmless
+// transient there — that caller owns the override across the reseek. The
+// scrub callers deliberately set nothing back: a scrub never overrides
+// follow, and after an out-of-range fallback stop the cleared override is
+// simply the resting stopped state.
 void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
     if (app.active_audio_view == 'T') {
         if (app.target_buffer_frames <= 0) { stop_playback_if_playing(); return; }

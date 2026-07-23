@@ -1110,8 +1110,9 @@ int main(int argc, char** argv) {
         if (app.loading || audio.total_frames() <= 0) return;
         if (!playback.is_playing()) return;
 
-        // Loop wrap: a looping audition (trim set, launch-captured in
-        // toggle_playback) wrapped its read position back to the window
+        // Loop wrap: a looping audition (trim set, launch-captured in the
+        // shared launch body launch_playback_from — Space toggle and scrub
+        // launch alike) wrapped its read position back to the window
         // begin. That is a backward cursor jump the free-running predictor
         // cannot see (it clamps its prediction to end_sample, so cursor() holds
         // at the window end and never reveals the wrap), so resync the

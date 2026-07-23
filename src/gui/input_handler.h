@@ -153,7 +153,8 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // mutual-exclusivity rule). DELIBERATELY NOT cleared: the region Space launch (the
 // region IS the launch point there), the nudge/drag playhead follow, marker
 // drops (`s`/Alt+S), undo/redo, and pure viewport moves (PageUp/PageDown, zoom
-// steps, pans). The plain waveform press (arm_region_drag_at) shares this
+// steps, pans) — and the lower-half scrub press, which touches no region at
+// all. The plain upper-half waveform press (arm_region_drag_at) shares this
 // helper — same dissolve shape. The other pre-existing clear sites (Esc, file
 // load, Ctrl+Tab, and the S/T switch) keep their own in-place clears — Esc
 // weaves the reset into its key-guarded early return, and load / Ctrl+Tab /
@@ -291,7 +292,9 @@ struct GuiInputHandler {
     // drag is REVERTED (its cent steps committed live — the grab tempo is
     // written back with one synchronous re-warp, selection and a ridden
     // playhead restored); a strip drag just ends
-    // where it is; a region drag is cancelled and the region restored to its
+    // where it is; a scrub-area drag likewise just ends (end-only — playback
+    // continues, Space remains the sole stop); a region drag is cancelled and
+    // the region restored to its
     // pre-drag snapshot. No-op when no drag is active. Callers: the drag-modal
     // escape hatches in on_key, and the WM-close and resize callbacks in
     // main.cpp (close cancels before raising the prompt; resize cancels before
@@ -302,7 +305,9 @@ struct GuiInputHandler {
     // is the active-domain frame the press just placed the playhead at; (x, y)
     // is the press position for the press-becomes-drag threshold. Captures the
     // pre-drag region for an Esc cancel and dissolves the resting region at
-    // mouse-down. Only the plain waveform press calls this; a Shift press
+    // mouse-down. Only the plain UPPER-HALF waveform press calls this (the
+    // lower half is the scrub surface, which arms its own drag and leaves the
+    // region alone); a Shift press
     // instead forms a region directly (one-shot — the former / marker demote)
     // and does not arm this drag.
     void arm_region_drag_at(int64_t anchor_frame, int x, int y);
