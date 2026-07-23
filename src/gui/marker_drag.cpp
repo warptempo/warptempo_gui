@@ -328,11 +328,18 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         // moveable_times, miss commit's bit-exact untouched branch, and column-snap
         // a marker that had NO permitted motion (a visually motionless, forbidden
         // drag committing an inward jump). Testing clamped == 0.0 returns orig
-        // verbatim, restoring the promised identity: zero effective motion ->
-        // verbatim originals -> any_changed false -> moved never latches ->
-        // commit's untouched short-circuit -> D == 0 -> whole group verbatim. It
-        // subsumes the raw_delta == 0 case (the bounds contain 0, so clamp(0) ==
-        // 0). For a nonzero clamped delta the OTHER members' commit reconstructs
+        // verbatim ALWAYS. The downstream no-commit chain (any_changed false ->
+        // moved never latches -> commit's untouched short-circuit -> D == 0 ->
+        // whole group verbatim) holds for a drag whose EVERY event was
+        // zero-clamped. A drag that moved inward first and then wandered back to a
+        // zero-clamped position is different: the return-to-originals event
+        // correctly sets any_changed on the transition and keeps moved latched
+        // (so the repaint is correct), and it still commits nothing — commit's
+        // bit-exact `proposed == original` untouched branch and the net_changed
+        // gate see the restored originals. So verbatim-on-return is right either
+        // way. It subsumes the raw_delta == 0 case (the bounds contain 0, so
+        // clamp(0) == 0). For a nonzero clamped delta the OTHER members' commit
+        // reconstructs
         // from D (D == 0 -> verbatim, else inv(fwd(orig_k) + D) through a plain
         // snap_authored_frame, no column snap), so their sub-column wander never
         // re-quantizes them.
@@ -581,8 +588,9 @@ void MarkerDragOps::commit_drag() {
     // positions round plainly, no per-member pixel anchoring), shifted rigidly
     // by D through inv(fwd(orig) + D) and funnelled through snap_authored_frame
     // (the ONE double-to-authored route), then the integer walls. At D == 0.0 it
-    // keeps the original verbatim, mirroring apply_drag_motion's raw_delta==0.0
-    // rule and avoiding the two-hop's interior non-bitwise identity.
+    // keeps the original verbatim, mirroring apply_drag_motion's CLAMPED-delta
+    // (zero effective motion) short-circuit and avoiding the two-hop's interior
+    // non-bitwise identity.
     std::vector<int64_t> committed(app.drag.moveable_times.size(), 0);
     for (size_t k = 0; k < app.drag.moveable_times.size(); ++k) {
         if (static_cast<int>(k) == gk) {
