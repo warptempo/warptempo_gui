@@ -1028,18 +1028,26 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         trim_has_begin, trim_has_end,
         wf_cache.surface);
 
-    // The stem paints only for the active column's last-selected marker; the
-    // blue flag highlight still marks the whole selection. last_selected_marker
-    // indexes the active column's list (it swaps with the column on W/P switch),
-    // so it is passed straight through. It is folded into fp_selection_hash
-    // (hash_selection above), so the stem appears/disappears as last-selected
-    // moves within an unchanged set (e.g. Tab through a multi-selection).
+    // The stem paints only for the active column's last-selected marker AND only
+    // when the selection is a SINGLETON (R6, architect 2026-07-23): a
+    // multi-select — e.g. a shift-range, a region drag, or the trim-bridge click
+    // — paints NO stem, so the lone stem no longer implies one anchor inside a
+    // larger set. The blue flag highlight still marks the whole selection
+    // (unchanged). The singleton gate collapses to -1 (which render_markers /
+    // render_phaseresetmarkers treat as "no stem") whenever the selection is
+    // empty or has 2+ members. last_selected_marker indexes the active column's
+    // list (it swaps with the column on W/P switch). Both the size and the
+    // last-selected index are folded into fp_selection_hash (hash_selection
+    // above), so the stem appears/disappears as the selection crosses the
+    // singleton boundary or last-selected moves within an unchanged singleton.
+    const int stem_last_selected =
+        (app.selected_markers.size() == 1) ? app.last_selected_marker : -1;
     if (mv == 'P') {
         const auto& list = app.phaseresetmarkers.markers();
         render_phaseresetmarkers(
             ccr, local_area, list,
             vp_start, vp_end, sr,
-            app.last_selected_marker,
+            stem_last_selected,
             tmap_arg, drag_overlay,
             wf_cache.surface);
     } else {
@@ -1047,7 +1055,7 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         render_markers(
             ccr, local_area, list,
             vp_start, vp_end, sr,
-            app.last_selected_marker,
+            stem_last_selected,
             tmap_arg, drag_overlay,
             wf_cache.surface);
     }

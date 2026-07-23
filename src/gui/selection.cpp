@@ -7,6 +7,17 @@
 #include <set>
 #include <vector>
 
+void Selection::damage_playhead_if_focus_flipped(bool was_empty) {
+    if (was_empty == app.selected_markers.empty()) return;   // no focus flip
+    if (audio.total_frames() <= 0) return;
+    // Damage the playhead column (line span + triangle lane). The two-argument
+    // form with equal endpoints damages exactly that one column — the playhead
+    // itself has not moved, only its FORM (grey stemless <-> green line+triangle)
+    // changed with the selection emptiness.
+    const double px = playhead_pixel_x(app, audio);
+    viewport.invalidate_playhead_columns(px, px);
+}
+
 void Selection::repair_last_selected() {
     if (app.last_selected_marker < 0) return;
     if (app.selected_markers.count(app.last_selected_marker)) return;
@@ -20,6 +31,7 @@ void Selection::repair_last_selected() {
 }
 
 void Selection::set_single_selection(int idx) {
+    const bool was_empty = app.selected_markers.empty();
     // Any non-range selection change dissolves the shift-range anchor (its
     // lifecycle: alive only across a continuous shift-held interaction). This
     // is also cycle_selection's clear route (it delegates here).
@@ -32,16 +44,21 @@ void Selection::set_single_selection(int idx) {
     // too (not only on hover), so a selection change damages the timestamp area
     // like a hover change does — the marker-text lane rides the top-strip damage.
     viewport.invalidate_timestamp_area();
+    damage_playhead_if_focus_flipped(was_empty);
 }
 
 void Selection::clear_selection() {
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     if (app.selected_markers.empty() && app.last_selected_marker == -1)
-        return;   // nothing selected
+        return;   // nothing selected (already empty -> no focus flip)
     app.selected_markers.clear();
     app.last_selected_marker = -1;
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
+    // Non-empty -> empty is always a focus flip here (the already-empty case
+    // returned above), so the playhead column repaints from grey stemless to
+    // green line+triangle even with no playhead move.
+    damage_playhead_if_focus_flipped(/*was_empty=*/false);
 }
 
 void Selection::collapse_to_focused() {
@@ -63,6 +80,7 @@ void Selection::collapse_to_focused() {
 }
 
 bool Selection::toggle_selection_membership(int idx) {
+    const bool was_empty = app.selected_markers.empty();
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     if (idx < 0) return false;
     bool added;
@@ -78,6 +96,7 @@ bool Selection::toggle_selection_membership(int idx) {
     }
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
+    damage_playhead_if_focus_flipped(was_empty);
     return added;
 }
 
@@ -89,6 +108,7 @@ void Selection::select_range_from_anchor(int idx) {
     // R1 reversal) after this returns, so idx < 0 (never reached from the
     // shift-click path, which resolves a real hit) is a plain no-op guard.
     if (idx < 0) return;
+    const bool was_empty = app.selected_markers.empty();
 
     // The active column's store size — the same phase-reset/warp selector
     // cycle_selection uses.
@@ -121,6 +141,7 @@ void Selection::select_range_from_anchor(int idx) {
         app.shift_range_anchor   = idx;
         viewport.invalidate_top_strip();
         viewport.invalidate_timestamp_area();
+        damage_playhead_if_focus_flipped(was_empty);
         return;
     }
 
@@ -140,6 +161,7 @@ void Selection::select_range_from_anchor(int idx) {
     app.last_selected_marker = idx;
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
+    damage_playhead_if_focus_flipped(was_empty);
 }
 
 void Selection::select_contained_in_span(int64_t lo, int64_t hi) {

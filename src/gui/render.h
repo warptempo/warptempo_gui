@@ -120,6 +120,16 @@ inline constexpr GuiColor kPlayheadCursor   = hex(0x1ABC9C);  // green cursor
 // translucent brightening of the same green the split playhead marks its bounds
 // in — the wash and the split half-triangles share one hue.
 inline constexpr GuiColor kPlayheadCursorLight = hex(0x98E1D2);
+// Marker-lane focus playhead grey (R6 focus model, architect 2026-07-23). When
+// the marker selection is NON-EMPTY the cursor playhead paints as a GREY,
+// STEMLESS triangle (no 1px waveform line) where the land left it — the "the
+// playhead attached to the last selected marker" state — distinct from the
+// waveform-focus breeze green (kPlayheadCursor #1abc9c) and readable against the
+// green family. Also distinct in role and value from the strip-drag anchor stem
+// grey (kStripAnchorStem #8c8c8c): this is a slightly lighter, faintly
+// green-tinted mid grey so the triangle reads as a muted cursor, not the neutral
+// pivot affordance.
+inline constexpr GuiColor kPlayheadCursorFocusGrey = hex(0x9AA5A0);
 inline constexpr GuiColor kAccent           = hex(0xBF332E);
 inline constexpr GuiColor kText             = hex(0xFCFCFC);  // Breeze paper white
 
@@ -544,7 +554,11 @@ void render_waveform(cairo_t* cr,
 // it's stamped above the stem via cairo_mask_surface, tinted with `color`.
 // The triangle belongs to the cursor exclusively under the split-playhead
 // model; pass `draw_triangle = false` for the scanner call so only the
-// vertical line is drawn.
+// vertical line is drawn. `draw_line = false` is the complementary suppression:
+// the triangle draws but the 1px vertical line does not — the R6 marker-lane
+// focus form (grey, STEMLESS triangle). The two flags are independent: the
+// scanner is line-only (triangle off, line on), waveform focus is both on, and
+// marker-lane focus is triangle-only (line off).
 //
 // `ink_plate` (default null) is the displayed waveform plate — an ARGB32 image
 // surface whose alpha is opaque exactly where a sample column was painted and
@@ -560,6 +574,7 @@ void render_playhead(cairo_t* cr,
                      double  playhead_pixel_x,
                      GuiColor color,
                      bool draw_triangle = true,
+                     bool draw_line = true,
                      cairo_surface_t* ink_plate = nullptr);
 
 // Draws the SPLIT playhead shown while a region-select is active: the normal

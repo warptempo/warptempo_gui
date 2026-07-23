@@ -701,7 +701,25 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             text_lane_scrub_press =
                 (y >= text_lane.y && y < text_lane.y + text_lane.h);
         }
-        if (inside_top && !text_lane_scrub_press)
+        // R6 parity ([CALL], architect 2026-07-23): the EMPTY flag/triangle lane
+        // is the waveform-upper-half's twin, so its plain/shift press is exempt
+        // from the top-strip playback stop exactly as the text-lane scrub is — a
+        // live session reseeks (plain) rather than stopping, and the shift no-op
+        // seed leaves playback untouched, so a shift+double-click augmented drop
+        // lands over a live session like the plain double-click. A MARKER hit
+        // (mh.index >= 0) still stops as today (it is not an empty-lane press),
+        // and ctrl/alt presses there stop too (they claim other gestures). The
+        // exemption spans plain AND shift because both are the parity lane's
+        // gestures; the text-lane scrub stays plain-only.
+        bool empty_lane_press = false;
+        if (inside_top && mh.index < 0 && !ctrl && !alt) {
+            const GuiRect flag_lane = top_flag_row_area(app);
+            const GuiRect tri_lane  = top_triangle_row_area(app);
+            empty_lane_press =
+                (y >= flag_lane.y && y < flag_lane.y + flag_lane.h) ||
+                (y >= tri_lane.y  && y < tri_lane.y  + tri_lane.h);
+        }
+        if (inside_top && !text_lane_scrub_press && !empty_lane_press)
             playback_lifecycle.stop_playback_if_playing();
 
         // Clicks in iter/BPM mode route through the unified marker
@@ -802,9 +820,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // lane included — is a strict no-op, falling through to the return
             // below (the R3.2 ctrl-clear is RETIRED, architect 2026-07-23:
             // ctrl-click in Ableton is just click, and ctrl stays the zoom
-            // modifier here; the PLAIN empty flag/triangle-lane clear below is
-            // the surviving clear). The zoom row (lane 0) was claimed above
-            // and never reaches here.
+            // modifier here; the PLAIN empty flag/triangle-lane press below is
+            // the surviving lane gesture — R6 waveform parity, not a bare
+            // clear). The zoom row (lane 0) was claimed above and never reaches
+            // here.
             if (inside_top) {
                 const GuiRect chip_row = top_upper_row_area(app);
                 if (y >= chip_row.y && y < chip_row.y + chip_row.h) {
@@ -1056,33 +1075,71 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         }
                     }
                 }
-            } else if (!shift) {
+            } else {
                 // Empty top-strip spot — no marker run/flag under the point (the
-                // chip row already returned above). Plain-only (R3.1 / R3.3):
+                // chip row already returned above; mh.index < 0 here).
                 const GuiRect text_lane = top_marker_text_row_area(app);
-                if (y >= text_lane.y && y < text_lane.y + text_lane.h) {
+                const GuiRect flag_lane = top_flag_row_area(app);
+                const GuiRect tri_lane  = top_triangle_row_area(app);
+                const bool in_flag_or_tri =
+                    (y >= flag_lane.y && y < flag_lane.y + flag_lane.h) ||
+                    (y >= tri_lane.y  && y < tri_lane.y  + tri_lane.h);
+                if (!shift &&
+                    y >= text_lane.y && y < text_lane.y + text_lane.h) {
                     // R3.3: the marker-text lane is the play-from-here SCRUB —
-                    // ONE-SHOT per click, nothing armed (the Ableton model). The
-                    // rendered run keeps precedence — a run hit resolved above as
-                    // mh.index >= 0, so this is reached only on an EMPTY text-lane
-                    // spot. Shares the waveform lower-half scrub body; playback
-                    // stayed alive via the text-lane-scrub stop exemption above,
-                    // so the scrub act (kill-and-revive) sees the live session
-                    // and its same-frame skip can keep an in-place audition
-                    // uninterrupted. Touches no
-                    // selection (the scrub convention).
+                    // ONE-SHOT per click, nothing armed (the Ableton model),
+                    // PLAIN only. The rendered run keeps precedence — a run hit
+                    // resolved above as mh.index >= 0, so this is reached only on
+                    // an EMPTY text-lane spot. Shares the waveform lower-half
+                    // scrub body; playback stayed alive via the text-lane-scrub
+                    // stop exemption above, so the scrub act (kill-and-revive)
+                    // sees the live session and its same-frame skip can keep an
+                    // in-place audition uninterrupted. Touches no selection (the
+                    // scrub convention).
                     scrub_press_at(x - area.x);
                     return;
                 }
-                const GuiRect flag_lane = top_flag_row_area(app);
-                const GuiRect tri_lane  = top_triangle_row_area(app);
-                if ((y >= flag_lane.y && y < flag_lane.y + flag_lane.h) ||
-                    (y >= tri_lane.y  && y < tri_lane.y  + tri_lane.h)) {
-                    // R3.1: an empty flag or triangle lane click clears the
-                    // marker selection (navigation, read-only allowed).
-                    selection.clear_selection();
+                if (in_flag_or_tri) {
+                    // R6 empty flag/triangle-lane parity (architect 2026-07-23):
+                    // the empty lane works like the waveform upper half. A
+                    // DOUBLE-CLICK consume creates a marker at the clicked
+                    // position (plain = bare-`s` drop, shift = Alt+S augmented
+                    // drop); otherwise the FIRST press seeds the candidate — a
+                    // PLAIN first press ALSO runs the placement body (deselect +
+                    // playhead + region arm), while a SHIFT first press is a pure
+                    // no-op seed ([CALL]: keeps the shift double-click clean and
+                    // the shift+drag inert — the waveform shift region former does
+                    // not extend to the lane). The consume reads the SECOND
+                    // press's shift state to pick plain vs augmented.
+                    const int click_rel_x = x - area.x;
+                    const DoubleClickCandidate& dc = dc_at_press;
+                    if (dc.surface == DoubleClickSurface::EmptyLane &&
+                        monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
+                        std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
+                        std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
+                        create_marker_at_empty_lane(click_rel_x,
+                                                    /*augmented=*/shift);
+                        return;
+                    }
+                    // SEED an EmptyLane candidate at this PRESS (position-keyed;
+                    // target unused). Cleared at the region-drag threshold
+                    // crossing so a moved drag never carries one (on_motion).
+                    app.double_click = DoubleClickCandidate{
+                        .surface = DoubleClickSurface::EmptyLane,
+                        .time_ms = monotonic_ms(),
+                        .press_x = x, .press_y = y,
+                        .target  = -1};
+                    if (!shift) {
+                        place_playhead_and_arm_region(
+                            click_rel_x, x, y, was_playing, playhead_at_entry);
+                    }
+                    // A shift first press only seeds (the pure no-op above): no
+                    // placement, no region arm, no clear.
                     return;
                 }
+                // A shift press on the text lane, or any other empty top-strip
+                // spot (e.g. a lane gap): nothing.
+                return;
             }
             return;
         }
@@ -1240,30 +1297,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 scrub_press_at(click_rel_x);
                 return;
             }
-            // Upper half: the placement press. The clear runs FIRST, before
-            // the gutter early-return below, so an inert-gutter click (no
-            // column to seat a playhead) still deselects.
-            selection.clear_selection();
-            if (click_rel_x < 0 || click_rel_x >= area.w) return;
-            // Clamp the click column's frame into the live domain ONCE and
-            // pass that same clamped value to both the playhead move and the
-            // region arm: move_playhead_to clamps internally, but the region
-            // former stored the raw value. At a fractional flush-right zoom the
-            // painter-quantized wall (q = nearbyint(spp*W)/W) differs from the
-            // click conversion's current_samples_per_pixel, so the last visible
-            // column's frame can compute to domain_total — one past
-            // [0, domain_total-1], which the display-state validator then
-            // clears wholesale (the round-3 "viewport-bounded columns cannot
-            // reach the wall" claim is disproven; the formers all clamp now).
-            const int64_t sample = clamp_playhead_to_live_domain(
-                playhead_frame_at_click_column(app, audio, click_rel_x),
-                app, audio);
-            viewport.move_playhead_to(sample);
-            if (was_playing && sample != playhead_at_entry) {
-                playback_lifecycle.reseek_keeping_alive(sample);
-            }
-            if (was_playing) app.follow_overridden_for_session = true;
-            arm_region_drag_at(sample, x, y);
+            // Upper half: the placement press body, shared verbatim with the
+            // R6 empty flag/triangle-lane parity press
+            // (place_playhead_and_arm_region): deselect-all, drop the playhead
+            // at the clicked column, reseek a live session, override follow, arm
+            // the region drag. The clear runs FIRST inside the helper, so an
+            // inert-gutter click still deselects.
+            place_playhead_and_arm_region(click_rel_x, x, y,
+                                          was_playing, playhead_at_entry);
         }
     }
     // Wheel events no longer reach on_button_press; they arrive coalesced
@@ -1301,6 +1342,69 @@ void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
     // the pre-press extent for the Esc-mid-drag restore. Same dissolve shape as
     // the navigation clears, so it shares clear_region_highlight.
     clear_region_highlight(app, viewport);
+}
+
+void GuiInputHandler::place_playhead_and_arm_region(int click_rel_x, int x,
+                                                    int y, bool was_playing,
+                                                    int64_t playhead_at_entry) {
+    // The waveform-upper-half placement press body, shared by the plain waveform
+    // press and the empty flag/triangle-lane parity press (R6). The clear runs
+    // FIRST, before the gutter early-return, so an inert-gutter click (no column
+    // to seat a playhead) still deselects.
+    const GuiRect area = waveform_area(app);
+    selection.clear_selection();
+    if (click_rel_x < 0 || click_rel_x >= area.w) return;
+    // Clamp the click column's frame into the live domain ONCE and pass that
+    // same clamped value to both the playhead move and the region arm:
+    // move_playhead_to clamps internally, but the region former stored the raw
+    // value. At a fractional flush-right zoom the painter-quantized wall
+    // (q = nearbyint(spp*W)/W) differs from the click conversion's
+    // current_samples_per_pixel, so the last visible column's frame can compute
+    // to domain_total — one past [0, domain_total-1], which the display-state
+    // validator would clear wholesale — so both formers clamp.
+    const int64_t sample = clamp_playhead_to_live_domain(
+        playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
+    viewport.move_playhead_to(sample);
+    if (was_playing && sample != playhead_at_entry)
+        playback_lifecycle.reseek_keeping_alive(sample);
+    if (was_playing) app.follow_overridden_for_session = true;
+    arm_region_drag_at(sample, x, y);
+}
+
+void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x,
+                                                  bool augmented) {
+    // R6 empty flag/triangle-lane double-click marker create: the bare-`s`
+    // (augmented=false) / Alt+S (augmented=true) drop equivalent, gated exactly
+    // like the keyboard `s` — home-view (active_column_authoring_allowed) and
+    // read-only refuse SILENTLY. Place the playhead on the clicked column first:
+    // the plain double-click's first click already moved it there, but the
+    // shift/augmented first click was a pure no-op seed, so the move is required
+    // (and a harmless same-value repeat in the plain case). The standing
+    // _at_playhead drops then author at that playhead, taking the full create
+    // path (walls, undo, selection) — the phase-reset lead-in additionally offset
+    // N/2 before the playhead and landing the playhead per that drop's rule.
+    const GuiRect area = waveform_area(app);
+    if (click_rel_x < 0 || click_rel_x >= area.w) return;
+    if (active_view_state(app).read_only) return;
+    if (!active_column_authoring_allowed(app)) return;
+    const int64_t sample = clamp_playhead_to_live_domain(
+        playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
+    viewport.move_playhead_to(sample);
+    // active_column_authoring_allowed guarantees the column is in its HOME audio
+    // view: W -> source (warp drops legal), P -> target (phase-reset drops legal,
+    // the lead-in's target requirement satisfied), so the view dispatch below
+    // needs no extra audio-view guard.
+    if (augmented) {
+        if (app.active_markers_view == 'P')
+            phase_resets.drop_phase_reset_lead_in_at_playhead();
+        else
+            warpops.drop_copy_previous_at_playhead();
+    } else {
+        if (app.active_markers_view == 'P')
+            phase_resets.drop_phase_reset_at_playhead();
+        else
+            warpops.drop_marker_at_playhead();
+    }
 }
 
 void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
@@ -1641,6 +1745,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             return;
         }
         app.region_drag.moved = true;
+        // A moved region drag drops any double-click candidate: this press became
+        // a drag, not the first click of a double-click. Only the R6 empty
+        // flag/triangle-lane press seeds a candidate before arming this drag (a
+        // waveform press seeds none), so this keeps a lane drag from later
+        // consuming as an EmptyLane marker-create double-click — the standing
+        // moved-drag clear route.
+        app.double_click = DoubleClickCandidate{};
         // Far endpoint at the pointer column, through the same click->frame
         // basis as the anchor, clamped to the visible strip like the other
         // drags' live tracking. Endpoints are active-domain frames, so the

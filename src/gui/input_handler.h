@@ -320,6 +320,28 @@ struct GuiInputHandler {
     // and does not arm this drag.
     void arm_region_drag_at(int64_t anchor_frame, int x, int y);
 
+    // The waveform-upper-half placement press BODY, shared by the plain waveform
+    // press and the empty flag/triangle-lane parity press (R6, architect
+    // 2026-07-23): clear the marker selection, drop the playhead at the clicked
+    // column, reseek a live scanner to it (keeping the session alive, follow
+    // overridden), and arm the region drag (which dissolves any resting highlight
+    // at mouse-down). `click_rel_x` is x - waveform_area.x; the gutter
+    // (click_rel_x outside [0, area.w)) still deselects but seats no playhead and
+    // arms no drag. `was_playing` / `playhead_at_entry` are the pre-stop snapshot
+    // the caller captured so the reseek fires only on a real move of a live
+    // session.
+    void place_playhead_and_arm_region(int click_rel_x, int x, int y,
+                                       bool was_playing,
+                                       int64_t playhead_at_entry);
+
+    // The empty flag/triangle-lane double-click marker CREATE (R6): the bare-`s`
+    // (augmented=false) / Alt+S (augmented=true) drop equivalent at the clicked
+    // column, home-view and read-only gated silently. Places the playhead on the
+    // clicked column first (the shift/augmented first click was a no-op that never
+    // moved it), then drops through the standing _at_playhead paths so the create
+    // takes the full path (walls, undo, selection, the lead-in offset) unchanged.
+    void create_marker_at_empty_lane(int click_rel_x, bool augmented);
+
     // Pump half of the kill-and-park dispatch rule, reached through
     // GuiTargetRender's dispatch_pending_archival hook on every
     // worker-completion path. Dispatches the parked archival command

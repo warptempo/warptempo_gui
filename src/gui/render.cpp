@@ -480,6 +480,7 @@ void render_playhead(cairo_t* cr,
                      double  playhead_pixel_x,
                      GuiColor color,
                      bool draw_triangle,
+                     bool draw_line,
                      cairo_surface_t* ink_plate) {
     if (area.w <= 0 || area.h <= 0) return;
     // Allow partial render at file start / end: the triangle's nearer
@@ -496,7 +497,10 @@ void render_playhead(cairo_t* cr,
     const double x_px = area.x + col + 0.5;
 
     cairo_save(cr);
-    if (col >= 0.0 && col < static_cast<double>(area.w)) {
+    // The 1px vertical line is suppressed for the R6 marker-lane focus form
+    // (draw_line = false, triangle-only) as well as when the column clips out;
+    // the triangle below is unaffected.
+    if (draw_line && col >= 0.0 && col < static_cast<double>(area.w)) {
         cairo_set_source_rgb(cr, color.r, color.g, color.b);
         cairo_set_line_width(cr, 1.0);
         cairo_move_to(cr, x_px, area.y);
@@ -645,7 +649,10 @@ void render_markers(cairo_t* cr,
     // Only the last-selected marker's stem lives on the waveform (stem-cache)
     // surface now. Every marker's frame tick (its flag triangle) moved into the
     // flag structure (flag cache, top strip), so the stem cache paints just the
-    // one stem. A disabled last-selected marker's stem dims plainly.
+    // one stem. A disabled last-selected marker's stem dims plainly. The caller
+    // (maybe_rebuild_stem_cache) passes -1 for `last_selected` whenever the
+    // selection is not a SINGLETON (R6, architect 2026-07-23), so a multi-select
+    // paints no stem; here -1 simply means "no stem".
     const auto is_disabled = [&](int i) { return effective_disabled(markers, i); };
     render_marker_stems_impl(
         cr, waveform_area, markers,

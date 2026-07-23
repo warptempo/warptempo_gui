@@ -456,6 +456,11 @@ void GuiInputHandler::cancel_active_drags() {
         app.region_drag = RegionDragState{};
         selection.clear_selection();
         viewport.invalidate_waveform_area();
+        // An Esc mid-gesture is not a clean release: drop any double-click
+        // candidate the arming press seeded (the R6 empty flag/triangle-lane
+        // press seeds an EmptyLane candidate before arming this drag), matching
+        // the strip-drag Esc's candidate clear — the standing Esc clear route.
+        app.double_click = DoubleClickCandidate{};
     }
     // A live editor-text drag is FINALIZED, not cancelled: it is selection-only
     // with nothing to revert, so it collapses a no-motion anchor to a caret and

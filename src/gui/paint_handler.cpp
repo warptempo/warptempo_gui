@@ -559,6 +559,7 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
                                                disp_spp);
         render_playhead(cr, area, scan_px, kPlayheadScanner,
                         /*draw_triangle=*/false,
+                        /*draw_line=*/true,
                         /*ink_plate=*/wf_cache.surface);
     }
 
@@ -576,10 +577,12 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // playhead stretched out — the split halves are its two ends, so a wash and
     // a cursor must never co-display; architect 2026-07-23). The exclusivity is
     // structural, not per-former: paint_region_wash gates on the same
-    // app.region.active this if/else branches on, this else is the ONLY
-    // kPlayheadCursor emitter and render_playhead/render_split_playhead have no
-    // other callers, so within any one frame the wash and the cursor are
-    // mutually exclusive by state. Across frames it holds because every
+    // app.region.active this if/else branches on, this else is the ONLY cursor
+    // emitter (waveform-focus green OR R6 marker-lane grey — the region branch
+    // above owns the split, so the grey cursor never paints while region.active)
+    // and render_playhead/render_split_playhead have no other callers, so within
+    // any one frame the wash and the cursor are mutually exclusive by state.
+    // Across frames it holds because every
     // app.region write is paired with waveform-area damage at its site (the
     // formers, the clears, clear_region_highlight, the Esc pre_region restore,
     // the tick repair), so the frame that first paints one has already erased
@@ -599,10 +602,26 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
                 (static_cast<double>(hi) - vp_start) / disp_spp));
             render_split_playhead(cr, area, lo_col, hi_col, kPlayheadCursor);
         }
-    } else {
+    } else if (app.selected_markers.empty()) {
+        // WAVEFORM FOCUS (R6, architect 2026-07-23): selection empty — the
+        // normal breeze-green (kPlayheadCursor) 1px line + triangle, two-toned
+        // over the plate ink.
         render_playhead(cr, area, px_x, kPlayheadCursor,
                         /*draw_triangle=*/true,
+                        /*draw_line=*/true,
                         /*ink_plate=*/wf_cache.surface);
+    } else {
+        // MARKER-LANE FOCUS (R6): selection non-empty — a GREY, STEMLESS
+        // triangle (no 1px waveform line, no ink-notch plate) at the resting
+        // cursor, which the selection land put on/near the focused marker. The
+        // scanner above is unaffected (it launches from this resting cursor and
+        // paints its own color); the region branch outranks both (handled by the
+        // if above, so a live region never reaches here). No ink_plate: with no
+        // line there is no column to two-tone.
+        render_playhead(cr, area, px_x, kPlayheadCursorFocusGrey,
+                        /*draw_triangle=*/true,
+                        /*draw_line=*/false,
+                        /*ink_plate=*/nullptr);
     }
 }
 

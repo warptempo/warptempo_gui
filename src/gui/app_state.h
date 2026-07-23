@@ -648,7 +648,7 @@ struct ScrollDragState {
 // the three double-click surfaces from cross-firing: a candidate seeded on one
 // surface can only be consumed by a press on the SAME surface (a zoom-row click
 // then a marker click within the window can never consume). None = no candidate.
-enum class DoubleClickSurface { None, ZoomRow, Marker, EditorText };
+enum class DoubleClickSurface { None, ZoomRow, Marker, EditorText, EmptyLane };
 
 // Double-click detection (Wayland delivers no double-click event, so it is
 // hand-rolled from two plain clicks). A click on a double-click-bearing surface
@@ -671,6 +671,16 @@ enum class DoubleClickSurface { None, ZoomRow, Marker, EditorText };
 //   EditorText -> selects the clicked character class's RUN (word / punctuation
 //                 / whitespace) in the active text editor (target unused; both
 //                 axes' slack compared).
+//   EmptyLane  -> creates a marker at the clicked position on an EMPTY flag /
+//                 triangle lane spot (R6, architect 2026-07-23): the consuming
+//                 press's shift state picks the drop — plain = the bare-`s` drop
+//                 (warp 1.00 owner / phase reset), shift = the Alt+S augmented
+//                 drop (warp copy-previous / phase reset N/2 lead-in), home-view
+//                 and read-only gated silently. Seeded at the PRESS
+//                 (position-keyed, target unused, both axes' slack compared); a
+//                 plain first press also runs the waveform-parity placement, a
+//                 shift first press is a pure no-op seed. Cleared like every
+//                 candidate when the armed region drag moves.
 // Cleared on file load, and the moment an action fires. Session-only.
 struct DoubleClickCandidate {
     DoubleClickSurface surface = DoubleClickSurface::None;
