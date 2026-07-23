@@ -283,18 +283,23 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
         // Full-precision frame doubles throughout: mid-gesture positions
         // are free — no grid, no snap — so the marker tracks the pointer
-        // exactly; commit_drag snaps the release to its painted column's
-        // whole frame. Both hops are identity on source view's empty map
-        // (proposed = orig + raw_delta there, bit-for-bit).
+        // exactly. At commit only the GRABBED slot snaps to its painted
+        // column's whole frame; the group then rides that member's uniform
+        // active-domain delta D (commit_drag), so these per-member proposals
+        // are paint values, not the committed positions. Both hops are identity
+        // on source view's empty map (proposed = orig + raw_delta there,
+        // bit-for-bit).
         const double orig = static_cast<double>(app.drag.original_times[k]);
         // Exact-zero short-circuit: at raw_delta == 0.0 the two-hop
         // inv(fwd(orig)) is NOT IEEE-bitwise orig at interior map points, so a
-        // drag wandered exactly back to its press x would fail commit_drag's
-        // bit-exact `proposed == original_times[k]` untouched compare and
-        // column-snap — a real edit + undo entry from a no-op gesture. Returning
-        // orig verbatim restores that untouched contract; a sub-column NON-zero
-        // wander keeps the old two-hop value (which column-snaps to the origin's
-        // column at commit anyway).
+        // drag wandered exactly back to its press x would leave a sub-frame
+        // paint jitter. Returning orig verbatim keeps the flag pinned. This
+        // matters for the grabbed slot's commit (its bit-exact `proposed ==
+        // original` untouched short-circuit, which makes D == 0 and restores the
+        // whole group verbatim); for the OTHER members commit ignores the
+        // proposal and reconstructs from D (D == 0 -> verbatim original, D != 0
+        // -> computed inv(fwd(orig_k) + D) through a plain snap_authored_frame,
+        // no column snap), so their sub-column wander never re-quantizes them.
         const double proposed = (raw_delta == 0.0)
             ? orig
             : map_target_to_source(

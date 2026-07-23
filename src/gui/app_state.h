@@ -204,8 +204,14 @@ struct DragState {
     // proposal inv(fwd(orig) + active-domain delta) — the two-hop formula at
     // apply_drag_motion's header (identity orig + delta in source view);
     // consumed by paint via DragOverlay so the live marker store stays untouched
-    // until commit. Seeded from original_times at begin_drag; commit converts
-    // back to authored frames through the pixel-anchoring snap.
+    // until commit. Seeded from original_times at begin_drag. These are
+    // MOTION/PAINT values: at commit ONLY the grabbed slot (grabbed_k) converts
+    // back to an authored frame through the pixel-anchoring column snap; every
+    // OTHER slot's proposal is IGNORED and its member reconstructs rigidly from
+    // original_times[k] plus the grabbed member's uniform active-domain delta D
+    // (D == 0 -> verbatim original), so the group keeps its spacing instead of
+    // being re-quantized per member. Do not reintroduce per-member snapping of
+    // these values (see commit_drag).
     std::vector<double> moveable_times;
     // Press position in ACTIVE-domain frame doubles; the motion delta
     // (mouse_frame - anchor) therefore lives in active-domain frames, and
