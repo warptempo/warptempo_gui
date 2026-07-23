@@ -1077,6 +1077,40 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         app.pending_marker_drag.deferred_click = true;
                         return;
                     }
+                    // GROUP TEMPO-drag deferral: the same file-manager deferral
+                    // for the W + target view tempo surface. That surface has
+                    // active_column_authoring_allowed FALSE, so the reposition
+                    // check above excluded it; defer here when the grabbed marker
+                    // is tempo-drag-ELIGIBLE (its predecessor set is walkable) AND
+                    // a member of a 2+ selection, so begin_tempo_drag seeds the
+                    // whole participant set intact. An INELIGIBLE grab arms no
+                    // drag, so there is nothing to defer — it collapses at press
+                    // below, as before.
+                    const bool would_arm_tempo =
+                        mh.on_flag && !active_view_state(app).read_only &&
+                        app.active_markers_view == 'W' &&
+                        app.active_audio_view == 'T' &&
+                        marker_drag.tempo_drag_predecessor(hit) >= 0;
+                    if (would_arm_tempo &&
+                        app.selected_markers.size() >= 2 &&
+                        app.selected_markers.count(hit) > 0) {
+                        // Keep the selection; seed the Marker double-click
+                        // candidate (press-time, target = hit) and arm the tempo
+                        // drag flagged deferred. A motionless release / lost
+                        // button runs the held single-select + land; Esc abandons.
+                        app.double_click = DoubleClickCandidate{
+                            .surface = DoubleClickSurface::Marker,
+                            .time_ms = monotonic_ms(),
+                            .press_x = x, .press_y = y,
+                            .target  = hit};
+                        app.pending_tempo_drag = PendingTempoDrag{};
+                        app.pending_tempo_drag.active         = true;
+                        app.pending_tempo_drag.marker         = hit;
+                        app.pending_tempo_drag.press_x        = x;
+                        app.pending_tempo_drag.press_y        = y;
+                        app.pending_tempo_drag.deferred_click = true;
+                        return;
+                    }
                     // Plain marker click single-selects (both views; W's
                     // click-to-edit is retired — the editor now opens on Enter or
                     // this double-click). Selection is navigation, allowed in
@@ -1601,12 +1635,28 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         return;
     }
     if (app.pending_tempo_drag.active) {
-        // The pending tempo drag never crossed the threshold: a pure flag
-        // click. The press already single-selected its marker AND seeded the
-        // Marker double-click candidate (press-time seeding), so there is
-        // nothing to commit or seed — just disarm, exactly like the pending
-        // marker drag below.
+        // The pending tempo drag never crossed the threshold: a pure flag click.
+        //  - IMMEDIATE arm (deferred_click false): the press already
+        //    single-selected its marker AND seeded the Marker candidate, so there
+        //    is nothing to commit — just disarm.
+        //  - DEFERRED arm (deferred_click true): the press held the click's
+        //    committed act back (a group member pressed with the multi-selection
+        //    intact). A motionless release IS that click now — collapse to {m}
+        //    and land the playhead on it, exactly the reposition pending's
+        //    deferred completion; the land's standing region clear gives the
+        //    plain-click highlight dissolve for free. Bounds-check m against the
+        //    warp store (the tempo surface is W view — nothing mutates it between
+        //    press and release, the pending gate swallows keys).
+        const bool deferred = app.pending_tempo_drag.deferred_click;
+        const int  m        = app.pending_tempo_drag.marker;
         app.pending_tempo_drag = PendingTempoDrag{};
+        if (deferred) {
+            const int n = static_cast<int>(app.warpmarkers.markers().size());
+            if (m >= 0 && m < n) {
+                selection.set_single_selection(m);
+                land_playhead_on_marker(app, audio, viewport, m);
+            }
+        }
         return;
     }
     if (app.trim_drag.active) {
@@ -1957,7 +2007,19 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // fold), and does not fall back into that branch this event.
     if (app.pending_tempo_drag.active) {
         if (!mods.primary_button_held) {   // button lost -> just the click
+            // A lost button before the crossing IS the click, matching the
+            // release path: a DEFERRED arm completes the held single-select +
+            // land now; an immediate arm just disarms. Bounds-check m (W store).
+            const bool deferred = app.pending_tempo_drag.deferred_click;
+            const int  m        = app.pending_tempo_drag.marker;
             app.pending_tempo_drag = PendingTempoDrag{};
+            if (deferred) {
+                const int n = static_cast<int>(app.warpmarkers.markers().size());
+                if (m >= 0 && m < n) {
+                    selection.set_single_selection(m);
+                    land_playhead_on_marker(app, audio, viewport, m);
+                }
+            }
             viewport.clear_hover_popup();
             return;
         }

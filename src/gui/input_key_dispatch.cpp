@@ -510,9 +510,17 @@ void GuiInputHandler::cancel_active_drags() {
         app.double_click = DoubleClickCandidate{};
     }
     // A pending tempo drag (a W+target flag press whose drag never began) is
-    // likewise just disarmed: nothing committed before the crossing.
-    if (app.pending_tempo_drag.active)
+    // likewise just disarmed. An IMMEDIATE arm committed its click at press; a
+    // DEFERRED arm (deferred_click — a group member pressed with the
+    // multi-selection intact) has Esc ABANDON the deferred click, leaving the
+    // selection untouched. Either way drop the Marker double-click candidate the
+    // arming press seeded — a cancelled gesture is not a clean click sequence,
+    // the load-bearing case being the non-keyboard cancel of a deferred press
+    // (the marker pending's clear, mirrored here).
+    if (app.pending_tempo_drag.active) {
         app.pending_tempo_drag = PendingTempoDrag{};
+        app.double_click = DoubleClickCandidate{};
+    }
     // A pending trim drag (a chip-row press whose drag never began) is just
     // disarmed: a PLAIN chip-drag pending mutated nothing — the trim-lane CLICK
     // action (the R4.5 select+highlight sync) is deferred to the motionless

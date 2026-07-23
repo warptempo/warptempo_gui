@@ -510,55 +510,80 @@ struct PendingMarkerDrag {
 // and arms nothing (the silent read-only convention). Session-only, never
 // serialized. Cleared on the crossing (begin_tempo_drag takes over), on
 // release / lost button before the crossing, on cancel, and on file load.
+//
+// deferred_click (the GROUP tempo-drag deferral, architect 2026-07-23): the
+// PendingMarkerDrag deferral extended to the tempo surface. When the grabbed
+// marker is tempo-drag-eligible AND already a member of a 2+ selection, the
+// press does NOT single-select + land — that would collapse the group before
+// begin_tempo_drag could seed the participant predecessor set. Instead the press
+// holds the click's committed act back and sets this flag; a group tempo drag
+// then seeds from the intact selection, while a motionless release / lost button
+// runs the held single-select + land, and Esc abandons it. An INELIGIBLE grab
+// arms no drag, so there is nothing to defer — it keeps the immediate collapse.
 struct PendingTempoDrag {
-    bool active      = false;
-    int  marker      = -1;   // dragged warp marker (its target image chases
-                             // the pointer); the GROUP's predecessor is NOT
-                             // held here — begin_tempo_drag re-walks it at the
-                             // crossing (the walk is O(stack length), trivially
-                             // cheap; nothing mutates the store between press
-                             // and crossing, so the re-walk is equivalent)
-    int  press_x     = 0;    // press position (window px): the gate only (the
-    int  press_y     = 0;    //   solve is absolute — pointer x -> tempo)
+    bool active         = false;
+    int  marker         = -1; // dragged warp marker (its target image chases
+                              // the pointer); the GROUP's predecessor is NOT
+                              // held here — begin_tempo_drag re-walks it at the
+                              // crossing (the walk is O(stack length), trivially
+                              // cheap; nothing mutates the store between press
+                              // and crossing, so the re-walk is equivalent)
+    int  press_x        = 0;  // press position (window px): the gate only (the
+    int  press_y        = 0;  //   solve is absolute — pointer x -> tempo)
+    bool deferred_click = false;
 };
 
-// Target-view tempo drag (Ableton-style stretch; architect 2026-07-22).
-// Horizontal flag motion on an eligible warp marker in W + target view
-// inverts the pointer's target-domain position to the PREDECESSOR's integer
-// tempo cents — the value that places the dragged marker's target image
-// nearest the pointer — and COMMITS it live per cent step: each changed
-// candidate writes the predecessor's tempo_cents into the live store (tempo
-// only — no time change, no reorder) and re-warps synchronously
-// (kick_waveform_sync, the tempo-step precedent), so the waveform squishes
-// and stretches under the pointer and displayed == live holds at every step
-// boundary. Deliberately NOT the DragState overlay model: there is no
+// Target-view tempo drag (Ableton-style stretch; architect 2026-07-22, group
+// 2026-07-23). Horizontal flag motion on an eligible warp marker in W + target
+// view inverts the pointer's target-domain position to the GRABBED marker's
+// predecessor's integer tempo cents — the value that places the grabbed marker's
+// target image nearest the pointer — producing a cents DELTA that every
+// participant predecessor rides in lockstep (a singleton drag has one
+// participant, the grabbed predecessor). Each changed event writes cents into
+// the live store (tempo only — no time change, no reorder) and re-warps
+// synchronously (kick_waveform_sync, the tempo-step precedent), so the waveform
+// squishes and stretches under the pointer and displayed == live holds at every
+// step boundary. Deliberately NOT the DragState overlay model: there is no
 // proposed-position overlay and no frozen paint basis — the store IS the
 // live proposal — so the marker/trim dispatch-freeze gate includes this
 // gesture only to keep ASYNC waveform jobs from racing the per-step sync
 // renders (the sync path is unaffected). One undo entry per drag: the
-// pre-drag store snapshot pushes at gesture end iff the final cents differ
-// from grab_cents (mouse drags are coalesce-ineligible by standing rule).
-// Esc-cancel restores grab_cents (one store write + one sync), the
-// SelectionSnapshot, and the grab playhead (always). The playhead follows the
-// dragged marker (the standing ruling): the arming click landed it on the
-// marker, so each step re-lands it on the marker's post-commit image (the
+// pre-drag store snapshot pushes at gesture end iff ANY participant's final
+// cents differ from its grab cents (mouse drags are coalesce-ineligible by
+// standing rule). Esc-cancel restores every participant's grab cents (one sync),
+// the SelectionSnapshot, and the grab playhead (always). The playhead follows
+// the grabbed marker (the standing ruling): the arming click landed it on the
+// marker, so each event re-lands it on the marker's post-commit image (the
 // marker's source frame never moves; only its image does). Session-only;
 // cleared on release / lost button (end), Esc/close (cancel), and file load.
 struct TempoDragState {
     bool active      = false;
-    // Latched at the first store write; end_tempo_drag needs no motion gate
-    // (the store compare against grab_cents is the net-change test) but the
-    // first write re-asserts the single selection (the tempo drag is
-    // single-marker, so this stays at the first committed step; the reposition
-    // drag's equivalent transfer moved to the threshold crossing in begin_drag).
-    bool moved       = false;
-    int  marker      = -1;   // dragged warp marker
-    int  predecessor = -1;   // the owner being rewritten (the GROUP's
+    // No motion-latch flag: end_tempo_drag's net-change test is the
+    // per-participant compare against grab cents, and the focus transfer runs
+    // once at the threshold crossing in begin_tempo_drag (the reposition drag's
+    // rule — a real drag focuses the grabbed marker at the crossing, so a walled
+    // group that never moves still focuses correctly).
+    int  marker      = -1;   // dragged warp marker (the absolute solve anchor)
+    int  predecessor = -1;   // the grabbed marker's predecessor (the GROUP's
                              // predecessor — nearest strictly-earlier frame,
-                             // not necessarily marker - 1)
-    // Predecessor tempo at grab: the Esc-cancel restore value and the
-    // net-change baseline for the end-of-gesture undo push.
-    int64_t grab_cents = 100;
+                             // not necessarily marker - 1) — the absolute solve
+                             // target; also one of the participants below (its
+                             // own grab cents / restore live in the parallel
+                             // vectors, so no separate grab_cents field is kept)
+    // Group participant predecessors (architect 2026-07-23): the DEDUPED set of
+    // tempo_drag_predecessor(m) over the whole selection (grabbed included; a
+    // singleton degenerates to {predecessor}), sorted ascending, and their GRAB
+    // cents in parallel — the Esc-cancel restore values and the end-of-gesture
+    // net-change baseline for every participant. apply_tempo_drag_motion adds the
+    // SAME group-stop-clamped delta to every participant so they move in cent
+    // lockstep. `walled` is set when ANY selected marker is tempo-drag-INELIGIBLE
+    // (tempo_drag_predecessor < 0): the group still ARMS (the grabbed marker is
+    // eligible) but the delta intersection pins to [0, 0] — the gesture engages
+    // yet cannot move, "the wall hit before it starts", so release commits
+    // nothing and Esc restores the untouched state.
+    std::vector<int>     participant_predecessors;
+    std::vector<int64_t> participant_grab_cents;
+    bool                 walled = false;
     // Full pre-drag warp store for the ONE undo entry per drag (the marker
     // drag's capture shape), plus the selection snapshot for the Esc restore.
     std::vector<GuiWarpMarker> pre_drag_snapshot;

@@ -900,15 +900,15 @@ int MarkerDragOps::tempo_drag_predecessor(int hit) const {
     return j;
 }
 
-// Begin the tempo drag at the threshold crossing. Captures the grab tempo,
-// the pre-drag store snapshot (the one undo entry's payload), the selection
-// snapshot, and the grab playhead (the Esc-cancel restore). Returns false
-// (gesture dropped) only on a defensive eligibility re-check failure.
+// Begin the tempo drag at the threshold crossing. Captures the grab tempo, the
+// deduped participant predecessor set + their grab cents, the pre-drag store
+// snapshot (the one undo entry's payload), the selection snapshot, and the grab
+// playhead (the Esc-cancel restore). Returns false (gesture dropped) only on a
+// defensive eligibility re-check failure of the GRABBED marker.
 bool MarkerDragOps::begin_tempo_drag(int hit) {
-    // The walk computes the GROUP's predecessor once; -1 is the ineligibility
-    // signal (a defensive re-check — the arm already ran the walk). Flowing the
-    // walked index here keeps predecessor == marker - 1 from being assumed
-    // anywhere downstream.
+    // The grabbed marker must be eligible (a defensive re-check — the arm already
+    // ran the walk); -1 drops the gesture. Flowing the walked index keeps
+    // predecessor == marker - 1 from being assumed anywhere downstream.
     const int pred = tempo_drag_predecessor(hit);
     if (pred < 0) return false;
     const auto& mv = app.warpmarkers.markers();
@@ -917,33 +917,82 @@ bool MarkerDragOps::begin_tempo_drag(int hit) {
     d.active      = true;
     d.marker      = hit;
     d.predecessor = pred;
-    d.grab_cents  = mv[pred].tempo_cents;
+
+    // Build the DEDUPED participant predecessor set over the WHOLE selection
+    // (grabbed included; a singleton selection degenerates to {pred}). Two
+    // selected members of one coincident stack walk to the SAME predecessor, and
+    // consecutive selected markers legitimately contribute each other — the set
+    // dedupes both. An INELIGIBLE member (tempo_drag_predecessor < 0 — no
+    // strictly-earlier marker, or a disabled/pass/ref/coincident-collapsed
+    // predecessor, or forward-label coupling) WALLS the group at zero: the drag
+    // still arms (the grabbed marker is eligible), but `walled` pins the delta
+    // intersection to [0, 0] so motion produces nothing — the wall hit before it
+    // starts. The grabbed predecessor is inserted unconditionally, so the set is
+    // never empty.
+    std::set<int> preds;
+    for (int m : app.selected_markers) {
+        if (m < 0 || m >= static_cast<int>(mv.size())) continue;
+        const int p = tempo_drag_predecessor(m);
+        if (p < 0) { d.walled = true; continue; }
+        preds.insert(p);
+    }
+    preds.insert(pred);
+    d.participant_predecessors.assign(preds.begin(), preds.end());
+    d.participant_grab_cents.reserve(d.participant_predecessors.size());
+    for (int p : d.participant_predecessors)
+        d.participant_grab_cents.push_back(mv[p].tempo_cents);
+
     d.pre_drag_snapshot      = mv;
     d.pre_drag_last_selected = app.last_selected_marker;
-    // Pre-drag selection for the Esc / Ctrl+Q cancellation restore: the
-    // arming press single-selected the dragged marker, so this captures
-    // {hit} (the marker-drag cancel shape).
+    // Pre-drag selection for the Esc / Ctrl+Q cancellation restore. A singleton
+    // press single-selected the dragged marker ({hit}); a group member's press
+    // DEFERRED its single-select, so this captures the whole intact
+    // multi-selection (the marker-drag cancel shape).
     d.pre_drag_selection = capture_selection_snapshot(app);
     // Playhead follows the dragged marker (see the ruling at DragState): the
-    // arming plain marker click landed the playhead on this marker, so each
-    // step re-lands it on the post-commit image. The marker's source frame
-    // never changes here — only its image moves. The pre-ride capture feeds
-    // the Esc-cancel restore (always applied).
+    // arming plain marker click landed the playhead on this marker (a singleton
+    // press; a group's deferred press did not, so the crossing focus + each
+    // event's re-land tow it there). The marker's source frame never changes
+    // here — only its image moves. The pre-ride capture feeds the Esc-cancel
+    // restore (always applied).
     d.pre_ride_playhead_sample = app.playhead_cursor_sample;
     app.tempo_drag = std::move(d);
+    // Focus transfer at the THRESHOLD CROSSING, the reposition drag's rule (a
+    // real drag focuses the grabbed marker at the crossing, so a walled group
+    // that never moves still focuses correctly, and there is exactly ONE
+    // focus-transfer site). A singleton re-asserts the single selection (a no-op
+    // — the arming press already single-selected it); a group focuses the grabbed
+    // marker WITHOUT collapsing membership so the whole selection keeps riding.
+    if (app.selected_markers.size() <= 1)
+        selection.set_single_selection(hit);
+    else
+        selection.focus_without_collapse(hit);
     viewport.clear_hover_popup();
     return true;
 }
 
-// One motion event: invert the pointer's target-domain position to the
-// predecessor tempo that places the dragged marker's image nearest it,
-// quantize to integer cents, clamp into the tempo bracket, and — when the
-// candidate differs from the stored value — commit it live with a
-// synchronous re-warp (the tempo-step precedent: every step is a committed
-// value edit with displayed == live restored synchronously at the step
+// One motion event: invert the pointer's target-domain position to the GRABBED
+// predecessor tempo that places the grabbed marker's image nearest it, quantize
+// to integer cents, clamp into the tempo bracket — that produces `candidate` —
+// then derive a cents DELTA (candidate - the grabbed predecessor's current
+// cents), group-stop-clamp it into the intersection of every participant's
+// bracket headroom, and — when the clamped delta is nonzero — add it to EVERY
+// participant live with ONE synchronous re-warp (the tempo-step precedent: a
+// committed value edit with displayed == live restored synchronously at the step
 // boundary). Vertical motion is ignored; the solve is ABSOLUTE (pointer x ->
-// tempo), so no press anchor exists and the threshold-crossing event needs
-// no catch-up fold.
+// tempo), so no press anchor exists and the threshold-crossing event needs no
+// catch-up fold.
+//
+// T(P)-CONSTANCY CAVEAT (group): the absolute solve assumes T(P_grabbed) — the
+// grabbed predecessor's own target image — is constant across the drag. With
+// co-selected markers UPSTREAM of the grabbed one, applying the delta to THEIR
+// predecessors moves T(P_grabbed) itself, so the premise holds only PER EVENT:
+// each motion event re-solves against the fresh live map and self-corrects, so
+// the grabbed flag can lag the pointer WITHIN a single event in that
+// configuration, converging as events arrive. A stationary pointer fires no
+// events, so no oscillation loop exists. (The single-participant / downstream
+// case keeps exact constancy, as before — see tempo_drag_predecessor's
+// forward-label-coupling refusal, which stays a per-member arm gate.)
 void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     if (!app.tempo_drag.active) return;
     const int sr = audio.sample_rate();
@@ -1016,28 +1065,55 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
         }
     }
 
-    // The both-unchanged skip: an event whose quantized candidate equals the
-    // stored value commits nothing — this is what makes the flag move in
-    // discrete cent-grid jumps (the Ableton snap; our grid is the cents
-    // grid) and bounds the sync-render cost to one per cent step.
-    if (candidate == mv[pi].tempo_cents) return;
+    // The group cents delta from the grabbed predecessor's absolute solve.
+    const int64_t delta = candidate - mv[pi].tempo_cents;
 
-    GuiWarpMarker* p = app.warpmarkers.marker_mut(pi);
-    if (!p) return;
-    // Tempo only: no time change, so the store's ascending order is
-    // untouched and no reorder/remap runs. The predecessor's iteration
-    // bracket is left in place — tempo changes never clear a bracket, the
-    // standing rule both tempo-authoring surfaces follow.
-    p->tempo_cents = candidate;
-    const bool first_commit = !app.tempo_drag.moved;
-    app.tempo_drag.moved = true;
-    // First committed step: re-assert the single selection on the dragged
-    // marker (normally a no-op — the arming press already single-selected
-    // it). The tempo drag keeps its focus re-assert at the first COMMITTED
-    // step (this gesture is single-marker only, always the grabbed marker);
-    // the reposition drag now does its equivalent transfer at the threshold
-    // crossing in begin_drag instead.
-    if (first_commit) selection.set_single_selection(mi);
+    // GROUP-STOP intersection clamp: delta must keep EVERY participant inside the
+    // bracket, so clamp it into the intersection over participants of
+    // [kTempoMinCents - cents_p, kTempoMaxCents - cents_p]. Computed from the
+    // CURRENT stored cents (not grab cents): the drag commits as it goes, so
+    // current cents track the live headroom; and since delta is itself re-derived
+    // per event from the current grabbed cents, current-vs-grab bounds are
+    // equivalent — current is the one that stays honest across committed steps.
+    // The grabbed predecessor is always a participant, so the intersection is
+    // never empty. A WALLED group (an ineligible member) pins the intersection to
+    // [0, 0]: the wall is already touching, so nothing moves. The init bounds are
+    // the widest a legal cents pair can produce (+/-(max-min)).
+    int64_t delta_lo = kTempoMinCents - kTempoMaxCents;   // -(range)
+    int64_t delta_hi = kTempoMaxCents - kTempoMinCents;   // +(range)
+    for (int pp : app.tempo_drag.participant_predecessors) {
+        if (pp < 0 || pp >= static_cast<int>(mv.size())) continue;
+        const int64_t cp = mv[pp].tempo_cents;
+        const int64_t lo_p = kTempoMinCents - cp;   // delta >= this keeps cp >= min
+        const int64_t hi_p = kTempoMaxCents - cp;   // delta <= this keeps cp <= max
+        if (lo_p > delta_lo) delta_lo = lo_p;
+        if (hi_p < delta_hi) delta_hi = hi_p;
+    }
+    if (app.tempo_drag.walled) { delta_lo = 0; delta_hi = 0; }
+    int64_t clamped = delta;
+    if (clamped < delta_lo) clamped = delta_lo;
+    if (clamped > delta_hi) clamped = delta_hi;
+
+    // The both-unchanged skip, generalized: a clamped delta of zero commits
+    // nothing — this is what makes the group move in discrete cent-grid jumps
+    // (the Ableton snap; our grid is the cents grid) and bounds the sync-render
+    // cost to one per cent step. A walled group takes this every event.
+    if (clamped == 0) return;
+
+    // Apply the SAME clamped delta to EVERY participant (plain integer adds — the
+    // structural producer discipline), so they move in cent lockstep. Tempo only:
+    // no time change, so the store's ascending order is untouched and no
+    // reorder/remap runs. Each participant's iteration bracket is left in place —
+    // tempo changes never clear a bracket, the standing rule both tempo-authoring
+    // surfaces follow, applied per member.
+    for (int pp : app.tempo_drag.participant_predecessors) {
+        if (pp < 0 || pp >= static_cast<int>(mv.size())) continue;
+        GuiWarpMarker* p = app.warpmarkers.marker_mut(pp);
+        if (!p) continue;
+        p->tempo_cents = p->tempo_cents + clamped;
+    }
+    // The focus transfer already ran at the threshold crossing (begin_tempo_drag,
+    // the reposition drag's rule), so there is no first-commit re-assert here.
     // Synchronous re-warp, exactly adjust_tempo_cents' target-view tail:
     // kick_waveform_sync reclamps zoom/viewport first (a tempo change moves
     // the target total) and rebuilds plate + stem/flag caches inline, with
@@ -1063,19 +1139,24 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
 
 // Release / lost-button finalize. The final synchronous re-warp already ran
 // on the last committed step, so this only settles history: a NET change
-// (final cents != grab cents) pushes the ONE undo entry from the pre-drag
-// snapshot, recomputes dirty, and fires the deferred target preview trigger;
-// a drag that wandered back to its grab value (the store already holds
-// grab_cents — steps only write on change) pushes nothing. No GestureKind /
-// coalesce wiring: mouse drags are coalesce-ineligible by standing rule,
-// exactly like commit_drag above.
+// (ANY participant's final cents != its grab cents) pushes the ONE undo entry
+// from the pre-drag snapshot, recomputes dirty, and fires the deferred target
+// preview trigger; a drag that wandered every participant back to its grab value
+// (the store already holds them — steps only write on change), or a walled group
+// that never moved, pushes nothing. No GestureKind / coalesce wiring: mouse
+// drags are coalesce-ineligible by standing rule, exactly like commit_drag above.
 void MarkerDragOps::end_tempo_drag() {
     if (!app.tempo_drag.active) return;
     const auto& mv = app.warpmarkers.markers();
-    const int pi = app.tempo_drag.predecessor;
-    const bool net_changed =
-        pi >= 0 && pi < static_cast<int>(mv.size()) &&
-        mv[pi].tempo_cents != app.tempo_drag.grab_cents;
+    bool net_changed = false;
+    for (size_t k = 0; k < app.tempo_drag.participant_predecessors.size(); ++k) {
+        const int pp = app.tempo_drag.participant_predecessors[k];
+        if (pp < 0 || pp >= static_cast<int>(mv.size())) continue;
+        if (mv[pp].tempo_cents != app.tempo_drag.participant_grab_cents[k]) {
+            net_changed = true;
+            break;
+        }
+    }
     std::vector<GuiWarpMarker> pre_state =
         std::move(app.tempo_drag.pre_drag_snapshot);
     const int hint_last = app.tempo_drag.pre_drag_last_selected;
@@ -1098,14 +1179,19 @@ void MarkerDragOps::end_tempo_drag() {
 void MarkerDragOps::cancel_tempo_drag() {
     if (!app.tempo_drag.active) return;
     restore_selection_snapshot(app, app.tempo_drag.pre_drag_selection);
-    const int pi = app.tempo_drag.predecessor;
+    // Restore EVERY participant's grab cents (the parallel vectors). A walled
+    // group and an unmoved drag restore nothing (the store already holds the
+    // grab values — motion only wrote on a nonzero clamped delta).
+    const auto& mv = app.warpmarkers.markers();
     bool restored = false;
-    if (pi >= 0 && pi < static_cast<int>(app.warpmarkers.markers().size()) &&
-        app.warpmarkers.markers()[pi].tempo_cents !=
-            app.tempo_drag.grab_cents) {
-        GuiWarpMarker* p = app.warpmarkers.marker_mut(pi);
+    for (size_t k = 0; k < app.tempo_drag.participant_predecessors.size(); ++k) {
+        const int pp = app.tempo_drag.participant_predecessors[k];
+        if (pp < 0 || pp >= static_cast<int>(mv.size())) continue;
+        if (mv[pp].tempo_cents == app.tempo_drag.participant_grab_cents[k])
+            continue;
+        GuiWarpMarker* p = app.warpmarkers.marker_mut(pp);
         if (p) {
-            p->tempo_cents = app.tempo_drag.grab_cents;
+            p->tempo_cents = app.tempo_drag.participant_grab_cents[k];
             restored = true;
         }
     }

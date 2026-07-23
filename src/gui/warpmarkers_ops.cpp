@@ -380,6 +380,14 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     if (app.active_markers_view != 'W') return;
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
+    // A 2+ selection is the GROUP step (architect 2026-07-23): all-or-nothing,
+    // owner-only, no freeze conversion. The singleton path below is UNCHANGED
+    // (per-view behavior bit-for-bit — the source-view pass/ref->owner freeze,
+    // the target-only collapsed refusal, the constructive per-marker clamp).
+    if (app.selected_markers.size() >= 2) {
+        adjust_tempo_cents_group(delta_cents);
+        return;
+    }
     // architect ruling 2026-07-22: the Alt+Up/Down tempo step is the one warp
     // authoring gesture that stays reachable off its source home (target view
     // is exactly where you want to hear/see a tempo change). But there it is
@@ -493,6 +501,103 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     // displayed == live at this command boundary, leaving no divergence window
     // for the displayed-basis gestures (phase drags, trim drags) to ride out.
     if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
+    target_render.trigger();
+}
+
+// Group tempo step (architect 2026-07-23): 2+ selected markers each step their
+// OWN tempo by one cent, ALL-OR-NOTHING. An ineligible member is "the wall being
+// hit before it starts to move" — if ANY selected marker is in the WALL SET the
+// whole press refuses silently (no partial stepping, no per-member pinning), the
+// phase-reset nudge's all-or-nothing wall convention carried into the cents
+// domain. The wall set (VIEW-INDEPENDENT, max strict): a pass (tempo_inherits),
+// a ref (non-empty label_ref) — the singleton step's payload predicates — a
+// DISABLED marker (its tempo is render-filtered, so a write would be inaudible),
+// a coincident-collapsed marker (warp_red_flag_set_cached — the resolver
+// replaces the stack with one 1.00 owner, so the write is render-inert), or a
+// marker already AT the bracket edge in the step direction. Disabled and
+// collapsed are render-inert regardless of the authoring view, so they wall in
+// SOURCE view too — a DELIBERATE asymmetry with the SINGLETON step, whose
+// collapsed refusal is target-view-only and whose source-view pass/ref->owner
+// FREEZE CONVERSION stays a singleton-only act (a bulk payload conversion from
+// one keystroke is refused by design). No freeze conversion here: every stepped
+// member is already an owner, so a plain integer add is the whole mutation.
+void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
+    const auto& mv = app.warpmarkers.markers();
+    const int n = static_cast<int>(mv.size());
+    // The coincident-collapse red set, computed VIEW-INDEPENDENTLY here (the
+    // group wall is max strict) — the same generation-keyed memoized helper the
+    // singleton step and the tempo-drag predecessor use.
+    const std::set<int>& red = warp_red_flag_set_cached(
+        app, audio.sample_rate(),
+        static_cast<long>(audio.total_frames())).red;
+    // Bracket edge for the step direction: stepping up walls at the max, down at
+    // the min (== the constructive clamp's stopping point for the singleton).
+    const int64_t edge = (delta_cents > 0) ? kTempoMaxCents : kTempoMinCents;
+    // Wall scan: ANY walled member refuses the whole press.
+    for (int idx : app.selected_markers) {
+        if (idx < 0 || idx >= n) continue;   // defensive; stale indices skipped
+        const GuiWarpMarker& m = mv[idx];
+        if (m.tempo_inherits || !m.label_ref.empty() || m.disabled ||
+            red.count(idx) || m.tempo_cents == edge) {
+            return;   // walled -> silent all-or-nothing refuse
+        }
+    }
+    // Coalesce decision before mutation (command adjacency, order-independent of
+    // the mutation; same as the singleton). Alt+Up/Down is the only route
+    // reaching here with kind TempoStep, and coalesce_gesture keys on the kind +
+    // command adjacency, NOT on any marker index, so a burst over the SAME group
+    // collapses to one entry (a selection change requires an intervening command,
+    // which breaks the burst) — the group is coalesce-eligible unchanged.
+    const bool merge = undo.coalesce_gesture(GestureKind::TempoStep);
+    std::vector<GuiWarpMarker> pre_state = mv;
+    const int hint_last = app.last_selected_marker;
+    // Apply +/-1 cent to each selected member (plain integer arithmetic — the
+    // structural producer discipline). None is walled (checked above), so every
+    // add stays in-bracket and actually changes the value; positions untouched,
+    // so no reorder/remap. Each member's iteration bracket is left in place
+    // (tempo changes never clear a bracket, per member).
+    std::vector<int> touched;
+    for (int idx : app.selected_markers) {
+        if (idx < 0 || idx >= n) continue;
+        GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
+        if (!m) continue;
+        m->tempo_cents = m->tempo_cents + delta_cents;
+        touched.push_back(idx);
+    }
+    if (touched.empty()) return;   // defensive (a fully-stale selection)
+    // ONE undo entry per press, with identity hints: no reorder happens
+    // (positions untouched), so touched_snapshot == touched_live == the stepped
+    // indices. A coalesced continuation press skips the push (the burst's first
+    // entry owns the pre-burst snapshot and its hints).
+    if (merge) undo.note_coalesced_commit();
+    else       undo.push_undo_warp(std::move(pre_state), hint_last,
+                                   /*affects_persistence=*/true,
+                                   touched, touched);
+    undo.record_gesture(GestureKind::TempoStep);
+    undo.recompute_dirty();
+    viewport.invalidate_top_strip();
+    viewport.invalidate_timestamp_area();
+    // Target-view synchronous re-warp tail (the plate must re-warp when authoring
+    // off source home), THEN re-land the playhead on the FOCUSED marker's
+    // post-step image. Unlike the singleton — whose own tempo shapes only the
+    // segment AFTER it, so its focused image is fixed by construction and needs
+    // no re-land — a GROUP step changes EARLIER selected members' tempos too, and
+    // an upstream member's change moves every downstream image INCLUDING the
+    // focused member's; without this the coincident playhead (the land put it on
+    // the focused marker) would strand off it after the re-warp. The
+    // playhead-follows-the-focused-marker invariant applied to a value gesture
+    // that moves images. Source view needs nothing (identity domain — the frame
+    // never moved). (The singleton deliberately keeps NO re-land: the
+    // label-coupling edge where even a singleton's own image can move is a
+    // recorded accepted gap there.)
+    if (app.active_audio_view == 'T') {
+        viewport.kick_waveform_sync();
+        const int f = app.last_selected_marker;
+        if (f >= 0 && f < n) {
+            viewport.move_playhead_to(source_frame_to_active_domain(
+                app, audio, app.warpmarkers.markers()[f].time_frame));
+        }
+    }
     target_render.trigger();
 }
 
