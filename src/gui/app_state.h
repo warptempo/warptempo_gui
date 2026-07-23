@@ -1334,10 +1334,12 @@ struct AppState {
     // one string, so a hover value pastes into a flag/settings text box.
     std::string        text_clipboard;
 
-    // Iteration mode. Toggled by plain `i` in warp view (no-op in
-    // phase reset view). Session-only; survives view-switches but is lost
-    // on app close. When true, hover popups are suppressed and a
-    // persistent iteration popup is rendered above every owning
+    // Iteration mode. Toggled by plain `i` in warp's home (W marker view +
+    // source audio view; no-op elsewhere). Session-only (off at load, lost on
+    // app close); survives the W/P marker-view switch, but entering target
+    // audio view (S->T) exits the mode through wipe_iter_state, so the mode
+    // can never rest in target view. When true, hover popups are suppressed
+    // and a persistent iteration popup is rendered above every owning
     // marker's flag rect.
     bool iteration_mode_enabled = false;
 

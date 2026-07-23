@@ -603,17 +603,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     if (ctrl && alt && !shift &&
         key == GuiKeys::I) {
         if (app.source_audio_path.empty()) return true;
+        // Also covers target view: mode-off-in-target is an invariant (the
+        // S->T toggle wipes iteration mode through wipe_iter_state), so a
+        // target-view press is mode-off and returns here.
         if (!app.iteration_mode_enabled) return true;
-        // Source-view only: the success tail below wipes every marker's iter
-        // bracket through wipe_iter_state (a warp-store authoring surface), so
-        // the dispatch is gated like the `i` toggle. A mode carried into T by
-        // the S->T toggle persists display-only — a target-view press is a
-        // consumed no-op (silent, the home-view refusal convention). Direct
-        // view compare, not active_column_authoring_allowed: the sweep acts on
-        // warp markers regardless of the active marker view (the dispatch never
-        // tested active_markers_view), so warp's home audio view is the whole
-        // gate.
-        if (app.active_audio_view != 'S') return true;
 
         // Dispatch validates nothing: the render worker's own resolve->build
         // chain is the tripwire surface (marker arrangements normalize to
@@ -1319,9 +1312,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         if (app.active_markers_view == 'W') {
             // Iteration mode drives the warp flag editor's bracket authoring,
             // so it toggles only in warp's home (source) view — both
-            // directions refuse silently off home (consumed no-op). An
-            // iteration mode already on when the user switches S->T simply
-            // persists (its authoring surfaces are gated anyway).
+            // directions refuse silently off home (consumed no-op). The S->T
+            // toggle exits iteration mode through wipe_iter_state
+            // (handle_active_audio_view_toggle), so the mode never rests in
+            // target view.
             if (!active_column_authoring_allowed(app)) return true;
             const bool turning_on = !app.iteration_mode_enabled;
             if (!turning_on) {

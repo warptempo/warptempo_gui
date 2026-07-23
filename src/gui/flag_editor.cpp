@@ -512,9 +512,10 @@ void GuiFlagEditor::commit_top_flag_edit() {
     target_render.trigger();
 }
 
-// Wipe every marker's session-only iter bracket. The single clear both
-// iteration-mode exit routes share: the `i` toggle's turning-off branch and
-// enter_bpm_mode's forced iter-off — exiting the mode is the clear on every
+// Wipe every marker's session-only iter bracket. The single clear every
+// iteration-mode exit route shares: the `i` toggle's turning-off branch,
+// enter_bpm_mode's forced iter-off, and the S->T audio-view toggle
+// (handle_active_audio_view_toggle) — exiting the mode is the clear on every
 // route, so a bracket exists only while the mode paints it on the flags.
 // Pushes one undo entry when something was cleared and no-ops otherwise, so
 // a bracketless exit leaves the undo stack untouched; plain undo is

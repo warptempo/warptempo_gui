@@ -48,9 +48,10 @@ struct GuiFlagEditor {
     void enter_bpm_mode();
     void exit_bpm_mode();
     // Wipe every marker's session-only iter bracket — the single clear
-    // both iteration-mode exit routes share (the `i` toggle's turning-off
-    // branch and enter_bpm_mode's forced iter-off). Undo entry when
-    // something cleared; callers own the mode flip and repaint.
+    // every iteration-mode exit route shares (the `i` toggle's turning-off
+    // branch, enter_bpm_mode's forced iter-off, and the S->T audio-view
+    // toggle). Undo entry when something cleared; callers own the mode flip
+    // and repaint.
     void wipe_iter_state();
     // Wipe every marker's session-only bpm state (owner flag, beats,
     // bracket bounds, endpoint). History-less; callers own the repaint.

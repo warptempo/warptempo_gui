@@ -1016,6 +1016,24 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // is the one place the toggle-into-target edge is handled.
     if (entering_target) flag_editor.exit_top_flag_edit_no_commit();
 
+    // Entering target view exits iteration mode through the shared wipe
+    // chokepoint: brackets are the step-away batch tool, target view the
+    // live-by-hand tool. wipe_iter_state pushes ONE undo entry when any
+    // bracket existed (plain undo back in S restores the bracket set — the
+    // ungated-undo rule at the chokepoint), and no-ops otherwise. This makes
+    // mode-off-in-target an INVARIANT: the mode only turns on in warp+source
+    // (the `i` toggle's active_column_authoring_allowed gate), Ctrl+Tab never
+    // changes the audio view, and every S -> T entry runs this exit. The
+    // settings-editor active_audio_view=T commit routes through this same edge
+    // and inherits the wipe (a GUI-kind commit is history-less, but this
+    // wipe's undo entry is the warp-store side effect wipe_iter_state always
+    // pushes — exactly like the `i` toggle, no special-casing). No extra
+    // invalidation here — the toggle's own tail repaints everything.
+    if (entering_target && app.iteration_mode_enabled) {
+        flag_editor.wipe_iter_state();
+        app.iteration_mode_enabled = false;
+    }
+
     // Target-view playback is rebound to the rendered target buffer once it is
     // ready, and Space is gated while that buffer is unavailable or updating.
     // Stop on every toggle so playback never chases a playhead in the other
