@@ -255,7 +255,9 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
 // exact-same-frame case): a live session scrubbed to its scanner's exact
 // current frame has nothing to re-launch, so the audition plays on
 // uninterrupted (the scanner-sample read is gated on is_playing — playing
-// implies scanner-active, so the field is meaningful). A refused revive
+// implies scanner-active, so the field is meaningful). The natural-end
+// ENDPOINT HOLD (playing false, scanner active) also takes the kill — see the
+// branch comment. A refused revive
 // (out-of-window frame; target update in flight) leaves playback stopped,
 // silently — the "nothing to audition" family; a later act at a launchable
 // frame revives (the revive-if-needed half).
@@ -264,6 +266,18 @@ void GuiInputHandler::scrub_act_at(int64_t frame) {
         if (frame == app.playhead_scanner_sample) return;  // same position ->
                                                            // nothing to re-launch
         playback_lifecycle.stop_playback_if_playing();     // the kill
+    } else if (app.playhead_scanner_active) {
+        // Natural-end ENDPOINT HOLD (playing false, scanner active — the one
+        // sanctioned non-playing scanner-validity window): kill through the
+        // SAME owner. stop_playback_if_playing's own guard admits this state,
+        // and it is the single owner of the scanner's visible-identity
+        // teardown — it invalidates the held endpoint column (the
+        // scanner-to-cursor span) before deactivating, which the revive's
+        // defensive flag clears alone would not, leaving the endpoint line
+        // ghosted (worse on a refused revive, where no heartbeat repaints).
+        // The same-frame skip does NOT apply here: the held session is DEAD,
+        // so a scrub at the endpoint frame still launches a fresh one.
+        playback_lifecycle.stop_playback_if_playing();
     }
     // Outer is_updating gate, mirroring the two Space handlers: a NEW launch
     // while a target update is in flight would audition the stale target

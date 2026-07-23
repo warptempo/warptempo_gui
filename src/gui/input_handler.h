@@ -654,7 +654,9 @@ private:
     // chip geometry (a chip-rect single hit, or the chip-row inter-chip bridge
     // span) — armed or read-only-refused — so the caller claims with no
     // fallback; false lets the caller fall through to the marker flag handling.
-    // Read-only claims without arming. Trim drags never touch selection.
+    // Read-only claims without arming. Trim drags sync the selection and the
+    // region highlight to the moving window (sync_highlight_to_trim_window);
+    // the PLAYHEAD is what they never touch.
     // Dual-axis strip drag, INCREMENTAL: applies one motion event at (x, y).
     // Reads the LIVE zoom level and viewport (never a stored press baseline),
     // pans by the dx since the last event at the old level, zooms by the dy off

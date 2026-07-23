@@ -443,8 +443,9 @@ void GuiInputHandler::cancel_active_drags() {
         end_strip_pointer_capture();
     }
     // The scrub-area drag is END-ONLY too, the strip/pan no-restore
-    // convention: the press/motion already launched or reseeked the live
-    // session, and Esc stops the GESTURE, not the audio — playback continues
+    // convention: the press/motion scrub acts (kill-and-revive) already
+    // launched the current session, and Esc stops the GESTURE, not the audio —
+    // playback continues
     // (Space remains the sole stop). Nothing to restore: the scrub never
     // touched cursor, selection, or region, and no capture was taken.
     if (app.scrub_area_drag.active)
@@ -477,8 +478,10 @@ void GuiInputHandler::cancel_active_drags() {
     if (app.pending_tempo_drag.active)
         app.pending_tempo_drag = PendingTempoDrag{};
     // A pending trim drag (a chip-row press whose drag never began) is just
-    // disarmed: the press mutated nothing (trim has no click action), so there
-    // is nothing to revert.
+    // disarmed: the press mutated nothing — the trim-lane CLICK action (the
+    // R4.5 select+highlight sync) is deferred to the motionless release /
+    // lost-button paths, so an Esc here ABANDONS that deferred click rather
+    // than performing it, and there is nothing to revert.
     if (app.pending_trim_drag.active)
         app.pending_trim_drag = PendingTrimDrag{};
 }
