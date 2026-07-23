@@ -75,6 +75,7 @@ public:
     void set_wheel_context_probe(WheelContextProbe cb);
     void set_text_editor_active_probe(TextEditorProbe cb);
     void set_repeat_eligible_probe(RepeatEligibleProbe cb);
+    void set_shift_released_hook(std::function<void()> cb);
     void set_on_tick(TickCallback cb);
     void set_on_pre_paint(PrePaintCallback cb);
 
@@ -388,6 +389,15 @@ private:
     WheelContextProbe    wheel_context_probe_;
     TextEditorProbe      text_editor_active_probe_;
     RepeatEligibleProbe  repeat_eligible_probe_;
+    // The application's shift-range anchor keys its lifecycle to the physical
+    // shift HOLD, and this hook is the one owner of the release half: it fires
+    // on the shift falling edge (held->up) at every place the cached shift bit
+    // transitions — the modifiers callback's 1->0, keyboard leave, and
+    // keyboard-capability loss (the modifier bits reset at the last two). The
+    // dispatch-entry polling it replaced could not see a release + re-press
+    // between commands, since the platform delivers no bare modifier traffic to
+    // dispatch. Null-safe and cheap — fires only at actual shift edges.
+    std::function<void()> shift_released_hook_;
     TickCallback         on_tick_;
     PrePaintCallback     on_pre_paint_;
 

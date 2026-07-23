@@ -310,9 +310,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // on release or motion — those are not discrete commands, and a drag is
     // already fenced by the press that began it here.
     ++app.command_seq;
-    // Shift-up dissolves the shift-range-select anchor (see on_key). A shift
-    // press keeps it — the shift-held range interaction spans these presses.
-    if (!mods.shift) app.shift_range_anchor = -1;
     // Prompt-modal input handling: while the bottom-strip prompt is
     // active, all mouse events are swallowed. Responses go through
     // the keyboard.
@@ -554,11 +551,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Unified marker hit, computed ONLY on the path that consumes it. The
         // marker is ONE pointer item — flag shape OR rendered lane run
         // (marker_hit_at, the shared resolver in render.cpp the hover recompute
-        // also reads) — and the TOP-STRIP hit feeds the plain/Shift
+        // also reads) — and the TOP-STRIP hit feeds the plain/Shift/Ctrl
         // marker-click branches (plain = single-select + land the playhead on
         // the marker + double-click seed / consume + arm the pending marker
-        // drag on the flag part, Shift = toggle membership), so it is resolved
-        // once here.
+        // drag on the flag part, Shift = file-manager inclusive RANGE select
+        // from the shift-held anchor to the clicked marker + land, Ctrl = the
+        // individual membership toggle + land-on-add), so it is resolved once
+        // here.
         // The editor lifecycle block above already closed any open flag editor,
         // so the lane run this resolves is the committed (non-editor) run. The
         // WAVEFORM never SELECTS a marker — a plain press is deselect-all +
@@ -694,8 +693,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // text lane, and the flag lane are disjoint y-bands, so this
             // contends with nothing: a marker-part press yields no chip/bridge
             // claim and falls to the marker handling. Shift never touches trim
-            // (a chip/bridge stays transparent to it) — it falls to the toggle.
-            // A claim (armed or read-only) returns without touching the
+            // (a chip/bridge stays transparent to it) — it falls to the RANGE
+            // select. A claim (armed or read-only) returns without touching the
             // selection.
             if (!shift && route_trim_chip_press(x, y)) return;
             if (mh.index >= 0) {
