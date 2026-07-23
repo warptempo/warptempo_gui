@@ -147,8 +147,10 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // cursor playhead, so a parked highlight would hide the cursor at its new
 // position. Call sites: jump_playhead_to_focused_marker (the whole Tab family
 // plus `c` through the one tail), run_zoom_toggle_command (bare `0`), the bare
-// Left/Right playhead scrub, Home/End (the trim-bound jumps), and the plain
-// marker-click land. DELIBERATELY NOT cleared: the region Space launch (the
+// Left/Right playhead scrub, Home/End (the trim-bound jumps), the plain
+// marker-click land, and the ctrl toggle-REMOVE (which does not land, so it
+// calls this directly — every marker interaction drops the region under the
+// mutual-exclusivity rule). DELIBERATELY NOT cleared: the region Space launch (the
 // region IS the launch point there), the nudge/drag playhead follow, marker
 // drops (`s`/Alt+S), undo/redo, and pure viewport moves (PageUp/PageDown, zoom
 // steps, pans). The plain waveform press (arm_region_drag_at) shares this
@@ -300,8 +302,9 @@ struct GuiInputHandler {
     // is the active-domain frame the press just placed the playhead at; (x, y)
     // is the press position for the press-becomes-drag threshold. Captures the
     // pre-drag region for an Esc cancel and dissolves the resting region at
-    // mouse-down. Only the plain waveform press calls this; a Shift press is a
-    // strict no-op and does not arm.
+    // mouse-down. Only the plain waveform press calls this; a Shift press
+    // instead forms a region directly (one-shot — the former / marker demote)
+    // and does not arm this drag.
     void arm_region_drag_at(int64_t anchor_frame, int x, int y);
 
     // Pump half of the kill-and-park dispatch rule, reached through

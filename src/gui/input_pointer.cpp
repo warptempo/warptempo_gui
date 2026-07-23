@@ -633,6 +633,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             if (inside_top && mh.index >= 0) {
                 if (selection.toggle_selection_membership(mh.index))
                     land_playhead_on_marker(app, audio, viewport, mh.index);
+                else
+                    // A toggle-REMOVE does not land, so it misses
+                    // land_playhead_on_marker's region dissolve — but every
+                    // marker interaction still drops the region (the
+                    // mutual-exclusivity rule; architect 2026-07-23).
+                    clear_region_highlight(app, viewport);
                 return;
             }
             if (inside_waveform) {
@@ -665,7 +671,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Plain or Shift press. In the waveform area a plain press clears the
         // marker selection (deselect-all), places the playhead at the clicked
         // column, and arms the region-select drag — it never SELECTS a marker; a
-        // Shift press on the waveform is a strict no-op. In the top strip a plain
+        // Shift press on the waveform instead FORMS a region (the former / marker
+        // demote, one-shot — see the waveform block). In the top strip a plain
         // CHIP-ROW press arms a trim chip/bridge drag (claimed ahead of the
         // marker select); otherwise (a marker click on EITHER part — flag shape
         // or lane run) selection is the whole interface, BOTH views. Plain click:
@@ -830,13 +837,85 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // this mouse-down (arm_region_drag_at clears it after snapshotting the
         // pre-press extent for an Esc-mid-drag restore), so the wash vanishes on
         // press whether the gesture becomes a click or a fresh drag. A Shift
-        // press is a strict no-op anywhere on the waveform, selection included.
+        // press instead FORMS a region (the demote path below), never a plain
+        // press's playhead placement.
         {
-            if (shift) return;
+            const int click_rel_x = x - area.x;
+            if (shift) {
+                // Waveform shift+click: the region former / the DEMOTE (markers
+                // flow DOWN to a region, never back; architect 2026-07-23,
+                // replacing the reserved strict no-op). With NO markers
+                // selected it forms a region from the PLAYHEAD to the clicked
+                // column; with markers selected it DEMOTES — the selection
+                // clears and the region spans from the selected marker FURTHEST
+                // from the click to the click (one rule: furthest =
+                // argmax |pos - click| over the selection in active-domain
+                // frames, which covers the between-the-series case as the
+                // longest side). It moves NO playhead, stops NO playback,
+                // reseeks nothing, overrides no follow, arms NO drag, seeds no
+                // double-click (one-shot). Read-only allowed (the region is
+                // transient navigation; the demote's deselect is selection =
+                // navigation). ctrl/alt returned earlier, so this is
+                // shift-exact — a shift+modified combination never reaches here.
+                if (click_rel_x < 0 || click_rel_x >= area.w) return;
+                const int64_t click_frame =
+                    playhead_frame_at_click_column(app, audio, click_rel_x);
+                int64_t endpoint = app.playhead_cursor_sample;
+                if (!app.selected_markers.empty()) {
+                    // Demote: the region's far endpoint is the selected marker
+                    // whose active-domain position is furthest from the click.
+                    // Stale indices are skipped defensively; if every index was
+                    // stale (degenerate) the playhead endpoint stands.
+                    int64_t best_dist = -1;
+                    for (int idx : app.selected_markers) {
+                        int64_t src_frame;
+                        if (app.active_markers_view == 'P') {
+                            const auto& tv = app.phaseresetmarkers.markers();
+                            if (idx < 0 || idx >= static_cast<int>(tv.size()))
+                                continue;
+                            src_frame = tv[idx].time_frame;
+                        } else {
+                            const auto& mv = app.warpmarkers.markers();
+                            if (idx < 0 || idx >= static_cast<int>(mv.size()))
+                                continue;
+                            src_frame = mv[idx].time_frame;
+                        }
+                        const int64_t pos = source_frame_to_active_domain(
+                            app, audio, src_frame);
+                        const int64_t dist = pos > click_frame
+                                                 ? pos - click_frame
+                                                 : click_frame - pos;
+                        if (dist > best_dist) {
+                            best_dist = dist;
+                            endpoint  = pos;
+                        }
+                    }
+                    // Deselect — the downward flow. This also dissolves the
+                    // shift-range anchor, correct here: this shift interaction
+                    // is on a DIFFERENT surface (the waveform) than the marker
+                    // range select, so no range is being extended.
+                    selection.clear_selection();
+                }
+                // Sliver rule (mirrors end_region_drag_min_size_check): a span
+                // narrower than the drag threshold — a click at the playhead,
+                // hand jitter — leaves no region window.
+                const double spp = current_samples_per_pixel(app, audio);
+                if (spp <= 0.0) return;
+                if (std::abs(static_cast<double>(endpoint - click_frame)) / spp
+                        < kDragMovedThresholdPx)
+                    return;
+                // RegionState endpoints are unordered — the painter and Space
+                // normalize lo/hi. Damage the waveform (the region paints as a
+                // direct overlay), matching the region-drag extend.
+                app.region.active  = true;
+                app.region.a_frame = endpoint;
+                app.region.b_frame = click_frame;
+                viewport.invalidate_waveform_area();
+                return;
+            }
             // The clear runs FIRST, before the gutter early-return below, so an
             // inert-gutter click (no column to seat a playhead) still deselects.
             selection.clear_selection();
-            const int click_rel_x = x - area.x;
             if (click_rel_x < 0 || click_rel_x >= area.w) return;
             const int64_t sample =
                 playhead_frame_at_click_column(app, audio, click_rel_x);

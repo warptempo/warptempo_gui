@@ -106,11 +106,36 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     }
     std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
     const int                 hint_last = app.last_selected_marker;
+    // Capture the selected resets' active-domain positions BEFORE the store
+    // mutation, so a multi-marker delete DEMOTES down to the region spanning
+    // them (mutual-exclusivity; architect 2026-07-23). Phase deletes run in the
+    // target home view, whose map phase resets do not affect, so the pre/post
+    // active-domain mapping is identical either way.
+    std::vector<int64_t> del_positions;
+    del_positions.reserve(app.selected_markers.size());
+    for (int idx : app.selected_markers) {
+        del_positions.push_back(
+            source_frame_to_active_domain(app, audio, tv[idx].time_frame));
+    }
     for (auto it = app.selected_markers.rbegin();
          it != app.selected_markers.rend(); ++it) {
         app.phaseresetmarkers.remove_marker(*it);
     }
     selection.clear_selection();
+    // Demote a multi-marker delete to the spanning region — session scratch,
+    // OUTSIDE undo (undoing the delete restores the markers while the region
+    // stays). A single deleted reset is a point, not a span, so it forms no
+    // region (the sliver rule's spirit; 2-marker + positive-span is the gate).
+    // The waveform damage below covers the region paint.
+    if (del_positions.size() >= 2) {
+        const auto [lo, hi] = std::minmax_element(del_positions.begin(),
+                                                  del_positions.end());
+        if (*hi > *lo) {
+            app.region.active  = true;
+            app.region.a_frame = *lo;
+            app.region.b_frame = *hi;
+        }
+    }
     undo.push_undo_phase_reset(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();

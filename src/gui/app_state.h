@@ -321,8 +321,12 @@ struct UndoHistory {
     }
 };
 
-// Session-only region selection — an Ableton-style arrangement span the user
-// paints by dragging on the waveform, consumed by bare x, which branches on
+// Session-only region selection — an Ableton-style arrangement span, formed by
+// THREE routes (architect 2026-07-23): the plain waveform drag (paints it live),
+// the waveform SHIFT+click (the region former / marker DEMOTE — playhead-to-click
+// with nothing selected, else furthest-selected-marker-to-click), and a
+// multi-marker DELETE (demotes to the span of the deleted positions). It is
+// consumed by bare x, which branches on
 // THIS highlight: a live region trims to it and clears it (the trim chips/wash
 // replace the highlight as the visual, so re-trimming needs a fresh drag —
 // Ableton persists its loop region but we deliberately do not); no region means

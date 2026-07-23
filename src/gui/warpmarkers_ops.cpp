@@ -198,12 +198,38 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     // before mutating so the undo can restore the pre-delete selection.
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     const int              hint_last = app.last_selected_marker;
+    // Capture the selected markers' active-domain positions BEFORE the store
+    // mutation, so a multi-marker delete DEMOTES down to the region spanning
+    // them (mutual-exclusivity; architect 2026-07-23). Warp deletes run in the
+    // source home view (home-view binding), where source_frame_to_active_domain
+    // is identity, so pre/post mapping agree regardless.
+    std::vector<int64_t> del_positions;
+    del_positions.reserve(app.selected_markers.size());
+    for (int idx : app.selected_markers) {
+        del_positions.push_back(
+            source_frame_to_active_domain(app, audio, mv[idx].time_frame));
+    }
     // Delete in descending order so earlier indices stay valid.
     for (auto it = app.selected_markers.rbegin();
          it != app.selected_markers.rend(); ++it) {
         app.warpmarkers.remove_marker(*it);
     }
     selection.clear_selection();
+    // Demote a multi-marker delete to the spanning region — session scratch,
+    // OUTSIDE undo, so undoing the delete restores the markers while the region
+    // stays (the standing region-outside-undo rule). A single deleted marker is
+    // a point, not a span, so it forms no region (the sliver rule's spirit; the
+    // 2-marker + positive-span gate needs no sub-pixel column compare). The
+    // waveform damage below covers the region paint.
+    if (del_positions.size() >= 2) {
+        const auto [lo, hi] = std::minmax_element(del_positions.begin(),
+                                                  del_positions.end());
+        if (*hi > *lo) {
+            app.region.active  = true;
+            app.region.a_frame = *lo;
+            app.region.b_frame = *hi;
+        }
+    }
     undo.push_undo_warp(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
