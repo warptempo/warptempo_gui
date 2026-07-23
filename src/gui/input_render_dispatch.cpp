@@ -376,8 +376,9 @@ void GuiInputHandler::on_batch_entry_complete(RenderOutcome outcome) {
 // e.g. "36 beats @ 220 bpm from 00:32.008 to 00:46.562". Beats is an
 // integer; bpm is a double printed in plain shortest round-trip form
 // ("220" stays "220", "220.5" stays "220.5"); the two timestamps are the
-// span's owner and endpoint marker times in display seconds
-// (frame / sample_rate, converted by the caller), formatted via the shared
+// span's owner time and its END (the boundary marker's time, or the song
+// end when the span reaches the store-final marker's section) in display
+// seconds (frame / sample_rate, converted by the caller), formatted via the shared
 // mm:ss.mmm formatter. Stored verbatim in the cell's per-entry .settings
 // bpm= field and promoted into the source .settings on commit.
 static std::string format_bpm_descriptor(int beats, double bpm,
@@ -431,17 +432,28 @@ bool GuiInputHandler::render_bpm_sweep() {
     if (!(owner.bpm_lo > 0.0))  return false;
     if (!(owner.bpm_hi > 0.0))  return false;
 
-    // Span endpoint is explicit (set on the `m` two-marker span gate).
+    // Span endpoint is explicit (set on the `m` section gate). It is one past
+    // the last selected marker: endpoint_idx == store size is the SONG-END
+    // sentinel (the last selected marker is store-final, its section runs to
+    // total_frames), endpoint_idx < size means the marker there is the closing
+    // boundary. A value <= owner or past the size is missing/malformed.
+    const int store_size = static_cast<int>(base_warp_markers.size());
     const int endpoint_idx = owner.bpm_endpoint;
-    if (endpoint_idx <= bpm_owner_idx ||
-        endpoint_idx >= static_cast<int>(base_warp_markers.size())) {
+    if (endpoint_idx <= bpm_owner_idx || endpoint_idx > store_size) {
         return false;   // missing or malformed span: no sweep
     }
+    // Span end frame: the boundary marker's time when one exists, else the
+    // song end. Named once here and reused for the duration and the
+    // descriptor's endpoint seconds.
+    const int64_t span_end_frame =
+        (endpoint_idx < store_size)
+            ? base_warp_markers[endpoint_idx].time_frame
+            : audio.total_frames();
     // The span duration is a musical (seconds-domain) quantity — the BPM
     // math needs beats per minute — so this is a genuine display/physics
     // conversion, not a persistence one: frames / sample_rate.
     const double duration_seconds =
-        (base_warp_markers[endpoint_idx].time_frame - owner.time_frame) /
+        (span_end_frame - owner.time_frame) /
         static_cast<double>(audio.sample_rate());
     if (!(duration_seconds > 0.0)) return false;
 
@@ -520,11 +532,15 @@ bool GuiInputHandler::render_bpm_sweep() {
             cell_warp_markers[i].tempo_cents    = 100;   // inert default
             cell_warp_markers[i].tempo_scale.reset();    // inert: no typed scale
             // label_def on a span-internal marker is preserved (refs are
-            // excluded from spans by the `m` two-marker span gate, but a def
-            // may exist); only the tempo fields are rewritten. Do not touch
-            // label_def, disabled, or any non-tempo field.
+            // excluded from spans by the `m` section gate's ref scan, but a
+            // def may exist); only the tempo fields are rewritten. Do not
+            // touch label_def, disabled, or any non-tempo field.
         }
-        // endpoint marker: untouched — its section lies outside the span.
+        // Boundary marker (when one exists): untouched — it owns the
+        // FOLLOWING section, which lies outside the span. At song end
+        // (endpoint_idx == store size) there is no boundary marker and the
+        // loop above already ran to the store end, so every following marker
+        // passes.
 
         EngineSettings cell_settings = app.engine_settings;
         cell_settings.scale = computed->scale;
@@ -536,7 +552,7 @@ bool GuiInputHandler::render_bpm_sweep() {
                 owner.bpm_beats, bpm,
                 owner.time_frame /
                     static_cast<double>(audio.sample_rate()),
-                base_warp_markers[endpoint_idx].time_frame /
+                span_end_frame /
                     static_cast<double>(audio.sample_rate()));
 
         char num_buf[16];

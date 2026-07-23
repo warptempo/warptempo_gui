@@ -626,15 +626,23 @@ bool GuiFlagEditor::commit_bpm_edit() {
     // red-flashes like any invalid editor value. Never clamp: a clamped
     // derivation would silently mistune the span. Gated on a well-formed
     // span (owner before endpoint, positive duration); without one,
-    // render_bpm_sweep early-bails and derives nothing.
+    // render_bpm_sweep early-bails and derives nothing. The bpm editor is
+    // modal, so the store cannot change between `m` and this commit — n here
+    // equals the store size the `m` gate recorded bpm_endpoint against.
     {
         const int endpoint_idx = mv_const[idx].bpm_endpoint;
+        const int n = static_cast<int>(mv_const.size());
+        // The span-end frame is the boundary marker's time when one exists,
+        // else the song end (bpm_endpoint == n is the song-end sentinel).
+        // Guarded on endpoint_idx > idx and endpoint_idx <= n.
         if (audio.sample_rate() > 0 &&
             endpoint_idx > idx &&
-            endpoint_idx < static_cast<int>(mv_const.size())) {
+            endpoint_idx <= n) {
+            const int64_t span_end_frame =
+                (endpoint_idx < n) ? mv_const[endpoint_idx].time_frame
+                                   : audio.total_frames();
             const double duration_seconds =
-                (mv_const[endpoint_idx].time_frame -
-                 mv_const[idx].time_frame) /
+                (span_end_frame - mv_const[idx].time_frame) /
                 static_cast<double>(audio.sample_rate());
             if (duration_seconds > 0.0 &&
                 (!compute_base_tempo_scale(duration_seconds, beats, lo) ||
@@ -681,18 +689,19 @@ bool GuiFlagEditor::commit_bpm_edit() {
 
 // Full mode-on transition for BPM mode. Validates the activation gate, toggles
 // iter mode off if active, maintains the single-owner invariant, and marks the
-// earlier of the two selected markers as the BPM owner (mode exit wipes the
-// bpm state, so a fresh entry always seeds a blank bracket), then flips the
-// mode flag. The
-// span endpoint is now explicit — supplied by the `m` handler and recorded on
-// the owner's bpm_endpoint — so this no longer auto-selects an endpoint cue.
-// The `m` handler calls this and then opens the bottom-strip BPM editor on the
-// owner.
+// FIRST selected marker as the BPM owner (mode exit wipes the bpm state, so a
+// fresh entry always seeds a blank bracket), then flips the mode flag. The
+// span endpoint is explicit — supplied by the `m` handler and recorded on the
+// owner's bpm_endpoint (section-based, architect 2026-07-23) — so this does not
+// auto-select an endpoint cue. The full section gate (non-empty, contiguous,
+// ref-free) lives in the `m` handler; this route re-checks only that at least
+// one marker is selected and the owner is eligible. The `m` handler calls this
+// and then opens the bottom-strip BPM editor on the owner.
 void GuiFlagEditor::enter_bpm_mode() {
     if (app.bpm_mode_enabled) return;
     if (app.active_markers_view != 'W') return;
-    if (app.selected_markers.size() != 2) return;
-    const int owner = *app.selected_markers.begin();   // earlier of the two
+    if (app.selected_markers.empty()) return;
+    const int owner = *app.selected_markers.begin();   // first selected
     const auto& mv_const = app.warpmarkers.markers();
     if (owner < 0 || owner >= static_cast<int>(mv_const.size())) return;
     if (!bpm_popup_eligible_marker(mv_const[owner])) return;

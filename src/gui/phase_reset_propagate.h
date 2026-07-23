@@ -50,11 +50,13 @@ struct PhaseResetPropagate {
           target_render(target_render_), active_views(active_views_),
           playback_lifecycle(playback_lifecycle_) {}
 
-    // Ctrl+P copy. Caller has already verified W-mode + exactly two
-    // warp markers selected. Replaces the clipboard with the named
-    // blocks and fractional placements derived from the half-open
-    // [first, last) source range. Non-mutating beyond clipboard
-    // state — no undo entry, no marker changes.
+    // Ctrl+P copy. Caller has already verified W-mode + at least one warp
+    // marker selected. Section-based (architect 2026-07-23): replaces the
+    // clipboard with the named blocks each SELECTED, effective-enabled,
+    // labeled marker owns — its time to the next store marker, or to the song
+    // end for the store-final marker. The selected set may be disjoint (one
+    // marker = one valid block). Non-mutating beyond clipboard state — no undo
+    // entry, no marker changes.
     void copy_from_selection();
 
     // Build the named-block list for the paste confirmation prompt

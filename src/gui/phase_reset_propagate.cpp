@@ -47,23 +47,26 @@ struct DestBlock {
 };
 
 // Walk the warp marker list across [from_idx, to_idx_exclusive),
-// returning the named blocks in order. A block's extent runs from
-// its owning marker to the next warp marker in the list; the final
-// marker in the warp list has no successor and contributes no block.
-// Markers without a label name also contribute no entry.
+// returning the named blocks in order. A block's extent runs from its
+// owning marker to the next warp marker in the list; the STORE-FINAL marker
+// owns the section running to the SONG END (song_end_frame, source frames),
+// so it contributes a block ending there (section rule, architect
+// 2026-07-23). Markers without a label name contribute no entry.
 std::vector<DestBlock> walk_named_blocks(
     const std::vector<GuiWarpMarker>& mv,
-    int from_idx, int to_idx_exclusive) {
+    int from_idx, int to_idx_exclusive, int64_t song_end_frame) {
     std::vector<DestBlock> out;
     const int n = static_cast<int>(mv.size());
     if (from_idx < 0)        from_idx = 0;
     if (to_idx_exclusive > n) to_idx_exclusive = n;
     for (int i = from_idx; i < to_idx_exclusive; ++i) {
-        if (i + 1 >= n) break;  // no next marker → no extent
         const std::string& name = warp_marker_label_name(mv[i]);
         if (name.empty()) continue;
         const int64_t start = mv[i].time_frame;
-        const int64_t end   = mv[i + 1].time_frame;
+        // Store-final marker: its section runs to the song end. Every other
+        // marker's section ends at the next store marker.
+        const int64_t end   = (i + 1 < n) ? mv[i + 1].time_frame
+                                          : song_end_frame;
         out.push_back(DestBlock{name, start, end});
     }
     return out;
@@ -106,24 +109,37 @@ std::string format_domain_timestamp(double source_frame,
 void PhaseResetPropagate::copy_from_selection() {
     const auto& mv = app.warpmarkers.markers();
     const auto& tv = app.phaseresetmarkers.markers();
-    if (app.selected_markers.size() != 2) return;
+    if (app.selected_markers.empty()) return;
 
-    auto it = app.selected_markers.begin();
-    const int first_idx = *it++;
-    const int last_idx  = *it;
-    if (first_idx < 0 || last_idx < 0) return;
     const int n = static_cast<int>(mv.size());
-    if (first_idx >= n || last_idx >= n) return;
-    if (first_idx >= last_idx) return;
+    const int64_t song_end_frame = target_render.audio.total_frames();
 
-    // The closing boundary is the time of the last selected marker —
-    // its block is excluded. The walk inspects markers in
-    // [first_idx, last_idx) and uses each marker's next-time as the
-    // block's end. The last_idx marker's time is the end-extent for
-    // a named block at index last_idx - 1 (provided by walk_named_blocks's
-    // i+1 indexing into mv).
-    std::vector<DestBlock> src_blocks =
-        walk_named_blocks(mv, first_idx, last_idx);
+    // Section-based copy (architect 2026-07-23): each selected marker
+    // contributes the block IT owns — from its time to the next store
+    // marker's time, or to the song end for the store-final marker. The set
+    // may be disjoint (one marker = one valid block; blocks are independent,
+    // the recorded asymmetry with the `m` sweep's contiguity requirement).
+    // Not routed through walk_named_blocks: the copy filters on the SELECTED
+    // set and on EFFECTIVE-enabled status (a disabled selected marker
+    // contributes no block), neither of which that shared destination walk
+    // expresses — a separate loop here, walk_named_blocks stays the
+    // paste-destination walk. std::set is ascending, so the blocks come out
+    // in time order.
+    std::vector<DestBlock> src_blocks;
+    for (int i : app.selected_markers) {
+        if (i < 0 || i >= n) continue;
+        // EFFECTIVE-enabled: unlike the bpm owner predicate (which tests a
+        // raw owning marker, where raw == effective), a copy-eligible marker
+        // may be a labeled DEF whose enabled state the cascade can reach, so
+        // the effective_disabled cascade matters here.
+        if (effective_disabled(mv, i)) continue;
+        const std::string& name = warp_marker_label_name(mv[i]);
+        if (name.empty()) continue;
+        const int64_t start = mv[i].time_frame;
+        const int64_t end   = (i + 1 < n) ? mv[i + 1].time_frame
+                                          : song_end_frame;
+        src_blocks.push_back(DestBlock{name, start, end});
+    }
 
     std::vector<ClipboardBlock> clipboard_blocks;
     clipboard_blocks.reserve(src_blocks.size());
@@ -195,7 +211,7 @@ void PhaseResetPropagate::paste_apply() {
     if (anchor < 0 || anchor >= n) return;
 
     std::vector<DestBlock> dest_blocks =
-        walk_named_blocks(mv, anchor, n);
+        walk_named_blocks(mv, anchor, n, target_render.audio.total_frames());
 
     const auto& clip_blocks = app.phase_reset_clipboard.blocks();
 
@@ -221,8 +237,10 @@ void PhaseResetPropagate::paste_apply() {
     if (matched == 0) {
         // Nothing to materialize: either a divergence at block 0
         // (stop_message non-empty), or the destination produced zero
-        // labeled blocks (e.g., anchor at the last warp marker), which
-        // is a clean partial walk and stays silent. Either way: no undo
+        // labeled blocks (e.g., no labeled marker at or after the anchor —
+        // the store-final marker now DOES own a block, running to the song
+        // end, so only unlabeled destinations reach here), which is a clean
+        // partial walk and stays silent. Either way: no undo
         // entry, no waveform / render flush, but the view-switch fires
         // per the always-switch rule.
         if (!stop_message.empty()) {
@@ -296,9 +314,12 @@ void PhaseResetPropagate::paste_apply() {
             // into authored data. Clamped after the snap to the column's
             // absolute range — 0 (the universal no-negative-position rule)
             // and the marker EOF wall, total - 1, the single wall both
-            // marker columns share; the walls win. The upper clamp is
-            // insurance: destination blocks end at warp markers, which
-            // themselves wall at total - 1.
+            // marker columns share; the walls win. The upper clamp is now
+            // load-bearing: the STORE-FINAL destination block ends at the
+            // song end (total_frames), so a near-end placement can rescale to
+            // total_frames itself — one past the wall — and the clamp pins it
+            // to total - 1 (interior blocks end at warp markers, which
+            // already wall at total - 1).
             nm.time_frame = std::clamp<int64_t>(snap_authored_frame(
                 dst_start + p.fractional_position * dst_dur), 0, reset_wall);
             nm.disabled     = p.disabled;
@@ -364,7 +385,7 @@ void PhaseResetPropagate::paste_state_apply() {
     if (anchor < 0 || anchor >= n) return;
 
     const std::vector<DestBlock> dest_blocks =
-        walk_named_blocks(mv, anchor, n);
+        walk_named_blocks(mv, anchor, n, target_render.audio.total_frames());
     const auto& clip_blocks = app.phase_reset_clipboard.blocks();
 
     // Boundary guard: the seconds-domain authoring tolerance converted

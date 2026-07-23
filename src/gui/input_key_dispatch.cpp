@@ -1243,15 +1243,20 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
 
-    // Ctrl+P: copy phase reset placements from a two-warp-marker
-    // selection into the session clipboard. W-mode only; phase reset
-    // mode is a silent no-op. Off-count selection in W-mode emits a
-    // one-line stderr nudge.
+    // Ctrl+P: copy phase reset placements from the selected warp markers
+    // into the session clipboard. Section-based (architect 2026-07-23):
+    // each selected marker contributes the block it owns (marker to next
+    // store marker, the store-final marker's block to the song end), so one
+    // or more markers may be selected and the set need not be contiguous
+    // (copy blocks are independent — the recorded asymmetry with the `m`
+    // sweep, which requires a contiguous run). W-mode only; phase reset mode
+    // is a silent no-op. An empty selection in W-mode emits a one-line
+    // stderr nudge.
     if (key == GuiKeys::P && ctrl && !shift && !alt) {
         if (app.active_markers_view != 'W') return true;
-        if (app.selected_markers.size() != 2) {
+        if (app.selected_markers.empty()) {
             std::fprintf(stderr,
-                "warptempo_gui: phase_reset copy: select exactly two warp "
+                "warptempo_gui: phase_reset copy: select one or more warp "
                 "markers\n");
             return true;
         }
@@ -1333,52 +1338,71 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // `m` (no modifiers): open the BPM editor on the earlier of two
-    // selected markers that define an explicit span. Warp view only; silent
-    // no-op in phase reset view. Mutual exclusion with iter mode is handled
-    // inside enter_bpm_mode. The gate requires exactly two selected markers
-    // with no label_ref anywhere in the span; any other selection is a
-    // silent no-op. There is no toggle-off branch: the bpm editor is a
-    // modal bottom-strip surface, so while it is open `m` never reaches
-    // this dispatch — it is just a typed character the bracket grammar
-    // rejects — and bpm mode never rests without its editor (the mode's
-    // only exits are the editor's own: Esc, and Enter's dispatch tail).
+    // `m` (no modifiers): open the BPM editor on the FIRST of a contiguous
+    // run of selected markers whose sections define the sweep span. Warp
+    // view only; silent no-op in phase reset view. Mutual exclusion with
+    // iter mode is handled inside enter_bpm_mode. The section rule (architect
+    // 2026-07-23): a marker owns the section from itself to the next store
+    // marker, and the store-final marker's section runs to the song end — so
+    // the selected run's LAST section is INCLUDED. The gate requires a
+    // NON-EMPTY, CONTIGUOUS run of selected markers with no label_ref in
+    // [owner .. boundary marker] inclusive; any other selection is a silent
+    // no-op. A disabled UNSELECTED marker inside the span stays a legal
+    // in-span pass; a disabled OWNER is rejected (bpm_popup_eligible_marker
+    // now excludes disabled — a disabled owner was a render-inert rewrite).
+    // There is no toggle-off branch: the bpm editor is a modal bottom-strip
+    // surface, so while it is open `m` never reaches this dispatch — it is
+    // just a typed character the bracket grammar rejects — and bpm mode never
+    // rests without its editor (the mode's only exits are the editor's own:
+    // Esc, and Enter's dispatch tail).
     if (key == GuiKeys::M && !ctrl && !shift && !alt) {
         if (app.active_markers_view != 'W') return true;
         // The bpm editor rewrites tempo through the derivation (not a ruled
         // target-view exception), so it opens only in warp's home (source)
         // view; off home is a consumed no-op.
         if (!active_column_authoring_allowed(app)) return true;
-        // Two-marker span gate. Exactly two markers must be selected; the
-        // earlier owns, the later closes the span. Neither endpoint nor any
-        // span-internal marker may be a label_ref — commit rewrites every
-        // in-span tempo and a ref cannot take a manual tempo.
-        if (app.selected_markers.size() != 2) return true;
+        // Section-based span gate. A non-empty, contiguous run of selected
+        // markers; the first owns, and the run covers the sections owned by
+        // every selected marker (the last one's section included).
+        if (app.selected_markers.empty()) return true;
         const auto& mv = app.warpmarkers.markers();
-        auto it = app.selected_markers.begin();
-        const int owner    = *it++;       // std::set: ascending, so owner is
-        const int endpoint = *it;         // the earlier index, endpoint later
-        if (owner < 0 || endpoint >= static_cast<int>(mv.size())) return true;
-        // No label_ref anywhere in [owner, endpoint] inclusive (endpoint
-        // included in the eligibility scan even though its section is not in
-        // the rendered region — a ref endpoint still cannot bound the span
-        // cleanly). Disabled markers ARE allowed and remain in-span.
-        for (int i = owner; i <= endpoint; ++i) {
+        const int n = static_cast<int>(mv.size());
+        const int owner    = *app.selected_markers.begin();
+        const int last_sel = *app.selected_markers.rbegin();
+        if (owner < 0 || last_sel >= n) return true;
+        // Contiguity: the sweep writes ONE owner tempo over ONE contiguous
+        // span, and the shift-range select produces exactly contiguous runs;
+        // a disjoint set has no single-span meaning here. (The COPY, whose
+        // blocks are independent, accepts disjoint sets — the recorded
+        // asymmetry.) std::set is ascending, so a run [owner .. last_sel] is
+        // contiguous iff its extent equals its count.
+        if (last_sel - owner + 1 != static_cast<int>(app.selected_markers.size()))
+            return true;
+        // boundary == last_sel + 1: one past the last selected marker. When
+        // boundary < n the marker there is the closing boundary (owns the
+        // following section, outside the span); boundary == n is the song end
+        // (last_sel is the store-final marker, its section runs to the end).
+        const int boundary = last_sel + 1;
+        // No label_ref anywhere in [owner .. min(boundary, n-1)] inclusive:
+        // every in-span marker rewrites its tempo (a ref cannot take one),
+        // and the boundary marker (when it exists) still cannot bound the
+        // span cleanly. At song end there is no boundary marker, so the scan
+        // clamps to n-1.
+        const int scan_end = std::min(boundary, n - 1);
+        for (int i = owner; i <= scan_end; ++i) {
             if (!mv[i].label_ref.empty()) return true;   // silent no-op
         }
-        // Owner must still satisfy the BPM-eligibility predicate (e.g. not
-        // itself a label_ref — already covered — and any other standing
-        // condition bpm_popup_eligible_marker encodes).
+        // Owner must satisfy the BPM-eligibility predicate (owning, no ref,
+        // and — now — enabled).
         if (!bpm_popup_eligible_marker(mv[owner])) return true;
-        // enter_bpm_mode tags the owner and flips the mode flag. It no
-        // longer auto-selects a next-marker cue; the span endpoint is
-        // explicit, so record it on the owner and keep both selected
-        // markers highlighted as the span cue.
+        // enter_bpm_mode tags the owner and flips the mode flag; the span
+        // endpoint is explicit, so record it on the owner and keep the whole
+        // selected run highlighted as the span cue.
         flag_editor.enter_bpm_mode();
         if (!app.bpm_mode_enabled) return true;   // gate inside bailed
         {
             auto& mvw = app.warpmarkers.markers_mut();
-            mvw[owner].bpm_endpoint = endpoint;
+            mvw[owner].bpm_endpoint = boundary;
         }
         const std::set<int> span_selection = app.selected_markers;
         // The bpm editor is a modal bottom-strip surface: stop playback at

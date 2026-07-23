@@ -32,11 +32,14 @@ struct GuiWarpMarker : WarpMarker {
     std::optional<int64_t> iter_end_cents;
 
     // BPM mode. Session-only authoring state for basetempo-scale
-    // sweeps; never serialized, lost on app close. The mode is a two-marker
-    // explicit span: of the two selected markers, the earlier owns
-    // (bpm_owner=true) and the later closes the span (its index held in this
-    // owner's bpm_endpoint). At most one marker at a time has bpm_owner=true
-    // (invariant maintained by the `m` toggle handler). "Committed" is
+    // sweeps; never serialized, lost on app close. The mode is SECTION-based
+    // (architect 2026-07-23): a contiguous run of selected markers is chosen;
+    // the FIRST owns (bpm_owner=true) and the sweep tempo covers the run's
+    // whole extent — the sections every selected marker owns, the LAST
+    // marker's section INCLUDED. bpm_endpoint holds the index one past the
+    // last selected marker (== store size means the span runs to the song
+    // end). At most one marker at a time has bpm_owner=true (invariant
+    // maintained by the `m` toggle handler). "Committed" is
     // implicit: bpm_beats > 0 means the owner has authored a value (parser
     // guarantees all three of bpm_beats, bpm_lo, bpm_hi are set together).
     // The value form is "<beats>@[<lo>,<hi>]" — beats a positive integer
@@ -47,10 +50,16 @@ struct GuiWarpMarker : WarpMarker {
     double bpm_lo    = 0.0;
     double bpm_hi    = 0.0;
 
-    // Session-only, set with bpm_owner on the `m`-press two-marker gate.
-    // Index of the span's closing marker (the later of the two selected).
-    // The BPM region runs [this owner, bpm_endpoint) — the endpoint marker
-    // closes the span and is not a member. -1 when unset. Not serialized.
+    // Session-only, set with bpm_owner on the `m`-press section gate.
+    // Index ONE PAST the last selected marker: the BPM region runs
+    // [this owner, bpm_endpoint) over the store, and the tempo covers the
+    // sections owned by every marker in that half-open range. bpm_endpoint
+    // == store size is the SONG-END sentinel — the last selected marker is
+    // the store-final marker, so its section runs to total_frames and there
+    // is no closing marker. When bpm_endpoint < size, the marker at that
+    // index is the boundary: it owns the FOLLOWING section (outside the
+    // span) and is left untouched by the sweep. -1 when unset. Not
+    // serialized.
     int  bpm_endpoint = -1;
 };
 
@@ -138,11 +147,17 @@ inline bool iter_popup_eligible_marker(const GuiWarpMarker& m) {
     return !m.tempo_inherits && m.label_ref.empty();
 }
 
-// BPM mode: same eligibility shape as iter (owning marker, no
-// label_ref). Defined separately so the two predicates can diverge later
-// without cascading edits.
+// BPM mode: an owning, enabled marker (owning = !tempo_inherits AND no
+// label_ref). Defined separately from iter so the two predicates can
+// diverge without cascading edits — and they now do: the bpm owner must
+// also be enabled (!m.disabled), because a disabled bpm owner was a
+// render-inert rewrite (the sweep authored a tempo onto a marker whose
+// disabled state drops it from the resolved map). For an OWNING marker
+// (the other two conjuncts) raw disabled equals effective disabled — the
+// effective-disabled cascade only reaches refs, which are excluded here —
+// so this needs no marker-vector/index threading, the plain flag suffices.
 inline bool bpm_popup_eligible_marker(const GuiWarpMarker& m) {
-    return !m.tempo_inherits && m.label_ref.empty();
+    return !m.tempo_inherits && m.label_ref.empty() && !m.disabled;
 }
 
 // BPM mode: format the bracket-editor text for marker `m`.
