@@ -391,10 +391,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // Mouse authoring is home-view gated like the keyboard: a plain flag
     // press in W+target arms the TEMPO drag on an eligible marker instead
     // of the reposition drag (marker_drag.tempo_drag_predecessor; an
-    // ineligible press just selects) — the pointer half of the home-view
-    // binding's one tempo exception — while placement arming everywhere
-    // else is gated by active_column_authoring_allowed, off-home selecting
-    // but arming nothing. The click-playhead / region-drag family below is
+    // ineligible press still selects and LANDS the playhead, only the drag
+    // arm is refused) — the pointer half of the home-view binding's one tempo
+    // exception — while placement arming everywhere else is gated by
+    // active_column_authoring_allowed, off-home selecting and landing but
+    // arming nothing. The click-playhead / region-drag family below is
     // navigation, not authoring, and stays view-independent.
 
     if (button == GuiMouseButton::Left) {
@@ -746,9 +747,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         // predecessor, or a coincident-collapsed predecessor
                         // whose tempo is render-inert — tempo_drag_predecessor
                         // returns -1), and the P column off ITS home (P view in
-                        // source view), select and arm nothing — the silent
-                        // read-only convention, marker motion / tempo authoring
-                        // being authoring.
+                        // source view), select and LAND the playhead but arm
+                        // nothing — the silent read-only convention, marker
+                        // motion / tempo authoring being authoring.
                         if (mh.on_flag && !active_view_state(app).read_only) {
                             if (active_column_authoring_allowed(app)) {
                                 app.pending_marker_drag = PendingMarkerDrag{};
