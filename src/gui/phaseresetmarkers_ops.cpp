@@ -165,10 +165,10 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
     // Stop playback first. Playhead rule, symmetric with
-    // nudge_selected_markers (full rationale there): parked off the focused
-    // marker → stays parked (lead-in intent); exactly coincident at press
-    // time → RIDES the marker (the playhead_rides test below). The ride
-    // never lands the playhead onto a fresh marker.
+    // nudge_selected_markers (full rationale there): the playhead FOLLOWS the
+    // focused marker through the nudge — it steps with it so a later Space
+    // auditions FROM the marker (architect 2026-07-23, reversing the 2026-07-20
+    // decoupling; the coming scrub surface owns upstream auditioning).
     playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
@@ -189,16 +189,6 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(tv.size())) return;
     }
-    // Coincident-ride test against the PRE-move frame, through the same
-    // two-step Tab placement basis as the warp nudge (one spelling, both
-    // columns — a phase reset does not change the warp map, but the basis
-    // is identical anyway). Singleton selection, so one test suffices.
-    const bool playhead_rides =
-        app.playhead_cursor_sample ==
-        clamp_playhead_to_live_domain(
-            source_frame_to_active_domain(
-                app, audio, tv[app.last_selected_marker].time_frame),
-            app, audio);
     // The anchoring map is the DISPLAYED paint basis —
     // displayed_or_live_target_map, the SAME map the stem/flag painter reads —
     // so a press moves the reset by exactly the commanded pixel column against
@@ -241,13 +231,13 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     // the selection at the moved reset.
     remap_marker_indices_after_reorder(
         app, reorder_markers_by_time(app.phaseresetmarkers.markers_mut()));
-    // Coincident ride: keep the playhead on the reset it sat on, through the
-    // post-mutation two-step basis (identical to the warp nudge's ride; the
+    // Playhead follows the marker: keep the playhead on the focused reset,
+    // through the post-mutation two-step basis (identical to the warp nudge; the
     // committed t_new is reorder-independent). move_playhead_to owns the
     // clamp and invalidation, writing the cursor field only — playback was
     // stopped above, so the scanner is inactive and stale by contract,
     // untouched either way.
-    if (playhead_rides && !proposals.empty()) {
+    if (!proposals.empty()) {
         viewport.move_playhead_to(
             source_frame_to_active_domain(app, audio,
                                           proposals.front().second));

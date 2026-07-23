@@ -184,22 +184,21 @@ struct DragState {
     // Pre-drag marker selection snapshot, captured at begin_drag for the
     // Esc / Ctrl+Q cancellation restore: the arming flag press single-selected
     // the grabbed marker, so this captures {hit} and a cancel restores exactly
-    // that. The playhead's cancel restore is the ride pair below: a non-riding
-    // drag never touches the playhead, so only a riding cancel puts it back.
+    // that. The playhead's cancel restore is pre_ride_playhead_sample below,
+    // which the cancel now always applies.
     SelectionSnapshot      pre_drag_selection;
-    // Coincident-ride ruling: a playhead EXACTLY on the grabbed marker at grab
-    // time (exact active-domain frame equality through the Tab placement basis
-    // — source_frame_to_active_domain then clamp_playhead_to_live_domain, so a
-    // Tab / `c` / alt+flag-click placement is coincident by construction)
-    // RIDES the marker through the drag: it stays on the marker so a later
-    // Space auditions FROM it. A playhead parked anywhere else is left alone —
-    // lead-in intent — and the ride never lands the playhead onto a fresh
-    // marker. Only the RESTING cursor playhead moves — move_playhead_to
-    // writes the cursor field only, so a live scanner is left untouched;
-    // it stays the audio thread's to own.
-    bool                   playhead_rides = false;
+    // Playhead-follows-marker ruling (architect 2026-07-23, reversing the
+    // 2026-07-20 decoupling): the arming plain marker click LANDS the playhead
+    // on the grabbed marker (source_frame_to_active_domain then
+    // clamp_playhead_to_live_domain), so it is coincident by construction, and
+    // the drag tows it UNCONDITIONALLY — it stays on the marker through the
+    // motion so a later Space auditions FROM it. The lead-in workflow (parking
+    // the playhead upstream to audition the approach) that the decoupling
+    // served is supplied by the coming scrub surface instead. Only the RESTING
+    // cursor playhead moves — move_playhead_to writes the cursor field only, so
+    // a live scanner is left untouched; it stays the audio thread's to own.
     // Cursor position at grab, for the Esc-cancel restore: the marker returns
-    // to its origin on cancel, so a ridden playhead returns with it.
+    // to its origin on cancel, so the towed playhead returns with it.
     int64_t                pre_ride_playhead_sample = 0;
     // Index of the marker whose flag press started the drag. Re-asserted as the
     // single selection at first motion (set_single_selection) — normally a
@@ -450,12 +449,11 @@ struct PendingTempoDrag {
 // pre-drag store snapshot pushes at gesture end iff the final cents differ
 // from grab_cents (mouse drags are coalesce-ineligible by standing rule).
 // Esc-cancel restores grab_cents (one store write + one sync), the
-// SelectionSnapshot, and — rides-only — the grab playhead. The coincident
-// ride follows the standing ruling: a playhead exactly on the dragged
-// marker at grab (Tab placement basis, decided once here) re-lands on the
-// marker's post-commit image each step (the marker's source frame never
-// moves; only its image does). Session-only; cleared on release / lost
-// button (end), Esc/close (cancel), and file load.
+// SelectionSnapshot, and the grab playhead (always). The playhead follows the
+// dragged marker (the standing ruling): the arming click landed it on the
+// marker, so each step re-lands it on the marker's post-commit image (the
+// marker's source frame never moves; only its image does). Session-only;
+// cleared on release / lost button (end), Esc/close (cancel), and file load.
 struct TempoDragState {
     bool active      = false;
     // Latched at the first store write; end_tempo_drag needs no motion gate
@@ -475,10 +473,10 @@ struct TempoDragState {
     std::vector<GuiWarpMarker> pre_drag_snapshot;
     int                pre_drag_last_selected = -1;
     SelectionSnapshot  pre_drag_selection;
-    // Coincident-ride pair (see DragState): verdict decided once at grab
-    // through the Tab placement basis; the grab position feeds the
-    // rides-only cancel restore.
-    bool    playhead_rides           = false;
+    // Playhead-follows-marker (see DragState): the arming click landed the
+    // playhead on the dragged marker, so each step re-lands it on the marker's
+    // post-commit image unconditionally; the grab position feeds the Esc-cancel
+    // restore, always applied.
     int64_t pre_ride_playhead_sample = 0;
 };
 
@@ -533,8 +531,8 @@ struct TrimDragState {
     // bound that moves. No pre-drag playhead capture: trim drags never touch
     // the playhead, so an Esc/Ctrl+Q cancel has nothing to restore there (the
     // recorded difference from the marker DragState, which restores its
-    // grabbed marker's selection and — rides-only — a playhead that rode the
-    // coincident marker).
+    // grabbed marker's selection and the grab playhead that followed the
+    // marker).
     bool    both                 = false;
     int64_t orig_begin_frame   = 0;
     int64_t orig_end_frame     = 0;

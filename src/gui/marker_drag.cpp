@@ -148,17 +148,10 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // captures {hit}, and a cancel restores exactly that (Esc reverts the drag's
     // position change, not the click's committed selection).
     d.pre_drag_selection = capture_selection_snapshot(app);
-    // Coincident-ride verdict, decided ONCE at grab against the grabbed
-    // marker's original frame through the Tab placement basis
-    // (source_frame_to_active_domain then clamp_playhead_to_live_domain), so
-    // a Tab / `c` / alt+flag-click placement is coincident by construction:
-    // an exactly-coincident playhead RIDES the marker through the drag (a
-    // parked one keeps today's lead-in behavior — see the ruling at
-    // DragState). The pre-ride capture feeds the Esc-cancel restore.
-    d.playhead_rides =
-        app.playhead_cursor_sample ==
-        clamp_playhead_to_live_domain(
-            source_frame_to_active_domain(app, audio, t_of(hit)), app, audio);
+    // Playhead follows the grabbed marker (see the ruling at DragState): the
+    // arming plain marker click landed the playhead on this marker, so the
+    // drag tows it by construction. The pre-ride capture feeds the Esc-cancel
+    // restore (always applied).
     d.pre_ride_playhead_sample = app.playhead_cursor_sample;
     app.drag = std::move(d);
     viewport.clear_hover_popup();
@@ -183,7 +176,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
 // different segments). This is the one deliberate revision of the "gesture
 // mechanics stay on the live map" rule: the drag's contract is
 // pointer-lockstep with the painted flag, so its mechanics run on the
-// DISPLAYED map (the paint basis); the commit's store write and the ride's
+// DISPLAYED map (the paint basis); the commit's store write and the playhead's
 // final placement remain live-map (post-commit) territory. The live consumer
 // of the non-identity case is the PHASE reset drag in target view: under the
 // home-view binding (architect 2026-07-22) a WARP marker drag authors in
@@ -263,8 +256,8 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         if (first_motion) {
             selection.set_single_selection(app.drag.hit_marker);
         }
-        // Coincident ride, mid-motion: slide the resting cursor playhead to
-        // the grabbed marker's live proposed position (the drag is
+        // Playhead follows the marker, mid-motion: slide the resting cursor
+        // playhead to the grabbed marker's live proposed position (the drag is
         // single-marker, so moveable_times[0] is the grabbed one). Target
         // view maps the free double through displayed_or_live_target_map —
         // the SAME basis the DragOverlay paints the flag through, so the
@@ -276,7 +269,7 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         // field regardless, so this call could not disturb a running
         // scanner even if one existed. The motion-clamped proposal stays
         // inside the visible strip, so no viewport scroll occurs.
-        if (app.drag.playhead_rides && !app.drag.moveable_times.empty()) {
+        if (!app.drag.moveable_times.empty()) {
             const double proposed = app.drag.moveable_times[0];
             int64_t sample;
             if (active_display_context(app, audio).domain !=
@@ -296,14 +289,14 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 
 // Commit the current drag. Caller ensures drag was active. Sets dirty
 // only if the markers actually moved. Playhead rule (drag and nudge,
-// keyboard/mouse counterparts, share it): a playhead parked OFF the grabbed
-// marker stays parked — the marker slides under it and an upstream audition
-// point survives the move — while a playhead EXACTLY on the grabbed marker
-// at grab time (active-domain equality, the Tab placement basis; see
-// begin_drag) RIDES it and lands with it here, so a later Space auditions
-// FROM the marker. The ride only keeps the playhead on a marker it already
-// sat on; the land routes remain the Tab family, `c`, and the alt-exact
-// flag click.
+// keyboard/mouse counterparts, share it): the playhead follows the grabbed
+// marker UNCONDITIONALLY (architect 2026-07-23, reversing the 2026-07-20
+// decoupling) — the arming plain marker click landed the playhead on the
+// marker, so it is coincident by construction, and the drag tows it and lands
+// with it here, so a later Space auditions FROM the marker. Every marker click
+// is a land route; Tab and `c` additionally recenter / re-zoom. The lead-in
+// workflow (parking the playhead upstream) is supplied by the coming scrub
+// surface instead.
 //
 // Write-back step: the live store was untouched throughout motion (the
 // proposed positions lived in app.drag.moveable_times and paint read
@@ -415,14 +408,15 @@ void MarkerDragOps::commit_drag() {
                 app, reorder_markers_by_time(app.warpmarkers.markers_mut()));
         }
     }
-    // Capture the ride verdict and the grabbed marker's committed frame into
-    // locals BEFORE the wholesale DragState reset below discards them. The
-    // ride lands regardless of net_changed: a wander-back drag must land the
-    // playhead exactly back on the marker (original_times[0]), erasing any
-    // mid-motion rounding drift from apply_drag_motion's paint-basis moves.
-    const bool playhead_rides = app.drag.playhead_rides &&
+    // Capture the grabbed marker's committed frame into a local BEFORE the
+    // wholesale DragState reset below discards it. The playhead lands regardless
+    // of net_changed: a wander-back drag must land the playhead exactly back on
+    // the marker (original_times[0]), erasing any mid-motion rounding drift from
+    // apply_drag_motion's paint-basis moves. The empty guards cover a
+    // degenerate drag with no moveable marker.
+    const bool land_playhead =
         (net_changed ? !committed.empty() : !app.drag.original_times.empty());
-    const int64_t ridden_final_frame = !playhead_rides ? 0
+    const int64_t ridden_final_frame = !land_playhead ? 0
         : (net_changed ? committed[0] : app.drag.original_times[0]);
     std::vector<GuiWarpMarker>    snap_w =
         std::move(app.drag.pre_drag_snapshot);
@@ -445,17 +439,16 @@ void MarkerDragOps::commit_drag() {
         viewport.invalidate_top_strip();
     }
     viewport.invalidate_waveform_area();
-    // Coincident ride, commit half (see the header comment): land the ridden
-    // playhead on the committed frame through the two-step placement basis.
-    // The call runs AFTER the store write + reorder/remap, so
+    // Playhead-follows-marker, commit half (see the header comment): land the
+    // playhead on the committed frame through the two-step placement basis. The
+    // call runs AFTER the store write + reorder/remap, so
     // source_frame_to_active_domain reads the POST-commit map via the
     // generation-keyed display cache — the shared Tab placement basis
     // (post-commit truth). A warp marker drag authors in the source home view
     // (home-view binding, architect 2026-07-22), where that call is identity, so
     // the playhead lands on the committed frame directly; a phase reset drag in
-    // its target home maps through the post-commit map. A non-riding drag leaves
-    // the playhead parked exactly as before.
-    if (playhead_rides) {
+    // its target home maps through the post-commit map.
+    if (land_playhead) {
         viewport.move_playhead_to(
             source_frame_to_active_domain(app, audio, ridden_final_frame));
     }
@@ -616,9 +609,7 @@ int MarkerDragOps::tempo_drag_predecessor(int hit) const {
 
 // Begin the tempo drag at the threshold crossing. Captures the grab tempo,
 // the pre-drag store snapshot (the one undo entry's payload), the selection
-// snapshot, and the coincident-ride verdict — exact, since nothing mutates
-// the store between press and crossing (the drag-modal key gate swallows
-// every command, pointer gestures are mutually exclusive). Returns false
+// snapshot, and the grab playhead (the Esc-cancel restore). Returns false
 // (gesture dropped) only on a defensive eligibility re-check failure.
 bool MarkerDragOps::begin_tempo_drag(int hit) {
     // The walk computes the GROUP's predecessor once; -1 is the ineligibility
@@ -640,17 +631,11 @@ bool MarkerDragOps::begin_tempo_drag(int hit) {
     // arming press single-selected the dragged marker, so this captures
     // {hit} (the marker-drag cancel shape).
     d.pre_drag_selection = capture_selection_snapshot(app);
-    // Coincident-ride verdict, decided ONCE at grab against the DRAGGED
-    // marker through the Tab placement basis (source_frame_to_active_domain
-    // then clamp_playhead_to_live_domain) — the marker whose IMAGE this
-    // gesture moves, exactly the reposition drag's rule. The marker's source
-    // frame never changes here; each step re-lands the ridden playhead on the
-    // post-commit image.
-    d.playhead_rides =
-        app.playhead_cursor_sample ==
-        clamp_playhead_to_live_domain(
-            source_frame_to_active_domain(app, audio, mv[hit].time_frame),
-            app, audio);
+    // Playhead follows the dragged marker (see the ruling at DragState): the
+    // arming plain marker click landed the playhead on this marker, so each
+    // step re-lands it on the post-commit image. The marker's source frame
+    // never changes here — only its image moves. The pre-ride capture feeds
+    // the Esc-cancel restore (always applied).
     d.pre_ride_playhead_sample = app.playhead_cursor_sample;
     app.tempo_drag = std::move(d);
     viewport.clear_hover_popup();
@@ -765,17 +750,15 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     // target_render.trigger() here — the preview fires ONCE at gesture end;
     // per-cent triggers would kill/re-dispatch the render worker per step.
     viewport.kick_waveform_sync();
-    // Coincident ride: re-land the resting cursor playhead on the marker's
-    // post-commit image (the live cache just rebuilt against the committed
-    // store — the Tab placement basis, post-commit truth). The image sits at
-    // the clamped pointer column, inside the visible strip, so this does not
-    // scroll; the arming top-strip press already stopped playback, so there
+    // Playhead follows the marker: re-land the resting cursor playhead on the
+    // marker's post-commit image (the live cache just rebuilt against the
+    // committed store — the Tab placement basis, post-commit truth). The image
+    // sits at the clamped pointer column, inside the visible strip, so this does
+    // not scroll; the arming top-strip press already stopped playback, so there
     // is no live scanner to disturb — and move_playhead_to only ever writes
     // the cursor field, so it could not touch one regardless.
-    if (app.tempo_drag.playhead_rides) {
-        viewport.move_playhead_to(
-            source_frame_to_active_domain(app, audio, mv[mi].time_frame));
-    }
+    viewport.move_playhead_to(
+        source_frame_to_active_domain(app, audio, mv[mi].time_frame));
     // The sync render's damage stops at the waveform's bottom edge; the
     // bottom strip is the one surface it does not cover (the dragged
     // marker's pass/ref readout resolves through the predecessor, and a
@@ -813,10 +796,10 @@ void MarkerDragOps::end_tempo_drag() {
 }
 
 // Esc / Ctrl+Q cancel: restore the GRAB tempo (one store write + one
-// synchronous re-warp), the pre-drag SelectionSnapshot, and — rides-only —
-// the grab playhead, exactly the marker-drag cancel shape. No undo entry and
-// no preview trigger: the restored store equals the pre-drag state the last
-// trigger already previewed.
+// synchronous re-warp), the pre-drag SelectionSnapshot, and the grab playhead,
+// exactly the marker-drag cancel shape. No undo entry and no preview trigger:
+// the restored store equals the pre-drag state the last trigger already
+// previewed.
 void MarkerDragOps::cancel_tempo_drag() {
     if (!app.tempo_drag.active) return;
     restore_selection_snapshot(app, app.tempo_drag.pre_drag_selection);
@@ -832,9 +815,7 @@ void MarkerDragOps::cancel_tempo_drag() {
         }
     }
     if (restored) viewport.kick_waveform_sync();
-    if (app.tempo_drag.playhead_rides) {
-        viewport.move_playhead_to(app.tempo_drag.pre_ride_playhead_sample);
-    }
+    viewport.move_playhead_to(app.tempo_drag.pre_ride_playhead_sample);
     app.tempo_drag = TempoDragState{};
     viewport.invalidate_waveform_area();
     viewport.invalidate_top_strip();

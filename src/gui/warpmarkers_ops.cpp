@@ -498,18 +498,14 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
 void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
     // Fine-tuning authoring gesture (Alt+Left/Right is the only caller path):
-    // stop playback first. Playhead rule: when the playhead is parked anywhere
-    // OFF the focused marker (usually upstream), it stays parked — the marker
-    // steps under it, the audition point survives the nudge, and a re-launch
-    // replays the approach into the moved marker. When the playhead sits
-    // EXACTLY on the focused marker at press time (exact active-domain frame
-    // equality through the Tab placement basis — see playhead_rides below), it
-    // RIDES the marker: it steps with it so a later Space auditions FROM the
-    // marker. The ride only keeps the playhead on a marker it already sits on;
-    // it never lands it onto a fresh one (the land routes are the Tab family,
-    // `c`, and the alt-exact flag click). Coincidence is tested per press, so
-    // a lead-in nudge that walks the marker exactly onto the parked playhead
-    // begins riding on the NEXT press — accepted emergent behavior.
+    // stop playback first. Playhead rule (architect 2026-07-23, reversing the
+    // 2026-07-20 decoupling): the playhead FOLLOWS the focused marker through
+    // the nudge — it steps with it so a later Space auditions FROM the marker.
+    // Most focus routes land the playhead on the marker already (a marker click,
+    // Tab, `c`); a focus set WITHOUT a land — a shift+click membership toggle,
+    // undo/redo's touched-set selection — is towed onto the marker by the first
+    // nudge. The lead-in workflow (parking the playhead upstream to audition the approach)
+    // is supplied by the coming scrub surface instead.
     playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
@@ -530,19 +526,6 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(mv.size())) return;
     }
-    // Coincident-ride test, against the PRE-move frame and PRE-move map: the
-    // playhead rides only when it sits EXACTLY on the focused marker's active-
-    // domain position, computed through the same two-step basis the Tab family
-    // places with (source_frame_to_active_domain then
-    // clamp_playhead_to_live_domain), so a Tab / `c` / alt+flag-click placement
-    // is coincident by construction — anything else means lead-in intent.
-    // The selection is a singleton (collapsed above), so one test suffices.
-    const bool playhead_rides =
-        app.playhead_cursor_sample ==
-        clamp_playhead_to_live_domain(
-            source_frame_to_active_domain(
-                app, audio, mv[app.last_selected_marker].time_frame),
-            app, audio);
     // The anchoring map is the DISPLAYED paint basis —
     // displayed_or_live_target_map, the SAME map the stem/flag painter reads —
     // so a press moves the marker by exactly the commanded pixel column against
@@ -584,7 +567,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     // the selection at the moved marker.
     remap_marker_indices_after_reorder(
         app, reorder_markers_by_time(app.warpmarkers.markers_mut()));
-    // Coincident ride: keep the playhead on the marker it sat on. The
+    // Playhead follows the marker: keep the playhead on the focused marker. The
     // committed frame (t_new, reorder-independent) maps through
     // source_frame_to_active_domain AFTER the store mutation — the shared Tab
     // placement basis (post-commit truth). Warp nudges author in the source
@@ -596,7 +579,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     // one column from a visible position); it writes the cursor field only
     // — playback was stopped above, so the scanner is inactive and stale by
     // contract, untouched either way.
-    if (playhead_rides && !proposals.empty()) {
+    if (!proposals.empty()) {
         viewport.move_playhead_to(
             source_frame_to_active_domain(app, audio,
                                           proposals.front().second));

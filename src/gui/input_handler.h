@@ -147,9 +147,9 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // cursor playhead, so a parked highlight would hide the cursor at its new
 // position. Call sites: jump_playhead_to_focused_marker (the whole Tab family
 // plus `c` through the one tail), run_zoom_toggle_command (bare `0`), the bare
-// Left/Right playhead scrub, Home/End (the trim-bound jumps), and the alt-exact
+// Left/Right playhead scrub, Home/End (the trim-bound jumps), and the plain
 // marker-click land. DELIBERATELY NOT cleared: the region Space launch (the
-// region IS the launch point there), the coincident nudge/drag ride, marker
+// region IS the launch point there), the nudge/drag playhead follow, marker
 // drops (`s`/Alt+S), undo/redo, and pure viewport moves (PageUp/PageDown, zoom
 // steps, pans). The plain waveform press (arm_region_drag_at) shares this
 // helper — same dissolve shape. The other pre-existing clear sites (Esc, file
@@ -500,10 +500,11 @@ private:
     // viewport on it at the current zoom. Returns true when a marker was
     // focused and the jump happened, false (leaving the playhead alone) when
     // there is none. This is the shared jump tail of cycle_marker_focus (the
-    // Tab family) and the `c` gesture; the alt-exact flag click is the third
-    // land-onto-marker route (its own direct write in on_button_press — same
-    // two-step placement basis, no viewport move). The nudge/drag ride only
-    // keeps an already-coincident playhead on its marker; it never lands one.
+    // Tab family) and the `c` gesture, both of which recenter the viewport; a
+    // plain marker click is the other land-onto-marker route (its own direct
+    // write in on_button_press — same two-step placement basis, but NO viewport
+    // move). The nudge/drag then tows the playhead along with the focused
+    // marker.
     bool jump_playhead_to_focused_marker();
 
     // The bare `0` key zoom TOGGLE: at the working zoom → full zoom-out (the

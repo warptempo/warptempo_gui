@@ -247,9 +247,9 @@ void apply_post_restore_rules_impl(AppState& app,
     // view when — and only when — it is offscreen. An already-visible target is
     // left exactly where it sits, so undo/redo of an in-view edit never jerks
     // the viewport. The playhead NEVER moves: undo/redo is not a land route —
-    // the Tab family, `c`, and the alt-exact flag click land the playhead on a
-    // marker, and the nudge/drag ride only keeps an already-coincident
-    // playhead on one (the Ableton behavior).
+    // every marker click lands the playhead on a marker (Tab and `c` also land,
+    // additionally recentering / re-zooming), and the nudge/drag then tows it,
+    // but undo/redo deliberately stands apart.
     //
     // The touched marker's time_frame is a whole SOURCE frame; the viewport
     // lives in the active display domain (identity in source view, the target

@@ -509,9 +509,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // marker is ONE pointer item — flag shape OR rendered lane run
         // (marker_hit_at, the shared resolver in render.cpp the hover recompute
         // also reads) — and the TOP-STRIP hit feeds the plain/Shift
-        // marker-click branches (plain = single-select + double-click seed /
-        // consume + arm the pending marker drag on the flag part, Shift = toggle
-        // membership) and the alt-exact land below, so it is resolved once here.
+        // marker-click branches (plain = single-select + land the playhead on
+        // the marker + double-click seed / consume + arm the pending marker
+        // drag on the flag part, Shift = toggle membership), so it is resolved
+        // once here.
         // The editor lifecycle block above already closed any open flag editor,
         // so the lane run this resolves is the committed (non-editor) run. The
         // WAVEFORM never SELECTS a marker — a plain press is deselect-all +
@@ -525,24 +526,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         MarkerHit mh;
         if (inside_top) mh = marker_hit_at(app, audio, x, y);
 
-        // Alt-exact left press: on a top-strip MARKER (flag shape or lane run —
-        // the one unified item) it LANDS — the THIRD land-onto-marker route
-        // beside the Tab family and `c` — and on the waveform it arms the
-        // captured grab-pan; alt-exact anywhere else does nothing further HERE.
-        // On a markerless TOP-STRIP spot that "nothing" is not a strict no-op in
-        // the playback sense: the standing top-strip playback stop above (every
-        // top-strip press stops playback) has already run, so playback is
-        // halted even though no land/pan fires.
-        //
-        // The LAND: single-select the hit marker (the plain-click selection
-        // half) AND move the playhead exactly onto it, with NO viewport move —
-        // the sole difference from Tab (which recenters) and `c` (which
-        // re-zooms and recenters), so the view holds perfectly still while
-        // the playhead seats. The action fires entirely AT THE PRESS and arms
-        // NOTHING — alt+drag from a marker is a strict no-op by architect
-        // ruling: subsequent motion with the button held is inert. Both
-        // columns, both views; navigation-class (selection + playhead, no
-        // authoring), so read-only tabs allow it.
+        // Alt-exact left press: on the waveform it arms the captured grab-pan;
+        // alt-exact anywhere else (a top-strip marker included) does nothing
+        // further HERE — the land now lives on the PLAIN marker click below.
+        // On a markerless (or top-strip) spot that "nothing" is not a strict
+        // no-op in the playback sense: the standing top-strip playback stop
+        // above (every top-strip press stops playback) has already run, so
+        // playback is halted even though no pan fires; alt+drag from a marker
+        // is inert by ruling.
         //
         // The waveform grab-pan: continuous 1:1 pan of the viewport by the
         // per-event pixel delta (see on_motion). It CAPTURES the pointer
@@ -557,47 +548,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // gestures. A motionless Alt press-release commits nothing but the brief
         // cursor hide/reappear (the scroll happens on motion).
         if (alt && !ctrl && !shift) {
-            if (inside_top && mh.index >= 0) {
-                const int hit = mh.index;
-                // Tab-family symmetry: a land route stops playback first (the
-                // top-strip stop above already ran, so this is a no-op here;
-                // the land stays self-contained).
-                playback_lifecycle.stop_playback_if_playing();
-                selection.set_single_selection(hit);
-                // The two-step placement basis the Tab family lands with
-                // (source_frame_to_active_domain then
-                // clamp_playhead_to_live_domain), against the active column's
-                // store, so this placement is exactly coincident for a
-                // subsequent nudge/drag ride.
-                int64_t src_frame = 0;
-                if (app.active_markers_view == 'P') {
-                    const auto& tv = app.phaseresetmarkers.markers();
-                    if (hit >= static_cast<int>(tv.size())) return;
-                    src_frame = tv[hit].time_frame;
-                } else {
-                    const auto& mv = app.warpmarkers.markers();
-                    if (hit >= static_cast<int>(mv.size())) return;
-                    src_frame = mv[hit].time_frame;
-                }
-                int64_t sample =
-                    source_frame_to_active_domain(app, audio, src_frame);
-                sample = clamp_playhead_to_live_domain(sample, app, audio);
-                // Direct cursor write mirroring jump_playhead_to_focused_marker's
-                // non-recenter part — NOT move_playhead_to, whose keep-visible
-                // edge-align could scroll for a half-offscreen flag, and the
-                // ruling is NO viewport write of any kind (the playhead may
-                // rest at a slightly offscreen column when the clicked flag
-                // hung half off the edge — accepted).
-                const double old_px = playhead_pixel_x(app, audio);
-                app.playhead_cursor_sample = sample;
-                // Navigation land: dissolve a resting region — the playhead
-                // just jumped onto the marker, off any prior auditioning span.
-                clear_region_highlight(app, viewport);
-                viewport.invalidate_playhead_columns(
-                    old_px, playhead_pixel_x(app, audio));
-                viewport.invalidate_timestamp_area();
-                return;
-            }
             if (inside_waveform) {
                 app.scroll_drag = ScrollDragState{};
                 app.scroll_drag.active = true;
@@ -653,12 +603,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // CHIP-ROW press arms a trim chip/bridge drag (claimed ahead of the
         // marker select); otherwise (a marker click on EITHER part — flag shape
         // or lane run) selection is the whole interface, BOTH views: a plain
-        // click single-selects and, on the FLAG part only, ARMS a pending marker
-        // drag (moves the marker if the pointer crosses the threshold, else a
-        // pure click); Shift+click toggles multi-select membership only. Neither
-        // moves the playhead — the land routes are the Tab family, `c`, and the
-        // alt-exact marker click above (and a drag only RIDES a playhead already
-        // exactly on the grabbed marker).
+        // click single-selects, LANDS the playhead on the marker (below), and,
+        // on the FLAG part only, ARMS a pending marker drag (moves the marker if
+        // the pointer crosses the threshold, else a pure click); Shift+click
+        // toggles multi-select membership only and does NOT land. The plain land
+        // makes every marker click a land route alongside the Tab family and `c`
+        // (which additionally recenter / re-zoom); the subsequent drag or nudge
+        // then tows the coincident playhead by construction.
         if (inside_top) {
             // Plain unmodified chip-row press arms a trim chip/bridge drag,
             // claimed BEFORE the marker single-select. The chip row, the marker
@@ -681,6 +632,57 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // this double-click). Selection is navigation, allowed in
                     // read-only.
                     selection.set_single_selection(hit);
+                    // ...and LANDS the playhead exactly onto the marker, with NO
+                    // viewport move — the sole difference from Tab (which
+                    // recenters) and `c` (which re-zooms and recenters), so the
+                    // view holds perfectly still while the playhead seats. The
+                    // two-step placement basis the Tab family lands with
+                    // (source_frame_to_active_domain then
+                    // clamp_playhead_to_live_domain), against the active column's
+                    // store, so the placement is exactly coincident for a
+                    // subsequent nudge/drag ride. Playback was already stopped by
+                    // the standing top-strip press stop above (Tab-family
+                    // symmetry: a land route stops playback first). Runs on EVERY
+                    // plain marker click — the double-click-consume path below
+                    // (the first click already landed, so the second's land is a
+                    // same-value repeat, harmless) and the plain-select path;
+                    // both parts of the unified item land (flag shape or lane
+                    // run — hit is the one index). Direct cursor write mirroring
+                    // jump_playhead_to_focused_marker's non-recenter part — NOT
+                    // move_playhead_to, whose keep-visible edge-align could
+                    // scroll for a half-offscreen flag, and the ruling is NO
+                    // viewport write of any kind (the playhead may rest at a
+                    // slightly offscreen column when the clicked flag hung half
+                    // off the edge — accepted). Read-only allowed (selection +
+                    // playhead are navigation).
+                    {
+                        int64_t src_frame = 0;
+                        bool valid = true;
+                        if (app.active_markers_view == 'P') {
+                            const auto& tv = app.phaseresetmarkers.markers();
+                            if (hit >= static_cast<int>(tv.size())) valid = false;
+                            else src_frame = tv[hit].time_frame;
+                        } else {
+                            const auto& mv = app.warpmarkers.markers();
+                            if (hit >= static_cast<int>(mv.size())) valid = false;
+                            else src_frame = mv[hit].time_frame;
+                        }
+                        if (valid) {
+                            int64_t sample = source_frame_to_active_domain(
+                                app, audio, src_frame);
+                            sample = clamp_playhead_to_live_domain(
+                                sample, app, audio);
+                            const double old_px = playhead_pixel_x(app, audio);
+                            app.playhead_cursor_sample = sample;
+                            // Navigation land: dissolve a resting region — the
+                            // playhead just jumped onto the marker, off any
+                            // prior auditioning span.
+                            clear_region_highlight(app, viewport);
+                            viewport.invalidate_playhead_columns(
+                                old_px, playhead_pixel_x(app, audio));
+                            viewport.invalidate_timestamp_area();
+                        }
+                    }
                     // Double-click: a Marker candidate for the SAME index within
                     // the window opens the flag editor, exactly like Enter on the
                     // focused marker (the click above already single-selected it).
@@ -965,10 +967,10 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 // strip-row zoom/pan drag, trim drag (or a pending trim drag arming past the
 // threshold), region-select drag, or marker reposition drag (or a pending
 // marker drag); with no gesture it recomputes hover at the cursor. The
-// marker drag applies the pointer delta to the grabbed marker; a playhead
-// parked off the marker is not towed (only a playhead exactly coincident at
-// grab RIDES the marker — apply_drag_motion owns that; the land routes are
-// the Tab family, `c`, and the alt-exact flag click).
+// marker drag applies the pointer delta to the grabbed marker; the playhead
+// follows the grabbed marker unconditionally (apply_drag_motion owns that —
+// the arming plain click already landed the playhead on the marker, so the
+// drag tows it by construction).
 void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // Record latest cursor coords so viewport mutators can re-evaluate hover
     // at the cursor's last position.
@@ -1292,10 +1294,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     const double mouse_frame = static_cast<double>(app.viewport_start_sample) +
         static_cast<double>(mouse_x - area.x) * spp;
     marker_drag.apply_drag_motion(mouse_frame - app.drag.anchor_mouse_time_frame);
-    // Playhead rule: a playhead parked OFF the grabbed marker stays parked —
-    // an upstream audition point survives the move — while one exactly on the
-    // marker at grab rode along inside apply_drag_motion (the coincident-ride
-    // ruling at DragState). apply_drag_motion above already latched
-    // app.drag.moved and collapsed the selection onto the grabbed marker on the
-    // first real move; nothing further tracks here.
+    // Playhead rule: the playhead follows the grabbed marker through the drag
+    // inside apply_drag_motion (the arming click landed it on the marker, so
+    // the drag tows it by construction — the DragState ruling). apply_drag_motion
+    // above already latched app.drag.moved and collapsed the selection onto the
+    // grabbed marker on the first real move; nothing further tracks here.
 }

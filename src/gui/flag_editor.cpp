@@ -172,8 +172,8 @@ void GuiFlagEditor::enter_text_edit(int idx,
     // Target-switching path. Single-select the new editor target so the
     // marker-column outline follows it. The playhead is DELIBERATELY not
     // moved: opening or retargeting a flag editor is a selection act, not a
-    // playhead move; the land routes are the Tab family, `c`, and the
-    // alt-exact flag click.
+    // playhead move; the land routes are the Tab family, `c`, and the plain
+    // marker click.
     selection.set_single_selection(idx);
 
     // Discard any prior edit silently before switching targets.
