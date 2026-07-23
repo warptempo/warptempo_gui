@@ -994,6 +994,22 @@ struct AppState {
     std::set<int> selected_markers;
     int           last_selected_marker = -1;
 
+    // Shift-range-select anchor (file-manager style): the index the first
+    // shift-click of a continuous shift-held interaction anchored on, over the
+    // active column's store; -1 = none. SESSION SCRATCH tied to the physical
+    // shift hold — it lives ONLY across a continuous shift-held interaction and
+    // is otherwise dissolved (architect 2026-07-23). Owners that clear it: any
+    // dispatch entry (on_key / on_button_press / on_wheel) that arrives with
+    // shift UP, and every OTHER selection mutator (set_single_selection,
+    // clear_selection, collapse_to_focused, toggle_selection_membership,
+    // sanitize_selection_after_restore, prune_live_selection; cycle_selection
+    // clears via set_single_selection). Set ONLY by the anchoring first
+    // shift-click inside Selection::select_range_from_anchor, which is also the
+    // one mutator that keeps it. This closes the shift-held store-mutation hole:
+    // Ctrl+Shift+Z redo arrives WITH shift (entry clear does not fire) but its
+    // restore runs sanitize_selection_after_restore, which clears.
+    int           shift_range_anchor = -1;
+
     // Monotonic command-adjacency counter, bumped once per discrete user
     // command at the three command-dispatch entry points (GuiInputHandler's
     // on_key, on_button_press, on_wheel). The rapid-gesture undo-coalesce guard

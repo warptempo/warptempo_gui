@@ -20,6 +20,10 @@ void Selection::repair_last_selected() {
 }
 
 void Selection::set_single_selection(int idx) {
+    // Any non-range selection change dissolves the shift-range anchor (its
+    // lifecycle: alive only across a continuous shift-held interaction). This
+    // is also cycle_selection's clear route (it delegates here).
+    app.shift_range_anchor = -1;
     app.selected_markers.clear();
     if (idx >= 0) app.selected_markers.insert(idx);
     app.last_selected_marker = (idx >= 0) ? idx : -1;
@@ -31,6 +35,7 @@ void Selection::set_single_selection(int idx) {
 }
 
 void Selection::clear_selection() {
+    app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     if (app.selected_markers.empty() && app.last_selected_marker == -1)
         return;   // nothing selected
     app.selected_markers.clear();
@@ -46,6 +51,7 @@ void Selection::collapse_to_focused() {
     // it stays the focus. Callers that full-invalidate afterward make the
     // top-strip / timestamp damage here redundant (a benign damage-union,
     // accepted).
+    app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     if (app.last_selected_marker < 0) return;   // nothing focused
     if (app.selected_markers.size() == 1 &&
         app.selected_markers.count(app.last_selected_marker))
@@ -57,6 +63,7 @@ void Selection::collapse_to_focused() {
 }
 
 bool Selection::toggle_selection_membership(int idx) {
+    app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     if (idx < 0) return false;
     bool added;
     auto it = app.selected_markers.find(idx);
@@ -74,7 +81,59 @@ bool Selection::toggle_selection_membership(int idx) {
     return added;
 }
 
+void Selection::select_range_from_anchor(int idx) {
+    // File-manager inclusive range select (architect 2026-07-23). This is the
+    // ONE mutator that keeps/sets app.shift_range_anchor; every OTHER Selection
+    // method clears it (see the field's lifecycle comment). The caller lands the
+    // playhead on idx unconditionally after this returns, so idx < 0 (never
+    // reached from the shift-click path, which resolves a real hit) is a plain
+    // no-op guard.
+    if (idx < 0) return;
+
+    // The active column's store size — the same phase-reset/warp selector
+    // cycle_selection uses.
+    const int n = (app.active_markers_view == 'P')
+        ? static_cast<int>(app.phaseresetmarkers.markers().size())
+        : static_cast<int>(app.warpmarkers.markers().size());
+
+    const int anchor = app.shift_range_anchor;
+    if (anchor < 0 || anchor >= n) {
+        // First shift-click of the interaction (no live anchor; the bounds
+        // check is belt-and-braces — a stale index is impossible under the
+        // lifecycle, but a store shrink between anchor and this click could
+        // otherwise leave it out of range). Cannot delegate to
+        // set_single_selection: that method CLEARS the anchor, and we must set
+        // it. Mirror its body (clear + insert + last + the top-strip/timestamp
+        // damage pair) and additionally anchor on idx.
+        app.selected_markers.clear();
+        app.selected_markers.insert(idx);
+        app.last_selected_marker = idx;
+        app.shift_range_anchor   = idx;
+        viewport.invalidate_top_strip();
+        viewport.invalidate_timestamp_area();
+        return;
+    }
+
+    // Live anchor: selection becomes exactly the inclusive index range between
+    // the anchor and idx (stores are time-sorted, so index range == time
+    // range; clicks in any order, lo/hi normalized). last_selected == idx (the
+    // range end = focus); the anchor stays put across successive shift-clicks.
+    // Disabled markers in the range are included (selection of disabled markers
+    // is legal — Delete and Ctrl+D already operate on them).
+    const int lo = anchor < idx ? anchor : idx;
+    const int hi = anchor < idx ? idx : anchor;
+    app.selected_markers.clear();
+    for (int i = lo; i <= hi; ++i) app.selected_markers.insert(i);
+    app.last_selected_marker = idx;
+    viewport.invalidate_top_strip();
+    viewport.invalidate_timestamp_area();
+}
+
 void Selection::sanitize_selection_after_restore(int n) {
+    // A restore (undo/redo) dissolves the shift-range anchor — this is the
+    // route that closes the shift-held hole for Ctrl+Shift+Z, which arrives
+    // WITH shift so the dispatch-entry clear does not fire.
+    app.shift_range_anchor = -1;
     std::set<int> cleaned;
     for (int idx : app.selected_markers) {
         if (idx >= 0 && idx < n) cleaned.insert(idx);
@@ -199,6 +258,7 @@ void Selection::select_next_marker() { cycle_selection(true);  }
 void Selection::select_prev_marker() { cycle_selection(false); }
 
 void Selection::prune_live_selection() {
+    app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     const int n = (app.active_markers_view == 'P')
         ? static_cast<int>(app.phaseresetmarkers.markers().size())
         : static_cast<int>(app.warpmarkers.markers().size());

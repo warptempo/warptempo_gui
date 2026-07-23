@@ -47,6 +47,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
 
+    // Dissolve the shift-range-select anchor on any event arriving with shift
+    // physically UP — the anchor lives ONLY across a continuous shift-held
+    // interaction (architect 2026-07-23). Mirrored at the other two dispatch
+    // entries (on_button_press, on_wheel). The Selection mutators clear it too
+    // (in their bodies), which closes the shift-held store-mutation hole:
+    // Ctrl+Shift+Z arrives WITH shift so this entry clear does not fire, but its
+    // restore runs sanitize_selection_after_restore, which clears.
+    if (!shift) app.shift_range_anchor = -1;
+
     // Transient bottom-strip status message clears on every real
     // keypress, including the press that may set a new message later
     // in this same on_key call (the handler that sets it does so at
@@ -914,6 +923,8 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     // a burst of same-frame detents is a single command, distinct wheel frames
     // are consecutive commands that coalesce.
     ++app.command_seq;
+    // Shift-up dissolves the shift-range anchor (see on_key).
+    if (!mods.shift) app.shift_range_anchor = -1;
     const int ctx = wheel_context(x, y);
     if (ctx < 0) return;
     // ctx: 1 waveform, 2 the top strip. The waveform zooms (plain) or pans

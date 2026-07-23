@@ -235,6 +235,10 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.strip_drag = StripDragState{};
     app.scroll_drag = ScrollDragState{};
     app.double_click = DoubleClickCandidate{};
+    // Belt-and-braces: dissolve the shift-range-select anchor on load (the
+    // selection.clear_selection() above already clears it; the dispatch-entry
+    // shift-up clears cover the reachable cases too).
+    app.shift_range_anchor = -1;
     // (The displayed hit map AND the resting selection region are cleared in
     // apply_settings_engine_and_prefs, the shared load+adopt view-establishment
     // routine, not here. The live-pointer-drag scratch above stays load-only:
