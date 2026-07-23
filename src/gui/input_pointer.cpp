@@ -243,31 +243,50 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
 
 } // namespace
 
+// One scrub ACT: kill-and-revive (architect 2026-07-23 — scrub is technically
+// not keep-alive but revive-if-needed-or-kill-and-revive). Every scrub act is
+// a FRESH session, never a positional seek inside the old one: a live session
+// STOPS first (the standing stop machinery — side-effect-clean here, the scrub
+// never moved the cursor), then the stopped launch path runs (the is_updating
+// outer gate + scrub_launch_at, the revive), re-capturing the loop verdict and
+// end bound freshly per scrub — a scrub after a mid-session trim edit
+// auditions the NEW window instead of riding the stale launch capture. ONE
+// degenerate skip, kept by explicit choice (re-launch-always EXCEPT the
+// exact-same-frame case): a live session scrubbed to its scanner's exact
+// current frame has nothing to re-launch, so the audition plays on
+// uninterrupted (the scanner-sample read is gated on is_playing — playing
+// implies scanner-active, so the field is meaningful). A refused revive
+// (out-of-window frame; target update in flight) leaves playback stopped,
+// silently — the "nothing to audition" family; a later act at a launchable
+// frame revives (the revive-if-needed half).
+void GuiInputHandler::scrub_act_at(int64_t frame) {
+    if (playback.is_playing()) {
+        if (frame == app.playhead_scanner_sample) return;  // same position ->
+                                                           // nothing to re-launch
+        playback_lifecycle.stop_playback_if_playing();     // the kill
+    }
+    // Outer is_updating gate, mirroring the two Space handlers: a NEW launch
+    // while a target update is in flight would audition the stale target
+    // buffer, which Space refuses — so the scrub revive refuses it too,
+    // silently.
+    if (!(app.active_audio_view == 'T' && target_render.is_updating()))
+        playback_lifecycle.scrub_launch_at(frame);         // the revive
+}
+
 // The scanner scrub press body, shared by the waveform lower-half plain press
 // and the marker-text-lane plain press (R3.3, architect 2026-07-23). See the
 // declaration for the full contract. Both callers keep playback alive across
 // the press (the waveform lower half is not a top-strip press; the text-lane
-// scrub is exempted from the top-strip stop), so `was_playing` reflects the
-// live scanner and the playing->reseek path is reachable from either surface.
-void GuiInputHandler::arm_scrub_at(int click_rel_x, bool was_playing) {
+// scrub is exempted from the top-strip stop), so the scrub act sees the live
+// session — load-bearing for its same-frame skip, which keeps an in-place
+// audition uninterrupted instead of restarting it.
+void GuiInputHandler::arm_scrub_at(int click_rel_x) {
     const GuiRect area = waveform_area(app);
     // Gutter / invalid column: no launch position exists, silent no-op.
     if (click_rel_x < 0 || click_rel_x >= area.w) return;
     const int64_t frame = clamp_playhead_to_live_domain(
         playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
-    if (was_playing) {
-        // Click-keep-alive reseek, skipped when the frame equals the current
-        // scanner position (the no-op convention).
-        if (frame != app.playhead_scanner_sample)
-            playback_lifecycle.reseek_keeping_alive(frame);
-    } else {
-        // Outer is_updating gate, mirroring the two Space handlers: a NEW launch
-        // while a target update is in flight would audition the stale target
-        // buffer, which Space refuses — so the stopped scrub press refuses it
-        // too, silently.
-        if (!(app.active_audio_view == 'T' && target_render.is_updating()))
-            playback_lifecycle.scrub_launch_at(frame);
-    }
+    scrub_act_at(frame);
     app.scrub_area_drag = ScrubAreaDragState{};
     app.scrub_area_drag.active   = true;
     app.scrub_area_drag.last_col = click_rel_x;
@@ -650,8 +669,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // branches see the same snapshot.
         // ONE exemption: a plain press in the marker-text lane with no run under
         // it is the text-lane scrub (R3.3) — a playback navigation, not
-        // authoring, so it keeps playback alive exactly like the waveform
-        // lower-half scrub, whose playing->reseek routing it shares. Every other
+        // authoring, so it reaches the shared scrub act (kill-and-revive) with
+        // the session still live, exactly like the waveform lower-half scrub —
+        // load-bearing for the act's same-frame skip, which keeps an in-place
+        // audition uninterrupted. Every other
         // top-strip press stops as before.
         const bool was_playing = playback.is_playing();
         const int64_t playhead_at_entry = app.playhead_cursor_sample;
@@ -713,8 +734,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // ctrl+waveform press-release seeds no ZoomRow double-click candidate
         // (that affordance stays zoom-row-only). The waveform strip-drag half is
         // navigation-class: allowed in read-only, never touches the playhead or
-        // selection. Ctrl-exact on a MARKERLESS top-strip spot is a strict no-op
-        // (falls through to the return below).
+        // selection — and a MOTIONLESS ctrl+waveform press-release commits
+        // nothing at all (the R3.4 selection clear is RETIRED, architect
+        // 2026-07-23: ctrl is purely the zoom modifier on the waveform).
+        // Ctrl-exact on a MARKERLESS top-strip spot is a strict no-op except
+        // the chip row's BEGIN bound set (the claim below).
         if (ctrl && !alt && !shift) {
             // Ctrl-exact on a top-strip MARKER is the individual membership
             // toggle (the former shift behavior) — this AMENDS the "Ctrl keeps
@@ -735,8 +759,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // survivor leaves the land's dissolve standing. Read-only allowed
             // (selection + playhead are navigation). The ctrl-exact WAVEFORM
             // press keeps the zoom-strip drag below (different surface, no
-            // collision); ctrl-exact on a markerless top-strip spot stays a
-            // strict no-op (falls through to the return below). The standing
+            // collision); a markerless top-strip ctrl press claims only the
+            // chip row (BEGIN bound set, next block) and is a strict no-op on
+            // every other lane. The standing
             // top-strip press stop already halted playback above.
             if (inside_top && mh.index >= 0) {
                 selection.toggle_selection_membership(mh.index);
@@ -748,26 +773,21 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 set_region_to_selection_extent(app, audio, viewport);
                 return;
             }
-            // Markerless top-strip ctrl-exact press splits by lane (architect
-            // 2026-07-23): the CHIP ROW sets the END trim bound at the click
-            // (R4.6 — the ctrl half of the shift-begin/ctrl-end pair;
+            // Markerless top-strip ctrl-exact press: the CHIP ROW sets the
+            // BEGIN trim bound at the click (R4.6 as corrected by R5 — ctrl is
+            // BEGIN and ctrl+shift is END, the architect's intended pair;
             // set_trim_bound_at_click refuses read-only silently and runs the
-            // coupling sync); an empty FLAG or TRIANGLE lane clears the marker
-            // selection (R3.2, navigation, read-only allowed). Any OTHER lane (the
-            // marker-text lane's empty spot, inter-lane gaps) stays a strict
-            // no-op, falling through to the return below. The zoom row (lane 0)
-            // was claimed above and never reaches here.
+            // coupling sync). EVERY other lane — an empty flag or triangle
+            // lane included — is a strict no-op, falling through to the return
+            // below (the R3.2 ctrl-clear is RETIRED, architect 2026-07-23:
+            // ctrl-click in Ableton is just click, and ctrl stays the zoom
+            // modifier here; the PLAIN empty flag/triangle-lane clear below is
+            // the surviving clear). The zoom row (lane 0) was claimed above
+            // and never reaches here.
             if (inside_top) {
                 const GuiRect chip_row = top_upper_row_area(app);
                 if (y >= chip_row.y && y < chip_row.y + chip_row.h) {
-                    set_trim_bound_at_click(/*is_begin=*/false, x);
-                    return;
-                }
-                const GuiRect flag_lane = top_flag_row_area(app);
-                const GuiRect tri_lane  = top_triangle_row_area(app);
-                if ((y >= flag_lane.y && y < flag_lane.y + flag_lane.h) ||
-                    (y >= tri_lane.y  && y < tri_lane.y  + tri_lane.h)) {
-                    selection.clear_selection();
+                    set_trim_bound_at_click(/*is_begin=*/true, x);
                     return;
                 }
             }
@@ -789,10 +809,24 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
 
+        // Ctrl+Shift-exact: the chip row is its ONE claim — set the END trim
+        // bound at the click (R5: ctrl is BEGIN, ctrl+shift is END;
+        // set_trim_bound_at_click refuses read-only silently and runs the
+        // coupling sync). Everywhere else Ctrl+Shift stays a strict no-op,
+        // falling to the return below.
+        if (ctrl && shift && !alt && inside_top) {
+            const GuiRect chip_row = top_upper_row_area(app);
+            if (y >= chip_row.y && y < chip_row.y + chip_row.h) {
+                set_trim_bound_at_click(/*is_begin=*/false, x);
+                return;
+            }
+        }
+
         // Strict modifier matching: the marker reposition arm lives on the plain
         // flag press and trim's chip/bridge drags on the plain chip-row press, so
         // every remaining modified combination — Ctrl+Alt (now a strict no-op),
-        // Ctrl+Shift, Shift+Alt, Ctrl+Alt+Shift, ... — no-ops here. Only a plain
+        // Ctrl+Shift off the chip row (its one claim is the END bound set
+        // above), Shift+Alt, Ctrl+Alt+Shift, ... — no-ops here. Only a plain
         // or Shift-on-the-top-strip base press proceeds (Shift adjusts the
         // marker selection). The Alt+wheel pan and the Alt keyboard chords are untouched
         // (separate handlers).
@@ -826,20 +860,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // claimed BEFORE the marker single-select. The chip row, the marker
             // text lane, and the flag/triangle lanes are disjoint y-bands, so
             // this contends with nothing: a marker-part press falls to the marker
-            // handling below. Two chip-row gestures (architect 2026-07-23): a
-            // SHIFT-exact click sets the BEGIN bound (R4.6); a PLAIN click either
-            // arms a chip/bridge drag or, on an unclaimed spot, selects +
-            // highlights the trim window (R4.5).
+            // handling below. The PLAIN click either arms a chip/bridge drag or,
+            // on an unclaimed spot, selects + highlights the trim window (R4.5);
+            // the bound-set clicks are the ctrl (BEGIN) / ctrl+shift (END)
+            // claims above (R5). A SHIFT-exact chip-row press claims nothing —
+            // trim is transparent to it, and the shift fall-through below is
+            // inert here (marker_hit_at's y-bands exclude the chip row), so it
+            // ends at the top-strip return.
             const GuiRect chip_row = top_upper_row_area(app);
             const bool in_chip_row =
                 (y >= chip_row.y && y < chip_row.y + chip_row.h);
-            if (shift && in_chip_row) {
-                // R4.6: shift-exact chip-row click sets the BEGIN trim bound at
-                // the click (set_trim_bound_at_click refuses read-only silently
-                // and runs the coupling sync).
-                set_trim_bound_at_click(/*is_begin=*/true, x);
-                return;
-            }
             if (!shift && in_chip_row) {
                 // Plain chip-row press (R4.5). Read-only cannot ARM a trim drag,
                 // but the select+highlight is navigation, so it runs directly
@@ -1008,9 +1038,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // mh.index >= 0, so this is reached only on an EMPTY text-lane
                     // spot. Shares the waveform lower-half scrub body; playback
                     // stayed alive via the text-lane-scrub stop exemption above,
-                    // so the playing->reseek routing is reachable. Touches no
+                    // so the scrub act (kill-and-revive) sees the live session
+                    // and its same-frame skip can keep an in-place audition
+                    // uninterrupted. Touches no
                     // selection (the scrub convention).
-                    arm_scrub_at(x - area.x, was_playing);
+                    arm_scrub_at(x - area.x);
                     return;
                 }
                 const GuiRect flag_lane = top_flag_row_area(app);
@@ -1039,8 +1071,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // (arm_region_drag_at clears it after snapshotting the pre-press
         // extent for an Esc-mid-drag restore), so the wash vanishes on press
         // whether the gesture becomes a click or a fresh drag. The LOWER half
-        // is the SCRUB surface (the branch below): the press launches or
-        // reseeks the SCANNER at the clicked frame and arms the scrub drag,
+        // is the SCRUB surface (the branch below): the press runs one
+        // kill-and-revive scrub act — a fresh SCANNER session from the clicked
+        // frame — and arms the scrub drag,
         // touching nothing else. ONLY the plain press splits — a Shift press
         // instead FORMS a region waveform-wide (the demote path below), never
         // a plain press's playhead placement, and ctrl/alt already claimed
@@ -1154,12 +1187,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // press drives the SCANNER (not the cursor) — the scanner fields
             // are meaningful only while active (the standing contract), and
             // this gesture is exactly the launches-the-scanner-independently-
-            // of-the-cursor consumer that contract anticipated. Stopped: launch
-            // from the clicked frame (scrub_launch_at — a launch refused by
-            // the standing gates is a silent no-op, exactly Space's
-            // conventions, and the armed drag then stays inert). Playing: the
-            // click-keep-alive reseek, skipped when the frame equals the
-            // current scanner position (the no-op convention). It touches
+            // of-the-cursor consumer that contract anticipated. Every scrub
+            // act is KILL-AND-REVIVE (scrub_act_at): a live session stops and
+            // a fresh one launches from the clicked frame — never a positional
+            // seek inside the old session — with one degenerate skip (same
+            // frame as the live scanner -> nothing to re-launch). A refused
+            // revive is a silent no-op, exactly Space's conventions. It touches
             // NOTHING else: no selection change, no region change, no cursor
             // write, no follow override, no double-click seed, no other drag
             // arm. Read-only allowed (playback is navigation). The gutter
@@ -1168,10 +1201,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // deselect-then-return.
             if (y >= area.y + area.h / 2) {
                 // Shared scrub body (arm_scrub_at): gutter no-op, clamped frame
-                // from the column, playing->reseek / stopped->launch behind the
-                // is_updating gate, arm the scrub-area drag. The same body serves
+                // from the column, one kill-and-revive scrub act, arm the
+                // scrub-area drag. The same body serves
                 // the marker-text-lane scrub (R3.3).
-                arm_scrub_at(click_rel_x, was_playing);
+                arm_scrub_at(click_rel_x);
                 return;
             }
             // Upper half: the placement press. The clear runs FIRST, before
@@ -1269,9 +1302,10 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // candidate (this release x equals the press x); a release that MOVED
         // records nothing and clears any candidate, so a drag can never seed the
         // second click of a double-click. Only the ZOOM-ROW arm seeds
-        // (double_click_seed): a ctrl+waveform strip drag shares this branch but
-        // carries the double-click nowhere, so a motionless one commits and seeds
-        // nothing.
+        // (double_click_seed): a motionless ctrl+waveform press-release commits
+        // NOTHING — no seed, no selection change (the R3.4 clear is RETIRED,
+        // architect 2026-07-23: the ctrl-waveform press is purely the zoom-strip
+        // drag).
         if (app.strip_drag.moved) {
             apply_strip_drag_at(x, y, /*final_event=*/true);
             app.double_click = DoubleClickCandidate{};
@@ -1280,16 +1314,6 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
                 .surface = DoubleClickSurface::ZoomRow,
                 .time_ms = monotonic_ms(), .press_x = x, .press_y = y,
                 .target = -1};
-        } else {
-            // R3.4: the click half of the ctrl-exact WAVEFORM surface (architect
-            // 2026-07-23) — motion is the zoom reach, a motionless click drops
-            // the marker selection. double_click_seed == false is the waveform
-            // origin (the zoom-row arm seeds true and took the branch above; the
-            // ctrl-exact waveform arm is the only false-seed strip drag), so this
-            // else reaches ONLY a motionless waveform strip press. Navigation
-            // (allowed in read-only). The zoom-row motionless release keeps its
-            // double-click seeding untouched above.
-            selection.clear_selection();
         }
         app.strip_drag = StripDragState{};
         // reappear the cursor at the anchor-stem column (y frozen at the press
@@ -1312,7 +1336,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     }
     if (app.scrub_area_drag.active) {
         // Scrub-area release KEEPS PLAYING — that IS the release semantics:
-        // the press/motion already launched or reseeked the session, so the
+        // the press/motion scrub acts already launched the current session, so
+        // the
         // release just ends the gesture (no capture to end, no finalize, no
         // seed — the scrub never seeds a double-click candidate).
         app.scrub_area_drag = ScrubAreaDragState{};
@@ -1380,7 +1405,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 }
 
 // Motion handler. Drives the active pointer gesture: editor-text drag,
-// strip-row zoom/pan drag, scrub-area drag (per-column reseek), trim drag (or
+// strip-row zoom/pan drag, scrub-area drag (one scrub act per column), trim drag (or
 // a pending trim drag arming past the threshold), region-select drag, or
 // marker reposition drag (or a pending
 // marker drag); with no gesture it recomputes hover at the cursor. The
@@ -1436,18 +1461,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (!mods.primary_button_held) {     // button lost -> end like release
             if (app.strip_drag.moved) {
                 apply_strip_drag_at(mouse_x, mouse_y, /*final_event=*/true);
-            } else if (!app.strip_drag.double_click_seed) {
-                // R3.4 on the lost-button end: a motionless ctrl-exact WAVEFORM
-                // press (double_click_seed == false, the waveform origin) is the
-                // click half of that surface and drops the marker selection here
-                // too — the lost-button end performs the same click action as a
-                // clean release, so the same physical click cannot rest
-                // differently depending on which path ended it. A motionless
-                // zoom-row press (seed == true) still seeds NOTHING on this
-                // abnormal end (unlike the clean release), matching the
-                // double_click clear below.
-                selection.clear_selection();
             }
+            // A motionless press ends with NO click action from either origin
+            // (the R3.4 ctrl-waveform clear is RETIRED — a motionless
+            // ctrl+waveform press-release commits nothing on the clean release
+            // too, so this abnormal end matches it for free), and a motionless
+            // zoom-row press seeds NOTHING on this abnormal end (unlike the
+            // clean release), matching the double_click clear below.
             app.strip_drag = StripDragState{};
             // An abnormal termination (button lost, not a clean release) seeds
             // no double-click candidate and drops any pending one.
@@ -1508,12 +1528,14 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     // Scrub-area drag motion (the held lower-half plain press): re-scrub at
-    // COLUMN granularity — when the pointer's clamped column differs from the
-    // last scrubbed one AND playback is live, reseek the session to the new
-    // column's frame. No threshold (the press already acted; scrubbing is
-    // continuous by design), no capture, no cursor hide. When the press's
-    // launch no-opped — or an out-of-range reseek fell back to the manual stop
-    // — playback is not live and motion stays inert (no retry-launch). A lost
+    // COLUMN granularity — each column change is one fresh scrub act
+    // (scrub_act_at, the same kill-and-revive the press runs): a live session
+    // stops and re-launches at the new column's frame, and a DEAD one just
+    // revives — the old inert-when-not-playing rule is retired with the
+    // keep-alive reseek (revive-if-needed: dragging out of the launchable
+    // window silently stops, dragging back in relaunches). No threshold (the
+    // press already acted; scrubbing is continuous by design), no capture, no
+    // cursor hide. A lost
     // button ends the gesture like release: nothing else, playback continues
     // (release keeps playing — that IS the release semantics).
     if (app.scrub_area_drag.active) {
@@ -1527,11 +1549,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         int rel = mouse_x - area.x;
         if (rel < 0) rel = 0;
         if (rel >= area.w) rel = area.w - 1;
-        if (rel != app.scrub_area_drag.last_col && playback.is_playing()) {
+        if (rel != app.scrub_area_drag.last_col) {
             // The press's clamped-frame spelling (domain conformance).
             const int64_t frame = clamp_playhead_to_live_domain(
                 playhead_frame_at_click_column(app, audio, rel), app, audio);
-            playback_lifecycle.reseek_keeping_alive(frame);
+            scrub_act_at(frame);
             app.scrub_area_drag.last_col = rel;
         }
         return;

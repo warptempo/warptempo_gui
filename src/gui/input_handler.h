@@ -694,7 +694,7 @@ private:
     // selection = the active-column markers contained in it
     // (Selection::select_contained_in_span). Otherwise (lone / no trim -> no
     // window) -> clear the region and the selection. One implementation shared by
-    // the trim-lane click (R4.5), the shift/ctrl bound-set (R4.6), and the trim
+    // the trim-lane click (R4.5), the ctrl / ctrl+shift bound-set (R4.6/R5), and the trim
     // drags' motion / release / cancel live-sync (R7), so window, highlight, and
     // selection can never drift. Navigation-class (region + selection are
     // navigation), so read-only-safe. Owns its own damage (waveform wash +
@@ -707,21 +707,34 @@ private:
     // tail (a bound onto/across its partner dissolves both). History-less like
     // every trim mutation; repaint + target_render.trigger() like the drag
     // release. Read-only refuses silently (trim authoring). Runs the coupling
-    // sync afterward. is_begin picks the bound: shift-click sets begin, ctrl-click
-    // sets end.
+    // sync afterward. is_begin picks the bound: the ctrl chip-row click sets
+    // begin, ctrl+shift sets end (R5).
     void set_trim_bound_at_click(bool is_begin, int mouse_x);
+
+    // One scrub ACT at an active-domain frame: kill-and-revive (architect
+    // 2026-07-23 — scrub is not keep-alive but
+    // revive-if-needed-or-kill-and-revive). Every act is a FRESH session: a
+    // live session is stopped first (the kill), then the stopped launch path
+    // runs (the target-view is_updating gate + scrub_launch_at, the revive) —
+    // re-capturing the loop verdict and end bound freshly per scrub. A dead
+    // session just revives; a live session scrubbed to the scanner's exact
+    // current frame skips (nothing to re-launch, audition uninterrupted).
+    // Shared by the scrub press body and the scrub drag's per-column motion.
+    void scrub_act_at(int64_t frame);
 
     // The scanner scrub press body, shared by the waveform lower-half plain press
     // and the marker-text-lane plain press (R3.3, architect 2026-07-23). Given
-    // the click's waveform-relative column, launch/reseek the scanner at that
-    // column's frame and arm the scrub-area drag. A gutter/invalid column
+    // the click's waveform-relative column, run one scrub act (scrub_act_at —
+    // kill-and-revive) at that column's frame and arm the scrub-area drag. A
+    // gutter/invalid column
     // (outside [0, area.w)) is a silent no-op (no launch position). Touches
     // NOTHING else — no selection, region, cursor, follow, or double-click seed.
-    // `was_playing` is the pre-press playing state (both callers keep playback
-    // alive for the scrub, so it reflects the live scanner): playing -> reseek
-    // (skipped when the frame equals the scanner sample), stopped -> scrub_launch_at
-    // behind the target-view is_updating gate.
-    void arm_scrub_at(int click_rel_x, bool was_playing);
+    // Both callers keep playback alive across the press (the lower half is not
+    // a top-strip press; the text-lane scrub is exempted from the top-strip
+    // stop), so the act sees the live session — load-bearing for its
+    // same-frame skip, which keeps an in-place audition uninterrupted instead
+    // of restarting it.
+    void arm_scrub_at(int click_rel_x);
 
     // Bare `t` toggle: flip app.active_audio_view between Source and Target.
     // Stops any current playback before switching domains. Source → Target

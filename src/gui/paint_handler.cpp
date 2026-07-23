@@ -571,6 +571,22 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // active-domain frames already in the displayed domain, so their column is
     // the plain viewport transform (no warp map walked, matching the wash). The
     // scanner is untouched — only the cursor splits.
+    //
+    // THIS BRANCH IS THE WASH<->CURSOR EXCLUSIVITY OWNER (the highlight IS the
+    // playhead stretched out — the split halves are its two ends, so a wash and
+    // a cursor must never co-display; architect 2026-07-23). The exclusivity is
+    // structural, not per-former: paint_region_wash gates on the same
+    // app.region.active this if/else branches on, this else is the ONLY
+    // kPlayheadCursor emitter and render_playhead/render_split_playhead have no
+    // other callers, so within any one frame the wash and the cursor are
+    // mutually exclusive by state. Across frames it holds because every
+    // app.region write is paired with waveform-area damage at its site (the
+    // formers, the clears, clear_region_highlight, the Esc pre_region restore,
+    // the tick repair), so the frame that first paints one has already erased
+    // the other — no stale co-display window exists. What CAN legitimately
+    // co-display with the cursor is the out-of-trim DIM contrast (a resting
+    // trim window with no active region — e.g. a lone bound, or after any
+    // region clear): that is trim's own display, not the region highlight.
     if (app.region.active) {
         if (disp_spp > 0.0) {
             const double vp_start =

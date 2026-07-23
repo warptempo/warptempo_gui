@@ -631,11 +631,12 @@ struct ScrollDragState {
 };
 
 // SCRUB-AREA drag: the plain unmodified press in the LOWER HALF of the
-// waveform (architect 2026-07-23) is an Ableton-style scrub — the press
-// launches the playhead SCANNER from the clicked frame (stopped:
-// scrub_launch_at; playing: the click-keep-alive reseek) and arms this state;
-// held motion re-scrubs the live session at column granularity (a reseek per
-// column change), and release keeps playing — that IS the release semantics.
+// waveform (architect 2026-07-23) is an Ableton-style scrub — the press runs
+// one scrub ACT (scrub_act_at, KILL-AND-REVIVE: a live session stops and a
+// fresh one launches from the clicked frame, re-capturing the loop verdict per
+// act; a dead one just revives; same-frame-as-scanner skips) and arms this
+// state; held motion re-scrubs at column granularity (one act per column
+// change), and release keeps playing — that IS the release semantics.
 // The gesture drives the SCANNER only, never the cursor: selection, region,
 // cursor, follow, and double-click seeding are all untouched, the pure
 // audition gesture. No threshold (the press already acted; scrubbing is
@@ -649,7 +650,8 @@ struct ScrollDragState {
 struct ScrubAreaDragState {
     bool active   = false;
     // Waveform column (effective-width-relative px) of the last scrub position
-    // — the press column at arm; motion reseeks only when its column differs.
+    // — the press column at arm; motion runs a scrub act only when its column
+    // differs.
     int  last_col = 0;
 };
 

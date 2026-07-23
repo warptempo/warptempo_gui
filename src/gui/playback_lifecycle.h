@@ -42,15 +42,15 @@ struct GuiPlaybackLifecycle {
     // is re-validated against the target buffer's domain, so an offset landing
     // at or past the buffer end is a silent no-op.
     void toggle_playback(int64_t launch_offset = 0);
-    // Scrub launch (the lower-half waveform scrub press, stopped case): launch
+    // Scrub launch (the revive half of the scrub act's kill-and-revive): launch
     // the scanner from `frame`, an ABSOLUTE position in the active paint
     // domain, leaving the resting cursor untouched — the pure audition entry.
     // Delegates to the same launch body as toggle_playback's play edge, so
     // the standing gates apply identically: a frame outside the trim window /
     // target buffer domain, or one leaving fewer than two playable frames of
     // remainder, is a silent no-op — exactly Space's conventions. A live
-    // session never launches (defensive; the scrub press routes live sessions
-    // to reseek_keeping_alive instead).
+    // session never launches (defensive; the scrub act KILLS a live session
+    // via stop_playback_if_playing before delegating here).
     void scrub_launch_at(int64_t frame);
     void set_playback_speed(float s);
 
@@ -59,10 +59,11 @@ struct GuiPlaybackLifecycle {
     // (source-domain in source view; target-domain in target view). Handles
     // the target-view target_buffer translation internally. Caller is
     // responsible for the entry-state check — playback alive AND the position
-    // actually moving (the placement press compares the sample against the
-    // entry playhead; the scrub press against the current scanner position;
-    // the scrub drag's motion re-scrub keys on a column change); this function
-    // unconditionally reseeks when called. For target view, samples
+    // actually moving (the upper-half placement press, the ONE caller,
+    // compares the sample against the entry playhead); this function
+    // unconditionally reseeks when called. The scrub paths no longer come
+    // here — every scrub act is kill-and-revive (scrub_act_at). For target
+    // view, samples
     // outside the target buffer's range fall back to playback.stop() —
     // keep-alive intent is well-defined for in-range positions only.
     void reseek_keeping_alive(int64_t sample);

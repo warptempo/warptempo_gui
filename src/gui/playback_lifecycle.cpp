@@ -125,18 +125,22 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     launch_playback_from(launch_pos);
 }
 
-// Scrub launch: start the scanner from `frame` — an absolute active-paint-
-// domain position (the scrub press hands it in already clamped to the live
+// Scrub launch — the REVIVE half of the scrub act's kill-and-revive: start the
+// scanner from `frame` — an absolute active-paint-
+// domain position (the scrub act hands it in already clamped to the live
 // domain) — with the resting cursor, selection, region, and follow all
 // untouched. The SCANNER, not the cursor, is what the gesture drives: the
 // scanner fields are meaningful only while active, and this is exactly the
 // launches-the-scanner-independently-of-the-cursor consumer that contract
 // anticipated. Riding the shared launch body makes a scrub launch
 // indistinguishable from a Space launch except for the start position, so
-// every standing gate applies (contract at the header declaration).
+// every standing gate applies (contract at the header declaration) — and each
+// revive re-captures the loop verdict and end bound freshly, the point of the
+// fresh-session semantic.
 void GuiPlaybackLifecycle::scrub_launch_at(int64_t frame) {
-    // Defensive: a live session never launches — the scrub press routes
-    // playing sessions to reseek_keeping_alive, so this guard only keeps a
+    // Defensive: a live session never launches — the scrub act KILLS a live
+    // session (stop_playback_if_playing) before delegating here, so this
+    // guard only keeps a
     // future caller from stacking play() over a live run.
     if (playback.is_playing()) return;
     // The same defensive clears toggle_playback's play edge runs (the launch
@@ -286,12 +290,14 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
 // range policy: source view against [trim_begin_sample(), trim_end_sample()),
 // target view against the bound buffer's [domain_begin(),
 // domain_end()). `sample` is a paint-domain coordinate, the same domain
-// playback's public API speaks in every view. Called from input_pointer.cpp
-// only, always with playback alive at call time: the upper-half plain
-// waveform press that places the playhead, the lower-half scrub press
-// (playing case), and the scrub drag's per-column motion re-scrub — the one
-// motion caller (a region drag never moves the playhead; the scrub drag
-// moves the SCANNER, which is this function's whole effect).
+// playback's public API speaks in every view. ONE caller (input_pointer.cpp),
+// always with playback alive at call time: the upper-half plain waveform
+// press that places the playhead — keep-alive is exactly that press's point
+// (reposition the running audition under the freshly-placed cursor without a
+// restart glitch, preserving the session's launch-captured loop verdict). The
+// scrub paths no longer come here: every scrub act is KILL-AND-REVIVE
+// (scrub_act_at — a fresh session per act, re-capturing the loop verdict and
+// end bound each time).
 // Both arms carry the same two-frame remainder gate as the launch body (see
 // the rationale at its source arm): a reseek that would leave fewer than two
 // playable frames is out of range, so a live-playback click at the last frame
@@ -304,10 +310,7 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
 // stop_playback_if_playing clears follow_overridden_for_session. The
 // placement-press caller sets it back to true immediately AFTER this returns
 // (having already run move_playhead_to before), so the reset is a harmless
-// transient there — that caller owns the override across the reseek. The
-// scrub callers deliberately set nothing back: a scrub never overrides
-// follow, and after an out-of-range fallback stop the cleared override is
-// simply the resting stopped state.
+// transient there — that caller owns the override across the reseek.
 void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
     if (app.active_audio_view == 'T') {
         if (app.target_buffer_frames <= 0) { stop_playback_if_playing(); return; }

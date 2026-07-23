@@ -460,6 +460,13 @@ void GuiInputHandler::sync_highlight_to_trim_window() {
         app.region.b_frame = hi;
         selection.select_contained_in_span(lo, hi);
     } else {
+        // No window (lone / no trim): clear the coupled highlight + selection.
+        // A LONE bound still paints its chip, stem, and one-sided out-of-trim
+        // dim — a bright completed-window span that can READ as a highlight —
+        // and the cursor playhead stays painted beside it. That is deliberate:
+        // the wash<->cursor exclusivity (paint_playheads) is scoped to the
+        // REGION highlight, and a half-authored trim has no window to
+        // highlight (the R4 no-window rule).
         app.region = RegionState{};
         selection.clear_selection();
     }
