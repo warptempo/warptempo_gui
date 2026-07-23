@@ -415,62 +415,107 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 //
 // Write-back step: the live store was untouched throughout motion (the
 // proposed positions lived in app.drag.moveable_times and paint read
-// them through the DragOverlay). On commit, walk dragging_markers and
-// assign each marker's time_frame from the column-snapped committed
-// times before pushing the pre-drag snapshot onto the undo stack.
-// Symmetric across warp and phase reset: identical statement shape on
-// each side.
+// them through the DragOverlay). On commit, the grabbed member column-snaps
+// (pixel-anchored) and the group rides its uniform active-domain shift (the
+// rigid model below), then walk dragging_markers and assign each marker's
+// time_frame from the committed times before pushing the pre-drag snapshot
+// onto the undo stack. Symmetric across warp and phase reset: identical
+// statement shape on each side.
 void MarkerDragOps::commit_drag() {
     if (!app.drag.active) return;
     const bool phase_reset = (app.drag.drag_mode == 'P');
-    // Commit-time column snap. Mid-gesture positions stay free and
-    // fractional (apply_drag_motion); only the commit snaps. The released
-    // position is snapped to the time of the pixel column it is PAINTED
-    // at — computed against the DISPLAYED map, the exact coordinate system
-    // the overlay painted through — and
-    // that column time funnels
-    // through snap_authored_frame (inside authored_frame_at_column), so
-    // the stored value is the whole frame of the shown column: stored
-    // equals shown, in both views at all zoom levels. With an
-    // integer-pixel pointer the column snap is a no-op; with fractional
-    // pointer coordinates (touchpads) it moves the value to the column
-    // painting already shows. The walls win over the grid: the absolute
-    // range (zero / the marker EOF wall, total - 1 for both columns — the
-    // per-column split is retired, see begin_drag) is re-applied after the
-    // snap, so a wall-clamped commit rests exactly on its wall (the walls
-    // are integer frames, so the clamp preserves whole-frame values). The
-    // visible-strip clamp composed into delta_min/delta_max during
-    // motion, as before.
+    // RIGID GROUP COMMIT, anchored on the GRABBED member's column snap. Only
+    // the grabbed member is pixel-anchored (stored equals shown for the
+    // pointer-authored flag); every other member rides a single uniform
+    // ACTIVE-domain shift folded from the grabbed member's snap, so the group
+    // commits rigidly — the mid-motion rigidity carried through the release
+    // instead of re-quantized. Per-member column snapping (the old model)
+    // changed inter-member spacing by up to nearly a full column at coarse
+    // zoom, contradicting the rigid contract; this preserves it.
+    //
+    // Consequences by view: in SOURCE view (warp home, identity displayed map)
+    // this is EXACT INTEGER rigidity — D below is an exact integer and
+    // committed_k = original_k + D bit-for-bit, matching the mid-motion model;
+    // in TARGET view (phase resets) it is rigid in the displayed/target domain
+    // exactly as the motion painted (no release jump), the source-frame spacing
+    // preserved to +/-1 frame (the integer authored store's inherent limit).
+    // The per-member wall clamp remains the backstop and may squash exactly at
+    // a wall (the recorded accepted case). Single-marker drags are identical by
+    // construction — the group loop has no other members.
+    //
+    // dmap = displayed_or_live_target_map — the DISPLAYED map (converged == live
+    // at rest; empty / identity in source view), the same basis apply_drag_motion
+    // anchored the proposals in and the overlay painted through, so
+    // stored-equals-shown holds even inside a worker publish window where
+    // displayed != live. The commit-time RIDE placement below stays on the LIVE
+    // map deliberately — post-commit placement truth, the Tab basis.
     const int64_t total    = audio.total_frames();
     const int64_t eof_wall = total - 1;
-    std::vector<int64_t> committed;
-    committed.reserve(app.drag.moveable_times.size());
-    // The map the overlay painted through: displayed_or_live_target_map —
-    // the DISPLAYED map (converged == live at rest; empty / identity in
-    // source view), the same basis apply_drag_motion anchored the proposals
-    // in, so stored-equals-shown holds at commit even inside a worker
-    // publish window where displayed != live. The commit-time RIDE placement
-    // below stays on the LIVE map deliberately — post-commit placement truth,
-    // the Tab basis.
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
+    const int gk = app.drag.grabbed_k;
+    const bool grabbed_valid =
+        gk >= 0 &&
+        gk < static_cast<int>(app.drag.moveable_times.size()) &&
+        gk < static_cast<int>(app.drag.original_times.size());
+
+    // (1) The GRABBED member commits exactly as before: bit-exact untouched
+    // short-circuit (a wander returning exactly to the press x keeps the
+    // original, dodging the two-hop's non-bitwise identity), else the painted
+    // column snap through authored_frame_at_column (which funnels the column
+    // time through snap_authored_frame) against the displayed map, then the
+    // integer walls.
+    int64_t committed_grabbed  = 0;
+    double  original_grabbed_d = 0.0;
+    if (grabbed_valid) {
+        const double proposed_g = app.drag.moveable_times[gk];
+        original_grabbed_d = static_cast<double>(app.drag.original_times[gk]);
+        if (proposed_g == original_grabbed_d) {
+            committed_grabbed = app.drag.original_times[gk];
+        } else {
+            const int c = painted_column_of_source_frame(
+                app, audio, proposed_g, dmap);
+            int64_t t = authored_frame_at_column(app, audio, c, dmap);
+            if (t < 0)        t = 0;
+            if (t > eof_wall) t = eof_wall;
+            committed_grabbed = t;
+        }
+    }
+
+    // (2) The uniform active-domain delta from the grabbed member's snap,
+    // through the SAME displayed map (fwd = map_source_to_target; identity in
+    // source view, where D is an exact integer). D == 0.0 exactly when the
+    // grabbed member returned to its origin, which folds the whole group's
+    // wander-back into the verbatim short-circuit below.
+    const double D = grabbed_valid
+        ? (map_source_to_target(static_cast<double>(committed_grabbed), dmap)
+           - map_source_to_target(original_grabbed_d, dmap))
+        : 0.0;
+
+    // (3) Every member: the grabbed one takes its own snap; every OTHER member
+    // is a COMPUTED position (the propagate-paste convention — computed
+    // positions round plainly, no per-member pixel anchoring), shifted rigidly
+    // by D through inv(fwd(orig) + D) and funnelled through snap_authored_frame
+    // (the ONE double-to-authored route), then the integer walls. At D == 0.0 it
+    // keeps the original verbatim, mirroring apply_drag_motion's raw_delta==0.0
+    // rule and avoiding the two-hop's interior non-bitwise identity.
+    std::vector<int64_t> committed(app.drag.moveable_times.size(), 0);
     for (size_t k = 0; k < app.drag.moveable_times.size(); ++k) {
-        const double proposed = app.drag.moveable_times[k];
-        // Only positions the drag actually moved snap; an untouched
-        // position keeps its stored value bit-exact, so a flag click
-        // without motion (and a wander that returns exactly to its
-        // origin) commits nothing.
-        if (k < app.drag.original_times.size() &&
-            proposed == static_cast<double>(app.drag.original_times[k])) {
-            committed.push_back(app.drag.original_times[k]);
+        if (static_cast<int>(k) == gk) {
+            committed[k] = committed_grabbed;
             continue;
         }
-        const int c = painted_column_of_source_frame(
-            app, audio, proposed, dmap);
-        int64_t t = authored_frame_at_column(app, audio, c, dmap);
+        const int64_t orig_k = (k < app.drag.original_times.size())
+            ? app.drag.original_times[k] : 0;
+        if (D == 0.0) {
+            committed[k] = orig_k;
+            continue;
+        }
+        int64_t t = snap_authored_frame(map_target_to_source(
+            map_source_to_target(static_cast<double>(orig_k), dmap) + D, dmap));
         if (t < 0)        t = 0;
         if (t > eof_wall) t = eof_wall;
-        committed.push_back(t);
+        committed[k] = t;
     }
     // Commit gates on NET change, not on whether motion occurred.
     // app.drag.moved latches true on the first position change during
@@ -541,15 +586,14 @@ void MarkerDragOps::commit_drag() {
         touched_live = app.drag.dragging_markers;
     }
     // Capture the GRABBED marker's committed frame into a local BEFORE the
-    // wholesale DragState reset below discards it — the grabbed_k slot, not [0]:
-    // a group drag's grabbed member may sit anywhere in the ascending vectors,
-    // and the playhead lands on IT (== [0] for a single-marker drag). The land
-    // runs regardless of net_changed: a wander-back drag must land the playhead
-    // exactly back on the grabbed marker (original_times[grabbed_k]), erasing any
-    // mid-motion rounding drift from apply_drag_motion's paint-basis moves. The
-    // bounds guards cover a degenerate drag with no moveable marker and a
-    // defensive out-of-range grabbed_k.
-    const int gk = app.drag.grabbed_k;
+    // wholesale DragState reset below discards it — the grabbed_k slot (gk,
+    // computed above), not [0]: a group drag's grabbed member may sit anywhere
+    // in the ascending vectors, and the playhead lands on IT (== [0] for a
+    // single-marker drag). The land runs regardless of net_changed: a wander-back
+    // drag must land the playhead exactly back on the grabbed marker
+    // (original_times[grabbed_k]), erasing any mid-motion rounding drift from
+    // apply_drag_motion's paint-basis moves. The bounds guards cover a degenerate
+    // drag with no moveable marker and a defensive out-of-range grabbed_k.
     const bool land_playhead = net_changed
         ? (gk >= 0 && gk < static_cast<int>(committed.size()))
         : (gk >= 0 && gk < static_cast<int>(app.drag.original_times.size()));

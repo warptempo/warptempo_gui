@@ -1264,10 +1264,14 @@ struct AppState {
     // Escape, and file load.
     RegionDragState region_drag;
 
-    // Pending marker-reposition drag, armed by a plain flag press (the marker
-    // is single-selected at press; the drag begins only past the threshold).
-    // Cleared on the threshold crossing, on button release / lost button, on
-    // Escape/close (cancel_active_drags), and on file load.
+    // Pending marker-reposition drag, armed by a plain flag press. Usually the
+    // press single-selects the marker immediately; but a press on a member of a
+    // 2+ selection DEFERS its single-select + land (deferred_click) so a group
+    // drag can seed the whole selection — the deferred click then runs at a
+    // motionless release / lost button, or is abandoned by Esc. The drag begins
+    // only past the threshold. Cleared on the threshold crossing, on button
+    // release / lost button, on Escape/close (cancel_active_drags), and on file
+    // load.
     PendingMarkerDrag pending_marker_drag;
 
     // Pending target-view tempo drag, armed by a plain warp-flag press in W +

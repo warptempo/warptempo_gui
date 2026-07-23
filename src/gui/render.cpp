@@ -1530,9 +1530,11 @@ LaneTextRun current_marker_lane_run(const AppState& app, const GuiAudio& audio)
     // seeds every selected member, so this is a MEMBERSHIP lookup (the
     // DragOverlay::effective_time shape), not moveable_times[0]: it substitutes
     // the proposed time for whichever dragged member this last-selected run
-    // shows, and falls back to the committed frame for a non-member. After first
-    // motion the focused (last-selected) marker IS the grabbed one, so the run
-    // tracks the grabbed member; any other member would too if it were focused.
+    // shows, and falls back to the committed frame for a non-member. From the
+    // THRESHOLD CROSSING on (begin_drag focuses the grabbed marker, including a
+    // wall-saturated drag with no moved motion) the focused (last-selected)
+    // marker IS the grabbed one, so the run tracks the grabbed member; any other
+    // member would too if it were focused.
     double display_src_f = static_cast<double>(src_f);
     if (app.drag.active) {
         DragOverlay overlay{&app.drag.dragging_markers,

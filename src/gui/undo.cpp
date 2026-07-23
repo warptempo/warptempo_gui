@@ -390,8 +390,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // tab, NOT entry's hint. The hint's contract everywhere is "last_selected
     // when this entry's snapshot state was live", and the counter's snapshot IS
     // the live pre-restore state — so its focus is the pre-restore one. Generic,
-    // not group-specific: e.g. select A-C with C focused, grab-and-drag A (first
-    // motion focuses A) → undo re-focuses C (entry's pre-drag hint), and redo
+    // not group-specific: e.g. select A-C with C focused, grab-and-drag A (the
+    // crossing focuses A) → undo re-focuses C (entry's pre-drag hint), and redo
     // must re-focus A (the pre-restore focus), which copying entry's hint got
     // wrong.
     //

@@ -2073,7 +2073,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     marker_drag.apply_drag_motion(mouse_frame - app.drag.anchor_mouse_time_frame);
     // Playhead rule: the playhead follows the grabbed marker through the drag
     // inside apply_drag_motion (the arming click landed it on the marker, so
-    // the drag tows it by construction — the DragState ruling). apply_drag_motion
-    // above already latched app.drag.moved and collapsed the selection onto the
-    // grabbed marker on the first real move; nothing further tracks here.
+    // the drag tows it by construction — the DragState ruling). The focus
+    // transfer onto the grabbed marker already ran at the THRESHOLD CROSSING in
+    // begin_drag (a single-marker drag re-asserts the single selection, a group
+    // drag focuses without collapsing), so it holds even for a wall-saturated
+    // drag with no moved motion; apply_drag_motion here only latches
+    // app.drag.moved and slides the playhead. Nothing further tracks here.
 }
