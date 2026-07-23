@@ -198,6 +198,8 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
     }
 }
 
+} // namespace
+
 // Direction B of the selection<->highlight coupling (architect 2026-07-23): a
 // multi-select CLICK that leaves 2+ markers selected sets the region to the
 // selection's active-domain position extent [earliest, latest], so the
@@ -206,13 +208,17 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 // standing region clear (land_playhead_on_marker's dissolve, or the ctrl
 // empty-branch's explicit clear_region_highlight) is the dissolve. Endpoints
 // are clamped through clamp_playhead_to_live_domain (the region domain's
-// playable-frame invariant, as every other former clamps). Shared by the
-// shift-range and ctrl-toggle click paths; MUST run AFTER the land (which
-// CLEARS any old region) — a reorder would let the clear kill this fresh
-// highlight. Touches ONLY the region, never shift_range_anchor, so the
-// shift-range path's anchor survives a direction-B set. Programmatic selections
-// (undo/redo, paste, drops, Tab/`c`) do NOT call this — the coupling belongs to
-// the two multi-select clicks.
+// playable-frame invariant, as every other former clamps). Callers: the
+// shift-range and ctrl-toggle click paths, each MUST run this AFTER the land
+// (which CLEARS any old region) — a reorder would let the clear kill this
+// fresh highlight — and the GROUP marker drag's commit, a THIRD caller that
+// MAINTAINS an already-active highlight through the store mutation (re-deriving
+// the live-tracked region from the post-commit, reordered/remapped store)
+// rather than creating one. Touches ONLY the region, never shift_range_anchor,
+// so the shift-range path's anchor survives a direction-B set. Programmatic
+// selections (undo/redo, paste, drops, Tab/`c`) do NOT call this — the coupling
+// belongs to the two multi-select clicks and the group-drag maintenance.
+// Declared in input_handler.h so marker_drag.cpp can reach it.
 void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
                                     Viewport& viewport) {
     if (app.selected_markers.size() < 2) return;
@@ -240,8 +246,6 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
     app.region.b_frame = hi;
     viewport.invalidate_waveform_area();
 }
-
-} // namespace
 
 // R3 Esc ladder (architect 2026-07-23): the selection/region collapse rung of
 // the Escape chain, placed after the drag / editor / render cancels and in place
@@ -1028,6 +1032,51 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                                 *app.selected_markers.begin());
                     set_region_to_selection_extent(app, audio, viewport);
                 } else {
+                    // GROUP-drag deferral (architect 2026-07-23, file-manager
+                    // convention): when THIS press would arm a REPOSITION drag
+                    // (the home-view flag-press arm condition at the tail of this
+                    // branch — mh.on_flag, tab writable,
+                    // active_column_authoring_allowed) AND the clicked marker is
+                    // already a member of a 2+ selection, DEFER the click's
+                    // committed act (single-select + land) to a motionless
+                    // release. Committing it now would collapse the
+                    // multi-selection to {hit} before begin_drag could seed the
+                    // whole group, so the press holds its fire. The tempo-drag
+                    // surface (W + target view) has active_column_authoring_allowed
+                    // false, so it is excluded — tempo stays single-marker and a
+                    // group member press there collapses at press exactly as
+                    // before. Every other plain marker press keeps the immediate
+                    // single-select + land below.
+                    const bool would_arm_reposition =
+                        mh.on_flag && !active_view_state(app).read_only &&
+                        active_column_authoring_allowed(app);
+                    if (would_arm_reposition &&
+                        app.selected_markers.size() >= 2 &&
+                        app.selected_markers.count(hit) > 0) {
+                        // Keep the selection; seed the Marker double-click
+                        // candidate exactly as the immediate path (press-time,
+                        // target = hit) and arm the reposition drag flagged
+                        // deferred. The double-click-consume check is SKIPPED —
+                        // it can never fire on a still-multi selection: a prior
+                        // release either collapsed the selection to a singleton
+                        // (routing the next press through the immediate path) or
+                        // never happened. If the pointer never crosses
+                        // kMarkerDragMovedThresholdPx the deferred single-select
+                        // + land runs at release / lost button; Esc ABANDONS it,
+                        // leaving the multi-selection intact.
+                        app.double_click = DoubleClickCandidate{
+                            .surface = DoubleClickSurface::Marker,
+                            .time_ms = monotonic_ms(),
+                            .press_x = x, .press_y = y,
+                            .target  = hit};
+                        app.pending_marker_drag = PendingMarkerDrag{};
+                        app.pending_marker_drag.active         = true;
+                        app.pending_marker_drag.marker         = hit;
+                        app.pending_marker_drag.press_x        = x;
+                        app.pending_marker_drag.press_y        = y;
+                        app.pending_marker_drag.deferred_click = true;
+                        return;
+                    }
                     // Plain marker click single-selects (both views; W's
                     // click-to-edit is retired — the editor now opens on Enter or
                     // this double-click). Selection is navigation, allowed in
@@ -1578,13 +1627,33 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     }
     if (app.pending_marker_drag.active) {
         // The pending marker drag never crossed the threshold: a pure flag
-        // click. The press already single-selected its marker AND seeded the
-        // Marker double-click candidate (press-time seeding, the one timing
-        // for the whole marker surface), so there is nothing to commit or seed
-        // — just disarm. (A crossed pending became app.drag — dropping the
-        // candidate at the threshold crossing — and commits through the branch
-        // below.)
+        // click, in one of two shapes.
+        //  - IMMEDIATE arm (deferred_click false): the press already
+        //    single-selected its marker AND seeded the Marker double-click
+        //    candidate (press-time seeding), so there is nothing to commit —
+        //    just disarm.
+        //  - DEFERRED arm (deferred_click true): the press held the click's
+        //    committed act back (a group member was pressed, the
+        //    multi-selection intact). A motionless release IS that click now —
+        //    collapse to {m} and land the playhead on it, exactly the immediate
+        //    path's press-time act, its standing region clear giving the plain
+        //    click's highlight dissolve for free. Bounds-check m against the
+        //    active column's store defensively (nothing mutates it between press
+        //    and release — the pending gate swallows keys).
+        // (A crossed pending became app.drag — dropping the candidate at the
+        // threshold crossing — and commits through the branch below.)
+        const bool deferred = app.pending_marker_drag.deferred_click;
+        const int  m        = app.pending_marker_drag.marker;
         app.pending_marker_drag = PendingMarkerDrag{};
+        if (deferred) {
+            const int n = (app.active_markers_view == 'P')
+                ? static_cast<int>(app.phaseresetmarkers.markers().size())
+                : static_cast<int>(app.warpmarkers.markers().size());
+            if (m >= 0 && m < n) {
+                selection.set_single_selection(m);
+                land_playhead_on_marker(app, audio, viewport, m);
+            }
+        }
         return;
     }
     if (!app.drag.active) return;
@@ -1911,7 +1980,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         marker_drag.apply_tempo_drag_motion(mouse_x);
         return;
     }
-    // Pending marker drag (armed by a plain flag press): the marker was
+    // Pending marker drag (armed by a plain flag press): usually the marker was
     // single-selected at press; the reposition begins only once the pointer
     // travels past the marker-specific Chebyshev threshold
     // (kMarkerDragMovedThresholdPx, larger than the strip / region / trim
@@ -1922,7 +1991,23 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // click.
     if (app.pending_marker_drag.active) {
         if (!mods.primary_button_held) {   // button lost -> just the click
+            // A lost button before the crossing IS the click, matching the
+            // release path: a DEFERRED arm (deferred_click — a group member
+            // pressed with the multi-selection held) completes the held
+            // single-select + land now; an immediate arm already committed that
+            // at press and just disarms. Bounds-check m defensively.
+            const bool deferred = app.pending_marker_drag.deferred_click;
+            const int  m        = app.pending_marker_drag.marker;
             app.pending_marker_drag = PendingMarkerDrag{};
+            if (deferred) {
+                const int n = (app.active_markers_view == 'P')
+                    ? static_cast<int>(app.phaseresetmarkers.markers().size())
+                    : static_cast<int>(app.warpmarkers.markers().size());
+                if (m >= 0 && m < n) {
+                    selection.set_single_selection(m);
+                    land_playhead_on_marker(app, audio, viewport, m);
+                }
+            }
             viewport.clear_hover_popup();
             return;
         }

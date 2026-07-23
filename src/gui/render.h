@@ -869,8 +869,10 @@ double flag_pending_text_left_x(
 // case: tier 1 the HOVERED marker's own value (hover_popup.lane_text at
 // hover_popup.source_frame), else tier 2 the LAST-SELECTED marker's own value
 // composed from the live store — flag_text_iter for a warp marker, the "p"
-// literal for a phase reset — with the mid-drag moveable_times[0] substitution
-// and the painted-column offscreen cull the flags apply. `valid` is false when
+// literal for a phase reset — with the mid-drag proposed-position substitution
+// (a DragOverlay membership lookup: the dragged member's live moveable time,
+// covering group drags) and the painted-column offscreen cull the flags apply.
+// `valid` is false when
 // no run shows. `marker_index` is the active-column store index (warp or
 // phase-reset per active_markers_view); `source_frame` is the DOUBLE centering
 // basis (the mid-drag substituted position included); `text` is the composed

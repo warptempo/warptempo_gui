@@ -1523,16 +1523,21 @@ LaneTextRun current_marker_lane_run(const AppState& app, const GuiAudio& audio)
         src_f = mv[idx].time_frame;
         txt   = flag_text_iter(mv, idx, app.iteration_mode_enabled);
     }
-    // During an active marker drag whose grabbed marker IS this last-selected
-    // one, center the run on the live proposed position from moveable_times[0]
-    // (a free source-frame double) instead of the committed store frame — the
-    // store is not mutated until commit, so the run would otherwise lag at the
-    // pre-drag spot while the flag slides.
+    // During an active marker drag, center the run on the dragged member's live
+    // proposed position (a free source-frame double) instead of the committed
+    // store frame — the store is not mutated until commit, so the run would
+    // otherwise lag at the pre-drag spot while the flag slides. A GROUP drag
+    // seeds every selected member, so this is a MEMBERSHIP lookup (the
+    // DragOverlay::effective_time shape), not moveable_times[0]: it substitutes
+    // the proposed time for whichever dragged member this last-selected run
+    // shows, and falls back to the committed frame for a non-member. After first
+    // motion the focused (last-selected) marker IS the grabbed one, so the run
+    // tracks the grabbed member; any other member would too if it were focused.
     double display_src_f = static_cast<double>(src_f);
-    if (app.drag.active && !app.drag.dragging_markers.empty() &&
-        app.drag.dragging_markers[0] == idx &&
-        !app.drag.moveable_times.empty()) {
-        display_src_f = app.drag.moveable_times[0];
+    if (app.drag.active) {
+        DragOverlay overlay{&app.drag.dragging_markers,
+                            &app.drag.moveable_times};
+        display_src_f = overlay.effective_time(idx, display_src_f);
     }
     // Cull to the visible strip by the painted column exactly as the flags do
     // (a fully-offscreen marker paints no flag, so it shows no run). The column

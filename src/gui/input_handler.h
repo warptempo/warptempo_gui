@@ -170,6 +170,15 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // repaint rather than this exact damage shape.
 void clear_region_highlight(AppState& app, Viewport& viewport);
 
+// Direction B of the selection<->highlight coupling: set the region to the
+// current selection's active-domain [earliest, latest] position extent when 2+
+// markers are selected (a <=1 selection sets nothing). MUST run AFTER any land
+// that clears the region. Definition lives in input_pointer.cpp; declared here
+// so the group-drag commit (MarkerDragOps::commit_drag) can re-derive the
+// live-tracked region from the post-commit store through the same owner.
+void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
+                                    Viewport& viewport);
+
 // -- GuiInputHandler ----------------------------------------------------
 //
 // The batch render runner lives on this struct as private helper methods

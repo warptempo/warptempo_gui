@@ -117,6 +117,52 @@ struct SelectionSnapshot {
     int           last_selected_marker = -1;
 };
 
+// Session-only region selection — an Ableton-style arrangement span, formed by
+// FOUR routes (architect 2026-07-23): the plain waveform drag (paints it live
+// AND, under the selection<->highlight coupling, live-SELECTS the active-column
+// markers it spans — Direction A), the waveform SHIFT+click (the region former /
+// marker DEMOTE — playhead-to-click with nothing selected, else
+// furthest-selected-marker-to-click, DROPPING the selection), a multi-marker
+// DELETE (demotes to the span of the deleted positions, also a DROP), and the
+// MULTI-SELECT EXTENT (Direction B): a shift-range or ctrl-toggle click that
+// leaves 2+ markers selected sets the region to the selection's position extent
+// [earliest, latest], so highlight, land, and Space's left-bound launch agree.
+// The old "region never promotes back to markers" mutual-exclusivity is DEAD —
+// the coupling runs BOTH ways (the plain drag selects; the two multi-select
+// clicks define the highlight), while the demote/delete formers still DROP.
+// Bare x branches on
+// THIS highlight: a live region trims to it and the highlight is KEPT
+// (architect 2026-07-23, reversing the earlier consume — under the coupling
+// the trim window and the highlight agree after x, re-derived through
+// sync_highlight_to_trim_window); no region means
+// x clears the trim instead, and this highlight is inactive there by definition.
+// NEVER serialized, and stored independently of the selection and undo systems
+// (a transient visual — no undo entry, its own field, not derived from the
+// selection set). The isolation is STORAGE-LEVEL only: the two systems' GESTURES
+// are coupled (the multi-select clicks set this highlight to the selection's
+// extent, and the trim-lane clicks + trim drags sync BOTH this highlight and the
+// selection to the trim window — sync_highlight_to_trim_window). Endpoints are
+// ACTIVE-DOMAIN frames (source frames in source
+// view, target frames in target view), stored in drag order and normalized
+// lo/hi at READ time, so the span survives pan/zoom mid-drag and at rest.
+// Cleared on file load, the A/B tab switch, the S/T audio-view switch (the
+// domain changes under it), Esc (only when nothing higher-priority consumes the
+// Esc), and a plain UPPER-HALF waveform PRESS (the placement press dissolves any
+// resting highlight at mouse-down, before it knows whether the gesture is a
+// click or a fresh region drag; at on_button_press via arm_region_drag_at — a
+// lower-half scrub press leaves the region alone). The W/P marker-column switch
+// does NOT clear it — the STORED highlight survives the column flip (a
+// storage-level independence; the coupling that keeps it agreeing with the
+// selection/trim window is a gesture-time sync, not a stored derivation). A
+// GROUP marker drag captures the resting region into DragState::pre_drag_region
+// (Esc restore) and live-tracks it to the moving group's extent (apply_drag_
+// motion), re-deriving from the post-commit store at commit.
+struct RegionState {
+    bool    active  = false;
+    int64_t a_frame = 0;   // the press-anchor endpoint
+    int64_t b_frame = 0;   // the far (pointer) endpoint
+};
+
 // Marker reposition drag state (begun by a plain flag drag past the shared
 // threshold). `active` gates motion handling; the rest captures the
 // pre-drag snapshot so Escape can restore positions and clamps can be
@@ -182,17 +228,21 @@ struct DragState {
     // Pre-drag last_selected for the undo hint; carried onto the entry at commit.
     int                    pre_drag_last_selected = -1;
     // Pre-drag marker selection snapshot, captured at begin_drag for the
-    // Esc / Ctrl+Q cancellation restore: the arming flag press single-selected
-    // the grabbed marker, so this captures {hit} and a cancel restores exactly
-    // that. The playhead's cancel restore is pre_ride_playhead_sample below,
-    // which the cancel now always applies.
+    // Esc / Ctrl+Q cancellation restore. For a single-marker drag the arming
+    // flag press single-selected the grabbed marker, so this captures {hit}; for
+    // a GROUP drag the arming press DEFERRED its single-select, so this captures
+    // the whole intact multi-selection — and a cancel restores exactly that. The
+    // playhead's cancel restore is pre_ride_playhead_sample below, which the
+    // cancel now always applies.
     SelectionSnapshot      pre_drag_selection;
     // Playhead-follows-marker ruling (architect 2026-07-23, reversing the
-    // 2026-07-20 decoupling): the arming plain marker click LANDS the playhead
-    // on the grabbed marker (source_frame_to_active_domain then
-    // clamp_playhead_to_live_domain), so it is coincident by construction, and
-    // the drag tows it UNCONDITIONALLY — it stays on the marker through the
-    // motion so a later Space auditions FROM it. The lead-in workflow (parking
+    // 2026-07-20 decoupling): a single-marker arming click LANDS the playhead on
+    // the grabbed marker (source_frame_to_active_domain then
+    // clamp_playhead_to_live_domain), so it is coincident by construction; a
+    // group drag's deferred press does not land, so the first motion tows the
+    // playhead onto the grabbed member. Either way the drag tows it
+    // UNCONDITIONALLY — it stays on the grabbed marker through the motion so a
+    // later Space auditions FROM it. The lead-in workflow (parking
     // the playhead upstream to audition the approach) that the decoupling
     // served is supplied by the scrub surface instead. Only the RESTING
     // cursor playhead moves — move_playhead_to writes the cursor field only, so
@@ -200,10 +250,26 @@ struct DragState {
     // Cursor position at grab, for the Esc-cancel restore: the marker returns
     // to its origin on cancel, so the towed playhead returns with it.
     int64_t                pre_ride_playhead_sample = 0;
-    // Index of the marker whose flag press started the drag. Re-asserted as the
-    // single selection at first motion (set_single_selection) — normally a
-    // no-op, since the arming press already single-selected it.
+    // Index of the marker whose flag press started the drag — the GRAB
+    // reference for the whole gesture: the delta anchor, the playhead-follow /
+    // land target, and (single-marker drag) the marker re-asserted as the
+    // single selection at first motion. A group drag focuses it without
+    // collapsing the membership (apply_drag_motion's first-motion arm).
     int                    hit_marker           = -1;
+    // hit_marker's SLOT in the parallel drag vectors (dragging_markers /
+    // original_times / moveable_times), found by a linear scan at begin_drag.
+    // hit_marker is a STORE index the reorder remaps; grabbed_k is a POSITION
+    // into the drag's own vectors, which stay positionally stable across a
+    // mid-drag reorder (values remap in place, slots do not), so it never needs
+    // remapping. For a single-marker drag grabbed_k is trivially 0.
+    int                    grabbed_k            = 0;
+    // Region as it rested at begin_drag, restored on an Esc / Ctrl+Q cancel
+    // alongside the selection snapshot and grab playhead. Only a GROUP drag can
+    // capture an active region here (a single-marker press landed the playhead
+    // at press, whose standing region clear dissolved any highlight before
+    // begin_drag ran — so for a single-marker drag this restore is a no-op by
+    // construction).
+    RegionState            pre_drag_region;
     // Which list this drag operates on. The motion / commit
     // handlers dispatch on this so a drag started in phase reset view
     // mutates the phase reset list.
@@ -321,49 +387,6 @@ struct UndoHistory {
     }
 };
 
-// Session-only region selection — an Ableton-style arrangement span, formed by
-// FOUR routes (architect 2026-07-23): the plain waveform drag (paints it live
-// AND, under the selection<->highlight coupling, live-SELECTS the active-column
-// markers it spans — Direction A), the waveform SHIFT+click (the region former /
-// marker DEMOTE — playhead-to-click with nothing selected, else
-// furthest-selected-marker-to-click, DROPPING the selection), a multi-marker
-// DELETE (demotes to the span of the deleted positions, also a DROP), and the
-// MULTI-SELECT EXTENT (Direction B): a shift-range or ctrl-toggle click that
-// leaves 2+ markers selected sets the region to the selection's position extent
-// [earliest, latest], so highlight, land, and Space's left-bound launch agree.
-// The old "region never promotes back to markers" mutual-exclusivity is DEAD —
-// the coupling runs BOTH ways (the plain drag selects; the two multi-select
-// clicks define the highlight), while the demote/delete formers still DROP.
-// Bare x branches on
-// THIS highlight: a live region trims to it and the highlight is KEPT
-// (architect 2026-07-23, reversing the earlier consume — under the coupling
-// the trim window and the highlight agree after x, re-derived through
-// sync_highlight_to_trim_window); no region means
-// x clears the trim instead, and this highlight is inactive there by definition.
-// NEVER serialized, and stored independently of the selection and undo systems
-// (a transient visual — no undo entry, its own field, not derived from the
-// selection set). The isolation is STORAGE-LEVEL only: the two systems' GESTURES
-// are coupled (the multi-select clicks set this highlight to the selection's
-// extent, and the trim-lane clicks + trim drags sync BOTH this highlight and the
-// selection to the trim window — sync_highlight_to_trim_window). Endpoints are
-// ACTIVE-DOMAIN frames (source frames in source
-// view, target frames in target view), stored in drag order and normalized
-// lo/hi at READ time, so the span survives pan/zoom mid-drag and at rest.
-// Cleared on file load, the A/B tab switch, the S/T audio-view switch (the
-// domain changes under it), Esc (only when nothing higher-priority consumes the
-// Esc), and a plain UPPER-HALF waveform PRESS (the placement press dissolves any
-// resting highlight at mouse-down, before it knows whether the gesture is a
-// click or a fresh region drag; at on_button_press via arm_region_drag_at — a
-// lower-half scrub press leaves the region alone). The W/P marker-column switch
-// does NOT clear it — the STORED highlight survives the column flip (a
-// storage-level independence; the coupling that keeps it agreeing with the
-// selection/trim window is a gesture-time sync, not a stored derivation).
-struct RegionState {
-    bool    active  = false;
-    int64_t a_frame = 0;   // the press-anchor endpoint
-    int64_t b_frame = 0;   // the far (pointer) endpoint
-};
-
 // State for the plain (unmodified) left-drag region-select gesture on the
 // waveform's UPPER half (the lower half is the scrub surface, whose press is a
 // one-shot scrub act arming nothing — only the plain press splits by half). The PRESS
@@ -412,8 +435,8 @@ struct EditorTextDragState {
 };
 
 // Pending marker-reposition drag, armed by a PLAIN (unmodified) flag press.
-// The press single-selects its marker immediately (the click), then arms
-// this pending state instead of the drag itself: only once the pointer
+// Usually the press single-selects its marker immediately (the click), then
+// arms this pending state instead of the drag itself: only once the pointer
 // travels past kMarkerDragMovedThresholdPx (Chebyshev from the press; the
 // marker-specific gate, larger than the strip / region / trim
 // kDragMovedThresholdPx) does begin_drag run and the marker-drag machinery
@@ -425,11 +448,22 @@ struct EditorTextDragState {
 // release / lost button before the crossing, on cancel, and on file load.
 // Shift never arms it, and a read-only tab never arms it (marker mutation is
 // refused there — the select still lands).
+//
+// deferred_click (the GROUP-drag deferral, architect 2026-07-23): when the
+// pressed marker is already a member of a 2+ selection, the press does NOT
+// single-select + land — that would collapse the multi-selection to {hit}
+// before begin_drag could seed the whole group. Instead the arming press holds
+// the click's committed act back and sets this flag; a group drag then seeds
+// from the intact selection, while a motionless release / lost button runs the
+// held single-select + land (the file-manager convention). Esc ABANDONS the
+// deferred click (the multi-selection stands). Every immediate arm leaves this
+// false, and its release path just disarms.
 struct PendingMarkerDrag {
-    bool active   = false;
-    int  marker   = -1;   // marker index to reposition (active view's list)
-    int  press_x  = 0;    // press position (window px): the gate + drag anchor
-    int  press_y  = 0;
+    bool active         = false;
+    int  marker         = -1; // marker index to reposition (active view's list)
+    int  press_x        = 0;  // press position (window px): the gate + drag anchor
+    int  press_y        = 0;
+    bool deferred_click = false;
 };
 
 // Pending target-view TEMPO drag, armed by a PLAIN (unmodified) warp-flag

@@ -67,6 +67,19 @@ void Selection::set_single_selection(int idx) {
     damage_overlay_on_size2_crossing(old_size);
 }
 
+void Selection::focus_without_collapse(int idx) {
+    // Membership untouched — only the FOCUS moves. Dissolve the shift-range
+    // anchor (every non-range selection mutator does; a subsequent shift-click
+    // re-adopts the focus). No damage_playhead_if_focus_flipped /
+    // damage_overlay_on_size2_crossing: the selection SIZE does not change, so
+    // neither the focus-emptiness boundary nor the size-2 threshold can cross.
+    if (idx < 0) return;
+    app.shift_range_anchor   = -1;
+    app.last_selected_marker = idx;
+    viewport.invalidate_top_strip();
+    viewport.invalidate_timestamp_area();
+}
+
 void Selection::clear_selection() {
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     if (app.selected_markers.empty() && app.last_selected_marker == -1)

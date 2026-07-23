@@ -377,14 +377,21 @@ void GuiInputHandler::cancel_active_drags() {
         // The live marker store was untouched during motion (proposed
         // positions lived in moveable_times, read by paint through
         // DragOverlay), so no marker revert is needed. A cancel drops the
-        // pending marker move, restores the SelectionSnapshot, and puts the
+        // pending marker move, restores the SelectionSnapshot, puts the
         // playhead back at its grab-time position (the marker returns to its
-        // origin, and the playhead followed the marker, so it returns with it).
-        // Restore the marker selection captured at drag begin (the arming press
-        // single-selected the grabbed marker, so this is {hit}) — a cancel
-        // reverts the drag's position change, not the click's selection.
+        // origin, and the playhead followed the marker, so it returns with it),
+        // and restores the pre-drag REGION. The selection snapshot is {hit} for
+        // a single-marker drag (the arming press single-selected it) and the
+        // whole group for a GROUP drag (the deferred press left the
+        // multi-selection intact) — a cancel reverts the drag's position change,
+        // not any click's selection. The region restore is a no-op for a
+        // single-marker drag by construction (its press's land cleared the
+        // region before begin_drag captured it); a group drag live-tracked the
+        // region during motion, so this brings the pre-drag highlight back.
+        // Restore the region BEFORE the DragState reset reads pre_drag_region.
         restore_selection_snapshot(app, app.drag.pre_drag_selection);
         viewport.move_playhead_to(app.drag.pre_ride_playhead_sample);
+        app.region = app.drag.pre_drag_region;
         app.drag = DragState{};
         viewport.invalidate_waveform_area();
         viewport.invalidate_top_strip();
@@ -483,8 +490,12 @@ void GuiInputHandler::cancel_active_drags() {
     // notices the lost button.
     if (app.editor_text_drag.active) finalize_editor_text_drag();
     // A pending marker drag (a flag press whose reposition never began) is just
-    // disarmed: the press already single-selected its marker (a committed click,
-    // not part of the pending gesture), so there is nothing to revert.
+    // disarmed. For an IMMEDIATE arm the press already single-selected its
+    // marker (a committed click, not part of the pending gesture), so there is
+    // nothing to revert. For a DEFERRED arm (deferred_click — a group member was
+    // pressed with the multi-selection held intact) Esc ABANDONS the deferred
+    // click: disarm only, leaving the multi-selection untouched (the release /
+    // lost-button paths are where a non-cancelled deferred click completes).
     if (app.pending_marker_drag.active)
         app.pending_marker_drag = PendingMarkerDrag{};
     // A pending tempo drag (a W+target flag press whose drag never began) is

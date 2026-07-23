@@ -43,6 +43,9 @@ void remap_marker_indices_after_reorder(AppState& app,
         // DragOverlay::effective_time scans linearly.
         for (int& idx : app.drag.dragging_markers) idx = mapped(idx);
         app.drag.hit_marker = mapped(app.drag.hit_marker);
+        // grabbed_k is deliberately NOT remapped: it is a POSITION into the
+        // parallel drag vectors (which stay positionally stable — values remap
+        // in place, slots do not), not a store index like hit_marker.
     }
 }
 

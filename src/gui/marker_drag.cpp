@@ -2,6 +2,7 @@
 
 #include "audio.h"
 #include "gui_display_context.h"
+#include "input_handler.h"       // set_region_to_selection_extent (group-drag commit)
 #include "warp_frame_map.h"
 #include "warp_frame_map_view.h"
 #include "phaseresetmarkers.h"
@@ -35,15 +36,28 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
         return app.warpmarkers.markers()[idx].time_frame;
     };
 
-    // Drag is a single-marker fine-tuning gesture: it always moves only the
-    // grabbed marker, regardless of any prior multi-selection — each marker is
-    // placed deliberately, and group drag does more harm than good. The arming
-    // flag press already single-selected the grabbed marker (the click), so the
-    // selection is {hit} before the drag begins; apply_drag_motion re-asserts
-    // that on first motion so the "a real drag focuses the grabbed marker" rule
-    // stays with the drag machinery.
+    // GROUP DRAG (architect 2026-07-23, REVERSING the retired single-marker-only
+    // rule): dragging a member of a 2+ selection moves the WHOLE selection
+    // rigidly, file-manager style. The arming plain flag press DEFERRED its
+    // single-select + land (PendingMarkerDrag::deferred_click) exactly so the
+    // multi-selection is still intact here — otherwise the press would have
+    // collapsed it to {hit}. So seed the drag set from ALL selected markers when
+    // the grabbed marker belongs to a 2+ selection; else the lone {hit} (the
+    // immediate-arm single-marker drag, whose press already single-selected and
+    // landed). Defensively skip any selected index outside the active column's
+    // [0, n) — the set_region_to_selection_extent convention; stale indices
+    // cannot arise mid-session, but the guard is cheap and keeps the parallel
+    // vectors sound. selected_markers is a sorted set, so dragging_markers stays
+    // ascending; grabbed_k (below) records hit's slot in it.
     std::set<int> drag_set;
-    drag_set.insert(hit);
+    if (app.selected_markers.size() >= 2 &&
+        app.selected_markers.count(hit) > 0) {
+        for (int idx : app.selected_markers) {
+            if (idx >= 0 && idx < n) drag_set.insert(idx);
+        }
+    } else {
+        drag_set.insert(hit);
+    }
 
     // No first-marker pin, either column: every marker is draggable,
     // including a warp marker at time 0. Whatever arrangement results, the
@@ -55,6 +69,16 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     d.active = true;
     d.drag_mode = phase_reset ? 'P' : 'W';
     d.dragging_markers.assign(drag_set.begin(), drag_set.end());
+    // grabbed_k: hit's slot in the ascending drag vectors — the delta anchor,
+    // the playhead-follow / land target, and (single-marker) the re-asserted
+    // selection. Linear find; a single-marker drag lands 0.
+    d.grabbed_k = 0;
+    for (size_t k = 0; k < d.dragging_markers.size(); ++k) {
+        if (d.dragging_markers[k] == hit) {
+            d.grabbed_k = static_cast<int>(k);
+            break;
+        }
+    }
     d.original_times.reserve(d.dragging_markers.size());
     for (int idx : d.dragging_markers) {
         d.original_times.push_back(t_of(idx));
@@ -73,16 +97,19 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
         static_cast<double>(app.viewport_start_sample) +
         static_cast<double>(mouse_x - area.x) * spp;
 
-    // Compute scalar delta_min / delta_max from the absolute range only:
-    // zero on the left and the marker EOF wall on the right — total_frames
-    // minus one source frame for BOTH columns (the per-column split, warp
-    // total-1 vs phase reset total, is retired: warp is structural,
-    // build_warp_frame_map refuses sub-frame segments; phase reset walls at
-    // total-1 by ruling — a reset in the last source frame has nothing left
-    // to re-ground, and total-1 keeps every marker inside the playhead's
-    // [0, total-1] domain). Exact frame compares — the same comparison the
-    // load guard applies. Neighbors do not bound the drag; the marker may
-    // cross them freely, and commit_drag reorders the store and remaps the
+    // Compute scalar delta_min / delta_max as the INTERSECTION of each dragged
+    // member's absolute range: zero on the left and the marker EOF wall on the
+    // right — total_frames minus one source frame for BOTH columns (the
+    // per-column split, warp total-1 vs phase reset total, is retired: warp is
+    // structural, build_warp_frame_map refuses sub-frame segments; phase reset
+    // walls at total-1 by ruling — a reset in the last source frame has nothing
+    // left to re-ground, and total-1 keeps every marker inside the playhead's
+    // [0, total-1] domain). Exact frame compares — the same comparison the load
+    // guard applies. This ONE shared scalar is what makes a GROUP drag stop AS A
+    // UNIT: in source view (warp's home, identity map) every member clamps at the
+    // same delta simultaneously, so the group stays rigid at the 0 / total-1
+    // walls. Neighbors do not bound the drag; members may cross each other and
+    // their neighbors freely, and commit_drag reorders the store and remaps the
     // held indices.
     const double total = static_cast<double>(audio.total_frames());
     const double eof_wall = total - 1.0;
@@ -98,20 +125,23 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
         if (ub < d.delta_max) d.delta_max = ub;
     }
 
-    // Viewport clamp: hit is the sole dragged marker, so it alone is clamped
-    // to the visible strip so a mouse drag can't push it offscreen, where its
-    // precise position would be hidden — on top of the absolute data walls
-    // (delta_min/delta_max computed just above). viewport_marker_bounds is
-    // active-domain while the walls are source frames, so inverse-translate
-    // the edges through the DISPLAYED map (the paint basis the drag's
-    // mechanics run on; identity on source view's empty map); the map is
-    // monotonic, so the source clamp matches the active-pixel clamp. The
-    // grabbed marker is
-    // on-screen at grab (the arming flag press hit hit_test_flag, which reports
-    // only visible chips against the same displayed map, so the marker's
-    // painted column is within the viewport), so
-    // these bounds bracket the marker. vp_lo_src <= vp_hi_src always,
-    // so [delta_min, delta_max] does not invert from this pair.
+    // Viewport clamp: GRABBED-ONLY, deliberately. Only the grabbed marker (hit)
+    // is clamped to the visible strip so a mouse drag can't push it offscreen,
+    // where its precise position — the one being authored — would be hidden. The
+    // OTHER group members ride the rigid delta and MAY travel offscreen: blind
+    // MOTION of a group held by one on-screen member is fine, exactly the trim
+    // pair drag's recorded ruling — the offscreen ruling forbids blind GRABS, not
+    // blind motion of a set held by its handle. The clamp sits on top of the
+    // absolute data walls (delta_min/delta_max computed just above).
+    // viewport_marker_bounds is active-domain while the walls are source frames,
+    // so inverse-translate the edges through the DISPLAYED map (the paint basis
+    // the drag's mechanics run on; identity on source view's empty map); the map
+    // is monotonic, so the source clamp matches the active-pixel clamp. The
+    // grabbed marker is on-screen at grab (the arming flag press hit
+    // hit_test_flag, which reports only visible chips against the same displayed
+    // map, so the marker's painted column is within the viewport), so these
+    // bounds bracket it. vp_lo_src <= vp_hi_src always, so [delta_min, delta_max]
+    // does not invert from this pair.
     {
         const auto vb = viewport_marker_bounds(app, audio);
         const std::vector<WarpFrameMapSegment>& vdmap =
@@ -144,15 +174,26 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     d.pre_drag_last_selected = app.last_selected_marker;
     d.hit_marker             = hit;
     // Pre-drag marker selection snapshot for the Esc/Ctrl+Q cancellation
-    // restore: the arming press single-selected the grabbed marker, so this
-    // captures {hit}, and a cancel restores exactly that (Esc reverts the drag's
-    // position change, not the click's committed selection).
+    // restore. For a single-marker drag the arming press single-selected the
+    // grabbed marker, so this captures {hit}; for a GROUP drag the arming press
+    // DEFERRED its single-select, so this captures the whole intact
+    // multi-selection — and a cancel restores exactly that (Esc reverts the
+    // drag's position change, not any click's selection: a deferred click never
+    // committed one).
     d.pre_drag_selection = capture_selection_snapshot(app);
-    // Playhead follows the grabbed marker (see the ruling at DragState): the
-    // arming plain marker click landed the playhead on this marker, so the
-    // drag tows it by construction. The pre-ride capture feeds the Esc-cancel
+    // Playhead follows the GRABBED marker (see the ruling at DragState): a
+    // single-marker press already landed the playhead on it; a group member's
+    // deferred press did not, so the first motion's focus + follow tows it onto
+    // the grabbed marker. Either way the pre-ride capture feeds the Esc-cancel
     // restore (always applied).
     d.pre_ride_playhead_sample = app.playhead_cursor_sample;
+    // Region as it rests at grab, for the Esc-cancel restore. Only a group drag
+    // can capture an ACTIVE region here — a single-marker press landed the
+    // playhead at press, whose standing region clear dissolved any highlight
+    // before begin_drag ran — so for a single-marker drag this is a no-op by
+    // construction. apply_drag_motion live-tracks an active region to the moving
+    // group's extent; commit_drag re-derives it from the post-commit store.
+    d.pre_drag_region = app.region;
     app.drag = std::move(d);
     viewport.clear_hover_popup();
     return true;
@@ -234,7 +275,14 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         // source frames — delta_min/delta_max fold the absolute data walls
         // with the grabbed marker's viewport clamp at begin_drag; the map is
         // monotone, so clamping the source proposal clamps its painted
-        // position too).
+        // position too). In SOURCE view (warp's home, identity map) the shared
+        // delta bounds clamp every group member at the same delta, so the group
+        // stays exactly rigid. In TARGET view (phase resets) the per-member
+        // source clamp against the SHARED intersection bounds guarantees no
+        // member ever crosses a wall, but near a wall a member may PIN while the
+        // others keep moving — a slight squash of the group in the displayed
+        // domain. ACCEPTED (the wall is the hard invariant; rigidity is the
+        // soft one).
         double new_t = proposed;
         if (new_t < orig + app.drag.delta_min) new_t = orig + app.drag.delta_min;
         if (new_t > orig + app.drag.delta_max) new_t = orig + app.drag.delta_max;
@@ -246,19 +294,26 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     if (any_changed) {
         const bool first_motion = !app.drag.moved;
         app.drag.moved = true;
-        // Selection focus on the press-to-motion edge: re-assert the single
-        // selection on the grabbed marker. The arming flag press already
-        // single-selected it, so this is normally a no-op; it lives here so the
-        // "a real drag focuses the grabbed marker" rule stays with the drag
-        // machinery regardless of how the drag was armed. Delegated to
-        // Selection::set_single_selection — the same helper a marker click uses
-        // — so the rule lives in one place.
+        // Selection focus on the press-to-motion edge. A SINGLE-marker drag
+        // re-asserts the single selection on the grabbed marker (normally a
+        // no-op — the arming press already single-selected it — kept here so
+        // the "a real drag focuses the grabbed marker" rule stays with the drag
+        // machinery). A GROUP drag must NOT collapse the multi-selection;
+        // instead it FOCUSES the grabbed marker without touching membership
+        // (Selection::focus_without_collapse — sets last_selected + dissolves
+        // the shift anchor, no size crossing so no size-2 overlay damage), so
+        // the whole group stays selected and the lane-text run / bottom readout
+        // track the grabbed member.
         if (first_motion) {
-            selection.set_single_selection(app.drag.hit_marker);
+            if (app.drag.dragging_markers.size() <= 1) {
+                selection.set_single_selection(app.drag.hit_marker);
+            } else {
+                selection.focus_without_collapse(app.drag.hit_marker);
+            }
         }
         // Playhead follows the marker, mid-motion: slide the resting cursor
-        // playhead to the grabbed marker's live proposed position (the drag is
-        // single-marker, so moveable_times[0] is the grabbed one). Target
+        // playhead to the GRABBED marker's live proposed position
+        // (moveable_times[grabbed_k] — [0] for a single-marker drag). Target
         // view maps the free double through displayed_or_live_target_map —
         // the SAME basis the DragOverlay paints the flag through, so the
         // playhead tracks the flag in lockstep (mid-motion is paint
@@ -269,11 +324,13 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         // field regardless, so this call could not disturb a running
         // scanner even if one existed. The motion-clamped proposal stays
         // inside the visible strip, so no viewport scroll occurs.
-        if (!app.drag.moveable_times.empty()) {
-            const double proposed = app.drag.moveable_times[0];
+        const bool target_domain = active_display_context(app, audio).domain !=
+            GuiDisplayDomain::Source;
+        const int gk = app.drag.grabbed_k;
+        if (gk >= 0 && gk < static_cast<int>(app.drag.moveable_times.size())) {
+            const double proposed = app.drag.moveable_times[gk];
             int64_t sample;
-            if (active_display_context(app, audio).domain !=
-                GuiDisplayDomain::Source) {
+            if (target_domain) {
                 sample = static_cast<int64_t>(std::nearbyint(
                     map_source_to_target(
                         proposed, displayed_or_live_target_map(app, audio))));
@@ -282,6 +339,42 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
             }
             viewport.move_playhead_to(sample);
         }
+        // Region live-tracking (group drag only — a single-marker press landed
+        // at press, whose standing region clear dissolved any highlight before
+        // begin_drag ran, so app.region.active is false here for those). Retrack
+        // the active region to the moving group's live extent: min/max over all
+        // moveable_times (SCAN — cheap and assumption-free; the two-hop is
+        // monotone so order actually survives, but the per-member wall clamps can
+        // tie values and a scan needs no such proof), each endpoint mapped
+        // exactly as the playhead follow above (identity in source view, through
+        // displayed_or_live_target_map otherwise — the paint basis, mid-motion
+        // being paint coherence), std::nearbyint, then clamp_playhead_to_live_
+        // domain (region endpoints hold PLAYABLE live-domain frames, the standing
+        // invariant every former clamps through). invalidate_waveform_area below
+        // already covers the repaint. When the region is inactive, touch nothing
+        // — a programmatic multi-select without a region gains none from a drag.
+        if (app.region.active && !app.drag.moveable_times.empty()) {
+            int64_t lo = 0, hi = 0;
+            bool have = false;
+            for (double proposed : app.drag.moveable_times) {
+                int64_t pos;
+                if (target_domain) {
+                    pos = static_cast<int64_t>(std::nearbyint(
+                        map_source_to_target(
+                            proposed,
+                            displayed_or_live_target_map(app, audio))));
+                } else {
+                    pos = static_cast<int64_t>(std::nearbyint(proposed));
+                }
+                pos = clamp_playhead_to_live_domain(pos, app, audio);
+                if (!have) { lo = hi = pos; have = true; }
+                else { if (pos < lo) lo = pos; if (pos > hi) hi = pos; }
+            }
+            if (have) {
+                app.region.a_frame = lo;
+                app.region.b_frame = hi;
+            }
+        }
         viewport.invalidate_waveform_area();
         viewport.invalidate_top_strip();
     }
@@ -289,14 +382,16 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 
 // Commit the current drag. Caller ensures drag was active. Sets dirty
 // only if the markers actually moved. Playhead rule (drag and nudge,
-// keyboard/mouse counterparts, share it): the playhead follows the grabbed
+// keyboard/mouse counterparts, share it): the playhead follows the GRABBED
 // marker UNCONDITIONALLY (architect 2026-07-23, reversing the 2026-07-20
-// decoupling) — the arming plain marker click landed the playhead on the
-// marker, so it is coincident by construction, and the drag tows it and lands
-// with it here, so a later Space auditions FROM the marker. Every marker click
-// is a land route; Tab and `c` additionally recenter / re-zoom. The lead-in
-// workflow (parking the playhead upstream) is supplied by the coming scrub
-// surface instead.
+// decoupling) — the grabbed member (grabbed_k) is the follow / land target.
+// For a single-marker drag the arming click already landed the playhead on it;
+// for a GROUP drag the deferred press did not, so the drag's first motion tows
+// the playhead onto the grabbed member — either way it lands with the grabbed
+// marker here, so a later Space auditions FROM it. Every marker click is a land
+// route; Tab and `c` additionally recenter / re-zoom. The lead-in workflow
+// (parking the playhead upstream) is supplied by the coming scrub surface
+// instead.
 //
 // Write-back step: the live store was untouched throughout motion (the
 // proposed positions lived in app.drag.moveable_times and paint read
@@ -393,12 +488,13 @@ void MarkerDragOps::commit_drag() {
                 m->time_frame = new_t;
             }
         }
-        // The drag may have carried the marker across neighbors; restore
-        // time order and remap the index-shaped state — the selection
-        // (collapsed to the grabbed marker at first motion) follows the
-        // marker to its new slot. The drag state's own held indices are
+        // The drag may have carried markers across neighbors; restore
+        // time order and remap the index-shaped state — the selection (the
+        // single grabbed marker, or the whole group of a group drag) follows
+        // the markers to their new slots. The drag state's own held indices are
         // remapped too, though they are discarded by the wholesale reset
-        // below.
+        // below (grabbed_k, a vector position not a store index, needs no
+        // remap — see app_state.cpp).
         if (phase_reset) {
             remap_marker_indices_after_reorder(
                 app,
@@ -408,16 +504,21 @@ void MarkerDragOps::commit_drag() {
                 app, reorder_markers_by_time(app.warpmarkers.markers_mut()));
         }
     }
-    // Capture the grabbed marker's committed frame into a local BEFORE the
-    // wholesale DragState reset below discards it. The playhead lands regardless
-    // of net_changed: a wander-back drag must land the playhead exactly back on
-    // the marker (original_times[0]), erasing any mid-motion rounding drift from
-    // apply_drag_motion's paint-basis moves. The empty guards cover a
-    // degenerate drag with no moveable marker.
-    const bool land_playhead =
-        (net_changed ? !committed.empty() : !app.drag.original_times.empty());
+    // Capture the GRABBED marker's committed frame into a local BEFORE the
+    // wholesale DragState reset below discards it — the grabbed_k slot, not [0]:
+    // a group drag's grabbed member may sit anywhere in the ascending vectors,
+    // and the playhead lands on IT (== [0] for a single-marker drag). The land
+    // runs regardless of net_changed: a wander-back drag must land the playhead
+    // exactly back on the grabbed marker (original_times[grabbed_k]), erasing any
+    // mid-motion rounding drift from apply_drag_motion's paint-basis moves. The
+    // bounds guards cover a degenerate drag with no moveable marker and a
+    // defensive out-of-range grabbed_k.
+    const int gk = app.drag.grabbed_k;
+    const bool land_playhead = net_changed
+        ? (gk >= 0 && gk < static_cast<int>(committed.size()))
+        : (gk >= 0 && gk < static_cast<int>(app.drag.original_times.size()));
     const int64_t ridden_final_frame = !land_playhead ? 0
-        : (net_changed ? committed[0] : app.drag.original_times[0]);
+        : (net_changed ? committed[gk] : app.drag.original_times[gk]);
     std::vector<GuiWarpMarker>    snap_w =
         std::move(app.drag.pre_drag_snapshot);
     std::vector<GuiPhaseResetMarker> snap_t =
@@ -451,6 +552,21 @@ void MarkerDragOps::commit_drag() {
     if (land_playhead) {
         viewport.move_playhead_to(
             source_frame_to_active_domain(app, audio, ridden_final_frame));
+    }
+    // Region re-derive (GROUP drag only — a single-marker drag never has an
+    // active region here, its press cleared it). apply_drag_motion live-tracked
+    // the region to the moving group during motion; snap it back to the RESTING
+    // extent now, re-derived from the POST-commit, reordered/remapped selection
+    // (still the whole group — the drag focused it without collapsing
+    // membership). Runs REGARDLESS of net_changed: a wander-back group drag also
+    // moved the region live and must restore it to the resting extent.
+    // set_region_to_selection_extent is the same Direction-B owner the
+    // multi-select clicks use; here it MAINTAINS an already-active highlight
+    // through the store mutation rather than creating one. app.region survives
+    // the DragState reset (it lives on AppState), so this reads the tracked-live
+    // active flag correctly.
+    if (app.region.active) {
+        set_region_to_selection_extent(app, audio, viewport);
     }
     // No synchronous re-warp at commit: a marker drag can no longer change the
     // displayed target plate. Warp marker drags author in warp's SOURCE home
