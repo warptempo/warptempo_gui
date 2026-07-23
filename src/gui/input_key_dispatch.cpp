@@ -468,10 +468,11 @@ void GuiInputHandler::cancel_active_drags() {
     // launched audition keeps playing, Space remains the sole stop.)
     // The region drag IS a cancel: unlike the strip drag it restores the region
     // to how it rested at arm (the pre-drag snapshot), then ends the gesture.
-    // It also DROPS the selection (Direction A of the coupling): the press
-    // deselected all, and the drag's live selection dies with the cancelled
-    // drag — there is no pre-press selection snapshot to restore, and the
-    // press's deselect was the committed act (architect 2026-07-23).
+    // The clear_selection is belt-and-braces under SELECTION-FLOWS-DOWNWARD-ONLY
+    // (architect 2026-07-23): the drag left the selection EMPTY (the region no
+    // longer selects its contents), so this is a harmless no-op on an already-
+    // empty selection — the press's deselect-all was the committed act, and there
+    // is no pre-press selection snapshot to restore.
     if (app.region_drag.active) {
         app.region = app.region_drag.pre_region;
         app.region_drag = RegionDragState{};

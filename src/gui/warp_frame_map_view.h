@@ -22,12 +22,16 @@
 // never-built and kick the user back to source view with the popup. Callers
 // in target view route this through compute_flag_hit_rects / render_flags /
 // popup-hit helpers so hit-test math and paint stay in sync.
+// quiet forwards to resolve_warp_markers_for_render: true suppresses every
+// normalization stderr line, ONLY for hypothetical (never-live) builds — the
+// group tempo drag's bisection candidates. Live builds stay loud (default).
 std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     const std::vector<GuiWarpMarker>& markers,
     double scale,
     int sample_rate,
     long total_frames,
-    std::string* error_out = nullptr);
+    std::string* error_out = nullptr,
+    bool quiet = false);
 
 struct AppState;
 

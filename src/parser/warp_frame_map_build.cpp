@@ -189,7 +189,8 @@ std::vector<WarpMarker> normalized_surviving_markers(
 
 std::vector<MarkerForRender>
 resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
-                                long sample_rate, long total_frames) {
+                                long sample_rate, long total_frames,
+                                bool quiet) {
     // Normalization pipeline: stages 1-5 build a normalized WarpMarker
     // intermediate, stage 6 emits MarkerForRender. Ambiguity resolves to
     // tempo 1.00 with one stderr line per affected timestamp, printed on
@@ -203,7 +204,7 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
     // Stages 1-3 — the shared projection above (survivor filter,
     // exact-coincidence collapse, frame-0 seed), with the stderr lines on.
     std::vector<WarpMarker> norm = normalized_surviving_markers(
-        src, sample_rate, /*emit_stderr=*/true, nullptr);
+        src, sample_rate, /*emit_stderr=*/!quiet, nullptr);
 
     // Stage 4 — pass materialization through the ref-opaque inheritance
     // walk (resolve_inherited_tempo / resolve_inherited_tempo_scale below,
@@ -241,7 +242,7 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
             p.tempo_scale    = pr.scale;
             // label_def survives materialization: a `pass:LABEL` def is
             // concrete from here on, so stage 5 measures it like any owner.
-            if (pr.from_ref) {
+            if (pr.from_ref && !quiet) {
                 std::fprintf(stderr,
                     "pass marker at %s inherits from a label ref; "
                     "renders as tempo 1.00\n",
@@ -310,12 +311,14 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
             WarpMarker plain;  // defaults: enabled 1.00 owner, no labels
             plain.time_frame = norm[i].time_frame;
             norm[i] = plain;
-            std::fprintf(stderr,
-                "label reference %s at %s %s; renders as tempo 1.00\n",
-                name.c_str(),
-                format_timestamp(
-                    static_cast<double>(plain.time_frame) / sr_d).c_str(),
-                reason);
+            if (!quiet) {
+                std::fprintf(stderr,
+                    "label reference %s at %s %s; renders as tempo 1.00\n",
+                    name.c_str(),
+                    format_timestamp(
+                        static_cast<double>(plain.time_frame) / sr_d).c_str(),
+                    reason);
+            }
         }
     }
 

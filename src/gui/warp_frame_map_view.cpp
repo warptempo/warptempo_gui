@@ -23,7 +23,8 @@ std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     double scale,
     int sample_rate,
     long total_frames,
-    std::string* error_out) {
+    std::string* error_out,
+    bool quiet) {
     // Trim is render-time, not view-time — target view paints the WHOLE song,
     // and build_warp_frame_map builds the whole-song map, matching the
     // paint_handler construction so hit-test math and waveform paint walk the
@@ -38,7 +39,7 @@ std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     // identity state.
     if (error_out) error_out->clear();
     auto resolved = resolve_warp_markers_for_render(
-        slice_to_warp_markers(markers), sample_rate, total_frames);
+        slice_to_warp_markers(markers), sample_rate, total_frames, quiet);
     auto r = build_warp_frame_map(
         resolved, scale, sample_rate, total_frames);
     if (!r) {

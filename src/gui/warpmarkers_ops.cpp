@@ -1,6 +1,7 @@
 #include "warpmarkers_ops.h"
 
 #include "audio.h"
+#include "input_handler.h"      // set_region_to_selection_extent (group step)
 #include "warp_frame_map_build.h"
 #include "warp_frame_map_view.h"
 #include "target_render.h"
@@ -597,6 +598,15 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
             viewport.move_playhead_to(source_frame_to_active_domain(
                 app, audio, app.warpmarkers.markers()[f].time_frame));
         }
+        // Region follows the images (architect 2026-07-23): the group step moved
+        // the selected markers' target IMAGES (tempos changed, source frames did
+        // not), so an active extent region re-derives to their new extent. Under
+        // selection-flows-downward-only an active region here IS the selection
+        // extent, so set_region_to_selection_extent lands it on the post-step
+        // images. Same target-view gate as the re-land; source view needs nothing
+        // (identity domain — no image moved).
+        if (app.region.active)
+            set_region_to_selection_extent(app, audio, viewport);
     }
     target_render.trigger();
 }

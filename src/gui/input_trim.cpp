@@ -447,16 +447,17 @@ void GuiInputHandler::commit_trim_drag() {
     app.trim_drag = TrimDragState{};
 }
 
-// The lane-click model's selection<->trim coupling (architect 2026-07-23). Both
-// bounds set -> the region highlight and the marker selection both take the trim
-// window: region = the window's active-domain extent (each source bound through
-// source_frame_to_active_domain, clamped to a playable frame like every other
-// region former), selection = the active-column markers contained in that same
-// active-domain span (select_contained_in_span, which owns the top-strip /
-// timestamp damage and clears the shift-range anchor). Bounds may be crossed
-// mid-drag, so normalize lo/hi (the map is monotone). Lone / no trim -> no window
-// -> clear both the region and the selection (the window is gone). Read-only-safe
-// (region + selection are navigation). The playhead is never touched.
+// The lane-click model's trim<->REGION coupling (architect 2026-07-23; amended
+// to region-only, SELECTION FLOWS DOWNWARD ONLY). Trim is region-related — the
+// region sets the trim — so this follows the same downward-only rule: TRIM
+// DOESN'T SELECT MARKERS, ONLY THE REGION. The marker SELECTION is the master
+// state; trim gestures never touch it, exactly as they never touch the PLAYHEAD.
+// Both bounds set -> the region takes the trim window's active-domain extent
+// (each source bound through source_frame_to_active_domain, clamped to a playable
+// frame like every other region former; bounds may be crossed mid-drag, so
+// normalize lo/hi, the map is monotone). Lone / no trim -> no window -> clear the
+// REGION only, leaving the selection alone. Read-only-safe (the region is
+// navigation). The playhead and the selection are never touched.
 void GuiInputHandler::sync_highlight_to_trim_window() {
     if (app.trim.has_begin && app.trim.has_end) {
         const int64_t a = clamp_playhead_to_live_domain(
@@ -470,17 +471,15 @@ void GuiInputHandler::sync_highlight_to_trim_window() {
         app.region.active  = true;
         app.region.a_frame = lo;
         app.region.b_frame = hi;
-        selection.select_contained_in_span(lo, hi);
     } else {
-        // No window (lone / no trim): clear the coupled highlight + selection.
-        // A LONE bound still paints its chip, stem, and one-sided out-of-trim
-        // dim — a bright completed-window span that can READ as a highlight —
-        // and the cursor playhead stays painted beside it. That is deliberate:
-        // the wash<->cursor exclusivity (paint_playheads) is scoped to the
-        // REGION highlight, and a half-authored trim has no window to
-        // highlight (the R4 no-window rule).
+        // No window (lone / no trim): clear the REGION only (the selection is
+        // untouched — trim never mutates it). A LONE bound still paints its chip,
+        // stem, and one-sided out-of-trim dim — a bright completed-window span
+        // that can READ as a highlight — and the cursor playhead stays painted
+        // beside it. That is deliberate: the wash<->cursor exclusivity
+        // (paint_playheads) is scoped to the REGION highlight, and a
+        // half-authored trim has no window to highlight (the R4 no-window rule).
         app.region = RegionState{};
-        selection.clear_selection();
     }
     viewport.invalidate_waveform_area();
 }

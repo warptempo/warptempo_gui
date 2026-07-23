@@ -135,10 +135,12 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // click's would, clearing the wash and the split playhead (the cursor playhead
 // returns when the region deactivates, which the same damage covers). Called
 // from both region-drag end points (release and button-lost). Only the REST is
-// gated — the live mid-drag extension paints slivers freely. A dissolved region
-// also DROPS the drag's live selection (Direction A of the coupling): the
-// press's deselect-all intent stands, so a jitter click must not leave a
-// one-marker selection behind (architect 2026-07-23).
+// gated — the live mid-drag extension paints slivers freely. The clear_selection
+// is belt-and-braces: under SELECTION-FLOWS-DOWNWARD-ONLY (architect 2026-07-23)
+// the drag leaves the selection EMPTY throughout (the region no longer selects
+// its contents), so on a dissolved sliver this clear is a harmless no-op on an
+// already-empty selection — kept so the press's deselect-all intent stands
+// regardless of any future path that might seed a selection mid-drag.
 void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
                                     Viewport& viewport, Selection& selection) {
     if (!app.region.active) return;
@@ -726,9 +728,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // press FORMS a region waveform-wide (from the playhead, or a marker
         // DEMOTE that clears the selection; see the waveform block below) — so
         // no marker scan runs on the waveform at all (the invisible stem is
-        // not a grab target). The plain DRAG does live-select the span's markers
-        // (Direction A of the coupling), but by CONTAINMENT of the active-domain
-        // span, not a stem hit. Trim bounds are grabbed only by their top-strip chips /
+        // not a grab target). The plain DRAG never selects markers either
+        // (SELECTION FLOWS DOWNWARD ONLY, architect 2026-07-23 — the region no
+        // longer selects its contents; it leaves the selection empty).
+        // Trim bounds are grabbed only by their top-strip chips /
         // the inter-chip bridge on a PLAIN chip-row press (route_trim_chip_press
         // below); a click over a bound's waveform stem is an ordinary waveform
         // click (the stem grab retired), so no trim hit test runs on the
@@ -1960,10 +1963,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (rel >= area.w) rel = area.w - 1;
         const int64_t far_frame = clamp_playhead_to_live_domain(
             playhead_frame_at_click_column(app, audio, rel), app, audio);
-        // Column-change gate: the span (and thus its contained selection)
-        // changes only when the far endpoint moves to a new frame. A same-frame
-        // motion event (sub-pixel jitter within one column) is a no-op — skip
-        // the selection recompute and the repaint. The anchor is fixed for the
+        // Column-change gate: the span changes only when the far endpoint moves
+        // to a new frame. A same-frame motion event (sub-pixel jitter within one
+        // column) is a no-op — skip the repaint. The anchor is fixed for the
         // gesture, so the far endpoint alone decides the span. On the first
         // extend event the arm cleared the region (active == false), so this
         // proceeds and seeds it.
@@ -1971,15 +1973,15 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         app.region.active  = true;
         app.region.a_frame = app.region_drag.anchor_frame;
         app.region.b_frame = far_frame;
-        // Direction A of the selection<->highlight coupling (architect
-        // 2026-07-23): the live drag SELECTS every active-column marker inside
-        // the span, updating as it extends/shrinks (an emptied span clears;
-        // focus = highest contained index). The helper owns the top-strip /
-        // timestamp damage and clears the shift-range anchor; the waveform-wash
-        // damage stays below.
-        const int64_t lo = std::min(app.region.a_frame, app.region.b_frame);
-        const int64_t hi = std::max(app.region.a_frame, app.region.b_frame);
-        selection.select_contained_in_span(lo, hi);
+        // SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23, retiring the R2
+        // coupling's Direction A): highlighting a region does NOT select the
+        // markers it contains — the press already deselected all and the drag
+        // leaves the selection EMPTY throughout. The reverse direction stands:
+        // when markers ARE selected the region is set to their extent (Direction
+        // B, the multi-select clicks; sync_highlight_to_trim_window for the trim
+        // window). So a drag-formed region always rests with an empty selection —
+        // and whenever 2+ markers rest selected WITH an active region, the region
+        // IS their extent by construction.
         viewport.invalidate_waveform_area();
         return;
     }

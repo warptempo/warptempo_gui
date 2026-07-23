@@ -727,18 +727,18 @@ private:
     bool trim_mouse_x_to_active_frame(int mouse_x, int64_t& out_frame);
     void commit_trim_drag();               // release: trigger render if moved
 
-    // The lane-click model's selection<->trim coupling (architect 2026-07-23):
-    // sync the region highlight AND the marker selection to the CURRENT trim
-    // window. Both bounds set -> region = the window's active-domain extent
-    // (source bounds through source_frame_to_active_domain, clamped playable),
-    // selection = the active-column markers contained in it
-    // (Selection::select_contained_in_span). Otherwise (lone / no trim -> no
-    // window) -> clear the region and the selection. One implementation shared by
+    // The lane-click model's trim<->REGION coupling (architect 2026-07-23,
+    // region-only under SELECTION FLOWS DOWNWARD ONLY): sync the region highlight
+    // to the CURRENT trim window, WITHOUT touching the marker selection — trim is
+    // region-related, so it never selects markers, only the region (the selection
+    // is the master state, exactly as trim never touches the PLAYHEAD). Both
+    // bounds set -> region = the window's active-domain extent (source bounds
+    // through source_frame_to_active_domain, clamped playable). Otherwise (lone /
+    // no trim -> no window) -> clear the region only. One implementation shared by
     // the trim-lane click (R4.5), the ctrl / ctrl+shift bound-set (R4.6/R5), and the trim
-    // drags' motion / release / cancel live-sync (R7), so window, highlight, and
-    // selection can never drift. Navigation-class (region + selection are
-    // navigation), so read-only-safe. Owns its own damage (waveform wash +
-    // top-strip/timestamp via the selection helpers). Never touches the playhead.
+    // drags' motion / release / cancel live-sync (R7), so window and highlight can
+    // never drift. Navigation-class (the region is navigation), so read-only-safe.
+    // Owns its own waveform-wash damage. Never touches the playhead or selection.
     void sync_highlight_to_trim_window();
 
     // R4.6: set ONE trim bound (begin or end) at the clicked column — the

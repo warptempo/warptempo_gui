@@ -1172,10 +1172,16 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
                 copy[pp].tempo_cents = copy[pp].tempo_cents + d;
             }
             std::string err;
+            // quiet=true: these are HYPOTHETICAL candidate builds (never-live
+            // states probed by the bisection); their normalization lines must not
+            // print — the resting store's lines would repeat ~12x per motion event
+            // and envelope warnings would fire for probed candidates that never
+            // commit. The live re-warp below (kick_waveform_sync) stays loud.
             const std::vector<WarpFrameMapSegment> m =
                 build_target_view_warp_frame_map(
                     copy, app.engine_settings.scale, sr,
-                    static_cast<long>(audio.total_frames()), &err);
+                    static_cast<long>(audio.total_frames()), &err,
+                    /*quiet=*/true);
             if (!err.empty()) return false;
             out = map_source_to_target(grabbed_src, m);
             return true;
@@ -1251,6 +1257,17 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     // the cursor field, so it could not touch one regardless.
     viewport.move_playhead_to(
         source_frame_to_active_domain(app, audio, mv[mi].time_frame));
+    // Region follows the images (architect 2026-07-23): a group tempo edit moves
+    // the selected markers' target IMAGES (tempos change, source frames don't), so
+    // an active extent region must re-derive to their new extent — like the group
+    // POSITION drag's region live-track, but through the images. Under selection-
+    // flows-downward-only an active region here implies region == selection
+    // extent, so re-deriving from the post-commit live map (set_region_to_
+    // selection_extent) lands it exactly. Source frames unmoved, so this is a pure
+    // image re-derive; the gate matches the playhead follow's (an inactive region
+    // is untouched).
+    if (app.region.active)
+        set_region_to_selection_extent(app, audio, viewport);
     // The sync render's damage stops at the waveform's bottom edge; the
     // bottom strip is the one surface it does not cover (the dragged
     // marker's pass/ref readout resolves through the predecessor, and a
@@ -1275,6 +1292,10 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
 // selection member the land put it on at press — and a later Space would audition
 // from the wrong marker. For a moved drag this is a same-value repeat of the last
 // event's follow (harmless). Esc-cancel still restores the pre-ride playhead.
+// No region re-derive here: the region follows the images per changed event in
+// apply_tempo_drag_motion, so the last committed event already landed it on the
+// final extent (a walled / zero-commit drag never moved the images, so its
+// resting region is still the pre-drag extent).
 void MarkerDragOps::end_tempo_drag() {
     if (!app.tempo_drag.active) return;
     const auto& mv = app.warpmarkers.markers();
@@ -1337,6 +1358,15 @@ void MarkerDragOps::cancel_tempo_drag() {
     }
     if (restored) viewport.kick_waveform_sync();
     viewport.move_playhead_to(app.tempo_drag.pre_ride_playhead_sample);
+    // Region follows the restored images (architect 2026-07-23): the cancel put
+    // the selection (the pre-drag group, via restore_selection_snapshot) and the
+    // participant tempos — hence every image — back, so re-deriving the extent
+    // lands the region EXACTLY on its pre-drag extent. NO captured pre_drag_region
+    // field is needed here (unlike the position drag, whose region can transiently
+    // diverge mid-motion from moveable_times): the region is a pure function of
+    // the store + selection, and both are now restored. Gated on region.active.
+    if (app.region.active)
+        set_region_to_selection_extent(app, audio, viewport);
     app.tempo_drag = TempoDragState{};
     viewport.invalidate_waveform_area();
     viewport.invalidate_top_strip();

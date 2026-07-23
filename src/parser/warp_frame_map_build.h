@@ -217,9 +217,15 @@ std::vector<bool> warp_markers_render_keep_mask(
 // label_ref_implied_effective_tempo helper the display's band verdict
 // uses, in one fixed operation order, because the envelope edges are
 // inclusive and IEEE-reassociated equivalents can disagree exactly there.
+// quiet exists ONLY for HYPOTHETICAL evaluations (states that are never
+// committed): when true, every normalization stderr line is suppressed. Live
+// resolves must stay LOUD (the default) — the standing one-line-per-timestamp-
+// per-resolve signal. The sole quiet caller is the group tempo drag's bisection,
+// which resolves ~12 never-live candidate stores per motion event.
 std::vector<MarkerForRender>
 resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
-                                long sample_rate, long total_frames);
+                                long sample_rate, long total_frames,
+                                bool quiet = false);
 
 // Backward inheritance walk over parser-domain markers: from `index`, scan
 // earlier markers for the nearest that OWNS its tempo — tempo_inherits ==
