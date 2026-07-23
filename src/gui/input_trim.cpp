@@ -205,9 +205,10 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
         if (trim_mouse_x_to_source_frame(mouse_x, anchor))
             app.trim_drag.anchor_frame = anchor;
     }
-    // The press only captures drag state; trim drags never touch selection at
-    // all (trim is not part of the selection system). A press that never moves
-    // commits nothing.
+    // The BEGIN only captures drag state — no selection write here; the
+    // selection + region highlight sync to the window at motion/commit (the
+    // lane-click coupling). A press that never moves commits no bound change
+    // (its motionless release runs the R4.5 click sync instead).
 }
 
 void GuiInputHandler::update_trim_drag(int mouse_x) {
@@ -540,7 +541,9 @@ void GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
 //     like every trim gesture, never moves the playhead), so it always arms as
 //     Begin structurally.
 // Both arms presuppose the full pair (the gate above): a lone bound arms
-// nothing — it is gesture-inert. Trim drags never touch selection.
+// nothing — it is gesture-inert. The drags sync the selection + region
+// highlight to the moving window (the lane-click coupling,
+// sync_highlight_to_trim_window); the PLAYHEAD is what they never touch.
 //
 // The bridge-region bound columns come from displayed_or_live_target_map — the
 // map the on-screen chips were painted with on the LAST COMMITTED frame (the

@@ -1434,8 +1434,20 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // rebuild plus the predictor resync. A lost button finalizes like release.
     if (app.strip_drag.active) {
         if (!mods.primary_button_held) {     // button lost -> end like release
-            if (app.strip_drag.moved)
+            if (app.strip_drag.moved) {
                 apply_strip_drag_at(mouse_x, mouse_y, /*final_event=*/true);
+            } else if (!app.strip_drag.double_click_seed) {
+                // R3.4 on the lost-button end: a motionless ctrl-exact WAVEFORM
+                // press (double_click_seed == false, the waveform origin) is the
+                // click half of that surface and drops the marker selection here
+                // too — the lost-button end performs the same click action as a
+                // clean release, so the same physical click cannot rest
+                // differently depending on which path ended it. A motionless
+                // zoom-row press (seed == true) still seeds NOTHING on this
+                // abnormal end (unlike the clean release), matching the
+                // double_click clear below.
+                selection.clear_selection();
+            }
             app.strip_drag = StripDragState{};
             // An abnormal termination (button lost, not a clean release) seeds
             // no double-click candidate and drops any pending one.
@@ -1547,7 +1559,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     if (app.pending_trim_drag.active) {
         viewport.clear_hover_popup();
         if (!mods.primary_button_held) {   // button lost -> just the click
+            // The motionless chip/bridge press is the trim-lane CLICK (R4.5):
+            // run the same select+highlight sync the clean release does, so the
+            // same physical click cannot rest differently depending on which
+            // path ended it. The pending only arms on the full pair (writable),
+            // so the window exists.
             app.pending_trim_drag = PendingTrimDrag{};
+            sync_highlight_to_trim_window();
             return;
         }
         if (std::max(std::abs(mouse_x - app.pending_trim_drag.press_x),

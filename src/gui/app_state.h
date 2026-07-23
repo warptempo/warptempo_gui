@@ -339,8 +339,13 @@ struct UndoHistory {
 // replace the highlight as the visual, so re-trimming needs a fresh drag —
 // Ableton persists its loop region but we deliberately do not); no region means
 // x clears the trim instead, and this highlight is inactive there by definition.
-// NEVER serialized, and outside the selection and undo systems entirely (a
-// transient visual). Endpoints are ACTIVE-DOMAIN frames (source frames in source
+// NEVER serialized, and stored independently of the selection and undo systems
+// (a transient visual — no undo entry, its own field, not derived from the
+// selection set). The isolation is STORAGE-LEVEL only: the two systems' GESTURES
+// are coupled (the multi-select clicks set this highlight to the selection's
+// extent, and the trim-lane clicks + trim drags sync BOTH this highlight and the
+// selection to the trim window — sync_highlight_to_trim_window). Endpoints are
+// ACTIVE-DOMAIN frames (source frames in source
 // view, target frames in target view), stored in drag order and normalized
 // lo/hi at READ time, so the span survives pan/zoom mid-drag and at rest.
 // Cleared by a region-trimming x, on file load, the A/B tab switch, the S/T audio-view switch (the
@@ -349,7 +354,9 @@ struct UndoHistory {
 // resting highlight at mouse-down, before it knows whether the gesture is a
 // click or a fresh region drag; at on_button_press via arm_region_drag_at — a
 // lower-half scrub press leaves the region alone). The W/P marker-column switch
-// does NOT clear it — the region is not marker-related.
+// does NOT clear it — the STORED highlight survives the column flip (a
+// storage-level independence; the coupling that keeps it agreeing with the
+// selection/trim window is a gesture-time sync, not a stored derivation).
 struct RegionState {
     bool    active  = false;
     int64_t a_frame = 0;   // the press-anchor endpoint
