@@ -422,9 +422,10 @@ void GuiInputHandler::cancel_active_drags() {
         viewport.invalidate_waveform_area();
         viewport.invalidate_top_strip();
         viewport.invalidate_timestamp_area();
-        // R7 cancel-sync: the drag live-synced the highlight + selection to the
-        // moving window; the bounds are back, so re-sync against the RESTORED
-        // window (the highlight/selection follow the window back to its origin).
+        // R7 cancel-sync: the drag live-synced the REGION highlight to the moving
+        // window; the bounds are back, so re-sync against the RESTORED window (the
+        // region follows the window back to its origin; the selection is never
+        // touched).
         sync_highlight_to_trim_window();
         // A bound-set-armed drag (set_click) dispatched a target PREVIEW at the
         // press for the click-set bounds (set_trim_bound_at_click's trigger), so
@@ -524,12 +525,13 @@ void GuiInputHandler::cancel_active_drags() {
     }
     // A pending trim drag (a chip-row press whose drag never began) is just
     // disarmed: a PLAIN chip-drag pending mutated nothing — the trim-lane CLICK
-    // action (the R4.5 select+highlight sync) is deferred to the motionless
+    // action (the R4.5 region-highlight sync) is deferred to the motionless
     // release / lost-button paths, so an Esc here ABANDONS that deferred click
     // rather than performing it, and there is nothing to revert. R3: a
     // BOUND-SET-armed pending (set_click) already mutated a bound at the press,
     // so an Esc undoes the whole gesture — restore the pre-press pair and re-sync
-    // the coupled highlight/selection to the rolled-back window.
+    // the coupled REGION highlight to the rolled-back window (the selection is
+    // never touched).
     if (app.pending_trim_drag.active) {
         if (app.pending_trim_drag.set_click) {
             app.trim.begin_frame = app.pending_trim_drag.preset_begin_frame;

@@ -243,9 +243,14 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
         else { if (pos < lo) lo = pos; if (pos > hi) hi = pos; }
     }
     if (!have) return;   // every selected index was stale (degenerate)
-    app.region.active  = true;
-    app.region.a_frame = lo;
-    app.region.b_frame = hi;
+    app.region.active         = true;
+    app.region.a_frame        = lo;
+    app.region.b_frame        = hi;
+    // The ONE site that SETS ownership: this region IS the selection's extent, so
+    // the image-follow gestures may track it. Every legitimate extent re-derive
+    // (the multi-select clicks, the position-drag commit, the tempo follows)
+    // routes through here, so ownership self-maintains.
+    app.region.selection_owned = true;
     viewport.invalidate_waveform_area();
 }
 
@@ -259,15 +264,16 @@ bool GuiInputHandler::handle_escape_selection_region() {
     // playhead, and a region is already the LOWER rung, so an active region
     // collapses STRAIGHT to the playhead — never into a subregion. This is why
     // region.active is tested FIRST, regardless of selection: the old rung (b)
-    // re-derived the region from the selection extent, which SHRANK a drag-formed
-    // region (whose contained markers the coupling had selected) to the markers'
-    // subregion. Consequence (architect-flagged, cheap to re-rule): a click-made
-    // multi-selection rests with its extent region active (Direction B), so it now
-    // collapses to the playhead in ONE Esc rather than two.
+    // re-derived the region from the selection extent, which SHRANK an active
+    // region to the selection's subregion. Consequence (architect-flagged, cheap
+    // to re-rule): a click-made multi-selection rests with its extent
+    // (selection-owned) region active, so it now collapses to the playhead in ONE
+    // Esc rather than two.
     if (app.region.active) {
-        // Region active: collapse to its start. The region is the stretched-out
-        // playhead, so clear it AND the selection (a drag-formed region's coupled
-        // selection dies with it) and land the playhead at the lo bound.
+        // Region active: collapse to its start (ownership-BLIND — any active
+        // region collapses). The region is the stretched-out playhead, so clear
+        // it AND the selection (a click-made multi-selection's coupled extent
+        // region dies with the selection here) and land the playhead at lo.
         const int64_t lo = std::min(app.region.a_frame, app.region.b_frame);
         app.region = RegionState{};
         selection.clear_selection();
@@ -978,14 +984,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 (y >= chip_row.y && y < chip_row.y + chip_row.h);
             if (!shift && in_chip_row) {
                 // Plain chip-row press (R4.5). Read-only cannot ARM a trim drag,
-                // but the select+highlight is navigation, so it runs directly
+                // but the region-highlight sync is navigation, so it runs directly
                 // there (route_trim_chip_press would claim-without-arming and
                 // skip it). In a writable tab a chip/bridge hit arms the drag (a
                 // motionless release then runs this same R4.5 click action at
                 // on_button_release), and an UNCLAIMED chip-row spot runs the
-                // R4.5 select+highlight now. With BOTH bounds set the window is
-                // taken; lone/no trim is a silent no-op. Either way the chip row
-                // consumes the press — it never falls to the marker handling.
+                // R4.5 region-highlight sync now. With BOTH bounds set the window
+                // is taken; lone/no trim is a silent no-op. Either way the chip
+                // row consumes the press — it never falls to the marker handling.
                 if (active_view_state(app).read_only) {
                     if (app.trim.has_begin && app.trim.has_end)
                         sync_highlight_to_trim_window();
@@ -1408,6 +1414,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 app.region.active  = true;
                 app.region.a_frame = endpoint;
                 app.region.b_frame = click_frame;
+                // The shift-click former / demote DROPS the selection, so this
+                // region is NOT selection-owned — image-follow gestures skip it.
+                app.region.selection_owned = false;
                 viewport.invalidate_waveform_area();
                 return;
             }
@@ -1670,9 +1679,10 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     if (app.pending_trim_drag.active) {
         // The pending trim drag never crossed the threshold: a motionless
         // chip/bridge press. Under the lane-click model that is the trim-lane
-        // CLICK (R4.5) — select + highlight the trim window. The pending only
-        // arms on the full pair (route_trim_chip_press gates it), so the window
-        // exists; the sync takes it. (A crossed pending became app.trim_drag and
+        // CLICK (R4.5) — highlight the trim window with the REGION (the selection
+        // is never touched). The pending only arms on the full pair
+        // (route_trim_chip_press gates it), so the window exists; the sync takes
+        // it. (A crossed pending became app.trim_drag and
         // commits through the branch above; read-only never armed a pending, so
         // this branch is writable-only — the read-only R4.5 click ran at press.)
         app.pending_trim_drag = PendingTrimDrag{};
@@ -1865,7 +1875,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         viewport.clear_hover_popup();
         if (!mods.primary_button_held) {   // button lost -> just the click
             // The motionless chip/bridge press is the trim-lane CLICK (R4.5):
-            // run the same select+highlight sync the clean release does, so the
+            // run the same region-highlight sync the clean release does, so the
             // same physical click cannot rest differently depending on which
             // path ended it. The pending only arms on the full pair (writable),
             // so the window exists.
@@ -1973,15 +1983,20 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         app.region.active  = true;
         app.region.a_frame = app.region_drag.anchor_frame;
         app.region.b_frame = far_frame;
+        // Drag-formed, so NOT selection-owned: the image-follow gestures leave it
+        // alone (it has an empty selection anyway).
+        app.region.selection_owned = false;
         // SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23, retiring the R2
         // coupling's Direction A): highlighting a region does NOT select the
         // markers it contains — the press already deselected all and the drag
         // leaves the selection EMPTY throughout. The reverse direction stands:
-        // when markers ARE selected the region is set to their extent (Direction
-        // B, the multi-select clicks; sync_highlight_to_trim_window for the trim
-        // window). So a drag-formed region always rests with an empty selection —
-        // and whenever 2+ markers rest selected WITH an active region, the region
-        // IS their extent by construction.
+        // when markers ARE selected the region is set to their extent (the
+        // multi-select clicks via set_region_to_selection_extent; the trim window
+        // via sync_highlight_to_trim_window — UNOWNED there). So a drag-formed
+        // region always rests with an empty selection — and whenever 2+ markers
+        // rest selected WITH an active SELECTION-OWNED region, that region IS
+        // their extent by construction (an unowned trim region may rest beside
+        // any selection).
         viewport.invalidate_waveform_area();
         return;
     }

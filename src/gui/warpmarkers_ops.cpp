@@ -237,6 +237,9 @@ void GuiWarpMarkersOps::delete_selected_marker() {
             app.region.active  = true;
             app.region.a_frame = *lo;
             app.region.b_frame = *hi;
+            // The delete demotion drops the deleted markers, so this region is
+            // NOT selection-owned — image-follow gestures skip it.
+            app.region.selection_owned = false;
         }
     }
     undo.push_undo_warp(std::move(pre_state), hint_last);
@@ -600,12 +603,13 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
         }
         // Region follows the images (architect 2026-07-23): the group step moved
         // the selected markers' target IMAGES (tempos changed, source frames did
-        // not), so an active extent region re-derives to their new extent. Under
-        // selection-flows-downward-only an active region here IS the selection
-        // extent, so set_region_to_selection_extent lands it on the post-step
-        // images. Same target-view gate as the re-land; source view needs nothing
-        // (identity domain — no image moved).
-        if (app.region.active)
+        // not), so a SELECTION-OWNED extent region re-derives to their new extent.
+        // Gated on selection_owned: an owned region IS the selection extent
+        // (re-derive it), while an UNOWNED trim-window / drag-formed region is
+        // left in place (snapping it to the selection would break the
+        // trim/highlight coupling). Same target-view gate as the re-land; source
+        // view needs nothing (identity domain — no image moved).
+        if (app.region.active && app.region.selection_owned)
             set_region_to_selection_extent(app, audio, viewport);
     }
     target_render.trigger();

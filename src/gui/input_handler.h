@@ -656,10 +656,10 @@ private:
     // Bare x branches on the highlight (no context-awareness beyond that): a
     // live region trims to it, begin at the span's lo, end at its hi,
     // overwriting any existing bounds, then KEEPS and re-syncs the highlight —
-    // the coupling tail (sync_highlight_to_trim_window) re-derives the region and
-    // the contained selection from the just-set window, so region, selection, and
-    // trim rest coupled (a crossed-collapse dissolve clears all three); no region
-    // clears the trim. Read-only refuses silently before anything, leaving the
+    // the coupling tail (sync_highlight_to_trim_window) re-derives the REGION
+    // (unowned, trim-derived) from the just-set window, so region and trim rest
+    // coupled (a crossed-collapse dissolve clears the region with the window; the
+    // selection is never touched); no region clears the trim. Read-only refuses silently before anything, leaving the
     // region untouched. The sole dispatch entry for the x key; the no-region
     // branch calls handle_trim_clear_both.
     void handle_trim_x();

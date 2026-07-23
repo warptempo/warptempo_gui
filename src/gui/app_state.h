@@ -142,11 +142,15 @@ struct SelectionSnapshot {
 // furthest-selected-marker-to-click, DROPPING the selection), a multi-marker
 // DELETE (demotes to the span of the deleted positions, also a DROP), and the
 // MULTI-SELECT EXTENT: a shift-range or ctrl-toggle click that leaves 2+ markers
-// selected sets the region to the selection's position extent [earliest, latest],
-// so highlight, land, and Space's left-bound launch agree. Consequently a
-// drag-formed region always rests with an EMPTY selection, and whenever 2+
-// markers rest selected WITH an active region the region IS their extent by
-// construction.
+// selected sets the region to the selection's position extent [earliest, latest]
+// (the SELECTION-OWNED region — see selection_owned), so highlight, land, and
+// Space's left-bound launch agree. Consequently a drag-formed region always rests
+// with an EMPTY selection, and whenever 2+ markers rest selected WITH an active
+// SELECTION-OWNED region that region IS their extent by construction — but an
+// UNOWNED region (trim-derived by sync_highlight_to_trim_window, or drag-formed)
+// may rest NEXT TO any selection without being its extent (the ownership bit is
+// what lets the trim/highlight coupling and the image-follow tempo gestures both
+// hold: the follows re-derive only owned regions).
 // Bare x branches on
 // THIS highlight: a live region trims to it and the highlight is KEPT
 // (architect 2026-07-23, reversing the earlier consume — under the coupling
@@ -180,6 +184,23 @@ struct RegionState {
     bool    active  = false;
     int64_t a_frame = 0;   // the press-anchor endpoint
     int64_t b_frame = 0;   // the far (pointer) endpoint
+    // Ownership bit (architect 2026-07-23): true iff the MARKER SELECTION owns
+    // this region — i.e. it was set to the selection's extent, so 2+ selected
+    // with an active selection-owned region ⇒ region == extent by construction.
+    // An UNOWNED region (drag-formed with an empty selection, or trim-derived by
+    // sync_highlight_to_trim_window while a 2+ selection sits beside it) may rest
+    // NEXT TO any selection. SET TRUE in exactly one place —
+    // set_region_to_selection_extent, the Direction-B owner every legitimate
+    // extent re-derive routes through (the multi-select clicks, the position-drag
+    // commit, the tempo follows) — and SET FALSE at every other former (region
+    // drag, shift-click former/demote, delete demotion, trim sync). The
+    // image-follow gestures (position drag live-track + commit re-derive, tempo
+    // drag per-event + cancel re-derive, group step re-derive) run ONLY on an
+    // owned region, so an unowned trim/drag region survives them untouched. Every
+    // wholesale RegionState{} reset (load, navigation clears, the Esc collapse)
+    // drops ownership by the false default. The Esc ladder, Space launch, x, and
+    // navigation clears are ownership-BLIND — they act on any active region.
+    bool    selection_owned = false;
 };
 
 // Marker reposition drag state (begun by a plain flag drag past the shared

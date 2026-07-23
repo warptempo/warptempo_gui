@@ -78,11 +78,12 @@ void GuiInputHandler::handle_trim_clear_both() {
 // always TRIMS to it — begin at the span's lo, end at its hi — overwriting any
 // existing bounds (the new span simply replaces them; x re-trims even over an
 // existing trim) — and the highlight is KEPT (architect 2026-07-23, reversing
-// the 2026-07-20 consume ruling): under the selection<->trim coupling the trim
+// the 2026-07-20 consume ruling): under the trim<->REGION coupling the trim
 // window and the highlight now agree, so after x they coincide — the tail runs
-// sync_highlight_to_trim_window so region, selection, and window rest coupled
-// through the one owner (a crossed-collapse dissolve clears all three
-// together). NO region → x CLEARS the trim via
+// sync_highlight_to_trim_window so the region and window rest coupled through the
+// one owner (an UNOWNED, trim-derived region — the selection is never touched; a
+// crossed-collapse dissolve clears the region with the window). NO region → x
+// CLEARS the trim via
 // handle_trim_clear_both, whose has_begin||has_end guard makes no-trim a natural
 // no-op (nothing to clear, no highlight to clear either — the region is inactive
 // in this branch by definition). Read-only refuses silently BEFORE anything,
@@ -95,8 +96,8 @@ void GuiInputHandler::handle_trim_clear_both() {
 // once) — the map is monotone, so lo/hi order survives — then clamp to the
 // shared [0, total-1] walls. A span collapsing to end <= begin after the snap
 // destroys both bounds via auto_clear_crossed_trim (the standing rule); the
-// coupling sync then clears the highlight and selection with the window. The
-// shared trim commit tail (auto_clear_crossed_trim
+// coupling sync then clears the REGION with the window (the selection is left
+// alone). The shared trim commit tail (auto_clear_crossed_trim
 // then the repaint/trigger, then the coupling sync) mirrors the other trim
 // commits; the playhead is
 // untouched (trim gestures never move it).
@@ -132,10 +133,11 @@ void GuiInputHandler::handle_trim_x() {
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     target_render.trigger();
-    // The coupling tail (architect 2026-07-23): the highlight is KEPT — the
-    // sync re-derives it from the just-set window (and selects the contained
-    // markers), so region, selection, and trim rest coupled through the one
-    // owner; a crossed-collapse dissolve (auto_clear above) clears all three.
+    // The coupling tail (architect 2026-07-23): the highlight is KEPT — the sync
+    // re-derives the REGION (unowned, trim-derived) from the just-set window, so
+    // region and trim rest coupled through the one owner (the selection is never
+    // touched); a crossed-collapse dissolve (auto_clear above) clears the region
+    // with the window.
     sync_highlight_to_trim_window();
 }
 
@@ -217,9 +219,9 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
         if (trim_mouse_x_to_source_frame(mouse_x, anchor))
             app.trim_drag.anchor_frame = anchor;
     }
-    // The BEGIN only captures drag state — no selection write here; the
-    // selection + region highlight sync to the window at motion/commit (the
-    // lane-click coupling). A press that never moves commits no bound change
+    // The BEGIN only captures drag state — no region write here; the region
+    // highlight syncs to the window at motion/commit (the lane-click coupling;
+    // the selection is never touched). A press that never moves commits no bound change
     // (its motionless release runs the R4.5 click sync instead).
 }
 
@@ -291,9 +293,9 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
             // repaints; the playhead stays where it is.
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
-            // R7 live-sync: the highlight + selection track the moving window
-            // (both bounds stay set through the drag; the coupling helper
-            // normalizes crossed bounds and reselects the contained markers).
+            // R7 live-sync: the region highlight tracks the moving window (both
+            // bounds stay set through the drag; the coupling helper normalizes
+            // crossed bounds — the selection is never touched).
             sync_highlight_to_trim_window();
         }
         return;
@@ -364,9 +366,9 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         // repaints; the playhead stays where it is.
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
-        // R7 live-sync: the highlight + selection track the moving window (both
+        // R7 live-sync: the region highlight tracks the moving window (both
         // bounds stay set through the single-bound drag; crossing is normalized
-        // in the coupling helper).
+        // in the coupling helper — the selection is never touched).
         sync_highlight_to_trim_window();
     }
 }
@@ -439,9 +441,10 @@ void GuiInputHandler::commit_trim_drag() {
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         target_render.trigger();
-        // R7 release-sync: a surviving pair re-syncs against the snapped bounds;
-        // a dissolved pair (crossed commit) clears the region + selection (the
-        // window is gone) — the coupling helper owns both outcomes.
+        // R7 release-sync: a surviving pair re-syncs the REGION against the
+        // snapped bounds; a dissolved pair (crossed commit) clears the region (the
+        // window is gone) — the coupling helper owns both outcomes (the selection
+        // is never touched).
         sync_highlight_to_trim_window();
     }
     app.trim_drag = TrimDragState{};
@@ -471,6 +474,12 @@ void GuiInputHandler::sync_highlight_to_trim_window() {
         app.region.active  = true;
         app.region.a_frame = lo;
         app.region.b_frame = hi;
+        // Trim-DERIVED, so NOT selection-owned: a 2+ marker selection may sit
+        // beside this region, but it is NOT that selection's extent — the
+        // image-follow tempo gestures must leave this trim-window highlight in
+        // place (never snap it to the selection extent). This is the ownership
+        // rule that lets the trim/highlight coupling and the tempo follows agree.
+        app.region.selection_owned = false;
     } else {
         // No window (lone / no trim): clear the REGION only (the selection is
         // untouched — trim never mutates it). A LONE bound still paints its chip,
@@ -498,8 +507,8 @@ void GuiInputHandler::sync_highlight_to_trim_window() {
 // both). History-less like every trim mutation; the repaint + trigger tail
 // mirrors the drag release. Read-only refuses silently (trim authoring). The
 // coupling sync runs afterward against whatever the trim now is (the surviving
-// pair -> window highlight + contained selection; a crossed dissolve ->
-// cleared).
+// pair -> the REGION highlight takes the window; a crossed dissolve -> the region
+// cleared; the selection is never touched).
 void GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     if (active_view_state(app).read_only) return;   // trim authoring
     // Adjust-only pair gate (see the header comment): no resting window, no
@@ -529,8 +538,9 @@ void GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     target_render.trigger();
-    // The lane-click coupling: keep the highlight + selection agreeing with the
-    // window (both bounds -> window; a dissolved/lone result -> cleared).
+    // The lane-click coupling: keep the REGION highlight agreeing with the
+    // window (both bounds -> window; a dissolved/lone result -> cleared; the
+    // selection is never touched).
     sync_highlight_to_trim_window();
 }
 
@@ -601,9 +611,9 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 //     like every trim gesture, never moves the playhead), so it always arms as
 //     Begin structurally.
 // Both arms presuppose the full pair (the gate above): a lone bound arms
-// nothing — it is gesture-inert. The drags sync the selection + region
-// highlight to the moving window (the lane-click coupling,
-// sync_highlight_to_trim_window); the PLAYHEAD is what they never touch.
+// nothing — it is gesture-inert. The drags sync the REGION highlight to the
+// moving window (the lane-click coupling, sync_highlight_to_trim_window); the
+// PLAYHEAD and the SELECTION are what they never touch.
 //
 // The bridge-region bound columns come from displayed_or_live_target_map — the
 // map the on-screen chips were painted with on the LAST COMMITTED frame (the

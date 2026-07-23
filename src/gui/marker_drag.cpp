@@ -412,9 +412,13 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         // being paint coherence), std::nearbyint, then clamp_playhead_to_live_
         // domain (region endpoints hold PLAYABLE live-domain frames, the standing
         // invariant every former clamps through). invalidate_waveform_area below
-        // already covers the repaint. When the region is inactive, touch nothing
-        // — a programmatic multi-select without a region gains none from a drag.
-        if (app.region.active && !app.drag.moveable_times.empty()) {
+        // already covers the repaint. Gated on selection_owned (architect
+        // 2026-07-23): the live-track follows ONLY a SELECTION-OWNED region (2+
+        // selected ⇒ region == extent); an unowned trim/drag-formed region rests
+        // untouched, and an inactive region gains nothing from a drag. It writes
+        // a_frame/b_frame only, LEAVING the ownership bit true.
+        if (app.region.active && app.region.selection_owned &&
+            !app.drag.moveable_times.empty()) {
             int64_t lo = 0, hi = 0;
             bool have = false;
             for (double proposed : app.drag.moveable_times) {
@@ -740,10 +744,13 @@ void MarkerDragOps::commit_drag() {
     // moved the region live and must restore it to the resting extent.
     // set_region_to_selection_extent is the same Direction-B owner the
     // multi-select clicks use; here it MAINTAINS an already-active highlight
-    // through the store mutation rather than creating one. app.region survives
-    // the DragState reset (it lives on AppState), so this reads the tracked-live
-    // active flag correctly.
-    if (app.region.active) {
+    // through the store mutation rather than creating one (and re-affirms the
+    // ownership bit). app.region survives the DragState reset (it lives on
+    // AppState), so this reads the tracked-live active flag correctly. Gated on
+    // selection_owned: only a SELECTION-OWNED region followed the drag (an
+    // unowned trim/drag-formed region was never live-tracked, so nothing to snap
+    // back).
+    if (app.region.active && app.region.selection_owned) {
         set_region_to_selection_extent(app, audio, viewport);
     }
     // No synchronous re-warp at commit: a marker drag can no longer change the
@@ -1259,14 +1266,15 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
         source_frame_to_active_domain(app, audio, mv[mi].time_frame));
     // Region follows the images (architect 2026-07-23): a group tempo edit moves
     // the selected markers' target IMAGES (tempos change, source frames don't), so
-    // an active extent region must re-derive to their new extent — like the group
-    // POSITION drag's region live-track, but through the images. Under selection-
-    // flows-downward-only an active region here implies region == selection
-    // extent, so re-deriving from the post-commit live map (set_region_to_
-    // selection_extent) lands it exactly. Source frames unmoved, so this is a pure
-    // image re-derive; the gate matches the playhead follow's (an inactive region
-    // is untouched).
-    if (app.region.active)
+    // a SELECTION-OWNED extent region must re-derive to their new extent — like
+    // the group POSITION drag's region live-track, but through the images. Gated
+    // on selection_owned: an owned region IS the selection extent (re-derive it
+    // via set_region_to_selection_extent, from the post-commit live map), while an
+    // UNOWNED trim-window / drag-formed region is left untouched (it is not the
+    // selection's extent, so snapping it there would break the trim/highlight
+    // coupling — the reported bug). Source frames unmoved, so this is a pure image
+    // re-derive.
+    if (app.region.active && app.region.selection_owned)
         set_region_to_selection_extent(app, audio, viewport);
     // The sync render's damage stops at the waveform's bottom edge; the
     // bottom strip is the one surface it does not cover (the dragged
@@ -1358,14 +1366,18 @@ void MarkerDragOps::cancel_tempo_drag() {
     }
     if (restored) viewport.kick_waveform_sync();
     viewport.move_playhead_to(app.tempo_drag.pre_ride_playhead_sample);
-    // Region follows the restored images (architect 2026-07-23): the cancel put
-    // the selection (the pre-drag group, via restore_selection_snapshot) and the
-    // participant tempos — hence every image — back, so re-deriving the extent
-    // lands the region EXACTLY on its pre-drag extent. NO captured pre_drag_region
-    // field is needed here (unlike the position drag, whose region can transiently
-    // diverge mid-motion from moveable_times): the region is a pure function of
-    // the store + selection, and both are now restored. Gated on region.active.
-    if (app.region.active)
+    // Region follows the restored images (architect 2026-07-23), gated on
+    // selection_owned. For a SELECTION-OWNED region the cancel put the selection
+    // (the pre-drag group, via restore_selection_snapshot) and the participant
+    // tempos — hence every image — back, so re-deriving the extent lands it
+    // EXACTLY on its pre-drag extent: NO captured pre_drag_region field is needed
+    // (the region is a pure function of store + selection, both restored — unlike
+    // the position drag, whose region can transiently diverge mid-motion from
+    // moveable_times). An UNOWNED trim-window / drag-formed region is left
+    // untouched — its bounds never depended on this selection, and the cancel
+    // restored the images anyway, so it correctly survives the Esc (closing the
+    // reported bug where Esc on a walled drag replaced a trim highlight).
+    if (app.region.active && app.region.selection_owned)
         set_region_to_selection_extent(app, audio, viewport);
     app.tempo_drag = TempoDragState{};
     viewport.invalidate_waveform_area();

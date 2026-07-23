@@ -141,6 +141,9 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
             app.region.active  = true;
             app.region.a_frame = *lo;
             app.region.b_frame = *hi;
+            // The delete demotion drops the deleted markers, so this region is
+            // NOT selection-owned — image-follow gestures skip it.
+            app.region.selection_owned = false;
         }
     }
     undo.push_undo_phase_reset(std::move(pre_state), hint_last);
