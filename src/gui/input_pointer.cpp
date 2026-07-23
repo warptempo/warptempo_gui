@@ -1043,9 +1043,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // multi-selection to {hit} before begin_drag could seed the
                     // whole group, so the press holds its fire. The tempo-drag
                     // surface (W + target view) has active_column_authoring_allowed
-                    // false, so it is excluded — tempo stays single-marker and a
-                    // group member press there collapses at press exactly as
-                    // before. Every other plain marker press keeps the immediate
+                    // false, so it is excluded HERE — but it has its OWN group
+                    // deferral in the next branch (an eligible grab on a selected
+                    // member defers likewise, so the group tempo drag seeds intact).
+                    // Every other plain marker press keeps the immediate
                     // single-select + land below.
                     const bool would_arm_reposition =
                         mh.on_flag && !active_view_state(app).read_only &&

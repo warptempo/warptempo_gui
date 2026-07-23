@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <limits>
 #include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -972,27 +973,38 @@ bool MarkerDragOps::begin_tempo_drag(int hit) {
 }
 
 // One motion event: invert the pointer's target-domain position to the GRABBED
-// predecessor tempo that places the grabbed marker's image nearest it, quantize
-// to integer cents, clamp into the tempo bracket — that produces `candidate` —
-// then derive a cents DELTA (candidate - the grabbed predecessor's current
-// cents), group-stop-clamp it into the intersection of every participant's
-// bracket headroom, and — when the clamped delta is nonzero — add it to EVERY
-// participant live with ONE synchronous re-warp (the tempo-step precedent: a
-// committed value edit with displayed == live restored synchronously at the step
-// boundary). Vertical motion is ignored; the solve is ABSOLUTE (pointer x ->
-// tempo), so no press anchor exists and the threshold-crossing event needs no
-// catch-up fold.
+// predecessor tempo that places the grabbed marker's image nearest it, producing
+// a group cents DELTA, group-stop-clamp it into the intersection of every
+// participant's bracket headroom, and — when the clamped delta is nonzero — add
+// it to EVERY participant live with ONE synchronous re-warp (the tempo-step
+// precedent: a committed value edit with displayed == live restored synchronously
+// at the step boundary). Vertical motion is ignored; the solve is ABSOLUTE
+// (pointer x -> tempo), so no press anchor exists and the threshold-crossing
+// event needs no catch-up fold.
 //
-// T(P)-CONSTANCY CAVEAT (group): the absolute solve assumes T(P_grabbed) — the
-// grabbed predecessor's own target image — is constant across the drag. With
-// co-selected markers UPSTREAM of the grabbed one, applying the delta to THEIR
-// predecessors moves T(P_grabbed) itself, so the premise holds only PER EVENT:
-// each motion event re-solves against the fresh live map and self-corrects, so
-// the grabbed flag can lag the pointer WITHIN a single event in that
-// configuration, converging as events arrive. A stationary pointer fires no
-// events, so no oscillation loop exists. (The single-participant / downstream
-// case keeps exact constancy, as before — see tempo_drag_predecessor's
-// forward-label-coupling refusal, which stays a per-member arm gate.)
+// TWO SOLVE PATHS by participant count:
+//   - ONE participant (a singleton drag, or a group whose members all share the
+//     grabbed predecessor): the CLOSED-FORM absolute solve, exact and bit-for-bit
+//     the original. T(P_grabbed) is constant — the sole participant IS
+//     pred(grabbed), whose own tempo shapes only the segment AFTER it (so it
+//     cannot move its own image), and tempo_drag_predecessor's leg-6
+//     forward-label-coupling refusal guarantees it feeds no earlier ref that
+//     would. Invert delta_tgt = L_src / (tempo * s), quantize to cents, clamp the
+//     delta into the intersection.
+//   - MULTIPLE participants: the closed form is an UNSTABLE fixed-point iteration
+//     here — a participant UPSTREAM of the grabbed marker moves T(P_grabbed) when
+//     written, so re-solving event-by-event can diverge/thrash between the walls
+//     (fixed-point derivative magnitude > 1). Solve EXACTLY by MONOTONE
+//     BISECTION on the integer group delta d: the objective T(d) = the grabbed
+//     marker's target image under the map rebuilt with every participant at
+//     current + d is STRICTLY DECREASING in d (raising every participant's tempo
+//     can only shorten target durations — through the label system too, a def's
+//     duration is its section length at the materialized tempo, so raising tempos
+//     shortens defs and their refs alike; strict because pred(grabbed) is always
+//     upstream of the grabbed marker), so it crosses t_des at most once and
+//     bisection over the integer intersection is exact. Each build is the same
+//     resolve->build pipeline the live cache uses, over a COPY (the live store is
+//     never touched); ~10 builds per event over dozens of markers, trivial.
 void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     if (!app.tempo_drag.active) return;
     const int sr = audio.sample_rate();
@@ -1017,87 +1029,135 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     const double t_des = static_cast<double>(app.viewport_start_sample) +
                          static_cast<double>(rel) * spp;
 
-    // T(P) from the live memoized map — constant across the drag's steps
-    // (the constancy argument in the header comment), recomputed per event
-    // by choice. Live, not displayed: each step commits and re-warps
-    // synchronously, so displayed == live at every step boundary and the
-    // live cache IS the current paint basis (an empty-map cold fallback is
-    // identity, matching paint's own fallback).
-    const TargetWarpFrameMapCache& c = target_view_warp_frame_map_cached(
-        app, sr, static_cast<long>(audio.total_frames()));
-    const double t_pred = map_source_to_target(
-        static_cast<double>(mv[pi].time_frame), c.warp_frame_map);
-    const double span  = t_des - t_pred;
-    const double l_src = static_cast<double>(
-        mv[mi].time_frame - mv[pi].time_frame);   // >= 1 by eligibility
-    // The segment's scale composition exactly as the map build resolves it:
-    // the settings engine scale times the predecessor's own typed scale
-    // (effective_tempo's value_or(1.0) convention). Both factors are
-    // bracket-positive, so the divisor below is positive whenever span is.
-    const double s = app.engine_settings.scale *
-                     mv[pi].tempo_scale.value_or(1.0);
+    // The grabbed marker's source frame — the objective's fixed evaluation point
+    // (tempo-only, so it never moves through the gesture).
+    const double grabbed_src = static_cast<double>(mv[mi].time_frame);
 
-    int64_t candidate;
-    if (!(span > 0.0)) {
-        // Pointer at or left of T(P): the solve degenerates — a positive
-        // source span can only shrink toward zero as tempo grows (faster is
-        // shorter, the slope convention above), so the zero/negative-span
-        // limit pins constructively to the bracket's MAX end.
-        candidate = kTempoMaxCents;
-    } else {
-        // Invert delta_tgt = L_src / (tempo * s) for tempo at span == T_des
-        // - T(P), then enter the integer-cents domain the way the bpm
-        // derivation does (compute_base_tempo_scale): nearbyint on the
-        // double cents count, bracket-clamped BEFORE the int64 cast so an
-        // overflowing count (a denormal span) can never reach the cast —
-        // the cents entry is a GUI-side gesture proposal funneling into the
-        // int64 store field, the value-domain sibling of
-        // snap_authored_frame. Constructive clamp, not refusal: far-right
-        // travel (tempo toward 0) pins to the MIN end, near-left to the MAX.
-        const double tempo   = l_src / (span * s);
-        const double cents_d = std::nearbyint(tempo * 100.0);
-        if (cents_d >= static_cast<double>(kTempoMaxCents)) {
-            candidate = kTempoMaxCents;
-        } else if (cents_d <= static_cast<double>(kTempoMinCents)) {
-            candidate = kTempoMinCents;
-        } else {
-            candidate = static_cast<int64_t>(cents_d);
-        }
-    }
-
-    // The group cents delta from the grabbed predecessor's absolute solve.
-    const int64_t delta = candidate - mv[pi].tempo_cents;
-
-    // GROUP-STOP intersection clamp: delta must keep EVERY participant inside the
-    // bracket, so clamp it into the intersection over participants of
-    // [kTempoMinCents - cents_p, kTempoMaxCents - cents_p]. Computed from the
-    // CURRENT stored cents (not grab cents): the drag commits as it goes, so
-    // current cents track the live headroom; and since delta is itself re-derived
-    // per event from the current grabbed cents, current-vs-grab bounds are
-    // equivalent — current is the one that stays honest across committed steps.
-    // The grabbed predecessor is always a participant, so the intersection is
-    // never empty. A WALLED group (an ineligible member) pins the intersection to
-    // [0, 0]: the wall is already touching, so nothing moves. The init bounds are
-    // the widest a legal cents pair can produce (+/-(max-min)).
+    // GROUP-STOP intersection [delta_lo, delta_hi]: the group cents delta must
+    // keep EVERY participant inside the bracket, so it lives in the intersection
+    // over participants of [kTempoMinCents - cents_p, kTempoMaxCents - cents_p],
+    // from CURRENT stored cents (the drag commits as it goes, so current cents
+    // track the live headroom). Every participant is currently in-bracket, so the
+    // intersection always contains 0 (delta_lo <= 0 <= delta_hi) and is never
+    // empty. A WALLED group (an ineligible member) pins it to [0, 0] — the wall
+    // is already touching, so nothing moves. Init to the widest a legal cents pair
+    // can produce (+/-(max-min)).
     int64_t delta_lo = kTempoMinCents - kTempoMaxCents;   // -(range)
     int64_t delta_hi = kTempoMaxCents - kTempoMinCents;   // +(range)
     for (int pp : app.tempo_drag.participant_predecessors) {
         if (pp < 0 || pp >= static_cast<int>(mv.size())) continue;
         const int64_t cp = mv[pp].tempo_cents;
-        const int64_t lo_p = kTempoMinCents - cp;   // delta >= this keeps cp >= min
-        const int64_t hi_p = kTempoMaxCents - cp;   // delta <= this keeps cp <= max
+        const int64_t lo_p = kTempoMinCents - cp;
+        const int64_t hi_p = kTempoMaxCents - cp;
         if (lo_p > delta_lo) delta_lo = lo_p;
         if (hi_p < delta_hi) delta_hi = hi_p;
     }
     if (app.tempo_drag.walled) { delta_lo = 0; delta_hi = 0; }
-    int64_t clamped = delta;
-    if (clamped < delta_lo) clamped = delta_lo;
-    if (clamped > delta_hi) clamped = delta_hi;
+
+    int64_t clamped;
+    if (app.tempo_drag.participant_predecessors.size() <= 1) {
+        // SINGLE participant: the closed-form ABSOLUTE solve (see the header),
+        // exact and bit-for-bit the original. T(P) from the live memoized map,
+        // recomputed per event; live, not displayed: each step re-warps
+        // synchronously, so displayed == live at every boundary and the live
+        // cache IS the current paint basis (an empty-map cold fallback is
+        // identity, matching paint's own).
+        const TargetWarpFrameMapCache& c = target_view_warp_frame_map_cached(
+            app, sr, static_cast<long>(audio.total_frames()));
+        const double t_pred = map_source_to_target(
+            static_cast<double>(mv[pi].time_frame), c.warp_frame_map);
+        const double span  = t_des - t_pred;
+        const double l_src = static_cast<double>(
+            mv[mi].time_frame - mv[pi].time_frame);   // >= 1 by eligibility
+        // The segment's scale composition exactly as the map build resolves it:
+        // the settings engine scale times the predecessor's own typed scale
+        // (effective_tempo's value_or(1.0) convention). Both factors are
+        // bracket-positive, so the divisor below is positive whenever span is.
+        const double s = app.engine_settings.scale *
+                         mv[pi].tempo_scale.value_or(1.0);
+        int64_t candidate;
+        if (!(span > 0.0)) {
+            // Pointer at or left of T(P): the solve degenerates — a positive
+            // source span can only shrink toward zero as tempo grows (faster is
+            // shorter), so the zero/negative-span limit pins to the MAX end.
+            candidate = kTempoMaxCents;
+        } else {
+            // Invert delta_tgt = L_src / (tempo * s), then enter the integer-cents
+            // domain the way the bpm derivation does (compute_base_tempo_scale):
+            // nearbyint on the double cents count, bracket-clamped BEFORE the
+            // int64 cast so an overflowing count (a denormal span) never reaches
+            // the cast. Constructive clamp, not refusal.
+            const double tempo   = l_src / (span * s);
+            const double cents_d = std::nearbyint(tempo * 100.0);
+            if (cents_d >= static_cast<double>(kTempoMaxCents)) {
+                candidate = kTempoMaxCents;
+            } else if (cents_d <= static_cast<double>(kTempoMinCents)) {
+                candidate = kTempoMinCents;
+            } else {
+                candidate = static_cast<int64_t>(cents_d);
+            }
+        }
+        clamped = candidate - mv[pi].tempo_cents;
+        if (clamped < delta_lo) clamped = delta_lo;
+        if (clamped > delta_hi) clamped = delta_hi;
+    } else {
+        // MULTIPLE participants: EXACT MONOTONE BISECTION (see the header). The
+        // objective T(d) rebuilds the whole-song map from a COPY of the live
+        // vector with every participant at current + d, through the same
+        // resolve->build pipeline the live cache uses; the live store is never
+        // mutated during evaluation. Returns false on a build error (UNREACHABLE
+        // — positions unchanged, and every candidate d in the intersection keeps
+        // cents bracket-clamped positive — but drop the event without committing
+        // if it ever fires).
+        auto eval_T = [&](int64_t d, double& out) -> bool {
+            std::vector<GuiWarpMarker> copy = mv;
+            for (int pp : app.tempo_drag.participant_predecessors) {
+                if (pp < 0 || pp >= static_cast<int>(copy.size())) continue;
+                copy[pp].tempo_cents = copy[pp].tempo_cents + d;
+            }
+            std::string err;
+            const std::vector<WarpFrameMapSegment> m =
+                build_target_view_warp_frame_map(
+                    copy, app.engine_settings.scale, sr,
+                    static_cast<long>(audio.total_frames()), &err);
+            if (!err.empty()) return false;
+            out = map_source_to_target(grabbed_src, m);
+            return true;
+        };
+        // Degenerate range (walled, or a fully-pinned intersection — always 0
+        // given the contains-zero property): no search, no builds.
+        if (delta_lo >= delta_hi) {
+            clamped = delta_lo;
+        } else {
+            // T is strictly decreasing: delta_lo (smallest d) gives the MAX image,
+            // delta_hi (largest d) the MIN. Saturate constructively; else bisect.
+            double T_lo, T_hi;
+            if (!eval_T(delta_lo, T_lo) || !eval_T(delta_hi, T_hi)) return;
+            if (t_des >= T_lo) {
+                clamped = delta_lo;      // want a larger image than achievable
+            } else if (t_des <= T_hi) {
+                clamped = delta_hi;      // want a smaller image than achievable
+            } else {
+                // Crossing bracketed: invariant T(lo) >= t_des >= T(hi), lo < hi.
+                int64_t lo = delta_lo, hi = delta_hi;
+                while (hi - lo > 1) {
+                    const int64_t mid = lo + (hi - lo) / 2;
+                    double T_mid;
+                    if (!eval_T(mid, T_mid)) return;
+                    if (T_mid >= t_des) lo = mid; else hi = mid;
+                }
+                // Two straddling integers: pick the image closer to the pointer.
+                double T_lo2, T_hi2;
+                if (!eval_T(lo, T_lo2) || !eval_T(hi, T_hi2)) return;
+                clamped = (std::abs(T_lo2 - t_des) <= std::abs(T_hi2 - t_des))
+                              ? lo : hi;
+            }
+        }
+    }
 
     // The both-unchanged skip, generalized: a clamped delta of zero commits
-    // nothing — this is what makes the group move in discrete cent-grid jumps
-    // (the Ableton snap; our grid is the cents grid) and bounds the sync-render
-    // cost to one per cent step. A walled group takes this every event.
+    // nothing — discrete cent-grid jumps (the Ableton snap), one sync render per
+    // cent step. A walled group takes this every event.
     if (clamped == 0) return;
 
     // Apply the SAME clamped delta to EVERY participant (plain integer adds — the
@@ -1138,13 +1198,22 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
 }
 
 // Release / lost-button finalize. The final synchronous re-warp already ran
-// on the last committed step, so this only settles history: a NET change
-// (ANY participant's final cents != its grab cents) pushes the ONE undo entry
-// from the pre-drag snapshot, recomputes dirty, and fires the deferred target
-// preview trigger; a drag that wandered every participant back to its grab value
-// (the store already holds them — steps only write on change), or a walled group
-// that never moved, pushes nothing. No GestureKind / coalesce wiring: mouse
+// on the last committed step, so this settles history and lands the playhead: a
+// NET change (ANY participant's final cents != its grab cents) pushes the ONE
+// undo entry from the pre-drag snapshot, recomputes dirty, and fires the deferred
+// target preview trigger; a drag that wandered every participant back to its grab
+// value (the store already holds them — steps only write on change), or a walled
+// group that never moved, pushes nothing. No GestureKind / coalesce wiring: mouse
 // drags are coalesce-ineligible by standing rule, exactly like commit_drag above.
+//
+// The playhead lands on the GRABBED marker's current image UNCONDITIONALLY
+// (regardless of net change), mirroring the position drag's commit-land: the
+// crossing focused the grabbed member, but a WALLED or zero-commit drag never ran
+// the per-event follow, so without a final land focus and the playhead would
+// SPLIT — focus on the grabbed marker, the playhead stranded on whichever
+// selection member the land put it on at press — and a later Space would audition
+// from the wrong marker. For a moved drag this is a same-value repeat of the last
+// event's follow (harmless). Esc-cancel still restores the pre-ride playhead.
 void MarkerDragOps::end_tempo_drag() {
     if (!app.tempo_drag.active) return;
     const auto& mv = app.warpmarkers.markers();
@@ -1157,6 +1226,8 @@ void MarkerDragOps::end_tempo_drag() {
             break;
         }
     }
+    // Capture the grabbed index before the wholesale reset discards it.
+    const int mi = app.tempo_drag.marker;
     std::vector<GuiWarpMarker> pre_state =
         std::move(app.tempo_drag.pre_drag_snapshot);
     const int hint_last = app.tempo_drag.pre_drag_last_selected;
@@ -1168,6 +1239,14 @@ void MarkerDragOps::end_tempo_drag() {
         // surfaces already repainted with the last step's sync render.
         viewport.invalidate_timestamp_area();
         target_render.trigger();
+    }
+    // Unconditional grabbed-marker land (see the header): closes the walled /
+    // zero-commit focus-vs-playhead split. The marker's source frame never moved
+    // (tempo only), so this is the current post-drag image through the standard
+    // placement basis.
+    if (mi >= 0 && mi < static_cast<int>(mv.size())) {
+        viewport.move_playhead_to(
+            source_frame_to_active_domain(app, audio, mv[mi].time_frame));
     }
 }
 
