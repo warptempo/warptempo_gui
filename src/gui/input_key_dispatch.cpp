@@ -207,12 +207,13 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     }
     // Global dispatch: only the continuous step gestures repeat — bare
     // Left/Right scrub, bare PageUp/PageDown, bare Equal/Minus zoom, the
-    // Alt-exact Left/Right/Up/Down nudges and tempo steps, and the
-    // marker-focus cycle (bare Tab / Shift+Tab / IsoLeftTab) plus the
-    // Ctrl+Shift+Tab march (the ONE repeating Ctrl chord — a continuous step
-    // gesture like the cycle it composes, not a one-shot command; Ctrl+Tab,
-    // the A/B switch, stays one-shot). Every letter, toggle, opener, other
-    // Ctrl / Ctrl+Alt chord, Space, Home/End, and Delete is one-shot.
+    // Alt-exact Left/Right/Up/Down nudges and tempo steps, the
+    // marker-focus cycle (bare Tab / Shift+Tab / IsoLeftTab), and the THREE
+    // repeating Ctrl chords — the Ctrl+Shift+Tab march plus Ctrl+Z / Ctrl+Shift+Z
+    // (undo / redo), each a continuous step gesture like the cycle, not a
+    // one-shot command (Ctrl+Tab, the A/B switch, stays one-shot). Every
+    // letter, toggle, opener, other Ctrl / Ctrl+Alt chord, Space, Home/End,
+    // and Delete is one-shot.
     if (!mods.ctrl && !mods.shift && !mods.alt &&
         (key == GuiKeys::Left || key == GuiKeys::Right ||
          key == GuiKeys::PageUp || key == GuiKeys::PageDown ||
@@ -230,6 +231,16 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         return true;
     // Ctrl+Shift+Tab exactly (the lockstep marker march) repeats too.
     if (mods.ctrl && mods.shift && !mods.alt && key == GuiKeys::Tab)
+        return true;
+    // Ctrl+Z / Ctrl+Shift+Z (undo / redo) repeat while held (architect
+    // 2026-07-23): stepping through history is a continuous step gesture
+    // like the marker march — each fire is a full command (touched-set
+    // selection, offscreen-only recenter, the sync re-warp where the entry
+    // demands it), costs bounded like the tempo step. The single condition
+    // covers both: shift distinguishes undo from redo, and repeat recomputes
+    // modifiers live, so a shift pressed mid-hold flips to redo — consistent
+    // with the platform's live-modifier rule.
+    if (mods.ctrl && !mods.alt && key == GuiKeys::Z)
         return true;
     return false;
 }
