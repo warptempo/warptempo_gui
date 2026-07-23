@@ -293,7 +293,9 @@ void GuiInputHandler::scrub_act_at(int64_t frame) {
 // (architect 2026-07-23, the Ableton model): derive the clicked column's frame
 // and run one scrub act — the press arms NOTHING, a held press does nothing
 // further, and motion over the scrub surfaces is inert (the scrub drag is
-// removed; each click pays scrub_act_at's one kill quiescence fence, and the
+// removed; each click pays scrub_act_at's kill quiescence fence AT MOST once —
+// a dead session's revive pays none, the live same-frame skip returns before
+// stopping — and the
 // per-column fence cadence class is structurally gone). Both callers keep
 // playback alive across the press (the waveform lower half is not a top-strip
 // press; the text-lane scrub is exempted from the top-strip stop), so the
@@ -1212,8 +1214,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // revive is a silent no-op, exactly Space's conventions. The scrub
             // is ONE-SHOT per click (architect 2026-07-23, the Ableton model):
             // the press arms NOTHING, a held press does nothing further, and
-            // motion over the surface is inert — each click pays the one kill
-            // quiescence fence. It touches
+            // motion over the surface is inert — each click pays at most one
+            // kill quiescence fence. It touches
             // NOTHING else: no selection change, no region change, no cursor
             // write, no follow override, no double-click seed, no drag
             // arm. Read-only allowed (playback is navigation). The gutter

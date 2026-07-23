@@ -636,8 +636,9 @@ struct ScrollDragState {
 // nothing, a held press does nothing further, and motion over the scrub
 // surfaces is inert (architect 2026-07-23, the Ableton model; the former
 // per-column re-scrub drag and its drag-state struct are removed — each
-// click pays exactly one stop-quiescence fence, so the per-column fence
-// cadence is structurally gone). The gesture drives the SCANNER only, never
+// click pays AT MOST one stop-quiescence fence (a dead session's revive pays
+// none; the live same-frame skip returns before stopping), so the per-column
+// fence cadence is structurally gone). The gesture drives the SCANNER only, never
 // the cursor: selection, region, cursor, follow, and double-click seeding are
 // all untouched, the pure audition gesture. NOT the retired plain-drag scrub
 // of the 61126db pivot — that one MOVED the cursor playhead per column.)

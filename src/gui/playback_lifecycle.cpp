@@ -81,11 +81,27 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         restore_playhead_to_lsp();
         return;
     }
+    // Natural-end ENDPOINT HOLD (playing false, scanner active — the one
+    // sanctioned non-playing scanner-validity window): tear down through
+    // stop_playback_if_playing, the scanner's visible-identity owner, exactly
+    // as the scrub act does. It damages the held endpoint column before the
+    // new session seeds — a bare flag clear would leave the old line ghosted —
+    // and on a REFUSED launch it leaves the scanner cleanly deactivated
+    // instead of scanner-active with the hold flags cleared, which the tick
+    // would re-arm into another endpoint hold. Must run while the scanner
+    // fields are still valid (before any flag write below). Alt+Space rides
+    // this same play edge (the offset only shifts the launch position), so it
+    // inherits the teardown.
+    if (app.playhead_scanner_active)
+        stop_playback_if_playing();
     // Defensive: clear any stale override from an unhandled stop path so
     // it can't survive into the new playback session. Runs before any
     // launch validation (the pre-sum gate below included), so a refused
     // launch still leaves these cleared; the shared launch body assumes
     // its caller ran them (scrub_launch_at, the other caller, does too).
+    // For the endpoint-hold case the teardown above already owns these
+    // clears (plus the scanner deactivation and its damage); these then
+    // re-run as no-ops, covering only the non-hold stale-flag case.
     app.follow_overridden_for_session = false;
     app.playhead_scanner_restore_pending = false;
     app.playhead_scanner_endpoint_painted = false;

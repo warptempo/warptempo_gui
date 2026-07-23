@@ -313,7 +313,8 @@ struct GuiInputHandler {
     // is the press position for the press-becomes-drag threshold. Captures the
     // pre-drag region for an Esc cancel and dissolves the resting region at
     // mouse-down. Only the plain UPPER-HALF waveform press calls this (the
-    // lower half is the scrub surface, which arms its own drag and leaves the
+    // lower half is the scrub surface, whose press is a one-shot scrub act
+    // arming nothing and leaving the
     // region alone); a Shift press
     // instead forms a region directly (one-shot — the former / marker demote)
     // and does not arm this drag.
@@ -732,7 +733,8 @@ private:
     // play-from-here per click (architect 2026-07-23, the Ableton model): the
     // press arms NOTHING, a held press does nothing further, and motion over
     // the scrub surfaces is inert (the scrub drag is removed, so each click
-    // pays exactly one kill quiescence fence). A gutter/invalid column
+    // pays AT MOST one kill quiescence fence — a dead session's revive pays
+    // none, and the live same-frame skip returns before stopping). A gutter/invalid column
     // (outside [0, area.w)) is a silent no-op (no launch position). Touches
     // NOTHING else — no selection, region, cursor, follow, or double-click seed.
     // Both callers keep playback alive across the press (the lower half is not
