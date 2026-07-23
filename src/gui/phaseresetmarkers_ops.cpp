@@ -108,7 +108,8 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     const int                 hint_last = app.last_selected_marker;
     // Capture the selected resets' active-domain positions BEFORE the store
     // mutation, so a multi-marker delete DEMOTES down to the region spanning
-    // them (mutual-exclusivity; architect 2026-07-23). Phase deletes run in the
+    // them (a DROP former of the selection<->highlight coupling — the delete
+    // drops the selection and forms the region; architect 2026-07-23). Phase deletes run in the
     // target home view, whose map phase resets do not affect, so the pre/post
     // active-domain mapping is identical either way.
     std::vector<int64_t> del_positions;

@@ -200,7 +200,8 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     const int              hint_last = app.last_selected_marker;
     // Capture the selected markers' active-domain positions BEFORE the store
     // mutation, so a multi-marker delete DEMOTES down to the region spanning
-    // them (mutual-exclusivity; architect 2026-07-23). Warp deletes run in the
+    // them (a DROP former of the selection<->highlight coupling — the delete
+    // drops the selection and forms the region; architect 2026-07-23). Warp deletes run in the
     // source home view (home-view binding), where source_frame_to_active_domain
     // is identity, so pre/post mapping agree regardless.
     std::vector<int64_t> del_positions;

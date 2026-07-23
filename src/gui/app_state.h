@@ -322,11 +322,19 @@ struct UndoHistory {
 };
 
 // Session-only region selection — an Ableton-style arrangement span, formed by
-// THREE routes (architect 2026-07-23): the plain waveform drag (paints it live),
-// the waveform SHIFT+click (the region former / marker DEMOTE — playhead-to-click
-// with nothing selected, else furthest-selected-marker-to-click), and a
-// multi-marker DELETE (demotes to the span of the deleted positions). It is
-// consumed by bare x, which branches on
+// FOUR routes (architect 2026-07-23): the plain waveform drag (paints it live
+// AND, under the selection<->highlight coupling, live-SELECTS the active-column
+// markers it spans — Direction A), the waveform SHIFT+click (the region former /
+// marker DEMOTE — playhead-to-click with nothing selected, else
+// furthest-selected-marker-to-click, DROPPING the selection), a multi-marker
+// DELETE (demotes to the span of the deleted positions, also a DROP), and the
+// MULTI-SELECT EXTENT (Direction B): a shift-range or ctrl-toggle click that
+// leaves 2+ markers selected sets the region to the selection's position extent
+// [earliest, latest], so highlight, land, and Space's left-bound launch agree.
+// The old "region never promotes back to markers" mutual-exclusivity is DEAD —
+// the coupling runs BOTH ways (the plain drag selects; the two multi-select
+// clicks define the highlight), while the demote/delete formers still DROP. It
+// is consumed by bare x, which branches on
 // THIS highlight: a live region trims to it and clears it (the trim chips/wash
 // replace the highlight as the visual, so re-trimming needs a fresh drag —
 // Ableton persists its loop region but we deliberately do not); no region means
@@ -356,18 +364,23 @@ struct RegionState {
 // resting highlight at mouse-down (snapshotting the pre-press extent into
 // pre_region first), and arms this drag; motion past the shared
 // press-becomes-drag threshold (kDragMovedThresholdPx) extends app.region from
-// the press frame to the pointer column. A sub-threshold press-release is a
+// the press frame to the pointer column AND, on each column change, live-SELECTS
+// the active-column markers the span contains (Direction A of the coupling,
+// select_contained_in_span). A sub-threshold press-release is a
 // plain waveform click and simply disarms — the highlight already dissolved at
 // press, so there is no release-time collapse. Only a plain, unmodified
 // upper-half waveform press arms (a Shift press is a click, Alt/Ctrl no-op
 // earlier), so an armed drag always signals a plain upper-half waveform press. A completed drag rests the
-// region on release UNLESS its final on-screen span is under the same
-// kDragMovedThresholdPx gate — the gate latches once past the arm and never
-// re-engages, so a jitter drag could otherwise rest a sliver, which dissolves
-// like a click instead (end_region_drag_min_size_check, at both end points).
-// Esc cancels a live drag and restores the pre-press region captured here at
-// arm (the marker drag's snapshot pattern — cheap, two ints). Session-only,
-// never undoable.
+// region AND its live selection on release UNLESS its final on-screen span is
+// under the same kDragMovedThresholdPx gate — the gate latches once past the
+// arm and never re-engages, so a jitter drag could otherwise rest a sliver,
+// which dissolves like a click instead (end_region_drag_min_size_check, at both
+// end points, which ALSO clears the drag's selection so the press's deselect
+// intent stands). Esc cancels a live drag, restores the pre-press region
+// captured here at arm (the marker drag's snapshot pattern — cheap, two ints)
+// and clears the selection (the drag's live selection dies with it; the press's
+// deselect was the committed act — there is no pre-press selection snapshot).
+// Session-only, never undoable.
 struct RegionDragState {
     bool    active       = false;
     bool    moved        = false;  // crossed the threshold into a real drag
@@ -1037,8 +1050,9 @@ struct AppState {
     // which sees a release + re-press between commands that dispatch-entry
     // polling could not — and every OTHER selection mutator (set_single_selection,
     // clear_selection, collapse_to_focused, toggle_selection_membership,
-    // sanitize_selection_after_restore, prune_live_selection; cycle_selection
-    // clears via set_single_selection), which own the orthogonal
+    // select_contained_in_span, sanitize_selection_after_restore,
+    // prune_live_selection; cycle_selection clears via set_single_selection),
+    // which own the orthogonal
     // index-invalidation concern (a store/selection mutation under a still-held
     // shift). Set ONLY by the anchoring first shift-click inside
     // Selection::select_range_from_anchor, which is also the one mutator that

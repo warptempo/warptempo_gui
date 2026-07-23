@@ -447,9 +447,14 @@ void GuiInputHandler::cancel_active_drags() {
         app.scrub_area_drag = ScrubAreaDragState{};
     // The region drag IS a cancel: unlike the strip drag it restores the region
     // to how it rested at arm (the pre-drag snapshot), then ends the gesture.
+    // It also DROPS the selection (Direction A of the coupling): the press
+    // deselected all, and the drag's live selection dies with the cancelled
+    // drag — there is no pre-press selection snapshot to restore, and the
+    // press's deselect was the committed act (architect 2026-07-23).
     if (app.region_drag.active) {
         app.region = app.region_drag.pre_region;
         app.region_drag = RegionDragState{};
+        selection.clear_selection();
         viewport.invalidate_waveform_area();
     }
     // A live editor-text drag is FINALIZED, not cancelled: it is selection-only

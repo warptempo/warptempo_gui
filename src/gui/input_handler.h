@@ -150,8 +150,13 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // Left/Right playhead scrub, Home/End (the trim-bound jumps), the marker-click
 // land (plain / shift-range / ctrl toggle, all landing through
 // land_playhead_on_marker), and the ctrl toggle that EMPTIES the selection
-// (which lands nothing, so it calls this directly — every marker interaction
-// drops the region under the mutual-exclusivity rule). DELIBERATELY NOT cleared: the region Space launch (the
+// (which lands nothing, so it calls this directly). The old mutual-exclusivity
+// framing ("every marker interaction drops the region") is DEAD: this clear
+// still runs on every marker-click land, but the two MULTI-SELECT clicks
+// (shift-range, ctrl-toggle) immediately RE-DEFINE the region afterward to the
+// selection's [earliest, latest] extent when 2+ remain selected (Direction B of
+// the selection<->highlight coupling, set_region_to_selection_extent — a
+// separate call that must run AFTER this clear). DELIBERATELY NOT cleared: the region Space launch (the
 // region IS the launch point there), the nudge/drag playhead follow, marker
 // drops (`s`/Alt+S), undo/redo, and pure viewport moves (PageUp/PageDown, zoom
 // steps, pans) — and the lower-half scrub press, which touches no region at

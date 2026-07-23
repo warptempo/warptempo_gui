@@ -129,6 +129,45 @@ void Selection::select_range_from_anchor(int idx) {
     viewport.invalidate_timestamp_area();
 }
 
+void Selection::select_contained_in_span(int64_t lo, int64_t hi) {
+    // Direction A of the selection<->highlight coupling (architect 2026-07-23):
+    // the plain-drag region gesture live-SELECTS every ACTIVE-column marker
+    // whose active-domain position lies inside the inclusive [lo, hi] span,
+    // recomputed as the drag extends/shrinks. Replaces the selection wholesale;
+    // focus (last_selected) = the HIGHEST contained index (== latest in time,
+    // the stores rest time-sorted), or -1 when the span contains nothing (an
+    // emptied span clears). Clears the shift-range anchor like every OTHER
+    // non-range mutator — a drag is not a shift-range extend, so no anchor is
+    // being held. Owns the top-strip/timestamp damage the flag-selection and
+    // marker-text lane repaint from (the caller adds the waveform-wash damage).
+    app.shift_range_anchor = -1;
+    app.selected_markers.clear();
+    const bool phase_reset = (app.active_markers_view == 'P');
+    const std::vector<GuiWarpMarker>& warp_vec = app.warpmarkers.markers();
+    const std::vector<GuiPhaseResetMarker>& phase_reset_vec =
+        app.phaseresetmarkers.markers();
+    const int n = phase_reset
+        ? static_cast<int>(phase_reset_vec.size())
+        : static_cast<int>(warp_vec.size());
+    int highest = -1;
+    for (int i = 0; i < n; ++i) {
+        const int64_t src_f = phase_reset
+            ? phase_reset_vec[i].time_frame
+            : warp_vec[i].time_frame;
+        // Membership only — the raw forward-map image needs no live-domain clamp
+        // (an EOF item's image rounding one past the wall stays outside any span
+        // whose bounds are already clamped playable frames).
+        const int64_t pos = source_frame_to_active_domain(app, audio, src_f);
+        if (pos >= lo && pos <= hi) {
+            app.selected_markers.insert(i);
+            highest = i;
+        }
+    }
+    app.last_selected_marker = highest;
+    viewport.invalidate_top_strip();
+    viewport.invalidate_timestamp_area();
+}
+
 void Selection::sanitize_selection_after_restore(int n) {
     // A restore (undo/redo) dissolves the shift-range anchor — this is the
     // route that closes the shift-held hole for Ctrl+Shift+Z: redo holds

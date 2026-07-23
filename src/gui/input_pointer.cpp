@@ -135,9 +135,12 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // click's would, clearing the wash and the split playhead (the cursor playhead
 // returns when the region deactivates, which the same damage covers). Called
 // from both region-drag end points (release and button-lost). Only the REST is
-// gated — the live mid-drag extension paints slivers freely.
+// gated — the live mid-drag extension paints slivers freely. A dissolved region
+// also DROPS the drag's live selection (Direction A of the coupling): the
+// press's deselect-all intent stands, so a jitter click must not leave a
+// one-marker selection behind (architect 2026-07-23).
 void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
-                                    Viewport& viewport) {
+                                    Viewport& viewport, Selection& selection) {
     if (!app.region.active) return;
     const double spp = current_samples_per_pixel(app, audio);
     if (spp <= 0.0) return;   // no geometry -> leave the region as-is
@@ -146,6 +149,7 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
         spp;
     if (span_px < kDragMovedThresholdPx) {
         app.region = RegionState{};
+        selection.clear_selection();
         viewport.invalidate_waveform_area();
     }
 }
@@ -192,6 +196,49 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
             old_px, playhead_pixel_x(app, audio));
         viewport.invalidate_timestamp_area();
     }
+}
+
+// Direction B of the selection<->highlight coupling (architect 2026-07-23): a
+// multi-select CLICK that leaves 2+ markers selected sets the region to the
+// selection's active-domain position extent [earliest, latest], so the
+// highlight, the earliest-marker land, and Space's play-from-region-left-bound
+// all agree by construction. A selection of <=1 sets NOTHING — the click's
+// standing region clear (land_playhead_on_marker's dissolve, or the ctrl
+// empty-branch's explicit clear_region_highlight) is the dissolve. Endpoints
+// are clamped through clamp_playhead_to_live_domain (the region domain's
+// playable-frame invariant, as every other former clamps). Shared by the
+// shift-range and ctrl-toggle click paths; MUST run AFTER the land (which
+// CLEARS any old region) — a reorder would let the clear kill this fresh
+// highlight. Touches ONLY the region, never shift_range_anchor, so the
+// shift-range path's anchor survives a direction-B set. Programmatic selections
+// (undo/redo, paste, drops, Tab/`c`) do NOT call this — the coupling belongs to
+// the two multi-select clicks.
+void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
+                                    Viewport& viewport) {
+    if (app.selected_markers.size() < 2) return;
+    const bool phase_reset = (app.active_markers_view == 'P');
+    const auto& warp_vec = app.warpmarkers.markers();
+    const auto& phase_reset_vec = app.phaseresetmarkers.markers();
+    const int n = phase_reset
+        ? static_cast<int>(phase_reset_vec.size())
+        : static_cast<int>(warp_vec.size());
+    int64_t lo = 0, hi = 0;
+    bool have = false;
+    for (int idx : app.selected_markers) {
+        if (idx < 0 || idx >= n) continue;   // defensive; stale indices skipped
+        const int64_t src_f = phase_reset
+            ? phase_reset_vec[idx].time_frame
+            : warp_vec[idx].time_frame;
+        const int64_t pos = clamp_playhead_to_live_domain(
+            source_frame_to_active_domain(app, audio, src_f), app, audio);
+        if (!have) { lo = hi = pos; have = true; }
+        else { if (pos < lo) lo = pos; if (pos > hi) hi = pos; }
+    }
+    if (!have) return;   // every selected index was stale (degenerate)
+    app.region.active  = true;
+    app.region.a_frame = lo;
+    app.region.b_frame = hi;
+    viewport.invalidate_waveform_area();
 }
 
 } // namespace
@@ -564,13 +611,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the earliest selected), so it is resolved once here.
         // The editor lifecycle block above already closed any open flag editor,
         // so the lane run this resolves is the committed (non-editor) run. The
-        // WAVEFORM never SELECTS a marker — a plain press splits by half
+        // WAVEFORM never SELECTS a marker by HIT — a plain press splits by half
         // (upper: deselect-all + playhead placement + region-drag arm; lower:
         // the scanner scrub, which touches no selection at all), and a Shift
         // press FORMS a region waveform-wide (from the playhead, or a marker
         // DEMOTE that clears the selection; see the waveform block below) — so
         // no marker scan runs on the waveform at all (the invisible stem is
-        // not a grab target). Trim bounds are grabbed only by their top-strip chips /
+        // not a grab target). The plain DRAG does live-select the span's markers
+        // (Direction A of the coupling), but by CONTAINMENT of the active-domain
+        // span, not a stem hit. Trim bounds are grabbed only by their top-strip chips /
         // the inter-chip bridge on a PLAIN chip-row press (route_trim_chip_press
         // below); a click over a bound's waveform stem is an ordinary waveform
         // click (the stem grab retired), so no trim hit test runs on the
@@ -634,15 +683,18 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // smallest index is the earliest in time; architect 2026-07-23), so a
             // Space auditions from the selection's start regardless of which
             // marker was clicked. An emptied selection (the last member toggled
-            // off) lands nothing and just drops the region — the non-empty land
-            // dissolves the region itself, the empty branch keeps the explicit
-            // clear_region_highlight (every marker interaction drops the region,
-            // the mutual-exclusivity rule). Read-only allowed (selection +
-            // playhead are navigation). The ctrl-exact WAVEFORM press keeps the
-            // zoom-strip drag below (different surface, no collision); ctrl-exact
-            // on a markerless top-strip spot stays a strict no-op (falls through
-            // to the return below). The standing top-strip press stop already
-            // halted playback above.
+            // off) lands nothing and drops the region (the empty branch's
+            // explicit clear_region_highlight). A land dissolves the old region,
+            // then — under Direction B of the selection<->highlight coupling
+            // (architect 2026-07-23) — a resulting selection of 2+ markers sets
+            // the region to the selection's [earliest, latest] extent
+            // (set_region_to_selection_extent, AFTER the land's clear); a single
+            // survivor leaves the land's dissolve standing. Read-only allowed
+            // (selection + playhead are navigation). The ctrl-exact WAVEFORM
+            // press keeps the zoom-strip drag below (different surface, no
+            // collision); ctrl-exact on a markerless top-strip spot stays a
+            // strict no-op (falls through to the return below). The standing
+            // top-strip press stop already halted playback above.
             if (inside_top && mh.index >= 0) {
                 selection.toggle_selection_membership(mh.index);
                 if (!app.selected_markers.empty())
@@ -650,6 +702,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                             *app.selected_markers.begin());
                 else
                     clear_region_highlight(app, viewport);
+                set_region_to_selection_extent(app, audio, viewport);
                 return;
             }
             if (inside_waveform) {
@@ -734,11 +787,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // membership toggle (above, landing at the earliest selected
                     // too). It arms no drag, seeds/consumes no double-click, opens
                     // no editor. Allowed in read-only (selection + playhead are
-                    // navigation).
+                    // navigation). Direction B of the coupling: a range leaving
+                    // 2+ selected sets the region to the [earliest, latest]
+                    // extent (set_region_to_selection_extent, AFTER the land's
+                    // region clear), so highlight, land, and Space's left-bound
+                    // launch agree; the anchoring first click ({hit}) leaves <=1
+                    // selected and sets no region.
                     selection.select_range_from_anchor(hit);
                     if (!app.selected_markers.empty())
                         land_playhead_on_marker(app, audio, viewport,
                                                 *app.selected_markers.begin());
+                    set_region_to_selection_extent(app, audio, viewport);
                 } else {
                     // Plain marker click single-selects (both views; W's
                     // click-to-edit is retired — the editor now opens on Enter or
@@ -870,9 +929,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         {
             const int click_rel_x = x - area.x;
             if (shift) {
-                // Waveform shift+click: the region former / the DEMOTE (markers
-                // flow DOWN to a region, never back; architect 2026-07-23,
-                // replacing the reserved strict no-op). With NO markers
+                // Waveform shift+click: the region former / the DEMOTE (this is
+                // one of the DROP formers — it clears the selection; the
+                // coupling's promote direction lives on the plain drag and the
+                // multi-select clicks, not here; architect 2026-07-23, replacing
+                // the reserved strict no-op). With NO markers
                 // selected it forms a region from the PLAYHEAD to the clicked
                 // column; with markers selected it DEMOTES — the selection
                 // clears and the region spans from the selected marker FURTHEST
@@ -942,10 +1003,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                             endpoint  = pos;
                         }
                     }
-                    // Deselect — the downward flow. This also dissolves the
-                    // shift-range anchor, correct here: this shift interaction
-                    // is on a DIFFERENT surface (the waveform) than the marker
-                    // range select, so no range is being extended.
+                    // Deselect — this demote is a DROP former (the shift-click
+                    // waveform demote drops the selection by explicit ruling,
+                    // unlike the plain drag and the multi-select clicks that
+                    // promote). This also dissolves the shift-range anchor,
+                    // correct here: this shift interaction is on a DIFFERENT
+                    // surface (the waveform) than the marker range select, so no
+                    // range is being extended.
                     selection.clear_selection();
                 }
                 // Sliver rule (mirrors end_region_drag_min_size_check): a span
@@ -1155,7 +1219,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // crossed the gate but rests a sub-threshold sliver dissolves like a
         // click (end_region_drag_min_size_check).
         app.region_drag = RegionDragState{};
-        end_region_drag_min_size_check(app, audio, viewport);
+        end_region_drag_min_size_check(app, audio, viewport, selection);
         return;
     }
     if (app.tempo_drag.active) {
@@ -1409,7 +1473,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // clean release branch does (end_region_drag_min_size_check).
         if (!mods.primary_button_held) {
             app.region_drag = RegionDragState{};
-            end_region_drag_min_size_check(app, audio, viewport);
+            end_region_drag_min_size_check(app, audio, viewport, selection);
             return;
         }
         const GuiRect area = waveform_area(app);
@@ -1439,9 +1503,26 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (rel >= area.w) rel = area.w - 1;
         const int64_t far_frame = clamp_playhead_to_live_domain(
             playhead_frame_at_click_column(app, audio, rel), app, audio);
+        // Column-change gate: the span (and thus its contained selection)
+        // changes only when the far endpoint moves to a new frame. A same-frame
+        // motion event (sub-pixel jitter within one column) is a no-op — skip
+        // the selection recompute and the repaint. The anchor is fixed for the
+        // gesture, so the far endpoint alone decides the span. On the first
+        // extend event the arm cleared the region (active == false), so this
+        // proceeds and seeds it.
+        if (app.region.active && far_frame == app.region.b_frame) return;
         app.region.active  = true;
         app.region.a_frame = app.region_drag.anchor_frame;
         app.region.b_frame = far_frame;
+        // Direction A of the selection<->highlight coupling (architect
+        // 2026-07-23): the live drag SELECTS every active-column marker inside
+        // the span, updating as it extends/shrinks (an emptied span clears;
+        // focus = highest contained index). The helper owns the top-strip /
+        // timestamp damage and clears the shift-range anchor; the waveform-wash
+        // damage stays below.
+        const int64_t lo = std::min(app.region.a_frame, app.region.b_frame);
+        const int64_t hi = std::max(app.region.a_frame, app.region.b_frame);
+        selection.select_contained_in_span(lo, hi);
         viewport.invalidate_waveform_area();
         return;
     }
