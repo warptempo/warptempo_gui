@@ -289,21 +289,23 @@ void GuiInputHandler::scrub_act_at(int64_t frame) {
 
 // The scanner scrub press body, shared by the waveform lower-half plain press
 // and the marker-text-lane plain press (R3.3, architect 2026-07-23). See the
-// declaration for the full contract. Both callers keep playback alive across
-// the press (the waveform lower half is not a top-strip press; the text-lane
-// scrub is exempted from the top-strip stop), so the scrub act sees the live
-// session — load-bearing for its same-frame skip, which keeps an in-place
-// audition uninterrupted instead of restarting it.
-void GuiInputHandler::arm_scrub_at(int click_rel_x) {
+// declaration for the full contract. ONE-SHOT play-from-here per click
+// (architect 2026-07-23, the Ableton model): derive the clicked column's frame
+// and run one scrub act — the press arms NOTHING, a held press does nothing
+// further, and motion over the scrub surfaces is inert (the scrub drag is
+// removed; each click pays scrub_act_at's one kill quiescence fence, and the
+// per-column fence cadence class is structurally gone). Both callers keep
+// playback alive across the press (the waveform lower half is not a top-strip
+// press; the text-lane scrub is exempted from the top-strip stop), so the
+// scrub act sees the live session — load-bearing for its same-frame skip,
+// which keeps an in-place audition uninterrupted instead of restarting it.
+void GuiInputHandler::scrub_press_at(int click_rel_x) {
     const GuiRect area = waveform_area(app);
     // Gutter / invalid column: no launch position exists, silent no-op.
     if (click_rel_x < 0 || click_rel_x >= area.w) return;
     const int64_t frame = clamp_playhead_to_live_domain(
         playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
     scrub_act_at(frame);
-    app.scrub_area_drag = ScrubAreaDragState{};
-    app.scrub_area_drag.active   = true;
-    app.scrub_area_drag.last_col = click_rel_x;
 }
 
 // Button-press handler. Verbatim from the lambda at the original
@@ -849,8 +851,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Plain or Shift press. In the waveform area a plain press splits by
         // HALF: the UPPER half clears the marker selection (deselect-all),
         // places the playhead at the clicked column, and arms the
-        // region-select drag; the LOWER half is the scrub surface (scanner
-        // launch/reseek, nothing else) — neither ever SELECTS a marker. A
+        // region-select drag; the LOWER half is the scrub surface (a one-shot
+        // play-from-here scrub act, nothing else) — neither ever SELECTS a marker. A
         // Shift press on the waveform instead FORMS a region waveform-wide
         // (the former / marker demote, one-shot — see the waveform block). In the top strip a plain
         // CHIP-ROW press arms a trim chip/bridge drag (claimed ahead of the
@@ -1047,7 +1049,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // chip row already returned above). Plain-only (R3.1 / R3.3):
                 const GuiRect text_lane = top_marker_text_row_area(app);
                 if (y >= text_lane.y && y < text_lane.y + text_lane.h) {
-                    // R3.3: the marker-text lane is the play-from-here SCRUB. The
+                    // R3.3: the marker-text lane is the play-from-here SCRUB —
+                    // ONE-SHOT per click, nothing armed (the Ableton model). The
                     // rendered run keeps precedence — a run hit resolved above as
                     // mh.index >= 0, so this is reached only on an EMPTY text-lane
                     // spot. Shares the waveform lower-half scrub body; playback
@@ -1056,7 +1059,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // and its same-frame skip can keep an in-place audition
                     // uninterrupted. Touches no
                     // selection (the scrub convention).
-                    arm_scrub_at(x - area.x);
+                    scrub_press_at(x - area.x);
                     return;
                 }
                 const GuiRect flag_lane = top_flag_row_area(app);
@@ -1087,7 +1090,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // whether the gesture becomes a click or a fresh drag. The LOWER half
         // is the SCRUB surface (the branch below): the press runs one
         // kill-and-revive scrub act — a fresh SCANNER session from the clicked
-        // frame — and arms the scrub drag,
+        // frame — arming nothing (the one-shot Ableton model) and
         // touching nothing else. ONLY the plain press splits — a Shift press
         // instead FORMS a region waveform-wide (the demote path below), never
         // a plain press's playhead placement, and ctrl/alt already claimed
@@ -1206,19 +1209,23 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // a fresh one launches from the clicked frame — never a positional
             // seek inside the old session — with one degenerate skip (same
             // frame as the live scanner -> nothing to re-launch). A refused
-            // revive is a silent no-op, exactly Space's conventions. It touches
+            // revive is a silent no-op, exactly Space's conventions. The scrub
+            // is ONE-SHOT per click (architect 2026-07-23, the Ableton model):
+            // the press arms NOTHING, a held press does nothing further, and
+            // motion over the surface is inert — each click pays the one kill
+            // quiescence fence. It touches
             // NOTHING else: no selection change, no region change, no cursor
-            // write, no follow override, no double-click seed, no other drag
+            // write, no follow override, no double-click seed, no drag
             // arm. Read-only allowed (playback is navigation). The gutter
             // (click_rel_x outside [0, area.w)) returns silently — no launch
             // position exists there, unlike the upper half's
             // deselect-then-return.
             if (y >= area.y + area.h / 2) {
-                // Shared scrub body (arm_scrub_at): gutter no-op, clamped frame
-                // from the column, one kill-and-revive scrub act, arm the
-                // scrub-area drag. The same body serves
+                // Shared scrub press body (scrub_press_at): gutter no-op,
+                // clamped frame from the column, one kill-and-revive scrub
+                // act, nothing armed. The same body serves
                 // the marker-text-lane scrub (R3.3).
-                arm_scrub_at(click_rel_x);
+                scrub_press_at(click_rel_x);
                 return;
             }
             // Upper half: the placement press. The clear runs FIRST, before
@@ -1348,15 +1355,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         end_strip_pointer_capture();
         return;
     }
-    if (app.scrub_area_drag.active) {
-        // Scrub-area release KEEPS PLAYING — that IS the release semantics:
-        // the press/motion scrub acts already launched the current session, so
-        // the
-        // release just ends the gesture (no capture to end, no finalize, no
-        // seed — the scrub never seeds a double-click candidate).
-        app.scrub_area_drag = ScrubAreaDragState{};
-        return;
-    }
+    // (No scrub branch: the scrub is a one-shot play-from-here at the PRESS —
+    // it arms nothing, so its release is an ordinary fall-through.)
     if (app.region_drag.active) {
         // The region is extended live during the drag (see on_motion); a drag
         // that moved rests the region at its final extent. A MOTIONLESS
@@ -1419,7 +1419,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 }
 
 // Motion handler. Drives the active pointer gesture: editor-text drag,
-// strip-row zoom/pan drag, scrub-area drag (one scrub act per column), trim drag (or
+// strip-row zoom/pan drag, trim drag (or
 // a pending trim drag arming past the threshold), region-select drag, or
 // marker reposition drag (or a pending
 // marker drag); with no gesture it recomputes hover at the cursor. The
@@ -1541,37 +1541,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         viewport.clear_hover_popup();
         return;
     }
-    // Scrub-area drag motion (the held lower-half plain press): re-scrub at
-    // COLUMN granularity — each column change is one fresh scrub act
-    // (scrub_act_at, the same kill-and-revive the press runs): a live session
-    // stops and re-launches at the new column's frame, and a DEAD one just
-    // revives — the old inert-when-not-playing rule is retired with the
-    // keep-alive reseek (revive-if-needed: dragging out of the launchable
-    // window silently stops, dragging back in relaunches). No threshold (the
-    // press already acted; scrubbing is continuous by design), no capture, no
-    // cursor hide. A lost
-    // button ends the gesture like release: nothing else, playback continues
-    // (release keeps playing — that IS the release semantics).
-    if (app.scrub_area_drag.active) {
-        viewport.clear_hover_popup();
-        if (!mods.primary_button_held) {     // button lost -> end like release
-            app.scrub_area_drag = ScrubAreaDragState{};
-            return;
-        }
-        const GuiRect area = waveform_area(app);
-        if (area.w <= 0) return;
-        int rel = mouse_x - area.x;
-        if (rel < 0) rel = 0;
-        if (rel >= area.w) rel = area.w - 1;
-        if (rel != app.scrub_area_drag.last_col) {
-            // The press's clamped-frame spelling (domain conformance).
-            const int64_t frame = clamp_playhead_to_live_domain(
-                playhead_frame_at_click_column(app, audio, rel), app, audio);
-            scrub_act_at(frame);
-            app.scrub_area_drag.last_col = rel;
-        }
-        return;
-    }
+    // (No scrub motion branch: the scrub is a ONE-SHOT play-from-here at the
+    // press — the held-drag per-column re-scrub is REMOVED (architect
+    // 2026-07-23, the Ableton model), so motion over the scrub surfaces is
+    // inert and the per-column kill-fence cadence is structurally gone.)
     // Trim-boundary drag motion. Handled before the marker-drag branch;
     // active in BOTH views (begin_trim_drag has no view gate, and
     // update_trim_drag / commit_trim_drag carry the target-view cached-map

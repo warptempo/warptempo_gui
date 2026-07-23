@@ -211,17 +211,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // The editor text-selection drag has its own modal gate above
     // the text-editor handlers; the pointer gestures here — the marker /
     // tempo / trim / strip / region drags, the Alt+drag grab-pan (scroll_drag),
-    // the lower-half scrub drag (scrub_area_drag), and the
+    // and the
     // pending marker / tempo / trim drags (a press held before its drag begins) —
     // are mutually exclusive with it. scroll_drag belongs on the list too: a live
     // pan must swallow authoring keys, and Esc must route to cancel_active_drags
     // (which ends it) rather than falling past to run a hotkey over a latched pan.
-    // scrub_area_drag likewise: Esc mid-scrub must END the gesture through
-    // cancel_active_drags (playback continues) rather than fall to the region
-    // clear, and a held scrub owns the keyboard like every pointer gesture.
+    // (The scrub is a one-shot press action, not a gesture — it arms nothing,
+    // so it has no entry here.)
     if (app.drag.active || app.tempo_drag.active || app.trim_drag.active ||
         app.strip_drag.active || app.region_drag.active ||
-        app.scroll_drag.active || app.scrub_area_drag.active ||
+        app.scroll_drag.active ||
         app.pending_marker_drag.active || app.pending_tempo_drag.active ||
         app.pending_trim_drag.active) {
         if (key == GuiKeys::Escape) {

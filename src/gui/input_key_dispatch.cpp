@@ -442,14 +442,9 @@ void GuiInputHandler::cancel_active_drags() {
         app.scroll_drag = ScrollDragState{};
         end_strip_pointer_capture();
     }
-    // The scrub-area drag is END-ONLY too, the strip/pan no-restore
-    // convention: the press/motion scrub acts (kill-and-revive) already
-    // launched the current session, and Esc stops the GESTURE, not the audio —
-    // playback continues
-    // (Space remains the sole stop). Nothing to restore: the scrub never
-    // touched cursor, selection, or region, and no capture was taken.
-    if (app.scrub_area_drag.active)
-        app.scrub_area_drag = ScrubAreaDragState{};
+    // (No scrub entry: the scrub is a one-shot play-from-here at the press —
+    // it arms nothing, so there is no scrub gesture for Esc to end; the
+    // launched audition keeps playing, Space remains the sole stop.)
     // The region drag IS a cancel: unlike the strip drag it restores the region
     // to how it rested at arm (the pre-drag snapshot), then ends the gesture.
     // It also DROPS the selection (Direction A of the coupling): the press

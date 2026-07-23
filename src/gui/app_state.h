@@ -194,7 +194,7 @@ struct DragState {
     // the drag tows it UNCONDITIONALLY — it stays on the marker through the
     // motion so a later Space auditions FROM it. The lead-in workflow (parking
     // the playhead upstream to audition the approach) that the decoupling
-    // served is supplied by the coming scrub surface instead. Only the RESTING
+    // served is supplied by the scrub surface instead. Only the RESTING
     // cursor playhead moves — move_playhead_to writes the cursor field only, so
     // a live scanner is left untouched; it stays the audio thread's to own.
     // Cursor position at grab, for the Esc-cancel restore: the marker returns
@@ -364,8 +364,8 @@ struct RegionState {
 };
 
 // State for the plain (unmodified) left-drag region-select gesture on the
-// waveform's UPPER half (the lower half is the scrub surface, which arms
-// ScrubAreaDragState instead — only the plain press splits by half). The PRESS
+// waveform's UPPER half (the lower half is the scrub surface, whose press is a
+// one-shot scrub act arming nothing — only the plain press splits by half). The PRESS
 // does its press-time work (deselect-all, playhead
 // placement, live-playback reseek — it never SELECTS a marker), DISSOLVES any
 // resting highlight at mouse-down (snapshotting the pre-press extent into
@@ -630,30 +630,17 @@ struct ScrollDragState {
     int    last_x   = 0;
 };
 
-// SCRUB-AREA drag: the plain unmodified press in the LOWER HALF of the
-// waveform (architect 2026-07-23) is an Ableton-style scrub — the press runs
-// one scrub ACT (scrub_act_at, KILL-AND-REVIVE: a live session stops and a
-// fresh one launches from the clicked frame, re-capturing the loop verdict per
-// act; a dead one just revives; same-frame-as-scanner skips) and arms this
-// state; held motion re-scrubs at column granularity (one act per column
-// change), and release keeps playing — that IS the release semantics.
-// The gesture drives the SCANNER only, never the cursor: selection, region,
-// cursor, follow, and double-click seeding are all untouched, the pure
-// audition gesture. No threshold (the press already acted; scrubbing is
-// continuous by design), no pointer capture, no cursor hide. NOT the retired
-// plain-drag scrub of the 61126db pivot — that was a different,
-// region-replacing gesture that MOVED the cursor playhead per column and was
-// superseded by the reinstated region drag; this one lives below the region
-// drag's (upper-half) surface and touches no cursor. Ended (end-only, no
-// restore — playback continues, the navigation convention) on release / lost
-// button, on Escape/close (cancel_active_drags), and on file load.
-struct ScrubAreaDragState {
-    bool active   = false;
-    // Waveform column (effective-width-relative px) of the last scrub position
-    // — the press column at arm; motion runs a scrub act only when its column
-    // differs.
-    int  last_col = 0;
-};
+// (The SCRUB has no drag state: the plain lower-half waveform press and the
+// empty marker-text-lane press are ONE-SHOT play-from-here scrub acts
+// (scrub_act_at, kill-and-revive), issued once per click — the press arms
+// nothing, a held press does nothing further, and motion over the scrub
+// surfaces is inert (architect 2026-07-23, the Ableton model; the former
+// per-column re-scrub drag and its drag-state struct are removed — each
+// click pays exactly one stop-quiescence fence, so the per-column fence
+// cadence is structurally gone). The gesture drives the SCANNER only, never
+// the cursor: selection, region, cursor, follow, and double-click seeding are
+// all untouched, the pure audition gesture. NOT the retired plain-drag scrub
+// of the 61126db pivot — that one MOVED the cursor playhead per column.)
 
 // The surface a double-click candidate belongs to. The surface tag is what keeps
 // the three double-click surfaces from cross-firing: a candidate seeded on one
@@ -1210,11 +1197,6 @@ struct AppState {
     // release / lost button, Escape (cancel_active_drags), and file load.
     ScrollDragState scroll_drag;
 
-    // Plain press-and-hold scrub on the waveform's lower half (drives the
-    // scanner only). Ended on button release / lost button, Escape
-    // (cancel_active_drags — end-only, playback continues), and file load.
-    ScrubAreaDragState scrub_area_drag;
-
     // Mouse drag-to-select inside the active text editor. Cleared on
     // button release, on a lost button mid-drag, and on file load.
     EditorTextDragState editor_text_drag;
@@ -1504,9 +1486,11 @@ inline int64_t snap_authored_frame(double frame) {
 
 // The single query for "some pointer gesture is in flight" — a marker
 // reposition drag, a target-view tempo drag, a trim drag, a strip-row
-// zoom/pan drag, a region-select drag, a lower-half scrub drag, an editor
+// zoom/pan drag, a region-select drag, an editor
 // text drag, or a pending marker / tempo / trim drag
-// armed by a press (button held, watching for the threshold). Consumed by the wheel_context
+// armed by a press (button held, watching for the threshold). (The scrub is a
+// one-shot press action, not a gesture — it arms nothing and so never appears
+// here.) Consumed by the wheel_context
 // predicate (on_wheel's completed-detent gate and the platform's per-frame
 // sub-detent accumulator probe both route through it), the gate that must
 // never fire mid-gesture: the "nothing pops mid-gesture" boundary. The pending
@@ -1516,7 +1500,6 @@ inline bool any_pointer_gesture_active(const AppState& app) {
     return app.drag.active || app.tempo_drag.active ||
            app.trim_drag.active ||
            app.strip_drag.active || app.scroll_drag.active ||
-           app.scrub_area_drag.active ||
            app.region_drag.active || app.editor_text_drag.active ||
            app.pending_marker_drag.active || app.pending_tempo_drag.active ||
            app.pending_trim_drag.active;
