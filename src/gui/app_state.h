@@ -183,15 +183,19 @@ struct RegionState {
 // pre-drag snapshot so Escape can restore positions and clamps can be
 // evaluated without re-scanning the marker list on every motion event.
 //
-// `delta_min` / `delta_max` is a single scalar SOURCE-domain offset range:
-// the intersection of each dragged marker's absolute bounds (zero and the
-// column's EOF wall) plus the grabbed marker's viewport clamp.
-// apply_drag_motion clamps each marker's proposed source value into
-// [orig + delta_min, orig + delta_max] — walls win over the displayed-map
-// delta anchoring (the uniform-rate model at apply_drag_motion's header).
-// Neighbors do not bound a drag — markers may cross
-// freely, and commit reorders the store. Trim is purely cosmetic and
-// does not constrain edits.
+// `delta_min` / `delta_max` is a single scalar ACTIVE-domain offset range
+// (architect 2026-07-23): the intersection of each dragged marker's wall
+// headroom mapped through the displayed map — [fwd(0) − fwd(orig_k),
+// fwd(eof_wall) − fwd(orig_k)] — plus the grabbed marker's viewport clamp, all
+// in the pointer-delta (active) domain. apply_drag_motion clamps the POINTER
+// delta ONCE into [delta_min, delta_max] before the per-member loop, so the
+// whole group rides the SAME clamped delta and stops as a UNIT the instant the
+// first member's image reaches its wall — no per-member squash, in either view
+// (source view is the fwd-identity special case, bit-for-bit the old behaviour).
+// A per-member absolute [0, eof_wall] source backstop stays in the loop for
+// fp-safety only, not as the rigidity mechanism. Neighbors do not bound a drag —
+// markers may cross freely, and commit reorders the store. Trim is purely
+// cosmetic and does not constrain edits.
 struct DragState {
     bool                active = false;
     std::vector<int>    dragging_markers;   // sorted ascending

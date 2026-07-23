@@ -98,30 +98,42 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
         static_cast<double>(mouse_x - area.x) * spp;
 
     // Compute scalar delta_min / delta_max as the INTERSECTION of each dragged
-    // member's absolute range: zero on the left and the marker EOF wall on the
-    // right — total_frames minus one source frame for BOTH columns (the
+    // member's ACTIVE-domain wall headroom (architect 2026-07-23, retiring the
+    // earlier source-domain intersection and its target-view per-member squash).
+    // The absolute source walls are zero on the left and the marker EOF wall on
+    // the right — total_frames minus one source frame for BOTH columns (the
     // per-column split, warp total-1 vs phase reset total, is retired: warp is
     // structural, build_warp_frame_map refuses sub-frame segments; phase reset
     // walls at total-1 by ruling — a reset in the last source frame has nothing
     // left to re-ground, and total-1 keeps every marker inside the playhead's
-    // [0, total-1] domain). Exact frame compares — the same comparison the load
-    // guard applies. This ONE shared scalar is what makes a GROUP drag stop AS A
-    // UNIT: in source view (warp's home, identity map) every member clamps at the
-    // same delta simultaneously, so the group stays rigid at the 0 / total-1
-    // walls. Neighbors do not bound the drag; members may cross each other and
-    // their neighbors freely, and commit_drag reorders the store and remaps the
-    // held indices.
+    // [0, total-1] domain). Map each wall through the SAME displayed map the
+    // drag's mechanics run on (fwd = map_source_to_target; identity in source
+    // view), so each member contributes [fwd(0) − fwd(orig_k), fwd(eof_wall) −
+    // fwd(orig_k)] in the ACTIVE (pointer-delta) domain, and the shared delta is
+    // the intersection. This ONE shared active-domain bound is what makes a GROUP
+    // drag stop AS A UNIT in BOTH views: apply_drag_motion clamps the POINTER
+    // delta once against it, so the FIRST member's image to reach its wall
+    // freezes the whole group — no per-member squash. Source view is the identity
+    // special case (fwd(x) == x), so the active bounds equal the source bounds and
+    // the behaviour is bit-for-bit today's. Neighbors do not bound the drag;
+    // members may cross each other and their neighbors freely, and commit_drag
+    // reorders the store and remaps the held indices.
     const double total = static_cast<double>(audio.total_frames());
     const double eof_wall = total - 1.0;
+    const std::vector<WarpFrameMapSegment>& vdmap =
+        displayed_or_live_target_map(app, audio);
+    const double fwd_lo_wall = map_source_to_target(0.0, vdmap);
+    const double fwd_hi_wall = map_source_to_target(eof_wall, vdmap);
 
     d.delta_min = -std::numeric_limits<double>::infinity();
     d.delta_max =  std::numeric_limits<double>::infinity();
 
     for (size_t k = 0; k < d.dragging_markers.size(); ++k) {
-        const double orig_t = static_cast<double>(d.original_times[k]);
-        const double lb = 0.0 - orig_t;
+        const double fwd_orig =
+            map_source_to_target(static_cast<double>(d.original_times[k]), vdmap);
+        const double lb = fwd_lo_wall - fwd_orig;
         if (lb > d.delta_min) d.delta_min = lb;
-        const double ub = eof_wall - orig_t;
+        const double ub = fwd_hi_wall - fwd_orig;
         if (ub < d.delta_max) d.delta_max = ub;
     }
 
@@ -132,27 +144,21 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // MOTION of a group held by one on-screen member is fine, exactly the trim
     // pair drag's recorded ruling — the offscreen ruling forbids blind GRABS, not
     // blind motion of a set held by its handle. The clamp sits on top of the
-    // absolute data walls (delta_min/delta_max computed just above).
-    // viewport_marker_bounds is active-domain while the walls are source frames,
-    // so inverse-translate the edges through the DISPLAYED map (the paint basis
-    // the drag's mechanics run on; identity on source view's empty map); the map
-    // is monotonic, so the source clamp matches the active-pixel clamp. The
-    // grabbed marker is on-screen at grab (the arming flag press hit
-    // hit_test_flag, which reports only visible chips against the same displayed
-    // map, so the marker's painted column is within the viewport), so these
-    // bounds bracket it. vp_lo_src <= vp_hi_src always, so [delta_min, delta_max]
-    // does not invert from this pair.
+    // absolute data walls (delta_min/delta_max above), in the SAME active domain:
+    // viewport_marker_bounds already returns active-domain values, so its edges
+    // fold in directly as [vb.first − fwd(orig_grabbed), vb.second −
+    // fwd(orig_grabbed)] — no inverse translation to source (that dance existed
+    // only because the walls were source-domain). The grabbed marker is on-screen
+    // at grab (the arming flag press hit hit_test_flag, which reports only visible
+    // chips against the same displayed map, so its painted column is within the
+    // viewport), so vb.first <= fwd(orig_grabbed) <= vb.second and this pair does
+    // not invert [delta_min, delta_max].
     {
         const auto vb = viewport_marker_bounds(app, audio);
-        const std::vector<WarpFrameMapSegment>& vdmap =
-            displayed_or_live_target_map(app, audio);
-        const double vp_lo_src =
-            map_target_to_source(static_cast<double>(vb.first), vdmap);
-        const double vp_hi_src =
-            map_target_to_source(static_cast<double>(vb.second), vdmap);
-        const double orig_grabbed = static_cast<double>(t_of(hit));
-        const double vp_lb = vp_lo_src - orig_grabbed;
-        const double vp_ub = vp_hi_src - orig_grabbed;
+        const double fwd_orig_grabbed =
+            map_source_to_target(static_cast<double>(t_of(hit)), vdmap);
+        const double vp_lb = static_cast<double>(vb.first)  - fwd_orig_grabbed;
+        const double vp_ub = static_cast<double>(vb.second) - fwd_orig_grabbed;
         if (vp_lb > d.delta_min) d.delta_min = vp_lb;
         if (vp_ub < d.delta_max) d.delta_max = vp_ub;
     }
@@ -279,6 +285,19 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
 
+    // Clamp the POINTER delta ONCE, up front, against the shared ACTIVE-domain
+    // wall intersection (begin_drag). This is the rigidity mechanism: every
+    // member then rides the SAME clamped active-domain delta, so the group stops
+    // as a UNIT the instant the first member's image reaches its wall — no
+    // per-member squash in either view. raw_delta == 0.0 is always inside the
+    // bounds (the resting positions are legal and the grabbed marker is on-screen
+    // at grab, so 0 headroom is never negative), so the exact-zero verbatim
+    // short-circuit below still tests the ORIGINAL raw_delta.
+    const double eof_wall = static_cast<double>(audio.total_frames()) - 1.0;
+    double clamped = raw_delta;
+    if (clamped < app.drag.delta_min) clamped = app.drag.delta_min;
+    if (clamped > app.drag.delta_max) clamped = app.drag.delta_max;
+
     bool any_changed = false;
     for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
         // Full-precision frame doubles throughout: mid-gesture positions
@@ -287,14 +306,14 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         // column's whole frame; the group then rides that member's uniform
         // active-domain delta D (commit_drag), so these per-member proposals
         // are paint values, not the committed positions. Both hops are identity
-        // on source view's empty map (proposed = orig + raw_delta there,
+        // on source view's empty map (proposed = orig + clamped there,
         // bit-for-bit).
         const double orig = static_cast<double>(app.drag.original_times[k]);
-        // Exact-zero short-circuit: at raw_delta == 0.0 the two-hop
-        // inv(fwd(orig)) is NOT IEEE-bitwise orig at interior map points, so a
-        // drag wandered exactly back to its press x would leave a sub-frame
-        // paint jitter. Returning orig verbatim keeps the flag pinned. This
-        // matters for the grabbed slot's commit (its bit-exact `proposed ==
+        // Exact-zero short-circuit on the ORIGINAL raw_delta: at raw_delta == 0.0
+        // the two-hop inv(fwd(orig)) is NOT IEEE-bitwise orig at interior map
+        // points, so a drag wandered exactly back to its press x would leave a
+        // sub-frame paint jitter. Returning orig verbatim keeps the flag pinned.
+        // This matters for the grabbed slot's commit (its bit-exact `proposed ==
         // original` untouched short-circuit, which makes D == 0 and restores the
         // whole group verbatim); for the OTHER members commit ignores the
         // proposal and reconstructs from D (D == 0 -> verbatim original, D != 0
@@ -303,22 +322,16 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         const double proposed = (raw_delta == 0.0)
             ? orig
             : map_target_to_source(
-                  map_source_to_target(orig, dmap) + raw_delta, dmap);
-        // Per-marker wall clamp in the SOURCE domain (walls are integer
-        // source frames — delta_min/delta_max fold the absolute data walls
-        // with the grabbed marker's viewport clamp at begin_drag; the map is
-        // monotone, so clamping the source proposal clamps its painted
-        // position too). In SOURCE view (warp's home, identity map) the shared
-        // delta bounds clamp every group member at the same delta, so the group
-        // stays exactly rigid. In TARGET view (phase resets) the per-member
-        // source clamp against the SHARED intersection bounds guarantees no
-        // member ever crosses a wall, but near a wall a member may PIN while the
-        // others keep moving — a slight squash of the group in the displayed
-        // domain. ACCEPTED (the wall is the hard invariant; rigidity is the
-        // soft one).
+                  map_source_to_target(orig, dmap) + clamped, dmap);
+        // Per-member ABSOLUTE source-domain wall backstop, [0, eof_wall] as plain
+        // doubles. With the pointer delta already clamped in the active domain
+        // upstream, this is no longer the rigidity mechanism — just fp-safety so
+        // no proposal can rest outside the authored domain; it should never engage
+        // beyond fp dust exactly at a wall (where fwd(orig)+clamped == fwd(wall)
+        // round-trips to the wall within rounding).
         double new_t = proposed;
-        if (new_t < orig + app.drag.delta_min) new_t = orig + app.drag.delta_min;
-        if (new_t > orig + app.drag.delta_max) new_t = orig + app.drag.delta_max;
+        if (new_t < 0.0)      new_t = 0.0;
+        if (new_t > eof_wall) new_t = eof_wall;
         if (k >= app.drag.moveable_times.size()) continue;
         if (app.drag.moveable_times[k] == new_t) continue;
         app.drag.moveable_times[k] = new_t;
@@ -444,9 +457,13 @@ void MarkerDragOps::commit_drag() {
     // in TARGET view (phase resets) it is rigid in the displayed/target domain
     // exactly as the motion painted (no release jump), the source-frame spacing
     // preserved to +/-1 frame (the integer authored store's inherent limit).
-    // The per-member wall clamp remains the backstop and may squash exactly at
-    // a wall (the recorded accepted case). Single-marker drags are identical by
-    // construction — the group loop has no other members.
+    // Walls no longer squash the group: apply_drag_motion clamps the pointer
+    // delta in the ACTIVE domain, so the group stops as a UNIT at the first
+    // member's wall and every member here is already inside its walls; the
+    // grabbed member's own column snap re-clamps to the integer walls, and the
+    // members' plain-double integer-wall clamp below is just fp-safety.
+    // Single-marker drags are identical by construction — the group loop has no
+    // other members.
     //
     // dmap = displayed_or_live_target_map — the DISPLAYED map (converged == live
     // at rest; empty / identity in source view), the same basis apply_drag_motion
