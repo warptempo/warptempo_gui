@@ -943,6 +943,61 @@ bool MarkerDragOps::begin_tempo_drag(int hit) {
     for (int p : d.participant_predecessors)
         d.participant_grab_cents.push_back(mv[p].tempo_cents);
 
+    // GROUP LABEL WALL — the multi-participant BISECTION's MONOTONICITY GUARANTEE
+    // (not an optimization), the max-strict group extension of leg 6. The
+    // bisection assumes T(d) is STRICTLY DECREASING in the group delta, but a
+    // label REF cited BEFORE the grabbed marker whose definition materializes from
+    // a PARTICIPANT breaks that: as d rises the ref's implied effective tempo can
+    // leave the [kRefImpliedTempoMin/Max] envelope, the resolver snaps that ref to
+    // a plain 1.00 owner, and its section abruptly LENGTHENS — a discontinuous
+    // UPWARD jump in T(d). The endpoint-saturation/bisection logic then bounds
+    // nothing (codex's legal case: def A@0 owner 1.00, ref A@1000 selected, owner
+    // 1.00 @9000, grabbed @10000 selected; participants {0,9000}; an exact
+    // interior d=-40 puts the image at 5000, but T(-75)=12000 and T(+300)=8500 so
+    // the t_des<=T_hi saturation falsely commits +300 -> image 8500). Leg 6 misses
+    // it: its ref scan is bounded to refs earlier than the PREDECESSOR (k < j), and
+    // this ref sits later than the frame-0 predecessor but before the grabbed
+    // marker. So WALL the whole group at zero when any such coupled ref exists —
+    // the standing walls-at-zero convention (a hit-before-it-moves wall). With the
+    // wall, every d-dependent term before the grabbed marker is a
+    // participant-coupled hyperbola L / ((cents_p + d)*scale) (passes inheriting
+    // from a participant ride it continuously; refs before the grabbed marker now
+    // have d-INDEPENDENT definitions; the collapse/frame-0-seed normalizations are
+    // positional and d-independent), so T(d) is strictly decreasing and the
+    // saturation/bisection is sound. GROUP-ONLY: the single-participant path keeps
+    // leg 6 alone, which suffices there — nothing sits strictly between
+    // pred(grabbed) and the grabbed marker except same-frame siblings, whose
+    // sections start AT the grabbed frame and cannot move T(grabbed).
+    //
+    // Frame-bound (not index-bound): a ref at a frame STRICTLY EARLIER than the
+    // grabbed marker's frame can affect T(grabbed); one AT the grabbed frame
+    // starts its section there and cannot. The store is time-sorted ascending, so
+    // an index walk with the frame compare (break at >= grabbed_frame) is exact.
+    // owner_idx is marker_effective's ref-opaque backward-walk terminus (the leg-6
+    // machinery), so it covers a def carried directly by a participant AND one a
+    // participant materializes through a pass chain; a synthetic-prior owner
+    // reports -1 and is excluded. Effectively-enabled is judged on the store (the
+    // benign over-refusal leg 6 accepts). The slice is built ONCE.
+    if (d.participant_predecessors.size() >= 2 && !d.walled) {
+        const std::vector<WarpMarker> resolved = slice_to_warp_markers(mv);
+        const long total = static_cast<long>(audio.total_frames());
+        const int64_t grabbed_frame = mv[hit].time_frame;
+        for (int def = 0;
+             def < static_cast<int>(mv.size()) && !d.walled; ++def) {
+            if (mv[def].label_def.empty()) continue;
+            const int owner = marker_effective(resolved, def, total).owner_idx;
+            if (owner < 0 || !preds.count(owner)) continue;
+            for (int k = 0; k < static_cast<int>(mv.size()); ++k) {
+                if (mv[k].time_frame >= grabbed_frame) break;  // sorted ascending
+                if (!marker_effectively_disabled(mv, static_cast<size_t>(k)) &&
+                    mv[k].label_ref == mv[def].label_def) {
+                    d.walled = true;
+                    break;
+                }
+            }
+        }
+    }
+
     d.pre_drag_snapshot      = mv;
     d.pre_drag_last_selected = app.last_selected_marker;
     // Pre-drag selection for the Esc / Ctrl+Q cancellation restore. A singleton
@@ -997,14 +1052,15 @@ bool MarkerDragOps::begin_tempo_drag(int hit) {
 //     (fixed-point derivative magnitude > 1). Solve EXACTLY by MONOTONE
 //     BISECTION on the integer group delta d: the objective T(d) = the grabbed
 //     marker's target image under the map rebuilt with every participant at
-//     current + d is STRICTLY DECREASING in d (raising every participant's tempo
-//     can only shorten target durations — through the label system too, a def's
-//     duration is its section length at the materialized tempo, so raising tempos
-//     shortens defs and their refs alike; strict because pred(grabbed) is always
-//     upstream of the grabbed marker), so it crosses t_des at most once and
-//     bisection over the integer intersection is exact. Each build is the same
-//     resolve->build pipeline the live cache uses, over a COPY (the live store is
-//     never touched); ~10 builds per event over dozens of markers, trivial.
+//     current + d is STRICTLY DECREASING in d — raising every participant's tempo
+//     only shortens target durations, and the GROUP LABEL WALL in begin_tempo_drag
+//     has already refused the one arrangement that would break this (a label ref
+//     before the grabbed marker whose def materializes from a participant, whose
+//     envelope normalization jumps T(d) upward). So T(d) crosses t_des at most
+//     once and bisection over the integer intersection is exact. Each build is the
+//     same resolve->build pipeline the live cache uses, over a COPY (the live
+//     store is never touched); per event: 2 endpoint builds + up to ~10 midpoint
+//     builds (log2 of the <=750-cent range), nothing re-evaluated — trivial.
 void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     if (!app.tempo_drag.active) return;
     const int sr = audio.sample_rate();
@@ -1130,7 +1186,10 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
             clamped = delta_lo;
         } else {
             // T is strictly decreasing: delta_lo (smallest d) gives the MAX image,
-            // delta_hi (largest d) the MIN. Saturate constructively; else bisect.
+            // delta_hi (largest d) the MIN. Saturate constructively; else bisect,
+            // CARRYING the endpoint values as the bracket narrows so the final
+            // straddling pair needs no re-evaluation (2 endpoint builds + up to
+            // ~10 midpoint builds — log2 of the <=750-cent range — nothing rebuilt).
             double T_lo, T_hi;
             if (!eval_T(delta_lo, T_lo) || !eval_T(delta_hi, T_hi)) return;
             if (t_des >= T_lo) {
@@ -1138,18 +1197,20 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
             } else if (t_des <= T_hi) {
                 clamped = delta_hi;      // want a smaller image than achievable
             } else {
-                // Crossing bracketed: invariant T(lo) >= t_des >= T(hi), lo < hi.
+                // Crossing bracketed: invariant T(lo) >= t_des >= T(hi), lo < hi,
+                // with Tlo/Thi retained for both bounds.
                 int64_t lo = delta_lo, hi = delta_hi;
+                double  Tlo = T_lo, Thi = T_hi;
                 while (hi - lo > 1) {
                     const int64_t mid = lo + (hi - lo) / 2;
                     double T_mid;
                     if (!eval_T(mid, T_mid)) return;
-                    if (T_mid >= t_des) lo = mid; else hi = mid;
+                    if (T_mid >= t_des) { lo = mid; Tlo = T_mid; }
+                    else                { hi = mid; Thi = T_mid; }
                 }
-                // Two straddling integers: pick the image closer to the pointer.
-                double T_lo2, T_hi2;
-                if (!eval_T(lo, T_lo2) || !eval_T(hi, T_hi2)) return;
-                clamped = (std::abs(T_lo2 - t_des) <= std::abs(T_hi2 - t_des))
+                // Two straddling integers (values retained): pick the image
+                // closer to the pointer.
+                clamped = (std::abs(Tlo - t_des) <= std::abs(Thi - t_des))
                               ? lo : hi;
             }
         }
