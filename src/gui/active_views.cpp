@@ -72,19 +72,19 @@ void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     viewport.clear_hover_popup();
 }
 
-// Ctrl+Tab toggles A/B navigational tabs. Stops playback with
-// return-to-launch, saves current viewport/zoom/playhead to the
-// leaving tab, restores the target tab. Does not mark the document
-// dirty.
+// Ctrl+Tab toggles A/B navigational tabs. Stops playback (deactivating the
+// scanner; the cursor is untouched either way), saves current
+// viewport/zoom/playhead to the leaving tab, restores the target tab. Does
+// not mark the document dirty.
 //
 // This is the AUTHORING tab switch: it swaps the live view fields WITH the
 // per-tab slots (app.tab_a / app.tab_b).
 void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
-    // Mirror toggle_playback's stop branch: tab switch is not a
-    // navigational commit, so the leaving tab's snapshot should
-    // capture the Space-launch position rather than the run-time
-    // audio cursor. stop_playback_if_playing's LSP overwrite is
-    // wrong here.
+    // Mirror toggle_playback's stop branch (playback.stop() then
+    // restore_playhead_to_lsp()). Neither this nor stop_playback_if_playing
+    // touches the cursor — it is the Space-launch position and was never
+    // moved during playback — so the leaving tab's snapshot below captures
+    // it exactly regardless of which stop path runs.
     if (playback_lifecycle.playback.is_playing()) {
         playback_lifecycle.playback.stop();
         playback_lifecycle.restore_playhead_to_lsp();

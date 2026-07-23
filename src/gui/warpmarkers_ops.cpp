@@ -601,10 +601,11 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     // home view (home-view binding, architect 2026-07-22), where that call is
     // identity, so the playhead lands on the moved frame directly; the two-step
     // basis is kept verbatim for symmetry with the phase nudge (which does map).
-    // move_playhead_to owns the live-domain clamp, the
-    // scanner mirror (playback stopped above, scanner inactive), the
-    // invalidation, and the standard keep-visible viewport edge-align (a
-    // nudged marker is at most one column from a visible position).
+    // move_playhead_to owns the live-domain clamp, the invalidation, and the
+    // standard keep-visible viewport edge-align (a nudged marker is at most
+    // one column from a visible position); it writes the cursor field only
+    // — playback was stopped above, so the scanner is inactive and stale by
+    // contract, untouched either way.
     if (playhead_rides && !proposals.empty()) {
         viewport.move_playhead_to(
             source_frame_to_active_domain(app, audio,

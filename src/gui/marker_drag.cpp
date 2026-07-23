@@ -272,10 +272,10 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         // coherence; commit_drag's two-step placement is the truth).
         // A marker drag can never run under live playback — the arming
         // top-strip flag press stops playback — so the scanner is always
-        // inactive here; move_playhead_to's scanner-inactive guard is a
-        // belt-and-braces invariant, not a live-playback accommodation. The
-        // motion-clamped proposal stays inside the visible strip, so no
-        // viewport scroll occurs.
+        // inactive here; move_playhead_to only ever writes the cursor
+        // field regardless, so this call could not disturb a running
+        // scanner even if one existed. The motion-clamped proposal stays
+        // inside the visible strip, so no viewport scroll occurs.
         if (app.drag.playhead_rides && !app.drag.moveable_times.empty()) {
             const double proposed = app.drag.moveable_times[0];
             int64_t sample;
@@ -769,9 +769,9 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     // post-commit image (the live cache just rebuilt against the committed
     // store — the Tab placement basis, post-commit truth). The image sits at
     // the clamped pointer column, inside the visible strip, so this does not
-    // scroll; a live scanner is untouched (the arming top-strip press
-    // stopped playback; move_playhead_to's scanner-inactive guard is the
-    // belt-and-braces invariant).
+    // scroll; the arming top-strip press already stopped playback, so there
+    // is no live scanner to disturb — and move_playhead_to only ever writes
+    // the cursor field, so it could not touch one regardless.
     if (app.tempo_drag.playhead_rides) {
         viewport.move_playhead_to(
             source_frame_to_active_domain(app, audio, mv[mi].time_frame));

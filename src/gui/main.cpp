@@ -1083,8 +1083,9 @@ int main(int argc, char** argv) {
         }
 
         // Playing was true last tick, now false — natural end. Hold the
-        // scanner on the exclusive end bound for one paint, then restore it to
-        // the launch position on the following tick. In target view the end
+        // scanner on the exclusive end bound for one paint, then deactivate
+        // it on the following tick (no snap-back; once inactive its value
+        // fields are stale by contract). In target view the end
         // bound is the bound target buffer's exclusive domain end — playback's
         // domain offset travels with the bind, so domain_end() is exactly the
         // full-target-frame coordinate the session played to.

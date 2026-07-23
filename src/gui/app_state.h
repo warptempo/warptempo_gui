@@ -194,8 +194,9 @@ struct DragState {
     // RIDES the marker through the drag: it stays on the marker so a later
     // Space auditions FROM it. A playhead parked anywhere else is left alone —
     // lead-in intent — and the ride never lands the playhead onto a fresh
-    // marker. Only the RESTING cursor playhead moves (a live scanner is
-    // untouched; move_playhead_to's scanner-inactive guard owns that).
+    // marker. Only the RESTING cursor playhead moves — move_playhead_to
+    // writes the cursor field only, so a live scanner is left untouched;
+    // it stays the audio thread's to own.
     bool                   playhead_rides = false;
     // Cursor position at grab, for the Esc-cancel restore: the marker returns
     // to its origin on cancel, so a ridden playhead returns with it.

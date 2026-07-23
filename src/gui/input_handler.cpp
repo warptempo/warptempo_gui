@@ -340,8 +340,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Alt+Space in actual target view, phase-reset mode: non-destructive
     // audition of the OLA/Hann synthesis lead-in. Launches the playback scanner
     // N/2 output samples AHEAD of the resting playhead (full-scale point of a
-    // reset dropped at the playhead) without moving the cursor, so stop snaps
-    // the scanner back to where it was. Placed BEFORE the modifier-independent
+    // reset dropped at the playhead) without moving the cursor, so stop just
+    // deactivates the scanner — the cursor it never touched is exactly where
+    // it was. Placed BEFORE the modifier-independent
     // is_play_pause_key block, which would otherwise swallow Alt+Space and run
     // a plain toggle. Restricted to Space (not Return/KpEnter). Source view and
     // warp mode fall through to the normal toggle below.

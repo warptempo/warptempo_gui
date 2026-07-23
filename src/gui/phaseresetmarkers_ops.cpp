@@ -250,7 +250,9 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     // Coincident ride: keep the playhead on the reset it sat on, through the
     // post-mutation two-step basis (identical to the warp nudge's ride; the
     // committed t_new is reorder-independent). move_playhead_to owns the
-    // clamp, scanner mirror, and invalidation.
+    // clamp and invalidation, writing the cursor field only — playback was
+    // stopped above, so the scanner is inactive and stale by contract,
+    // untouched either way.
     if (playhead_rides && !proposals.empty()) {
         viewport.move_playhead_to(
             source_frame_to_active_domain(app, audio,
