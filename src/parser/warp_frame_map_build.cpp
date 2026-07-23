@@ -362,8 +362,9 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
 // literal, grammar-exact owner fields so that freezing a pass (tempo
 // nudge, Ctrl+N) is lossless.
 int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index,
-                                bool* inherited_from_ref) {
+                                bool* inherited_from_ref, int* owner_index) {
     if (inherited_from_ref) *inherited_from_ref = false;
+    if (owner_index) *owner_index = -1;
     for (int i = index - 1; i >= 0; --i) {
         const WarpMarker& m = markers[i];
         if (!m.label_ref.empty()) {
@@ -374,6 +375,7 @@ int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int inde
             continue;
         }
         if (!m.tempo_inherits && !m.disabled) {
+            if (owner_index) *owner_index = i;
             return m.tempo_cents;
         }
     }
@@ -508,6 +510,7 @@ MarkerEffective marker_effective(
         r.base_cents = m.tempo_cents;
         r.scale      = m.tempo_scale;
         r.source_idx = idx;
+        r.owner_idx  = idx;  // an owner sources its own tempo
         return r;
     }
 
@@ -557,7 +560,9 @@ MarkerEffective marker_effective(
             // stage 4 runs, over the same pre-materialization list, so the
             // value matches the render by construction.
             bool from_ref = false;
-            r.base_cents = resolve_inherited_tempo(proj, img, &from_ref);
+            int  proj_owner = -1;
+            r.base_cents = resolve_inherited_tempo(proj, img, &from_ref,
+                                                   &proj_owner);
             r.scale      = resolve_inherited_tempo_scale(proj, img);
             // A walk terminated by a surviving enabled label ref is the
             // render's 1.00 fallback, not a value inherited from the ref —
@@ -566,8 +571,15 @@ MarkerEffective marker_effective(
             if (from_ref) {
                 r.from_ref   = true;
                 r.source_idx = -1;
-                return r;
+                return r;  // owner_idx stays -1: nothing owns the fallback
             }
+            // Terminal owner in RAW coordinates: map the walk's projection
+            // terminus back through raw_index. A SYNTHETIC owner (the frame-0
+            // seed or a collapsed group's replacement) maps to -1 there, and a
+            // walk that reached no owner leaves proj_owner -1 — both yield
+            // owner_idx -1, which the coupling guard never matches against a
+            // real predecessor index.
+            if (proj_owner >= 0) r.owner_idx = raw_index[proj_owner];
             // Provenance: the immediate prior marker in the projection —
             // the visible source of the inherited value, not necessarily
             // the owning marker if there is a chain of passes; every
@@ -624,7 +636,8 @@ MarkerEffective marker_effective(
         // inheriting marker in front of an owning origin.
         const int walk = idx + 1;
         bool from_ref = false;
-        r.base_cents = resolve_inherited_tempo(mv, walk, &from_ref);
+        int  owner    = -1;
+        r.base_cents = resolve_inherited_tempo(mv, walk, &from_ref, &owner);
         r.scale      = resolve_inherited_tempo_scale(mv, walk);
         // A walk terminated by a surviving enabled label ref is the render's
         // 1.00 fallback, not a value inherited from the ref — attributing it
@@ -633,8 +646,11 @@ MarkerEffective marker_effective(
         if (from_ref) {
             r.from_ref   = true;
             r.source_idx = -1;
-            return r;
+            return r;  // owner_idx stays -1: nothing owns the fallback
         }
+        // Raw walk: the terminus IS a raw index (this branch resolves against
+        // mv), or -1 when no owner was reached.
+        r.owner_idx = owner;
         // source_idx is the immediate prior render-surviving marker — the
         // visible source of the inherited value, not necessarily the owning
         // marker if there is a chain of passes; cascade-disabled refs are

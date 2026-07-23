@@ -492,19 +492,22 @@ void MarkerDragOps::commit_drag() {
 // FASTER IS SHORTER: raising P's tempo pulls the dragged marker's image
 // left, lowering it pushes the image right.
 //
-// T(P)-constancy (holds UNLESS an earlier enabled ref cites P's own label —
-// see tempo_drag_predecessor, which refuses that arm): P's own tempo cannot
+// T(P)-constancy (holds UNLESS a label definition whose tempo materializes
+// from P is cited by an earlier enabled reference — see
+// tempo_drag_predecessor, which refuses that arm): P's own tempo cannot
 // move P's own image. In pass 2, iteration i consumes markers[i]'s tempo to
 // emit the anchor at markers[i+1]'s source frame — the anchor AT P's frame
 // was emitted by the PRECEDING iteration from upstream tempos only (or is the
 // {0,0} seed). Only P's tempo changes during this gesture (positions never
 // move, no other value is written), so every upstream segment — and with it
 // T(P) — is constant across the drag's steps. The one exception is the
-// forward-label coupling: if a surviving enabled reference EARLIER than P
-// cites P's label_def, pass 1's definition duration (derived from P's tempo)
-// feeds that earlier reference in pass 2, so writing P's tempo shifts the
-// anchor at P's frame too — the eligibility guard excludes that arrangement so
-// the solve here only ever runs with T(P) genuinely constant. T(P) is still
+// forward-label coupling: if a label DEFINITION whose tempo materializes from
+// P (P's own, directly or through a chain of passes inheriting P) is cited by
+// a surviving enabled reference EARLIER than P, pass 1's definition duration
+// (derived from P's materialized tempo) feeds that earlier reference in pass
+// 2, so writing P's tempo shifts the anchor at P's frame too — the eligibility
+// guard excludes that arrangement so the solve here only ever runs with T(P)
+// genuinely constant. T(P) is still
 // RECOMPUTED per motion
 // event from the live memoized map rather than cached as a double at grab:
 // it is one binary search, and re-deriving keeps the solve immune to any
@@ -561,33 +564,49 @@ int MarkerDragOps::tempo_drag_predecessor(int hit) const {
         app, audio.sample_rate(),
         static_cast<long>(audio.total_frames())).red;
     if (red.count(j)) return -1;
-    // Forward-label coupling breaks T(P)-constancy: if the predecessor P owns a
-    // label DEFINITION and a surviving enabled REFERENCE to it sits at an
-    // EARLIER frame than P, then P's own tempo moves P's own image. In the
-    // builder, pass 1 derives the definition's section target-duration from P's
-    // tempo and pass 2 applies that duration to the earlier (forward-declared)
-    // reference's section, so every anchor from that reference forward — and
-    // with it the anchor AT P's frame, i.e. T(P) — shifts when P's tempo is
-    // written. The absolute solve holds the OLD T(P) constant while computing
-    // the candidate, then the write invalidates it, so the pointer events
-    // oscillate the marker around the cursor instead of converging. A reference
-    // AT OR AFTER the dragged marker touches only positions downstream of it
-    // (T(P) and the P -> dragged-marker segment stay exact, so those defs stay
-    // draggable), and a reference exactly at P's frame puts P in a stack already
-    // rejected by the red-set test above. Refuse the arm — broken arrangements
-    // are fixed in warp view.
+    // Forward-label coupling breaks T(P)-constancy: a definition whose tempo
+    // MATERIALIZES from the predecessor P, consumed by an earlier enabled
+    // reference, moves P's own image when P's tempo is written. In the builder,
+    // pass 1 derives a definition's section target-duration from its
+    // (materialized) tempo and pass 2 applies that duration to an earlier
+    // forward-declared reference's section, so every anchor from that reference
+    // forward — and with it the anchor AT P's frame, i.e. T(P) — shifts when
+    // P's tempo is written. The absolute solve holds the OLD T(P) constant
+    // while computing the candidate, then the write invalidates it, so the
+    // pointer events oscillate the marker around the cursor instead of
+    // converging. Refuse the arm — broken arrangements are fixed in warp view.
+    //
+    // A def materializes from P exactly when marker_effective's owner_idx — the
+    // ref-opaque backward walk's own TERMINUS in raw coordinates — equals j.
+    // This covers the direct case (P itself carries the def: owner_idx ==
+    // idx == j) AND the pass-materialization case (a later pass, alone or
+    // through a chain of passes, whose walk skips passes to land on P). The GUI
+    // re-derives no walk of its own; owner_idx is the walk result. Cases that
+    // do NOT couple fall out because owner_idx != j: a ref fallback or a
+    // materialization from a synthetic prior (frame-0 seed, collapsed-group
+    // owner) reports owner_idx -1 (its duration is the 1.00 fallback, not P's
+    // rate); a def BEFORE P can only resolve to an owner before it. The
+    // reference scan is bounded k < j, so a reference at or after the dragged
+    // marker (or exactly at P's frame, where P is already a rejected stack)
+    // never triggers a refusal — those defs stay draggable.
     //
     // "Effectively enabled" is judged on the store, which slightly OVER-refuses
     // (an earlier ref that would itself die inside a coincident collapse still
     // triggers the refusal): deliberate — an arm refusal is benign, and
     // mirroring the resolver's exact survivor semantics here would re-create
     // resolver logic GUI-side. Duplicate label definitions are load-fatal, so
-    // p.label_def names at most one definition and the string compare is the
-    // whole match rule.
-    if (!p.label_def.empty()) {
+    // a def's label_def names at most one definition and the string compare is
+    // the whole match rule. The resolution slice is built ONCE per arm (the
+    // slice/projection mechanics adjust_tempo_cents uses); the per-def cost is
+    // arm-time-only and trivial on a store of dozens.
+    const std::vector<WarpMarker> resolved = slice_to_warp_markers(mv);
+    const long total = static_cast<long>(audio.total_frames());
+    for (int d = 0; d < static_cast<int>(mv.size()); ++d) {
+        if (mv[d].label_def.empty()) continue;
+        if (marker_effective(resolved, d, total).owner_idx != j) continue;
         for (int k = 0; k < j; ++k) {
             if (!marker_effectively_disabled(mv, static_cast<size_t>(k)) &&
-                mv[k].label_ref == p.label_def) {
+                mv[k].label_ref == mv[d].label_def) {
                 return -1;
             }
         }

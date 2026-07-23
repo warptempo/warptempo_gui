@@ -66,6 +66,27 @@ struct MarkerEffective {
     // collapsed-group owner), which also carries source_idx -1 but is NOT a
     // normalization fallback.
     bool from_ref = false;
+    // The RAW STORE INDEX of the terminal OWNER the ref-opaque backward walk
+    // landed on — the marker whose authored tempo this value actually comes
+    // from — or -1 when no raw owning marker exists. Distinct from source_idx
+    // (the immediate-prior provenance the hover readout wants); this names the
+    // walk's TERMINUS, not its first hop. By resolution kind:
+    //   owner            -> idx (resolves to its own tempo);
+    //   pass -> raw owner -> that owner's raw index (the value
+    //                        resolve_inherited_tempo walks to);
+    //   ref fallback (from_ref / UndefinedLabel / ExtremeRatio) -> -1
+    //                        (the value is the 1.00 fallback, owned by nothing);
+    //   pass -> SYNTHETIC prior (frame-0 seed or a collapsed group's
+    //                        replacement owner) -> -1 (maps through raw_index,
+    //                        which no raw marker names);
+    //   pass with no owner reached (a leading pass) -> -1;
+    //   any label ref (successful or fallback) -> -1 (a ref carries a duration
+    //                        equation, not an owner's rate — no single raw
+    //                        owner sources it).
+    // The sole consumer (the tempo-drag coupling guard) only ever compares
+    // this against a raw index, so -1-on-anything-not-a-raw-owner is the
+    // contract. No existing consumer reads it.
+    int owner_idx = -1;
 };
 
 // Returns the built warp frame map on success, or std::unexpected carrying
@@ -214,8 +235,16 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
 // inheritance walk: resolve_warp_markers_for_render and the hover surfaces
 // (marker_effective / compute_hover_popup_text) both call it, so the popup
 // display always matches the tempo the engine resolves.
+//
+// When `owner_index` is non-null it receives the index (in `markers`) of the
+// owner the walk terminated on, or -1 if the walk hit a surviving enabled ref
+// or ran off the front with no owner — the terminus marker_effective maps to
+// its owner_idx field (through raw_index on the projection path). from_ref and
+// owner_index are independent: a ref-terminated walk sets from_ref true and
+// leaves owner_index -1.
 int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index,
-                                bool* inherited_from_ref = nullptr);
+                                bool* inherited_from_ref = nullptr,
+                                int* owner_index = nullptr);
 std::optional<double> resolve_inherited_tempo_scale(
     const std::vector<WarpMarker>& markers, int index,
     bool* inherited_from_ref = nullptr);
