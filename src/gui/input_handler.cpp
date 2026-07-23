@@ -549,8 +549,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // x branches on the highlight: a live region trims to it (overwriting any
-    // existing bounds and consuming the highlight, so re-trimming needs a fresh
-    // drag); no region clears the trim. The playhead plays no part. Trim's
+    // existing bounds; the highlight is KEPT, re-coupled to the new window
+    // through sync_highlight_to_trim_window — architect 2026-07-23); no region
+    // clears the trim. The playhead plays no part. Trim's
     // pointer routes are the PLAIN chip-row press (single via a chip-rect hit,
     // pair via a bridge press strictly between the two bound columns); trim is
     // outside the selection system, so there is no Delete arm. Plain Ctrl+x is

@@ -1271,23 +1271,17 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // block, and the paste's destination walk skips unlabeled markers
     // identically, so the two label sequences stay aligned regardless.
     // W-mode only; phase reset mode is a silent no-op. An empty or
-    // non-contiguous selection in W-mode emits a one-line stderr nudge.
+    // non-contiguous selection refuses SILENTLY (architect 2026-07-23 —
+    // gesture refusals are silent by convention, the read-only/home-view
+    // class; stderr stays the render/load signal channel).
     if (key == GuiKeys::P && ctrl && !shift && !alt) {
         if (app.active_markers_view != 'W') return true;
-        if (app.selected_markers.empty()) {
-            std::fprintf(stderr,
-                "warptempo_gui: phase_reset copy: select one or more warp "
-                "markers\n");
-            return true;
-        }
+        if (app.selected_markers.empty()) return true;
         // Contiguity gate, same spelling as the `m` sweep: std::set is
         // ascending, so a run [first .. last] is contiguous iff its extent
         // equals its count.
         if (*app.selected_markers.rbegin() - *app.selected_markers.begin() + 1
                 != static_cast<int>(app.selected_markers.size())) {
-            std::fprintf(stderr,
-                "warptempo_gui: phase_reset copy: select a contiguous run of "
-                "warp markers\n");
             return true;
         }
         phase_reset_propagate.copy_from_selection();

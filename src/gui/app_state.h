@@ -333,11 +333,12 @@ struct UndoHistory {
 // [earliest, latest], so highlight, land, and Space's left-bound launch agree.
 // The old "region never promotes back to markers" mutual-exclusivity is DEAD —
 // the coupling runs BOTH ways (the plain drag selects; the two multi-select
-// clicks define the highlight), while the demote/delete formers still DROP. It
-// is consumed by bare x, which branches on
-// THIS highlight: a live region trims to it and clears it (the trim chips/wash
-// replace the highlight as the visual, so re-trimming needs a fresh drag —
-// Ableton persists its loop region but we deliberately do not); no region means
+// clicks define the highlight), while the demote/delete formers still DROP.
+// Bare x branches on
+// THIS highlight: a live region trims to it and the highlight is KEPT
+// (architect 2026-07-23, reversing the earlier consume — under the coupling
+// the trim window and the highlight agree after x, re-derived through
+// sync_highlight_to_trim_window); no region means
 // x clears the trim instead, and this highlight is inactive there by definition.
 // NEVER serialized, and stored independently of the selection and undo systems
 // (a transient visual — no undo entry, its own field, not derived from the
@@ -348,7 +349,7 @@ struct UndoHistory {
 // ACTIVE-DOMAIN frames (source frames in source
 // view, target frames in target view), stored in drag order and normalized
 // lo/hi at READ time, so the span survives pan/zoom mid-drag and at rest.
-// Cleared by a region-trimming x, on file load, the A/B tab switch, the S/T audio-view switch (the
+// Cleared on file load, the A/B tab switch, the S/T audio-view switch (the
 // domain changes under it), Esc (only when nothing higher-priority consumes the
 // Esc), and a plain UPPER-HALF waveform PRESS (the placement press dissolves any
 // resting highlight at mouse-down, before it knows whether the gesture is a
@@ -1036,11 +1037,17 @@ struct AppState {
     std::set<int> selected_markers;
     int           last_selected_marker = -1;
 
-    // Shift-range-select anchor (file-manager style): the index the first
-    // shift-click of a continuous shift-held interaction anchored on, over the
+    // Shift-range-select anchor (file-manager style): the index the current
+    // shift-held interaction ranges from, over the
     // active column's store; -1 = none. SESSION SCRATCH tied to the physical
     // shift hold — it lives ONLY across a continuous shift-held interaction and
-    // is otherwise dissolved (architect 2026-07-23). Owners that clear it: the
+    // is otherwise dissolved (architect 2026-07-23). A cleared anchor does NOT
+    // silence the next shift-click: select_range_from_anchor SEEDS the anchor
+    // by ADOPTING THE FOCUS when none is live (architect labwc round 2,
+    // 2026-07-23 — plain-click A then shift+click B ranges A..B, and a
+    // re-started shift interaction ranges from the previous click's focus;
+    // only with nothing focused does the click anchor on itself). Owners that
+    // clear it: the
     // platform's shift FALLING EDGE (held->up in the modifiers callback, plus
     // keyboard leave and keyboard-capability loss where the modifier bits reset)
     // via the installed shift-released hook — the one owner of the release half,
@@ -1051,7 +1058,7 @@ struct AppState {
     // prune_live_selection; cycle_selection clears via set_single_selection),
     // which own the orthogonal
     // index-invalidation concern (a store/selection mutation under a still-held
-    // shift). Set ONLY by the anchoring first shift-click inside
+    // shift). Set ONLY inside
     // Selection::select_range_from_anchor, which is also the one mutator that
     // keeps it. Ctrl+Shift+Z redo arrives WITH shift still held (no falling
     // edge) but its restore runs sanitize_selection_after_restore, which clears.

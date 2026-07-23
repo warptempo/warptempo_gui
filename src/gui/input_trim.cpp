@@ -72,14 +72,17 @@ void GuiInputHandler::handle_trim_clear_both() {
     }
 }
 
-// Bare x branches on the HIGHLIGHT, not the trim (architect 2026-07-20), with no
+// Bare x branches on the HIGHLIGHT, not the trim, with no
 // context-awareness beyond that: the playhead plays no part, and there are no
 // positional rules. A live REGION (the drag-painted span, active-domain frames)
 // always TRIMS to it — begin at the span's lo, end at its hi — overwriting any
 // existing bounds (the new span simply replaces them; x re-trims even over an
-// existing trim), then consumes the highlight (the trim chips/wash replace it as
-// the visual, so re-trimming needs a fresh drag — Ableton persists its loop
-// region but we deliberately do not). NO region → x CLEARS the trim via
+// existing trim) — and the highlight is KEPT (architect 2026-07-23, reversing
+// the 2026-07-20 consume ruling): under the selection<->trim coupling the trim
+// window and the highlight now agree, so after x they coincide — the tail runs
+// sync_highlight_to_trim_window so region, selection, and window rest coupled
+// through the one owner (a crossed-collapse dissolve clears all three
+// together). NO region → x CLEARS the trim via
 // handle_trim_clear_both, whose has_begin||has_end guard makes no-trim a natural
 // no-op (nothing to clear, no highlight to clear either — the region is inactive
 // in this branch by definition). Read-only refuses silently BEFORE anything,
@@ -92,8 +95,10 @@ void GuiInputHandler::handle_trim_clear_both() {
 // once) — the map is monotone, so lo/hi order survives — then clamp to the
 // shared [0, total-1] walls. A span collapsing to end <= begin after the snap
 // destroys both bounds via auto_clear_crossed_trim (the standing rule); the
-// region is already cleared by then. The shared trim commit tail (auto_clear_crossed_trim
-// then the repaint/trigger) mirrors the other trim commits; the playhead is
+// coupling sync then clears the highlight and selection with the window. The
+// shared trim commit tail (auto_clear_crossed_trim
+// then the repaint/trigger, then the coupling sync) mirrors the other trim
+// commits; the playhead is
 // untouched (trim gestures never move it).
 void GuiInputHandler::handle_trim_x() {
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
@@ -123,14 +128,15 @@ void GuiInputHandler::handle_trim_x() {
     app.trim.has_begin   = true;
     app.trim.end_frame   = end;
     app.trim.has_end     = true;
-    // The highlight hands off to the trim: consume the region after reading it
-    // (the trim chips/wash replace it as the visual), so re-trimming needs a
-    // fresh drag. The invalidate_waveform_area below repaints the removal.
-    app.region = RegionState{};
     auto_clear_crossed_trim();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     target_render.trigger();
+    // The coupling tail (architect 2026-07-23): the highlight is KEPT — the
+    // sync re-derives it from the just-set window (and selects the contained
+    // markers), so region, selection, and trim rest coupled through the one
+    // owner; a crossed-collapse dissolve (auto_clear above) clears all three.
+    sync_highlight_to_trim_window();
 }
 
 // --- Trim boundary mouse gestures ---------------------------------------
@@ -473,7 +479,12 @@ void GuiInputHandler::sync_highlight_to_trim_window() {
     viewport.invalidate_waveform_area();
 }
 
-// R4.6: set ONE trim bound at the clicked column. The column maps to a source
+// R4.6: set ONE trim bound at the clicked column — ADJUST-ONLY (architect
+// 2026-07-23): the click requires an EXISTING full pair and refuses silently
+// otherwise, matching the standing every-trim-pointer-gesture-requires-the-pair
+// convention. The clicks ADJUST a resting window, never create one from
+// nothing — the window is created by region→x, and the settings editor remains
+// the deliberate lone-bound route. The column maps to a source
 // frame through authored_frame_at_column over the DISPLAYED paint map — the same
 // release-snap basis commit_trim_drag uses (its snap_moved_bound goes
 // source_frame -> painted_column -> authored_frame; a click carries the column
@@ -481,10 +492,14 @@ void GuiInputHandler::sync_highlight_to_trim_window() {
 // shared crossed-commit auto-clear (a bound onto/across its partner dissolves
 // both). History-less like every trim mutation; the repaint + trigger tail
 // mirrors the drag release. Read-only refuses silently (trim authoring). The
-// coupling sync runs afterward against whatever the trim now is (both bounds ->
-// window highlight + contained selection; a dissolve / lone result -> cleared).
+// coupling sync runs afterward against whatever the trim now is (the surviving
+// pair -> window highlight + contained selection; a crossed dissolve ->
+// cleared).
 void GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     if (active_view_state(app).read_only) return;   // trim authoring
+    // Adjust-only pair gate (see the header comment): no resting window, no
+    // bound-set click.
+    if (!(app.trim.has_begin && app.trim.has_end)) return;
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
     if (current_samples_per_pixel(app, audio) <= 0.0) return;
     const GuiRect area = waveform_area(app);

@@ -656,7 +656,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // marker-click branches (plain = single-select + land the playhead on
         // the marker + double-click seed / consume + arm the pending marker
         // drag on the flag part, Shift = file-manager inclusive RANGE select
-        // from the shift-held anchor to the clicked marker + land at the
+        // from the interaction's anchor (shift-held, else the adopted focus)
+        // to the clicked marker + land at the
         // earliest selected, Ctrl = the individual membership toggle + land at
         // the earliest selected), so it is resolved once here.
         // The editor lifecycle block above already closed any open flag editor,
@@ -794,7 +795,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // Markerless top-strip ctrl-exact press: the CHIP ROW sets the
             // BEGIN trim bound at the click (R4.6 as corrected by R5 — ctrl is
             // BEGIN and ctrl+shift is END, the architect's intended pair;
-            // set_trim_bound_at_click refuses read-only silently and runs the
+            // set_trim_bound_at_click refuses read-only AND a missing pair
+            // silently — the clicks ADJUST an existing window, never create
+            // one — and runs the
             // coupling sync). EVERY other lane — an empty flag or triangle
             // lane included — is a strict no-op, falling through to the return
             // below (the R3.2 ctrl-clear is RETIRED, architect 2026-07-23:
@@ -829,7 +832,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
         // Ctrl+Shift-exact: the chip row is its ONE claim — set the END trim
         // bound at the click (R5: ctrl is BEGIN, ctrl+shift is END;
-        // set_trim_bound_at_click refuses read-only silently and runs the
+        // set_trim_bound_at_click refuses read-only AND a missing pair
+        // silently — adjust-only — and runs the
         // coupling sync). Everywhere else Ctrl+Shift stays a strict no-op,
         // falling to the return below.
         if (ctrl && shift && !alt && inside_top) {
@@ -863,7 +867,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // single-select, LAND the playhead on the marker (below), and — on the
         // FLAG part only — ARM a pending marker drag (moves the marker if the
         // pointer crosses the threshold, else a pure click). Shift+click: a
-        // file-manager INCLUSIVE RANGE select from the shift-held anchor to the
+        // file-manager INCLUSIVE RANGE select from the interaction's anchor
+        // (shift-held, else the adopted focus) to the
         // clicked marker (the range end = FOCUS), which LANDS the playhead at the
         // range's EARLIEST member (not the clicked end — focus and land diverge).
         // The individual membership TOGGLE moved to Ctrl+click (the ctrl-exact
@@ -912,11 +917,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 const int hit = mh.index;
                 if (shift) {
                     // Shift+click is a file-manager INCLUSIVE RANGE select
-                    // (architect 2026-07-23): the first shift-click of a
-                    // continuous shift-held interaction anchors on the marker
-                    // (selection becomes {hit}, hit the anchor + focus); each
+                    // (architect 2026-07-23): the click ranges from the
+                    // interaction's anchor — a live shift-held anchor, else the
+                    // ADOPTED FOCUS (architect labwc round 2, 2026-07-23:
+                    // plain-click A then shift+click B selects A..B, and a
+                    // re-started shift interaction ranges from the previous
+                    // click's focus; with nothing focused the click anchors on
+                    // its own marker, selection {hit}) — each
                     // successive shift-click replaces the selection with the
-                    // inclusive index range between the shift-held anchor and
+                    // inclusive index range between that anchor and
                     // hit. The clicked marker becomes the range end = FOCUS
                     // (last_selected), but the playhead LANDS at the range's
                     // EARLIEST member (*selected_markers.begin() — smallest
@@ -924,8 +933,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // Space after a range select auditions from the range's
                     // start. FOCUS and the land target thus DIVERGE here: the
                     // unconditional nudge/drag follow then tows the playhead onto
-                    // the FOCUSED (clicked) range end as ever. On the anchoring
-                    // first click the selection is {hit}, so *begin() == hit and
+                    // the FOCUSED (clicked) range end as ever. On an anchoring
+                    // focus-less first click the selection is {hit}, so
+                    // *begin() == hit and
                     // the land is unchanged. Ctrl+click is the individual
                     // membership toggle (above, landing at the earliest selected
                     // too). It arms no drag, seeds/consumes no double-click, opens

@@ -710,7 +710,10 @@ private:
     // paint map), walls [0, total-1], then the auto_clear_crossed_trim commit
     // tail (a bound onto/across its partner dissolves both). History-less like
     // every trim mutation; repaint + target_render.trigger() like the drag
-    // release. Read-only refuses silently (trim authoring). Runs the coupling
+    // release. Read-only refuses silently (trim authoring), as does a missing
+    // pair — ADJUST-ONLY (architect 2026-07-23): the clicks adjust an existing
+    // window, never create one (region→x creates; the settings editor is the
+    // deliberate lone-bound route). Runs the coupling
     // sync afterward. is_begin picks the bound: the ctrl chip-row click sets
     // begin, ctrl+shift sets end (R5).
     void set_trim_bound_at_click(bool is_begin, int mouse_x);

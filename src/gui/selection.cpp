@@ -96,12 +96,22 @@ void Selection::select_range_from_anchor(int idx) {
         ? static_cast<int>(app.phaseresetmarkers.markers().size())
         : static_cast<int>(app.warpmarkers.markers().size());
 
-    const int anchor = app.shift_range_anchor;
+    int anchor = app.shift_range_anchor;
     if (anchor < 0 || anchor >= n) {
-        // First shift-click of the interaction (no live anchor; the bounds
-        // check is belt-and-braces — a stale index is impossible under the
-        // lifecycle, but a store shrink between anchor and this click could
-        // otherwise leave it out of range). Cannot delegate to
+        // No live shift-held anchor: ADOPT THE FOCUS (architect labwc round 2,
+        // 2026-07-23). The file-manager convention ranges a shift-click from
+        // the CURRENT focus — plain-click A then shift+click B selects A..B,
+        // and a shift interaction re-started after a shift release ranges from
+        // the previous click's focus — so the anchor seed is the focused
+        // marker whenever one exists, not only a prior shift-click. This also
+        // self-heals any platform-side anchor loss: the focus was set by the
+        // first click regardless, so the range re-derives from it. (The bounds
+        // check stays belt-and-braces for a store shrink.)
+        anchor = app.last_selected_marker;
+    }
+    if (anchor < 0 || anchor >= n) {
+        // Nothing focused either: the click anchors the interaction on its own
+        // marker (selection = {idx}). Cannot delegate to
         // set_single_selection: that method CLEARS the anchor, and we must set
         // it. Mirror its body (clear + insert + last + the top-strip/timestamp
         // damage pair) and additionally anchor on idx.
@@ -114,12 +124,15 @@ void Selection::select_range_from_anchor(int idx) {
         return;
     }
 
-    // Live anchor: selection becomes exactly the inclusive index range between
+    // Live (or just-adopted) anchor: selection becomes exactly the inclusive
+    // index range between
     // the anchor and idx (stores are time-sorted, so index range == time
     // range; clicks in any order, lo/hi normalized). last_selected == idx (the
-    // range end = focus); the anchor stays put across successive shift-clicks.
+    // range end = focus); the anchor is (re-)stored so it stays put across
+    // successive shift-clicks of the interaction.
     // Disabled markers in the range are included (selection of disabled markers
     // is legal — Delete and Ctrl+D already operate on them).
+    app.shift_range_anchor = anchor;
     const int lo = anchor < idx ? anchor : idx;
     const int hi = anchor < idx ? idx : anchor;
     app.selected_markers.clear();
