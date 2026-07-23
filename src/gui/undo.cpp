@@ -56,7 +56,9 @@ void Undo::recompute_dirty() {
 }
 
 void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state, int hint_last,
-                          bool affects_persistence) {
+                          bool affects_persistence,
+                          std::vector<int> touched_snapshot,
+                          std::vector<int> touched_live) {
     UndoEntry e;
     e.snapshot           = std::move(pre_state);
     e.phase_reset_snapshot = app.phaseresetmarkers.markers();
@@ -65,12 +67,16 @@ void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state, int hint_last,
     e.tab                = app.active_tab_view;
     e.hint_last_selected = hint_last;
     e.affects_persistence = affects_persistence;
+    e.touched_snapshot   = std::move(touched_snapshot);
+    e.touched_live       = std::move(touched_live);
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
 }
 
 void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
-                               int hint_last) {
+                               int hint_last,
+                               std::vector<int> touched_snapshot,
+                               std::vector<int> touched_live) {
     UndoEntry e;
     e.snapshot           = app.warpmarkers.markers();
     e.phase_reset_snapshot = std::move(pre_state);
@@ -78,6 +84,8 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     e.op_mode            = 'P';
     e.tab                = app.active_tab_view;
     e.hint_last_selected = hint_last;
+    e.touched_snapshot   = std::move(touched_snapshot);
+    e.touched_live       = std::move(touched_live);
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
 }
@@ -179,7 +187,24 @@ void apply_post_restore_rules_impl(AppState& app,
                                    FieldsDiffer  fields_differ) {
     std::set<int> target_set;
 
-    if (after.size() > before.size()) {
+    // Explicit identity hints first (reposition drags): entry.touched_snapshot
+    // names the touched markers directly in THIS entry's snapshot coordinates,
+    // which are exactly `after` (the state a restore of this entry produced). Use
+    // them verbatim, bounds-filtered against `after` defensively; only when they
+    // are absent (every hint-less producer) or filter empty (defensive) does the
+    // diff reconstruction below run. The hints exist because that diff matcher
+    // cannot tell a moved row from an untouched one when a translated group or a
+    // column-snapped drag lands field-identical rows at another's position.
+    if (!entry.touched_snapshot.empty()) {
+        for (int idx : entry.touched_snapshot) {
+            if (idx >= 0 && idx < static_cast<int>(after.size()))
+                target_set.insert(idx);
+        }
+    }
+
+    if (!target_set.empty()) {
+        // Hints resolved the touched set — skip the diff reconstruction entirely.
+    } else if (after.size() > before.size()) {
         std::multiset<int64_t> before_frames;
         for (const auto& m : before) before_frames.insert(m.time_frame);
         for (size_t i = 0; i < after.size(); ++i) {
@@ -215,9 +240,15 @@ void apply_post_restore_rules_impl(AppState& app,
         //
         // Consequences: a pure permutation with no field change (a stable-sort
         // tie reorder) matches every row and yields an empty touched set — no
-        // selection change, correct; a multi-marker drag flags exactly the
-        // moved set; coincident equal rows are handled by the one-match-per-row
-        // consumption exactly like the add/remove branches.
+        // selection change, correct; coincident equal rows are handled by the
+        // one-match-per-row consumption exactly like the add/remove branches.
+        // This matcher CANNOT distinguish a moved row that lands field-identical
+        // to an untouched row (a group translated by the inter-marker spacing, or
+        // a column-snapped drag onto a row-identical marker) from that untouched
+        // row — it would flag the wrong subset. The reposition drags therefore
+        // supply explicit touched_snapshot hints (consumed above), and this
+        // diff matcher is only the fallback for hint-less producers, where such
+        // collisions do not arise.
         std::vector<char> used(before.size(), 0);
         for (size_t i = 0; i < after.size(); ++i) {
             bool matched = false;
@@ -355,8 +386,55 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     counter.settings            = capture_current_settings(app);
     counter.op_mode             = entry.op_mode;
     counter.tab                 = entry.tab;
-    counter.hint_last_selected  = entry.hint_last_selected;
+    // The counter's hint is the pre-restore focus of the OP's column ON the op's
+    // tab, NOT entry's hint. The hint's contract everywhere is "last_selected
+    // when this entry's snapshot state was live", and the counter's snapshot IS
+    // the live pre-restore state — so its focus is the pre-restore one. Generic,
+    // not group-specific: e.g. select A-C with C focused, grab-and-drag A (first
+    // motion focuses A) → undo re-focuses C (entry's pre-drag hint), and redo
+    // must re-focus A (the pre-restore focus), which copying entry's hint got
+    // wrong.
+    //
+    // But app.last_selected_marker is the focus of the LIVE column (active tab,
+    // active markers view), and the op may target a DIFFERENT column: selection
+    // and W/P / Ctrl+Tab view switches are not undoable, so the user may have
+    // switched away since the op with no marker push in between. The op column's
+    // pre-restore focus then lives in a tab STASH, not in app.last_selected_marker
+    // — reading the live field there would index the wrong column's store and
+    // yield an incoherent hint. The capture MUST run here (the counter is pushed
+    // just below, before the tab switch and the mode-swap stash), so resolve the
+    // op-column focus by hand across three cases, mirroring where those switches
+    // will read from:
+    //   (1) op tab INACTIVE (entry.tab != active): its column focus is stashed in
+    //       that tab's ViewState slot (an inactive tab always has both columns
+    //       stashed).
+    //   (2) op tab active but op COLUMN inactive (op_mode != active view): stashed
+    //       in the ACTIVE tab's op_mode slot — the same slots the mode swap below
+    //       reads.
+    //   (3) otherwise (op targets the live column, or a settings-only entry): the
+    //       live app.last_selected_marker.
+    int op_column_focus;
+    if (entry.op_mode != 'S' && entry.tab != app.active_tab_view) {
+        const ViewState& t = (entry.tab == 'B') ? app.tab_b : app.tab_a;
+        op_column_focus = (entry.op_mode == 'P') ? t.phase_reset_last_selected
+                                                 : t.warp_last_selected;
+    } else if (entry.op_mode != 'S' &&
+               entry.op_mode != app.active_markers_view) {
+        const ViewState& t = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
+        op_column_focus = (entry.op_mode == 'P') ? t.phase_reset_last_selected
+                                                 : t.warp_last_selected;
+    } else {
+        op_column_focus = app.last_selected_marker;
+    }
+    counter.hint_last_selected  = op_column_focus;
     counter.affects_persistence = entry.affects_persistence;
+    // The touched-set identity hints SWAP coordinate spaces on the counter: the
+    // counter's snapshot is the op's after-state, so the rows touched by a
+    // restore of the counter (= redoing this op) are entry.touched_live, and the
+    // rows live when the counter was pushed (this entry's snapshot state) are
+    // entry.touched_snapshot. Empty stays empty (hint-less producers).
+    counter.touched_snapshot    = entry.touched_live;
+    counter.touched_live        = entry.touched_snapshot;
     std::vector<GuiWarpMarker>       before_w = counter.snapshot;
     std::vector<GuiPhaseResetMarker> before_t = counter.phase_reset_snapshot;
 

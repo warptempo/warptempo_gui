@@ -472,6 +472,15 @@ void MarkerDragOps::commit_drag() {
             break;
         }
     }
+    // Identity hints for the post-restore selection, filled only on a real
+    // (net_changed) drag. The undo diff matcher cannot recover the touched set
+    // when a translated group or a column-snapped drag lands rows FIELD-IDENTICAL
+    // at another marker's position, so name the touched markers explicitly:
+    // touched_snapshot = their indices in the PRE-DRAG snapshot (the pre-reorder
+    // store indices, valid in the snapshot a restore produces), touched_live =
+    // their POST-reorder indices in the committed (after) store.
+    std::vector<int> touched_snapshot;
+    std::vector<int> touched_live;
     if (net_changed) {
         for (size_t k = 0; k < app.drag.dragging_markers.size(); ++k) {
             const int idx = app.drag.dragging_markers[k];
@@ -488,6 +497,10 @@ void MarkerDragOps::commit_drag() {
                 m->time_frame = new_t;
             }
         }
+        // Pre-reorder: the store was untouched in order during motion and the
+        // write above changed only time_frame values, so dragging_markers still
+        // holds the pre-drag store indices — the pre-drag snapshot's coordinates.
+        touched_snapshot = app.drag.dragging_markers;
         // The drag may have carried markers across neighbors; restore
         // time order and remap the index-shaped state — the selection (the
         // single grabbed marker, or the whole group of a group drag) follows
@@ -503,6 +516,9 @@ void MarkerDragOps::commit_drag() {
             remap_marker_indices_after_reorder(
                 app, reorder_markers_by_time(app.warpmarkers.markers_mut()));
         }
+        // Post-remap: remap_marker_indices_after_reorder rewrote dragging_markers
+        // in place to the reordered (after) store's indices.
+        touched_live = app.drag.dragging_markers;
     }
     // Capture the GRABBED marker's committed frame into a local BEFORE the
     // wholesale DragState reset below discards it — the grabbed_k slot, not [0]:
@@ -527,9 +543,14 @@ void MarkerDragOps::commit_drag() {
     app.drag = DragState{};
     if (net_changed) {
         if (phase_reset) {
-            undo.push_undo_phase_reset(std::move(snap_t), hint_last);
+            undo.push_undo_phase_reset(std::move(snap_t), hint_last,
+                                       std::move(touched_snapshot),
+                                       std::move(touched_live));
         } else {
-            undo.push_undo_warp(std::move(snap_w), hint_last);
+            undo.push_undo_warp(std::move(snap_w), hint_last,
+                                /*affects_persistence=*/true,
+                                std::move(touched_snapshot),
+                                std::move(touched_live));
         }
         undo.recompute_dirty();
         viewport.invalidate_timestamp_area();

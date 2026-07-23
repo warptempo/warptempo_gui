@@ -496,8 +496,19 @@ void GuiInputHandler::cancel_active_drags() {
     // pressed with the multi-selection held intact) Esc ABANDONS the deferred
     // click: disarm only, leaving the multi-selection untouched (the release /
     // lost-button paths are where a non-cancelled deferred click completes).
-    if (app.pending_marker_drag.active)
+    // Drop the Marker double-click candidate the arming press seeded (both
+    // shapes seed one): a cancelled gesture is not a clean click sequence, so a
+    // later click must not pair with this abandoned press and open the editor.
+    // The keyboard Esc path already killed the candidate at the on_key
+    // chokepoint (this double-clear is harmless); the load-bearing case is the
+    // NON-keyboard cancel — main.cpp's resize / WM-close / prompt paths call
+    // cancel_active_drags directly, so a resize while a deferred press is held
+    // would otherwise strand a consumable candidate. Mirrors the strip / region
+    // drag Esc branches, which clear the candidate inline for the same reason.
+    if (app.pending_marker_drag.active) {
         app.pending_marker_drag = PendingMarkerDrag{};
+        app.double_click = DoubleClickCandidate{};
+    }
     // A pending tempo drag (a W+target flag press whose drag never began) is
     // likewise just disarmed: nothing committed before the crossing.
     if (app.pending_tempo_drag.active)

@@ -104,6 +104,20 @@ struct UndoEntry {
     // session state and never serialize, so crossing such an entry must not
     // make recompute_dirty report a warp-file difference.
     bool                      affects_persistence  = true;
+    // Explicit touched-set IDENTITY HINTS for the post-restore selection, filled
+    // ONLY by producers whose touched rows the diff reconstruction cannot
+    // recover by marker identity — the reposition drags, where a moved row can
+    // land field-identical to an untouched row (a group translated by the
+    // inter-marker spacing, or any dragged marker column-snapped exactly onto a
+    // row-identical marker). Empty means "no hint — use the diff reconstruction"
+    // (every other producer). COORDINATE SPACES (kept distinct because the
+    // counter-entry SWAPS them, restore_history_entry): touched_snapshot indexes
+    // THIS entry's `snapshot` — the state a restore of this entry PRODUCES, so
+    // apply_post_restore_rules reads it directly as the selection; touched_live
+    // indexes the state that was LIVE when the entry was pushed (the op's
+    // after-state), which becomes the snapshot coordinate of the counter-entry.
+    std::vector<int>          touched_snapshot;
+    std::vector<int>          touched_live;
 };
 
 // The marker selection state a marker drag's first-motion collapse rewrites,
