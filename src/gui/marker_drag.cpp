@@ -138,27 +138,37 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     }
 
     // Viewport clamp: GRABBED-ONLY, deliberately. Only the grabbed marker (hit)
-    // is clamped to the visible strip so a mouse drag can't push it offscreen,
-    // where its precise position — the one being authored — would be hidden. The
-    // OTHER group members ride the rigid delta and MAY travel offscreen: blind
-    // MOTION of a group held by one on-screen member is fine, exactly the trim
-    // pair drag's recorded ruling — the offscreen ruling forbids blind GRABS, not
-    // blind motion of a set held by its handle. The clamp sits on top of the
-    // absolute data walls (delta_min/delta_max above), in the SAME active domain:
-    // viewport_marker_bounds already returns active-domain values, so its edges
-    // fold in directly as [vb.first − fwd(orig_grabbed), vb.second −
+    // is clamped to the visible strip so a mouse drag can't push it FURTHER
+    // offscreen, where its precise position — the one being authored — would be
+    // hidden. The OTHER group members ride the rigid delta and MAY travel
+    // offscreen: blind MOTION of a group held by one on-screen member is fine,
+    // exactly the trim pair drag's recorded ruling — the offscreen ruling forbids
+    // blind GRABS, not blind motion of a set held by its handle. The clamp sits
+    // on top of the absolute data walls (delta_min/delta_max above), in the SAME
+    // active domain: viewport_marker_bounds already returns active-domain values,
+    // so its edges fold in directly as [vb.first − fwd(orig_grabbed), vb.second −
     // fwd(orig_grabbed)] — no inverse translation to source (that dance existed
-    // only because the walls were source-domain). The grabbed marker is on-screen
-    // at grab (the arming flag press hit hit_test_flag, which reports only visible
-    // chips against the same displayed map, so its painted column is within the
-    // viewport), so vb.first <= fwd(orig_grabbed) <= vb.second and this pair does
-    // not invert [delta_min, delta_max].
+    // only because the walls were source-domain).
+    //
+    // WIDEN the pair to include ZERO. The visible-flag iteration keeps flag
+    // CENTERS up to half a flag width past either edge (a half-offscreen flag is
+    // still hit-testable on its visible part), so a legal grab can have its center
+    // OUTSIDE [vb.first, vb.second] — the naive pair would then exclude 0 and the
+    // first nonzero motion would jump the marker (and its group) INWARD against
+    // the pointer. The viewport clamp only exists to stop the drag pushing the
+    // marker FURTHER out; a marker grabbed half-offscreen may rest where it is and
+    // move inward, never further out. So min the lower headroom with 0 and max the
+    // upper with 0: the interval always contains 0, the no-motion identity
+    // clamp(0) == 0 holds on every reachable grab, and a centered grab (0 already
+    // inside) is unaffected.
     {
         const auto vb = viewport_marker_bounds(app, audio);
         const double fwd_orig_grabbed =
             map_source_to_target(static_cast<double>(t_of(hit)), vdmap);
-        const double vp_lb = static_cast<double>(vb.first)  - fwd_orig_grabbed;
-        const double vp_ub = static_cast<double>(vb.second) - fwd_orig_grabbed;
+        double vp_lb = static_cast<double>(vb.first)  - fwd_orig_grabbed;
+        double vp_ub = static_cast<double>(vb.second) - fwd_orig_grabbed;
+        if (vp_lb > 0.0) vp_lb = 0.0;
+        if (vp_ub < 0.0) vp_ub = 0.0;
         if (vp_lb > d.delta_min) d.delta_min = vp_lb;
         if (vp_ub < d.delta_max) d.delta_max = vp_ub;
     }
@@ -258,9 +268,12 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
 // source view, where the displayed map is identity and both hops degenerate
 // to orig + delta, while a phase reset drag authors in target view against a
 // real (non-identity) displayed map — where a live-map inverse would slip at
-// the slope ratio, and the displayed basis does not. Walls stay
-// integer source frames and win over everything: the proposed source value
-// clamps per marker into [orig + delta_min, orig + delta_max].
+// the slope ratio, and the displayed basis does not. Walls win as a SHARED
+// active-domain clamp: the POINTER delta is clamped ONCE into the group
+// intersection [delta_min, delta_max] before the per-member loop, so every
+// member rides the same clamped delta and the group stops as a UNIT at the
+// first member's wall (the rigidity mechanism). Each member keeps only a plain
+// absolute [0, eof_wall] source-frame backstop for fp-safety.
 //
 // Writes proposed new times into app.drag.moveable_times — the live
 // marker store is NOT mutated. Paint reads moveable_times through the
@@ -509,10 +522,46 @@ void MarkerDragOps::commit_drag() {
     // source view, where D is an exact integer). D == 0.0 exactly when the
     // grabbed member returned to its origin, which folds the whole group's
     // wander-back into the verbatim short-circuit below.
-    const double D = grabbed_valid
+    double D = grabbed_valid
         ? (map_source_to_target(static_cast<double>(committed_grabbed), dmap)
            - map_source_to_target(original_grabbed_d, dmap))
         : 0.0;
+
+    // (2b) WALLS WIN OVER THE GRID at the group intersection. Motion clamped the
+    // pointer delta to the shared active-domain intersection [delta_min,
+    // delta_max] (still held on DragState here — the reset is far below); but the
+    // grabbed member's release COLUMN SNAP can overshoot that edge by up to half
+    // a column, which would carry D — and with it every rigidly-shifted member —
+    // past the wall the group actually stopped at. The limiting member would then
+    // pin in its own integer clamp while the grabbed member kept the larger
+    // displacement, squashing the group at release — exactly what the active-
+    // domain clamp retired. So clamp D back into the SAME intersection. When the
+    // clamp engages, RE-DERIVE the grabbed member from the clamped D by PLAIN
+    // rounding — snap_authored_frame(inv(fwd(orig_grabbed) + D)) then integer
+    // walls, NO column snap: the walls-win rule gives up stored-equals-shown for
+    // this one saturated case so the whole group rests rigidly on the wall side
+    // of the grid. Recompute D from the re-derived frame so the grabbed value and
+    // the members stay mutually consistent; ONE round suffices — the re-derived
+    // frame's D differs from the clamped bound only by rounding dust, which the
+    // members' own integer walls absorb. In SOURCE view the bound is
+    // integer-valued (walls and originals are integers under identity fwd), so
+    // committed_grabbed = orig + D is exact and the limiting member rests exactly
+    // ON its wall.
+    if (grabbed_valid) {
+        double clamped_D = D;
+        if (clamped_D < app.drag.delta_min) clamped_D = app.drag.delta_min;
+        if (clamped_D > app.drag.delta_max) clamped_D = app.drag.delta_max;
+        if (clamped_D != D) {
+            int64_t t = snap_authored_frame(map_target_to_source(
+                map_source_to_target(original_grabbed_d, dmap) + clamped_D,
+                dmap));
+            if (t < 0)        t = 0;
+            if (t > eof_wall) t = eof_wall;
+            committed_grabbed = t;
+            D = map_source_to_target(static_cast<double>(committed_grabbed), dmap)
+                - map_source_to_target(original_grabbed_d, dmap);
+        }
+    }
 
     // (3) Every member: the grabbed one takes its own snap; every OTHER member
     // is a COMPUTED position (the propagate-paste convention — computed
