@@ -758,16 +758,23 @@ private:
     void set_trim_bound_at_click_then_arm_drag(bool is_begin, int mouse_x,
                                                int mouse_y);
 
-    // R3 Esc ladder (architect 2026-07-23): the selection/region collapse rung of
-    // the Escape chain — placed AFTER the drag / editor / render cancels and in
-    // place of the old plain region clear. Returns true iff it consumed the Esc:
-    //   singleton selection  -> deselect + land the playhead on the marker
-    //   multiple selection    -> rest the region at the selection extent, deselect
-    //   no selection, region  -> collapse the region to its lo bound (clear the
-    //                            region + move the playhead there)
-    // Defined in input_pointer.cpp beside land_playhead_on_marker /
-    // set_region_to_selection_extent (both file-local there). Navigation-class,
-    // read-only allowed.
+    // Esc ladder (architect 2026-07-23, DOWN-ONLY as of round 4): the
+    // selection/region collapse rung of the Escape chain — placed AFTER the drag /
+    // editor / render cancels and in place of the old plain region clear. Tested
+    // REGION-FIRST so a region never shrinks into a subregion. Returns true iff it
+    // consumed the Esc:
+    //   region ACTIVE (any selection) -> collapse STRAIGHT to its start: clear the
+    //                                    region AND the selection, playhead to the
+    //                                    lo bound
+    //   no region + MULTIPLE selected -> drop to region: rest the region at the
+    //                                    selection extent, deselect (a PROGRAMMATIC
+    //                                    multi-select only — a click-made one rests
+    //                                    with its extent region, caught above)
+    //   no region + SINGLETON         -> deselect + land the playhead on the marker
+    // Consequence (architect-flagged): a click-made multi-selection (extent region
+    // resting) now collapses in ONE Esc, not two. Defined in input_pointer.cpp
+    // beside land_playhead_on_marker / set_region_to_selection_extent (both
+    // file-local there). Navigation-class, read-only allowed.
     bool handle_escape_selection_region();
 
     // One scrub ACT at an active-domain frame: kill-and-revive (architect

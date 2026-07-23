@@ -585,9 +585,10 @@ int main(int argc, char** argv) {
     GuiPlatform  gui;
     WaveformCache wf_cache;
     // Trim boundary stems live on their own surface, rebuilt synchronously from
-    // on_tick (the marker stem is a hover-preview live overlay, not cached).
-    // Constructed alongside wf_cache so they share the same lifetime; passed by
-    // reference into GuiPaintHandler and (for the destroy_surface hook)
+    // on_tick (the marker stem is the selected-marker live overlay
+    // paint_selected_stem — singleton-gated, blue, armed by hover/drag/nudge —
+    // not cached). Constructed alongside wf_cache so they share the same lifetime;
+    // passed by reference into GuiPaintHandler and (for the destroy_surface hook)
     // GuiFileLoader.
     StemCache     stem_cache;
     // Top-strip flag rects live on their own surface, rebuilt

@@ -93,6 +93,7 @@ void Selection::collapse_to_focused() {
     // accepted).
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     if (app.last_selected_marker < 0) return;   // nothing focused
+    const size_t old_size = app.selected_markers.size();
     if (app.selected_markers.size() == 1 &&
         app.selected_markers.count(app.last_selected_marker))
         return;   // already exactly the focused singleton
@@ -100,6 +101,17 @@ void Selection::collapse_to_focused() {
     app.selected_markers.insert(app.last_selected_marker);
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
+    // A REAL multi -> singleton collapse (old size >= 2; the early-returns above
+    // don't reach here) crosses BOTH the phase-reset overlay's 2-suppression
+    // threshold (2+ -> visible) and the selected-stem's singleton gate (now a
+    // singleton is selected), so both WAVEFORM overlays flip. The fine-tuning
+    // callers can collapse then REFUSE (a wall/no-change nudge, a bracket-edge
+    // tempo step) and full-invalidate NOTHING, so this owns the damage rather
+    // than relying on the caller — full waveform, once. Broader than
+    // damage_overlay_on_size2_crossing's P+target gate ON PURPOSE: the phase-reset
+    // overlay is P+target-only but the selected stem is view-independent (both
+    // columns, W and P), so the flip must repaint in every view.
+    if (old_size >= 2) viewport.invalidate_waveform_area();
 }
 
 bool Selection::toggle_selection_membership(int idx) {

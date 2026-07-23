@@ -565,7 +565,8 @@ void render_trim_stems(cairo_t* cr,
 
     // Stem geometry: the trim stem spans the waveform area, top at
     // waveform_area.y (where its b/e chip's structure ends above) down to the
-    // waveform bottom — the same span the hover-preview marker stem uses.
+    // waveform bottom — the same span the selected-marker stem (paint_selected_stem)
+    // uses.
     const double y_stem_top = static_cast<double>(waveform_area.y);
     const double y1 = static_cast<double>(waveform_area.y + waveform_area.h);
 
