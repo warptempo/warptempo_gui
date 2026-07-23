@@ -1022,10 +1022,6 @@ bool GuiInputHandler::adopt_render_entry(
     set_gui_font_size_pt(app.font_size);
     paint_handler.on_resize(app.width, app.height);
 
-    if (!app.playhead_scanner_active) {
-        app.playhead_scanner_sample = app.playhead_cursor_sample;
-        app.playhead_scanner_precise = static_cast<double>(app.playhead_cursor_sample);
-    }
     clamp_viewport_start(app, audio);
     viewport.clear_hover_popup();
     viewport.kick_waveform_sync();

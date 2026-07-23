@@ -6,8 +6,9 @@
 
 // Gesture-stop: called at the top of any handler that will move the
 // cursor (keys, button press, undo/redo, tab switch).
-// Stops the audio thread and restores the split-playhead invariant:
-// when the scanner is inactive its sample equals the cursor's sample.
+// Stops the audio thread and DEACTIVATES the scanner (clearing the
+// endpoint-hold flags too). Once inactive the scanner's value fields are
+// stale by contract — no consumer reads them — so nothing is snapped back.
 // The cursor is not touched here — the caller is about to commit a new
 // cursor position. The scanner's last-painted column must be invalidated
 // here regardless of what the caller does next: the caller cares about
@@ -21,8 +22,6 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     app.playhead_scanner_restore_pending = false;
     app.playhead_scanner_endpoint_painted = false;
     app.playhead_scanner_active = false;
-    app.playhead_scanner_sample = app.playhead_cursor_sample;
-    app.playhead_scanner_precise = static_cast<double>(app.playhead_cursor_sample);
     viewport.invalidate_playhead_columns(scanner_px, cursor_px);
     viewport.invalidate_timestamp_area();
     app.follow_overridden_for_session = false;
@@ -42,12 +41,13 @@ void GuiPlaybackLifecycle::hold_natural_end_scanner(int64_t endpoint_sample) {
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
 }
 
-// End scanner motion and restore the invariant. Used by Space/Enter to
-// stop and by natural end-of-playback. The cursor never moved during
-// playback (the predictor only writes the scanner), so the only work
-// here is to deactivate the scanner and snap it back onto the cursor.
-// Invalidate the span between the scanner's last-painted column and the
-// cursor's column so both repaint cleanly.
+// End scanner motion. Used by Space/Enter to stop and by natural
+// end-of-playback. The cursor never moved during playback (the predictor
+// only writes the scanner), so the only work here is to deactivate the
+// scanner (and clear the endpoint-hold flags); once inactive its value
+// fields are stale by contract, so nothing is snapped back. Invalidate the
+// span between the scanner's last-painted column and the cursor's column so
+// both repaint cleanly.
 void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
     const double scanner_px = scanner_pixel_x(app, audio);
     const double cursor_px  = playhead_pixel_x(app, audio);
@@ -58,16 +58,15 @@ void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
     app.playhead_scanner_restore_pending = false;
     app.playhead_scanner_endpoint_painted = false;
     app.playhead_scanner_active = false;
-    app.playhead_scanner_sample = app.playhead_cursor_sample;
-    app.playhead_scanner_precise = static_cast<double>(app.playhead_cursor_sample);
     app.follow_overridden_for_session = false;
 }
 
 // Space-bar: start/stop playback. Playback runs from the cursor to
 // trim_end (or total_frames if no e= marker). Pressing space with the
-// cursor at or past trim-end is a silent no-op. Space-to-stop sends
-// the scanner back to the cursor (the cursor is the launch point by
-// definition under the split-playhead model — no separate stash).
+// cursor at or past trim-end is a silent no-op. Space-to-stop just
+// DEACTIVATES the scanner (its value fields go stale by contract — no
+// snap-back, no separate stash; the cursor is the launch point by
+// definition under the split-playhead model).
 //
 // Target-view branch: the audio device is bound to app.target_buffer
 // (rebound by GuiTargetRender's completion path on Success, with the
@@ -124,7 +123,8 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         if (app.target_buffer_frames <= 0) return;
         // Launch = cursor + launch_offset. The offset is 0 for plain Space and
         // +N/2 for the Alt+Space lead-in audition; the resting cursor is never
-        // moved either way, so stop snaps the scanner back onto it. Validate the
+        // moved either way, so stop just deactivates the scanner and the cursor
+        // is right where it was left. Validate the
         // OFFSET launch (not the bare cursor) against the bound target buffer's
         // target-domain extent: a launch outside it — including cursor + N/2 at
         // or past the buffer end — is a silent no-op, nothing to audition.

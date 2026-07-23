@@ -87,8 +87,6 @@ void GuiTargetRender::trigger() {
         app.playhead_scanner_active = false;
         app.playhead_scanner_restore_pending = false;
         app.playhead_scanner_endpoint_painted = false;
-        app.playhead_scanner_sample = app.playhead_cursor_sample;
-        app.playhead_scanner_precise = static_cast<double>(app.playhead_cursor_sample);
     }
 
     // A render dispatch kills the running render. Any running archival
@@ -476,8 +474,6 @@ void GuiTargetRender::ensure_ready() {
             app.playhead_scanner_active = false;
             app.playhead_scanner_restore_pending = false;
             app.playhead_scanner_endpoint_painted = false;
-            app.playhead_scanner_sample = app.playhead_cursor_sample;
-            app.playhead_scanner_precise = static_cast<double>(app.playhead_cursor_sample);
         }
         // Restore the domain offset the cached buffer was rendered with.
         // rebind_to_source() (the T→S leg) rebinds the source at offset 0,

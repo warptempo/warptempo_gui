@@ -866,12 +866,20 @@ struct AppState {
     bool    follow_overridden_for_session = false;
 
     // Split-playhead state. The cursor (above, mirrored from the active
-    // ViewState) is the user's stationary reference frame; the scanner
-    // is the engine's playback position. They coincide when nothing is
-    // playing. Natural end holds the scanner on the exclusive end bound for
-    // one paint before restoring it to the cursor; manual stop paths restore
-    // immediately. The cursor is per-tab; the scanner is session-only and not
-    // persisted.
+    // ViewState) is the user's stationary reference frame. The scanner is the
+    // engine's playback position and is MEANINGFUL ONLY while
+    // playhead_scanner_active is true (plus the natural-end endpoint hold's one
+    // paint — see below); every consumer gates on that flag, so at REST the
+    // scanner sample / precise are stale by contract and no path reads them.
+    // The launch seed (toggle_playback), the per-paint predictor advance, and
+    // the endpoint-hold write are the only writers of the value fields. Natural
+    // end holds the scanner on the exclusive end bound for one paint
+    // (restore_pending + endpoint_painted) before deactivating; manual stop
+    // paths deactivate immediately. There is no resting coincidence with the
+    // cursor — a coincide-at-rest relationship would be wrong, not just unused
+    // (the scanner launches from the cursor, but a coming scrub gesture launches
+    // it independently). The cursor is per-tab; the scanner is session-only and
+    // not persisted.
     // `playback_speed` is authoritative on the main thread and pushed
     // to the playback engine on every change.
     int64_t playhead_scanner_sample = 0;
@@ -879,12 +887,12 @@ struct AppState {
     // DRAWN pixel is computed from this double (scanner_pixel_x) so a per-frame
     // viewport rescale during a strip-drag zoom slides the scanner smoothly
     // instead of stepping on integer frames (smoothness over accuracy —
-    // precision is judged at standstill). Kept in lockstep with the integer
-    // sample at every site that assigns it: the playback pre-paint hook writes
-    // the predictor's continuous position here, and every non-playback assignment
-    // mirrors the integer value as a double. The integer sample stays the
-    // domain / change-detection anchor (loop-wrap, the cur == sample
-    // short-circuit, the viewport-centering targets, the timestamp readout).
+    // precision is judged at standstill). Written only on the active path: the
+    // playback pre-paint hook writes the predictor's continuous position here,
+    // and the launch seed / endpoint hold write the integer value as a double.
+    // The integer sample stays the domain / change-detection anchor (loop-wrap,
+    // the cur == sample short-circuit, the viewport-centering targets, the
+    // timestamp readout). Meaningful only while active, like the integer sample.
     double  playhead_scanner_precise = 0.0;
     bool    playhead_scanner_active = false;
     bool    playhead_scanner_restore_pending = false;
@@ -1537,10 +1545,11 @@ double  playhead_pixel_x(const AppState& a, const GuiAudio& audio,
                          int64_t vp_start, double spp);
 // Returns the pixel column (offset from waveform_area.x) for the scanner,
 // computed from the CONTINUOUS playhead_scanner_precise (not the integer
-// sample) so a viewport rescale slides it smoothly. Equal to playhead_pixel_x
-// when playhead_scanner_active is false (by the invariant: scanner precise
-// tracks cursor sample when inactive). The (app, audio, vp_start, spp) overload
-// follows the same live-vs-displayed split documented on playhead_pixel_x above.
+// sample) so a viewport rescale slides it smoothly. Meaningful only while
+// playhead_scanner_active — at rest playhead_scanner_precise is stale by
+// contract, so every caller reads this behind that gate. The
+// (app, audio, vp_start, spp) overload follows the same live-vs-displayed split
+// documented on playhead_pixel_x above.
 double  scanner_pixel_x(const AppState& a, const GuiAudio& audio);
 double  scanner_pixel_x(const AppState& a, const GuiAudio& audio,
                         int64_t vp_start, double spp);

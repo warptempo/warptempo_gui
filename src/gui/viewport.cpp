@@ -106,15 +106,6 @@ void Viewport::move_playhead_to(int64_t new_sample) {
     const int64_t visible = samples_visible(app, audio);
 
     app.playhead_cursor_sample = new_sample;
-    // Split-playhead invariant: when the scanner is inactive its
-    // sample tracks the cursor. Mouse-click-during-playback paths
-    // keep scanner_active true and update the scanner via the audio
-    // thread's reseek; this branch only fires for the idle / stopped
-    // case the gesture callers funnel through here after stop.
-    if (!app.playhead_scanner_active) {
-        app.playhead_scanner_sample = new_sample;
-        app.playhead_scanner_precise = static_cast<double>(new_sample);
-    }
 
     const int64_t vp_end = app.viewport_start_sample + visible;
     bool viewport_changed = false;
@@ -176,10 +167,11 @@ void Viewport::clamp_display_state_to_live_domain() {
     // playhead columns and the timestamp readout the way move_playhead_to's
     // playhead-only branch does (playhead_pixel_x reads app.playhead_cursor_sample,
     // so old_px is captured before the write). No scanner write: the repair
-    // concerns the RESTING cursor only — every scanner read gates on
-    // playhead_scanner_active (the `? scanner : cursor` ternaries), so an inactive
-    // scanner's consumers read the cursor this just repaired, and an active
-    // scanner is the audio thread's to own; a map edit strands only the cursor.
+    // concerns the RESTING cursor only — the scanner is meaningful only while
+    // playhead_scanner_active, and every scanner read gates on it (the
+    // `? scanner : cursor` ternaries take the cursor this just repaired when the
+    // scanner is inactive), while an active scanner is the audio thread's to own;
+    // a map edit strands only the cursor.
     const int64_t clamped =
         clamp_playhead_to_live_domain(app.playhead_cursor_sample, app, audio);
     if (clamped != app.playhead_cursor_sample) {
@@ -252,9 +244,9 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     app.zoom_level = new_zoom_level;
 
     // Split-playhead: during playback zoom tracks the audio under review
-    // (scanner); otherwise tracks the launch point (cursor). The two are equal
-    // by invariant when the scanner is inactive, so this only matters during
-    // playback. At the effective ceiling samples_visible == total, so
+    // (scanner); otherwise tracks the cursor. The scanner is meaningful only
+    // while active, so the ternary below takes the cursor at rest. At the
+    // effective ceiling samples_visible == total, so
     // clamp_viewport_start's visible >= total branch parks the start at 0
     // (whole song visible) without any mode test.
     const int64_t target = app.playhead_scanner_active
@@ -496,8 +488,8 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous,
 void Viewport::center_viewport_on_playhead() {
     if (audio.total_frames() <= 0) return;
     // Split-playhead: during playback center on the scanner (audio
-    // under review); otherwise center on the cursor (launch point).
-    // The two are equal by invariant when the scanner is inactive.
+    // under review); otherwise center on the cursor. The scanner is
+    // meaningful only while active, so the ternary takes the cursor at rest.
     const int64_t target = app.playhead_scanner_active
         ? app.playhead_scanner_sample
         : app.playhead_cursor_sample;
@@ -538,10 +530,10 @@ void Viewport::invalidate_all() {
 // Auto-follow during playback: when the scanner leaves the viewport,
 // scroll so the scanner lands ~10% into the new view, leaving room
 // ahead. Only the first move beyond vp_end triggers a scroll. Called
-// at play press too (when scanner == cursor by invariant), so the same
-// landing rule left-edge-aligns the viewport on the cursor if it was
-// offscreen — so the scanner always issues forth from a visible
-// cursor.
+// at play press too (right after the launch seed sets the scanner to the
+// launch cursor position), so the same landing rule left-edge-aligns the
+// viewport on the cursor if it was offscreen — so the scanner always issues
+// forth from a visible cursor.
 void Viewport::follow_scroll_if_needed() {
     const int64_t visible = samples_visible(app, audio);
     if (visible <= 0) return;

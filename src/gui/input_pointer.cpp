@@ -587,16 +587,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // edge-align could scroll for a half-offscreen flag, and the
                 // ruling is NO viewport write of any kind (the playhead may
                 // rest at a slightly offscreen column when the clicked flag
-                // hung half off the edge — accepted). Mirror move_playhead_to's
-                // scanner-sync invariant: playback was just stopped, so the
-                // inactive scanner tracks the cursor.
+                // hung half off the edge — accepted).
                 const double old_px = playhead_pixel_x(app, audio);
                 app.playhead_cursor_sample = sample;
-                if (!app.playhead_scanner_active) {
-                    app.playhead_scanner_sample = sample;
-                    app.playhead_scanner_precise =
-                        static_cast<double>(sample);
-                }
                 // Navigation land: dissolve a resting region — the playhead
                 // just jumped onto the marker, off any prior auditioning span.
                 clear_region_highlight(app, viewport);

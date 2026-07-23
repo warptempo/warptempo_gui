@@ -677,15 +677,8 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
     const int64_t old_vp = app.viewport_start_sample;
 
     // Set the cursor directly — no move_playhead_to, which would scroll
-    // the viewport a second time before centering. Mirror move_playhead_to's
-    // scanner-sync invariant: when the scanner is inactive its sample
-    // tracks the cursor (Tab always runs with playback stopped, so the
-    // scanner is inactive here, but keep the guard for symmetry).
+    // the viewport a second time before centering.
     app.playhead_cursor_sample = sample;
-    if (!app.playhead_scanner_active) {
-        app.playhead_scanner_sample = sample;
-        app.playhead_scanner_precise = static_cast<double>(sample);
-    }
 
     // Navigation jump: dissolve a resting region highlight (its span is stale
     // now the playhead has left it, and the region would suppress the cursor

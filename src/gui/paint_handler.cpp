@@ -625,8 +625,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     //
     //     sr is the loaded file's sample rate and the playhead samples are
     //     source-frames. Split-playhead: track the scanner during playback
-    //     (what the user hears), the cursor otherwise (equal by invariant when
-    //     the scanner is inactive).
+    //     (what the user hears), the cursor otherwise (the scanner is
+    //     meaningful only while active, so the ternary takes the cursor at rest).
     {
         const int64_t ts_sample = app.playhead_scanner_active
             ? app.playhead_scanner_sample
