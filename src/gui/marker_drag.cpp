@@ -302,10 +302,7 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // wall intersection (begin_drag). This is the rigidity mechanism: every
     // member then rides the SAME clamped active-domain delta, so the group stops
     // as a UNIT the instant the first member's image reaches its wall — no
-    // per-member squash in either view. raw_delta == 0.0 is always inside the
-    // bounds (the resting positions are legal and the grabbed marker is on-screen
-    // at grab, so 0 headroom is never negative), so the exact-zero verbatim
-    // short-circuit below still tests the ORIGINAL raw_delta.
+    // per-member squash in either view.
     const double eof_wall = static_cast<double>(audio.total_frames()) - 1.0;
     double clamped = raw_delta;
     if (clamped < app.drag.delta_min) clamped = app.drag.delta_min;
@@ -322,17 +319,24 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         // on source view's empty map (proposed = orig + clamped there,
         // bit-for-bit).
         const double orig = static_cast<double>(app.drag.original_times[k]);
-        // Exact-zero short-circuit on the ORIGINAL raw_delta: at raw_delta == 0.0
-        // the two-hop inv(fwd(orig)) is NOT IEEE-bitwise orig at interior map
-        // points, so a drag wandered exactly back to its press x would leave a
-        // sub-frame paint jitter. Returning orig verbatim keeps the flag pinned.
-        // This matters for the grabbed slot's commit (its bit-exact `proposed ==
-        // original` untouched short-circuit, which makes D == 0 and restores the
-        // whole group verbatim); for the OTHER members commit ignores the
-        // proposal and reconstructs from D (D == 0 -> verbatim original, D != 0
-        // -> computed inv(fwd(orig_k) + D) through a plain snap_authored_frame,
-        // no column snap), so their sub-column wander never re-quantizes them.
-        const double proposed = (raw_delta == 0.0)
+        // Zero-EFFECTIVE-motion short-circuit on the CLAMPED delta, not the raw
+        // pointer delta: the two-hop inv(fwd(orig) + clamped) is NOT IEEE-bitwise
+        // orig at interior map points even when clamped == 0, so a motion whose
+        // pointer delta is nonzero but CLAMPED TO ZERO — the load-bearing case is
+        // an OUTWARD drag of a half-offscreen flag, whose contains-zero viewport
+        // bound clamps it to 0 — would otherwise write sub-frame residue into
+        // moveable_times, miss commit's bit-exact untouched branch, and column-snap
+        // a marker that had NO permitted motion (a visually motionless, forbidden
+        // drag committing an inward jump). Testing clamped == 0.0 returns orig
+        // verbatim, restoring the promised identity: zero effective motion ->
+        // verbatim originals -> any_changed false -> moved never latches ->
+        // commit's untouched short-circuit -> D == 0 -> whole group verbatim. It
+        // subsumes the raw_delta == 0 case (the bounds contain 0, so clamp(0) ==
+        // 0). For a nonzero clamped delta the OTHER members' commit reconstructs
+        // from D (D == 0 -> verbatim, else inv(fwd(orig_k) + D) through a plain
+        // snap_authored_frame, no column snap), so their sub-column wander never
+        // re-quantizes them.
+        const double proposed = (clamped == 0.0)
             ? orig
             : map_target_to_source(
                   map_source_to_target(orig, dmap) + clamped, dmap);
@@ -536,30 +540,39 @@ void MarkerDragOps::commit_drag() {
     // pin in its own integer clamp while the grabbed member kept the larger
     // displacement, squashing the group at release — exactly what the active-
     // domain clamp retired. So clamp D back into the SAME intersection. When the
-    // clamp engages, RE-DERIVE the grabbed member from the clamped D by PLAIN
-    // rounding — snap_authored_frame(inv(fwd(orig_grabbed) + D)) then integer
-    // walls, NO column snap: the walls-win rule gives up stored-equals-shown for
-    // this one saturated case so the whole group rests rigidly on the wall side
-    // of the grid. Recompute D from the re-derived frame so the grabbed value and
-    // the members stay mutually consistent; ONE round suffices — the re-derived
-    // frame's D differs from the clamped bound only by rounding dust, which the
-    // members' own integer walls absorb. In SOURCE view the bound is
-    // integer-valued (walls and originals are integers under identity fwd), so
-    // committed_grabbed = orig + D is exact and the limiting member rests exactly
-    // ON its wall.
+    // clamp engages, set D = clamped_D and RE-DERIVE the grabbed member from it by
+    // PLAIN rounding — snap_authored_frame(inv(fwd(orig_grabbed) + D)) then
+    // integer walls, NO column snap: the walls-win rule gives up stored-equals-
+    // shown for this one saturated case so the whole group rests rigidly on the
+    // wall side of the grid.
+    //
+    // The RE-QUANTIZATION TRAP (do NOT recompute D from the re-derived frame):
+    // fwd(re-derived grabbed) − fwd(orig) re-snaps D onto the GRABBED member's
+    // LOCAL slope grid, which at a steep segment (slope up to 16 is
+    // bracket-legal) can move D by ~half that slope — nearly 8 active frames —
+    // straight back OUTSIDE the clamped bound, driving a member in a shallow
+    // segment tens of frames past EOF into a semantic (not fp) clamp: the very
+    // squash this guards against. Consistency does NOT come from D matching the
+    // grabbed frame's exact displacement; it comes from EVERY member (grabbed
+    // included) being the plain rounding of the SAME rigid formula
+    // snap_authored_frame(inv(fwd(orig) + D)). The re-derived grabbed frame IS
+    // that formula applied to itself, so grabbed and members are consistent BY
+    // CONSTRUCTION, and clamped_D <= delta_max keeps every member's inverse
+    // within its wall up to genuine rounding dust (<= half a source frame), which
+    // the integer walls absorb. In SOURCE view the bound is integer-valued (walls
+    // and originals are integers under identity fwd), so committed_grabbed =
+    // orig + D is exact and the limiting member rests exactly ON its wall.
     if (grabbed_valid) {
         double clamped_D = D;
         if (clamped_D < app.drag.delta_min) clamped_D = app.drag.delta_min;
         if (clamped_D > app.drag.delta_max) clamped_D = app.drag.delta_max;
         if (clamped_D != D) {
+            D = clamped_D;
             int64_t t = snap_authored_frame(map_target_to_source(
-                map_source_to_target(original_grabbed_d, dmap) + clamped_D,
-                dmap));
+                map_source_to_target(original_grabbed_d, dmap) + D, dmap));
             if (t < 0)        t = 0;
             if (t > eof_wall) t = eof_wall;
             committed_grabbed = t;
-            D = map_source_to_target(static_cast<double>(committed_grabbed), dmap)
-                - map_source_to_target(original_grabbed_d, dmap);
         }
     }
 
