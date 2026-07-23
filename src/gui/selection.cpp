@@ -85,9 +85,9 @@ void Selection::select_range_from_anchor(int idx) {
     // File-manager inclusive range select (architect 2026-07-23). This is the
     // ONE mutator that keeps/sets app.shift_range_anchor; every OTHER Selection
     // method clears it (see the field's lifecycle comment). The caller lands the
-    // playhead on idx unconditionally after this returns, so idx < 0 (never
-    // reached from the shift-click path, which resolves a real hit) is a plain
-    // no-op guard.
+    // playhead on *selected_markers.begin() (the EARLIEST selected marker, the
+    // R1 reversal) after this returns, so idx < 0 (never reached from the
+    // shift-click path, which resolves a real hit) is a plain no-op guard.
     if (idx < 0) return;
 
     // The active column's store size — the same phase-reset/warp selector

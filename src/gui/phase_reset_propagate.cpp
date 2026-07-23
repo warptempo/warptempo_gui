@@ -51,7 +51,16 @@ struct DestBlock {
 // owning marker to the next warp marker in the list; the STORE-FINAL marker
 // owns the section running to the SONG END (song_end_frame, source frames),
 // so it contributes a block ending there (section rule, architect
-// 2026-07-23). Markers without a label name contribute no entry.
+// 2026-07-23). Markers without a label name, and EFFECTIVELY-DISABLED labeled
+// markers, contribute no block: the copy filters effective-disabled selected
+// markers out of the clipboard, so this destination walk must filter them
+// identically or a disabled labeled marker opens a lockstep gap (codex
+// round-5 finding) — a destination section owned by a disabled marker then
+// receives no paste and keeps its resets, consistent with disabled markers
+// being excluded from eligibility. Only OWNERSHIP is filtered: a skipped
+// marker's TIME still bounds the previous block's extent (the extent stays
+// next-in-STORE, so the surviving predecessor block still ends at the next
+// store marker's time).
 std::vector<DestBlock> walk_named_blocks(
     const std::vector<GuiWarpMarker>& mv,
     int from_idx, int to_idx_exclusive, int64_t song_end_frame) {
@@ -62,6 +71,9 @@ std::vector<DestBlock> walk_named_blocks(
     for (int i = from_idx; i < to_idx_exclusive; ++i) {
         const std::string& name = warp_marker_label_name(mv[i]);
         if (name.empty()) continue;
+        // Effective-disabled labeled marker: not a block owner (see head
+        // comment) — but its time still bounds the previous block's extent.
+        if (effective_disabled(mv, i)) continue;
         const int64_t start = mv[i].time_frame;
         // Store-final marker: its section runs to the song end. Every other
         // marker's section ends at the next store marker.
@@ -121,9 +133,11 @@ void PhaseResetPropagate::copy_from_selection() {
     // paste walks every labeled destination block in strict lockstep, so a
     // disjoint clipboard would diverge at the first gap; contiguity is what
     // keeps the two label sequences aligned (the copy gate mirrors the `m`
-    // sweep's). Unlabeled markers inside the run still contribute no block, and
-    // the paste's destination walk skips unlabeled markers identically, so the
-    // sequences stay aligned. Not routed through walk_named_blocks: the copy
+    // sweep's). Unlabeled AND effective-disabled markers inside the run still
+    // contribute no block, and the paste's destination walk skips both
+    // identically (walk_named_blocks filters unnamed and effective-disabled
+    // owners), so the sequences stay aligned. Not routed through
+    // walk_named_blocks: the copy
     // filters on the SELECTED set and on EFFECTIVE-enabled status (a disabled
     // selected marker contributes no block), neither of which that shared
     // destination walk expresses — a separate loop here, walk_named_blocks
@@ -255,10 +269,11 @@ void PhaseResetPropagate::paste_apply() {
     if (matched == 0) {
         // Nothing to materialize: either a divergence at block 0
         // (stop_message non-empty), or the destination produced zero
-        // labeled blocks (e.g., no labeled marker at or after the anchor —
+        // owned blocks (e.g., no enabled labeled marker at or after the anchor —
         // the store-final marker now DOES own a block, running to the song
-        // end, so only unlabeled destinations reach here), which is a clean
-        // partial walk and stays silent. Either way: no undo
+        // end, so only unlabeled or effective-disabled destinations reach
+        // here), which is a clean partial walk and stays silent. Either way:
+        // no undo
         // entry, no waveform / render flush, but the view-switch fires
         // per the always-switch rule.
         if (!stop_message.empty()) {
