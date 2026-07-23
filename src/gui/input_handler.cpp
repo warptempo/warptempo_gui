@@ -43,6 +43,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // key-repeat re-enters through the same path as consecutive commands, which
     // correctly coalesce.
     ++app.command_seq;
+    // Double-click lifecycle, KEYBOARD half: any keyboard command between two
+    // clicks breaks EVERY pending double-click candidate (ZoomRow, Marker,
+    // EmptyLane alike) at this one chokepoint — no legitimate double-click types
+    // a key between its two presses, and a cross-context consume (seed a
+    // candidate, run a command, click again to consume in a different context)
+    // must not fire. The consume lives entirely in on_button_press (nothing on
+    // the keyboard path reads the candidate), and key-repeat re-entering here is
+    // equally fine — no candidate can survive a held key. The pointer-side
+    // per-branch clears (the on_button_press top-of-frame clear, the moved-drag
+    // clears, the Esc drag-cancel clears) stay: they own the pointer half of the
+    // lifetime; this owns the keyboard half.
+    app.double_click = DoubleClickCandidate{};
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;

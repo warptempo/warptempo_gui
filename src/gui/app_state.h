@@ -681,7 +681,13 @@ enum class DoubleClickSurface { None, ZoomRow, Marker, EditorText, EmptyLane };
 //                 plain first press also runs the waveform-parity placement, a
 //                 shift first press is a pure no-op seed. Cleared like every
 //                 candidate when the armed region drag moves.
-// Cleared on file load, and the moment an action fires. Session-only.
+// Cleared on file load, the moment an action fires, and — the KEYBOARD half of
+// the lifetime — at the TOP of every on_key command (beside the command_seq
+// bump): any keyboard command between two clicks breaks EVERY candidate at that
+// one chokepoint, so a seed formed in one context can never consume in another
+// after an intervening keypress (Esc included). The pointer half is the
+// on_button_press top-of-frame clear, the moved-drag clears, and the Esc
+// drag-cancel clears. Session-only.
 struct DoubleClickCandidate {
     DoubleClickSurface surface = DoubleClickSurface::None;
     int64_t time_ms   = 0;      // CLOCK_MONOTONIC ms at the seeding press/release
@@ -1299,8 +1305,9 @@ struct AppState {
     // Mirrored to/from the active tab's ViewState slot at the tab-swap
     // boundary in active_views.cpp (same pattern as viewport/zoom/playhead).
     // Trim is a region authored purely by the plain chip-row pointer drags
-    // (single-bound chip, chip-row inter-chip bridge/pair) and the bare-x
-    // set/clear/region-consume — it is NOT part of the selection system (no
+    // (single-bound chip, chip-row inter-chip bridge/pair) and the bare-x branch
+    // (a live region sets the trim to it and KEEPS/re-syncs the highlight; no
+    // region clears the trim) — it is NOT part of the selection system (no
     // bound selection, no Tab stop, no Delete arm).
     TrimState trim;
 
