@@ -11,6 +11,7 @@
 #include <string>
 
 struct GuiTargetRender;
+struct Selection;
 
 // File-lifecycle operations, extracted from main.cpp's inline
 // lambdas. Owns the audio-load → markers-parse → settings-parse →
@@ -28,6 +29,7 @@ struct GuiFileLoader {
     // through GuiPaintHandler::on_resize, the same geometry-and-cache
     // rebuild path a window resize takes.
     GuiPaintHandler&   paint_handler;
+    Selection&         selection;
 
     GuiFileLoader(AppState&          app_,
                   GuiAudio&          audio_,
@@ -35,14 +37,16 @@ struct GuiFileLoader {
                   GuiPlayback&       playback_,
                   Viewport&          viewport_,
                   GuiTargetRender&   target_render_,
-                  GuiPaintHandler&   paint_handler_)
+                  GuiPaintHandler&   paint_handler_,
+                  Selection&         selection_)
         : app(app_),
           audio(audio_),
           gui(gui_),
           playback(playback_),
           viewport(viewport_),
           target_render(target_render_),
-          paint_handler(paint_handler_) {}
+          paint_handler(paint_handler_),
+          selection(selection_) {}
 
     bool load_file(const std::string& path);
 };

@@ -172,6 +172,7 @@ namespace {
 template <class M, class FieldsDiffer>
 void apply_post_restore_rules_impl(AppState& app,
                                    const GuiAudio& audio,
+                                   Selection& selection,
                                    const UndoEntry& entry,
                                    const std::vector<M>& before,
                                    const std::vector<M>& after,
@@ -193,9 +194,9 @@ void apply_post_restore_rules_impl(AppState& app,
         // A removal leaves no touched row to select — clear the selection.
         // Nothing to show, so the viewport also stays put: the offscreen
         // recenter in the selection tail below runs only when there is a
-        // surviving touched marker. The playhead never moves either.
-        app.selected_markers.clear();
-        app.last_selected_marker = -1;
+        // surviving touched marker. The playhead never moves either
+        // (clear_selection's damage is paint-only, not a viewport move).
+        selection.clear_selection();
         return;
     } else {  // same count: identity-based row matching
         // A crossing drag reorders the store (reorder_markers_by_time), so
@@ -276,7 +277,7 @@ void apply_post_restore_rules_impl(AppState& app,
 void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
                                          const std::vector<GuiWarpMarker>& before) {
     apply_post_restore_rules_impl(
-        app, viewport.audio, entry, before, app.warpmarkers.markers(),
+        app, viewport.audio, selection, entry, before, app.warpmarkers.markers(),
         [](const GuiWarpMarker& a, const GuiWarpMarker& b) {
             return a.time_frame     != b.time_frame
                 || a.disabled       != b.disabled
@@ -305,7 +306,8 @@ void Undo::apply_post_restore_rules_phase_reset(
         const UndoEntry& entry,
         const std::vector<GuiPhaseResetMarker>& before) {
     apply_post_restore_rules_impl(
-        app, viewport.audio, entry, before, app.phaseresetmarkers.markers(),
+        app, viewport.audio, selection, entry, before,
+        app.phaseresetmarkers.markers(),
         [](const GuiPhaseResetMarker& a, const GuiPhaseResetMarker& b) {
             return a.time_frame != b.time_frame
                 || a.disabled   != b.disabled;

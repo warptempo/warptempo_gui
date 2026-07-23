@@ -26,6 +26,7 @@ struct Selection {
     void repair_last_selected();
     void set_single_selection(int idx);
     void clear_selection();
+    void collapse_to_focused();
     bool toggle_selection_membership(int idx);
     void sanitize_selection_after_restore(int n);
     void cycle_selection(bool forward);

@@ -654,7 +654,7 @@ int main(int argc, char** argv) {
     // dispatches the eager target preview), so it must be constructed after
     // target_render.
     GuiFileLoader file_loader(app, audio, gui, playback, viewport,
-                              target_render, paint_handler);
+                              target_render, paint_handler, selection);
     GuiActiveViews active_views(app, audio, viewport, selection,
                                 playback_lifecycle);
     Undo undo(app, viewport, selection, playback_lifecycle, active_views,

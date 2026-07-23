@@ -3,6 +3,7 @@
 #include "input_handler.h"   // validate_target_view_entry (load gate below)
 #include "prompt.h"
 #include "render_output_naming.h"
+#include "selection.h"
 #include "settings_io.h"
 #include "target_render.h"
 #include "warp_frame_map_view.h"
@@ -222,8 +223,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // corrupt audio file or invalid engine settings below.
     app.warpmarkers.clear();
     app.phaseresetmarkers.clear();
-    app.selected_markers.clear();
-    app.last_selected_marker = -1;
+    selection.clear_selection();
     app.active_markers_view    = 'W';
     app.drag = DragState{};
     app.region_drag = RegionDragState{};

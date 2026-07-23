@@ -39,6 +39,23 @@ void Selection::clear_selection() {
     viewport.invalidate_timestamp_area();
 }
 
+void Selection::collapse_to_focused() {
+    // The fine-tuning ops (inherit toggle, tempo step, both nudges) collapse
+    // the selection to the focused marker so the operation and the resulting
+    // selection target last_selected only. last_selected_marker is untouched —
+    // it stays the focus. Callers that full-invalidate afterward make the
+    // top-strip / timestamp damage here redundant (a benign damage-union,
+    // accepted).
+    if (app.last_selected_marker < 0) return;   // nothing focused
+    if (app.selected_markers.size() == 1 &&
+        app.selected_markers.count(app.last_selected_marker))
+        return;   // already exactly the focused singleton
+    app.selected_markers.clear();
+    app.selected_markers.insert(app.last_selected_marker);
+    viewport.invalidate_top_strip();
+    viewport.invalidate_timestamp_area();
+}
+
 bool Selection::toggle_selection_membership(int idx) {
     if (idx < 0) return false;
     bool added;

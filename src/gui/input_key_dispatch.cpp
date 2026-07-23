@@ -919,8 +919,7 @@ bool GuiInputHandler::adopt_render_entry(
 
     app.warpmarkers.markers_mut()       = std::move(src_warp);
     app.phaseresetmarkers.markers_mut() = std::move(src_phase_resets);
-    app.selected_markers.clear();
-    app.last_selected_marker = -1;
+    selection.clear_selection();
     // Wholesale authoring reset: every per-tab per-mode selection slot
     // referencing the replaced marker stores is stale.
     {

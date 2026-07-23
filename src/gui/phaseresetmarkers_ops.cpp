@@ -46,9 +46,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     GuiPhaseResetMarker nm;
     nm.time_frame = drop_frame;
     const int new_idx = app.phaseresetmarkers.insert_marker(std::move(nm));
-    app.selected_markers.clear();
-    app.selected_markers.insert(new_idx);
-    app.last_selected_marker = new_idx;
+    selection.set_single_selection(new_idx);
     undo.push_undo_phase_reset(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
@@ -112,8 +110,7 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
          it != app.selected_markers.rend(); ++it) {
         app.phaseresetmarkers.remove_marker(*it);
     }
-    app.selected_markers.clear();
-    app.last_selected_marker = -1;
+    selection.clear_selection();
     undo.push_undo_phase_reset(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
@@ -180,13 +177,10 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     // this handler); it just has to run before record_gesture stamps this
     // command below.
     const bool merge = undo.coalesce_gesture(GestureKind::PhaseResetNudge);
-    // Fine-tuning op: collapse the selection to the focused marker,
-    // mirroring nudge_selected_markers (warpmarkers_ops.cpp). Phase resets
-    // carry no tempo, so there is no inherit/tempo analog to collapse —
-    // only nudge and jump. The existing per-marker loop then runs over the
-    // singleton.
-    app.selected_markers.clear();
-    app.selected_markers.insert(app.last_selected_marker);
+    // Phase resets carry no tempo, so there is no inherit/tempo analog to
+    // collapse — only nudge and jump; the per-marker loop below then runs
+    // over the focused singleton.
+    selection.collapse_to_focused();
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
     if (current_samples_per_pixel(app, audio) <= 0.0) return;

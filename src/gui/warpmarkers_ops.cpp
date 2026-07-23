@@ -74,9 +74,7 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     const int              hint_last = app.last_selected_marker;
     const int new_idx = app.warpmarkers.insert_marker(std::move(nm));
     // Newly-dropped marker becomes the sole selection.
-    app.selected_markers.clear();
-    app.selected_markers.insert(new_idx);
-    app.last_selected_marker = new_idx;
+    selection.set_single_selection(new_idx);
     undo.push_undo_warp(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
@@ -205,8 +203,7 @@ void GuiWarpMarkersOps::delete_selected_marker() {
          it != app.selected_markers.rend(); ++it) {
         app.warpmarkers.remove_marker(*it);
     }
-    app.selected_markers.clear();
-    app.last_selected_marker = -1;
+    selection.clear_selection();
     undo.push_undo_warp(std::move(pre_state), hint_last);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
@@ -238,10 +235,7 @@ void GuiWarpMarkersOps::delete_selected_marker() {
 void GuiWarpMarkersOps::toggle_inherits() {
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
-    // Fine-tuning op: collapse the selection to the focused marker, so the
-    // operation (and the resulting selection) targets last_selected only.
-    app.selected_markers.clear();
-    app.selected_markers.insert(app.last_selected_marker);
+    selection.collapse_to_focused();
     const auto& mv_const = app.warpmarkers.markers();
     std::vector<GuiWarpMarker> proposed = mv_const;
     // Single-marker resolve via marker_effective (slice once) — the
@@ -391,9 +385,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     // this command. Alt+Up/Down is the only route reaching here with kind
     // TempoStep, so a burst of tempo steps coalesces as intended.
     const bool merge = undo.coalesce_gesture(GestureKind::TempoStep);
-    // Fine-tuning op: collapse the selection to the focused marker.
-    app.selected_markers.clear();
-    app.selected_markers.insert(app.last_selected_marker);
+    selection.collapse_to_focused();
     const auto& mv_const = app.warpmarkers.markers();
     std::vector<GuiWarpMarker> proposed = mv_const;
     // Single-marker resolve via marker_effective (slice once) — the
@@ -526,9 +518,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     // this handler); it just has to run before record_gesture stamps this
     // command below.
     const bool merge = undo.coalesce_gesture(GestureKind::WarpNudge);
-    // Fine-tuning op: collapse the selection to the focused marker.
-    app.selected_markers.clear();
-    app.selected_markers.insert(app.last_selected_marker);
+    selection.collapse_to_focused();
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
     if (current_samples_per_pixel(app, audio) <= 0.0) return;
