@@ -415,22 +415,25 @@ bool GuiInputHandler::render_bpm_sweep() {
     // tripwire surface, and its per-cell scale/tempo mutations stay on the
     // async stderr backstop. Trim never refuses (crossed/equal bounds cannot
     // rest; an ambiguous trim renders untrimmed).
-    int owner_idx = -1;
+    // This scans for the session bpm-mode owner FLAG (bpm_owner), unrelated
+    // to MarkerEffective::owner_idx (the parser's ref-opaque inheritance
+    // walk's terminal tempo owner) — a different concept despite the name.
+    int bpm_owner_idx = -1;
     for (int i = 0; i < static_cast<int>(base_warp_markers.size()); ++i) {
         if (base_warp_markers[i].bpm_owner) {
-            owner_idx = i;
+            bpm_owner_idx = i;
             break;
         }
     }
-    if (owner_idx < 0) return false;
-    const GuiWarpMarker& owner = base_warp_markers[owner_idx];
+    if (bpm_owner_idx < 0) return false;
+    const GuiWarpMarker& owner = base_warp_markers[bpm_owner_idx];
     if (owner.bpm_beats <= 0)   return false;
     if (!(owner.bpm_lo > 0.0))  return false;
     if (!(owner.bpm_hi > 0.0))  return false;
 
     // Span endpoint is explicit (set on the `m` two-marker span gate).
     const int endpoint_idx = owner.bpm_endpoint;
-    if (endpoint_idx <= owner_idx ||
+    if (endpoint_idx <= bpm_owner_idx ||
         endpoint_idx >= static_cast<int>(base_warp_markers.size())) {
         return false;   // missing or malformed span: no sweep
     }
@@ -506,13 +509,13 @@ bool GuiInputHandler::render_bpm_sweep() {
         // at both bracket ends (the derivation is monotone in bpm), so in
         // practice every cell derives in-bracket and serializes exactly
         // (padded shortest round-trip form).
-        cell_warp_markers[owner_idx].tempo_inherits = false;
-        cell_warp_markers[owner_idx].tempo_cents    = computed->base_tempo_cents;
-        cell_warp_markers[owner_idx].tempo_scale.reset();
+        cell_warp_markers[bpm_owner_idx].tempo_inherits = false;
+        cell_warp_markers[bpm_owner_idx].tempo_cents    = computed->base_tempo_cents;
+        cell_warp_markers[bpm_owner_idx].tempo_scale.reset();
         // Span-internal markers pass: their own tempo is subsumed by the
         // owner's span tempo. Disabled span-internal markers stay disabled
         // but also pass (the disabled flag is independent of tempo_inherits).
-        for (int i = owner_idx + 1; i < endpoint_idx; ++i) {
+        for (int i = bpm_owner_idx + 1; i < endpoint_idx; ++i) {
             cell_warp_markers[i].tempo_inherits = true;
             cell_warp_markers[i].tempo_cents    = 100;   // inert default
             cell_warp_markers[i].tempo_scale.reset();    // inert: no typed scale
