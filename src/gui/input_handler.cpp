@@ -333,12 +333,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // selection/region collapse rung, placed AFTER the higher-priority consumers —
     // a live pointer drag (cancelled at the drag-modal gate above), an open editor
     // (closed in the editor blocks above), and an in-flight render/batch (cancelled
-    // just above) each win — and in place of the old plain region clear. An active
-    // region collapses STRAIGHT to the playhead (clear region + selection, playhead
-    // to its lo bound) — a region never shrinks into a subregion; else a
-    // programmatic multi-select drops to its extent region + deselects; else a
-    // singleton deselects + lands the playhead on the marker. All navigation-class,
-    // so this runs in read-only too (the allowlist admits Esc).
+    // just above) each win — and in place of the old plain region clear. It walks
+    // ONE rung per Esc: an active region + 2+ selected clears the SELECTION ONLY
+    // (region rests, demoted to Free); an active region + 0/1 selected collapses to
+    // the playhead (clear region + selection, playhead to its lo bound) — a region
+    // never shrinks into a subregion; else a programmatic multi-select drops to its
+    // extent region + deselects; else a singleton deselects + lands the playhead on
+    // the marker. All navigation-class, so this runs in read-only too (the
+    // allowlist admits Esc). See handle_escape_selection_region for the rungs.
     if (key == GuiKeys::Escape && handle_escape_selection_region()) return;
 
     // Ctrl+Q: quit (via unsaved-work dialog when dirty).

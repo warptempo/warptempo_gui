@@ -12,8 +12,10 @@ void Selection::damage_playhead_if_focus_flipped(bool was_empty) {
     if (audio.total_frames() <= 0) return;
     // Damage the playhead column (line span + triangle lane). The two-argument
     // form with equal endpoints damages exactly that one column — the playhead
-    // itself has not moved, only its FORM (grey stemless <-> green line+triangle)
-    // changed with the selection emptiness.
+    // itself has not moved, only its PRESENCE at the cursor changed with the
+    // selection emptiness: empty paints the green line+triangle there, non-empty
+    // paints nothing (the grey focus triangle moved onto the selected markers —
+    // paint_selected_marker_triangles).
     const double px = playhead_pixel_x(app, audio);
     viewport.invalidate_playhead_columns(px, px);
 }
@@ -98,8 +100,9 @@ void Selection::clear_selection() {
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
     // Non-empty -> empty is always a focus flip here (the already-empty case
-    // returned above), so the playhead column repaints from grey stemless to
-    // green line+triangle even with no playhead move.
+    // returned above), so the playhead column repaints — nothing at the cursor
+    // (non-empty) back to the green line+triangle (empty) — even with no playhead
+    // move.
     damage_playhead_if_focus_flipped(/*was_empty=*/false);
     // A 2+ -> 0 clear crosses the overlay's 2 threshold (un-suppress).
     damage_overlay_on_size2_crossing(old_size);

@@ -1309,13 +1309,17 @@ struct AppState {
     // lapses (the fix for a pin that used to persist indefinitely while the user
     // idled). The default stem_pin_marker = -1 never matches a real (>= 0)
     // selection, so the startup command_seq == 0 == stem_pin_command_seq
-    // coincidence pins nothing. The pin DIES on the next command (adjacency), on
-    // burst-window EXPIRY (reaped one-shot in on_tick: it damages the stem column
-    // and resets stem_pin_marker = -1 so the stem disappears without user input),
-    // or on the usual selection changes (a stale index simply fails the paint
-    // gate). Session-only, never serialized. Workflow note: after the burst the
-    // green cursor playhead line rests at the marker (a plain Esc deselects and
-    // lands there), which replaces the persistent blue line.
+    // coincidence pins nothing. BOTH death causes are REAPED one-shot in on_tick:
+    // when stem_pin_marker is set and EITHER adjacency is lost (command_seq moved)
+    // OR the burst window lapsed, the reaper damages the stem column and resets
+    // stem_pin_marker = -1 so the blue line disappears without user input. Paint
+    // stops drawing the pin the instant either cause holds, but not every killing
+    // command damages the waveform (bare `o` invalidates only the bottom strip)
+    // and an idle expiry gets no command at all, so the reaper — not the killing
+    // command — owns the damage; a stale index simply fails the paint gate and the
+    // reaper's index guard. Session-only, never serialized. Workflow note: after
+    // the burst the green cursor playhead line rests at the marker (a plain Esc
+    // deselects and lands there), which replaces the persistent blue line.
     int           stem_pin_marker      = -1;
     uint64_t      stem_pin_command_seq = 0;
     int64_t       stem_pin_ms          = 0;

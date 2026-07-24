@@ -265,10 +265,32 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     const double D = map_source_to_target(static_cast<double>(committed_f), map)
                    - map_source_to_target(static_cast<double>(orig_f),      map);
 
+    // The wall images in the TARGET domain (fwd is monotone, so the two frame
+    // walls map to the interval ends). A rider's rigid proposal is checked
+    // against THESE before the inverse — see the trap below. Empty map: fwd is
+    // identity, so these degrade to [0, reset_wall] naturally.
+    const double tgt_wall_lo = map_source_to_target(0.0, map);
+    const double tgt_wall_hi =
+        map_source_to_target(static_cast<double>(reset_wall), map);
+
     // (3) Every member's proposal: the anchor commits its column snap; every
     // OTHER member is the rigid computed position snap(inv(fwd(orig_k) + D)) — the
     // ONE double-to-authored route, never re-column-snapped. Check EACH against
     // the absolute range; ANY out-of-range member refuses the whole press.
+    // THE CLAMPING-INVERSE TRAP: map_target_to_source CLAMPS any query at or
+    // before the map's first target breakpoint to the first source frame (0), so
+    // a rider whose rigid target proposal fwd(orig_k)+D falls BELOW the song start
+    // would inverse-map to 0 and pass a post-snap [0, reset_wall] check while
+    // pinning at 0 — defeating both the group all-or-nothing refusal and rigid
+    // spacing. So test the rider's proposal in the TARGET domain FIRST (the
+    // group-drag active-domain wall model applied as refusal): strictly outside
+    // [tgt_wall_lo, tgt_wall_hi] refuses the whole press. The post-snap integer
+    // [0, reset_wall] check stays as the belt — the snap of an in-interval double
+    // can still round ONTO a wall, which is legal (equality passes); only strict
+    // outside refuses. The ANCHOR keeps its own post-snap check (committed_f from
+    // authored_frame_at_column DEFINES D, so a low-clamped anchor still yields a
+    // rigid D matching its actual displayed move — the singleton behavior,
+    // unchanged by ruling).
     std::vector<std::pair<int, int64_t>> proposals;
     proposals.reserve(app.selected_markers.size());
     for (int idx : app.selected_markers) {
@@ -276,10 +298,11 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         if (idx == f) {
             t_new = committed_f;
         } else {
-            t_new = snap_authored_frame(map_target_to_source(
+            const double tgt_prop =
                 map_source_to_target(static_cast<double>(tv[idx].time_frame),
-                                     map) + D,
-                map));
+                                     map) + D;
+            if (tgt_prop < tgt_wall_lo || tgt_prop > tgt_wall_hi) return;
+            t_new = snap_authored_frame(map_target_to_source(tgt_prop, map));
             if (t_new < 0 || t_new > reset_wall) return;
         }
         proposals.emplace_back(idx, t_new);

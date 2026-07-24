@@ -716,12 +716,15 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     const double px_x = playhead_pixel_x(app, audio,
                                          wf_cache.fp_vp_start, disp_spp);
 
-    // Playhead drawn last so its stem and triangle paint over any
-    // marker connector pixels they share a column with — the
-    // playhead must never be occluded by marker stems or flag
-    // annotations. The triangle indicator lives in the top
-    // strip, so render whenever either the waveform or top strip is
-    // exposed; otherwise a flag-strip-only repaint would erase the
+    // Playheads now paint UNDER the marker flags (the Z-ORDER FLIP, architect
+    // 2026-07-23 — see the paint-order block in on_redraw): the cursor line +
+    // triangle and the region split half-triangles pass beneath a marker flag
+    // sharing their column, so a multimarker select's extent-region halves rest
+    // hidden behind the earliest/latest members' flags. The scanner line stays
+    // waveform-only (no flag lane), so its stacking is unaffected; the cursor
+    // still draws over the marker STEMS below it in the waveform. The triangle
+    // indicator lives in the top strip, so render whenever either the waveform or
+    // top strip is exposed; otherwise a flag-strip-only repaint would erase the
     // triangle.
     //
     // Split-playhead paint order: scanner first (line only, gated

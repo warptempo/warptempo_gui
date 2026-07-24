@@ -983,19 +983,22 @@ int main(int argc, char** argv) {
         // waveform all snap together at the worker's completion swap.
         paint_handler.maybe_rebuild_flag_cache();
 
-        // Nudge stem-pin EXPIRY reap (architect 2026-07-23). The blue nudge pin
-        // is live only for the burst window (see AppState::stem_pin_*). The
-        // command-adjacency half dies at the next command — which repaints — but a
-        // pin left idle after the burst gets no repaint, so reap it here: when the
-        // pin is still command-adjacent (its burst is the latest command) yet the
-        // burst window has lapsed, damage the stem's column so the blue line
-        // disappears without user input, and reset stem_pin_marker so this fires
-        // ONCE. A pin already killed by an intervening command (command_seq moved)
-        // simply fails this gate.
+        // Nudge stem-pin reap (architect 2026-07-23). The blue nudge pin dies by
+        // TWO causes (see AppState::stem_pin_*): (a) command adjacency lost — any
+        // other command bumped command_seq — or (b) the burst window lapsed. Paint
+        // stops drawing the pin the instant EITHER holds, but nothing guarantees a
+        // waveform repaint: a command that bumps command_seq may damage only
+        // another strip (bare `o` invalidates just the bottom strip), and an idle
+        // pin whose window lapsed gets no command at all. So this reaper is the
+        // one-shot cleanup for BOTH: when the pin is set and either cause holds,
+        // damage the stem column so the blue line disappears without user input and
+        // reset stem_pin_marker so it fires ONCE. Harmless when the killing command
+        // already damaged the waveform (a redundant one-column damage-union); a
+        // stale index skips the damage (the mutating command emitted its own).
         if (app.stem_pin_marker >= 0 &&
-            app.command_seq == app.stem_pin_command_seq &&
-            monotonic_ms() - app.stem_pin_ms >
-                static_cast<int64_t>(kGestureCoalesceMs)) {
+            (app.command_seq != app.stem_pin_command_seq ||
+             monotonic_ms() - app.stem_pin_ms >
+                 static_cast<int64_t>(kGestureCoalesceMs))) {
             int64_t src_f = -1;
             if (app.active_markers_view == 'P') {
                 const auto& v = app.phaseresetmarkers.markers();
