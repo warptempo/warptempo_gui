@@ -1301,9 +1301,31 @@ struct AppState {
     // (focused/grabbed) marker's post-commit index, `stem_pin_command_seq` = the
     // current command_seq. The pin means "the LAST COMMAND was a lateral gesture on
     // this marker": it is LIVE iff pure command adjacency holds — `command_seq ==
-    // stem_pin_command_seq` — so ANY other command (a click, key, wheel, Esc, undo
-    // — anything that bumps command_seq at its dispatch entry without re-stamping)
-    // kills it. No timer and no key-hold probe: the "disappear asap"/held-key model
+    // stem_pin_command_seq`. DEATH IS DAMAGE-QUIESCENCE-SCOPED (architect
+    // 2026-07-24): only a command that PAINTED SOMETHING counts as "the next
+    // command" and breaks adjacency. Every visible effect funnels through
+    // GuiPlatform::invalidate_region (a monotonic damage_seq() counter), so a
+    // command that never reaches it changed nothing on screen — a silent refusal
+    // (P-view Alt+Up/Down, a mapped-domain all-or-nothing nudge refusal), a
+    // modal-gate-swallowed key, an unbound key, a swallowed sub-detent wheel —
+    // and the dispatch-exit preserve (StemPinPreserveGuard at on_key/
+    // on_button_press/on_wheel) re-stamps stem_pin_command_seq so adjacency holds
+    // across it. A refused press already never STAMPS; now it also never KILLS.
+    // A rare damage-less REAL action (Ctrl+S save, `l` launch) preserves too —
+    // accepted/desirable (if nothing changed on screen the stem has no reason to
+    // vanish); consecutive no-ops chain (each re-stamps); command_seq itself is
+    // never touched so undo coalescing is unaffected. A DAMAGING command (a
+    // click that deselects/repaints, a source-view tempo commit) still kills it.
+    // The guard judges only the PRESS command's own damage: damage from
+    // non-command events (a release, motion) never enters the compare. So a
+    // DEFERRED-CLICK press (a plain flag press on an already-selected member of a
+    // 2+ selection — PendingMarkerDrag/PendingTempoDrag::deferred_click) paints
+    // nothing at press time — its single-select collapse + land fires at the
+    // motionless RELEASE, which is not a command — and the guard preserves a live
+    // pin across it. Accepted: benign and self-healing (the next damaging command
+    // kills it, a drag that crosses the threshold re-stamps at its commit anyway,
+    // and where the clicked marker IS the pinned one the stem persisting is right).
+    // No timer and no key-hold probe: the "disappear asap"/held-key model
     // (a fixed burst timer, then a key-hold chord probe) was architect-REVERTED
     // 2026-07-24 after labwc use — the stem now becomes visible on any lateral
     // gesture and STAYS visible until literally anything else, so walking away

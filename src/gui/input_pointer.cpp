@@ -506,6 +506,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // on release or motion — those are not discrete commands, and a drag is
     // already fenced by the press that began it here.
     ++app.command_seq;
+    // Stem-pin preserve: re-stamp at exit if this press painted nothing (a
+    // swallowed modal press, a no-op click). See StemPinPreserveGuard.
+    StemPinPreserveGuard stem_pin_guard(app, gui);
     // Prompt-modal input handling: while the bottom-strip prompt is
     // active, all mouse events are swallowed. Responses go through
     // the keyboard.

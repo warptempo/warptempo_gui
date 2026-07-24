@@ -43,6 +43,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // key-repeat re-enters through the same path as consecutive commands, which
     // correctly coalesce.
     ++app.command_seq;
+    // Stem-pin preserve: re-stamp the lateral-gesture pin at function exit if
+    // this command painted nothing (a silent refusal like P-view Alt+Up/Down,
+    // an unbound key, a modal-swallowed key). See StemPinPreserveGuard.
+    StemPinPreserveGuard stem_pin_guard(app, gui);
     // Double-click lifecycle, KEYBOARD half: any keyboard command between two
     // clicks breaks EVERY pending double-click candidate (ZoomRow, Marker,
     // EmptyLane alike) at this one chokepoint — no legitimate double-click types
@@ -948,6 +952,10 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     // a burst of same-frame detents is a single command, distinct wheel frames
     // are consecutive commands that coalesce.
     ++app.command_seq;
+    // Stem-pin preserve: re-stamp at exit if this wheel frame painted nothing
+    // (a swallowed sub-detent event, an out-of-context wheel). See
+    // StemPinPreserveGuard.
+    StemPinPreserveGuard stem_pin_guard(app, gui);
     const int ctx = wheel_context(x, y);
     if (ctx < 0) return;
     // ctx: 1 waveform, 2 the top strip. The waveform zooms (plain) or pans
