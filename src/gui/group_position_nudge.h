@@ -178,9 +178,11 @@ int64_t stepped_anchor_frame(
 // rebuild no longer sits inside the measured 500 ms coalesce window, and a next
 // burst press landing near that boundary can open a fresh undo entry where the
 // pre-image would have merged. Worst case: one extra undo entry — a second Ctrl+Z.
-// Accepted — the unified tail adopts the warp shape verbatim to minimize warp/phase
-// divergence, and the coalesce window's anchor point is a heuristic, not a recorded
-// contract.
+// Accepted and architect-ratified (2026-07-24): the unified tail adopts the warp
+// shape verbatim to minimize warp/phase divergence — the twins now behave MORE
+// alike than before — and the coalesce window's anchor point is a heuristic, not a
+// recorded contract (deliberate sub-500 ms presses are how bursts are actually
+// played).
 void finish_group_position_nudge(
     AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
     GestureKind kind, int64_t committed_focused_frame,
