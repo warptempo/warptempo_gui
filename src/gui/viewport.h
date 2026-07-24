@@ -172,7 +172,8 @@ struct Viewport {
 
     // Repair the LIVE display-state fields after a map edit that changed the
     // active-domain total (a target-view tempo step / drag, the settings
-    // engine-scale commit, undo/redo — every total-changing warp-map edit).
+    // engine-scale commit, undo/redo, the Alt+Left/Right position nudge's
+    // target-view press — every total-changing warp-map edit).
     // Clamps the resting cursor playhead back into [0, live_total - 1] through
     // the shared clamp_playhead_to_live_domain chokepoint, and CLEARS a live
     // region whose either bound left that domain. Called from kick_waveform_sync
