@@ -496,11 +496,15 @@ void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
             // outside undo). A window whose image collapses below one target frame
             // cannot be honestly highlighted, so clear the HIGHLIGHT only — the
             // TRIM ITSELF is untouched (its authored source-frame bounds stand),
-            // and clearing drops the provenance so a later tempo re-sync won't
-            // resurrect it. The user re-clicks the chip row once the images
-            // re-separate; x with no highlight then takes its documented
-            // no-highlight clear branch (WYSIWYG — no hairline wash, no silent
-            // pair destruction).
+            // and clearing drops the LIVE provenance. Recovery depends on the
+            // caller: within a tempo DRAG the grab-time trim intent
+            // (TempoDragState::grab_trim_highlight) re-syncs the window BACK on the
+            // next event whose images re-separate, and Esc restores the captured
+            // pre-drag region verbatim; for a RESTING clear (a drag RELEASED while
+            // coincident, or a one-shot group STEP that reads live provenance) the
+            // user re-clicks the chip row once the images re-separate. Either way,
+            // x with no highlight takes its documented no-highlight clear branch
+            // (WYSIWYG — no hairline wash, no silent pair destruction).
             app.region = RegionState{};
         } else {
             app.region.active     = true;

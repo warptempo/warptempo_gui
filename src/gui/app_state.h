@@ -654,20 +654,32 @@ struct TempoDragState {
     // restore, always applied.
     int64_t pre_ride_playhead_sample = 0;
     // Grab-time trim-highlight INTENT (architect 2026-07-23): captured at
-    // begin_tempo_drag as (region.active && provenance == TrimWindow). The
-    // per-event and cancel trim re-sync decisions read THIS, never the LIVE
-    // provenance — because the coincident-image clear arm is DESIGNED to erase
-    // live TrimWindow provenance MID-GESTURE (images compressing onto one target
-    // frame), so a live read would latch off after the first coincident event and
-    // never re-sync when the images re-separate, and Esc would restore the map but
-    // not the highlight. With the grab intent: a window that coincident-clears
-    // mid-drag re-syncs BACK into view on further motion, and Esc re-syncs the
-    // pre-drag highlight unconditionally (the restored images cannot be coincident
-    // — they were separated at grab). The SelectionExtent follow stays per-event
-    // LIVE (see apply): it can never rest cleared mid-drag (the post-kick
-    // re-derive always re-activates with in-domain clamped endpoints, and no
-    // demote runs mid-gesture with keys swallowed), so the asymmetry is sound.
+    // begin_tempo_drag as (region.active && provenance == TrimWindow). A WITHIN-
+    // GESTURE ROUTING signal ONLY — read by the PER-EVENT trim re-sync in
+    // apply_tempo_drag_motion, never by cancel. It is NOT a geometry invariant:
+    // the coincident-image clear arm is DESIGNED to erase live TrimWindow
+    // provenance mid-gesture (images compressing onto one target frame), so a live
+    // per-event read would latch off after the first coincident event and never
+    // re-sync when the images re-separate. With the grab intent the per-event
+    // re-sync republishes the window on every event whose images are separated
+    // (and a pre-stale/coincident TrimWindow region's first committed event
+    // re-syncs it to the fresh images — the follow's purpose). Cancel does NOT use
+    // this — it restores pre_drag_region verbatim (below), because the grab bit
+    // proves nothing about grab-time geometry (a settings-scale commit / undo/redo
+    // before the press can leave the region stale, even coincident). The
+    // SelectionExtent per-event follow stays LIVE (see apply): it can never rest
+    // cleared mid-drag (the post-kick re-derive always re-activates with in-domain
+    // clamped endpoints, and no demote runs with keys swallowed).
     bool    grab_trim_highlight = false;
+    // Whole-struct pre-drag region (provenance included), captured at
+    // begin_tempo_drag and RESTORED VERBATIM by cancel_tempo_drag — the position
+    // drag's exact pattern. Cancel restores every participant to its grab cents
+    // and nothing else can change mid-gesture (keys swallowed, editors
+    // unreachable), so the restored map IS the grab-time map, and this region —
+    // stale or fresh, any provenance — is exactly what was displayed against it.
+    // So Esc reproduces the pre-drag display unconditionally, with no geometry
+    // assumptions and no coincident-arm involvement.
+    RegionState pre_drag_region;
 };
 
 // Pending trim chip/bridge drag, armed by a PLAIN (unmodified) left press in the
