@@ -166,6 +166,16 @@ struct GuiRect;
 double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
                                  const GuiRect& area);
 
+// Viewport-END sample for a strip `w` px wide at samples-per-pixel `spp`:
+// vp_start + nearbyint(spp * w), the painter-quantized right anchor the plate,
+// the flag/trim hit tests, and the trim column math all derive their upper
+// bound from. One owner so every viewport-END derivation rounds the span
+// identically (the twin of painter_samples_per_pixel's forward direction).
+inline int64_t viewport_end_sample(int64_t vp_start, double spp, int w) {
+    return vp_start +
+        static_cast<int64_t>(std::nearbyint(spp * static_cast<double>(w)));
+}
+
 // The exact source-grid position at pixel column `col` for a grid-snapped
 // viewport: recover the viewport's column index m = nearbyint(viewport_start/q)
 // and round once. Returns the double (m+col)*q; a marker commit funnels this

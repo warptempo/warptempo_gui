@@ -869,9 +869,7 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s, double alpha) {
     // Prefix is monospace ASCII like the rest of the box; its advance is
     // exact arithmetic (glyph count * monospace_advance()), matching the flag
     // paths, with no transient cairo_text_extents over s.prefix.
-    const double prefix_adv =
-        static_cast<double>(s.prefix.length()) * monospace_advance();
-    const double editable_left = s.anchor_x + prefix_adv;
+    const double editable_left = editor_text_glyph0_x(s.anchor_x, s.prefix);
 
     cairo_text_extents_t text_ext;
     cairo_text_extents(cr, s.text.c_str(), &text_ext);

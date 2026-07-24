@@ -270,6 +270,34 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     }
 }
 
+// -- GuiPaintHandler::displayed_viewport_basis / region_columns ----------
+
+// See the declaration comment in paint_handler.h: the fp-recipe basis locked to
+// the blitted plate while the worker rebuilds, with the live spp fallback when
+// no plate has published a span yet.
+GuiPaintHandler::DisplayedViewportBasis
+GuiPaintHandler::displayed_viewport_basis() const {
+    DisplayedViewportBasis b;
+    b.spp = wf_cache.fp_area_w > 0
+        ? static_cast<double>(wf_cache.fp_vp_end - wf_cache.fp_vp_start) /
+          static_cast<double>(wf_cache.fp_area_w)
+        : current_samples_per_pixel(app, audio);
+    b.vp_start = static_cast<double>(wf_cache.fp_vp_start);
+    return b;
+}
+
+GuiPaintHandler::RegionColumns
+GuiPaintHandler::region_columns(const DisplayedViewportBasis& basis) const {
+    const int64_t lo = std::min(app.region.a_frame, app.region.b_frame);
+    const int64_t hi = std::max(app.region.a_frame, app.region.b_frame);
+    RegionColumns c;
+    c.lo_col = static_cast<int>(std::nearbyint(
+        (static_cast<double>(lo) - basis.vp_start) / basis.spp));
+    c.hi_col = static_cast<int>(std::nearbyint(
+        (static_cast<double>(hi) - basis.vp_start) / basis.spp));
+    return c;
+}
+
 // -- GuiPaintHandler::paint_region_wash ----------------------------------
 
 // Paints the region-select span as a flat translucent brightening wash over
@@ -287,27 +315,17 @@ void GuiPaintHandler::paint_region_wash(cairo_t* cr, const GuiRect& area) {
     // Displayed-viewport recipe: the same fp_* fingerprint paint_playheads and
     // paint_phase_reset_overlay use, so the wash stays locked to the blitted
     // plate while the worker rebuilds against a viewport change.
-    const double spp = wf_cache.fp_area_w > 0
-        ? static_cast<double>(wf_cache.fp_vp_end - wf_cache.fp_vp_start) /
-          static_cast<double>(wf_cache.fp_area_w)
-        : current_samples_per_pixel(app, audio);
-    if (spp <= 0.0) return;
-    const double vp_start = static_cast<double>(wf_cache.fp_vp_start);
+    const DisplayedViewportBasis basis = displayed_viewport_basis();
+    if (basis.spp <= 0.0) return;
 
-    // Endpoints are active-domain frames stored in drag order; normalize to
-    // [lo, hi] at read time. The active-domain->column map is the plain
-    // viewport form (the endpoints already live in the displayed domain, so no
-    // warp map is walked — unlike the phase reset overlay, whose source-frame
-    // marker crosses to target first).
-    const int64_t lo = std::min(app.region.a_frame, app.region.b_frame);
-    const int64_t hi = std::max(app.region.a_frame, app.region.b_frame);
-    const int lo_col = static_cast<int>(std::nearbyint(
-        (static_cast<double>(lo) - vp_start) / spp));
-    const int hi_col = static_cast<int>(std::nearbyint(
-        (static_cast<double>(hi) - vp_start) / spp));
+    // Endpoints normalized to [lo, hi] and mapped to columns via the shared
+    // region_columns owner (the plain viewport transform — the endpoints already
+    // live in the displayed domain, so no warp map is walked, unlike the phase
+    // reset overlay whose source-frame marker crosses to target first).
+    const RegionColumns cols = region_columns(basis);
 
-    double x0 = static_cast<double>(area.x + lo_col);
-    double x1 = static_cast<double>(area.x + hi_col);
+    double x0 = static_cast<double>(area.x + cols.lo_col);
+    double x1 = static_cast<double>(area.x + cols.hi_col);
     // Clamp to the visible strip; a span wholly offscreen paints nothing.
     x0 = std::max(x0, static_cast<double>(area.x));
     x1 = std::min(x1, static_cast<double>(area.x + area.w));
@@ -417,12 +435,10 @@ void GuiPaintHandler::paint_phase_reset_overlay(
     // Displayed-viewport recipe: same as paint_playheads, so the overlay
     // stays locked to the blitted plate and the stem cache while the worker
     // rebuilds against a viewport change.
-    const double spp = wf_cache.fp_area_w > 0
-        ? static_cast<double>(wf_cache.fp_vp_end - wf_cache.fp_vp_start) /
-          static_cast<double>(wf_cache.fp_area_w)
-        : current_samples_per_pixel(app, audio);
+    const DisplayedViewportBasis basis = displayed_viewport_basis();
+    const double spp = basis.spp;
     if (spp <= 0.0) return;
-    const double vp_start = static_cast<double>(wf_cache.fp_vp_start);
+    const double vp_start = basis.vp_start;
 
     // Columns: left_col uses the same std::nearbyint-to-int placement the stem
     // renderer uses, so the overlay's left edge stays on the marker's column.
@@ -589,12 +605,10 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
         eff_time = ov.effective_time(idx, eff_time);
     }
 
-    const double disp_spp = wf_cache.fp_area_w > 0
-        ? static_cast<double>(wf_cache.fp_vp_end - wf_cache.fp_vp_start) /
-          static_cast<double>(wf_cache.fp_area_w)
-        : current_samples_per_pixel(app, audio);
+    const DisplayedViewportBasis basis = displayed_viewport_basis();
+    const double disp_spp = basis.spp;
     if (disp_spp <= 0.0) return;
-    const double vp_start = static_cast<double>(wf_cache.fp_vp_start);
+    const double vp_start = basis.vp_start;
 
     // Forward-map the (possibly fractional) source frame to the displayed axis
     // (identity in source view), the same shape render.cpp's frame_to_paint_sample
@@ -643,12 +657,10 @@ void GuiPaintHandler::paint_selected_marker_triangles(cairo_t* cr,
     if (area.w <= 0 || area.h <= 0) return;
     if (app.selected_markers.empty()) return;
 
-    const double disp_spp = wf_cache.fp_area_w > 0
-        ? static_cast<double>(wf_cache.fp_vp_end - wf_cache.fp_vp_start) /
-          static_cast<double>(wf_cache.fp_area_w)
-        : current_samples_per_pixel(app, audio);
+    const DisplayedViewportBasis basis = displayed_viewport_basis();
+    const double disp_spp = basis.spp;
     if (disp_spp <= 0.0) return;
-    const double vp_start = static_cast<double>(wf_cache.fp_vp_start);
+    const double vp_start = basis.vp_start;
 
     // Drag overlay: while a live marker drag grabs the active column, every
     // dragged member's triangle rides its proposed mid-gesture position.
@@ -709,12 +721,10 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
     if (!app.strip_drag.active || !app.strip_drag.moved) return;
     if (area.w <= 0 || area.h <= 0) return;
 
-    const double spp = wf_cache.fp_area_w > 0
-        ? static_cast<double>(wf_cache.fp_vp_end - wf_cache.fp_vp_start) /
-          static_cast<double>(wf_cache.fp_area_w)
-        : current_samples_per_pixel(app, audio);
+    const DisplayedViewportBasis basis = displayed_viewport_basis();
+    const double spp = basis.spp;
     if (spp <= 0.0) return;
-    const double vp_start = static_cast<double>(wf_cache.fp_vp_start);
+    const double vp_start = basis.vp_start;
     const int col = static_cast<int>(std::nearbyint(
         (app.strip_drag.anchor_sample - vp_start) / spp));
     render_strip_anchor_stem(cr, area, col, wf_cache.surface);
@@ -728,10 +738,8 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // lockstep with the cached waveform / stem / flag layers during
     // the 1-2 paint frames while the worker rebuilds against a
     // viewport change. See declaration comment in app_state.h.
-    const double disp_spp = wf_cache.fp_area_w > 0
-        ? static_cast<double>(wf_cache.fp_vp_end - wf_cache.fp_vp_start) /
-          static_cast<double>(wf_cache.fp_area_w)
-        : current_samples_per_pixel(app, audio);
+    const DisplayedViewportBasis basis = displayed_viewport_basis();
+    const double disp_spp = basis.spp;
     const double px_x = playhead_pixel_x(app, audio,
                                          wf_cache.fp_vp_start, disp_spp);
 
@@ -798,15 +806,12 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // region clear): that is trim's own display, not the region highlight.
     if (app.region.active) {
         if (disp_spp > 0.0) {
-            const double vp_start =
-                static_cast<double>(wf_cache.fp_vp_start);
-            const int64_t lo = std::min(app.region.a_frame, app.region.b_frame);
-            const int64_t hi = std::max(app.region.a_frame, app.region.b_frame);
-            const int lo_col = static_cast<int>(std::nearbyint(
-                (static_cast<double>(lo) - vp_start) / disp_spp));
-            const int hi_col = static_cast<int>(std::nearbyint(
-                (static_cast<double>(hi) - vp_start) / disp_spp));
-            render_split_playhead(cr, area, lo_col, hi_col, kPlayheadCursor);
+            // Same displayed basis and region_columns owner as
+            // paint_region_wash, so the split halves' shared edges land exactly
+            // on the wash's left/right edges.
+            const RegionColumns cols = region_columns(basis);
+            render_split_playhead(cr, area, cols.lo_col, cols.hi_col,
+                                  kPlayheadCursor);
         }
     } else if (app.selected_markers.empty()) {
         // WAVEFORM FOCUS (architect 2026-07-23): selection empty — the normal

@@ -181,8 +181,7 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
 
     const double  spp      = current_samples_per_pixel(app, audio);
     const int64_t vp_start = app.viewport_start_sample;
-    const int64_t vp_end   = vp_start +
-        static_cast<int64_t>(std::nearbyint(spp * area.w));
+    const int64_t vp_end   = viewport_end_sample(vp_start, spp, area.w);
     const int     sr       = audio.sample_rate();
 
     const bool is_target = (app.active_audio_view == 'T');

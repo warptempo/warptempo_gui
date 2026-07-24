@@ -476,6 +476,33 @@ private:
     };
     OutOfTrimRects compute_out_of_trim_rects(const GuiRect& area) const;
 
+    // The displayed-viewport paint basis: vp_start and samples-per-pixel LOCKED
+    // to the blitted plate (wf_cache.fp_*) while the worker rebuilds against a
+    // viewport change, so every live overlay (region wash, phase-reset overlay,
+    // selected stem, focus triangles, strip-drag anchor, playheads) stays
+    // registered with the cached pixels instead of the not-yet-painted live
+    // viewport. spp falls back to the LIVE current_samples_per_pixel when no
+    // plate has published a span yet (fp_area_w <= 0, cold before the first
+    // completion). The ONE owner of that recipe; each caller keeps its own
+    // spp <= 0 guard where it has one today.
+    struct DisplayedViewportBasis {
+        double vp_start = 0.0;
+        double spp      = 0.0;
+    };
+    DisplayedViewportBasis displayed_viewport_basis() const;
+
+    // The region-select span's on-screen column pair under a given displayed
+    // basis. Endpoints are active-domain frames stored in drag order; normalize
+    // to [lo, hi] then map to columns via the plain viewport transform (the
+    // endpoints already live in the displayed domain, so no warp map is walked).
+    // Shared by paint_region_wash and the split-playhead branch so the wash edges
+    // and the split half-triangles land on exactly the same columns.
+    struct RegionColumns {
+        int lo_col = 0;
+        int hi_col = 0;
+    };
+    RegionColumns region_columns(const DisplayedViewportBasis& basis) const;
+
     // on_redraw paint passes. Each renders one strip/layer; on_redraw keeps
     // the rects_intersect gates and calls these in place.
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip, int sr);

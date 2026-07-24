@@ -881,13 +881,14 @@ enum class DoubleClickSurface { None, ZoomRow, Marker, EditorText, EmptyLane };
 //                 plain first press also runs the waveform-parity placement, a
 //                 shift first press is a pure no-op seed. Cleared like every
 //                 candidate when the armed region drag moves.
-// Cleared on file load, the moment an action fires, and — the KEYBOARD half of
-// the lifetime — at the TOP of every on_key command (beside the command_seq
-// bump): any keyboard command between two clicks breaks EVERY candidate at that
-// one chokepoint, so a seed formed in one context can never consume in another
-// after an intervening keypress (Esc included). The pointer half is the
-// on_button_press top-of-frame clear, the moved-drag clears, and the Esc
-// drag-cancel clears. Session-only.
+// Cleared on file load, the moment an action fires, and — the KEYBOARD and
+// WHEEL halves of the lifetime — at the TOP of every on_key AND on_wheel command
+// (beside the command_seq bump): any keyboard command OR wheel frame between two
+// clicks breaks EVERY candidate at those chokepoints, so a seed formed in one
+// context can never consume in another after an intervening keypress (Esc
+// included) or a wheel zoom/pan that moved content under the pointer. The
+// pointer half is the on_button_press top-of-frame clear, the moved-drag clears,
+// and the Esc drag-cancel clears. Session-only.
 struct DoubleClickCandidate {
     DoubleClickSurface surface = DoubleClickSurface::None;
     int64_t time_ms   = 0;      // CLOCK_MONOTONIC ms at the seeding press/release

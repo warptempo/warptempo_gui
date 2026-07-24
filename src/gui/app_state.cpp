@@ -136,8 +136,8 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
         // hit-side vp_end (the painters' quantized-span denominator), the chip
         // rect via trim_chip_rect. So a hit lands on exactly the drawn chip.
         const double ms = displayed_trim_ms(frame, target_warp_frame_map);
-        const int64_t vp_end = app.viewport_start_sample +
-            static_cast<int64_t>(std::nearbyint(spp * wave_w));
+        const int64_t vp_end =
+            viewport_end_sample(app.viewport_start_sample, spp, wave_w);
         const TrimBoundColumn c =
             trim_bound_column(ms, app.viewport_start_sample, vp_end, wave_w);
         if (!c.in_viewport) return;
@@ -177,8 +177,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     const GuiRect top  = top_strip_area(app);
     const double spp = current_samples_per_pixel(app, audio);
     const int64_t vp_start = app.viewport_start_sample;
-    const int64_t vp_end = vp_start +
-        static_cast<int64_t>(std::nearbyint(spp * area.w));
+    const int64_t vp_end = viewport_end_sample(vp_start, spp, area.w);
     // The mapped views' flags paint at translated positions
     // (compute_flag_hit_rects with a non-null warp_frame_map), so hit-test
     // must walk the same warp_frame_map — the item pixels' own via

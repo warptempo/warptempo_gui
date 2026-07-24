@@ -83,19 +83,19 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
     if (adv <= 0.0) return g;
     if (text_editor::is_active(app.settings_editor)) {
         g.ed = &app.settings_editor;
-        g.text_left = static_cast<double>(timestamp_pad_x()) +
-            std::strlen(kSettingsEditorPrefix) * adv;
+        g.text_left = editor_text_glyph0_x(
+            static_cast<double>(timestamp_pad_x()), kSettingsEditorPrefix);
         g.bottom_strip = true;
     } else if (text_editor::is_active(app.commit_editor)) {
         g.ed = &app.commit_editor;
-        g.text_left = static_cast<double>(timestamp_pad_x()) +
-            std::strlen(kCommitEditorPrefix) * adv;
+        g.text_left = editor_text_glyph0_x(
+            static_cast<double>(timestamp_pad_x()), kCommitEditorPrefix);
         g.bottom_strip = true;
     } else if (text_editor::is_active(app.top_flag_editor) &&
                app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
         g.ed = &app.top_flag_editor;
-        g.text_left = static_cast<double>(timestamp_pad_x()) +
-            std::strlen(kBpmEditorPrefix) * adv;
+        g.text_left = editor_text_glyph0_x(
+            static_cast<double>(timestamp_pad_x()), kBpmEditorPrefix);
         g.bottom_strip = true;
     } else if (text_editor::is_active(app.top_flag_editor)) {
         // FlagPayload — marker-text lane. text_left is the lane run's left

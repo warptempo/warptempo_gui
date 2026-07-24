@@ -707,8 +707,8 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
     if (mouse_y >= row.y && mouse_y < row.y + row.h) {
         const GuiRect area = waveform_area(app);
         const int click_rel_x = mouse_x - area.x;
-        const int64_t vp_end = app.viewport_start_sample +
-            static_cast<int64_t>(std::nearbyint(spp * area.w));
+        const int64_t vp_end =
+            viewport_end_sample(app.viewport_start_sample, spp, area.w);
         const std::vector<WarpFrameMapSegment>& dmap =
             displayed_or_live_target_map(app, audio);
         const std::vector<WarpFrameMapSegment>* map =

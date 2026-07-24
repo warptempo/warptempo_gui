@@ -57,7 +57,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // equally fine — no candidate can survive a held key. The pointer-side
     // per-branch clears (the on_button_press top-of-frame clear, the moved-drag
     // clears, the Esc drag-cancel clears) stay: they own the pointer half of the
-    // lifetime; this owns the keyboard half.
+    // lifetime; this owns the keyboard half, and on_wheel owns the wheel half
+    // (same clear beside its own command_seq bump).
     app.double_click = DoubleClickCandidate{};
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
@@ -952,6 +953,15 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     // a burst of same-frame detents is a single command, distinct wheel frames
     // are consecutive commands that coalesce.
     ++app.command_seq;
+    // Double-click lifecycle, WHEEL half: a wheel command between two clicks
+    // moves content under the pointer (a zoom rescales, a pan slides), so the
+    // second click must not consume as a double-click of the first. Clear every
+    // pending candidate here, beside the command_seq bump, exactly as on_key's
+    // keyboard half does — the platform delivers one on_wheel per pointer frame
+    // (net detent count >= 1) after accumulating sub-detent remainder itself, so
+    // every call here is a completed detent frame that bumps, matching on_key's
+    // unconditional placement.
+    app.double_click = DoubleClickCandidate{};
     // Stem-pin preserve: re-stamp at exit if this wheel frame painted nothing
     // (a swallowed sub-detent event, an out-of-context wheel). See
     // StemPinPreserveGuard.

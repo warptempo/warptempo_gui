@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 class GuiAudio;
@@ -377,6 +378,17 @@ double monospace_row_baseline_offset();
 // Forward declaration: defined with its full doc comment below. Needed here
 // because flag_chip_rect (inline) computes the chip width from it.
 double monospace_advance();
+
+// Char-0 origin (px) of an editor's editable text run: the box anchor plus the
+// static prefix's exact monospace advance (glyph count * monospace_advance()).
+// The ONE owner shared by render_editor_text_box's paint-time editable_left and
+// the click-to-caret geometry (active_editor_text), so the caret origin can
+// never drift from the painted glyph run. std::string_view accepts both the
+// const char* editor prefixes and render_editor_text_box's std::string prefix.
+inline double editor_text_glyph0_x(double anchor_x, std::string_view prefix) {
+    return anchor_x +
+        static_cast<double>(prefix.size()) * monospace_advance();
+}
 
 // Total chip width (px) for a glyph_count-glyph chip: the padded glyph advance
 // plus the outline ring on both sides. This is the ONE definition of a chip's
