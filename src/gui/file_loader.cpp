@@ -36,6 +36,15 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     // seam). Ruling at the selector.
     app.displayed_target_warp_frame_map.clear();
     app.staged_displayed_target_warp_frame_map.clear();
+    // The displayed-viewport mirror (sibling of the map) resets to cold too:
+    // area_w = 0 yields the live-viewport fallback until the new view's item
+    // caches rebuild, stage, and a frame promotes.
+    app.displayed_vp_start = 0;
+    app.displayed_vp_end   = 0;
+    app.displayed_area_w   = 0;
+    app.staged_displayed_vp_start = 0;
+    app.staged_displayed_vp_end   = 0;
+    app.staged_displayed_area_w   = 0;
     app.staged_displayed_valid = false;
     // The resting selection region is view-domain scratch: its frame span reads
     // against whichever view is live. This routine re-establishes the live view

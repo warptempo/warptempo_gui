@@ -1453,20 +1453,24 @@ double lane_text_left_x_at_frame(
     const double advance = monospace_advance();
     if (advance <= 0.0) return -1.0;
     // The marker's painted pixel column (window coords) via the painters' own
-    // math (painted_column_of_source_frame). BASIS CONTRACT: the lane run
-    // annotates painted flag pixels, so it must read the SAME map those pixels
-    // were painted with — displayed_or_live_target_map, the event-synchronized
-    // basis the hit tests use (identity/empty in source view; in target view the
-    // map the last committed frame's flag cache baked, with the live map as the
-    // cold-state fallback). Reading the live map instead would center the run on
-    // the NEW column during an async target-map republish while the flag still
-    // paints at the OLD one, so the run would visibly jump off its flag until the
-    // worker caught up. The frame is the marker's authored source frame; both
-    // marker columns translate through this same map.
+    // math. BASIS CONTRACT: the lane run annotates painted flag pixels, so it
+    // must read the SAME basis those pixels were painted with — BOTH halves of
+    // that basis. (1) The displayed MAP (displayed_or_live_target_map): the
+    // event-synchronized map the hit tests use — identity/empty in source view;
+    // in target view the map the last committed frame's flag cache baked. (2) The
+    // displayed VIEWPORT (displayed_viewport_basis): the vp_start/spp the same
+    // committed frame's flag cache baked, NOT the live viewport. Reading the live
+    // map OR the live viewport would center the run on the NEW column during an
+    // async republish while the flag still paints at the OLD one, so the run would
+    // visibly jump off its flag until the worker caught up (a real improvement for
+    // the fallback run's mid-follow-scroll centering, not an accident). The frame
+    // is the marker's authored source frame; both marker columns translate through
+    // this same map.
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
-    const int col = painted_column_of_source_frame(
-        app, audio, source_frame, map);
+    const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
+    const int col = painted_column_of_source_frame_on_basis(
+        app, audio, source_frame, map, basis.vp_start, basis.spp);
     const GuiRect area = waveform_area(app);
     const double center_x = static_cast<double>(area.x + col);
     const double run_w = static_cast<double>(glyph_count) * advance;
@@ -1506,13 +1510,35 @@ double flag_pending_text_left_x(
                             app.top_flag_editor.pending.size());
 }
 
-LaneTextRun current_marker_lane_run(const AppState& app, const GuiAudio& audio)
-{
-    // The non-editor arbitration paint_marker_text_lane's tiers own, factored
-    // out verbatim so the paint pass and the unified marker hit resolver
-    // (marker_hit_at) agree on one run. The FlagPayload editor case is resolved
-    // by the callers before this point (it owns the lane alone); this covers
-    // only the hover / last-selected tiers.
+namespace {
+
+// The 9-glyph ambient budget: the "N.NN:a.NN" base form. A composed value longer
+// than 9 glyphs displays as its first 8 bytes plus the UTF-8 ellipsis (U+2026 =
+// "\xe2\x80\xa6"), 11 bytes / 9 glyphs. Composed text is ASCII by construction
+// (printable-ASCII keyboard insert, lowercase-ASCII label grammar), so 8 bytes
+// == 8 glyphs and the ellipsis is a collision-free truncation marker no
+// clipboard route can author. DISPLAY-ONLY: the store, sidecars, editor seed,
+// hover fields, and the copy payload never see it. Sets `glyphs` to the display
+// glyph count.
+constexpr size_t kLaneAmbientGlyphBudget = 9;
+
+void cap_lane_run_text(std::string& text, size_t& glyphs) {
+    if (text.size() > kLaneAmbientGlyphBudget) {
+        text = text.substr(0, 8) + "\xe2\x80\xa6";
+        glyphs = kLaneAmbientGlyphBudget;
+    } else {
+        glyphs = text.size();
+    }
+}
+
+// The FALLBACK single run — today's one-run arbitration, kept byte-identical
+// (modulo the displayed-viewport basis, which the cull now reads too): tier 1
+// the HOVERED marker's value, else tier 2 the LAST-SELECTED marker's value
+// composed from the live store, with the mid-drag DragOverlay substitution and
+// the painted-column offscreen cull the flags apply. The fallback run carries
+// FULL (untruncated) text; glyphs = text.size() (ASCII, byte == glyph).
+LaneTextRun current_marker_lane_run_fallback(const AppState& app,
+                                             const GuiAudio& audio) {
     LaneTextRun run;
 
     // Tier 1: the HOVERED marker's own value wins whenever a hover is showing.
@@ -1526,6 +1552,7 @@ LaneTextRun current_marker_lane_run(const AppState& app, const GuiAudio& audio)
         run.marker_index = app.hover_popup.marker_index;
         run.source_frame = static_cast<double>(app.hover_popup.source_frame);
         run.text         = app.hover_popup.lane_text;
+        run.glyphs       = run.text.size();
         return run;
     }
 
@@ -1567,20 +1594,138 @@ LaneTextRun current_marker_lane_run(const AppState& app, const GuiAudio& audio)
         display_src_f = overlay.effective_time(idx, display_src_f);
     }
     // Cull to the visible strip by the painted column exactly as the flags do
-    // (a fully-offscreen marker paints no flag, so it shows no run). The column
-    // basis is displayed_or_live_target_map, the same basis the flag/lane
+    // (a fully-offscreen marker paints no flag, so it shows no run). The basis is
+    // the displayed MAP and the displayed VIEWPORT, the same pair the flag/lane
     // painters and hit tests use.
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
-    const int col = painted_column_of_source_frame(
-        app, audio, display_src_f, map);
+    const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
+    const int col = painted_column_of_source_frame_on_basis(
+        app, audio, display_src_f, map, basis.vp_start, basis.spp);
     if (col < 0 || col >= waveform_area(app).w) return run;
 
     run.valid        = true;
     run.marker_index = idx;
     run.source_frame = display_src_f;
     run.text         = std::move(txt);
+    run.glyphs       = run.text.size();
     return run;
+}
+
+// Wrap the fallback single run in a LaneRunSet (all_visible = false).
+LaneRunSet lane_run_set_fallback(const AppState& app, const GuiAudio& audio) {
+    LaneRunSet set;
+    set.all_visible = false;
+    const LaneTextRun run = current_marker_lane_run_fallback(app, audio);
+    if (run.valid) set.runs.push_back(run);
+    return set;
+}
+
+} // namespace
+
+LaneRunSet current_marker_lane_runs(const AppState& app, const GuiAudio& audio)
+{
+    // The occlusion arbitration the paint pass and the unified marker hit
+    // resolver (marker_hit_at) share (contract at the declaration). The open
+    // FlagPayload editor is NOT handled here — it is an overlay resolved by the
+    // paint pass (its marker's capped ambient run still participates in the
+    // verdict; the editor's full-width box never does).
+    const double advance = monospace_advance();
+    // Font not measured yet — the whole geometry is undefined. Return the empty
+    // fallback shape; paint/hit keep their own advance guards.
+    if (advance <= 0.0) return lane_run_set_fallback(app, audio);
+
+    const GuiRect area = waveform_area(app);
+    if (area.w <= 0) return lane_run_set_fallback(app, audio);
+
+    // The displayed MAP + VIEWPORT basis the flag pixels were painted with, so
+    // the visible-set cull, the run columns, and the verdict all read the same
+    // basis the flags do (see lane_text_left_x_at_frame's basis contract).
+    const std::vector<WarpFrameMapSegment>& map =
+        displayed_or_live_target_map(app, audio);
+    const std::vector<WarpFrameMapSegment>* map_arg =
+        map.empty() ? nullptr : &map;
+    const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
+    if (basis.spp <= 0.0) return lane_run_set_fallback(app, audio);
+
+    // The flags' own half-offscreen cull (iterate_visible_flags_impl): a flag may
+    // hang up to half its width offscreen; cull only when FULLY offscreen. Sample
+    // space, on the displayed basis. vp_end reconstructs as vp_start + spp*W (==
+    // the flag cache's fp_vp_end at rest); the half-flag slack dwarfs any ULP.
+    const double W        = static_cast<double>(area.w);
+    const double vp_end   = basis.vp_start + basis.spp * W;
+    const double half_flag =
+        static_cast<double>(flag_lane_w_px()) / 2.0;
+    const double cull_lo  = basis.vp_start - half_flag * basis.spp;
+    const double cull_hi  = vp_end + half_flag * basis.spp;
+
+    // Positions ride the DragOverlay when a drag is active (every dragged
+    // member's run tracks its live proposed position, matching the flags).
+    DragOverlay overlay_storage{&app.drag.dragging_markers,
+                                &app.drag.moveable_times};
+    const DragOverlay* overlay = app.drag.active ? &overlay_storage : nullptr;
+    const bool is_phase = (app.active_markers_view == 'P');
+
+    // Compose the visible set: every active-column marker whose flag paints, its
+    // capped display run, centered on the displayed column.
+    LaneRunSet set;
+    auto add_visible = [&](int idx, int64_t time_frame, std::string text) {
+        const double eff_time = overlay
+            ? overlay->effective_time(idx, static_cast<double>(time_frame))
+            : static_cast<double>(time_frame);
+        const double ms = frame_to_paint_sample(eff_time, map_arg);
+        if (ms < cull_lo || ms > cull_hi) return;   // fully offscreen — no flag
+        LaneTextRun run;
+        run.valid        = true;
+        run.marker_index = idx;
+        run.source_frame = eff_time;
+        run.text         = std::move(text);
+        cap_lane_run_text(run.text, run.glyphs);
+        set.runs.push_back(std::move(run));
+    };
+
+    if (is_phase) {
+        const auto& pv = app.phaseresetmarkers.markers();
+        for (size_t i = 0; i < pv.size(); ++i)
+            add_visible(static_cast<int>(i), pv[i].time_frame, "p");
+    } else {
+        const auto& mv = app.warpmarkers.markers();
+        for (size_t i = 0; i < mv.size(); ++i)
+            add_visible(static_cast<int>(i), mv[i].time_frame,
+                        flag_text_iter(mv, static_cast<int>(i),
+                                       app.iteration_mode_enabled));
+    }
+
+    // Empty visible set: nothing to show either way — fall through to the
+    // fallback shape (its arbitration also finds nothing onscreen, so behavior
+    // is identical; the fallback keeps the tier code as the ONE owner of "no
+    // ambient set" too).
+    if (set.runs.empty()) return lane_run_set_fallback(app, audio);
+
+    // THE VERDICT: pass iff no two capped runs' rects overlap. Each rect's left
+    // comes from the shared placement owner (clamped fully onscreen), width =
+    // glyphs * advance. Sort by left; a right edge is HALF-OPEN, so right(a) ==
+    // left(b) (abutting, gap 0) is legal and passes.
+    struct RunRect { double left; double right; };
+    std::vector<RunRect> rects;
+    rects.reserve(set.runs.size());
+    for (const LaneTextRun& r : set.runs) {
+        const double left = lane_text_left_x_at_frame(
+            app, audio, r.source_frame, r.glyphs);
+        const double width = static_cast<double>(r.glyphs) * advance;
+        rects.push_back({left, left + width});
+    }
+    std::sort(rects.begin(), rects.end(),
+              [](const RunRect& a, const RunRect& b) { return a.left < b.left; });
+    for (size_t i = 1; i < rects.size(); ++i) {
+        if (rects[i - 1].right > rects[i].left) {
+            // Occlusion — fall back to the one-run arbitration EXACTLY.
+            return lane_run_set_fallback(app, audio);
+        }
+    }
+
+    set.all_visible = true;
+    return set;
 }
 
 MarkerHit marker_hit_at(const AppState& app, const GuiAudio& audio,
@@ -1595,18 +1740,37 @@ MarkerHit marker_hit_at(const AppState& app, const GuiAudio& audio,
         h.on_flag = true;
         return h;
     }
-    const LaneTextRun run = current_marker_lane_run(app, audio);
-    if (!run.valid) return h;
     const double advance = monospace_advance();
     if (advance <= 0.0) return h;
-    // left < 0 means the monospace advance is not yet measured — no run to hit.
+    const GuiRect lane = top_marker_text_row_area(app);
+    if (y < lane.y || y >= lane.y + lane.h) return h;   // y-band already half-open
+
+    const LaneRunSet set = current_marker_lane_runs(app, audio);
+    if (set.all_visible) {
+        // Every run's rect is disjoint by construction (the verdict passed), so
+        // order is irrelevant; test with HALF-OPEN x intervals [left, left+w) so
+        // two abutting runs (right(a) == left(b)) cannot double-hit.
+        for (const LaneTextRun& run : set.runs) {
+            const double left = lane_text_left_x_at_frame(
+                app, audio, run.source_frame, run.glyphs);
+            if (left < 0.0) continue;   // advance not measured (already guarded)
+            const double run_w = static_cast<double>(run.glyphs) * advance;
+            if (static_cast<double>(x) >= left &&
+                static_cast<double>(x) < left + run_w) {
+                h.index = run.marker_index;
+                return h;
+            }
+        }
+        return h;
+    }
+    // Fallback (0-or-1 run): today's CLOSED interval test, byte-identical.
+    if (set.runs.empty()) return h;
+    const LaneTextRun& run = set.runs.front();
     const double left = lane_text_left_x_at_frame(
-        app, audio, run.source_frame, run.text.size());
+        app, audio, run.source_frame, run.glyphs);
     if (left < 0.0) return h;
-    const GuiRect lane  = top_marker_text_row_area(app);
-    const double  run_w = static_cast<double>(run.text.size()) * advance;
-    if (y >= lane.y && y < lane.y + lane.h &&
-        static_cast<double>(x) >= left &&
+    const double run_w = static_cast<double>(run.glyphs) * advance;
+    if (static_cast<double>(x) >= left &&
         static_cast<double>(x) <= left + run_w) {
         h.index = run.marker_index;
     }

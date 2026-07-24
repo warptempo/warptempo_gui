@@ -80,6 +80,28 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio) {
     return *ctx.warp_frame_map;
 }
 
+// The viewport twin of displayed_or_live_target_map (full rationale at the
+// declaration): the {vp_start, spp} the flag/stem item caches were painted with
+// on the last committed frame, so the marker-text lane geometry rides the same
+// basis the flag pixels do. The warm spp is (vp_end - vp_start) / area_w, which
+// equals painter_samples_per_pixel exactly at rest (vp_end == vp_start +
+// nearbyint(spp * area_w), the painter-quantized span the flags and the viewport
+// snap both use). Cold (area_w == 0, nothing promoted yet) falls back to the
+// live viewport, the analog of the live-map cold fallback above.
+DisplayedViewportBasis displayed_viewport_basis(const AppState& app,
+                                                const GuiAudio& audio) {
+    DisplayedViewportBasis b;
+    if (app.displayed_area_w > 0) {
+        b.vp_start = static_cast<double>(app.displayed_vp_start);
+        b.spp = static_cast<double>(app.displayed_vp_end - app.displayed_vp_start) /
+                static_cast<double>(app.displayed_area_w);
+    } else {
+        b.vp_start = static_cast<double>(app.viewport_start_sample);
+        b.spp = current_samples_per_pixel(app, audio);
+    }
+    return b;
+}
+
 TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y) {
     // Trim bounds hit-test in the AUTHORING views against the active A/B tab's

@@ -94,30 +94,73 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
 // -- GuiPaintHandler::paint_marker_text_lane -----------------------------
 
 void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
-    // The marker-text lane (top lane 2, between the trim chips and the flags)
-    // shows AT MOST ONE run, arbitrated in this precedence: the FlagPayload flag
-    // editor beats everything (it owns the lane alone while open — recompute_
-    // hover_at_cursor already clears the popup whenever any top_flag_editor is
-    // active, and the editor-first return below is the explicit backstop); else
-    // the HOVERED marker's own value while a hover is showing; else the LAST-
-    // SELECTED marker's own value (the same last-selected notion the bottom-strip
-    // readout falls back to — here shown for ANY marker type, not only pass/ref);
-    // else nothing. All paint live here (per-keystroke editor, per-motion hover,
-    // per-frame last-selected), after the flag-cache blit — no cache, the
-    // live-overlay role the bottom strip's editor/hover paints had before the lane
-    // existed. The run centers its monospace text over its marker's painted column
-    // and clamps it fully onscreen (lane_text_left_x_at_frame) on a kBackground
-    // fill behind the run with no border. The editor flashes its fill kAccent on
-    // an invalid commit.
+    // The marker-text lane (top lane 2, between the trim chips and the flags).
+    // THE OCCLUSION MODEL: the lane shows EVERY onscreen marker's text ambiently
+    // when the whole visible set fits unoccluded at the 9-glyph budget, else it
+    // falls back to the ONE-run arbitration (hover, else last-selected). The
+    // FlagPayload flag editor is now an OVERLAY, not an exclusive occupant: the
+    // ambient runs still paint per the verdict, the editor's OWN marker's ambient
+    // run is suppressed, and the editor's full-text box paints LAST on top. All
+    // paint live here (per-keystroke editor, per-motion hover, per-frame ambient
+    // set), after the flag-cache blit — no cache, the live-overlay role the
+    // bottom strip's editor/hover paints had before the lane existed. Each run
+    // centers its monospace text over its marker's painted column and clamps it
+    // fully onscreen (lane_text_left_x_at_frame) on a kBackground fill behind the
+    // run with no border. The editor box flashes its fill kAccent on an invalid
+    // commit.
     const GuiRect lane      = top_marker_text_row_area(app);
     const double  baseline  = lane.y + monospace_row_baseline_offset();
     const double  advance   = monospace_advance();
     if (advance <= 0.0) return;
 
-    if (text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind == text_editor::Kind::FlagPayload) {
+    const bool editor_active =
+        text_editor::is_active(app.top_flag_editor) &&
+        app.top_flag_editor.kind == text_editor::Kind::FlagPayload;
+    const int editor_target = editor_active ? app.top_flag_editor.target : -1;
+
+    // Per-run painter: kBackground fill exactly behind the run (AA off for a
+    // crisp edge), then the display text — no border, no caret. WIDTH uses the
+    // run's glyph count (never txt.size(): a truncated run is 11 bytes / 9
+    // glyphs), while cairo receives the whole UTF-8 display string (the toy API
+    // draws U+2026 at the uniform mono advance). source_frame centers the run on
+    // the marker's painted column (lane_text_left_x_at_frame), column-agnostic so
+    // this needs no knowledge of which store the marker came from; a bad advance
+    // or clamp yields left<0 and skips. source_frame is a DOUBLE so a mid-drag run
+    // centers on the dragged member's free proposed position.
+    auto paint_run = [&](double source_frame, const std::string& txt,
+                         size_t glyphs) {
+        if (glyphs == 0) return;
+        const double left = lane_text_left_x_at_frame(
+            app, audio, source_frame, glyphs);
+        if (left < 0.0) return;
+        const double run_w = static_cast<double>(glyphs) * advance;
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_set_source_rgb(cr, kBackground.r, kBackground.g, kBackground.b);
+        cairo_rectangle(cr, left, static_cast<double>(lane.y),
+                        run_w, static_cast<double>(lane.h));
+        cairo_fill(cr);
+        cairo_restore(cr);
+        text_display::draw_line(cr, left, baseline, txt, kText,
+                                flag_font_size_px());
+    };
+
+    // Every ambient run (all-visible: the whole set; fallback: the 0/1 run),
+    // resolved by the shared owner current_marker_lane_runs — the ONE arbitration
+    // the unified marker hit resolver (marker_hit_at) also reads, so the painted
+    // runs and the clickable runs cannot drift. While the editor is open, SKIP
+    // its own marker's ambient run (the editor box below replaces it); its capped
+    // run still participated in the verdict.
+    const LaneRunSet set = current_marker_lane_runs(app, audio);
+    for (const LaneTextRun& run : set.runs) {
+        if (editor_active && run.marker_index == editor_target) continue;
+        paint_run(run.source_frame, run.text, run.glyphs);
+    }
+
+    // The FlagPayload editor box LAST, overlaying any ambient run it overlaps.
+    if (editor_active) {
         const text_editor::State& ed = app.top_flag_editor;
-        // The caret-origin owner supplies the run's left x, centered on the
+        // The caret-origin owner supplies the box's left x, centered on the
         // marker and clamped onscreen, so paint and the click->byte caret math
         // share one origin.
         const double left = flag_pending_text_left_x(app, audio, ed.target);
@@ -152,43 +195,7 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
         box.cursor_pos      = ed.cursor_pos;
         render_editor_text_box(cr, box);
         cairo_restore(cr);
-        return;
     }
-
-    // One-run painter: kBackground fill exactly behind the run (AA off for a
-    // crisp edge), then the text — no border, no caret. source_frame centers the
-    // run on the marker's painted column (lane_text_left_x_at_frame), column-
-    // agnostic so this needs no knowledge of which store the marker came from; a
-    // bad advance or clamp yields left<0 and skips. source_frame is a DOUBLE so a
-    // mid-drag run can center on the grabbed marker's free proposed position (the
-    // same fractional basis the flag overlay paints through — see tier 2).
-    auto paint_run = [&](double source_frame, const std::string& txt) {
-        if (txt.empty()) return;
-        const double left = lane_text_left_x_at_frame(
-            app, audio, source_frame, txt.size());
-        if (left < 0.0) return;
-        const double run_w = static_cast<double>(txt.size()) * advance;
-        cairo_save(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, kBackground.r, kBackground.g, kBackground.b);
-        cairo_rectangle(cr, left, static_cast<double>(lane.y),
-                        run_w, static_cast<double>(lane.h));
-        cairo_fill(cr);
-        cairo_restore(cr);
-        text_display::draw_line(cr, left, baseline, txt, kText,
-                                flag_font_size_px());
-    };
-
-    // Tiers 1 (the HOVERED marker's value) and 2 (else the LAST-SELECTED
-    // marker's value, composed from the live store with the mid-drag
-    // moveable_times substitution and the painted-column offscreen cull) are
-    // resolved by the shared run resolver current_marker_lane_run — the ONE
-    // arbitration the unified marker hit resolver (marker_hit_at) also reads,
-    // so the painted run and the clickable run cannot drift. paint_run keeps
-    // its own txt.empty() and left<0 guards, so consuming the resolved run here
-    // is byte-identical to the inline tiers it replaced.
-    const LaneTextRun run = current_marker_lane_run(app, audio);
-    if (run.valid) paint_run(run.source_frame, run.text);
 }
 
 // -- GuiPaintHandler::paint_waveform_plate -------------------------------
@@ -1022,6 +1029,13 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         app.displayed_target_warp_frame_map =
             std::move(app.staged_displayed_target_warp_frame_map);
         app.staged_displayed_target_warp_frame_map.clear();
+        // Promote the displayed VIEWPORT mirror in the SAME block (one promote,
+        // one gen bump): the marker-text lane geometry advances to the fp_*
+        // viewport the just-blitted flag/stem caches were built against, in
+        // lockstep with the map above.
+        app.displayed_vp_start = app.staged_displayed_vp_start;
+        app.displayed_vp_end   = app.staged_displayed_vp_end;
+        app.displayed_area_w   = app.staged_displayed_area_w;
         app.staged_displayed_valid = false;
         ++app.displayed_map_gen;
         if (on_displayed_map_promoted) on_displayed_map_promoted();

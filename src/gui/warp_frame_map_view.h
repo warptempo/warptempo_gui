@@ -223,6 +223,21 @@ int painted_column_of_source_frame(
     const AppState& app, const GuiAudio& audio, double source_frame,
     const std::vector<WarpFrameMapSegment>& warp_frame_map);
 
+// The explicit-basis variant of painted_column_of_source_frame: the same
+// painters' math, but the viewport (`vp_start`) and samples-per-pixel (`spp`)
+// come from the CALLER instead of the live viewport / painter_samples_per_pixel.
+// painted_column_of_source_frame delegates here with the LIVE basis; the
+// marker-text lane geometry passes the DISPLAYED basis (displayed_viewport_basis
+// in app_state.h) so a run centers on the column the flag pixels were painted at
+// even mid-publish, when the live viewport already holds a not-yet-blitted span.
+// `spp` must be > 0 (returns 0, a valid column, on a degenerate spp — callers
+// guard the geometry, exactly like the live-basis form). The domain and the
+// source->target mapping are unchanged (they don't depend on the viewport).
+int painted_column_of_source_frame_on_basis(
+    const AppState& app, const GuiAudio& audio, double source_frame,
+    const std::vector<WarpFrameMapSegment>& warp_frame_map,
+    double vp_start, double spp);
+
 // authored_frame_at_column: the authored source-frame value of pixel
 // column `col` under the same coordinate system — active-domain time =
 // viewport start + col * the painters' samples-per-pixel; in the

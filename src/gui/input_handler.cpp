@@ -1158,6 +1158,15 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // commit both route here). Ruling at the selector.
     app.displayed_target_warp_frame_map.clear();
     app.staged_displayed_target_warp_frame_map.clear();
+    // The displayed-viewport mirror (sibling of the map) resets to cold too, so
+    // the lane geometry falls back to the live viewport until the new view's
+    // item caches stage a fresh basis and a frame promotes it.
+    app.displayed_vp_start = 0;
+    app.displayed_vp_end   = 0;
+    app.displayed_area_w   = 0;
+    app.staged_displayed_vp_start = 0;
+    app.staged_displayed_vp_end   = 0;
+    app.staged_displayed_area_w   = 0;
     app.staged_displayed_valid = false;
 
     // The region-select span is in the ACTIVE display domain, which just

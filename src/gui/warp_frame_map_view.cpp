@@ -182,11 +182,10 @@ double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
            static_cast<double>(area.w);
 }
 
-int painted_column_of_source_frame(
+int painted_column_of_source_frame_on_basis(
     const AppState& app, const GuiAudio& audio, double source_frame,
-    const std::vector<WarpFrameMapSegment>& warp_frame_map) {
-    const GuiRect area = waveform_area(app);
-    const double spp = painter_samples_per_pixel(app, audio, area);
+    const std::vector<WarpFrameMapSegment>& warp_frame_map,
+    double vp_start, double spp) {
     if (spp <= 0.0) return 0;
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     // The painters' exact shape (frame_to_paint_sample in render.cpp):
@@ -196,9 +195,23 @@ int painted_column_of_source_frame(
     if (ctx.domain != GuiDisplayDomain::Source && !warp_frame_map.empty()) {
         ms = std::nearbyint(map_source_to_target(ms, warp_frame_map));
     }
-    const double x_raw =
-        (ms - static_cast<double>(app.viewport_start_sample)) / spp;
+    const double x_raw = (ms - vp_start) / spp;
     return static_cast<int>(std::nearbyint(x_raw));
+}
+
+int painted_column_of_source_frame(
+    const AppState& app, const GuiAudio& audio, double source_frame,
+    const std::vector<WarpFrameMapSegment>& warp_frame_map) {
+    const GuiRect area = waveform_area(app);
+    const double spp = painter_samples_per_pixel(app, audio, area);
+    if (spp <= 0.0) return 0;
+    // The LIVE basis: the live viewport start and the painter-quantized spp.
+    // Gesture-commit callers (the nudges, drag commits, trim drags, the hover-
+    // stem invalidator) anchor to the LIVE on-screen grid by ruling — only the
+    // marker-text lane geometry rides the displayed basis.
+    return painted_column_of_source_frame_on_basis(
+        app, audio, source_frame, warp_frame_map,
+        static_cast<double>(app.viewport_start_sample), spp);
 }
 
 int64_t authored_frame_at_column(

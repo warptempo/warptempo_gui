@@ -1530,6 +1530,42 @@ struct AppState {
     // frame rate.
     long long displayed_map_gen = 0;
 
+    // Displayed-VIEWPORT mirror — the SIBLING of displayed_target_warp_frame_map
+    // for the viewport half of the same event-synchronized hit geometry. The
+    // flag/stem item pixels are painted from the item cache's rebuild-time
+    // fingerprint (wf_cache.fp_vp_start / fp_vp_end / fp_area_w), NOT the live
+    // viewport; painted_column_of_source_frame reads the LIVE viewport
+    // (app.viewport_start_sample). During an async plate-publish window (a
+    // worker-dispatched viewport change — follow-scroll, center-on-playhead) the
+    // live viewport already holds the NEW span while the flags still paint at the
+    // OLD one, so a lane run centered by the LIVE viewport would jump off its
+    // flag until the worker caught up. These fields hold the vp_start/vp_end/
+    // area_w the LAST COMMITTED frame's item caches were built against, promoted
+    // in LOCKSTEP with displayed_target_warp_frame_map at the frame that blits
+    // those caches, so the marker-text lane geometry (run centering, the visible-
+    // set cull, the run hit rects — see displayed_viewport_basis in this header)
+    // rides the same basis the flags do. area_w == 0 means cold (nothing promoted
+    // yet); the accessor then falls back to the live viewport, matching
+    // displayed_or_live_target_map's cold live-map fallback. Written by the
+    // paint-pass promotion; cleared alongside displayed_target_warp_frame_map at
+    // every clear site (source load / `'` adopt / view toggle). Deliberately
+    // SEPARATE from GuiPaintHandler::displayed_viewport_basis, which reads the
+    // LIVE wf_cache.fp_* so the PLATE-registered overlays (region wash, playheads)
+    // stay locked to the just-blitted plate — the two register with different
+    // surfaces (plate vs the flag/stem item caches) and can transiently diverge.
+    int64_t displayed_vp_start = 0;
+    int64_t displayed_vp_end   = 0;
+    int     displayed_area_w   = 0;
+
+    // Staging half of the displayed-viewport mirror above — the viewport twin of
+    // staged_displayed_target_warp_frame_map, sharing its staged_displayed_valid
+    // flag (one stage, one promote, one gen bump). The item-cache rebuilds write
+    // the wf_cache.fp_* viewport they baked here; on_redraw promotes it into
+    // displayed_vp_* at the next committed frame. Cleared alongside the staged map.
+    int64_t staged_displayed_vp_start = 0;
+    int64_t staged_displayed_vp_end   = 0;
+    int     staged_displayed_area_w   = 0;
+
     // Marker reposition drag state. Not reset across file loads — explicitly
     // cleared there and on button release / Escape.
     DragState     drag;
@@ -2206,6 +2242,35 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 // playhead-placement clicks (out of scope by ruling — a far subtler seam).
 const std::vector<WarpFrameMapSegment>&
 displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
+
+// displayed_viewport_basis: the VIEWPORT twin of displayed_or_live_target_map —
+// the {vp_start, spp} the item hit tests and the marker-text lane geometry
+// decide against, so a run centers on and a hit lands on the column the flag
+// pixels were painted at. In target OR source view with a warm promoted mirror
+// (app.displayed_area_w > 0) it returns the vp_start and painter-quantized spp
+// (== (vp_end - vp_start) / area_w, the flags' own samples-per-pixel) the LAST
+// COMMITTED frame's flag/stem caches were built against; cold (nothing promoted
+// yet — first paint / view flip / just-after-load) it falls back to the LIVE
+// viewport {app.viewport_start_sample, current_samples_per_pixel}, matching the
+// live-map cold fallback of displayed_or_live_target_map.
+//
+// This is the free-function owner homed beside displayed_or_live_target_map so
+// the render.cpp free functions (lane_text_left_x_at_frame, the lane run
+// resolver, marker_hit_at) share ONE basis. It is DELIBERATELY DISTINCT from
+// GuiPaintHandler::displayed_viewport_basis, which reads the LIVE wf_cache.fp_*
+// (the plate's current fingerprint): the paint-handler method registers the
+// PLATE-locked overlays (region wash, playheads, phase-reset overlay) with the
+// just-blitted plate, whereas this owner registers the flag/lane/hit geometry
+// with the committed FLAG/STEM item caches (the promoted mirror). The two
+// surfaces are keyed off the same fp_* at rest but can transiently diverge —
+// plate published NEW while the flag cache still shows OLD for one frame — so
+// they are two owners by construction, not accidental duplication.
+struct DisplayedViewportBasis {
+    double vp_start = 0.0;
+    double spp      = 0.0;
+};
+DisplayedViewportBasis displayed_viewport_basis(const AppState& app,
+                                                const GuiAudio& audio);
 
 // Promoted from a lambda in main(). True iff the warp marker
 // at `idx` is hover-popup-eligible — i.e. its rect doesn't already

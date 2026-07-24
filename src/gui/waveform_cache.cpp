@@ -1047,6 +1047,14 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         app.staged_displayed_target_warp_frame_map = wf_cache.fp_warp_frame_map;
     else
         app.staged_displayed_target_warp_frame_map.clear();
+    // Stage the displayed VIEWPORT alongside the map (the sibling half): the
+    // fp_* these stems were mapped through, so the marker-text lane geometry
+    // promotes to the same vp_start/spp basis the flags do. Staged in BOTH views
+    // (unlike the map, which stages a source-view clear) — the lane run rides the
+    // displayed viewport in source view too.
+    app.staged_displayed_vp_start = wf_cache.fp_vp_start;
+    app.staged_displayed_vp_end   = wf_cache.fp_vp_end;
+    app.staged_displayed_area_w   = wf_cache.fp_area_w;
     app.staged_displayed_valid = true;
 
     // Invalidate the stem region. Viewport-driven invalidations
@@ -1244,6 +1252,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         app.staged_displayed_target_warp_frame_map = wf_cache.fp_warp_frame_map;
     else
         app.staged_displayed_target_warp_frame_map.clear();
+    // Stage the displayed VIEWPORT alongside the map — same fp_* the flags/chips
+    // just mapped through; the same value the stem rebuild stages this tick.
+    app.staged_displayed_vp_start = wf_cache.fp_vp_start;
+    app.staged_displayed_vp_end   = wf_cache.fp_vp_end;
+    app.staged_displayed_area_w   = wf_cache.fp_area_w;
     app.staged_displayed_valid = true;
 
     gui.invalidate_region(top_strip.x, top_strip.y,

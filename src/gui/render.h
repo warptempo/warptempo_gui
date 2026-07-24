@@ -942,53 +942,69 @@ double flag_pending_text_left_x(
     const AppState& app, const GuiAudio& audio,
     int marker_idx);
 
-// The marker-text lane's current NON-EDITOR run, arbitrated once so the paint
-// pass and the unified marker hit resolver (marker_hit_at, below — the run is
-// the marker's second hittable part beside its flag shape) read
-// the SAME run and cannot drift.
-// Mirrors the precedence paint_marker_text_lane owns below the flag-editor
-// case: tier 1 the HOVERED marker's own value (hover_popup.lane_text at
-// hover_popup.source_frame), else tier 2 the LAST-SELECTED marker's own value
-// composed from the live store — flag_text_iter for a warp marker, the "p"
-// literal for a phase reset — with the mid-drag proposed-position substitution
-// (a DragOverlay membership lookup: the dragged member's live moveable time,
-// covering group drags) and the painted-column offscreen cull the flags apply.
-// `valid` is false when
-// no run shows. `marker_index` is the active-column store index (warp or
-// phase-reset per active_markers_view); `source_frame` is the DOUBLE centering
-// basis (the mid-drag substituted position included); `text` is the composed
-// run. The FlagPayload flag-editor case is NOT covered here — it owns the lane
-// alone and is resolved ahead of this call at both consumers.
+// One marker-text-lane run: a marker's composed value at its displayed column.
+// `text` is the DISPLAY bytes (may end in the UTF-8 ellipsis "\xe2\x80\xa6" when
+// the composed value exceeds the 9-glyph ambient budget), and `glyphs` is the
+// DISPLAY glyph count — ALL width math (fill, verdict, hit) uses `glyphs`, never
+// text.size(), since a truncated run is 11 bytes / 9 glyphs. `marker_index` is
+// the active-column store index (warp or phase-reset per active_markers_view);
+// `source_frame` is the DOUBLE centering basis (the mid-drag proposed position
+// substituted for a dragged member).
 struct LaneTextRun {
     bool        valid        = false;
     int         marker_index = -1;
     double      source_frame = 0.0;
     std::string text;
+    size_t      glyphs       = 0;
 };
 
-// Resolve the current marker-text-lane run (the non-editor arbitration above),
+// The marker-text lane's current run SET, arbitrated once so the paint pass and
+// the unified marker hit resolver (marker_hit_at, below) read the SAME runs and
+// cannot drift. THE OCCLUSION RULE: the lane shows EVERY onscreen marker's text
+// ambiently IFF the whole visible set fits without any 9-glyph-capped run
+// occluding another (all-or-nothing); when the verdict fails it falls back to
+// the one-run arbitration — tier 1 the HOVERED marker's value
+// (hover_popup.lane_text), else tier 2 the LAST-SELECTED marker's value composed
+// from the live store (flag_text_iter for a warp marker, "p" for a phase reset),
+// with the mid-drag DragOverlay substitution and the painted-column offscreen
+// cull the flags apply; the fallback run keeps its FULL (untruncated) text.
+//
+// all_visible == true: `runs` is the whole visible set (capped display text).
+// all_visible == false: `runs` is the 0-or-1 fallback run (full text). All lane
+// geometry is on the DISPLAYED viewport basis (displayed_viewport_basis) and
+// displayed_or_live_target_map — the flag pixels' own basis. The open FlagPayload
+// editor is NOT resolved here (it is an OVERLAY: the ambient runs still resolve,
+// paint suppresses the editor marker's ambient run and draws the editor box on
+// top). advance <= 0 (font not measured) → the empty fallback shape.
+struct LaneRunSet {
+    bool all_visible = false;
+    std::vector<LaneTextRun> runs;
+};
+
+// Resolve the current marker-text-lane run set (the occlusion arbitration above),
 // the single owner both paint_marker_text_lane and the unified marker hit
-// resolver read so the painted run and the clickable run are one run. The
+// resolver read so the painted runs and the clickable runs are one set. Each
 // run's screen rect is derived by the caller exactly as paint does (left =
-// lane_text_left_x_at_frame(app, audio, source_frame, text.size()), a left<0
-// meaning the advance is not yet measured). No cairo context.
-LaneTextRun current_marker_lane_run(const AppState& app, const GuiAudio& audio);
+// lane_text_left_x_at_frame(app, audio, source_frame, glyphs), width =
+// glyphs * monospace_advance()). No cairo context.
+LaneRunSet current_marker_lane_runs(const AppState& app, const GuiAudio& audio);
 
 // The unified marker hit: the marker is ONE pointer item, hit either by its
 // FLAG SHAPE (hit_test_flag: the fixed rectangle plus the fused triangle,
-// topmost-painted wins) or by its RENDERED MARKER-TEXT LANE RUN (the run
-// current_marker_lane_run resolves — the ONE run arbitration the lane paint
-// also reads — when the point lands inside the run's screen rect, derived
-// exactly as paint derives it: lane_text_left_x_at_frame for the left edge,
-// glyph count times monospace_advance for the width, top_marker_text_row_area
-// for the y-band). `on_flag` records WHICH part was hit for the one asymmetry
-// the parts keep: the flag is the sole DRAG handle (a run press selects /
-// double-clicks / lands but never arms a reposition; the hover recompute reads
-// only .index, the surface not mattering to hover). index is the
-// active-column store index, -1 when neither part is under the point. Pure
-// geometry over app/audio (no cairo context); homed here beside
-// current_marker_lane_run so the press chain (input_pointer.cpp) and the hover
-// recompute (viewport.cpp) share one resolver.
+// topmost-painted wins) or by its RENDERED MARKER-TEXT LANE RUN (a run from the
+// set current_marker_lane_runs resolves — the ONE arbitration the lane paint
+// also reads — when the point lands inside a run's screen rect, derived exactly
+// as paint derives it: lane_text_left_x_at_frame for the left edge, glyphs times
+// monospace_advance for the width, top_marker_text_row_area for the y-band). In
+// all-visible mode every run is tested with HALF-OPEN x intervals (abutting runs
+// cannot double-hit); in fallback mode the single run keeps the closed-interval
+// test. `on_flag` records WHICH part was hit for the one asymmetry the parts
+// keep: the flag is the sole DRAG handle (a run press selects / double-clicks /
+// lands but never arms a reposition; the hover recompute reads only .index, the
+// surface not mattering to hover). index is the active-column store index, -1
+// when neither part is under the point. Pure geometry over app/audio (no cairo
+// context); homed here beside current_marker_lane_runs so the press chain
+// (input_pointer.cpp) and the hover recompute (viewport.cpp) share one resolver.
 struct MarkerHit {
     int  index   = -1;
     bool on_flag = false;

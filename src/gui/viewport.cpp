@@ -634,27 +634,35 @@ void Viewport::recompute_hover_at_cursor() {
     // unchanged by the flag→lane widening: the hit is still one marker index and
     // still depends only on the stores and the displayed map.
     //
-    // The hover identity adopts the UNIFIED marker hit (flag shape OR the
-    // rendered lane run's rect), the same resolver the press chain reads, so
-    // moving the pointer off the flag up into the marker-text lane holds the
-    // hover instead of dropping it. STABILITY (no oscillation): the run's rect
-    // derives from the marker the run CURRENTLY shows (hover-else-last-selected,
-    // via current_marker_lane_run). Pointer over hovered-M's run → the resolver
-    // returns M (hover tier) — a fixed point, so the hover persists. Pointer
-    // entering the lane over the last-selected run with NO hover showing → the
-    // hover becomes that marker, but the run's text and frame are IDENTICAL
-    // under both tiers (same composition from the same store fields), so the
-    // rect does not move when the tier flips — one settle, no flicker. Only the
-    // marker index feeds hover; on_flag (the drag-handle asymmetry) is
+    // The hover identity adopts the UNIFIED marker hit (flag shape OR a rendered
+    // lane run's rect), the same resolver the press chain reads, so moving the
+    // pointer off the flag up into the marker-text lane holds the hover instead
+    // of dropping it. STABILITY (no oscillation), TWO-MODE (via
+    // current_marker_lane_runs):
+    //   ALL-VISIBLE mode — the run set is the whole visible set, depending only
+    //   on store / viewport(displayed) / map / drag / iteration state, NEVER on
+    //   hover. Pointer over marker-M's run → marker_hit_at returns M regardless
+    //   of what hover holds, so the resolve is a fixed point by construction (the
+    //   convergence loop's staleness machinery is not exercised here).
+    //   FALLBACK mode — the single run's rect derives from the marker the run
+    //   CURRENTLY shows (hover-else-last-selected). Pointer over hovered-M's run →
+    //   the resolver returns M (hover tier), a fixed point. Pointer entering the
+    //   lane over the last-selected run with NO hover showing → the hover becomes
+    //   that marker, but the run's text and frame are IDENTICAL under both tiers
+    //   (same composition from the same store fields), so the rect does not move
+    //   when the tier flips — one settle, no flicker.
+    // Only the marker index feeds hover; on_flag (the drag-handle asymmetry) is
     // irrelevant here.
     const long long warp_gen  = app.warpmarkers.generation();
     const long long phase_gen = app.phaseresetmarkers.generation();
     const long long disp_gen  = app.displayed_map_gen;
 
     // A store mutation or a silent map promotion invalidates the cached hover
-    // run that marker_hit_at resolves against: while a hover shows,
-    // current_marker_lane_run's Tier 1 serves hover_popup.lane_text /
+    // run that marker_hit_at resolves against: in FALLBACK mode, while a hover
+    // shows, current_marker_lane_runs' hover tier serves hover_popup.lane_text /
     // source_frame, so the first resolve below is judged against the OLD rect.
+    // (In ALL-VISIBLE mode the run set is hover-independent, so this staleness
+    // class does not arise — the convergence loop still terminates, immediately.)
     // On the pure-motion path these three keys still match the cache, the cache
     // is accurate, and one resolve+recompose is the fixed point (unchanged
     // cost). When any key differs the cache is stale, so the recompose must
@@ -693,7 +701,7 @@ void Viewport::recompute_hover_at_cursor() {
     const int64_t old_hover_frame = app.hover_popup.source_frame;
 
     // Recompose both surfaces from a hit index INTO the live hover cache.
-    // current_marker_lane_run serves exactly this cached run as its Tier-1 hover
+    // current_marker_lane_runs' fallback hover tier serves exactly this cached
     // run, so applying here is precisely what a re-resolve of marker_hit_at reads
     // back. The LANE shows the hovered marker's own value regardless of
     // eligibility — the canonical flag line for a warp marker (flag_text_iter,
@@ -738,18 +746,23 @@ void Viewport::recompute_hover_at_cursor() {
     // against the freshly composed run and, while the resolved identity differs
     // from what we just applied, re-apply — driving to a fixed point.
     //
-    // Termination (bounded at 3 passes): each pass either reaches agreement
+    // Termination (bounded at 3 passes): in ALL-VISIBLE mode marker_hit_at is
+    // hover-independent, so the first re-resolve already agrees and the loop
+    // settles at once. In FALLBACK mode each pass either reaches agreement
     // (resolved index == the applied index → done) or strictly advances through
     // the reachable states — stale-M (old rect) → none-or-another-marker (judged
     // against M's NEW rect / the geometric flag test, both cache-independent) →
     // the last-selected run. That last-selected run is a fixed point because
-    // current_marker_lane_run composes it identically under the hover tier and
-    // the last-selected tier (same store fields, same rect), so once a pass
-    // applies it the next resolve returns it unchanged. No cycle is possible:
-    // every transition replaces cached state with freshly composed state, and
-    // identical state resolves identically, so a hit the loop already visited
-    // cannot re-appear with a different follow-on. If the hard bound is somehow
-    // hit without agreement, clear the hover — never latch a stale one.
+    // current_marker_lane_runs' fallback composes it identically under the hover
+    // tier and the last-selected tier (same store fields, same rect), so once a
+    // pass applies it the next resolve returns it unchanged. A mode flip cannot
+    // occur inside the loop — the verdict depends on store/viewport/map/drag/
+    // iteration state, none of which mutate here (only hover_popup, which the
+    // verdict ignores) — so the mode is fixed for the whole convergence. No cycle
+    // is possible: every transition replaces cached state with freshly composed
+    // state, and identical state resolves identically, so a hit the loop already
+    // visited cannot re-appear with a different follow-on. If the hard bound is
+    // somehow hit without agreement, clear the hover — never latch a stale one.
     if (cache_invalidated) {
         constexpr int kMaxHoverConvergePasses = 3;
         int passes = 1;  // apply_hit(hit) above counts as the first pass
