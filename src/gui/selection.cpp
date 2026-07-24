@@ -31,7 +31,8 @@ void Selection::damage_overlay_on_size2_crossing(size_t old_size) {
     // Full plate damage: the overlay's forward span is wider than the mutators'
     // top-strip/playhead damage, and a whole-plate blit on a rare size-2 crossing
     // is bounded. The <2 -> 2+ direction is also covered by the multi-select
-    // builders' own invalidate_waveform_area (Direction B); this makes the
+    // builders' own invalidate_waveform_area (the downward selection->extent
+    // coupling); this makes the
     // 2+ -> <2 direction — e.g. a propagate-paste multi-selection reduced to one
     // by a plain marker click — equally covered, redundant-but-harmless with the
     // builders.

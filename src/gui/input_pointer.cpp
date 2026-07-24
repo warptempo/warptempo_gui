@@ -135,14 +135,12 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // architect unified the gate 2026-07-24, so the smallest region that can rest
 // tracks the smallest press that becomes a drag. Called
 // from both region-drag end points (release and button-lost). Only the REST is
-// gated — the live mid-drag extension paints slivers freely. The clear_selection
-// is belt-and-braces: under SELECTION-FLOWS-DOWNWARD-ONLY (architect 2026-07-23)
-// the drag leaves the selection EMPTY throughout (the region no longer selects
-// its contents), so on a dissolved sliver this clear is a harmless no-op on an
-// already-empty selection — kept so the press's deselect-all intent stands
-// regardless of any future path that might seed a selection mid-drag.
+// gated — the live mid-drag extension paints slivers freely. Under
+// SELECTION-FLOWS-DOWNWARD-ONLY (architect 2026-07-23) the drag never touches
+// the selection: the press's deselect/demote was the committed act, and the
+// drag holds no selection to clear — so this dissolve drops the region alone.
 void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
-                                    Viewport& viewport, Selection& selection) {
+                                    Viewport& viewport) {
     if (!app.region.active) return;
     const double spp = current_samples_per_pixel(app, audio);
     if (spp <= 0.0) return;   // no geometry -> leave the region as-is
@@ -151,7 +149,6 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
         spp;
     if (span_px < kDragMovedThresholdPx) {
         app.region = RegionState{};
-        selection.clear_selection();
         viewport.invalidate_waveform_area();
     }
 }
@@ -202,7 +199,8 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 
 } // namespace
 
-// Direction B of the selection<->highlight coupling (architect 2026-07-23): a
+// The DOWNWARD coupling — the selection defines the extent region,
+// SELECTION-FLOWS-DOWNWARD-ONLY (architect 2026-07-23): a
 // multi-select CLICK that leaves 2+ markers selected sets the region to the
 // selection's active-domain position extent [earliest, latest], so the
 // highlight, the earliest-marker land, and Space's play-from-region-left-bound
@@ -877,8 +875,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // marker was clicked. An emptied selection (the last member toggled
             // off) lands nothing and drops the region (the empty branch's
             // explicit clear_region_highlight). A land dissolves the old region,
-            // then — under Direction B of the selection<->highlight coupling
-            // (architect 2026-07-23) — a resulting selection of 2+ markers sets
+            // then — under the DOWNWARD selection->extent coupling
+            // (SELECTION-FLOWS-DOWNWARD-ONLY, architect 2026-07-23) — a resulting
+            // selection of 2+ markers sets
             // the region to the selection's [earliest, latest] extent
             // (set_region_to_selection_extent, AFTER the land's clear); a single
             // survivor leaves the land's dissolve standing. Read-only allowed
@@ -1055,7 +1054,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // membership toggle (above, landing at the earliest selected
                     // too). It arms no drag, seeds/consumes no double-click, opens
                     // no editor. Allowed in read-only (selection + playhead are
-                    // navigation). Direction B of the coupling: a range leaving
+                    // navigation). The downward selection->extent coupling
+                    // (SELECTION-FLOWS-DOWNWARD-ONLY): a range leaving
                     // 2+ selected sets the region to the [earliest, latest]
                     // extent (set_region_to_selection_extent, AFTER the land's
                     // region clear), so highlight, land, and Space's left-bound
@@ -1741,7 +1741,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // check would early-return anyway — the gate changes nothing there.
         const bool moved = app.region_drag.moved;
         app.region_drag = RegionDragState{};
-        if (moved) end_region_drag_min_size_check(app, audio, viewport, selection);
+        if (moved) end_region_drag_min_size_check(app, audio, viewport);
         return;
     }
     if (app.tempo_drag.active) {
@@ -2056,7 +2056,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             const bool moved = app.region_drag.moved;
             app.region_drag = RegionDragState{};
             if (moved)
-                end_region_drag_min_size_check(app, audio, viewport, selection);
+                end_region_drag_min_size_check(app, audio, viewport);
             return;
         }
         const GuiRect area = waveform_area(app);
@@ -2116,9 +2116,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // Drag-formed, so FREE provenance: no tempo gesture re-derives it (it has
         // an empty selection anyway).
         app.region.provenance = RegionProvenance::Free;
-        // SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23, retiring the R2
-        // coupling's Direction A): highlighting a region does NOT select the
-        // markers it contains — the press already deselected all and the drag
+        // SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23): highlighting a
+        // region does NOT select the markers it contains (the reverse coupling —
+        // a region selecting its contents — was tried and retired; do not
+        // re-propose) — the press already deselected all and the drag
         // leaves the selection EMPTY throughout. The reverse direction stands:
         // when markers ARE selected the region is set to their extent (the
         // multi-select clicks via set_region_to_selection_extent — provenance

@@ -154,9 +154,10 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // framing ("every marker interaction drops the region") is DEAD: this clear
 // still runs on every marker-click land, but the two MULTI-SELECT clicks
 // (shift-range, ctrl-toggle) immediately RE-DEFINE the region afterward to the
-// selection's [earliest, latest] extent when 2+ remain selected (Direction B of
-// the selection<->highlight coupling, set_region_to_selection_extent — a
-// separate call that must run AFTER this clear). DELIBERATELY NOT cleared: the region Space launch (the
+// selection's [earliest, latest] extent when 2+ remain selected (the DOWNWARD
+// coupling — the selection defines the extent region, SELECTION-FLOWS-DOWNWARD-
+// ONLY; set_region_to_selection_extent — a separate call that must run AFTER
+// this clear). DELIBERATELY NOT cleared: the region Space launch (the
 // region IS the launch point there), the nudge/drag playhead follow, marker
 // drops (`s`/Alt+S), undo/redo, and pure viewport moves (PageUp/PageDown, zoom
 // steps, pans) — and the lower-half scrub press, which touches no region at
@@ -172,7 +173,8 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // rather than this exact damage shape.
 void clear_region_highlight(AppState& app, Viewport& viewport);
 
-// Direction B of the selection<->highlight coupling: set the region to the
+// The DOWNWARD coupling (the selection defines the extent region,
+// SELECTION-FLOWS-DOWNWARD-ONLY): set the region to the
 // current selection's active-domain [earliest, latest] position extent when 2+
 // markers are selected (a <=1 selection sets nothing). MUST run AFTER any land
 // that clears the region. Definition lives in input_pointer.cpp; declared here

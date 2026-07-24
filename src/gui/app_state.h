@@ -133,10 +133,10 @@ struct SelectionSnapshot {
 };
 
 // Session-only region selection — an Ableton-style arrangement span. SELECTION
-// FLOWS DOWNWARD ONLY (architect 2026-07-23, retiring the R2 two-way coupling's
-// Direction A): highlighting a region does NOT select the markers it contains;
-// if markers ARE selected the region is set to their extent — never the other
-// way. Formed by FOUR routes: the plain waveform drag (paints it live, leaving
+// FLOWS DOWNWARD ONLY (architect 2026-07-23): highlighting a region does NOT
+// select the markers it contains (the reverse coupling — a region selecting its
+// contents — was tried and retired; do not re-propose); if markers ARE selected
+// the region is set to their extent — never the other way. Formed by FOUR routes: the plain waveform drag (paints it live, leaving
 // the selection EMPTY throughout), the waveform SHIFT+click (the region former /
 // marker DEMOTE — playhead-to-click with nothing selected, else
 // furthest-selected-marker-to-click, DROPPING the selection), a multi-marker
@@ -505,12 +505,11 @@ struct UndoHistory {
 // under the same kDragMovedThresholdPx gate — the gate latches once past the
 // arm and never re-engages, so a jitter drag could otherwise rest a sliver,
 // which dissolves like a click instead (end_region_drag_min_size_check, at both
-// end points; its clear_selection is a belt-and-braces no-op now that the drag
-// holds no selection). Esc cancels a live drag, restores the pre-press region
-// captured here at arm (the marker drag's snapshot pattern — cheap, two ints);
-// its clear_selection is likewise a no-op on the already-empty selection (the
-// press's deselect was the committed act — there is no pre-press selection
-// snapshot). Session-only, never undoable.
+// end points). The drag never touches the selection anywhere — the press's
+// deselect/demote was the committed act, and downward-only is structural (there
+// is no selection write in the drag, its ends, or its Esc cancel). Esc cancels a
+// live drag, restoring the pre-press region captured here at arm (the marker
+// drag's snapshot pattern — cheap, two ints). Session-only, never undoable.
 struct RegionDragState {
     bool    active       = false;
     bool    moved        = false;  // crossed the threshold into a real drag

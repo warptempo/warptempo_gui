@@ -733,8 +733,11 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     if (D > delta_max) D = delta_max;
 
     // (3) Every member rides the single rigid delta orig_k + D. The
-    // [0, warp_wall] clamp is fp-safety — the intersection already keeps every
-    // integer sum in range.
+    // [0, warp_wall] clamp is a deliberate walls-win belt — provably dead today
+    // (this path is all-integer int64 sums, and the intersection proof above
+    // keeps every sum in range), kept as cheap insurance so a future edit to the
+    // intersection code cannot commit a wall-illegal frame (an out-of-wall
+    // authored position would save a load-fatal file).
     std::vector<GuiWarpMarker> proposed = mv;
     bool any_changed = false;
     for (int idx : app.selected_markers) {

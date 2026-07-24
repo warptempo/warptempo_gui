@@ -181,19 +181,17 @@ struct WaveformCache {
 // Carries the TRIM boundary stems only (the marker stem became the selected-
 // marker live overlay paint_selected_stem, out of any cache). Mirrors WaveformCache's
 // "live" side but with no pending/supersede plumbing — rebuilds are synchronous
-// on the main thread (sub-millisecond). The fingerprint is split into two halves:
-//   1. Displayed-viewport inputs (vp_start/vp_end/trim/target/warp_frame_map_hash/
-//      area dimensions): read from wf_cache.fp_*, NOT from
-//      current app state. This is how the stem layer snaps together with
-//      the waveform layer at the worker's completion swap — both sides
-//      key off the same set of displayed-viewport values, which the
-//      waveform's swap callback publishes atomically.
-//   2. Marker-driven inputs (warpmarker/phase_reset generations, drag
-//      overlay hash/active, marker view, selection hash): read live from app
-//      state. These no longer drive any stem output (the trim stems are
-//      marker/selection-independent); they SURVIVE in the fingerprint and merely
-//      over-invalidate this trim-only surface — harmless (two lines re-render),
-//      and they still catch the displayed-trim positions those inputs can drive.
+// on the main thread (sub-millisecond). The cache is TRIM-ONLY, and its
+// fingerprint is exactly render_trim_stems' input list: the displayed-viewport
+// inputs (vp_start/vp_end/trim frames/has-bits/target/warp_frame_map_hash/area
+// dimensions), read from wf_cache.fp_* and NOT from current app state. This is
+// how the stem layer snaps together with the waveform layer at the worker's
+// completion swap — both sides key off the same set of displayed-viewport
+// values, which the waveform's swap callback publishes atomically. Any
+// displaced-trim change a marker interaction could drive already shows up in
+// fp_trim_begin/fp_trim_end (compute_displayed_trim feeds them), so no
+// marker-store generation, drag-overlay, selection, or marker-view field lives
+// here — marker interactions no longer rebuild this cache.
 //
 // Surface matches the waveform area: the trim stems span the WAVEFORM AREA ONLY
 // (top at screen y = area.y, down to area.y + area.h — no strip overhang; the
@@ -212,13 +210,6 @@ struct StemCache {
     int       fp_area_h           = 0;       // surface height (incl. stem overhang)
     bool      fp_target           = false;
     uint64_t  fp_warp_frame_map_hash     = 0;
-
-    long long fp_warp_generation       = -1;
-    long long fp_phase_reset_generation      = -1;
-    uint64_t  fp_drag_overlay_hash           = 0;
-    bool      fp_drag_active                 = false;
-    char      fp_active_markers_view         = '\0';
-    uint64_t  fp_selection_hash              = 0;
 
     // Trim boundary stems share this cache. The begin/end frame
     // positions ride fp_trim_begin / fp_trim_end above; these capture the

@@ -922,15 +922,6 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     const bool     is_target    = wf_cache.fp_target;
     const uint64_t warp_frame_map_hash = wf_cache.fp_warp_frame_map_hash;
 
-    // Marker-driven inputs: read live from app state.
-    const long long warp_gen   = app.warpmarkers.generation();
-    const long long phase_gen  = app.phaseresetmarkers.generation();
-    const uint64_t  drag_hash  = hash_drag_overlay(app.drag);
-    const bool     drag_active = app.drag.active;
-    const char     mv          = app.active_markers_view;
-    const uint64_t sel_hash    = hash_selection(app.selected_markers,
-                                                app.last_selected_marker);
-
     // Trim boundary stems. Positions ride trim_begin / trim_end
     // (displayed domain), has-set bits from the active A/B tab (trim carries
     // no selected state). Computed by the shared helper so the flag cache's
@@ -951,12 +942,6 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
         stem_cache.fp_area_h                  == surface_h &&
         stem_cache.fp_target                  == is_target &&
         stem_cache.fp_warp_frame_map_hash            == warp_frame_map_hash &&
-        stem_cache.fp_warp_generation   == warp_gen &&
-        stem_cache.fp_phase_reset_generation  == phase_gen &&
-        stem_cache.fp_drag_overlay_hash       == drag_hash &&
-        stem_cache.fp_drag_active             == drag_active &&
-        stem_cache.fp_active_markers_view     == mv &&
-        stem_cache.fp_selection_hash          == sel_hash &&
         stem_cache.fp_trim_has_begin          == trim_has_begin &&
         stem_cache.fp_trim_has_end            == trim_has_end;
 
@@ -1000,12 +985,10 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     // no longer cached: it became the selected-marker live overlay
     // (paint_selected_stem — a per-frame, one-column paint over the plate for the
     // SINGLE selected marker while it is hovered / dragged / nudged; round 3,
-    // refined round 4, architect 2026-07-23), so an interaction never rebuilds
-    // this cache. The marker-driven fingerprint keys (warp/phase generations,
-    // drag-overlay hash, drag-active, selection hash) survive above and merely
-    // over-invalidate this trim-only surface — harmless (two vertical lines
-    // re-render), and they still catch the displayed-trim changes those inputs
-    // can drive.
+    // refined round 4, architect 2026-07-23), so a marker interaction never
+    // rebuilds this cache. The fingerprint is exactly render_trim_stems' input
+    // list; a displaced-trim change a marker input could drive rides
+    // fp_trim_begin/fp_trim_end directly (compute_displayed_trim feeds them).
     render_trim_stems(
         ccr, local_area, vp_start, vp_end,
         trim_struct,
@@ -1022,12 +1005,6 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     stem_cache.fp_area_h                    = surface_h;
     stem_cache.fp_target                    = is_target;
     stem_cache.fp_warp_frame_map_hash              = warp_frame_map_hash;
-    stem_cache.fp_warp_generation     = warp_gen;
-    stem_cache.fp_phase_reset_generation    = phase_gen;
-    stem_cache.fp_drag_overlay_hash         = drag_hash;
-    stem_cache.fp_drag_active               = drag_active;
-    stem_cache.fp_active_markers_view       = mv;
-    stem_cache.fp_selection_hash            = sel_hash;
     stem_cache.fp_trim_has_begin            = trim_has_begin;
     stem_cache.fp_trim_has_end              = trim_has_end;
 
