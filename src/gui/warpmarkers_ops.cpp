@@ -872,8 +872,13 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     // re-stamps each press (the immediately-next command), so the stem stays solid
     // across the whole burst. Paint gates it to a SINGLETON selection, so for a 2+
     // selection this stamp is INERT — the singleton paint gate never admits it, and
-    // any command that narrows the group to one is itself a damaging command that
-    // kills the pin first. Stamped anyway for uniformity.
+    // any DAMAGING command that narrows the group to one kills the pin first —
+    // except the accepted deferred-click exception (full edge at
+    // AppState::stem_pin_*): a plain press on an already-selected group member
+    // arms a deferred click and paints nothing, so a damage-less press re-stamps
+    // the still-inert pin, and the completing motionless release (not a command)
+    // narrows the selection to singleton without killing it, admitting the pin
+    // when the released marker is the pinned one. Stamped anyway for uniformity.
     app.stem_pin_marker      = app.last_selected_marker;
     app.stem_pin_command_seq = app.command_seq;
     // Coalesce a rapid burst: the first press pushed the pre-burst snapshot with

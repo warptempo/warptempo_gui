@@ -1377,7 +1377,8 @@ struct AppState {
     // completions (pending marker/tempo drag, at release and at lost-button).
     //   CLEARED (to -1) in Viewport::recompute_hover_at_cursor on the full
     // (non-short-circuited) path the instant the resolved hit differs from the
-    // latch marker — that is the only clear, so a mouseout-then-return re-arms.
+    // latch marker — that is the only POINTER-GEOMETRY clear (five lifecycle
+    // clears exist beside it, enumerated below), so a mouseout-then-return re-arms.
     //   TESTED in paint_selected_stem: the HOVER arm requires the latch to be
     // dead OR not name this idx (stem_hover_suppress_active). The drag /
     // tempo-drag / lateral-PIN arms are UNTOUCHED — the pin deliberately shows
