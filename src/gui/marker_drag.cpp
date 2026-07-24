@@ -738,6 +738,20 @@ void MarkerDragOps::commit_drag() {
         viewport.move_playhead_to(
             source_frame_to_active_domain(app, audio, ridden_final_frame));
     }
+    // Stem LATERAL-GESTURE PIN: the position drag is a lateral gesture, so keep
+    // the grabbed marker's stem visible after release. Stamp the POST-REORDER
+    // grabbed (focused) index — app.last_selected_marker, which the remap above
+    // rewrote to the grabbed marker's new slot (begin_drag focused the grabbed
+    // marker) — and the current command_seq; pure command adjacency, reaped
+    // one-shot in on_tick (see AppState::stem_pin_*). Unconditional (outside the
+    // net_changed guard): a wander-back drag is still a lateral gesture, and the
+    // land above already parked the playhead on the grabbed marker. Paint gates it
+    // to a SINGLETON selection, so a group drag's stamp is INERT (same as the
+    // nudges). The Esc-cancel path (cancel_drag) does NOT reach here, so a
+    // cancelled gesture leaves no pin — and Esc, a command, kills any prior pin by
+    // adjacency anyway.
+    app.stem_pin_marker      = app.last_selected_marker;
+    app.stem_pin_command_seq = app.command_seq;
     // Region re-derive (GROUP drag only — a single-marker drag never has an
     // active region here, its press cleared it). apply_drag_motion live-tracked
     // the region to the moving group during motion; snap it back to the RESTING
@@ -1380,6 +1394,17 @@ void MarkerDragOps::end_tempo_drag() {
         viewport.move_playhead_to(
             source_frame_to_active_domain(app, audio, mv[mi].time_frame));
     }
+    // Stem LATERAL-GESTURE PIN: the tempo drag is a lateral gesture (the dragged
+    // marker's IMAGE moved under the re-warped map, W+target by construction), so
+    // keep its stem visible after release. Stamp the DRAGGED (grabbed) index and
+    // the current command_seq; pure command adjacency, reaped one-shot in on_tick
+    // (see AppState::stem_pin_*). Unconditional (net change or not) — a walled /
+    // zero-commit drag is still a lateral gesture — and the tempo drag never
+    // reorders (placement fixed), so `mi` stays a valid store index. Esc-cancel
+    // (cancel_tempo_drag) does NOT reach here, so a cancelled gesture leaves no
+    // pin; Esc kills any prior pin by adjacency anyway.
+    app.stem_pin_marker      = mi;
+    app.stem_pin_command_seq = app.command_seq;
 }
 
 // Esc / Ctrl+Q cancel: restore the GRAB tempo (one store write + one

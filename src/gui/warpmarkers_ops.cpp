@@ -500,6 +500,19 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
+    // Stem LATERAL-GESTURE PIN — TARGET VIEW ONLY. The tempo step is lateral
+    // exactly in target-view warp markers, where the FOCUSED marker's IMAGE slides
+    // as the map re-warps; a SOURCE-view step moves nothing on screen (non-lateral)
+    // and does NOT stamp — it bumps command_seq like every command, killing any
+    // prior pin by adjacency. Stamp the FOCUSED (post-collapse) index and the
+    // current command_seq; pure command adjacency, reaped one-shot in on_tick (see
+    // AppState::stem_pin_*). The step never reorders (placement fixed), so
+    // last_selected_marker stays valid; a refused/walled press early-returned
+    // above and never reaches here.
+    if (app.active_audio_view == 'T') {
+        app.stem_pin_marker      = app.last_selected_marker;
+        app.stem_pin_command_seq = app.command_seq;
+    }
     // Discrete warp_frame_map change that CAN run in target view: Alt+Up/Down is a
     // warp authoring gesture reachable off its source home (the ruled exception
     // gated above), so it is one of the surviving target-view re-warp sites (with
@@ -619,6 +632,16 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
             viewport.move_playhead_to(source_frame_to_active_domain(
                 app, audio, app.warpmarkers.markers()[f].time_frame));
         }
+        // Stem LATERAL-GESTURE PIN — inside this TARGET-VIEW block by construction,
+        // so a SOURCE-view group step never stamps (it moved no image on screen,
+        // non-lateral, and its command_seq bump kills any prior pin by adjacency).
+        // Stamp the FOCUSED marker's post-step index (positions untouched, so no
+        // reorder — f stays valid) and the current command_seq; pure command
+        // adjacency, reaped one-shot in on_tick. Paint gates to a SINGLETON, so for
+        // this 2+ selection the stamp is INERT (like the group nudges), stamped for
+        // uniformity. See AppState::stem_pin_*.
+        app.stem_pin_marker      = app.last_selected_marker;
+        app.stem_pin_command_seq = app.command_seq;
         // Region follows the images (architect 2026-07-23): the group step moved
         // the selected markers' target IMAGES (tempos changed, source frames did
         // not).
@@ -840,14 +863,16 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     // selection in place).
     std::vector<int> touched_live(app.selected_markers.begin(),
                                   app.selected_markers.end());
-    // Stem NUDGE PIN: keep the FOCUSED marker's stem visible while the Alt+Left/
-    // Right key is HELD (the fine-tuning case). Stamp the post-reorder focused
-    // index and the current command_seq; the pin is live iff command-adjacent AND
-    // the key-repeat hold is armed, reaped one-shot in on_tick on either death
-    // (see AppState::stem_pin_*). Paint gates it to a SINGLETON selection, so for
-    // a 2+ selection this stamp is INERT — the singleton paint gate never admits
-    // it, and any command that could narrow the group to one bumps command_seq and
-    // kills the pin by adjacency first. Stamped anyway for uniformity.
+    // Stem LATERAL-GESTURE PIN: the position nudge is a lateral gesture, so keep
+    // the FOCUSED marker's stem visible after it. Stamp the post-reorder focused
+    // index and the current command_seq; the pin is live by pure command adjacency
+    // and persists until any other command, reaped one-shot in on_tick (see
+    // AppState::stem_pin_*). A burst re-stamps each press (the immediately-next
+    // command), so the stem stays solid across the whole burst. Paint gates it to
+    // a SINGLETON selection, so for a 2+ selection this stamp is INERT — the
+    // singleton paint gate never admits it, and any command that could narrow the
+    // group to one bumps command_seq and kills the pin by adjacency first. Stamped
+    // anyway for uniformity.
     app.stem_pin_marker      = app.last_selected_marker;
     app.stem_pin_command_seq = app.command_seq;
     // Coalesce a rapid burst: the first press pushed the pre-burst snapshot with

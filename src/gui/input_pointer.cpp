@@ -42,8 +42,9 @@
 namespace {
 
 // monotonic_ms() (the press-driven CLOCK_MONOTONIC ms time base for double-click
-// detection here and the nudge stem-pin window) is now the shared reader
-// declared in app_state.h — one owner, no per-TU clock copy.
+// detection) is now the shared reader declared in app_state.h — one owner, no
+// per-TU clock copy. (The stem pin no longer consumes it — it keys purely on
+// command adjacency; see AppState::stem_pin_*.)
 
 // Active-domain playhead frame at click column `col`. SOURCE view: the exact
 // source grid (source_grid_position_at_column via painter q), matching marker

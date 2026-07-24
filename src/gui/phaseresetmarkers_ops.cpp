@@ -322,13 +322,14 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         app, reorder_markers_by_time(app.phaseresetmarkers.markers_mut()));
     std::vector<int> touched_live(app.selected_markers.begin(),
                                   app.selected_markers.end());
-    // Stem NUDGE PIN (symmetric with the warp nudge): keep the FOCUSED reset's
-    // stem visible while the Alt+Left/Right key is HELD. Post-reorder focused index
-    // and the current command_seq; the pin is live iff command-adjacent AND the
-    // key-repeat hold is armed, reaped one-shot in on_tick on either death (see
-    // AppState::stem_pin_*). Paint gates it to a singleton, so for a 2+ selection
-    // this stamp is INERT — the singleton gate never admits it, and any command
-    // that could narrow the group to one bumps command_seq and kills the pin by
+    // Stem LATERAL-GESTURE PIN (symmetric with the warp nudge): the position nudge
+    // is a lateral gesture, so keep the FOCUSED reset's stem visible after it.
+    // Post-reorder focused index and the current command_seq; the pin is live by
+    // pure command adjacency and persists until any other command, reaped one-shot
+    // in on_tick (see AppState::stem_pin_*). A burst re-stamps each press, so the
+    // stem stays solid. Paint gates it to a singleton, so for a 2+ selection this
+    // stamp is INERT — the singleton gate never admits it, and any command that
+    // could narrow the group to one bumps command_seq and kills the pin by
     // adjacency first. Stamped anyway for uniformity with the singleton path.
     app.stem_pin_marker      = app.last_selected_marker;
     app.stem_pin_command_seq = app.command_seq;

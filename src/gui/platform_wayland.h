@@ -64,28 +64,6 @@ public:
     int height() const;
     bool has_initial_configure() const { return has_initial_configure_; }
 
-    // Live key-repeat + modifier snapshot for the nudge stem-pin reap's
-    // chord-liveness test (composed GUI-side in main.cpp, so the platform stays
-    // generic). repeat_hold_key() is the currently ARMED repeat key (0 when none):
-    // true from the key's press — including the compositor's initial-delay phase,
-    // before the first repeat fires — until the hold is cleared by a key release,
-    // a DIFFERENT key press, a pointer-button press, a completed wheel emission,
-    // keyboard leave, or keyboard-capability loss (all of which zero repeat_key_ at
-    // the platform input chokepoints). It DELIBERATELY survives a bare modifier
-    // change (Alt released while Right stays down keeps the Right repeat armed) —
-    // the live-modifier rule is load-bearing for the Ctrl+Z <-> Ctrl+Shift+Z flip,
-    // so the platform must NOT disarm repeat on a modifier edge. The three mod
-    // accessors read the LIVE modifier bits (the same mod_*_ current_mods() reads).
-    // The reap composes them into the exact Alt-exact Left/Right nudge chord, so a
-    // bare-Right repeat (Alt released mid-hold) or a shift/ctrl press ends the chord
-    // and kills the pin next tick even mid-initial-delay, matching HELP's "moment
-    // the nudge key is released", while the repeat hold itself survives for the
-    // live-modifier rule.
-    GuiKey repeat_hold_key() const { return repeat_key_; }
-    bool   mod_alt_held()    const { return mod_alt_; }
-    bool   mod_shift_held()  const { return mod_shift_; }
-    bool   mod_ctrl_held()   const { return mod_ctrl_; }
-
     void set_on_redraw(RedrawCallback cb);
     void set_on_resize(ResizeCallback cb);
     void set_on_key(KeyCallback cb);

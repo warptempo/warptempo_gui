@@ -1293,46 +1293,45 @@ struct AppState {
     // never serialized.
     uint64_t      command_seq = 0;
 
-    // Selected-marker stem NUDGE PIN (round 4, architect 2026-07-23; key-hold
-    // lifecycle 2026-07-24). The selected singleton's stem (paint_selected_stem)
-    // shows while THAT marker is hovered, dragged, OR just nudged; the nudge arm
-    // has no hover/drag to key on, so both Alt+Left/Right nudge handlers stamp
-    // these at commit — `stem_pin_marker` = the moved (focused) marker's
-    // post-reorder index, `stem_pin_command_seq` = the current command_seq. The
-    // pin is LIVE iff BOTH halves hold: (a) command adjacency — `command_seq ==
-    // stem_pin_command_seq` (and stem_pin_marker == the selected index); any OTHER
-    // command bumps command_seq at its dispatch entry and kills the pin instantly
-    // — AND (b) the live Alt-exact Left/Right CHORD still holds: the platform's
-    // armed repeat key is an arrow (repeat_hold_key() == Left/Right) AND the live
-    // modifiers are alt-exact (alt held, no shift/ctrl), composed in the on_tick
-    // reap from the platform's minimal repeat/mod read. It is the CHORD, not a bare
-    // "arrow key still armed" probe: the repeat hold DELIBERATELY survives a
-    // modifier change (the live-modifier rule, load-bearing for the Ctrl+Z <->
-    // Ctrl+Shift+Z flip), so releasing Alt while Right stays down keeps Right armed
-    // yet ends the nudge — the chord test then kills the pin next tick even
-    // mid-initial-delay, matching "the moment the nudge key is released". This
-    // key-hold half REPLACED a fixed burst timer: the compositor's ~600 ms initial
-    // delay meant any short window flickered during a hold's initial delay, so no
-    // fixed timer works — a held chord keeps the stem solid, an end kills it "asap"
-    // (within one tick). Manual-tap consequence: a single tap shows the stem only
-    // for the press's own frames (the release ends the chord, reaped next tick); the
-    // SUSTAINED stem is the HELD fine-tuning case, and hover covers inspection. The
-    // default stem_pin_marker = -1 never matches a real (>= 0) selection, so the
-    // startup command_seq == 0 == stem_pin_command_seq coincidence pins nothing.
-    // Both halves are the two DEATH causes, REAPED one-shot in on_tick: when
-    // stem_pin_marker is set and EITHER adjacency is lost OR the nudge chord no
-    // longer holds, the reaper invalidates the FULL waveform area and
-    // resets stem_pin_marker = -1 so the blue line disappears without user input.
-    // Paint (adjacency-only) stops drawing it too, but not every killing command
-    // damages the waveform (bare `o` invalidates only the bottom strip) and a
-    // release gets no command at all, so the reaper — not the killing command —
-    // owns the damage. Full-area damage, NOT a column recompute: the stem painted
-    // on the DISPLAYED basis (wf_cache.fp_*), and a column recomputed on the LIVE
-    // basis could miss it inside a resize/async publish window (do not "optimize"
-    // this back to a single-column damage). The reaper reads no marker index; it
-    // needs none. Session-only, never serialized. Workflow note: after the hold the
-    // green cursor playhead line rests at the marker (a plain Esc deselects and
-    // lands there), which replaces the persistent blue line.
+    // Selected-marker stem LATERAL-GESTURE PIN (round 4, architect 2026-07-23;
+    // lateral-persistence lifecycle 2026-07-24). The selected singleton's stem
+    // (paint_selected_stem) shows while THAT marker is hovered, dragged, OR moved
+    // by a lateral gesture; the nudge/tempo-end arms have no hover/drag to key on,
+    // so the lateral-gesture commits stamp these — `stem_pin_marker` = the moved
+    // (focused/grabbed) marker's post-commit index, `stem_pin_command_seq` = the
+    // current command_seq. The pin means "the LAST COMMAND was a lateral gesture on
+    // this marker": it is LIVE iff pure command adjacency holds — `command_seq ==
+    // stem_pin_command_seq` — so ANY other command (a click, key, wheel, Esc, undo
+    // — anything that bumps command_seq at its dispatch entry without re-stamping)
+    // kills it. No timer and no key-hold probe: the "disappear asap"/held-key model
+    // (a fixed burst timer, then a key-hold chord probe) was architect-REVERTED
+    // 2026-07-24 after labwc use — the stem now becomes visible on any lateral
+    // gesture and STAYS visible until literally anything else, so walking away
+    // leaves it standing (intended). THE FOUR LATERAL GESTURES that stamp: (1) the
+    // marker POSITION DRAG's commit (both columns, home views), (2) the POSITION
+    // NUDGE (Alt+Left/Right; warp in both audio views, phase in target), (3) the
+    // TEMPO DRAG's end (W+target by construction), (4) the TEMPO NUDGE (Alt+Up/Down,
+    // singleton and group) BUT ONLY IN TARGET VIEW — the tempo pair is lateral
+    // exactly in target-view warp markers, where the marker's IMAGE moves laterally;
+    // a SOURCE-view tempo step moves nothing on screen, is NON-lateral, does not
+    // stamp, and — bumping command_seq — kills any prior pin like every other
+    // command. Each stamp re-stamps the current command_seq, so a nudge burst keeps
+    // the stem alive (each press is the immediately-next command). The default
+    // stem_pin_marker = -1 never matches a real (>= 0) selection, so the startup
+    // command_seq == 0 == stem_pin_command_seq coincidence pins nothing. REAPED
+    // one-shot in on_tick: when stem_pin_marker is set and adjacency is lost
+    // (command_seq moved past stem_pin_command_seq), the reaper invalidates the FULL
+    // waveform area and resets stem_pin_marker = -1 so the blue line disappears
+    // without user input. Paint (adjacency-only) stops drawing it too, but not every
+    // killing command damages the waveform (bare `o` invalidates only the bottom
+    // strip), so the reaper — not the killing command — owns the damage. Full-area
+    // damage, NOT a column recompute: the stem painted on the DISPLAYED basis
+    // (wf_cache.fp_*), and a column recomputed on the LIVE basis could miss it
+    // inside a resize/async publish window (do not "optimize" this back to a
+    // single-column damage). The reaper reads no marker index; it needs none.
+    // Session-only, never serialized. Workflow note: the green cursor playhead line
+    // rests at the marker (a plain Esc deselects and lands there), which replaces
+    // the persistent blue line.
     int           stem_pin_marker      = -1;
     uint64_t      stem_pin_command_seq = 0;
 
@@ -1870,9 +1869,8 @@ void remap_marker_indices_after_reorder(AppState& app,
 // CLOCK_MONOTONIC milliseconds (steady_clock is CLOCK_MONOTONIC on this
 // platform). The ONE shared wall-clock reader for the press-driven double-click
 // time base (strip-row / marker double-click detection, input_pointer.cpp). Body
-// in app_state.cpp so no TU copies its own clock reader. (The nudge stem pin no
-// longer times out on a fixed window — it keys on the live key-repeat hold; see
-// AppState::stem_pin_*.)
+// in app_state.cpp so no TU copies its own clock reader. (The stem pin has no time
+// base at all — it keys purely on command adjacency; see AppState::stem_pin_*.)
 int64_t monotonic_ms();
 
 void    clamp_viewport_start(AppState& a, const GuiAudio& audio);

@@ -487,9 +487,11 @@ private:
     // Selected-marker stem (round 4, architect 2026-07-23): a per-frame live
     // overlay marking the SINGLE selected marker's column — where the playhead
     // sits/would land on it — shown only during interaction with it: while it is
-    // HOVERED, while a live marker DRAG grabs it (at the proposed position), or
-    // while its Alt+Left/Right NUDGE key is HELD (the pin — live while
-    // command-adjacent AND the key-repeat hold is armed; see AppState::stem_pin_*).
+    // HOVERED, while a live position DRAG grabs it (at the proposed position),
+    // while a live TEMPO DRAG grabs it (the image slides under the re-warped map),
+    // or while a LATERAL GESTURE on it was the last command (the pin — pure
+    // command adjacency, the key-hold/timer model reverted 2026-07-24; see
+    // AppState::stem_pin_*).
     // Painted BLUE
     // (kSelected — it marks the selected marker like its flag) through
     // render_playhead's line-only form over the plate; out of the stem cache so

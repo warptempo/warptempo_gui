@@ -983,37 +983,24 @@ int main(int argc, char** argv) {
         // waveform all snap together at the worker's completion swap.
         paint_handler.maybe_rebuild_flag_cache();
 
-        // Nudge stem-pin reap (architect 2026-07-24). The blue nudge pin dies by
-        // TWO causes (see AppState::stem_pin_*): (a) command adjacency lost — any
-        // other command bumped command_seq — or (b) the live Alt-exact Left/Right
-        // NUDGE CHORD no longer holds. hold_ok composes the platform's armed repeat
-        // key and live modifier bits into the EXACT chord the dispatch gate
-        // requires: the armed repeat key is Left or Right AND alt-exact (alt held,
-        // no shift/ctrl). The chord test — not a bare "key still armed" probe — is
-        // needed because the repeat machinery DELIBERATELY keeps the hold across a
-        // modifier change (the live-modifier rule, load-bearing for the Ctrl+Z <->
-        // Ctrl+Shift+Z flip), so releasing Alt while Right stays down leaves Right
-        // armed but is no longer a nudge; hold_ok goes false and the pin dies next
-        // tick even mid-initial-delay (a shift/ctrl press mid-hold likewise). This
-        // replaced the fixed burst timer, which flickered during the compositor's
-        // ~600 ms initial delay. Paint stops drawing the pin the instant either
-        // cause holds, but nothing guarantees a waveform repaint (a command that
-        // bumps command_seq may damage only another strip — bare `o` invalidates
-        // just the bottom strip — and a chord end gets no command at all), so this
-        // reaper is the one-shot cleanup for BOTH: when the pin is set and either
-        // cause holds, damage the waveform and reset stem_pin_marker so it fires
-        // ONCE. Full-area damage (not a column): the stem painted on the DISPLAYED
-        // basis (wf_cache.fp_*), but a column recomputed on the LIVE basis
+        // Lateral-gesture stem-pin reap (architect 2026-07-24). The blue stem pin
+        // means "the LAST COMMAND was a lateral gesture on this marker" (a position
+        // nudge/drag, the W+target tempo drag, or the target-view tempo nudge; see
+        // AppState::stem_pin_*), so it
+        // dies on ANY other command — pure command adjacency: when command_seq has
+        // moved past stem_pin_command_seq, the last command was not a re-stamping
+        // lateral gesture, so clear the pin. This reaper owns the cleanup because
+        // paint (adjacency-only) stops drawing the pin the instant the command_seq
+        // moves, but the killing command may damage no waveform (bare `o`
+        // invalidates only the bottom strip), so the stem would otherwise ghost.
+        // Full-area damage (not a column): the stem painted on the DISPLAYED basis
+        // (wf_cache.fp_*), and a column recomputed on the LIVE basis
         // (app.viewport_start_sample + current spp) can miss it inside a resize/
-        // async publish window, ghosting the old column. The reap is rare (once per
-        // hold end), so one full repaint is negligible and harmless when the killing
+        // async publish window. The reap is one-shot (stem_pin_marker = -1) and
+        // rare, so one full repaint is negligible and harmless when the killing
         // command already damaged the waveform (a redundant damage-union).
-        const GuiKey rk = gui.repeat_hold_key();
-        const bool hold_ok = (rk == GuiKeys::Left || rk == GuiKeys::Right) &&
-                             gui.mod_alt_held() &&
-                             !gui.mod_shift_held() && !gui.mod_ctrl_held();
         if (app.stem_pin_marker >= 0 &&
-            (app.command_seq != app.stem_pin_command_seq || !hold_ok)) {
+            app.command_seq != app.stem_pin_command_seq) {
             viewport.invalidate_waveform_area();
             app.stem_pin_marker = -1;
         }

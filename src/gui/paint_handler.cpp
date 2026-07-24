@@ -511,15 +511,18 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr,
 //   (0) exactly ONE marker selected (a multi-select paints no stem), and
 //   one of:
 //   (a) that marker is HOVERED (hover_popup.marker_index == the selected index),
-//   (b) a live marker DRAG grabs it (drag.active on the active column) — painted
+//   (b) a live POSITION DRAG grabs it (drag.active on the active column) — painted
 //       at the LIVE proposed position (moveable_times via the DragOverlay); the
-//       drag suppresses hover, so this arm cannot lean on (a), and
-//   (c) the NUDGE PIN is live — this marker's Alt+Left/Right nudge is the most
+//       drag suppresses hover, so this arm cannot lean on (a),
+//   (c) the LATERAL-GESTURE PIN is live — this marker's lateral gesture (position
+//       nudge/drag, W+target tempo drag, or target-view tempo nudge) is the most
 //       recent command (command_seq == stem_pin_command_seq && stem_pin_marker ==
-//       it). The KEY-HOLD half of the liveness (the Alt+Left/Right key still down)
-//       is owned by the on_tick reap, not tested here: paint keeps the adjacency
-//       check alone and the reaper zeroes stem_pin_marker the tick after the hold
-//       releases (a <=1-tick paint straggle accepted). See AppState::stem_pin_*.
+//       it). The pin is pure command adjacency now (the key-hold/timer model was
+//       architect-reverted 2026-07-24); the on_tick reap zeroes stem_pin_marker
+//       once the last command is not a re-stamping lateral gesture, so paint tests
+//       adjacency alone (see AppState::stem_pin_*), and
+//   (d) a live TEMPO DRAG grabs it (tempo_drag.active, tempo_drag.marker == it) —
+//       the store frame slides visually under the per-step re-warped map (below).
 // Painted BLUE (kSelected — it marks the selected marker, like its flag; the grey
 // belongs to the focus triangle painted ON each selected marker
 // (paint_selected_marker_triangles), not this stem) through render_playhead's line-only
@@ -541,13 +544,24 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
     // Is this the active-column marker being dragged?
     const bool drag_arm =
         app.drag.active && app.drag.drag_mode == app.active_markers_view;
-    // Visibility arms (a) hover, (b) drag, (c) nudge pin. The nudge pin's
-    // key-hold half is reaped in on_tick (stem_pin_marker zeroed on release), so
-    // paint tests adjacency only.
+    // Is this the marker whose tempo is being dragged? A tempo drag never MOVES
+    // the marker's store frame — it rewrites a predecessor's tempo, so the dragged
+    // marker's IMAGE slides laterally under the changing map. The stem paints at
+    // the store frame (the default eff_time; NOT the DragOverlay proposal, which is
+    // position-only) through the displayed map, and the tempo drag's per-step
+    // synchronous re-warps keep displayed == live at each event boundary, so the
+    // stem rides the moving image naturally. W+target by construction, so the
+    // active-column guard is implicit (warp column).
+    const bool tempo_drag_arm =
+        app.tempo_drag.active && app.tempo_drag.marker == idx;
+    // Visibility arms (a) hover, (b) position drag, (c) lateral-gesture pin,
+    // (d) tempo drag. The pin's liveness is pure command adjacency (the on_tick
+    // reap zeroes stem_pin_marker once the last command is not a re-stamping
+    // lateral gesture), so paint tests adjacency only.
     const bool hover_arm = (app.hover_popup.marker_index == idx);
     const bool nudge_arm = (app.stem_pin_marker == idx &&
                             app.command_seq == app.stem_pin_command_seq);
-    if (!hover_arm && !drag_arm && !nudge_arm) return;
+    if (!hover_arm && !drag_arm && !nudge_arm && !tempo_drag_arm) return;
 
     // The marker's effective time: the live store frame, or — under a drag that
     // grabs it — the proposed mid-gesture position (a source-frame double) from
