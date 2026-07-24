@@ -189,8 +189,44 @@ void enter(State& s, int target,
     touch_blink(s);
 }
 
+KeyClass classify_key(GuiKey key, GuiInputState mods) {
+    // Precedence mirrors handle_key's branch order exactly (see the header):
+    // session first, then the Ctrl chords, then motion (any mods), then
+    // printable. Each test returns before the next, so a key satisfying two
+    // predicates classifies as the branch handle_key would act on.
+    if (key == GuiKeys::Escape ||
+        key == GuiKeys::Return || key == GuiKeys::KpEnter)
+        return KeyClass::SessionKey;
+    // The chords test Ctrl ALONE (Shift/Alt ride along), on the specific
+    // A/C/X/V keys — so Ctrl+Left is not a chord here, it is motion below.
+    if (mods.ctrl && (key == GuiKeys::A || key == GuiKeys::C ||
+                      key == GuiKeys::X || key == GuiKeys::V))
+        return KeyClass::ChordKey;
+    // Motion / editing ignores modifiers entirely (word-jump/word-erase
+    // variants included).
+    if (key == GuiKeys::Left || key == GuiKeys::Right ||
+        key == GuiKeys::Home || key == GuiKeys::End ||
+        key == GuiKeys::BackSpace || key == GuiKeys::Delete)
+        return KeyClass::MotionEditKey;
+    // Printable insertion: no Ctrl/Alt, printable ASCII codepoint.
+    if (!mods.ctrl && !mods.alt &&
+        mods.codepoint >= 0x20 && mods.codepoint <= 0x7e)
+        return KeyClass::PrintableKey;
+    return KeyClass::NotEditorKey;
+}
+
 KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     if (!is_active(s)) return KeyAction::NotConsumed;
+
+    // Membership gate (audit C6): the classifier is the single truth of which
+    // keys the editor owns. NotEditorKey falls through here; every other class
+    // is covered by a branch below that returns a consumed action, so no
+    // classified key can reach the function-end NotConsumed fallback — a key
+    // added to a branch but not the classifier is dead (benign), and a key
+    // classified as owned but missing from the branches would be an error the
+    // coverage walk forbids.
+    if (classify_key(key, mods) == KeyClass::NotEditorKey)
+        return KeyAction::NotConsumed;
 
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;

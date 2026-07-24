@@ -162,6 +162,32 @@ enum class KeyAction {
     PasteRequested,
 };
 
+// The editor's key-classification owner (audit C6): the single truth of which
+// keys the editor consumes, and how. It is side-effect-free (no State), because
+// handle_key's MEMBERSHIP — which branch a key enters — depends only on key+mods;
+// State decides EFFECTS within a branch (e.g. Ctrl+C returns CopyRequested vs
+// plain Consumed by has_selection), never whether a key is owned. Three
+// consumers share it: handle_key gates membership on it (NotEditorKey returns
+// NotConsumed before any branch), modal_editor_key_blocked admits exactly the
+// non-NotEditorKey set plus its gate-level carve-outs, and repeat_eligible's
+// in-editor arm repeats exactly MotionEditKey | PrintableKey.
+enum class KeyClass {
+    NotEditorKey,   // falls through to global dispatch (or the modal gate drops it)
+    SessionKey,     // Escape, Return/KpEnter — end the session, never repeat
+    ChordKey,       // Ctrl+A/C/X/V (ctrl alone tested; Shift/Alt mirror through) — one-shot
+    MotionEditKey,  // Left/Right/Home/End/BackSpace/Delete, ANY modifiers — repeats
+    PrintableKey,   // no ctrl/alt, codepoint 0x20..0x7e — repeats
+};
+
+// Classify key+mods against the editor's owned keymap, reproducing handle_key's
+// exact predicates and precedence: Escape/Return before the Ctrl chords, the
+// chords (specific A/C/X/V, ctrl tested alone) before motion, motion (any
+// modifiers) before printable. A key that could satisfy two predicates
+// classifies as the one handle_key acts on (Ctrl+A is ChordKey, not printable —
+// printable already excludes ctrl; Ctrl+Left is MotionEditKey — the chord test
+// is A/C/X/V only).
+KeyClass classify_key(GuiKey key, GuiInputState mods);
+
 KeyAction handle_key(State& s, GuiKey key, GuiInputState mods);
 
 // Clipboard primitives, used by the input handler to bridge the editor's

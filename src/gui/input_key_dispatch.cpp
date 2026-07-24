@@ -190,20 +190,16 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     if (app.prompt.active) return false;
     if (any_pointer_gesture_active(app)) return false;
     if (any_text_editor_active()) {
-        // Session-ending / one-shot editor keys never repeat.
-        if (key == GuiKeys::Return || key == GuiKeys::KpEnter ||
-            key == GuiKeys::Escape || key == GuiKeys::Tab ||
-            key == GuiKeys::IsoLeftTab)
-            return false;
-        // Cursor / edit motion keys repeat under ANY modifiers (the word-jump
-        // and word-erase variants repeat too).
-        if (key == GuiKeys::Left || key == GuiKeys::Right ||
-            key == GuiKeys::Home || key == GuiKeys::End ||
-            key == GuiKeys::BackSpace || key == GuiKeys::Delete)
-            return true;
-        // Otherwise repeat only a printable ASCII insert.
-        return !mods.ctrl && !mods.alt &&
-               mods.codepoint >= 0x20 && mods.codepoint <= 0x7e;
+        // Only the editor's motion/edit and printable-insert keys auto-repeat
+        // while held; its session (Escape/Return) and chord (Ctrl+A/C/X/V) keys
+        // are one-shot, and NotEditorKey is not the editor's to repeat. This
+        // consumes the one editor-key owner (audit C6): Tab/IsoLeftTab classify
+        // as NotEditorKey (handle_key never consumes Tab — the autocompletes are
+        // intercepted at the gate before handle_key) and so do not repeat here,
+        // matching the prior explicit one-shot exclusion.
+        const auto kc = text_editor::classify_key(key, mods);
+        return kc == text_editor::KeyClass::MotionEditKey ||
+               kc == text_editor::KeyClass::PrintableKey;
     }
     // Global dispatch: only the continuous step gestures repeat — bare
     // Left/Right scrub, bare PageUp/PageDown, bare Equal/Minus zoom, the
@@ -252,36 +248,26 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // editor stays open), and Ctrl+Q (close routing) —
 // nothing else: Space-as-playback, zoom, mode toggles, tab switches,
 // undo/redo, and the marker / trim chords all drop here. "The editor
-// itself" mirrors text_editor::handle_key's consumption exactly — Escape
-// and Enter unconditionally, Ctrl+A/C/X/V (select-all + clipboard;
-// handle_key tests only Ctrl, so the Shift/Alt variants mirror through),
-// the cursor and editing keys Left / Right / Home / End / BackSpace /
-// Delete under any modifiers, and printable insertion (no Ctrl/Alt, ASCII
-// codepoint; Space lands in the buffer as a typed character, not as
-// playback) — plus the settings editor's own bare-Tab value autocomplete
-// (handle_settings_editor_key intercepts it before handle_key; the bpm
-// editor has no Tab route, so bare Tab drops while it is open). Admitted
-// keys flow into the existing editor routing unchanged, so the only
-// NotConsumed keys that can reach the editors' command tails are the three
-// allowlisted chords.
+// itself" CONSUMES the one editor-key owner (audit C6):
+// text_editor::classify_key — the modal gate admits exactly the non-NotEditorKey
+// set (Escape/Enter, Ctrl+A/C/X/V, the cursor/editing keys Left / Right / Home /
+// End / BackSpace / Delete under any modifiers, and printable insertion; Space
+// lands in the buffer as a typed character, not as playback). The gate-level
+// carve-outs below are NOT editor consumption — they are gate policy layered on
+// top: the settings/commit editors' own bare-Tab value autocomplete (their
+// handle_*_editor_key intercepts it before handle_key; the bpm editor has no Tab
+// route, so bare Tab drops while it is open), Ctrl+S (save), and Ctrl+Q (close
+// routing). Admitted keys flow into the existing editor routing unchanged, so
+// the only NotConsumed keys that can reach the editors' command tails are the
+// three allowlisted chords.
 bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
                                                GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
-    const bool is_esc    = (key == GuiKeys::Escape);
-    const bool is_commit =
-        (key == GuiKeys::Return || key == GuiKeys::KpEnter);
-    const bool is_editor_ctrl_chord =
-        (ctrl && (key == GuiKeys::A || key == GuiKeys::C ||
-                  key == GuiKeys::X || key == GuiKeys::V));
-    const bool is_editor_motion_or_edit =
-        (key == GuiKeys::Left || key == GuiKeys::Right ||
-         key == GuiKeys::Home || key == GuiKeys::End ||
-         key == GuiKeys::BackSpace || key == GuiKeys::Delete);
-    const bool is_printable =
-        (!ctrl && !alt &&
-         mods.codepoint >= 0x20 && mods.codepoint <= 0x7e);
+    const bool is_editor_key =
+        (text_editor::classify_key(key, mods) !=
+         text_editor::KeyClass::NotEditorKey);
     const bool is_settings_autocomplete =
         (text_editor::is_active(app.settings_editor) &&
          key == GuiKeys::Tab && !ctrl && !shift && !alt);
@@ -295,8 +281,7 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
         (ctrl && !shift && !alt && key == GuiKeys::S);
     const bool is_ctrl_q =
         (ctrl && !shift && !alt && key == GuiKeys::Q);
-    return !(is_esc || is_commit || is_editor_ctrl_chord ||
-             is_editor_motion_or_edit || is_printable ||
+    return !(is_editor_key ||
              is_settings_autocomplete || is_commit_autocomplete ||
              is_save || is_ctrl_q);
 }
