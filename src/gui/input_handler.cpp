@@ -619,9 +619,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // — warp in source, phase reset in target (the home-view binding). In
     // W+TARGET Alt+Left/Right is NOT a position gesture: it dispatches the
     // TEMPO-IMAGE STEP (MarkerDragOps::step_tempo_image), the tempo drag's
-    // keyboard twin — one painted column of the FOCUSED marker's IMAGE per
-    // press via the (deduped participant) predecessor tempo solve, the drag's
-    // eligibility legs included. Read-only tabs refuse all three routes
+    // keyboard twin — steps the FOCUSED marker's IMAGE by one painted column
+    // per press where the cent grid allows, else the minimum directional cent
+    // (travel can span several columns), via the (deduped participant)
+    // predecessor tempo solve, the drag's eligibility legs included. Read-only
+    // tabs refuse all three routes
     // upstream (read_only_key_blocked — Alt-exact arrows are not allowlisted).
     if (alt && !shift && !ctrl && key == GuiKeys::Left) {
         if (app.active_markers_view == 'P') {

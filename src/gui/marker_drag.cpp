@@ -1506,11 +1506,14 @@ void MarkerDragOps::cancel_tempo_drag() {
 // the drag refuses, e.g. on a marker following a label ref) — it is deleted;
 // warp POSITIONS author in source view only again.
 //
-// One press = one painted column of the FOCUSED marker's IMAGE, reached by
-// adjusting the (deduped participant) predecessors' tempo_cents through the
-// drag's own factored solve (closed-form singleton / monotone bisection group)
-// — pixel-anchored like every nudge: read the image's painted column, target
-// the adjacent column's position, let the solve place the image nearest it.
+// One press steps the FOCUSED marker's IMAGE by one painted column WHERE THE
+// CENT GRID ALLOWS — otherwise the minimum directional cent, whose travel can
+// span several columns (the minimum-step rule below; e.g. ~8 px on a 1 s span
+// at working zoom) — reached by adjusting the (deduped participant)
+// predecessors' tempo_cents through the drag's own factored solve (closed-form
+// singleton / monotone bisection group) — pixel-anchored like every nudge:
+// read the image's painted column, target the adjacent column's position, let
+// the solve place the image nearest it.
 // Alt+Left = column - 1 -> image earlier -> predecessor tempo UP (faster is
 // shorter); Alt+Right the reverse. No viewport gate (nudges have none — an
 // offscreen image steps fine); the solve's bracket-intersection clamp handles
@@ -1550,8 +1553,23 @@ void MarkerDragOps::step_tempo_image(int direction) {
     if (f < 0 || f >= static_cast<int>(mv.size())) return;   // focused stale
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
-    const double spp = current_samples_per_pixel(app, audio);
-    if (spp <= 0.0) return;
+    // BASIS COHERENCE (codex second-pass round-2 MEDIUM): the adjacent-column
+    // target MUST live on the SAME column grid that produced the column, or an
+    // off-screen focused marker shears. `cf` comes from
+    // painted_column_of_source_frame, whose basis is the PAINTER-QUANTIZED
+    // q = nearbyint(spp*W)/W over waveform_area — NOT the logical
+    // current_samples_per_pixel. At integer zoom rungs the two coincide; at a
+    // fractional rest they differ by design, and mixing them makes the
+    // adjacent-column error grow as cf*(spp - q): far enough off-screen it
+    // exceeds a pixel and lands t_des on the OPPOSITE side of the image, so the
+    // solve returns a wrong-sign (many-cent) delta the d==0 fallback never
+    // catches. So derive t_des from q — the exact free function the painter
+    // uses, degenerate-geometry guard and all. (The tempo DRAG deliberately
+    // differs: its t_des comes from the POINTER, which is clamped on-screen by
+    // definition, so the logical spp is its natural basis.)
+    const GuiRect area = waveform_area(app);
+    const double q = painter_samples_per_pixel(app, audio, area);
+    if (q <= 0.0) return;
 
     // Eligibility, the drag's own: the focused marker arms (its predecessor
     // owns a rewritable, non-collapsed tempo — the six legs), and the seeded
@@ -1564,15 +1582,15 @@ void MarkerDragOps::step_tempo_image(int direction) {
     // STEP TARGET, pixel-anchored: the focused marker's image under the LIVE
     // memoized map (the drag's solve basis — displayed == live at every command
     // boundary, this gesture's own sync re-warp maintaining it), its painted
-    // column, and the adjacent column's target-domain position through the same
-    // viewport/spp mapping the drag applies to its pointer (t_des =
-    // viewport_start + column * spp).
+    // column, and the adjacent column's target-domain position through the SAME
+    // painter-quantized q that produced the column (t_des = viewport_start +
+    // column * q — see the basis-coherence note above).
     const TargetWarpFrameMapCache& c = target_view_warp_frame_map_cached(
         app, sr, static_cast<long>(audio.total_frames()));
     const int cf = painted_column_of_source_frame(
         app, audio, static_cast<double>(mv[f].time_frame), c.warp_frame_map);
     const double t_des = static_cast<double>(app.viewport_start_sample) +
-                         static_cast<double>(cf + direction) * spp;
+                         static_cast<double>(cf + direction) * q;
 
     // The factored solve core (never walled here — a walled seed refused
     // above). A failed hypothetical build drops the press.
@@ -1591,9 +1609,11 @@ void MarkerDragOps::step_tempo_image(int direction) {
     // unchanged column, so nothing accumulates). A directional press therefore
     // commits AT LEAST one cent in the pressed direction (the Alt+Up/Down "a step
     // always steps" convention), moving the image by that cent's own pixel
-    // distance (~2 px at working zoom over a 1 s span, more over longer spans —
-    // the pressed direction always wins, the exact pixel count yielded to the
-    // grid). SIGN: d_fallback = -direction — Alt+Left (direction -1) targets an
+    // distance (for THIS example — 1.00 -> 1.01 over a 1 s span at working zoom,
+    // 55.125 frames/px — the segment shortens ~436.6 frames ≈ ~7.9 px, not one
+    // pixel; longer spans travel further — the pressed direction always wins,
+    // the exact pixel count yielded to the grid).
+    // SIGN: d_fallback = -direction — Alt+Left (direction -1) targets an
     // earlier column -> shorter segment -> predecessor tempo UP -> +1 cent;
     // Alt+Right (direction +1) -> -1 cent (verified against the solve's own
     // faster-is-shorter derivation: tempo = l_src / (span * s), so a smaller
@@ -1668,7 +1688,8 @@ void MarkerDragOps::step_tempo_image(int direction) {
     if (follow_extent)      set_region_to_selection_extent(app, audio, viewport);
     else if (trim_resync)   sync_region_to_trim_window(app, audio, viewport);
     // Stem LATERAL-GESTURE PIN: the image step is a lateral gesture — the
-    // FOCUSED marker's image slid one column — so stamp exactly as the position
+    // FOCUSED marker's image slid (one column where the grid allowed, else the
+    // minimum directional cent's travel) — so stamp exactly as the position
     // nudge does (post-commit index + command_seq; no reorder, so f is stable).
     // Lifecycle at AppState::stem_pin_*; a burst re-stamps each press.
     app.stem_pin_marker      = f;

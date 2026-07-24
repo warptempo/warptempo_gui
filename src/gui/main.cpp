@@ -985,9 +985,12 @@ int main(int argc, char** argv) {
 
         // Lateral-gesture stem-pin reap (architect 2026-07-24). The blue stem pin
         // means "the LAST COMMAND was a lateral gesture on this marker". FOUR
-        // stamping sites (mirroring the authoritative list at AppState::stem_pin_*):
-        // the position nudge, the position-drag commit, the tempo-drag end, and the
-        // tempo-image step (Alt+Left/Right in W+target). The Alt+Up/Down tempo step
+        // lateral gesture CLASSES at FIVE assignment sites (mirroring the
+        // authoritative list at AppState::stem_pin_*, which counts classes): the
+        // position nudge (its own warp and phase-reset implementations —
+        // warpmarkers_ops.cpp / phaseresetmarkers_ops.cpp — are TWO sites), the
+        // position-drag commit, the tempo-drag end, and the tempo-image step
+        // (Alt+Left/Right in W+target). The Alt+Up/Down tempo step
         // stamps NOWHERE (its stepped marker's own image is fixed by construction).
         // Command
         // adjacency is the test (command_seq ==
