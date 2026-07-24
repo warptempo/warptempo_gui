@@ -531,10 +531,9 @@ struct EditorTextDragState {
 // Pending marker-reposition drag, armed by a PLAIN (unmodified) flag press.
 // Usually the press single-selects its marker immediately (the click), then
 // arms this pending state instead of the drag itself: only once the pointer
-// travels past kMarkerDragMovedThresholdPx (Chebyshev from the press; the
-// marker-specific gate, larger than the strip / region / trim
-// kDragMovedThresholdPx) does begin_drag run and the marker-drag machinery
-// take over. Deferring
+// travels past kDragMovedThresholdPx (Chebyshev from the press; the one generic
+// 8px gate shared by every press-becomes-drag surface) does begin_drag run and
+// the marker-drag machinery take over. Deferring
 // begin_drag to the crossing keeps its pre-drag snapshot / selection capture
 // / wall math exact — nothing mutates the store between press and crossing —
 // and lets a sub-threshold press-release stay a pure click. Session-only,
@@ -570,8 +569,8 @@ struct PendingMarkerDrag {
 // and NOT a member of a surviving coincident group (whose collapse to one 1.00
 // owner makes its authored tempo render-inert — the same normalization-red set
 // the flag painter uses is the test) — and arms this pending state; only past
-// kMarkerDragMovedThresholdPx (the SAME
-// marker grab threshold the reposition drag uses) does begin_tempo_drag run
+// kDragMovedThresholdPx (the SAME generic gate the reposition drag and every
+// other press-becomes-drag surface use) does begin_tempo_drag run
 // and the tempo-drag machinery take over. An ineligible press single-selects
 // and arms nothing (the silent read-only convention). Session-only, never
 // serialized. Cleared on the crossing (begin_tempo_drag takes over), on
@@ -903,29 +902,31 @@ struct DoubleClickCandidate {
 constexpr int64_t kDoubleClickMs      = 500;
 constexpr int     kDoubleClickSlackPx = 8;
 
-// Chebyshev pixel distance a press must travel before it becomes a DRAG
-// (architect-tunable), shared by two consumers. On the strip rows: under
-// pointer capture the relative-pointer stream delivers every sub-pixel sensor
-// tick as a motion event, so a physical click almost always rocks the sensor a
-// count or two; without this gate that jitter would mark every click as moved
-// and starve double-click detection. On the waveform: the same gate keeps a
-// click from becoming a micro-region, so a motionless click stays plain
-// playhead placement. Both use the same latch shape — a motion event below the
-// threshold is ignored outright (moved stays false, no apply, the drag stays
-// armed); once a drag, always a drag, so dragging back near the press has no
-// dead zone. The strip drag leaves last_x/last_y at the press until the crossing,
-// so the crossing event folds the whole accumulated delta and no travel is lost.
-constexpr int     kDragMovedThresholdPx = 3;
-
-// Markers use a LARGER grab threshold than the shared gate above: a plain
-// flag press must travel kMarkerDragMovedThresholdPx (Chebyshev from the
-// press) before it becomes a reposition drag, so a flag is easy to click
-// (select, or double-click to edit) without nudging it, and pixel-exact
-// fine-tuning stays on Alt+Left/Right rather than the drag — the Ableton
-// convention (markers get more grab slop than zoom / region). Only the
-// pending_marker_drag crossing reads this; strip / region / trim keep
-// kDragMovedThresholdPx.
-constexpr int     kMarkerDragMovedThresholdPx = 8;
+// ONE generic Chebyshev pixel distance a press must travel before it becomes a
+// DRAG (architect-tunable), shared by EVERY press-becomes-drag surface — strip,
+// region, trim, marker flag, and tempo flag. UNIFIED to 8px (architect
+// 2026-07-24: region felt too hair-trigger at the old 3, and the separate
+// kMarkerDragMovedThresholdPx = 8 was folded into this one constant). Two
+// rationales, now one story:
+//  - CAPTURE-JITTER / DOUBLE-CLICK STARVATION (strip, waveform region): under
+//    pointer capture the relative-pointer stream delivers every sub-pixel sensor
+//    tick as a motion event, so a physical click almost always rocks the sensor a
+//    count or two; without this gate that jitter would mark every click as moved
+//    and starve double-click detection, and on the waveform a click would become
+//    a micro-region instead of plain playhead placement.
+//  - MARKER GRAB SLOP (marker / tempo flag): a flag must be easy to click
+//    (select, or double-click to edit) without nudging it, and pixel-exact
+//    fine-tuning lives on Alt+Left/Right rather than the drag — the Ableton
+//    convention. 8px gives that slop; the strip/trim/region surfaces inherit it.
+// One latch shape everywhere — a motion event below the threshold is ignored
+// outright (moved stays false, no apply, the drag stays armed); once a drag,
+// always a drag, so dragging back near the press has no dead zone. The strip
+// drag leaves last_x/last_y at the press until the crossing, so the crossing
+// event folds the whole accumulated delta and no travel is lost.
+// RECORDED FALLBACK: if the strip/trim feel degrades at 8, re-split into a
+// per-surface pair (the pre-2026-07-24 form: strip/region/trim at 3, markers
+// at 8).
+constexpr int     kDragMovedThresholdPx = 8;
 
 // Hover state, two surfaces driven by one hovered marker. Any marker under the
 // cursor — either column — shows its OWN value in the marker-text lane (top
@@ -1334,15 +1335,18 @@ struct AppState {
     // gesture and STAYS visible until the next DAMAGING command (the
     // damage-quiescence scope above is authoritative; damage-less commands
     // re-stamp through the preserve), so walking away leaves it standing
-    // (intended). THE FOUR LATERAL GESTURES that stamp: (1) the
-    // marker POSITION DRAG's commit (both columns, home views), (2) the POSITION
-    // NUDGE (Alt+Left/Right; warp in both audio views, phase in target), (3) the
-    // TEMPO DRAG's end (W+target by construction), (4) the TEMPO NUDGE (Alt+Up/Down,
-    // singleton and group) BUT ONLY IN TARGET VIEW — the tempo pair is lateral
-    // exactly in target-view warp markers, where the marker's IMAGE moves laterally;
-    // a SOURCE-view tempo step moves nothing on screen, is NON-lateral, does not
-    // stamp, and — bumping command_seq — kills any prior pin like every other
-    // command. Each stamp re-stamps the current command_seq, so a nudge burst keeps
+    // (intended). THE THREE LATERAL GESTURES that stamp (architect 2026-07-24,
+    // narrowed from four): (1) the marker POSITION DRAG's commit (both columns,
+    // home views), (2) the POSITION NUDGE (Alt+Left/Right; warp in both audio
+    // views, phase in target), (3) the TEMPO DRAG's end (W+target by construction,
+    // the dragged marker IS the laterally-moving one). The TEMPO STEP (Alt+Up/Down,
+    // singleton and group) is EXPLICITLY NOT a stamping site: the stepped marker's
+    // OWN image is fixed by construction — its tempo shapes only the segment AFTER
+    // it, so the step slides only DOWNSTREAM images, never the receiving marker's
+    // own (a group step can move the FOCUSED image via an UPSTREAM member, but the
+    // rule is per-ACTION and flat, so the group tail does not stamp either). The
+    // step still bumps command_seq like every command, killing any prior pin by
+    // adjacency. Each stamp re-stamps the current command_seq, so a nudge burst keeps
     // the stem alive (each press is the immediately-next command). The default
     // stem_pin_marker = -1 never matches a real (>= 0) selection, so the startup
     // command_seq == 0 == stem_pin_command_seq coincidence pins nothing. REAPED

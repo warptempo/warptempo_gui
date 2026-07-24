@@ -500,19 +500,13 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
-    // Stem LATERAL-GESTURE PIN — TARGET VIEW ONLY. The tempo step is lateral
-    // exactly in target-view warp markers, where the FOCUSED marker's IMAGE slides
-    // as the map re-warps; a SOURCE-view step moves nothing on screen (non-lateral)
-    // and does NOT stamp — it bumps command_seq like every command, killing any
-    // prior pin by adjacency. Stamp the FOCUSED (post-collapse) index and the
-    // current command_seq; pure command adjacency, reaped one-shot in on_tick (see
-    // AppState::stem_pin_*). The step never reorders (placement fixed), so
-    // last_selected_marker stays valid; a refused/walled press early-returned
-    // above and never reaches here.
-    if (app.active_audio_view == 'T') {
-        app.stem_pin_marker      = app.last_selected_marker;
-        app.stem_pin_command_seq = app.command_seq;
-    }
+    // No stem-pin stamp: the tempo step is NOT a lateral gesture (architect
+    // 2026-07-24). The stepped marker's OWN image is fixed by construction — its
+    // tempo shapes only the segment AFTER it, so the step slides only DOWNSTREAM
+    // images, never the receiving marker's own. Only actions where the receiving
+    // marker moves laterally stamp the pin (see AppState::stem_pin_*). The step
+    // still bumps command_seq like every command, killing any prior pin by
+    // adjacency (the on_tick reap damages it away).
     // Discrete warp_frame_map change that CAN run in target view: Alt+Up/Down is a
     // warp authoring gesture reachable off its source home (the ruled exception
     // gated above), so it is one of the surviving target-view re-warp sites (with
@@ -632,16 +626,12 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
             viewport.move_playhead_to(source_frame_to_active_domain(
                 app, audio, app.warpmarkers.markers()[f].time_frame));
         }
-        // Stem LATERAL-GESTURE PIN — inside this TARGET-VIEW block by construction,
-        // so a SOURCE-view group step never stamps (it moved no image on screen,
-        // non-lateral, and its command_seq bump kills any prior pin by adjacency).
-        // Stamp the FOCUSED marker's post-step index (positions untouched, so no
-        // reorder — f stays valid) and the current command_seq; pure command
-        // adjacency, reaped one-shot in on_tick. Paint gates to a SINGLETON, so for
-        // this 2+ selection the stamp is INERT (like the group nudges), stamped for
-        // uniformity. See AppState::stem_pin_*.
-        app.stem_pin_marker      = app.last_selected_marker;
-        app.stem_pin_command_seq = app.command_seq;
+        // No stem-pin stamp: the tempo step is NOT a lateral gesture (architect
+        // 2026-07-24), the group tail going with the singleton. A group step CAN
+        // move the focused marker's image via an UPSTREAM member's change (which is
+        // why the re-land above exists), but the rule is per-ACTION and flat — the
+        // stepped markers' OWN images are not what the pin marks. The command_seq
+        // bump kills any prior pin by adjacency; the on_tick reap damages it away.
         // Region follows the images (architect 2026-07-23): the group step moved
         // the selected markers' target IMAGES (tempos changed, source frames did
         // not).

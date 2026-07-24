@@ -129,7 +129,11 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // region a pixel or two wide. That was never an intentional window: a
 // sub-threshold rest reads as a click, so it dissolves exactly as a plain
 // click's would, clearing the wash and the split playhead (the cursor playhead
-// returns when the region deactivates, which the same damage covers). Called
+// returns when the region deactivates, which the same damage covers). The
+// resting-region minimum floor SCALES with the gate (deliberate): reading
+// kDragMovedThresholdPx here means the sliver floor rose to 8px when the
+// architect unified the gate 2026-07-24, so the smallest region that can rest
+// tracks the smallest press that becomes a drag. Called
 // from both region-drag end points (release and button-lost). Only the REST is
 // gated — the live mid-drag extension paints slivers freely. The clear_selection
 // is belt-and-braces: under SELECTION-FLOWS-DOWNWARD-ONLY (architect 2026-07-23)
@@ -1099,7 +1103,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         // release either collapsed the selection to a singleton
                         // (routing the next press through the immediate path) or
                         // never happened. If the pointer never crosses
-                        // kMarkerDragMovedThresholdPx the deferred single-select
+                        // kDragMovedThresholdPx the deferred single-select
                         // + land runs at release / lost button; Esc ABANDONS it,
                         // leaving the multi-selection intact.
                         app.double_click = DoubleClickCandidate{
@@ -2059,8 +2063,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     }
     // Pending tempo drag (armed by a plain flag press in W + target view on
     // an eligible marker): the tempo drag begins only once the pointer
-    // travels past the marker-specific Chebyshev threshold — the SAME
-    // kMarkerDragMovedThresholdPx grab slop the reposition drag uses. A lost
+    // travels past the shared Chebyshev threshold — the SAME
+    // kDragMovedThresholdPx grab slop the reposition drag uses. A lost
     // button before the crossing ends it as a plain click. Placed after the
     // tempo_drag branch above: on the crossing this begins the drag AND
     // applies its first solve inline (the solve is absolute — pointer x ->
@@ -2090,7 +2094,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         }
         if (std::max(std::abs(mouse_x - app.pending_tempo_drag.press_x),
                      std::abs(mouse_y - app.pending_tempo_drag.press_y)) <
-                kMarkerDragMovedThresholdPx) {
+                kDragMovedThresholdPx) {
             return;   // still a click; leave the pending armed, do nothing
         }
         const int marker = app.pending_tempo_drag.marker;
@@ -2109,9 +2113,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     }
     // Pending marker drag (armed by a plain flag press): usually the marker was
     // single-selected at press; the reposition begins only once the pointer
-    // travels past the marker-specific Chebyshev threshold
-    // (kMarkerDragMovedThresholdPx, larger than the strip / region / trim
-    // gate). Handled before the hover
+    // travels past the shared Chebyshev threshold (kDragMovedThresholdPx, now
+    // one generic 8px gate for every press-becomes-drag surface). Handled before the hover
     // fallthrough below and after the other drag branches (a pending drag and
     // any other pointer gesture are mutually exclusive — the arming press does
     // no other work). A lost button before the crossing ends it as a plain
@@ -2144,7 +2147,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         }
         if (std::max(std::abs(mouse_x - app.pending_marker_drag.press_x),
                      std::abs(mouse_y - app.pending_marker_drag.press_y)) <
-                kMarkerDragMovedThresholdPx) {
+                kDragMovedThresholdPx) {
             return;   // still a click; leave the pending armed, do nothing
         }
         // Threshold crossed: begin the drag anchored at the PRESS column so the

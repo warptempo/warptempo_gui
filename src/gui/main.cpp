@@ -985,8 +985,9 @@ int main(int argc, char** argv) {
 
         // Lateral-gesture stem-pin reap (architect 2026-07-24). The blue stem pin
         // means "the LAST COMMAND was a lateral gesture on this marker" (a position
-        // nudge/drag, the W+target tempo drag, or the target-view tempo nudge; see
-        // AppState::stem_pin_*). Command adjacency is the test (command_seq ==
+        // nudge/drag or the W+target tempo drag; the tempo NUDGE/step no longer
+        // stamps — architect 2026-07-24; see AppState::stem_pin_*). Command
+        // adjacency is the test (command_seq ==
         // stem_pin_command_seq), but death is DAMAGE-QUIESCENCE-SCOPED: the
         // dispatch-exit preserve (StemPinPreserveGuard) re-stamps
         // stem_pin_command_seq across a command that painted nothing, so the pin
