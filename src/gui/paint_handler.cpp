@@ -558,7 +558,13 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
     // (d) tempo drag. The pin's liveness is pure command adjacency (the on_tick
     // reap zeroes stem_pin_marker once the last command is not a re-stamping
     // lateral gesture), so paint tests adjacency only.
-    const bool hover_arm = (app.hover_popup.marker_index == idx);
+    // The hover arm is re-arm-latched: after a pointer marker-click, the stem
+    // stays hidden while the pointer merely rests inside the clicked marker's
+    // hit area, until a mouseout-then-return clears the latch (see
+    // AppState::stem_hover_suppress_marker). The drag / tempo-drag / pin arms
+    // below are untouched.
+    const bool hover_arm = (app.hover_popup.marker_index == idx) &&
+                           (app.stem_hover_suppress_marker != idx);
     const bool nudge_arm = (app.stem_pin_marker == idx &&
                             app.command_seq == app.stem_pin_command_seq);
     if (!hover_arm && !drag_arm && !nudge_arm && !tempo_drag_arm) return;

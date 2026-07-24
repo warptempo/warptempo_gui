@@ -1335,6 +1335,49 @@ struct AppState {
     int           stem_pin_marker      = -1;
     uint64_t      stem_pin_command_seq = 0;
 
+    // Stem hover re-arm latch. Meaning: "the last POINTER marker-click clicked
+    // THIS marker and the pointer has not yet left its hit area — the selected
+    // stem's HOVER arm is disarmed for it." The bug it fixes: a pointer click
+    // selects a marker, the pointer is then still inside that marker's hit
+    // area, and the very next motion re-resolves hover onto it, so
+    // paint_selected_stem's hover arm fires and the blue stem pops right after
+    // the click. Desired: after a click selects a marker, the hover stem waits
+    // until the user mouses OUT of the hit area and returns.
+    //   SET (to the CLICKED / hit index, NOT the landed-earliest one) at every
+    // pointer marker-click selection route: the plain flag/lane single-select,
+    // the shift-range select, the ctrl membership toggle (add OR remove — the
+    // clicked marker is under the pointer either way), and both deferred-click
+    // completions (pending marker/tempo drag, at release and at lost-button).
+    //   CLEARED (to -1) in Viewport::recompute_hover_at_cursor on the full
+    // (non-short-circuited) path the instant the resolved hit differs from the
+    // latch marker — that is the only clear, so a mouseout-then-return re-arms.
+    //   TESTED in paint_selected_stem: the HOVER arm requires
+    // stem_hover_suppress_marker != idx. The drag / tempo-drag / lateral-PIN
+    // arms are UNTOUCHED — the pin deliberately shows the stem after a
+    // nudge/drag regardless of hover, and that stays.
+    // SCOPE decisions:
+    //  - Pointer clicks only: keyboard focus routes (Tab family, `c`,
+    //    undo/redo) never set the latch — a coincidentally-underlying pointer
+    //    arming the stem after a Tab is accepted.
+    //  - Survives across commands (pure pointer geometry, unlike the
+    //    command-adjacency stem pin): after the click any number of keyboard
+    //    commands may run and the stem still waits for a mouseout-return.
+    //  - Pointer-leave-the-window then re-enter onto the SAME marker without
+    //    crossing hover-off does NOT re-arm (the recompute clear is the only
+    //    clear); accepted, rare.
+    // LIFECYCLE clears (index is a per-column, per-tab store position — a stale
+    // cross-column/tab index must not suppress an unrelated marker): reset to
+    // -1 at file load and `'` adopt (apply_settings_engine_and_prefs), at the
+    // Ctrl+Tab tab switch, the W/P column toggle, and the S/T audio-view
+    // switch. Across store reorders it REMAPS alongside the selection in
+    // remap_marker_indices_after_reorder (exactly like last_selected_marker).
+    // Session-only, never serialized. No new invalidation: setting it rides a
+    // click that already repaints (selection change), and clearing it happens
+    // while the stem is NOT painting (it was suppressed) — the hover
+    // recompute's existing invalidate_hover_stem_column damage owns the
+    // appear/disappear transitions.
+    int           stem_hover_suppress_marker = -1;
+
     // Active markers view: 'W' = warp markers, 'P' = phase reset markers.
     // Toggled by `p`. Determines which marker collection is visible / edited /
     // hit-tested and which color set is used for the playhead and selected

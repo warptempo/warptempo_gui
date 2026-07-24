@@ -41,6 +41,11 @@ void remap_marker_indices_after_reorder(AppState& app,
     for (int idx : app.selected_markers) remapped.insert(mapped(idx));
     app.selected_markers = std::move(remapped);
     app.last_selected_marker = mapped(app.last_selected_marker);
+    // The stem hover-suppress latch is a store index into the active column too
+    // (see AppState::stem_hover_suppress_marker); remap it exactly like
+    // last_selected_marker. A reorder keeps every marker (only their indices
+    // change), so mapped() never drops one; the default -1 maps to -1.
+    app.stem_hover_suppress_marker = mapped(app.stem_hover_suppress_marker);
     if (app.drag.active) {
         // Pairing between dragging_markers and its parallel time vectors
         // (original_times / moveable_times) is positional by k, so an

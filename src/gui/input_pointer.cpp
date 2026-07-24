@@ -883,6 +883,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // top-strip press stop already halted playback above.
             if (inside_top && mh.index >= 0) {
                 selection.toggle_selection_membership(mh.index);
+                // Disarm the CLICKED marker's hover stem until a mouseout-return
+                // (see AppState::stem_hover_suppress_marker) — the pointer rests
+                // on mh.index whether the toggle added or removed it, distinct
+                // from the earliest-selected land target below.
+                app.stem_hover_suppress_marker = mh.index;
                 if (!app.selected_markers.empty())
                     land_playhead_on_marker(app, audio, viewport,
                                             *app.selected_markers.begin());
@@ -1050,6 +1055,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // launch agree; the anchoring first click ({hit}) leaves <=1
                     // selected and sets no region.
                     selection.select_range_from_anchor(hit);
+                    // Disarm the CLICKED marker's hover stem until a
+                    // mouseout-return (AppState::stem_hover_suppress_marker) —
+                    // the pointer rests on the range END (hit = focus), which
+                    // diverges from the earliest-member land target.
+                    app.stem_hover_suppress_marker = hit;
                     if (!app.selected_markers.empty())
                         land_playhead_on_marker(app, audio, viewport,
                                                 *app.selected_markers.begin());
@@ -1140,6 +1150,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // this double-click). Selection is navigation, allowed in
                     // read-only.
                     selection.set_single_selection(hit);
+                    // Disarm the clicked marker's hover stem until a
+                    // mouseout-return (AppState::stem_hover_suppress_marker), so
+                    // the blue stem does not pop while the pointer rests on the
+                    // just-clicked marker. Covers the double-click-consume path
+                    // below too (this single-select ran first).
+                    app.stem_hover_suppress_marker = hit;
                     // ...and LANDS the playhead exactly onto the marker (shared
                     // helper; see land_playhead_on_marker). Runs on EVERY plain
                     // marker click — the double-click-consume path below (the
@@ -1681,6 +1697,10 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
             const int n = static_cast<int>(app.warpmarkers.markers().size());
             if (m >= 0 && m < n) {
                 selection.set_single_selection(m);
+                // Deferred click completes on marker m under the pointer:
+                // disarm its hover stem until a mouseout-return
+                // (AppState::stem_hover_suppress_marker).
+                app.stem_hover_suppress_marker = m;
                 land_playhead_on_marker(app, audio, viewport, m);
             }
         }
@@ -1729,6 +1749,10 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
                 : static_cast<int>(app.warpmarkers.markers().size());
             if (m >= 0 && m < n) {
                 selection.set_single_selection(m);
+                // Deferred click completes on marker m under the pointer:
+                // disarm its hover stem until a mouseout-return
+                // (AppState::stem_hover_suppress_marker).
+                app.stem_hover_suppress_marker = m;
                 land_playhead_on_marker(app, audio, viewport, m);
             }
         }
@@ -2049,6 +2073,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 const int n = static_cast<int>(app.warpmarkers.markers().size());
                 if (m >= 0 && m < n) {
                     selection.set_single_selection(m);
+                    // Deferred click completes on marker m under the pointer:
+                    // disarm its hover stem until a mouseout-return
+                    // (AppState::stem_hover_suppress_marker).
+                    app.stem_hover_suppress_marker = m;
                     land_playhead_on_marker(app, audio, viewport, m);
                 }
             }
@@ -2099,6 +2127,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                     : static_cast<int>(app.warpmarkers.markers().size());
                 if (m >= 0 && m < n) {
                     selection.set_single_selection(m);
+                    // Deferred click completes on marker m under the pointer:
+                    // disarm its hover stem until a mouseout-return
+                    // (AppState::stem_hover_suppress_marker).
+                    app.stem_hover_suppress_marker = m;
                     land_playhead_on_marker(app, audio, viewport, m);
                 }
             }
