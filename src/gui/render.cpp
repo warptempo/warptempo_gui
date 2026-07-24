@@ -136,8 +136,10 @@ void fill_column_ink_runs(cairo_t* cr, int dest_x, int dest_y, int area_h,
 // Fills and outlines ONE marker/phase-reset/trim flag SHAPE at `center_x` (the
 // item's pixel column). `anchor` places the rectangle relative to that column:
 // Center (markers/phase resets — straddles the column, may hang half offscreen)
-// or LeftEdge/RightEdge (trim chips — a bound is an edge, so its chip sits fully
-// to one side). The shape is the fixed-width rectangle
+// or LeftEdge (rect left column ON `center_x`). Trim chips call with LeftEdge and
+// `center_x` = the edge-anchored rect left from trim_chip_rect (which owns the
+// begin/end edge asymmetry), so a chip's begin/end handedness lives THERE, not
+// here. The shape is the fixed-width rectangle
 // in the flag lane [rx, flag_top, flag_w, rect_h] plus (when `with_triangle`)
 // the tip-down triangle in the triangle lane directly beneath it, tip on the
 // column at `tip_y` (= the waveform top edge). The two are ONE shape: the
@@ -157,13 +159,12 @@ void fill_column_ink_runs(cairo_t* cr, int dest_x, int dest_y, int area_h,
 // the cached playhead mask stamps, so a flag's triangle and the playhead's
 // coincide when the cursor sits on it.
 // Horizontal anchor of the shape's rectangle relative to `center_x`'s column.
-// Center is the marker-flag default (and the playhead triangle). The edge modes
-// serve the trim chips: a bound is an EDGE, not a point, so its chip reads as an
-// edge handle sitting ON the bound column rather than straddling it — the begin
-// chip's LEFT edge on the column (body rightward), the end chip's RIGHT edge on
-// it (body leftward). This is the deliberate asymmetry vs marker flags, which
-// center and may hang half offscreen.
-enum class FlagHAnchor { Center, LeftEdge, RightEdge };
+// Center is the marker-flag default (and the playhead triangle) — straddles the
+// column and may hang half offscreen. LeftEdge puts the rect's LEFT column ON
+// `center_x`; it serves the trim chips, which pass the already-edge-anchored
+// rect left from trim_chip_rect (the begin/end asymmetry owner), so both begin
+// and end chips are painted LeftEdge at their resolved rect.x.
+enum class FlagHAnchor { Center, LeftEdge };
 
 void paint_flag_shape(cairo_t* cr, double center_x,
                       double flag_top_d, double tri_top_d, double tip_y_d,
@@ -174,12 +175,10 @@ void paint_flag_shape(cairo_t* cr, double center_x,
 
     const int cx     = static_cast<int>(std::round(center_x));
     // Rect left per anchor: Center straddles the column; LeftEdge puts the
-    // rect's left column ON it; RightEdge puts the rect's RIGHTMOST column on it
-    // (rx + flag_w - 1 == cx). cx is otherwise the triangle apex (Center only).
+    // rect's left column ON it. cx is otherwise the triangle apex (Center only).
     const int rx =
-        anchor == FlagHAnchor::LeftEdge  ? cx
-      : anchor == FlagHAnchor::RightEdge ? cx - flag_w + 1
-      :                                    cx - flag_w / 2;   // rect left
+        anchor == FlagHAnchor::LeftEdge ? cx
+      :                                   cx - flag_w / 2;   // rect left
     const int rw     = flag_w;
     const int ry     = static_cast<int>(std::round(flag_top_d));
     const int rb     = static_cast<int>(std::round(tri_top_d)); // rect bottom = tri top
@@ -546,6 +545,55 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col,
     cairo_restore(cr);
 }
 
+// -- Trim bound geometry owners (audit C1) -------------------------------
+// One column formula, one mapping helper, one chip rect. See render.h for the
+// full rationale (basis-per-caller ruling, the quantized-span denominator, the
+// EOF-wall clamp).
+
+TrimBoundColumn trim_bound_column(double displayed_ms,
+                                  long long vp_start, long long vp_end,
+                                  int wave_w) {
+    TrimBoundColumn out;
+    out.ms = displayed_ms;
+    out.in_viewport =
+        displayed_ms >= static_cast<double>(vp_start) &&
+        displayed_ms <  static_cast<double>(vp_end);
+    // The painters' quantized-span denominator: (vp_end - vp_start)/wave_w,
+    // where the hit sites' vp_end itself was derived via nearbyint(spp*wave_w).
+    const double span = static_cast<double>(vp_end - vp_start);
+    const double samples_per_pixel = span / static_cast<double>(wave_w);
+    const double x_raw =
+        (displayed_ms - static_cast<double>(vp_start)) / samples_per_pixel;
+    out.col_raw = static_cast<int>(std::nearbyint(x_raw));
+    out.col = out.col_raw;
+    if (wave_w > 0)
+        out.col = std::clamp(out.col, 0, wave_w - 1);
+    return out;
+}
+
+double displayed_trim_ms(int64_t frame,
+                         const std::vector<WarpFrameMapSegment>* map) {
+    double ms = static_cast<double>(frame);
+    if (map && !map->empty()) {
+        const double q = static_cast<double>(frame < 0 ? 0 : frame);
+        ms = std::nearbyint(map_source_to_target(q, *map));
+    }
+    return ms;
+}
+
+GuiRect trim_chip_rect(bool is_begin, int strip_x, int col, GuiRect row) {
+    const int flag_w = flag_lane_w_px();
+    const int abs_col = strip_x + col;
+    GuiRect r;
+    // Begin left-edge-anchored (rect left ON the column); end right-edge-anchored
+    // (rightmost pixel ON the column). Y-band from the chip lane `row`.
+    r.x = is_begin ? abs_col : abs_col - flag_w + 1;
+    r.y = row.y;
+    r.w = flag_w;
+    r.h = row.h;
+    return r;
+}
+
 void render_trim_stems(cairo_t* cr,
                        GuiRect waveform_area,
                        long long viewport_start_sample,
@@ -575,27 +623,21 @@ void render_trim_stems(cairo_t* cr,
     if (ink_plate) cairo_surface_flush(ink_plate);
 
     auto paint_bound = [&](int64_t frame) {
-        const double ms = static_cast<double>(frame);
-        if (ms < static_cast<double>(viewport_start_sample)) return;
-        if (ms >= static_cast<double>(viewport_end_sample)) return;
+        // `frame` is already the displayed-domain position (compute_displayed_trim
+        // pre-mapped it). Column + visibility come from the shared resolver; the
+        // clamped column keeps the waveform stem, strip stem, and chip on one
+        // column (the EOF-wall clamp — see trim_bound_column).
+        const TrimBoundColumn c = trim_bound_column(
+            static_cast<double>(frame), viewport_start_sample,
+            viewport_end_sample, waveform_area.w);
+        if (!c.in_viewport) return;
         cairo_set_source_rgb(cr, kTrimMarker.r, kTrimMarker.g, kTrimMarker.b);
-        const double x_raw =
-            (ms - static_cast<double>(viewport_start_sample))
-                / samples_per_pixel;
-        // Clamp into the visible column range [0, W-1], matching render_trim_flags
-        // (col_of): the inclusive END wall T-1 at full zoom-out rounds to column W
-        // (one past the surface). Without the clamp this waveform stem segment
-        // would land offscreen at W while the strip-crossing segment/chip sit at
-        // the clamped W-1, breaking the one-column connection between them.
-        int icol = static_cast<int>(std::nearbyint(x_raw));
-        if (waveform_area.w > 0)
-            icol = std::clamp(icol, 0, waveform_area.w - 1);
-        const double x_px = waveform_area.x + icol + 0.5;
+        const double x_px = waveform_area.x + c.col + 0.5;
         cairo_move_to(cr, x_px, y_stem_top);
         cairo_line_to(cr, x_px, y1);
         cairo_stroke(cr);
         fill_column_ink_runs(cr, waveform_area.x, waveform_area.y,
-                             waveform_area.h, ink_plate, icol);
+                             waveform_area.h, ink_plate, c.col);
     };
 
     if (has_begin) paint_bound(trim.begin);
@@ -642,33 +684,19 @@ void render_trim_flags(cairo_t* cr,
     // bottom — one unbroken 1px line at the bound column.
     const int wave_top = top_strip_area.y + top_strip_area.h;
 
-    // Bound column (unclamped) and its viewport visibility. Columns are computed
-    // unconditionally so the wash band spans between them even when a chip is
-    // culled; chips and their stems draw only for a visible bound.
-    auto col_of = [&](int64_t frame) {
-        const double x_raw =
-            (static_cast<double>(frame) -
-             static_cast<double>(viewport_start_sample)) / samples_per_pixel;
-        const int c = static_cast<int>(std::nearbyint(x_raw));
-        // Clamp into the visible column range [0, W-1]. At full zoom-out the
-        // inclusive END wall T-1 rounds to column W (one past the surface); left
-        // unclamped, the right-edge-anchored end chip loses its bound-edge pixel
-        // and outline to the cache clip and its stems fall entirely offscreen.
-        // Clamping lands the wall on the last visible column so the chip stays
-        // fully visible and connected. Begin/frame-0 already maps to column 0 and
-        // is unaffected. hit_test_trim_chip clamps identically so paint and hit
-        // stay column-identical.
-        if (waveform_area.w > 0)
-            return std::clamp(c, 0, waveform_area.w - 1);
-        return c;
-    };
-    auto in_viewport = [&](int64_t frame) {
-        const double ms = static_cast<double>(frame);
-        return ms >= static_cast<double>(viewport_start_sample) &&
-               ms <  static_cast<double>(viewport_end_sample);
-    };
-    const int begin_col = col_of(trim.begin);
-    const int end_col   = col_of(trim.end);
+    // One shared resolver call per bound (frames pre-mapped by
+    // compute_displayed_trim), read three ways: .col (clamped), .col_raw
+    // (unclamped, for the offscreen wash edges), .in_viewport (visibility).
+    // Computed unconditionally so the wash band spans between the bounds even
+    // when a chip is culled; chips and their stems draw only for a visible bound.
+    const TrimBoundColumn bc = trim_bound_column(
+        static_cast<double>(trim.begin), viewport_start_sample,
+        viewport_end_sample, waveform_area.w);
+    const TrimBoundColumn ec = trim_bound_column(
+        static_cast<double>(trim.end), viewport_start_sample,
+        viewport_end_sample, waveform_area.w);
+    const int begin_col = bc.col;
+    const int end_col   = ec.col;
 
     cairo_save(cr);
 
@@ -698,16 +726,10 @@ void render_trim_flags(cairo_t* cr,
     // EOF (T-1) stays in_viewport, so it uses the clamped column (a ~1px seam vs
     // the raw column, accepted), preserving the visible EOF chip's connection.
     if (has_begin && has_end && waveform_area.w > 0) {
-        auto col_raw = [&](int64_t frame) {
-            const double x_raw =
-                (static_cast<double>(frame) -
-                 static_cast<double>(viewport_start_sample)) / samples_per_pixel;
-            return static_cast<int>(std::nearbyint(x_raw));
-        };
         const int gap_lo =
-            (in_viewport(trim.begin) ? begin_col : col_raw(trim.begin)) + chip_w;
+            (bc.in_viewport ? bc.col : bc.col_raw) + chip_w;
         const int gap_hi =
-            (in_viewport(trim.end) ? end_col : col_raw(trim.end)) - chip_w + 1;
+            (ec.in_viewport ? ec.col : ec.col_raw) - chip_w + 1;
         if (gap_hi > gap_lo) {
             cairo_set_source_rgba(cr, kOverlay.r, kOverlay.g,
                                   kOverlay.b, kOverlayAlpha);
@@ -746,16 +768,16 @@ void render_trim_flags(cairo_t* cr,
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
         cairo_set_source_rgb(cr, kTrimMarker.r, kTrimMarker.g, kTrimMarker.b);
         cairo_set_line_width(cr, 1.0);
-        auto paint_strip_stem = [&](int64_t frame) {
-            if (!in_viewport(frame)) return;
+        auto paint_strip_stem = [&](const TrimBoundColumn& c) {
+            if (!c.in_viewport) return;
             const double x_px =
-                static_cast<double>(top_strip_area.x + col_of(frame)) + 0.5;
+                static_cast<double>(top_strip_area.x + c.col) + 0.5;
             cairo_move_to(cr, x_px, static_cast<double>(chip_bottom));
             cairo_line_to(cr, x_px, static_cast<double>(wave_top));
             cairo_stroke(cr);
         };
-        if (has_begin) paint_strip_stem(trim.begin);
-        if (has_end)   paint_strip_stem(trim.end);
+        if (has_begin) paint_strip_stem(bc);
+        if (has_end)   paint_strip_stem(ec);
         cairo_restore(cr);
     }
 
@@ -771,9 +793,9 @@ void render_trim_flags(cairo_t* cr,
         bool is_begin;
     };
     std::vector<TrimChip> chips;
-    if (has_begin && in_viewport(trim.begin))
+    if (has_begin && bc.in_viewport)
         chips.push_back({begin_col, true});
-    if (has_end && in_viewport(trim.end))
+    if (has_end && ec.in_viewport)
         chips.push_back({end_col, false});
     std::sort(chips.begin(), chips.end(),
               [](const TrimChip& a, const TrimChip& b) {
@@ -789,17 +811,22 @@ void render_trim_flags(cairo_t* cr,
     // bounds are unselectable (recorded asymmetry), so there is no selected pass.
     // Each chip is a plain kTrimMarker rectangle with a kTrimMarkerOutline
     // border, no triangle; the bottom argument is unused for the rectangle shape.
+    const GuiRect chip_row{top_strip_area.x, chip_top, waveform_area.w, chip_h};
     for (auto it = chips.rbegin(); it != chips.rend(); ++it) {
-        const double center_x =
-            static_cast<double>(top_strip_area.x + it->col);
-        paint_flag_shape(cr, center_x,
+        // The chip rect (edge-anchored begin/end) comes from the shared owner
+        // trim_chip_rect — the SAME rule hit_test_trim_chip uses. paint_flag_shape
+        // then draws the rectangle with its left column ON rect.x (LeftEdge means
+        // "rect left = center_x"), so the begin/end asymmetry lives only in
+        // trim_chip_rect. chip_bottom is the tri-top row (no triangle here).
+        const GuiRect r =
+            trim_chip_rect(it->is_begin, top_strip_area.x, it->col, chip_row);
+        paint_flag_shape(cr, static_cast<double>(r.x),
                          static_cast<double>(chip_top),
                          static_cast<double>(chip_bottom),
                          static_cast<double>(chip_bottom),
                          kTrimMarker, kTrimMarkerOutline,
                          /*with_triangle=*/false, /*alpha=*/1.0,
-                         it->is_begin ? FlagHAnchor::LeftEdge
-                                      : FlagHAnchor::RightEdge);
+                         FlagHAnchor::LeftEdge);
     }
 
     cairo_restore(cr);

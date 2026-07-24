@@ -1,6 +1,7 @@
 #include "input_handler.h"
 
 #include "gui_display_context.h"
+#include "render.h"
 #include "warp_frame_map_view.h"
 
 #include <algorithm>
@@ -706,19 +707,22 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
     if (mouse_y >= row.y && mouse_y < row.y + row.h) {
         const GuiRect area = waveform_area(app);
         const int click_rel_x = mouse_x - area.x;
-        const double vp = static_cast<double>(app.viewport_start_sample);
+        const int64_t vp_end = app.viewport_start_sample +
+            static_cast<int64_t>(std::nearbyint(spp * area.w));
         const std::vector<WarpFrameMapSegment>& dmap =
             displayed_or_live_target_map(app, audio);
         const std::vector<WarpFrameMapSegment>* map =
             dmap.empty() ? nullptr : &dmap;
+        // Bridge columns via the SAME owners the painter's wash gap uses
+        // (render.h): map with displayed_trim_ms, column with trim_bound_column
+        // (waveform-relative col_raw — UNCLAMPED, no visibility gate, for the
+        // strictly-between test). The chip single-hit above consumes the chip
+        // pixels first, so the effective bridge grab equals the painted wash gap
+        // — and now both read the SAME per-bound column source (FINDING-11).
         auto bound_col = [&](int64_t frame) -> int {
-            double ms = static_cast<double>(frame);
-            if (map) {
-                const size_t q = (frame < 0) ? static_cast<size_t>(0)
-                                             : static_cast<size_t>(frame);
-                ms = std::nearbyint(map_source_to_target(q, *map));
-            }
-            return static_cast<int>(std::nearbyint((ms - vp) / spp));
+            const double ms = displayed_trim_ms(frame, map);
+            return trim_bound_column(ms, app.viewport_start_sample, vp_end,
+                                     area.w).col_raw;
         };
         const int bcol = bound_col(app.trim.begin_frame);
         const int ecol = bound_col(app.trim.end_frame);

@@ -625,6 +625,73 @@ void render_strip_anchor_stem(cairo_t* cr,
 // while it is hovered / dragged / nudged — round 3, refined round 4, architect
 // 2026-07-23. The stem cache now carries only the trim stems below.)
 
+// The ONE trim bound-to-column geometry owner (audit C1). Every consumer of a
+// trim bound's pixel column funnels here: the two paint sites (render_trim_stems'
+// waveform stem, render_trim_flags' chips / strip stems / wash gap) and the two
+// hit sites (hit_test_trim_chip's chip rects, route_trim_chip_press' bridge
+// test). It replaced five hand-copied `nearbyint` + `clamp(0, W-1)` formulas
+// maintained "byte-identical" by comment discipline.
+//
+// PURE: all basis inputs are parameters — the collapse unifies the FORMULA, NOT
+// the basis choice. The basis stays per-caller BY RULING (the event-synchronized
+// hit-geometry doctrine): the painters call with the fp-recipe viewport they are
+// handed from the caches (and `displayed_ms` already mapped by
+// compute_displayed_trim); the hit sites call with the LIVE viewport, their
+// derived `vp_end` (= vp_start + nearbyint(spp*wave_w)), and `displayed_ms`
+// mapped through displayed_or_live_target_map by displayed_trim_ms. Do not
+// "helpfully" unify the basis.
+//
+// The x_raw denominator is the PAINTERS' quantized-span form
+// (vp_end - vp_start)/wave_w, NOT current_samples_per_pixel. The two are
+// identical at integer zoom rungs on multiple-of-16 widths and differ by
+// <~0.02 px at a fractional zoom rest; adopting it at the hit sites too (they
+// formerly divided by spp) is the one deliberate byte change of the collapse and
+// ALIGNS paint and hit exactly — the point of unifying them.
+//
+// EOF-WALL CLAMP (the one copy, formerly installed at three sites at once):
+// `col` clamps col_raw into the visible column range [0, wave_w-1]. The
+// inclusive END wall T-1 at full zoom-out rounds to column wave_w (one past the
+// surface); left unclamped, the right-edge-anchored end chip loses its
+// bound-edge pixel and outline to the cache clip and its stems fall offscreen.
+// Clamping lands the wall on the last visible column so the chip stays fully
+// visible and connected. Begin/frame-0 already maps to column 0, unaffected.
+// The wash band deliberately reads col_raw (unclamped) for an OFFSCREEN bound so
+// its fill/ring follow the chip past the viewport edge (clipped by the surface).
+struct TrimBoundColumn {
+    double ms;          // displayed-domain position (already mapped)
+    bool   in_viewport; // ms in [vp_start, vp_end)
+    int    col_raw;     // unclamped nearbyint column
+    int    col;         // clamped into [0, wave_w-1] (the EOF-wall clamp)
+};
+TrimBoundColumn trim_bound_column(double displayed_ms,
+                                  long long vp_start, long long vp_end,
+                                  int wave_w);
+
+// The source-frame -> displayed-domain mapping the two HIT sites share
+// (add_chip, bound_col). Byte-identical to render.cpp's file-local
+// frame_to_paint_sample for every reachable (non-negative) trim bound: in a
+// mapped view the source frame is rounded once through map_source_to_target,
+// then rounded again; the identity (null/empty map) path returns the frame
+// as-is. A negative frame is guarded to 0 (unreachable — past-EOF is load-fatal
+// and bounds are never negative — kept for exactness vs the prior hit code).
+// The PAINT sites do NOT call this: they receive pre-mapped `displayed_ms` from
+// compute_displayed_trim (their fp-recipe basis), which maps once for both
+// caches. `map` is null in source view (identity) and the item pixels' own map
+// (displayed_or_live_target_map) in target view.
+double displayed_trim_ms(int64_t frame,
+                         const std::vector<WarpFrameMapSegment>* map);
+
+// The ONE trim chip screen-rect owner (audit C1): the begin/end edge-anchoring
+// rule lives here, consumed by both the painter (render_trim_flags) and the hit
+// test (hit_test_trim_chip). A trim bound is an EDGE, not a point: the begin
+// chip's LEFT edge sits ON the bound column (rect left = strip_x+col), the end
+// chip's RIGHT edge sits on it (rightmost pixel = strip_x+col, so rect left =
+// strip_x+col - flag_w + 1). The chip is flag-sized (flag_lane_w_px() wide); its
+// y-band comes from `row` (the trim chip lane = top_upper_row_area). Deliberate
+// asymmetry vs centered marker flags: a bound at frame 0 / EOF shows its chip
+// fully onscreen.
+GuiRect trim_chip_rect(bool is_begin, int strip_x, int col, GuiRect row);
+
 // Draws the WAVEFORM-AREA portion of the trim begin/end boundary stems. Each set
 // bound (gated by `has_begin` / `has_end`) paints a 1px vertical stem at its
 // domain-frame column, spanning the WAVEFORM AREA (top at `waveform_area.y`, down

@@ -106,7 +106,6 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     if (spp <= 0.0) return TrimHit::None;
     const int sr = audio.sample_rate();
     if (sr <= 0) return TrimHit::None;
-    const double vp = static_cast<double>(app.viewport_start_sample);
 
     // Column translation so the chip column lands
     // where the stem (and chip) are painted in the mapped views: the map is
@@ -131,39 +130,20 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     };
     std::vector<TrimChipHit> chips;
     auto add_chip = [&](int64_t frame, TrimHit which) {
-        const int64_t src_sample = frame;
-        double ms = static_cast<double>(src_sample);
-        if (target_warp_frame_map) {
-            const size_t q = (src_sample < 0)
-                ? static_cast<size_t>(0)
-                : static_cast<size_t>(src_sample);
-            ms = std::nearbyint(map_source_to_target(q, *target_warp_frame_map));
-        }
+        // Map the authored source frame to the displayed domain and resolve its
+        // column through the SAME owners the painter uses (render.h): the mapping
+        // via displayed_trim_ms, the column via trim_bound_column against the
+        // hit-side vp_end (the painters' quantized-span denominator), the chip
+        // rect via trim_chip_rect. So a hit lands on exactly the drawn chip.
+        const double ms = displayed_trim_ms(frame, target_warp_frame_map);
         const int64_t vp_end = app.viewport_start_sample +
             static_cast<int64_t>(std::nearbyint(spp * wave_w));
-        if (ms < vp || ms >= static_cast<double>(vp_end)) return;
-        const double x_raw = (ms - vp) / spp;
-        // Local column clamped into [0, W-1], byte-identical to
-        // render_trim_flags' col_of: the inclusive END wall T-1 at full zoom-out
-        // rounds to column W (one past the surface), so the clamp lands it on the
-        // last visible column. Begin/frame-0 maps to column 0 and is unaffected.
-        int local_col = static_cast<int>(std::nearbyint(x_raw));
-        if (wave_w > 0) local_col = std::clamp(local_col, 0, wave_w - 1);
-        const double center_x = static_cast<double>(top.x + local_col);
-        // The chip is a fixed flag-sized rectangle EDGE-ANCHORED on the bound
-        // column, exactly as render_trim_flags paints it: the begin chip's LEFT
-        // edge sits on the column (rect left = col), the end chip's RIGHT edge
-        // (rightmost pixel = col, so rect left = col - flag_w + 1). Only rx/rw
-        // are read here (the vertical band was checked via top_upper_row_area
-        // above). A bound is an edge, not a point — the deliberate asymmetry vs
-        // centered marker flags, so a bound at frame 0 / EOF is fully onscreen.
-        const int flag_w = flag_lane_w_px();
-        const int col = top.x + local_col;
-        GuiRect cr_rect;
-        cr_rect.x = (which == TrimHit::Begin) ? col : col - flag_w + 1;
-        cr_rect.y = row.y;
-        cr_rect.w = flag_w;
-        cr_rect.h = row.h;
+        const TrimBoundColumn c =
+            trim_bound_column(ms, app.viewport_start_sample, vp_end, wave_w);
+        if (!c.in_viewport) return;
+        const GuiRect cr_rect =
+            trim_chip_rect(which == TrimHit::Begin, top.x, c.col, row);
+        const double center_x = static_cast<double>(top.x + c.col);
         chips.push_back({center_x, cr_rect, which});
     };
 
