@@ -199,9 +199,10 @@ void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
 // command by pure command adjacency, but only a command that PAINTED
 // SOMETHING should count as "the next command". Every visible effect funnels
 // through GuiPlatform::invalidate_region, so a command that never reaches it
-// (a silent refusal like P-view Alt+Up/Down, an unbound key, a swallowed
-// sub-detent wheel) changed nothing on screen and must not break the pin's
-// adjacency. This RAII guard snapshots, at the top of a dispatch entry point
+// (a silent refusal like P-view Alt+Up/Down, an unbound key, a wall-saturated
+// zoom-OUT wheel — WheelUp already at the effective ceiling returns from
+// zoom_steps before any invalidate) changed nothing on screen and must not
+// break the pin's adjacency. This RAII guard snapshots, at the top of a dispatch entry point
 // (after the command_seq bump), whether the pin was live for THIS command and
 // the platform's damage counter; at every exit — the entry functions have many
 // early returns — it re-stamps stem_pin_command_seq to the current command_seq

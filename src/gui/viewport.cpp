@@ -670,15 +670,19 @@ void Viewport::recompute_hover_at_cursor() {
 
     // Stem hover re-arm latch clear (see AppState::stem_hover_suppress_marker):
     // once the resolved hit moves OFF the suppressed marker, re-arm its hover
-    // stem. This is the ONLY clear, so a click-then-rest keeps the stem hidden
-    // until a genuine mouseout-return. The short-circuit above cannot strand
-    // the latch: the first motion that carries the hit off the latch marker
-    // takes THIS full path (hit != hover then, since a resting hover on the
-    // latch marker means hit == hover would have short-circuited only while the
-    // hit stays on it — moving off changes hit), so the latch always sees its
-    // release.
-    if (hit != app.stem_hover_suppress_marker)
+    // stem. This is the ONLY clear on the pointer-geometry path, so a
+    // click-then-rest keeps the stem hidden until a genuine mouseout-return. The
+    // short-circuit above cannot strand the latch: the first motion that carries
+    // the hit off the latch marker takes THIS full path (hit != hover then,
+    // since a resting hover on the latch marker means hit == hover would have
+    // short-circuited only while the hit stays on it — moving off changes hit),
+    // so the latch always sees its release. A DEAD latch (store mutated since
+    // set — stem_hover_suppress_active false) also resets here lazily.
+    if (!stem_hover_suppress_active(app) ||
+        hit != app.stem_hover_suppress_marker) {
         app.stem_hover_suppress_marker = -1;
+        app.stem_hover_suppress_gen    = -1;
+    }
 
     const bool was_visible = app.hover_popup.any_visible();
     // Selected-stem hover-transition damage inputs: the OLD hovered marker (whose

@@ -963,8 +963,10 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     // unconditional placement.
     app.double_click = DoubleClickCandidate{};
     // Stem-pin preserve: re-stamp at exit if this wheel frame painted nothing
-    // (a swallowed sub-detent event, an out-of-context wheel). See
-    // StemPinPreserveGuard.
+    // (a wall-saturated zoom-OUT — WheelUp already at the effective ceiling,
+    // zoom_steps returns before any invalidate; an out-of-context wheel over the
+    // bottom strip — handle_wheel early-returns; a modifier-mismatched chord
+    // swallowed there). See StemPinPreserveGuard.
     StemPinPreserveGuard stem_pin_guard(app, gui);
     const int ctx = wheel_context(x, y);
     if (ctx < 0) return;
@@ -1158,7 +1160,10 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // Clear the stem hover-suppress latch across the S/T flip: the displayed
     // basis and hit geometry just changed, so a leftover index should not carry
     // a stale suppression into the new view (AppState::stem_hover_suppress_marker).
+    // The explicit clear stays the correctness owner (the S/T flip does not bump
+    // any store generation); the gen-stamp reset is belt-and-braces.
     app.stem_hover_suppress_marker = -1;
+    app.stem_hover_suppress_gen    = -1;
 
     // The S/T toggle translates the active tab's live playhead across the
     // domain flip; the inactive tab's stored playhead must translate too, or

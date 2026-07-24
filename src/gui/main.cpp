@@ -986,13 +986,17 @@ int main(int argc, char** argv) {
         // Lateral-gesture stem-pin reap (architect 2026-07-24). The blue stem pin
         // means "the LAST COMMAND was a lateral gesture on this marker" (a position
         // nudge/drag, the W+target tempo drag, or the target-view tempo nudge; see
-        // AppState::stem_pin_*), so it
-        // dies on ANY other command — pure command adjacency: when command_seq has
-        // moved past stem_pin_command_seq, the last command was not a re-stamping
-        // lateral gesture, so clear the pin. This reaper owns the cleanup because
-        // paint (adjacency-only) stops drawing the pin the instant the command_seq
-        // moves, but the killing command may damage no waveform (bare `o`
-        // invalidates only the bottom strip), so the stem would otherwise ghost.
+        // AppState::stem_pin_*). Command adjacency is the test (command_seq ==
+        // stem_pin_command_seq), but death is DAMAGE-QUIESCENCE-SCOPED: the
+        // dispatch-exit preserve (StemPinPreserveGuard) re-stamps
+        // stem_pin_command_seq across a command that painted nothing, so the pin
+        // survives every damage-less command and the reaper fires only after a
+        // DAMAGING non-lateral command has moved command_seq past the stamp
+        // (see AppState::stem_pin_* for the full scope). This reaper owns the
+        // cleanup because paint (adjacency-only) stops drawing the pin the
+        // instant command_seq moves, but the killing command may damage no
+        // waveform (bare `o` invalidates only the bottom strip), so the stem
+        // would otherwise ghost.
         // Full-area damage (not a column): the stem painted on the DISPLAYED basis
         // (wf_cache.fp_*), and a column recomputed on the LIVE basis
         // (app.viewport_start_sample + current spp) can miss it inside a resize/
