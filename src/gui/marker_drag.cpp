@@ -1026,6 +1026,14 @@ bool MarkerDragOps::begin_tempo_drag(int hit) {
     // here — only its image moves. The pre-ride capture feeds the Esc-cancel
     // restore (always applied).
     d.pre_ride_playhead_sample = app.playhead_cursor_sample;
+    // Grab-time trim-highlight INTENT (see the field): the per-event / cancel trim
+    // re-sync reads this, not the live provenance the coincident arm erases
+    // mid-gesture. A resting TrimWindow region has separated images by
+    // construction (the sync's coincident arm never publishes a lo==hi region), so
+    // this true iff there was a real highlighted trim window at grab.
+    d.grab_trim_highlight =
+        app.region.active &&
+        app.region.provenance == RegionProvenance::TrimWindow;
     app.tempo_drag = std::move(d);
     // Focus transfer at the THRESHOLD CROSSING, the reposition drag's rule (a
     // real drag focuses the grabbed marker at the crossing, so a walled group
@@ -1255,17 +1263,23 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     }
     // The focus transfer already ran at the threshold crossing (begin_tempo_drag,
     // the reposition drag's rule), so there is no first-commit re-assert here.
-    // Region follow decision CAPTURED BEFORE the kick (architect 2026-07-23, the
-    // ordering hazard): kick_waveform_sync's live-domain reclamp wholesale-CLEARS
-    // any region whose old endpoint fell outside the now-shorter target domain
-    // (a faster map shrinks the total), so the follow must NOT gate on post-kick
-    // region.active — it would see a region the kick just cleared. Capture the
-    // provenance decision now, act on it unconditionally after the kick (both
-    // re-activators write active = true).
+    // Region follow decisions (architect 2026-07-23):
+    //  - SelectionExtent: captured LIVE, BEFORE the kick — the kick's live-domain
+    //    reclamp wholesale-CLEARS a region whose old endpoint fell outside the
+    //    now-shorter target domain, so this must not gate on post-kick
+    //    region.active; but a SelectionExtent region can never REST cleared
+    //    mid-drag (the post-kick re-derive always re-activates with in-domain
+    //    clamped endpoints, and no demote runs with keys swallowed), so the live
+    //    read stays valid across events.
+    //  - TrimWindow: decided from the GRAB-TIME intent (grab_trim_highlight), NOT
+    //    the live provenance — the coincident-image clear arm is DESIGNED to erase
+    //    live TrimWindow provenance mid-gesture, so a live read would latch off
+    //    after the first coincident event and never re-sync when the images
+    //    re-separate. The grab bit makes the re-sync re-publish the window on every
+    //    event where its images are separated again.
     const bool follow_extent = app.region.active &&
         app.region.provenance == RegionProvenance::SelectionExtent;
-    const bool trim_resync = app.region.active &&
-        app.region.provenance == RegionProvenance::TrimWindow;
+    const bool trim_resync = app.tempo_drag.grab_trim_highlight;
     // Synchronous re-warp, exactly adjust_tempo_cents' target-view tail:
     // kick_waveform_sync reclamps zoom/viewport first (a tempo change moves
     // the target total) and rebuilds plate + stem/flag caches inline, with
@@ -1370,15 +1384,19 @@ void MarkerDragOps::end_tempo_drag() {
 // previewed.
 void MarkerDragOps::cancel_tempo_drag() {
     if (!app.tempo_drag.active) return;
-    // Capture the region-follow decision FIRST — BEFORE restore_selection_snapshot
+    // Capture the region-follow decisions FIRST — BEFORE restore_selection_snapshot
     // (which demotes a SelectionExtent region to Free) and before the kick (which
     // can clear a region on a domain shrink). We re-derive / re-sync after, so a
     // SelectionExtent region survives the cancel via the re-derive below (not via
-    // the demoting restore), and a TrimWindow region survives via the re-sync.
+    // the demoting restore). The TrimWindow decision reads the GRAB-TIME intent
+    // (grab_trim_highlight), NOT the live provenance — a coincident event mid-drag
+    // may have cleared the live TrimWindow provenance, but the cancel restores the
+    // pre-drag map whose images were SEPARATED at grab (a resting TrimWindow region
+    // is never coincident), so the re-sync unconditionally reproduces the pre-drag
+    // highlight.
     const bool follow_extent = app.region.active &&
         app.region.provenance == RegionProvenance::SelectionExtent;
-    const bool trim_resync = app.region.active &&
-        app.region.provenance == RegionProvenance::TrimWindow;
+    const bool trim_resync = app.tempo_drag.grab_trim_highlight;
     restore_selection_snapshot(app, app.tempo_drag.pre_drag_selection);
     // Restore EVERY participant's grab cents (the parallel vectors). A walled
     // group and an unmoved drag restore nothing (the store already holds the
@@ -1406,11 +1424,13 @@ void MarkerDragOps::cancel_tempo_drag() {
     //    field is needed (the region is a pure function of store + selection, both
     //    restored — unlike the position drag, whose region can transiently diverge
     //    mid-motion from moveable_times).
-    //  - TrimWindow: re-sync from app.trim's source-frame bounds through the
-    //    restored map, landing the wash back on the restored chips/stems (closing
-    //    the reported bug where Esc on a walled drag replaced a trim highlight —
-    //    the trim bounds never depended on this selection, and the images are
-    //    restored, so the re-sync reproduces the pre-drag trim highlight).
+    //  - TrimWindow (grab intent): re-sync from app.trim's source-frame bounds
+    //    through the restored map, landing the wash back on the restored
+    //    chips/stems. Unconditional on the grab bit: the restored map is the
+    //    pre-drag map, whose bound images were SEPARATED at grab, so the sync's
+    //    coincident arm cannot fire — it reproduces the pre-drag highlight even
+    //    if a coincident event mid-drag had cleared the live provenance. (Also
+    //    closes the earlier walled-drag case where Esc replaced a trim highlight.)
     //  - Free: untouched scratch.
     if (follow_extent)      set_region_to_selection_extent(app, audio, viewport);
     else if (trim_resync)   sync_region_to_trim_window(app, audio, viewport);

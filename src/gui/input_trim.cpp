@@ -82,8 +82,11 @@ void GuiInputHandler::handle_trim_clear_both() {
 // window and the highlight now agree, so after x they coincide — the tail runs
 // sync_highlight_to_trim_window so the region and window rest coupled through the
 // one owner (provenance RegionProvenance::TrimWindow — the selection is never
-// touched; a crossed-collapse or coincident-image collapse clears the region with
-// the window). NO region → x CLEARS the trim via
+// touched). Two distinct clears: CROSSED AUTHORED BOUNDS (auto_clear) destroy the
+// trim window AND the highlight; COINCIDENT MAPPED IMAGES (bracket-legal
+// compression rounding both bounds to one target frame) leave the AUTHORED window
+// untouched and clear only the HIGHLIGHT — so `has_begin && has_end` does NOT
+// imply an active TrimWindow region. NO region → x CLEARS the trim via
 // handle_trim_clear_both, whose has_begin||has_end guard makes no-trim a natural
 // no-op (nothing to clear, no highlight to clear either — the region is inactive
 // in this branch by definition). Read-only refuses silently BEFORE anything,
@@ -455,13 +458,16 @@ void GuiInputHandler::commit_trim_drag() {
 // region sets the trim — so this follows the same downward-only rule: TRIM
 // DOESN'T SELECT MARKERS, ONLY THE REGION. The marker SELECTION is the master
 // state; trim gestures never touch it, exactly as they never touch the PLAYHEAD.
-// Both bounds set -> the region takes the trim window's active-domain extent
-// (each source bound through source_frame_to_active_domain, clamped to a playable
-// frame like every other region former; bounds may be crossed mid-drag, so
-// normalize lo/hi, the map is monotone) with TrimWindow provenance. Lone / no
-// trim -> no window -> clear the REGION only, leaving the selection alone.
-// Read-only-safe (the region is navigation). The playhead and the selection are
-// never touched.
+// Both bounds set with SEPARATED images -> the region takes the trim window's
+// active-domain extent (each source bound through source_frame_to_active_domain,
+// clamped to a playable frame; bounds may be crossed mid-drag, so normalize lo/hi,
+// the map is monotone) with TrimWindow provenance. Both bounds set but COINCIDENT
+// images (lo == hi under bracket-legal compression) -> clear the HIGHLIGHT only,
+// leaving the AUTHORED window untouched (a zero-width region would let x destroy
+// the pair — see the branch). Lone / no trim -> no window -> clear the REGION.
+// So `has_begin && has_end` does NOT imply an active TrimWindow region. Every arm
+// leaves the SELECTION alone. Read-only-safe (the region is navigation). The
+// playhead and the selection are never touched.
 //
 // Defined as a FREE function so the group tempo gestures (MarkerDragOps /
 // GuiWarpMarkersOps) can RE-SYNC a TrimWindow region from app.trim's SOURCE-frame

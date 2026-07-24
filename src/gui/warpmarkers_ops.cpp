@@ -599,7 +599,12 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
         // kick_waveform_sync's live-domain reclamp wholesale-clears any region
         // whose old endpoint fell outside the now-shorter target domain (a faster
         // map shrinks the total), so the follow must not gate on post-kick
-        // region.active. Act on the captured decision unconditionally after.
+        // region.active. Act on the captured decision unconditionally after. Unlike
+        // the tempo DRAG, the step reads the LIVE provenance for BOTH decisions:
+        // a discrete press has no gesture state to capture a grab intent across, so
+        // a step whose images compress coincident clears the TrimWindow highlight
+        // (the coincident arm) and the user re-clicks the chip row to re-highlight
+        // once the images re-separate — the recorded recovery for a one-shot edit.
         const bool follow_extent = app.region.active &&
             app.region.provenance == RegionProvenance::SelectionExtent;
         const bool trim_resync = app.region.active &&

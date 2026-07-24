@@ -180,11 +180,14 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
                                     Viewport& viewport);
 
 // Set the region to the CURRENT trim window's active-domain extent (TrimWindow
-// provenance), or clear it when there is no full pair. Definition lives in
-// input_trim.cpp; declared here so the group tempo gestures can RE-SYNC a
-// TrimWindow region from app.trim's source-frame bounds through the new live map
-// after a tempo edit (FIX C). GuiInputHandler::sync_highlight_to_trim_window
-// wraps this.
+// provenance) when both bounds are set AND their images are SEPARATED; clear the
+// HIGHLIGHT only when both bounds are set but their images round COINCIDENT
+// (bracket-legal compression — the authored window rests untouched, else x would
+// destroy the pair); clear the region when there is no full pair. So a full pair
+// does NOT imply an active TrimWindow region. Definition lives in input_trim.cpp;
+// declared here so the group tempo gestures can RE-SYNC a TrimWindow region from
+// app.trim's source-frame bounds through the new live map after a tempo edit.
+// GuiInputHandler::sync_highlight_to_trim_window wraps this.
 void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
                                 Viewport& viewport);
 
@@ -741,9 +744,11 @@ private:
     // to the CURRENT trim window, WITHOUT touching the marker selection — trim is
     // region-related, so it never selects markers, only the region (the selection
     // is the master state, exactly as trim never touches the PLAYHEAD). Both
-    // bounds set -> region = the window's active-domain extent (source bounds
-    // through source_frame_to_active_domain, clamped playable). Otherwise (lone /
-    // no trim -> no window) -> clear the region only. One implementation shared by
+    // bounds set with SEPARATED images -> region = the window's active-domain
+    // extent (source bounds through source_frame_to_active_domain, clamped
+    // playable); both bounds set but COINCIDENT images -> clear the HIGHLIGHT only
+    // (authored window untouched); lone / no trim -> clear the region. So a full
+    // pair does NOT imply an active TrimWindow region. One implementation shared by
     // the trim-lane click (R4.5), the ctrl / ctrl+shift bound-set (R4.6/R5), and the trim
     // drags' motion / release / cancel live-sync (R7), so window and highlight can
     // never drift. Navigation-class (the region is navigation), so read-only-safe.

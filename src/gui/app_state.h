@@ -653,6 +653,21 @@ struct TempoDragState {
     // post-commit image unconditionally; the grab position feeds the Esc-cancel
     // restore, always applied.
     int64_t pre_ride_playhead_sample = 0;
+    // Grab-time trim-highlight INTENT (architect 2026-07-23): captured at
+    // begin_tempo_drag as (region.active && provenance == TrimWindow). The
+    // per-event and cancel trim re-sync decisions read THIS, never the LIVE
+    // provenance — because the coincident-image clear arm is DESIGNED to erase
+    // live TrimWindow provenance MID-GESTURE (images compressing onto one target
+    // frame), so a live read would latch off after the first coincident event and
+    // never re-sync when the images re-separate, and Esc would restore the map but
+    // not the highlight. With the grab intent: a window that coincident-clears
+    // mid-drag re-syncs BACK into view on further motion, and Esc re-syncs the
+    // pre-drag highlight unconditionally (the restored images cannot be coincident
+    // — they were separated at grab). The SelectionExtent follow stays per-event
+    // LIVE (see apply): it can never rest cleared mid-drag (the post-kick
+    // re-derive always re-activates with in-domain clamped endpoints, and no
+    // demote runs mid-gesture with keys swallowed), so the asymmetry is sound.
+    bool    grab_trim_highlight = false;
 };
 
 // Pending trim chip/bridge drag, armed by a PLAIN (unmodified) left press in the
