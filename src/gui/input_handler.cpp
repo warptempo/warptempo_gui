@@ -603,18 +603,31 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // pixel of time. Trim is not part of the selection system, so the nudge
     // never acts on a bound (trim's pointer route is the plain chip-row
     // press-drag on its chip / the inter-chip bridge).
+    //
+    // POSITION-NUDGE HOME-VIEW GATE (architect 2026-07-24): the WARP position
+    // nudge is the home-view binding's THIRD exception — Alt+Left/Right on the
+    // warp column runs in BOTH audio views (source AND target). The exception is
+    // for this ONE keyboard gesture only: the flag DRAG stays home-view-only (the
+    // binding's "imprecise by construction" rationale is about pointer drags; a
+    // discrete one-column step is accepted imprecision by ruling). The PHASE
+    // nudge keeps its home (target) binding unchanged. Read-only tabs still refuse
+    // both (gated upstream by read_only_key_blocked, not here).
     if (alt && !shift && !ctrl && key == GuiKeys::Left) {
-        // Nudge authors the active column's store: home view only (W->source,
-        // P->target). Off home is a consumed no-op.
-        if (!active_column_authoring_allowed(app)) return;
-        if (app.active_markers_view == 'P') phase_resets.nudge_selected_phase_resets(-1);
-        else                        warpops.nudge_selected_markers(-1);
+        if (app.active_markers_view == 'P') {
+            if (app.active_audio_view != 'T') return;   // phase home = target
+            phase_resets.nudge_selected_phase_resets(-1);
+        } else {
+            warpops.nudge_selected_markers(-1);         // warp: both views
+        }
         return;
     }
     if (alt && !shift && !ctrl && key == GuiKeys::Right) {
-        if (!active_column_authoring_allowed(app)) return;
-        if (app.active_markers_view == 'P') phase_resets.nudge_selected_phase_resets(+1);
-        else                        warpops.nudge_selected_markers(+1);
+        if (app.active_markers_view == 'P') {
+            if (app.active_audio_view != 'T') return;
+            phase_resets.nudge_selected_phase_resets(+1);
+        } else {
+            warpops.nudge_selected_markers(+1);
+        }
         return;
     }
 

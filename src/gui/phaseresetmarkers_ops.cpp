@@ -18,37 +18,6 @@
 // operations on the phase reset store, reaching undo, selection, viewport,
 // and playback_lifecycle through the struct's reference members.
 
-namespace {
-
-// UNCLAMPED inverse of map_source_to_target, used ONLY by the group phase-reset
-// nudge's rider proposals. map_target_to_source CLAMPS any query at or before the
-// map's first target breakpoint to the first source frame — which would hide an
-// out-of-range rigid proposal at 0 (the round-1 trap). This helper instead
-// EXTENDS segment 0's slope linearly BACKWARD below the first breakpoint, so a
-// proposal that mathematically lands before the song start inverse-maps to a
-// NEGATIVE source double and is caught by the exact integer wall belt after the
-// snap. The interior interpolation and the beyond-last linear tail are already
-// exact in map_target_to_source (the clamp is its only lossy arm), so delegate
-// for every query at or above the first breakpoint. A single-breakpoint map has
-// no segment-0 slope; use slope 1, mirroring map_target_to_source's own
-// beyond-last unit-slope tail. Empty map is identity.
-inline double unclamped_target_to_source(
-    double tgt_frame, const std::vector<WarpFrameMapSegment>& map) {
-    if (map.empty()) return tgt_frame;
-    if (tgt_frame > map.front().tgt_frame)
-        return map_target_to_source(tgt_frame, map);
-    // At or below the first target breakpoint: extend segment 0's slope backward.
-    if (map.size() >= 2) {
-        const double src_dur = map[1].src_frame - map[0].src_frame;
-        const double tgt_dur = map[1].tgt_frame - map[0].tgt_frame;
-        return map[0].src_frame +
-               (tgt_frame - map[0].tgt_frame) * (src_dur / tgt_dur);
-    }
-    return map[0].src_frame + (tgt_frame - map[0].tgt_frame);  // unit slope
-}
-
-}  // namespace
-
 // Drop a phase reset marker at `time_frame`. Placement is bounded only
 // by the absolute range; arbitrarily close and exactly-coincident drops
 // are legal (the render boundary collapses an exact-equal group to one
@@ -354,16 +323,15 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     std::vector<int> touched_live(app.selected_markers.begin(),
                                   app.selected_markers.end());
     // Stem NUDGE PIN (symmetric with the warp nudge): keep the FOCUSED reset's
-    // stem visible through the fine-tuning burst. Post-reorder focused index, the
-    // current command_seq, and the burst-window timestamp; the pin dies at the
-    // next command, at burst-window expiry (on_tick reap), or on a selection
-    // change. Paint gates it to a singleton, so for a 2+ selection this stamp is
-    // INERT — the singleton gate never admits it, and any command that could
-    // narrow the group to one bumps command_seq and kills the pin by adjacency
-    // first. Stamped anyway for uniformity with the singleton path.
+    // stem visible while the Alt+Left/Right key is HELD. Post-reorder focused index
+    // and the current command_seq; the pin is live iff command-adjacent AND the
+    // key-repeat hold is armed, reaped one-shot in on_tick on either death (see
+    // AppState::stem_pin_*). Paint gates it to a singleton, so for a 2+ selection
+    // this stamp is INERT — the singleton gate never admits it, and any command
+    // that could narrow the group to one bumps command_seq and kills the pin by
+    // adjacency first. Stamped anyway for uniformity with the singleton path.
     app.stem_pin_marker      = app.last_selected_marker;
     app.stem_pin_command_seq = app.command_seq;
-    app.stem_pin_ms          = monotonic_ms();
     // Playhead follows the FOCUSED reset through the post-mutation two-step basis
     // (committed_f is reorder-independent; the phase reset home is target view, so
     // source_frame_to_active_domain maps). move_playhead_to owns the clamp and

@@ -1293,40 +1293,42 @@ struct AppState {
     // never serialized.
     uint64_t      command_seq = 0;
 
-    // Selected-marker stem NUDGE PIN (round 4, architect 2026-07-23). The
-    // selected singleton's stem (paint_selected_stem) shows while THAT marker is
-    // hovered, dragged, OR just nudged; the nudge arm has no hover/drag to key
-    // on, so both Alt+Left/Right nudge handlers stamp these at commit —
-    // `stem_pin_marker` = the moved (focused) marker's post-reorder index,
-    // `stem_pin_command_seq` = the current command_seq, `stem_pin_ms` = the
-    // monotonic_ms() stamp of the commit. The pin is LIVE iff BOTH halves hold
-    // (architect 2026-07-23): (a) command adjacency — `command_seq ==
-    // stem_pin_command_seq` (and stem_pin_marker == the selected index); any
-    // OTHER command bumps command_seq at its dispatch entry and kills the pin
-    // instantly, no timer — AND (b) the BURST WINDOW — `monotonic_ms() -
-    // stem_pin_ms <= kGestureCoalesceMs`, the same 500 ms window the undo
-    // coalescer defines, so an idle pin stops showing once the fine-tuning burst
-    // lapses (the fix for a pin that used to persist indefinitely while the user
-    // idled). The default stem_pin_marker = -1 never matches a real (>= 0)
+    // Selected-marker stem NUDGE PIN (round 4, architect 2026-07-23; key-hold
+    // lifecycle 2026-07-24). The selected singleton's stem (paint_selected_stem)
+    // shows while THAT marker is hovered, dragged, OR just nudged; the nudge arm
+    // has no hover/drag to key on, so both Alt+Left/Right nudge handlers stamp
+    // these at commit — `stem_pin_marker` = the moved (focused) marker's
+    // post-reorder index, `stem_pin_command_seq` = the current command_seq. The
+    // pin is LIVE iff BOTH halves hold: (a) command adjacency — `command_seq ==
+    // stem_pin_command_seq` (and stem_pin_marker == the selected index); any OTHER
+    // command bumps command_seq at its dispatch entry and kills the pin instantly
+    // — AND (b) the Alt+Left/Right KEY IS STILL HELD (gui.repeat_hold_active(), the
+    // platform's key-repeat armed state, true from press through the initial-delay
+    // phase and every repeat until release/disarm). The key-hold half REPLACED a
+    // fixed burst timer (architect 2026-07-24): the compositor's ~600 ms initial
+    // delay meant any short window flickered during a hold's initial delay, so no
+    // fixed timer works — a held key now keeps the stem solid, a release kills it
+    // "asap" (within one tick). Manual-tap consequence: a single tap shows the stem
+    // only for the press's own frames (the release disarms the hold, reaped next
+    // tick); the SUSTAINED stem is the HELD fine-tuning case, and hover covers
+    // inspection. The default stem_pin_marker = -1 never matches a real (>= 0)
     // selection, so the startup command_seq == 0 == stem_pin_command_seq
-    // coincidence pins nothing. BOTH death causes are REAPED one-shot in on_tick:
-    // when stem_pin_marker is set and EITHER adjacency is lost (command_seq moved)
-    // OR the burst window lapsed, the reaper invalidates the FULL waveform area and
+    // coincidence pins nothing. Both halves are the two DEATH causes, REAPED
+    // one-shot in on_tick: when stem_pin_marker is set and EITHER adjacency is lost
+    // OR the key hold released, the reaper invalidates the FULL waveform area and
     // resets stem_pin_marker = -1 so the blue line disappears without user input.
-    // Paint stops drawing the pin the instant either cause holds, but not every
-    // killing command damages the waveform (bare `o` invalidates only the bottom
-    // strip) and an idle expiry gets no command at all, so the reaper — not the
-    // killing command — owns the damage. Full-area damage, NOT a column recompute:
-    // the stem painted on the DISPLAYED basis (wf_cache.fp_*), and a column
-    // recomputed on the LIVE basis could miss it inside a resize/async publish
-    // window (do not "optimize" this back to a single-column damage). The reaper
-    // reads no marker index; it needs none. Session-only, never serialized.
-    // Workflow note: after the burst the green cursor playhead line rests at the
-    // marker (a plain Esc deselects and lands there), which replaces the persistent
-    // blue line.
+    // Paint (adjacency-only) stops drawing it too, but not every killing command
+    // damages the waveform (bare `o` invalidates only the bottom strip) and a
+    // release gets no command at all, so the reaper — not the killing command —
+    // owns the damage. Full-area damage, NOT a column recompute: the stem painted
+    // on the DISPLAYED basis (wf_cache.fp_*), and a column recomputed on the LIVE
+    // basis could miss it inside a resize/async publish window (do not "optimize"
+    // this back to a single-column damage). The reaper reads no marker index; it
+    // needs none. Session-only, never serialized. Workflow note: after the hold the
+    // green cursor playhead line rests at the marker (a plain Esc deselects and
+    // lands there), which replaces the persistent blue line.
     int           stem_pin_marker      = -1;
     uint64_t      stem_pin_command_seq = 0;
-    int64_t       stem_pin_ms          = 0;
 
     // Active markers view: 'W' = warp markers, 'P' = phase reset markers.
     // Toggled by `p`. Determines which marker collection is visible / edited /
@@ -1773,11 +1775,15 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // only — warp markers in source view, phase resets in target view. In the
 // non-home view a column is display/navigation-only (selection, hover, Tab,
 // readouts all live; every placement/store mutation refuses silently,
-// navigation-class, exactly the read-only-tab convention). The two ruled
-// exceptions live at their sites: the target-view Alt+Up/Down tempo step
-// (owner-only there, adjust_tempo_cents) and the phase-reset propagate
-// (a warp-view gesture that authors phase resets; its paste lands in
-// target view).
+// navigation-class, exactly the read-only-tab convention). The ruled exceptions
+// live at their sites: (1) the target-view Alt+Up/Down tempo step (owner-only
+// there, adjust_tempo_cents); (2) the phase-reset propagate (a warp-view gesture
+// that authors phase resets; its paste lands in target view); and (3) the WARP
+// POSITION NUDGE (Alt+Left/Right, architect 2026-07-24) — this one keyboard
+// gesture runs in BOTH views, gated at its dispatch site (input_handler.cpp) NOT
+// through this predicate, with target-view mechanics mirroring the phase nudge's
+// mapped-domain all-or-nothing regime. The flag DRAG and every other warp
+// mutation stay home-view-only through this predicate.
 inline bool active_column_authoring_allowed(const AppState& app) {
     return (app.active_markers_view == 'P') ? (app.active_audio_view == 'T')
                                             : (app.active_audio_view == 'S');
@@ -1856,10 +1862,11 @@ void remap_marker_indices_after_reorder(AppState& app,
                                         const std::vector<int>& old_to_new);
 
 // CLOCK_MONOTONIC milliseconds (steady_clock is CLOCK_MONOTONIC on this
-// platform). The ONE shared wall-clock reader for the press-driven time bases —
-// strip-row/marker double-click detection (input_pointer.cpp) and the nudge
-// stem-pin burst window (paint_selected_stem + the on_tick expiry reap). Body in
-// app_state.cpp so no TU copies its own clock reader.
+// platform). The ONE shared wall-clock reader for the press-driven double-click
+// time base (strip-row / marker double-click detection, input_pointer.cpp). Body
+// in app_state.cpp so no TU copies its own clock reader. (The nudge stem pin no
+// longer times out on a fixed window — it keys on the live key-repeat hold; see
+// AppState::stem_pin_*.)
 int64_t monotonic_ms();
 
 void    clamp_viewport_start(AppState& a, const GuiAudio& audio);

@@ -4,7 +4,6 @@
 #include "text_display.h"
 #include "text_editor.h"
 #include "time_format.h"
-#include "undo.h"                     // kGestureCoalesceMs (stem-pin burst window)
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
 #include "engine/engine_geometry.h"  // kRs
@@ -517,10 +516,10 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr,
 //       drag suppresses hover, so this arm cannot lean on (a), and
 //   (c) the NUDGE PIN is live — this marker's Alt+Left/Right nudge is the most
 //       recent command (command_seq == stem_pin_command_seq && stem_pin_marker ==
-//       it) AND still inside the burst window (monotonic_ms() - stem_pin_ms <=
-//       kGestureCoalesceMs); an idle pin past the window stops showing (the
-//       on_tick reap kills it). See AppState::stem_pin_* for the two-half
-//       lifecycle.
+//       it). The KEY-HOLD half of the liveness (the Alt+Left/Right key still down)
+//       is owned by the on_tick reap, not tested here: paint keeps the adjacency
+//       check alone and the reaper zeroes stem_pin_marker the tick after the hold
+//       releases (a <=1-tick paint straggle accepted). See AppState::stem_pin_*.
 // Painted BLUE (kSelected — it marks the selected marker, like its flag; the grey
 // belongs to the focus triangle painted ON each selected marker
 // (paint_selected_marker_triangles), not this stem) through render_playhead's line-only
@@ -542,12 +541,12 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
     // Is this the active-column marker being dragged?
     const bool drag_arm =
         app.drag.active && app.drag.drag_mode == app.active_markers_view;
-    // Visibility arms (a) hover, (b) drag, (c) nudge pin.
+    // Visibility arms (a) hover, (b) drag, (c) nudge pin. The nudge pin's
+    // key-hold half is reaped in on_tick (stem_pin_marker zeroed on release), so
+    // paint tests adjacency only.
     const bool hover_arm = (app.hover_popup.marker_index == idx);
     const bool nudge_arm = (app.stem_pin_marker == idx &&
-                            app.command_seq == app.stem_pin_command_seq &&
-                            monotonic_ms() - app.stem_pin_ms <=
-                                static_cast<int64_t>(kGestureCoalesceMs));
+                            app.command_seq == app.stem_pin_command_seq);
     if (!hover_arm && !drag_arm && !nudge_arm) return;
 
     // The marker's effective time: the live store frame, or — under a drag that

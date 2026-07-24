@@ -488,8 +488,9 @@ private:
     // overlay marking the SINGLE selected marker's column — where the playhead
     // sits/would land on it — shown only during interaction with it: while it is
     // HOVERED, while a live marker DRAG grabs it (at the proposed position), or
-    // right after its Alt+Left/Right NUDGE (the pin — live while command-adjacent
-    // AND within the burst window; see AppState::stem_pin_*). Painted BLUE
+    // while its Alt+Left/Right NUDGE key is HELD (the pin — live while
+    // command-adjacent AND the key-repeat hold is armed; see AppState::stem_pin_*).
+    // Painted BLUE
     // (kSelected — it marks the selected marker like its flag) through
     // render_playhead's line-only form over the plate; out of the stem cache so
     // interaction never rebuilds a cache. (The grey focus triangle paints ON each

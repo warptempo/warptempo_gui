@@ -228,3 +228,32 @@ int painted_column_of_source_frame(
 int64_t authored_frame_at_column(
     const AppState& app, const GuiAudio& audio, int col,
     const std::vector<WarpFrameMapSegment>& warp_frame_map);
+
+// UNCLAMPED inverse of map_source_to_target, the shared honest-inverse for the
+// group position nudges' rider proposals in TARGET view (BOTH columns — the warp
+// nudge's third-exception target path and the phase-reset nudge). map_target_to_
+// source CLAMPS any query at or before the map's first target breakpoint to the
+// first source frame, which would HIDE an out-of-range rigid proposal at 0 and
+// pass the post-snap wall belt. This instead EXTENDS segment 0's slope backward
+// below the first breakpoint, so a proposal that mathematically lands before the
+// song start inverse-maps to a NEGATIVE source double and is caught by the exact
+// integer wall belt AFTER the snap — walls stay exact integer compares, never an
+// epsilon-fragile float pre-filter. The interior interpolation and the beyond-last
+// linear tail are already exact in map_target_to_source (the clamp is its only
+// lossy arm), so delegate for every query at or above the first breakpoint. A
+// single-breakpoint map has no segment-0 slope; use slope 1, mirroring
+// map_target_to_source's own beyond-last unit-slope tail. Empty map is identity.
+inline double unclamped_target_to_source(
+    double tgt_frame, const std::vector<WarpFrameMapSegment>& map) {
+    if (map.empty()) return tgt_frame;
+    if (tgt_frame > map.front().tgt_frame)
+        return map_target_to_source(tgt_frame, map);
+    // At or below the first target breakpoint: extend segment 0's slope backward.
+    if (map.size() >= 2) {
+        const double src_dur = map[1].src_frame - map[0].src_frame;
+        const double tgt_dur = map[1].tgt_frame - map[0].tgt_frame;
+        return map[0].src_frame +
+               (tgt_frame - map[0].tgt_frame) * (src_dur / tgt_dur);
+    }
+    return map[0].src_frame + (tgt_frame - map[0].tgt_frame);  // unit slope
+}

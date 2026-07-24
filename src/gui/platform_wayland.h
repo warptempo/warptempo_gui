@@ -64,6 +64,18 @@ public:
     int height() const;
     bool has_initial_configure() const { return has_initial_configure_; }
 
+    // Whether a repeat-eligible key is currently HELD (armed). True from the
+    // key's press (including the compositor's initial-delay phase, before the
+    // first repeat fires) until the hold is cleared — key release, a different
+    // key press, a pointer-button press, a completed wheel emission, keyboard
+    // leave, or keyboard-capability loss (all of which zero repeat_key_ at the
+    // platform input chokepoints). The nudge stem-pin reap uses this as the
+    // "key still down" probe, so a held Alt+Left/Right keeps the blue stem solid
+    // through the initial delay and every repeat, and a release kills it within
+    // one tick. (repeat_key_ == 0 is the "no repeat" state, e.g. a compositor
+    // advertising rate 0.)
+    bool repeat_hold_active() const { return repeat_key_ != 0; }
+
     void set_on_redraw(RedrawCallback cb);
     void set_on_resize(ResizeCallback cb);
     void set_on_key(KeyCallback cb);

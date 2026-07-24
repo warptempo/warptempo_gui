@@ -983,26 +983,28 @@ int main(int argc, char** argv) {
         // waveform all snap together at the worker's completion swap.
         paint_handler.maybe_rebuild_flag_cache();
 
-        // Nudge stem-pin reap (architect 2026-07-23). The blue nudge pin dies by
+        // Nudge stem-pin reap (architect 2026-07-24). The blue nudge pin dies by
         // TWO causes (see AppState::stem_pin_*): (a) command adjacency lost — any
-        // other command bumped command_seq — or (b) the burst window lapsed. Paint
-        // stops drawing the pin the instant EITHER holds, but nothing guarantees a
-        // waveform repaint: a command that bumps command_seq may damage only
-        // another strip (bare `o` invalidates just the bottom strip), and an idle
-        // pin whose window lapsed gets no command at all. So this reaper is the
-        // one-shot cleanup for BOTH: when the pin is set and either cause holds,
-        // damage the waveform so the blue line disappears without user input and
-        // reset stem_pin_marker so it fires ONCE. Full-area damage (not a column):
-        // the stem painted on the DISPLAYED basis (wf_cache.fp_*), but a column
-        // recomputed on the LIVE basis (app.viewport_start_sample + current spp)
-        // can miss it inside a resize/async publish window, ghosting the old
-        // column. The reap is rare (once per burst end), so one full repaint is
-        // negligible and harmless when the killing command already damaged the
-        // waveform (a redundant damage-union).
+        // other command bumped command_seq — or (b) the Alt+Left/Right key-repeat
+        // HOLD released (gui.repeat_hold_active() false). The key-hold probe
+        // replaced the fixed burst timer: a held key keeps the stem SOLID through
+        // the compositor's initial-delay phase and every repeat, and a release
+        // kills it within one tick (~16 ms — "asap"), where any fixed window either
+        // lagged or flickered during the initial delay. Paint stops drawing the pin
+        // the instant EITHER cause holds, but nothing guarantees a waveform repaint
+        // (a command that bumps command_seq may damage only another strip — bare
+        // `o` invalidates just the bottom strip — and a release gets no command at
+        // all), so this reaper is the one-shot cleanup for BOTH: when the pin is set
+        // and either cause holds, damage the waveform and reset stem_pin_marker so
+        // it fires ONCE. Full-area damage (not a column): the stem painted on the
+        // DISPLAYED basis (wf_cache.fp_*), but a column recomputed on the LIVE basis
+        // (app.viewport_start_sample + current spp) can miss it inside a resize/
+        // async publish window, ghosting the old column. The reap is rare (once per
+        // hold end), so one full repaint is negligible and harmless when the killing
+        // command already damaged the waveform (a redundant damage-union).
         if (app.stem_pin_marker >= 0 &&
             (app.command_seq != app.stem_pin_command_seq ||
-             monotonic_ms() - app.stem_pin_ms >
-                 static_cast<int64_t>(kGestureCoalesceMs))) {
+             !gui.repeat_hold_active())) {
             viewport.invalidate_waveform_area();
             app.stem_pin_marker = -1;
         }
