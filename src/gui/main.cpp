@@ -984,9 +984,12 @@ int main(int argc, char** argv) {
         paint_handler.maybe_rebuild_flag_cache();
 
         // Lateral-gesture stem-pin reap (architect 2026-07-24). The blue stem pin
-        // means "the LAST COMMAND was a lateral gesture on this marker" (a position
-        // nudge/drag or the W+target tempo drag; the tempo NUDGE/step no longer
-        // stamps — architect 2026-07-24; see AppState::stem_pin_*). Command
+        // means "the LAST COMMAND was a lateral gesture on this marker". FOUR
+        // stamping sites (mirroring the authoritative list at AppState::stem_pin_*):
+        // the position nudge, the position-drag commit, the tempo-drag end, and the
+        // tempo-image step (Alt+Left/Right in W+target). The Alt+Up/Down tempo step
+        // stamps NOWHERE (its stepped marker's own image is fixed by construction).
+        // Command
         // adjacency is the test (command_seq ==
         // stem_pin_command_seq), but death is DAMAGE-QUIESCENCE-SCOPED: the
         // dispatch-exit preserve (StemPinPreserveGuard) re-stamps

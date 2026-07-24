@@ -1581,11 +1581,43 @@ void MarkerDragOps::step_tempo_image(int direction) {
                                  /*walled=*/false, d)) {
         return;
     }
-    // d == 0: bracket edge (the constructive clamp pinned the solve at the
-    // current cents) — a refused press: no undo entry, no dirty, no stamp, and
-    // no damage, so the damage-quiescence guard preserves any live stem pin
-    // across it for free (a refused press never kills the pin).
-    if (d == 0) return;
+    // THE MINIMUM-STEP RULE (codex second-pass round-1 HIGH): d == 0 is NOT only
+    // the bracket edge — it is the NORMAL quantization result whenever one cent
+    // moves the image more than ~2 px. The cent grid is the authored domain's
+    // resolution, so a one-pixel image target on a long span is unrepresentable:
+    // 44.1 kHz, scale 1, tempo 1.00, working zoom, a 1 s / 800 px predecessor
+    // span gives the adjacent-pixel solve 100.125 / 99.875 cents -> nearbyint ->
+    // 100 -> d == 0 both directions, forever (each press re-derives from the
+    // unchanged column, so nothing accumulates). A directional press therefore
+    // commits AT LEAST one cent in the pressed direction (the Alt+Up/Down "a step
+    // always steps" convention), moving the image by that cent's own pixel
+    // distance (~2 px at working zoom over a 1 s span, more over longer spans —
+    // the pressed direction always wins, the exact pixel count yielded to the
+    // grid). SIGN: d_fallback = -direction — Alt+Left (direction -1) targets an
+    // earlier column -> shorter segment -> predecessor tempo UP -> +1 cent;
+    // Alt+Right (direction +1) -> -1 cent (verified against the solve's own
+    // faster-is-shorter derivation: tempo = l_src / (span * s), so a smaller
+    // span raises the predecessor tempo). ALL-OR-NOTHING against the
+    // participants: every participant must have >= 1 cent of bracket headroom in
+    // that direction, else the WHOLE press refuses silently — a TRUE bracket wall
+    // still refuses (the d==0 edge case remains real, just correctly scoped now).
+    // When the SOLVE returns a nonzero d (short spans — one pixel needs many
+    // cents), the fallback is never consulted and behavior is unchanged; the
+    // fallback only floors the long-span limit. Rejected alternatives, recorded
+    // so they are not re-proposed: sub-cent intent accumulation across presses
+    // (violates the nothing-accumulates pixel-anchor principle — every press
+    // re-derives from the painted state) and allowing the no-op (the reported
+    // inertness IS the bug). Judged planner-side as family-consistent; architect
+    // may re-rule.
+    if (d == 0) {
+        const int64_t d_fallback = -static_cast<int64_t>(direction);
+        for (int pp : seed.participants) {
+            if (pp < 0 || pp >= static_cast<int>(mv.size())) continue;
+            const int64_t c2 = mv[pp].tempo_cents + d_fallback;
+            if (c2 < kTempoMinCents || c2 > kTempoMaxCents) return;  // true wall
+        }
+        d = d_fallback;
+    }
 
     // Coalescing decision before mutation (command adjacency; this route is the
     // only producer of TempoImageStep, so a burst over the same group collapses

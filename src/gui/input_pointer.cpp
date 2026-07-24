@@ -1729,9 +1729,19 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // arm_region_drag_at), so a plain click leaves the region cleared and
         // there is nothing to do at release but disarm. A jitter drag that
         // crossed the gate but rests a sub-threshold sliver dissolves like a
-        // click (end_region_drag_min_size_check).
+        // click (end_region_drag_min_size_check) — but ONLY a MOVED drag runs
+        // that check (codex second-pass round-1 MEDIUM): the SHIFT-exact former's
+        // preserving arm (arm_region_drag_preserving) does NOT dissolve
+        // app.region, so a motionless shift-sliver press-release rests a legal
+        // narrow region (a SelectionExtent/TrimWindow highlight, NOT subject to
+        // the drag-rest minimum), and an unconditional min-size check would delete
+        // it. Capture `moved` BEFORE the state reset (the reset zeroes it). Plain
+        // path unaffected: a plain MOVED drag still checks; a plain motionless
+        // release left the region cleared at arm (arm_region_drag_at), so the
+        // check would early-return anyway — the gate changes nothing there.
+        const bool moved = app.region_drag.moved;
         app.region_drag = RegionDragState{};
-        end_region_drag_min_size_check(app, audio, viewport, selection);
+        if (moved) end_region_drag_min_size_check(app, audio, viewport, selection);
         return;
     }
     if (app.tempo_drag.active) {
@@ -2036,10 +2046,17 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // end the gesture, resting the region at its current extent (as a
         // clean release would). Modifier changes mid-drag are ignored. A
         // sub-threshold sliver rest dissolves like a click, exactly as the
-        // clean release branch does (end_region_drag_min_size_check).
+        // clean release branch does (end_region_drag_min_size_check) — and
+        // identically gated on `moved` (codex second-pass round-1 MEDIUM): a
+        // MOTIONLESS lost button on the shift-exact preserving arm must not delete
+        // the legal narrow region it left resting. Capture `moved` before the
+        // reset zeroes it; plain path unaffected for the same reasons as the clean
+        // release branch.
         if (!mods.primary_button_held) {
+            const bool moved = app.region_drag.moved;
             app.region_drag = RegionDragState{};
-            end_region_drag_min_size_check(app, audio, viewport, selection);
+            if (moved)
+                end_region_drag_min_size_check(app, audio, viewport, selection);
             return;
         }
         const GuiRect area = waveform_area(app);
@@ -2047,8 +2064,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // Sub-threshold: the press has not yet become a drag. Below the shared
         // Chebyshev gate nothing extra happens — the press already did the
         // click and cleared any resting region at mouse-down. Once a drag,
-        // always a drag (moved never re-engages).
-        if (!app.region_drag.moved &&
+        // always a drag (moved never re-engages). `crossing` = this event is the
+        // transition to moved (captured before we set the flag); it force-installs
+        // the anchored span below, past the same-column short-circuit.
+        const bool crossing = !app.region_drag.moved;
+        if (crossing &&
             std::max(std::abs(mouse_x - app.region_drag.press_x),
                      std::abs(mouse_y - app.region_drag.press_y)) <
                 kDragMovedThresholdPx) {
@@ -2079,10 +2099,17 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // Column-change gate: the span changes only when the far endpoint moves
         // to a new frame. A same-frame motion event (sub-pixel jitter within one
         // column) is a no-op — skip the repaint. The anchor is fixed for the
-        // gesture, so the far endpoint alone decides the span. On the first
-        // extend event the arm cleared the region (active == false), so this
-        // proceeds and seeds it.
-        if (app.region.active && far_frame == app.region.b_frame) return;
+        // gesture, so the far endpoint alone decides the span. The CROSSING event
+        // ALWAYS installs {anchor, pointer}, bypassing this short-circuit (codex
+        // second-pass round-1 MEDIUM): the plain arm cleared the region
+        // (active == false) so it would proceed anyway, but the SHIFT-exact
+        // preserving arm leaves the OLD region active, and its stale b_frame can
+        // coincide with the first crossed column's frame — without the bypass the
+        // crossing marks moved yet returns before installing, resting the stale
+        // span indefinitely. The short-circuit's purpose (redundant-damage
+        // avoidance on same-column motion) survives for every LATER event.
+        if (!crossing && app.region.active && far_frame == app.region.b_frame)
+            return;
         app.region.active     = true;
         app.region.a_frame    = app.region_drag.anchor_frame;
         app.region.b_frame    = far_frame;
