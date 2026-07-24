@@ -2,7 +2,7 @@
 
 #include "audio.h"
 #include "engine/engine_geometry.h"  // kN
-#include "input_handler.h"      // set_region_to_selection_extent (group nudge)
+#include "group_position_nudge.h"  // the shared group position-nudge flesh
 #include "target_render.h"
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
@@ -183,9 +183,10 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // press (GROUP, architect 2026-07-23 — a 2+ selection nudges rigidly, the
 // keyboard sibling of the group position drag; a singleton is the degenerate
 // case). Direction: -1 for earlier, +1 for later. Symmetric with
-// nudge_selected_markers — the FOCUSED reset is the pixel-column ANCHOR (the
-// one-column-per-press derivation and its numeric rationale live in the comment
-// there), and every OTHER selected member rides the anchor's uniform target-domain
+// nudge_selected_markers — the FOCUSED reset is the pixel-column ANCHOR
+// (stepped_anchor_frame — the one-column-per-press derivation and its numeric
+// rationale live in the comment there), and every OTHER selected member rides the
+// anchor's uniform target-domain
 // delta D as a COMPUTED position (snap(inv(fwd(orig_k) + D)) through the mapped
 // domain, never re-column-snapped per member). Both columns share
 // painted_column_of_source_frame / authored_frame_at_column, so the anchored
@@ -205,20 +206,15 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // reorder-and-remap path below; the render boundary collapses an exact-equal
 // group to one event.
 void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
-    if (app.loading || audio.total_frames() <= 0) return;
-    // Stop playback first. Playhead rule, symmetric with
-    // nudge_selected_markers (full rationale there): the playhead FOLLOWS the
-    // focused marker through the nudge — it steps with it so a later Space
-    // auditions FROM the marker (architect 2026-07-23, reversing the 2026-07-20
-    // decoupling; the coming scrub surface owns upstream auditioning).
-    playback_lifecycle.stop_playback_if_playing();
-    if (app.selected_markers.empty()) return;
-    if (app.last_selected_marker < 0) return;
-    // Undo-coalescing decision. coalesce_gesture keys off command adjacency
-    // (app.command_seq, bumped once at the on_key dispatch entry that reached
-    // this handler); it just has to run before record_gesture stamps this
-    // command below.
-    const bool merge = undo.coalesce_gesture(GestureKind::PhaseResetNudge);
+    // Shared guard prologue: loading / empty-audio refusal, playback stop first,
+    // empty/no-focus refusals, the coalesce verdict, the geometry refusals, and
+    // the stale-index belt (the playhead-follows-focused / lead-in rationale lives
+    // at the declaration). Refuses silently, navigation-class.
+    const GroupNudgePrologue pro = group_position_nudge_prologue(
+        app, audio, playback_lifecycle, undo, GestureKind::PhaseResetNudge,
+        static_cast<int>(app.phaseresetmarkers.markers().size()));
+    if (!pro.ok) return;
+    const bool merge = pro.merge;
     // GROUP nudge (architect 2026-07-23): a 2+ selection nudges RIGIDLY, the
     // keyboard sibling of the group position drag — NO collapse_to_focused. Phase
     // resets carry no tempo, so there is no inherit/tempo analog; the FOCUSED
@@ -226,16 +222,8 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     // other selected member rides its uniform delta D (the rigid-group
     // convention — computed positions, never re-column-snapped per member). A
     // singleton degenerates to the anchor alone.
-    const int sr = audio.sample_rate();
-    if (sr <= 0) return;
-    if (current_samples_per_pixel(app, audio) <= 0.0) return;
-
     const auto& tv = app.phaseresetmarkers.markers();
-    for (int idx : app.selected_markers) {
-        if (idx < 0 || idx >= static_cast<int>(tv.size())) return;
-    }
-    const int f = app.last_selected_marker;
-    if (f < 0 || f >= static_cast<int>(tv.size())) return;   // focused stale
+    const int   f  = pro.focused;   // validated in [0, tv.size()) by the prologue
 
     // The anchoring map is the DISPLAYED paint basis —
     // displayed_or_live_target_map, the SAME map the stem/flag painter reads —
@@ -252,13 +240,11 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         displayed_or_live_target_map(app, audio);
     const int64_t reset_wall = audio.total_frames() - 1;
 
-    // (1) The ANCHOR steps one painted column (its committed frame is the pixel
-    // anchor). A refusal here refuses the whole press.
+    // (1) The ANCHOR steps one painted column (stepped_anchor_frame; its committed
+    // frame is the pixel anchor). A refusal here refuses the whole press.
     const int64_t orig_f = tv[f].time_frame;
-    const int cf = painted_column_of_source_frame(
-        app, audio, static_cast<double>(orig_f), map);
     const int64_t committed_f =
-        authored_frame_at_column(app, audio, cf + direction, map);
+        stepped_anchor_frame(app, audio, map, orig_f, direction);
     if (committed_f < 0 || committed_f > reset_wall) return;
     // (2) The uniform ACTIVE-domain (target) delta from the anchor's step, in the
     // mapped domain: D = fwd(committed_f) - fwd(orig_f).
@@ -322,35 +308,11 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         app, reorder_markers_by_time(app.phaseresetmarkers.markers_mut()));
     std::vector<int> touched_live(app.selected_markers.begin(),
                                   app.selected_markers.end());
-    // Stem LATERAL-GESTURE PIN (symmetric with the warp nudge): the position nudge
-    // is a lateral gesture, so keep the FOCUSED reset's stem visible after it.
-    // Post-reorder focused index and the current command_seq; the pin persists
-    // until the next DAMAGING command — damage-less commands re-stamp adjacency
-    // through StemPinPreserveGuard — and the dead pin is reaped one-shot in on_tick
-    // (the authoritative scope lives at AppState::stem_pin_*). A burst re-stamps
-    // each press, so the stem stays solid. Paint gates it to a singleton, so for a
-    // 2+ selection this stamp is INERT — the singleton gate never admits it, and
-    // any DAMAGING command that narrows the group to one kills the pin first —
-    // except the accepted deferred-click exception (full edge at
-    // AppState::stem_pin_*): a plain press on an already-selected group member
-    // arms a deferred click and paints nothing, so a damage-less press re-stamps
-    // the still-inert pin, and the completing motionless release (not a command)
-    // narrows the selection to singleton without killing it, admitting the pin
-    // when the released marker is the pinned one. Stamped anyway for uniformity
-    // with the singleton path.
-    app.stem_pin_marker      = app.last_selected_marker;
-    app.stem_pin_command_seq = app.command_seq;
-    // Playhead follows the FOCUSED reset through the post-mutation two-step basis
-    // (committed_f is reorder-independent; the phase reset home is target view, so
-    // source_frame_to_active_domain maps). move_playhead_to owns the clamp and
-    // invalidation, writing the cursor field only (playback was stopped above).
-    viewport.move_playhead_to(
-        source_frame_to_active_domain(app, audio, committed_f));
     // Coalesce a rapid burst: the first press pushed the pre-burst snapshot with
     // the group hints; a continuation press skips the redundant push and REFRESHES
     // the surviving entry's touched_live to this press's post-reorder indices
-    // (touched_snapshot stays the first press's pre-burst coordinates). Then
-    // re-record with the post-mutation selection.
+    // (touched_snapshot stays the first press's pre-burst coordinates). The
+    // post-mutation re-record happens in the shared tail.
     if (merge) {
         undo.note_coalesced_commit();
         undo.refresh_coalesced_touched_live(std::move(touched_live));
@@ -359,18 +321,11 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
                                    std::move(touched_snapshot),
                                    std::move(touched_live));
     }
-    undo.record_gesture(GestureKind::PhaseResetNudge);
-    undo.recompute_dirty();
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
-    // Region follow (SelectionExtent only): an active SelectionExtent region
-    // re-derives to the moved group's extent (MAINTAIN only, never CREATE; an
-    // inactive / Free / TrimWindow region is untouched — position gestures do not
-    // re-sync TrimWindow). The SelectionExtent provenance survives the nudge (no
-    // collapse, and the reorder remap does not demote), so the gate is reliable.
-    if (app.region.active &&
-        app.region.provenance == RegionProvenance::SelectionExtent) {
-        set_region_to_selection_extent(app, audio, viewport);
-    }
-    target_render.trigger();
+    // Shared commit tail: stem lateral-gesture pin, record/dirty/invalidate,
+    // playhead follow (committed_f is reorder-independent; the target home maps),
+    // SelectionExtent region follow, and the view-independent target trigger.
+    // Ordering rationale at the declaration.
+    finish_group_position_nudge(app, audio, viewport, undo,
+                                GestureKind::PhaseResetNudge, committed_f,
+                                target_render);
 }

@@ -1,0 +1,171 @@
+#pragma once
+
+#include "app_state.h"
+#include "playback_lifecycle.h"
+#include "undo.h"
+#include "viewport.h"
+#include "warp_frame_map.h"   // WarpFrameMapSegment
+
+#include <cstdint>
+#include <vector>
+
+class GuiAudio;
+struct GuiTargetRender;
+
+// Shared type-free flesh of the two GROUP POSITION nudges — the warp nudge
+// (GuiWarpMarkersOps::nudge_selected_markers, source home view) and the phase
+// reset nudge (GuiPhaseResetMarkersOps::nudge_selected_phase_resets, target home
+// view). Both are Alt+Left/Right, each authoring its own column in its home
+// view; a 2+ selection nudges rigidly, a singleton is the degenerate case. The
+// twins share an identical guard prologue, an identical pixel-column anchor
+// step, and an identical commit tail; only the WALL-REGIME MIDDLE differs by
+// ruled doctrine ("one regime per column at its home") — warp CLAMPS the rigid
+// integer delta into the member wall-headroom intersection (identity domain),
+// phase REFUSES all-or-nothing over the mapped domain (unclamped inverse + exact
+// integer wall belt) — and that middle stays in each twin VERBATIM. These three
+// free functions collapse only the type-free parts: no templates, no callbacks,
+// no policy structs (the naming-symmetry doctrine resists genericity — this is
+// plain extraction of the shared flesh).
+
+// Result of the shared guard prologue.
+struct GroupNudgePrologue {
+    bool ok      = false;  // false: the press refuses (silent, navigation-class)
+    bool merge   = false;  // undo-coalesce verdict for this press
+    int  focused = -1;     // app.last_selected_marker, validated in [0, store_size)
+};
+
+// The shared guard prologue of the two group position nudges. Order is IDENTICAL
+// in both twins and preserved exactly: (1) loading / empty-audio refusal;
+// (2) stop_playback_if_playing FIRST — this is a fine-tuning authoring gesture
+// (Alt+Left/Right is the only caller path), and an empty-selection press in home
+// view still stops playback today; (3) empty-selection refusal; (4) no-focus
+// refusal; (5) the undo-coalesce verdict, computed before the geometry refusals
+// (a const query — coalesce_gesture keys off command adjacency, app.command_seq
+// bumped once at the on_key dispatch entry that reached the handler, and it just
+// has to run before record_gesture stamps this command in the tail); (6) bad
+// sample-rate refusal; (7) non-positive samples-per-pixel refusal; (8) the
+// stale-index belt over every selected index; (9) focused-index stale refusal.
+// Every marker is nudgeable, including the one at time 0 — the parser resolver
+// normalizes the resulting arrangement at render/preview time, there is no
+// gesture pin.
+//
+// PLAYHEAD RULE (architect 2026-07-23, reversing the 2026-07-20 decoupling): the
+// playhead FOLLOWS the focused marker through the nudge (the actual follow lands
+// in finish_group_position_nudge) — it steps with the marker so a later Space
+// auditions FROM the marker. Some focus routes land the playhead on the FOCUSED
+// marker already (a plain single-select marker click, Tab, `c`); a focus set
+// whose land went ELSEWHERE or nowhere — a shift-range / ctrl marker click (which
+// lands at the earliest SELECTED marker, diverging from the clicked focus unless
+// it is the earliest), a Ctrl+click toggle-REMOVE (focus repaired to another
+// selected marker), undo/redo's touched-set selection — is towed onto the focused
+// marker by the first nudge. The lead-in workflow (parking the playhead upstream
+// to audition the approach) is supplied by the scrub surface instead. The twins
+// keep their own GestureKind (WarpNudge / PhaseResetNudge).
+GroupNudgePrologue group_position_nudge_prologue(
+    AppState& app, const GuiAudio& audio,
+    GuiPlaybackLifecycle& playback_lifecycle, Undo& undo,
+    GestureKind kind, int store_size);
+
+// The shared pixel-column ANCHOR step: read the focused item's currently painted
+// column (painted_column_of_source_frame — the stem painters' own math against
+// the displayed paint basis) and commit the frame at cf + direction
+// (authored_frame_at_column, which funnels through snap_authored_frame, the one
+// fractional-to-authored route). Returns the committed frame RAW — walls are NOT
+// this helper's business: the warp twin clamps its rigid delta afterward, the
+// phase twin applies its own all-or-nothing refusal.
+//
+// THE ONE-COLUMN-PER-PRESS GUARANTEE and its numeric rationale live here. It is a
+// GRID-FINENESS property, not a gesture-family property: the anchor's painted move
+// is exactly the commanded column per press because the authored FRAME grid is
+// finer than the pixel grid, so every adjacent-column target is representable in
+// the authored domain (and re-anchoring to the column grid every press re-derives
+// the pixel phase, so whole-frame rounding residue never accumulates — rounding
+// each press independently would paint occasional 0 or 2 px jumps). In the PHASE
+// nudge's mapped target home the deepest zoom gives at least 27.5625 / 16 = 1.72
+// source frames per target pixel under the value brackets (tempo times both scales
+// at least 0.25 * 0.5 * 0.5 = 1/16) at the 44100 sample-rate floor, so the
+// whole-frame rounding error is at most 0.29 px; in the WARP nudge's identity
+// source home the bound is trivially stronger (a column is at least 27.5625 whole
+// frames, error at most 0.5 frame, about 0.018 px). Either way each press still
+// advances at least one whole frame.
+//
+// The contrast is the point, documenting a trap that already bit once: the
+// W+target Alt+Left/Right TEMPO-IMAGE STEP (MarkerDragOps::step_tempo_image) is
+// NOT a consumer of this guarantee and cannot be — it authors CENTS, a grid
+// COARSER than the pixel grid on ordinary spans (one cent moves the image about
+// 2+ px there), so the guarantee INVERTS and the minimum-step rule at
+// step_tempo_image owns that gesture's step size. One painted column per press
+// applies to the POSITION nudges only.
+int64_t stepped_anchor_frame(
+    const AppState& app, const GuiAudio& audio,
+    const std::vector<WarpFrameMapSegment>& map,
+    int64_t orig_frame, int direction);
+
+// The shared type-free COMMIT TAIL. Each twin calls this AFTER it has: run its
+// regime middle, mutated its store, run reorder_markers_by_time +
+// remap_marker_indices_after_reorder, collected touched_live, and done its own
+// typed undo merge/push block (push_undo_warp with affects_persistence=true /
+// push_undo_phase_reset — those stay in the twins). The tail then, in order:
+// (a) stem LATERAL-GESTURE PIN: the position nudge is a lateral gesture, so keep
+//     the FOCUSED item's stem visible after it — stamp the post-reorder focused
+//     index and the current command_seq. The pin persists until the next DAMAGING
+//     command (damage-less commands re-stamp adjacency through
+//     StemPinPreserveGuard) and the dead pin is reaped one-shot in on_tick (the
+//     authoritative scope lives at AppState::stem_pin_*). A burst re-stamps each
+//     press (the immediately-next command), so the stem stays solid across it.
+//     Paint gates the stem to a SINGLETON selection, so for a 2+ selection this
+//     stamp is INERT — the singleton gate never admits it, and any DAMAGING
+//     command that narrows the group to one kills the pin first — except the
+//     accepted deferred-click exception (full edge at AppState::stem_pin_*): a
+//     plain press on an already-selected group member arms a deferred click and
+//     paints nothing, so a damage-less press re-stamps the still-inert pin, and
+//     the completing motionless release (not a command) narrows the selection to
+//     singleton without killing it, admitting the pin when the released marker is
+//     the pinned one. Stamped anyway for uniformity with the singleton path.
+// (b) record_gesture (re-stamps this command for the next coalesce test);
+// (c) recompute_dirty;
+// (d) invalidate_waveform_area;
+// (e) invalidate_timestamp_area;
+// (f) PLAYHEAD FOLLOW: move_playhead_to the focused item's committed frame
+//     through the two-step placement basis (source_frame_to_active_domain —
+//     identity in warp's source home, a real map in phase's target home;
+//     committed_focused_frame is reorder-independent). move_playhead_to owns the
+//     clamp, invalidation, and keep-visible edge-align, writing the cursor field
+//     only (playback was stopped in the prologue).
+// (g) REGION FOLLOW (SelectionExtent only): an active SelectionExtent region
+//     re-derives to the moved group's extent — MAINTAIN only, never CREATE; an
+//     inactive / Free / TrimWindow region is untouched (position gestures do not
+//     re-sync TrimWindow). The SelectionExtent provenance survives the nudge (no
+//     membership replace, and the reorder remap does not demote), so the gate is
+//     reliable.
+// (h) target_render.trigger.
+//
+// NO SYNCHRONOUS RE-WARP is needed at either home: the warp nudge authors in
+// warp's SOURCE home view, where the source waveform pixels do not depend on the
+// warp map, and the phase nudge moves phase reset positions, which do not change
+// the warp map either — so there is no displayed target plate to re-warp. The
+// target preview still invalidates (a source-view warp edit changes the rendered
+// target buffer), so the view-independent trigger stays.
+//
+// ORDERING: the two twins historically ordered {pin, undo push, playhead}
+// slightly differently (warp: pin -> push -> record -> ... -> playhead -> region;
+// phase: pin -> playhead -> push -> record -> ... -> region). This unified order
+// is behavior-identical for the committed bytes and the undo entry: the undo
+// push/record read neither the playhead nor the stem pin (their snapshots capture
+// the marker stores, engine settings, tab, and the hint indices only — not the
+// cursor), the stem-pin stamp and move_playhead_to do not read undo state, and
+// the region follow reads only the post-mutation store/selection.
+//
+// ONE knowingly-accepted display-state delta rides the unification: hover-popup
+// ordering. move_playhead_to can conditionally recompute the hover after a
+// viewport shift, and the undo push clears it; the phase twin historically
+// recomputed-then-cleared while the warp twin cleared-then-maybe-recomputed, so
+// the unified tail (push first, playhead in the tail) gives BOTH the warp
+// behavior — a nudge that shifts the viewport with the pointer resting on a
+// hoverable marker now ends with the hover recomputed rather than cleared. This
+// is transient display state only (no committed bytes, no undo content, damage
+// idempotent); accepted as improved twin symmetry.
+void finish_group_position_nudge(
+    AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
+    GestureKind kind, int64_t committed_focused_frame,
+    GuiTargetRender& target_render);
