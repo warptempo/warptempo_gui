@@ -160,6 +160,14 @@ void Undo::note_coalesced_commit() {
     viewport.clear_hover_popup();
 }
 
+void Undo::refresh_coalesced_touched_live(std::vector<int> touched_live) {
+    // Single-writer: the burst's entry is the top of the undo stack (command
+    // adjacency admits no intervening push). Overwrite only touched_live; the
+    // first-press touched_snapshot stays the restore-produces coordinates.
+    if (app.history.undo_stack.empty()) return;
+    app.history.undo_stack.back().touched_live = std::move(touched_live);
+}
+
 namespace {
 
 // Shared post-restore SELECTION rule for both marker lists. After a marker

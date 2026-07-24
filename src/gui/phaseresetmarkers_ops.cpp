@@ -2,6 +2,7 @@
 
 #include "audio.h"
 #include "engine/engine_geometry.h"  // kN
+#include "input_handler.h"      // set_region_to_selection_extent (group nudge)
 #include "target_render.h"
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
@@ -178,25 +179,31 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
     target_render.trigger();
 }
 
-// Nudge the focused phase reset by exactly one on-screen pixel column
-// per press. Direction: -1 for earlier, +1 for later. Symmetric with
-// nudge_selected_markers — the pixel-column-anchored derivation, the
-// one-column-per-press guarantee, and its numeric rationale live in the
-// comment there; both columns share painted_column_of_source_frame /
-// authored_frame_at_column, so the anchored column is the painted one
-// and the committed value is a whole source frame.
+// Nudge the selected phase resets by exactly one on-screen pixel column per
+// press (GROUP, architect 2026-07-23 — a 2+ selection nudges rigidly, the
+// keyboard sibling of the group position drag; a singleton is the degenerate
+// case). Direction: -1 for earlier, +1 for later. Symmetric with
+// nudge_selected_markers — the FOCUSED reset is the pixel-column ANCHOR (the
+// one-column-per-press derivation and its numeric rationale live in the comment
+// there), and every OTHER selected member rides the anchor's uniform target-domain
+// delta D as a COMPUTED position (snap(inv(fwd(orig_k) + D)) through the mapped
+// domain, never re-column-snapped per member). Both columns share
+// painted_column_of_source_frame / authored_frame_at_column, so the anchored
+// column is the painted one and every committed value is a whole source frame.
 //
-// Wall semantics are one regime now, against this column's absolute range
-// (zero / total_frames - 1 — the single marker EOF wall both columns share;
-// see drop_phase_reset_at_position for the ruling): this gesture runs in
-// phase reset's TARGET home view only (the home-view binding, architect
-// 2026-07-22), so the all-or-nothing silent refusal is unconditional — a
-// proposal leaving the range refuses wholesale. The integer walls win over
-// the pixel grid. (The old source-view clamp arm died with the binding —
-// there is no per-view refuse-vs-clamp split left.)
-// Crossing a neighbor is legal and goes through the reorder-and-remap
-// path below; the render boundary collapses an exact-equal group to one
-// event.
+// Wall semantics are one regime, GROUP-strict, against this column's absolute
+// range (zero / total_frames - 1 — the single marker EOF wall both columns share;
+// see drop_phase_reset_at_position for the ruling): this gesture runs in phase
+// reset's TARGET home view only (the home-view binding, architect 2026-07-22), so
+// the all-or-nothing silent refusal applies to the WHOLE group — if ANY member's
+// proposal (the anchor's column snap or any rider's rigid position) leaves the
+// range the whole press refuses (no per-member skip; the wall is hit before
+// anything moves — the group step's max-strict precedent). A singleton is
+// bit-for-bit the pre-group refusal. The integer walls win over the pixel grid.
+// (The old source-view clamp arm died with the binding — there is no per-view
+// refuse-vs-clamp split left.) Crossing a neighbor is legal and goes through the
+// reorder-and-remap path below; the render boundary collapses an exact-equal
+// group to one event.
 void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
     // Stop playback first. Playhead rule, symmetric with
@@ -212,10 +219,13 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     // this handler); it just has to run before record_gesture stamps this
     // command below.
     const bool merge = undo.coalesce_gesture(GestureKind::PhaseResetNudge);
-    // Phase resets carry no tempo, so there is no inherit/tempo analog to
-    // collapse — only nudge and jump; the per-marker loop below then runs
-    // over the focused singleton.
-    selection.collapse_to_focused();
+    // GROUP nudge (architect 2026-07-23): a 2+ selection nudges RIGIDLY, the
+    // keyboard sibling of the group position drag — NO collapse_to_focused. Phase
+    // resets carry no tempo, so there is no inherit/tempo analog; the FOCUSED
+    // reset (app.last_selected_marker) is the pixel-anchored ANCHOR and every
+    // other selected member rides its uniform delta D (the rigid-group
+    // convention — computed positions, never re-column-snapped per member). A
+    // singleton degenerates to the anchor alone.
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
     if (current_samples_per_pixel(app, audio) <= 0.0) return;
@@ -224,73 +234,120 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(tv.size())) return;
     }
+    const int f = app.last_selected_marker;
+    if (f < 0 || f >= static_cast<int>(tv.size())) return;   // focused stale
+
     // The anchoring map is the DISPLAYED paint basis —
     // displayed_or_live_target_map, the SAME map the stem/flag painter reads —
-    // so a press moves the reset by exactly the commanded pixel column against
-    // WHAT IS PAINTED, even inside a worker publish window where the displayed
-    // map lags the live one. Phase resets author in their TARGET home view only
-    // (the home-view binding, architect 2026-07-22), a mapped (non-identity)
-    // domain, so the wall policy is a single regime — the all-or-nothing silent
-    // refusal outside the absolute range — because target is the only view this
-    // gesture runs in; the former source-view clamp arm was unreachable under
-    // the home-view binding and is gone.
+    // so the ANCHOR moves by exactly the commanded pixel column against WHAT IS
+    // PAINTED, even inside a worker publish window where the displayed map lags
+    // the live one. Phase resets author in their TARGET home view only (the
+    // home-view binding, architect 2026-07-22), a mapped (non-identity) domain,
+    // so the wall policy is one regime — GROUP all-or-nothing silent refusal:
+    // if ANY member's proposal leaves the absolute range the WHOLE press refuses
+    // (the wall is hit before anything moves — the group's max-strict precedent).
+    // The former source-view clamp arm was unreachable under the binding and is
+    // gone.
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
     const int64_t reset_wall = audio.total_frames() - 1;
+
+    // (1) The ANCHOR steps one painted column (its committed frame is the pixel
+    // anchor). A refusal here refuses the whole press.
+    const int64_t orig_f = tv[f].time_frame;
+    const int cf = painted_column_of_source_frame(
+        app, audio, static_cast<double>(orig_f), map);
+    const int64_t committed_f =
+        authored_frame_at_column(app, audio, cf + direction, map);
+    if (committed_f < 0 || committed_f > reset_wall) return;
+    // (2) The uniform ACTIVE-domain (target) delta from the anchor's step, in the
+    // mapped domain: D = fwd(committed_f) - fwd(orig_f).
+    const double D = map_source_to_target(static_cast<double>(committed_f), map)
+                   - map_source_to_target(static_cast<double>(orig_f),      map);
+
+    // (3) Every member's proposal: the anchor commits its column snap; every
+    // OTHER member is the rigid computed position snap(inv(fwd(orig_k) + D)) — the
+    // ONE double-to-authored route, never re-column-snapped. Check EACH against
+    // the absolute range; ANY out-of-range member refuses the whole press.
     std::vector<std::pair<int, int64_t>> proposals;
     proposals.reserve(app.selected_markers.size());
     for (int idx : app.selected_markers) {
-        const int c = painted_column_of_source_frame(
-            app, audio, static_cast<double>(tv[idx].time_frame), map);
-        int64_t t_new =
-            authored_frame_at_column(app, audio, c + direction, map);
-        // All-or-nothing silent refusal outside the absolute range.
-        if (t_new < 0 || t_new > reset_wall) return;
+        int64_t t_new;
+        if (idx == f) {
+            t_new = committed_f;
+        } else {
+            t_new = snap_authored_frame(map_target_to_source(
+                map_source_to_target(static_cast<double>(tv[idx].time_frame),
+                                     map) + D,
+                map));
+            if (t_new < 0 || t_new > reset_wall) return;
+        }
         proposals.emplace_back(idx, t_new);
     }
     bool any_changed = false;
     for (const auto& [idx, t_new] : proposals) {
-        if (t_new != tv[idx].time_frame) any_changed = true;
+        if (t_new != tv[idx].time_frame) { any_changed = true; break; }
     }
     if (!any_changed) return;
     std::vector<GuiPhaseResetMarker> pre_state =
         app.phaseresetmarkers.markers();
     const int                 hint_last = app.last_selected_marker;
+    // Identity hints: the WHOLE group in PRE-reorder snapshot coordinates (the
+    // diff matcher is identity-blind for a translated group).
+    std::vector<int> touched_snapshot(app.selected_markers.begin(),
+                                      app.selected_markers.end());
     for (const auto& [idx, t_new] : proposals) {
         GuiPhaseResetMarker* m =
             app.phaseresetmarkers.marker_mut(idx);
         if (!m) continue;
         m->time_frame = t_new;
     }
-    // A nudge may cross a neighbor; restore time order and re-point
-    // the selection at the moved reset.
+    // A nudge may cross a neighbor; restore time order and remap the index-shaped
+    // state (the whole group's selection follows to the new slots).
     remap_marker_indices_after_reorder(
         app, reorder_markers_by_time(app.phaseresetmarkers.markers_mut()));
-    // Stem NUDGE PIN (symmetric with the warp nudge): keep the moved reset's stem
-    // visible through the fine-tuning burst. Post-reorder focused index + the
-    // current command_seq; the pin dies at the next command.
+    std::vector<int> touched_live(app.selected_markers.begin(),
+                                  app.selected_markers.end());
+    // Stem NUDGE PIN (symmetric with the warp nudge): keep the FOCUSED reset's
+    // stem visible through the fine-tuning burst. Post-reorder focused index, the
+    // current command_seq, and the burst-window timestamp; the pin dies at the
+    // next command, at burst-window expiry (on_tick reap), or on a selection
+    // change. Paint gates it to a singleton, so a group nudge stamps but shows no
+    // stem until the group narrows to one.
     app.stem_pin_marker      = app.last_selected_marker;
     app.stem_pin_command_seq = app.command_seq;
-    // Playhead follows the marker: keep the playhead on the focused reset,
-    // through the post-mutation two-step basis (identical to the warp nudge; the
-    // committed t_new is reorder-independent). move_playhead_to owns the
-    // clamp and invalidation, writing the cursor field only — playback was
-    // stopped above, so the scanner is inactive and stale by contract,
-    // untouched either way.
-    if (!proposals.empty()) {
-        viewport.move_playhead_to(
-            source_frame_to_active_domain(app, audio,
-                                          proposals.front().second));
+    app.stem_pin_ms          = monotonic_ms();
+    // Playhead follows the FOCUSED reset through the post-mutation two-step basis
+    // (committed_f is reorder-independent; the phase reset home is target view, so
+    // source_frame_to_active_domain maps). move_playhead_to owns the clamp and
+    // invalidation, writing the cursor field only (playback was stopped above).
+    viewport.move_playhead_to(
+        source_frame_to_active_domain(app, audio, committed_f));
+    // Coalesce a rapid burst: the first press pushed the pre-burst snapshot with
+    // the group hints; a continuation press skips the redundant push and REFRESHES
+    // the surviving entry's touched_live to this press's post-reorder indices
+    // (touched_snapshot stays the first press's pre-burst coordinates). Then
+    // re-record with the post-mutation selection.
+    if (merge) {
+        undo.note_coalesced_commit();
+        undo.refresh_coalesced_touched_live(std::move(touched_live));
+    } else {
+        undo.push_undo_phase_reset(std::move(pre_state), hint_last,
+                                   std::move(touched_snapshot),
+                                   std::move(touched_live));
     }
-    // Coalesce a rapid burst: the first press already pushed the pre-burst
-    // snapshot, so a continuation press skips its redundant push and one
-    // Ctrl+Z reverts the whole burst. Then re-record with the post-mutation
-    // (reordered) selection.
-    if (merge) undo.note_coalesced_commit();
-    else       undo.push_undo_phase_reset(std::move(pre_state), hint_last);
     undo.record_gesture(GestureKind::PhaseResetNudge);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    // Region follow (SelectionExtent only): an active SelectionExtent region
+    // re-derives to the moved group's extent (MAINTAIN only, never CREATE; an
+    // inactive / Free / TrimWindow region is untouched — position gestures do not
+    // re-sync TrimWindow). The SelectionExtent provenance survives the nudge (no
+    // collapse, and the reorder remap does not demote), so the gate is reliable.
+    if (app.region.active &&
+        app.region.provenance == RegionProvenance::SelectionExtent) {
+        set_region_to_selection_extent(app, audio, viewport);
+    }
     target_render.trigger();
 }

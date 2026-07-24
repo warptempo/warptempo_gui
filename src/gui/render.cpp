@@ -407,9 +407,9 @@ void render_playhead(cairo_t* cr,
     const double x_px = area.x + col + 0.5;
 
     cairo_save(cr);
-    // The 1px vertical line is suppressed for the R6 marker-lane focus form
-    // (draw_line = false, triangle-only) as well as when the column clips out;
-    // the triangle below is unaffected.
+    // The 1px vertical line is suppressed for the grey selected-marker focus
+    // triangle form (draw_line = false, triangle-only — architect 2026-07-23) as
+    // well as when the column clips out; the triangle below is unaffected.
     if (draw_line && col >= 0.0 && col < static_cast<double>(area.w)) {
         cairo_set_source_rgb(cr, color.r, color.g, color.b);
         cairo_set_line_width(cr, 1.0);

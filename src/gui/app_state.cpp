@@ -9,12 +9,18 @@
 #include "warp_frame_map.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
 #include <string>
 #include <vector>
+
+int64_t monotonic_ms() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
 
 SettingsSnapshot capture_current_settings(const AppState& app) {
     SettingsSnapshot s;

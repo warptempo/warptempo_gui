@@ -182,7 +182,10 @@ struct SelectionSnapshot {
 // selection/trim window is a gesture-time sync, not a stored derivation). A
 // GROUP marker drag captures the resting region into DragState::pre_drag_region
 // (Esc restore) and live-tracks it to the moving group's extent (apply_drag_
-// motion), re-deriving from the post-commit store at commit.
+// motion), re-deriving from the post-commit store at commit. The GROUP POSITION
+// NUDGES (Alt+Left/Right, both columns) re-derive the same way at their commit —
+// MAINTAIN only, per-press, no live track and no Esc restore (a nudge is one
+// atomic step) — so an active SelectionExtent region follows the nudged group.
 // Region PROVENANCE (architect 2026-07-23, three-state ownership): tracks WHO the
 // region is derived from, which decides how the image-follow tempo gestures treat
 // it across a map change. Free — a drag-formed / demoted region, display scratch
@@ -1295,17 +1298,27 @@ struct AppState {
     // hovered, dragged, OR just nudged; the nudge arm has no hover/drag to key
     // on, so both Alt+Left/Right nudge handlers stamp these at commit —
     // `stem_pin_marker` = the moved (focused) marker's post-reorder index,
-    // `stem_pin_command_seq` = the current command_seq. The pin is LIVE iff
-    // `command_seq == stem_pin_command_seq` (and stem_pin_marker == the selected
-    // index): any OTHER command bumps command_seq at its dispatch entry and kills
-    // the pin naturally — the command-adjacency pattern, no timer. The default
-    // stem_pin_marker = -1 never matches a real (>= 0) selection, so the
-    // startup command_seq == 0 == stem_pin_command_seq coincidence pins nothing.
-    // Accepted caveat: a pin that goes stale between paints leaves the stem drawn
-    // until the next damage — harmless, and each nudge press full-invalidates the
-    // waveform anyway. Session-only, never serialized.
+    // `stem_pin_command_seq` = the current command_seq, `stem_pin_ms` = the
+    // monotonic_ms() stamp of the commit. The pin is LIVE iff BOTH halves hold
+    // (architect 2026-07-23): (a) command adjacency — `command_seq ==
+    // stem_pin_command_seq` (and stem_pin_marker == the selected index); any
+    // OTHER command bumps command_seq at its dispatch entry and kills the pin
+    // instantly, no timer — AND (b) the BURST WINDOW — `monotonic_ms() -
+    // stem_pin_ms <= kGestureCoalesceMs`, the same 500 ms window the undo
+    // coalescer defines, so an idle pin stops showing once the fine-tuning burst
+    // lapses (the fix for a pin that used to persist indefinitely while the user
+    // idled). The default stem_pin_marker = -1 never matches a real (>= 0)
+    // selection, so the startup command_seq == 0 == stem_pin_command_seq
+    // coincidence pins nothing. The pin DIES on the next command (adjacency), on
+    // burst-window EXPIRY (reaped one-shot in on_tick: it damages the stem column
+    // and resets stem_pin_marker = -1 so the stem disappears without user input),
+    // or on the usual selection changes (a stale index simply fails the paint
+    // gate). Session-only, never serialized. Workflow note: after the burst the
+    // green cursor playhead line rests at the marker (a plain Esc deselects and
+    // lands there), which replaces the persistent blue line.
     int           stem_pin_marker      = -1;
     uint64_t      stem_pin_command_seq = 0;
+    int64_t       stem_pin_ms          = 0;
 
     // Active markers view: 'W' = warp markers, 'P' = phase reset markers.
     // Toggled by `p`. Determines which marker collection is visible / edited /
@@ -1833,6 +1846,13 @@ std::vector<int> reorder_markers_by_time(std::vector<Marker>& markers) {
 // store was already in order). Body in app_state.cpp.
 void remap_marker_indices_after_reorder(AppState& app,
                                         const std::vector<int>& old_to_new);
+
+// CLOCK_MONOTONIC milliseconds (steady_clock is CLOCK_MONOTONIC on this
+// platform). The ONE shared wall-clock reader for the press-driven time bases —
+// strip-row/marker double-click detection (input_pointer.cpp) and the nudge
+// stem-pin burst window (paint_selected_stem + the on_tick expiry reap). Body in
+// app_state.cpp so no TU copies its own clock reader.
+int64_t monotonic_ms();
 
 void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
 // Returns the pixel column (offset from waveform_area.x) for the cursor.

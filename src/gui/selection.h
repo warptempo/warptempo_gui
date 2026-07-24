@@ -45,11 +45,12 @@ struct Selection {
     void prune_live_selection();
 
    private:
-    // R6 focus model (architect 2026-07-23): the cursor playhead's FORM depends
-    // on selection emptiness — empty = breeze-green line + triangle (waveform
-    // focus), non-empty = grey STEMLESS triangle (marker-lane focus). A change
-    // that CROSSES the emptiness boundary flips whether the 1px waveform line
-    // paints and the triangle's color, so the playhead COLUMN must repaint even
+    // Focus model (architect 2026-07-23): the cursor playhead's presence depends
+    // on selection emptiness — empty = breeze-green line + triangle at the cursor
+    // (waveform focus), non-empty = NOTHING at the cursor (the grey focus triangle
+    // paints ON each selected marker instead — paint_selected_marker_triangles).
+    // A change that CROSSES the emptiness boundary makes the green cursor
+    // line+triangle appear or disappear, so the playhead COLUMN must repaint even
     // when the playhead itself does not move. The mutators already emit
     // top-strip/timestamp damage (which covers the triangle lane) but not the
     // waveform-area line, so this adds the playhead-column damage on a flip.

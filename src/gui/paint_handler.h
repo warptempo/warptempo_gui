@@ -488,12 +488,24 @@ private:
     // overlay marking the SINGLE selected marker's column — where the playhead
     // sits/would land on it — shown only during interaction with it: while it is
     // HOVERED, while a live marker DRAG grabs it (at the proposed position), or
-    // right after its Alt+Left/Right NUDGE (the command-adjacency pin). Painted
-    // BLUE (kSelected — it marks the selected marker like its flag) through
+    // right after its Alt+Left/Right NUDGE (the pin — live while command-adjacent
+    // AND within the burst window; see AppState::stem_pin_*). Painted BLUE
+    // (kSelected — it marks the selected marker like its flag) through
     // render_playhead's line-only form over the plate; out of the stem cache so
-    // interaction never rebuilds a cache. (Only the playhead triangle turns grey
-    // in marker-focus — see paint_playheads.)
+    // interaction never rebuilds a cache. (The grey focus triangle paints ON each
+    // selected marker, not at the playhead — see paint_selected_marker_triangles.)
     void paint_selected_stem(cairo_t* cr, const GuiRect& area);
+    // Selected-marker focus triangles (architect 2026-07-23): the GREY
+    // (kPlayheadCursorFocusGrey), triangle-only, stemless playhead mask painted
+    // ON each selected marker of the active column — a live overlay ABOVE the
+    // flag blit, so the grey triangle sits over the marker's own fused triangle.
+    // Retires the R6 grey-triangle-at-the-cursor form: the focus cue now attaches
+    // to the selected markers, not the resting playhead. Gated on a NON-EMPTY
+    // selection; painted per member (stale index skip), tracking the LIVE
+    // proposed positions of every dragged member during a marker drag. Region
+    // active does NOT suppress it (a multimarker select shows wash + grey
+    // triangles). Same displayed-paint basis as paint_selected_stem.
+    void paint_selected_marker_triangles(cairo_t* cr, const GuiRect& area);
     void paint_playheads(cairo_t* cr, const GuiRect& area);
     void paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr, int sr);

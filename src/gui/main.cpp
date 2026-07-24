@@ -983,6 +983,34 @@ int main(int argc, char** argv) {
         // waveform all snap together at the worker's completion swap.
         paint_handler.maybe_rebuild_flag_cache();
 
+        // Nudge stem-pin EXPIRY reap (architect 2026-07-23). The blue nudge pin
+        // is live only for the burst window (see AppState::stem_pin_*). The
+        // command-adjacency half dies at the next command — which repaints — but a
+        // pin left idle after the burst gets no repaint, so reap it here: when the
+        // pin is still command-adjacent (its burst is the latest command) yet the
+        // burst window has lapsed, damage the stem's column so the blue line
+        // disappears without user input, and reset stem_pin_marker so this fires
+        // ONCE. A pin already killed by an intervening command (command_seq moved)
+        // simply fails this gate.
+        if (app.stem_pin_marker >= 0 &&
+            app.command_seq == app.stem_pin_command_seq &&
+            monotonic_ms() - app.stem_pin_ms >
+                static_cast<int64_t>(kGestureCoalesceMs)) {
+            int64_t src_f = -1;
+            if (app.active_markers_view == 'P') {
+                const auto& v = app.phaseresetmarkers.markers();
+                if (app.stem_pin_marker < static_cast<int>(v.size()))
+                    src_f = v[app.stem_pin_marker].time_frame;
+            } else {
+                const auto& v = app.warpmarkers.markers();
+                if (app.stem_pin_marker < static_cast<int>(v.size()))
+                    src_f = v[app.stem_pin_marker].time_frame;
+            }
+            if (src_f >= 0)
+                viewport.invalidate_hover_stem_column(app.stem_pin_marker, src_f);
+            app.stem_pin_marker = -1;
+        }
+
         // Stationary-cursor hover refresh (the BACKSTOP). A keyboard mutation
         // (tempo step, Ctrl+N, nudge) changes the hovered marker's fields/position
         // without a pointer-motion event, so nothing else re-reads the hover text.

@@ -113,6 +113,15 @@ struct Undo {
     // Per-press side effects for a coalesced (push-skipped) press: the same
     // hover-popup clear the push_undo_* helpers do, minus the history push.
     void note_coalesced_commit();
+    // Refresh the coalesced burst entry's touched_live to a continuation press's
+    // LATEST post-reorder indices (the group position nudges, which reorder — the
+    // tempo step never does). The surviving first-press undo entry keeps its
+    // touched_snapshot (the pre-burst snapshot coordinates a restore produces),
+    // but its touched_live — the coordinates a redo of the whole coalesced op must
+    // re-select — must track the final after-state as later presses reorder
+    // further. Command adjacency (the coalesce precondition) guarantees the top of
+    // the undo stack IS this burst's entry; a no-op on an empty stack (defensive).
+    void refresh_coalesced_touched_live(std::vector<int> touched_live);
 
   private:
     // Shared authoritative guard for do_undo / do_redo: true when the step

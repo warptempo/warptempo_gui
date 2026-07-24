@@ -106,11 +106,13 @@ void Selection::clear_selection() {
 }
 
 void Selection::collapse_to_focused() {
-    // The fine-tuning ops (inherit toggle, tempo step, both nudges) collapse
-    // the selection to the focused marker so the operation and the resulting
-    // selection target last_selected only. last_selected_marker is untouched —
-    // it stays the focus. Callers that full-invalidate afterward make the
-    // top-strip / timestamp damage here redundant (a benign damage-union,
+    // The SINGLETON fine-tuning ops (inherit toggle, the singleton tempo step)
+    // collapse the selection to the focused marker so the operation and the
+    // resulting selection target last_selected only. The position NUDGES and the
+    // GROUP tempo gestures do NOT collapse — they went group (architect
+    // 2026-07-23), operating over the whole selection rigidly. last_selected_marker
+    // is untouched — it stays the focus. Callers that full-invalidate afterward
+    // make the top-strip / timestamp damage here redundant (a benign damage-union,
     // accepted).
     // Membership replace (collapse to the focused singleton) -> demote a
     // SelectionExtent region to Free (a 1-marker extent is degenerate).

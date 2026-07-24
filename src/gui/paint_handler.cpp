@@ -4,6 +4,7 @@
 #include "text_display.h"
 #include "text_editor.h"
 #include "time_format.h"
+#include "undo.h"                     // kGestureCoalesceMs (stem-pin burst window)
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
 #include "engine/engine_geometry.h"  // kRs
@@ -514,10 +515,15 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr,
 //   (b) a live marker DRAG grabs it (drag.active on the active column) — painted
 //       at the LIVE proposed position (moveable_times via the DragOverlay); the
 //       drag suppresses hover, so this arm cannot lean on (a), and
-//   (c) the NUDGE PIN is live — the last command was this marker's Alt+Left/Right
-//       nudge (command_seq == stem_pin_command_seq && stem_pin_marker == it).
-// Painted BLUE (kSelected — it marks the selected marker, like its flag; only the
-// playhead triangle is grey in marker-focus) through render_playhead's line-only
+//   (c) the NUDGE PIN is live — this marker's Alt+Left/Right nudge is the most
+//       recent command (command_seq == stem_pin_command_seq && stem_pin_marker ==
+//       it) AND still inside the burst window (monotonic_ms() - stem_pin_ms <=
+//       kGestureCoalesceMs); an idle pin past the window stops showing (the
+//       on_tick reap kills it). See AppState::stem_pin_* for the two-half
+//       lifecycle.
+// Painted BLUE (kSelected — it marks the selected marker, like its flag; the grey
+// belongs to the focus triangle painted ON each selected marker
+// (paint_selected_marker_triangles), not this stem) through render_playhead's line-only
 // form (draw_triangle=false, draw_line=true) — the plate ink-notch two-tone reads
 // fine in any color (fill_column_ink_runs overdraws kBackground over opaque ink,
 // color-independent; the blue line shows over the gaps). It lives OUT of the stem
@@ -539,7 +545,9 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
     // Visibility arms (a) hover, (b) drag, (c) nudge pin.
     const bool hover_arm = (app.hover_popup.marker_index == idx);
     const bool nudge_arm = (app.stem_pin_marker == idx &&
-                            app.command_seq == app.stem_pin_command_seq);
+                            app.command_seq == app.stem_pin_command_seq &&
+                            monotonic_ms() - app.stem_pin_ms <=
+                                static_cast<int64_t>(kGestureCoalesceMs));
     if (!hover_arm && !drag_arm && !nudge_arm) return;
 
     // The marker's effective time: the live store frame, or — under a drag that
@@ -591,6 +599,78 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
                     /*draw_triangle=*/false,
                     /*draw_line=*/true,
                     /*ink_plate=*/wf_cache.surface);
+}
+
+// -- GuiPaintHandler::paint_selected_marker_triangles --------------------
+
+// The GREY focus triangle painted ON every selected marker of the active column
+// (architect 2026-07-23). Retires the R6 grey-triangle-at-the-cursor form: the
+// focus cue is now attached to the selection itself, so undo/redo (which never
+// moves the playhead) can no longer strand a grey triangle at a moved playhead.
+// Painted AFTER the flag blit, so each grey triangle reads as sitting ON its
+// marker's fused blue/red/default triangle; the SELECTION need not be a
+// singleton (every member gets one). During a live marker DRAG the triangles
+// track the LIVE proposed positions of ALL dragged members (the DragOverlay,
+// exactly paint_selected_stem's drag arm), so a group drag shows every member's
+// triangle riding the pointer; during a nudge the store already moved. Region
+// active does NOT suppress these (a multimarker select shows wash + grey
+// triangles). The displayed paint basis (fp_vp_start + derived disp_spp + the
+// displayed target map forward-map) matches paint_selected_stem / paint_playheads
+// so the triangle lands on the flag's own column even inside a worker publish
+// window; render_playhead's triangle-only, stemless, plate-less form column-culls
+// each px_x itself.
+void GuiPaintHandler::paint_selected_marker_triangles(cairo_t* cr,
+                                                      const GuiRect& area) {
+    if (area.w <= 0 || area.h <= 0) return;
+    if (app.selected_markers.empty()) return;
+
+    const double disp_spp = wf_cache.fp_area_w > 0
+        ? static_cast<double>(wf_cache.fp_vp_end - wf_cache.fp_vp_start) /
+          static_cast<double>(wf_cache.fp_area_w)
+        : current_samples_per_pixel(app, audio);
+    if (disp_spp <= 0.0) return;
+    const double vp_start = static_cast<double>(wf_cache.fp_vp_start);
+
+    // Drag overlay: while a live marker drag grabs the active column, every
+    // dragged member's triangle rides its proposed mid-gesture position.
+    const bool drag_arm =
+        app.drag.active && app.drag.drag_mode == app.active_markers_view;
+    DragOverlay ov;
+    if (drag_arm) {
+        ov.indices = &app.drag.dragging_markers;
+        ov.times   = &app.drag.moveable_times;
+    }
+
+    // Target view forward-maps each source frame to its target image (identity
+    // in source view — no map walked). One map reference for the whole loop.
+    const std::vector<WarpFrameMapSegment>* dmap =
+        (app.active_audio_view == 'T')
+            ? &displayed_or_live_target_map(app, audio)
+            : nullptr;
+
+    const bool phase = (app.active_markers_view == 'P');
+    const size_t n = phase ? app.phaseresetmarkers.markers().size()
+                           : app.warpmarkers.markers().size();
+
+    for (int idx : app.selected_markers) {
+        if (idx < 0 || idx >= static_cast<int>(n)) continue;  // stale-index skip
+        double eff_time = phase
+            ? static_cast<double>(app.phaseresetmarkers.markers()[idx].time_frame)
+            : static_cast<double>(app.warpmarkers.markers()[idx].time_frame);
+        if (drag_arm) eff_time = ov.effective_time(idx, eff_time);
+
+        double ms = std::nearbyint(eff_time);
+        if (dmap && !dmap->empty()) {
+            const size_t q = ms < 0.0 ? static_cast<size_t>(0)
+                                      : static_cast<size_t>(ms);
+            ms = std::nearbyint(map_source_to_target(q, *dmap));
+        }
+        const double px_x = (ms - vp_start) / disp_spp;
+        render_playhead(cr, area, px_x, kPlayheadCursorFocusGrey,
+                        /*draw_triangle=*/true,
+                        /*draw_line=*/false,
+                        /*ink_plate=*/nullptr);
+    }
 }
 
 // -- GuiPaintHandler::paint_strip_drag_anchor ----------------------------
@@ -677,11 +757,15 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // playhead stretched out — the split halves are its two ends, so a wash and
     // a cursor must never co-display; architect 2026-07-23). The exclusivity is
     // structural, not per-former: paint_region_wash gates on the same
-    // app.region.active this if/else branches on, this else is the ONLY cursor
-    // emitter (waveform-focus green OR R6 marker-lane grey — the region branch
-    // above owns the split, so the grey cursor never paints while region.active)
-    // and render_playhead/render_split_playhead have no other callers, so within
-    // any one frame the wash and the cursor are mutually exclusive by state.
+    // app.region.active this if/else branches on, and the CURSOR forms emit only
+    // here — the region branch owns the split, the empty-selection else owns the
+    // waveform-focus green (a NON-EMPTY selection paints NOTHING at the cursor now;
+    // the grey focus triangle moved ONTO the selected markers, retiring the R6
+    // grey stemless cursor). render_split_playhead has no other caller and the
+    // green cursor is emitted only in the else below (paint_selected_stem /
+    // paint_selected_marker_triangles also call render_playhead, but as marker
+    // overlays, never as the cursor), so within any one frame the wash and the
+    // cursor are mutually exclusive by state.
     // Across frames it holds because every
     // app.region write is paired with waveform-area damage at its site (the
     // formers, the clears, clear_region_highlight, the Esc pre_region restore,
@@ -703,26 +787,20 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
             render_split_playhead(cr, area, lo_col, hi_col, kPlayheadCursor);
         }
     } else if (app.selected_markers.empty()) {
-        // WAVEFORM FOCUS (R6, architect 2026-07-23): selection empty — the
-        // normal breeze-green (kPlayheadCursor) 1px line + triangle, two-toned
-        // over the plate ink.
+        // WAVEFORM FOCUS (architect 2026-07-23): selection empty — the normal
+        // breeze-green (kPlayheadCursor) 1px line + triangle, two-toned over the
+        // plate ink.
         render_playhead(cr, area, px_x, kPlayheadCursor,
                         /*draw_triangle=*/true,
                         /*draw_line=*/true,
                         /*ink_plate=*/wf_cache.surface);
-    } else {
-        // MARKER-LANE FOCUS (R6): selection non-empty — a GREY, STEMLESS
-        // triangle (no 1px waveform line, no ink-notch plate) at the resting
-        // cursor, which the selection land put on/near the focused marker. The
-        // scanner above is unaffected (it launches from this resting cursor and
-        // paints its own color); the region branch outranks both (handled by the
-        // if above, so a live region never reaches here). No ink_plate: with no
-        // line there is no column to two-tone.
-        render_playhead(cr, area, px_x, kPlayheadCursorFocusGrey,
-                        /*draw_triangle=*/true,
-                        /*draw_line=*/false,
-                        /*ink_plate=*/nullptr);
     }
+    // else: selection non-empty, no region — NOTHING paints at the cursor
+    // (architect 2026-07-23, retiring the R6 grey stemless cursor triangle). The
+    // focus cue is the grey triangle painted ON each selected marker
+    // (paint_selected_marker_triangles, after the flag blit); the resting cursor
+    // is simply hidden while a selection is live. The scanner above is
+    // unaffected — it launches from this resting cursor and paints its own color.
 }
 
 // -- GuiPaintHandler::paint_bottom_strip ---------------------------------
@@ -959,6 +1037,16 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // above (the flag cache) supplies the connection. The paint rect is
         // exactly the waveform area, matching the stem-cache surface height and
         // origin in maybe_rebuild_stem_cache.
+        // Final paint order (top to bottom of the stack): waveform plate ->
+        // region wash -> phase-reset overlay -> marker stems -> selected stem ->
+        // playheads (scanner + split/cursor) -> flag blit -> grey
+        // selected-marker focus triangles -> marker-text lane / zoom ring ->
+        // strip-drag anchor -> bottom strip. The Z-ORDER FLIP (architect
+        // 2026-07-23): the cursor playhead (green line+triangle) and the region
+        // SPLIT half-triangles now pass UNDER marker flags, so on a multimarker
+        // select the extent region's half-triangles rest hidden behind the
+        // earliest/latest members' flags (identical 17-wide triangle geometry at
+        // the same column) while the grey focus triangles paint OVER the flags.
         const GuiRect marker_paint_rect = area;
         if (rects_intersect(exposed, marker_paint_rect)) {
             // Over the plate and dim, under the stems: the phase reset
@@ -966,14 +1054,35 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // then the stems paint on top so the focused stem stays crisp.
             paint_phase_reset_overlay(cr, area);
             paint_marker_stems(cr, marker_paint_rect);
-            // Selected-marker stem over the plate + trim stems, under the flags
-            // and the playhead (round 4): the single selected marker's column,
-            // live per-frame (not cached), while it is hovered / dragged / nudged.
+            // Selected-marker stem over the plate + trim stems, under the
+            // playhead and the flags (round 4): the single selected marker's
+            // column, live per-frame (not cached), while it is hovered /
+            // dragged / nudged.
             paint_selected_stem(cr, area);
+        }
+
+        // Playheads BEFORE the flag blit (Z-ORDER FLIP, architect 2026-07-23):
+        // the scanner line stays waveform-only (triangle-free, no lane conflict —
+        // its stacking vs the lanes is unaffected by this move), while the cursor
+        // line+triangle and the region split half-triangles now paint UNDER the
+        // marker flags that follow. flag_cache.surface is ARGB32, CLEAR-cleared
+        // each rebuild and transparent outside the painted shapes, so the flag
+        // blit composites source-over and never erases the playheads it does not
+        // cover. Gated on area OR top_strip: the cursor line lives in the waveform
+        // area, its triangle in the triangle lane (top strip).
+        if (rects_intersect(exposed, area) ||
+            rects_intersect(exposed, top_strip)) {
+            paint_playheads(cr, area);
         }
 
         if (rects_intersect(exposed, top_strip)) {
             paint_flag_annotations(cr, top_strip, sr);
+            // Grey selected-marker focus triangles OVER the flag blit (architect
+            // 2026-07-23): each selected marker's grey triangle sits on its fused
+            // flag triangle. Painted here so it beats the flag color; on a
+            // multimarker select these ride the wash while the split half-triangles
+            // stay hidden under the flags (see the flip note above).
+            paint_selected_marker_triangles(cr, area);
             // Marker-text lane (top row 2): the hover popup and the flag
             // editor's live text, painted over the just-blitted flag cache —
             // the same layering role the bottom strip's hover/editor paints had.
@@ -988,15 +1097,17 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                   waveform_area(app).w);
         }
 
-        // Strip-drag anchor stem: over the plate/stems, under the playhead
-        // (which must never be occluded), in the waveform area only.
+        // Strip-drag anchor stem: over the plate/stems in the waveform area
+        // only. It now paints AFTER the playheads (the flip moved them up), so
+        // where the pivot column coincides with the cursor/scanner column during
+        // a strip drag the grey anchor stem sits OVER the playhead LINE (both are
+        // waveform verticals; the playhead's triangle lane is untouched, the
+        // anchor carries no triangle). The anchor shows only mid-strip-drag, so
+        // this overlap is transient and the pivot affordance reading on top is
+        // acceptable. paint_marker_text_lane likewise ends up after the playheads
+        // but on the non-overlapping text lane.
         if (rects_intersect(exposed, area)) {
             paint_strip_drag_anchor(cr, area);
-        }
-
-        if (rects_intersect(exposed, area) ||
-            rects_intersect(exposed, top_strip)) {
-            paint_playheads(cr, area);
         }
 
         const GuiRect bottom_strip = timestamp_invalidate_rect(app);

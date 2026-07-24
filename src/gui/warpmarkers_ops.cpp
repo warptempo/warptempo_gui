@@ -631,15 +631,18 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
     target_render.trigger();
 }
 
-// Nudge the focused marker by exactly one on-screen pixel column per
-// press. direction: -1 for earlier (up/left), +1 for later (down/right).
+// Nudge the selected warp markers by exactly one on-screen pixel column per
+// press (GROUP, architect 2026-07-23 — a 2+ selection nudges rigidly, the
+// keyboard sibling of the group position drag; a singleton is the degenerate
+// case). direction: -1 for earlier (up/left), +1 for later (down/right).
 //
-// Pixel-column-anchored: the press reads the marker's currently PAINTED
-// column (painted_column_of_source_frame — the stem painter's own math),
-// targets the adjacent column, takes that column's time (viewport start plus
-// column times samples-per-pixel — this gesture runs only in warp's SOURCE
-// home view, so there is no target-domain inverse mapping), and commits it
-// through snap_authored_frame, so the stored value is a whole source frame. The painted move is exactly one column per press,
+// Pixel-column-anchored on the FOCUSED marker (the ANCHOR): the press reads the
+// anchor's currently PAINTED column (painted_column_of_source_frame — the stem
+// painter's own math), targets the adjacent column, takes that column's time
+// (viewport start plus column times samples-per-pixel — this gesture runs only in
+// warp's SOURCE home view, so there is no target-domain inverse mapping), and
+// commits it through snap_authored_frame, so the stored value is a whole source
+// frame. The anchor's painted move is exactly one column per press,
 // unconditionally: the whole-frame rounding error is bounded by
 // 0.5 / (source frames per target pixel) of a pixel, and with the
 // bracketed value vocabulary (tempo times both scales at least
@@ -650,20 +653,25 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
 // independently would NOT give this guarantee (whole-frame residue on
 // top of an off-grid sub-pixel phase paints occasional 0 or 2 px jumps);
 // anchoring to the column grid re-derives the pixel phase every press,
-// so nothing accumulates.
+// so nothing accumulates. Every OTHER selected member rides the anchor's uniform
+// active-domain delta D — a COMPUTED position (orig_k + D in the source identity
+// domain), never re-column-snapped per member (the rigid-group convention; the
+// codex round-3 spacing defect was per-member snapping).
 //
-// Wall semantics are one regime now: this gesture runs in warp's SOURCE
-// home view only (the home-view binding, architect 2026-07-22), so the
-// clamp (creep-to-the-wall) is unconditional — a proposal leaving the
-// absolute range (zero / the warp EOF wall — total_frames minus one source
-// frame, because build_warp_frame_map refuses sub-frame segments) clamps to
-// the wall, so every wall stays exactly reachable by nudge. The walls win
-// over the pixel grid, and every wall is an integer frame, so a wall-clamped
-// commit stays whole. (The old target-view all-or-nothing refusal arm died
-// with the binding — there is no per-view refuse-vs-clamp split left.) Spacing is
-// not the GUI's concern: crossing a neighbor is legal and goes through
-// the reorder-and-remap path below; the render boundary collapses
-// exact-frame ties to one 1.00 owner.
+// Wall semantics are one regime, GROUP-intersected: this gesture runs in warp's
+// SOURCE home view only (the home-view binding, architect 2026-07-22), so the
+// clamp (creep-to-the-wall) applies — D is clamped ONCE into the intersection of
+// every member's wall headroom over the absolute range (zero / the warp EOF wall
+// — total_frames minus one source frame, because build_warp_frame_map refuses
+// sub-frame segments), so the group stops AS A UNIT at the first member's wall
+// and every wall stays exactly reachable by nudge. The walls win over the pixel
+// grid, and every wall is an integer frame, so a wall-clamped commit stays whole;
+// a singleton's intersection degenerates to its own headroom (bit-for-bit the
+// pre-group clamp). (The old target-view all-or-nothing refusal arm died with the
+// binding — there is no per-view refuse-vs-clamp split left.) Spacing is not the
+// GUI's concern: crossing a neighbor is legal and goes through the
+// reorder-and-remap path below; the render boundary collapses exact-frame ties to
+// one 1.00 owner.
 void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     if (app.loading || audio.total_frames() <= 0) return;
     // Fine-tuning authoring gesture (Alt+Left/Right is the only caller path):
@@ -687,7 +695,14 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     // this handler); it just has to run before record_gesture stamps this
     // command below.
     const bool merge = undo.coalesce_gesture(GestureKind::WarpNudge);
-    selection.collapse_to_focused();
+    // GROUP nudge (architect 2026-07-23): a 2+ selection nudges RIGIDLY, the
+    // keyboard sibling of the group position drag — NO collapse_to_focused. The
+    // FOCUSED marker (app.last_selected_marker) is the pixel-anchored ANCHOR;
+    // every other selected member is a COMPUTED position riding the anchor's
+    // uniform delta D (the propagate-paste / group-drag convention — computed
+    // positions round plainly, NEVER re-snapped per member, which would
+    // re-quantize the group's spacing by up to a column, the codex round-3
+    // defect). A singleton degenerates to the anchor alone.
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
     if (current_samples_per_pixel(app, audio) <= 0.0) return;
@@ -699,79 +714,138 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(mv.size())) return;
     }
+    const int f = app.last_selected_marker;
+    if (f < 0 || f >= static_cast<int>(mv.size())) return;   // focused stale
+
     // The anchoring map is the DISPLAYED paint basis —
     // displayed_or_live_target_map, the SAME map the stem/flag painter reads —
-    // so a press moves the marker by exactly the commanded pixel column against
-    // WHAT IS PAINTED. Warp markers author in their SOURCE home view only (the
-    // home-view binding, architect 2026-07-22), so the displayed map is the
-    // empty identity map here and the shared painted_column / authored_frame
-    // helpers take it naturally; the working-zoom authoring-grid bit-exactness
-    // claims (all source-view) are unaffected. The wall policy is a single
-    // regime — the per-marker clamp (creep-to-the-wall), walls exactly reachable
-    // by nudge — because source is the only view this gesture runs in; the
-    // former mapped-domain all-or-nothing refusal arm was unreachable under the
-    // home-view binding and is gone.
+    // so the ANCHOR moves by exactly the commanded pixel column against WHAT IS
+    // PAINTED. Warp markers author in their SOURCE home view only (the home-view
+    // binding, architect 2026-07-22), so the displayed map is the empty identity
+    // map here — the shared painted_column / authored_frame helpers take it
+    // naturally, D is a plain integer frame difference, and the working-zoom
+    // authoring-grid bit-exactness claims (all source-view) are unaffected.
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
     const int64_t warp_wall = audio.total_frames() - 1;
-    std::vector<std::pair<int, int64_t>> proposals;
-    proposals.reserve(app.selected_markers.size());
+
+    // (1) The ANCHOR steps one painted column. In source view
+    // authored_frame_at_column funnels through the source-grid single-rounding,
+    // so the anchor's painted move is exactly one column per press.
+    const int64_t orig_f = mv[f].time_frame;
+    const int cf = painted_column_of_source_frame(
+        app, audio, static_cast<double>(orig_f), map);
+    const int64_t committed_f_raw =
+        authored_frame_at_column(app, audio, cf + direction, map);
+    // The uniform ACTIVE-domain delta from the anchor's step (source view is the
+    // fwd-identity special case — D is the plain integer frame difference).
+    int64_t D = committed_f_raw - orig_f;
+
+    // (2) WALLS WIN, group-intersected (clamp regime — warp's creep-to-the-wall,
+    // walls exactly reachable). Intersect each member's wall headroom
+    // [0 - orig_k, warp_wall - orig_k] (source domain, identity map — integer
+    // arithmetic): delta_min = -min(orig_k), delta_max = warp_wall - max(orig_k),
+    // non-empty because every stored marker rests in [0, warp_wall]. Clamp D ONCE
+    // into the intersection; the group stops AS A UNIT the instant the FIRST
+    // member reaches its wall. When the clamp engages EVERY member (the anchor
+    // included) is the plain orig_k + D — no anchor column re-snap, and D is NEVER
+    // recomputed from any committed frame (the re-quantization trap). A singleton's
+    // intersection degenerates to [-orig_f, warp_wall - orig_f], so the anchor
+    // commit orig_f + D is clamp(committed_f_raw, 0, warp_wall) exactly — the
+    // pre-group per-marker clamp bit-for-bit.
+    int64_t min_orig = orig_f, max_orig = orig_f;
     for (int idx : app.selected_markers) {
-        const int c = painted_column_of_source_frame(
-            app, audio, static_cast<double>(mv[idx].time_frame), map);
-        int64_t t_new =
-            authored_frame_at_column(app, audio, c + direction, map);
-        if (t_new < 0)         t_new = 0;
-        if (t_new > warp_wall) t_new = warp_wall;
-        proposals.emplace_back(idx, t_new);
+        const int64_t o = mv[idx].time_frame;
+        if (o < min_orig) min_orig = o;
+        if (o > max_orig) max_orig = o;
     }
+    const int64_t delta_min = -min_orig;
+    const int64_t delta_max = warp_wall - max_orig;
+    if (D < delta_min) D = delta_min;
+    if (D > delta_max) D = delta_max;
+
+    // (3) Every member (anchor included) rides the single rigid delta orig_k + D.
+    // The [0, warp_wall] clamp is fp-safety only — the intersection already keeps
+    // every integer sum in range.
     bool any_changed = false;
     std::vector<GuiWarpMarker> proposed = mv;
-    for (const auto& [idx, t_new] : proposals) {
-        if (t_new == mv[idx].time_frame) continue;
-        proposed[idx].time_frame = t_new;
-        any_changed = true;
+    for (int idx : app.selected_markers) {
+        int64_t t_new = mv[idx].time_frame + D;
+        if (t_new < 0)         t_new = 0;
+        if (t_new > warp_wall) t_new = warp_wall;
+        if (t_new != mv[idx].time_frame) {
+            proposed[idx].time_frame = t_new;
+            any_changed = true;
+        }
     }
-    if (!any_changed) return;
+    if (!any_changed) return;   // fully saturated / D == 0 press: nothing moves
+    // The anchor's committed frame (reorder-independent), for the playhead follow.
+    const int64_t committed_f = orig_f + D;
+
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     const int              hint_last = app.last_selected_marker;
+    // Identity hints (the diff matcher is identity-blind for a translated group —
+    // a member can land field-identical on another row). touched_snapshot names
+    // the WHOLE group (a restore re-selects it) in PRE-reorder snapshot
+    // coordinates = the current selection indices.
+    std::vector<int> touched_snapshot(app.selected_markers.begin(),
+                                      app.selected_markers.end());
     app.warpmarkers.markers_mut() = std::move(proposed);
-    // A nudge may cross a neighbor; restore time order and re-point
-    // the selection at the moved marker.
+    // A nudge may cross a neighbor; restore time order and remap the index-shaped
+    // state (the whole group's selection follows to the new slots).
     remap_marker_indices_after_reorder(
         app, reorder_markers_by_time(app.warpmarkers.markers_mut()));
-    // Stem NUDGE PIN: keep the moved marker's stem visible through the
-    // fine-tuning burst. Stamp the post-reorder focused index and the current
-    // command_seq; the pin dies at the next command (see AppState::stem_pin_*).
+    // touched_live: the group's POST-reorder live indices (the remap rewrote the
+    // selection in place).
+    std::vector<int> touched_live(app.selected_markers.begin(),
+                                  app.selected_markers.end());
+    // Stem NUDGE PIN: keep the FOCUSED marker's stem visible through the
+    // fine-tuning burst. Stamp the post-reorder focused index, the current
+    // command_seq, AND the burst-window timestamp; the pin dies at the next
+    // command, at burst-window expiry (on_tick reap), or on a selection change
+    // (see AppState::stem_pin_*). Paint gates it to a SINGLETON selection, so a
+    // group nudge stamps but shows no stem until the group narrows to one.
     app.stem_pin_marker      = app.last_selected_marker;
     app.stem_pin_command_seq = app.command_seq;
-    // Playhead follows the marker: keep the playhead on the focused marker. The
-    // committed frame (t_new, reorder-independent) maps through
-    // source_frame_to_active_domain AFTER the store mutation — the shared Tab
-    // placement basis (post-commit truth). Warp nudges author in the source
-    // home view (home-view binding, architect 2026-07-22), where that call is
-    // identity, so the playhead lands on the moved frame directly; the two-step
-    // basis is kept verbatim for symmetry with the phase nudge (which does map).
-    // move_playhead_to owns the live-domain clamp, the invalidation, and the
-    // standard keep-visible viewport edge-align (a nudged marker is at most
-    // one column from a visible position); it writes the cursor field only
-    // — playback was stopped above, so the scanner is inactive and stale by
-    // contract, untouched either way.
-    if (!proposals.empty()) {
-        viewport.move_playhead_to(
-            source_frame_to_active_domain(app, audio,
-                                          proposals.front().second));
+    app.stem_pin_ms          = monotonic_ms();
+    // Playhead follows the FOCUSED member's committed frame through the two-step
+    // placement basis (post-commit truth). Warp nudges author in the source home
+    // view, where source_frame_to_active_domain is identity, so the playhead
+    // lands on committed_f directly; the two-step basis is kept for symmetry with
+    // the phase nudge (which maps). move_playhead_to owns the clamp, invalidation,
+    // and keep-visible edge-align; it writes the cursor field only (playback was
+    // stopped above).
+    viewport.move_playhead_to(
+        source_frame_to_active_domain(app, audio, committed_f));
+    // Coalesce a rapid burst: the first press pushed the pre-burst snapshot with
+    // the group hints; a continuation press skips the redundant push and instead
+    // REFRESHES the surviving entry's touched_live to this press's post-reorder
+    // indices (touched_snapshot stays the first press's pre-burst coordinates — a
+    // restore produces that snapshot, and the burst moves the same selection by
+    // command adjacency). Then re-record with the post-mutation selection.
+    if (merge) {
+        undo.note_coalesced_commit();
+        undo.refresh_coalesced_touched_live(std::move(touched_live));
+    } else {
+        undo.push_undo_warp(std::move(pre_state), hint_last,
+                            /*affects_persistence=*/true,
+                            std::move(touched_snapshot),
+                            std::move(touched_live));
     }
-    // Coalesce a rapid burst: the first press already pushed the pre-burst
-    // snapshot, so a continuation press skips its redundant push and one
-    // Ctrl+Z reverts the whole burst. Then re-record with the post-mutation
-    // (reordered) selection.
-    if (merge) undo.note_coalesced_commit();
-    else       undo.push_undo_warp(std::move(pre_state), hint_last);
     undo.record_gesture(GestureKind::WarpNudge);
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    // Region follow (SelectionExtent only): an active SelectionExtent region
+    // re-derives to the moved group's extent (the position-drag commit
+    // convention — MAINTAIN only, never CREATE; an inactive / Free / TrimWindow
+    // region is untouched, position gestures not re-syncing TrimWindow). The
+    // SelectionExtent provenance survives the nudge (no collapse, and the reorder
+    // remap does not demote), so the gate is reliable here.
+    if (app.region.active &&
+        app.region.provenance == RegionProvenance::SelectionExtent) {
+        set_region_to_selection_extent(app, audio, viewport);
+    }
     // No synchronous re-warp: the nudge authors in warp's SOURCE home view only
     // (the home-view binding, architect 2026-07-22), where the source waveform
     // pixels don't depend on the warp map, so there is no displayed target plate

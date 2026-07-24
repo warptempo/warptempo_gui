@@ -784,20 +784,22 @@ private:
     // Esc ladder (architect 2026-07-23, DOWN-ONLY as of round 4): the
     // selection/region collapse rung of the Escape chain — placed AFTER the drag /
     // editor / render cancels and in place of the old plain region clear. Tested
-    // REGION-FIRST so a region never shrinks into a subregion. Returns true iff it
-    // consumed the Esc:
-    //   region ACTIVE (any selection) -> collapse STRAIGHT to its start: clear the
-    //                                    region AND the selection, playhead to the
-    //                                    lo bound
+    // REGION-FIRST so a region never shrinks into a subregion, and it walks ONE
+    // rung per Esc. Returns true iff it consumed the Esc:
+    //   region ACTIVE + 2+ selected  -> clear the SELECTION ONLY, region rests
+    //                                   (clear_selection demotes a SelectionExtent
+    //                                   region to Free); playhead untouched — a
+    //                                   SECOND Esc then takes the collapse below
+    //   region ACTIVE + 0/1 selected -> collapse to its start: clear the region AND
+    //                                   the selection, playhead to the lo bound
     //   no region + MULTIPLE selected -> drop to region: rest the region at the
     //                                    selection extent, deselect (a PROGRAMMATIC
     //                                    multi-select only — a click-made one rests
     //                                    with its extent region, caught above)
     //   no region + SINGLETON         -> deselect + land the playhead on the marker
-    // Consequence (architect-flagged): a click-made multi-selection (extent region
-    // resting) now collapses in ONE Esc, not two. Defined in input_pointer.cpp
-    // beside land_playhead_on_marker / set_region_to_selection_extent (both
-    // file-local there). Navigation-class, read-only allowed.
+    // Defined in input_pointer.cpp beside land_playhead_on_marker /
+    // set_region_to_selection_extent (both file-local there). Navigation-class,
+    // read-only allowed.
     bool handle_escape_selection_region();
 
     // One scrub ACT at an active-domain frame: kill-and-revive (architect

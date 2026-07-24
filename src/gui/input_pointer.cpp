@@ -9,7 +9,6 @@
 #include "warpmarkers.h"
 
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -42,13 +41,9 @@
 // each editor's char-0 text origin; advance is the shared monospace cell.
 namespace {
 
-// CLOCK_MONOTONIC milliseconds — the time base for strip-row double-click
-// detection (steady_clock is CLOCK_MONOTONIC on this platform). Press-driven,
-// so the synthesized e-key button composes with it automatically.
-int64_t monotonic_ms() {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
-}
+// monotonic_ms() (the press-driven CLOCK_MONOTONIC ms time base for double-click
+// detection here and the nudge stem-pin window) is now the shared reader
+// declared in app_state.h — one owner, no per-TU clock copy.
 
 // Active-domain playhead frame at click column `col`. SOURCE view: the exact
 // source grid (source_grid_position_at_column via painter q), matching marker
@@ -263,19 +258,31 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
 bool GuiInputHandler::handle_escape_selection_region() {
     // DOWN-ONLY ladder (round 4, architect 2026-07-23): markers -> region ->
     // playhead, and a region is already the LOWER rung, so an active region
-    // collapses STRAIGHT to the playhead — never into a subregion. This is why
+    // collapses toward the playhead — never into a subregion. This is why
     // region.active is tested FIRST, regardless of selection: the old rung (b)
     // re-derived the region from the selection extent, which SHRANK an active
-    // region to the selection's subregion. Consequence (architect-flagged, cheap
-    // to re-rule): a click-made multi-selection rests with its SelectionExtent
-    // region active, so it now collapses to the playhead in ONE Esc rather than
-    // two.
+    // region to the selection's subregion. The ladder walks ONE rung per Esc:
+    // for a MULTIMARKER selection resting under an active region, the first Esc
+    // clears the SELECTION ONLY (the region stays), and a SECOND Esc then takes
+    // the region collapse below.
     if (app.region.active) {
-        // Region active: collapse to its start (PROVENANCE-BLIND — any active
-        // region collapses, SelectionExtent / TrimWindow / Free alike). The region
-        // is the stretched-out playhead, so clear it AND the selection (a
-        // click-made multi-selection's coupled extent region dies with the
-        // selection here) and land the playhead at lo.
+        // First rung under an active region: 2+ selected markers -> clear the
+        // SELECTION ONLY and leave the region resting (architect 2026-07-23,
+        // re-ruling the earlier one-Esc collapse). clear_selection runs
+        // demote_region_provenance, so a SelectionExtent region demotes to Free
+        // and simply rests; the region and the playhead are untouched, so the
+        // next Esc reaches the collapse. A singleton + region and a no-selection +
+        // region fall through to the immediate collapse below.
+        if (app.selected_markers.size() >= 2) {
+            selection.clear_selection();
+            viewport.invalidate_waveform_area();
+            return true;
+        }
+        // Region active (0 or 1 selected): collapse to its start (PROVENANCE-BLIND
+        // — any active region collapses, SelectionExtent / TrimWindow / Free
+        // alike). The region is the stretched-out playhead, so clear it AND the
+        // selection (a singleton's coupled extent region dies with the selection
+        // here) and land the playhead at lo.
         const int64_t lo = std::min(app.region.a_frame, app.region.b_frame);
         app.region = RegionState{};
         selection.clear_selection();
