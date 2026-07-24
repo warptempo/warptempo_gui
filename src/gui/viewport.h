@@ -80,16 +80,19 @@ struct Viewport {
     //
     // Callers are the discrete, one-shot repositioning events: view swaps
     // (tab / marker navigation), viewport recenters, undo/redo, adopt, and the
-    // warp_frame_map edits still reachable in target view — the Alt+Up/Down
-    // tempo step (adjust_tempo_cents, the one warp authoring gesture reachable
-    // off its source home) and the settings engine-scale commit — each re-warps
-    // the map, so the plate and the overlays (playhead, markers, flags) must
-    // land in one frame with the reclamped geometry below, or the overlays jump
-    // a frame ahead of a stale plate. The warp PLACEMENT edits (drop / delete /
-    // marker drag / nudge / Ctrl+N / Ctrl+D / the flag-editor commit) now author
-    // in warp's source home view (home-view binding, architect 2026-07-22),
-    // where the source waveform has no map-dependent plate — they no longer call
-    // this. The ASYNC worker path is not a map-edit route:
+    // warp_frame_map edits reachable in target view — the Alt+Up/Down tempo step
+    // (adjust_tempo_cents), the settings engine-scale commit, and (architect
+    // 2026-07-24) the WARP POSITION NUDGE's target-view path (Alt+Left/Right, the
+    // home-view binding's third exception — a warp position change in target view
+    // deforms the map the view displays) — each re-warps the map, so the plate
+    // and the overlays (playhead, markers, flags) must land in one frame with the
+    // reclamped geometry below, or the overlays jump a frame ahead of a stale
+    // plate. The other warp PLACEMENT edits (drop / delete / marker drag / Ctrl+N /
+    // Ctrl+D / the flag-editor commit) author in warp's source home view only
+    // (home-view binding, architect 2026-07-22), where the source waveform has no
+    // map-dependent plate — they never call this; the nudge's own SOURCE path is
+    // likewise no-kick (identity map), only its target path kicks. The ASYNC
+    // worker path is not a map-edit route:
     // it serves viewport navigation (pan/follow/resize) and repaints the
     // plate on preview completion, both undriven-by-a-discrete-edit cases the
     // key-repeat-rate argument for staying async never applied to.

@@ -1302,20 +1302,26 @@ struct AppState {
     // pin is LIVE iff BOTH halves hold: (a) command adjacency — `command_seq ==
     // stem_pin_command_seq` (and stem_pin_marker == the selected index); any OTHER
     // command bumps command_seq at its dispatch entry and kills the pin instantly
-    // — AND (b) the Alt+Left/Right KEY IS STILL HELD (gui.repeat_hold_active(), the
-    // platform's key-repeat armed state, true from press through the initial-delay
-    // phase and every repeat until release/disarm). The key-hold half REPLACED a
-    // fixed burst timer (architect 2026-07-24): the compositor's ~600 ms initial
+    // — AND (b) the live Alt-exact Left/Right CHORD still holds: the platform's
+    // armed repeat key is an arrow (repeat_hold_key() == Left/Right) AND the live
+    // modifiers are alt-exact (alt held, no shift/ctrl), composed in the on_tick
+    // reap from the platform's minimal repeat/mod read. It is the CHORD, not a bare
+    // "arrow key still armed" probe: the repeat hold DELIBERATELY survives a
+    // modifier change (the live-modifier rule, load-bearing for the Ctrl+Z <->
+    // Ctrl+Shift+Z flip), so releasing Alt while Right stays down keeps Right armed
+    // yet ends the nudge — the chord test then kills the pin next tick even
+    // mid-initial-delay, matching "the moment the nudge key is released". This
+    // key-hold half REPLACED a fixed burst timer: the compositor's ~600 ms initial
     // delay meant any short window flickered during a hold's initial delay, so no
-    // fixed timer works — a held key now keeps the stem solid, a release kills it
-    // "asap" (within one tick). Manual-tap consequence: a single tap shows the stem
-    // only for the press's own frames (the release disarms the hold, reaped next
-    // tick); the SUSTAINED stem is the HELD fine-tuning case, and hover covers
-    // inspection. The default stem_pin_marker = -1 never matches a real (>= 0)
-    // selection, so the startup command_seq == 0 == stem_pin_command_seq
-    // coincidence pins nothing. Both halves are the two DEATH causes, REAPED
-    // one-shot in on_tick: when stem_pin_marker is set and EITHER adjacency is lost
-    // OR the key hold released, the reaper invalidates the FULL waveform area and
+    // fixed timer works — a held chord keeps the stem solid, an end kills it "asap"
+    // (within one tick). Manual-tap consequence: a single tap shows the stem only
+    // for the press's own frames (the release ends the chord, reaped next tick); the
+    // SUSTAINED stem is the HELD fine-tuning case, and hover covers inspection. The
+    // default stem_pin_marker = -1 never matches a real (>= 0) selection, so the
+    // startup command_seq == 0 == stem_pin_command_seq coincidence pins nothing.
+    // Both halves are the two DEATH causes, REAPED one-shot in on_tick: when
+    // stem_pin_marker is set and EITHER adjacency is lost OR the nudge chord no
+    // longer holds, the reaper invalidates the FULL waveform area and
     // resets stem_pin_marker = -1 so the blue line disappears without user input.
     // Paint (adjacency-only) stops drawing it too, but not every killing command
     // damages the waveform (bare `o` invalidates only the bottom strip) and a

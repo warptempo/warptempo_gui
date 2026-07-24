@@ -295,12 +295,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Keyboard authoring is HOME-VIEW gated, not view-blind: warp markers
     // author in source view, phase resets in target view, via the one
     // predicate active_column_authoring_allowed consulted at each
-    // individual handler below (marker drop, nudge, status toggle, flag
-    // editor open, etc.) beside the read-only check above — off home a
-    // handler still dispatches here but refuses silently, navigation-class.
-    // The two ruled exceptions: the Alt+Up/Down tempo step stays owner-only
-    // in target view, and the phase-reset propagate paste starts in source
-    // view and lands in target through the `t` toggle chokepoint.
+    // individual handler below (marker drop, status toggle, flag editor open,
+    // etc.) beside the read-only check above — off home a handler still
+    // dispatches here but refuses silently, navigation-class. The THREE ruled
+    // exceptions: (1) the Alt+Up/Down tempo step stays owner-only in target view;
+    // (2) the phase-reset propagate paste starts in source view and lands in
+    // target through the `t` toggle chokepoint; and (3) the WARP POSITION NUDGE
+    // (Alt+Left/Right, architect 2026-07-24) runs in BOTH views — its dispatch
+    // block gates the home rule ITSELF (not through the predicate), phase nudge
+    // home-gated as before, and its target path re-warps synchronously.
 
     // Bare `t` toggles view-domain (S ↔ T). Placed before the marker /
     // phase reset edit handlers so the toggle wins over any future

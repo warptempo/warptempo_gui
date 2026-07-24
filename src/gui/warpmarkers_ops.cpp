@@ -392,15 +392,18 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
         adjust_tempo_cents_group(delta_cents);
         return;
     }
-    // architect ruling 2026-07-22: the Alt+Up/Down tempo step is the one warp
-    // authoring gesture that stays reachable off its source home (target view
-    // is exactly where you want to hear/see a tempo change). But there it is
-    // OWNER-ONLY: the focus-collapse target must already own an adjustable
-    // tempo, so a pass (tempo_inherits) or a label ref refuses silently — no
-    // freeze conversion, no undo entry, no dirty. Source view is UNCHANGED
-    // (the pass/ref-to-owner freeze below still applies). The owner test reads
-    // the marker's own authored fields, not the resolved projection: the
-    // question is whether this marker owns a tempo, which is payload.
+    // architect ruling 2026-07-22: the Alt+Up/Down tempo step stays reachable off
+    // its source home (target view is exactly where you want to hear/see a tempo
+    // change). It is one of the warp column's off-home authoring exceptions (the
+    // other keyboard one is the Alt+Left/Right POSITION NUDGE, architect
+    // 2026-07-24 — both views). But the tempo step there is OWNER-ONLY: the
+    // focus-collapse target must already own an adjustable tempo, so a pass
+    // (tempo_inherits) or a label ref refuses silently — no freeze conversion, no
+    // undo entry, no dirty (unlike the position nudge, which nudges any marker's
+    // position). Source view is UNCHANGED (the pass/ref-to-owner freeze below
+    // still applies). The owner test reads the marker's own authored fields, not
+    // the resolved projection: the question is whether this marker owns a tempo,
+    // which is payload.
     if (app.active_audio_view == 'T') {
         const auto& mv = app.warpmarkers.markers();
         const int f = app.last_selected_marker;
@@ -497,13 +500,14 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
-    // Discrete warp_frame_map change that CAN run in target view: Alt+Up/Down is
-    // the one warp authoring gesture reachable off its source home (the ruled
-    // exception gated above), so it is now one of the few surviving target-view
-    // re-warp sites (with the settings engine-scale commit and undo/redo). When
-    // it runs in target view the plate must re-warp, so render synchronously so
-    // displayed == live at this command boundary, leaving no divergence window
-    // for the displayed-basis gestures (phase drags, trim drags) to ride out.
+    // Discrete warp_frame_map change that CAN run in target view: Alt+Up/Down is a
+    // warp authoring gesture reachable off its source home (the ruled exception
+    // gated above), so it is one of the surviving target-view re-warp sites (with
+    // the settings engine-scale commit, undo/redo, and — architect 2026-07-24 —
+    // the Alt+Left/Right POSITION NUDGE's target path). When it runs in target
+    // view the plate must re-warp, so render synchronously so displayed == live at
+    // this command boundary, leaving no divergence window for the displayed-basis
+    // gestures (phase drags, trim drags) to ride out.
     if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
     target_render.trigger();
 }

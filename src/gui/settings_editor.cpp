@@ -447,11 +447,11 @@ void GuiSettingsEditor::commit() {
     text_editor::deactivate(app.settings_editor);
     // The engine scale is a warp-map input (build_warp_frame_map's slope
     // product), so an engine commit that moved it re-warps the target-view
-    // plate. This is one of the few warp_frame_map edits still reachable in
-    // target view (with the Alt+Up/Down tempo step and undo/redo — the warp
-    // placement edits now author in source view under the home-view binding),
-    // so re-warp synchronously in target view so displayed == live at this
-    // command boundary. A non-scale engine key (provenance) leaves the plate
+    // plate. This is one of the warp_frame_map edits reachable in target view
+    // (with the Alt+Up/Down tempo step, undo/redo, and — architect 2026-07-24 —
+    // the Alt+Left/Right POSITION NUDGE's target path; the OTHER warp placement
+    // edits author in source view only under the home-view binding), so re-warp
+    // synchronously in target view so displayed == live at this command boundary. A non-scale engine key (provenance) leaves the plate
     // unchanged, so the sync is a redundant bounded rebuild there — acceptable,
     // matching the unconditional trigger beside it.
     if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
