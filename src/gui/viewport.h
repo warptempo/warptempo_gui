@@ -81,17 +81,16 @@ struct Viewport {
     // Callers are the discrete, one-shot repositioning events: view swaps
     // (tab / marker navigation), viewport recenters, undo/redo, adopt, and the
     // warp_frame_map edits reachable in target view — the Alt+Up/Down tempo step
-    // (adjust_tempo_cents), the settings engine-scale commit, and (architect
-    // 2026-07-24) the WARP POSITION NUDGE's target-view path (Alt+Left/Right, the
-    // home-view binding's third exception — a warp position change in target view
-    // deforms the map the view displays) — each re-warps the map, so the plate
+    // (adjust_tempo_cents), the Alt+Left/Right TEMPO-IMAGE STEP (the tempo
+    // drag's keyboard twin, MarkerDragOps::step_tempo_image), and the settings
+    // engine-scale commit — each re-warps the map, so the plate
     // and the overlays (playhead, markers, flags) must land in one frame with the
     // reclamped geometry below, or the overlays jump a frame ahead of a stale
-    // plate. The other warp PLACEMENT edits (drop / delete / marker drag / Ctrl+N /
-    // Ctrl+D / the flag-editor commit) author in warp's source home view only
-    // (home-view binding, architect 2026-07-22), where the source waveform has no
-    // map-dependent plate — they never call this; the nudge's own SOURCE path is
-    // likewise no-kick (identity map), only its target path kicks. The ASYNC
+    // plate. The warp PLACEMENT edits (drop / delete / marker drag / the
+    // position nudge / Ctrl+N / Ctrl+D / the flag-editor commit) author in
+    // warp's source home view only (home-view binding, architect 2026-07-22 —
+    // W+target authors tempo only, never position), where the source waveform
+    // has no map-dependent plate — they never call this. The ASYNC
     // worker path is not a map-edit route:
     // it serves viewport navigation (pan/follow/resize) and repaints the
     // plate on preview completion, both undriven-by-a-discrete-edit cases the
@@ -171,9 +170,9 @@ struct Viewport {
     void follow_scroll_if_needed();
 
     // Repair the LIVE display-state fields after a map edit that changed the
-    // active-domain total (a target-view tempo step / drag, the settings
-    // engine-scale commit, undo/redo, the Alt+Left/Right position nudge's
-    // target-view press — every total-changing warp-map edit).
+    // active-domain total (a target-view tempo step / drag / Alt+Left/Right
+    // tempo-image step, the settings engine-scale commit, undo/redo — every
+    // total-changing warp-map edit).
     // Clamps the resting cursor playhead back into [0, live_total - 1] through
     // the shared clamp_playhead_to_live_domain chokepoint, and CLEARS a live
     // region whose either bound left that domain. Called from kick_waveform_sync

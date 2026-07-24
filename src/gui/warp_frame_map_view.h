@@ -239,9 +239,13 @@ int64_t authored_frame_at_column(
     const AppState& app, const GuiAudio& audio, int col,
     const std::vector<WarpFrameMapSegment>& warp_frame_map);
 
-// UNCLAMPED inverse of map_source_to_target, the shared honest-inverse for the
-// group position nudges' rider proposals in TARGET view (BOTH columns — the warp
-// nudge's third-exception target path and the phase-reset nudge). map_target_to_
+// UNCLAMPED inverse of map_source_to_target, the honest-inverse for the group
+// PHASE-RESET nudge's rider proposals in its target home view — that nudge is
+// its ONE consumer, a recorded phase-reset-only asymmetry (the warp position
+// nudge authors in source view, an identity domain with no inverse to take; the
+// short-lived 2026-07-24 warp-in-target position branch that briefly shared
+// this helper was re-ruled away the same day). Kept here beside the other map
+// helpers. map_target_to_
 // source CLAMPS any query at or before the map's first target breakpoint to the
 // first source frame, which would HIDE an out-of-range rigid proposal at 0 and
 // pass the post-snap wall belt. This instead EXTENDS segment 0's slope backward

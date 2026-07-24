@@ -302,13 +302,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // predicate active_column_authoring_allowed consulted at each
     // individual handler below (marker drop, status toggle, flag editor open,
     // etc.) beside the read-only check above — off home a handler still
-    // dispatches here but refuses silently, navigation-class. The THREE ruled
-    // exceptions: (1) the Alt+Up/Down tempo step stays owner-only in target view;
-    // (2) the phase-reset propagate paste starts in source view and lands in
-    // target through the `t` toggle chokepoint; and (3) the WARP POSITION NUDGE
-    // (Alt+Left/Right, architect 2026-07-24) runs in BOTH views — its dispatch
-    // block gates the home rule ITSELF (not through the predicate), phase nudge
-    // home-gated as before, and its target path re-warps synchronously.
+    // dispatches here but refuses silently, navigation-class. The TWO ruled
+    // exceptions: (1) the TEMPO family in W+target — one motion
+    // (stretch/squish), three flavors: the Alt+Up/Down step (owner-only there),
+    // the tempo drag, and the Alt+Left/Right tempo-image step (the drag's
+    // keyboard twin, dispatched below where the warp column's nudge route
+    // splits by view); (2) the phase-reset propagate paste starts in source
+    // view and lands in target through the `t` toggle chokepoint. (The
+    // 2026-07-24 "third exception" — a both-views warp POSITION nudge — was
+    // re-ruled away the same day: no warp position authoring in target view.)
 
     // Bare `t` toggles view-domain (S ↔ T). Placed before the marker /
     // phase reset edit handlers so the toggle wins over any future
@@ -612,20 +614,23 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // never acts on a bound (trim's pointer route is the plain chip-row
     // press-drag on its chip / the inter-chip bridge).
     //
-    // POSITION-NUDGE HOME-VIEW GATE (architect 2026-07-24): the WARP position
-    // nudge is the home-view binding's THIRD exception — Alt+Left/Right on the
-    // warp column runs in BOTH audio views (source AND target). The exception is
-    // for this ONE keyboard gesture only: the flag DRAG stays home-view-only (the
-    // binding's "imprecise by construction" rationale is about pointer drags; a
-    // discrete one-column step is accepted imprecision by ruling). The PHASE
-    // nudge keeps its home (target) binding unchanged. Read-only tabs still refuse
-    // both (gated upstream by read_only_key_blocked, not here).
+    // ROUTING (architect 2026-07-24 second pass, re-ruling the same-day "third
+    // exception" away): each column's POSITION nudge runs in its HOME view only
+    // — warp in source, phase reset in target (the home-view binding). In
+    // W+TARGET Alt+Left/Right is NOT a position gesture: it dispatches the
+    // TEMPO-IMAGE STEP (MarkerDragOps::step_tempo_image), the tempo drag's
+    // keyboard twin — one painted column of the FOCUSED marker's IMAGE per
+    // press via the (deduped participant) predecessor tempo solve, the drag's
+    // eligibility legs included. Read-only tabs refuse all three routes
+    // upstream (read_only_key_blocked — Alt-exact arrows are not allowlisted).
     if (alt && !shift && !ctrl && key == GuiKeys::Left) {
         if (app.active_markers_view == 'P') {
             if (app.active_audio_view != 'T') return;   // phase home = target
             phase_resets.nudge_selected_phase_resets(-1);
+        } else if (app.active_audio_view == 'T') {
+            marker_drag.step_tempo_image(-1);   // W+target: tempo-image step
         } else {
-            warpops.nudge_selected_markers(-1);         // warp: both views
+            warpops.nudge_selected_markers(-1); // warp home (source): position
         }
         return;
     }
@@ -633,6 +638,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (app.active_markers_view == 'P') {
             if (app.active_audio_view != 'T') return;
             phase_resets.nudge_selected_phase_resets(+1);
+        } else if (app.active_audio_view == 'T') {
+            marker_drag.step_tempo_image(+1);
         } else {
             warpops.nudge_selected_markers(+1);
         }

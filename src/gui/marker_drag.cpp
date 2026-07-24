@@ -929,47 +929,34 @@ int MarkerDragOps::tempo_drag_predecessor(int hit) const {
     return j;
 }
 
-// Begin the tempo drag at the threshold crossing. Captures the grab tempo, the
-// deduped participant predecessor set + their grab cents, the pre-drag store
-// snapshot (the one undo entry's payload), the selection snapshot, and the grab
-// playhead (the Esc-cancel restore). Returns false (gesture dropped) only on a
-// defensive eligibility re-check failure of the GRABBED marker.
-bool MarkerDragOps::begin_tempo_drag(int hit) {
-    // The grabbed marker must be eligible (a defensive re-check — the arm already
-    // ran the walk); -1 drops the gesture. Flowing the walked index keeps
-    // predecessor == marker - 1 from being assumed anywhere downstream.
-    const int pred = tempo_drag_predecessor(hit);
-    if (pred < 0) return false;
+// Deduped participant-predecessor seeding (participants + walled verdict), the
+// ONE owner shared by begin_tempo_drag and step_tempo_image (see the header).
+MarkerDragOps::TempoGroupSeed
+MarkerDragOps::seed_tempo_group_participants(int hit, int pred) const {
     const auto& mv = app.warpmarkers.markers();
-
-    TempoDragState d;
-    d.active      = true;
-    d.marker      = hit;
-    d.predecessor = pred;
+    TempoGroupSeed seed;
 
     // Build the DEDUPED participant predecessor set over the WHOLE selection
-    // (grabbed included; a singleton selection degenerates to {pred}). Two
-    // selected members of one coincident stack walk to the SAME predecessor, and
-    // consecutive selected markers legitimately contribute each other — the set
-    // dedupes both. An INELIGIBLE member (tempo_drag_predecessor < 0 — no
+    // (grabbed/focused included; a singleton selection degenerates to {pred}).
+    // Two selected members of one coincident stack walk to the SAME predecessor,
+    // and consecutive selected markers legitimately contribute each other — the
+    // set dedupes both. An INELIGIBLE member (tempo_drag_predecessor < 0 — no
     // strictly-earlier marker, or a disabled/pass/ref/coincident-collapsed
-    // predecessor, or forward-label coupling) WALLS the group at zero: the drag
-    // still arms (the grabbed marker is eligible), but `walled` pins the delta
-    // intersection to [0, 0] so motion produces nothing — the wall hit before it
-    // starts. The grabbed predecessor is inserted unconditionally, so the set is
-    // never empty.
+    // predecessor, or forward-label coupling) WALLS the group at zero: for the
+    // drag, `walled` pins the delta intersection to [0, 0] so motion produces
+    // nothing — the wall hit before it starts (the keyboard step instead maps
+    // the verdict to a whole-press refusal, the step-family convention). The
+    // grabbed predecessor is inserted unconditionally, so the set is never
+    // empty.
     std::set<int> preds;
     for (int m : app.selected_markers) {
         if (m < 0 || m >= static_cast<int>(mv.size())) continue;
         const int p = tempo_drag_predecessor(m);
-        if (p < 0) { d.walled = true; continue; }
+        if (p < 0) { seed.walled = true; continue; }
         preds.insert(p);
     }
     preds.insert(pred);
-    d.participant_predecessors.assign(preds.begin(), preds.end());
-    d.participant_grab_cents.reserve(d.participant_predecessors.size());
-    for (int p : d.participant_predecessors)
-        d.participant_grab_cents.push_back(mv[p].tempo_cents);
+    seed.participants.assign(preds.begin(), preds.end());
 
     // GROUP LABEL WALL — the multi-participant BISECTION's MONOTONICITY GUARANTEE
     // (not an optimization), the max-strict group extension of leg 6. The
@@ -1006,12 +993,12 @@ bool MarkerDragOps::begin_tempo_drag(int hit) {
     // participant materializes through a pass chain; a synthetic-prior owner
     // reports -1 and is excluded. Effectively-enabled is judged on the store (the
     // benign over-refusal leg 6 accepts). The slice is built ONCE.
-    if (d.participant_predecessors.size() >= 2 && !d.walled) {
+    if (seed.participants.size() >= 2 && !seed.walled) {
         const std::vector<WarpMarker> resolved = slice_to_warp_markers(mv);
         const long total = static_cast<long>(audio.total_frames());
         const int64_t grabbed_frame = mv[hit].time_frame;
         for (int def = 0;
-             def < static_cast<int>(mv.size()) && !d.walled; ++def) {
+             def < static_cast<int>(mv.size()) && !seed.walled; ++def) {
             if (mv[def].label_def.empty()) continue;
             const int owner = marker_effective(resolved, def, total).owner_idx;
             if (owner < 0 || !preds.count(owner)) continue;
@@ -1019,12 +1006,41 @@ bool MarkerDragOps::begin_tempo_drag(int hit) {
                 if (mv[k].time_frame >= grabbed_frame) break;  // sorted ascending
                 if (!marker_effectively_disabled(mv, static_cast<size_t>(k)) &&
                     mv[k].label_ref == mv[def].label_def) {
-                    d.walled = true;
+                    seed.walled = true;
                     break;
                 }
             }
         }
     }
+    return seed;
+}
+
+// Begin the tempo drag at the threshold crossing. Captures the grab tempo, the
+// deduped participant predecessor set + their grab cents (the shared seeding
+// helper above — begin consumes its verdict byte-identically, `walled` staying
+// a drag concept), the pre-drag store snapshot (the one undo entry's payload),
+// the selection snapshot, and the grab playhead (the Esc-cancel restore).
+// Returns false (gesture dropped) only on a defensive eligibility re-check
+// failure of the GRABBED marker.
+bool MarkerDragOps::begin_tempo_drag(int hit) {
+    // The grabbed marker must be eligible (a defensive re-check — the arm already
+    // ran the walk); -1 drops the gesture. Flowing the walked index keeps
+    // predecessor == marker - 1 from being assumed anywhere downstream.
+    const int pred = tempo_drag_predecessor(hit);
+    if (pred < 0) return false;
+    const auto& mv = app.warpmarkers.markers();
+
+    TempoDragState d;
+    d.active      = true;
+    d.marker      = hit;
+    d.predecessor = pred;
+
+    TempoGroupSeed seed = seed_tempo_group_participants(hit, pred);
+    d.walled                   = seed.walled;
+    d.participant_predecessors = std::move(seed.participants);
+    d.participant_grab_cents.reserve(d.participant_predecessors.size());
+    for (int p : d.participant_predecessors)
+        d.participant_grab_cents.push_back(mv[p].tempo_cents);
 
     d.pre_drag_snapshot      = mv;
     d.pre_drag_last_selected = app.last_selected_marker;
@@ -1102,29 +1118,18 @@ bool MarkerDragOps::begin_tempo_drag(int hit) {
 //     same resolve->build pipeline the live cache uses, over a COPY (the live
 //     store is never touched); per event: 2 endpoint builds + up to ~10 midpoint
 //     builds (log2 of the <=750-cent range), nothing re-evaluated — trivial.
-void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
-    if (!app.tempo_drag.active) return;
-    const int sr = audio.sample_rate();
-    if (sr <= 0) return;
-    const auto& mv = app.warpmarkers.markers();
-    const int mi = app.tempo_drag.marker;
-    const int pi = app.tempo_drag.predecessor;
-    if (pi < 0 || mi <= pi || mi >= static_cast<int>(mv.size())) return;
-    const GuiRect area = waveform_area(app);
-    if (area.w <= 0) return;
-    const double spp = current_samples_per_pixel(app, audio);
-    if (spp <= 0.0) return;
 
-    // Desired target position under the pointer, through the CURRENT
-    // viewport (each step's sync re-warp reclamps zoom/viewport first, so
-    // the live viewport is always the painted one). The gesture takes no
-    // pointer capture; travel outside the window clamps to the visible
-    // strip, like the reposition drag's live tracking clamp.
-    int rel = mouse_x - area.x;
-    if (rel < 0)       rel = 0;
-    if (rel >= area.w) rel = area.w - 1;
-    const double t_des = static_cast<double>(app.viewport_start_sample) +
-                         static_cast<double>(rel) * spp;
+// The solve CORE (factored from apply_tempo_drag_motion, byte-identical through
+// the factor; step_tempo_image is the second caller). Computes the group-stop
+// intersection from the participants' CURRENT stored cents + the walled pin,
+// then runs the two-path solve above toward `t_des`. Returns false only on a
+// hypothetical-build failure inside the bisection (unreachable by
+// construction; the caller drops the event/press without committing).
+bool MarkerDragOps::solve_tempo_group_delta(
+    double t_des, int mi, int pi, const std::vector<int>& participants,
+    bool walled, int64_t& out_delta) const {
+    const int sr = audio.sample_rate();
+    const auto& mv = app.warpmarkers.markers();
 
     // The grabbed marker's source frame — the objective's fixed evaluation point
     // (tempo-only, so it never moves through the gesture).
@@ -1141,7 +1146,7 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     // can produce (+/-(max-min)).
     int64_t delta_lo = kTempoMinCents - kTempoMaxCents;   // -(range)
     int64_t delta_hi = kTempoMaxCents - kTempoMinCents;   // +(range)
-    for (int pp : app.tempo_drag.participant_predecessors) {
+    for (int pp : participants) {
         if (pp < 0 || pp >= static_cast<int>(mv.size())) continue;
         const int64_t cp = mv[pp].tempo_cents;
         const int64_t lo_p = kTempoMinCents - cp;
@@ -1149,10 +1154,10 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
         if (lo_p > delta_lo) delta_lo = lo_p;
         if (hi_p < delta_hi) delta_hi = hi_p;
     }
-    if (app.tempo_drag.walled) { delta_lo = 0; delta_hi = 0; }
+    if (walled) { delta_lo = 0; delta_hi = 0; }
 
     int64_t clamped;
-    if (app.tempo_drag.participant_predecessors.size() <= 1) {
+    if (participants.size() <= 1) {
         // SINGLE participant: the closed-form ABSOLUTE solve (see the header),
         // exact and bit-for-bit the original. T(P) from the live memoized map,
         // recomputed per event; live, not displayed: each step re-warps
@@ -1208,7 +1213,7 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
         // if it ever fires).
         auto eval_T = [&](int64_t d, double& out) -> bool {
             std::vector<GuiWarpMarker> copy = mv;
-            for (int pp : app.tempo_drag.participant_predecessors) {
+            for (int pp : participants) {
                 if (pp < 0 || pp >= static_cast<int>(copy.size())) continue;
                 copy[pp].tempo_cents = copy[pp].tempo_cents + d;
             }
@@ -1217,7 +1222,7 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
             // states probed by the bisection); their normalization lines must not
             // print — the resting store's lines would repeat ~12x per motion event
             // and envelope warnings would fire for probed candidates that never
-            // commit. The live re-warp below (kick_waveform_sync) stays loud.
+            // commit. The live re-warp (kick_waveform_sync) stays loud.
             const std::vector<WarpFrameMapSegment> m =
                 build_target_view_warp_frame_map(
                     copy, app.engine_settings.scale, sr,
@@ -1238,7 +1243,7 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
             // straddling pair needs no re-evaluation (2 endpoint builds + up to
             // ~10 midpoint builds — log2 of the <=750-cent range — nothing rebuilt).
             double T_lo, T_hi;
-            if (!eval_T(delta_lo, T_lo) || !eval_T(delta_hi, T_hi)) return;
+            if (!eval_T(delta_lo, T_lo) || !eval_T(delta_hi, T_hi)) return false;
             if (t_des >= T_lo) {
                 clamped = delta_lo;      // want a larger image than achievable
             } else if (t_des <= T_hi) {
@@ -1251,7 +1256,7 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
                 while (hi - lo > 1) {
                     const int64_t mid = lo + (hi - lo) / 2;
                     double T_mid;
-                    if (!eval_T(mid, T_mid)) return;
+                    if (!eval_T(mid, T_mid)) return false;
                     if (T_mid >= t_des) { lo = mid; Tlo = T_mid; }
                     else                { hi = mid; Thi = T_mid; }
                 }
@@ -1261,6 +1266,43 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
                               ? lo : hi;
             }
         }
+    }
+    out_delta = clamped;
+    return true;
+}
+
+void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
+    if (!app.tempo_drag.active) return;
+    const int sr = audio.sample_rate();
+    if (sr <= 0) return;
+    const auto& mv = app.warpmarkers.markers();
+    const int mi = app.tempo_drag.marker;
+    const int pi = app.tempo_drag.predecessor;
+    if (pi < 0 || mi <= pi || mi >= static_cast<int>(mv.size())) return;
+    const GuiRect area = waveform_area(app);
+    if (area.w <= 0) return;
+    const double spp = current_samples_per_pixel(app, audio);
+    if (spp <= 0.0) return;
+
+    // Desired target position under the pointer, through the CURRENT
+    // viewport (each step's sync re-warp reclamps zoom/viewport first, so
+    // the live viewport is always the painted one). The gesture takes no
+    // pointer capture; travel outside the window clamps to the visible
+    // strip, like the reposition drag's live tracking clamp.
+    int rel = mouse_x - area.x;
+    if (rel < 0)       rel = 0;
+    if (rel >= area.w) rel = area.w - 1;
+    const double t_des = static_cast<double>(app.viewport_start_sample) +
+                         static_cast<double>(rel) * spp;
+
+    // The factored solve core (intersection + two-path solve — see
+    // solve_tempo_group_delta above); a failed hypothetical build drops the
+    // event without committing, exactly the pre-factor inline returns.
+    int64_t clamped = 0;
+    if (!solve_tempo_group_delta(t_des, mi, pi,
+                                 app.tempo_drag.participant_predecessors,
+                                 app.tempo_drag.walled, clamped)) {
+        return;
     }
 
     // The both-unchanged skip, generalized: a clamped delta of zero commits
@@ -1450,4 +1492,154 @@ void MarkerDragOps::cancel_tempo_drag() {
     viewport.invalidate_waveform_area();
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
+}
+
+// -- W+target Alt+Left/Right: the tempo drag's keyboard twin ---------------
+//
+// architect 2026-07-24 second pass (BUG + re-rule): W+target collapses to ONE
+// MOTION — stretch/squish the waveform — reached by two image-lateral routes,
+// the pointer-continuous tempo drag and this one-column-per-press step (plus
+// the direct Alt+Up/Down tempo step on an owner). The same-day warp position
+// nudge's target-view branch (the short-lived "third exception") authored the
+// marker's SOURCE position from target view, deforming the map in a way that
+// read as waveform truncation, and had no eligibility gate (it ran even where
+// the drag refuses, e.g. on a marker following a label ref) — it is deleted;
+// warp POSITIONS author in source view only again.
+//
+// One press = one painted column of the FOCUSED marker's IMAGE, reached by
+// adjusting the (deduped participant) predecessors' tempo_cents through the
+// drag's own factored solve (closed-form singleton / monotone bisection group)
+// — pixel-anchored like every nudge: read the image's painted column, target
+// the adjacent column's position, let the solve place the image nearest it.
+// Alt+Left = column - 1 -> image earlier -> predecessor tempo UP (faster is
+// shorter); Alt+Right the reverse. No viewport gate (nudges have none — an
+// offscreen image steps fine); the solve's bracket-intersection clamp handles
+// the walls constructively, so a press at the cents wall lands d == 0 and
+// refuses below.
+//
+// ELIGIBILITY = the DRAG's, all-or-nothing (the keyboard step-family
+// convention from adjust_tempo_cents_group — refuse the WHOLE press, never
+// skip): the focused marker must arm (tempo_drag_predecessor >= 0), and the
+// shared seeding helper's verdict over the whole selection — the six
+// per-member legs AND the group label wall — REFUSES here where the drag
+// arms-but-WALLS. Recorded difference: a drag is a held gesture, so walling it
+// at zero keeps the hand-feel (the wall was hit before it moved); a keyboard
+// press has no gesture to hold — refusal is the step convention. This closes
+// the old position-branch hole where a marker after a label ref still nudged.
+//
+// COMMIT mirrors the tempo STEP's per-press tail (one discrete command), not
+// the drag's per-event one: one coalescing-eligible undo entry per press (its
+// OWN GestureKind::TempoImageStep, so a burst coalesces with itself and
+// nothing else; touched hints = the participant rows, touched_snapshot ==
+// touched_live — tempo only, no reorder ever), capture-before-kick region
+// decision, ONE synchronous re-warp, post-kick playhead re-land on the FOCUSED
+// marker's image, per-press preview trigger, and the STEM PIN STAMP — this IS
+// a lateral action (the receiving marker's image moves), unlike the
+// Alt+Up/Down tempo step whose stepped marker's own image is fixed by
+// construction.
+void MarkerDragOps::step_tempo_image(int direction) {
+    // Guards (silent refusals, navigation-class). The dispatch site already
+    // routes only W+target here; the view test is kept defensive, the shape of
+    // adjust_tempo_cents' own view gate. Read-only tabs refuse upstream
+    // (read_only_key_blocked — Alt-exact arrows are not on the allowlist).
+    if (app.active_markers_view != 'W' || app.active_audio_view != 'T') return;
+    if (app.loading || audio.total_frames() <= 0) return;
+    if (app.selected_markers.empty()) return;
+    const int f = app.last_selected_marker;
+    const auto& mv = app.warpmarkers.markers();
+    if (f < 0 || f >= static_cast<int>(mv.size())) return;   // focused stale
+    const int sr = audio.sample_rate();
+    if (sr <= 0) return;
+    const double spp = current_samples_per_pixel(app, audio);
+    if (spp <= 0.0) return;
+
+    // Eligibility, the drag's own: the focused marker arms (its predecessor
+    // owns a rewritable, non-collapsed tempo — the six legs), and the seeded
+    // group verdict is clean. `walled` maps to REFUSE (see the header comment).
+    const int pred = tempo_drag_predecessor(f);
+    if (pred < 0) return;
+    TempoGroupSeed seed = seed_tempo_group_participants(f, pred);
+    if (seed.walled) return;
+
+    // STEP TARGET, pixel-anchored: the focused marker's image under the LIVE
+    // memoized map (the drag's solve basis — displayed == live at every command
+    // boundary, this gesture's own sync re-warp maintaining it), its painted
+    // column, and the adjacent column's target-domain position through the same
+    // viewport/spp mapping the drag applies to its pointer (t_des =
+    // viewport_start + column * spp).
+    const TargetWarpFrameMapCache& c = target_view_warp_frame_map_cached(
+        app, sr, static_cast<long>(audio.total_frames()));
+    const int cf = painted_column_of_source_frame(
+        app, audio, static_cast<double>(mv[f].time_frame), c.warp_frame_map);
+    const double t_des = static_cast<double>(app.viewport_start_sample) +
+                         static_cast<double>(cf + direction) * spp;
+
+    // The factored solve core (never walled here — a walled seed refused
+    // above). A failed hypothetical build drops the press.
+    int64_t d = 0;
+    if (!solve_tempo_group_delta(t_des, f, pred, seed.participants,
+                                 /*walled=*/false, d)) {
+        return;
+    }
+    // d == 0: bracket edge (the constructive clamp pinned the solve at the
+    // current cents) — a refused press: no undo entry, no dirty, no stamp, and
+    // no damage, so the damage-quiescence guard preserves any live stem pin
+    // across it for free (a refused press never kills the pin).
+    if (d == 0) return;
+
+    // Coalescing decision before mutation (command adjacency; this route is the
+    // only producer of TempoImageStep, so a burst over the same group collapses
+    // to one entry — any intervening command breaks it).
+    const bool merge = undo.coalesce_gesture(GestureKind::TempoImageStep);
+    std::vector<GuiWarpMarker> pre_state = mv;
+    const int hint_last = app.last_selected_marker;
+    // Identity hints: the PARTICIPANT rows (the mutated markers — the diff
+    // matcher would see them fine, but the hints are the group convention).
+    // Tempo only, positions untouched, no reorder ever: touched_snapshot ==
+    // touched_live, and the stamped focused index below stays valid.
+    std::vector<int> touched = seed.participants;
+    // Apply the SAME clamped delta to EVERY participant (plain integer adds —
+    // the structural producer discipline). Iteration brackets stay (tempo
+    // changes never clear a bracket, per member).
+    for (int pp : seed.participants) {
+        if (pp < 0 || pp >= static_cast<int>(mv.size())) continue;
+        GuiWarpMarker* p = app.warpmarkers.marker_mut(pp);
+        if (!p) continue;
+        p->tempo_cents = p->tempo_cents + d;
+    }
+    if (merge) undo.note_coalesced_commit();
+    else       undo.push_undo_warp(std::move(pre_state), hint_last,
+                                   /*affects_persistence=*/true,
+                                   touched, touched);
+    undo.record_gesture(GestureKind::TempoImageStep);
+    undo.recompute_dirty();
+    viewport.invalidate_top_strip();
+    viewport.invalidate_timestamp_area();
+    // Target tail, the group tempo step's exact shape: capture the region
+    // follow/re-sync decision BEFORE kick_waveform_sync (its live-domain
+    // reclamp wholesale-clears a region whose old endpoint fell outside a
+    // shrunken target total), one synchronous re-warp, then act on the captured
+    // decision unconditionally. Like the STEP (a discrete press, no gesture
+    // state), both decisions read the LIVE provenance — a press whose images
+    // compress coincident clears a TrimWindow highlight (the coincident arm)
+    // and the chip-row re-click is the recorded recovery.
+    const bool follow_extent = app.region.active &&
+        app.region.provenance == RegionProvenance::SelectionExtent;
+    const bool trim_resync = app.region.active &&
+        app.region.provenance == RegionProvenance::TrimWindow;
+    viewport.kick_waveform_sync();
+    // Playhead re-land on the FOCUSED marker's post-kick image (the live cache
+    // just rebuilt against the committed store — the Tab placement basis,
+    // post-commit truth). Its source frame never moved; only the image did.
+    viewport.move_playhead_to(
+        source_frame_to_active_domain(app, audio, mv[f].time_frame));
+    if (follow_extent)      set_region_to_selection_extent(app, audio, viewport);
+    else if (trim_resync)   sync_region_to_trim_window(app, audio, viewport);
+    // Stem LATERAL-GESTURE PIN: the image step is a lateral gesture — the
+    // FOCUSED marker's image slid one column — so stamp exactly as the position
+    // nudge does (post-commit index + command_seq; no reorder, so f is stable).
+    // Lifecycle at AppState::stem_pin_*; a burst re-stamps each press.
+    app.stem_pin_marker      = f;
+    app.stem_pin_command_seq = app.command_seq;
+    target_render.trigger();
 }

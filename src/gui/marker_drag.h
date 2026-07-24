@@ -72,4 +72,47 @@ struct MarkerDragOps {
     void apply_tempo_drag_motion(int mouse_x);
     void end_tempo_drag();     // release / lost button: finalize
     void cancel_tempo_drag();  // Esc / Ctrl+Q: restore the grab tempo
+
+    // Deduped participant-predecessor seeding over the WHOLE selection — the
+    // ONE owner of the group eligibility verdict, shared by begin_tempo_drag
+    // (which consumes `walled` as the drag's arms-but-walls state) and the
+    // keyboard step_tempo_image (which maps "would wall" to a silent refusal)
+    // so the two surfaces cannot drift. `hit` is the grabbed/focused marker,
+    // `pred` its own predecessor (tempo_drag_predecessor(hit), caller-checked
+    // >= 0). participants is the deduped ascending predecessor set (never
+    // empty — pred is inserted unconditionally); walled = any ineligible
+    // selected member (tempo_drag_predecessor < 0: no strictly-earlier marker,
+    // or a disabled/pass/ref/coincident-collapsed predecessor, or forward-label
+    // coupling) OR the GROUP LABEL WALL (the multi-participant bisection's
+    // monotonicity guarantee — full rationale at the definition).
+    struct TempoGroupSeed {
+        std::vector<int> participants;
+        bool             walled = false;
+    };
+    TempoGroupSeed seed_tempo_group_participants(int hit, int pred) const;
+
+    // The tempo solve CORE, factored out of apply_tempo_drag_motion
+    // (byte-identical through the factor — the drag keeps its pointer->t_des
+    // derivation and per-event commit tail around this call): given the desired
+    // target-domain position `t_des` for marker `mi`'s image, mi's predecessor
+    // `pi`, the participant set, and the walled pin, produce the
+    // bracket-intersection-clamped group cents delta. Two paths by participant
+    // count (closed-form absolute solve / exact monotone bisection — the full
+    // rationale at apply_tempo_drag_motion). Returns false only on a
+    // hypothetical-build failure inside the bisection (unreachable by
+    // construction; the caller drops the event/press without committing).
+    bool solve_tempo_group_delta(double t_des, int mi, int pi,
+                                 const std::vector<int>& participants,
+                                 bool walled, int64_t& out_delta) const;
+
+    // W+target Alt+Left/Right: the tempo drag's KEYBOARD TWIN (architect
+    // 2026-07-24 second pass — replacing the same-day warp position nudge's
+    // target-view branch, which read as waveform truncation). One motion, two
+    // routes: the drag is pointer-continuous, this is one painted column of the
+    // FOCUSED marker's IMAGE per press, both authoring the (deduped
+    // participant) predecessors' tempo_cents through the same seeding and solve
+    // helpers above. Dispatched from the Alt+Left/Right route in
+    // input_handler.cpp; a keyboard command like adjust_tempo_cents, living
+    // here because the machinery is the drag's.
+    void step_tempo_image(int direction);
 };

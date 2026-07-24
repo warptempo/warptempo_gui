@@ -23,7 +23,14 @@ struct GuiTargetRender;
 // history push is suppressed. Any intervening command breaks the burst (see
 // command-adjacency below), so "same target / same tab / same history" all
 // follow for free: changing any of those requires a command in between.
-enum class GestureKind { None, WarpNudge, PhaseResetNudge, TempoStep };
+enum class GestureKind {
+    None, WarpNudge, PhaseResetNudge, TempoStep,
+    // W+target Alt+Left/Right — the tempo drag's keyboard twin
+    // (MarkerDragOps::step_tempo_image). Its own kind so a burst of image
+    // steps coalesces with itself and nothing else (never with the position
+    // nudges or the Alt+Up/Down tempo step).
+    TempoImageStep
+};
 
 // Coalesce window. Presses farther apart than this start a fresh undo entry.
 // Named so it is easy to tune.

@@ -1340,11 +1340,13 @@ struct AppState {
     // gesture and STAYS visible until the next DAMAGING command (the
     // damage-quiescence scope above is authoritative; damage-less commands
     // re-stamp through the preserve), so walking away leaves it standing
-    // (intended). THE THREE LATERAL GESTURES that stamp (architect 2026-07-24,
-    // narrowed from four): (1) the marker POSITION DRAG's commit (both columns,
-    // home views), (2) the POSITION NUDGE (Alt+Left/Right; warp in both audio
-    // views, phase in target), (3) the TEMPO DRAG's end (W+target by construction,
-    // the dragged marker IS the laterally-moving one). The TEMPO STEP (Alt+Up/Down,
+    // (intended). THE FOUR LATERAL GESTURES that stamp (architect 2026-07-24):
+    // (1) the marker POSITION DRAG's commit (both columns, home views), (2) the
+    // POSITION NUDGE (Alt+Left/Right in each column's home view — warp in
+    // source, phase in target), (3) the TEMPO DRAG's end (W+target by
+    // construction, the dragged marker IS the laterally-moving one), (4) the
+    // TEMPO-IMAGE STEP (Alt+Left/Right in W+target, the drag's keyboard twin —
+    // the FOCUSED marker's image slides one column). The TEMPO STEP (Alt+Up/Down,
     // singleton and group) is EXPLICITLY NOT a stamping site: the stepped marker's
     // OWN image is fixed by construction — its tempo shapes only the segment AFTER
     // it, so the step slides only DOWNSTREAM images, never the receiving marker's
@@ -1899,14 +1901,17 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // only — warp markers in source view, phase resets in target view. In the
 // non-home view a column is display/navigation-only (selection, hover, Tab,
 // readouts all live; every placement/store mutation refuses silently,
-// navigation-class, exactly the read-only-tab convention). The ruled exceptions
-// live at their sites: (1) the target-view Alt+Up/Down tempo step (owner-only
-// there, adjust_tempo_cents); (2) the phase-reset propagate (a warp-view gesture
-// that authors phase resets; its paste lands in target view); and (3) the WARP
-// POSITION NUDGE (Alt+Left/Right, architect 2026-07-24) — this one keyboard
-// gesture runs in BOTH views, gated at its dispatch site (input_handler.cpp) NOT
-// through this predicate, with target-view mechanics mirroring the phase nudge's
-// mapped-domain all-or-nothing regime. The flag DRAG and every other warp
+// navigation-class, exactly the read-only-tab convention). The TWO ruled
+// exceptions live at their sites: (1) the TEMPO family in W+target — ONE motion
+// (stretch/squish the waveform), THREE flavors: the Alt+Up/Down step
+// (owner-only there, adjust_tempo_cents), the tempo drag, and the
+// Alt+Left/Right tempo-image step (the drag's keyboard twin,
+// MarkerDragOps::step_tempo_image — Alt+Left/Right routes by view at its
+// dispatch site in input_handler.cpp, NOT through this predicate); (2) the
+// phase-reset propagate (a warp-view gesture that authors phase resets; its
+// paste lands in target view). The 2026-07-24 "third exception" — a both-views
+// warp POSITION nudge — was re-ruled away the same day: there is no warp
+// position authoring in target view at all. The flag DRAG and every other warp
 // mutation stay home-view-only through this predicate.
 inline bool active_column_authoring_allowed(const AppState& app) {
     return (app.active_markers_view == 'P') ? (app.active_audio_view == 'T')

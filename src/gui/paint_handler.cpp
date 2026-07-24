@@ -531,7 +531,8 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr,
 //       at the LIVE proposed position (moveable_times via the DragOverlay); the
 //       drag suppresses hover, so this arm cannot lean on (a),
 //   (c) the LATERAL-GESTURE PIN is live — this marker's lateral gesture (position
-//       nudge/drag or W+target tempo drag; the tempo NUDGE/step no longer stamps —
+//       nudge/drag, the W+target tempo drag, or the W+target Alt+Left/Right
+//       tempo-image step; the Alt+Up/Down tempo step does not stamp —
 //       architect 2026-07-24, its own image is fixed by construction) has had no
 //       DAMAGING command intervene since (the preserve re-stamps across damage-less
 //       ones), so command_seq == stem_pin_command_seq && stem_pin_marker == it. The
