@@ -81,24 +81,32 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio) {
 }
 
 // The viewport twin of displayed_or_live_target_map (full rationale at the
-// declaration): the {vp_start, spp} the flag/stem item caches were painted with
-// on the last committed frame, so the marker-text lane geometry rides the same
-// basis the flag pixels do. The warm spp is (vp_end - vp_start) / area_w, which
-// equals painter_samples_per_pixel exactly at rest (vp_end == vp_start +
-// nearbyint(spp * area_w), the painter-quantized span the flags and the viewport
-// snap both use). Cold (area_w == 0, nothing promoted yet) falls back to the
-// live viewport, the analog of the live-map cold fallback above.
+// declaration): the vp_start/vp_end/area_w the flag/stem item caches were painted
+// with on the last committed frame, so the marker/chip/lane geometry rides the
+// same basis the flag/chip pixels do. The warm spp is (vp_end - vp_start) /
+// area_w — the flags' OWN samples-per-pixel (span over the effective waveform
+// width the item render used), exact on the committing frame. Cold (area_w == 0,
+// nothing promoted yet) falls back to the live viewport span at the effective
+// waveform width, bit-for-bit the pre-mirror hit-test live basis.
 DisplayedViewportBasis displayed_viewport_basis(const AppState& app,
                                                 const GuiAudio& audio) {
     DisplayedViewportBasis b;
     if (app.displayed_area_w > 0) {
-        b.vp_start = static_cast<double>(app.displayed_vp_start);
-        b.spp = static_cast<double>(app.displayed_vp_end - app.displayed_vp_start) /
-                static_cast<double>(app.displayed_area_w);
+        b.vp_start_frame = app.displayed_vp_start;
+        b.vp_end_frame   = app.displayed_vp_end;
+        b.area_w         = app.displayed_area_w;
     } else {
-        b.vp_start = static_cast<double>(app.viewport_start_sample);
-        b.spp = current_samples_per_pixel(app, audio);
+        const GuiRect area = waveform_area(app);
+        const double  spp  = current_samples_per_pixel(app, audio);
+        b.vp_start_frame = app.viewport_start_sample;
+        b.vp_end_frame   = viewport_end_sample(b.vp_start_frame, spp, area.w);
+        b.area_w         = area.w;
     }
+    b.vp_start = static_cast<double>(b.vp_start_frame);
+    b.spp = b.area_w > 0
+        ? static_cast<double>(b.vp_end_frame - b.vp_start_frame) /
+          static_cast<double>(b.area_w)
+        : 0.0;
     return b;
 }
 
@@ -119,13 +127,21 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     if (mouse_y < row.y || mouse_y >= row.y + row.h) return TrimHit::None;
 
     const GuiRect top = top_strip_area(app);
-    // Effective waveform width: the trim chip's visibility cull must match the
-    // painter's viewport extent (render_trim_flags maps against this width),
-    // so a gutter column at a non-multiple-of-16 window is culled the same in
-    // paint and hit-test. Equal to top.w at 1920/2560/3840.
-    const int wave_w = waveform_area(app).w;
-    const double spp = current_samples_per_pixel(app, audio);
-    if (spp <= 0.0) return TrimHit::None;
+    // Event-synchronized hit geometry, the VIEWPORT half: the b/e chip pixels are
+    // painted by render_trim_flags on the flag cache's committed fp_vp span over
+    // the effective waveform width the render used, NOT the live viewport. So the
+    // chip columns must resolve on the DISPLAYED basis (displayed_viewport_basis)
+    // — the same reason hit_test_flag does — else during an async publish window a
+    // chip painted at the OLD column would be grabbed at the NEW/live column. (The
+    // MAP was already the displayed one; only the viewport lagged.) The visibility
+    // cull matches the painter's viewport extent (render_trim_flags maps against
+    // this same {span, width}), so a gutter column at a non-multiple-of-16 window
+    // is culled the same in paint and hit-test. Cold falls back to the live basis.
+    const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
+    if (basis.spp <= 0.0) return TrimHit::None;
+    const int     wave_w   = basis.area_w;
+    const int64_t vp_start = basis.vp_start_frame;
+    const int64_t vp_end   = basis.vp_end_frame;
     const int sr = audio.sample_rate();
     if (sr <= 0) return TrimHit::None;
 
@@ -155,13 +171,11 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
         // Map the authored source frame to the displayed domain and resolve its
         // column through the SAME owners the painter uses (render.h): the mapping
         // via displayed_trim_ms, the column via trim_bound_column against the
-        // hit-side vp_end (the painters' quantized-span denominator), the chip
-        // rect via trim_chip_rect. So a hit lands on exactly the drawn chip.
+        // displayed-basis vp span (the painters' quantized-span denominator), the
+        // chip rect via trim_chip_rect. So a hit lands on exactly the drawn chip.
         const double ms = displayed_trim_ms(frame, target_warp_frame_map);
-        const int64_t vp_end =
-            viewport_end_sample(app.viewport_start_sample, spp, wave_w);
         const TrimBoundColumn c =
-            trim_bound_column(ms, app.viewport_start_sample, vp_end, wave_w);
+            trim_bound_column(ms, vp_start, vp_end, wave_w);
         if (!c.in_viewport) return;
         const GuiRect cr_rect =
             trim_chip_rect(which == TrimHit::Begin, top.x, c.col, row);
@@ -195,11 +209,22 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y) {
-    const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
-    const double spp = current_samples_per_pixel(app, audio);
-    const int64_t vp_start = app.viewport_start_sample;
-    const int64_t vp_end = viewport_end_sample(vp_start, spp, area.w);
+    // Event-synchronized hit geometry, the VIEWPORT half: the flag pixels are
+    // painted from the item cache's committed fp_vp span over the effective
+    // waveform width the render used (the flag cache's own basis), NOT the live
+    // viewport. So the hit rects must build on the DISPLAYED basis
+    // (displayed_viewport_basis, the twin of the displayed MAP below) — else
+    // during an async plate-publish window a click over the visible OLD flag
+    // would be tested at the NEW/live column, splitting the one marker item from
+    // its lane run (which already rides the displayed basis). With the basis
+    // triple the rects here are exactly the painted flag rectangles across the
+    // publish window, not just at rest. Cold falls back to the live basis
+    // bit-for-bit (see the accessor).
+    const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
+    const int64_t vp_start = basis.vp_start_frame;
+    const int64_t vp_end   = basis.vp_end_frame;
+    const int     wave_w   = basis.area_w;
     // The mapped views' flags paint at translated positions
     // (compute_flag_hit_rects with a non-null warp_frame_map), so hit-test
     // must walk the same warp_frame_map — the item pixels' own via
@@ -219,17 +244,18 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     }
     // This two-way branch chain is the sole hit-rect builder: the flag paint
     // and this hit test share the fixed flag rectangle (via
-    // compute_flag_hit_rects / iterate_visible_flags_impl), so the rects
-    // computed here are exactly the painted flag rectangles.
+    // compute_flag_hit_rects / iterate_visible_flags_impl) on the same displayed
+    // viewport + width, so the rects computed here are exactly the painted flag
+    // rectangles.
     std::vector<FlagHitRect> rects;
     if (app.active_markers_view == 'P') {
         rects = compute_phase_reset_flag_hit_rects(
-            top, area.w, app.phaseresetmarkers.markers(),
+            top, wave_w, app.phaseresetmarkers.markers(),
             vp_start, vp_end, audio.sample_rate(),
             tmap_arg, drag_overlay);
     } else {
         rects = compute_flag_hit_rects(
-            top, area.w, app.warpmarkers.markers(),
+            top, wave_w, app.warpmarkers.markers(),
             vp_start, vp_end, audio.sample_rate(),
             tmap_arg, drag_overlay);
     }

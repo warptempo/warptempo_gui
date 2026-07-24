@@ -1650,10 +1650,11 @@ LaneRunSet current_marker_lane_runs(const AppState& app, const GuiAudio& audio)
 
     // The flags' own half-offscreen cull (iterate_visible_flags_impl): a flag may
     // hang up to half its width offscreen; cull only when FULLY offscreen. Sample
-    // space, on the displayed basis. vp_end reconstructs as vp_start + spp*W (==
-    // the flag cache's fp_vp_end at rest); the half-flag slack dwarfs any ULP.
-    const double W        = static_cast<double>(area.w);
-    const double vp_end   = basis.vp_start + basis.spp * W;
+    // space, on the displayed basis — the EXACT committed vp span (vp_start_frame/
+    // vp_end_frame, the flag cache's own fp_vp span), the same {span, width} the
+    // flags divided by, so the cull matches the flags' visibility on the
+    // committing frame, not just at rest.
+    const double vp_end   = static_cast<double>(basis.vp_end_frame);
     const double half_flag =
         static_cast<double>(flag_lane_w_px()) / 2.0;
     const double cull_lo  = basis.vp_start - half_flag * basis.spp;

@@ -2244,30 +2244,44 @@ const std::vector<WarpFrameMapSegment>&
 displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 
 // displayed_viewport_basis: the VIEWPORT twin of displayed_or_live_target_map —
-// the {vp_start, spp} the item hit tests and the marker-text lane geometry
-// decide against, so a run centers on and a hit lands on the column the flag
-// pixels were painted at. In target OR source view with a warm promoted mirror
-// (app.displayed_area_w > 0) it returns the vp_start and painter-quantized spp
-// (== (vp_end - vp_start) / area_w, the flags' own samples-per-pixel) the LAST
-// COMMITTED frame's flag/stem caches were built against; cold (nothing promoted
-// yet — first paint / view flip / just-after-load) it falls back to the LIVE
-// viewport {app.viewport_start_sample, current_samples_per_pixel}, matching the
-// live-map cold fallback of displayed_or_live_target_map.
+// the viewport span the item hit tests (flag shape, trim chip, marker-text lane)
+// and the lane geometry decide against, so a run centers on and a hit lands on
+// the column the flag/chip pixels were painted at. In target OR source view with
+// a warm promoted mirror (app.displayed_area_w > 0) it returns the vp_start/
+// vp_end/area_w triple the LAST COMMITTED frame's flag/stem caches were built
+// against — vp_start/vp_end from wf_cache.fp_* and area_w the LIVE effective
+// waveform width the item render used (staged at rebuild, not fp_area_w which is
+// the possibly-stale PLATE width) — so `spp` == (vp_end - vp_start) / area_w is
+// the flags' OWN samples-per-pixel, exact on the committing frame, not just at
+// rest. Cold (nothing promoted yet — first paint / view flip / just-after-load)
+// it falls back to the LIVE viewport {viewport_start_sample, viewport_end_sample
+// at current_samples_per_pixel, effective width}, matching the live-map cold
+// fallback of displayed_or_live_target_map (and the pre-mirror hit_test_flag /
+// hit_test_trim_chip live basis, so cold behavior is unchanged).
 //
 // This is the free-function owner homed beside displayed_or_live_target_map so
 // the render.cpp free functions (lane_text_left_x_at_frame, the lane run
-// resolver, marker_hit_at) share ONE basis. It is DELIBERATELY DISTINCT from
+// resolver, marker_hit_at) AND the app_state.cpp hit tests (hit_test_flag,
+// hit_test_trim_chip) share ONE basis. It is DELIBERATELY DISTINCT from
 // GuiPaintHandler::displayed_viewport_basis, which reads the LIVE wf_cache.fp_*
 // (the plate's current fingerprint): the paint-handler method registers the
 // PLATE-locked overlays (region wash, playheads, phase-reset overlay) with the
-// just-blitted plate, whereas this owner registers the flag/lane/hit geometry
-// with the committed FLAG/STEM item caches (the promoted mirror). The two
-// surfaces are keyed off the same fp_* at rest but can transiently diverge —
+// just-blitted plate, whereas this owner registers the flag/chip/lane/hit
+// geometry with the committed FLAG/STEM item caches (the promoted mirror). The
+// two surfaces are keyed off the same fp_* at rest but can transiently diverge —
 // plate published NEW while the flag cache still shows OLD for one frame — so
 // they are two owners by construction, not accidental duplication.
+//
+// The double vp_start/spp serve the lane column math (painted_column_of_source_
+// frame_on_basis); the int64 vp_start_frame/vp_end_frame/area_w serve the hit
+// tests, which pass the integer span + width to compute_flag_hit_rects /
+// trim_bound_column verbatim, and the lane cull (exact vp_end, no reconstruction).
 struct DisplayedViewportBasis {
-    double vp_start = 0.0;
-    double spp      = 0.0;
+    double  vp_start       = 0.0;
+    double  spp            = 0.0;
+    int64_t vp_start_frame = 0;
+    int64_t vp_end_frame   = 0;
+    int     area_w         = 0;
 };
 DisplayedViewportBasis displayed_viewport_basis(const AppState& app,
                                                 const GuiAudio& audio);

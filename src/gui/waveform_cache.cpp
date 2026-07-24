@@ -1048,13 +1048,17 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     else
         app.staged_displayed_target_warp_frame_map.clear();
     // Stage the displayed VIEWPORT alongside the map (the sibling half): the
-    // fp_* these stems were mapped through, so the marker-text lane geometry
-    // promotes to the same vp_start/spp basis the flags do. Staged in BOTH views
+    // fp_vp span these stems were mapped through, and the LIVE effective
+    // waveform width the render actually divided that span by (area.w =
+    // surface_w — NOT wf_cache.fp_area_w, the possibly-stale PLATE width that
+    // diverges from area.w after a resize until the plate republishes). So the
+    // promoted basis spp == span / this width is the stems'/flags' own
+    // samples-per-pixel, exact on the committing frame. Staged in BOTH views
     // (unlike the map, which stages a source-view clear) — the lane run rides the
     // displayed viewport in source view too.
     app.staged_displayed_vp_start = wf_cache.fp_vp_start;
     app.staged_displayed_vp_end   = wf_cache.fp_vp_end;
-    app.staged_displayed_area_w   = wf_cache.fp_area_w;
+    app.staged_displayed_area_w   = area.w;
     app.staged_displayed_valid = true;
 
     // Invalidate the stem region. Viewport-driven invalidations
@@ -1252,11 +1256,13 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         app.staged_displayed_target_warp_frame_map = wf_cache.fp_warp_frame_map;
     else
         app.staged_displayed_target_warp_frame_map.clear();
-    // Stage the displayed VIEWPORT alongside the map — same fp_* the flags/chips
-    // just mapped through; the same value the stem rebuild stages this tick.
+    // Stage the displayed VIEWPORT alongside the map — same fp_vp span the flags/
+    // chips just mapped through, divided by the LIVE effective waveform width
+    // wave_w these flags/chips were column-mapped against (NOT fp_area_w, the
+    // plate width). The same {span, width} the stem rebuild stages this tick.
     app.staged_displayed_vp_start = wf_cache.fp_vp_start;
     app.staged_displayed_vp_end   = wf_cache.fp_vp_end;
-    app.staged_displayed_area_w   = wf_cache.fp_area_w;
+    app.staged_displayed_area_w   = wave_w;
     app.staged_displayed_valid = true;
 
     gui.invalidate_region(top_strip.x, top_strip.y,
