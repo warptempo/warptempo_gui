@@ -163,11 +163,13 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // all. The plain upper-half waveform press (arm_region_drag_at) shares this
 // helper — same dissolve shape. The other pre-existing clear sites (Esc, file
 // load, Ctrl+Tab, and the S/T switch) keep their own in-place clears — Esc's is
-// now the down-only ladder's region rung (handle_escape_selection_region: a live
-// region COLLAPSES TO ITS START — clear the region AND selection AND move the
-// playhead to its lo bound — regardless of selection, rather than a plain clear),
-// and load / Ctrl+Tab / S/T pair the reset with a domain flip or a full-window
-// repaint rather than this exact damage shape.
+// now the down-only ladder's region rung, which walks ONE rung per Esc
+// (handle_escape_selection_region: a live region + 2+ selected first clears the
+// SELECTION ONLY, the region resting demoted to Free; a live region + 0/1 selected
+// COLLAPSES TO ITS START — clear the region AND selection AND move the playhead to
+// its lo bound — so a multimarker selection takes a second Esc to collapse), and
+// load / Ctrl+Tab / S/T pair the reset with a domain flip or a full-window repaint
+// rather than this exact damage shape.
 void clear_region_highlight(AppState& app, Viewport& viewport);
 
 // Direction B of the selection<->highlight coupling: set the region to the

@@ -205,17 +205,21 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 // standing region clear (land_playhead_on_marker's dissolve, or the ctrl
 // empty-branch's explicit clear_region_highlight) is the dissolve. Endpoints
 // are clamped through clamp_playhead_to_live_domain (the region domain's
-// playable-frame invariant, as every other former clamps). Callers: the
-// shift-range and ctrl-toggle click paths, each MUST run this AFTER the land
-// (which CLEARS any old region) — a reorder would let the clear kill this
-// fresh highlight — and the GROUP marker drag's commit, a THIRD caller that
-// MAINTAINS an already-active highlight through the store mutation (re-deriving
-// the live-tracked region from the post-commit, reordered/remapped store)
-// rather than creating one. Touches ONLY the region, never shift_range_anchor,
-// so the shift-range path's anchor survives a direction-B set. Programmatic
-// selections (undo/redo, paste, drops, Tab/`c`) do NOT call this — the coupling
-// belongs to the two multi-select clicks and the group-drag maintenance.
-// Declared in input_handler.h so marker_drag.cpp can reach it.
+// playable-frame invariant, as every other former clamps). Two caller CLASSES:
+//   (1) CREATORS — the shift-range and ctrl-toggle click paths, each MUST run
+//       this AFTER the land (which CLEARS any old region) — a reorder would let
+//       the clear kill this fresh highlight;
+//   (2) MAINTAINERS — the group image-moving commits that re-derive an
+//       ALREADY-ACTIVE SelectionExtent highlight from the post-commit,
+//       reordered/remapped store (never creating one): the group marker DRAG's
+//       commit and BOTH group position NUDGES (warp + phase reset). Their callers
+//       gate on region.active && provenance == SelectionExtent, so a Free /
+//       TrimWindow / inactive region is untouched.
+// Touches ONLY the region, never shift_range_anchor, so the shift-range path's
+// anchor survives a direction-B set. Programmatic selections (undo/redo, paste,
+// drops, Tab/`c`) do NOT call this — the coupling belongs to the two multi-select
+// clicks (create) and the group image-move maintenance. Declared in
+// input_handler.h so the ops TUs can reach it.
 void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
                                     Viewport& viewport) {
     if (app.selected_markers.size() < 2) return;

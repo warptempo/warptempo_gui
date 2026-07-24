@@ -1311,15 +1311,19 @@ struct AppState {
     // selection, so the startup command_seq == 0 == stem_pin_command_seq
     // coincidence pins nothing. BOTH death causes are REAPED one-shot in on_tick:
     // when stem_pin_marker is set and EITHER adjacency is lost (command_seq moved)
-    // OR the burst window lapsed, the reaper damages the stem column and resets
-    // stem_pin_marker = -1 so the blue line disappears without user input. Paint
-    // stops drawing the pin the instant either cause holds, but not every killing
-    // command damages the waveform (bare `o` invalidates only the bottom strip)
-    // and an idle expiry gets no command at all, so the reaper — not the killing
-    // command — owns the damage; a stale index simply fails the paint gate and the
-    // reaper's index guard. Session-only, never serialized. Workflow note: after
-    // the burst the green cursor playhead line rests at the marker (a plain Esc
-    // deselects and lands there), which replaces the persistent blue line.
+    // OR the burst window lapsed, the reaper invalidates the FULL waveform area and
+    // resets stem_pin_marker = -1 so the blue line disappears without user input.
+    // Paint stops drawing the pin the instant either cause holds, but not every
+    // killing command damages the waveform (bare `o` invalidates only the bottom
+    // strip) and an idle expiry gets no command at all, so the reaper — not the
+    // killing command — owns the damage. Full-area damage, NOT a column recompute:
+    // the stem painted on the DISPLAYED basis (wf_cache.fp_*), and a column
+    // recomputed on the LIVE basis could miss it inside a resize/async publish
+    // window (do not "optimize" this back to a single-column damage). The reaper
+    // reads no marker index; it needs none. Session-only, never serialized.
+    // Workflow note: after the burst the green cursor playhead line rests at the
+    // marker (a plain Esc deselects and lands there), which replaces the persistent
+    // blue line.
     int           stem_pin_marker      = -1;
     uint64_t      stem_pin_command_seq = 0;
     int64_t       stem_pin_ms          = 0;
