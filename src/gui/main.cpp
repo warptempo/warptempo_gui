@@ -991,26 +991,19 @@ int main(int argc, char** argv) {
         // another strip (bare `o` invalidates just the bottom strip), and an idle
         // pin whose window lapsed gets no command at all. So this reaper is the
         // one-shot cleanup for BOTH: when the pin is set and either cause holds,
-        // damage the stem column so the blue line disappears without user input and
-        // reset stem_pin_marker so it fires ONCE. Harmless when the killing command
-        // already damaged the waveform (a redundant one-column damage-union); a
-        // stale index skips the damage (the mutating command emitted its own).
+        // damage the waveform so the blue line disappears without user input and
+        // reset stem_pin_marker so it fires ONCE. Full-area damage (not a column):
+        // the stem painted on the DISPLAYED basis (wf_cache.fp_*), but a column
+        // recomputed on the LIVE basis (app.viewport_start_sample + current spp)
+        // can miss it inside a resize/async publish window, ghosting the old
+        // column. The reap is rare (once per burst end), so one full repaint is
+        // negligible and harmless when the killing command already damaged the
+        // waveform (a redundant damage-union).
         if (app.stem_pin_marker >= 0 &&
             (app.command_seq != app.stem_pin_command_seq ||
              monotonic_ms() - app.stem_pin_ms >
                  static_cast<int64_t>(kGestureCoalesceMs))) {
-            int64_t src_f = -1;
-            if (app.active_markers_view == 'P') {
-                const auto& v = app.phaseresetmarkers.markers();
-                if (app.stem_pin_marker < static_cast<int>(v.size()))
-                    src_f = v[app.stem_pin_marker].time_frame;
-            } else {
-                const auto& v = app.warpmarkers.markers();
-                if (app.stem_pin_marker < static_cast<int>(v.size()))
-                    src_f = v[app.stem_pin_marker].time_frame;
-            }
-            if (src_f >= 0)
-                viewport.invalidate_hover_stem_column(app.stem_pin_marker, src_f);
+            viewport.invalidate_waveform_area();
             app.stem_pin_marker = -1;
         }
 

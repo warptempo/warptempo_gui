@@ -18,6 +18,37 @@
 // operations on the phase reset store, reaching undo, selection, viewport,
 // and playback_lifecycle through the struct's reference members.
 
+namespace {
+
+// UNCLAMPED inverse of map_source_to_target, used ONLY by the group phase-reset
+// nudge's rider proposals. map_target_to_source CLAMPS any query at or before the
+// map's first target breakpoint to the first source frame — which would hide an
+// out-of-range rigid proposal at 0 (the round-1 trap). This helper instead
+// EXTENDS segment 0's slope linearly BACKWARD below the first breakpoint, so a
+// proposal that mathematically lands before the song start inverse-maps to a
+// NEGATIVE source double and is caught by the exact integer wall belt after the
+// snap. The interior interpolation and the beyond-last linear tail are already
+// exact in map_target_to_source (the clamp is its only lossy arm), so delegate
+// for every query at or above the first breakpoint. A single-breakpoint map has
+// no segment-0 slope; use slope 1, mirroring map_target_to_source's own
+// beyond-last unit-slope tail. Empty map is identity.
+inline double unclamped_target_to_source(
+    double tgt_frame, const std::vector<WarpFrameMapSegment>& map) {
+    if (map.empty()) return tgt_frame;
+    if (tgt_frame > map.front().tgt_frame)
+        return map_target_to_source(tgt_frame, map);
+    // At or below the first target breakpoint: extend segment 0's slope backward.
+    if (map.size() >= 2) {
+        const double src_dur = map[1].src_frame - map[0].src_frame;
+        const double tgt_dur = map[1].tgt_frame - map[0].tgt_frame;
+        return map[0].src_frame +
+               (tgt_frame - map[0].tgt_frame) * (src_dur / tgt_dur);
+    }
+    return map[0].src_frame + (tgt_frame - map[0].tgt_frame);  // unit slope
+}
+
+}  // namespace
+
 // Drop a phase reset marker at `time_frame`. Placement is bounded only
 // by the absolute range; arbitrarily close and exactly-coincident drops
 // are legal (the render boundary collapses an exact-equal group to one
@@ -265,32 +296,23 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     const double D = map_source_to_target(static_cast<double>(committed_f), map)
                    - map_source_to_target(static_cast<double>(orig_f),      map);
 
-    // The wall images in the TARGET domain (fwd is monotone, so the two frame
-    // walls map to the interval ends). A rider's rigid proposal is checked
-    // against THESE before the inverse — see the trap below. Empty map: fwd is
-    // identity, so these degrade to [0, reset_wall] naturally.
-    const double tgt_wall_lo = map_source_to_target(0.0, map);
-    const double tgt_wall_hi =
-        map_source_to_target(static_cast<double>(reset_wall), map);
-
     // (3) Every member's proposal: the anchor commits its column snap; every
     // OTHER member is the rigid computed position snap(inv(fwd(orig_k) + D)) — the
-    // ONE double-to-authored route, never re-column-snapped. Check EACH against
-    // the absolute range; ANY out-of-range member refuses the whole press.
-    // THE CLAMPING-INVERSE TRAP: map_target_to_source CLAMPS any query at or
-    // before the map's first target breakpoint to the first source frame (0), so
-    // a rider whose rigid target proposal fwd(orig_k)+D falls BELOW the song start
-    // would inverse-map to 0 and pass a post-snap [0, reset_wall] check while
-    // pinning at 0 — defeating both the group all-or-nothing refusal and rigid
-    // spacing. So test the rider's proposal in the TARGET domain FIRST (the
-    // group-drag active-domain wall model applied as refusal): strictly outside
-    // [tgt_wall_lo, tgt_wall_hi] refuses the whole press. The post-snap integer
-    // [0, reset_wall] check stays as the belt — the snap of an in-interval double
-    // can still round ONTO a wall, which is legal (equality passes); only strict
-    // outside refuses. The ANCHOR keeps its own post-snap check (committed_f from
-    // authored_frame_at_column DEFINES D, so a low-clamped anchor still yields a
-    // rigid D matching its actual displayed move — the singleton behavior,
-    // unchanged by ruling).
+    // ONE double-to-authored route, never re-column-snapped. THE ONE refusal is
+    // the EXACT INTEGER wall belt on the SNAPPED result (t_new outside
+    // [0, reset_wall]) — walls are exact integer compares, never a float compare
+    // (the exact-wall-reach doctrine forbids an epsilon-fragile pre-filter). To
+    // make that belt honest the inverse must NOT clamp: map_target_to_source pins
+    // any query at/below the map's first target breakpoint to source frame 0,
+    // which would HIDE a below-start rigid proposal at 0 and pass the belt (the
+    // round-1 trap). unclamped_target_to_source instead extends segment 0's slope
+    // backward, so a truly-outside proposal reaches a negative (or past-wall)
+    // source double, snaps to an out-of-range integer, and refuses; a proposal
+    // whose exact rigid result rounds ONTO a wall snaps to 0/reset_wall and passes
+    // (equality is legal). ANY out-of-range member refuses the whole press. The
+    // ANCHOR keeps its own post-snap check (committed_f from authored_frame_at_column
+    // DEFINES D, so a low-clamped anchor still yields a rigid D matching its actual
+    // displayed move — the singleton behavior, unchanged by ruling).
     std::vector<std::pair<int, int64_t>> proposals;
     proposals.reserve(app.selected_markers.size());
     for (int idx : app.selected_markers) {
@@ -301,8 +323,8 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
             const double tgt_prop =
                 map_source_to_target(static_cast<double>(tv[idx].time_frame),
                                      map) + D;
-            if (tgt_prop < tgt_wall_lo || tgt_prop > tgt_wall_hi) return;
-            t_new = snap_authored_frame(map_target_to_source(tgt_prop, map));
+            t_new = snap_authored_frame(
+                unclamped_target_to_source(tgt_prop, map));
             if (t_new < 0 || t_new > reset_wall) return;
         }
         proposals.emplace_back(idx, t_new);
@@ -335,8 +357,10 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     // stem visible through the fine-tuning burst. Post-reorder focused index, the
     // current command_seq, and the burst-window timestamp; the pin dies at the
     // next command, at burst-window expiry (on_tick reap), or on a selection
-    // change. Paint gates it to a singleton, so a group nudge stamps but shows no
-    // stem until the group narrows to one.
+    // change. Paint gates it to a singleton, so for a 2+ selection this stamp is
+    // INERT — the singleton gate never admits it, and any command that could
+    // narrow the group to one bumps command_seq and kills the pin by adjacency
+    // first. Stamped anyway for uniformity with the singleton path.
     app.stem_pin_marker      = app.last_selected_marker;
     app.stem_pin_command_seq = app.command_seq;
     app.stem_pin_ms          = monotonic_ms();

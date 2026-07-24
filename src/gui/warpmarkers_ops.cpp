@@ -803,8 +803,11 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     // fine-tuning burst. Stamp the post-reorder focused index, the current
     // command_seq, AND the burst-window timestamp; the pin dies at the next
     // command, at burst-window expiry (on_tick reap), or on a selection change
-    // (see AppState::stem_pin_*). Paint gates it to a SINGLETON selection, so a
-    // group nudge stamps but shows no stem until the group narrows to one.
+    // (see AppState::stem_pin_*). Paint gates it to a SINGLETON selection, so for
+    // a 2+ selection this stamp is INERT — the singleton paint gate never admits
+    // it, and any command that could narrow the group to one bumps command_seq
+    // and kills the pin by adjacency first. Stamped anyway for uniformity with the
+    // singleton path.
     app.stem_pin_marker      = app.last_selected_marker;
     app.stem_pin_command_seq = app.command_seq;
     app.stem_pin_ms          = monotonic_ms();
