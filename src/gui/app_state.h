@@ -196,10 +196,14 @@ struct SelectionSnapshot {
 //
 // RECORDED BOUNDARY of the follow/re-sync behavior (architect 2026-07-23): only
 // the GROUP TEMPO gestures (the step, the drag's per-event, its cancel) re-derive
-// a SelectionExtent region or re-sync a TrimWindow region across their map change.
-// The OTHER target-map changers — undo/redo, the settings engine-scale commit,
-// adopt — leave the region NUMERICALLY UNTOUCHED for ALL provenances (display
-// scratch, today's behavior); extending the follow to them is out of scope.
+// a SelectionExtent region or re-sync a TrimWindow region across their map change
+// (plus the settings-editor trim commit, which re-syncs a TrimWindow region to
+// the edited bounds). The OTHER target-map changers — undo/redo, the settings
+// engine-scale commit, adopt — do NOT re-derive or re-sync provenance; a resting
+// region is display scratch there (today's behavior). This is scoped to the
+// provenance follow/re-sync: the GENERIC region clears still apply to ANY
+// provenance — the kick validator drops a region stranded outside a shrunken live
+// domain, and load/adopt clear the region unconditionally.
 enum class RegionProvenance { Free, SelectionExtent, TrimWindow };
 
 struct RegionState {

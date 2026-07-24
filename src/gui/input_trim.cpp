@@ -81,9 +81,9 @@ void GuiInputHandler::handle_trim_clear_both() {
 // the 2026-07-20 consume ruling): under the trim<->REGION coupling the trim
 // window and the highlight now agree, so after x they coincide — the tail runs
 // sync_highlight_to_trim_window so the region and window rest coupled through the
-// one owner (an UNOWNED, trim-derived region — the selection is never touched; a
-// crossed-collapse dissolve clears the region with the window). NO region → x
-// CLEARS the trim via
+// one owner (provenance RegionProvenance::TrimWindow — the selection is never
+// touched; a crossed-collapse or coincident-image collapse clears the region with
+// the window). NO region → x CLEARS the trim via
 // handle_trim_clear_both, whose has_begin||has_end guard makes no-trim a natural
 // no-op (nothing to clear, no highlight to clear either — the region is inactive
 // in this branch by definition). Read-only refuses silently BEFORE anything,
@@ -480,17 +480,35 @@ void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
             app, audio);
         const int64_t lo = std::min(a, b);
         const int64_t hi = std::max(a, b);
-        app.region.active     = true;
-        app.region.a_frame    = lo;
-        app.region.b_frame    = hi;
-        // Trim-DERIVED provenance: a 2+ marker selection may sit beside this
-        // region, but it is NOT that selection's extent — the tempo gestures must
-        // never snap it to the selection extent. Instead they RE-SYNC a TrimWindow
-        // region from app.trim's source-frame bounds through the new map (this
-        // very function re-run), so the wash tracks the chips/stems across a tempo
-        // edit. This is the provenance that lets the trim/highlight coupling and
-        // the selection-extent follows both hold.
-        app.region.provenance = RegionProvenance::TrimWindow;
+        if (lo == hi) {
+            // COINCIDENT IMAGES -> take the CLEAR arm, do NOT publish a
+            // zero-width region (the standing sliver rule: degenerate spans never
+            // rest). Distinct legal source bounds can round to the SAME target
+            // frame (16x compression is bracket-legal), and an active lo==hi
+            // region would let a bare x inverse-map the degenerate span to an
+            // EQUAL pair that auto_clear_crossed_trim silently DESTROYS (trim is
+            // outside undo). A window whose image collapses below one target frame
+            // cannot be honestly highlighted, so clear the HIGHLIGHT only — the
+            // TRIM ITSELF is untouched (its authored source-frame bounds stand),
+            // and clearing drops the provenance so a later tempo re-sync won't
+            // resurrect it. The user re-clicks the chip row once the images
+            // re-separate; x with no highlight then takes its documented
+            // no-highlight clear branch (WYSIWYG — no hairline wash, no silent
+            // pair destruction).
+            app.region = RegionState{};
+        } else {
+            app.region.active     = true;
+            app.region.a_frame    = lo;
+            app.region.b_frame    = hi;
+            // Trim-DERIVED provenance: a 2+ marker selection may sit beside this
+            // region, but it is NOT that selection's extent — the tempo gestures
+            // must never snap it to the selection extent. Instead they RE-SYNC a
+            // TrimWindow region from app.trim's source-frame bounds through the new
+            // map (this very function re-run), so the wash tracks the chips/stems
+            // across a tempo edit. This is the provenance that lets the
+            // trim/highlight coupling and the selection-extent follows both hold.
+            app.region.provenance = RegionProvenance::TrimWindow;
+        }
     } else {
         // No window (lone / no trim): clear the REGION only (the selection is
         // untouched — trim never mutates it). A LONE bound still paints its chip,

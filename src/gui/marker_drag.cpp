@@ -1289,8 +1289,13 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     //    active = true), so it follows even across a domain shrink.
     //  - TrimWindow: re-run the trim SET path, which re-maps app.trim's SOURCE-
     //    frame bounds through the NEW live map (FIX C), so the wash tracks the
-    //    chips/stems; a bare x can never inverse-map a stale span. The trim can't
-    //    dissolve mid-tempo-gesture, so the no-window arm is unreachable here.
+    //    chips/stems; a bare x can never inverse-map a stale span. The trim pair
+    //    cannot DISSOLVE mid-tempo-gesture (no bound is authored here), so the
+    //    no-window arm is not reached FROM tempo gestures — but the coincident
+    //    lo==hi arm can fire (images compressing onto one target frame), clearing
+    //    the highlight while the trim stands. (The no-window arm's other callers
+    //    are enumerable: the trim gestures' lone/dissolve and the settings-editor
+    //    trim commit, which now syncs a TrimWindow region at commit.)
     //  - Free: untouched scratch (drag-formed) — no re-derive.
     if (follow_extent)      set_region_to_selection_extent(app, audio, viewport);
     else if (trim_resync)   sync_region_to_trim_window(app, audio, viewport);

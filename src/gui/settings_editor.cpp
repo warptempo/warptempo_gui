@@ -253,6 +253,17 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             if (active) {
                 viewport.invalidate_waveform_area();
                 target_render.trigger();
+                // MAINTAIN (never create) a TrimWindow highlight: an active-tab
+                // bound unset is a trim author, so if a TrimWindow region is up,
+                // re-sync it — the no-window arm clears it now that a bound is
+                // gone, so x can't resurrect the pair from a stale highlight and
+                // no later tempo re-sync hits the no-window arm. A text commit is
+                // NOT a pointing gesture — it only maintains an existing trim
+                // highlight, so a Free / SelectionExtent / no region is left
+                // untouched (no creation).
+                if (app.region.active &&
+                    app.region.provenance == RegionProvenance::TrimWindow)
+                    input->sync_highlight_to_trim_window();
             }
             applied(); return true;
         }
@@ -277,6 +288,14 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             input->auto_clear_crossed_trim();
             viewport.invalidate_waveform_area();
             target_render.trigger();
+            // MAINTAIN (never create) a TrimWindow highlight after the bound
+            // commit + auto_clear: re-sync an already-active TrimWindow region to
+            // the NEW pair (or clear it if auto_clear dissolved the pair). A text
+            // commit is not a pointing gesture — a Free / SelectionExtent / no
+            // region is left untouched (no creation).
+            if (app.region.active &&
+                app.region.provenance == RegionProvenance::TrimWindow)
+                input->sync_highlight_to_trim_window();
         } else if (t.has_begin && t.has_end && t.end_frame <= t.begin_frame) {
             // Inactive band: the load convention — a crossed/equal resulting
             // pair clears both bounds, one stderr line.
