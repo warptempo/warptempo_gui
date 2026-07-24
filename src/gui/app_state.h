@@ -194,16 +194,20 @@ struct SelectionSnapshot {
 // re-synced from app.trim's source-frame bounds through the new map at every
 // tempo mutation so the wash tracks the chips/stems.
 //
-// RECORDED BOUNDARY of the follow/re-sync behavior (architect 2026-07-23): only
-// the GROUP TEMPO gestures (the step, the drag's per-event, its cancel) re-derive
-// a SelectionExtent region or re-sync a TrimWindow region across their map change
-// (plus the settings-editor trim commit, which re-syncs a TrimWindow region to
-// the edited bounds). The OTHER target-map changers — undo/redo, the settings
-// engine-scale commit, adopt — do NOT re-derive or re-sync provenance; a resting
-// region is display scratch there (today's behavior). This is scoped to the
-// provenance follow/re-sync: the GENERIC region clears still apply to ANY
-// provenance — the kick validator drops a region stranded outside a shrunken live
-// domain, and load/adopt clear the region unconditionally.
+// RECORDED BOUNDARY of the follow/re-sync behavior (architect 2026-07-23): the
+// re-derive/re-sync sites are the GROUP STEP and the group tempo DRAG's PER-EVENT
+// path (re-derive a SelectionExtent region or re-sync a TrimWindow region across
+// their map change), plus the settings-editor trim commit (re-syncs a TrimWindow
+// region to the edited bounds). The drag CANCEL does NOT re-derive/re-sync — it
+// restores the whole-struct captured TempoDragState::pre_drag_region VERBATIM
+// (the round-7 rule: pre-drag staleness falsified the re-derive premise, so Esc
+// reproduces the pre-drag display exactly, any provenance). The OTHER target-map
+// changers — undo/redo, the settings engine-scale commit, adopt — do NOT
+// re-derive or re-sync provenance; a resting region is display scratch there
+// (today's behavior). This is scoped to the provenance follow/re-sync: the
+// GENERIC region clears still apply to ANY provenance — the kick validator drops
+// a region stranded outside a shrunken live domain, and load/adopt clear the
+// region unconditionally.
 enum class RegionProvenance { Free, SelectionExtent, TrimWindow };
 
 struct RegionState {
@@ -1771,9 +1775,11 @@ inline SelectionSnapshot capture_selection_snapshot(const AppState& app) {
 inline void restore_selection_snapshot(AppState& app,
                                        const SelectionSnapshot& s) {
     // Restoring the snapshot replaces the live membership -> demote a
-    // SelectionExtent region to Free (the drag/tempo cancel then re-derives the
-    // owned region itself, so a SelectionExtent survives a cancel via that
-    // re-derive, not this restore).
+    // SelectionExtent region to Free. Harmless at both drags' cancels: each
+    // restores its whole-struct captured pre_drag_region VERBATIM (the position
+    // drag's app.drag.pre_drag_region, the tempo drag's
+    // TempoDragState::pre_drag_region) AFTER this restore, so the verbatim write
+    // lands last and reinstates the captured provenance regardless of this demote.
     demote_region_provenance(app.region);
     app.selected_markers     = s.selected_markers;
     app.last_selected_marker = s.last_selected_marker;
