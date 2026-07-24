@@ -510,9 +510,8 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     // adjacency (the on_tick reap damages it away).
     // Discrete warp_frame_map change that CAN run in target view: Alt+Up/Down is a
     // warp authoring gesture reachable off its source home (the ruled exception
-    // gated above), so it is one of the surviving target-view re-warp sites (with
-    // the settings engine-scale commit, undo/redo, and the Alt+Left/Right
-    // TEMPO-IMAGE STEP — marker_drag.cpp). When it runs in target
+    // gated above), so it is one of the target-view re-warp sites (the full
+    // inventory lives at Viewport::kick_waveform_sync). When it runs in target
     // view the plate must re-warp, so render synchronously so displayed == live at
     // this command boundary, leaving no divergence window for the displayed-basis
     // gestures (phase drags, trim drags) to ride out.

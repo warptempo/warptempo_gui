@@ -1511,14 +1511,19 @@ void MarkerDragOps::cancel_tempo_drag() {
 // span several columns (the minimum-step rule below; e.g. ~8 px on a 1 s span
 // at working zoom) — reached by adjusting the (deduped participant)
 // predecessors' tempo_cents through the drag's own factored solve (closed-form
-// singleton / monotone bisection group) — pixel-anchored like every nudge:
-// read the image's painted column, target the adjacent column's position, let
-// the solve place the image nearest it.
+// singleton / monotone bisection group) — COLUMN-TARGETED: read the image's
+// painted column, target the adjacent column's position, and let the solve place
+// the image nearest it, the committed displacement then yielding to the cent grid
+// (the minimum-step rule below). Not "pixel-anchored" — that term is reserved
+// project-wide for the authored-position stored-equals-shown contract, which this
+// cents-authoring gesture deliberately does not carry.
 // Alt+Left = column - 1 -> image earlier -> predecessor tempo UP (faster is
-// shorter); Alt+Right the reverse. No viewport gate (nudges have none — an
-// offscreen image steps fine); the solve's bracket-intersection clamp handles
-// the walls constructively, so a press at the cents wall lands d == 0 and
-// refuses below.
+// shorter); Alt+Right the reverse. No viewport gate: SELECTION/FOCUS, not viewport
+// visibility, decides whether a keyboard edit can act (Ableton-parity — offscreen
+// members of a selection drag as a group, and this step is the drag's keyboard
+// twin; the painter-quantized q basis above keeps the offscreen solve honest). The
+// solve's bracket-intersection clamp handles the walls constructively, so a press
+// at the cents wall lands d == 0 and refuses below.
 //
 // ELIGIBILITY = the DRAG's, all-or-nothing (the keyboard step-family
 // convention from adjust_tempo_cents_group — refuse the WHOLE press, never
@@ -1545,6 +1550,14 @@ void MarkerDragOps::step_tempo_image(int direction) {
     // routes only W+target here; the view test is kept defensive, the shape of
     // adjust_tempo_cents' own view gate. Read-only tabs refuse upstream
     // (read_only_key_blocked — Alt-exact arrows are not on the allowlist).
+    // NO early stop_playback_if_playing (unlike the position nudges): every
+    // SUCCESSFUL press reaches target_render.trigger() (the function's last line),
+    // and target view's trigger synchronously freezes playback before the buffer
+    // re-render (target_render.cpp's "every edit halts playback" model), so the
+    // successful command's resting playback state matches the position nudges and
+    // only the in-command ordering differs; a REFUSED press (any guard below)
+    // leaves a listening session undisturbed — navigation-class, which an early
+    // stop would not preserve.
     if (app.active_markers_view != 'W' || app.active_audio_view != 'T') return;
     if (app.loading || audio.total_frames() <= 0) return;
     if (app.selected_markers.empty()) return;
@@ -1579,12 +1592,15 @@ void MarkerDragOps::step_tempo_image(int direction) {
     TempoGroupSeed seed = seed_tempo_group_participants(f, pred);
     if (seed.walled) return;
 
-    // STEP TARGET, pixel-anchored: the focused marker's image under the LIVE
-    // memoized map (the drag's solve basis — displayed == live at every command
-    // boundary, this gesture's own sync re-warp maintaining it), its painted
-    // column, and the adjacent column's target-domain position through the SAME
-    // painter-quantized q that produced the column (t_des = viewport_start +
-    // column * q — see the basis-coherence note above).
+    // STEP TARGET, COLUMN-TARGETED (the gesture reads the painted column and
+    // targets the adjacent column, but the committed displacement yields to the
+    // cent grid — not "pixel-anchored", which is reserved for stored-equals-shown
+    // position authoring): the focused marker's image under the LIVE memoized map
+    // (the drag's solve basis — displayed == live at every command boundary, this
+    // gesture's own sync re-warp maintaining it), its painted column, and the
+    // adjacent column's target-domain position through the SAME painter-quantized q
+    // that produced the column (t_des = viewport_start + column * q — see the
+    // basis-coherence note above).
     const TargetWarpFrameMapCache& c = target_view_warp_frame_map_cached(
         app, sr, static_cast<long>(audio.total_frames()));
     const int cf = painted_column_of_source_frame(
@@ -1627,8 +1643,8 @@ void MarkerDragOps::step_tempo_image(int direction) {
     // so they are not re-proposed: sub-cent intent accumulation across presses
     // (violates the nothing-accumulates pixel-anchor principle — every press
     // re-derives from the painted state) and allowing the no-op (the reported
-    // inertness IS the bug). Judged planner-side as family-consistent; architect
-    // may re-rule.
+    // inertness IS the bug). The minimum-step rule is architect-ratified
+    // (2026-07-24).
     if (d == 0) {
         const int64_t d_fallback = -static_cast<int64_t>(direction);
         for (int pp : seed.participants) {

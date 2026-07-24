@@ -84,7 +84,8 @@ GroupNudgePrologue group_position_nudge_prologue(
 // nudge's mapped target home the deepest zoom gives at least 27.5625 / 16 = 1.72
 // source frames per target pixel under the value brackets (tempo times both scales
 // at least 0.25 * 0.5 * 0.5 = 1/16) at the 44100 sample-rate floor, so the
-// whole-frame rounding error is at most 0.29 px; in the WARP nudge's identity
+// whole-frame rounding error is just under 0.291 px (0.5 / 1.72265625 =
+// 0.29025); in the WARP nudge's identity
 // source home the bound is trivially stronger (a column is at least 27.5625 whole
 // frames, error at most 0.5 frame, about 0.018 px). Either way each press still
 // advances at least one whole frame.
@@ -149,22 +150,37 @@ int64_t stepped_anchor_frame(
 //
 // ORDERING: the two twins historically ordered {pin, undo push, playhead}
 // slightly differently (warp: pin -> push -> record -> ... -> playhead -> region;
-// phase: pin -> playhead -> push -> record -> ... -> region). This unified order
-// is behavior-identical for the committed bytes and the undo entry: the undo
-// push/record read neither the playhead nor the stem pin (their snapshots capture
-// the marker stores, engine settings, tab, and the hint indices only — not the
-// cursor), the stem-pin stamp and move_playhead_to do not read undo state, and
-// the region follow reads only the post-mutation store/selection.
+// phase: pin -> playhead -> push -> record -> ... -> region). The unified order
+// gives both the WARP shape (push in the twin, then this tail: pin, record,
+// invalidate, playhead, region). The COMMITTED BYTES are identical for every
+// input: the undo push/record read neither the playhead nor the stem pin (their
+// snapshots capture the marker stores, engine settings, tab, and the hint indices
+// only — not the cursor), the stem-pin stamp and move_playhead_to do not read undo
+// state, and the region follow reads only the post-mutation store/selection. TWO
+// knowingly-accepted deltas ride the unification, both phase-only (the warp twin
+// already had this shape) and both harmless, recorded here so the next reader need
+// not re-derive them.
 //
-// ONE knowingly-accepted display-state delta rides the unification: hover-popup
-// ordering. move_playhead_to can conditionally recompute the hover after a
-// viewport shift, and the undo push clears it; the phase twin historically
-// recomputed-then-cleared while the warp twin cleared-then-maybe-recomputed, so
-// the unified tail (push first, playhead in the tail) gives BOTH the warp
-// behavior — a nudge that shifts the viewport with the pointer resting on a
-// hoverable marker now ends with the hover recomputed rather than cleared. This
-// is transient display state only (no committed bytes, no undo content, damage
-// idempotent); accepted as improved twin symmetry.
+// (1) HOVER-POPUP ordering. move_playhead_to can conditionally recompute the hover
+// after a viewport shift, and the undo push clears it; the phase twin historically
+// recomputed-then-cleared while the warp twin cleared-then-maybe-recomputed, so the
+// unified tail gives both the warp behavior — a nudge that shifts the viewport with
+// the pointer resting on a hoverable marker now ends with the hover recomputed
+// rather than cleared. Transient display state only (no committed bytes, no undo
+// content, damage idempotent); accepted as improved twin symmetry.
+//
+// (2) THE COALESCE CLOCK (touches the undo ENTRY). Undo::record_gesture stamps
+// gesture_steady_ms() into the coalescer, and the same move_playhead_to can run a
+// SYNCHRONOUS kick_waveform_sync when the follow shifts the viewport (the
+// offscreen-focused case). The phase pre-image moved the playhead THEN recorded
+// (clock stamped AFTER that rebuild); the unified tail records THEN moves the
+// playhead (clock stamped BEFORE it). So when the focused reset is offscreen the
+// rebuild no longer sits inside the measured 500 ms coalesce window, and a next
+// burst press landing near that boundary can open a fresh undo entry where the
+// pre-image would have merged. Worst case: one extra undo entry — a second Ctrl+Z.
+// Accepted — the unified tail adopts the warp shape verbatim to minimize warp/phase
+// divergence, and the coalesce window's anchor point is a heuristic, not a recorded
+// contract.
 void finish_group_position_nudge(
     AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
     GestureKind kind, int64_t committed_focused_frame,

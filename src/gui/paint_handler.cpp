@@ -587,9 +587,9 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
         (app.hover_popup.marker_index == idx) &&
         !(stem_hover_suppress_active(app) &&
           app.stem_hover_suppress_marker == idx);
-    const bool nudge_arm = (app.stem_pin_marker == idx &&
+    const bool pin_arm = (app.stem_pin_marker == idx &&
                             app.command_seq == app.stem_pin_command_seq);
-    if (!hover_arm && !drag_arm && !nudge_arm && !tempo_drag_arm) return;
+    if (!hover_arm && !drag_arm && !pin_arm && !tempo_drag_arm) return;
 
     // The marker's effective time: the live store frame, or — under a drag that
     // grabs it — the proposed mid-gesture position (a source-frame double) from

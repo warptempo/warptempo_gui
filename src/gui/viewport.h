@@ -78,23 +78,48 @@ struct Viewport {
     // it) it falls back to the async worker kick, so the path stays correct
     // either way.
     //
-    // Callers are the discrete, one-shot repositioning events: view swaps
-    // (tab / marker navigation), viewport recenters, undo/redo, adopt, and the
-    // warp_frame_map edits reachable in target view — the Alt+Up/Down tempo step
-    // (adjust_tempo_cents), the Alt+Left/Right TEMPO-IMAGE STEP (the tempo
-    // drag's keyboard twin, MarkerDragOps::step_tempo_image), and the settings
-    // engine-scale commit — each re-warps the map, so the plate
-    // and the overlays (playhead, markers, flags) must land in one frame with the
-    // reclamped geometry below, or the overlays jump a frame ahead of a stale
-    // plate. The warp PLACEMENT edits (drop / delete / marker drag / the
-    // position nudge / Ctrl+N / Ctrl+D / the flag-editor commit) author in
-    // warp's source home view only (home-view binding, architect 2026-07-22 —
-    // W+target authors tempo only, never position), where the source waveform
-    // has no map-dependent plate — they never call this. The ASYNC
-    // worker path is not a map-edit route:
-    // it serves viewport navigation (pan/follow/resize) and repaints the
-    // plate on preview completion, both undriven-by-a-discrete-edit cases the
-    // key-repeat-rate argument for staying async never applied to.
+    // THE CALLER INVENTORY (grep-derived; this is the ONE authoritative copy —
+    // every other site carries only its own class statement plus a pointer here,
+    // never a second full list). Two axes.
+    //
+    // AXIS 1 — WHY the plate must land in one frame with the reclamped geometry
+    // below (else the overlays — playhead, markers, flags — jump a frame ahead of
+    // a stale plate):
+    //  - GENERIC viewport / view jumps: the plate CONTENT is unchanged but the
+    //    viewport, zoom, or displayed DOMAIN moved. Viewport's own mutators
+    //    (move_playhead_to's offscreen-follow shift, apply_zoom_change,
+    //    apply_zoom_to_start, center_viewport_on_playhead, apply_strip_drag_zoom),
+    //    the S/T view toggle and the Ctrl+Tab A/B tab switch (domain flips), the
+    //    settings tab_X_viewport_start commit, the strip-drag Esc/stop finalize,
+    //    and main.cpp's tick backstop for an ASYNC total change (a preview
+    //    completion) live here.
+    //  - TARGET-WARP-MAP mutations: a build_warp_frame_map INPUT changed, so the
+    //    target-view plate itself re-warps. The Alt+Up/Down tempo step
+    //    (adjust_tempo_cents, singleton AND group), the Alt+Left/Right TEMPO-IMAGE
+    //    STEP (the tempo drag's keyboard twin, MarkerDragOps::step_tempo_image),
+    //    the settings engine-scale commit, undo/redo, adopt, and the TEMPO DRAG
+    //    itself each kick so displayed == live at the command boundary, leaving no
+    //    divergence window for the displayed-basis gestures (phase / trim drags)
+    //    to ride out. Warp PLACEMENT edits (drop / delete / marker drag / the
+    //    position nudge / Ctrl+N / Ctrl+D / the flag-editor commit) author in
+    //    warp's SOURCE home only (home-view binding, architect 2026-07-22 —
+    //    W+target authors tempo, never position), where the source waveform has no
+    //    map-dependent plate, so they never call this.
+    //
+    // AXIS 2 — the CADENCE. Every site above is a discrete ONE-SHOT per command
+    // EXCEPT the TEMPO DRAG, whose two kicks are the ones a hand-copied list keeps
+    // dropping: apply_tempo_drag_motion re-warps LIVE per cent step mid-gesture
+    // (the keyboard zoom's cost paid per pointer frame — and deliberately NO
+    // target_render.trigger there, the preview fires once at gesture end), and
+    // cancel_tempo_drag re-warps once on the Esc-restore when it rewound cents.
+    // (apply_strip_drag_zoom is the only OTHER live-per-event kick, a generic
+    // viewport rebuild, not a map edit.)
+    //
+    // The ASYNC worker path (the request_waveform_sync_ fallback above,
+    // kick_waveform_render) is not a map-edit route: it serves viewport navigation
+    // (pan / follow / resize) and repaints the plate on preview completion — both
+    // undriven-by-a-discrete-edit cases the key-repeat-rate argument for staying
+    // async never applied to.
     std::function<void()> request_waveform_sync_;
     void kick_waveform_sync() {
         // Render FINAL clamped geometry: reclamp through the one zoom/viewport
@@ -171,8 +196,9 @@ struct Viewport {
 
     // Repair the LIVE display-state fields after a map edit that changed the
     // active-domain total (a target-view tempo step / drag / Alt+Left/Right
-    // tempo-image step, the settings engine-scale commit, undo/redo — every
-    // total-changing warp-map edit).
+    // tempo-image step, the settings engine-scale commit, undo/redo, adopt — every
+    // total-changing warp-map edit; the full grep-derived caller inventory lives
+    // at kick_waveform_sync above).
     // Clamps the resting cursor playhead back into [0, live_total - 1] through
     // the shared clamp_playhead_to_live_domain chokepoint, and CLEARS a live
     // region whose either bound left that domain. Called from kick_waveform_sync
