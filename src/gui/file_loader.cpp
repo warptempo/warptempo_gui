@@ -50,8 +50,7 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     // for BOTH routes, so the clear lives here beside the region clear
     // (see AppState::stem_hover_suppress_marker). A store load bumps generation
     // too, so the gen-stamp is belt-and-braces; the explicit clear stays owner.
-    app.stem_hover_suppress_marker = -1;
-    app.stem_hover_suppress_gen    = -1;
+    clear_stem_hover_suppress(app);
     app.active_audio_view   = sf.active_audio_view;
     app.active_markers_view = sf.active_markers_view;
     app.active_tab_view     = sf.active_tab_view;

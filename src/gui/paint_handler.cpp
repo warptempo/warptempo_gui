@@ -531,12 +531,13 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr,
 //       at the LIVE proposed position (moveable_times via the DragOverlay); the
 //       drag suppresses hover, so this arm cannot lean on (a),
 //   (c) the LATERAL-GESTURE PIN is live — this marker's lateral gesture (position
-//       nudge/drag, W+target tempo drag, or target-view tempo nudge) is the most
-//       recent command (command_seq == stem_pin_command_seq && stem_pin_marker ==
-//       it). The pin is pure command adjacency now (the key-hold/timer model was
+//       nudge/drag, W+target tempo drag, or target-view tempo nudge) has had no
+//       DAMAGING command intervene since (the preserve re-stamps across damage-less
+//       ones), so command_seq == stem_pin_command_seq && stem_pin_marker == it. The
+//       pin is pure command adjacency now (the key-hold/timer model was
 //       architect-reverted 2026-07-24); the on_tick reap zeroes stem_pin_marker
-//       once the last command is not a re-stamping lateral gesture, so paint tests
-//       adjacency alone (see AppState::stem_pin_*), and
+//       once a damaging command breaks adjacency, so paint tests adjacency alone
+//       (see AppState::stem_pin_*), and
 //   (d) a live TEMPO DRAG grabs it (tempo_drag.active, tempo_drag.marker == it) —
 //       the store frame slides visually under the per-step re-warped map (below).
 // Painted BLUE (kSelected — it marks the selected marker, like its flag; the grey
@@ -572,8 +573,9 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
         app.tempo_drag.active && app.tempo_drag.marker == idx;
     // Visibility arms (a) hover, (b) position drag, (c) lateral-gesture pin,
     // (d) tempo drag. The pin's liveness is pure command adjacency (the on_tick
-    // reap zeroes stem_pin_marker once the last command is not a re-stamping
-    // lateral gesture), so paint tests adjacency only.
+    // reap zeroes stem_pin_marker once a DAMAGING command breaks adjacency;
+    // damage-less commands re-stamp it through the preserve), so paint tests
+    // adjacency only.
     // The hover arm is re-arm-latched: after a pointer marker-click, the stem
     // stays hidden while the pointer merely rests inside the clicked marker's
     // hit area, until a mouseout-then-return clears the latch (see

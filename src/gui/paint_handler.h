@@ -516,8 +516,9 @@ private:
     // sits/would land on it — shown only during interaction with it: while it is
     // HOVERED, while a live position DRAG grabs it (at the proposed position),
     // while a live TEMPO DRAG grabs it (the image slides under the re-warped map),
-    // or while a LATERAL GESTURE on it was the last command (the pin — pure
-    // command adjacency, the key-hold/timer model reverted 2026-07-24; see
+    // or while a LATERAL GESTURE on it has had no DAMAGING command intervene since
+    // (the pin — pure command adjacency, damage-less commands re-stamp through the
+    // preserve; the key-hold/timer model reverted 2026-07-24; see
     // AppState::stem_pin_*).
     // Painted BLUE
     // (kSelected — it marks the selected marker like its flag) through

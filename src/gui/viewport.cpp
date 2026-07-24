@@ -677,11 +677,12 @@ void Viewport::recompute_hover_at_cursor() {
     // since a resting hover on the latch marker means hit == hover would have
     // short-circuited only while the hit stays on it — moving off changes hit),
     // so the latch always sees its release. A DEAD latch (store mutated since
-    // set — stem_hover_suppress_active false) also resets here lazily.
+    // set — stem_hover_suppress_active false) also resets here lazily. Routes
+    // through the shared clear_stem_hover_suppress helper so the {marker, gen}
+    // pair is never half-cleared (the same helper the five lifecycle clears use).
     if (!stem_hover_suppress_active(app) ||
         hit != app.stem_hover_suppress_marker) {
-        app.stem_hover_suppress_marker = -1;
-        app.stem_hover_suppress_gen    = -1;
+        clear_stem_hover_suppress(app);
     }
 
     const bool was_visible = app.hover_popup.any_visible();

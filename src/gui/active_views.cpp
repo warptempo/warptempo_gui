@@ -76,8 +76,7 @@ void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     // explicit clear stays the correctness owner: the generation stamp compares
     // against the ACTIVE column's store and the other column's counter could
     // coincidentally match, so the gen-stamp is only belt-and-braces here.
-    app.stem_hover_suppress_marker = -1;
-    app.stem_hover_suppress_gen    = -1;
+    clear_stem_hover_suppress(app);
 }
 
 // Ctrl+Tab toggles A/B navigational tabs. Stops playback (deactivating the
@@ -108,8 +107,7 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // suppress an unrelated marker (AppState::stem_hover_suppress_marker). This
     // explicit clear stays the correctness owner — a cross-tab generation
     // counter could coincidentally match — so the gen-stamp is belt-and-braces.
-    app.stem_hover_suppress_marker = -1;
-    app.stem_hover_suppress_gen    = -1;
+    clear_stem_hover_suppress(app);
     this->refresh_active_tab_view_from_app();
     app.active_tab_view = target_tab;
     const ViewState& target = (app.active_tab_view == 'A') ? app.tab_a : app.tab_b;

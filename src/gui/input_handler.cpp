@@ -1162,8 +1162,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // a stale suppression into the new view (AppState::stem_hover_suppress_marker).
     // The explicit clear stays the correctness owner (the S/T flip does not bump
     // any store generation); the gen-stamp reset is belt-and-braces.
-    app.stem_hover_suppress_marker = -1;
-    app.stem_hover_suppress_gen    = -1;
+    clear_stem_hover_suppress(app);
 
     // The S/T toggle translates the active tab's live playhead across the
     // domain flip; the inactive tab's stored playhead must translate too, or

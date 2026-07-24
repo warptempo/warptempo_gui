@@ -1417,11 +1417,17 @@ struct AppState {
     //  - Pointer-leave-the-window then re-enter onto the SAME marker without
     //    crossing hover-off does NOT re-arm (the recompute clear is the only
     //    clear); accepted, rare.
-    // LIFECYCLE clears (index is a per-column, per-tab store position — a stale
-    // cross-column/tab index must not suppress an unrelated marker): reset to
-    // -1 at file load and `'` adopt (apply_settings_engine_and_prefs), at the
-    // Ctrl+Tab tab switch, the W/P column toggle, and the S/T audio-view
-    // switch. These stay the correctness owners: the generation compare is
+    // LIFECYCLE clears (FIVE sites; index is a per-column, per-tab store
+    // position — a stale cross-column/tab index must not suppress an unrelated
+    // marker): reset to -1 at file load and `'` adopt
+    // (apply_settings_engine_and_prefs), at the Ctrl+Tab tab switch, the W/P
+    // column toggle, the S/T audio-view switch, and undo/redo's INLINE same-tab
+    // W/P column swap (the fifth, round-2 codex finding: that swap assigns
+    // active_markers_view directly and bypasses switch_active_markers_view_to,
+    // hence its clear too, and the two stores' independent generations can
+    // coincide across the flip). All five route through the ONE
+    // clear_stem_hover_suppress helper so the {marker, gen} pair can never be
+    // half-cleared. These stay the correctness owners: the generation compare is
     // against the ACTIVE column's store, and a cross-column/tab generation
     // counter could coincidentally match, so the gen-stamp is only
     // belt-and-braces there. (No reorder remap: a reorder bumps the generation,
@@ -1919,6 +1925,14 @@ inline void set_stem_hover_suppress(AppState& app, int idx) {
 inline bool stem_hover_suppress_active(const AppState& app) {
     return app.stem_hover_suppress_marker >= 0 &&
            app.stem_hover_suppress_gen == active_marker_store_generation(app);
+}
+
+// ONE paired clear for the latch: reset BOTH fields to -1 together so the pair
+// can never be half-cleared. Every lifecycle clear site (the five listed at the
+// latch's field comment) routes through this.
+inline void clear_stem_hover_suppress(AppState& app) {
+    app.stem_hover_suppress_marker = -1;
+    app.stem_hover_suppress_gen    = -1;
 }
 
 // SelectionSnapshot movers: capture the live marker selection at drag begin,

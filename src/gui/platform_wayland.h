@@ -212,8 +212,10 @@ private:
     // Monotonic damage counter, bumped at the top of every invalidate_region
     // call (a during-paint re-entrant deferred append is still damage). The
     // input dispatch snapshots it around a command to detect one that painted
-    // nothing (a silent refusal, an unbound key, a swallowed sub-detent wheel)
-    // and preserve the lateral-gesture stem pin across it. See damage_seq().
+    // nothing (a silent refusal, an unbound key, a wall-saturated zoom-OUT wheel
+    // already at the effective ceiling — sub-detent input never leaves the
+    // platform accumulator, only completed detents reach on_wheel) and preserve
+    // the lateral-gesture stem pin across it. See damage_seq().
     uint64_t damage_seq_ = 0;
 
     // The bound single wl_output's latest CURRENT mode, in millihertz.

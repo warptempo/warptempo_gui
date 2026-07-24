@@ -865,14 +865,15 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
                                   app.selected_markers.end());
     // Stem LATERAL-GESTURE PIN: the position nudge is a lateral gesture, so keep
     // the FOCUSED marker's stem visible after it. Stamp the post-reorder focused
-    // index and the current command_seq; the pin is live by pure command adjacency
-    // and persists until any other command, reaped one-shot in on_tick (see
-    // AppState::stem_pin_*). A burst re-stamps each press (the immediately-next
-    // command), so the stem stays solid across the whole burst. Paint gates it to
-    // a SINGLETON selection, so for a 2+ selection this stamp is INERT — the
-    // singleton paint gate never admits it, and any command that could narrow the
-    // group to one bumps command_seq and kills the pin by adjacency first. Stamped
-    // anyway for uniformity.
+    // index and the current command_seq; the pin persists until the next DAMAGING
+    // command (a command that painted something) — damage-less commands re-stamp
+    // adjacency through StemPinPreserveGuard — and the dead pin is reaped one-shot
+    // in on_tick (the authoritative scope lives at AppState::stem_pin_*). A burst
+    // re-stamps each press (the immediately-next command), so the stem stays solid
+    // across the whole burst. Paint gates it to a SINGLETON selection, so for a 2+
+    // selection this stamp is INERT — the singleton paint gate never admits it, and
+    // any command that narrows the group to one is itself a damaging command that
+    // kills the pin first. Stamped anyway for uniformity.
     app.stem_pin_marker      = app.last_selected_marker;
     app.stem_pin_command_seq = app.command_seq;
     // Coalesce a rapid burst: the first press pushed the pre-burst snapshot with
