@@ -162,6 +162,19 @@ bool marker_effectively_disabled(const std::vector<MarkerT>& mv, size_t idx) {
 std::vector<bool> warp_markers_render_keep_mask(
     const std::vector<WarpMarker>& src);
 
+// The stage-2 coincident-collapse rule as a pure classifier over the RAW
+// authored store (audit C11, the one owner): out[i] is true iff raw index i
+// belongs to an exact-frame run whose effectively-enabled member count is >= 2
+// — the run that stage 2 collapses to one synthetic 1.00 owner. Positions are
+// whole int64 frames (exact equality IS the coincidence predicate) and the
+// store is time-sorted, so a run is adjacent. Membership is the whole run,
+// disabled members included (the GUI reddens the entire overlapping stack).
+// Consumed internally by stage 2 (via its raw-index map) and externally by the
+// GUI's normalization-red set, so the render's collapse verdict and the GUI's
+// red cue cannot drift.
+std::vector<char> warp_coincident_collapse_members(
+    const std::vector<WarpMarker>& markers);
+
 // Resolve each WarpMarker to a MarkerForRender — the normalization
 // chokepoint every render path passes through before build_warp_frame_map
 // (both the engine-bound render pipeline and the target view's

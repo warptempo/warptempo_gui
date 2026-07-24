@@ -97,24 +97,16 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
         slice_to_warp_markers(app.warpmarkers.markers());
     const int n = static_cast<int>(mv.size());
 
-    // Pass 1 — exact-frame collapse: the store is time-sorted, so a coincident
-    // group is a run of adjacent equal frames. A run whose enabled member count
-    // is 2+ collapses to one 1.00 owner in the render (marker_effectively_
-    // disabled is the survivor test), so redden every member of the run — the
-    // overlapping flags then read as one red flag, matching the render's single
-    // stderr line per group.
-    int i = 0;
-    while (i < n) {
-        int j = i + 1;
-        while (j < n && mv[j].time_frame == mv[i].time_frame) ++j;
-        int enabled = 0;
-        for (int k = i; k < j; ++k)
-            if (!marker_effectively_disabled(mv, static_cast<size_t>(k)))
-                ++enabled;
-        if (enabled >= 2)
-            for (int k = i; k < j; ++k) c.red.insert(k);
-        i = j;
-    }
+    // Pass 1 — exact-frame collapse: warp_coincident_collapse_members
+    // (warp_frame_map_build.h, audit C11) OWNS the coincident-collapse rule —
+    // the render resolver's stage 2 consults the same classifier, so the
+    // render's collapse verdict and this red cue cannot drift. The GUI
+    // consumes it here at press/paint time as a pure function of the
+    // committed store; a marked run reads as one red flag, matching the
+    // render's single stderr line per group.
+    const std::vector<char> members = warp_coincident_collapse_members(mv);
+    for (int k = 0; k < n; ++k)
+        if (members[static_cast<size_t>(k)]) c.red.insert(k);
 
     // Pass 2 — ref/pass 1.00 fallback: marker_effective is the silent
     // per-marker resolution the hover uses; it reports the render's

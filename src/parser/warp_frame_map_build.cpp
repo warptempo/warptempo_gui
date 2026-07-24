@@ -85,6 +85,30 @@ std::vector<bool> warp_markers_render_keep_mask(
     return keep;
 }
 
+std::vector<char> warp_coincident_collapse_members(
+    const std::vector<WarpMarker>& markers) {
+    // Contract in warp_frame_map_build.h. The store is time-sorted, so a
+    // coincident group is a run of adjacent equal frames; count the run's
+    // effectively-enabled members (marker_effectively_disabled, the stage-1
+    // survivor test) and mark the WHOLE run when the count is >= 2.
+    const size_t n = markers.size();
+    std::vector<char> out(n, 0);
+    size_t i = 0;
+    while (i < n) {
+        size_t j = i + 1;
+        while (j < n && markers[j].time_frame == markers[i].time_frame) ++j;
+        size_t enabled = 0;
+        for (size_t k = i; k < j; ++k) {
+            if (!marker_effectively_disabled(markers, k)) ++enabled;
+        }
+        if (enabled >= 2) {
+            for (size_t k = i; k < j; ++k) out[k] = 1;
+        }
+        i = j;
+    }
+    return out;
+}
+
 namespace {
 
 // Stages 1-3 of the render resolver's normalization pipeline — the shared
@@ -130,7 +154,21 @@ std::vector<WarpMarker> normalized_surviving_markers(
     // inside a collapsed group dies with it, and refs to it go dangling,
     // which stage 5 then normalizes with their own stderr line — a
     // deterministic cascade rather than a guess at which member to keep.
+    //
+    // The collapse verdict comes from warp_coincident_collapse_members,
+    // the rule's one owner (audit C11) — a raw-store classifier looked up
+    // through raw[]. EQUIVALENCE with the former adjacent-run predicate
+    // `j - i >= 2`: stage-1 survivors are exactly the effectively-enabled
+    // raw markers, filtering preserves order and times are non-decreasing,
+    // so the adjacent equal-frame survivor run [i, j) in norm IS the
+    // enabled subset of raw[i]'s exact-frame raw run — j - i equals that
+    // run's enabled count, hence j - i >= 2 iff collapse_members[raw[i]].
+    // Every entry raw[] holds HERE is >= 0: synthetics enter raw[] only
+    // below — the -1 this block pushes for a collapsed group's replacement
+    // owner, and stage 3's frame-0 seed insert.
     {
+        const std::vector<char> collapse_members =
+            warp_coincident_collapse_members(src);
         std::vector<WarpMarker> collapsed;
         std::vector<int>        collapsed_raw;
         collapsed.reserve(norm.size());
@@ -142,7 +180,7 @@ std::vector<WarpMarker> normalized_surviving_markers(
                    norm[j].time_frame == norm[i].time_frame) {
                 ++j;
             }
-            if (j - i >= 2) {
+            if (collapse_members[static_cast<size_t>(raw[i])]) {
                 WarpMarker owner;  // defaults: enabled 1.00 owner, no labels
                 owner.time_frame = norm[i].time_frame;
                 collapsed.push_back(owner);
