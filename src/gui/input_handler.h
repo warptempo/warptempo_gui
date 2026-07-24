@@ -383,10 +383,19 @@ struct GuiInputHandler {
     // mouse-down. Only the plain UPPER-HALF waveform press calls this (the
     // lower half is the scrub surface, whose press is a one-shot scrub act
     // arming nothing and leaving the
-    // region alone); a Shift press
-    // instead forms a region directly (one-shot — the former / marker demote)
-    // and does not arm this drag.
+    // region alone); the Shift-exact former arms through
+    // arm_region_drag_preserving instead.
     void arm_region_drag_at(int64_t anchor_frame, int x, int y);
+
+    // The SHIFT-exact former's arm (labwc 2026-07-24 second pass): same drag
+    // state as arm_region_drag_at, anchored at the FAR endpoint, but it does NOT
+    // dissolve app.region — the former has already left it exactly as it should
+    // rest for a motionless release, so preserving it keeps that one-shot
+    // behavior bit-for-bit. `pre_press` is the pre-press highlight (captured by
+    // the caller BEFORE the former overwrote app.region) for the Esc-mid-drag
+    // restore.
+    void arm_region_drag_preserving(int64_t anchor_frame, int x, int y,
+                                    const RegionState& pre_press);
 
     // The waveform-upper-half placement press BODY, shared by the plain waveform
     // press and the empty flag/triangle-lane parity press (R6, architect

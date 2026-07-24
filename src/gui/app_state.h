@@ -493,9 +493,14 @@ struct UndoHistory {
 // selection stays EMPTY from the press's deselect-all through release. A
 // sub-threshold press-release is a
 // plain waveform click and simply disarms — the highlight already dissolved at
-// press, so there is no release-time collapse. Only a plain, unmodified
-// upper-half waveform press arms (a Shift press is a click, Alt/Ctrl no-op
-// earlier), so an armed drag always signals a plain upper-half waveform press. A completed drag rests the
+// press, so there is no release-time collapse. TWO presses arm this drag: the
+// plain upper-half waveform press (arm_region_drag_at — dissolves the resting
+// region at mouse-down, anchors at the CLICK column) and the SHIFT-exact former
+// (labwc 2026-07-24, arm_region_drag_preserving — PRESERVES the just-formed
+// region, anchors at the FAR endpoint = playhead / demote's furthest marker),
+// which share every motion/release/Esc path unchanged (the anchor semantic is
+// identical: a_frame = anchor_frame fixed, b_frame tracks the pointer). Alt/Ctrl
+// no-op earlier. A completed drag rests the
 // region on release UNLESS its final on-screen span is
 // under the same kDragMovedThresholdPx gate — the gate latches once past the
 // arm and never re-engages, so a jitter drag could otherwise rest a sliver,

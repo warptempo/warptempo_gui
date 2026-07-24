@@ -1368,8 +1368,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // argmax |pos - click| over the selection in active-domain
                 // frames, which covers the between-the-series case as the
                 // longest side). It moves NO playhead, stops NO playback,
-                // reseeks nothing, overrides no follow, arms NO drag, seeds no
-                // double-click (one-shot). Read-only allowed (the region is
+                // reseeks nothing, overrides no follow, seeds no double-click.
+                // Read-only allowed (the region is
                 // transient navigation; the demote's deselect is selection =
                 // navigation). ctrl/alt returned earlier, so this is
                 // shift-exact — a shift+modified combination never reaches here.
@@ -1377,10 +1377,26 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // an inert-gutter shift+click (no column to form a region from)
                 // still drops the marker selection — every waveform click drops
                 // it, mirroring the plain branch's gutter clear.
+                //
+                // NEW (architect 2026-07-24 second pass): the former now also
+                // ARMS a region drag anchored at the FAR endpoint (the playhead,
+                // or the demote's furthest-marker image). So the press is
+                // one-shot ONLY on a motionless release (the formed region, or on
+                // the sliver rule the pre-press region, rests exactly as today);
+                // motion past the shared gate drags the CLICK-side endpoint live
+                // through the region-drag motion path, the far endpoint fixed,
+                // and Esc mid-drag restores the PRE-PRESS region. GUTTER presses
+                // arm NOTHING (there is no column to anchor a drag against).
                 if (click_rel_x < 0 || click_rel_x >= area.w) {
                     selection.clear_selection();
                     return;
                 }
+                // Capture the PRE-PRESS highlight BEFORE the former overwrites
+                // app.region, so the armed drag's Esc restore brings back what
+                // stood before this shift press (the plain drag's pre_region
+                // contract). Placed after the gutter return so the no-arm gutter
+                // path is untouched.
+                const RegionState pre_press_region = app.region;
                 // Region endpoints hold PLAYABLE live-domain frames only: the
                 // display-state validator (clamp_display_state_to_live_domain)
                 // defines an endpoint >= total as invalid and clears the whole
@@ -1445,8 +1461,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 const double spp = current_samples_per_pixel(app, audio);
                 if (spp <= 0.0) return;
                 if (std::abs(static_cast<double>(endpoint - click_frame)) / spp
-                        < kDragMovedThresholdPx)
+                        < kDragMovedThresholdPx) {
+                    // Sliver: form NO region (app.region untouched — a motionless
+                    // release keeps the pre-press region, bit-for-bit today), but
+                    // ARM the drag anchored at the far endpoint so dragging out
+                    // past the gate still grows a fresh region live from it (e.g.
+                    // shift-click AT the playhead, then drag out).
+                    arm_region_drag_preserving(endpoint, x, y, pre_press_region);
                     return;
+                }
                 // RegionState endpoints are unordered — the painter and Space
                 // normalize lo/hi. Damage the waveform (the region paints as a
                 // direct overlay), matching the region-drag extend.
@@ -1457,6 +1480,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // region is FREE — tempo gestures skip it.
                 app.region.provenance = RegionProvenance::Free;
                 viewport.invalidate_waveform_area();
+                // ARM the drag anchored at the FAR endpoint, PRESERVING the
+                // just-formed region: a motionless release keeps it (today's
+                // one-shot region, bit-for-bit), motion past the gate drags the
+                // click-side endpoint live (the motion handler fixes a_frame =
+                // anchor = endpoint and tracks b_frame to the pointer).
+                arm_region_drag_preserving(endpoint, x, y, pre_press_region);
                 return;
             }
             // THE HALF TEST, first thing on the plain path — before the
@@ -1534,6 +1563,33 @@ void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
     // the pre-press extent for the Esc-mid-drag restore. Same dissolve shape as
     // the navigation clears, so it shares clear_region_highlight.
     clear_region_highlight(app, viewport);
+}
+
+void GuiInputHandler::arm_region_drag_preserving(int64_t anchor_frame, int x,
+                                                 int y,
+                                                 const RegionState& pre_press) {
+    // The SHIFT-exact former's arm (labwc 2026-07-24 second pass). Same drag
+    // state as arm_region_drag_at — active, anchored at the FAR endpoint (the
+    // playhead, or the demote's furthest-marker image), press coordinates for
+    // the shared Chebyshev gate — but it does NOT dissolve app.region: the
+    // former has already left it exactly as it should REST for a motionless
+    // release (the freshly formed region, or on the sliver rule the pre-press
+    // region untouched), so preserving it keeps today's one-shot behaviour
+    // bit-for-bit. pre_region is the PRE-PRESS highlight (captured by the caller
+    // before the former overwrote app.region), so an Esc mid-drag restores what
+    // stood before the shift press — the same pre_region contract the plain drag
+    // carries. Past the gate the SHARED region-drag motion handler re-establishes
+    // app.region from this anchor (it fixes a_frame = anchor_frame and tracks
+    // b_frame to the pointer column on each column change), so the click-side
+    // endpoint drags live while this far endpoint stays put — no motion/release/
+    // Esc handler change needed, the anchor semantic is identical to the plain
+    // drag's.
+    app.region_drag = RegionDragState{};
+    app.region_drag.active       = true;
+    app.region_drag.anchor_frame = anchor_frame;
+    app.region_drag.press_x      = x;
+    app.region_drag.press_y      = y;
+    app.region_drag.pre_region   = pre_press;
 }
 
 void GuiInputHandler::place_playhead_and_arm_region(int click_rel_x, int x,
