@@ -134,7 +134,7 @@ void GuiInputHandler::handle_trim_x() {
     viewport.invalidate_timestamp_area();
     target_render.trigger();
     // The coupling tail (architect 2026-07-23): the highlight is KEPT — the sync
-    // re-derives the REGION (unowned, trim-derived) from the just-set window, so
+    // re-derives the REGION (provenance TrimWindow) from the just-set window, so
     // region and trim rest coupled through the one owner (the selection is never
     // touched); a crossed-collapse dissolve (auto_clear above) clears the region
     // with the window.
@@ -458,10 +458,19 @@ void GuiInputHandler::commit_trim_drag() {
 // Both bounds set -> the region takes the trim window's active-domain extent
 // (each source bound through source_frame_to_active_domain, clamped to a playable
 // frame like every other region former; bounds may be crossed mid-drag, so
-// normalize lo/hi, the map is monotone). Lone / no trim -> no window -> clear the
-// REGION only, leaving the selection alone. Read-only-safe (the region is
-// navigation). The playhead and the selection are never touched.
-void GuiInputHandler::sync_highlight_to_trim_window() {
+// normalize lo/hi, the map is monotone) with TrimWindow provenance. Lone / no
+// trim -> no window -> clear the REGION only, leaving the selection alone.
+// Read-only-safe (the region is navigation). The playhead and the selection are
+// never touched.
+//
+// Defined as a FREE function so the group tempo gestures (MarkerDragOps /
+// GuiWarpMarkersOps) can RE-SYNC a TrimWindow region from app.trim's SOURCE-frame
+// bounds through the NEW live map after a tempo edit (FIX C) — reachable through
+// input_handler.h beside set_region_to_selection_extent. GuiInputHandler's
+// sync_highlight_to_trim_window is a thin wrapper over it (all its callers keep
+// working).
+void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
+                                Viewport& viewport) {
     if (app.trim.has_begin && app.trim.has_end) {
         const int64_t a = clamp_playhead_to_live_domain(
             source_frame_to_active_domain(app, audio, app.trim.begin_frame),
@@ -471,15 +480,17 @@ void GuiInputHandler::sync_highlight_to_trim_window() {
             app, audio);
         const int64_t lo = std::min(a, b);
         const int64_t hi = std::max(a, b);
-        app.region.active  = true;
-        app.region.a_frame = lo;
-        app.region.b_frame = hi;
-        // Trim-DERIVED, so NOT selection-owned: a 2+ marker selection may sit
-        // beside this region, but it is NOT that selection's extent — the
-        // image-follow tempo gestures must leave this trim-window highlight in
-        // place (never snap it to the selection extent). This is the ownership
-        // rule that lets the trim/highlight coupling and the tempo follows agree.
-        app.region.selection_owned = false;
+        app.region.active     = true;
+        app.region.a_frame    = lo;
+        app.region.b_frame    = hi;
+        // Trim-DERIVED provenance: a 2+ marker selection may sit beside this
+        // region, but it is NOT that selection's extent — the tempo gestures must
+        // never snap it to the selection extent. Instead they RE-SYNC a TrimWindow
+        // region from app.trim's source-frame bounds through the new map (this
+        // very function re-run), so the wash tracks the chips/stems across a tempo
+        // edit. This is the provenance that lets the trim/highlight coupling and
+        // the selection-extent follows both hold.
+        app.region.provenance = RegionProvenance::TrimWindow;
     } else {
         // No window (lone / no trim): clear the REGION only (the selection is
         // untouched — trim never mutates it). A LONE bound still paints its chip,
@@ -491,6 +502,10 @@ void GuiInputHandler::sync_highlight_to_trim_window() {
         app.region = RegionState{};
     }
     viewport.invalidate_waveform_area();
+}
+
+void GuiInputHandler::sync_highlight_to_trim_window() {
+    sync_region_to_trim_window(app, audio, viewport);
 }
 
 // R4.6: set ONE trim bound at the clicked column — ADJUST-ONLY (architect

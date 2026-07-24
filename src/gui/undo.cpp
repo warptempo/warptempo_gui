@@ -265,6 +265,11 @@ void apply_post_restore_rules_impl(AppState& app,
 
     if (target_set.empty()) return;
 
+    // Undo/redo replaces the membership with the touched set -> demote a
+    // SelectionExtent region to Free (restored regions are display scratch that
+    // must not silently retarget to the touched set's extent). sanitize below
+    // also demotes, so this is belt-and-braces for the explicit-site rule.
+    demote_region_provenance(app.region);
     app.selected_markers = target_set;
     if (target_set.count(entry.hint_last_selected)) {
         app.last_selected_marker = entry.hint_last_selected;
@@ -479,7 +484,10 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // observable — the swap must stay pre-sanitize-only here.
     if (entry.op_mode != 'S' && entry.op_mode != app.active_markers_view) {
         // Stash the current selection into the leaving mode's slot,
-        // then restore the destination mode's slot.
+        // then restore the destination mode's slot. Replacing the live membership
+        // demotes a SelectionExtent region to Free (the W/P inline swap; sanitize
+        // below also demotes, belt-and-braces).
+        demote_region_provenance(app.region);
         ViewState& curtab = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
         if (app.active_markers_view == 'P') {
             curtab.phase_reset_selected      = app.selected_markers;

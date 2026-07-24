@@ -179,6 +179,15 @@ void clear_region_highlight(AppState& app, Viewport& viewport);
 void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
                                     Viewport& viewport);
 
+// Set the region to the CURRENT trim window's active-domain extent (TrimWindow
+// provenance), or clear it when there is no full pair. Definition lives in
+// input_trim.cpp; declared here so the group tempo gestures can RE-SYNC a
+// TrimWindow region from app.trim's source-frame bounds through the new live map
+// after a tempo edit (FIX C). GuiInputHandler::sync_highlight_to_trim_window
+// wraps this.
+void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
+                                Viewport& viewport);
+
 // -- GuiInputHandler ----------------------------------------------------
 //
 // The batch render runner lives on this struct as private helper methods
@@ -657,7 +666,7 @@ private:
     // live region trims to it, begin at the span's lo, end at its hi,
     // overwriting any existing bounds, then KEEPS and re-syncs the highlight —
     // the coupling tail (sync_highlight_to_trim_window) re-derives the REGION
-    // (unowned, trim-derived) from the just-set window, so region and trim rest
+    // (provenance TrimWindow) from the just-set window, so region and trim rest
     // coupled (a crossed-collapse dissolve clears the region with the window; the
     // selection is never touched); no region clears the trim. Read-only refuses silently before anything, leaving the
     // region untouched. The sole dispatch entry for the x key; the no-region

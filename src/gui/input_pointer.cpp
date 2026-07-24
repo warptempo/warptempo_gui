@@ -243,14 +243,15 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
         else { if (pos < lo) lo = pos; if (pos > hi) hi = pos; }
     }
     if (!have) return;   // every selected index was stale (degenerate)
-    app.region.active         = true;
-    app.region.a_frame        = lo;
-    app.region.b_frame        = hi;
-    // The ONE site that SETS ownership: this region IS the selection's extent, so
-    // the image-follow gestures may track it. Every legitimate extent re-derive
-    // (the multi-select clicks, the position-drag commit, the tempo follows)
-    // routes through here, so ownership self-maintains.
-    app.region.selection_owned = true;
+    app.region.active     = true;
+    app.region.a_frame    = lo;
+    app.region.b_frame    = hi;
+    // The ONE site that sets SelectionExtent provenance: this region IS the
+    // selection's extent, so the image-follow gestures may track it. Every
+    // legitimate extent re-derive (the multi-select clicks, the position-drag
+    // commit, the tempo follows) routes through here, so provenance self-maintains
+    // (demote_region_provenance drops it back to Free on any membership replace).
+    app.region.provenance = RegionProvenance::SelectionExtent;
     viewport.invalidate_waveform_area();
 }
 
@@ -266,14 +267,15 @@ bool GuiInputHandler::handle_escape_selection_region() {
     // region.active is tested FIRST, regardless of selection: the old rung (b)
     // re-derived the region from the selection extent, which SHRANK an active
     // region to the selection's subregion. Consequence (architect-flagged, cheap
-    // to re-rule): a click-made multi-selection rests with its extent
-    // (selection-owned) region active, so it now collapses to the playhead in ONE
-    // Esc rather than two.
+    // to re-rule): a click-made multi-selection rests with its SelectionExtent
+    // region active, so it now collapses to the playhead in ONE Esc rather than
+    // two.
     if (app.region.active) {
-        // Region active: collapse to its start (ownership-BLIND — any active
-        // region collapses). The region is the stretched-out playhead, so clear
-        // it AND the selection (a click-made multi-selection's coupled extent
-        // region dies with the selection here) and land the playhead at lo.
+        // Region active: collapse to its start (PROVENANCE-BLIND — any active
+        // region collapses, SelectionExtent / TrimWindow / Free alike). The region
+        // is the stretched-out playhead, so clear it AND the selection (a
+        // click-made multi-selection's coupled extent region dies with the
+        // selection here) and land the playhead at lo.
         const int64_t lo = std::min(app.region.a_frame, app.region.b_frame);
         app.region = RegionState{};
         selection.clear_selection();
@@ -1411,12 +1413,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // RegionState endpoints are unordered — the painter and Space
                 // normalize lo/hi. Damage the waveform (the region paints as a
                 // direct overlay), matching the region-drag extend.
-                app.region.active  = true;
-                app.region.a_frame = endpoint;
-                app.region.b_frame = click_frame;
+                app.region.active     = true;
+                app.region.a_frame    = endpoint;
+                app.region.b_frame    = click_frame;
                 // The shift-click former / demote DROPS the selection, so this
-                // region is NOT selection-owned — image-follow gestures skip it.
-                app.region.selection_owned = false;
+                // region is FREE — tempo gestures skip it.
+                app.region.provenance = RegionProvenance::Free;
                 viewport.invalidate_waveform_area();
                 return;
             }
@@ -1980,23 +1982,23 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // extend event the arm cleared the region (active == false), so this
         // proceeds and seeds it.
         if (app.region.active && far_frame == app.region.b_frame) return;
-        app.region.active  = true;
-        app.region.a_frame = app.region_drag.anchor_frame;
-        app.region.b_frame = far_frame;
-        // Drag-formed, so NOT selection-owned: the image-follow gestures leave it
-        // alone (it has an empty selection anyway).
-        app.region.selection_owned = false;
+        app.region.active     = true;
+        app.region.a_frame    = app.region_drag.anchor_frame;
+        app.region.b_frame    = far_frame;
+        // Drag-formed, so FREE provenance: no tempo gesture re-derives it (it has
+        // an empty selection anyway).
+        app.region.provenance = RegionProvenance::Free;
         // SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23, retiring the R2
         // coupling's Direction A): highlighting a region does NOT select the
         // markers it contains — the press already deselected all and the drag
         // leaves the selection EMPTY throughout. The reverse direction stands:
         // when markers ARE selected the region is set to their extent (the
-        // multi-select clicks via set_region_to_selection_extent; the trim window
-        // via sync_highlight_to_trim_window — UNOWNED there). So a drag-formed
-        // region always rests with an empty selection — and whenever 2+ markers
-        // rest selected WITH an active SELECTION-OWNED region, that region IS
-        // their extent by construction (an unowned trim region may rest beside
-        // any selection).
+        // multi-select clicks via set_region_to_selection_extent — provenance
+        // SelectionExtent; the trim window via sync_highlight_to_trim_window —
+        // provenance TrimWindow). So a drag-formed region always rests with an
+        // empty selection (Free) — and whenever 2+ markers rest selected WITH an
+        // active SelectionExtent region, that region IS their extent by
+        // construction (a TrimWindow region may rest beside any selection).
         viewport.invalidate_waveform_area();
         return;
     }

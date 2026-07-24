@@ -49,6 +49,10 @@ void Selection::repair_last_selected() {
 }
 
 void Selection::set_single_selection(int idx) {
+    // Membership replace -> demote a SelectionExtent region to Free (it is no
+    // longer this selection's extent). Harmless when a Direction-B click re-owns
+    // right after (demote-then-re-own).
+    demote_region_provenance(app.region);
     const bool was_empty = app.selected_markers.empty();
     const size_t old_size = app.selected_markers.size();
     // Any non-range selection change dissolves the shift-range anchor (its
@@ -81,6 +85,10 @@ void Selection::focus_without_collapse(int idx) {
 }
 
 void Selection::clear_selection() {
+    // Membership replace (to empty) -> demote a SelectionExtent region to Free.
+    // A region with no live owner is Free (the Esc lower rung relies on this: it
+    // sets the extent then clears the selection, leaving a Free region).
+    demote_region_provenance(app.region);
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     if (app.selected_markers.empty() && app.last_selected_marker == -1)
         return;   // nothing selected (already empty -> no focus flip)
@@ -104,6 +112,9 @@ void Selection::collapse_to_focused() {
     // it stays the focus. Callers that full-invalidate afterward make the
     // top-strip / timestamp damage here redundant (a benign damage-union,
     // accepted).
+    // Membership replace (collapse to the focused singleton) -> demote a
+    // SelectionExtent region to Free (a 1-marker extent is degenerate).
+    demote_region_provenance(app.region);
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     if (app.last_selected_marker < 0) return;   // nothing focused
     const size_t old_size = app.selected_markers.size();
@@ -128,6 +139,9 @@ void Selection::collapse_to_focused() {
 }
 
 bool Selection::toggle_selection_membership(int idx) {
+    // Membership replace -> demote a SelectionExtent region to Free. Harmless
+    // when a Direction-B ctrl-toggle re-owns right after (demote-then-re-own).
+    demote_region_provenance(app.region);
     const bool was_empty = app.selected_markers.empty();
     const size_t old_size = app.selected_markers.size();
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
@@ -158,6 +172,10 @@ void Selection::select_range_from_anchor(int idx) {
     // R1 reversal) after this returns, so idx < 0 (never reached from the
     // shift-click path, which resolves a real hit) is a plain no-op guard.
     if (idx < 0) return;
+    // Membership replace -> demote a SelectionExtent region to Free (the
+    // Direction-B shift-range re-owns right after via set_region_to_selection_
+    // extent, so this is demote-then-re-own).
+    demote_region_provenance(app.region);
     const bool was_empty = app.selected_markers.empty();
     const size_t old_size = app.selected_markers.size();
 
@@ -218,6 +236,10 @@ void Selection::select_range_from_anchor(int idx) {
 }
 
 void Selection::sanitize_selection_after_restore(int n) {
+    // A restore replaces the selection membership from the entry -> demote a
+    // SelectionExtent region to Free (undo/redo regions are display scratch that
+    // must not silently retarget to the restored selection's extent).
+    demote_region_provenance(app.region);
     // A restore (undo/redo) dissolves the shift-range anchor — this is the
     // route that closes the shift-held hole for Ctrl+Shift+Z: redo holds
     // shift, so no shift falling edge fires (the platform falling-edge hook
@@ -348,6 +370,9 @@ void Selection::select_next_marker() { cycle_selection(true);  }
 void Selection::select_prev_marker() { cycle_selection(false); }
 
 void Selection::prune_live_selection() {
+    // Pruning out-of-range members replaces the membership -> demote a
+    // SelectionExtent region to Free.
+    demote_region_provenance(app.region);
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     const int n = (app.active_markers_view == 'P')
         ? static_cast<int>(app.phaseresetmarkers.markers().size())

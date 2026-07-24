@@ -234,12 +234,12 @@ void GuiWarpMarkersOps::delete_selected_marker() {
         const auto [lo, hi] = std::minmax_element(del_positions.begin(),
                                                   del_positions.end());
         if (*hi > *lo) {
-            app.region.active  = true;
-            app.region.a_frame = *lo;
-            app.region.b_frame = *hi;
+            app.region.active     = true;
+            app.region.a_frame    = *lo;
+            app.region.b_frame    = *hi;
             // The delete demotion drops the deleted markers, so this region is
-            // NOT selection-owned — image-follow gestures skip it.
-            app.region.selection_owned = false;
+            // FREE — tempo gestures skip it.
+            app.region.provenance = RegionProvenance::Free;
         }
     }
     undo.push_undo_warp(std::move(pre_state), hint_last);
@@ -595,6 +595,15 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
     // label-coupling edge where even a singleton's own image can move is a
     // recorded accepted gap there.)
     if (app.active_audio_view == 'T') {
+        // Region follow decision CAPTURED BEFORE the kick (the ordering hazard):
+        // kick_waveform_sync's live-domain reclamp wholesale-clears any region
+        // whose old endpoint fell outside the now-shorter target domain (a faster
+        // map shrinks the total), so the follow must not gate on post-kick
+        // region.active. Act on the captured decision unconditionally after.
+        const bool follow_extent = app.region.active &&
+            app.region.provenance == RegionProvenance::SelectionExtent;
+        const bool trim_resync = app.region.active &&
+            app.region.provenance == RegionProvenance::TrimWindow;
         viewport.kick_waveform_sync();
         const int f = app.last_selected_marker;
         if (f >= 0 && f < n) {
@@ -603,14 +612,16 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
         }
         // Region follows the images (architect 2026-07-23): the group step moved
         // the selected markers' target IMAGES (tempos changed, source frames did
-        // not), so a SELECTION-OWNED extent region re-derives to their new extent.
-        // Gated on selection_owned: an owned region IS the selection extent
-        // (re-derive it), while an UNOWNED trim-window / drag-formed region is
-        // left in place (snapping it to the selection would break the
-        // trim/highlight coupling). Same target-view gate as the re-land; source
-        // view needs nothing (identity domain — no image moved).
-        if (app.region.active && app.region.selection_owned)
-            set_region_to_selection_extent(app, audio, viewport);
+        // not).
+        //  - SelectionExtent: re-derive to the selection's NEW extent (re-activates
+        //    a region the kick may have cleared).
+        //  - TrimWindow: re-sync from app.trim's source-frame bounds through the
+        //    new map (FIX C), so the wash tracks the chips/stems.
+        //  - Free: untouched scratch.
+        // Source view needs nothing (identity domain — no image moved), which is
+        // why this whole block gates on target view.
+        if (follow_extent)      set_region_to_selection_extent(app, audio, viewport);
+        else if (trim_resync)   sync_region_to_trim_window(app, audio, viewport);
     }
     target_render.trigger();
 }

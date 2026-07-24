@@ -143,14 +143,17 @@ struct SelectionSnapshot {
 // DELETE (demotes to the span of the deleted positions, also a DROP), and the
 // MULTI-SELECT EXTENT: a shift-range or ctrl-toggle click that leaves 2+ markers
 // selected sets the region to the selection's position extent [earliest, latest]
-// (the SELECTION-OWNED region — see selection_owned), so highlight, land, and
-// Space's left-bound launch agree. Consequently a drag-formed region always rests
-// with an EMPTY selection, and whenever 2+ markers rest selected WITH an active
-// SELECTION-OWNED region that region IS their extent by construction — but an
-// UNOWNED region (trim-derived by sync_highlight_to_trim_window, or drag-formed)
-// may rest NEXT TO any selection without being its extent (the ownership bit is
-// what lets the trim/highlight coupling and the image-follow tempo gestures both
-// hold: the follows re-derive only owned regions).
+// (provenance SelectionExtent — see RegionProvenance), so highlight, land, and
+// Space's left-bound launch agree. THE INVARIANT (three-state, architect
+// 2026-07-23): 2+ selected with an active SelectionExtent region ⇒ region == the
+// current selection's extent (maintained by demote_region_provenance, which
+// downgrades to Free the instant the membership is replaced); a TrimWindow region
+// tracks the trim bounds' images (re-synced across map changes); a Free region is
+// untouched display scratch. So a drag-formed region always rests with an EMPTY
+// selection (Free), and a trim-derived region (TrimWindow) may rest NEXT TO any
+// selection without being its extent — provenance is what lets the trim/highlight
+// coupling and the image-follow tempo gestures both hold: the follows re-derive
+// only SelectionExtent regions, re-sync only TrimWindow ones.
 // Bare x branches on
 // THIS highlight: a live region trims to it and the highlight is KEPT
 // (architect 2026-07-23, reversing the earlier consume — under the coupling
@@ -180,28 +183,54 @@ struct SelectionSnapshot {
 // GROUP marker drag captures the resting region into DragState::pre_drag_region
 // (Esc restore) and live-tracks it to the moving group's extent (apply_drag_
 // motion), re-deriving from the post-commit store at commit.
+// Region PROVENANCE (architect 2026-07-23, three-state ownership): tracks WHO the
+// region is derived from, which decides how the image-follow tempo gestures treat
+// it across a map change. Free — a drag-formed / demoted region, display scratch
+// that no gesture re-derives. SelectionExtent — set to the marker selection's
+// [earliest, latest] extent (the Direction-B clicks, the position-drag commit,
+// the tempo follows), valid ONLY while that selection persists (any membership
+// REPLACE demotes it to Free via demote_region_provenance). TrimWindow — set to
+// the trim window's images (sync_highlight_to_trim_window), selection-independent,
+// re-synced from app.trim's source-frame bounds through the new map at every
+// tempo mutation so the wash tracks the chips/stems.
+//
+// RECORDED BOUNDARY of the follow/re-sync behavior (architect 2026-07-23): only
+// the GROUP TEMPO gestures (the step, the drag's per-event, its cancel) re-derive
+// a SelectionExtent region or re-sync a TrimWindow region across their map change.
+// The OTHER target-map changers — undo/redo, the settings engine-scale commit,
+// adopt — leave the region NUMERICALLY UNTOUCHED for ALL provenances (display
+// scratch, today's behavior); extending the follow to them is out of scope.
+enum class RegionProvenance { Free, SelectionExtent, TrimWindow };
+
 struct RegionState {
     bool    active  = false;
     int64_t a_frame = 0;   // the press-anchor endpoint
     int64_t b_frame = 0;   // the far (pointer) endpoint
-    // Ownership bit (architect 2026-07-23): true iff the MARKER SELECTION owns
-    // this region — i.e. it was set to the selection's extent, so 2+ selected
-    // with an active selection-owned region ⇒ region == extent by construction.
-    // An UNOWNED region (drag-formed with an empty selection, or trim-derived by
-    // sync_highlight_to_trim_window while a 2+ selection sits beside it) may rest
-    // NEXT TO any selection. SET TRUE in exactly one place —
-    // set_region_to_selection_extent, the Direction-B owner every legitimate
-    // extent re-derive routes through (the multi-select clicks, the position-drag
-    // commit, the tempo follows) — and SET FALSE at every other former (region
-    // drag, shift-click former/demote, delete demotion, trim sync). The
-    // image-follow gestures (position drag live-track + commit re-derive, tempo
-    // drag per-event + cancel re-derive, group step re-derive) run ONLY on an
-    // owned region, so an unowned trim/drag region survives them untouched. Every
-    // wholesale RegionState{} reset (load, navigation clears, the Esc collapse)
-    // drops ownership by the false default. The Esc ladder, Space launch, x, and
-    // navigation clears are ownership-BLIND — they act on any active region.
-    bool    selection_owned = false;
+    // Provenance (see enum above). The follow-gates test provenance ==
+    // SelectionExtent; the trim re-sync tests provenance == TrimWindow; Free is
+    // untouched scratch. SET in three places — set_region_to_selection_extent ->
+    // SelectionExtent, sync_highlight_to_trim_window's set arm -> TrimWindow, and
+    // every OTHER former (region drag, shift-click former/demote, delete
+    // demotions) -> Free — plus demote_region_provenance downgrading
+    // SelectionExtent -> Free on a selection-membership replace. Every wholesale
+    // RegionState{} reset (load, navigation clears, the Esc collapse) defaults
+    // Free. The Esc ladder, Space launch, x, and navigation clears are
+    // provenance-BLIND — they act on any active region.
+    RegionProvenance provenance = RegionProvenance::Free;
 };
+
+// Demote a SELECTION-EXTENT region to Free (architect 2026-07-23): SelectionExtent
+// provenance is valid only while the selection it was derived from persists, so
+// EVERY site that REPLACES the selection membership calls this. The region stays
+// visible but stops being a follow target (a region with no live owner is Free).
+// TrimWindow is selection-independent — untouched; Free stays Free. NOT called on
+// an index REMAP (reorder_markers_by_time keeps the same markers at new indices,
+// so the extent is unchanged) or on focus_without_collapse (membership unchanged
+// — the extent is a function of membership only).
+inline void demote_region_provenance(RegionState& r) {
+    if (r.provenance == RegionProvenance::SelectionExtent)
+        r.provenance = RegionProvenance::Free;
+}
 
 // Marker reposition drag state (begun by a plain flag drag past the shared
 // threshold). `active` gates motion handling; the rest captures the
@@ -1710,6 +1739,11 @@ inline SelectionSnapshot capture_selection_snapshot(const AppState& app) {
 
 inline void restore_selection_snapshot(AppState& app,
                                        const SelectionSnapshot& s) {
+    // Restoring the snapshot replaces the live membership -> demote a
+    // SelectionExtent region to Free (the drag/tempo cancel then re-derives the
+    // owned region itself, so a SelectionExtent survives a cancel via that
+    // re-derive, not this restore).
+    demote_region_provenance(app.region);
     app.selected_markers     = s.selected_markers;
     app.last_selected_marker = s.last_selected_marker;
 }

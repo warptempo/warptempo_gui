@@ -596,6 +596,10 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
     }
     active_views.switch_active_markers_view_to('P');
     if (!created.empty()) {
+        // The paste replaces the membership with the created resets -> demote a
+        // SelectionExtent region to Free (explicit: switch_active_markers_view_to
+        // is a no-op when already in P view, so its prune-demote may not have run).
+        demote_region_provenance(app.region);
         app.selected_markers     = created;
         app.last_selected_marker = *created.rbegin();
     }

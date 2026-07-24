@@ -412,12 +412,15 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         // being paint coherence), std::nearbyint, then clamp_playhead_to_live_
         // domain (region endpoints hold PLAYABLE live-domain frames, the standing
         // invariant every former clamps through). invalidate_waveform_area below
-        // already covers the repaint. Gated on selection_owned (architect
-        // 2026-07-23): the live-track follows ONLY a SELECTION-OWNED region (2+
-        // selected ⇒ region == extent); an unowned trim/drag-formed region rests
-        // untouched, and an inactive region gains nothing from a drag. It writes
-        // a_frame/b_frame only, LEAVING the ownership bit true.
-        if (app.region.active && app.region.selection_owned &&
+        // already covers the repaint. Gated on provenance == SelectionExtent
+        // (architect 2026-07-23): the live-track follows ONLY a SelectionExtent
+        // region (2+ selected ⇒ region == extent); a Free / TrimWindow region
+        // rests untouched, and an inactive region gains nothing from a drag. It
+        // writes a_frame/b_frame only, LEAVING the provenance SelectionExtent. No
+        // kick runs during motion (the overlay model — the store is not mutated),
+        // so app.region.active is reliable here.
+        if (app.region.active &&
+            app.region.provenance == RegionProvenance::SelectionExtent &&
             !app.drag.moveable_times.empty()) {
             int64_t lo = 0, hi = 0;
             bool have = false;
@@ -744,13 +747,17 @@ void MarkerDragOps::commit_drag() {
     // moved the region live and must restore it to the resting extent.
     // set_region_to_selection_extent is the same Direction-B owner the
     // multi-select clicks use; here it MAINTAINS an already-active highlight
-    // through the store mutation rather than creating one (and re-affirms the
-    // ownership bit). app.region survives the DragState reset (it lives on
-    // AppState), so this reads the tracked-live active flag correctly. Gated on
-    // selection_owned: only a SELECTION-OWNED region followed the drag (an
-    // unowned trim/drag-formed region was never live-tracked, so nothing to snap
-    // back).
-    if (app.region.active && app.region.selection_owned) {
+    // through the store mutation rather than creating one (and re-affirms
+    // SelectionExtent provenance). app.region survives the DragState reset (it
+    // lives on AppState), and commit_drag does NOT kick_waveform_sync before this
+    // (see below), so app.region.active is reliable — no capture-before-kick
+    // hazard here (positions don't shrink the warp target domain: a warp position
+    // drag is source-view identity, and a phase-reset position drag leaves the
+    // warp map's total unchanged). Gated on provenance == SelectionExtent: only a
+    // SelectionExtent region followed the drag (a Free / TrimWindow region was
+    // never live-tracked, so nothing to snap back).
+    if (app.region.active &&
+        app.region.provenance == RegionProvenance::SelectionExtent) {
         set_region_to_selection_extent(app, audio, viewport);
     }
     // No synchronous re-warp at commit: a marker drag can no longer change the
@@ -1248,6 +1255,17 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     }
     // The focus transfer already ran at the threshold crossing (begin_tempo_drag,
     // the reposition drag's rule), so there is no first-commit re-assert here.
+    // Region follow decision CAPTURED BEFORE the kick (architect 2026-07-23, the
+    // ordering hazard): kick_waveform_sync's live-domain reclamp wholesale-CLEARS
+    // any region whose old endpoint fell outside the now-shorter target domain
+    // (a faster map shrinks the total), so the follow must NOT gate on post-kick
+    // region.active — it would see a region the kick just cleared. Capture the
+    // provenance decision now, act on it unconditionally after the kick (both
+    // re-activators write active = true).
+    const bool follow_extent = app.region.active &&
+        app.region.provenance == RegionProvenance::SelectionExtent;
+    const bool trim_resync = app.region.active &&
+        app.region.provenance == RegionProvenance::TrimWindow;
     // Synchronous re-warp, exactly adjust_tempo_cents' target-view tail:
     // kick_waveform_sync reclamps zoom/viewport first (a tempo change moves
     // the target total) and rebuilds plate + stem/flag caches inline, with
@@ -1265,17 +1283,17 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     viewport.move_playhead_to(
         source_frame_to_active_domain(app, audio, mv[mi].time_frame));
     // Region follows the images (architect 2026-07-23): a group tempo edit moves
-    // the selected markers' target IMAGES (tempos change, source frames don't), so
-    // a SELECTION-OWNED extent region must re-derive to their new extent — like
-    // the group POSITION drag's region live-track, but through the images. Gated
-    // on selection_owned: an owned region IS the selection extent (re-derive it
-    // via set_region_to_selection_extent, from the post-commit live map), while an
-    // UNOWNED trim-window / drag-formed region is left untouched (it is not the
-    // selection's extent, so snapping it there would break the trim/highlight
-    // coupling — the reported bug). Source frames unmoved, so this is a pure image
-    // re-derive.
-    if (app.region.active && app.region.selection_owned)
-        set_region_to_selection_extent(app, audio, viewport);
+    // the selected markers' target IMAGES (tempos change, source frames don't).
+    //  - SelectionExtent: re-derive to the selection's NEW extent (re-activates a
+    //    region the kick may have cleared — set_region_to_selection_extent writes
+    //    active = true), so it follows even across a domain shrink.
+    //  - TrimWindow: re-run the trim SET path, which re-maps app.trim's SOURCE-
+    //    frame bounds through the NEW live map (FIX C), so the wash tracks the
+    //    chips/stems; a bare x can never inverse-map a stale span. The trim can't
+    //    dissolve mid-tempo-gesture, so the no-window arm is unreachable here.
+    //  - Free: untouched scratch (drag-formed) — no re-derive.
+    if (follow_extent)      set_region_to_selection_extent(app, audio, viewport);
+    else if (trim_resync)   sync_region_to_trim_window(app, audio, viewport);
     // The sync render's damage stops at the waveform's bottom edge; the
     // bottom strip is the one surface it does not cover (the dragged
     // marker's pass/ref readout resolves through the predecessor, and a
@@ -1347,6 +1365,15 @@ void MarkerDragOps::end_tempo_drag() {
 // previewed.
 void MarkerDragOps::cancel_tempo_drag() {
     if (!app.tempo_drag.active) return;
+    // Capture the region-follow decision FIRST — BEFORE restore_selection_snapshot
+    // (which demotes a SelectionExtent region to Free) and before the kick (which
+    // can clear a region on a domain shrink). We re-derive / re-sync after, so a
+    // SelectionExtent region survives the cancel via the re-derive below (not via
+    // the demoting restore), and a TrimWindow region survives via the re-sync.
+    const bool follow_extent = app.region.active &&
+        app.region.provenance == RegionProvenance::SelectionExtent;
+    const bool trim_resync = app.region.active &&
+        app.region.provenance == RegionProvenance::TrimWindow;
     restore_selection_snapshot(app, app.tempo_drag.pre_drag_selection);
     // Restore EVERY participant's grab cents (the parallel vectors). A walled
     // group and an unmoved drag restore nothing (the store already holds the
@@ -1366,19 +1393,22 @@ void MarkerDragOps::cancel_tempo_drag() {
     }
     if (restored) viewport.kick_waveform_sync();
     viewport.move_playhead_to(app.tempo_drag.pre_ride_playhead_sample);
-    // Region follows the restored images (architect 2026-07-23), gated on
-    // selection_owned. For a SELECTION-OWNED region the cancel put the selection
-    // (the pre-drag group, via restore_selection_snapshot) and the participant
-    // tempos — hence every image — back, so re-deriving the extent lands it
-    // EXACTLY on its pre-drag extent: NO captured pre_drag_region field is needed
-    // (the region is a pure function of store + selection, both restored — unlike
-    // the position drag, whose region can transiently diverge mid-motion from
-    // moveable_times). An UNOWNED trim-window / drag-formed region is left
-    // untouched — its bounds never depended on this selection, and the cancel
-    // restored the images anyway, so it correctly survives the Esc (closing the
-    // reported bug where Esc on a walled drag replaced a trim highlight).
-    if (app.region.active && app.region.selection_owned)
-        set_region_to_selection_extent(app, audio, viewport);
+    // Region restored to its pre-drag home (architect 2026-07-23), on the decision
+    // captured at the TOP:
+    //  - SelectionExtent: the cancel put the selection (the pre-drag group) and
+    //    the participant tempos — hence every image — back, so re-deriving the
+    //    extent lands it EXACTLY on its pre-drag extent. NO captured pre_drag_region
+    //    field is needed (the region is a pure function of store + selection, both
+    //    restored — unlike the position drag, whose region can transiently diverge
+    //    mid-motion from moveable_times).
+    //  - TrimWindow: re-sync from app.trim's source-frame bounds through the
+    //    restored map, landing the wash back on the restored chips/stems (closing
+    //    the reported bug where Esc on a walled drag replaced a trim highlight —
+    //    the trim bounds never depended on this selection, and the images are
+    //    restored, so the re-sync reproduces the pre-drag trim highlight).
+    //  - Free: untouched scratch.
+    if (follow_extent)      set_region_to_selection_extent(app, audio, viewport);
+    else if (trim_resync)   sync_region_to_trim_window(app, audio, viewport);
     app.tempo_drag = TempoDragState{};
     viewport.invalidate_waveform_area();
     viewport.invalidate_top_strip();
