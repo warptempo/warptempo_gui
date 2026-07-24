@@ -1323,23 +1323,8 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         scroll_accum_ = 0.0;
 
         // Losing the keyboard is the hard end of the key stream: a held
-        // synthesized-left button will never see its release. End it here on
-        // the logical 1->0 edge, the same tail as on_keyboard_leave. Flush the
-        // deferred motion FIRST, while synth_left_held_ still reads held, then
-        // clear it, then deliver — so the flushed motion observes the
-        // pre-release held state and takes the live-drag path (skipped when we
-        // do not deliver, since no OR 1->0 edge occurs).
-        if (synth_left_held_) {
-            const bool deliver_release =
-                !pointer_left_held_ && on_button_release_;
-            if (deliver_release) flush_deferred_motion();
-            synth_left_held_    = false;
-            synth_left_keycode_ = 0;
-            if (deliver_release) {
-                on_button_release_(GuiMouseButton::Left,
-                                   pointer_x_, pointer_y_, current_mods());
-            }
-        }
+        // synthesized-left button will never see its release. End it here.
+        end_left_hold_source(/*physical=*/false);
     }
 
     if (has_pointer && !wl_pointer_) {
@@ -1356,7 +1341,6 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         end_pointer_capture();
         // The relative pointer depends on the wl_pointer; destroy it first.
         destroy_relative_pointer();
-        const bool left_was_held = pointer_left_held_;
         wl_pointer_release(wl_pointer_);
         wl_pointer_ = nullptr;
         pointer_focused_   = false;
@@ -1364,34 +1348,10 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // Capability loss is the hard end of this wl_pointer event stream:
         // the protocol guarantees that no further events (and therefore no
         // matching button release or frame boundary) arrive on this object.
-        // End a held application gesture at the last delivered coordinates,
-        // using the same release tail as an ordinary/lost-button finish, so
-        // marker/trim commits and the three navigation/text gestures cannot
-        // remain stuck until a future pointer capability happens to appear.
-        //
-        // The logical left button is `pointer_left_held_ || synth_left_held_`.
-        // Clearing the physical bit ends the gesture only when it drives that
-        // OR 1->0 -- physical left was held AND no synthesized hold remains. If
-        // a synthesized left is still held (bare `e` synth-left plus a physical
-        // BTN_LEFT), the OR stays 1: leave the synth hold and its keycode owner
-        // untouched so its later release delivers the single 1->0 edge, and
-        // suppress the release here. This mirrors the keyboard-leave/capability
-        // tails, which likewise hold the release while the OTHER source is held.
-        //
-        // Flush the deferred motion FIRST, while pointer_left_held_ still reads
-        // held, then clear the physical bit, then deliver — so the flushed
-        // motion observes the pre-release held state and takes the live-drag
-        // path, not the button-lost teardown (the same invariant as the
-        // ordinary physical release). Skipped when we do not deliver (no OR
-        // 1->0 edge): a flush would be harmless but is not needed.
-        const bool deliver_release =
-            left_was_held && !synth_left_held_ && on_button_release_;
-        if (deliver_release) flush_deferred_motion();
-        pointer_left_held_ = false;
-        if (deliver_release) {
-            on_button_release_(GuiMouseButton::Left,
-                               pointer_x_, pointer_y_, current_mods());
-        }
+        // End a held physical left button here, so marker/trim commits and the
+        // three navigation/text gestures cannot remain stuck until a future
+        // pointer capability happens to appear.
+        end_left_hold_source(/*physical=*/true);
 
         // A sub-detent carry and the staged half of a logical pointer frame
         // belong to the destroyed pointer object. They must not combine with
@@ -1473,22 +1433,8 @@ void GuiPlatform::on_keyboard_leave(uint32_t /*serial*/,
     scroll_accum_ = 0.0;
 
     // A held synthesized-left button can never see its keycode-matched release
-    // once keyboard focus is gone, so end it here on the logical 1->0 edge —
-    // the same rationale as the pointer-capability-loss tail that ends a held
-    // physical button. A concurrent physical hold keeps the button down. Flush
-    // the deferred motion FIRST, while synth_left_held_ still reads held, then
-    // clear it, then deliver — the flushed motion observes the pre-release held
-    // state and takes the live-drag path (skipped when no OR 1->0 edge occurs).
-    if (synth_left_held_) {
-        const bool deliver_release = !pointer_left_held_ && on_button_release_;
-        if (deliver_release) flush_deferred_motion();
-        synth_left_held_    = false;
-        synth_left_keycode_ = 0;
-        if (deliver_release) {
-            on_button_release_(GuiMouseButton::Left,
-                               pointer_x_, pointer_y_, current_mods());
-        }
-    }
+    // once keyboard focus is gone, so end it here.
+    end_left_hold_source(/*physical=*/false);
 }
 
 void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
@@ -1506,26 +1452,12 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
         }
         // End a synthesized-left hold on its owning keycode's release. The
         // keycode match means a kLeftClickKey press typed into an editor —
-        // which never started a hold — has no effect here. The release is
-        // NEVER gated: not by the editor probe (an editor opened mid-hold must
-        // not orphan the button) and not by pointer focus (it lands at the
-        // last known coordinates, the same convention as the
-        // pointer-capability-loss tail). It fires only on the logical 1->0
-        // edge, so a concurrent physical hold keeps the button down.
-        // Flush the deferred motion FIRST, while synth_left_held_ still reads
-        // held, then clear it, then deliver — so the flushed motion observes
-        // the pre-release held state and takes the live-drag path (skipped when
-        // a concurrent physical hold keeps the OR at 1, so no release delivers).
-        if (synth_left_held_ && xkb_keycode == synth_left_keycode_) {
-            const bool deliver_release =
-                !pointer_left_held_ && on_button_release_;
-            if (deliver_release) flush_deferred_motion();
-            synth_left_held_    = false;
-            synth_left_keycode_ = 0;
-            if (deliver_release) {
-                on_button_release_(GuiMouseButton::Left,
-                                   pointer_x_, pointer_y_, current_mods());
-            }
+        // which never started a hold — has no effect here (synth_left_keycode_
+        // is 0 unless a hold is live). The release is NEVER gated: not by the
+        // editor probe (an editor opened mid-hold must not orphan the button)
+        // and not by pointer focus (it lands at the last known coordinates).
+        if (xkb_keycode == synth_left_keycode_) {
+            end_left_hold_source(/*physical=*/false);
         }
         return;
     }
@@ -1793,6 +1725,27 @@ void GuiPlatform::flush_deferred_motion() {
     if (frame_have_relmotion_ && on_motion_) {
         on_motion_(pointer_x_, pointer_y_, current_mods());
         frame_have_relmotion_ = false;
+    }
+}
+
+void GuiPlatform::end_left_hold_source(bool physical) {
+    const bool held = physical ? pointer_left_held_ : synth_left_held_;
+    if (!held) return;
+    // Deliver only on the logical OR 1->0 edge: this source going up while the
+    // OTHER source is not held. Flush the deferred motion FIRST (see the header)
+    // while this source's bit still reads held, then clear, then deliver.
+    const bool deliver_release =
+        (physical ? !synth_left_held_ : !pointer_left_held_) && on_button_release_;
+    if (deliver_release) flush_deferred_motion();
+    if (physical) {
+        pointer_left_held_ = false;
+    } else {
+        synth_left_held_    = false;
+        synth_left_keycode_ = 0;
+    }
+    if (deliver_release) {
+        on_button_release_(GuiMouseButton::Left,
+                           pointer_x_, pointer_y_, current_mods());
     }
 }
 

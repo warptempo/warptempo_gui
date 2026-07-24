@@ -471,6 +471,19 @@ private:
     // synth releases) calls this immediately before delivering.
     void flush_deferred_motion();
 
+    // Ends ONE source's contribution to the logical left hold (logical left =
+    // pointer_left_held_ || synth_left_held_; see the OR-edge model). Delivers
+    // the release only on the logical 1->0 edge — i.e. when the OTHER source is
+    // not held — and encodes the ordering invariant ONCE: flush the deferred
+    // motion FIRST, while this source's bit still reads held, so the flushed
+    // motion observes the pre-release held state and takes the live-drag path,
+    // not the button-lost teardown; then clear the bit; then deliver at the
+    // last known pointer coordinates with current_mods(). When no edge occurs
+    // (the other source still holds), just clear — the other source's later
+    // release delivers the single edge. physical selects pointer_left_held_
+    // (true) vs synth_left_held_ (false, which also clears synth_left_keycode_).
+    void end_left_hold_source(bool physical);
+
     // -- Pointer-capture helpers --
     // Create relative_pointer_ once both wl_pointer_ and the manager exist
     // (called from both on_seat_capabilities and init(), whichever wins the
