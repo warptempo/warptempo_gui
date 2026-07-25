@@ -1700,9 +1700,11 @@ void GuiPlatform::on_pointer_leave(uint32_t /*serial*/,
     // Drop hover: no motion event follows a leave, so without this a hover POPUP /
     // marker-text run / readout would keep showing the marker under the old pointer
     // position after the pointer slid out the window edge. The hook owns the erase
-    // damage (clear_hover_popup) — hover surfaces only; the selected-marker stem is
-    // always-on for a singleton and NOT touched here (clear_hover_popup no longer
-    // damages stem pixels). Re-entry fires a synthesized motion (on_pointer_enter)
+    // damage (clear_hover_popup) — hover surfaces only. The selected-marker stem is
+    // always-on for a singleton: the hover clear neither changes its visibility nor
+    // issues any dedicated stem-column damage (its top-strip invalidation may
+    // incidentally repaint the one-row waveform seam, redrawing the same stem, never
+    // hiding it). Re-entry fires a synthesized motion (on_pointer_enter)
     // that re-resolves — and since the clear reset hover_popup to no marker, that
     // first re-entry motion cannot short-circuit on a stale cached hit.
     if (pointer_left_hook_) pointer_left_hook_();

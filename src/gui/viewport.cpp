@@ -597,9 +597,14 @@ void Viewport::clear_hover_popup() {
         invalidate_top_strip();
         invalidate_timestamp_area();
     }
-    // No stem damage here: the selected-marker stem is always-on for the singleton
-    // selection (the blue-focus pivot), so hover no longer drives it. The stem's
+    // No DEDICATED stem-column damage here, and the hover clear never changes stem
+    // VISIBILITY: the selected-marker stem is always-on for the singleton selection
+    // (the blue-focus pivot), so hover no longer drives it — its
     // appear/move/disappear rides the subject-change owner on Selection instead.
+    // (invalidate_top_strip above damages top_strip_area.h + 1; that one extra seam
+    // row overlaps the waveform's first scanline under the half-open
+    // rects_intersect, so the always-on stem incidentally repaints its top row
+    // identically — a same-pixel redraw, never a hide.)
 }
 
 // Re-evaluate hover at the cursor's last on_motion coordinates. The single
@@ -793,7 +798,12 @@ void Viewport::recompute_hover_at_cursor() {
         invalidate_top_strip();
         invalidate_timestamp_area();
     }
-    // No stem damage here: the selected-marker stem is always-on for the singleton
-    // selection (the blue-focus pivot), so a hover change no longer appears/erases
-    // it. Its transitions ride the subject-change owner on Selection.
+    // No DEDICATED stem-column damage here, and a hover change never changes stem
+    // VISIBILITY: the selected-marker stem is always-on for the singleton selection
+    // (the blue-focus pivot), so a hover change no longer appears/erases it — its
+    // transitions ride the subject-change owner on Selection. (invalidate_top_strip
+    // above damages top_strip_area.h + 1; that one extra seam row overlaps the
+    // waveform's first scanline under the half-open rects_intersect, so the
+    // always-on stem incidentally repaints its top row identically — a same-pixel
+    // redraw, never a hide.)
 }
