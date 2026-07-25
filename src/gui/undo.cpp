@@ -549,8 +549,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             //     that failed at the current level forces the framer to a DIFFERENT
             //     (more zoomed-out) level to seat the MARGIN-widened span — the
             //     level differs, so the guard does not short-circuit. THE ONE
-            //     EXCEPTION (planner-ruled 2026-07-25, flagged for architect veto —
-            //     upgrades to architect attribution only if/when ratified) is the
+            //     EXCEPTION (accepted, architect 2026-07-25 (ratified after
+            //     talk-through)) is the
             //     CONJUNCTION the two code paths already embody: (a) an endpoint's
             //     painted column still fails the [0, W) test after the ceiling /
             //     start-0 clamp — which happens for ANY hi landing in the final
