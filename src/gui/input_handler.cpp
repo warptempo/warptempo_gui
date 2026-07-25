@@ -825,16 +825,21 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     const double ceiling = effective_max_zoom_level(W, total, sr);
     const double target_level = std::clamp(raw_level, kMinZoom, ceiling);
 
-    // CENTER: place the margined span's midpoint at the window center. visible_at
-    // is the frame count the PAINTER shows at target_level — the producer's own
-    // basis (samples_visible's nearbyint(spp*W)), never the sibling logical spp
-    // formula. In the unclamped case visible == the margined span, so this is
-    // exactly flo (one formula, no special case); the ceiling-saturated whole-song
-    // case (mid = total/2, visible ~= total -> start ~= 0) is then wall-clamped by
-    // clamp_viewport_start inside apply_zoom_to_start exactly as before.
+    // CENTER: place the margined span's midpoint at the window center, using the
+    // UNROUNDED visible width (spp_t * W) — grid quantization is owned downstream
+    // by clamp_viewport_start (the chokepoint), so no painter-quantized
+    // pre-rounding belongs here. Only the FINAL start is nearbyint'd. This keeps
+    // the promised single behavior change (the floor-saturated centering): in the
+    // ordinary UNCLAMPED fit spp_t * W equals the margined span in exact reals, so
+    // mid - span/2 == flo and the start degenerates to nearbyint(flo) identically
+    // (pre-rounding the width could shift it a frame, which clamp_viewport_start
+    // then amplifies to a whole grid step). The residual is ULP-level exp2/log2
+    // round-trip noise, material only within an ULP of a .5 rounding boundary. The
+    // ceiling-saturated whole-song case (mid = total/2, spp_t * W ~= total ->
+    // start ~= 0) is then wall-clamped to 0 by clamp_viewport_start as before.
     const double mid       = 0.5 * (flo + fhi);
-    const double spp_t     = samples_per_pixel_at(target_level, W, total, sr);
-    const double visible_t = std::nearbyint(spp_t * static_cast<double>(W));
+    const double visible_t = samples_per_pixel_at(target_level, W, total, sr) *
+                             static_cast<double>(W);
     const int64_t target_start =
         static_cast<int64_t>(std::nearbyint(mid - visible_t / 2.0));
 

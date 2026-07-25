@@ -1691,8 +1691,12 @@ void MarkerDragOps::step_tempo_image(int direction) {
         if (!p) continue;
         p->tempo_cents = p->tempo_cents + d;
     }
-    // LATERAL: the TEMPO-IMAGE STEP — a singleton undo/redo re-stamps the stem
-    // on the FOCUSED marker, matching step_tempo_image's live stamp.
+    // LATERAL: the TEMPO-IMAGE STEP. The entry's touched hints are
+    // seed.participants (the PREDECESSOR / cents receiver), so a singleton
+    // undo/redo selects, lands, and re-stamps the stem on the PREDECESSOR — NOT
+    // the focused/grabbed marker the live step stamps here. Deliberate (the ruled
+    // reading at undo.cpp's restore tail: the undo visual follows the TOUCHED row,
+    // which is the selection); do not "fix" it back toward the focused marker.
     if (merge) undo.note_coalesced_commit();
     else       undo.push_undo_warp(std::move(pre_state),
                                    /*affects_persistence=*/true,
