@@ -1527,7 +1527,11 @@ struct AppState {
     // overlays vs this staged/promoted mirror for item-registered geometry), and
     // the two are NUMERICALLY EQUAL at every frame committed by the THREE PLATE
     // WRITERS (worker publish, incremental pan, synchronous rebuild): each
-    // rebuilds the flag cache inline before its damage (closure dates to the
+    // rebuilds the flag cache inline before the damaged frame can paint or
+    // commit (the sync writer queues its invalidation first, but
+    // invalidate_region only QUEUES and nothing paints re-entrantly inside the
+    // synchronous call, so the rebuild/stage still completes ahead of the
+    // frame; closure dates to the
     // worker publish joining the pan and sync writers' inline shape), so those
     // frames commit new plate + new items together and the mirror promote at the
     // top of the committing paint agrees with the plate fp by construction. The
@@ -2235,7 +2239,10 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // are NUMERICALLY EQUAL at every frame committed by the THREE PLATE WRITERS
 // (worker publish, incremental pan, synchronous rebuild) — the old one-frame
 // plate-published-NEW-while-items-show-OLD divergence is retired, since each
-// writer rebuilds the flag cache inline before its committing damage and this
+// writer rebuilds the flag cache inline before the damaged frame paints or
+// commits (damage-REQUEST order varies — the sync writer queues its
+// invalidation first — but invalidate_region only queues, so the rebuild and
+// stage always land ahead of the frame) and this
 // mirror promotes at the top of that frame's paint (closure dates to the
 // worker-publish inline rebuild) — but the equality is NOT unconditional: the
 // accepted RESIZE ITEM-ONLY-PROMOTION window is the live exception. A resize
