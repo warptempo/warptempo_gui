@@ -1563,7 +1563,9 @@ struct AppState {
     // in LOCKSTEP with displayed_target_warp_frame_map at the frame that blits
     // those caches, so the marker-text lane geometry (run centering, the visible-
     // set cull, the run hit rects — see displayed_viewport_basis in this header)
-    // rides the same basis the flags do. area_w == 0 means cold (nothing promoted
+    // AND the hover-stem DAMAGE (invalidate_hover_stem_column, which erases
+    // displayed-basis stem pixels — damage follows the pixels it erases) ride the
+    // same basis the flags do. area_w == 0 means cold (nothing promoted
     // yet); the accessor then falls back to the live viewport, matching
     // displayed_or_live_target_map's cold live-map fallback. Written by the
     // paint-pass promotion; cleared alongside displayed_target_warp_frame_map at
@@ -2289,8 +2291,11 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 //
 // This is the free-function owner homed beside displayed_or_live_target_map so
 // the render.cpp free functions (lane_text_left_x_at_frame, the lane run
-// resolver, marker_hit_at) AND the app_state.cpp hit tests (hit_test_flag,
-// hit_test_trim_chip) share ONE basis. It is DELIBERATELY DISTINCT from
+// resolver, marker_hit_at), the app_state.cpp hit tests (hit_test_flag,
+// hit_test_trim_chip), AND the hover-stem DAMAGE
+// (Viewport::invalidate_hover_stem_column, which erases displayed-basis stem
+// pixels — damage follows the basis of the pixels it erases) share ONE basis. It
+// is DELIBERATELY DISTINCT from
 // GuiPaintHandler::displayed_viewport_basis, which reads the LIVE wf_cache.fp_*
 // (the plate's current fingerprint): the paint-handler method registers the
 // PLATE-locked overlays (region wash, playheads, phase-reset overlay) with the

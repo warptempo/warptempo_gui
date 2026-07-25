@@ -206,9 +206,13 @@ int painted_column_of_source_frame(
     const double spp = painter_samples_per_pixel(app, audio, area);
     if (spp <= 0.0) return 0;
     // The LIVE basis: the live viewport start and the painter-quantized spp.
-    // Gesture-commit callers (the nudges, drag commits, trim drags, the hover-
-    // stem invalidator) anchor to the LIVE on-screen grid by ruling — only the
-    // marker-text lane geometry rides the displayed basis.
+    // Gesture-commit callers (the nudges, drag commits, trim drags) anchor to the
+    // LIVE on-screen grid by ruling, and live-painted DAMAGE (playhead columns)
+    // stays live too. The boundary is damage-follows-the-pixels: damage rides the
+    // basis of the pixels it erases, so the marker-text lane geometry AND the
+    // hover-stem invalidator (invalidate_hover_stem_column) instead ride the
+    // DISPLAYED basis via _on_basis — the run text and the selected-marker stem
+    // paint on the displayed item basis, so their narrow damage must too.
     return painted_column_of_source_frame_on_basis(
         app, audio, source_frame, warp_frame_map,
         static_cast<double>(app.viewport_start_sample), spp);
