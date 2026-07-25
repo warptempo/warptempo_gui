@@ -1524,15 +1524,25 @@ struct AppState {
     // LIVE wf_cache.fp_* so the PLATE-registered overlays (region wash, playheads)
     // stay locked to the just-blitted plate. The split PERSISTS as a
     // mechanism/lifecycle distinction (direct fp read for plate-registered
-    // overlays vs this staged/promoted mirror for item-registered geometry), but
-    // the two are now NUMERICALLY EQUAL at every committing paint: since the worker
-    // publish rebuilds the flag cache inline before its damage (as the pan and
-    // sync writers already did — closure dates to that inline publish rebuild), all
-    // three plate writers commit new plate + new items together, and the mirror
-    // promote runs at the top of the committing frame's paint, so the plate-fp
-    // accessor and this promoted mirror agree by construction. Keeping the two
-    // owners is the mechanism/lifecycle split, not a live divergence; unifying them
-    // is a possible future collapse, out of scope here.
+    // overlays vs this staged/promoted mirror for item-registered geometry), and
+    // the two are NUMERICALLY EQUAL at every frame committed by the THREE PLATE
+    // WRITERS (worker publish, incremental pan, synchronous rebuild): each
+    // rebuilds the flag cache inline before its damage (closure dates to the
+    // worker publish joining the pan and sync writers' inline shape), so those
+    // frames commit new plate + new items together and the mirror promote at the
+    // top of the committing paint agrees with the plate fp by construction. The
+    // equality is NOT unconditional, though — the accepted RESIZE
+    // ITEM-ONLY-PROMOTION window is the live exception: a resize changes the
+    // top-strip dims, so maybe_rebuild_flag_cache fires from on_tick and stages
+    // the OLD fp_vp span over the NEW effective width while the still-displayed
+    // plate pairs that same span with its OLD fp_area_w until the in-flight
+    // worker render publishes — so this promoted mirror's spp and the plate-fp
+    // accessor's spp diverge for that window. Item-registered geometry
+    // (paint_trim, the hit tests, the lane) rides THIS mirror through it —
+    // paint == hit holds because both read the same owner — see the consumer-
+    // side statement at GuiPaintHandler::paint_trim's basis comment. So the two
+    // owners must NOT be collapsed on the strength of the plate-writer
+    // equality; any future unification has to resolve the resize window first.
     int64_t displayed_vp_start = 0;
     int64_t displayed_vp_end   = 0;
     int     displayed_area_w   = 0;
@@ -2221,17 +2231,26 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // (the plate's current fingerprint): the paint-handler method registers the
 // PLATE-locked overlays (region wash, playheads, phase-reset overlay) with the
 // just-blitted plate, whereas this owner registers the flag/chip/lane/hit
-// geometry with the committed FLAG item cache (the promoted mirror). The
-// two are now NUMERICALLY EQUAL at every committing paint: the one-frame
-// plate-published-NEW-while-items-show-OLD divergence is RETIRED — all three
-// plate writers (worker publish, incremental pan, synchronous rebuild) rebuild
-// the flag cache inline before their committing damage, and this mirror promotes
-// at the top of that frame's paint, so the plate fp and the promoted mirror agree
-// by construction (closure dates to the worker-publish inline rebuild). The two
+// geometry with the committed FLAG item cache (the promoted mirror). The two
+// are NUMERICALLY EQUAL at every frame committed by the THREE PLATE WRITERS
+// (worker publish, incremental pan, synchronous rebuild) — the old one-frame
+// plate-published-NEW-while-items-show-OLD divergence is retired, since each
+// writer rebuilds the flag cache inline before its committing damage and this
+// mirror promotes at the top of that frame's paint (closure dates to the
+// worker-publish inline rebuild) — but the equality is NOT unconditional: the
+// accepted RESIZE ITEM-ONLY-PROMOTION window is the live exception. A resize
+// changes the top-strip dims, so the flag rebuild fires from on_tick and
+// stages the OLD fp_vp span over the NEW effective width while the
+// still-displayed plate pairs that span with its OLD fp_area_w until the
+// in-flight worker render publishes — this owner and the plate-fp method
+// diverge for that window, and item-registered consumers (the hit tests, the
+// lane, the live trim pass) must ride THIS owner so paint == hit holds through
+// it (the consumer-side statement lives at GuiPaintHandler::paint_trim's basis
+// comment). The two
 // owners PERSIST as a mechanism/lifecycle split — direct fp read for
 // plate-registered overlays vs the staged/promoted mirror for item-registered
-// geometry — not a live divergence; unifying them is a possible future collapse,
-// out of scope here.
+// geometry; do not collapse them on the strength of the plate-writer equality —
+// any future unification has to resolve the resize window first.
 //
 // The double vp_start/spp serve the lane column math (painted_column_of_source_
 // frame_on_basis); the int64 vp_start_frame/vp_end_frame/area_w serve the hit

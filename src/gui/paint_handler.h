@@ -396,8 +396,11 @@ private:
     // stays locked to the trim stem, while during an async publish window the
     // plate basis keeps the edge on the just-blitted plate instead of the
     // not-yet-blitted live span. (The live trim pass paint_trim rides the ITEM
-    // basis instead — the two agree at every committing paint, so dim edge and
-    // trim stem coincide there.) Both rects span the full waveform height; ATOP
+    // basis instead — equal to this plate basis at every plate-writer commit,
+    // so dim edge and trim stem coincide there; inside the accepted resize
+    // item-only-promotion window the two bases diverge and the dim edge can
+    // sit a hair off the stem until the plate republishes — see the basis
+    // comment at paint_trim.) Both rects span the full waveform height; ATOP
     // confines the recolor to sample pixels.
     struct OutOfTrimRects {
         bool    has_left  = false;
