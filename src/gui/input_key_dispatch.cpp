@@ -987,7 +987,6 @@ bool GuiInputHandler::adopt_render_entry(
     std::vector<GuiWarpMarker>       warp_pre  = app.warpmarkers.markers();
     std::vector<GuiPhaseResetMarker> phase_reset_pre =
         app.phaseresetmarkers.markers();
-    const int hint_last = app.last_selected_marker;
 
     app.warpmarkers.markers_mut()       = std::move(src_warp);
     app.phaseresetmarkers.markers_mut() = std::move(src_phase_resets);
@@ -1011,7 +1010,7 @@ bool GuiInputHandler::adopt_render_entry(
     // trim out of history.
     const char commit_marker_mode = app.active_markers_view;
     undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
-                        commit_marker_mode, hint_last, commit_tab);
+                        commit_marker_mode, commit_tab);
     undo.recompute_dirty();
 
     const std::filesystem::path src(app.source_audio_path);

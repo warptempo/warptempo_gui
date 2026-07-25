@@ -1,8 +1,11 @@
 #include "undo.h"
 
+#include "input_handler.h"        // land_playhead_on_marker,
+                                  // set_region_to_selection_extent,
+                                  // frame_span_into_view — the restore visual tail
 #include "target_render.h"
 #include "warp_frame_map_view.h"  // source_frame_to_active_domain, for the
-                                  // offscreen-touched-marker viewport recenter
+                                  // singleton offscreen recenter
 
 #include <algorithm>
 #include <chrono>
@@ -55,17 +58,18 @@ void Undo::recompute_dirty() {
     app.dirty = app.warp_dirty || app.phase_reset_dirty || app.settings_dirty;
 }
 
-void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state, int hint_last,
+void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state,
                           bool affects_persistence,
                           std::vector<int> touched_snapshot,
-                          std::vector<int> touched_live) {
+                          std::vector<int> touched_live,
+                          bool lateral) {
     UndoEntry e;
     e.snapshot           = std::move(pre_state);
     e.phase_reset_snapshot = app.phaseresetmarkers.markers();
     e.settings           = capture_current_settings(app);
     e.op_mode            = 'W';
     e.tab                = app.active_tab_view;
-    e.hint_last_selected = hint_last;
+    e.lateral            = lateral;
     e.affects_persistence = affects_persistence;
     e.touched_snapshot   = std::move(touched_snapshot);
     e.touched_live       = std::move(touched_live);
@@ -74,16 +78,16 @@ void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state, int hint_last,
 }
 
 void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
-                               int hint_last,
                                std::vector<int> touched_snapshot,
-                               std::vector<int> touched_live) {
+                               std::vector<int> touched_live,
+                               bool lateral) {
     UndoEntry e;
     e.snapshot           = app.warpmarkers.markers();
     e.phase_reset_snapshot = std::move(pre_state);
     e.settings           = capture_current_settings(app);
     e.op_mode            = 'P';
     e.tab                = app.active_tab_view;
-    e.hint_last_selected = hint_last;
+    e.lateral            = lateral;
     e.touched_snapshot   = std::move(touched_snapshot);
     e.touched_live       = std::move(touched_live);
     app.history.push(std::move(e));
@@ -92,14 +96,13 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
 
 void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
                           std::vector<GuiPhaseResetMarker> phase_reset_pre,
-                          char op_mode, int hint_last, char tab_override) {
+                          char op_mode, char tab_override) {
     UndoEntry e;
     e.snapshot           = std::move(warp_pre);
     e.phase_reset_snapshot = std::move(phase_reset_pre);
     e.settings           = capture_current_settings(app);
     e.op_mode            = op_mode;
     e.tab                = tab_override ? tab_override : app.active_tab_view;
-    e.hint_last_selected = hint_last;
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
 }
@@ -111,7 +114,6 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
     e.settings           = std::move(pre_state);
     e.op_mode            = 'S';
     e.tab                = app.active_tab_view;
-    e.hint_last_selected = app.last_selected_marker;
     app.history.push(std::move(e));
     viewport.clear_hover_popup();
     recompute_dirty();
@@ -181,13 +183,15 @@ namespace {
 // matches on the FULL row (every field, via !fields_differ). So a crossing drag
 // that reorders the store still flags only the changed row, and when one of two
 // exactly coincident markers is touched, the tie's moved member is still
-// identified. Undo/redo NEVER moves the playhead; it does scroll the viewport
-// so an offscreen touched marker becomes visible — see the selection tail below.
-// `audio` is needed there to translate the touched marker's source frame into
-// the active display domain for the visibility test.
+// identified. This resolves the touched set, writes it as the selection, and
+// picks the EARLIEST touched marker as focus (equal members; the group nudge's
+// pixel anchor, the tempo step's re-land, Tab's start, and the lane/readout
+// fallbacks all tolerate it, and a singleton's earliest IS the touched marker).
+// The VISUAL tail — the singleton playhead land, the group SelectionExtent
+// region, and the offscreen framing/recenter — lives in restore_history_entry
+// AFTER sanitize (the region write must follow sanitize's provenance demote).
 template <class M, class FieldsDiffer>
 void apply_post_restore_rules_impl(AppState& app,
-                                   const GuiAudio& audio,
                                    Selection& selection,
                                    const UndoEntry& entry,
                                    const std::vector<M>& before,
@@ -225,10 +229,9 @@ void apply_post_restore_rules_impl(AppState& app,
         }
     } else if (after.size() < before.size()) {
         // A removal leaves no touched row to select — clear the selection.
-        // Nothing to show, so the viewport also stays put: the offscreen
-        // recenter in the selection tail below runs only when there is a
-        // surviving touched marker. The playhead never moves either
-        // (clear_selection's damage is paint-only, not a viewport move).
+        // The empty post-sanitize selection then takes the visual tail's
+        // size == 0 arm in restore_history_entry: no land, no region, playhead
+        // and viewport still (clear_selection's damage is paint-only).
         selection.clear_selection();
         return;
     } else {  // same count: identity-based row matching
@@ -279,41 +282,11 @@ void apply_post_restore_rules_impl(AppState& app,
     // also demotes, so this is belt-and-braces for the explicit-site rule.
     demote_region_provenance(app.region);
     app.selected_markers = target_set;
-    if (target_set.count(entry.hint_last_selected)) {
-        app.last_selected_marker = entry.hint_last_selected;
-    } else {
-        app.last_selected_marker = *target_set.rbegin();
-    }
-
-    // Undo/redo shows its target: it SELECTS the touched set above, the entry's
-    // A/B tab was already restored before the swap (restore_history_entry), and
-    // here the viewport SCROLLS to bring the last-selected touched marker into
-    // view when — and only when — it is offscreen. An already-visible target is
-    // left exactly where it sits, so undo/redo of an in-view edit never jerks
-    // the viewport. The playhead NEVER moves: undo/redo is not a land route —
-    // every marker click lands the playhead on a marker (Tab and `c` also land,
-    // additionally recentering / re-zooming), and the nudge/drag then tows it,
-    // but undo/redo deliberately stands apart.
-    //
-    // The touched marker's time_frame is a whole SOURCE frame; the viewport
-    // lives in the active display domain (identity in source view, the target
-    // image in target view), so translate before comparing against the visible
-    // span [viewport_start, viewport_start + samples_visible). last_selected is
-    // an index in `after` (it came out of target_set, whose members index
-    // `after`), so this read is in-range.
-    const int64_t domain_frame = source_frame_to_active_domain(
-        app, audio, after[app.last_selected_marker].time_frame);
-    const int64_t visible = samples_visible(app, audio);
-    const int64_t start   = app.viewport_start_sample;
-    if (domain_frame < start || domain_frame >= start + visible) {
-        // Center on it, then re-establish the grid-snapped, clamped rest
-        // viewport through the one chokepoint. The waveform/timestamp
-        // invalidations and the sync kick this scroll needs are issued
-        // unconditionally by restore_history_entry after this call returns
-        // (they already fire for the marker change itself).
-        app.viewport_start_sample = domain_frame - visible / 2;
-        clamp_viewport_start(app, audio);
-    }
+    // EARLIEST touched marker as focus — one rule for singleton (trivially the
+    // touched marker) and group (all members are equal; there is no stored focus
+    // hint). sanitize keeps it (it is in the set and in range); the visual tail
+    // in restore_history_entry then lands the singleton on it or frames the group.
+    app.last_selected_marker = *target_set.begin();
 }
 
 }  // namespace
@@ -321,7 +294,7 @@ void apply_post_restore_rules_impl(AppState& app,
 void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
                                          const std::vector<GuiWarpMarker>& before) {
     apply_post_restore_rules_impl(
-        app, viewport.audio, selection, entry, before, app.warpmarkers.markers(),
+        app, selection, entry, before, app.warpmarkers.markers(),
         [](const GuiWarpMarker& a, const GuiWarpMarker& b) {
             return a.time_frame     != b.time_frame
                 || a.disabled       != b.disabled
@@ -350,7 +323,7 @@ void Undo::apply_post_restore_rules_phase_reset(
         const UndoEntry& entry,
         const std::vector<GuiPhaseResetMarker>& before) {
     apply_post_restore_rules_impl(
-        app, viewport.audio, selection, entry, before,
+        app, selection, entry, before,
         app.phaseresetmarkers.markers(),
         [](const GuiPhaseResetMarker& a, const GuiPhaseResetMarker& b) {
             return a.time_frame != b.time_frame
@@ -399,47 +372,12 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     counter.settings            = capture_current_settings(app);
     counter.op_mode             = entry.op_mode;
     counter.tab                 = entry.tab;
-    // The counter's hint is the pre-restore focus of the OP's column ON the op's
-    // tab, NOT entry's hint. The hint's contract everywhere is "last_selected
-    // when this entry's snapshot state was live", and the counter's snapshot IS
-    // the live pre-restore state — so its focus is the pre-restore one. Generic,
-    // not group-specific: e.g. select A-C with C focused, grab-and-drag A (the
-    // crossing focuses A) → undo re-focuses C (entry's pre-drag hint), and redo
-    // must re-focus A (the pre-restore focus), which copying entry's hint got
-    // wrong.
-    //
-    // But app.last_selected_marker is the focus of the LIVE column (active tab,
-    // active markers view), and the op may target a DIFFERENT column: selection
-    // and W/P / Ctrl+Tab view switches are not undoable, so the user may have
-    // switched away since the op with no marker push in between. The op column's
-    // pre-restore focus then lives in a tab STASH, not in app.last_selected_marker
-    // — reading the live field there would index the wrong column's store and
-    // yield an incoherent hint. The capture MUST run here (the counter is pushed
-    // just below, before the tab switch and the mode-swap stash), so resolve the
-    // op-column focus by hand across three cases, mirroring where those switches
-    // will read from:
-    //   (1) op tab INACTIVE (entry.tab != active): its column focus is stashed in
-    //       that tab's ViewState slot (an inactive tab always has both columns
-    //       stashed).
-    //   (2) op tab active but op COLUMN inactive (op_mode != active view): stashed
-    //       in the ACTIVE tab's op_mode slot — the same slots the mode swap below
-    //       reads.
-    //   (3) otherwise (op targets the live column, or a settings-only entry): the
-    //       live app.last_selected_marker.
-    int op_column_focus;
-    if (entry.op_mode != 'S' && entry.tab != app.active_tab_view) {
-        const ViewState& t = (entry.tab == 'B') ? app.tab_b : app.tab_a;
-        op_column_focus = (entry.op_mode == 'P') ? t.phase_reset_last_selected
-                                                 : t.warp_last_selected;
-    } else if (entry.op_mode != 'S' &&
-               entry.op_mode != app.active_markers_view) {
-        const ViewState& t = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
-        op_column_focus = (entry.op_mode == 'P') ? t.phase_reset_last_selected
-                                                 : t.warp_last_selected;
-    } else {
-        op_column_focus = app.last_selected_marker;
-    }
-    counter.hint_last_selected  = op_column_focus;
+    // The op class is direction-symmetric: undoing or redoing a lateral gesture is
+    // still that gesture, so the counter carries the same lateral bit (a singleton
+    // restore in either direction re-stamps the stem). No focus hint survives —
+    // group focus defaults to the earliest touched marker and a singleton's focus
+    // is trivially the touched marker (apply_post_restore_rules_impl).
+    counter.lateral             = entry.lateral;
     counter.affects_persistence = entry.affects_persistence;
     // The touched-set identity hints SWAP coordinate spaces on the counter: the
     // counter's snapshot is the op's after-state, so the rows touched by a
@@ -529,13 +467,110 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
         selection.sanitize_selection_after_restore(
             static_cast<int>(app.warpmarkers.markers().size()));
     }
+
+    // VISUAL TAIL (architect 2026-07-25 — undo/redo adopts the group visual
+    // language, superseding "undo/redo shows its target WITHOUT the playhead"):
+    // a SINGLETON restore LANDS the playhead on its touched marker (the region
+    // dissolves via the land, exactly the plain marker-click land) and re-stamps
+    // the stem iff the op was lateral; a GROUP restore re-selects the touched set
+    // (done above) AND sets the SelectionExtent REGION — undo/redo joins the
+    // extent-region writers, framing the group like the zoom double-click when any
+    // member is offscreen, the cursor playhead UNTOUCHED (the wash + split
+    // half-triangles ARE the group's representation). Runs AFTER
+    // sanitize_selection_after_restore so the region write follows sanitize's
+    // provenance demote (the demote-then-derive order the multi-select clicks use),
+    // and BEFORE the recompute/invalidate/kick block below so restore's one sync
+    // render covers the final geometry. Gated off 'S' (a settings-only restore
+    // leaves whatever selection rests — it must not land or write a region), and
+    // branches on the POST-sanitize live size, so a defensive edge takes the
+    // matching arm (a group entry sanitized down to one member lands as a
+    // singleton; a removal cleared to empty is the size == 0 no-op).
+    if (entry.op_mode != 'S') {
+        const size_t sel_size = app.selected_markers.size();
+        if (sel_size == 1) {
+            const int t = *app.selected_markers.begin();
+            // Resolve the touched marker's source frame with ONE bounds check up
+            // front — an out-of-range t skips the WHOLE singleton visual (land +
+            // recenter + stem) rather than half-applying it (a bad t would else
+            // land nothing but recenter on the src_f=0 default). Defensive only:
+            // post-sanitize the selection indices are always in range, so this
+            // guards an impossible state, never a reachable one.
+            int64_t src_f   = 0;
+            bool    in_range = false;
+            if (app.active_markers_view == 'P') {
+                const auto& pv = app.phaseresetmarkers.markers();
+                in_range = (t >= 0 && t < static_cast<int>(pv.size()));
+                if (in_range) src_f = pv[t].time_frame;
+            } else {
+                const auto& wv = app.warpmarkers.markers();
+                in_range = (t >= 0 && t < static_cast<int>(wv.size()));
+                if (in_range) src_f = wv[t].time_frame;
+            }
+            if (in_range) {
+                // LAND: two-step placement basis, direct cursor write, NO viewport
+                // move; dissolves any resting region. Playback is already stopped
+                // above, so land's scanner-inactive premise holds.
+                land_playhead_on_marker(app, viewport.audio, viewport, t);
+                // OFFSCREEN -> plain recenter at the CURRENT zoom (no framer, no
+                // zoom change): center on the touched marker's active-domain image
+                // and re-snap/clamp through the one chokepoint only when it is
+                // outside the visible span.
+                const int64_t domain_frame =
+                    source_frame_to_active_domain(app, viewport.audio, src_f);
+                const int64_t visible = samples_visible(app, viewport.audio);
+                const int64_t start   = app.viewport_start_sample;
+                if (domain_frame < start || domain_frame >= start + visible) {
+                    app.viewport_start_sample = domain_frame - visible / 2;
+                    clamp_viewport_start(app, viewport.audio);
+                }
+                // STEM: re-stamp iff the op was lateral (the four gesture commits'
+                // shape), AFTER the land. The pin then lives by ordinary command
+                // adjacency and the on_tick reaper kills it at the next damaging
+                // command. Ruled reading: for a tempo drag / tempo-image step the
+                // TOUCHED row is the PREDECESSOR (the cents receiver), not the live
+                // gesture's grabbed marker — the undo visual follows the touched
+                // marker (it is the selection), deliberately.
+                if (entry.lateral) {
+                    app.stem_pin_marker      = t;
+                    app.stem_pin_command_seq = app.command_seq;
+                }
+            }
+        } else if (sel_size >= 2) {
+            // GROUP: no land, no stem, cursor playhead untouched. Set the
+            // SelectionExtent region (the one owner clamps endpoints playable, sets
+            // provenance, and damages the waveform).
+            set_region_to_selection_extent(app, viewport.audio, viewport);
+            // FRAMING: any touched member offscreen <=> the extent's lo/hi are not
+            // BOTH inside the visible span (members lie between). Then frame the
+            // group like the zoom double-click's region case — fit level +
+            // 2.5%-per-side margin, centered, clamped [kMinZoom, effective ceiling],
+            // through apply_zoom_to_start, NO playhead recenter. Fully visible: no
+            // viewport write. ACCEPTED COST: when the framer engages,
+            // apply_zoom_to_start runs one sync render and the unconditional
+            // kick_waveform_sync below runs a second over identical final state — a
+            // bounded duplicate on a discrete keystroke (the keyboard zoom's
+            // per-press cost), taken for keeping ONE framer chokepoint.
+            if (app.region.active) {
+                const int64_t lo      = app.region.a_frame;
+                const int64_t hi      = app.region.b_frame;
+                const int64_t visible = samples_visible(app, viewport.audio);
+                const int64_t start   = app.viewport_start_sample;
+                if (!(lo >= start && hi < start + visible))
+                    frame_span_into_view(app, viewport.audio, viewport,
+                                         lo, hi, /*margin=*/true);
+            }
+        }
+        // sel_size == 0: nothing — the removal branch cleared, viewport/playhead
+        // stay put.
+    }
+
     recompute_dirty();
     viewport.invalidate_waveform_area();
     // One-shot discrete jump: undo/redo restored markers / phase resets /
     // settings, changing the displayed plate (the target-view warp_frame_map).
-    // The post-restore rules above may have scrolled the viewport to reveal an
-    // offscreen touched marker; these invalidations and the sync kick cover that
-    // scroll as well as the marker change (the playhead never moves). Render it
+    // The visual tail above may have LANDED the playhead (singleton), recentered
+    // or framed the viewport, and written a region; these invalidations and the
+    // sync kick cover all of that as well as the marker change. Render it
     // synchronously so the restored markers and the waveform land together. A
     // single keystroke, so bounded — the drag-time async-warp_frame_map policy is about
     // the marker-drag torrent, not discrete events. kick_waveform_sync's damage

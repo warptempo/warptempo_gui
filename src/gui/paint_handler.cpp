@@ -667,8 +667,11 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
 
 // The GREY focus triangle painted ON every selected marker of the active column
 // (architect 2026-07-23). Retires the R6 grey-triangle-at-the-cursor form: the
-// focus cue is now attached to the selection itself, so undo/redo (which never
-// moves the playhead) can no longer strand a grey triangle at a moved playhead.
+// focus cue is attached to the SELECTION itself, so it tracks the selected
+// markers, not the playhead — correct on its own terms regardless of whether a
+// command moved the playhead (undo/redo's singleton restore now LANDS the
+// playhead, architect 2026-07-25, but these triangles follow the selection, so
+// that change does not affect them; a group restore leaves the cursor untouched).
 // Painted AFTER the flag blit, so each grey triangle reads as sitting ON its
 // marker's fused blue/red/default triangle; the SELECTION need not be a
 // singleton (every member gets one). During a live marker DRAG the triangles
@@ -828,7 +831,8 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // Across frames it holds because every
     // app.region write is paired with waveform-area damage at its site (the
     // formers, the clears, clear_region_highlight, the Esc pre_region restore,
-    // the tick repair), so the frame that first paints one has already erased
+    // the tick repair, and the undo/redo restore's land-clear / group-extent
+    // set), so the frame that first paints one has already erased
     // the other — no stale co-display window exists. What CAN legitimately
     // co-display with the cursor is the out-of-trim DIM contrast (a resting
     // trim window with no active region — e.g. a lone bound, or after any

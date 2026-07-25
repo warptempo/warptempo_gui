@@ -188,7 +188,6 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     } else {
         d.pre_drag_snapshot = app.warpmarkers.markers();
     }
-    d.pre_drag_last_selected = app.last_selected_marker;
     d.hit_marker             = hit;
     // Pre-drag marker selection snapshot for the Esc/Ctrl+Q cancellation
     // restore. For a single-marker drag the arming press single-selected the
@@ -216,10 +215,10 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     app.drag = std::move(d);
     // Focus transfer at the THRESHOLD CROSSING, unconditionally (was: the first
     // MOVED motion in apply_drag_motion). It MUST run after every pre-drag
-    // capture above — pre_drag_last_selected, pre_drag_selection,
-    // pre_ride_playhead_sample, pre_drag_region all record the PRE-transfer state
-    // so Esc and the undo hint restore the selection/focus/playhead/region the
-    // gesture started from — and after app.drag = std::move(d) so it mutates the
+    // capture above — pre_drag_selection, pre_ride_playhead_sample, and
+    // pre_drag_region record the PRE-transfer state so Esc restores the
+    // selection/playhead/region the gesture started from — and after
+    // app.drag = std::move(d) so it mutates the
     // live selection, not the moved-from local. A threshold-crossed drag is a
     // REAL drag whether or not the walls let any proposal move, and commit_drag
     // lands the playhead on the grabbed member regardless of net change; so "a
@@ -703,18 +702,21 @@ void MarkerDragOps::commit_drag() {
         std::move(app.drag.pre_drag_snapshot);
     std::vector<GuiPhaseResetMarker> snap_t =
         std::move(app.drag.pre_drag_phase_reset_snapshot);
-    const int                 hint_last = app.drag.pre_drag_last_selected;
     app.drag = DragState{};
     if (net_changed) {
+        // LATERAL: the position-DRAG commit (both columns) — a singleton
+        // undo/redo re-stamps the stem, matching commit_drag's live stamp below.
         if (phase_reset) {
-            undo.push_undo_phase_reset(std::move(snap_t), hint_last,
+            undo.push_undo_phase_reset(std::move(snap_t),
                                        std::move(touched_snapshot),
-                                       std::move(touched_live));
+                                       std::move(touched_live),
+                                       /*lateral=*/true);
         } else {
-            undo.push_undo_warp(std::move(snap_w), hint_last,
+            undo.push_undo_warp(std::move(snap_w),
                                 /*affects_persistence=*/true,
                                 std::move(touched_snapshot),
-                                std::move(touched_live));
+                                std::move(touched_live),
+                                /*lateral=*/true);
         }
         undo.recompute_dirty();
         viewport.invalidate_timestamp_area();
@@ -1043,7 +1045,6 @@ bool MarkerDragOps::begin_tempo_drag(int hit) {
         d.participant_grab_cents.push_back(mv[p].tempo_cents);
 
     d.pre_drag_snapshot      = mv;
-    d.pre_drag_last_selected = app.last_selected_marker;
     // Pre-drag selection for the Esc / Ctrl+Q cancellation restore. A singleton
     // press single-selected the dragged marker ({hit}); a group member's press
     // DEFERRED its single-select, so this captures the whole intact
@@ -1418,10 +1419,16 @@ void MarkerDragOps::end_tempo_drag() {
     const int mi = app.tempo_drag.marker;
     std::vector<GuiWarpMarker> pre_state =
         std::move(app.tempo_drag.pre_drag_snapshot);
-    const int hint_last = app.tempo_drag.pre_drag_last_selected;
     app.tempo_drag = TempoDragState{};
     if (net_changed) {
-        undo.push_undo_warp(std::move(pre_state), hint_last);
+        // LATERAL: the TEMPO DRAG end — a singleton undo/redo re-stamps the stem
+        // on the TOUCHED (predecessor) marker, matching end_tempo_drag's live
+        // stamp on the grabbed marker (the touched row is the cents receiver;
+        // ruled reading at the restore tail). No touched hints (diff matcher).
+        undo.push_undo_warp(std::move(pre_state),
+                            /*affects_persistence=*/true,
+                            /*touched_snapshot=*/{}, /*touched_live=*/{},
+                            /*lateral=*/true);
         undo.recompute_dirty();
         // The dirty dot and readouts live in the bottom strip; the flag/lane
         // surfaces already repainted with the last step's sync render.
@@ -1670,7 +1677,6 @@ void MarkerDragOps::step_tempo_image(int direction) {
     // to one entry — any intervening command breaks it).
     const bool merge = undo.coalesce_gesture(GestureKind::TempoImageStep);
     std::vector<GuiWarpMarker> pre_state = mv;
-    const int hint_last = app.last_selected_marker;
     // Identity hints: the PARTICIPANT rows (the mutated markers — the diff
     // matcher would see them fine, but the hints are the group convention).
     // Tempo only, positions untouched, no reorder ever: touched_snapshot ==
@@ -1685,10 +1691,13 @@ void MarkerDragOps::step_tempo_image(int direction) {
         if (!p) continue;
         p->tempo_cents = p->tempo_cents + d;
     }
+    // LATERAL: the TEMPO-IMAGE STEP — a singleton undo/redo re-stamps the stem
+    // on the FOCUSED marker, matching step_tempo_image's live stamp.
     if (merge) undo.note_coalesced_commit();
-    else       undo.push_undo_warp(std::move(pre_state), hint_last,
+    else       undo.push_undo_warp(std::move(pre_state),
                                    /*affects_persistence=*/true,
-                                   touched, touched);
+                                   touched, touched,
+                                   /*lateral=*/true);
     undo.record_gesture(GestureKind::TempoImageStep);
     undo.recompute_dirty();
     viewport.invalidate_top_strip();

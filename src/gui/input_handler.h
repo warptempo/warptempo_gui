@@ -159,9 +159,12 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // ONLY; set_region_to_selection_extent — a separate call that must run AFTER
 // this clear). DELIBERATELY NOT cleared: the region Space launch (the
 // region IS the launch point there), the nudge/drag playhead follow, marker
-// drops (`s`/Alt+S), undo/redo, and pure viewport moves (PageUp/PageDown, zoom
+// drops (`s`/Alt+S), and pure viewport moves (PageUp/PageDown, zoom
 // steps, pans) — and the lower-half scrub press, which touches no region at
-// all. The plain upper-half waveform press (arm_region_drag_at) shares this
+// all. UNDO/REDO left this list (architect 2026-07-25): a SINGLETON restore now
+// clears the region via its land (like a marker click), and a GROUP restore
+// RE-DEFINES the region to the touched set's extent (undo.cpp's visual tail) —
+// neither keeps a stale region. The plain upper-half waveform press (arm_region_drag_at) shares this
 // helper — same dissolve shape. The other pre-existing clear sites (Esc, file
 // load, Ctrl+Tab, and the S/T switch) keep their own in-place clears — Esc's is
 // now the down-only ladder's region rung, which walks ONE rung per Esc
@@ -182,6 +185,33 @@ void clear_region_highlight(AppState& app, Viewport& viewport);
 // live-tracked region from the post-commit store through the same owner.
 void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
                                     Viewport& viewport);
+
+// LAND the playhead exactly onto marker `hit` of the ACTIVE column with NO
+// viewport move (the two-step placement basis source_frame_to_active_domain then
+// clamp_playhead_to_live_domain, a direct cursor write, dissolving any resting
+// region via clear_region_highlight). Definition in input_pointer.cpp. Callers:
+// the plain / shift-range / ctrl-toggle marker clicks (which land at ITS marker /
+// the earliest selected), and the SINGLETON undo/redo restore (undo.cpp's visual
+// tail, landing on the touched marker). Read-only allowed; callers stop playback
+// first.
+void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
+                             Viewport& viewport, int hit);
+
+// Frame an ACTIVE-domain span [lo, hi] into the viewport: compute the margined
+// fit level (effective_max_zoom_level's formula over the span, clamped
+// [kMinZoom, effective ceiling]) and CENTER the span in the window, then apply
+// through Viewport::apply_zoom_to_start (pre-clamps the level, funnels through
+// clamp_viewport_start, keeps the idempotent current-vs-target no-op, kicks one
+// sync render). `margin` adds a 2.5%-per-side (region / trim / group cases); the
+// whole-song case passes margin=false. The centering formula uses the
+// PAINTER-QUANTIZED spp at the target level (samples_visible's basis) so a
+// floor-saturated span rests CENTERED rather than left-aligned, and degenerates
+// to the span's left edge in the unclamped case (visible == the margined span by
+// the solve). Shared by run_zoom_double_click_command (all three arms) and the
+// GROUP undo/redo restore's offscreen framing. Definition in input_handler.cpp.
+void frame_span_into_view(AppState& app, const GuiAudio& audio,
+                          Viewport& viewport, int64_t lo, int64_t hi,
+                          bool margin);
 
 // Set the region to the CURRENT trim window's active-domain extent (TrimWindow
 // provenance) when both bounds are set AND their images are SEPARATED; clear the

@@ -77,21 +77,27 @@ struct Undo {
     void recompute_dirty();
     // touched_snapshot / touched_live are the reposition drag's identity hints
     // (UndoEntry): defaulted empty for every other caller, which then uses the
-    // diff-based touched-set reconstruction in the post-restore rules.
-    void push_undo_warp(std::vector<GuiWarpMarker> pre_state, int hint_last,
+    // diff-based touched-set reconstruction in the post-restore rules. `lateral`
+    // marks the entry as one of the four lateral-gesture classes (position nudge,
+    // position-drag commit, tempo drag, tempo-image step — the stem-pin stamp set;
+    // see AppState::stem_pin_*), so a singleton restore re-stamps the stem; set
+    // true only by those four producers. push_undo_both / push_settings_undo are
+    // never lateral.
+    void push_undo_warp(std::vector<GuiWarpMarker> pre_state,
                         bool affects_persistence = true,
                         std::vector<int> touched_snapshot = {},
-                        std::vector<int> touched_live = {});
+                        std::vector<int> touched_live = {},
+                        bool lateral = false);
     void push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
-                             int hint_last,
                              std::vector<int> touched_snapshot = {},
-                             std::vector<int> touched_live = {});
+                             std::vector<int> touched_live = {},
+                             bool lateral = false);
     // tab_override attributes entries pushed on behalf of a tab the caller is
     // about to switch to. The entry belongs to the edit's semantic tab, not
     // the incidental tab the cursor is in when history is pushed.
     void push_undo_both(std::vector<GuiWarpMarker> warp_pre,
                         std::vector<GuiPhaseResetMarker> phase_reset_pre,
-                        char op_mode, int hint_last, char tab_override = 0);
+                        char op_mode, char tab_override = 0);
     // Settings-only undo entry. op_mode='S' marks it as settings-class so
     // do_undo / do_redo skip the mode-switch and post-restore-rules
     // dispatch. Markers are captured wholesale at push time (carry-

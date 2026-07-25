@@ -470,7 +470,6 @@ void GuiFlagEditor::commit_top_flag_edit() {
 
     // Capture pre-state for undo BEFORE mutating.
     std::vector<GuiWarpMarker> pre_state = mv_const;
-    const int              hint_last = app.last_selected_marker;
     app.warpmarkers.markers_mut() = std::move(proposed);
 
     if (n_refs_renamed > 0) {
@@ -481,7 +480,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
     }
 
     if (store_changed) {
-        undo.push_undo_warp(std::move(pre_state), hint_last,
+        undo.push_undo_warp(std::move(pre_state),
                             /*affects_persistence=*/canonical_changed);
     }
 
@@ -532,12 +531,11 @@ void GuiFlagEditor::wipe_iter_state() {
     }
     if (!any) return;
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
-    const int hint_last = app.last_selected_marker;
     for (auto& m : mv) {
         m.iter_start_cents.reset();
         m.iter_end_cents.reset();
     }
-    undo.push_undo_warp(std::move(pre_state), hint_last,
+    undo.push_undo_warp(std::move(pre_state),
                         /*affects_persistence=*/false);
 }
 

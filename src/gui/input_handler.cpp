@@ -786,6 +786,64 @@ void GuiInputHandler::run_zoom_toggle_command() {
     }
 }
 
+void frame_span_into_view(AppState& app, const GuiAudio& audio,
+                          Viewport& viewport, int64_t lo, int64_t hi,
+                          bool margin) {
+    // The shared span framer (declared in input_handler.h). Computes the margined
+    // fit level exactly as the double-click always has, then ALWAYS derives the
+    // start by CENTERING the margined span in the window through the painter-
+    // quantized visible width — so a span too small for kMinZoom to fill (the
+    // floor-saturated case) rests centered instead of left-aligned, and the
+    // unclamped case degenerates to the span's left edge (visible == the margined
+    // span by the fit-level solve). Ends at the one chokepoint apply_zoom_to_start.
+    if (audio.total_frames() <= 0) return;
+    const GuiRect area = waveform_area(app);
+    const int     W    = area.w;
+    const int     sr   = audio.sample_rate();
+    if (W <= 0 || sr <= 0) return;
+    const int64_t total = live_total_frames(app, audio);
+    if (total <= 0) return;
+
+    if (hi < lo) std::swap(lo, hi);   // defensive; monotone callers keep order
+    double flo = static_cast<double>(lo);
+    double fhi = static_cast<double>(hi);
+    if (margin) {
+        const double m = 0.025 * static_cast<double>(hi - lo);
+        flo -= m;
+        fhi += m;
+    }
+
+    // Fit level: effective_max_zoom_level's formula with the span in place of
+    // total, clamped into [kMinZoom, per-file effective ceiling]. A zoom-OUT
+    // ceiling and a zoom-IN floor, so framing a tiny span may go deep (down to
+    // kMinZoom) while a span wider than the song saturates at whole-song-visible.
+    double span = fhi - flo;
+    if (span < 1.0) span = 1.0;  // guard log2 of <= 0 (degenerate lo == hi)
+    const double raw_level = 1.0 + std::log2(
+        span * 1000.0 /
+        (0.625 * static_cast<double>(sr) * static_cast<double>(W)));
+    const double ceiling = effective_max_zoom_level(W, total, sr);
+    const double target_level = std::clamp(raw_level, kMinZoom, ceiling);
+
+    // CENTER: place the margined span's midpoint at the window center. visible_at
+    // is the frame count the PAINTER shows at target_level — the producer's own
+    // basis (samples_visible's nearbyint(spp*W)), never the sibling logical spp
+    // formula. In the unclamped case visible == the margined span, so this is
+    // exactly flo (one formula, no special case); the ceiling-saturated whole-song
+    // case (mid = total/2, visible ~= total -> start ~= 0) is then wall-clamped by
+    // clamp_viewport_start inside apply_zoom_to_start exactly as before.
+    const double mid       = 0.5 * (flo + fhi);
+    const double spp_t     = samples_per_pixel_at(target_level, W, total, sr);
+    const double visible_t = std::nearbyint(spp_t * static_cast<double>(W));
+    const int64_t target_start =
+        static_cast<int64_t>(std::nearbyint(mid - visible_t / 2.0));
+
+    // Set level + start through the two clamp chokepoints and repaint like the
+    // other zoom commands; the idempotent current-vs-target no-op lives there.
+    // NOT apply_zoom_change (which would recenter on the playhead).
+    viewport.apply_zoom_to_start(target_level, target_start);
+}
+
 void GuiInputHandler::run_zoom_double_click_command() {
     // The zoom-strip double-click ZOOMS TO A SPAN, split from
     // run_zoom_toggle_command so the bare `0` key keeps its working-zoom toggle
@@ -835,35 +893,12 @@ void GuiInputHandler::run_zoom_double_click_command() {
         margin = true;
     }
 
-    // Frame the span: a 2.5%-of-span margin on EACH side for the region / trim
-    // cases (5% total), none for the whole song (already the whole song -> the
-    // effective ceiling at viewport 0).
-    double flo = static_cast<double>(lo);
-    double fhi = static_cast<double>(hi);
-    if (margin) {
-        const double m = 0.025 * static_cast<double>(hi - lo);
-        flo -= m;
-        fhi += m;
-    }
-
-    // Fit level: effective_max_zoom_level's formula with the span in place of
-    // total, clamped into [kMinZoom, per-file effective ceiling]. A zoom-OUT
-    // ceiling and a zoom-IN floor, so framing a tiny span may go deep (down to
-    // kMinZoom) while a span wider than the song saturates at whole-song-visible.
-    double span = fhi - flo;
-    if (span < 1.0) span = 1.0;  // guard log2 of <= 0 (degenerate lo == hi)
-    const double raw_level = 1.0 + std::log2(
-        span * 1000.0 /
-        (0.625 * static_cast<double>(sr) * static_cast<double>(W)));
-    const double ceiling = effective_max_zoom_level(W, total, sr);
-    const double target_level = std::clamp(raw_level, kMinZoom, ceiling);
-    const int64_t target_start =
-        static_cast<int64_t>(std::nearbyint(flo));
-
-    // Set level + start through the two clamp chokepoints and repaint like the
-    // other zoom commands; the idempotent current-vs-target no-op lives there.
-    // NOT apply_zoom_change (which would recenter on the playhead).
-    viewport.apply_zoom_to_start(target_level, target_start);
+    // Frame the span through the shared framer (2.5%-per-side for region / trim,
+    // none for the whole song — already whole-song at the effective ceiling,
+    // start 0). Centering + the wall clamp make the whole-song arm degenerate to
+    // the effective ceiling at start 0. The idempotent no-op lives in
+    // apply_zoom_to_start inside the framer.
+    frame_span_into_view(app, audio, viewport, lo, hi, margin);
 }
 
 // Shared wheel handler. Verbatim from the lambda at the original

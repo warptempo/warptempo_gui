@@ -73,11 +73,10 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // Snapshot pre-mutation state for undo. Captured after the wall check
     // so rejected drops don't leave a no-op entry on the stack.
     std::vector<GuiWarpMarker> pre_state = mv;
-    const int              hint_last = app.last_selected_marker;
     const int new_idx = app.warpmarkers.insert_marker(std::move(nm));
     // Newly-dropped marker becomes the sole selection.
     selection.set_single_selection(new_idx);
-    undo.push_undo_warp(std::move(pre_state), hint_last);
+    undo.push_undo_warp(std::move(pre_state));
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -196,10 +195,9 @@ void GuiWarpMarkersOps::delete_selected_marker() {
         }
     }
 
-    // All validations passed — capture snapshot and selection hint
-    // before mutating so the undo can restore the pre-delete selection.
+    // All validations passed — capture the snapshot before mutating so the undo
+    // can restore the pre-delete state.
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
-    const int              hint_last = app.last_selected_marker;
     // Capture the selected markers' active-domain positions BEFORE the store
     // mutation, so a multi-marker delete DEMOTES down to the region spanning
     // them (a DROP former of the selection<->highlight coupling — the delete
@@ -243,7 +241,7 @@ void GuiWarpMarkersOps::delete_selected_marker() {
             app.region.provenance = RegionProvenance::Free;
         }
     }
-    undo.push_undo_warp(std::move(pre_state), hint_last);
+    undo.push_undo_warp(std::move(pre_state));
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -324,9 +322,8 @@ void GuiWarpMarkersOps::toggle_inherits() {
     }
     if (!changed) return;
     std::vector<GuiWarpMarker> pre_state = mv_const;
-    const int              hint_last = app.last_selected_marker;
     app.warpmarkers.markers_mut() = std::move(proposed);
-    undo.push_undo_warp(std::move(pre_state), hint_last);
+    undo.push_undo_warp(std::move(pre_state));
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -347,7 +344,6 @@ void GuiWarpMarkersOps::toggle_disabled() {
     // normalizes that at render/preview time (the silent 1.00 seed takes
     // the frame-0 slot) — nothing gates this gesture.
     std::vector<GuiWarpMarker> proposed = mv_const;
-    const int              hint_last = app.last_selected_marker;
     bool changed = false;
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
@@ -357,7 +353,7 @@ void GuiWarpMarkersOps::toggle_disabled() {
     if (!changed) return;
     std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);
-    undo.push_undo_warp(std::move(pre_state), hint_last);
+    undo.push_undo_warp(std::move(pre_state));
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -491,12 +487,12 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     }
     if (!changed) return;
     std::vector<GuiWarpMarker> pre_state = mv_const;
-    const int              hint_last = app.last_selected_marker;
     app.warpmarkers.markers_mut() = std::move(proposed);
     // Coalesce a rapid tempo-step burst: continuation presses skip the
-    // redundant push so one Ctrl+Z reverts the whole burst.
+    // redundant push so one Ctrl+Z reverts the whole burst. NOT lateral (the
+    // stepped marker's own image is fixed by construction — no stem pin).
     if (merge) undo.note_coalesced_commit();
-    else       undo.push_undo_warp(std::move(pre_state), hint_last);
+    else       undo.push_undo_warp(std::move(pre_state));
     undo.record_gesture(GestureKind::TempoStep);
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
@@ -565,7 +561,6 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
     // which breaks the burst) — the group is coalesce-eligible unchanged.
     const bool merge = undo.coalesce_gesture(GestureKind::TempoStep);
     std::vector<GuiWarpMarker> pre_state = mv;
-    const int hint_last = app.last_selected_marker;
     // Apply +/-1 cent to each selected member (plain integer arithmetic — the
     // structural producer discipline). None is walled (checked above), so every
     // add stays in-bracket and actually changes the value; positions untouched,
@@ -583,9 +578,11 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
     // ONE undo entry per press, with identity hints: no reorder happens
     // (positions untouched), so touched_snapshot == touched_live == the stepped
     // indices. A coalesced continuation press skips the push (the burst's first
-    // entry owns the pre-burst snapshot and its hints).
+    // entry owns the pre-burst snapshot and its hints). NOT lateral (the group
+    // step's receiving markers' own images are fixed — no stem pin, per the
+    // per-action flat rule at stem_pin_*).
     if (merge) undo.note_coalesced_commit();
-    else       undo.push_undo_warp(std::move(pre_state), hint_last,
+    else       undo.push_undo_warp(std::move(pre_state),
                                    /*affects_persistence=*/true,
                                    touched, touched);
     undo.record_gesture(GestureKind::TempoStep);
@@ -754,7 +751,6 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     const int64_t committed_f = orig_f + D;
 
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
-    const int              hint_last = app.last_selected_marker;
     // Identity hints (the diff matcher is identity-blind for a translated group —
     // a member can land field-identical on another row). touched_snapshot names
     // the WHOLE group (a restore re-selects it) in PRE-reorder snapshot
@@ -780,10 +776,14 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
         undo.note_coalesced_commit();
         undo.refresh_coalesced_touched_live(std::move(touched_live));
     } else {
-        undo.push_undo_warp(std::move(pre_state), hint_last,
+        // LATERAL: the warp POSITION NUDGE (the receiving marker's own image
+        // slides) — a singleton undo/redo re-stamps the stem, matching
+        // finish_group_position_nudge's live stamp.
+        undo.push_undo_warp(std::move(pre_state),
                             /*affects_persistence=*/true,
                             std::move(touched_snapshot),
-                            std::move(touched_live));
+                            std::move(touched_live),
+                            /*lateral=*/true);
     }
     // Shared commit tail: stem lateral-gesture pin, record/dirty/invalidate,
     // playhead follow (committed_f is reorder-independent), SelectionExtent region

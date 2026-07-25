@@ -76,9 +76,11 @@ struct SettingsSnapshot {
     EngineSettings engine_settings;
 };
 
-// One entry on either stack. Carries the pre-mutation marker snapshot plus
-// a pre-op selection hint (so Undo-of-Destroy / Undo-of-Move can restore
-// a sensible selection anchor).
+// One entry on either stack. Carries the pre-mutation marker snapshot; the
+// touched rows a restore re-selects are recovered from the identity hints below
+// (or the diff matcher), and group focus defaults to the earliest touched marker
+// — there is no stored focus hint (a restore's visual is the selection + the
+// singleton land / group region, not a remembered anchor).
 //
 // Every entry also carries the pre-mutation phase reset snapshot and the mode
 // the operation was performed in. Both lists are always restored on undo/redo
@@ -99,7 +101,15 @@ struct UndoEntry {
     SettingsSnapshot          settings;
     char                      op_mode              = 'W';
     char                      tab                  = 'A';
-    int                       hint_last_selected   = -1;
+    // True iff this entry's op was one of the FOUR lateral-gesture classes that
+    // stamp the selected-marker stem pin (position nudge, position-drag commit,
+    // tempo drag, tempo-image step — the authoritative four-class inventory lives
+    // at AppState::stem_pin_*). A SINGLETON undo/redo of a lateral op re-stamps
+    // the stem on the touched marker after its land; non-lateral and group
+    // restores never stamp. Set by the lateral producers through the push_undo_*
+    // `lateral` parameter; the counter-entry COPIES it (undoing/redoing a lateral
+    // op is still that op, direction-symmetric).
+    bool                      lateral              = false;
     // False for an iteration-bracket-only snapshot. Iteration brackets are
     // session state and never serialize, so crossing such an entry must not
     // make recompute_dirty report a warp-file difference.
@@ -316,8 +326,6 @@ struct DragState {
     // commit when no motion occurred (DragState is reset wholesale there).
     std::vector<GuiWarpMarker>      pre_drag_snapshot;
     std::vector<GuiPhaseResetMarker> pre_drag_phase_reset_snapshot;
-    // Pre-drag last_selected for the undo hint; carried onto the entry at commit.
-    int                    pre_drag_last_selected = -1;
     // Pre-drag marker selection snapshot, captured at begin_drag for the
     // Esc / Ctrl+Q cancellation restore. For a single-marker drag the arming
     // flag press single-selected the grabbed marker, so this captures {hit}; for
@@ -662,7 +670,6 @@ struct TempoDragState {
     // Full pre-drag warp store for the ONE undo entry per drag (the marker
     // drag's capture shape), plus the selection snapshot for the Esc restore.
     std::vector<GuiWarpMarker> pre_drag_snapshot;
-    int                pre_drag_last_selected = -1;
     SelectionSnapshot  pre_drag_selection;
     // Playhead-follows-marker (see DragState): the arming click landed the
     // playhead on the dragged marker, so each step re-lands it on the marker's
@@ -1360,7 +1367,15 @@ struct AppState {
     // source, phase in target), (3) the TEMPO DRAG's end (W+target by
     // construction, the dragged marker IS the laterally-moving one), (4) the
     // TEMPO-IMAGE STEP (Alt+Left/Right in W+target, the drag's keyboard twin —
-    // the FOCUSED marker's image slides one column). The TEMPO STEP (Alt+Up/Down,
+    // the FOCUSED marker's image slides one column). A FIFTH stamp site (architect
+    // 2026-07-25) is the SINGLETON undo/redo RESTORE of any of (1)-(4): undo.cpp's
+    // visual tail lands the playhead on the touched marker and, iff
+    // UndoEntry::lateral (which the four producers set and the counter-entry
+    // copies), re-stamps the pin on it after the land — the restore stem then
+    // lives by ordinary command adjacency and the on_tick reaper kills it at the
+    // next damaging command. GROUP restores never stamp (the stem is
+    // singleton-only; the group's cue is the region wash + split half-triangles).
+    // The TEMPO STEP (Alt+Up/Down,
     // singleton and group) is EXPLICITLY NOT a stamping site: the stepped marker's
     // OWN image is fixed by construction — its tempo shapes only the segment AFTER
     // it, so the step slides only DOWNSTREAM images, never the receiving marker's

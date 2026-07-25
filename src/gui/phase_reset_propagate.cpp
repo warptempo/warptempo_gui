@@ -287,7 +287,6 @@ void PhaseResetPropagate::paste_apply() {
 
     std::vector<GuiPhaseResetMarker> pre_state =
         app.phaseresetmarkers.markers();
-    const int hint_last = app.last_selected_marker;
 
     auto& out = app.phaseresetmarkers.markers_mut();
 
@@ -394,7 +393,7 @@ void PhaseResetPropagate::paste_apply() {
         }
     }
     if (store_changed) {
-        undo.push_undo_phase_reset(std::move(pre_state), hint_last);
+        undo.push_undo_phase_reset(std::move(pre_state));
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
@@ -454,7 +453,6 @@ void PhaseResetPropagate::paste_state_apply() {
     // if at least one flag actually changes.
     std::vector<GuiPhaseResetMarker> pre_state =
         app.phaseresetmarkers.markers();
-    const int hint_last = app.last_selected_marker;
 
     auto& out = app.phaseresetmarkers.markers_mut();
 
@@ -542,8 +540,7 @@ void PhaseResetPropagate::paste_state_apply() {
     // pushes nothing and touches no dirty/render state. The stop message
     // and the P-view switch below still fire unconditionally.
     if (any_change) {
-        undo.push_undo_phase_reset(std::move(pre_state),
-                                   hint_last);
+        undo.push_undo_phase_reset(std::move(pre_state));
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();

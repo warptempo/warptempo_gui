@@ -153,13 +153,16 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
     }
 }
 
+} // namespace
+
 // LANDS the playhead exactly onto marker `hit` (active column's store), with
 // NO viewport move — the sole difference from Tab (which recenters) and `c`
 // (which re-zooms and recenters), so the view holds perfectly still while the
 // playhead seats. Shared by the plain marker click (lands on ITS marker), the
 // shift range click, and the ctrl toggle click (both land at the EARLIEST
 // selected marker, `hit` = *selected_markers.begin(); an empty post-toggle
-// selection lands nothing). The two-step placement
+// selection lands nothing), and the SINGLETON undo/redo restore (undo.cpp's
+// visual tail, landing on the touched marker). The two-step placement
 // basis the Tab family lands with (source_frame_to_active_domain then
 // clamp_playhead_to_live_domain), against the active column's store, so the
 // placement is exactly coincident for a subsequent nudge/drag ride. Direct
@@ -169,7 +172,8 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // playhead may rest at a slightly offscreen column when the clicked flag hung
 // half off the edge — accepted). Read-only allowed (selection + playhead are
 // navigation). Callers stop playback first (the standing top-strip press stop),
-// Tab-family symmetry.
+// Tab-family symmetry. External linkage (declared in input_handler.h) so the
+// undo restore can reach it.
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit) {
     int64_t src_frame = 0;
@@ -197,8 +201,6 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
     }
 }
 
-} // namespace
-
 // The DOWNWARD coupling — the selection defines the extent region,
 // SELECTION-FLOWS-DOWNWARD-ONLY (architect 2026-07-23): a
 // multi-select CLICK that leaves 2+ markers selected sets the region to the
@@ -208,7 +210,7 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 // standing region clear (land_playhead_on_marker's dissolve, or the ctrl
 // empty-branch's explicit clear_region_highlight) is the dissolve. Endpoints
 // are clamped through clamp_playhead_to_live_domain (the region domain's
-// playable-frame invariant, as every other former clamps). Two caller CLASSES:
+// playable-frame invariant, as every other former clamps). Three caller CLASSES:
 //   (1) CREATORS — the shift-range and ctrl-toggle click paths, each MUST run
 //       this AFTER the land (which CLEARS any old region) — a reorder would let
 //       the clear kill this fresh highlight;
@@ -217,12 +219,17 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 //       reordered/remapped store (never creating one): the group marker DRAG's
 //       commit and BOTH group position NUDGES (warp + phase reset). Their callers
 //       gate on region.active && provenance == SelectionExtent, so a Free /
-//       TrimWindow / inactive region is untouched.
+//       TrimWindow / inactive region is untouched;
+//   (3) the GROUP undo/redo RESTORE (undo.cpp's visual tail) — unlike the
+//       maintainers it MAY CREATE a region: when a restore re-selects 2+ touched
+//       markers it defines the SelectionExtent region for the group (undo/redo
+//       adopts the group visual language, architect 2026-07-25). This is the one
+//       programmatic selection that calls this — the others below still do not.
 // Touches ONLY the region, never shift_range_anchor, so the shift-range path's
-// anchor survives a downward selection->extent set. Programmatic selections (undo/redo, paste,
-// drops, Tab/`c`) do NOT call this — the coupling belongs to the two multi-select
-// clicks (create) and the group image-move maintenance. Declared in
-// input_handler.h so the ops TUs can reach it.
+// anchor survives a downward selection->extent set. The OTHER programmatic
+// selections (paste, drops, Tab/`c`) do NOT call this — undo/redo LEFT that list
+// with the group-restore ruling above. Declared in input_handler.h so the ops
+// TUs and undo.cpp can reach it.
 void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
                                     Viewport& viewport) {
     if (app.selected_markers.size() < 2) return;

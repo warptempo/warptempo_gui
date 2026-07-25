@@ -43,12 +43,11 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     if (drop_frame > audio.total_frames() - 1)
         return;
     std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
-    const int                 hint_last = app.last_selected_marker;
     GuiPhaseResetMarker nm;
     nm.time_frame = drop_frame;
     const int new_idx = app.phaseresetmarkers.insert_marker(std::move(nm));
     selection.set_single_selection(new_idx);
-    undo.push_undo_phase_reset(std::move(pre_state), hint_last);
+    undo.push_undo_phase_reset(std::move(pre_state));
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -106,7 +105,6 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
         }
     }
     std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
-    const int                 hint_last = app.last_selected_marker;
     // Capture the selected resets' active-domain positions BEFORE the store
     // mutation, so a multi-marker delete DEMOTES down to the region spanning
     // them (a DROP former of the selection<->highlight coupling — the delete
@@ -147,7 +145,7 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
             app.region.provenance = RegionProvenance::Free;
         }
     }
-    undo.push_undo_phase_reset(std::move(pre_state), hint_last);
+    undo.push_undo_phase_reset(std::move(pre_state));
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -163,7 +161,6 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
 void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
     if (app.selected_markers.empty()) return;
     std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
-    const int                 hint_last = app.last_selected_marker;
     bool changed = false;
     for (int idx : app.selected_markers) {
         GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(idx);
@@ -172,7 +169,7 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
         changed = true;
     }
     if (!changed) return;
-    undo.push_undo_phase_reset(std::move(pre_state), hint_last);
+    undo.push_undo_phase_reset(std::move(pre_state));
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -291,7 +288,6 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     if (!any_changed) return;
     std::vector<GuiPhaseResetMarker> pre_state =
         app.phaseresetmarkers.markers();
-    const int                 hint_last = app.last_selected_marker;
     // Identity hints: the WHOLE group in PRE-reorder snapshot coordinates (the
     // diff matcher is identity-blind for a translated group).
     std::vector<int> touched_snapshot(app.selected_markers.begin(),
@@ -317,9 +313,12 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         undo.note_coalesced_commit();
         undo.refresh_coalesced_touched_live(std::move(touched_live));
     } else {
-        undo.push_undo_phase_reset(std::move(pre_state), hint_last,
+        // LATERAL: the phase-reset POSITION NUDGE — a singleton undo/redo
+        // re-stamps the stem, matching finish_group_position_nudge's live stamp.
+        undo.push_undo_phase_reset(std::move(pre_state),
                                    std::move(touched_snapshot),
-                                   std::move(touched_live));
+                                   std::move(touched_live),
+                                   /*lateral=*/true);
     }
     // Shared commit tail: stem lateral-gesture pin, record/dirty/invalidate,
     // playhead follow (committed_f is reorder-independent; the target home maps),

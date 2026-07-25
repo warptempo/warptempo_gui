@@ -284,8 +284,12 @@ void Selection::select_range_from_anchor(int idx) {
 
 void Selection::sanitize_selection_after_restore(int n) {
     // A restore replaces the selection membership from the entry -> demote a
-    // SelectionExtent region to Free (undo/redo regions are display scratch that
-    // must not silently retarget to the restored selection's extent).
+    // SelectionExtent region to Free. This is the DEMOTE half of the group
+    // restore's demote-then-derive (architect 2026-07-25): restore_history_entry's
+    // visual tail runs AFTER this, so a GROUP restore then RE-DERIVES the
+    // SelectionExtent region from the fresh touched set (the multi-select clicks'
+    // order). For a singleton / settings restore the demote is terminal (no
+    // re-derive) — a stale SelectionExtent region must not retarget silently.
     demote_region_provenance(app.region);
     // A restore (undo/redo) dissolves the shift-range anchor — this is the
     // route that closes the shift-held hole for Ctrl+Shift+Z: redo holds
