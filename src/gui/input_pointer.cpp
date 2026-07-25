@@ -157,12 +157,14 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // LANDS the playhead exactly onto marker `hit` (active column's store), with
 // NO viewport move — the sole difference from Tab (which recenters) and `c`
 // (which re-zooms and recenters), so the view holds perfectly still while the
-// playhead seats. Shared by the plain marker click (lands on ITS marker), the
-// shift range click, and the ctrl toggle click (both land at the EARLIEST
-// selected marker, `hit` = *selected_markers.begin(); an empty post-toggle
-// selection lands nothing), and BOTH undo/redo restore arms (undo.cpp's
-// visual tail: the singleton lands on its touched marker, the group on the
-// earliest touched member). The two-step placement
+// playhead seats. Shared by the plain marker click (lands on ITS marker, incl.
+// its deferred-click completions), the shift range click, and the ctrl toggle
+// click (both land at the EARLIEST selected marker, `hit` =
+// *selected_markers.begin(); an empty post-toggle selection lands nothing), the
+// no-region + singleton Esc rung of handle_escape_selection_region (deselect +
+// land on the marker), and BOTH undo/redo restore arms (undo.cpp's visual tail:
+// the singleton lands on its touched marker, the group on the earliest touched
+// member). The two-step placement
 // basis the Tab family lands with (source_frame_to_active_domain then
 // clamp_playhead_to_live_domain), against the active column's store, so the
 // placement is exactly coincident for a subsequent nudge/drag ride. Direct
@@ -171,9 +173,12 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // half-offscreen flag, and the ruling is NO viewport write of any kind (the
 // playhead may rest at a slightly offscreen column when the clicked flag hung
 // half off the edge — accepted). Read-only allowed (selection + playhead are
-// navigation). Callers stop playback first (the standing top-strip press stop),
-// Tab-family symmetry. External linkage (declared in input_handler.h) so the
-// undo restore can reach it.
+// navigation). The click and restore callers stop playback first (the standing
+// top-strip press stop, Tab-family symmetry); the Esc rung may land DURING
+// playback, safe because the land is a direct RESTING-cursor write and a live
+// scanner is untouched by cursor writes (the move_playhead_to scanner-inactive
+// convention). External linkage (declared in input_handler.h) so undo.cpp can
+// reach it.
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit) {
     int64_t src_frame = 0;
@@ -266,8 +271,9 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
 
 // R3 Esc ladder (architect 2026-07-23): the selection/region collapse rung of
 // the Escape chain, placed after the drag / editor / render cancels and in place
-// of the old plain region clear. Defined here so it can reach the file-local
-// land_playhead_on_marker / set_region_to_selection_extent above. Returns true
+// of the old plain region clear. Defined here beside land_playhead_on_marker /
+// set_region_to_selection_extent (external linkage, declared in input_handler.h
+// — undo.cpp reaches them there). Returns true
 // iff it consumed the Esc. Navigation-class, read-only allowed.
 bool GuiInputHandler::handle_escape_selection_region() {
     // DOWN-ONLY ladder (round 4, architect 2026-07-23): markers -> region ->

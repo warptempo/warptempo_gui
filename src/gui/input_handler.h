@@ -191,9 +191,14 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
 // clamp_playhead_to_live_domain, a direct cursor write, dissolving any resting
 // region via clear_region_highlight). Definition in input_pointer.cpp. Callers:
 // the plain / shift-range / ctrl-toggle marker clicks (which land at ITS marker /
-// the earliest selected), and BOTH undo/redo restore arms (undo.cpp's visual
-// tail: the singleton lands on its touched marker, the group on the earliest
-// touched member). Read-only allowed; callers stop playback first.
+// the earliest selected; the plain click incl. its deferred-click completions),
+// handle_escape_selection_region's no-region + singleton Esc rung (deselect +
+// land), and BOTH undo/redo restore arms (undo.cpp's visual tail: the singleton
+// lands on its touched marker, the group on the earliest touched member).
+// Read-only allowed. The click and restore callers stop playback first; the Esc
+// rung may land during playback — safe, as the land is a direct RESTING-cursor
+// write and a live scanner is untouched by cursor writes (the move_playhead_to
+// scanner-inactive convention).
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit);
 
@@ -851,8 +856,8 @@ private:
     //                                    with its extent region, caught above)
     //   no region + SINGLETON         -> deselect + land the playhead on the marker
     // Defined in input_pointer.cpp beside land_playhead_on_marker /
-    // set_region_to_selection_extent (both file-local there). Navigation-class,
-    // read-only allowed.
+    // set_region_to_selection_extent (both external-linkage, declared here).
+    // Navigation-class, read-only allowed.
     bool handle_escape_selection_region();
 
     // One scrub ACT at an active-domain frame: kill-and-revive (architect
