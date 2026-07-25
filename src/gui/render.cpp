@@ -546,18 +546,26 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col,
 }
 
 // -- Trim bound geometry owners (audit C1) -------------------------------
-// One column formula, one mapping helper, one chip rect. See render.h for the
-// full rationale (basis-per-caller ruling, the quantized-span denominator, the
-// EOF-wall clamp).
+// One column formula, one mapping helper, one chip rect, one bridge-gap owner.
+// See render.h for the full rationale (the UNIFIED displayed basis — both
+// painters and hit sites decide against the same committed viewport, the
+// event-sync ruling; the quantized-span denominator; the EOF-wall clamp; and the
+// side-aware bridge sentinels).
 
 TrimBoundColumn trim_bound_column(double displayed_ms,
                                   long long vp_start, long long vp_end,
                                   int wave_w) {
     TrimBoundColumn out;
     out.ms = displayed_ms;
-    out.in_viewport =
-        displayed_ms >= static_cast<double>(vp_start) &&
-        displayed_ms <  static_cast<double>(vp_end);
+    // The unrounded verdict — both in_viewport AND the offscreen SIDE come from
+    // this one compare, so col_raw's rounding seam (a barely-off-left ms rounding
+    // to col_raw == 0) never decides the side.
+    const bool at_or_past_left = displayed_ms >= static_cast<double>(vp_start);
+    const bool before_right    = displayed_ms <  static_cast<double>(vp_end);
+    out.in_viewport = at_or_past_left && before_right;
+    out.side = out.in_viewport ? TrimBoundSide::InView
+             : (at_or_past_left ? TrimBoundSide::OffRight
+                                : TrimBoundSide::OffLeft);
     // The painters' quantized-span denominator: (vp_end - vp_start)/wave_w,
     // where the hit sites' vp_end itself was derived via nearbyint(spp*wave_w).
     const double span = static_cast<double>(vp_end - vp_start);
@@ -572,16 +580,32 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 }
 
 TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
-                              const TrimBoundColumn& end, int chip_w) {
-    // Contract at the declaration. A PAINTED (in_viewport) chip bounds the gap at
-    // its inner edge (inset by chip_w — the room the chip occupies); an OFFSCREEN
-    // bound paints no chip, so the wash runs FLUSH to the bound's true column with
-    // no inset. Direction falls out of the anchoring: begin is left-edge-anchored
-    // (lo = its column), end is right-edge-anchored (hi = its rightmost column,
-    // exclusive => +1).
+                              const TrimBoundColumn& end, int chip_w,
+                              int wave_w) {
+    // Contract (4x2 table) at the declaration. A PAINTED (InView) chip bounds the
+    // gap at its inner edge (inset by chip_w — the room the chip occupies); an
+    // OFFSCREEN bound paints no chip, so the wash runs FLUSH. The offscreen arms
+    // key on the bound's SIDE (not col_raw, which cannot tell the side across the
+    // rounding seam), and use side-specific SENTINELS so an offscreen edge lands
+    // STRICTLY past the visible range — never col 0 / col wave_w-1 — which is what
+    // makes the flush fill AND the offscreen ring-border clip hold.
     TrimBridgeGap g;
-    g.lo = begin.in_viewport ? (begin.col + chip_w) : begin.col_raw;
-    g.hi = end.in_viewport   ? (end.col - chip_w + 1) : (end.col_raw + 1);
+    switch (begin.side) {
+        case TrimBoundSide::InView:
+            g.lo = begin.col + chip_w; break;
+        case TrimBoundSide::OffLeft:
+            g.lo = std::min(begin.col_raw, -1); break;      // strictly < 0
+        case TrimBoundSide::OffRight:
+            g.lo = std::max(begin.col_raw, wave_w); break;  // >= wave_w -> empty
+    }
+    switch (end.side) {
+        case TrimBoundSide::InView:
+            g.hi = end.col - chip_w + 1; break;
+        case TrimBoundSide::OffRight:
+            g.hi = std::max(end.col_raw + 1, wave_w + 1); break;  // > wave_w
+        case TrimBoundSide::OffLeft:
+            g.hi = std::min(end.col_raw + 1, 0); break;           // <= 0 -> empty
+    }
     return g;
 }
 
@@ -732,18 +756,19 @@ void render_trim_flags(cairo_t* cr,
     // interval comes from the shared owner trim_bridge_gap (the SAME owner
     // route_trim_chip_press' bridge hit consumes, so paint and hit cannot drift):
     // an in_viewport bound bounds the gap at its drawn chip's inner edge; an
-    // OFFSCREEN bound (no chip) runs the wash FLUSH to its true column with no
-    // chip-width inset. The fill and ring are drawn at these raw (unclamped)
-    // positions, so an offscreen-side edge lands past the viewport edge and is
-    // clipped by the cache surface: the wash fills flush to the edge (no
-    // chip-width gap, even a BARELY-offscreen bound) and that side's ring border
-    // goes offscreen with the chip rather than floating in a blank strip. The
-    // top/bottom borders span the full raw width and are clipped to the visible
-    // portion. An end bound at EOF (T-1) stays in_viewport, so it uses the clamped
-    // column (a ~1px seam vs the raw column, accepted), preserving the visible EOF
-    // chip's connection.
+    // OFFSCREEN bound (no chip) runs the wash FLUSH via a side-specific sentinel
+    // (keyed on the bound's SIDE, not col_raw — the rounding seam). The fill and
+    // ring are drawn at these raw (unclamped) positions, so an offscreen-side edge
+    // lands STRICTLY past the viewport edge and is clipped by the cache surface:
+    // the wash fills flush to the edge (no chip-width gap, even a BARELY-offscreen
+    // bound) and that side's ring border goes offscreen with the chip rather than
+    // floating in a blank strip. The top/bottom borders span the full raw width
+    // and are clipped to the visible portion. An end bound at EOF (T-1) stays
+    // in_viewport, so it uses the clamped column (a ~1px seam vs the raw column,
+    // accepted), preserving the visible EOF chip's connection.
     if (has_begin && has_end && waveform_area.w > 0) {
-        const TrimBridgeGap gap = trim_bridge_gap(bc, ec, chip_w);
+        const TrimBridgeGap gap =
+            trim_bridge_gap(bc, ec, chip_w, waveform_area.w);
         if (gap.hi > gap.lo) {
             cairo_set_source_rgba(cr, kOverlay.r, kOverlay.g,
                                   kOverlay.b, kOverlayAlpha);

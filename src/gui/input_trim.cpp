@@ -642,12 +642,12 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 //     row) arms that bound's single drag.
 //   BRIDGE: else, a press whose y lies in the chip (upper) row band —
 //     top_upper_row_area, the band the translucent bridge block spans between
-//     the two chips — and whose column is strictly between the two BOUND
-//     columns arms the pair drag. The chips edge-anchor ON their bound columns
-//     (begin left-edge, end right-edge, bodies facing inward), so this
-//     between-columns test is a superset of the visible gap; the CHIP HIT above
-//     is tested first and consumes the chip pixels, so the effective bridge grab
-//     equals the wash gap that render_trim_flags paints (paint and press match).
+//     the two chips — and whose column falls inside the shared trim_bridge_gap
+//     interval (render.h) arms the pair drag. That is the SAME owner
+//     render_trim_flags' wash uses, so the clickable band IS the painted wash
+//     exactly (no reliance on the CHIP HIT above consuming pixels first — the
+//     chip rects sit outside the gap either way), plus a [0, area_w) click gate so
+//     the inert non-multiple-of-16 gutter cannot arm past the painted surface.
 //     The bridge handle is the chip-ROW inter-chip span, NOT the whole strip
 //     height: a top-strip press below the chip row (the marker flag row) is not
 //     claimed and falls through to the caller's flag handling. Both bounds are
@@ -741,7 +741,8 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
         };
         const TrimBoundColumn bc = bound_column(app.trim.begin_frame);
         const TrimBoundColumn ec = bound_column(app.trim.end_frame);
-        const TrimBridgeGap gap = trim_bridge_gap(bc, ec, flag_lane_w_px());
+        const TrimBridgeGap gap =
+            trim_bridge_gap(bc, ec, flag_lane_w_px(), basis.area_w);
         // The [0, area_w) click gate: the inert non-multiple-of-16 right gutter
         // (or a newly exposed width over an older committed cache) has no painted
         // wash, so a click there must NOT arm a pair drag past the surface.

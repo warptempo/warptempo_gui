@@ -672,11 +672,18 @@ void render_strip_anchor_stem(cairo_t* cr,
 // visible and connected. Begin/frame-0 already maps to column 0, unaffected.
 // The wash band deliberately reads col_raw (unclamped) for an OFFSCREEN bound so
 // its fill/ring follow the chip past the viewport edge (clipped by the surface).
+// Which side of the viewport an OFFSCREEN bound lies on — meaningful only when
+// !in_viewport. Derived from the SAME unrounded ms compare that sets in_viewport,
+// NOT from col_raw: a bound less than half a pixel off the LEFT rounds to
+// col_raw == 0 yet is off-screen, so col_raw alone cannot tell the side (the
+// rounding seam). trim_bridge_gap needs the true side to flush/empty correctly.
+enum class TrimBoundSide { InView, OffLeft, OffRight };
 struct TrimBoundColumn {
-    double ms;          // displayed-domain position (already mapped)
-    bool   in_viewport; // ms in [vp_start, vp_end)
-    int    col_raw;     // unclamped nearbyint column
-    int    col;         // clamped into [0, wave_w-1] (the EOF-wall clamp)
+    double        ms;          // displayed-domain position (already mapped)
+    bool          in_viewport; // ms in [vp_start, vp_end)
+    TrimBoundSide side;        // InView / OffLeft / OffRight (unrounded)
+    int           col_raw;     // unclamped nearbyint column
+    int           col;         // clamped into [0, wave_w-1] (the EOF-wall clamp)
 };
 TrimBoundColumn trim_bound_column(double displayed_ms,
                                   long long vp_start, long long vp_end,
@@ -686,35 +693,47 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 // half-open, EMPTY when hi <= lo), the ONE owner shared by the painter
 // (render_trim_flags' wash band + its ring border) and the router
 // (route_trim_chip_press' pair-drag between test), so a bridge click lands
-// exactly on the painted wash. Both bounds must be set (callers gate). Per bound,
-// by in_viewport / offscreen state:
+// exactly on the painted wash. Both bounds must be set (callers gate). The
+// offscreen arms key on the bound's SIDE (TrimBoundColumn::side, the unrounded
+// verdict) — NOT col_raw, which cannot tell the side across the rounding seam
+// (a barely-off-left bound rounds to col_raw == 0). The 4x2 semantics:
 //   BEGIN — the gap's LEFT edge, a left-edge-anchored chip:
-//     in_viewport (chip painted) -> lo = col + chip_w      (the drawn chip's
+//     InView (chip painted) -> lo = col + chip_w           (the drawn chip's
 //        inner RIGHT edge; the gap starts just past the chip).
-//     offscreen  (no chip)       -> lo = col_raw           (FLUSH: the wash runs
-//        to the bound's TRUE column with NO chip-width inset, since no chip is
-//        painted — begin off the LEFT gives lo < 0, flush to the edge by the
-//        surface/gutter clip; begin off the RIGHT gives lo >= wave_w -> empty gap).
+//     OffLeft (no chip)     -> lo = min(col_raw, -1)        (a STRICTLY NEGATIVE
+//        flush sentinel: the fill clips flush to column 0 AND the left ring border
+//        lands offscreen — true only via the sentinel; raw col_raw == 0 would
+//        float the border at the edge).
+//     OffRight (no chip)    -> lo = max(col_raw, wave_w)     (>= wave_w: nothing
+//        paints in the visible [0, wave_w) and the router's [0, wave_w) gate can
+//        never arm — an empty gap in the visible area).
 //   END — the gap's RIGHT edge, a right-edge-anchored chip:
-//     in_viewport (chip painted) -> hi = col - chip_w + 1  (the drawn chip's
+//     InView (chip painted) -> hi = col - chip_w + 1        (the drawn chip's
 //        inner LEFT edge, exclusive).
-//     offscreen  (no chip)       -> hi = col_raw + 1       (FLUSH: exclusive of
-//        the bound's true rightmost column — end off the RIGHT gives hi > wave_w,
-//        flush to the edge; end off the LEFT gives hi <= 0 -> empty gap).
+//     OffRight (no chip)    -> hi = max(col_raw + 1, wave_w + 1)  (a PAST-THE-EDGE
+//        flush sentinel: the fill clips flush to the right edge AND the right ring
+//        border lands offscreen).
+//     OffLeft (no chip)     -> hi = min(col_raw + 1, 0)      (<= 0: empty against
+//        any lo >= 0 — closes the one-pixel bridge a raw col_raw == 0 left, which
+//        gave hi = 1 and painted/accepted a column-0 sliver for a window wholly
+//        left of the viewport).
 // The +chip_w inset is the ROOM a PAINTED chip occupies; an offscreen bound
-// paints no chip, so the inset is dropped and the wash fills FLUSH — this closes
-// the barely-offscreen partial-gap defect (col_raw + chip_w formerly left a
-// chip_w-1-wide blank strip at the edge, and the ring border floated in it). The
-// interval is UNCLAMPED (raw): the painter draws at these positions and the cache
-// surface clips an offscreen side away (fill AND ring border go offscreen with the
-// absent chip, as ruled); the router additionally applies its own [0, wave_w)
-// click gate for the inert gutter.
+// paints no chip, so the inset is dropped and the wash fills FLUSH. The interval
+// is UNCLAMPED (raw sentinels included): the painter draws at these positions and
+// the cache surface clips an offscreen side away (fill AND ring border go
+// offscreen with the absent chip — the border-clip guarantee holds only because
+// the sentinels push an offscreen edge strictly past the visible range, never to
+// col 0 or col wave_w-1); the router additionally applies its own [0, wave_w)
+// click gate for the inert gutter. (An off-right sentinel that lands in the
+// <=15px non-multiple-of-16 gutter [wave_w, strip_w) paints an inert gutter
+// sliver, clipped by the surface and outside every grid-aligned surface — as with
+// every gutter column.)
 struct TrimBridgeGap {
     int lo;  // inclusive left column
     int hi;  // exclusive right column (empty gap when hi <= lo)
 };
 TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
-                              const TrimBoundColumn& end, int chip_w);
+                              const TrimBoundColumn& end, int chip_w, int wave_w);
 
 // The source-frame -> displayed-domain mapping the two HIT sites share
 // (add_chip, bound_col). Byte-identical to render.cpp's file-local
