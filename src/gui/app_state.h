@@ -164,12 +164,12 @@ struct SelectionSnapshot {
 // selection without being its extent — provenance is what lets the trim/highlight
 // coupling and the image-follow tempo gestures both hold: the follows re-derive
 // only SelectionExtent regions, re-sync only TrimWindow ones.
-// Bare x branches on
-// THIS highlight: a live region trims to it and the highlight is KEPT
-// (architect 2026-07-23, reversing the earlier consume — under the coupling
-// the trim window and the highlight agree after x, re-derived through
-// sync_highlight_to_trim_window); no region means
-// x clears the trim instead, and this highlight is inactive there by definition.
+// Bare x is SET-ONLY and branches on
+// THIS highlight (architect 2026-07-25): a live region trims to it and the
+// highlight is KEPT (architect 2026-07-23, reversing the earlier consume —
+// under the coupling the trim window and the highlight agree after x, re-derived
+// through sync_highlight_to_trim_window); no region means x is a silent no-op.
+// Shift+X UNSETS the trim, tearing down a TrimWindow highlight with the window.
 // NEVER serialized, and stored independently of the selection and undo systems
 // (a transient visual — no undo entry, its own field, not derived from the
 // selection set). The GESTURE couplings are DOWNWARD-ONLY: the multi-select
@@ -1683,10 +1683,11 @@ struct AppState {
     // Mirrored to/from the active tab's ViewState slot at the tab-swap
     // boundary in active_views.cpp (same pattern as viewport/zoom/playhead).
     // Trim is a region authored purely by the plain chip-row pointer drags
-    // (single-bound chip, chip-row inter-chip bridge/pair) and the bare-x branch
+    // (single-bound chip, chip-row inter-chip bridge/pair), the bare-x set arm
     // (a live region sets the trim to it and KEEPS/re-syncs the highlight; no
-    // region clears the trim) — it is NOT part of the selection system (no
-    // bound selection, no Tab stop, no Delete arm).
+    // region is a silent no-op), and the Shift+X unset arm (clears both bounds)
+    // — it is NOT part of the selection system (no bound selection, no Tab stop,
+    // no Delete arm).
     TrimState trim;
 
     // Bottom-strip command prompt. Active only when a close / re-detect

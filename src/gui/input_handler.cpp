@@ -572,16 +572,22 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         viewport.zoom_out(); return;
     }
 
-    // x branches on the highlight: a live region trims to it (overwriting any
-    // existing bounds; the highlight is KEPT, re-coupled to the new window
-    // through sync_highlight_to_trim_window — architect 2026-07-23); no region
-    // clears the trim. The playhead plays no part. Trim's
-    // pointer routes are the PLAIN chip-row press (single via a chip-rect hit,
-    // pair via a bridge press strictly between the two bound columns); trim is
-    // outside the selection system, so there is no Delete arm. Plain Ctrl+x is
-    // cut (text_editor.cpp) and stays unbound here.
+    // x SETS the trim; Shift+X UNSETS it (architect 2026-07-25, splitting the
+    // old x-branch). Bare x is set-only: a live region trims to it (overwriting
+    // any existing bounds; the highlight is KEPT, re-coupled to the new window
+    // through sync_highlight_to_trim_window — architect 2026-07-23), and with no
+    // region it is a silent no-op. Shift+X clears both bounds
+    // (handle_trim_shift_x). The playhead plays no part. Trim's pointer routes
+    // are the PLAIN chip-row press (single via a chip-rect hit, pair via a bridge
+    // press strictly between the two bound columns); trim is outside the
+    // selection system, so there is no Delete arm. Plain Ctrl+x is cut
+    // (text_editor.cpp) and stays unbound here.
     if (!ctrl && !shift && !alt && key == GuiKeys::X) {
         handle_trim_x();
+        return;
+    }
+    if (!ctrl && shift && !alt && key == GuiKeys::X) {
+        handle_trim_shift_x();
         return;
     }
 

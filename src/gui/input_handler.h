@@ -757,23 +757,31 @@ private:
     // returns true.
     bool adopt_render_entry(const AppState::RenderEntry& e);
 
-    // Bare x branches on the highlight (no context-awareness beyond that): a
-    // live region trims to it, begin at the span's lo, end at its hi,
-    // overwriting any existing bounds, then KEEPS and re-syncs the highlight —
-    // the coupling tail (sync_highlight_to_trim_window) re-derives the REGION
-    // (provenance TrimWindow) from the just-set window, so region and trim rest
-    // coupled (a crossed-collapse dissolve clears the region with the window; the
-    // selection is never touched); no region clears the trim. Read-only refuses silently before anything, leaving the
-    // region untouched. The sole dispatch entry for the x key; the no-region
-    // branch calls handle_trim_clear_both.
+    // Bare x is SET-ONLY (architect 2026-07-25): it branches on the highlight
+    // (no context-awareness beyond that) — a live region trims to it, begin at
+    // the span's lo, end at its hi, overwriting any existing bounds, then KEEPS
+    // and re-syncs the highlight — the coupling tail
+    // (sync_highlight_to_trim_window) re-derives the REGION (provenance
+    // TrimWindow) from the just-set window, so region and trim rest coupled (a
+    // crossed-collapse dissolve clears the region with the window; the selection
+    // is never touched); NO region is a silent no-op (the unset moved to
+    // Shift+X). Read-only refuses silently before anything, leaving the region
+    // untouched. The sole dispatch entry for the bare-x key.
     void handle_trim_x();
 
+    // Shift+X UNSETS the trim (architect 2026-07-25 — split off x, which is now
+    // set-only). Read-only refuses silently first (trim authoring), then
+    // delegates to handle_trim_clear_both and, when the region it just tore down
+    // was the trim's own TrimWindow highlight, re-syncs so that highlight cannot
+    // outlive its window (a Free/SelectionExtent region is NOT trim's to clear).
+    void handle_trim_shift_x();
+
     // Clear both trim bounds unconditionally. Silent no-op when neither bound
-    // is set. The caller is handle_trim_x's no-region branch.
+    // is set. The caller is handle_trim_shift_x (the Shift+X unset arm).
     void handle_trim_clear_both();
 
-    // Field-reset core shared by handle_trim_clear_both (the x key's no-region
-    // clear) and the crossed-commit auto-clear below: unset both bounds, zero both
+    // Field-reset core shared by handle_trim_clear_both (the Shift+X unset arm)
+    // and the crossed-commit auto-clear below: unset both bounds, zero both
     // frames. No invalidation and no trigger — callers own their repaint tail.
     // One implementation so the two clears can never drift.
     void clear_trim_bounds();

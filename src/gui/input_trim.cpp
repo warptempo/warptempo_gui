@@ -33,7 +33,7 @@
 // refused render.
 
 // The clear-both field resets, shared verbatim by handle_trim_clear_both (the
-// x key's clear arm) and the crossed-commit auto-clear (auto_clear_crossed_trim)
+// Shift+X key's clear arm) and the crossed-commit auto-clear (auto_clear_crossed_trim)
 // so the two clears can never drift. Fields only: no invalidation, no trigger —
 // callers own their repaint tail.
 void GuiInputHandler::clear_trim_bounds() {
@@ -62,8 +62,9 @@ void GuiInputHandler::auto_clear_crossed_trim() {
 }
 
 // Clear both trim bounds unconditionally. Silent no-op when neither bound is
-// set. The caller is handle_trim_x's no-region branch. Trim is gesture-owned
-// and excluded from undo/redo history.
+// set. The caller is handle_trim_shift_x (the Shift+X unset arm; architect
+// 2026-07-25 split it off x, which is now set-only). Trim is gesture-owned and
+// excluded from undo/redo history.
 void GuiInputHandler::handle_trim_clear_both() {
     if (app.trim.has_begin || app.trim.has_end) {
         clear_trim_bounds();
@@ -73,9 +74,11 @@ void GuiInputHandler::handle_trim_clear_both() {
     }
 }
 
-// Bare x branches on the HIGHLIGHT, not the trim, with no
-// context-awareness beyond that: the playhead plays no part, and there are no
-// positional rules. A live REGION (the drag-painted span, active-domain frames)
+// Bare x is SET-ONLY (architect 2026-07-25, reversing the 2026-07-20 x-branch
+// ruling's clear arm — the unset moved to the shift-exact Shift+X binding,
+// handle_trim_shift_x below): x branches on the HIGHLIGHT, not the trim, with no
+// context-awareness beyond that (the playhead plays no part, and there are no
+// positional rules). A live REGION (the drag-painted span, active-domain frames)
 // always TRIMS to it — begin at the span's lo, end at its hi — overwriting any
 // existing bounds (the new span simply replaces them; x re-trims even over an
 // existing trim) — and the highlight is KEPT (architect 2026-07-23, reversing
@@ -87,11 +90,9 @@ void GuiInputHandler::handle_trim_clear_both() {
 // trim window AND the highlight; COINCIDENT MAPPED IMAGES (bracket-legal
 // compression rounding both bounds to one target frame) leave the AUTHORED window
 // untouched and clear only the HIGHLIGHT — so `has_begin && has_end` does NOT
-// imply an active TrimWindow region. NO region → x CLEARS the trim via
-// handle_trim_clear_both, whose has_begin||has_end guard makes no-trim a natural
-// no-op (nothing to clear, no highlight to clear either — the region is inactive
-// in this branch by definition). Read-only refuses silently BEFORE anything,
-// leaving the region untouched (trim authoring).
+// imply an active TrimWindow region. NO region → x is a SILENT NO-OP (the clear
+// arm moved to Shift+X; x never unsets). Read-only refuses silently BEFORE
+// anything, leaving the region untouched (trim authoring).
 //
 // Set-from-region: normalize the span at read time (endpoints rest in drag
 // order), inverse-map each active-domain endpoint to a source frame through
@@ -107,17 +108,13 @@ void GuiInputHandler::handle_trim_clear_both() {
 // untouched (trim gestures never move it).
 void GuiInputHandler::handle_trim_x() {
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
-    // x is trim authoring in both directions: read-only refuses silently,
-    // and a resting region is left as it is.
+    // x is trim authoring: read-only refuses silently, and a resting region is
+    // left as it is.
     if (active_view_state(app).read_only) return;
 
-    // No live region → clear the trim. handle_trim_clear_both owns the
-    // has_begin||has_end guard and the repaint/trigger tail, so no-trim is a
-    // natural no-op; the region is inactive here by definition, nothing to clear.
-    if (!app.region.active) {
-        handle_trim_clear_both();
-        return;
-    }
+    // No live region → silent no-op: x is set-only, and the unset is Shift+X's
+    // (handle_trim_shift_x). A resting trim is left exactly as it is.
+    if (!app.region.active) return;
 
     // Live region → trim to it, overwriting any existing bounds.
     const int64_t lo_active = std::min(app.region.a_frame, app.region.b_frame);
@@ -143,6 +140,36 @@ void GuiInputHandler::handle_trim_x() {
     // touched); a crossed-collapse dissolve (auto_clear above) clears the region
     // with the window.
     sync_highlight_to_trim_window();
+}
+
+// Shift+X UNSETS the trim (architect 2026-07-25 — the unset arm x used to own
+// when no region was live; x is now set-only). One-shot, history-less like every
+// trim mutation. Read-only refuses silently FIRST (trim authoring, the same
+// convention x's read-only refusal follows), then delegates to
+// handle_trim_clear_both — whose has_begin||has_end guard makes an already-empty
+// trim a natural no-op and whose tail owns the repaint (waveform + timestamp) and
+// the target_render trigger. The REGION is touched only through
+// handle_trim_clear_both's own repaint tail's downstream: the clear does NOT run
+// the coupling sync here because it is not a trim COMMIT — but a resting
+// TrimWindow-provenance highlight would then outlive its destroyed window, so run
+// sync_highlight_to_trim_window afterward too. The sync's no-window arm
+// (has_begin && has_end both false after the clear) clears the REGION: a
+// TrimWindow region (the trim's own highlight) dissolves with the window it
+// mirrored, which is exactly right — but so would any Free/SelectionExtent region,
+// since sync_region_to_trim_window's else arm assigns RegionState{} regardless of
+// provenance. A Free/SelectionExtent region is NOT trim's to clear, so gate the
+// sync on TrimWindow provenance: only a highlight the trim itself owns is torn
+// down with the window; a selection-extent or free region rests untouched.
+void GuiInputHandler::handle_trim_shift_x() {
+    if (active_view_state(app).read_only) return;   // trim authoring
+    const bool had_trim_window =
+        app.region.active &&
+        app.region.provenance == RegionProvenance::TrimWindow;
+    handle_trim_clear_both();
+    // Only a TrimWindow highlight is trim's to dissolve. Re-sync it so a resting
+    // window-derived region cannot outlive the window; Free/SelectionExtent
+    // regions are left alone (downward-only: trim never touches a non-trim region).
+    if (had_trim_window) sync_highlight_to_trim_window();
 }
 
 // --- Trim boundary mouse gestures ---------------------------------------
