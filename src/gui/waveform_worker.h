@@ -160,8 +160,10 @@ private:
 // inset is passed in rather than read via waveform_inset_px() so the render
 // touches no gui_font_scale()/g_font_size_pt state: ALL font-dependent geometry
 // is snapshotted on the GUI thread at dispatch, closing the race with a
-// mid-render set_gui_font_size_pt (which supersedes this job via the resize
-// rebuild regardless).
+// mid-render set_gui_font_size_pt. Such a job publishes its coherent
+// old-geometry snapshot; when the commit actually changed integer waveform
+// geometry the next maybe_enqueue_waveform_render() dirty-detect observes the
+// changed fingerprint and dispatches the replacement (no change, no replacement).
 void render_waveform_to_cache_surface(
     cairo_surface_t* dest,
     int area_w,
