@@ -41,6 +41,13 @@ struct WaveformJob {
     bool      target           = false;
     uint64_t  warp_frame_map_hash     = 0;
 
+    // Font-dependent waveform inset (waveform_inset_px()), captured on the GUI
+    // thread at dispatch alongside area_w/area_h. The worker must never read
+    // gui_font_scale()/g_font_size_pt itself — the GUI thread mutates that via
+    // set_gui_font_size_pt without draining in-flight jobs — so ALL
+    // font-derived geometry is snapshotted here for a coherent render.
+    int       inset_px         = 0;
+
     // Frame-map snapshot the worker dereferences during the render. Populated
     // for target view from the memoized target display map (an owned copy taken
     // at job submission, so the worker never races a cache rebuild). Empty in
@@ -148,12 +155,18 @@ private:
 // either on the waveform worker thread (the async dispatch) or synchronously on
 // the GUI thread (force_synchronous_waveform_rebuild), touching only the
 // supplied dest surface, the audio handle's peak pyramid (read-only after
-// load), and the caller's warp_frame_map snapshot — no other shared or
-// main-thread state.
+// load), the caller's warp_frame_map snapshot, and the job-captured geometry
+// scalars (area_w/area_h/inset_px) — no other shared or main-thread state. The
+// inset is passed in rather than read via waveform_inset_px() so the render
+// touches no gui_font_scale()/g_font_size_pt state: ALL font-dependent geometry
+// is snapshotted on the GUI thread at dispatch, closing the race with a
+// mid-render set_gui_font_size_pt (which supersedes this job via the resize
+// rebuild regardless).
 void render_waveform_to_cache_surface(
     cairo_surface_t* dest,
     int area_w,
     int area_h,
+    int inset_px,
     const GuiAudio& audio,
     int64_t vp_start,
     int64_t vp_end,

@@ -38,6 +38,7 @@ void render_waveform_to_cache_surface(
     cairo_surface_t* dest,
     int area_w,
     int area_h,
+    int inset_px,
     const GuiAudio& audio,
     int64_t vp_start,
     int64_t vp_end,
@@ -52,20 +53,23 @@ void render_waveform_to_cache_surface(
     cairo_paint(ccr);
     cairo_restore(ccr);
     // Samples draw into an inset sub-rect of the full-height cache surface:
-    // waveform_inset_px() clear at top and bottom (the top band holds the cursor
+    // inset_px clear at top and bottom (the top band holds the cursor
     // triangle; the bottom mirrors it so the waveform is centered in its area).
+    // inset_px is the GUI-thread-captured waveform_inset_px() snapshot (see the
+    // WaveformJob geometry-capture note) — this function reads no font-scale
+    // state itself, so a mid-render font commit cannot tear the geometry.
     // The surface itself is still area_w x area_h and is blitted at area.y, so
     // the cache fingerprint and blit are unaffected — the inset is
     // a property of sample drawing only.
-    const int inset_h = area_h - 2 * waveform_inset_px();
+    const int inset_h = area_h - 2 * inset_px;
     if (inset_h <= 0) { cairo_destroy(ccr); return; }
-    const GuiRect cache_area{0, waveform_inset_px(), area_w, inset_h};
+    const GuiRect cache_area{0, inset_px, area_w, inset_h};
     // Stereo is structural — channels != 2 refuses at load (see file_loader) —
     // so both channels always render. No channel gap: the 1972 Krips material
     // is effectively never unity, so the two channels' inner excursions do
     // not visually collide at the shared midline; a plain halve of the
     // inset region is clean. The two channels share the single inset band
-    // (inset first, then split), so waveform_inset_px() stays clear above
+    // (inset first, then split), so the inset_px band stays clear above
     // the top channel and below the bottom channel, with the channels
     // meeting at the inset region's vertical center.
     const int ch_h = cache_area.h / 2;
@@ -100,13 +104,17 @@ void render_waveform_to_cache_surface(
 // Runs inline on the GUI thread (the strip is at most a window wide; see
 // pan_waveform_incremental's over-a-window fallback), so unlike the worker
 // render it touches the LIVE wf_cache.surface directly. Safe because the pan
-// path only takes this branch when the worker is idle.
+// path only takes this branch when the worker is idle. It has no font-scale
+// race (GUI thread), but takes inset_px explicitly for sibling symmetry with
+// render_waveform_to_cache_surface — the caller passes the same freshly
+// GUI-computed value it would read from waveform_inset_px().
 static void render_waveform_strip_to_cache_surface(
     cairo_surface_t* dest,
     int area_w,
     int area_h,
     int strip_x,
     int strip_w,
+    int inset_px,
     const GuiAudio& audio,
     int64_t vp_start_full,
     int64_t vp_end_full,
@@ -139,13 +147,13 @@ static void render_waveform_strip_to_cache_surface(
     cairo_rectangle(ccr, strip_x, 0, strip_w, area_h);
     cairo_clip(ccr);
 
-    const int inset_h = area_h - 2 * waveform_inset_px();
+    const int inset_h = area_h - 2 * inset_px;
     if (inset_h <= 0) { cairo_restore(ccr); cairo_destroy(ccr); return; }
     // Stereo is structural — channels != 2 refuses at load (see file_loader) —
     // so both channels always render.
     const int ch_h = inset_h / 2;
-    const GuiRect ch0{strip_x, waveform_inset_px(), strip_w, ch_h};
-    const GuiRect ch1{strip_x, waveform_inset_px() + ch_h, strip_w, ch_h};
+    const GuiRect ch0{strip_x, inset_px, strip_w, ch_h};
+    const GuiRect ch1{strip_x, inset_px + ch_h, strip_w, ch_h};
     render_waveform(ccr, ch0, audio, 0,
                     strip_vp_start, strip_vp_end,
                     kWaveform, warp_frame_map_or_null);
@@ -166,7 +174,9 @@ static void render_waveform_strip_to_cache_surface(
 // is the single source of truth for the desired waveform fingerprint, and
 // is also consumed by force_synchronous_waveform_rebuild(). on_redraw's
 // consumer derivation must stay in sync with the helper the same way it
-// tracked the prior inline block.
+// tracked the prior inline block. It also snapshots the GUI thread's
+// font-dependent geometry (area_w/area_h and inset_px = waveform_inset_px())
+// so the worker render never reads gui_font_scale()/g_font_size_pt directly.
 
 GuiPaintHandler::WaveformRenderInputs
 GuiPaintHandler::compute_waveform_render_inputs() const {
@@ -197,6 +207,7 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.vp_end        = vp_end;
     in.area_w        = area.w;
     in.area_h        = area.h;
+    in.inset_px      = waveform_inset_px();
     in.is_target     = is_target;
     in.warp_frame_map_hash  = target_warp_frame_map_hash;
     in.warp_frame_map       = std::move(target_warp_frame_map);
@@ -270,6 +281,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.supersede_vp_end      = in.vp_end;
         wf_cache.supersede_area_w      = in.area_w;
         wf_cache.supersede_area_h      = in.area_h;
+        wf_cache.supersede_inset_px    = in.inset_px;
         wf_cache.supersede_target      = in.is_target;
         wf_cache.supersede_warp_frame_map_hash = in.warp_frame_map_hash;
         wf_cache.supersede_warp_frame_map     = std::move(in.warp_frame_map);
@@ -296,6 +308,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.vp_end         = in.vp_end;
     job.area_w         = in.area_w;
     job.area_h         = in.area_h;
+    job.inset_px       = in.inset_px;
     job.target         = in.is_target;
     job.warp_frame_map_hash   = in.warp_frame_map_hash;
     // Stash a copy of the warp_frame_map on the pending slot so the
@@ -404,6 +417,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         job.vp_end         = wf_cache.supersede_vp_end;
         job.area_w         = sw;
         job.area_h         = sh;
+        job.inset_px       = wf_cache.supersede_inset_px;
         job.target         = wf_cache.supersede_target;
         job.warp_frame_map_hash   = wf_cache.supersede_warp_frame_map_hash;
         // Thread the supersede warp_frame_map into both the job and
@@ -570,7 +584,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     // in.audio is the source audio.
     render_waveform_to_cache_surface(
         wf_cache.surface,
-        in.area_w, in.area_h,
+        in.area_w, in.area_h, in.inset_px,
         *in.audio,
         in.vp_start, in.vp_end,
         in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
@@ -789,7 +803,7 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
     render_waveform_strip_to_cache_surface(
         wf_cache.surface,
         in.area_w, in.area_h,
-        strip_x, strip_w,
+        strip_x, strip_w, in.inset_px,
         *in.audio,
         in.vp_start, in.vp_end,
         in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);

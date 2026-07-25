@@ -144,6 +144,7 @@ struct WaveformCache {
     int64_t   supersede_vp_end      = 0;
     int       supersede_area_w      = 0;
     int       supersede_area_h      = 0;
+    int       supersede_inset_px    = 0;   // GUI-captured font-dependent inset
     bool      supersede_target      = false;
     uint64_t  supersede_warp_frame_map_hash = 0;
     std::vector<WarpFrameMapSegment> supersede_warp_frame_map;
@@ -345,6 +346,11 @@ private:
         int64_t  vp_end        = 0;
         int      area_w        = 0;
         int      area_h        = 0;
+        // Font-dependent waveform inset (waveform_inset_px()), captured on the
+        // GUI thread beside area_w/area_h so the worker render reads no
+        // gui_font_scale()/g_font_size_pt state (the GUI thread mutates that
+        // without draining jobs). All font-derived geometry is snapshotted.
+        int      inset_px      = 0;
         bool     is_target     = false;
         uint64_t warp_frame_map_hash  = 0;
         // The translation map: the target-view map in target view, empty in
