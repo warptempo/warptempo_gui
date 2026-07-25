@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <set>
 #include <utility>
@@ -519,23 +520,38 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             // SelectionExtent region (the one owner clamps endpoints playable, sets
             // provenance, and damages the waveform).
             set_region_to_selection_extent(app, viewport.audio, viewport);
-            // OFFSCREEN handling (architect 2026-07-25 post-labwc): PREFER a plain
-            // scroll at the current zoom, ZOOM only when the group cannot fit —
-            // any touched member offscreen <=> the extent's lo/hi are not BOTH
-            // inside the visible span [start, start + visible) (members lie
-            // between). Three arms:
-            //   - fully visible -> no viewport write;
-            //   - offscreen but FITS at the current level (hi - lo strictly <
-            //     visible; equality takes the framer because the half-open span
-            //     leaves the hi marker's column one past the last visible pixel)
-            //     -> SCROLL ONLY: center the extent at the current zoom, the
-            //     singleton recenter's group sibling (no zoom change, no margin);
-            //   - too wide for the level -> frame_span_into_view with margin (the
-            //     cannot-fit fallback; the framer then only ever zooms OUT to fit,
-            //     fit level + 2.5%-per-side, centered, clamped [kMinZoom, effective
-            //     ceiling], NO playhead recenter). This diverges from the zoom-row
-            //     DOUBLE-CLICK, which keeps its unconditional zoom-to-span — the
-            //     framer itself is untouched, this is an undo-tail rule only.
+            // OFFSCREEN handling (architect 2026-07-25 post-labwc; codex round:
+            // column-decided): PREFER a plain scroll at the current zoom, ZOOM only
+            // when the group cannot fit. The fit contract is PAINTED COLUMNS, not a
+            // sample span — an endpoint's flag paints at its CENTER column and the
+            // painter does NOT edge-clamp that center, so the capacity is the
+            // pixel range [0, W), NOT q*W samples (which overcounts by up to a
+            // column) and NOT the grid-snapped start (clamp_viewport_start moves it
+            // ~half a pixel). Both tests decide on the endpoints' columns under the
+            // painter's own basis (painter_samples_per_pixel + the flag painters'
+            // nearbyint((frame - vp_start)/q) — the region endpoints already live in
+            // the active display domain, so no warp map is walked, matching
+            // region_columns). Three arms:
+            //   - fully visible (both endpoint columns in [0, W) under the CURRENT
+            //     start) -> no viewport write;
+            //   - otherwise TENTATIVELY center at the current zoom (the singleton
+            //     recenter's group sibling: viewport_start = extent midpoint -
+            //     visible/2, then clamp_viewport_start) and re-test the columns
+            //     under the clamped start: both in [0, W) -> the SCROLL stands (no
+            //     zoom change, no margin);
+            //   - else -> frame_span_into_view with margin (the cannot-fit
+            //     fallback; the framer only ever zooms OUT to fit — fit level +
+            //     2.5%-per-side, centered, clamped [kMinZoom, effective ceiling], NO
+            //     playhead recenter). It OVERWRITES the tentative viewport wholesale
+            //     (level + start via apply_zoom_to_start), so the tentative write
+            //     needs no revert; and its apply_zoom_to_start no-op guard can never
+            //     leave the failing tentative state standing, because a fit that
+            //     failed at the current level forces the framer to a DIFFERENT
+            //     (more zoomed-out) level to seat the MARGIN-widened span — the
+            //     level always differs, so the guard never short-circuits. This
+            //     diverges from the zoom-row DOUBLE-CLICK's unconditional
+            //     zoom-to-span; the framer itself is untouched, an undo-tail rule
+            //     only.
             // ACCEPTED COST on the framer arm: apply_zoom_to_start runs one sync
             // render and the unconditional kick_waveform_sync below runs a second
             // over identical final state — a bounded duplicate on a discrete
@@ -543,15 +559,27 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             if (app.region.active) {
                 const int64_t lo      = app.region.a_frame;
                 const int64_t hi      = app.region.b_frame;
-                const int64_t visible = samples_visible(app, viewport.audio);
-                const int64_t start   = app.viewport_start_sample;
-                const bool fully_visible = (lo >= start && hi < start + visible);
-                if (!fully_visible) {
-                    if (hi - lo < visible) {
-                        // Fits — scroll to center, no zoom change.
-                        app.viewport_start_sample = (lo + hi) / 2 - visible / 2;
-                        clamp_viewport_start(app, viewport.audio);
-                    } else {
+                const int     W       = waveform_area(app).w;
+                const double  q       = painter_samples_per_pixel(
+                    app, viewport.audio, waveform_area(app));
+                // Endpoint column under a given viewport start, on the flag
+                // painters' basis; empty q (no geometry) leaves the region put.
+                auto both_columns_visible = [&](int64_t vp_start) {
+                    const int lo_col = static_cast<int>(std::nearbyint(
+                        (static_cast<double>(lo) - static_cast<double>(vp_start)) / q));
+                    const int hi_col = static_cast<int>(std::nearbyint(
+                        (static_cast<double>(hi) - static_cast<double>(vp_start)) / q));
+                    return lo_col >= 0 && lo_col < W && hi_col >= 0 && hi_col < W;
+                };
+                if (q > 0.0 && W > 0 &&
+                    !both_columns_visible(app.viewport_start_sample)) {
+                    // Tentatively center at the current zoom and clamp.
+                    const int64_t visible = samples_visible(app, viewport.audio);
+                    app.viewport_start_sample = (lo + hi) / 2 - visible / 2;
+                    clamp_viewport_start(app, viewport.audio);
+                    if (!both_columns_visible(app.viewport_start_sample)) {
+                        // Cannot fit at this level even centered -> zoom out to fit
+                        // (overwrites the tentative viewport wholesale).
                         frame_span_into_view(app, viewport.audio, viewport,
                                              lo, hi, /*margin=*/true);
                     }
