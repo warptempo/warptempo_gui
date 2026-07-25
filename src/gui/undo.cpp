@@ -184,7 +184,8 @@ namespace {
 // picks the EARLIEST touched marker as focus (equal members; the group nudge's
 // pixel anchor, the tempo step's re-land, Tab's start, and the lane/readout
 // fallbacks all tolerate it, and a singleton's earliest IS the touched marker).
-// The VISUAL tail — the singleton playhead land, the group SelectionExtent
+// The VISUAL tail — the playhead land (singleton on its marker, group on the
+// earliest touched member), the group SelectionExtent
 // region, and the offscreen framing/recenter — lives in restore_history_entry
 // AFTER sanitize (the region write must follow sanitize's provenance demote).
 template <class M, class FieldsDiffer>
@@ -282,7 +283,8 @@ void apply_post_restore_rules_impl(AppState& app,
     // EARLIEST touched marker as focus — one rule for singleton (trivially the
     // touched marker) and group (all members are equal; there is no stored focus
     // hint). sanitize keeps it (it is in the set and in range); the visual tail
-    // in restore_history_entry then lands the singleton on it or frames the group.
+    // in restore_history_entry then lands the singleton on it, or lands the group
+    // on its earliest and sets/frames the extent region.
     app.last_selected_marker = *target_set.begin();
 }
 
@@ -652,7 +654,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     viewport.invalidate_waveform_area();
     // One-shot discrete jump: undo/redo restored markers / phase resets /
     // settings, changing the displayed plate (the target-view warp_frame_map).
-    // The visual tail above may have LANDED the playhead (singleton), recentered
+    // The visual tail above may have LANDED the playhead (singleton on its marker,
+    // group on the earliest touched member), recentered
     // or framed the viewport, and written a region; these invalidations and the
     // sync kick cover all of that as well as the marker change. Render it
     // synchronously so the restored markers and the waveform land together. A

@@ -191,9 +191,9 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
 // clamp_playhead_to_live_domain, a direct cursor write, dissolving any resting
 // region via clear_region_highlight). Definition in input_pointer.cpp. Callers:
 // the plain / shift-range / ctrl-toggle marker clicks (which land at ITS marker /
-// the earliest selected), and the SINGLETON undo/redo restore (undo.cpp's visual
-// tail, landing on the touched marker). Read-only allowed; callers stop playback
-// first.
+// the earliest selected), and BOTH undo/redo restore arms (undo.cpp's visual
+// tail: the singleton lands on its touched marker, the group on the earliest
+// touched member). Read-only allowed; callers stop playback first.
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit);
 

@@ -160,8 +160,9 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // playhead seats. Shared by the plain marker click (lands on ITS marker), the
 // shift range click, and the ctrl toggle click (both land at the EARLIEST
 // selected marker, `hit` = *selected_markers.begin(); an empty post-toggle
-// selection lands nothing), and the SINGLETON undo/redo restore (undo.cpp's
-// visual tail, landing on the touched marker). The two-step placement
+// selection lands nothing), and BOTH undo/redo restore arms (undo.cpp's
+// visual tail: the singleton lands on its touched marker, the group on the
+// earliest touched member). The two-step placement
 // basis the Tab family lands with (source_frame_to_active_domain then
 // clamp_playhead_to_live_domain), against the active column's store, so the
 // placement is exactly coincident for a subsequent nudge/drag ride. Direct
