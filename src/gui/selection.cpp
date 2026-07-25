@@ -62,6 +62,17 @@ void Selection::damage_overlay_on_subject_change(
 void Selection::repair_last_selected() {
     if (app.last_selected_marker < 0) return;
     if (app.selected_markers.count(app.last_selected_marker)) return;
+    // The focus is no longer a member; it moves to the largest remaining
+    // selected index, or to none. In P + target view with no active region that
+    // can change the overlay subject (a stale reset -> the largest remaining
+    // selected reset, or -> none), and this runs without a reliable enclosing
+    // waveform repaint — bare Return/KpEnter routes here and, in P view, returns
+    // before the warp-only editor with no waveform damage, and `c`'s recenter
+    // can be a no-op at an already-centered rest — so own the overlay repaint
+    // here like every other focus-writing mutator. When reached from
+    // toggle_selection_membership this double-fires with that mutator's own pair,
+    // harmlessly (both damage the same subject change, a benign damage-union).
+    const std::optional<int64_t> old_subject = phase_overlay_subject();
     if (app.selected_markers.empty()) {
         app.last_selected_marker = -1;
     } else {
@@ -69,6 +80,7 @@ void Selection::repair_last_selected() {
         // if empty).
         app.last_selected_marker = *app.selected_markers.rbegin();
     }
+    damage_overlay_on_subject_change(old_subject);
 }
 
 void Selection::set_single_selection(int idx) {

@@ -1043,13 +1043,15 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
     app.staged_displayed_valid = true;
 
     // Invalidate the stem region. After C-A (architect 2026-07-24) this cache is
-    // trim-only and its fingerprint is exactly render_trim_stems' input list, so
-    // a rebuild fires only on a displayed-viewport change (vp / trim frames /
-    // target / displayed-map hash / area). Viewport-driven invalidations already
-    // cover the vp case, but a trim-frame or displayed-map change need not have
-    // routed through the viewport's invalidator — damage the strip explicitly so
-    // the next paint blits the freshly rebuilt stems. Idempotent against the
-    // waveform's own damage.
+    // trim-only and its fingerprint is exactly render_trim_stems' input list: the
+    // displayed viewport (vp start/end), the displayed-domain trim FRAMES
+    // (begin/end), the trim PRESENCE bits (has-begin/has-end), the area
+    // dimensions, the target flag, and the displayed-map hash. A rebuild fires
+    // only when one of those changes. A viewport or area change already routes
+    // through the viewport's invalidator, but a trim-frame, trim-presence, or
+    // displayed-map change need not — damage the strip explicitly so the next
+    // paint blits the freshly rebuilt stems. Idempotent against the waveform's
+    // own damage.
     gui.invalidate_region(
         0,
         area.y,
