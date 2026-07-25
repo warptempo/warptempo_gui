@@ -1341,7 +1341,9 @@ struct AppState {
     // and the dispatch-exit preserve (StemPinPreserveGuard at on_key/
     // on_button_press/on_wheel) re-stamps stem_pin_command_seq so adjacency holds
     // across it. A refused press already never STAMPS; now it also never KILLS.
-    // A rare damage-less REAL action (Ctrl+S save, `l` launch) preserves too —
+    // A rare damage-less REAL action (Ctrl+S save, `l` external-player launch)
+    // preserves too — a PLAYBACK launch is NOT damage-less (scrub/Space damage
+    // the scanner's launch column at press via launch_playback_from) —
     // accepted/desirable (if nothing changed on screen the stem has no reason to
     // vanish); consecutive no-ops chain (each re-stamps); command_seq itself is
     // never touched so undo coalescing is unaffected. A DAMAGING command (a

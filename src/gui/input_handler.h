@@ -243,8 +243,12 @@ void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
 // own damage: damage from a later release/motion — e.g. a deferred-click's
 // single-select+land at the motionless release — never enters the compare, so
 // such a press is treated as damage-less and preserves the pin; accepted.)
-// A damage-less REAL action (Ctrl+S,
-// `l`) is preserved too, which is accepted/desirable. command_seq itself is
+// A damage-less REAL action (Ctrl+S, `l` — the external audio-player launch)
+// is preserved too, which is accepted/desirable. A PLAYBACK launch (scrub or
+// Space) is NOT in this class: launch_playback_from's success tail damages the
+// scanner's launch column at press, so a launch kills the pin like any damaging
+// command (only its silent "nothing to audition" refusals stay damage-less and
+// preserve it). command_seq itself is
 // never touched, so undo coalescing is unaffected.
 struct StemPinPreserveGuard {
     AppState&          app;

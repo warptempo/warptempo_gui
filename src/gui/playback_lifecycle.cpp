@@ -290,6 +290,27 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // sufficient regardless of whether the user has follow mode toggled on,
     // so always run it on press.
     viewport.follow_scroll_if_needed();
+    // Damage the scanner's launch column and the timestamp area NOW, in the
+    // success tail (strictly after every refusal return above). A launch's
+    // visible effect — the scanner line appearing at the launch column and the
+    // timestamp readout advancing — otherwise waits for the first on_tick
+    // predictor advance to paint, leaving the PRESS itself damage-less; that
+    // let StemPinPreserveGuard treat a scrub/Space launch as a damage-less
+    // command and re-stamp the lateral-gesture stem pin, so the pinned stem
+    // survived the whole audition (dying only at the Space stop's teardown
+    // damage). Painting the launch column one frame early makes the launch an
+    // honest DAMAGING command, so the guard leaves the pin's adjacency alone
+    // and the on_tick reaper clears it at the press. Computed AFTER
+    // follow_scroll_if_needed, which may have moved the viewport, so the column
+    // reflects the post-scroll position. The scanner fields are already seeded
+    // above. The REFUSAL paths never reach here — a silent "nothing to
+    // audition" no-op stays damage-less and preserves the pin by design, like
+    // every silent refusal. The kill-and-revive scrub over a live session
+    // already damaged via the stop half; this revive-half damage is a harmless
+    // union with it.
+    const double launch_px = scanner_pixel_x(app, audio);
+    viewport.invalidate_playhead_columns(launch_px, launch_px);
+    viewport.invalidate_timestamp_area();
     const bool force_one_x = (app.active_audio_view == 'T');
     playback.set_speed(force_one_x ? 1.0f : app.playback_speed);
     // Stash the captured loop start for the click-keep-alive reseek to reuse
