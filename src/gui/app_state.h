@@ -510,15 +510,20 @@ struct UndoHistory {
 // deselect/demote was the committed act, and downward-only is structural (there
 // is no selection write in the drag, its ends, or its Esc cancel). Esc cancels a
 // live drag, restoring the pre-press region captured here at arm (the marker
-// drag's snapshot pattern — cheap, two ints). Session-only, never undoable.
+// drag's snapshot pattern — cheap, two ints), then DEMOTING the restored
+// provenance: the shift-former's snapshot is captured before its own
+// clear_selection demote, so it can carry SelectionExtent, but the cancel
+// restores no selection, so an ex-SelectionExtent restore must rest Free (the
+// committed deselect re-applies at the restore). Session-only, never undoable.
 struct RegionDragState {
     bool    active       = false;
     bool    moved        = false;  // crossed the threshold into a real drag
     int     press_x      = 0;      // press position (window px), for the gate
     int     press_y      = 0;
     int64_t anchor_frame = 0;      // active-domain frame the press placed
-    // The region as it rested BEFORE the press dissolved it; restored on an Esc
-    // cancel of the gesture, bringing the pre-press highlight back.
+    // The region as it rested BEFORE the press dissolved it, provenance and all;
+    // restored on an Esc cancel of the gesture, bringing the pre-press highlight
+    // back (the cancel then demotes the restored provenance — see the class doc).
     RegionState pre_region;
 };
 

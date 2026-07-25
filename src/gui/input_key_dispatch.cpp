@@ -453,13 +453,22 @@ void GuiInputHandler::cancel_active_drags() {
     // it arms nothing, so there is no scrub gesture for Esc to end; the
     // launched audition keeps playing, Space remains the sole stop.)
     // The region drag IS a cancel: unlike the strip drag it restores the region
-    // to how it rested at arm (the pre-drag snapshot), then ends the gesture.
+    // to how it rested at arm (the pre-press snapshot), then ends the gesture.
     // Under SELECTION-FLOWS-DOWNWARD-ONLY (architect 2026-07-23) the drag never
     // touches the selection — the press's deselect/demote was the committed act,
-    // and there is no pre-press selection snapshot to restore — so the cancel
-    // restores the region alone.
+    // and there is no pre-press selection snapshot to restore. So restore the
+    // region alone, then DEMOTE its provenance: the SHIFT-former captures
+    // pre_region BEFORE its own clear_selection demote runs, so the snapshot can
+    // still carry SelectionExtent, yet the committed deselect left NO owning
+    // selection — an ex-SelectionExtent restore must rest Free (SelectionExtent
+    // is valid only while its selection persists, app_state.h). Free/TrimWindow
+    // snapshots are untouched by the demote, and the plain drag's snapshot is
+    // already post-demote (captured after its press's clear_selection). This
+    // demote is the genuine side effect the deleted C-E clear_selection call used
+    // to provide (its demote ran before the empty-selection early return).
     if (app.region_drag.active) {
         app.region = app.region_drag.pre_region;
+        demote_region_provenance(app.region);
         app.region_drag = RegionDragState{};
         viewport.invalidate_waveform_area();
         // An Esc mid-gesture is not a clean release: drop any double-click
