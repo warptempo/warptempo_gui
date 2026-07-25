@@ -537,7 +537,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // Delete drops at the read-only gate above, which is the keyboard
         // path's single guard, and no pointer path reaches the delete routines.
         // Trim is not part of the selection system, so Delete never acts on a
-        // bound (bare x is trim's clear).
+        // bound (Shift+X is trim's clear; bare x is set-only).
         // Deletion authors the active column's store: home view only (the
         // predicate maps W->source, P->target). Off home is a consumed no-op.
         if (!active_column_authoring_allowed(app)) return;

@@ -516,23 +516,26 @@ void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
         const int64_t hi = std::max(a, b);
         if (lo == hi) {
             // COINCIDENT IMAGES -> take the CLEAR arm, do NOT publish a
-            // zero-width region (the standing sliver rule: degenerate spans never
-            // rest). Distinct legal source bounds can round to the SAME target
-            // frame (16x compression is bracket-legal), and an active lo==hi
-            // region would let a bare x inverse-map the degenerate span to an
-            // EQUAL pair that auto_clear_crossed_trim silently DESTROYS (trim is
-            // outside undo). A window whose image collapses below one target frame
-            // cannot be honestly highlighted, so clear the HIGHLIGHT only — the
-            // TRIM ITSELF is untouched (its authored source-frame bounds stand),
-            // and clearing drops the LIVE provenance. Recovery depends on the
-            // caller: within a tempo DRAG the grab-time trim intent
+            // zero-width region: the STANDING SLIVER RULE alone — degenerate
+            // spans never rest — a window whose image collapses below one target
+            // frame cannot be honestly highlighted. Distinct legal source bounds
+            // can round to the SAME target frame (16x compression is
+            // bracket-legal). (Historical: this clear once also PROTECTED the pair
+            // from a later bare x that would inverse-map an active lo==hi region to
+            // an EQUAL pair auto_clear_crossed_trim silently destroyed. That
+            // motivation DISSOLVED with the 2026-07-25 set-only re-split: bare x
+            // with no highlight is now a silent no-op — it never unsets, so it can
+            // never destroy the pair — and the unset lives on Shift+X. The sliver
+            // rule is the surviving reason to clear.) Clear the HIGHLIGHT only —
+            // the TRIM ITSELF is untouched (its authored source-frame bounds
+            // stand), and clearing drops the LIVE provenance. Recovery depends on
+            // the caller: within a tempo DRAG the grab-time trim intent
             // (TempoDragState::grab_trim_highlight) re-syncs the window BACK on the
             // next event whose images re-separate, and Esc restores the captured
             // pre-drag region verbatim; for a RESTING clear (a drag RELEASED while
             // coincident, or a one-shot group STEP that reads live provenance) the
             // user re-clicks the chip row once the images re-separate. Either way,
-            // x with no highlight takes its documented no-highlight clear branch
-            // (WYSIWYG — no hairline wash, no silent pair destruction).
+            // x with no highlight is a silent no-op (WYSIWYG — no hairline wash).
             app.region = RegionState{};
         } else {
             app.region.active     = true;
