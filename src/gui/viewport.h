@@ -233,9 +233,11 @@ struct Viewport {
     // for the plain-click-on-already-selected case (set_single_selection is
     // damage-idempotent there) — a fragile coupling a "skip the no-op land"
     // cleanup would orphan. The damage rides the SAME invalidator the hover
-    // recompute uses for this stem (invalidate_hover_stem_column), unambiguous
-    // because a resting click has live == displayed viewport. Delegates the state
-    // write to the one setter (set_stem_hover_suppress).
+    // recompute uses for this stem (invalidate_hover_stem_column), which erases
+    // the COMMITTED DISPLAYED stem pixels — correct whether or not the live and
+    // displayed viewports currently coincide (a click can dispatch inside an async
+    // publish window, live already advanced, so no live==displayed assumption is
+    // made). Delegates the state write to the one setter (set_stem_hover_suppress).
     void suppress_hover_stem(int idx);
 
     // Reset the hover popup state. If the popup was visible, invalidate

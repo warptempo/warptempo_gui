@@ -96,12 +96,15 @@ void Viewport::invalidate_hover_stem_column(int idx, int64_t source_frame) {
     // The stem's column on the DISPLAYED item basis — the honest source, since the
     // selected-marker stem paints against the promoted item mirror
     // (displayed_viewport_basis), not the live viewport. Both the displayed MAP
-    // and the displayed VIEWPORT/spp: at rest they equal live (the "hover shows =>
-    // live == displayed" case still holds), but during an async publish window the
-    // live viewport already holds the NEW span while the stem still paints at the
-    // OLD displayed column — a live-basis column would then miss the stem entirely
-    // (the mixed-basis hazard the pin stamp went full-area to avoid). Both
-    // consumers inherit this: suppress_hover_stem's disappear damage and the hover
+    // and the displayed VIEWPORT/spp: the invariant is damage-follows-the-pixels —
+    // this erases the COMMITTED DISPLAYED stem pixels, correct regardless of
+    // whether live and displayed currently coincide. It matters during an async
+    // publish window, where the live viewport already holds the NEW span while the
+    // stem still paints at the OLD displayed column — a live-basis column would
+    // then miss the stem entirely (the mixed-basis hazard the pin stamp went
+    // full-area to avoid); at a fully settled rest with no publish pending the two
+    // bases happen to coincide, but nothing here relies on that. Both consumers
+    // inherit this: suppress_hover_stem's disappear damage and the hover
     // recompute's appear/disappear transitions (old + new columns).
     const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
     const int col = painted_column_of_source_frame_on_basis(
