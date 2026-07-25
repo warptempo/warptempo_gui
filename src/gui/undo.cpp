@@ -573,9 +573,11 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             //     16) the gutter is empty and it half-culls. Either way NO route
             //     places the endpoint INSIDE the effective span at whole-song-
             //     visible — the standing flags-may-hang-half-offscreen geometry (cull
-            //     only when FULLY out), the SAME cull every navigation route shows
-            //     there (Tab, the marker-click land, `c`, and the zoom-row
-            //     double-click framer itself) — not a framing defect, and identical
+            //     only when FULLY out), the SAME cull the level-preserving
+            //     navigation routes show there (Tab, which keeps the level; the
+            //     marker-click land, which writes no viewport; and the zoom-row
+            //     double-click framer itself, no-op under this conjunction) — not a
+            //     framing defect, and identical
             //     under every option reachable within the whole-song-ceiling and
             //     centered-flag rulings. The futile framer call is left as-is (a
             //     harmless no-op there); a ceiling special-case would be a branch for
