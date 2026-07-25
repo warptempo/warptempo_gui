@@ -219,7 +219,7 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 //       gate on region.active && provenance == SelectionExtent, so a Free /
 //       TrimWindow / inactive region is untouched.
 // Touches ONLY the region, never shift_range_anchor, so the shift-range path's
-// anchor survives a direction-B set. Programmatic selections (undo/redo, paste,
+// anchor survives a downward selection->extent set. Programmatic selections (undo/redo, paste,
 // drops, Tab/`c`) do NOT call this — the coupling belongs to the two multi-select
 // clicks (create) and the group image-move maintenance. Declared in
 // input_handler.h so the ops TUs can reach it.
@@ -1357,9 +1357,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             const int click_rel_x = x - area.x;
             if (shift) {
                 // Waveform shift+click: the region former / the DEMOTE (this is
-                // one of the DROP formers — it clears the selection; the
-                // coupling's promote direction lives on the plain drag and the
-                // multi-select clicks, not here; architect 2026-07-23, replacing
+                // one of the DROP formers — it clears the selection; the downward
+                // selection->extent derivation lives on the multi-select clicks
+                // and the SelectionExtent maintainers (group drags / tempo
+                // follows), never on a drag-formed region — the plain waveform
+                // drag makes a FREE region and selects nothing, and this shift
+                // former likewise clears; architect 2026-07-23, replacing
                 // the reserved strict no-op). With NO markers
                 // selected it forms a region from the PLAYHEAD to the clicked
                 // column; with markers selected it DEMOTES — the selection

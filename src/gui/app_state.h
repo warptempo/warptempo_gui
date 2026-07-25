@@ -190,8 +190,9 @@ struct SelectionSnapshot {
 // region is derived from, which decides how the image-follow tempo gestures treat
 // it across a map change. Free — a drag-formed / demoted region, display scratch
 // that no gesture re-derives. SelectionExtent — set to the marker selection's
-// [earliest, latest] extent (the Direction-B clicks, the position-drag commit,
-// the tempo follows), valid ONLY while that selection persists (any membership
+// [earliest, latest] extent (the downward selection->extent clicks, the
+// position-drag commit, the tempo follows), valid ONLY while that selection
+// persists (any membership
 // REPLACE demotes it to Free via demote_region_provenance). TrimWindow — set to
 // the trim window's images (sync_highlight_to_trim_window), selection-independent,
 // re-synced from app.trim's source-frame bounds through the new map at every

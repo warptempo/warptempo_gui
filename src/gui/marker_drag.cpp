@@ -759,8 +759,8 @@ void MarkerDragOps::commit_drag() {
     // (still the whole group — the drag focused it without collapsing
     // membership). Runs REGARDLESS of net_changed: a wander-back group drag also
     // moved the region live and must restore it to the resting extent.
-    // set_region_to_selection_extent is the same Direction-B owner the
-    // multi-select clicks use; here it MAINTAINS an already-active highlight
+    // set_region_to_selection_extent is the same downward selection->extent owner
+    // the multi-select clicks use; here it MAINTAINS an already-active highlight
     // through the store mutation rather than creating one (and re-affirms
     // SelectionExtent provenance). app.region survives the DragState reset (it
     // lives on AppState), and commit_drag does NOT kick_waveform_sync before this

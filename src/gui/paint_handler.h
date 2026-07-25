@@ -207,7 +207,7 @@ struct StemCache {
     int64_t   fp_trim_begin       = 0;
     int64_t   fp_trim_end         = 0;
     int       fp_area_w           = 0;
-    int       fp_area_h           = 0;       // surface height (incl. stem overhang)
+    int       fp_area_h           = 0;       // surface height = waveform-area height (no stem overhang: the trim stems span exactly the waveform)
     bool      fp_target           = false;
     uint64_t  fp_warp_frame_map_hash     = 0;
 

@@ -659,13 +659,16 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // moving window (the lane-click coupling, sync_highlight_to_trim_window); the
 // PLAYHEAD and the SELECTION are what they never touch.
 //
-// The bridge-region bound columns come from displayed_or_live_target_map — the
-// map the on-screen chips were painted with on the LAST COMMITTED frame (the
-// item rebuilds only STAGE; the paint pass PROMOTES at the committing frame, not
-// at the earlier plate publish) — so a hit lands on what is drawn: the routing
-// decision flips at the exact instant the on-screen items flip (the event-sync
-// ruling at that selector). What was the open live-vs-painted window for item
-// hits is CLOSED to commit granularity. The remaining seams are all ACCEPTED:
+// The bridge-region bound columns come from the displayed MAP
+// (displayed_or_live_target_map) AND the displayed VIEWPORT
+// (displayed_viewport_basis) — the map + vp_start/vp_end/effective-width the
+// on-screen chips were painted with on the LAST COMMITTED frame (the item
+// rebuilds only STAGE; the paint pass PROMOTES both halves at the committing
+// frame, not at the earlier plate publish) — so a hit lands on what is drawn:
+// the routing decision flips at the exact instant the on-screen items flip (the
+// event-sync ruling at that selector). What was the open live-vs-painted window
+// for item hits is CLOSED to commit granularity. The remaining seams are all
+// ACCEPTED:
 // commit-to-scanout plus human reaction (irreducible — input responds to the
 // previously presented frame), the COLD-STATE fallback (first paint, a view
 // toggle, or just after load, live map until the first committed target frame),
@@ -673,8 +676,16 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // far subtler seam).
 bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
     if (audio.total_frames() <= 0) return false;
-    const double spp = current_samples_per_pixel(app, audio);
-    if (spp <= 0.0) return false;
+    // Event-synchronized hit geometry, the VIEWPORT half (the ruling at the
+    // header): the chip AND bridge pixels are painted from the flag cache's
+    // committed fp_vp span over the effective width the render used, so both the
+    // single-chip hit (hit_test_trim_chip, which takes its own displayed basis)
+    // and the bridge column math below ride the DISPLAYED basis, never the live
+    // viewport — else a press on the visible bridge during an async publish window
+    // could fall through unclaimed (or a blank point falsely arm the pair drag).
+    // Cold falls back to the live basis (see the accessor).
+    const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
+    if (basis.spp <= 0.0) return false;
     // Every trim drag needs the full pair set. With a lone bound, trim
     // contributes NO pointer geometry at all — the press is transparent and
     // falls through to the caller's flag handling.
@@ -700,14 +711,16 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
     // notion — both bounds are the subject, so it always arms as Begin
     // structurally (there is no nearer-bound pick, and the gesture never moves
     // the playhead). The bound columns use the forward-map + column math on the
-    // painted items' own map (the displayed_or_live_target_map ruling above),
-    // computed only on this path.
+    // painted items' own map AND displayed viewport (the event-sync ruling
+    // above), computed only on this path.
     const GuiRect row = top_upper_row_area(app);
     if (mouse_y >= row.y && mouse_y < row.y + row.h) {
         const GuiRect area = waveform_area(app);
+        // click_rel_x is waveform-relative from the layout origin area.x (a
+        // stable layout constant, not viewport-driven); the bound columns below
+        // are 0-based col_raw in the SAME committed-width column space, so the
+        // strictly-between test compares like against like.
         const int click_rel_x = mouse_x - area.x;
-        const int64_t vp_end =
-            viewport_end_sample(app.viewport_start_sample, spp, area.w);
         const std::vector<WarpFrameMapSegment>& dmap =
             displayed_or_live_target_map(app, audio);
         const std::vector<WarpFrameMapSegment>* map =
@@ -715,13 +728,16 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
         // Bridge columns via the SAME owners the painter's wash gap uses
         // (render.h): map with displayed_trim_ms, column with trim_bound_column
         // (waveform-relative col_raw — UNCLAMPED, no visibility gate, for the
-        // strictly-between test). The chip single-hit above consumes the chip
-        // pixels first, so the effective bridge grab equals the painted wash gap
-        // — and now both read the SAME per-bound column source (FINDING-11).
+        // strictly-between test) on the DISPLAYED basis (vp_start_frame/
+        // vp_end_frame/area_w — the flag cache's own committed fp_vp span and
+        // effective width), so the columns are exactly where the wash gap was
+        // painted on the committing frame. The chip single-hit above consumes the
+        // chip pixels first, so the effective bridge grab equals the painted wash
+        // gap — and both read the SAME per-bound committed column source.
         auto bound_col = [&](int64_t frame) -> int {
             const double ms = displayed_trim_ms(frame, map);
-            return trim_bound_column(ms, app.viewport_start_sample, vp_end,
-                                     area.w).col_raw;
+            return trim_bound_column(ms, basis.vp_start_frame,
+                                     basis.vp_end_frame, basis.area_w).col_raw;
         };
         const int bcol = bound_col(app.trim.begin_frame);
         const int ecol = bound_col(app.trim.end_frame);

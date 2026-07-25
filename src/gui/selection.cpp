@@ -53,8 +53,8 @@ void Selection::repair_last_selected() {
 
 void Selection::set_single_selection(int idx) {
     // Membership replace -> demote a SelectionExtent region to Free (it is no
-    // longer this selection's extent). Harmless when a Direction-B click re-owns
-    // right after (demote-then-re-own).
+    // longer this selection's extent). Harmless when a downward selection->extent
+    // click re-owns right after (demote-then-re-own).
     demote_region_provenance(app.region);
     const bool was_empty = app.selected_markers.empty();
     const size_t old_size = app.selected_markers.size();
@@ -146,7 +146,8 @@ void Selection::collapse_to_focused() {
 
 bool Selection::toggle_selection_membership(int idx) {
     // Membership replace -> demote a SelectionExtent region to Free. Harmless
-    // when a Direction-B ctrl-toggle re-owns right after (demote-then-re-own).
+    // when a downward selection->extent ctrl-toggle re-owns right after
+    // (demote-then-re-own).
     demote_region_provenance(app.region);
     const bool was_empty = app.selected_markers.empty();
     const size_t old_size = app.selected_markers.size();
@@ -179,8 +180,8 @@ void Selection::select_range_from_anchor(int idx) {
     // shift-click path, which resolves a real hit) is a plain no-op guard.
     if (idx < 0) return;
     // Membership replace -> demote a SelectionExtent region to Free (the
-    // Direction-B shift-range re-owns right after via set_region_to_selection_
-    // extent, so this is demote-then-re-own).
+    // downward selection->extent shift-range re-owns right after via
+    // set_region_to_selection_extent, so this is demote-then-re-own).
     demote_region_provenance(app.region);
     const bool was_empty = app.selected_markers.empty();
     const size_t old_size = app.selected_markers.size();

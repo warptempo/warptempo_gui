@@ -850,9 +850,10 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
 
 namespace {
 
-// FNV-1a over the live drag-overlay state, folded into the StemCache
-// fingerprint. Hashing the drag state directly removes the requirement
-// that every mutation site of app.drag remember to bump a generation
+// FNV-1a over the live drag-overlay state, folded into the FlagCache
+// fingerprint (its only consumer — the trim-only StemCache no longer carries a
+// marker-driven fingerprint half). Hashing the drag state directly removes the
+// requirement that every mutation site of app.drag remember to bump a generation
 // counter. Cost is dominated by the loop over moveable_times,
 // which at observed selection sizes (0–5) is a handful of nanoseconds.
 uint64_t hash_drag_overlay(const DragState& d) {
