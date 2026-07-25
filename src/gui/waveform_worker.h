@@ -144,13 +144,12 @@ private:
 
 // Render the waveform into `dest` from scratch (clears to transparent
 // first, then strokes peaks for both stereo channels — stereo is structural,
-// channels != 2 refuses at load; see file_loader). Free function so both the
-// worker thread and the main thread can reach it (the main thread invokes it
-// indirectly only via the worker; this declaration is here for callers that
-// need to render synchronously outside the worker).
-//
-// Render runs on the worker thread; nothing in this function
-// touches main-thread cairo state.
+// channels != 2 refuses at load; see file_loader). Thread-agnostic: it runs
+// either on the waveform worker thread (the async dispatch) or synchronously on
+// the GUI thread (force_synchronous_waveform_rebuild), touching only the
+// supplied dest surface, the audio handle's peak pyramid (read-only after
+// load), and the caller's warp_frame_map snapshot — no other shared or
+// main-thread state.
 void render_waveform_to_cache_surface(
     cairo_surface_t* dest,
     int area_w,
