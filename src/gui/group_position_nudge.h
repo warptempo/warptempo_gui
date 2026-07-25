@@ -107,39 +107,27 @@ int64_t stepped_anchor_frame(
 // remap_marker_indices_after_reorder, collected touched_live, and done its own
 // typed undo merge/push block (push_undo_warp with affects_persistence=true /
 // push_undo_phase_reset — those stay in the twins). The tail then, in order:
-// (a) stem LATERAL-GESTURE PIN: the position nudge is a lateral gesture, so keep
-//     the FOCUSED item's stem visible after it — stamp the post-reorder focused
-//     index and the current command_seq. The pin persists until the next DAMAGING
-//     command (damage-less commands re-stamp adjacency through
-//     StemPinPreserveGuard) and the dead pin is reaped one-shot in on_tick (the
-//     authoritative scope lives at AppState::stem_pin_*). A burst re-stamps each
-//     press (the immediately-next command), so the stem stays solid across it.
-//     Paint gates the stem to a SINGLETON selection, so for a 2+ selection this
-//     stamp is INERT — the singleton gate never admits it, and any DAMAGING
-//     command that narrows the group to one kills the pin first — except the
-//     accepted deferred-click exception (full edge at AppState::stem_pin_*): a
-//     plain press on an already-selected group member arms a deferred click and
-//     paints nothing, so a damage-less press re-stamps the still-inert pin, and
-//     the completing motionless release (not a command) narrows the selection to
-//     singleton without killing it, admitting the pin when the released marker is
-//     the pinned one. Stamped anyway for uniformity with the singleton path.
-// (b) record_gesture (re-stamps this command for the next coalesce test);
-// (c) recompute_dirty;
-// (d) invalidate_waveform_area;
-// (e) invalidate_timestamp_area;
-// (f) PLAYHEAD FOLLOW: move_playhead_to the focused item's committed frame
+// (a) record_gesture (re-stamps this command for the next coalesce test);
+// (b) recompute_dirty;
+// (c) invalidate_waveform_area — this full-waveform damage also OWNS the
+//     selected-marker stem's move: a nudge shifts the focused SINGLETON's frame,
+//     and its always-on blue stem (the blue-focus pivot, architect 2026-07-25)
+//     repaints at the new column here. A 2+ selection paints no stem (its cue is
+//     the extent-region wash), so nothing to move there;
+// (d) invalidate_timestamp_area;
+// (e) PLAYHEAD FOLLOW: move_playhead_to the focused item's committed frame
 //     through the two-step placement basis (source_frame_to_active_domain —
 //     identity in warp's source home, a real map in phase's target home;
 //     committed_focused_frame is reorder-independent). move_playhead_to owns the
 //     clamp, invalidation, and keep-visible edge-align, writing the cursor field
 //     only (playback was stopped in the prologue).
-// (g) REGION FOLLOW (SelectionExtent only): an active SelectionExtent region
+// (f) REGION FOLLOW (SelectionExtent only): an active SelectionExtent region
 //     re-derives to the moved group's extent — MAINTAIN only, never CREATE; an
 //     inactive / Free / TrimWindow region is untouched (position gestures do not
 //     re-sync TrimWindow). The SelectionExtent provenance survives the nudge (no
 //     membership replace, and the reorder remap does not demote), so the gate is
 //     reliable.
-// (h) target_render.trigger.
+// (g) target_render.trigger.
 //
 // NO SYNCHRONOUS RE-WARP is needed at either home: the warp nudge authors in
 // warp's SOURCE home view, where the source waveform pixels do not depend on the
@@ -148,14 +136,14 @@ int64_t stepped_anchor_frame(
 // target preview still invalidates (a source-view warp edit changes the rendered
 // target buffer), so the view-independent trigger stays.
 //
-// ORDERING: the two twins historically ordered {pin, undo push, playhead}
-// slightly differently (warp: pin -> push -> record -> ... -> playhead -> region;
-// phase: pin -> playhead -> push -> record -> ... -> region). The unified order
-// gives both the WARP shape (push in the twin, then this tail: pin, record,
+// ORDERING: the two twins historically ordered {undo push, playhead}
+// slightly differently (warp: push -> record -> ... -> playhead -> region;
+// phase: playhead -> push -> record -> ... -> region). The unified order
+// gives both the WARP shape (push in the twin, then this tail: record,
 // invalidate, playhead, region). The COMMITTED BYTES are identical for every
-// input: the undo push/record read neither the playhead nor the stem pin (their
+// input: the undo push/record read neither the playhead nor the selection (their
 // snapshots capture the marker stores, engine settings, tab, and the hint indices
-// only — not the cursor), the stem-pin stamp and move_playhead_to do not read undo
+// only — not the cursor), move_playhead_to does not read undo
 // state, and the region follow reads only the post-mutation store/selection. TWO
 // knowingly-accepted deltas ride the unification, both phase-only (the warp twin
 // already had this shape) and both harmless, recorded here so the next reader need

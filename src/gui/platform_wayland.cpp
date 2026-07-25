@@ -942,11 +942,6 @@ void GuiPlatform::paint_one_frame() {
 }
 
 void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
-    // Damage counter (see damage_seq()): bumped unconditionally at the top, so
-    // a during-paint re-entrant append and even a degenerate empty rect still
-    // register as "the program tried to paint". The input dispatch's stem-pin
-    // preserve compares this across a command.
-    ++damage_seq_;
     if (w <= 0 || h <= 0) return;
 
     // Re-entered from inside the on_redraw paint loop (the displayed-map

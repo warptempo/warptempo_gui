@@ -101,15 +101,6 @@ struct UndoEntry {
     SettingsSnapshot          settings;
     char                      op_mode              = 'W';
     char                      tab                  = 'A';
-    // True iff this entry's op was one of the FOUR lateral-gesture classes that
-    // stamp the selected-marker stem pin (position nudge, position-drag commit,
-    // tempo drag, tempo-image step — the authoritative four-class inventory lives
-    // at AppState::stem_pin_*). A SINGLETON undo/redo of a lateral op re-stamps
-    // the stem on the touched marker after its land; non-lateral and group
-    // restores never stamp. Set by the lateral producers through the push_undo_*
-    // `lateral` parameter; the counter-entry COPIES it (undoing/redoing a lateral
-    // op is still that op, direction-symmetric).
-    bool                      lateral              = false;
     // False for an iteration-bracket-only snapshot. Iteration brackets are
     // session state and never serialize, so crossing such an entry must not
     // make recompute_dirty report a warp-file difference.
@@ -1321,104 +1312,21 @@ struct AppState {
     // never serialized.
     uint64_t      command_seq = 0;
 
-    // Selected-marker stem LATERAL-GESTURE PIN (round 4, architect 2026-07-23;
-    // lateral-persistence lifecycle 2026-07-24). The selected singleton's stem
-    // (paint_selected_stem) shows while THAT marker is hovered, dragged, OR moved
-    // by a lateral gesture; the nudge/tempo-end arms have no hover/drag to key on,
-    // so the lateral-gesture commits stamp these — `stem_pin_marker` = the moved
-    // (focused/grabbed) marker's post-commit index, `stem_pin_command_seq` = the
-    // current command_seq. The pin means "the LAST COMMAND was a lateral gesture on
-    // this marker": it is LIVE iff pure command adjacency holds — `command_seq ==
-    // stem_pin_command_seq`. DEATH IS DAMAGE-QUIESCENCE-SCOPED (architect
-    // 2026-07-24): only a command that PAINTED SOMETHING counts as "the next
-    // command" and breaks adjacency. Every visible effect funnels through
-    // GuiPlatform::invalidate_region (a monotonic damage_seq() counter), so a
-    // command that never reaches it changed nothing on screen — a silent refusal
-    // (P-view Alt+Up/Down, a mapped-domain all-or-nothing nudge refusal), a
-    // modal-gate-swallowed key, an unbound key, a wall-saturated zoom-OUT wheel
-    // (WheelUp already at the effective ceiling — zoom_steps returns at
-    // zoom_level >= max_l before any invalidate) —
-    // and the dispatch-exit preserve (StemPinPreserveGuard at on_key/
-    // on_button_press/on_wheel) re-stamps stem_pin_command_seq so adjacency holds
-    // across it. A refused press already never STAMPS; now it also never KILLS.
-    // A rare damage-less REAL action (Ctrl+S save, `l` external-player launch)
-    // preserves too — a PLAYBACK launch is NOT damage-less (scrub/Space damage
-    // the scanner's launch column at press via launch_playback_from) —
-    // accepted/desirable (if nothing changed on screen the stem has no reason to
-    // vanish); consecutive no-ops chain (each re-stamps); command_seq itself is
-    // never touched so undo coalescing is unaffected. A DAMAGING command (a
-    // click that deselects/repaints, a source-view tempo commit) still kills it.
-    // The guard judges only the PRESS command's own damage: damage from
-    // non-command events (a release, motion) never enters the compare. So a
-    // DEFERRED-CLICK press (a plain flag press on an already-selected member of a
-    // 2+ selection — PendingMarkerDrag/PendingTempoDrag::deferred_click) paints
-    // nothing at press time — its single-select collapse + land fires at the
-    // motionless RELEASE, which is not a command — and the guard preserves a live
-    // pin across it. Accepted: benign and self-healing (the next damaging command
-    // kills it, a drag that crosses the threshold re-stamps at its commit anyway,
-    // and where the clicked marker IS the pinned one the stem persisting is right).
-    // No timer and no key-hold probe: the "disappear asap"/held-key model
-    // (a fixed burst timer, then a key-hold chord probe) was architect-REVERTED
-    // 2026-07-24 after labwc use — the stem now becomes visible on any lateral
-    // gesture and STAYS visible until the next DAMAGING command (the
-    // damage-quiescence scope above is authoritative; damage-less commands
-    // re-stamp through the preserve), so walking away leaves it standing
-    // (intended). THE FOUR LATERAL GESTURES that stamp (architect 2026-07-24):
-    // (1) the marker POSITION DRAG's commit (both columns, home views), (2) the
-    // POSITION NUDGE (Alt+Left/Right in each column's home view — warp in
-    // source, phase in target), (3) the TEMPO DRAG's end (W+target by
-    // construction, the dragged marker IS the laterally-moving one), (4) the
-    // TEMPO-IMAGE STEP (Alt+Left/Right in W+target, the drag's keyboard twin —
-    // the FOCUSED marker's image slides one column). A FIFTH stamp site (architect
-    // 2026-07-25) is the SINGLETON undo/redo RESTORE of any of (1)-(4): undo.cpp's
-    // visual tail lands the playhead on the touched marker and, iff
-    // UndoEntry::lateral (which the four producers set and the counter-entry
-    // copies), re-stamps the pin on it after the land — the restore stem then
-    // lives by ordinary command adjacency and the on_tick reaper kills it at the
-    // next damaging command. GROUP restores never stamp (the stem is
-    // singleton-only; the group's cue is the region wash + split half-triangles).
-    // The TEMPO STEP (Alt+Up/Down,
-    // singleton and group) is EXPLICITLY NOT a stamping site: the stepped marker's
-    // OWN image is fixed by construction — its tempo shapes only the segment AFTER
-    // it, so the step slides only DOWNSTREAM images, never the receiving marker's
-    // own (a group step can move the FOCUSED image via an UPSTREAM member, but the
-    // rule is per-ACTION and flat, so the group tail does not stamp either). The
-    // step still bumps command_seq like every command, killing any prior pin by
-    // adjacency. Each stamp re-stamps the current command_seq, so a nudge burst keeps
-    // the stem alive (each press is the immediately-next command). The default
-    // stem_pin_marker = -1 never matches a real (>= 0) selection, so the startup
-    // command_seq == 0 == stem_pin_command_seq coincidence pins nothing. REAPED
-    // one-shot in on_tick: when stem_pin_marker is set and adjacency is lost
-    // (command_seq moved past stem_pin_command_seq), the reaper invalidates the FULL
-    // waveform area and resets stem_pin_marker = -1 so the blue line disappears
-    // without user input. Paint (adjacency-only) stops drawing it too, but not every
-    // killing command damages the waveform (bare `o` invalidates only the bottom
-    // strip), so the reaper — not the killing command — owns the damage. Full-area
-    // damage, NOT a column recompute: the stem painted on the DISPLAYED basis
-    // (wf_cache.fp_*), and a column recomputed on the LIVE basis could miss it
-    // inside a resize/async publish window (do not "optimize" this back to a
-    // single-column damage). The reaper reads no marker index; it needs none.
-    // Session-only, never serialized. Workflow note: the green cursor playhead line
-    // rests at the marker (a plain Esc deselects and lands there), which replaces
-    // the persistent blue line.
-    int           stem_pin_marker      = -1;
-    uint64_t      stem_pin_command_seq = 0;
-
-    // Selected-marker stem visibility model (paint_selected_stem owns the arms).
-    // The blue stem paints for the SINGLETON selection while any of four arms
-    // fire: (a) HOVER — the pointer rests on the selected marker's hit area (the
-    // plain hover arm); (b) position DRAG; (c) TEMPO drag; (d) LATERAL PIN (the
-    // last command was a lateral gesture on the marker). A marker CLICK shows the
-    // stem IMMEDIATELY because the pointer is already inside the hit area, so the
-    // plain hover arm fires — the click sites damage the stem column (via
-    // Viewport::damage_marker_stem_column) so the appearing stem paints without
-    // relying on an adjacent land/selection repaint; hover-OUT hides it (the hover
-    // arm goes false, damaged by the hover recompute), and re-hover re-shows it.
-    // A KEYBOARD-only selection with the pointer never entering the marker shows
-    // no stem — the stem is a pointer/working affordance, and the drag / tempo-drag
-    // / pin arms cover the gesture cases (a non-lateral singleton undo/redo shows
-    // no stem, matching that cross-ruling). The former hover re-arm SUPPRESS latch
-    // is retired: clicking a marker now shows its stem at once.
+    // Selected-marker stem visibility model (blue-focus pivot, architect
+    // 2026-07-25, superseding the conditional-stem apparatus). The blue stem
+    // (paint_selected_stem) is the SINGLETON selection's focus visual and ALWAYS
+    // paints for the one selected marker — no hover, pin, or gesture condition.
+    // The former LATERAL-GESTURE PIN (stem_pin_marker / stem_pin_command_seq, the
+    // five stamp sites, the on_tick reaper, StemPinPreserveGuard, and the damage_seq
+    // counter it consumed) existed only to keep the stem visible after a lateral
+    // gesture without a hover; always-on subsumes that purpose, so the whole
+    // apparatus was harvested. Stem-transition DAMAGE now rides ONE subject-change
+    // owner on Selection (stem_subject / damage_stem_on_subject_change, the
+    // phase-overlay pattern's sibling), wired at the selection mutators: the stem
+    // appears/moves/disappears iff the singleton subject changes, and the gestures
+    // that move a subject marker's FRAME or IMAGE (nudges, drags, re-warps) already
+    // full-damage the waveform. A focused GROUP (2+ selected) shows no stem — its
+    // blue cue is the extent-region wash.
 
     // Active markers view: 'W' = warp markers, 'P' = phase reset markers.
     // Toggled by `p`. Determines which marker collection is visible / edited /
@@ -1512,7 +1420,7 @@ struct AppState {
     // set cull, the run hit rects — see displayed_viewport_basis in this header),
     // the LIVE TRIM pass (GuiPaintHandler::paint_trim — its chips/stems paint on
     // this basis so hit_test_trim_chip / route_trim_chip_press land on the drawn
-    // pixels), AND the hover-stem DAMAGE (invalidate_hover_stem_column, which
+    // pixels), AND the selected-stem DAMAGE (invalidate_stem_column, which
     // erases
     // displayed-basis stem pixels — damage follows the pixels it erases) ride the
     // same basis the flags do. area_w == 0 means cold (nothing promoted
@@ -2024,8 +1932,7 @@ void remap_marker_indices_after_reorder(AppState& app,
 // CLOCK_MONOTONIC milliseconds (steady_clock is CLOCK_MONOTONIC on this
 // platform). The ONE shared wall-clock reader for the press-driven double-click
 // time base (strip-row / marker double-click detection, input_pointer.cpp). Body
-// in app_state.cpp so no TU copies its own clock reader. (The stem pin has no time
-// base at all — it keys purely on command adjacency; see AppState::stem_pin_*.)
+// in app_state.cpp so no TU copies its own clock reader.
 int64_t monotonic_ms();
 
 void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
@@ -2227,8 +2134,8 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // the render.cpp free functions (lane_text_left_x_at_frame, the lane run
 // resolver, marker_hit_at), the app_state.cpp hit tests (hit_test_flag,
 // hit_test_trim_chip), the LIVE TRIM paint pass (GuiPaintHandler::paint_trim —
-// paint and hit share the one basis by construction), AND the hover-stem DAMAGE
-// (Viewport::invalidate_hover_stem_column, which erases displayed-basis stem
+// paint and hit share the one basis by construction), AND the selected-stem DAMAGE
+// (Viewport::invalidate_stem_column, which erases displayed-basis stem
 // pixels — damage follows the basis of the pixels it erases) share ONE basis. It
 // is DELIBERATELY DISTINCT from
 // GuiPaintHandler::displayed_viewport_basis, which reads the LIVE wf_cache.fp_*

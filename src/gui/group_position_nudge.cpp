@@ -57,24 +57,23 @@ void finish_group_position_nudge(
     AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
     GestureKind kind, int64_t committed_focused_frame,
     GuiTargetRender& target_render) {
-    // (a) stem lateral-gesture pin (see the declaration for the full edge).
-    app.stem_pin_marker      = app.last_selected_marker;
-    app.stem_pin_command_seq = app.command_seq;
-    // (b) re-record with the post-mutation selection for the next coalesce test.
+    // (a) re-record with the post-mutation selection for the next coalesce test.
     undo.record_gesture(kind);
-    // (c) dirty flags.
+    // (b) dirty flags.
     undo.recompute_dirty();
-    // (d, e) damage.
+    // (c, d) damage. The full-waveform damage here also owns the selected-marker
+    // stem's move: a nudge shifts the focused SINGLETON's frame, so its always-on
+    // blue stem (the blue-focus pivot) repaints at the new column on this repaint.
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    // (f) playhead follows the FOCUSED item's committed frame.
+    // (e) playhead follows the FOCUSED item's committed frame.
     viewport.move_playhead_to(
         source_frame_to_active_domain(app, audio, committed_focused_frame));
-    // (g) region follow (SelectionExtent only; MAINTAIN, never CREATE).
+    // (f) region follow (SelectionExtent only; MAINTAIN, never CREATE).
     if (app.region.active &&
         app.region.provenance == RegionProvenance::SelectionExtent) {
         set_region_to_selection_extent(app, audio, viewport);
     }
-    // (h) view-independent target preview.
+    // (g) view-independent target preview.
     target_render.trigger();
 }

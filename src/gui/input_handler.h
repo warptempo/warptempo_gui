@@ -227,53 +227,6 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
                                 Viewport& viewport);
 
-// -- StemPinPreserveGuard -----------------------------------------------
-//
-// The lateral-gesture stem pin (AppState::stem_pin_*) dies on the next
-// command by pure command adjacency, but only a command that PAINTED
-// SOMETHING should count as "the next command". Every visible effect funnels
-// through GuiPlatform::invalidate_region, so a command that never reaches it
-// (a silent refusal like P-view Alt+Up/Down, an unbound key, a wall-saturated
-// zoom-OUT wheel — WheelUp already at the effective ceiling returns from
-// zoom_steps before any invalidate) changed nothing on screen and must not
-// break the pin's adjacency. This RAII guard snapshots, at the top of a dispatch entry point
-// (after the command_seq bump), whether the pin was live for THIS command and
-// the platform's damage counter; at every exit — the entry functions have many
-// early returns — it re-stamps stem_pin_command_seq to the current command_seq
-// when the pin was live and no damage occurred, so the on_tick reaper (which is
-// untouched) still sees adjacency intact. (It judges only the PRESS command's
-// own damage: damage from a later release/motion — e.g. a deferred-click's
-// single-select+land at the motionless release — never enters the compare, so
-// such a press is treated as damage-less and preserves the pin; accepted.)
-// A damage-less REAL action (Ctrl+S, `l` — the external audio-player launch)
-// is preserved too, which is accepted/desirable. A PLAYBACK launch (scrub or
-// Space) is NOT in this class: launch_playback_from's success tail damages the
-// scanner's launch column at press, so a launch kills the pin like any damaging
-// command (only its silent "nothing to audition" refusals stay damage-less and
-// preserve it). command_seq itself is
-// never touched, so undo coalescing is unaffected.
-struct StemPinPreserveGuard {
-    AppState&          app;
-    const GuiPlatform& gui;
-    bool               pin_live_before;
-    uint64_t           damage_before;
-
-    StemPinPreserveGuard(AppState& app_, const GuiPlatform& gui_)
-        : app(app_), gui(gui_),
-          pin_live_before(app_.stem_pin_marker >= 0 &&
-                          app_.command_seq == app_.stem_pin_command_seq + 1),
-          damage_before(gui_.damage_seq()) {}
-
-    ~StemPinPreserveGuard() {
-        if (pin_live_before && gui.damage_seq() == damage_before) {
-            app.stem_pin_command_seq = app.command_seq;
-        }
-    }
-
-    StemPinPreserveGuard(const StemPinPreserveGuard&)            = delete;
-    StemPinPreserveGuard& operator=(const StemPinPreserveGuard&) = delete;
-};
-
 // -- GuiInputHandler ----------------------------------------------------
 //
 // The batch render runner lives on this struct as private helper methods

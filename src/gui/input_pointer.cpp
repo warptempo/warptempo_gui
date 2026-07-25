@@ -43,8 +43,7 @@ namespace {
 
 // monotonic_ms() (the press-driven CLOCK_MONOTONIC ms time base for double-click
 // detection) is now the shared reader declared in app_state.h — one owner, no
-// per-TU clock copy. (The stem pin no longer consumes it — it keys purely on
-// command adjacency; see AppState::stem_pin_*.)
+// per-TU clock copy.
 
 // Active-domain playhead frame at click column `col`. SOURCE view: the exact
 // source grid (source_grid_position_at_column via painter q), matching marker
@@ -515,9 +514,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // on release or motion — those are not discrete commands, and a drag is
     // already fenced by the press that began it here.
     ++app.command_seq;
-    // Stem-pin preserve: re-stamp at exit if this press painted nothing (a
-    // swallowed modal press, a no-op click). See StemPinPreserveGuard.
-    StemPinPreserveGuard stem_pin_guard(app, gui);
     // Prompt-modal input handling: while the bottom-strip prompt is
     // active, all mouse events are swallowed. Responses go through
     // the keyboard.
@@ -669,13 +665,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             flag_editor.exit_top_flag_edit_no_commit();
             // Re-resolve hover NOW, before the fall-through arms anything. While
             // the editor was open, hover_popup stayed cleared (recompute is
-            // suppressed by an open editor, and motion kept it clear), so a
-            // fall-through marker click would set_single_selection +
-            // damage_marker_stem_column yet paint NO stem — the hover arm needs
-            // hover_popup to name the marker. Recomputing here reflects the
-            // pointer's true position (a flag press always hovers it), so the
-            // stem paints. Placed before any pending-drag arm on purpose: a
-            // recompute AFTER an arm would hit the drags-suppress-hover rule
+            // suppressed by an open editor, and motion kept it clear), so the
+            // hover-driven POPUP / lane-text surfaces would be stale after a
+            // fall-through marker click. Recomputing here reflects the pointer's
+            // true position so the popup/lane text settle correctly (one of the
+            // 57f7196 hover-settling fixes; the stem no longer keys on hover under
+            // the blue-focus pivot). Placed before any pending-drag arm on purpose:
+            // a recompute AFTER an arm would hit the drags-suppress-hover rule
             // (any_pointer_gesture_active) and clear it again; here no gesture is
             // active yet, so this is a genuine resolve.
             viewport.recompute_hover_at_cursor();
@@ -909,11 +905,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // top-strip press stop already halted playback above.
             if (inside_top && mh.index >= 0) {
                 selection.toggle_selection_membership(mh.index);
-                // Damage the CLICKED marker's stem column so its immediately-
-                // showing hover stem paints (damage_marker_stem_column) — the
-                // pointer rests on mh.index whether the toggle added or removed it,
-                // distinct from the earliest-selected land target below.
-                viewport.damage_marker_stem_column(mh.index);
+                // The selected-marker stem is always-on for a singleton (the
+                // blue-focus pivot); toggle_selection_membership owns its
+                // appear/move/disappear damage via the subject-change owner, so no
+                // explicit stem damage is needed here.
                 if (!app.selected_markers.empty())
                     land_playhead_on_marker(app, audio, viewport,
                                             *app.selected_markers.begin());
@@ -1082,11 +1077,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // launch agree; the anchoring first click ({hit}) leaves <=1
                     // selected and sets no region.
                     selection.select_range_from_anchor(hit);
-                    // Damage the CLICKED marker's stem column so its immediately-
-                    // showing hover stem paints (damage_marker_stem_column) — the
-                    // pointer rests on the range END (hit = focus), which diverges
-                    // from the earliest-member land target.
-                    viewport.damage_marker_stem_column(hit);
+                    // A range leaving exactly one selected shows its always-on stem;
+                    // select_range_from_anchor owns the subject-change damage (a 2+
+                    // range shows the extent-region wash, no stem).
                     if (!app.selected_markers.empty())
                         land_playhead_on_marker(app, audio, viewport,
                                                 *app.selected_markers.begin());
@@ -1177,16 +1170,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // this double-click). Selection is navigation, allowed in
                     // read-only.
                     selection.set_single_selection(hit);
-                    // Damage the clicked marker's stem column so its immediately-
-                    // showing blue hover stem paints (damage_marker_stem_column):
-                    // the pointer rests on the just-clicked marker, so the hover
-                    // arm fires at once. The explicit damage matters HERE most:
-                    // clicking an ALREADY-selected marker makes set_single_selection
-                    // a damage no-op, so without it the only repaint was
-                    // land_playhead_on_marker's same-position column invalidation.
-                    // Covers the double-click-consume path below too (this
-                    // single-select ran first).
-                    viewport.damage_marker_stem_column(hit);
+                    // The clicked marker's always-on blue stem (the blue-focus
+                    // pivot) appears/moves here through set_single_selection's
+                    // subject-change owner — including the click-an-already-selected
+                    // no-op case (same subject, no stem damage needed, the stem is
+                    // already painting there). Covers the double-click-consume path
+                    // below too (this single-select ran first).
                     // ...and LANDS the playhead exactly onto the marker (shared
                     // helper; see land_playhead_on_marker). Runs on EVERY plain
                     // marker click — the double-click-consume path below (the
@@ -1797,20 +1786,19 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
             const int n = static_cast<int>(app.warpmarkers.markers().size());
             if (m >= 0 && m < n) {
                 selection.set_single_selection(m);
-                // Deferred click completes on marker m under the pointer: damage
-                // its stem column so the immediately-showing hover stem paints
-                // (damage_marker_stem_column).
-                viewport.damage_marker_stem_column(m);
+                // Deferred click completes on marker m: set_single_selection owns
+                // the always-on stem's subject-change damage (the blue-focus pivot).
                 land_playhead_on_marker(app, audio, viewport, m);
             }
         }
         // Settle hover to the pointer's ACTUAL position. Sub-threshold motion
         // during the pending drag never recomputed hover, so hover_popup still
         // holds the press-time hit — stale if the pointer slid off the flag rect
-        // (the stem would then paint at a marker no longer hovered). Recompute
-        // when the pointer is still here (a clean release always is); covers the
-        // immediate arm too. (If it had left, the pointer-leave hook already
-        // cleared — but a clean release means it is here, so this is the resolve.)
+        // (the hover POPUP / lane text would then show a marker no longer under the
+        // pointer). Recompute when the pointer is still here (a clean release always
+        // is); covers the immediate arm too. (If it had left, the pointer-leave hook
+        // already cleared — but a clean release means it is here, so this is the
+        // resolve.)
         if (gui.pointer_focused()) viewport.recompute_hover_at_cursor();
         return;
     }
@@ -1857,17 +1845,16 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
                 : static_cast<int>(app.warpmarkers.markers().size());
             if (m >= 0 && m < n) {
                 selection.set_single_selection(m);
-                // Deferred click completes on marker m under the pointer: damage
-                // its stem column so the immediately-showing hover stem paints
-                // (damage_marker_stem_column).
-                viewport.damage_marker_stem_column(m);
+                // Deferred click completes on marker m: set_single_selection owns
+                // the always-on stem's subject-change damage (the blue-focus pivot).
                 land_playhead_on_marker(app, audio, viewport, m);
             }
         }
         // Settle hover to the pointer's ACTUAL position (see the tempo pending's
         // twin above): a sub-threshold slide off the flag left hover_popup stale,
         // so re-resolve while the pointer is still here (a clean release always
-        // is) — the stem then paints iff genuinely hovering, immediate arm too.
+        // is) — the hover popup / lane text then reflect the true pointer position,
+        // immediate arm too.
         if (gui.pointer_focused()) viewport.recompute_hover_at_cursor();
         return;
     }
@@ -2204,19 +2191,19 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 const int n = static_cast<int>(app.warpmarkers.markers().size());
                 if (m >= 0 && m < n) {
                     selection.set_single_selection(m);
-                    // Deferred click completes on marker m under the pointer:
-                    // damage its stem column so the immediately-showing hover stem
-                    // paints (damage_marker_stem_column).
-                    viewport.damage_marker_stem_column(m);
+                    // Deferred click completes on marker m: set_single_selection
+                    // owns the always-on stem's subject-change damage (blue-focus
+                    // pivot).
                     land_playhead_on_marker(app, audio, viewport, m);
                 }
             }
             // Settle hover to the pointer's ACTUAL state instead of the old
-            // unconditional clear (which erased a legitimately-hovering stem):
+            // unconditional clear (which erased a legitimately-hovering popup):
             // if the pointer is still here, re-resolve — a slid-off pointer drops
-            // the stem, a still-hovering one keeps it; if focus is gone (the usual
-            // lost-button cause), the pointer-leave hook already cleared, so this
-            // is a no-op. Same observable end state as the clean release above.
+            // the popup/lane text, a still-hovering one keeps it; if focus is gone
+            // (the usual lost-button cause), the pointer-leave hook already cleared,
+            // so this is a no-op. Same observable end state as the clean release
+            // above.
             if (gui.pointer_focused()) viewport.recompute_hover_at_cursor();
             return;
         }
@@ -2263,10 +2250,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                     : static_cast<int>(app.warpmarkers.markers().size());
                 if (m >= 0 && m < n) {
                     selection.set_single_selection(m);
-                    // Deferred click completes on marker m under the pointer:
-                    // damage its stem column so the immediately-showing hover stem
-                    // paints (damage_marker_stem_column).
-                    viewport.damage_marker_stem_column(m);
+                    // Deferred click completes on marker m: set_single_selection
+                    // owns the always-on stem's subject-change damage (blue-focus
+                    // pivot).
                     land_playhead_on_marker(app, audio, viewport, m);
                 }
             }
@@ -2274,7 +2260,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // above): re-resolve while the pointer is here, else the pointer-leave
             // hook owns the clear. Replaces the old unconditional clear that broke
             // its own "matches the clean release" promise by erasing a hovering
-            // stem. Same observable end state as the clean release.
+            // popup. Same observable end state as the clean release.
             if (gui.pointer_focused()) viewport.recompute_hover_at_cursor();
             return;
         }

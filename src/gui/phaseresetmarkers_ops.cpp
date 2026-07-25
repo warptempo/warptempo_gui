@@ -313,17 +313,16 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         undo.note_coalesced_commit();
         undo.refresh_coalesced_touched_live(std::move(touched_live));
     } else {
-        // LATERAL: the phase-reset POSITION NUDGE — a singleton undo/redo
-        // re-stamps the stem, matching finish_group_position_nudge's live stamp.
+        // The phase-reset POSITION NUDGE. A singleton restore's always-on blue stem
+        // follows from the selection (the blue-focus pivot — no lateral bit).
         undo.push_undo_phase_reset(std::move(pre_state),
                                    std::move(touched_snapshot),
-                                   std::move(touched_live),
-                                   /*lateral=*/true);
+                                   std::move(touched_live));
     }
-    // Shared commit tail: stem lateral-gesture pin, record/dirty/invalidate,
-    // playhead follow (committed_f is reorder-independent; the target home maps),
-    // SelectionExtent region follow, and the view-independent target trigger.
-    // Ordering rationale at the declaration.
+    // Shared commit tail: record/dirty/invalidate (its full-waveform damage moves
+    // the focused singleton's always-on stem), playhead follow (committed_f is
+    // reorder-independent; the target home maps), SelectionExtent region follow, and
+    // the view-independent target trigger. Ordering rationale at the declaration.
     finish_group_position_nudge(app, audio, viewport, undo,
                                 GestureKind::PhaseResetNudge, committed_f,
                                 target_render);

@@ -210,7 +210,7 @@ int painted_column_of_source_frame(
     // LIVE on-screen grid by ruling, and live-painted DAMAGE (playhead columns)
     // stays live too. The boundary is damage-follows-the-pixels: damage rides the
     // basis of the pixels it erases, so the marker-text lane geometry AND the
-    // hover-stem invalidator (invalidate_hover_stem_column) instead ride the
+    // selected-stem invalidator (invalidate_stem_column) instead ride the
     // DISPLAYED basis via _on_basis — the run text and the selected-marker stem
     // paint on the displayed item basis, so their narrow damage must too.
     return painted_column_of_source_frame_on_basis(

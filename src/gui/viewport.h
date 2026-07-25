@@ -212,33 +212,19 @@ struct Viewport {
     void invalidate_waveform_area();
     void invalidate_timestamp_area();
     void invalidate_playhead_columns(double old_px, double new_px);
-    // Hover-transition stem damage: the SELECTED-marker stem (paint_selected_stem)
-    // is a live WAVEFORM overlay whose hover arm appears/disappears as the pointer
-    // enters/leaves a marker's flag, but a hover change only damages the top strip
-    // / timestamp. Damage the given active-column marker's stem column (waveform
-    // height) so a hover moving between markers, or on/off one, repaints it. Since
-    // round 4 the stem shows only for the SELECTED singleton when hovered, so this
-    // over-damages the non-selected markers' columns — harmless (a bounded blit),
-    // and it keeps the appear/disappear on the SELECTED marker's flag covered.
-    // (The drag and nudge arms are covered by their own full-waveform damage.)
-    // No-op when idx < 0 or the column is offscreen.
-    void invalidate_hover_stem_column(int idx, int64_t source_frame);
+    // Low-level SELECTED-marker stem column damage (blue-focus pivot, architect
+    // 2026-07-25): damage the stem column at the given SOURCE FRAME on the DISPLAYED
+    // item basis (waveform height, +AA slack). The stem (paint_selected_stem) paints
+    // against the promoted item mirror (displayed_viewport_basis), not the live
+    // viewport, so this erases the COMMITTED DISPLAYED stem pixels — correct
+    // regardless of whether live and displayed currently coincide (damage follows
+    // the pixels). The SOLE caller is Selection::damage_stem_on_subject_change (the
+    // subject-change owner), which passes the old and new singleton-subject frames;
+    // the former hover-driven and click-site callers died with the conditional-stem
+    // apparatus. No-op when the column is offscreen.
+    void invalidate_stem_column(int64_t source_frame);
     void invalidate_top_strip();
     void invalidate_all();
-
-    // Damage active-column marker `idx`'s stem column, so a marker CLICK's
-    // immediately-appearing hover stem renders without relying on an adjacent
-    // land/selection repaint. The click paths call this because clicking an
-    // ALREADY-selected marker makes set_single_selection a damage no-op, and only
-    // land_playhead_on_marker's same-position column invalidation would otherwise
-    // repaint — a fragile coupling a "skip the no-op land" cleanup would orphan.
-    // The damage rides the SAME invalidator the hover recompute uses for this stem
-    // (invalidate_hover_stem_column), which erases the COMMITTED DISPLAYED stem
-    // pixels — correct whether or not the live and displayed viewports currently
-    // coincide (a click can dispatch inside an async publish window, live already
-    // advanced, so no live==displayed assumption is made). (The former re-arm
-    // suppress latch this once set is retired; only the damage half survives.)
-    void damage_marker_stem_column(int idx);
 
     // Reset the hover popup state. If the popup was visible, invalidate
     // the readout area so the next paint erases it. Safe to call from any

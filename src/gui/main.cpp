@@ -981,39 +981,6 @@ int main(int argc, char** argv) {
         // flags snap together with the just-blitted waveform.
         paint_handler.maybe_rebuild_flag_cache();
 
-        // Lateral-gesture stem-pin reap (architect 2026-07-24). The blue stem pin
-        // means "the LAST COMMAND was a lateral gesture on this marker". FOUR
-        // lateral gesture CLASSES at FIVE assignment sites (mirroring the
-        // authoritative list at AppState::stem_pin_*, which counts classes): the
-        // position nudge (its own warp and phase-reset implementations —
-        // warpmarkers_ops.cpp / phaseresetmarkers_ops.cpp — are TWO sites), the
-        // position-drag commit, the tempo-drag end, and the tempo-image step
-        // (Alt+Left/Right in W+target). The Alt+Up/Down tempo step
-        // stamps NOWHERE (its stepped marker's own image is fixed by construction).
-        // Command
-        // adjacency is the test (command_seq ==
-        // stem_pin_command_seq), but death is DAMAGE-QUIESCENCE-SCOPED: the
-        // dispatch-exit preserve (StemPinPreserveGuard) re-stamps
-        // stem_pin_command_seq across a command that painted nothing, so the pin
-        // survives every damage-less command and the reaper fires only after a
-        // DAMAGING non-lateral command has moved command_seq past the stamp
-        // (see AppState::stem_pin_* for the full scope). This reaper owns the
-        // cleanup because paint (adjacency-only) stops drawing the pin the
-        // instant command_seq moves, but the killing command may damage no
-        // waveform (bare `o` invalidates only the bottom strip), so the stem
-        // would otherwise ghost.
-        // Full-area damage (not a column): the stem painted on the DISPLAYED basis
-        // (wf_cache.fp_*), and a column recomputed on the LIVE basis
-        // (app.viewport_start_sample + current spp) can miss it inside a resize/
-        // async publish window. The reap is one-shot (stem_pin_marker = -1) and
-        // rare, so one full repaint is negligible and harmless when the killing
-        // command already damaged the waveform (a redundant damage-union).
-        if (app.stem_pin_marker >= 0 &&
-            app.command_seq != app.stem_pin_command_seq) {
-            viewport.invalidate_waveform_area();
-            app.stem_pin_marker = -1;
-        }
-
         // Stationary-cursor hover refresh (the BACKSTOP). A keyboard mutation
         // (tempo step, Ctrl+N, nudge) changes the hovered marker's fields/position
         // without a pointer-motion event, so nothing else re-reads the hover text.

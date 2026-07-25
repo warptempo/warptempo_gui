@@ -704,19 +704,18 @@ void MarkerDragOps::commit_drag() {
         std::move(app.drag.pre_drag_phase_reset_snapshot);
     app.drag = DragState{};
     if (net_changed) {
-        // LATERAL: the position-DRAG commit (both columns) — a singleton
-        // undo/redo re-stamps the stem, matching commit_drag's live stamp below.
+        // The position-DRAG commit (both columns). A singleton restore's always-on
+        // blue stem follows from the selection (the blue-focus pivot — no lateral
+        // bit).
         if (phase_reset) {
             undo.push_undo_phase_reset(std::move(snap_t),
                                        std::move(touched_snapshot),
-                                       std::move(touched_live),
-                                       /*lateral=*/true);
+                                       std::move(touched_live));
         } else {
             undo.push_undo_warp(std::move(snap_w),
                                 /*affects_persistence=*/true,
                                 std::move(touched_snapshot),
-                                std::move(touched_live),
-                                /*lateral=*/true);
+                                std::move(touched_live));
         }
         undo.recompute_dirty();
         viewport.invalidate_timestamp_area();
@@ -740,20 +739,11 @@ void MarkerDragOps::commit_drag() {
         viewport.move_playhead_to(
             source_frame_to_active_domain(app, audio, ridden_final_frame));
     }
-    // Stem LATERAL-GESTURE PIN: the position drag is a lateral gesture, so keep
-    // the grabbed marker's stem visible after release. Stamp the POST-REORDER
-    // grabbed (focused) index — app.last_selected_marker, which the remap above
-    // rewrote to the grabbed marker's new slot (begin_drag focused the grabbed
-    // marker) — and the current command_seq; pure command adjacency, reaped
-    // one-shot in on_tick (see AppState::stem_pin_*). Unconditional (outside the
-    // net_changed guard): a wander-back drag is still a lateral gesture, and the
-    // land above already parked the playhead on the grabbed marker. Paint gates it
-    // to a SINGLETON selection, so a group drag's stamp is INERT (same as the
-    // nudges). The Esc-cancel path (cancel_drag) does NOT reach here, so a
-    // cancelled gesture leaves no pin — and Esc, a command, kills any prior pin by
-    // adjacency anyway.
-    app.stem_pin_marker      = app.last_selected_marker;
-    app.stem_pin_command_seq = app.command_seq;
+    // The selected-marker stem's move at commit is owned by the full-waveform
+    // invalidate_waveform_area above (a position drag of a SINGLETON selection
+    // shifts its frame, so its always-on blue stem — the blue-focus pivot — repaints
+    // at the committed column). A group drag paints no stem (its cue is the extent
+    // region wash), so nothing to move there.
     // Region re-derive (GROUP drag only — a single-marker drag never has an
     // active region here, its press cleared it). apply_drag_motion live-tracked
     // the region to the moving group during motion; snap it back to the RESTING
@@ -1421,14 +1411,13 @@ void MarkerDragOps::end_tempo_drag() {
         std::move(app.tempo_drag.pre_drag_snapshot);
     app.tempo_drag = TempoDragState{};
     if (net_changed) {
-        // LATERAL: the TEMPO DRAG end — a singleton undo/redo re-stamps the stem
-        // on the TOUCHED (predecessor) marker, matching end_tempo_drag's live
-        // stamp on the grabbed marker (the touched row is the cents receiver;
-        // ruled reading at the restore tail). No touched hints (diff matcher).
+        // The TEMPO DRAG end. A singleton restore's always-on blue stem follows
+        // from the selection (the blue-focus pivot — no lateral bit); the restored
+        // selection is the TOUCHED (predecessor) row, whose image the re-warp
+        // repaints. No touched hints (diff matcher).
         undo.push_undo_warp(std::move(pre_state),
                             /*affects_persistence=*/true,
-                            /*touched_snapshot=*/{}, /*touched_live=*/{},
-                            /*lateral=*/true);
+                            /*touched_snapshot=*/{}, /*touched_live=*/{});
         undo.recompute_dirty();
         // The dirty dot and readouts live in the bottom strip; the flag/lane
         // surfaces already repainted with the last step's sync render.
@@ -1443,27 +1432,14 @@ void MarkerDragOps::end_tempo_drag() {
         viewport.move_playhead_to(
             source_frame_to_active_domain(app, audio, mv[mi].time_frame));
     }
-    // Stem LATERAL-GESTURE PIN: the tempo drag is a lateral gesture (the dragged
-    // marker's IMAGE moved under the re-warped map, W+target by construction), so
-    // keep its stem visible after release. Stamp the DRAGGED (grabbed) index and
-    // the current command_seq; pure command adjacency, reaped one-shot in on_tick
-    // (see AppState::stem_pin_*). Unconditional (net change or not) — a walled /
-    // zero-commit drag is still a lateral gesture — and the tempo drag never
-    // reorders (placement fixed), so `mi` stays a valid store index. Esc-cancel
-    // (cancel_tempo_drag) does NOT reach here, so a cancelled gesture leaves no
-    // pin; Esc kills any prior pin by adjacency anyway.
-    app.stem_pin_marker      = mi;
-    app.stem_pin_command_seq = app.command_seq;
-    // Damage the waveform so the newly-pinned stem's APPEAR renders on its own. A
-    // net-changed drag already damaged it via the last per-cent-step
-    // kick_waveform_sync, but a WALLED / zero-commit drag ran NO sync render, so
-    // its only repaint was move_playhead_to's same-position column invalidation
-    // above — the fragile coupling a "skip the no-op land" cleanup would orphan.
-    // Full-area (not a column) mirrors the pin REAPER's precedent: the stem paints
-    // on the DISPLAYED basis, and a live-basis column can miss it inside an async
-    // publish window, so the reaper damages the whole area and so does the stamp —
-    // once per gesture, negligible, and a redundant union when a sync already ran.
-    viewport.invalidate_waveform_area();
+    // No stem damage at release: the dragged marker IS the singleton selection, so
+    // its always-on blue stem (the blue-focus pivot) painted throughout the drag
+    // and stays painted after it — release moves nothing (tempo_drag.active going
+    // false changes no stem input). A net-changed drag already repainted the stem's
+    // moving image via each per-cent-step kick_waveform_sync; a walled / zero-commit
+    // drag changed nothing at all. (The former lateral-gesture pin stamp + its
+    // appear-damage lived only to survive tempo_drag.active going false without a
+    // hover — subsumed by always-on.)
 }
 
 // Esc / Ctrl+Q cancel: restore the GRAB tempo (one store write + one
@@ -1558,10 +1534,10 @@ void MarkerDragOps::cancel_tempo_drag() {
 // nothing else; touched hints = the participant rows, touched_snapshot ==
 // touched_live — tempo only, no reorder ever), capture-before-kick region
 // decision, ONE synchronous re-warp, post-kick playhead re-land on the FOCUSED
-// marker's image, per-press preview trigger, and the STEM PIN STAMP — this IS
-// a lateral action (the receiving marker's image moves), unlike the
-// Alt+Up/Down tempo step whose stepped marker's own image is fixed by
-// construction.
+// marker's image, and a per-press preview trigger. The FOCUSED marker's image
+// moves here (unlike the Alt+Up/Down tempo step, whose stepped marker's own
+// image is fixed by construction), so its always-on blue stem (the blue-focus
+// pivot) rides the re-warp's full-waveform damage to its new column.
 void MarkerDragOps::step_tempo_image(int direction) {
     // Guards (silent refusals, navigation-class). The dispatch site already
     // routes only W+target here; the view test is kept defensive, the shape of
@@ -1691,17 +1667,14 @@ void MarkerDragOps::step_tempo_image(int direction) {
         if (!p) continue;
         p->tempo_cents = p->tempo_cents + d;
     }
-    // LATERAL: the TEMPO-IMAGE STEP. The entry's touched hints are
-    // seed.participants (the PREDECESSOR / cents receiver), so a singleton
-    // undo/redo selects, lands, and re-stamps the stem on the PREDECESSOR — NOT
-    // the focused/grabbed marker the live step stamps here. Deliberate (the ruled
-    // reading at undo.cpp's restore tail: the undo visual follows the TOUCHED row,
-    // which is the selection); do not "fix" it back toward the focused marker.
+    // The TEMPO-IMAGE STEP. The entry's touched hints are seed.participants (the
+    // PREDECESSOR / cents receiver), so a singleton restore selects and lands on
+    // the PREDECESSOR, its always-on blue stem following from the selection (the
+    // blue-focus pivot — no lateral bit; the undo visual follows the TOUCHED row).
     if (merge) undo.note_coalesced_commit();
     else       undo.push_undo_warp(std::move(pre_state),
                                    /*affects_persistence=*/true,
-                                   touched, touched,
-                                   /*lateral=*/true);
+                                   touched, touched);
     undo.record_gesture(GestureKind::TempoImageStep);
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
@@ -1726,12 +1699,10 @@ void MarkerDragOps::step_tempo_image(int direction) {
         source_frame_to_active_domain(app, audio, mv[f].time_frame));
     if (follow_extent)      set_region_to_selection_extent(app, audio, viewport);
     else if (trim_resync)   sync_region_to_trim_window(app, audio, viewport);
-    // Stem LATERAL-GESTURE PIN: the image step is a lateral gesture — the
-    // FOCUSED marker's image slid (one column where the grid allowed, else the
-    // minimum directional cent's travel) — so stamp exactly as the position
-    // nudge does (post-commit index + command_seq; no reorder, so f is stable).
-    // Lifecycle at AppState::stem_pin_*; a burst re-stamps each press.
-    app.stem_pin_marker      = f;
-    app.stem_pin_command_seq = app.command_seq;
+    // The focused marker's always-on blue stem (the blue-focus pivot) rides the
+    // FOCUSED image's slide on the kick_waveform_sync full-waveform re-warp above —
+    // its source frame never moved (tempo only), but the re-warp repaints its
+    // moved image column. No pin stamp is needed; the singleton stays selected, so
+    // the stem was and remains painting.
     target_render.trigger();
 }

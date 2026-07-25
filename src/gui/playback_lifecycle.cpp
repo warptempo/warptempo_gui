@@ -295,29 +295,22 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // the scanner line appearing at the launch column and the timestamp readout
     // advancing — otherwise waits for the next tick-driven paint opportunity
     // (the tick heartbeat invalidates the scanner's current column even when the
-    // integer predictor has not yet advanced), leaving the PRESS itself
-    // damage-less; that let StemPinPreserveGuard treat a scrub/Space launch as a
-    // damage-less command and re-stamp the lateral-gesture stem pin, so the
-    // pinned stem survived the whole audition (dying only at the Space stop's
-    // teardown damage). Damaging at press makes the launch an honest DAMAGING
-    // command, so the guard leaves the pin's adjacency alone and the on_tick
-    // reaper clears it at the press.
+    // integer predictor has not yet advanced), leaving the PRESS itself damage-less
+    // for a whole frame. Damaging at press paints the scanner one frame earlier
+    // than the tick heartbeat would — honest damage at the press that caused it.
     //
-    // FULL waveform-area damage, NOT a narrow launch-column recompute — the
-    // lesson-25 shape the stem-pin reaper already uses ("for a rare cleanup,
-    // full-area damage beats a clever narrow recompute"). A playback launch is a
-    // rare, DISCRETE command, and the scanner PAINTS against the plate owner
-    // (wf_cache.fp_*), which any narrow-damage basis reachable from here can
-    // transiently DIVERGE from: during an async publish window (plate old, live
-    // viewport new) and — after a resize — the item-only promote (the tick
+    // FULL waveform-area damage, NOT a narrow launch-column recompute (the
+    // "for a rare cleanup, full-area damage beats a clever narrow recompute" shape).
+    // A playback launch is a rare, DISCRETE command, and the scanner PAINTS against
+    // the plate owner (wf_cache.fp_*), which any narrow-damage basis reachable from
+    // here can transiently DIVERGE from: during an async publish window (plate old,
+    // live viewport new) and — after a resize — the item-only promote (the tick
     // rebuilds the flag item mirror against the new live width while the
     // scanner keeps painting the old plate until the still-in-flight worker
     // publishes), where a narrow item-basis column would miss the plate-basis
     // scanner and the line would stay invisible until the publish. Full-area
     // damage is ownership-window-proof by construction, at one full repaint per
-    // launch keystroke — bounded for a rare command. The REFUSAL paths never
-    // reach here — a silent "nothing to audition" no-op stays damage-less and
-    // preserves the pin by design, like every silent refusal. The
+    // launch keystroke — bounded for a rare command. The
     // kill-and-revive scrub over a live session already damaged via the stop
     // half; this revive-half damage is a harmless union with it.
     viewport.invalidate_waveform_area();

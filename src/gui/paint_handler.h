@@ -413,7 +413,7 @@ private:
     // The displayed-viewport paint basis: vp_start and samples-per-pixel LOCKED
     // to the blitted plate (wf_cache.fp_*) while the worker rebuilds against a
     // viewport change, so every live overlay (region wash, phase-reset overlay,
-    // selected stem, focus triangles, strip-drag anchor, playheads) stays
+    // selected stem, strip-drag anchor, playheads) stays
     // registered with the cached pixels instead of the not-yet-painted live
     // viewport. spp falls back to the LIVE current_samples_per_pixel when no
     // plate has published a span yet (fp_area_w <= 0, cold before the first
@@ -458,32 +458,20 @@ private:
     // repaint the live chips/bridge/strip stems too; the outer Cairo damage
     // clip bounds the actual work. See the definition for the basis contract.
     void paint_trim(cairo_t* cr, const GuiRect& area, const GuiRect& top_strip);
-    // Selected-marker stem (round 4, architect 2026-07-23): a per-frame live
-    // overlay marking the SINGLE selected marker's column — where the playhead
-    // sits/would land on it — shown only during interaction with it: while it is
-    // HOVERED, while a live position DRAG grabs it (at the proposed position),
-    // while a live TEMPO DRAG grabs it (the image slides under the re-warped map),
-    // or while a LATERAL GESTURE on it has had no DAMAGING command intervene since
-    // (the pin — pure command adjacency, damage-less commands re-stamp through the
-    // preserve; the key-hold/timer model reverted 2026-07-24; see
-    // AppState::stem_pin_*).
-    // Painted BLUE
+    // Selected-marker stem (blue-focus pivot, architect 2026-07-25): a per-frame
+    // live overlay marking the SINGLE selected marker's column — where the playhead
+    // sits/would land on it — ALWAYS painted for a singleton selection. It is the
+    // singleton's focus visual: hover-, pin-, and gesture-INDEPENDENT (the whole
+    // conditional-stem apparatus was harvested with this pivot), so a keyboard-only
+    // selection shows it and it persists through scrubs/auditions. The ONE
+    // non-selection input is a live position DRAG, which overrides the store frame
+    // with the proposed position so the stem tracks the flag. Painted BLUE
     // (kSelected — it marks the selected marker like its flag) through
     // render_playhead's line-only form over the plate; a live overlay, so
-    // interaction never rebuilds a cache. (The grey focus triangle paints ON each
-    // selected marker, not at the playhead — see paint_selected_marker_triangles.)
+    // selection changes never rebuild a cache. A focused GROUP (2+ selected) shows
+    // no stem — its blue focus cue is the extent-region wash (kSelectedLight), the
+    // stem's "spread" form.
     void paint_selected_stem(cairo_t* cr, const GuiRect& area);
-    // Selected-marker focus triangles (architect 2026-07-23): the GREY
-    // (kPlayheadCursorFocusGrey), triangle-only, stemless playhead mask painted
-    // ON each selected marker of the active column — a live overlay ABOVE the
-    // flag blit, so the grey triangle sits over the marker's own fused triangle.
-    // Retires the R6 grey-triangle-at-the-cursor form: the focus cue now attaches
-    // to the selected markers, not the resting playhead. Gated on a NON-EMPTY
-    // selection; painted per member (stale index skip), tracking the LIVE
-    // proposed positions of every dragged member during a marker drag. Region
-    // active does NOT suppress it (a multimarker select shows wash + grey
-    // triangles). Same displayed-paint basis as paint_selected_stem.
-    void paint_selected_marker_triangles(cairo_t* cr, const GuiRect& area);
     void paint_playheads(cairo_t* cr, const GuiRect& area);
     void paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr, int sr);

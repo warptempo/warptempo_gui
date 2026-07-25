@@ -57,11 +57,6 @@ public:
     void run();
     void request_exit();
     void invalidate_region(int x, int y, int w, int h);
-    // Monotonic count of invalidate_region calls (every visible effect funnels
-    // through that one damage primitive). Read by the input dispatch's stem-pin
-    // preserve guard to tell a command that PAINTED SOMETHING from one that did
-    // not; see the stem-pin preserve in on_key/on_button_press/on_wheel.
-    uint64_t damage_seq() const { return damage_seq_; }
     void drain_events();
     void paint_now();
 
@@ -221,15 +216,6 @@ private:
     // held rects after the loop, so the damage lands on the next frame.
     bool in_redraw_ = false;
     std::vector<DamageRect> deferred_damage_;
-
-    // Monotonic damage counter, bumped at the top of every invalidate_region
-    // call (a during-paint re-entrant deferred append is still damage). The
-    // input dispatch snapshots it around a command to detect one that painted
-    // nothing (a silent refusal, an unbound key, a wall-saturated zoom-OUT wheel
-    // already at the effective ceiling — sub-detent input never leaves the
-    // platform accumulator, only completed detents reach on_wheel) and preserve
-    // the lateral-gesture stem pin across it. See damage_seq().
-    uint64_t damage_seq_ = 0;
 
     // The bound single wl_output's latest CURRENT mode, in millihertz.
     // Replaced on mode changes and cleared on output removal. Zero means no

@@ -77,21 +77,14 @@ struct Undo {
     void recompute_dirty();
     // touched_snapshot / touched_live are the reposition drag's identity hints
     // (UndoEntry): defaulted empty for every other caller, which then uses the
-    // diff-based touched-set reconstruction in the post-restore rules. `lateral`
-    // marks the entry as one of the four lateral-gesture classes (position nudge,
-    // position-drag commit, tempo drag, tempo-image step — the stem-pin stamp set;
-    // see AppState::stem_pin_*), so a singleton restore re-stamps the stem; set
-    // true only by those four producers. push_undo_both / push_settings_undo are
-    // never lateral.
+    // diff-based touched-set reconstruction in the post-restore rules.
     void push_undo_warp(std::vector<GuiWarpMarker> pre_state,
                         bool affects_persistence = true,
                         std::vector<int> touched_snapshot = {},
-                        std::vector<int> touched_live = {},
-                        bool lateral = false);
+                        std::vector<int> touched_live = {});
     void push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
                              std::vector<int> touched_snapshot = {},
-                             std::vector<int> touched_live = {},
-                             bool lateral = false);
+                             std::vector<int> touched_live = {});
     // tab_override attributes entries pushed on behalf of a tab the caller is
     // about to switch to. The entry belongs to the edit's semantic tab, not
     // the incidental tab the cursor is in when history is pushed.

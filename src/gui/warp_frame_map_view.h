@@ -227,8 +227,8 @@ int painted_column_of_source_frame(
 // painters' math, but the viewport (`vp_start`) and samples-per-pixel (`spp`)
 // come from the CALLER instead of the live viewport / painter_samples_per_pixel.
 // painted_column_of_source_frame delegates here with the LIVE basis; the
-// marker-text lane geometry AND the hover-stem invalidator
-// (Viewport::invalidate_hover_stem_column) pass the DISPLAYED basis
+// marker-text lane geometry AND the selected-stem invalidator
+// (Viewport::invalidate_stem_column) pass the DISPLAYED basis
 // (displayed_viewport_basis in app_state.h) — damage follows the pixels it
 // erases, so both the run centering and the stem damage land on the column the
 // flag / stem pixels were painted at even mid-publish, when the live viewport

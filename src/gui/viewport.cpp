@@ -88,8 +88,7 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
     }
 }
 
-void Viewport::invalidate_hover_stem_column(int idx, int64_t source_frame) {
-    if (idx < 0) return;
+void Viewport::invalidate_stem_column(int64_t source_frame) {
     if (audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
     if (area.w <= 0) return;
@@ -101,11 +100,8 @@ void Viewport::invalidate_hover_stem_column(int idx, int64_t source_frame) {
     // whether live and displayed currently coincide. It matters during an async
     // publish window, where the live viewport already holds the NEW span while the
     // stem still paints at the OLD displayed column — a live-basis column would
-    // then miss the stem entirely (the mixed-basis hazard the pin stamp went
-    // full-area to avoid); at a fully settled rest with no publish pending the two
-    // bases happen to coincide, but nothing here relies on that. Both consumers
-    // inherit this: damage_marker_stem_column's click-appear damage and the hover
-    // recompute's appear/disappear transitions (old + new columns).
+    // then miss the stem entirely; at a fully settled rest with no publish pending
+    // the two bases happen to coincide, but nothing here relies on that.
     const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
     const int col = painted_column_of_source_frame_on_basis(
         app, audio, static_cast<double>(source_frame),
@@ -120,38 +116,6 @@ void Viewport::invalidate_hover_stem_column(int idx, int64_t source_frame) {
     if (x1 > area.x + area.w)     x1 = area.x + area.w;
     if (x1 <= x0) return;
     gui.invalidate_region(x0, area.y, x1 - x0, area.h);
-}
-
-void Viewport::damage_marker_stem_column(int idx) {
-    // Explicit stem-column damage so the marker CLICK's immediately-appearing
-    // hover stem renders without relying on an adjacent land/selection repaint
-    // (see the declaration). Frame from the active column's store — the index is
-    // per-column — and only damage when idx resolves there.
-    // ACCEPTED TRANSIENT: this narrow damage rides the DISPLAYED item-mirror
-    // basis (invalidate_hover_stem_column), which can momentarily diverge from
-    // the plate basis inside a RESIZE window — an item-only rebuild promotes the
-    // new width while a slow worker plate render is still in flight — so the
-    // click's stem can transiently miss its column until the publish's full-area
-    // damage catches up. Accepted: it self-heals at that publish, and clicks are
-    // common enough that keeping the narrow displayed-basis damage (over a
-    // full-area repaint per click) is the right trade — unlike the rare playback
-    // launch, which went full-area for the same divergence.
-    int64_t frame = 0;
-    bool    have  = false;
-    if (app.active_markers_view == 'P') {
-        const auto& pv = app.phaseresetmarkers.markers();
-        if (idx >= 0 && idx < static_cast<int>(pv.size())) {
-            frame = pv[idx].time_frame;
-            have  = true;
-        }
-    } else {
-        const auto& mv = app.warpmarkers.markers();
-        if (idx >= 0 && idx < static_cast<int>(mv.size())) {
-            frame = mv[idx].time_frame;
-            have  = true;
-        }
-    }
-    if (have) invalidate_hover_stem_column(idx, frame);
 }
 
 // move_playhead_to: update playhead, keep viewport so playhead stays
@@ -628,18 +592,14 @@ void Viewport::follow_scroll_if_needed() {
 // readout) so the next paint erases whichever was up. Safe to call from any path.
 void Viewport::clear_hover_popup() {
     const bool was_visible = app.hover_popup.any_visible();
-    // Erase the selected-marker stem's HOVER arm (a live WAVEFORM overlay) when a
-    // hovered marker is being cleared — the top-strip damage below does not reach
-    // it. Captured before the reset; a no-op when nothing was hovered / offscreen
-    // (or the cleared marker was not the selected one — a harmless over-damage).
-    const int     old_hover_idx   = app.hover_popup.marker_index;
-    const int64_t old_hover_frame = app.hover_popup.source_frame;
     app.hover_popup = HoverPopupState{};
     if (was_visible) {
         invalidate_top_strip();
         invalidate_timestamp_area();
     }
-    invalidate_hover_stem_column(old_hover_idx, old_hover_frame);
+    // No stem damage here: the selected-marker stem is always-on for the singleton
+    // selection (the blue-focus pivot), so hover no longer drives it. The stem's
+    // appear/move/disappear rides the subject-change owner on Selection instead.
 }
 
 // Re-evaluate hover at the cursor's last on_motion coordinates. The single
@@ -735,11 +695,6 @@ void Viewport::recompute_hover_at_cursor() {
         mh.on_flag == app.hover_popup.on_flag && !cache_invalidated) return;
 
     const bool was_visible = app.hover_popup.any_visible();
-    // Selected-stem hover-transition damage inputs: the OLD hovered marker (whose
-    // column may lose the stem's hover arm) captured before apply_hit overwrites
-    // the cache. The NEW column is damaged after settling below.
-    const int     old_hover_idx   = app.hover_popup.marker_index;
-    const int64_t old_hover_frame = app.hover_popup.source_frame;
 
     // Recompose both surfaces from a hit index INTO the live hover cache.
     // current_marker_lane_runs' fallback hover tier serves exactly this cached
@@ -838,13 +793,7 @@ void Viewport::recompute_hover_at_cursor() {
         invalidate_top_strip();
         invalidate_timestamp_area();
     }
-    // The selected-marker stem's HOVER arm lives in the WAVEFORM, which the
-    // top-strip damage above does not cover. Damage the OLD hovered marker's stem
-    // column (it may lose the stem) and the NEW one's (it may gain it) — no-ops
-    // when either is absent or offscreen, and a harmless over-damage when the
-    // marker is not the selected one. A pure motion within one marker's rect
-    // (old == new, both frames equal) redundantly damages the same column once.
-    invalidate_hover_stem_column(old_hover_idx, old_hover_frame);
-    invalidate_hover_stem_column(app.hover_popup.marker_index,
-                                 app.hover_popup.source_frame);
+    // No stem damage here: the selected-marker stem is always-on for the singleton
+    // selection (the blue-focus pivot), so a hover change no longer appears/erases
+    // it. Its transitions ride the subject-change owner on Selection.
 }

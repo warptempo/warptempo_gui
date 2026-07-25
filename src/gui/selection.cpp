@@ -14,9 +14,10 @@ void Selection::damage_playhead_if_focus_flipped(bool was_empty) {
     // Damage the playhead column (line span + triangle lane). The two-argument
     // form with equal endpoints damages exactly that one column — the playhead
     // itself has not moved, only its PRESENCE at the cursor changed with the
-    // selection emptiness: empty paints the green line+triangle there, non-empty
-    // paints nothing (the grey focus triangle moved onto the selected markers —
-    // paint_selected_marker_triangles).
+    // selection emptiness: empty paints the green line+triangle there; non-empty
+    // conceptually moves the cursor COINCIDENT with the marker (hidden behind it —
+    // the blue stem is the cursor line, the flag occludes the triangle), so the
+    // green cursor form stops painting there (the blue-focus pivot).
     const double px = playhead_pixel_x(app, audio);
     viewport.invalidate_playhead_columns(px, px);
 }
@@ -59,6 +60,40 @@ void Selection::damage_overlay_on_subject_change(
     viewport.invalidate_waveform_area();
 }
 
+std::optional<int64_t> Selection::stem_subject() const {
+    // The always-on selected-marker stem paints for a SINGLETON selection, BOTH
+    // columns and BOTH audio views (the blue-focus pivot). The subject is that one
+    // marker's ACTIVE-COLUMN SOURCE frame (invalidate_stem_column maps it to the
+    // displayed column, source view identity). Empty or 2+ selected -> no stem.
+    // Frame, not index: a reorder remap preserves frames (subject-stable). Reads
+    // *selected_markers.begin() to mirror paint_selected_stem's own idx pick.
+    if (app.selected_markers.size() != 1) return std::nullopt;
+    const int idx = *app.selected_markers.begin();
+    if (idx < 0) return std::nullopt;
+    if (app.active_markers_view == 'P') {
+        const auto& pv = app.phaseresetmarkers.markers();
+        if (idx >= static_cast<int>(pv.size())) return std::nullopt;
+        return pv[idx].time_frame;
+    }
+    const auto& mv = app.warpmarkers.markers();
+    if (idx >= static_cast<int>(mv.size())) return std::nullopt;
+    return mv[idx].time_frame;
+}
+
+void Selection::damage_stem_on_subject_change(
+    std::optional<int64_t> old_subject) {
+    const std::optional<int64_t> new_subject = stem_subject();
+    if (new_subject == old_subject) return;   // subject unchanged
+    if (audio.total_frames() <= 0) return;
+    // Narrow displayed-basis column damage: the OLD subject's column (loses the
+    // stem) and the NEW one's (gains it) — each a no-op when absent or offscreen.
+    // invalidate_stem_column erases the COMMITTED DISPLAYED stem pixels
+    // (damage-follows-the-pixels), so a same-frame old==new is filtered above and
+    // a genuine A->B damages both columns.
+    if (old_subject) viewport.invalidate_stem_column(*old_subject);
+    if (new_subject) viewport.invalidate_stem_column(*new_subject);
+}
+
 void Selection::repair_last_selected() {
     if (app.last_selected_marker < 0) return;
     if (app.selected_markers.count(app.last_selected_marker)) return;
@@ -73,6 +108,7 @@ void Selection::repair_last_selected() {
     // toggle_selection_membership this double-fires with that mutator's own pair,
     // harmlessly (both damage the same subject change, a benign damage-union).
     const std::optional<int64_t> old_subject = phase_overlay_subject();
+    const std::optional<int64_t> old_stem    = stem_subject();
     if (app.selected_markers.empty()) {
         app.last_selected_marker = -1;
     } else {
@@ -81,6 +117,7 @@ void Selection::repair_last_selected() {
         app.last_selected_marker = *app.selected_markers.rbegin();
     }
     damage_overlay_on_subject_change(old_subject);
+    damage_stem_on_subject_change(old_stem);
 }
 
 void Selection::set_single_selection(int idx) {
@@ -90,6 +127,7 @@ void Selection::set_single_selection(int idx) {
     demote_region_provenance(app.region);
     const bool was_empty = app.selected_markers.empty();
     const std::optional<int64_t> old_subject = phase_overlay_subject();
+    const std::optional<int64_t> old_stem    = stem_subject();
     // Any non-range selection change dissolves the shift-range anchor (its
     // lifecycle: alive only across a continuous shift-held interaction). This
     // is also cycle_selection's clear route (it delegates here).
@@ -104,6 +142,7 @@ void Selection::set_single_selection(int idx) {
     viewport.invalidate_timestamp_area();
     damage_playhead_if_focus_flipped(was_empty);
     damage_overlay_on_subject_change(old_subject);
+    damage_stem_on_subject_change(old_stem);
 }
 
 void Selection::focus_without_collapse(int idx) {
@@ -116,13 +155,18 @@ void Selection::focus_without_collapse(int idx) {
     // today's only callers are the group-drag threshold crossing (2+ selected,
     // where the overlay is suppressed so the subject is none either way, a
     // no-op), but the owner is here structurally for any future size-<2 caller.
+    // The STEM subject is likewise none at 2+ (the always-on stem is
+    // singleton-only), so its owner is a no-op today too — kept for the same
+    // future-caller symmetry.
     if (idx < 0) return;
     const std::optional<int64_t> old_subject = phase_overlay_subject();
+    const std::optional<int64_t> old_stem    = stem_subject();
     app.shift_range_anchor   = -1;
     app.last_selected_marker = idx;
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
     damage_overlay_on_subject_change(old_subject);
+    damage_stem_on_subject_change(old_stem);
 }
 
 void Selection::clear_selection() {
@@ -134,6 +178,7 @@ void Selection::clear_selection() {
     if (app.selected_markers.empty() && app.last_selected_marker == -1)
         return;   // nothing selected (already empty -> no focus flip)
     const std::optional<int64_t> old_subject = phase_overlay_subject();
+    const std::optional<int64_t> old_stem    = stem_subject();
     app.selected_markers.clear();
     app.last_selected_marker = -1;
     viewport.invalidate_top_strip();
@@ -143,8 +188,10 @@ void Selection::clear_selection() {
     // (non-empty) back to the green line+triangle (empty) — even with no playhead
     // move.
     damage_playhead_if_focus_flipped(/*was_empty=*/false);
-    // Clearing the focus erases any overlay it annotated (subject frame -> none).
+    // Clearing the focus erases any overlay it annotated (subject frame -> none)
+    // and any singleton stem (its subject -> none).
     damage_overlay_on_subject_change(old_subject);
+    damage_stem_on_subject_change(old_stem);
 }
 
 void Selection::collapse_to_focused() {
@@ -161,8 +208,8 @@ void Selection::collapse_to_focused() {
     demote_region_provenance(app.region);
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     if (app.last_selected_marker < 0) return;   // nothing focused
-    const size_t old_size = app.selected_markers.size();
     const std::optional<int64_t> old_subject = phase_overlay_subject();
+    const std::optional<int64_t> old_stem    = stem_subject();
     if (app.selected_markers.size() == 1 &&
         app.selected_markers.count(app.last_selected_marker))
         return;   // already exactly the focused singleton
@@ -170,18 +217,16 @@ void Selection::collapse_to_focused() {
     app.selected_markers.insert(app.last_selected_marker);
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
-    // A REAL multi -> singleton collapse (old size >= 2; the early-returns above
-    // don't reach here) flips the selected-stem's singleton gate (now a
-    // singleton is selected), a VIEW-INDEPENDENT waveform overlay (both columns,
-    // W and P). The fine-tuning callers can collapse then REFUSE (a wall/no-
-    // change nudge, a bracket-edge tempo step) and full-invalidate NOTHING, so
-    // this owns the stem damage rather than relying on the caller — full
-    // waveform, once, in every view (broader than the P+target overlay owner ON
-    // PURPOSE). The phase-reset overlay's own repaint (P+target) rides the
-    // subject owner below, which the 2+ -> 1 case here also triggers (a benign
-    // damage-union with this stem invalidate).
-    if (old_size >= 2) viewport.invalidate_waveform_area();
+    // A REAL multi -> singleton collapse turns the always-on selected-marker stem
+    // ON for the focused singleton (its subject goes none -> focused frame): the
+    // subject-change owner below damages that column narrowly. The fine-tuning
+    // callers can collapse then REFUSE (a wall/no-change nudge, a bracket-edge
+    // tempo step) and full-invalidate NOTHING, so this owner — not the caller —
+    // covers the stem's appear (both columns, both views). The phase-reset overlay's
+    // own P+target repaint rides its subject owner, which the 2+ -> 1 case here also
+    // triggers.
     damage_overlay_on_subject_change(old_subject);
+    damage_stem_on_subject_change(old_stem);
 }
 
 bool Selection::toggle_selection_membership(int idx) {
@@ -191,6 +236,7 @@ bool Selection::toggle_selection_membership(int idx) {
     demote_region_provenance(app.region);
     const bool was_empty = app.selected_markers.empty();
     const std::optional<int64_t> old_subject = phase_overlay_subject();
+    const std::optional<int64_t> old_stem    = stem_subject();
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     if (idx < 0) return false;
     bool added;
@@ -208,6 +254,10 @@ bool Selection::toggle_selection_membership(int idx) {
     viewport.invalidate_timestamp_area();
     damage_playhead_if_focus_flipped(was_empty);
     damage_overlay_on_subject_change(old_subject);
+    // The stem's singleton subject can change here: a toggle to/from a 1-marker
+    // selection. (When repair_last_selected fired above it double-fires its own
+    // pair, a benign damage-union.)
+    damage_stem_on_subject_change(old_stem);
     return added;
 }
 
@@ -225,6 +275,7 @@ void Selection::select_range_from_anchor(int idx) {
     demote_region_provenance(app.region);
     const bool was_empty = app.selected_markers.empty();
     const std::optional<int64_t> old_subject = phase_overlay_subject();
+    const std::optional<int64_t> old_stem    = stem_subject();
 
     // The active column's store size — the same phase-reset/warp selector
     // cycle_selection uses.
@@ -259,6 +310,7 @@ void Selection::select_range_from_anchor(int idx) {
         viewport.invalidate_timestamp_area();
         damage_playhead_if_focus_flipped(was_empty);
         damage_overlay_on_subject_change(old_subject);
+        damage_stem_on_subject_change(old_stem);
         return;
     }
 
@@ -280,6 +332,7 @@ void Selection::select_range_from_anchor(int idx) {
     viewport.invalidate_timestamp_area();
     damage_playhead_if_focus_flipped(was_empty);
     damage_overlay_on_subject_change(old_subject);
+    damage_stem_on_subject_change(old_stem);
 }
 
 void Selection::sanitize_selection_after_restore(int n) {
@@ -298,6 +351,7 @@ void Selection::sanitize_selection_after_restore(int n) {
     // clear is what dissolves the anchor instead.
     app.shift_range_anchor = -1;
     const std::optional<int64_t> old_subject = phase_overlay_subject();
+    const std::optional<int64_t> old_stem    = stem_subject();
     std::set<int> cleaned;
     for (int idx : app.selected_markers) {
         if (idx >= 0 && idx < n) cleaned.insert(idx);
@@ -307,11 +361,13 @@ void Selection::sanitize_selection_after_restore(int n) {
         app.last_selected_marker = -1;
     }
     // Pruning the focused reset out of range erases its overlay (subject ->
-    // none). The sole caller (undo/redo restore) full-repaints the waveform, so
-    // this is normally redundant; it stays as the structural owner so a
-    // subject-dropping restore cannot leave a stale overlay if a future path
+    // none), and a sanitize that lands on / leaves a singleton changes the stem
+    // subject. The sole caller (undo/redo restore) full-repaints the waveform, so
+    // both are normally redundant; they stay as the structural owners so a
+    // subject-dropping restore cannot leave a stale overlay/stem if a future path
     // sanitizes without a full redraw.
     damage_overlay_on_subject_change(old_subject);
+    damage_stem_on_subject_change(old_stem);
 }
 
 void Selection::cycle_selection(bool forward) {
@@ -433,6 +489,7 @@ void Selection::prune_live_selection() {
     demote_region_provenance(app.region);
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     const std::optional<int64_t> old_subject = phase_overlay_subject();
+    const std::optional<int64_t> old_stem    = stem_subject();
     const int n = (app.active_markers_view == 'P')
         ? static_cast<int>(app.phaseresetmarkers.markers().size())
         : static_cast<int>(app.warpmarkers.markers().size());
@@ -452,9 +509,11 @@ void Selection::prune_live_selection() {
                 ? -1
                 : *app.selected_markers.rbegin();
     }
-    // Pruning the focused reset erases its overlay (subject -> none). The sole
-    // caller (the W/P view swap) full-repaints the waveform after this, so this
-    // is normally redundant; it stays as the structural owner for any future
-    // caller that prunes without a full redraw.
+    // Pruning the focused reset erases its overlay (subject -> none), and pruning
+    // to / from a singleton changes the stem subject. The sole caller (the W/P view
+    // swap) full-repaints the waveform after this, so both are normally redundant;
+    // they stay as the structural owners for any future caller that prunes without
+    // a full redraw.
     damage_overlay_on_subject_change(old_subject);
+    damage_stem_on_subject_change(old_stem);
 }

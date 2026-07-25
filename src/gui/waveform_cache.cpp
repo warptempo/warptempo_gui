@@ -468,7 +468,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // the timerfd tick that runs the on_tick dirty-check, so deferring the
     // flag rebuild to the tick let a frame blit the NEW plate over an OLD
     // flag cache — and the plate-registered overlays (selected stem,
-    // grey focus triangles, phase-reset overlay), which read the NEW fp_* via
+    // phase-reset overlay), which read the NEW fp_* via
     // displayed_viewport_basis, visibly left their flags for one frame during a
     // follow-scroll / resize / pan-fallback publish. Doing the rebuild here makes
     // the committing frame blit new plate + new items together and promote the

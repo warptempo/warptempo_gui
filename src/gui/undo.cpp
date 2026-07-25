@@ -61,15 +61,13 @@ void Undo::recompute_dirty() {
 void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state,
                           bool affects_persistence,
                           std::vector<int> touched_snapshot,
-                          std::vector<int> touched_live,
-                          bool lateral) {
+                          std::vector<int> touched_live) {
     UndoEntry e;
     e.snapshot           = std::move(pre_state);
     e.phase_reset_snapshot = app.phaseresetmarkers.markers();
     e.settings           = capture_current_settings(app);
     e.op_mode            = 'W';
     e.tab                = app.active_tab_view;
-    e.lateral            = lateral;
     e.affects_persistence = affects_persistence;
     e.touched_snapshot   = std::move(touched_snapshot);
     e.touched_live       = std::move(touched_live);
@@ -79,15 +77,13 @@ void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state,
 
 void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
                                std::vector<int> touched_snapshot,
-                               std::vector<int> touched_live,
-                               bool lateral) {
+                               std::vector<int> touched_live) {
     UndoEntry e;
     e.snapshot           = app.warpmarkers.markers();
     e.phase_reset_snapshot = std::move(pre_state);
     e.settings           = capture_current_settings(app);
     e.op_mode            = 'P';
     e.tab                = app.active_tab_view;
-    e.lateral            = lateral;
     e.touched_snapshot   = std::move(touched_snapshot);
     e.touched_live       = std::move(touched_live);
     app.history.push(std::move(e));
@@ -372,12 +368,6 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     counter.settings            = capture_current_settings(app);
     counter.op_mode             = entry.op_mode;
     counter.tab                 = entry.tab;
-    // The op class is direction-symmetric: undoing or redoing a lateral gesture is
-    // still that gesture, so the counter carries the same lateral bit (a singleton
-    // restore in either direction re-stamps the stem). No focus hint survives —
-    // group focus defaults to the earliest touched marker and a singleton's focus
-    // is trivially the touched marker (apply_post_restore_rules_impl).
-    counter.lateral             = entry.lateral;
     counter.affects_persistence = entry.affects_persistence;
     // The touched-set identity hints SWAP coordinate spaces on the counter: the
     // counter's snapshot is the op's after-state, so the rows touched by a
@@ -463,8 +453,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // VISUAL TAIL (architect 2026-07-25 — undo/redo adopts the group visual
     // language, superseding "undo/redo shows its target WITHOUT the playhead"):
     // a SINGLETON restore LANDS the playhead on its touched marker (the region
-    // dissolves via the land, exactly the plain marker-click land) and re-stamps
-    // the stem iff the op was lateral; a GROUP restore re-selects the touched set
+    // dissolves via the land, exactly the plain marker-click land) and its
+    // always-on blue stem follows from the selection (the blue-focus pivot — no
+    // stamp); a GROUP restore re-selects the touched set
     // (done above) AND sets the SelectionExtent REGION — undo/redo joins the
     // extent-region writers, framing the group like the zoom double-click when any
     // member is offscreen, the cursor playhead UNTOUCHED (the wash + split
@@ -483,7 +474,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             const int t = *app.selected_markers.begin();
             // Resolve the touched marker's source frame with ONE bounds check up
             // front — an out-of-range t skips the WHOLE singleton visual (land +
-            // recenter + stem) rather than half-applying it (a bad t would else
+            // recenter) rather than half-applying it (a bad t would else
             // land nothing but recenter on the src_f=0 default). Defensive only:
             // post-sanitize the selection indices are always in range, so this
             // guards an impossible state, never a reachable one.
@@ -515,20 +506,15 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                     app.viewport_start_sample = domain_frame - visible / 2;
                     clamp_viewport_start(app, viewport.audio);
                 }
-                // STEM: re-stamp iff the op was lateral (the four gesture commits'
-                // shape), AFTER the land. The pin then lives by ordinary command
-                // adjacency and the on_tick reaper kills it at the next damaging
-                // command. Ruled reading: for a tempo drag / tempo-image step the
-                // TOUCHED row is the PREDECESSOR (the cents receiver), not the live
-                // gesture's grabbed marker — the undo visual follows the touched
-                // marker (it is the selection), deliberately.
-                if (entry.lateral) {
-                    app.stem_pin_marker      = t;
-                    app.stem_pin_command_seq = app.command_seq;
-                }
+                // The restored singleton's always-on blue stem (the blue-focus
+                // pivot) follows automatically from the selection — sanitize's
+                // subject-change owner plus the full-waveform invalidate below
+                // repaint it on the touched marker. No pin stamp is needed (the
+                // whole conditional-stem apparatus was harvested).
             }
         } else if (sel_size >= 2) {
-            // GROUP: no land, no stem, cursor playhead untouched. Set the
+            // GROUP: no land, cursor playhead untouched (the group's cue is the
+            // extent-region wash, no stem). Set the
             // SelectionExtent region (the one owner clamps endpoints playable, sets
             // provenance, and damages the waveform).
             set_region_to_selection_extent(app, viewport.audio, viewport);

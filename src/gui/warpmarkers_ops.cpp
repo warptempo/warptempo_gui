@@ -489,21 +489,18 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);
     // Coalesce a rapid tempo-step burst: continuation presses skip the
-    // redundant push so one Ctrl+Z reverts the whole burst. NOT lateral (the
-    // stepped marker's own image is fixed by construction — no stem pin).
+    // redundant push so one Ctrl+Z reverts the whole burst.
     if (merge) undo.note_coalesced_commit();
     else       undo.push_undo_warp(std::move(pre_state));
     undo.record_gesture(GestureKind::TempoStep);
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
-    // No stem-pin stamp: the tempo step is NOT a lateral gesture (architect
-    // 2026-07-24). The stepped marker's OWN image is fixed by construction — its
-    // tempo shapes only the segment AFTER it, so the step slides only DOWNSTREAM
-    // images, never the receiving marker's own. Only actions where the receiving
-    // marker moves laterally stamp the pin (see AppState::stem_pin_*). The step
-    // still bumps command_seq like every command, killing any prior pin by
-    // adjacency (the on_tick reap damages it away).
+    // The singleton selection's always-on blue stem does not MOVE for its own
+    // tempo step: the stepped marker's OWN image is fixed by construction (its
+    // tempo shapes only the segment AFTER it, sliding only DOWNSTREAM images), so
+    // the subject frame is unchanged and no stem repaint is needed here — the
+    // target-view re-warp below still repaints the downstream plate.
     // Discrete warp_frame_map change that CAN run in target view: Alt+Up/Down is a
     // warp authoring gesture reachable off its source home (the ruled exception
     // gated above), so it is one of the target-view re-warp sites (the full
@@ -578,9 +575,9 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
     // ONE undo entry per press, with identity hints: no reorder happens
     // (positions untouched), so touched_snapshot == touched_live == the stepped
     // indices. A coalesced continuation press skips the push (the burst's first
-    // entry owns the pre-burst snapshot and its hints). NOT lateral (the group
-    // step's receiving markers' own images are fixed — no stem pin, per the
-    // per-action flat rule at stem_pin_*).
+    // entry owns the pre-burst snapshot and its hints). A 2+ selection paints no
+    // stem (its cue is the extent-region wash), so the group step has no stem to
+    // move.
     if (merge) undo.note_coalesced_commit();
     else       undo.push_undo_warp(std::move(pre_state),
                                    /*affects_persistence=*/true,
@@ -623,12 +620,9 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
             viewport.move_playhead_to(source_frame_to_active_domain(
                 app, audio, app.warpmarkers.markers()[f].time_frame));
         }
-        // No stem-pin stamp: the tempo step is NOT a lateral gesture (architect
-        // 2026-07-24), the group tail going with the singleton. A group step CAN
-        // move the focused marker's image via an UPSTREAM member's change (which is
-        // why the re-land above exists), but the rule is per-ACTION and flat — the
-        // stepped markers' OWN images are not what the pin marks. The command_seq
-        // bump kills any prior pin by adjacency; the on_tick reap damages it away.
+        // No stem to move here: a 2+ selection paints no stem under the blue-focus
+        // pivot (its cue is the extent-region wash, re-derived below). The
+        // kick_waveform_sync above already repainted the moved images.
         // Region follows the images (architect 2026-07-23): the group step moved
         // the selected markers' target IMAGES (tempos changed, source frames did
         // not).
@@ -776,20 +770,19 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
         undo.note_coalesced_commit();
         undo.refresh_coalesced_touched_live(std::move(touched_live));
     } else {
-        // LATERAL: the warp POSITION NUDGE (the receiving marker's own image
-        // slides) — a singleton undo/redo re-stamps the stem, matching
-        // finish_group_position_nudge's live stamp.
+        // The warp POSITION NUDGE (the receiving marker's own image slides). A
+        // singleton restore's always-on blue stem follows from the selection (the
+        // blue-focus pivot — no lateral bit).
         undo.push_undo_warp(std::move(pre_state),
                             /*affects_persistence=*/true,
                             std::move(touched_snapshot),
-                            std::move(touched_live),
-                            /*lateral=*/true);
+                            std::move(touched_live));
     }
-    // Shared commit tail: stem lateral-gesture pin, record/dirty/invalidate,
-    // playhead follow (committed_f is reorder-independent), SelectionExtent region
-    // follow, and the view-independent target trigger (no synchronous re-warp —
-    // source-view warp pixels don't depend on the map). Ordering rationale at the
-    // declaration.
+    // Shared commit tail: record/dirty/invalidate (its full-waveform damage moves
+    // the focused singleton's always-on stem), playhead follow (committed_f is
+    // reorder-independent), SelectionExtent region follow, and the view-independent
+    // target trigger (no synchronous re-warp — source-view warp pixels don't depend
+    // on the map). Ordering rationale at the declaration.
     finish_group_position_nudge(app, audio, viewport, undo,
                                 GestureKind::WarpNudge, committed_f,
                                 target_render);

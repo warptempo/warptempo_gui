@@ -107,33 +107,31 @@ inline constexpr double    kOverlayOutlineAlpha = 0.30;
 // brightens the span, Ableton-style). A flat translucent fill (not a plate
 // masked recolor) over the full waveform height, composited AFTER the plate and
 // the out-of-trim dim, so a region inside a dimmed area lifts the dimmed pixels
-// — accepted, it stays visible. Painted in kPlayheadCursorLight (the playhead
-// green lightened toward white) at this alpha, so the region reads as a lighter
-// tint of the same green the split playhead marks its bounds in. Architect-
-// tunable on the labwc pass; start subtle.
+// — accepted, it stays visible. Painted in kSelectedLight (the selected-marker
+// blue lightened toward white) at this alpha, so a live region reads as a blue
+// brightening in the FOCUS color family: a blue stem (kSelected) marks one
+// selected marker, this blue wash marks a group — the extent region is the
+// singleton stem's "spread" form (architect 2026-07-25, replacing the earlier
+// playhead-green wash). The split half-triangles at the bounds are full-opacity
+// kSelected (blue) too — the same blue focus family as the wash and stem (the
+// veto conversion), marking the region bounds where the hidden cursor's split
+// form sits. Architect-tunable on the labwc pass; start subtle.
 inline constexpr double    kRegionWashAlpha = 0.10;
 
 inline constexpr GuiColor kMarker           = hex(0x9145AD);
 inline constexpr GuiColor kSelected         = hex(0x3DAEE9);  // Breeze blue
+// kSelected (Breeze blue) blended ~55% toward white, per channel
+// c' = round(c + 0.55*(255-c)): 0x3D->0xA8, 0xAE->0xDB, 0xE9->0xF5. A lighter
+// tint of the selected-marker blue, used for the region-select wash
+// (kRegionWashAlpha) so a live region reads as a translucent brightening in the
+// same blue family as the singleton's focus stem (kSelected) — one focus color
+// family: a blue stem for one selected marker, a blue wash for many (the extent
+// region is the stem's "spread" form). This is the SAME per-channel blend that
+// produced the retired kPlayheadCursorLight from kPlayheadCursor, re-applied to
+// the blue base (architect 2026-07-25, the blue-focus pivot).
+inline constexpr GuiColor kSelectedLight    = hex(0xA8DBF5);
 inline constexpr GuiColor kPlayheadScanner  = hex(0xF2D959);
 inline constexpr GuiColor kPlayheadCursor   = hex(0x1ABC9C);  // green cursor
-// kPlayheadCursor blended ~55% toward white, per channel c' = round(c + 0.55*(255-c)):
-// 0x1A->0x98, 0xBC->0xE1, 0x9C->0xD2. A lighter tint of the playhead green,
-// used for the region-select wash (kRegionWashAlpha) so a live region reads as a
-// translucent brightening of the same green the split playhead marks its bounds
-// in — the wash and the split half-triangles share one hue.
-inline constexpr GuiColor kPlayheadCursorLight = hex(0x98E1D2);
-// Selected-marker focus grey (architect 2026-07-23). When the marker selection
-// is NON-EMPTY a GREY, STEMLESS triangle paints ON each selected marker
-// (paint_selected_marker_triangles, over the flag), the focus cue attached to
-// the selection itself; NOTHING paints at the resting cursor while a selection is
-// live (retiring the earlier R6 grey-triangle-at-the-cursor form). Distinct from
-// the waveform-focus breeze green (kPlayheadCursor #1abc9c) and readable against
-// the green family. Also distinct in role and value from the strip-drag anchor
-// stem grey (kStripAnchorStem #8c8c8c): this is a slightly lighter, faintly
-// green-tinted mid grey so the triangle reads as a muted focus cue, not the
-// neutral pivot affordance.
-inline constexpr GuiColor kPlayheadCursorFocusGrey = hex(0x9AA5A0);
 inline constexpr GuiColor kAccent           = hex(0xBF332E);
 inline constexpr GuiColor kText             = hex(0xFCFCFC);  // Breeze paper white
 
@@ -571,11 +569,11 @@ void render_waveform(cairo_t* cr,
 // The triangle belongs to the cursor exclusively under the split-playhead
 // model; pass `draw_triangle = false` for the scanner call so only the
 // vertical line is drawn. `draw_line = false` is the complementary suppression:
-// the triangle draws but the 1px vertical line does not — the grey, STEMLESS
-// selected-marker FOCUS triangle (paint_selected_marker_triangles, painted ON
-// each selected marker, architect 2026-07-23). The two flags are independent:
-// the scanner is line-only (triangle off, line on), the waveform-focus cursor is
-// both on, and the selected-marker focus triangle is triangle-only (line off).
+// the triangle draws but the 1px vertical line does not — a triangle-only form
+// with no current consumer (the grey selected-marker focus triangle it once
+// served was retired in the blue-focus pivot, architect 2026-07-25); the flag
+// stays as a general primitive. The two flags are independent: the scanner is
+// line-only (triangle off, line on), and the waveform-focus cursor is both on.
 //
 // `ink_plate` (default null) is the displayed waveform plate — an ARGB32 image
 // surface whose alpha is opaque exactly where a sample column was painted and
