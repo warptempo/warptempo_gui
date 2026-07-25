@@ -3,6 +3,7 @@
 #include "app_state.h"
 #include "viewport.h"
 
+#include <optional>
 #include <set>
 
 class GuiAudio;
@@ -30,9 +31,9 @@ struct Selection {
     // damaging the top strip + timestamp for the lane-text run / readout. The
     // group marker drag uses this at the threshold crossing (begin_drag) so the
     // grabbed marker becomes the focus while the whole selection stays selected.
-    // No size crossing
-    // happens (membership untouched), so no focus-flip / size-2 overlay damage
-    // is needed here.
+    // Membership is untouched, so no focus-emptiness flip — but the FOCUS moving
+    // can change the overlay subject, so it owns that repaint (a no-op for
+    // today's 2+-selected callers, where the overlay is suppressed either way).
     void focus_without_collapse(int idx);
     void clear_selection();
     void collapse_to_focused();
@@ -58,14 +59,26 @@ struct Selection {
     // unchanged (the common case: Tab within a non-empty set, a range shrink).
     void damage_playhead_if_focus_flipped(bool was_empty);
 
-    // R7 (round 3, architect 2026-07-23): the phase-reset lead-in overlay
-    // (paint_phase_reset_overlay) is SUPPRESSED while the selection has 2+
-    // members, so a selection-size change that CROSSES the 2 threshold flips its
-    // visibility. The overlay lives in the WAVEFORM but these mutators damage only
-    // the top strip / timestamp (+ the R6 playhead column), so a crossing needs
-    // waveform damage to paint/erase the overlay's forward span. It only shows in
-    // P + target view, so this gates there and damages the whole plate once on the
-    // crossing (bounded, rare). `old_size` is captured BEFORE the mutation; a
-    // no-op when the 2 threshold is not crossed.
-    void damage_overlay_on_size2_crossing(size_t old_size);
+    // The phase-reset lead-in overlay (paint_phase_reset_overlay, architect
+    // 2026-07-23) annotates the ONE focused enabled reset. Its SUBJECT — the
+    // frame it paints at, or none — is the selection-state portion of that
+    // paint's visibility rule (P + target view, selection under the 2-member
+    // suppression, no active region, a valid enabled focused reset). The overlay
+    // lives in the WAVEFORM but these mutators damage only the top strip /
+    // timestamp (+ the playhead column), so a change of subject needs
+    // waveform damage to paint/erase the overlay's forward span. Frame, not
+    // index: a reorder remap preserves frames, so a remap is subject-stable.
+    std::optional<int64_t> phase_overlay_subject() const;
+
+    // Damage the waveform when the overlay subject changed across a mutation.
+    // `old_subject` is captured BEFORE the mutation via phase_overlay_subject();
+    // a no-op when the subject is unchanged (the common case). This is the
+    // explicit owner of the overlay's appear/disappear and focus-move repaints:
+    // before C-A (architect 2026-07-24) the stem cache's fp_selection_hash
+    // rebuilt on every selection change and its tail damaged the whole strip, so
+    // the overlay rode that accident; the C-A cut removed it, leaving this owner.
+    // It SUBSUMES the old size-2-only crossing helper (a 1<->2 crossing is a
+    // subject change) and additionally covers the 0<->1 focus swaps and the
+    // focus moving between resets at different frames.
+    void damage_overlay_on_subject_change(std::optional<int64_t> old_subject);
 };

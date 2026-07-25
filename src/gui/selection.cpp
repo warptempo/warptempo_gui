@@ -4,6 +4,7 @@
 #include "warp_frame_map_view.h"
 
 #include <cstdint>
+#include <optional>
 #include <set>
 #include <vector>
 
@@ -20,22 +21,41 @@ void Selection::damage_playhead_if_focus_flipped(bool was_empty) {
     viewport.invalidate_playhead_columns(px, px);
 }
 
-void Selection::damage_overlay_on_size2_crossing(size_t old_size) {
-    const bool old_multi = old_size >= 2;
-    const bool new_multi = app.selected_markers.size() >= 2;
-    if (old_multi == new_multi) return;   // 2 threshold not crossed
-    // The overlay lives only in P + target view; elsewhere there is nothing to
-    // paint/erase, so the crossing needs no waveform damage there.
-    if (app.active_markers_view != 'P' || app.active_audio_view != 'T') return;
+std::optional<int64_t> Selection::phase_overlay_subject() const {
+    // Mirror paint_phase_reset_overlay's SELECTION-STATE visibility guards
+    // (paint_handler.cpp) exactly: P view + target view, selection under the
+    // 2-member suppression, no active region, and the focused marker a valid
+    // ENABLED phase reset. The geometry guards there (area size, samples-per-
+    // pixel, sub-pixel forward width) are NOT selection state — they cannot
+    // change across a Selection mutation — so they are excluded here. The
+    // subject is the reset's FRAME, not its store index: a reorder remap
+    // preserves frames (subject-stable), and two resets sharing one frame paint
+    // the overlay at the same column, so a focus swap between them is not a
+    // subject change.
+    if (app.active_markers_view != 'P') return std::nullopt;
+    if (app.active_audio_view != 'T') return std::nullopt;
+    if (app.selected_markers.size() >= 2) return std::nullopt;
+    if (app.region.active) return std::nullopt;
+    const auto& markers = app.phaseresetmarkers.markers();
+    const int idx = app.last_selected_marker;
+    if (idx < 0 || idx >= static_cast<int>(markers.size())) return std::nullopt;
+    if (markers[idx].disabled) return std::nullopt;
+    return markers[idx].time_frame;
+}
+
+void Selection::damage_overlay_on_subject_change(
+    std::optional<int64_t> old_subject) {
+    if (phase_overlay_subject() == old_subject) return;   // subject unchanged
     if (audio.total_frames() <= 0) return;
     // Full plate damage: the overlay's forward span is wider than the mutators'
-    // top-strip/playhead damage, and a whole-plate blit on a rare size-2 crossing
-    // is bounded. The <2 -> 2+ direction is also covered by the multi-select
-    // builders' own invalidate_waveform_area (the downward selection->extent
-    // coupling); this makes the
-    // 2+ -> <2 direction — e.g. a propagate-paste multi-selection reduced to one
-    // by a plain marker click — equally covered, redundant-but-harmless with the
-    // builders.
+    // top-strip/playhead damage, and a whole-plate blit on a selection change is
+    // bounded (selection changes are rare). A subject change is the overlay
+    // appearing/disappearing (0<->1 focus, the 1<->2 suppression crossing) or
+    // the focus moving to a reset at a different frame — every case the old
+    // size-2-only helper missed and that fell back to the stem cache's
+    // (now-deleted) selection-hash rebuild damage. The <2 -> 2+ direction is
+    // ALSO covered by the multi-select builders' own invalidate_waveform_area
+    // (the downward selection->extent coupling) — redundant-but-harmless.
     viewport.invalidate_waveform_area();
 }
 
@@ -57,7 +77,7 @@ void Selection::set_single_selection(int idx) {
     // click re-owns right after (demote-then-re-own).
     demote_region_provenance(app.region);
     const bool was_empty = app.selected_markers.empty();
-    const size_t old_size = app.selected_markers.size();
+    const std::optional<int64_t> old_subject = phase_overlay_subject();
     // Any non-range selection change dissolves the shift-range anchor (its
     // lifecycle: alive only across a continuous shift-held interaction). This
     // is also cycle_selection's clear route (it delegates here).
@@ -71,20 +91,26 @@ void Selection::set_single_selection(int idx) {
     // like a hover change does — the marker-text lane rides the top-strip damage.
     viewport.invalidate_timestamp_area();
     damage_playhead_if_focus_flipped(was_empty);
-    damage_overlay_on_size2_crossing(old_size);
+    damage_overlay_on_subject_change(old_subject);
 }
 
 void Selection::focus_without_collapse(int idx) {
     // Membership untouched — only the FOCUS moves. Dissolve the shift-range
     // anchor (every non-range selection mutator does; a subsequent shift-click
-    // re-adopts the focus). No damage_playhead_if_focus_flipped /
-    // damage_overlay_on_size2_crossing: the selection SIZE does not change, so
-    // neither the focus-emptiness boundary nor the size-2 threshold can cross.
+    // re-adopts the focus). No damage_playhead_if_focus_flipped: the selection
+    // SIZE does not change, so the focus-emptiness boundary cannot cross. The
+    // overlay SUBJECT can move with the focus, though (its owner keys on the
+    // focused frame, not on size), so capture-and-compare owns that repaint —
+    // today's only callers are the group-drag threshold crossing (2+ selected,
+    // where the overlay is suppressed so the subject is none either way, a
+    // no-op), but the owner is here structurally for any future size-<2 caller.
     if (idx < 0) return;
+    const std::optional<int64_t> old_subject = phase_overlay_subject();
     app.shift_range_anchor   = -1;
     app.last_selected_marker = idx;
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
+    damage_overlay_on_subject_change(old_subject);
 }
 
 void Selection::clear_selection() {
@@ -95,7 +121,7 @@ void Selection::clear_selection() {
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     if (app.selected_markers.empty() && app.last_selected_marker == -1)
         return;   // nothing selected (already empty -> no focus flip)
-    const size_t old_size = app.selected_markers.size();
+    const std::optional<int64_t> old_subject = phase_overlay_subject();
     app.selected_markers.clear();
     app.last_selected_marker = -1;
     viewport.invalidate_top_strip();
@@ -105,8 +131,8 @@ void Selection::clear_selection() {
     // (non-empty) back to the green line+triangle (empty) — even with no playhead
     // move.
     damage_playhead_if_focus_flipped(/*was_empty=*/false);
-    // A 2+ -> 0 clear crosses the overlay's 2 threshold (un-suppress).
-    damage_overlay_on_size2_crossing(old_size);
+    // Clearing the focus erases any overlay it annotated (subject frame -> none).
+    damage_overlay_on_subject_change(old_subject);
 }
 
 void Selection::collapse_to_focused() {
@@ -124,6 +150,7 @@ void Selection::collapse_to_focused() {
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     if (app.last_selected_marker < 0) return;   // nothing focused
     const size_t old_size = app.selected_markers.size();
+    const std::optional<int64_t> old_subject = phase_overlay_subject();
     if (app.selected_markers.size() == 1 &&
         app.selected_markers.count(app.last_selected_marker))
         return;   // already exactly the focused singleton
@@ -132,16 +159,17 @@ void Selection::collapse_to_focused() {
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
     // A REAL multi -> singleton collapse (old size >= 2; the early-returns above
-    // don't reach here) crosses BOTH the phase-reset overlay's 2-suppression
-    // threshold (2+ -> visible) and the selected-stem's singleton gate (now a
-    // singleton is selected), so both WAVEFORM overlays flip. The fine-tuning
-    // callers can collapse then REFUSE (a wall/no-change nudge, a bracket-edge
-    // tempo step) and full-invalidate NOTHING, so this owns the damage rather
-    // than relying on the caller — full waveform, once. Broader than
-    // damage_overlay_on_size2_crossing's P+target gate ON PURPOSE: the phase-reset
-    // overlay is P+target-only but the selected stem is view-independent (both
-    // columns, W and P), so the flip must repaint in every view.
+    // don't reach here) flips the selected-stem's singleton gate (now a
+    // singleton is selected), a VIEW-INDEPENDENT waveform overlay (both columns,
+    // W and P). The fine-tuning callers can collapse then REFUSE (a wall/no-
+    // change nudge, a bracket-edge tempo step) and full-invalidate NOTHING, so
+    // this owns the stem damage rather than relying on the caller — full
+    // waveform, once, in every view (broader than the P+target overlay owner ON
+    // PURPOSE). The phase-reset overlay's own repaint (P+target) rides the
+    // subject owner below, which the 2+ -> 1 case here also triggers (a benign
+    // damage-union with this stem invalidate).
     if (old_size >= 2) viewport.invalidate_waveform_area();
+    damage_overlay_on_subject_change(old_subject);
 }
 
 bool Selection::toggle_selection_membership(int idx) {
@@ -150,7 +178,7 @@ bool Selection::toggle_selection_membership(int idx) {
     // (demote-then-re-own).
     demote_region_provenance(app.region);
     const bool was_empty = app.selected_markers.empty();
-    const size_t old_size = app.selected_markers.size();
+    const std::optional<int64_t> old_subject = phase_overlay_subject();
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     if (idx < 0) return false;
     bool added;
@@ -167,7 +195,7 @@ bool Selection::toggle_selection_membership(int idx) {
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
     damage_playhead_if_focus_flipped(was_empty);
-    damage_overlay_on_size2_crossing(old_size);
+    damage_overlay_on_subject_change(old_subject);
     return added;
 }
 
@@ -184,7 +212,7 @@ void Selection::select_range_from_anchor(int idx) {
     // set_region_to_selection_extent, so this is demote-then-re-own).
     demote_region_provenance(app.region);
     const bool was_empty = app.selected_markers.empty();
-    const size_t old_size = app.selected_markers.size();
+    const std::optional<int64_t> old_subject = phase_overlay_subject();
 
     // The active column's store size — the same phase-reset/warp selector
     // cycle_selection uses.
@@ -218,7 +246,7 @@ void Selection::select_range_from_anchor(int idx) {
         viewport.invalidate_top_strip();
         viewport.invalidate_timestamp_area();
         damage_playhead_if_focus_flipped(was_empty);
-        damage_overlay_on_size2_crossing(old_size);
+        damage_overlay_on_subject_change(old_subject);
         return;
     }
 
@@ -239,7 +267,7 @@ void Selection::select_range_from_anchor(int idx) {
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
     damage_playhead_if_focus_flipped(was_empty);
-    damage_overlay_on_size2_crossing(old_size);
+    damage_overlay_on_subject_change(old_subject);
 }
 
 void Selection::sanitize_selection_after_restore(int n) {
@@ -253,6 +281,7 @@ void Selection::sanitize_selection_after_restore(int n) {
     // owns the release half of the anchor's lifetime), and this restore-path
     // clear is what dissolves the anchor instead.
     app.shift_range_anchor = -1;
+    const std::optional<int64_t> old_subject = phase_overlay_subject();
     std::set<int> cleaned;
     for (int idx : app.selected_markers) {
         if (idx >= 0 && idx < n) cleaned.insert(idx);
@@ -261,6 +290,12 @@ void Selection::sanitize_selection_after_restore(int n) {
     if (!app.selected_markers.count(app.last_selected_marker)) {
         app.last_selected_marker = -1;
     }
+    // Pruning the focused reset out of range erases its overlay (subject ->
+    // none). The sole caller (undo/redo restore) full-repaints the waveform, so
+    // this is normally redundant; it stays as the structural owner so a
+    // subject-dropping restore cannot leave a stale overlay if a future path
+    // sanitizes without a full redraw.
+    damage_overlay_on_subject_change(old_subject);
 }
 
 void Selection::cycle_selection(bool forward) {
@@ -381,6 +416,7 @@ void Selection::prune_live_selection() {
     // SelectionExtent region to Free.
     demote_region_provenance(app.region);
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
+    const std::optional<int64_t> old_subject = phase_overlay_subject();
     const int n = (app.active_markers_view == 'P')
         ? static_cast<int>(app.phaseresetmarkers.markers().size())
         : static_cast<int>(app.warpmarkers.markers().size());
@@ -400,4 +436,9 @@ void Selection::prune_live_selection() {
                 ? -1
                 : *app.selected_markers.rbegin();
     }
+    // Pruning the focused reset erases its overlay (subject -> none). The sole
+    // caller (the W/P view swap) full-repaints the waveform after this, so this
+    // is normally redundant; it stays as the structural owner for any future
+    // caller that prunes without a full redraw.
+    damage_overlay_on_subject_change(old_subject);
 }
