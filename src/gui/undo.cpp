@@ -457,8 +457,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // always-on blue stem follows from the selection (the blue-focus pivot — no
     // stamp); a GROUP restore re-selects the touched set
     // (done above) AND sets the SelectionExtent REGION — undo/redo joins the
-    // extent-region writers, framing the group like the zoom double-click when any
-    // member is offscreen, the cursor playhead UNTOUCHED (the wash + split
+    // extent-region writers, then, when any member is offscreen, PREFERS a plain
+    // scroll and only ZOOMS OUT if the group cannot fit at the current level (the
+    // group arm below), the cursor playhead UNTOUCHED (the wash + split
     // half-triangles ARE the group's representation). Runs AFTER
     // sanitize_selection_after_restore so the region write follows sanitize's
     // provenance demote (the demote-then-derive order the multi-select clicks use),
@@ -518,24 +519,43 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             // SelectionExtent region (the one owner clamps endpoints playable, sets
             // provenance, and damages the waveform).
             set_region_to_selection_extent(app, viewport.audio, viewport);
-            // FRAMING: any touched member offscreen <=> the extent's lo/hi are not
-            // BOTH inside the visible span (members lie between). Then frame the
-            // group like the zoom double-click's region case — fit level +
-            // 2.5%-per-side margin, centered, clamped [kMinZoom, effective ceiling],
-            // through apply_zoom_to_start, NO playhead recenter. Fully visible: no
-            // viewport write. ACCEPTED COST: when the framer engages,
-            // apply_zoom_to_start runs one sync render and the unconditional
-            // kick_waveform_sync below runs a second over identical final state — a
-            // bounded duplicate on a discrete keystroke (the keyboard zoom's
-            // per-press cost), taken for keeping ONE framer chokepoint.
+            // OFFSCREEN handling (architect 2026-07-25 post-labwc): PREFER a plain
+            // scroll at the current zoom, ZOOM only when the group cannot fit —
+            // any touched member offscreen <=> the extent's lo/hi are not BOTH
+            // inside the visible span [start, start + visible) (members lie
+            // between). Three arms:
+            //   - fully visible -> no viewport write;
+            //   - offscreen but FITS at the current level (hi - lo strictly <
+            //     visible; equality takes the framer because the half-open span
+            //     leaves the hi marker's column one past the last visible pixel)
+            //     -> SCROLL ONLY: center the extent at the current zoom, the
+            //     singleton recenter's group sibling (no zoom change, no margin);
+            //   - too wide for the level -> frame_span_into_view with margin (the
+            //     cannot-fit fallback; the framer then only ever zooms OUT to fit,
+            //     fit level + 2.5%-per-side, centered, clamped [kMinZoom, effective
+            //     ceiling], NO playhead recenter). This diverges from the zoom-row
+            //     DOUBLE-CLICK, which keeps its unconditional zoom-to-span — the
+            //     framer itself is untouched, this is an undo-tail rule only.
+            // ACCEPTED COST on the framer arm: apply_zoom_to_start runs one sync
+            // render and the unconditional kick_waveform_sync below runs a second
+            // over identical final state — a bounded duplicate on a discrete
+            // keystroke (the keyboard zoom's per-press cost).
             if (app.region.active) {
                 const int64_t lo      = app.region.a_frame;
                 const int64_t hi      = app.region.b_frame;
                 const int64_t visible = samples_visible(app, viewport.audio);
                 const int64_t start   = app.viewport_start_sample;
-                if (!(lo >= start && hi < start + visible))
-                    frame_span_into_view(app, viewport.audio, viewport,
-                                         lo, hi, /*margin=*/true);
+                const bool fully_visible = (lo >= start && hi < start + visible);
+                if (!fully_visible) {
+                    if (hi - lo < visible) {
+                        // Fits — scroll to center, no zoom change.
+                        app.viewport_start_sample = (lo + hi) / 2 - visible / 2;
+                        clamp_viewport_start(app, viewport.audio);
+                    } else {
+                        frame_span_into_view(app, viewport.audio, viewport,
+                                             lo, hi, /*margin=*/true);
+                    }
+                }
             }
         }
         // sel_size == 0: nothing — the removal branch cleared, viewport/playhead
