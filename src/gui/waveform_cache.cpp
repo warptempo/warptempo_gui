@@ -457,11 +457,25 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // so the next maybe_rebuild_stem_cache reads the same coordinate
     // system the just-blitted waveform pixels were rendered against.
     std::swap(wf_cache.fp_warp_frame_map,     wf_cache.pending_fp_warp_frame_map);
-    // The event-sync hit-map advance does NOT happen here: this is the PLATE
-    // publish, but the aimed-at item pixels (stem/flag caches) rebuild against
-    // this map only at the tick, and the hit map advances only when the paint
-    // pass COMMITS that rebuild. The rebuilds stage; on_redraw promotes at the
-    // committing frame (the two-phase commit — ruling at the selector).
+
+    // Rebuild the item caches INLINE now, against the fingerprint just published
+    // — the same shape the incremental-pan and synchronous-rebuild paths already
+    // use (pan_waveform_incremental / force_synchronous_waveform_rebuild). The run
+    // loop can service the wl_display fd (the frame callback that PAINTS) before
+    // the timerfd tick that runs the on_tick dirty-check, so deferring the
+    // stem/flag rebuilds to the tick let a frame blit the NEW plate over OLD
+    // stem/flag/chip caches — and the plate-registered overlays (selected stem,
+    // grey focus triangles, phase-reset overlay), which read the NEW fp_* via
+    // displayed_viewport_basis, visibly left their flags for one frame during a
+    // follow-scroll / resize / pan-fallback publish. Doing the rebuilds here makes
+    // the committing frame blit new plate + new items together and promote the
+    // staged basis atomically. The two-phase stage/promote ruling is UNCHANGED:
+    // these rebuilds STAGE the displayed hit map (app.staged_displayed_*), and
+    // on_redraw still PROMOTES it at the committing frame; the on_tick rebuilds
+    // remain the idempotent fingerprint-guarded backstop. This also removes the
+    // one-frame item lag every worker publish had.
+    maybe_rebuild_stem_cache();
+    maybe_rebuild_flag_cache();
 
     // Invalidate the waveform area so the next paint blits the new
     // pixels. Matches the rect Viewport::invalidate_waveform_area uses.

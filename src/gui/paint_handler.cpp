@@ -1254,13 +1254,20 @@ GuiPaintHandler::compute_out_of_trim_rects(const GuiRect& area) const {
         return out;
     }
 
-    // LIVE viewport + live samples-per-pixel (NOT wf_cache.fp_*): during a
-    // trim drag the viewport is static so this equals the displayed viewport
-    // and the dim edge sits on the stem; keeping it live means the dim never
-    // waits on the plate's async rebuild to recolor.
-    const double spp = current_samples_per_pixel(app, audio);
+    // PLATE basis (displayed_viewport_basis — the same owner the region wash and
+    // the playheads use), NOT the live viewport: the dim is a PLATE COMPOSITE
+    // (paint_waveform_plate masks it through the just-blitted plate's alpha), so
+    // it must register with the plate's viewport, not the live one. During an
+    // async viewport window (follow_scroll always, the discrete-pan worker
+    // fallback) the live viewport already holds the not-yet-blitted span, so a
+    // live basis snapped the dim edge off both the plate and the trim stems until
+    // publish. Trim-drag live tracking is preserved: the gesture holds the
+    // viewport fixed (so the plate basis equals live), and the trim FRAMES stay
+    // live through compute_displayed_trim / app.trim.
+    const DisplayedViewportBasis basis = displayed_viewport_basis();
+    const double spp = basis.spp;
     if (spp <= 0.0) return out;
-    const int64_t vp_start = app.viewport_start_sample;
+    const double vp_start = basis.vp_start;
     const int x_lo = area.x;
     const int x_hi = area.x + area.w;
 

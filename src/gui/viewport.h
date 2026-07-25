@@ -226,6 +226,18 @@ struct Viewport {
     void invalidate_top_strip();
     void invalidate_all();
 
+    // Set the stem-hover suppression latch for active-column marker `idx` AND
+    // damage that marker's stem column, so the now-suppressed hover stem's
+    // DISAPPEAR renders on its own. The click paths that set this latch also land
+    // the playhead, whose same-position column invalidation was the only repaint
+    // for the plain-click-on-already-selected case (set_single_selection is
+    // damage-idempotent there) — a fragile coupling a "skip the no-op land"
+    // cleanup would orphan. The damage rides the SAME invalidator the hover
+    // recompute uses for this stem (invalidate_hover_stem_column), unambiguous
+    // because a resting click has live == displayed viewport. Delegates the state
+    // write to the one setter (set_stem_hover_suppress).
+    void suppress_hover_stem(int idx);
+
     // Reset the hover popup state. If the popup was visible, invalidate
     // the readout area so the next paint erases it. Safe to call from any
     // path.

@@ -1447,6 +1447,16 @@ void MarkerDragOps::end_tempo_drag() {
     // pin; Esc kills any prior pin by adjacency anyway.
     app.stem_pin_marker      = mi;
     app.stem_pin_command_seq = app.command_seq;
+    // Damage the waveform so the newly-pinned stem's APPEAR renders on its own. A
+    // net-changed drag already damaged it via the last per-cent-step
+    // kick_waveform_sync, but a WALLED / zero-commit drag ran NO sync render, so
+    // its only repaint was move_playhead_to's same-position column invalidation
+    // above — the fragile coupling a "skip the no-op land" cleanup would orphan.
+    // Full-area (not a column) mirrors the pin REAPER's precedent: the stem paints
+    // on the DISPLAYED basis, and a live-basis column can miss it inside an async
+    // publish window, so the reaper damages the whole area and so does the stamp —
+    // once per gesture, negligible, and a redundant union when a sync already ran.
+    viewport.invalidate_waveform_area();
 }
 
 // Esc / Ctrl+Q cancel: restore the GRAB tempo (one store write + one

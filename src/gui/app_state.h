@@ -1459,11 +1459,16 @@ struct AppState {
     // belt-and-braces there. (No reorder remap: a reorder bumps the generation,
     // so the latch dies there for free — the former remap in
     // remap_marker_indices_after_reorder was redundant and is removed.)
-    // Session-only, never serialized. No new invalidation: setting it rides a
-    // click that already repaints (selection change), and clearing it happens
-    // while the stem is NOT painting (it was suppressed) — the hover
-    // recompute's existing invalidate_hover_stem_column damage owns the
-    // appear/disappear transitions.
+    // Session-only, never serialized. SETTING the latch explicitly damages the
+    // suppressed marker's stem column (Viewport::suppress_hover_stem — the one
+    // click-path setter, which damages then delegates to set_stem_hover_suppress):
+    // an earlier claim that the set "rides a click that already repaints" was
+    // wrong for the plain click on an ALREADY-selected marker, where
+    // set_single_selection is a damage no-op and only land_playhead_on_marker's
+    // same-position column invalidation repainted — a fragile coupling now made
+    // explicit. CLEARING happens while the stem is NOT painting (it was
+    // suppressed), and the hover recompute's own invalidate_hover_stem_column
+    // damage owns the later appear/disappear transitions.
     int           stem_hover_suppress_marker = -1;
     // The ACTIVE column's store generation stamped when the latch was set
     // (set_stem_hover_suppress). The latch is LIVE only while this still equals

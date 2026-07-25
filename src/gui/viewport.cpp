@@ -109,6 +109,31 @@ void Viewport::invalidate_hover_stem_column(int idx, int64_t source_frame) {
     gui.invalidate_region(x0, area.y, x1 - x0, area.h);
 }
 
+void Viewport::suppress_hover_stem(int idx) {
+    // State write through the one setter, then explicit stem-column damage so the
+    // suppressed hover stem's disappear renders without relying on an adjacent
+    // land/selection repaint (see the declaration). Frame from the active
+    // column's store — the latch index is per-column — and only damage when idx
+    // resolves there.
+    set_stem_hover_suppress(app, idx);
+    int64_t frame = 0;
+    bool    have  = false;
+    if (app.active_markers_view == 'P') {
+        const auto& pv = app.phaseresetmarkers.markers();
+        if (idx >= 0 && idx < static_cast<int>(pv.size())) {
+            frame = pv[idx].time_frame;
+            have  = true;
+        }
+    } else {
+        const auto& mv = app.warpmarkers.markers();
+        if (idx >= 0 && idx < static_cast<int>(mv.size())) {
+            frame = mv[idx].time_frame;
+            have  = true;
+        }
+    }
+    if (have) invalidate_hover_stem_column(idx, frame);
+}
+
 // move_playhead_to: update playhead, keep viewport so playhead stays
 // visible. Invalidate only what changed. Clamps to the full audio
 // range; trim is purely cosmetic so the playhead is free to sit in
