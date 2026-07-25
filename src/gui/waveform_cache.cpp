@@ -13,9 +13,10 @@
 #include <set>
 #include <vector>
 
-// Waveform / marker / flag cache production. The off-screen surfaces
+// Waveform / trim-stem / flag cache production. The off-screen surfaces
 // on_redraw blits — the waveform plate (worker-rendered, incrementally
-// panned, or synchronously rebuilt), the marker-stem cache, and the
+// panned, or synchronously rebuilt), the trim-stem cache (trim boundary stems
+// only — marker stems are live overlays, not cached), and the
 // flag-rect cache — are produced here, away from the on-screen paint
 // path in paint_handler.cpp. These are GuiPaintHandler members defined
 // in a second translation unit; the class declaration and the on-screen
@@ -840,13 +841,14 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
     gui.invalidate_region(0, 0, app.width, a.y + a.h);
 }
 
-// -- Marker stem cache dirty-detect and rebuild --------------------------
+// -- Trim stem cache dirty-detect and rebuild ----------------------------
 //
 // Called from on_tick AFTER maybe_enqueue_waveform_render. Reads displayed-
 // viewport inputs from wf_cache.fp_* (the LIVE waveform fingerprint — the
-// post-swap viewport, not necessarily the current app state); reads
-// marker-driven inputs from app state directly. Diverging fingerprint
-// triggers a synchronous offscreen rebuild + region invalidation.
+// post-swap viewport, not necessarily the current app state); the only
+// item-driven inputs are the trim bounds + has-set bits (marker stems left this
+// cache — they are live overlays now). Diverging fingerprint triggers a
+// synchronous offscreen rebuild + region invalidation.
 
 namespace {
 
@@ -970,8 +972,9 @@ void GuiPaintHandler::maybe_rebuild_stem_cache() {
 
     // Local rect: the stem geometry translated into the cache surface's
     // coordinate system, which is the waveform area with its top at y = 0.
-    // Both marker and trim stems span [0, area.h) — no overhang. The blit at
-    // on_redraw time positions the surface at screen y = area.y.
+    // The trim stems (the only stems in this cache) span [0, area.h) — no
+    // overhang. The blit at on_redraw time positions the surface at screen
+    // y = area.y.
     const GuiRect local_area{
         0,
         0,

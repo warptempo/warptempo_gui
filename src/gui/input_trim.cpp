@@ -704,46 +704,49 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
     // Bridge (pair) drag: the CHIP ROW ONLY — a press whose y lies in the
     // top-strip upper-row band (top_upper_row_area, the exact band
     // hit_test_trim_chip y-gates on and the band the translucent bridge block
-    // spans between the two chips) and whose column is strictly between the two
-    // chips' columns (both bounds guaranteed set by the gate above). A top-strip
-    // press BELOW that band — the marker flag row — is not the bridge handle: it
-    // falls through to the caller's flag handling. The pair has no grabbed-bound
-    // notion — both bounds are the subject, so it always arms as Begin
-    // structurally (there is no nearer-bound pick, and the gesture never moves
-    // the playhead). The bound columns use the forward-map + column math on the
-    // painted items' own map AND displayed viewport (the event-sync ruling
+    // spans between the two chips) and whose column falls inside the painted wash
+    // gap between the two chips (both bounds guaranteed set by the gate above). A
+    // top-strip press BELOW that band — the marker flag row — is not the bridge
+    // handle: it falls through to the caller's flag handling. The pair has no
+    // grabbed-bound notion — both bounds are the subject, so it always arms as
+    // Begin structurally (there is no nearer-bound pick, and the gesture never
+    // moves the playhead). The gap interval uses the forward-map + column math on
+    // the painted items' own map AND displayed viewport (the event-sync ruling
     // above), computed only on this path.
     const GuiRect row = top_upper_row_area(app);
     if (mouse_y >= row.y && mouse_y < row.y + row.h) {
         const GuiRect area = waveform_area(app);
         // click_rel_x is waveform-relative from the layout origin area.x (a
-        // stable layout constant, not viewport-driven); the bound columns below
-        // are 0-based col_raw in the SAME committed-width column space, so the
-        // strictly-between test compares like against like.
+        // stable layout constant, not viewport-driven); the gap interval below is
+        // 0-based columns in the SAME committed-width column space, so the
+        // in-gap test compares like against like.
         const int click_rel_x = mouse_x - area.x;
         const std::vector<WarpFrameMapSegment>& dmap =
             displayed_or_live_target_map(app, audio);
         const std::vector<WarpFrameMapSegment>* map =
             dmap.empty() ? nullptr : &dmap;
-        // Bridge columns via the SAME owners the painter's wash gap uses
-        // (render.h): map with displayed_trim_ms, column with trim_bound_column
-        // (waveform-relative col_raw — UNCLAMPED, no visibility gate, for the
-        // strictly-between test) on the DISPLAYED basis (vp_start_frame/
-        // vp_end_frame/area_w — the flag cache's own committed fp_vp span and
-        // effective width), so the columns are exactly where the wash gap was
-        // painted on the committing frame. The chip single-hit above consumes the
-        // chip pixels first, so the effective bridge grab equals the painted wash
-        // gap — and both read the SAME per-bound committed column source.
-        auto bound_col = [&](int64_t frame) -> int {
+        // Bridge hit interval = the PAINTED wash gap EXACTLY, via the shared owner
+        // trim_bridge_gap (render.h) — the SAME owner render_trim_flags' wash uses
+        // — over the two bounds' TrimBoundColumns on the DISPLAYED basis
+        // (vp_start_frame/vp_end_frame/area_w — the flag cache's own committed
+        // fp_vp span and effective width), so the columns are exactly where the
+        // wash was painted on the committing frame. The owner already handles the
+        // offscreen-flush edges (no chip-width inset for an unpainted bound), so
+        // this needs no min/max and no reliance on the chip single-hit consuming
+        // the chip pixels first (the chip rects sit OUTSIDE the gap either way).
+        auto bound_column = [&](int64_t frame) -> TrimBoundColumn {
             const double ms = displayed_trim_ms(frame, map);
             return trim_bound_column(ms, basis.vp_start_frame,
-                                     basis.vp_end_frame, basis.area_w).col_raw;
+                                     basis.vp_end_frame, basis.area_w);
         };
-        const int bcol = bound_col(app.trim.begin_frame);
-        const int ecol = bound_col(app.trim.end_frame);
-        const int lo = std::min(bcol, ecol);
-        const int hi = std::max(bcol, ecol);
-        if (click_rel_x > lo && click_rel_x < hi) {
+        const TrimBoundColumn bc = bound_column(app.trim.begin_frame);
+        const TrimBoundColumn ec = bound_column(app.trim.end_frame);
+        const TrimBridgeGap gap = trim_bridge_gap(bc, ec, flag_lane_w_px());
+        // The [0, area_w) click gate: the inert non-multiple-of-16 right gutter
+        // (or a newly exposed width over an older committed cache) has no painted
+        // wash, so a click there must NOT arm a pair drag past the surface.
+        if (click_rel_x >= 0 && click_rel_x < basis.area_w &&
+            click_rel_x >= gap.lo && click_rel_x < gap.hi) {
             // Read-only claims the bridge region but never arms (no fallback).
             if (active_view_state(app).read_only) return true;
             arm_pending_trim_drag(/*is_begin=*/true, /*both=*/true,

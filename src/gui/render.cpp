@@ -571,6 +571,20 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
     return out;
 }
 
+TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
+                              const TrimBoundColumn& end, int chip_w) {
+    // Contract at the declaration. A PAINTED (in_viewport) chip bounds the gap at
+    // its inner edge (inset by chip_w — the room the chip occupies); an OFFSCREEN
+    // bound paints no chip, so the wash runs FLUSH to the bound's true column with
+    // no inset. Direction falls out of the anchoring: begin is left-edge-anchored
+    // (lo = its column), end is right-edge-anchored (hi = its rightmost column,
+    // exclusive => +1).
+    TrimBridgeGap g;
+    g.lo = begin.in_viewport ? (begin.col + chip_w) : begin.col_raw;
+    g.hi = end.in_viewport   ? (end.col - chip_w + 1) : (end.col_raw + 1);
+    return g;
+}
+
 double displayed_trim_ms(int64_t frame,
                          const std::vector<WarpFrameMapSegment>* map) {
     double ms = static_cast<double>(frame);
@@ -704,44 +718,44 @@ void render_trim_flags(cairo_t* cr,
     // two edge-anchored chips: from the begin chip's inner (right) edge to the
     // end chip's inner (left) edge. The chips edge-anchor ON their bound columns
     // (begin left-edge, end right-edge, bodies facing inward), so this gap is the
-    // span the pair (bridge) drag grabs — route_trim_chip_press tests strictly
-    // between the two bound columns, and the chip single-hit consumes the chip
-    // pixels first, so the effective grab region equals this gap. The wash is the
-    // shared overlay pair (kOverlay / kOverlayAlpha, the phase reset overlay's
-    // pair) with a 1px ring at ring strength (kOverlayOutlineAlpha) around it.
-    // Columns are computed unconditionally (a chip's viewport cull must not
-    // suppress the band). A gap exists only when the begin chip sits fully left
-    // of the end chip (wide-enough, non-inverted span); an inverted or narrow
-    // trim shows no bridge, its chips simply overlap.
+    // span the pair (bridge) drag grabs — route_trim_chip_press tests the SAME gap
+    // interval (the shared trim_bridge_gap owner below), so the clickable band is
+    // exactly the painted wash. The wash is the shared overlay pair (kOverlay /
+    // kOverlayAlpha, the phase reset overlay's pair) with a 1px ring at ring
+    // strength (kOverlayOutlineAlpha) around it. Columns are computed
+    // unconditionally (a chip's viewport cull must not suppress the band). A gap
+    // exists only when the begin chip sits fully left of the end chip
+    // (wide-enough, non-inverted span); an inverted or narrow trim shows no
+    // bridge (trim_bridge_gap returns hi <= lo), its chips simply overlap.
     //
-    // Offscreen-border rule: a gap edge follows its chip offscreen. When a bound
-    // is IN the viewport its edge aligns with the drawn (clamped) chip; when it
-    // has scrolled OFFSCREEN the edge is taken from the bound's TRUE unclamped
-    // column (col_raw). The fill and ring are drawn at these raw positions with
-    // NO [0,W-1] clamp, so an offscreen-side edge lands past the viewport edge
-    // and is clipped by the cache surface: the wash fills flush to the edge (no
-    // chip-width gap) and that side's ring border goes offscreen with the chip
-    // rather than resting at the viewport edge. The top/bottom borders span the
-    // full raw width and are clipped to the visible portion. An end bound at
-    // EOF (T-1) stays in_viewport, so it uses the clamped column (a ~1px seam vs
-    // the raw column, accepted), preserving the visible EOF chip's connection.
+    // Offscreen-border rule: a gap edge follows its chip offscreen. The gap
+    // interval comes from the shared owner trim_bridge_gap (the SAME owner
+    // route_trim_chip_press' bridge hit consumes, so paint and hit cannot drift):
+    // an in_viewport bound bounds the gap at its drawn chip's inner edge; an
+    // OFFSCREEN bound (no chip) runs the wash FLUSH to its true column with no
+    // chip-width inset. The fill and ring are drawn at these raw (unclamped)
+    // positions, so an offscreen-side edge lands past the viewport edge and is
+    // clipped by the cache surface: the wash fills flush to the edge (no
+    // chip-width gap, even a BARELY-offscreen bound) and that side's ring border
+    // goes offscreen with the chip rather than floating in a blank strip. The
+    // top/bottom borders span the full raw width and are clipped to the visible
+    // portion. An end bound at EOF (T-1) stays in_viewport, so it uses the clamped
+    // column (a ~1px seam vs the raw column, accepted), preserving the visible EOF
+    // chip's connection.
     if (has_begin && has_end && waveform_area.w > 0) {
-        const int gap_lo =
-            (bc.in_viewport ? bc.col : bc.col_raw) + chip_w;
-        const int gap_hi =
-            (ec.in_viewport ? ec.col : ec.col_raw) - chip_w + 1;
-        if (gap_hi > gap_lo) {
+        const TrimBridgeGap gap = trim_bridge_gap(bc, ec, chip_w);
+        if (gap.hi > gap.lo) {
             cairo_set_source_rgba(cr, kOverlay.r, kOverlay.g,
                                   kOverlay.b, kOverlayAlpha);
-            cairo_rectangle(cr, static_cast<double>(top_strip_area.x + gap_lo),
+            cairo_rectangle(cr, static_cast<double>(top_strip_area.x + gap.lo),
                             static_cast<double>(chip_top),
-                            static_cast<double>(gap_hi - gap_lo),
+                            static_cast<double>(gap.hi - gap.lo),
                             static_cast<double>(chip_h));
             cairo_fill(cr);
             // 1px ring bordering the gap rect, AA off. Drawn at the raw gap
             // positions (no clamp) so an offscreen-side border is clipped away.
-            const int rx = top_strip_area.x + gap_lo;
-            const int rw = gap_hi - gap_lo;
+            const int rx = top_strip_area.x + gap.lo;
+            const int rw = gap.hi - gap.lo;
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
             cairo_set_source_rgba(cr, kOverlay.r, kOverlay.g, kOverlay.b,

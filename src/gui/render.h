@@ -644,14 +644,17 @@ void render_strip_anchor_stem(cairo_t* cr,
 // test). It replaced five hand-copied `nearbyint` + `clamp(0, W-1)` formulas
 // maintained "byte-identical" by comment discipline.
 //
-// PURE: all basis inputs are parameters — the collapse unifies the FORMULA, NOT
-// the basis choice. The basis stays per-caller BY RULING (the event-synchronized
-// hit-geometry doctrine): the painters call with the fp-recipe viewport they are
-// handed from the caches (and `displayed_ms` already mapped by
-// compute_displayed_trim); the hit sites call with the LIVE viewport, their
-// derived `vp_end` (= vp_start + nearbyint(spp*wave_w)), and `displayed_ms`
-// mapped through displayed_or_live_target_map by displayed_trim_ms. Do not
-// "helpfully" unify the basis.
+// PURE: all basis inputs are parameters — the collapse unifies the FORMULA. Both
+// the painters AND the hit sites now decide against the SAME DISPLAYED basis (the
+// event-synchronized hit-geometry doctrine): the painters call with the fp-recipe
+// viewport they are handed from the caches (and `displayed_ms` already mapped by
+// compute_displayed_trim); the hit sites call with the DISPLAYED basis from
+// displayed_viewport_basis (vp_start_frame/vp_end_frame/area_w — the promoted
+// mirror of that same committed fp_vp span + effective width) and `displayed_ms`
+// mapped through displayed_or_live_target_map by displayed_trim_ms. (Earlier the
+// hit sites used the LIVE viewport, which split a hit from its painted pixels
+// during an async plate-publish window; the promoted mirror closed that window,
+// so the basis is now unified by ruling — paint and hit are one geometry.)
 //
 // The x_raw denominator is the PAINTERS' quantized-span form
 // (vp_end - vp_start)/wave_w, NOT current_samples_per_pixel. The two are
@@ -678,6 +681,40 @@ struct TrimBoundColumn {
 TrimBoundColumn trim_bound_column(double displayed_ms,
                                   long long vp_start, long long vp_end,
                                   int wave_w);
+
+// The inter-chip wash-gap column interval [lo, hi) (waveform-relative,
+// half-open, EMPTY when hi <= lo), the ONE owner shared by the painter
+// (render_trim_flags' wash band + its ring border) and the router
+// (route_trim_chip_press' pair-drag between test), so a bridge click lands
+// exactly on the painted wash. Both bounds must be set (callers gate). Per bound,
+// by in_viewport / offscreen state:
+//   BEGIN — the gap's LEFT edge, a left-edge-anchored chip:
+//     in_viewport (chip painted) -> lo = col + chip_w      (the drawn chip's
+//        inner RIGHT edge; the gap starts just past the chip).
+//     offscreen  (no chip)       -> lo = col_raw           (FLUSH: the wash runs
+//        to the bound's TRUE column with NO chip-width inset, since no chip is
+//        painted — begin off the LEFT gives lo < 0, flush to the edge by the
+//        surface/gutter clip; begin off the RIGHT gives lo >= wave_w -> empty gap).
+//   END — the gap's RIGHT edge, a right-edge-anchored chip:
+//     in_viewport (chip painted) -> hi = col - chip_w + 1  (the drawn chip's
+//        inner LEFT edge, exclusive).
+//     offscreen  (no chip)       -> hi = col_raw + 1       (FLUSH: exclusive of
+//        the bound's true rightmost column — end off the RIGHT gives hi > wave_w,
+//        flush to the edge; end off the LEFT gives hi <= 0 -> empty gap).
+// The +chip_w inset is the ROOM a PAINTED chip occupies; an offscreen bound
+// paints no chip, so the inset is dropped and the wash fills FLUSH — this closes
+// the barely-offscreen partial-gap defect (col_raw + chip_w formerly left a
+// chip_w-1-wide blank strip at the edge, and the ring border floated in it). The
+// interval is UNCLAMPED (raw): the painter draws at these positions and the cache
+// surface clips an offscreen side away (fill AND ring border go offscreen with the
+// absent chip, as ruled); the router additionally applies its own [0, wave_w)
+// click gate for the inert gutter.
+struct TrimBridgeGap {
+    int lo;  // inclusive left column
+    int hi;  // exclusive right column (empty gap when hi <= lo)
+};
+TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
+                              const TrimBoundColumn& end, int chip_w);
 
 // The source-frame -> displayed-domain mapping the two HIT sites share
 // (add_chip, bound_col). Byte-identical to render.cpp's file-local
@@ -748,14 +785,18 @@ void render_trim_stems(cairo_t* cr,
 // down to the waveform top, meeting the render_trim_stems waveform segment there
 // as one unbroken line at the bound column.
 // With BOTH bounds set, a wash band fills the GAP between the two edge-anchored
-// chips (begin chip's inner edge to end chip's inner edge) — the visual
-// affordance of the pair (bridge) drag's grab band. It occupies the trim-chip
-// lane's vertical band and uses the shared overlay wash (kOverlay /
-// kOverlayAlpha, the same pair the phase reset overlay paints with) with a 1px
-// ring around it, over the strip background. Columns are computed unconditionally
-// (independent of the chips' viewport cull) and clamped into the mapped waveform
-// width, so it still paints across the visible part when a chip is offscreen; a
-// gap shows only when the span is wide enough that the chips do not overlap.
+// chips — the visual affordance of the pair (bridge) drag's grab band. It
+// occupies the trim-chip lane's vertical band and uses the shared overlay wash
+// (kOverlay / kOverlayAlpha, the same pair the phase reset overlay paints with)
+// with a 1px ring around it, over the strip background. The gap interval is the
+// shared trim_bridge_gap owner (computed unconditionally, independent of the
+// chips' viewport cull): an in_viewport bound bounds the gap at its drawn chip's
+// inner edge; an OFFSCREEN bound runs the wash FLUSH from its true (UNCLAMPED)
+// col_raw — NOT clamped to the mapped width — so an offscreen side fills to the
+// edge with no chip-width gap and is clipped by the cache surface. A gap shows
+// only when the span is wide enough that the chips do not overlap.
+// route_trim_chip_press consumes the SAME owner, so the clickable bridge equals
+// the painted wash.
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
                        GuiRect waveform_area,

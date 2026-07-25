@@ -67,10 +67,10 @@ tail, and the motionless/Esc/lost-button outcomes.
 - R3 (stem persistence coupled to damage/command epochs) is NOT
   residue: the damage-quiescence scope is the ruled product semantic
   ("the stem survives any command that paints nothing"), final-state.
-- R4 (genealogy prose) took the MIDDLE PATH: dead-model NAMES
-  (Direction A/B, retired-revision tags) purge to behavioral
-  statements; don't-re-propose records and dated provenance of LIVE
-  rulings stay.
+- R4 (genealogy prose) took the MIDDLE PATH: dead-model NAMES (the
+  two retired directional coupling labels, retired-revision tags)
+  purge to behavioral statements; don't-re-propose records and dated
+  provenance of LIVE rulings stay.
 
 ## Process adoptions (planner-side, standing, no ruling needed)
 
