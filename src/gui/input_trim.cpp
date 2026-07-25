@@ -743,9 +743,11 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
         const TrimBoundColumn ec = bound_column(app.trim.end_frame);
         const TrimBridgeGap gap =
             trim_bridge_gap(bc, ec, flag_lane_w_px(), basis.area_w);
-        // The [0, area_w) click gate: the inert non-multiple-of-16 right gutter
-        // (or a newly exposed width over an older committed cache) has no painted
-        // wash, so a click there must NOT arm a pair drag past the surface.
+        // The [0, area_w) click gate — the SAME effective-width clip the bridge
+        // PAINTER applies (render_trim_flags intersects its drawn extent with
+        // [0, wave_w)): the inert non-multiple-of-16 right gutter (or a newly
+        // exposed width over an older committed cache) NEITHER paints wash NOR
+        // arms, so paint == hit exactly there.
         if (click_rel_x >= 0 && click_rel_x < basis.area_w &&
             click_rel_x >= gap.lo && click_rel_x < gap.hi) {
             // Read-only claims the bridge region but never arms (no fallback).

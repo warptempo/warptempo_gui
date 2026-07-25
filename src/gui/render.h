@@ -670,8 +670,11 @@ void render_strip_anchor_stem(cairo_t* cr,
 // bound-edge pixel and outline to the cache clip and its stems fall offscreen.
 // Clamping lands the wall on the last visible column so the chip stays fully
 // visible and connected. Begin/frame-0 already maps to column 0, unaffected.
-// The wash band deliberately reads col_raw (unclamped) for an OFFSCREEN bound so
-// its fill/ring follow the chip past the viewport edge (clipped by the surface).
+// The wash band (trim_bridge_gap) reads an OFFSCREEN bound's SIDE (below) to pick
+// a side-specific flush sentinel past the visible edge, and the painter clips its
+// DRAWN extent to the effective width [0, wave_w) so the fill/ring stop flush at
+// the edge (the inert gutter never paints; col_raw is the sentinel input, not the
+// drawn position).
 // Which side of the viewport an OFFSCREEN bound lies on — meaningful only when
 // !in_viewport. Derived from the SAME unrounded ms compare that sets in_viewport,
 // NOT from col_raw: a bound less than half a pixel off the LEFT rounds to
@@ -718,16 +721,18 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 //        gave hi = 1 and painted/accepted a column-0 sliver for a window wholly
 //        left of the viewport).
 // The +chip_w inset is the ROOM a PAINTED chip occupies; an offscreen bound
-// paints no chip, so the inset is dropped and the wash fills FLUSH. The interval
-// is UNCLAMPED (raw sentinels included): the painter draws at these positions and
-// the cache surface clips an offscreen side away (fill AND ring border go
-// offscreen with the absent chip — the border-clip guarantee holds only because
-// the sentinels push an offscreen edge strictly past the visible range, never to
-// col 0 or col wave_w-1); the router additionally applies its own [0, wave_w)
-// click gate for the inert gutter. (An off-right sentinel that lands in the
-// <=15px non-multiple-of-16 gutter [wave_w, strip_w) paints an inert gutter
-// sliver, clipped by the surface and outside every grid-aligned surface — as with
-// every gutter column.)
+// paints no chip, so the inset is dropped and the wash fills FLUSH. This interval
+// is returned UNCLAMPED (raw sentinels included) — its role is to carry the
+// offscreen-flush and empty semantics past the visible edge; it is NOT the drawn
+// interval. The two consumers own the visible boundary identically: the PAINTER
+// intersects the drawn extent with the effective width [0, wave_w) (fill,
+// top/bottom ring runs; a side border draws only when its raw edge column lies in
+// [0, wave_w)), and the ROUTER applies the same [0, wave_w) click gate. So the
+// inert non-multiple-of-16 gutter [wave_w, strip_w) NEITHER paints NOR hits, and
+// paint == hit exactly everywhere. The border-clip guarantee holds only because
+// the sentinels push an offscreen edge STRICTLY past the visible range (never to
+// col 0 or col wave_w-1), so the [0, wave_w) test drops that border while keeping
+// an in-view one.
 struct TrimBridgeGap {
     int lo;  // inclusive left column
     int hi;  // exclusive right column (empty gap when hi <= lo)
@@ -810,12 +815,13 @@ void render_trim_stems(cairo_t* cr,
 // with a 1px ring around it, over the strip background. The gap interval is the
 // shared trim_bridge_gap owner (computed unconditionally, independent of the
 // chips' viewport cull): an in_viewport bound bounds the gap at its drawn chip's
-// inner edge; an OFFSCREEN bound runs the wash FLUSH from its true (UNCLAMPED)
-// col_raw — NOT clamped to the mapped width — so an offscreen side fills to the
-// edge with no chip-width gap and is clipped by the cache surface. A gap shows
-// only when the span is wide enough that the chips do not overlap.
-// route_trim_chip_press consumes the SAME owner, so the clickable bridge equals
-// the painted wash.
+// inner edge; an OFFSCREEN bound runs the wash FLUSH via a side-specific sentinel.
+// The painter then clips the DRAWN extent to the effective width [0, wave_w) —
+// the inert gutter never paints — so an offscreen side fills flush to the edge
+// with no chip-width gap and its ring border goes offscreen with the chip. A gap
+// shows only when the span is wide enough that the chips do not overlap.
+// route_trim_chip_press consumes the SAME owner under the SAME [0, wave_w) gate,
+// so the clickable bridge equals the painted wash exactly.
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
                        GuiRect waveform_area,

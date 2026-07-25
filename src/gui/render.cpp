@@ -723,8 +723,9 @@ void render_trim_flags(cairo_t* cr,
     const int wave_top = top_strip_area.y + top_strip_area.h;
 
     // One shared resolver call per bound (frames pre-mapped by
-    // compute_displayed_trim), read three ways: .col (clamped), .col_raw
-    // (unclamped, for the offscreen wash edges), .in_viewport (visibility).
+    // compute_displayed_trim), read four ways: .col (clamped), .col_raw
+    // (unclamped, the offscreen sentinel input), .in_viewport (visibility), and
+    // .side (offscreen left/right, the sentinel selector — trim_bridge_gap).
     // Computed unconditionally so the wash band spans between the bounds even
     // when a chip is culled; chips and their stems draw only for a visible bound.
     const TrimBoundColumn bc = trim_bound_column(
@@ -757,38 +758,56 @@ void render_trim_flags(cairo_t* cr,
     // route_trim_chip_press' bridge hit consumes, so paint and hit cannot drift):
     // an in_viewport bound bounds the gap at its drawn chip's inner edge; an
     // OFFSCREEN bound (no chip) runs the wash FLUSH via a side-specific sentinel
-    // (keyed on the bound's SIDE, not col_raw — the rounding seam). The fill and
-    // ring are drawn at these raw (unclamped) positions, so an offscreen-side edge
-    // lands STRICTLY past the viewport edge and is clipped by the cache surface:
-    // the wash fills flush to the edge (no chip-width gap, even a BARELY-offscreen
-    // bound) and that side's ring border goes offscreen with the chip rather than
-    // floating in a blank strip. The top/bottom borders span the full raw width
-    // and are clipped to the visible portion. An end bound at EOF (T-1) stays
+    // (keyed on the bound's SIDE, not col_raw — the rounding seam), pushing that
+    // edge STRICTLY past the visible range. The interval is RAW; the PAINTER clips
+    // the DRAWN extent to the effective width [0, wave_w) (below) — the inert
+    // gutter never paints, so paint == hit exactly. The flush fill therefore stops
+    // at the edge with no chip-width gap (even a BARELY-offscreen bound), and an
+    // offscreen side's ring border is not drawn at all (its raw edge column is
+    // outside [0, wave_w)), so it goes offscreen with the absent chip rather than
+    // floating in a blank strip or the gutter. An end bound at EOF (T-1) stays
     // in_viewport, so it uses the clamped column (a ~1px seam vs the raw column,
     // accepted), preserving the visible EOF chip's connection.
     if (has_begin && has_end && waveform_area.w > 0) {
         const TrimBridgeGap gap =
             trim_bridge_gap(bc, ec, chip_w, waveform_area.w);
-        if (gap.hi > gap.lo) {
+        // The gap interval is RAW (offscreen sentinels intact — they carry the
+        // border semantics); the PAINTER is the visible-interval clip owner. Clip
+        // the DRAWN extent to the EFFECTIVE width [0, wave_w): only strip
+        // backgrounds and damage use the full top_strip.w, so the inert
+        // non-multiple-of-16 gutter [wave_w, strip_w) must NOT paint — this makes
+        // paint == hit exact (the router's [0, area_w) gate refuses the gutter).
+        const int clip_lo = std::max(gap.lo, 0);
+        const int clip_hi = std::min(gap.hi, waveform_area.w);
+        if (clip_hi > clip_lo) {
             cairo_set_source_rgba(cr, kOverlay.r, kOverlay.g,
                                   kOverlay.b, kOverlayAlpha);
-            cairo_rectangle(cr, static_cast<double>(top_strip_area.x + gap.lo),
+            cairo_rectangle(cr, static_cast<double>(top_strip_area.x + clip_lo),
                             static_cast<double>(chip_top),
-                            static_cast<double>(gap.hi - gap.lo),
+                            static_cast<double>(clip_hi - clip_lo),
                             static_cast<double>(chip_h));
             cairo_fill(cr);
-            // 1px ring bordering the gap rect, AA off. Drawn at the raw gap
-            // positions (no clamp) so an offscreen-side border is clipped away.
-            const int rx = top_strip_area.x + gap.lo;
-            const int rw = gap.hi - gap.lo;
+            // 1px ring, AA off. The top/bottom runs span the CLIPPED width; the
+            // side borders draw at the RAW gap edge columns (gap.lo, gap.hi-1) and
+            // ONLY when that column lies in [0, wave_w) — an offscreen side edge
+            // draws NO border (it goes offscreen with the absent chip), never a
+            // floating border pinned to the clip boundary.
+            const int rx = top_strip_area.x + clip_lo;
+            const int rw = clip_hi - clip_lo;
+            const int left_col  = gap.lo;
+            const int right_col = gap.hi - 1;
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
             cairo_set_source_rgba(cr, kOverlay.r, kOverlay.g, kOverlay.b,
                                   kOverlayOutlineAlpha);
             cairo_rectangle(cr, rx, chip_top, rw, 1);              // top
             cairo_rectangle(cr, rx, chip_top + chip_h - 1, rw, 1); // bottom
-            cairo_rectangle(cr, rx, chip_top, 1, chip_h);          // left
-            cairo_rectangle(cr, rx + rw - 1, chip_top, 1, chip_h); // right
+            if (left_col >= 0 && left_col < waveform_area.w)
+                cairo_rectangle(cr, top_strip_area.x + left_col,
+                                chip_top, 1, chip_h);              // left
+            if (right_col >= 0 && right_col < waveform_area.w)
+                cairo_rectangle(cr, top_strip_area.x + right_col,
+                                chip_top, 1, chip_h);              // right
             cairo_fill(cr);
             cairo_restore(cr);
         }
