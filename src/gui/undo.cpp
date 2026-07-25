@@ -456,12 +456,16 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // a SINGLETON restore LANDS the playhead on its touched marker (the region
     // dissolves via the land, exactly the plain marker-click land) and its
     // always-on blue stem follows from the selection (the blue-focus pivot — no
-    // stamp); a GROUP restore re-selects the touched set
-    // (done above) AND sets the SelectionExtent REGION — undo/redo joins the
-    // extent-region writers, then, when any member is offscreen, PREFERS a plain
-    // scroll and only ZOOMS OUT if the group cannot fit at the current level (the
-    // group arm below), the cursor playhead UNTOUCHED (the wash + split
-    // half-triangles ARE the group's representation). Runs AFTER
+    // stamp); a GROUP restore re-selects the touched set (done above), LANDS the
+    // playhead on the EARLIEST touched member, AND sets the SelectionExtent REGION
+    // — undo/redo joins the extent-region writers, then, when any member is
+    // offscreen, PREFERS a plain scroll and only ZOOMS OUT if the group cannot fit
+    // at the current level (the group arm below). The extent's split half-triangles
+    // ARE the dissolved cursor playhead (its left half on the earliest member, the
+    // spot the double-Esc collapse parks at), so the readout follows the land; the
+    // multi-select clicks' earliest-land + land-then-extent order is the precedent
+    // (region.active still suppresses the cursor line, so no waveform pixel changes
+    // — only the timestamp readout). Runs AFTER
     // sanitize_selection_after_restore so the region write follows sanitize's
     // provenance demote (the demote-then-derive order the multi-select clicks use),
     // and BEFORE the recompute/invalidate/kick block below so restore's one sync
@@ -515,10 +519,32 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 // whole conditional-stem apparatus was harvested).
             }
         } else if (sel_size >= 2) {
-            // GROUP: no land, cursor playhead untouched (the group's cue is the
-            // extent-region wash, no stem). Set the
-            // SelectionExtent region (the one owner clamps endpoints playable, sets
-            // provenance, and damages the waveform).
+            // GROUP: LAND the playhead on the EARLIEST touched member, THEN set the
+            // SelectionExtent region (architect 2026-07-25). The extent's split
+            // half-triangles ARE the dissolved cursor playhead — its left half sits
+            // ON the earliest member, the same spot the double-Esc collapse parks at
+            // (min(a,b)) — so the playhead is "technically" there already and the
+            // bottom-strip readout should say so; landing here makes the timestamp,
+            // the Esc-collapse park, and Space's left-bound launch agree by
+            // construction. LAND-THEN-EXTENT mirrors the multi-select clicks' order:
+            // the land dissolves any resting region, then set_region_to_selection_extent
+            // overwrites it (the demote-then-derive order). Earliest =
+            // *selected_markers.begin() (sorted set, smallest index = earliest in
+            // time). land_playhead_on_marker is internally bounds-guarded (an
+            // impossible out-of-range index no-ops the land and leaves the region
+            // write to run) — the singleton branch's defensive in-range intent. The
+            // land writes NO viewport, so the three-way offscreen arm below is
+            // byte-identical; playback is already stopped above (land's
+            // scanner-inactive premise). No cursor pixel changes: region.active
+            // suppresses the cursor playhead, so the only visible delta is the
+            // timestamp readout.
+            land_playhead_on_marker(app, viewport.audio, viewport,
+                                    *app.selected_markers.begin());
+            // Set the SelectionExtent region (the one owner clamps endpoints
+            // playable, sets provenance, and damages the waveform). A degenerate
+            // all-coincident touched set yields an ACTIVE zero-width region (a == b,
+            // the split-playhead's single-mask case), not a clear — matching the
+            // multi-select clicks' land-then-extent bit-for-bit.
             set_region_to_selection_extent(app, viewport.audio, viewport);
             // OFFSCREEN handling (architect 2026-07-25 post-labwc; codex round:
             // column-decided): PREFER a plain scroll at the current zoom, ZOOM only
