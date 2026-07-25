@@ -131,7 +131,6 @@ void GuiWaveformWorker::worker_loop() {
                 job.surface,
                 job.area_w,
                 job.area_h,
-                job.channel_count,
                 *job.audio,
                 job.vp_start,
                 job.vp_end,

@@ -108,16 +108,14 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
             // pre-flip screen column: ph_px is the playhead's column in the
             // source domain; the target-domain viewport start places the
             // translated playhead at that same column, at the unchanged zoom.
-            const GuiRect area = waveform_area(app);
             const double cur_spp = samples_per_pixel_at(
-                app.zoom_level, area.w, src_total, audio.sample_rate());
+                app.zoom_level, audio.sample_rate());
             const double ph_px = (cur_spp > 0.0)
                 ? (static_cast<double>(app.playhead_cursor_sample -
                                        app.viewport_start_sample) / cur_spp)
                 : 0.0;
             const double new_spp = samples_per_pixel_at(
-                app.zoom_level, area.w, c.tgt_total_frames,
-                audio.sample_rate());
+                app.zoom_level, audio.sample_rate());
             const double new_vp_d =
                 static_cast<double>(tph) - ph_px * new_spp;
             s.view_viewport_start_frame =

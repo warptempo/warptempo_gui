@@ -38,7 +38,6 @@ void render_waveform_to_cache_surface(
     cairo_surface_t* dest,
     int area_w,
     int area_h,
-    int channel_count,
     const GuiAudio& audio,
     int64_t vp_start,
     int64_t vp_end,
@@ -61,29 +60,25 @@ void render_waveform_to_cache_surface(
     const int inset_h = area_h - 2 * waveform_inset_px();
     if (inset_h <= 0) { cairo_destroy(ccr); return; }
     const GuiRect cache_area{0, waveform_inset_px(), area_w, inset_h};
-    // channel_count is render_channels() = min(source channels, 2), and the
-    // source load refuses channels != 2, so it is always 2 — only the stereo
-    // split runs (the mono arm is unreachable and gone).
-    if (channel_count >= 2) {
-        // No channel gap: the 1972 Krips material
-        // is effectively never unity, so the two channels' inner excursions do
-        // not visually collide at the shared midline; a plain halve of the
-        // inset region is clean. The two channels share the single inset band
-        // (inset first, then split), so waveform_inset_px() stays clear above
-        // the top channel and below the bottom channel, with the channels
-        // meeting at the inset region's vertical center.
-        const int ch_h = cache_area.h / 2;
-        const GuiRect ch0{0, cache_area.y, cache_area.w, ch_h};
-        const GuiRect ch1{0, cache_area.y + ch_h, cache_area.w, ch_h};
-        render_waveform(ccr, ch0, audio, 0,
-                        vp_start, vp_end,
-                        kWaveform,
-                        warp_frame_map_or_null);
-        render_waveform(ccr, ch1, audio, 1,
-                        vp_start, vp_end,
-                        kWaveform,
-                        warp_frame_map_or_null);
-    }
+    // Stereo is structural — channels != 2 refuses at load (see file_loader) —
+    // so both channels always render. No channel gap: the 1972 Krips material
+    // is effectively never unity, so the two channels' inner excursions do
+    // not visually collide at the shared midline; a plain halve of the
+    // inset region is clean. The two channels share the single inset band
+    // (inset first, then split), so waveform_inset_px() stays clear above
+    // the top channel and below the bottom channel, with the channels
+    // meeting at the inset region's vertical center.
+    const int ch_h = cache_area.h / 2;
+    const GuiRect ch0{0, cache_area.y, cache_area.w, ch_h};
+    const GuiRect ch1{0, cache_area.y + ch_h, cache_area.w, ch_h};
+    render_waveform(ccr, ch0, audio, 0,
+                    vp_start, vp_end,
+                    kWaveform,
+                    warp_frame_map_or_null);
+    render_waveform(ccr, ch1, audio, 1,
+                    vp_start, vp_end,
+                    kWaveform,
+                    warp_frame_map_or_null);
     cairo_destroy(ccr);
 }
 
@@ -99,7 +94,7 @@ void render_waveform_to_cache_surface(
 // strip columns land at the exact frames a full-plate render at this viewport
 // would produce; the shifted pixels and the freshly rendered strip then meet
 // seamlessly at the strip boundary. Mirrors render_waveform_to_cache_surface's
-// inset + mono/stereo split, restricted to the strip columns and clipped so a
+// inset + stereo split, restricted to the strip columns and clipped so a
 // 1px stroke cannot bleed past the strip edge into the reused pixels.
 //
 // Runs inline on the GUI thread (the strip is at most a window wide; see
@@ -112,7 +107,6 @@ static void render_waveform_strip_to_cache_surface(
     int area_h,
     int strip_x,
     int strip_w,
-    int channel_count,
     const GuiAudio& audio,
     int64_t vp_start_full,
     int64_t vp_end_full,
@@ -147,17 +141,17 @@ static void render_waveform_strip_to_cache_surface(
 
     const int inset_h = area_h - 2 * waveform_inset_px();
     if (inset_h <= 0) { cairo_restore(ccr); cairo_destroy(ccr); return; }
-    if (channel_count >= 2) {  // always 2 (stereo); see the sibling fn above
-        const int ch_h = inset_h / 2;
-        const GuiRect ch0{strip_x, waveform_inset_px(), strip_w, ch_h};
-        const GuiRect ch1{strip_x, waveform_inset_px() + ch_h, strip_w, ch_h};
-        render_waveform(ccr, ch0, audio, 0,
-                        strip_vp_start, strip_vp_end,
-                        kWaveform, warp_frame_map_or_null);
-        render_waveform(ccr, ch1, audio, 1,
-                        strip_vp_start, strip_vp_end,
-                        kWaveform, warp_frame_map_or_null);
-    }
+    // Stereo is structural — channels != 2 refuses at load (see file_loader) —
+    // so both channels always render.
+    const int ch_h = inset_h / 2;
+    const GuiRect ch0{strip_x, waveform_inset_px(), strip_w, ch_h};
+    const GuiRect ch1{strip_x, waveform_inset_px() + ch_h, strip_w, ch_h};
+    render_waveform(ccr, ch0, audio, 0,
+                    strip_vp_start, strip_vp_end,
+                    kWaveform, warp_frame_map_or_null);
+    render_waveform(ccr, ch1, audio, 1,
+                    strip_vp_start, strip_vp_end,
+                    kWaveform, warp_frame_map_or_null);
     cairo_restore(ccr);
     cairo_destroy(ccr);
 }
@@ -205,7 +199,6 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.area_h        = area.h;
     in.is_target     = is_target;
     in.warp_frame_map_hash  = target_warp_frame_map_hash;
-    in.channel_count = audio_source->render_channels();
     in.warp_frame_map       = std::move(target_warp_frame_map);
     in.audio         = audio_source;
     in.valid         = true;
@@ -312,7 +305,6 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     wf_cache.pending_fp_warp_frame_map = in.warp_frame_map;
     job.warp_frame_map        = std::move(in.warp_frame_map);
     job.surface        = wf_cache.pending_surface;
-    job.channel_count  = in.channel_count;
     // The audio the worker reads: always the one process-immortal source audio.
     job.audio          = in.audio;
 
@@ -421,11 +413,8 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_warp_frame_map = wf_cache.supersede_warp_frame_map;
         job.warp_frame_map        = std::move(wf_cache.supersede_warp_frame_map);
         job.surface        = wf_cache.pending_surface;
-        // The superseding job reads the one process-immortal source audio;
-        // channel_count reads from it.
-        const GuiAudio* sup_audio = &audio;
-        job.channel_count  = sup_audio->render_channels();
-        job.audio          = sup_audio;
+        // The superseding job reads the one process-immortal source audio.
+        job.audio          = &audio;
 
         wf_cache.pending_fp_vp_start    = wf_cache.supersede_vp_start;
         wf_cache.pending_fp_vp_end      = wf_cache.supersede_vp_end;
@@ -582,7 +571,6 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     render_waveform_to_cache_surface(
         wf_cache.surface,
         in.area_w, in.area_h,
-        in.channel_count,
         *in.audio,
         in.vp_start, in.vp_end,
         in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
@@ -802,7 +790,6 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
         wf_cache.surface,
         in.area_w, in.area_h,
         strip_x, strip_w,
-        in.channel_count,
         *in.audio,
         in.vp_start, in.vp_end,
         in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);

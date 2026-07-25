@@ -347,7 +347,6 @@ private:
         int      area_h        = 0;
         bool     is_target     = false;
         uint64_t warp_frame_map_hash  = 0;
-        int      channel_count = 0;
         // The translation map: the target-view map in target view, empty in
         // source view.
         std::vector<WarpFrameMapSegment> warp_frame_map;
@@ -439,7 +438,7 @@ private:
 
     // on_redraw paint passes. Each renders one strip/layer; on_redraw keeps
     // the rects_intersect gates and calls these in place.
-    void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip, int sr);
+    void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip);
     void paint_marker_text_lane(cairo_t* cr);
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
     void paint_region_wash(cairo_t* cr, const GuiRect& area);

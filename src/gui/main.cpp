@@ -132,8 +132,8 @@ namespace {
 
 // Geometry helpers — public to viewport.cpp via app_state.h.
 // samples_per_pixel_at is likewise declared in app_state.h and defined
-// non-static: its explicit-domain form is called from input_render_dispatch.cpp
-// (the queue/dispatch view-anchor math), so it cannot be main-private.
+// non-static: it is called from input_render_dispatch.cpp (the queue/dispatch
+// view-anchor math), so it cannot be main-private.
 //
 // Per-strip lane stacks with per-lane heights (the former uniform-row contract
 // is superseded). Top and bottom strips now DIFFER in height; the waveform
@@ -174,14 +174,14 @@ int top_lane_height(int lane) {
         default: return 0;
     }
 }
-int bottom_lane_height(int /*lane*/) {
+int bottom_lane_height() {
     return monospace_row_h();                    // status row, editor/modal row
 }
 int strip_total_h(bool top_strip) {
     int sum = 2 * static_cast<int>(kFlagBottomLiftPx);  // outer + waveform-side gaps
     const int lanes = top_strip ? kTopLaneCount : kBottomLaneCount;
     for (int i = 0; i < lanes; ++i)
-        sum += top_strip ? top_lane_height(i) : bottom_lane_height(i);
+        sum += top_strip ? top_lane_height(i) : bottom_lane_height();
     sum += (lanes - 1) * static_cast<int>(kRowGapPx);   // inter-lane gaps
     return sum;
 }
@@ -243,11 +243,11 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
     clamp_dims(w, h);
     int inset = static_cast<int>(kFlagBottomLiftPx);
     for (int i = 0; i < lane_from_window_edge; ++i) {
-        inset += top_strip ? top_lane_height(i) : bottom_lane_height(i);
+        inset += top_strip ? top_lane_height(i) : bottom_lane_height();
         inset += static_cast<int>(kRowGapPx);
     }
     const int lane_h = top_strip ? top_lane_height(lane_from_window_edge)
-                                 : bottom_lane_height(lane_from_window_edge);
+                                 : bottom_lane_height();
     const int y = top_strip ? inset : (h - inset - lane_h);
     return GuiRect{0, y, w, lane_h};
 }
@@ -325,16 +325,11 @@ std::pair<long long, long long> compute_trim_samples(
     return {begin, end};
 }
 
-double samples_per_pixel_at(double zoom_level,
-                            int waveform_width_px,
-                            int64_t total_frames,
-                            int sample_rate) {
+double samples_per_pixel_at(double zoom_level, int sample_rate) {
     // One continuous domain, no sentinel: ms_per_px = 0.625 * 2^(level - 1).
-    // total_frames / waveform_width_px play no part — at the per-file effective
+    // Fully level-determined and domain-independent — at the per-file effective
     // ceiling the exponent already yields spp = total/width (whole song
     // visible) by construction, so there is no fit-file special case.
-    (void)waveform_width_px;
-    (void)total_frames;
     assert(zoom_level >= kMinZoom && zoom_level <= kMaxZoom);
     return 0.625 * std::exp2(zoom_level - 1.0) *
            static_cast<double>(sample_rate) / 1000.0;
@@ -382,15 +377,24 @@ double clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level) 
 
 int64_t samples_visible(const AppState& a, const GuiAudio& audio) {
     const GuiRect area = waveform_area(a);
-    const double spp = samples_per_pixel_at(
-        a.zoom_level, area.w, live_total_frames(a, audio), audio.sample_rate());
+    // Preserved evaluation: the former signature evaluated live_total_frames
+    // here, and in target view that primes target_view_warp_frame_map_cached (a
+    // live map rebuild + the resolver's normalization stderr at this timing).
+    // spp no longer needs the total, but dropping the evaluation would move the
+    // cache-rebuild/diagnostic timing — deliberately kept identical.
+    (void)live_total_frames(a, audio);
+    const double spp = samples_per_pixel_at(a.zoom_level, audio.sample_rate());
     return static_cast<int64_t>(std::nearbyint(spp * area.w));
 }
 
 double current_samples_per_pixel(const AppState& a, const GuiAudio& audio) {
-    const GuiRect area = waveform_area(a);
-    return samples_per_pixel_at(
-        a.zoom_level, area.w, live_total_frames(a, audio), audio.sample_rate());
+    // Preserved evaluation: the former signature evaluated live_total_frames
+    // here, and in target view that primes target_view_warp_frame_map_cached (a
+    // live map rebuild + the resolver's normalization stderr at this timing).
+    // spp no longer needs the total, but dropping the evaluation would move the
+    // cache-rebuild/diagnostic timing — deliberately kept identical.
+    (void)live_total_frames(a, audio);
+    return samples_per_pixel_at(a.zoom_level, audio.sample_rate());
 }
 
 std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
@@ -490,21 +494,17 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     a.viewport_start_sample = snapped;
 }
 
-double playhead_pixel_x(const AppState& a, const GuiAudio& audio,
-                        int64_t vp_start, double spp) {
-    (void)audio;
+double playhead_pixel_x(const AppState& a, int64_t vp_start, double spp) {
     if (spp <= 0.0) return -1.0;
     return static_cast<double>(a.playhead_cursor_sample - vp_start) / spp;
 }
 
 double playhead_pixel_x(const AppState& a, const GuiAudio& audio) {
-    return playhead_pixel_x(a, audio, a.viewport_start_sample,
+    return playhead_pixel_x(a, a.viewport_start_sample,
                             current_samples_per_pixel(a, audio));
 }
 
-double scanner_pixel_x(const AppState& a, const GuiAudio& audio,
-                       int64_t vp_start, double spp) {
-    (void)audio;
+double scanner_pixel_x(const AppState& a, int64_t vp_start, double spp) {
     if (spp <= 0.0) return -1.0;
     // Drive the scanner's pixel from the CONTINUOUS predictor position
     // (playhead_scanner_precise) rather than the quantized integer sample, so a
@@ -516,7 +516,7 @@ double scanner_pixel_x(const AppState& a, const GuiAudio& audio,
 }
 
 double scanner_pixel_x(const AppState& a, const GuiAudio& audio) {
-    return scanner_pixel_x(a, audio, a.viewport_start_sample,
+    return scanner_pixel_x(a, a.viewport_start_sample,
                            current_samples_per_pixel(a, audio));
 }
 

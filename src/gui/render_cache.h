@@ -180,15 +180,13 @@ public:
                 int channels, int sample_rate,
                 std::vector<float>& out_samples);
 
-    // Confirmed-hit publish. Confirms the wav's .fingerprint sidecar only
-    // (unlike lookup, there is no channels/sample_rate check here), then
-    // byte-copies the entry to staging_path. The channels and sample_rate
-    // parameters are unused, kept for signature symmetry with lookup: the
-    // fingerprint already binds sample rate, and a byte copy needs no format
-    // check. Byte-identical to an engine publish by construction; no sample
-    // conversion occurs.
+    // Confirmed-hit publish. Keys on the fingerprint alone: confirms the wav's
+    // .fingerprint sidecar (which already binds sample rate), then byte-copies
+    // the entry to staging_path. Unlike lookup it neither validates nor decodes
+    // against a format — a byte copy needs no channels/sample_rate check — so it
+    // is byte-identical to an engine publish by construction with no sample
+    // conversion.
     bool publish_wav(const std::vector<uint8_t>& fingerprint,
-                     int channels, int sample_rate,
                      const std::string& staging_path);
 
     // Insert a freshly rendered wav blob into the disk tier, evicting LRU

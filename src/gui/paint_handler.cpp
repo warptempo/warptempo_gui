@@ -68,8 +68,7 @@ static void render_bottom_strip_editor(cairo_t* cr,
 // -- GuiPaintHandler::paint_flag_annotations -----------------------------
 
 void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
-                                             const GuiRect& top_strip,
-                                             int /*sr*/) {
+                                             const GuiRect& top_strip) {
     // Flag annotations in the top strip. The fixed-width marker/phase-reset
     // flag shapes live on
     // flag_cache.surface (rebuilt from on_tick via maybe_rebuild_flag_cache);
@@ -739,8 +738,7 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // viewport change. See declaration comment in app_state.h.
     const DisplayedViewportBasis basis = displayed_viewport_basis();
     const double disp_spp = basis.spp;
-    const double px_x = playhead_pixel_x(app, audio,
-                                         wf_cache.fp_vp_start, disp_spp);
+    const double px_x = playhead_pixel_x(app, wf_cache.fp_vp_start, disp_spp);
 
     // Playheads now paint UNDER the marker flags (the Z-ORDER FLIP, architect
     // 2026-07-23 — see the paint-order block in on_redraw): the cursor line +
@@ -763,8 +761,7 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // (launched from the region's left bound) alongside the two static split
     // half-triangles and the wash.
     if (app.playhead_scanner_active) {
-        const double scan_px = scanner_pixel_x(app, audio,
-                                               wf_cache.fp_vp_start,
+        const double scan_px = scanner_pixel_x(app, wf_cache.fp_vp_start,
                                                disp_spp);
         render_playhead(cr, area, scan_px, kPlayheadScanner,
                         /*draw_triangle=*/false,
@@ -1135,7 +1132,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         }
 
         if (rects_intersect(exposed, top_strip)) {
-            paint_flag_annotations(cr, top_strip, sr);
+            paint_flag_annotations(cr, top_strip);
             // Marker-text lane (top row 2): the hover popup and the flag
             // editor's live text, painted over the just-blitted flag cache —
             // the same layering role the bottom strip's hover/editor paints had.

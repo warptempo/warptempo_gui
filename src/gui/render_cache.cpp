@@ -578,12 +578,10 @@ bool RenderCache::lookup(const std::vector<uint8_t>& fp,
 }
 
 bool RenderCache::publish_wav(const std::vector<uint8_t>& fp,
-                              int /*channels*/, int /*sample_rate*/,
                               const std::string& staging_path) {
-    // The disk-tier publish confirms via the .fingerprint sidecar (the
-    // fingerprint already binds sample rate), then byte-copies the entry, so
-    // the channels/sample_rate arguments — kept for signature symmetry with
-    // lookup — are unused here.
+    // The disk-tier publish keys on the fingerprint alone: it confirms via the
+    // .fingerprint sidecar (the fingerprint already binds sample rate), then
+    // byte-copies the entry — no format check.
     if (!enabled_) return false;
     const uint64_t h = fnv1a64(fp);
 

@@ -51,7 +51,6 @@ struct WaveformJob {
     // surface). The worker only writes pixels; the cache lifecycle owns
     // destroy/recreate.
     cairo_surface_t* surface = nullptr;
-    int channel_count = 0;     // always 2 (stereo-only sources)
 
     // Audio handle the render reads (see lifetime invariant above). Always
     // main.cpp's single long-lived source audio — the one GuiAudio for the
@@ -144,10 +143,11 @@ private:
 };
 
 // Render the waveform into `dest` from scratch (clears to transparent
-// first, then strokes peaks for `channel_count` channels). Free function so
-// both the worker thread and the main thread can reach it (the main thread
-// invokes it indirectly only via the worker; this declaration is here for
-// callers that need to render synchronously outside the worker).
+// first, then strokes peaks for both stereo channels — stereo is structural,
+// channels != 2 refuses at load; see file_loader). Free function so both the
+// worker thread and the main thread can reach it (the main thread invokes it
+// indirectly only via the worker; this declaration is here for callers that
+// need to render synchronously outside the worker).
 //
 // Render runs on the worker thread; nothing in this function
 // touches main-thread cairo state.
@@ -155,7 +155,6 @@ void render_waveform_to_cache_surface(
     cairo_surface_t* dest,
     int area_w,
     int area_h,
-    int channel_count,
     const GuiAudio& audio,
     int64_t vp_start,
     int64_t vp_end,

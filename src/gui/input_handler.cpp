@@ -261,9 +261,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //     (no mods)                step. Pure navigation, same family as
     //                              the scrub and Home/End entries.
     //   - =/- (no mods)          → zoom in/out
-    //   - 0 (no mods)            → fit ↔ snap-zoom toggle
+    //   - 0 (no mods)            → working zoom ↔ full zoom-out toggle
+    //                              (run_zoom_toggle_command)
     //   - f (no mods)            → follow mode toggle
-    //   - c (no mods)            → center+snap-zoom on playhead
+    //   - c (no mods)            → focused-marker jump (when present) +
+    //                              working zoom; with no focused marker,
+    //                              working zoom centered on the playhead
     //   - t (no mods)            → S/T sub-view toggle
     //   - p (no mods)            → W/P sub-view toggle
     //   - Tab/Shift+Tab/IsoLeftTab → cycle marker focus
@@ -842,7 +845,7 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     // ceiling-saturated whole-song case (mid = total/2, spp_t * W ~= total ->
     // start ~= 0) is then wall-clamped to 0 by clamp_viewport_start as before.
     const double mid       = 0.5 * (flo + fhi);
-    const double visible_t = samples_per_pixel_at(target_level, W, total, sr) *
+    const double visible_t = samples_per_pixel_at(target_level, sr) *
                              static_cast<double>(W);
     const int64_t target_start =
         static_cast<int64_t>(std::nearbyint(mid - visible_t / 2.0));

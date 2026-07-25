@@ -38,7 +38,6 @@ public:
     int64_t  source_load_mtime() const { return load_identity_mtime_; }
     int     sample_rate()     const { return sample_rate_; }
     int     channels()        const { return channels_; }
-    int     render_channels() const { return render_channels_; }
 
     // Raw interleaved float32 sample buffer. The pointer is valid as long as
     // this GuiAudio instance is alive and no new buffer has been installed. The

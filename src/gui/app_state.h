@@ -1778,16 +1778,12 @@ GuiRect bottom_upper_row_area(const AppState& a);
 GuiRect bottom_lower_row_area(const AppState& a);
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);
 double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
-// The explicit-domain form of current_samples_per_pixel: spp at a zoom level
-// against a caller-chosen domain total. The level fully determines spp
-// (total-independent — the total/width param pair is unused now that the
-// fit-file mode is gone, kept for the shared signature). For callers that need
-// a domain OTHER than the active display context's (e.g. the dispatch-time
-// snapshot clamping queue-moment view keys against a cell's own map domain).
-double  samples_per_pixel_at(double zoom_level,
-                             int waveform_width_px,
-                             int64_t total_frames,
-                             int sample_rate);
+// The pure level→spp exponent: ms_per_px = 0.625 * 2^(level - 1), fully
+// level-determined and domain-independent. Non-static/public because it is
+// called from input_render_dispatch.cpp's dispatch-time view-anchor math (a
+// domain OTHER than the active display context's — a cell's own map domain),
+// so it cannot be main-private.
+double  samples_per_pixel_at(double zoom_level, int sample_rate);
 // Active-domain sample range a marker may occupy to stay within the visible
 // strip: pixel 0 (viewport_start) through the last fully-visible pixel
 // (area.w - 1). Mouse-driven marker moves clamp the grabbed marker to this so
@@ -1957,18 +1953,16 @@ void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
 // step, drag, predictor advance at fixed viewport) needs the live
 // position because live == displayed in steady state.
 double  playhead_pixel_x(const AppState& a, const GuiAudio& audio);
-double  playhead_pixel_x(const AppState& a, const GuiAudio& audio,
-                         int64_t vp_start, double spp);
+double  playhead_pixel_x(const AppState& a, int64_t vp_start, double spp);
 // Returns the pixel column (offset from waveform_area.x) for the scanner,
 // computed from the CONTINUOUS playhead_scanner_precise (not the integer
 // sample) so a viewport rescale slides it smoothly. Meaningful only while
 // playhead_scanner_active — at rest playhead_scanner_precise is stale by
 // contract, so every caller reads this behind that gate. The
-// (app, audio, vp_start, spp) overload follows the same live-vs-displayed split
+// (app, vp_start, spp) overload follows the same live-vs-displayed split
 // documented on playhead_pixel_x above.
 double  scanner_pixel_x(const AppState& a, const GuiAudio& audio);
-double  scanner_pixel_x(const AppState& a, const GuiAudio& audio,
-                        int64_t vp_start, double spp);
+double  scanner_pixel_x(const AppState& a, int64_t vp_start, double spp);
 // Active-domain total frame count. Source view returns audio.total_frames();
 // target view returns the deformed total derived from the warp_frame_map cache
 // (the forward-translated source length). Used by every viewport helper that needs the

@@ -639,8 +639,7 @@ RenderOutcome do_render(const RenderRequest& req,
         // Rung: render cache. A confirmed hit publishes the canonical wav
         // bytes by byte-copying the disk entry file after sidecar
         // confirmation; no sample conversion occurs.
-        if (req.render_cache->publish_wav(fingerprint, source_channels_probe,
-                                          static_cast<int>(sample_rate),
+        if (req.render_cache->publish_wav(fingerprint,
                                           staging_output_path)) {
             // publish_wav did a potentially large byte write or disk copy to
             // the staging path; a cancel that lands during it must not
