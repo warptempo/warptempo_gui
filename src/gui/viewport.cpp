@@ -127,6 +127,15 @@ void Viewport::damage_marker_stem_column(int idx) {
     // hover stem renders without relying on an adjacent land/selection repaint
     // (see the declaration). Frame from the active column's store — the index is
     // per-column — and only damage when idx resolves there.
+    // ACCEPTED TRANSIENT: this narrow damage rides the DISPLAYED item-mirror
+    // basis (invalidate_hover_stem_column), which can momentarily diverge from
+    // the plate basis inside a RESIZE window — an item-only rebuild promotes the
+    // new width while a slow worker plate render is still in flight — so the
+    // click's stem can transiently miss its column until the publish's full-area
+    // damage catches up. Accepted: it self-heals at that publish, and clicks are
+    // common enough that keeping the narrow displayed-basis damage (over a
+    // full-area repaint per click) is the right trade — unlike the rare playback
+    // launch, which went full-area for the same divergence.
     int64_t frame = 0;
     bool    have  = false;
     if (app.active_markers_view == 'P') {

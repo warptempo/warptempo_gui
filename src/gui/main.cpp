@@ -864,6 +864,12 @@ int main(int argc, char** argv) {
     // capability loss) is its release owner and dissolves it here.
     gui.set_shift_released_hook([&] { app.shift_range_anchor = -1; });
 
+    // Pointer-leave / capability-loss hover drop: no motion event follows those
+    // edges, so clear_hover_popup here erases a hovered selected-marker stem when
+    // the pointer slides out the window edge (the ruled hide-on-hover-out). It
+    // owns the erase damage; re-entry's synthesized motion re-resolves hover.
+    gui.set_pointer_left_hook([&] { viewport.clear_hover_popup(); });
+
     gui.set_on_motion([&](int mouse_x, int mouse_y, GuiInputState mods) {
         input_handler.on_motion(mouse_x, mouse_y, mods);
     });

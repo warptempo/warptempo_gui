@@ -81,6 +81,13 @@ public:
     void set_text_editor_active_probe(TextEditorProbe cb);
     void set_repeat_eligible_probe(RepeatEligibleProbe cb);
     void set_shift_released_hook(std::function<void()> cb);
+    // Fired when the pointer LEAVES the surface (wl_pointer.leave) and at
+    // pointer-capability loss — the two edges that drop pointer focus without a
+    // motion event. The one owner of the hover-off-on-leave behavior: main.cpp
+    // wires it to Viewport::clear_hover_popup so a pointer that slides out through
+    // the window edge erases any hovered selected-marker stem (the ruled
+    // hide/re-show), which no motion event would otherwise damage. Null-safe.
+    void set_pointer_left_hook(std::function<void()> cb);
     void set_on_tick(TickCallback cb);
     void set_on_pre_paint(PrePaintCallback cb);
 
@@ -109,6 +116,12 @@ public:
     // may call it unconditionally.
     void begin_pointer_capture();
     void end_pointer_capture();
+
+    // Is the pointer currently over our surface? Read by the deferred-click
+    // completions (input_pointer.cpp) to decide whether to re-resolve hover at
+    // the pointer's position (still here) or leave the clear to the pointer-left
+    // hook (already gone). True between wl_pointer.enter and .leave.
+    bool pointer_focused() const { return pointer_focused_; }
 
     // Override the release-restore x for the active capture. The strip drags
     // set this each event to the surface x of their anchor stem, so the cursor
@@ -412,6 +425,10 @@ private:
     // between commands, since the platform delivers no bare modifier traffic to
     // dispatch. Null-safe and cheap — fires only at actual shift edges.
     std::function<void()> shift_released_hook_;
+    // The one owner of hover-off-on-pointer-leave: fired at wl_pointer.leave and
+    // at pointer-capability loss (the two focus-dropping edges with no motion
+    // event to re-resolve hover). Wired to Viewport::clear_hover_popup. Null-safe.
+    std::function<void()> pointer_left_hook_;
     TickCallback         on_tick_;
     PrePaintCallback     on_pre_paint_;
 

@@ -1344,6 +1344,9 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         wl_pointer_release(wl_pointer_);
         wl_pointer_ = nullptr;
         pointer_focused_   = false;
+        // Same hover drop as wl_pointer.leave: capability loss ends the pointer
+        // stream with no leave/motion to follow, so erase any hovered stem here.
+        if (pointer_left_hook_) pointer_left_hook_();
 
         // Capability loss is the hard end of this wl_pointer event stream:
         // the protocol guarantees that no further events (and therefore no
@@ -1698,6 +1701,13 @@ void GuiPlatform::on_pointer_leave(uint32_t /*serial*/,
                                    struct wl_surface* surface) {
     if (surface != wl_surface_) return;
     pointer_focused_ = false;
+    // Drop hover: no motion event follows a leave, so without this a hovered
+    // selected-marker stem would keep painting after the pointer slid out the
+    // window edge (the ruled hide-on-hover-out). The hook owns the erase damage
+    // (clear_hover_popup); re-entry fires a synthesized motion (on_pointer_enter)
+    // that re-resolves — and since the clear reset hover_popup to no marker, that
+    // first re-entry motion cannot short-circuit on a stale cached hit.
+    if (pointer_left_hook_) pointer_left_hook_();
     // Left-held state persists across leave; the next press/release
     // will resync it. We do NOT clear pointer_left_held_ here because
     // a drag that briefly skids outside the surface and returns
@@ -2169,6 +2179,7 @@ void GuiPlatform::set_wheel_context_probe(WheelContextProbe cb)    { wheel_conte
 void GuiPlatform::set_text_editor_active_probe(TextEditorProbe cb) { text_editor_active_probe_ = std::move(cb); }
 void GuiPlatform::set_repeat_eligible_probe(RepeatEligibleProbe cb) { repeat_eligible_probe_ = std::move(cb); }
 void GuiPlatform::set_shift_released_hook(std::function<void()> cb) { shift_released_hook_ = std::move(cb); }
+void GuiPlatform::set_pointer_left_hook(std::function<void()> cb) { pointer_left_hook_ = std::move(cb); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }
 void GuiPlatform::set_worker_completion_fd(int fd, std::function<void()> on_event) {

@@ -665,8 +665,21 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // on the flag part, writable), and the second consumes into a fresh
         // open. That IS the documented "double-click opens the editor"; there
         // is no own-marker special case.
-        if (text_editor::is_active(app.top_flag_editor))
+        if (text_editor::is_active(app.top_flag_editor)) {
             flag_editor.exit_top_flag_edit_no_commit();
+            // Re-resolve hover NOW, before the fall-through arms anything. While
+            // the editor was open, hover_popup stayed cleared (recompute is
+            // suppressed by an open editor, and motion kept it clear), so a
+            // fall-through marker click would set_single_selection +
+            // damage_marker_stem_column yet paint NO stem — the hover arm needs
+            // hover_popup to name the marker. Recomputing here reflects the
+            // pointer's true position (a flag press always hovers it), so the
+            // stem paints. Placed before any pending-drag arm on purpose: a
+            // recompute AFTER an arm would hit the drags-suppress-hover rule
+            // (any_pointer_gesture_active) and clear it again; here no gesture is
+            // active yet, so this is a genuine resolve.
+            viewport.recompute_hover_at_cursor();
+        }
 
         // Live top zoom-strip row (Ableton-style navigation), claimed ahead of
         // the top-strip playback-stop and the click routing below. It claims
@@ -1791,6 +1804,14 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
                 land_playhead_on_marker(app, audio, viewport, m);
             }
         }
+        // Settle hover to the pointer's ACTUAL position. Sub-threshold motion
+        // during the pending drag never recomputed hover, so hover_popup still
+        // holds the press-time hit — stale if the pointer slid off the flag rect
+        // (the stem would then paint at a marker no longer hovered). Recompute
+        // when the pointer is still here (a clean release always is); covers the
+        // immediate arm too. (If it had left, the pointer-leave hook already
+        // cleared — but a clean release means it is here, so this is the resolve.)
+        if (gui.pointer_focused()) viewport.recompute_hover_at_cursor();
         return;
     }
     if (app.trim_drag.active) {
@@ -1843,6 +1864,11 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
                 land_playhead_on_marker(app, audio, viewport, m);
             }
         }
+        // Settle hover to the pointer's ACTUAL position (see the tempo pending's
+        // twin above): a sub-threshold slide off the flag left hover_popup stale,
+        // so re-resolve while the pointer is still here (a clean release always
+        // is) — the stem then paints iff genuinely hovering, immediate arm too.
+        if (gui.pointer_focused()) viewport.recompute_hover_at_cursor();
         return;
     }
     if (!app.drag.active) return;
@@ -2185,7 +2211,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                     land_playhead_on_marker(app, audio, viewport, m);
                 }
             }
-            viewport.clear_hover_popup();
+            // Settle hover to the pointer's ACTUAL state instead of the old
+            // unconditional clear (which erased a legitimately-hovering stem):
+            // if the pointer is still here, re-resolve — a slid-off pointer drops
+            // the stem, a still-hovering one keeps it; if focus is gone (the usual
+            // lost-button cause), the pointer-leave hook already cleared, so this
+            // is a no-op. Same observable end state as the clean release above.
+            if (gui.pointer_focused()) viewport.recompute_hover_at_cursor();
             return;
         }
         if (std::max(std::abs(mouse_x - app.pending_tempo_drag.press_x),
@@ -2238,7 +2270,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                     land_playhead_on_marker(app, audio, viewport, m);
                 }
             }
-            viewport.clear_hover_popup();
+            // Settle hover to the pointer's ACTUAL state (see the tempo twin
+            // above): re-resolve while the pointer is here, else the pointer-leave
+            // hook owns the clear. Replaces the old unconditional clear that broke
+            // its own "matches the clean release" promise by erasing a hovering
+            // stem. Same observable end state as the clean release.
+            if (gui.pointer_focused()) viewport.recompute_hover_at_cursor();
             return;
         }
         if (std::max(std::abs(mouse_x - app.pending_marker_drag.press_x),
