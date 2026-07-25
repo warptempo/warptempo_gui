@@ -791,11 +791,13 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
                           bool margin) {
     // The shared span framer (declared in input_handler.h). Computes the margined
     // fit level exactly as the double-click always has, then ALWAYS derives the
-    // start by CENTERING the margined span in the window through the painter-
-    // quantized visible width — so a span too small for kMinZoom to fill (the
+    // start by CENTERING the margined span in the window through the UNROUNDED
+    // visible width (spp_t * W) — grid quantization is owned downstream by
+    // clamp_viewport_start, so NO painter-quantized pre-rounding belongs here (see
+    // the centering block below). A span too small for kMinZoom to fill (the
     // floor-saturated case) rests centered instead of left-aligned, and the
-    // unclamped case degenerates to the span's left edge (visible == the margined
-    // span by the fit-level solve). Ends at the one chokepoint apply_zoom_to_start.
+    // unclamped case degenerates to the span's left edge (unrounded spp_t * W ==
+    // the margined span by the fit-level solve). Ends at apply_zoom_to_start.
     if (audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
     const int     W    = area.w;

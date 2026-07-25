@@ -293,22 +293,39 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // Damage the scanner's launch column and the timestamp area NOW, in the
     // success tail (strictly after every refusal return above). A launch's
     // visible effect — the scanner line appearing at the launch column and the
-    // timestamp readout advancing — otherwise waits for the first on_tick
-    // predictor advance to paint, leaving the PRESS itself damage-less; that
-    // let StemPinPreserveGuard treat a scrub/Space launch as a damage-less
-    // command and re-stamp the lateral-gesture stem pin, so the pinned stem
-    // survived the whole audition (dying only at the Space stop's teardown
-    // damage). Painting the launch column one frame early makes the launch an
-    // honest DAMAGING command, so the guard leaves the pin's adjacency alone
-    // and the on_tick reaper clears it at the press. Computed AFTER
-    // follow_scroll_if_needed, which may have moved the viewport, so the column
-    // reflects the post-scroll position. The scanner fields are already seeded
-    // above. The REFUSAL paths never reach here — a silent "nothing to
-    // audition" no-op stays damage-less and preserves the pin by design, like
-    // every silent refusal. The kill-and-revive scrub over a live session
-    // already damaged via the stop half; this revive-half damage is a harmless
-    // union with it.
-    const double launch_px = scanner_pixel_x(app, audio);
+    // timestamp readout advancing — otherwise waits for the next tick-driven
+    // paint opportunity (the tick heartbeat invalidates the scanner's current
+    // column even when the integer predictor has not yet advanced), leaving the
+    // PRESS itself damage-less; that let StemPinPreserveGuard treat a
+    // scrub/Space launch as a damage-less command and re-stamp the
+    // lateral-gesture stem pin, so the pinned stem survived the whole audition
+    // (dying only at the Space stop's teardown damage). Painting the launch
+    // column one frame early makes the launch an honest DAMAGING command, so
+    // the guard leaves the pin's adjacency alone and the on_tick reaper clears
+    // it at the press.
+    //
+    // DAMAGE-FOLLOWS-THE-PIXELS: compute the column on the DISPLAYED plate
+    // basis, the basis paint_playheads actually draws the scanner against
+    // (wf_cache.fp_vp_start + the displayed spp, feeding the four-arg
+    // scanner_pixel_x). displayed_viewport_basis(app, audio) is the item-mirror
+    // owner, equal to the plate basis at every committing paint by construction
+    // (and equally OLD during an async publish window), and is the same seam
+    // invalidate_hover_stem_column uses for waveform-overlay column damage; its
+    // cold state (no plate published) falls back to the live viewport, the
+    // standing convention. A live-basis column would MISS the scanner inside a
+    // publish window — a stopped discrete pan repaints the OLD plate while the
+    // live viewport already holds the new span, so a launch there would target
+    // the wrong column and the line would stay invisible until the publish's
+    // full-area damage. Computed AFTER follow_scroll_if_needed, which may have
+    // moved the viewport, so the basis reflects the post-scroll position. The
+    // scanner fields are already seeded above. The REFUSAL paths never reach
+    // here — a silent "nothing to audition" no-op stays damage-less and
+    // preserves the pin by design, like every silent refusal. The
+    // kill-and-revive scrub over a live session already damaged via the stop
+    // half; this revive-half damage is a harmless union with it.
+    const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
+    const double launch_px =
+        scanner_pixel_x(app, audio, basis.vp_start_frame, basis.spp);
     viewport.invalidate_playhead_columns(launch_px, launch_px);
     viewport.invalidate_timestamp_area();
     const bool force_one_x = (app.active_audio_view == 'T');

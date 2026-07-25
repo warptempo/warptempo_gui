@@ -203,12 +203,14 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 // through Viewport::apply_zoom_to_start (pre-clamps the level, funnels through
 // clamp_viewport_start, keeps the idempotent current-vs-target no-op, kicks one
 // sync render). `margin` adds a 2.5%-per-side (region / trim / group cases); the
-// whole-song case passes margin=false. The centering formula uses the
-// PAINTER-QUANTIZED spp at the target level (samples_visible's basis) so a
-// floor-saturated span rests CENTERED rather than left-aligned, and degenerates
-// to the span's left edge in the unclamped case (visible == the margined span by
-// the solve). Shared by run_zoom_double_click_command (all three arms) and the
-// GROUP undo/redo restore's offscreen framing. Definition in input_handler.cpp.
+// whole-song case passes margin=false. The centering formula uses the UNROUNDED
+// visible width (spp_t * W) — grid quantization is owned downstream by
+// clamp_viewport_start, so NO painter-quantized pre-rounding is applied here
+// (only the final start is rounded). A floor-saturated span rests CENTERED rather
+// than left-aligned, and the unclamped case degenerates to the span's left edge
+// (unrounded spp_t * W == the margined span by the solve). Shared by
+// run_zoom_double_click_command (all three arms) and the GROUP undo/redo
+// restore's offscreen framing. Definition in input_handler.cpp.
 void frame_span_into_view(AppState& app, const GuiAudio& audio,
                           Viewport& viewport, int64_t lo, int64_t hi,
                           bool margin);
