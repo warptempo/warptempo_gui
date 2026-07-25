@@ -53,13 +53,6 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     // source-view region survived into the forced target view and a later `x`
     // overwrote the freshly adopted recipe trim with the stale span.
     app.region = RegionState{};
-    // The stem hover-suppress latch is a store index into the active column;
-    // a load / `'` adopt replaces the stores, so a leftover index would
-    // suppress an unrelated marker. This routine re-establishes the live view
-    // for BOTH routes, so the clear lives here beside the region clear
-    // (see AppState::stem_hover_suppress_marker). A store load bumps generation
-    // too, so the gen-stamp is belt-and-braces; the explicit clear stays owner.
-    clear_stem_hover_suppress(app);
     app.active_audio_view   = sf.active_audio_view;
     app.active_markers_view = sf.active_markers_view;
     app.active_tab_view     = sf.active_tab_view;

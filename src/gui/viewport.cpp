@@ -104,7 +104,7 @@ void Viewport::invalidate_hover_stem_column(int idx, int64_t source_frame) {
     // then miss the stem entirely (the mixed-basis hazard the pin stamp went
     // full-area to avoid); at a fully settled rest with no publish pending the two
     // bases happen to coincide, but nothing here relies on that. Both consumers
-    // inherit this: suppress_hover_stem's disappear damage and the hover
+    // inherit this: damage_marker_stem_column's click-appear damage and the hover
     // recompute's appear/disappear transitions (old + new columns).
     const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
     const int col = painted_column_of_source_frame_on_basis(
@@ -122,13 +122,11 @@ void Viewport::invalidate_hover_stem_column(int idx, int64_t source_frame) {
     gui.invalidate_region(x0, area.y, x1 - x0, area.h);
 }
 
-void Viewport::suppress_hover_stem(int idx) {
-    // State write through the one setter, then explicit stem-column damage so the
-    // suppressed hover stem's disappear renders without relying on an adjacent
-    // land/selection repaint (see the declaration). Frame from the active
-    // column's store — the latch index is per-column — and only damage when idx
-    // resolves there.
-    set_stem_hover_suppress(app, idx);
+void Viewport::damage_marker_stem_column(int idx) {
+    // Explicit stem-column damage so the marker CLICK's immediately-appearing
+    // hover stem renders without relying on an adjacent land/selection repaint
+    // (see the declaration). Frame from the active column's store — the index is
+    // per-column — and only damage when idx resolves there.
     int64_t frame = 0;
     bool    have  = false;
     if (app.active_markers_view == 'P') {
@@ -726,23 +724,6 @@ void Viewport::recompute_hover_at_cursor() {
     // stored into the hover cache below and compared here.
     if (hit == app.hover_popup.marker_index &&
         mh.on_flag == app.hover_popup.on_flag && !cache_invalidated) return;
-
-    // Stem hover re-arm latch clear (see AppState::stem_hover_suppress_marker):
-    // once the resolved hit moves OFF the suppressed marker, re-arm its hover
-    // stem. This is the ONLY clear on the pointer-geometry path, so a
-    // click-then-rest keeps the stem hidden until a genuine mouseout-return. The
-    // short-circuit above cannot strand the latch: the first motion that carries
-    // the hit off the latch marker takes THIS full path (hit != hover then,
-    // since a resting hover on the latch marker means hit == hover would have
-    // short-circuited only while the hit stays on it — moving off changes hit),
-    // so the latch always sees its release. A DEAD latch (store mutated since
-    // set — stem_hover_suppress_active false) also resets here lazily. Routes
-    // through the shared clear_stem_hover_suppress helper so the {marker, gen}
-    // pair is never half-cleared (the same helper the five lifecycle clears use).
-    if (!stem_hover_suppress_active(app) ||
-        hit != app.stem_hover_suppress_marker) {
-        clear_stem_hover_suppress(app);
-    }
 
     const bool was_visible = app.hover_popup.any_visible();
     // Selected-stem hover-transition damage inputs: the OLD hovered marker (whose

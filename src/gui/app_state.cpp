@@ -41,11 +41,6 @@ void remap_marker_indices_after_reorder(AppState& app,
     for (int idx : app.selected_markers) remapped.insert(mapped(idx));
     app.selected_markers = std::move(remapped);
     app.last_selected_marker = mapped(app.last_selected_marker);
-    // The stem hover-suppress latch is NOT remapped: a reorder bumps the active
-    // column's store generation, so the latch goes dead by the generation
-    // compare (stem_hover_suppress_active) and the recompute clear resets it
-    // lazily — the former remap here was redundant (see
-    // AppState::stem_hover_suppress_marker).
     if (app.drag.active) {
         // Pairing between dragging_markers and its parallel time vectors
         // (original_times / moveable_times) is positional by k, so an

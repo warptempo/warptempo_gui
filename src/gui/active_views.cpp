@@ -70,13 +70,6 @@ void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     app.active_markers_view = target_mode;
     selection.prune_live_selection();
     viewport.clear_hover_popup();
-    // The stem hover-suppress latch indexes the active COLUMN's store; the W/P
-    // flip changes column, so a leftover index would suppress an unrelated
-    // marker in the other column (AppState::stem_hover_suppress_marker). This
-    // explicit clear stays the correctness owner: the generation stamp compares
-    // against the ACTIVE column's store and the other column's counter could
-    // coincidentally match, so the gen-stamp is only belt-and-braces here.
-    clear_stem_hover_suppress(app);
 }
 
 // Ctrl+Tab toggles A/B navigational tabs. Stops playback (deactivating the
@@ -102,12 +95,6 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // domain), so a resting region cannot carry across. The kick_waveform_sync
     // below repaints the whole waveform area, clearing the wash.
     app.region = RegionState{};
-    // The stem hover-suppress latch indexes the active tab's store; a Ctrl+Tab
-    // switch restores a different per-tab selection, so a leftover index would
-    // suppress an unrelated marker (AppState::stem_hover_suppress_marker). This
-    // explicit clear stays the correctness owner — a cross-tab generation
-    // counter could coincidentally match — so the gen-stamp is belt-and-braces.
-    clear_stem_hover_suppress(app);
     this->refresh_active_tab_view_from_app();
     app.active_tab_view = target_tab;
     const ViewState& target = (app.active_tab_view == 'A') ? app.tab_a : app.tab_b;

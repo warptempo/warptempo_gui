@@ -601,15 +601,14 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
     // reap zeroes stem_pin_marker once a DAMAGING command breaks adjacency;
     // damage-less commands re-stamp it through the preserve), so paint tests
     // adjacency only.
-    // The hover arm is re-arm-latched: after a pointer marker-click, the stem
-    // stays hidden while the pointer merely rests inside the clicked marker's
-    // hit area, until a mouseout-then-return clears the latch (see
-    // AppState::stem_hover_suppress_marker). The drag / tempo-drag / pin arms
-    // below are untouched.
-    const bool hover_arm =
-        (app.hover_popup.marker_index == idx) &&
-        !(stem_hover_suppress_active(app) &&
-          app.stem_hover_suppress_marker == idx);
+    // The hover arm: the pointer rests on this selected marker's hit area. A
+    // marker CLICK shows the stem at once through this arm (the pointer is inside
+    // the hit area at click time); hover-OUT hides it and re-hover re-shows it.
+    // A click shows the stem at once because the pointer is on the just-clicked
+    // marker; hover-out hides it and re-hover re-shows it (the former latch that
+    // deferred the click's stem is gone). The drag / tempo-drag / pin arms below
+    // are unchanged (they show the stem regardless of hover).
+    const bool hover_arm = (app.hover_popup.marker_index == idx);
     const bool pin_arm = (app.stem_pin_marker == idx &&
                             app.command_seq == app.stem_pin_command_seq);
     if (!hover_arm && !drag_arm && !pin_arm && !tempo_drag_arm) return;

@@ -447,14 +447,6 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             app.last_selected_marker       = curtab.phase_reset_last_selected;
         }
         app.active_markers_view = entry.op_mode;
-        // FIFTH stem-hover-suppress lifecycle clear (round-2 codex finding): this
-        // inline same-tab W/P column swap bypasses
-        // GuiActiveViews::switch_active_markers_view_to, hence its latch clear too.
-        // The two store generations are independent, so an active-column latch
-        // stamp can coincide with the other column's current generation across the
-        // flip and falsely suppress an unrelated same-index marker; clear the pair
-        // here beside the four helper-site clears.
-        clear_stem_hover_suppress(app);
     }
 
     // Settings-only entries carry no marker or focus post-restore work.

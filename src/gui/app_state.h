@@ -1404,93 +1404,21 @@ struct AppState {
     int           stem_pin_marker      = -1;
     uint64_t      stem_pin_command_seq = 0;
 
-    // Stem hover re-arm latch. Meaning: "the last POINTER marker-click clicked
-    // THIS marker and the pointer has not yet left its hit area — the selected
-    // stem's HOVER arm is disarmed for it." The bug it fixes: a pointer click
-    // selects a marker, the pointer is then still inside that marker's hit
-    // area, and the very next motion re-resolves hover onto it, so
-    // paint_selected_stem's hover arm fires and the blue stem pops right after
-    // the click. Desired: after a click selects a marker, the hover stem waits
-    // until the user mouses OUT of the hit area and returns.
-    //   SET (to the CLICKED / hit index, NOT the landed-earliest one) at every
-    // pointer marker-click selection route: the plain flag/lane single-select,
-    // the shift-range select, the ctrl membership toggle (add OR remove — the
-    // clicked marker is under the pointer either way), and both deferred-click
-    // completions (pending marker/tempo drag, at release and at lost-button).
-    //   CLEARED (to -1) in Viewport::recompute_hover_at_cursor on the full
-    // (non-short-circuited) path the instant the resolved hit differs from the
-    // latch marker — that is the only POINTER-GEOMETRY clear (five lifecycle
-    // clears exist beside it, enumerated below), so a mouseout-then-return re-arms.
-    //   TESTED in paint_selected_stem: the HOVER arm requires the latch to be
-    // dead OR not name this idx (stem_hover_suppress_active). The drag /
-    // tempo-drag / lateral-PIN arms are UNTOUCHED — the pin deliberately shows
-    // the stem after a nudge/drag regardless of hover, and that stays.
-    //   LIVENESS IS GENERATION-STAMPED (round-1 codex finding). The latch pairs
-    // the index with stem_hover_suppress_gen = the ACTIVE column's store
-    // generation at set time; it is LIVE iff stem_hover_suppress_marker >= 0 &&
-    // stem_hover_suppress_gen == that store's CURRENT generation. So the latch
-    // dies when EITHER the pointer leaves the hit area (the recompute clear) OR
-    // ANY mutation of the active column's store bumps its generation (insert,
-    // delete, reorder, nudge, paste, payload edit — every GuiMarkerStore mutator
-    // bumps generation_). One setter (set_stem_hover_suppress) and one predicate
-    // (stem_hover_suppress_active) below own the invariant; the two consumers
-    // (paint_selected_stem, recompute_hover_at_cursor) share the predicate so
-    // they cannot drift, and a dead latch resets to {-1,-1} lazily at the
-    // recompute clear.
-    //   The generation rule fixes the codex insertion index-transfer bug: click
-    // marker i (latch = i), press `s` to create a COINCIDENT marker that inserts
-    // AT index i — the store generation bumps, the latch goes dead, and the new
-    // marker hover-arms normally (the old raw-index latch would have transferred
-    // to the keyboard-created marker, violating "keyboard routes never latch").
-    // Deletions at/before the latched row shift identity the same way and are
-    // covered by the same one rule.
-    //   ACCEPTED EDGE (new): a store mutation while the pointer still rests
-    // inside the clicked marker's hit area re-arms the hover stem without a
-    // mouseout (e.g. a flag-editor commit, a nudge after the pin dies). Accepted:
-    // the click-pop the latch exists for cannot recur without a fresh click, and
-    // the visible-stem cases are covered by the lateral pin anyway.
-    // SCOPE decisions:
-    //  - Pointer clicks only: keyboard focus routes (Tab family, `c`,
-    //    undo/redo) never set the latch — a coincidentally-underlying pointer
-    //    arming the stem after a Tab is accepted.
-    //  - Survives across NON-mutating commands (pure pointer geometry, unlike
-    //    the command-adjacency stem pin): after the click any number of
-    //    store-preserving commands may run and the stem still waits for a
-    //    mouseout-return; a store mutation (above) ends it.
-    //  - Pointer-leave-the-window then re-enter onto the SAME marker without
-    //    crossing hover-off does NOT re-arm (the recompute clear is the only
-    //    clear); accepted, rare.
-    // LIFECYCLE clears (FIVE sites; index is a per-column, per-tab store
-    // position — a stale cross-column/tab index must not suppress an unrelated
-    // marker): reset to -1 at file load and `'` adopt
-    // (apply_settings_engine_and_prefs), at the Ctrl+Tab tab switch, the W/P
-    // column toggle, the S/T audio-view switch, and undo/redo's INLINE same-tab
-    // W/P column swap (the fifth, round-2 codex finding: that swap assigns
-    // active_markers_view directly and bypasses switch_active_markers_view_to,
-    // hence its clear too, and the two stores' independent generations can
-    // coincide across the flip). All five route through the ONE
-    // clear_stem_hover_suppress helper so the {marker, gen} pair can never be
-    // half-cleared. These stay the correctness owners: the generation compare is
-    // against the ACTIVE column's store, and a cross-column/tab generation
-    // counter could coincidentally match, so the gen-stamp is only
-    // belt-and-braces there. (No reorder remap: a reorder bumps the generation,
-    // so the latch dies there for free — the former remap in
-    // remap_marker_indices_after_reorder was redundant and is removed.)
-    // Session-only, never serialized. SETTING the latch explicitly damages the
-    // suppressed marker's stem column (Viewport::suppress_hover_stem — the one
-    // click-path setter, which damages then delegates to set_stem_hover_suppress):
-    // an earlier claim that the set "rides a click that already repaints" was
-    // wrong for the plain click on an ALREADY-selected marker, where
-    // set_single_selection is a damage no-op and only land_playhead_on_marker's
-    // same-position column invalidation repainted — a fragile coupling now made
-    // explicit. CLEARING happens while the stem is NOT painting (it was
-    // suppressed), and the hover recompute's own invalidate_hover_stem_column
-    // damage owns the later appear/disappear transitions.
-    int           stem_hover_suppress_marker = -1;
-    // The ACTIVE column's store generation stamped when the latch was set
-    // (set_stem_hover_suppress). The latch is LIVE only while this still equals
-    // that store's current generation — see stem_hover_suppress_active().
-    long long     stem_hover_suppress_gen    = -1;
+    // Selected-marker stem visibility model (paint_selected_stem owns the arms).
+    // The blue stem paints for the SINGLETON selection while any of four arms
+    // fire: (a) HOVER — the pointer rests on the selected marker's hit area (the
+    // plain hover arm); (b) position DRAG; (c) TEMPO drag; (d) LATERAL PIN (the
+    // last command was a lateral gesture on the marker). A marker CLICK shows the
+    // stem IMMEDIATELY because the pointer is already inside the hit area, so the
+    // plain hover arm fires — the click sites damage the stem column (via
+    // Viewport::damage_marker_stem_column) so the appearing stem paints without
+    // relying on an adjacent land/selection repaint; hover-OUT hides it (the hover
+    // arm goes false, damaged by the hover recompute), and re-hover re-shows it.
+    // A KEYBOARD-only selection with the pointer never entering the marker shows
+    // no stem — the stem is a pointer/working affordance, and the drag / tempo-drag
+    // / pin arms cover the gesture cases (a non-lateral singleton undo/redo shows
+    // no stem, matching that cross-ruling). The former hover re-arm SUPPRESS latch
+    // is retired: clicking a marker now shows its stem at once.
 
     // Active markers view: 'W' = warp markers, 'P' = phase reset markers.
     // Toggled by `p`. Determines which marker collection is visible / edited /
@@ -1999,38 +1927,6 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 inline bool active_column_authoring_allowed(const AppState& app) {
     return (app.active_markers_view == 'P') ? (app.active_audio_view == 'T')
                                             : (app.active_audio_view == 'S');
-}
-
-// Stem hover-suppress latch owner (see AppState::stem_hover_suppress_marker).
-// The active column's current store generation — the value the latch stamps at
-// set time and compares against to stay live.
-inline long long active_marker_store_generation(const AppState& app) {
-    return (app.active_markers_view == 'P')
-               ? app.phaseresetmarkers.generation()
-               : app.warpmarkers.generation();
-}
-
-// ONE setter for the latch: index + generation stamp, so every set site cannot
-// forget the stamp. All pointer marker-click routes go through this.
-inline void set_stem_hover_suppress(AppState& app, int idx) {
-    app.stem_hover_suppress_marker = idx;
-    app.stem_hover_suppress_gen    = active_marker_store_generation(app);
-}
-
-// ONE liveness predicate shared by the two consumers (paint_selected_stem's
-// hover arm, recompute_hover_at_cursor's clear): live iff a marker is latched
-// AND the active column's store has not mutated since (generation still matches).
-inline bool stem_hover_suppress_active(const AppState& app) {
-    return app.stem_hover_suppress_marker >= 0 &&
-           app.stem_hover_suppress_gen == active_marker_store_generation(app);
-}
-
-// ONE paired clear for the latch: reset BOTH fields to -1 together so the pair
-// can never be half-cleared. Every lifecycle clear site (the five listed at the
-// latch's field comment) routes through this.
-inline void clear_stem_hover_suppress(AppState& app) {
-    app.stem_hover_suppress_marker = -1;
-    app.stem_hover_suppress_gen    = -1;
 }
 
 // SelectionSnapshot movers: capture the live marker selection at drag begin,

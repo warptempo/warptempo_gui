@@ -226,19 +226,19 @@ struct Viewport {
     void invalidate_top_strip();
     void invalidate_all();
 
-    // Set the stem-hover suppression latch for active-column marker `idx` AND
-    // damage that marker's stem column, so the now-suppressed hover stem's
-    // DISAPPEAR renders on its own. The click paths that set this latch also land
-    // the playhead, whose same-position column invalidation was the only repaint
-    // for the plain-click-on-already-selected case (set_single_selection is
-    // damage-idempotent there) — a fragile coupling a "skip the no-op land"
-    // cleanup would orphan. The damage rides the SAME invalidator the hover
-    // recompute uses for this stem (invalidate_hover_stem_column), which erases
-    // the COMMITTED DISPLAYED stem pixels — correct whether or not the live and
-    // displayed viewports currently coincide (a click can dispatch inside an async
-    // publish window, live already advanced, so no live==displayed assumption is
-    // made). Delegates the state write to the one setter (set_stem_hover_suppress).
-    void suppress_hover_stem(int idx);
+    // Damage active-column marker `idx`'s stem column, so a marker CLICK's
+    // immediately-appearing hover stem renders without relying on an adjacent
+    // land/selection repaint. The click paths call this because clicking an
+    // ALREADY-selected marker makes set_single_selection a damage no-op, and only
+    // land_playhead_on_marker's same-position column invalidation would otherwise
+    // repaint — a fragile coupling a "skip the no-op land" cleanup would orphan.
+    // The damage rides the SAME invalidator the hover recompute uses for this stem
+    // (invalidate_hover_stem_column), which erases the COMMITTED DISPLAYED stem
+    // pixels — correct whether or not the live and displayed viewports currently
+    // coincide (a click can dispatch inside an async publish window, live already
+    // advanced, so no live==displayed assumption is made). (The former re-arm
+    // suppress latch this once set is retired; only the damage half survives.)
+    void damage_marker_stem_column(int idx);
 
     // Reset the hover popup state. If the popup was visible, invalidate
     // the readout area so the next paint erases it. Safe to call from any
