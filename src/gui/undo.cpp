@@ -549,24 +549,39 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             //     that failed at the current level forces the framer to a DIFFERENT
             //     (more zoomed-out) level to seat the MARGIN-widened span — the
             //     level differs, so the guard does not short-circuit. THE ONE
-            //     EXCEPTION (accepted, architect 2026-07-25): already AT the
-            //     effective zoom-out ceiling (whole song visible, start clamped 0),
-            //     a group extent ending at EOF has its hi column round to W — the
-            //     recorded "inclusive END wall total-1 rounds to column W at full
-            //     zoom-out" geometry — and the framer cannot zoom out further (its
-            //     margined level clamps back to the ceiling, so apply_zoom_to_start
-            //     no-ops and the ceiling rest at start 0 stands). The EOF flag then
-            //     half-culls: that is the standing flags-may-hang-half-offscreen
-            //     geometry (cull only when FULLY out), the SAME cull every
-            //     navigation route shows there (Tab, the marker-click land, `c`, and
-            //     the zoom-row double-click framer itself cannot show an EOF flag
-            //     whole at whole-song-visible either) — not a framing defect, and
-            //     identical under every option reachable within the whole-song-
-            //     ceiling and centered-flag rulings. The futile framer call is left
-            //     as-is (a harmless no-op there); a ceiling special-case would be a
-            //     branch for ZERO behavioral difference. This whole arm diverges
-            //     from the zoom-row DOUBLE-CLICK's unconditional zoom-to-span; the
-            //     framer itself is untouched, an undo-tail rule only.
+            //     EXCEPTION (planner-ruled 2026-07-25, flagged for architect veto —
+            //     upgrades to architect attribution only if/when ratified) is the
+            //     CONJUNCTION the two code paths already embody: (a) an endpoint's
+            //     painted column still fails the [0, W) test after the ceiling /
+            //     start-0 clamp — which happens for ANY hi landing in the final
+            //     half-pixel interval at the ceiling q, NOT only total-1 (e.g.
+            //     W=1920, total=4,410,000, q=2296.875: hi = total-1000 rounds to
+            //     column W without ending at EOF) — AND (b) the margined fit request
+            //     clamps back to that SAME ceiling, so apply_zoom_to_start no-ops and
+            //     the ceiling rest at start 0 stands. Both are required: a NARROW
+            //     EOF-ending group fails (a) but not (b) — e.g. extent
+            //     [4,000,000, total-1] ends at EOF yet its 5%-widened span frames to
+            //     a DEEPER level, exercising no no-op — while the (a)-failing wide
+            //     case no-ops because its margined span is already at least
+            //     song-wide. When the conjunction holds the endpoint rests AT or
+            //     PAST the effective waveform's right edge: half-culled, or (at a
+            //     non-multiple-of-16 window width) sitting in the 0-15px inert right
+            //     gutter, where the 17px flag can even show WHOLE just outside the
+            //     effective span — flag centers use the effective W (floored to a
+            //     multiple of 16) while the flag surface spans the full strip. At
+            //     the ruled deployment widths (1920 / 2560 / 3840, all multiples of
+            //     16) the gutter is empty and it half-culls. Either way NO route
+            //     places the endpoint INSIDE the effective span at whole-song-
+            //     visible — the standing flags-may-hang-half-offscreen geometry (cull
+            //     only when FULLY out), the SAME cull every navigation route shows
+            //     there (Tab, the marker-click land, `c`, and the zoom-row
+            //     double-click framer itself) — not a framing defect, and identical
+            //     under every option reachable within the whole-song-ceiling and
+            //     centered-flag rulings. The futile framer call is left as-is (a
+            //     harmless no-op there); a ceiling special-case would be a branch for
+            //     ZERO behavioral difference. This whole arm diverges from the
+            //     zoom-row DOUBLE-CLICK's unconditional zoom-to-span; the framer
+            //     itself is untouched, an undo-tail rule only.
             // ACCEPTED COST on the framer arm: apply_zoom_to_start runs one sync
             // render and the unconditional kick_waveform_sync below runs a second
             // over identical final state — a bounded duplicate on a discrete
