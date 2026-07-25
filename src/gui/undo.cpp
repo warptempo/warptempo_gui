@@ -544,14 +544,29 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             //     2.5%-per-side, centered, clamped [kMinZoom, effective ceiling], NO
             //     playhead recenter). It OVERWRITES the tentative viewport wholesale
             //     (level + start via apply_zoom_to_start), so the tentative write
-            //     needs no revert; and its apply_zoom_to_start no-op guard can never
-            //     leave the failing tentative state standing, because a fit that
-            //     failed at the current level forces the framer to a DIFFERENT
+            //     needs no revert. Its apply_zoom_to_start no-op guard normally
+            //     cannot leave the failing tentative state standing, because a fit
+            //     that failed at the current level forces the framer to a DIFFERENT
             //     (more zoomed-out) level to seat the MARGIN-widened span — the
-            //     level always differs, so the guard never short-circuits. This
-            //     diverges from the zoom-row DOUBLE-CLICK's unconditional
-            //     zoom-to-span; the framer itself is untouched, an undo-tail rule
-            //     only.
+            //     level differs, so the guard does not short-circuit. THE ONE
+            //     EXCEPTION (accepted, architect 2026-07-25): already AT the
+            //     effective zoom-out ceiling (whole song visible, start clamped 0),
+            //     a group extent ending at EOF has its hi column round to W — the
+            //     recorded "inclusive END wall total-1 rounds to column W at full
+            //     zoom-out" geometry — and the framer cannot zoom out further (its
+            //     margined level clamps back to the ceiling, so apply_zoom_to_start
+            //     no-ops and the ceiling rest at start 0 stands). The EOF flag then
+            //     half-culls: that is the standing flags-may-hang-half-offscreen
+            //     geometry (cull only when FULLY out), the SAME cull every
+            //     navigation route shows there (Tab, the marker-click land, `c`, and
+            //     the zoom-row double-click framer itself cannot show an EOF flag
+            //     whole at whole-song-visible either) — not a framing defect, and
+            //     identical under every option reachable within the whole-song-
+            //     ceiling and centered-flag rulings. The futile framer call is left
+            //     as-is (a harmless no-op there); a ceiling special-case would be a
+            //     branch for ZERO behavioral difference. This whole arm diverges
+            //     from the zoom-row DOUBLE-CLICK's unconditional zoom-to-span; the
+            //     framer itself is untouched, an undo-tail rule only.
             // ACCEPTED COST on the framer arm: apply_zoom_to_start runs one sync
             // render and the unconditional kick_waveform_sync below runs a second
             // over identical final state — a bounded duplicate on a discrete
