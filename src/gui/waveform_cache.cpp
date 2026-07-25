@@ -13,12 +13,14 @@
 #include <set>
 #include <vector>
 
-// Waveform / trim-stem / flag cache production. The off-screen surfaces
+// Waveform / flag cache production. The off-screen surfaces
 // on_redraw blits — the waveform plate (worker-rendered, incrementally
-// panned, or synchronously rebuilt), the trim-stem cache (trim boundary stems
-// only — marker stems are live overlays, not cached), and the
+// panned, or synchronously rebuilt) and the
 // flag-rect cache — are produced here, away from the on-screen paint
-// path in paint_handler.cpp. These are GuiPaintHandler members defined
+// path in paint_handler.cpp. (Trim is a LIVE paint pass now —
+// GuiPaintHandler::paint_trim, below the playheads — so no trim pixel is
+// cached; the former trim-stem cache is retired.) These are GuiPaintHandler
+// members defined
 // in a second translation unit; the class declaration and the on-screen
 // paint passes live in paint_handler.{h,cpp}. Nothing here reaches the
 // render path, so this is a labwc / build concern only.
@@ -54,7 +56,7 @@ void render_waveform_to_cache_surface(
     // waveform_inset_px() clear at top and bottom (the top band holds the cursor
     // triangle; the bottom mirrors it so the waveform is centered in its area).
     // The surface itself is still area_w x area_h and is blitted at area.y, so
-    // the cache fingerprint, stem cache, and blit are unaffected — the inset is
+    // the cache fingerprint and blit are unaffected — the inset is
     // a property of sample drawing only.
     const int inset_h = area_h - 2 * waveform_inset_px();
     if (inset_h <= 0) { cairo_destroy(ccr); return; }
@@ -304,7 +306,8 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.target         = in.is_target;
     job.warp_frame_map_hash   = in.warp_frame_map_hash;
     // Stash a copy of the warp_frame_map on the pending slot so the
-    // stem cache can read it at completion-swap time. The job consumes
+    // flag cache (and the out-of-trim dim) can read it at completion-swap
+    // time. The job consumes
     // the original by move; the copy stays on the cache.
     wf_cache.pending_fp_warp_frame_map = in.warp_frame_map;
     job.warp_frame_map        = std::move(in.warp_frame_map);
@@ -414,7 +417,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         // Thread the supersede warp_frame_map into both the job and
         // pending_fp_warp_frame_map, the same way the idle-path dispatch does.
         // Copy first, then move into the job — the cache keeps a
-        // displayable copy for the post-completion stem rebuild.
+        // displayable copy for the post-completion flag rebuild.
         wf_cache.pending_fp_warp_frame_map = wf_cache.supersede_warp_frame_map;
         job.warp_frame_map        = std::move(wf_cache.supersede_warp_frame_map);
         job.surface        = wf_cache.pending_surface;
@@ -454,27 +457,27 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     wf_cache.fp_target       = wf_cache.pending_fp_target;
     wf_cache.fp_warp_frame_map_hash = wf_cache.pending_fp_warp_frame_map_hash;
     // Publish the in-flight job's warp_frame_map to the displayed slot
-    // so the next maybe_rebuild_stem_cache reads the same coordinate
+    // so the next maybe_rebuild_flag_cache reads the same coordinate
     // system the just-blitted waveform pixels were rendered against.
     std::swap(wf_cache.fp_warp_frame_map,     wf_cache.pending_fp_warp_frame_map);
 
-    // Rebuild the item caches INLINE now, against the fingerprint just published
+    // Rebuild the flag cache INLINE now, against the fingerprint just published
     // — the same shape the incremental-pan and synchronous-rebuild paths already
     // use (pan_waveform_incremental / force_synchronous_waveform_rebuild). The run
     // loop can service the wl_display fd (the frame callback that PAINTS) before
     // the timerfd tick that runs the on_tick dirty-check, so deferring the
-    // stem/flag rebuilds to the tick let a frame blit the NEW plate over OLD
-    // stem/flag/chip caches — and the plate-registered overlays (selected stem,
+    // flag rebuild to the tick let a frame blit the NEW plate over an OLD
+    // flag cache — and the plate-registered overlays (selected stem,
     // grey focus triangles, phase-reset overlay), which read the NEW fp_* via
     // displayed_viewport_basis, visibly left their flags for one frame during a
-    // follow-scroll / resize / pan-fallback publish. Doing the rebuilds here makes
+    // follow-scroll / resize / pan-fallback publish. Doing the rebuild here makes
     // the committing frame blit new plate + new items together and promote the
     // staged basis atomically. The two-phase stage/promote ruling is UNCHANGED:
-    // these rebuilds STAGE the displayed hit map (app.staged_displayed_*), and
-    // on_redraw still PROMOTES it at the committing frame; the on_tick rebuilds
-    // remain the idempotent fingerprint-guarded backstop. This also removes the
-    // one-frame item lag every worker publish had.
-    maybe_rebuild_stem_cache();
+    // the rebuild STAGES the displayed hit map (app.staged_displayed_*), and
+    // on_redraw still PROMOTES it at the committing frame; the on_tick rebuild
+    // remains the idempotent fingerprint-guarded backstop. This also removes the
+    // one-frame item lag every worker publish had. (The live trim pass needs no
+    // rebuild — it reads the promoted item basis per frame.)
     maybe_rebuild_flag_cache();
 
     // Invalidate the waveform area so the next paint blits the new
@@ -487,10 +490,10 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 //
 // Tab / Shift+Tab / Ctrl+Shift+Tab routes through here from the input
 // handler. The async worker rebuilds the waveform one frame late, so the
-// same-tick stem/flag rebuilds key off the lagging wf_cache.fp_* and the
+// same-tick flag rebuild keys off the lagging wf_cache.fp_* and the
 // selection rectangle on the newly focused marker blinks across the
 // worker window. Forcing a sync render + fp publish here makes the
-// stem/flag caches converge against the final viewport this tick.
+// flag cache converge against the final viewport this tick.
 //
 // Writing into wf_cache.surface directly (not pending_surface + swap) is
 // safe only because wait_until_idle() ran first — the worker is Idle and
@@ -499,7 +502,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 
 // Synchronous-repaint rule (the waveform-layer coherence invariant):
 //
-// The waveform plate and the marker / playhead / dim / stem / flag overlays are
+// The waveform plate and the marker / playhead / dim / trim / flag overlays are
 // separate paint layers. The overlays are computed inline from live state and
 // paint on the next frame; the plate is the expensive layer. If a one-shot
 // state change updates the overlays inline but defers the plate to the async
@@ -584,8 +587,8 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
         in.vp_start, in.vp_end,
         in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
 
-    // Publish the displayed fingerprint NOW so the stem/flag rebuilds at
-    // the tail of this function read the current viewport. Keep pending_fp_*
+    // Publish the displayed fingerprint NOW so the flag rebuild at
+    // the tail of this function reads the current viewport. Keep pending_fp_*
     // in lockstep so the next maybe_enqueue_waveform_render sees no diff and
     // does not re-dispatch the same target on the worker.
     wf_cache.fp_vp_start     = in.vp_start;
@@ -607,24 +610,23 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     const GuiRect a = waveform_area(app);
     gui.invalidate_region(0, 0, app.width, a.y + a.h);
 
-    // Rebuild the overlay caches inline, against the fingerprint just
+    // Rebuild the flag cache inline, against the fingerprint just
     // published. Without this the plate leads its overlays: the run loop
     // services the wl_display fd (the input event AND the frame callback that
     // paints) before the timerfd tick that would run the on_tick dirty-check,
-    // so the paint blits the fresh plate over stem/flag/chip/triangle caches
-    // that are one or more ticks stale — and during a zoom key-repeat or wheel
+    // so the paint blits the fresh plate over a flag cache
+    // that is one or more ticks stale — and during a zoom key-repeat or wheel
     // torrent the plate leads the overlays by the whole gesture. Doing the
-    // rebuilds here makes plate, fingerprint, stem cache, flag cache, and the
+    // rebuild here makes plate, fingerprint, flag cache, and the
     // staged displayed hit map all commit before the next paint — the
     // same-frame consistency every kick_waveform_sync caller expects (zoom,
     // Home/End, center-on-playhead, tab/view swaps, drops/deletes/commits,
-    // undo/redo). Both rebuilds are fingerprint-guarded, so they are cheap
-    // no-ops when the caches already match. The two functions also stage the
+    // undo/redo). The rebuild is fingerprint-guarded, so it is a cheap
+    // no-op when the cache already matches. It also stages the
     // event-sync displayed hit map (promoted when on_redraw commits the
-    // rebuild — the two-phase commit, ruling at the selector); running them
+    // rebuild — the two-phase commit, ruling at the selector); running it
     // here closes the hit-test staleness window that otherwise lasts until the
     // next tick.
-    maybe_rebuild_stem_cache();
     maybe_rebuild_flag_cache();
 }
 
@@ -738,9 +740,8 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
         wf_cache.pending_fp_target      = in.is_target;
         wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
         wf_cache.pending_fp_warp_frame_map      = in.warp_frame_map;
-        // Plate bookkeeping advanced to the new viewport; bring the overlay
-        // caches with it so stems / flags / dim do not lag the plate.
-        maybe_rebuild_stem_cache();
+        // Plate bookkeeping advanced to the new viewport; bring the flag
+        // cache with it so flags / dim do not lag the plate.
         maybe_rebuild_flag_cache();
         const GuiRect a = waveform_area(app);
         gui.invalidate_region(0, 0, app.width, a.y + a.h);
@@ -751,8 +752,8 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
     // guarantees a correct frame (the rare fast-flick case), and keeps the
     // inline strip work strictly bounded to at most a window width.
     if (delta_px >= plate_w || delta_px <= -plate_w) {
-        // force_synchronous_waveform_rebuild rebuilds the stem and flag
-        // caches inline at its tail, so the fast-flick frame is already fully
+        // force_synchronous_waveform_rebuild rebuilds the flag
+        // cache inline at its tail, so the fast-flick frame is already fully
         // consistent — plate and overlays commit together, no reliance on an
         // on_tick that may not run before the next paint.
         force_synchronous_waveform_rebuild();
@@ -841,34 +842,25 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
     wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
     wf_cache.pending_fp_warp_frame_map      = in.warp_frame_map;
 
-    // The plate advanced synchronously in this event. Rebuild the stem and
-    // flag caches now, against the just-published fingerprint, so the overlay
-    // layers (stems, flags, and the dim they paint under markers) move in
+    // The plate advanced synchronously in this event. Rebuild the
+    // flag cache now, against the just-published fingerprint, so the overlay
+    // layers (flags, and the dim) move in
     // lockstep with the plate. Without this they lag until the next on_tick
     // dirty-check, and a continuous drag shows the markers and their dim
-    // trailing the waveform by a step. Both rebuilds are fingerprint-guarded
+    // trailing the waveform by a step. The rebuild is fingerprint-guarded
     // and cheap; this is the same inline rebuild the synchronous path runs.
-    maybe_rebuild_stem_cache();
     maybe_rebuild_flag_cache();
 
     const GuiRect a = waveform_area(app);
     gui.invalidate_region(0, 0, app.width, a.y + a.h);
 }
 
-// -- Trim stem cache dirty-detect and rebuild ----------------------------
-//
-// Called from on_tick AFTER maybe_enqueue_waveform_render. Reads displayed-
-// viewport inputs from wf_cache.fp_* (the LIVE waveform fingerprint — the
-// post-swap viewport, not necessarily the current app state); the only
-// item-driven inputs are the trim bounds + has-set bits (marker stems left this
-// cache — they are live overlays now). Diverging fingerprint triggers a
-// synchronous offscreen rebuild + region invalidation.
+// -- Flag-cache fingerprint hashes ---------------------------------------
 
 namespace {
 
 // FNV-1a over the live drag-overlay state, folded into the FlagCache
-// fingerprint (its only consumer — the trim-only StemCache no longer carries a
-// marker-driven fingerprint half). Hashing the drag state directly removes the
+// fingerprint (its only consumer). Hashing the drag state directly removes the
 // requirement that every mutation site of app.drag remember to bump a generation
 // counter. Cost is dominated by the loop over moveable_times,
 // which at observed selection sizes (0–5) is a handful of nanoseconds.
@@ -914,179 +906,23 @@ uint64_t hash_selection(const std::set<int>& s,
 
 } // namespace
 
-void GuiPaintHandler::maybe_rebuild_stem_cache() {
-    if (app.loading || audio.total_frames() <= 0) return;
-
-    // No live waveform yet → no stems. The first stem rebuild happens
-    // after the first waveform-completion swap (which sets
-    // wf_cache.fp_rendered); until then the displayed-viewport fields hold
-    // defaults that wouldn't agree with anything sensible on the marker
-    // side anyway.
-    if (!wf_cache.fp_rendered) return;
-
-    const GuiRect area = waveform_area(app);
-    if (area.w <= 0 || area.h <= 0) return;
-
-    // The stem surface is exactly the waveform area — stems no longer overhang
-    // above the waveform top (the flag+triangle structure above lives in the
-    // FlagCache). See the geometry note in StemCache's class comment.
-    const int surface_w = area.w;
-    const int surface_h = area.h;
-
-    // Displayed-viewport inputs: read from wf_cache.fp_*, not app state.
-    const int64_t  vp_start     = wf_cache.fp_vp_start;
-    const int64_t  vp_end       = wf_cache.fp_vp_end;
-    const bool     is_target    = wf_cache.fp_target;
-    const uint64_t warp_frame_map_hash = wf_cache.fp_warp_frame_map_hash;
-
-    // Trim boundary stems. Positions ride trim_begin / trim_end
-    // (displayed domain), has-set bits from the active A/B tab (trim carries
-    // no selected state). Computed by the shared helper so the flag cache's
-    // b/e chips read the exact same values (chip + stem are one unit).
-    const DisplayedTrim dtrim   = compute_displayed_trim();
-    const bool trim_has_begin   = dtrim.has_begin;
-    const bool trim_has_end     = dtrim.has_end;
-    const int64_t trim_begin    = dtrim.begin;
-    const int64_t trim_end      = dtrim.end;
-
-    const bool matches =
-        stem_cache.surface &&
-        stem_cache.fp_vp_start                == vp_start &&
-        stem_cache.fp_vp_end                  == vp_end &&
-        stem_cache.fp_trim_begin              == trim_begin &&
-        stem_cache.fp_trim_end                == trim_end &&
-        stem_cache.fp_area_w                  == surface_w &&
-        stem_cache.fp_area_h                  == surface_h &&
-        stem_cache.fp_target                  == is_target &&
-        stem_cache.fp_warp_frame_map_hash            == warp_frame_map_hash &&
-        stem_cache.fp_trim_has_begin          == trim_has_begin &&
-        stem_cache.fp_trim_has_end            == trim_has_end;
-
-    if (matches) return;
-
-    // Reuse-or-recreate the surface on dimension change.
-    if (!stem_cache.surface ||
-        stem_cache.width  != surface_w ||
-        stem_cache.height != surface_h) {
-        if (stem_cache.surface) {
-            cairo_surface_destroy(stem_cache.surface);
-            stem_cache.surface = nullptr;
-        }
-        stem_cache.surface = cairo_image_surface_create(
-            CAIRO_FORMAT_ARGB32, surface_w, surface_h);
-        stem_cache.width  = surface_w;
-        stem_cache.height = surface_h;
-    }
-
-    cairo_t* ccr = cairo_create(stem_cache.surface);
-    cairo_save(ccr);
-    cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);
-    cairo_paint(ccr);
-    cairo_restore(ccr);
-
-    // Local rect: the stem geometry translated into the cache surface's
-    // coordinate system, which is the waveform area with its top at y = 0.
-    // The trim stems (the only stems in this cache) span [0, area.h) — no
-    // overhang. The blit at on_redraw time positions the surface at screen
-    // y = area.y.
-    const GuiRect local_area{
-        0,
-        0,
-        surface_w,
-        area.h
-    };
-    const TrimRange trim_struct{trim_begin, trim_end};
-
-    // Trim boundary stems, painted in both 'W' and 'P' views — the ONLY stems the
-    // cache now carries. Positions are the displayed-domain trim frames (already
-    // translated); the has-set bits decide which stems draw. The MARKER stem is
-    // no longer cached: it became the selected-marker live overlay
-    // (paint_selected_stem — a per-frame, one-column paint over the plate for the
-    // SINGLE selected marker while it is hovered / dragged / nudged; round 3,
-    // refined round 4, architect 2026-07-23), so a marker interaction never
-    // rebuilds this cache. The fingerprint is exactly render_trim_stems' input
-    // list; a displaced-trim change a marker input could drive rides
-    // fp_trim_begin/fp_trim_end directly (compute_displayed_trim feeds them).
-    render_trim_stems(
-        ccr, local_area, vp_start, vp_end,
-        trim_struct,
-        trim_has_begin, trim_has_end,
-        wf_cache.surface);
-
-    cairo_destroy(ccr);
-
-    stem_cache.fp_vp_start                  = vp_start;
-    stem_cache.fp_vp_end                    = vp_end;
-    stem_cache.fp_trim_begin                = trim_begin;
-    stem_cache.fp_trim_end                  = trim_end;
-    stem_cache.fp_area_w                    = surface_w;
-    stem_cache.fp_area_h                    = surface_h;
-    stem_cache.fp_target                    = is_target;
-    stem_cache.fp_warp_frame_map_hash              = warp_frame_map_hash;
-    stem_cache.fp_trim_has_begin            = trim_has_begin;
-    stem_cache.fp_trim_has_end              = trim_has_end;
-
-    // Event-synchronized hit geometry, STAGE phase: these OFFSCREEN stem pixels
-    // just rebuilt, but the on-screen items change only when the paint pass
-    // blits this cache and commits the frame. So stage the displayed map
-    // (wf_cache.fp_warp_frame_map, the map the trim stems here and the flags are
-    // painted through, target view) or a clear (source view, mapless); on_redraw
-    // promotes it at
-    // that committing frame. maybe_rebuild_flag_cache runs in the same tick and
-    // stages the same value (both caches consume wf_cache.fp_warp_frame_map), so
-    // this is a per-item stage, not a once-after-both site — last writer wins,
-    // and staging where each item rebuild runs means the staged value tracks the
-    // caches exactly, even when only one of the two rebuilds. Ruling at the
-    // selector.
-    if (is_target)
-        app.staged_displayed_target_warp_frame_map = wf_cache.fp_warp_frame_map;
-    else
-        app.staged_displayed_target_warp_frame_map.clear();
-    // Stage the displayed VIEWPORT alongside the map (the sibling half): the
-    // fp_vp span these stems were mapped through, and the LIVE effective
-    // waveform width the render actually divided that span by (area.w =
-    // surface_w — NOT wf_cache.fp_area_w, the possibly-stale PLATE width that
-    // diverges from area.w after a resize until the plate republishes). So the
-    // promoted basis spp == span / this width is the stems'/flags' own
-    // samples-per-pixel, exact on the committing frame. Staged in BOTH views
-    // (unlike the map, which stages a source-view clear) — the lane run rides the
-    // displayed viewport in source view too.
-    app.staged_displayed_vp_start = wf_cache.fp_vp_start;
-    app.staged_displayed_vp_end   = wf_cache.fp_vp_end;
-    app.staged_displayed_area_w   = area.w;
-    app.staged_displayed_valid = true;
-
-    // Invalidate the stem region. After C-A (architect 2026-07-24) this cache is
-    // trim-only and its fingerprint is exactly render_trim_stems' input list: the
-    // displayed viewport (vp start/end), the displayed-domain trim FRAMES
-    // (begin/end), the trim PRESENCE bits (has-begin/has-end), the area
-    // dimensions, the target flag, and the displayed-map hash. A rebuild fires
-    // only when one of those changes. A viewport or area change already routes
-    // through the viewport's invalidator, but a trim-frame, trim-presence, or
-    // displayed-map change need not — damage the strip explicitly so the next
-    // paint blits the freshly rebuilt stems. Idempotent against the waveform's
-    // own damage.
-    gui.invalidate_region(
-        0,
-        area.y,
-        app.width,
-        surface_h);
-}
-
 // -- Flag-rect cache dirty-detect and rebuild ----------------------------
 //
-// Mirrors maybe_rebuild_stem_cache: same wf_cache.fp_* coupling for the
-// displayed-viewport half of the fingerprint; same live-app-state reads
-// for the marker-driven half (with the selection hash added). The cache holds
-// EVERY flag shape and the b/e trim chips — the flag editor's text renders live
+// Called from on_tick AFTER maybe_enqueue_waveform_render: wf_cache.fp_*
+// coupling for the displayed-viewport half of the fingerprint, live-app-state
+// reads for the marker-driven half. The cache holds
+// EVERY flag shape (marker + phase reset) — the flag editor's text renders live
 // in the marker-text lane, not in this cache, so the editing target's flag is an
-// ordinary cached shape (no skip-guard).
+// ordinary cached shape (no skip-guard). Trim's chips/stems left this cache and
+// the retired trim-stem cache for the live paint_trim pass, so no trim field
+// remains in the fingerprint (a trim edit repaints through its own mutation
+// damage, no cache rebuild).
 
 void GuiPaintHandler::maybe_rebuild_flag_cache() {
     if (app.loading || audio.total_frames() <= 0) return;
 
-    // No live waveform yet → no flags. Same pre-first-completion guard as
-    // the stem cache uses; until wf_cache.fp_rendered comes up after the
+    // No live waveform yet → no flags. Until wf_cache.fp_rendered comes up
+    // after the
     // first worker swap, the displayed-viewport fields hold defaults that
     // wouldn't agree with anything sensible.
     if (!wf_cache.fp_rendered) return;
@@ -1098,10 +934,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const int surface_h = top_strip.h;
 
     // Displayed-viewport inputs from wf_cache.fp_*. Warp/phase flags are
-    // positioned at marker times only. The b/e trim chips also ride this
-    // strip, so the displayed-domain trim positions + has bits (trim carries
-    // no selected state; from the shared helper, identical to the stem
-    // cache's) are part of the flag cache's identity.
+    // positioned at marker times only.
     const int64_t  vp_start     = wf_cache.fp_vp_start;
     const int64_t  vp_end       = wf_cache.fp_vp_end;
     const bool     is_target    = wf_cache.fp_target;
@@ -1116,10 +949,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                                      app.last_selected_marker);
     const char      mv         = app.active_markers_view;
 
-    // Displayed-domain trim state for the b/e chips (shared helper,
-    // same values the stem cache paints its stems at).
-    const DisplayedTrim dtrim = compute_displayed_trim();
-
     const bool matches =
         flag_cache.surface &&
         flag_cache.fp_vp_start                == vp_start &&
@@ -1132,11 +961,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_phase_reset_generation  == phase_gen &&
         flag_cache.fp_drag_overlay_hash       == drag_hash &&
         flag_cache.fp_selection_hash          == sel_hash &&
-        flag_cache.fp_active_markers_view     == mv &&
-        flag_cache.fp_trim_begin              == dtrim.begin &&
-        flag_cache.fp_trim_end                == dtrim.end &&
-        flag_cache.fp_trim_has_begin          == dtrim.has_begin &&
-        flag_cache.fp_trim_has_end            == dtrim.has_end;
+        flag_cache.fp_active_markers_view     == mv;
 
     if (matches) return;
 
@@ -1163,9 +988,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // surface rect. The blit at on_redraw time positions the surface back
     // at screen (0, 0).
     const GuiRect local_top_strip{0, 0, surface_w, surface_h};
-    // Effective waveform width: the flag column mapping shares the stem
-    // cache's samples-per-pixel (both divide the same displayed span by this
-    // width), so chips stay column-aligned with the stems below them. The
+    // Effective waveform width: the flag column mapping divides the displayed
+    // span by this width — the same denominator the live trim pass and the hit
+    // tests use — so flags stay column-aligned with the trim/stem verticals
+    // below them. The
     // surface stays full-strip width; a non-multiple-of-16 window leaves the
     // gutter columns unpainted.
     const int wave_w = waveform_area(app).w;
@@ -1183,21 +1009,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         drag_overlay = &drag_overlay_storage;
     }
 
-    // Z-order rule: trim paints FIRST (behind the marker flags). The b/e trim
-    // chips cap their stems in the trim-chip lane, and each chip's strip-crossing
-    // stem segment runs down through the marker-text / flag / triangle lanes — so
-    // where that stem shares pixels with a marker flag the trim segment must lose.
-    // Painting it before render_flags/render_phase_reset_flags lets the marker
-    // flags overpaint it (markers over trim). Painted in both 'W' and 'P' views
-    // (like the stems). The real waveform_area locates the lanes and supplies the
-    // column-mapping width; the top strip's screen origin equals the cache surface
-    // origin (0,0), so local_top_strip and the real waveform rect need no
-    // translation.
-    render_trim_flags(
-        ccr, local_top_strip, waveform_area(app),
-        vp_start, vp_end,
-        TrimRange{dtrim.begin, dtrim.end},
-        dtrim.has_begin, dtrim.has_end);
+    // (No trim pass here: "markers over trim" is structural pass order now —
+    // the live trim pass paints before the playheads, and this cache blits
+    // after them — so the cache carries marker/phase-reset flag shapes only.)
 
     // Red-flag sets: the marker indices whose render normalizes to the 1.00
     // fallback, painted kAccent unless selected. Read from the memoized caches
@@ -1241,25 +1055,29 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_drag_overlay_hash       = drag_hash;
     flag_cache.fp_selection_hash          = sel_hash;
     flag_cache.fp_active_markers_view     = mv;
-    flag_cache.fp_trim_begin              = dtrim.begin;
-    flag_cache.fp_trim_end                = dtrim.end;
-    flag_cache.fp_trim_has_begin          = dtrim.has_begin;
-    flag_cache.fp_trim_has_end            = dtrim.has_end;
 
-    // Event-synchronized hit geometry, STAGE phase — the flag/chip twin of the
-    // stem-cache stage: these OFFSCREEN flags/chips just rebuilt, so stage the
+    // Event-synchronized hit geometry, STAGE phase: these OFFSCREEN flags just
+    // rebuilt, so stage the
     // map they baked (target view) or a clear (source view); on_redraw promotes
-    // it at the frame that blits this cache. Same value the stem rebuild stages
-    // this tick; per-item so the staged value tracks the caches whichever
-    // rebuilds. Ruling at the selector.
+    // it at the frame that blits this cache. THIS IS THE SOLE ITEM-BASIS STAGE
+    // SITE (grep app.staged_displayed_valid = true): the retired trim-stem
+    // cache's rebuild used to stage the same value in the same tick, and
+    // deleting that duplicate is safe exactly because THIS rebuild remains the
+    // stage owner on every viewport/map/dimension change — every one of those
+    // changes moves a field of this cache's fingerprint (fp_vp span, map hash,
+    // target bit, top-strip dims; wave_w changes only with the window width,
+    // which changes surface_w), so the rebuild fires and re-stages. A trim-only
+    // change no longer stages anything, which is correct: trim never entered
+    // the staged basis values, and the live trim pass reads the promoted basis
+    // per frame. Ruling at the selector.
     if (is_target)
         app.staged_displayed_target_warp_frame_map = wf_cache.fp_warp_frame_map;
     else
         app.staged_displayed_target_warp_frame_map.clear();
-    // Stage the displayed VIEWPORT alongside the map — same fp_vp span the flags/
-    // chips just mapped through, divided by the LIVE effective waveform width
-    // wave_w these flags/chips were column-mapped against (NOT fp_area_w, the
-    // plate width). The same {span, width} the stem rebuild stages this tick.
+    // Stage the displayed VIEWPORT alongside the map — same fp_vp span the
+    // flags just mapped through, divided by the LIVE effective waveform width
+    // wave_w these flags were column-mapped against (NOT fp_area_w, the
+    // plate width).
     app.staged_displayed_vp_start = wf_cache.fp_vp_start;
     app.staged_displayed_vp_end   = wf_cache.fp_vp_end;
     app.staged_displayed_area_w   = wave_w;

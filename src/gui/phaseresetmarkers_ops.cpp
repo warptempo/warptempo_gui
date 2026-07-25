@@ -223,7 +223,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     const int   f  = pro.focused;   // validated in [0, tv.size()) by the prologue
 
     // The anchoring map is the DISPLAYED paint basis —
-    // displayed_or_live_target_map, the SAME map the stem/flag painter reads —
+    // displayed_or_live_target_map, the SAME map the flag/trim painters read —
     // so the ANCHOR moves by exactly the commanded pixel column against WHAT IS
     // PAINTED, even inside a worker publish window where the displayed map lags
     // the live one. Phase resets author in their TARGET home view only (the

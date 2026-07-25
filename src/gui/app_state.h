@@ -981,7 +981,7 @@ struct HoverPopupState {
     // when marker_index < 0.
     bool        on_flag = false;
     // Marker-store generations captured at set time, one per column (the same
-    // counters the stem/flag caches fingerprint). marker_index alone identifies
+    // counters the flag cache fingerprints). marker_index alone identifies
     // WHICH marker is hovered, but every derived field (lane_text, readout_text,
     // copy_payload, source_frame) is read from that marker's CURRENT fields and
     // position, so an in-place mutation under a stationary cursor — a tempo step,
@@ -1450,11 +1450,12 @@ struct AppState {
     mutable PhaseResetRedFlagCache phase_reset_red_flag_cache;
 
     // The warp_frame_map the LAST COMMITTED frame's target-view item pixels
-    // (marker/trim stems, flags, chips) were painted with — the geometry the
+    // (flags; the live trim/selected-stem passes read it directly per frame)
+    // were painted with — the geometry the
     // user is currently looking at, to commit granularity. This is the PROMOTED
-    // half of a two-phase commit: the item-cache rebuilds stage a value
+    // half of a two-phase commit: the item-cache rebuild stages a value
     // (staged_displayed_*, below), and the paint pass promotes it here at the
-    // frame that blits those cache surfaces (GuiPaintHandler::on_redraw), so the
+    // frame that blits that cache surface (GuiPaintHandler::on_redraw), so the
     // hit map advances exactly when the on-screen items commit — not at the
     // offscreen rebuild. Lifecycle: WRITTEN by the paint-pass promotion (target
     // view) / cleared-value promotion (source view, mapless items); CLEARED
@@ -1470,11 +1471,12 @@ struct AppState {
     // as accepted at the selector.
     std::vector<WarpFrameMapSegment> displayed_target_warp_frame_map;
 
-    // Staging half of the two-phase commit above. The item-cache rebuilds
-    // (maybe_rebuild_stem_cache / maybe_rebuild_flag_cache) write the map they
-    // baked here — or an empty clear in source view — and set the valid flag;
+    // Staging half of the two-phase commit above. The item-cache rebuild
+    // (maybe_rebuild_flag_cache, the sole stage site since the trim-stem cache
+    // retired and trim went live) writes the map it
+    // baked here — or an empty clear in source view — and sets the valid flag;
     // GuiPaintHandler::on_redraw promotes it into displayed_target_warp_frame_map
-    // once, at the next committed frame (which blits those caches), then clears
+    // once, at the next committed frame (which blits that cache), then clears
     // the flag (idle frames with no staged value do nothing). A COPY, not a
     // reference to wf_cache.fp_warp_frame_map, so a worker completion between
     // the rebuild and the paint cannot mutate what the committed items were
@@ -1496,7 +1498,7 @@ struct AppState {
 
     // Displayed-VIEWPORT mirror — the SIBLING of displayed_target_warp_frame_map
     // for the viewport half of the same event-synchronized hit geometry. The
-    // flag/stem item pixels are painted from the item cache's rebuild-time
+    // flag item pixels are painted from the flag cache's rebuild-time
     // fingerprint (wf_cache.fp_vp_start / fp_vp_end / fp_area_w), NOT the live
     // viewport; painted_column_of_source_frame reads the LIVE viewport
     // (app.viewport_start_sample). During an async plate-publish window (a
@@ -1504,11 +1506,14 @@ struct AppState {
     // live viewport already holds the NEW span while the flags still paint at the
     // OLD one, so a lane run centered by the LIVE viewport would jump off its
     // flag until the worker caught up. These fields hold the vp_start/vp_end/
-    // area_w the LAST COMMITTED frame's item caches were built against, promoted
+    // area_w the LAST COMMITTED frame's flag cache was built against, promoted
     // in LOCKSTEP with displayed_target_warp_frame_map at the frame that blits
-    // those caches, so the marker-text lane geometry (run centering, the visible-
-    // set cull, the run hit rects — see displayed_viewport_basis in this header)
-    // AND the hover-stem DAMAGE (invalidate_hover_stem_column, which erases
+    // that cache, so the marker-text lane geometry (run centering, the visible-
+    // set cull, the run hit rects — see displayed_viewport_basis in this header),
+    // the LIVE TRIM pass (GuiPaintHandler::paint_trim — its chips/stems paint on
+    // this basis so hit_test_trim_chip / route_trim_chip_press land on the drawn
+    // pixels), AND the hover-stem DAMAGE (invalidate_hover_stem_column, which
+    // erases
     // displayed-basis stem pixels — damage follows the pixels it erases) ride the
     // same basis the flags do. area_w == 0 means cold (nothing promoted
     // yet); the accessor then falls back to the live viewport, matching
@@ -1521,7 +1526,7 @@ struct AppState {
     // mechanism/lifecycle distinction (direct fp read for plate-registered
     // overlays vs this staged/promoted mirror for item-registered geometry), but
     // the two are now NUMERICALLY EQUAL at every committing paint: since the worker
-    // publish rebuilds the item caches inline before its damage (as the pan and
+    // publish rebuilds the flag cache inline before its damage (as the pan and
     // sync writers already did — closure dates to that inline publish rebuild), all
     // three plate writers commit new plate + new items together, and the mirror
     // promote runs at the top of the committing frame's paint, so the plate-fp
@@ -1534,8 +1539,8 @@ struct AppState {
 
     // Staging half of the displayed-viewport mirror above — the viewport twin of
     // staged_displayed_target_warp_frame_map, sharing its staged_displayed_valid
-    // flag (one stage, one promote, one gen bump). The item-cache rebuilds write
-    // the wf_cache.fp_* viewport they baked here; on_redraw promotes it into
+    // flag (one stage, one promote, one gen bump). The flag-cache rebuild writes
+    // the wf_cache.fp_* viewport it baked here; on_redraw promotes it into
     // displayed_vp_* at the next committed frame. Cleared alongside the staged map.
     int64_t staged_displayed_vp_start = 0;
     int64_t staged_displayed_vp_end   = 0;
@@ -2160,18 +2165,19 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y);
 
 // displayed_or_live_target_map: the warp_frame_map the item hit tests decide
-// against — the map the aimed-at item pixels (marker/trim stems, flags, chips)
-// were painted with on the LAST COMMITTED frame, so a grab lands on what is
+// against — the map the aimed-at item pixels (flags from the committed cache;
+// the live trim chips/stems and selected stem, which read it directly per frame)
+// were painted with, so a grab lands on what is
 // drawn (WYSIWYG grabs). In target view with a non-empty displayed map
 // (app.displayed_target_warp_frame_map, promoted at the frame commit that blits
-// the item caches — see the two-phase stage/promote at that member) it returns
+// the flag cache — see the two-phase stage/promote at that member) it returns
 // that map; otherwise the live display context's map (source view = the live
 // context's identity/empty map, unchanged semantics; target-view cold = the
 // live map until the first committed target frame).
 //
 // EVENT-SYNC RULING: hit DECISIONS read the committed frame's map, so hit
 // geometry flips at the exact instant the on-screen items flip — the FRAME
-// COMMIT that blits the stem/flag caches, not the offscreen item rebuild (which
+// COMMIT that blits the flag cache, not the offscreen item rebuild (which
 // only stages) and not the earlier plate publish. Gesture MECHANICS — anchors,
 // walls, motion translation, the release snap, the x-coincidence images — stay
 // on the LIVE map: the display converges to live within the rebuild+commit
@@ -2192,7 +2198,7 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // and the lane geometry decide against, so a run centers on and a hit lands on
 // the column the flag/chip pixels were painted at. In target OR source view with
 // a warm promoted mirror (app.displayed_area_w > 0) it returns the vp_start/
-// vp_end/area_w triple the LAST COMMITTED frame's flag/stem caches were built
+// vp_end/area_w triple the LAST COMMITTED frame's flag cache was built
 // against — vp_start/vp_end from wf_cache.fp_* and area_w the LIVE effective
 // waveform width the item render used (staged at rebuild, not fp_area_w which is
 // the possibly-stale PLATE width) — so `spp` == (vp_end - vp_start) / area_w is
@@ -2206,7 +2212,8 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // This is the free-function owner homed beside displayed_or_live_target_map so
 // the render.cpp free functions (lane_text_left_x_at_frame, the lane run
 // resolver, marker_hit_at), the app_state.cpp hit tests (hit_test_flag,
-// hit_test_trim_chip), AND the hover-stem DAMAGE
+// hit_test_trim_chip), the LIVE TRIM paint pass (GuiPaintHandler::paint_trim —
+// paint and hit share the one basis by construction), AND the hover-stem DAMAGE
 // (Viewport::invalidate_hover_stem_column, which erases displayed-basis stem
 // pixels — damage follows the basis of the pixels it erases) share ONE basis. It
 // is DELIBERATELY DISTINCT from
@@ -2214,11 +2221,11 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // (the plate's current fingerprint): the paint-handler method registers the
 // PLATE-locked overlays (region wash, playheads, phase-reset overlay) with the
 // just-blitted plate, whereas this owner registers the flag/chip/lane/hit
-// geometry with the committed FLAG/STEM item caches (the promoted mirror). The
+// geometry with the committed FLAG item cache (the promoted mirror). The
 // two are now NUMERICALLY EQUAL at every committing paint: the one-frame
 // plate-published-NEW-while-items-show-OLD divergence is RETIRED — all three
 // plate writers (worker publish, incremental pan, synchronous rebuild) rebuild
-// the item caches inline before their committing damage, and this mirror promotes
+// the flag cache inline before their committing damage, and this mirror promotes
 // at the top of that frame's paint, so the plate fp and the promoted mirror agree
 // by construction (closure dates to the worker-publish inline rebuild). The two
 // owners PERSIST as a mechanism/lifecycle split — direct fp read for

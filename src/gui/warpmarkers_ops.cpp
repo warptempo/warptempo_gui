@@ -689,7 +689,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     const int   f  = pro.focused;   // validated in [0, mv.size()) by the prologue
 
     // The anchoring map is the DISPLAYED paint basis —
-    // displayed_or_live_target_map, the SAME map the stem/flag painter reads — so
+    // displayed_or_live_target_map, the SAME map the flag/trim painters read — so
     // the ANCHOR moves by exactly the commanded pixel column against WHAT IS
     // PAINTED. This gesture runs in warp's SOURCE home view only, so the
     // displayed map is the empty identity map here — the shared painted_column /

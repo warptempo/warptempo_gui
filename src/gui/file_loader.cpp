@@ -532,7 +532,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // window resize performs: on_resize re-clamps zoom/viewport against
     // the (possibly changed) strip geometry, the next redraw re-measures
     // the grid metrics, and the cache fingerprints (area dims keyed off
-    // monospace_row_h()) rebuild the waveform/stem/flag surfaces. The
+    // monospace_row_h()) rebuild the waveform/flag surfaces. The
     // full-window invalidation at the end of this load supplies the
     // damage, mirroring the resize path's full-surface damage.
     set_gui_font_size_pt(app.font_size);

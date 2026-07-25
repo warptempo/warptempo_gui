@@ -95,18 +95,20 @@ struct WaveformCache {
     int       fp_area_w      = 0;
     int       fp_area_h      = 0;
     // false until the first worker completion (or synchronous rebuild) has
-    // published live pixels. The stem/flag caches gate on it — they hold no
+    // published live pixels. The flag cache gates on it — it holds no
     // sensible displayed-viewport values before the first waveform paint.
     bool      fp_rendered    = false;
     bool      fp_target      = false;
     uint64_t  fp_warp_frame_map_hash = 0;
 
     // Layered-paint: the warp_frame_map baked into the live waveform
-    // pixels. The stem cache reads this to render target-view stems
-    // against the same coordinate system the displayed waveform uses, so
-    // stems and waveform pixels snap together at the completion swap
-    // instead of diverging during the rebuild window. Empty in source
-    // view; empty before the first completion has fired.
+    // pixels. The flag-cache rebuild reads this to render target-view
+    // flags against the same coordinate system the displayed waveform
+    // uses (and to stage the displayed hit map), so flags and waveform
+    // pixels snap together at the completion swap instead of diverging
+    // during the rebuild window; compute_displayed_trim reads it for the
+    // out-of-trim dim's plate-composite frames. Empty in source view;
+    // empty before the first completion has fired.
     std::vector<WarpFrameMapSegment> fp_warp_frame_map;
 
     // Pending-slot surface and fingerprint. The worker renders
@@ -176,67 +178,19 @@ struct WaveformCache {
     ~WaveformCache() { destroy_surface(); }
 };
 
-// -- Off-screen pixel cache for the TRIM stems --------------------------
-//
-// Carries the TRIM boundary stems only (the marker stem became the selected-
-// marker live overlay paint_selected_stem, out of any cache). Mirrors WaveformCache's
-// "live" side but with no pending/supersede plumbing — rebuilds are synchronous
-// on the main thread (sub-millisecond). The cache is TRIM-ONLY, and its
-// fingerprint is exactly render_trim_stems' input list: the displayed-viewport
-// inputs (vp_start/vp_end/trim frames/has-bits/target/warp_frame_map_hash/area
-// dimensions), read from wf_cache.fp_* and NOT from current app state. This is
-// how the stem layer snaps together with the waveform layer at the worker's
-// completion swap — both sides key off the same set of displayed-viewport
-// values, which the waveform's swap callback publishes atomically. Any
-// displaced-trim change a marker interaction could drive already shows up in
-// fp_trim_begin/fp_trim_end (compute_displayed_trim feeds them), so no
-// marker-store generation, drag-overlay, selection, or marker-view field lives
-// here — marker interactions no longer rebuild this cache.
-//
-// Surface matches the waveform area: the trim stems span the WAVEFORM AREA ONLY
-// (top at screen y = area.y, down to area.y + area.h — no strip overhang; the
-// chip structure above lives in the FlagCache). The cache surface is
-// waveform-height and the blit positions it at screen y = area.y.
-struct StemCache {
-    cairo_surface_t* surface = nullptr;
-    int              width   = 0;
-    int              height  = 0;
-
-    int64_t   fp_vp_start         = 0;
-    int64_t   fp_vp_end           = 0;
-    int64_t   fp_trim_begin       = 0;
-    int64_t   fp_trim_end         = 0;
-    int       fp_area_w           = 0;
-    int       fp_area_h           = 0;       // surface height = waveform-area height (no stem overhang: the trim stems span exactly the waveform)
-    bool      fp_target           = false;
-    uint64_t  fp_warp_frame_map_hash     = 0;
-
-    // Trim boundary stems share this cache. The begin/end frame
-    // positions ride fp_trim_begin / fp_trim_end above; these capture the
-    // project has-set bits so the cache rebuilds when a bound
-    // appears/disappears.
-    bool      fp_trim_has_begin              = false;
-    bool      fp_trim_has_end                = false;
-
-    void destroy_surface() {
-        if (surface) {
-            cairo_surface_destroy(surface);
-            surface = nullptr;
-        }
-        width  = 0;
-        height = 0;
-    }
-
-    ~StemCache() { destroy_surface(); }
-};
-
 // -- Off-screen pixel cache for the top-strip flag rects ----------------
 //
-// Mirrors StemCache's shape: synchronous main-thread rebuild fingerprinted
+// (The former trim-stem cache is retired: EVERY trim pixel — chips, bridge
+// wash, strip stem segments, waveform stem segments — paints live per frame in
+// GuiPaintHandler::paint_trim, below the playheads. This flag cache is the one
+// remaining item cache.)
+//
+// Synchronous main-thread rebuild fingerprinted
 // against wf_cache.fp_* (displayed-viewport inputs) plus marker-store
 // generations, drag-overlay hash, selection hash, and marker-view. The cache
-// holds ALL flag pixels (the fixed-width marker/phase-reset shapes and the b/e
-// trim chips); the paint pass is a pure blit. The flag editor's text renders
+// holds the fixed-width marker/phase-reset flag shapes ONLY (trim's b/e chips
+// left it for the live trim pass); the paint pass is a pure blit. The flag
+// editor's text renders
 // live in the marker-text lane, not in this cache, so the editing target's flag
 // paints here as an ordinary selected shape — no skip-guard, no per-frame live
 // flag render in the cache.
@@ -262,18 +216,6 @@ struct FlagCache {
     uint64_t  fp_selection_hash           = 0;
     char      fp_active_markers_view      = '\0';
 
-    // The begin/end trim flag chips ride this cache (they live in
-    // top_upper_row_area, inside top_strip_area). Their pixels depend on the
-    // displayed-domain bound positions (fp_trim_begin / fp_trim_end) and
-    // whether each bound is set (fp_trim_has_begin / fp_trim_has_end) — trim
-    // carries no selected state, and none of these bump any marker generation,
-    // so they are part of the cache identity. Mirrors the StemCache fp_trim_*
-    // fields so chip and stem rebuild on the same triggers.
-    int64_t   fp_trim_begin               = 0;
-    int64_t   fp_trim_end                 = 0;
-    bool      fp_trim_has_begin           = false;
-    bool      fp_trim_has_end             = false;
-
     void destroy_surface() {
         if (surface) {
             cairo_surface_destroy(surface);
@@ -297,7 +239,6 @@ struct GuiPaintHandler {
     const GuiAudio&    audio;
     GuiPlayback&       playback;
     WaveformCache&     wf_cache;
-    StemCache&         stem_cache;
     FlagCache&         flag_cache;
     GuiWaveformWorker& waveform_worker;
     GuiPlatform&       gui;
@@ -306,7 +247,6 @@ struct GuiPaintHandler {
                     const GuiAudio&    audio_,
                     GuiPlayback&       playback_,
                     WaveformCache&     wf_cache_,
-                    StemCache&         stem_cache_,
                     FlagCache&         flag_cache_,
                     GuiWaveformWorker& waveform_worker_,
                     GuiPlatform&       gui_)
@@ -314,7 +254,6 @@ struct GuiPaintHandler {
           audio(audio_),
           playback(playback_),
           wf_cache(wf_cache_),
-          stem_cache(stem_cache_),
           flag_cache(flag_cache_),
           waveform_worker(waveform_worker_),
           gui(gui_) {}
@@ -354,29 +293,23 @@ struct GuiPaintHandler {
     // and invalidates the waveform area.
     void on_waveform_render_done(bool ok);
 
-    // Dirty-detect for the stem cache. Called from on_tick AFTER
-    // maybe_enqueue_waveform_render. Reads displayed-viewport inputs from
-    // wf_cache.fp_*; reads marker-driven inputs from app state. If the
-    // fingerprint matches, no-ops. Otherwise rebuilds the offscreen
-    // surface synchronously (sub-millisecond at observed marker counts)
-    // and invalidates the stem strip so the next paint blits the new
-    // pixels.
-    void maybe_rebuild_stem_cache();
-
     // Dirty-detect for the flag-rect cache. Called from on_tick
-    // AFTER maybe_rebuild_stem_cache so all three layers (waveform, stems,
+    // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the
     // waveform's completion swap. Reads displayed-viewport inputs from
     // wf_cache.fp_*; reads marker-driven inputs (warpmarker / phase_reset
     // generations, drag-overlay hash, selection hash, marker-view,
     // editor targets) live from app state. Rebuilds are
-    // synchronous (sub-millisecond at observed flag counts).
+    // synchronous (sub-millisecond at observed flag counts). This rebuild
+    // is the SOLE item-basis STAGE site (the retired trim-stem cache's
+    // rebuild was the only other one) — see the staging comment at its
+    // tail in waveform_cache.cpp.
     void maybe_rebuild_flag_cache();
 
     // Force a synchronous waveform rebuild + fp_vp_* update for a single
     // discrete viewport jump (the marker-focus cycle). Renders into the
     // live surface on the calling (main) thread and publishes the
-    // displayed fingerprint immediately, so a same-tick stem/flag rebuild
+    // displayed fingerprint immediately, so a same-tick flag rebuild
     // reads the current viewport instead of the lagging async one. NOT
     // for continuous gestures — those stay on the worker.
     void force_synchronous_waveform_rebuild();
@@ -427,17 +360,17 @@ private:
 
     WaveformRenderInputs compute_waveform_render_inputs() const;
 
-    // Displayed-domain trim boundary state, shared by the stem cache (which
-    // paints the begin/end stems) and the flag cache (which paints the b/e
-    // chips that cap them). Computing it in one place keeps chip and stem in
-    // lockstep — same positions, same has bits (trim has no selected state) —
-    // so they always read as one continuous unit. Positions are the AUTHORED
+    // Displayed-domain trim boundary state for the out-of-trim DIM
+    // (compute_out_of_trim_rects, its sole consumer now — the live trim pass
+    // paint_trim maps its own frames through the item-basis owners
+    // displayed_trim_ms / displayed_or_live_target_map instead, matching the
+    // trim hit tests; this helper stays on the PLATE's fp map because the dim
+    // is a plate composite). Positions are the AUTHORED
     // per-bound frames — unordered (bounds may be inverted mid-gesture —
     // crossed cannot rest — and this paints per frame; past-EOF is load-fatal,
     // so each bound is within [0, EOF])
     // — translated into the displayed domain (target-view warp_frame_map from
-    // wf_cache.fp_warp_frame_map, or source-frame), matching the marker
-    // stems' coordinate system.
+    // wf_cache.fp_warp_frame_map, or source-frame).
     struct DisplayedTrim {
         int64_t begin          = 0;
         int64_t end            = 0;
@@ -455,14 +388,16 @@ private:
     // waveform plate blit, so the dim recolors only the out-of-trim sample
     // pixels (the plate itself is trim-agnostic — see render_waveform).
     // A SPLIT basis: the trim FRAMES are the LIVE bounds mapped through the
-    // displayed map (compute_displayed_trim() — the SAME source the trim stems
-    // use), positioned on the PLATE fingerprint's viewport/spp
+    // plate's fp map (compute_displayed_trim()), positioned on the PLATE
+    // fingerprint's viewport/spp
     // (displayed_viewport_basis, the plate-registered owner region wash and
     // playheads share). The dim is a plate composite, so it registers with the
     // plate: across a drag the viewport is fixed (plate == live) and the edge
     // stays locked to the trim stem, while during an async publish window the
     // plate basis keeps the edge on the just-blitted plate instead of the
-    // not-yet-blitted live span. Both rects span the full waveform height; ATOP
+    // not-yet-blitted live span. (The live trim pass paint_trim rides the ITEM
+    // basis instead — the two agree at every committing paint, so dim edge and
+    // trim stem coincide there.) Both rects span the full waveform height; ATOP
     // confines the recolor to sample pixels.
     struct OutOfTrimRects {
         bool    has_left  = false;
@@ -506,7 +441,20 @@ private:
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
     void paint_region_wash(cairo_t* cr, const GuiRect& area);
     void paint_phase_reset_overlay(cairo_t* cr, const GuiRect& area);
-    void paint_marker_stems(cairo_t* cr, const GuiRect& marker_paint_rect);
+    // The LIVE trim pass (architect 2026-07-25 — trim z-order below the
+    // playhead): paints EVERY trim pixel per frame — the b/e chips, the bridge
+    // wash, the strip-crossing stem segments, and the waveform stem segments —
+    // in ONE pass, in the old trim-stem-cache slot: after
+    // paint_phase_reset_overlay, before paint_selected_stem and hence before
+    // every playhead element, while the flag blit still follows the playheads.
+    // "Markers over trim" and "playhead over trim" are therefore STRUCTURAL
+    // pass order (trim < selected stem < playheads < flags), not an intra-cache
+    // paint convention. Invoked whenever the exposed rect intersects the top
+    // strip OR the waveform area — render_background erases every exposed
+    // top-strip pixel, so a strip-only damage (hover text, a flag change) must
+    // repaint the live chips/bridge/strip stems too; the outer Cairo damage
+    // clip bounds the actual work. See the definition for the basis contract.
+    void paint_trim(cairo_t* cr, const GuiRect& area, const GuiRect& top_strip);
     // Selected-marker stem (round 4, architect 2026-07-23): a per-frame live
     // overlay marking the SINGLE selected marker's column — where the playhead
     // sits/would land on it — shown only during interaction with it: while it is
@@ -518,7 +466,7 @@ private:
     // AppState::stem_pin_*).
     // Painted BLUE
     // (kSelected — it marks the selected marker like its flag) through
-    // render_playhead's line-only form over the plate; out of the stem cache so
+    // render_playhead's line-only form over the plate; a live overlay, so
     // interaction never rebuilds a cache. (The grey focus triangle paints ON each
     // selected marker, not at the playhead — see paint_selected_marker_triangles.)
     void paint_selected_stem(cairo_t* cr, const GuiRect& area);

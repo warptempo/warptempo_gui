@@ -584,16 +584,12 @@ int main(int argc, char** argv) {
     GuiPlayback  playback;
     GuiPlatform  gui;
     WaveformCache wf_cache;
-    // Trim boundary stems live on their own surface, rebuilt synchronously from
-    // on_tick (the marker stem is the selected-marker live overlay
-    // paint_selected_stem — singleton-gated, blue, armed by hover/drag/nudge —
-    // not cached). Constructed alongside wf_cache so they share the same lifetime;
-    // passed by reference into GuiPaintHandler and (for the destroy_surface hook)
-    // GuiFileLoader.
-    StemCache     stem_cache;
     // Top-strip flag rects live on their own surface, rebuilt
-    // synchronously from on_tick alongside the stem cache. Same lifetime
-    // shape, same passed-by-reference plumbing.
+    // synchronously from on_tick. Constructed alongside wf_cache so they share
+    // the same lifetime; passed by reference into GuiPaintHandler. (Trim has no
+    // cache — every trim pixel paints live per frame in
+    // GuiPaintHandler::paint_trim, below the playheads; the marker stem is the
+    // selected-marker live overlay paint_selected_stem.)
     FlagCache     flag_cache;
     if (!gui.init(app.width, app.height, "warptempo_gui")) {
         return 1;
@@ -650,7 +646,7 @@ int main(int argc, char** argv) {
     // changes through its on_resize (the shared geometry-and-cache rebuild
     // path). The settings-editor font_size commit uses the input handler's own
     // paint_handler ref for the same rebuild.
-    GuiPaintHandler paint_handler(app, audio, playback, wf_cache, stem_cache,
+    GuiPaintHandler paint_handler(app, audio, playback, wf_cache,
                                   flag_cache, waveform_worker, gui);
     // file_loader holds a GuiTargetRender& (its end-of-load ensure_ready()
     // dispatches the eager target preview), so it must be constructed after
@@ -976,17 +972,13 @@ int main(int argc, char** argv) {
             }
         }
 
-        // Stem-cache dirty-detect. Runs AFTER the waveform's
+        // Flag-rect cache dirty-detect. Runs AFTER the waveform's
         // dirty-detect on purpose — both layers key their displayed-
         // viewport inputs off wf_cache.fp_*, so on a viewport-change
-        // tick the waveform enqueues and the stems hold the OLD
+        // tick the waveform enqueues and the flags hold the OLD
         // viewport; on a post-swap tick (eventfd handler runs before
         // on_tick) wf_cache.fp_* already carries the new viewport, so
-        // stems snap together with the just-blitted waveform.
-        paint_handler.maybe_rebuild_stem_cache();
-        // Flag-rect cache dirty-detect. Same ordering rule as
-        // the stem cache — keyed off wf_cache.fp_* so flags, stems, and
-        // waveform all snap together at the worker's completion swap.
+        // flags snap together with the just-blitted waveform.
         paint_handler.maybe_rebuild_flag_cache();
 
         // Lateral-gesture stem-pin reap (architect 2026-07-24). The blue stem pin

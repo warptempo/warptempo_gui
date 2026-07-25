@@ -420,10 +420,9 @@ void GuiInputHandler::commit_trim_drag() {
         // release-snap consequence (the constant-gap phrasing at TrimDragState
         // describes the mid-gesture active-domain motion).
         // The map is the DISPLAYED paint basis (displayed_or_live_target_map —
-        // identity in source view), the SAME map the trim stems paint through:
-        // the waveform cache's baked map (fp_warp_frame_map) is what the on-screen
-        // stems are drawn with, and displayed_or_live_target_map returns exactly
-        // that (falling back to the live cache only when cold), so the release
+        // identity in source view), the SAME map the live trim pass
+        // (paint_trim) draws the on-screen
+        // stems through (falling back to the live cache only when cold), so the release
         // column-snaps against WHAT IS PAINTED and stored equals shown even inside
         // an async waveform-rebuild window where the displayed map lags the live
         // cache — the residual case now that the target-view warp_frame_map edits
@@ -691,13 +690,12 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 //
 // The bridge-region bound columns come from the displayed MAP
 // (displayed_or_live_target_map) AND the displayed VIEWPORT
-// (displayed_viewport_basis) — the map + vp_start/vp_end/effective-width the
-// on-screen chips were painted with on the LAST COMMITTED frame (the item
-// rebuilds only STAGE; the paint pass PROMOTES both halves at the committing
-// frame, not at the earlier plate publish) — so a hit lands on what is drawn:
-// the routing decision flips at the exact instant the on-screen items flip (the
-// event-sync ruling at that selector). What was the open live-vs-painted window
-// for item hits is CLOSED to commit granularity. The remaining seams are all
+// (displayed_viewport_basis) — the EXACT basis and owner chain the live trim
+// pass (GuiPaintHandler::paint_trim) paints the chips/wash from every frame
+// (displayed_trim_ms -> trim_bound_column -> trim_bridge_gap), so a hit lands
+// on what is drawn BY SHARED OWNERS: paint and hit read the same functions on
+// the same basis (the
+// event-sync ruling at that selector). The remaining seams are all
 // ACCEPTED:
 // commit-to-scanout plus human reaction (irreducible — input responds to the
 // previously presented frame), the COLD-STATE fallback (first paint, a view
@@ -707,13 +705,14 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
     if (audio.total_frames() <= 0) return false;
     // Event-synchronized hit geometry, the VIEWPORT half (the ruling at the
-    // header): the chip AND bridge pixels are painted from the flag cache's
-    // committed fp_vp span over the effective width the render used, so both the
+    // header): the chip AND bridge pixels are painted live (paint_trim) on the
+    // DISPLAYED basis, so both the
     // single-chip hit (hit_test_trim_chip, which takes its own displayed basis)
-    // and the bridge column math below ride the DISPLAYED basis, never the live
+    // and the bridge column math below ride the SAME basis, never the live
     // viewport — else a press on the visible bridge during an async publish window
     // could fall through unclaimed (or a blank point falsely arm the pair drag).
-    // Cold falls back to the live basis (see the accessor).
+    // Cold falls back to the live basis (see the accessor), matching the
+    // painter's cold fallback.
     const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
     if (basis.spp <= 0.0) return false;
     // Every trim drag needs the full pair set. With a lone bound, trim
@@ -758,9 +757,9 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
         // Bridge hit interval = the PAINTED wash gap EXACTLY, via the shared owner
         // trim_bridge_gap (render.h) — the SAME owner render_trim_flags' wash uses
         // — over the two bounds' TrimBoundColumns on the DISPLAYED basis
-        // (vp_start_frame/vp_end_frame/area_w — the flag cache's own committed
-        // fp_vp span and effective width), so the columns are exactly where the
-        // wash was painted on the committing frame. The owner already handles the
+        // (vp_start_frame/vp_end_frame/area_w — the same triple the live trim
+        // pass paints with), so the columns are exactly where the
+        // wash is painted. The owner already handles the
         // offscreen-flush edges (no chip-width inset for an unpainted bound), so
         // this needs no min/max and no reliance on the chip single-hit consuming
         // the chip pixels first (the chip rects sit OUTSIDE the gap either way).
@@ -776,7 +775,7 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
         // The [0, area_w) click gate — the SAME effective-width clip the bridge
         // PAINTER applies (render_trim_flags intersects its drawn extent with
         // [0, wave_w)): the inert non-multiple-of-16 right gutter (or a newly
-        // exposed width over an older committed cache) NEITHER paints wash NOR
+        // exposed width over an older committed basis) NEITHER paints wash NOR
         // arms, so paint == hit exactly there.
         if (click_rel_x >= 0 && click_rel_x < basis.area_w &&
             click_rel_x >= gap.lo && click_rel_x < gap.hi) {

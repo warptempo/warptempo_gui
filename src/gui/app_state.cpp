@@ -61,7 +61,7 @@ void remap_marker_indices_after_reorder(AppState& app,
 
 // Event-synchronized hit map (ruling at the declaration in app_state.h): in
 // target view with a warm displayed map, the item hit tests decide against the
-// map the LAST COMMITTED frame's stem/flag pixels were painted with (promoted
+// map the LAST COMMITTED frame's flag pixels were painted with (promoted
 // at that frame commit, not the offscreen rebuild or the plate publish);
 // otherwise the live display context's map (source view = its identity/empty
 // map, target-view cold = the live map until the first committed target frame).
@@ -76,7 +76,7 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio) {
 }
 
 // The viewport twin of displayed_or_live_target_map (full rationale at the
-// declaration): the vp_start/vp_end/area_w the flag/stem item caches were painted
+// declaration): the vp_start/vp_end/area_w the flag item cache was painted
 // with on the last committed frame, so the marker/chip/lane geometry rides the
 // same basis the flag/chip pixels do. The warm spp is (vp_end - vp_start) /
 // area_w — the flags' OWN samples-per-pixel (span over the effective waveform
@@ -122,16 +122,17 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     if (mouse_y < row.y || mouse_y >= row.y + row.h) return TrimHit::None;
 
     const GuiRect top = top_strip_area(app);
-    // Event-synchronized hit geometry, the VIEWPORT half: the b/e chip pixels are
-    // painted by render_trim_flags on the flag cache's committed fp_vp span over
-    // the effective waveform width the render used, NOT the live viewport. So the
-    // chip columns must resolve on the DISPLAYED basis (displayed_viewport_basis)
+    // Event-synchronized hit geometry, the VIEWPORT half: the b/e chip pixels
+    // are painted live by the trim pass (GuiPaintHandler::paint_trim ->
+    // render_trim_flags) on the DISPLAYED basis, NOT the live viewport. So the
+    // chip columns must resolve on the SAME basis (displayed_viewport_basis)
     // — the same reason hit_test_flag does — else during an async publish window a
-    // chip painted at the OLD column would be grabbed at the NEW/live column. (The
-    // MAP was already the displayed one; only the viewport lagged.) The visibility
-    // cull matches the painter's viewport extent (render_trim_flags maps against
+    // chip painted at the OLD column would be grabbed at the NEW/live column.
+    // The visibility
+    // cull matches the painter's viewport extent (the painter maps against
     // this same {span, width}), so a gutter column at a non-multiple-of-16 window
-    // is culled the same in paint and hit-test. Cold falls back to the live basis.
+    // is culled the same in paint and hit-test. Cold falls back to the live
+    // basis, matching the painter's cold fallback.
     const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
     if (basis.spp <= 0.0) return TrimHit::None;
     const int     wave_w   = basis.area_w;
@@ -144,7 +145,8 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     // where the stem (and chip) are painted in the mapped views: the map is
     // the item pixels' own via displayed_or_live_target_map (event-synchronized
     // hit geometry — the ruling at that selector), empty (identity) in source
-    // view and the map the stem/flag item caches baked when warm in target view.
+    // view and the map the flag item cache baked when warm in target view
+    // (the live trim pass paints its chips through the same selector).
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
     const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
@@ -225,7 +227,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // must walk the same warp_frame_map — the item pixels' own via
     // displayed_or_live_target_map (event-synchronized hit geometry — the
     // ruling at that selector): empty (identity) in source view, the map the
-    // stem/flag item caches baked when warm in target view.
+    // flag item cache baked when warm in target view.
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
     const std::vector<WarpFrameMapSegment>* tmap_arg =

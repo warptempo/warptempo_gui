@@ -17,8 +17,9 @@
 
 // On-screen paint handler: on_redraw and its per-strip paint passes, the
 // out-of-trim geometry they use, and on_resize. The off-screen surfaces
-// these passes blit — the waveform plate and the marker-stem and flag-rect
-// caches — are produced in waveform_cache.cpp.
+// these passes blit — the waveform plate and the flag-rect
+// cache — are produced in waveform_cache.cpp. Trim paints live per frame
+// (paint_trim), out of any cache.
 
 // The settings-prompt editor and the BPM editor paint the same
 // bottom-strip text box through render_editor_text_box, differing only
@@ -69,10 +70,12 @@ static void render_bottom_strip_editor(cairo_t* cr,
 void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
                                              const GuiRect& top_strip,
                                              int /*sr*/) {
-    // Flag annotations in the top strip. All flag pixels — the fixed-width
-    // marker/phase-reset shapes and the b/e trim chips — live on
+    // Flag annotations in the top strip. The fixed-width marker/phase-reset
+    // flag shapes live on
     // flag_cache.surface (rebuilt from on_tick via maybe_rebuild_flag_cache);
-    // this pass is a pure blit. The flag shapes are textless; a marker's flag
+    // this pass is a pure blit. (Trim's b/e chips left this cache for the live
+    // paint_trim pass, which runs BEFORE the playheads — the z-order ruling.)
+    // The flag shapes are textless; a marker's flag
     // payload text (and the hover popup) surface in the marker-text lane, painted
     // live per-frame in paint_marker_text_lane after this blit — the editing
     // target's flag paints here as an ordinary selected shape. Like the other
@@ -237,8 +240,8 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     // live surface currently holds. For worker-path renders that may
     // be a one- or two-frame-old viewport during the worker-rebuild
     // window; the incremental pan path updates the plate in the same
-    // frame, so it has no such lag. The stem and flag layers close
-    // any mismatch by layering markers and flags onto surfaces keyed
+    // frame, so it has no such lag. The flag layer closes
+    // any mismatch by layering flags onto a surface keyed
     // off the same displayed-viewport.
     //
     // If wf_cache.surface is null (initial load, before the first
@@ -328,7 +331,7 @@ GuiPaintHandler::region_columns(const DisplayedViewportBasis& basis) const {
 // paint_waveform_plate, so it composites over the just-blitted plate AND the
 // out-of-trim dim (a region inside a dimmed area lifts the dimmed pixels —
 // accepted, it stays visible). Session-only, nothing persisted; not part of
-// the plate/stem/flag caches — a direct per-frame overlay like the phase reset
+// the plate/flag caches — a direct per-frame overlay like the phase reset
 // overlay and the out-of-trim dim, so no cache is involved. AA off on the edges
 // like the other overlay rects.
 void GuiPaintHandler::paint_region_wash(cairo_t* cr, const GuiRect& area) {
@@ -456,7 +459,7 @@ void GuiPaintHandler::paint_phase_reset_overlay(
     }
 
     // Displayed-viewport recipe: same as paint_playheads, so the overlay
-    // stays locked to the blitted plate and the stem cache while the worker
+    // stays locked to the blitted plate while the worker
     // rebuilds against a viewport change.
     const DisplayedViewportBasis basis = displayed_viewport_basis();
     const double spp = basis.spp;
@@ -512,34 +515,100 @@ void GuiPaintHandler::paint_phase_reset_overlay(
     cairo_restore(cr);
 }
 
-// -- GuiPaintHandler::paint_marker_stems ---------------------------------
+// -- GuiPaintHandler::paint_trim -----------------------------------------
 
-void GuiPaintHandler::paint_marker_stems(cairo_t* cr,
-                                         const GuiRect& marker_paint_rect) {
-    // stem_cache.surface now carries the TRIM stems only (the marker stem became
-    // the selected-marker live overlay paint_selected_stem — see maybe_rebuild_
-    // stem_cache), rebuilt synchronously from on_tick. The paint path is blit-only.
-    // Like the waveform cache, this surface may be null on the
-    // very first paint after a load (before the first stem
-    // rebuild fires); the blit is skipped and the background
-    // shows through for that one frame. The surface's screen
-    // origin is `marker_paint_rect.x, marker_paint_rect.y`
-    // (i.e. area.x, area.y — the surface is waveform-height with no
-    // overhang), matching the local-coord choice in maybe_rebuild_stem_cache.
-    if (stem_cache.surface) {
-        cairo_save(cr);
-        cairo_rectangle(cr,
-                        marker_paint_rect.x,
-                        marker_paint_rect.y,
-                        marker_paint_rect.w,
-                        marker_paint_rect.h);
-        cairo_clip(cr);
-        cairo_set_source_surface(cr, stem_cache.surface,
-                                 marker_paint_rect.x,
-                                 marker_paint_rect.y);
-        cairo_paint(cr);
-        cairo_restore(cr);
-    }
+// The LIVE trim pass (architect 2026-07-25 — trim z-order below the playhead):
+// every trim pixel — both b/e chips, the bridge wash, the strip-crossing stem
+// segments, and the waveform stem segments — paints here per frame, in the old
+// trim-stem-cache slot (after paint_phase_reset_overlay, before
+// paint_selected_stem and hence before every playhead element), so the playhead
+// triangle sits OVER a trim stem crossing the triangle lane while marker flags
+// stay above the playheads (the z-order flip untouched). "Markers over trim" is
+// now STRUCTURAL pass order — trim < selected stem < playheads < flag blit —
+// not an intra-cache paint convention; the two-segment stem join (strip segment
+// from render_trim_flags, waveform segment from render_trim_stems) lives in
+// this ONE pass instead of joining bit-exactly across two caches.
+//
+// BASIS: the FREE item-geometry owners — displayed_viewport_basis(app, audio)
+// and displayed_or_live_target_map(app, audio) — feeding the shared geometry
+// owners displayed_trim_ms / trim_bound_column / trim_bridge_gap /
+// trim_chip_rect inside the two renderers, so paint stays column-coherent with
+// hit_test_trim_chip / route_trim_chip_press, which read exactly that basis
+// (paint == hit by shared owners). Deliberately NOT the member
+// GuiPaintHandler::displayed_viewport_basis(): that is the PLATE-fingerprint
+// basis for plate-registered overlays, and the two differ inside the accepted
+// resize item-only-promotion window — trim must ride the ITEM basis the chips'
+// hit rects resolve on. The renderers' column math therefore divides the
+// basis span by basis.area_w (the width the committed items were mapped
+// against), which is why the waveform rect handed to them carries that width.
+//
+// COLD STATES (nothing promoted yet — first paint after load/adopt, the view
+// toggle): the free accessors fall back to the LIVE viewport/map, so trim
+// paints on the pre-first-publish frame too. Small intentional behavior
+// change: the retired cached path SKIPPED its null cache surfaces there, so
+// trim was absent for that one frame — the live pass paints it (an
+// improvement, not byte-identical cold behavior).
+//
+// COORDINATES: both renderers take SCREEN-space rects (the top strip anchors
+// at (0,0), so its screen and former cache-local coords coincide; the waveform
+// rect carries its real screen x/y). The ink-notch column stays LOCAL to the
+// plate surface: fill_column_ink_runs reads plate column c.col and paints at
+// dest_x + c.col, and the plate blits at (area.x, area.y), so plate-local and
+// screen columns agree by the shared origin — the same contract
+// paint_selected_stem's render_playhead ink-notch already relies on.
+void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
+                                 const GuiRect& top_strip) {
+    if (!app.trim.has_begin && !app.trim.has_end) return;
+    if (area.w <= 0 || area.h <= 0) return;
+    if (top_strip.w <= 0 || top_strip.h <= 0) return;
+
+    // The ITEM basis (free owners; the member fn is the plate basis — see the
+    // header comment above). ::-qualified because the member name would
+    // otherwise shadow the free function inside this class scope.
+    const ::DisplayedViewportBasis basis =
+        ::displayed_viewport_basis(app, audio);
+    if (basis.area_w <= 0 || basis.spp <= 0.0) return;
+
+    // The item pixels' map: empty (identity) in source view, the committed
+    // displayed map (live fallback cold) in target view — exactly
+    // hit_test_trim_chip's selection.
+    const std::vector<WarpFrameMapSegment>& dmap =
+        displayed_or_live_target_map(app, audio);
+    const std::vector<WarpFrameMapSegment>* map_arg =
+        dmap.empty() ? nullptr : &dmap;
+
+    // Per-bound displayed-domain positions through the shared mapping owner
+    // (displayed_trim_ms returns an integral-valued double; the int64 round
+    // trip through TrimRange is exact, so trim_bound_column sees the same
+    // value the hit sites pass). Unset bounds stay 0 — the has-bits gate every
+    // consumer, so the value is never read.
+    TrimRange trim{0, 0};
+    if (app.trim.has_begin)
+        trim.begin = static_cast<int64_t>(
+            displayed_trim_ms(app.trim.begin_frame, map_arg));
+    if (app.trim.has_end)
+        trim.end = static_cast<int64_t>(
+            displayed_trim_ms(app.trim.end_frame, map_arg));
+
+    // Waveform rect for the renderers: real screen origin/height, width =
+    // basis.area_w (the committed item width — the column-mapping denominator
+    // and the [0, wave_w) painter clip, keeping paint == hit through the
+    // accepted resize window; equal to waveform_area(app).w at rest).
+    const GuiRect wave_rect{area.x, area.y, basis.area_w, area.h};
+
+    // Waveform stem segments first (verbatim geometry: hard-aliased 1-px
+    // verticals, kTrimMarker, the kBackground ink-notch against the plate),
+    // then the top-strip half (chips + bridge wash + strip stem segments, with
+    // the side-aware offscreen sentinels and the effective-width clip inside
+    // render_trim_flags). The two halves are geometrically disjoint and meet
+    // at the waveform top edge, so their relative order is cosmetic.
+    render_trim_stems(cr, wave_rect,
+                      basis.vp_start_frame, basis.vp_end_frame,
+                      trim, app.trim.has_begin, app.trim.has_end,
+                      wf_cache.surface);
+    render_trim_flags(cr, top_strip, wave_rect,
+                      basis.vp_start_frame, basis.vp_end_frame,
+                      trim, app.trim.has_begin, app.trim.has_end);
 }
 
 // -- GuiPaintHandler::paint_selected_stem --------------------------------
@@ -1016,12 +1085,13 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     init_monospace_grid_metrics(cr);
 
     // Event-synchronized hit geometry, PROMOTE phase (ruling at the selector):
-    // done at the TOP of the frame, BEFORE any painting, so the caches this
-    // frame blits (stems/flags/chips are blit-only below) AND the overlays this
-    // frame paints on top of them (the marker-text lane, hover, selection, the
+    // done at the TOP of the frame, BEFORE any painting, so the flag cache this
+    // frame blits (blit-only below) AND the overlays this
+    // frame paints around it (the live trim pass, the marker-text lane, hover,
+    // selection, the
     // playhead) all land on the SAME map — the one the committed items were
     // built against. Promoting at the frame's END instead let the overlays paint
-    // against the OLD map on the very frame that first blit the rebuilt caches,
+    // against the OLD map on the very frame that first blit the rebuilt cache,
     // then advanced the map silently with no further damage, so those overlay
     // pixels could stay misplaced (and a stationary hover could keep naming a
     // marker whose flag had moved away). Promote the staged value the last item
@@ -1050,7 +1120,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         app.staged_displayed_target_warp_frame_map.clear();
         // Promote the displayed VIEWPORT mirror in the SAME block (one promote,
         // one gen bump): the marker-text lane geometry advances to the fp_*
-        // viewport the just-blitted flag/stem caches were built against, in
+        // viewport the just-blitted flag cache was built against, in
         // lockstep with the map above.
         app.displayed_vp_start = app.staged_displayed_vp_start;
         app.displayed_vp_end   = app.staged_displayed_vp_end;
@@ -1083,44 +1153,56 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         const GuiRect exposed{x, y, w, h};
         const int     sr         = audio.sample_rate();
 
-        // The live viewport / target-warp_frame_map / trim computations
-        // live in the cache rebuild paths (waveform via the worker, stems
-        // via maybe_rebuild_stem_cache, flags via maybe_rebuild_flag_cache),
-        // not in on_redraw, which reads wf_cache.fp_* for displayed-viewport
-        // inputs and treats every strip as a blit-then-overlay path.
+        // The live viewport / target-warp_frame_map computations live in the
+        // cache rebuild paths (waveform via the worker, flags via
+        // maybe_rebuild_flag_cache), not in on_redraw, which reads
+        // wf_cache.fp_* for displayed-viewport inputs and treats the plate and
+        // flag strips as blit-then-overlay paths. Trim is a live pass
+        // (paint_trim) on the free item-basis owners.
+        //
+        // Final paint order (top to bottom of the stack): waveform plate ->
+        // region wash -> phase-reset overlay -> LIVE TRIM (chips + bridge wash
+        // + strip and waveform stem segments, one pass) -> selected stem ->
+        // playheads (scanner + split/cursor) -> flag blit -> grey
+        // selected-marker focus triangles -> marker-text lane / zoom ring ->
+        // strip-drag anchor -> bottom strip. Two structural z-order rulings
+        // live in this sequence: the Z-ORDER FLIP (architect 2026-07-23) — the
+        // cursor playhead (green line+triangle) and the region SPLIT
+        // half-triangles pass UNDER marker flags, so on a multimarker select
+        // the extent region's half-triangles rest hidden behind the
+        // earliest/latest members' flags (identical 17-wide triangle geometry
+        // at the same column) while the grey focus triangles paint OVER the
+        // flags — and TRIM BELOW THE PLAYHEAD (architect 2026-07-25) — every
+        // trim pixel paints before every playhead element, so the playhead
+        // triangle sits over a trim stem crossing the triangle lane:
+        // trim < selected stem < playheads < marker flags.
 
         if (rects_intersect(exposed, area)) {
             paint_waveform_plate(cr, area);
             // Region-select wash: over the plate and the out-of-trim dim,
-            // under the phase reset overlay, stems, and playheads.
+            // under the phase reset overlay, trim, and playheads.
             paint_region_wash(cr, area);
+            // Over the plate and dim, under trim and the stems: the phase
+            // reset overlay lightens the span ahead of the focused phase
+            // reset, then the trim/stem verticals paint on top so the focused
+            // stem stays crisp.
+            paint_phase_reset_overlay(cr, area);
         }
 
-        // Markers: vertical stems in the waveform area, beneath the
-        // playhead. Cairo's outer clip confines painting to `exposed`. Stems
-        // now span the WAVEFORM AREA ONLY (top at `area.y`, down to
-        // `area.y + area.h`) — no strip overhang; the flag+triangle structure
-        // above (the flag cache) supplies the connection. The paint rect is
-        // exactly the waveform area, matching the stem-cache surface height and
-        // origin in maybe_rebuild_stem_cache.
-        // Final paint order (top to bottom of the stack): waveform plate ->
-        // region wash -> phase-reset overlay -> marker stems -> selected stem ->
-        // playheads (scanner + split/cursor) -> flag blit -> grey
-        // selected-marker focus triangles -> marker-text lane / zoom ring ->
-        // strip-drag anchor -> bottom strip. The Z-ORDER FLIP (architect
-        // 2026-07-23): the cursor playhead (green line+triangle) and the region
-        // SPLIT half-triangles now pass UNDER marker flags, so on a multimarker
-        // select the extent region's half-triangles rest hidden behind the
-        // earliest/latest members' flags (identical 17-wide triangle geometry at
-        // the same column) while the grey focus triangles paint OVER the flags.
-        const GuiRect marker_paint_rect = area;
-        if (rects_intersect(exposed, marker_paint_rect)) {
-            // Over the plate and dim, under the stems: the phase reset
-            // overlay lightens the span ahead of the focused phase reset,
-            // then the stems paint on top so the focused stem stays crisp.
-            paint_phase_reset_overlay(cr, area);
-            paint_marker_stems(cr, marker_paint_rect);
-            // Selected-marker stem over the plate + trim stems, under the
+        // LIVE TRIM PASS — the old trim-stem-cache slot, now covering ALL trim
+        // pixels (waveform stems AND the strip's chips/bridge/stem segments).
+        // Gated on EITHER half being exposed: render_background erased every
+        // exposed top-strip pixel above, so a strip-only damage (hover text, a
+        // flag change) must repaint the strip-resident trim pixels, and a
+        // waveform-only damage the stem segments; the outer Cairo damage clip
+        // bounds the actual work either way.
+        if (rects_intersect(exposed, area) ||
+            rects_intersect(exposed, top_strip)) {
+            paint_trim(cr, area, top_strip);
+        }
+
+        if (rects_intersect(exposed, area)) {
+            // Selected-marker stem over the plate + trim, under the
             // playhead and the flags (round 4): the single selected marker's
             // column, live per-frame (not cached), while it is hovered /
             // dragged / nudged.
@@ -1199,18 +1281,21 @@ GuiPaintHandler::compute_displayed_trim() const {
     out.has_begin      = app.trim.has_begin;
     out.has_end        = app.trim.has_end;
 
-    // Positions read LIVE from app state (no waveform-cache coupling): trim
+    // Positions read LIVE from app state: trim
     // no longer affects waveform pixels, so they must follow the cursor every
     // motion tick rather than lagging a worker-completion swap. Target-view
-    // positions map through the displayed warp_frame_map (wf_cache.fp_warp_frame_map) — the
-    // same coordinate system the marker stems use — which trim does not
-    // perturb, so it is stable across a trim drag.
+    // positions map through the PLATE's warp_frame_map
+    // (wf_cache.fp_warp_frame_map) — the dim is a plate composite (the sole
+    // consumer, compute_out_of_trim_rects, masks through the plate's alpha on
+    // the plate's viewport basis) — which trim does not
+    // perturb, so it is stable across a trim drag. The live trim pass
+    // (paint_trim) maps its own frames through the ITEM-basis owners instead;
+    // the two maps agree at every committing paint.
     //
     // Positions are the AUTHORED frames, per side, unclamped and unordered
     // (NOT compute_trim_samples, whose per-side [0, total] clamp serves
-    // playback ranges): stems and chips paint at the authored spot — past
-    // EOF included — and the hit test (hit_test_trim_chip) tests
-    // the same authored positions, so paint and pick stay in agreement.
+    // playback ranges): the dim edges rest at the authored spot — past
+    // EOF included.
     // Bounds may be inverted mid-gesture (crossed cannot rest; this runs
     // per frame); the helper is position-only and needs no order (the
     // dim-rect consumer applies its own inverted-window rule).

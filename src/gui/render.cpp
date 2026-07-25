@@ -661,8 +661,9 @@ void render_trim_stems(cairo_t* cr,
     if (ink_plate) cairo_surface_flush(ink_plate);
 
     auto paint_bound = [&](int64_t frame) {
-        // `frame` is already the displayed-domain position (compute_displayed_trim
-        // pre-mapped it). Column + visibility come from the shared resolver; the
+        // `frame` is already the displayed-domain position (the live trim pass
+        // pre-mapped it through displayed_trim_ms — the hit sites' mapping
+        // owner). Column + visibility come from the shared resolver; the
         // clamped column keeps the waveform stem, strip stem, and chip on one
         // column (the EOF-wall clamp — see trim_bound_column).
         const TrimBoundColumn c = trim_bound_column(
@@ -722,8 +723,8 @@ void render_trim_flags(cairo_t* cr,
     // bottom — one unbroken 1px line at the bound column.
     const int wave_top = top_strip_area.y + top_strip_area.h;
 
-    // One shared resolver call per bound (frames pre-mapped by
-    // compute_displayed_trim), read four ways: .col (clamped), .col_raw
+    // One shared resolver call per bound (frames pre-mapped by the live trim
+    // pass through displayed_trim_ms), read four ways: .col (clamped), .col_raw
     // (unclamped, the offscreen sentinel input), .in_viewport (visibility), and
     // .side (offscreen left/right, the sentinel selector — trim_bridge_gap).
     // Computed unconditionally so the wash band spans between the bounds even

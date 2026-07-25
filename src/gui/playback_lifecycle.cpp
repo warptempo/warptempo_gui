@@ -310,7 +310,7 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // (wf_cache.fp_*), which any narrow-damage basis reachable from here can
     // transiently DIVERGE from: during an async publish window (plate old, live
     // viewport new) and — after a resize — the item-only promote (the tick
-    // rebuilds the stem/flag item mirror against the new live width while the
+    // rebuilds the flag item mirror against the new live width while the
     // scanner keeps painting the old plate until the still-in-flight worker
     // publishes), where a narrow item-basis column would miss the plate-basis
     // scanner and the line would stay invisible until the publish. Full-area

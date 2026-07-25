@@ -1344,7 +1344,7 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     const bool trim_resync = app.tempo_drag.grab_trim_highlight;
     // Synchronous re-warp, exactly adjust_tempo_cents' target-view tail:
     // kick_waveform_sync reclamps zoom/viewport first (a tempo change moves
-    // the target total) and rebuilds plate + stem/flag caches inline, with
+    // the target total) and rebuilds plate + flag cache inline, with
     // full-width damage covering the top strip and waveform. Deliberately NO
     // target_render.trigger() here — the preview fires ONCE at gesture end;
     // per-cent triggers would kill/re-dispatch the render worker per step.

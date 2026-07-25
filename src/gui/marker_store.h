@@ -77,7 +77,8 @@ public:
     }
 
     // Monotonically-increasing token bumped on every mutating method.
-    // Consumers (stem cache fingerprint) detect any marker-store
+    // Consumers (the flag-cache fingerprint, the red-flag-set memos)
+    // detect any marker-store
     // change by comparing generations rather than diffing contents.
     long long generation() const { return generation_; }
 

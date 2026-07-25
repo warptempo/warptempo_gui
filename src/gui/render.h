@@ -43,8 +43,10 @@ inline constexpr GuiColor hex(uint32_t rgb) {
 
 // Trim boundaries in domain-frame samples (source-frame in source view,
 // target-frame in target view). Trim no longer dims any renderer — it is
-// consumed only by render_trim_stems to place the two boundary stems. Values
-// are the AUTHORED positions from compute_displayed_trim (paint_handler.cpp):
+// consumed by render_trim_stems / render_trim_flags to place the boundary
+// stems and chips. Values
+// are the AUTHORED positions mapped into the displayed domain by the live
+// trim pass (GuiPaintHandler::paint_trim, through displayed_trim_ms):
 // per-bound, unordered (bounds may be inverted mid-gesture — crossed cannot
 // rest — and this paints per frame; past-EOF is load-fatal, so each bound is
 // within [0, EOF]); each stem is placed independently, so no order is
@@ -635,7 +637,8 @@ void render_strip_anchor_stem(cairo_t* cr,
 // are retired: the marker stem became a live overlay,
 // GuiPaintHandler::paint_selected_stem — the SINGLE selected marker's stem, shown
 // while it is hovered / dragged / nudged — round 3, refined round 4, architect
-// 2026-07-23. The stem cache now carries only the trim stems below.)
+// 2026-07-23. The trim stems below are live too — GuiPaintHandler::paint_trim,
+// below the playheads; no stem is cached anywhere.)
 
 // The ONE trim bound-to-column geometry owner (audit C1). Every consumer of a
 // trim bound's pixel column funnels here: the two paint sites (render_trim_stems'
@@ -645,16 +648,18 @@ void render_strip_anchor_stem(cairo_t* cr,
 // maintained "byte-identical" by comment discipline.
 //
 // PURE: all basis inputs are parameters — the collapse unifies the FORMULA. Both
-// the painters AND the hit sites now decide against the SAME DISPLAYED basis (the
-// event-synchronized hit-geometry doctrine): the painters call with the fp-recipe
-// viewport they are handed from the caches (and `displayed_ms` already mapped by
-// compute_displayed_trim); the hit sites call with the DISPLAYED basis from
+// the painter AND the hit sites decide against the SAME DISPLAYED basis (the
+// event-synchronized hit-geometry doctrine): the live trim pass
+// (GuiPaintHandler::paint_trim) and the hit sites all call with the DISPLAYED
+// basis from
 // displayed_viewport_basis (vp_start_frame/vp_end_frame/area_w — the promoted
-// mirror of that same committed fp_vp span + effective width) and `displayed_ms`
-// mapped through displayed_or_live_target_map by displayed_trim_ms. (Earlier the
+// mirror of the committed fp_vp span + effective width) and `displayed_ms`
+// mapped through displayed_or_live_target_map by displayed_trim_ms — the
+// identical owner chain, so paint and hit are one geometry by construction.
+// (Earlier the
 // hit sites used the LIVE viewport, which split a hit from its painted pixels
 // during an async plate-publish window; the promoted mirror closed that window,
-// so the basis is now unified by ruling — paint and hit are one geometry.)
+// and the trim painter later joined the same basis when it went live.)
 //
 // The x_raw denominator is the PAINTERS' quantized-span form
 // (vp_end - vp_start)/wave_w, NOT current_samples_per_pixel. The two are
@@ -740,16 +745,16 @@ struct TrimBridgeGap {
 TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
                               const TrimBoundColumn& end, int chip_w, int wave_w);
 
-// The source-frame -> displayed-domain mapping the two HIT sites share
-// (add_chip, bound_col). Byte-identical to render.cpp's file-local
+// The source-frame -> displayed-domain mapping the two HIT sites (add_chip,
+// bound_col) AND the live trim paint pass (GuiPaintHandler::paint_trim)
+// share. Byte-identical to render.cpp's file-local
 // frame_to_paint_sample for every reachable (non-negative) trim bound: in a
 // mapped view the source frame is rounded once through map_source_to_target,
 // then rounded again; the identity (null/empty map) path returns the frame
 // as-is. A negative frame is guarded to 0 (unreachable — past-EOF is load-fatal
 // and bounds are never negative — kept for exactness vs the prior hit code).
-// The PAINT sites do NOT call this: they receive pre-mapped `displayed_ms` from
-// compute_displayed_trim (their fp-recipe basis), which maps once for both
-// caches. `map` is null in source view (identity) and the item pixels' own map
+// One mapping owner for paint and hit, so a chip is grabbed exactly where it
+// is drawn. `map` is null in source view (identity) and the item pixels' own map
 // (displayed_or_live_target_map) in target view.
 double displayed_trim_ms(int64_t frame,
                          const std::vector<WarpFrameMapSegment>* map);
