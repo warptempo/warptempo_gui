@@ -80,8 +80,10 @@ public:
     // pointer-capability loss — the two edges that drop pointer focus without a
     // motion event. The one owner of the hover-off-on-leave behavior: main.cpp
     // wires it to Viewport::clear_hover_popup so a pointer that slides out through
-    // the window edge erases any hovered selected-marker stem (the ruled
-    // hide/re-show), which no motion event would otherwise damage. Null-safe.
+    // the window edge erases any hover POPUP / marker-text run / readout (which no
+    // motion event would otherwise damage). It does NOT touch the selected-marker
+    // stem — that is always-on for a singleton selection (the blue-focus pivot) and
+    // is driven only by the selection subject, never by hover. Null-safe.
     void set_pointer_left_hook(std::function<void()> cb);
     void set_on_tick(TickCallback cb);
     void set_on_pre_paint(PrePaintCallback cb);
@@ -413,7 +415,9 @@ private:
     std::function<void()> shift_released_hook_;
     // The one owner of hover-off-on-pointer-leave: fired at wl_pointer.leave and
     // at pointer-capability loss (the two focus-dropping edges with no motion
-    // event to re-resolve hover). Wired to Viewport::clear_hover_popup. Null-safe.
+    // event to re-resolve hover). Wired to Viewport::clear_hover_popup, which
+    // drops the hover POPUP / marker-text / readout only — the selected-marker stem
+    // is always-on for a singleton and never keys on hover. Null-safe.
     std::function<void()> pointer_left_hook_;
     TickCallback         on_tick_;
     PrePaintCallback     on_pre_paint_;

@@ -632,7 +632,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // image under the per-step re-warped displayed map), so the store frame is
 // correct there with no override.
 // Painted BLUE (kSelected — it marks the selected marker, like its flag) through
-// render_playhead's line-only form (draw_triangle=false, draw_line=true) — the
+// render_playhead's line-only form (draw_triangle=false) — the
 // plate ink-notch two-tone reads fine in any color (fill_column_ink_runs
 // overdraws kBackground over opaque ink, color-independent; the blue line shows
 // over the gaps). It lives OUT of the stem cache as a per-frame one-column overlay
@@ -700,7 +700,6 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
     // itself, so a stem off the visible strip paints nothing.
     render_playhead(cr, area, px_x, kSelected,
                     /*draw_triangle=*/false,
-                    /*draw_line=*/true,
                     /*ink_plate=*/wf_cache.surface);
 }
 
@@ -769,7 +768,6 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
                                                disp_spp);
         render_playhead(cr, area, scan_px, kPlayheadScanner,
                         /*draw_triangle=*/false,
-                        /*draw_line=*/true,
                         /*ink_plate=*/wf_cache.surface);
     }
 
@@ -828,7 +826,6 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
         // plate ink.
         render_playhead(cr, area, px_x, kPlayheadCursor,
                         /*draw_triangle=*/true,
-                        /*draw_line=*/true,
                         /*ink_plate=*/wf_cache.surface);
     }
     // else: selection non-empty, no region. SEMANTICS (architect 2026-07-25): a

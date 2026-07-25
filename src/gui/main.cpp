@@ -861,9 +861,11 @@ int main(int argc, char** argv) {
     gui.set_shift_released_hook([&] { app.shift_range_anchor = -1; });
 
     // Pointer-leave / capability-loss hover drop: no motion event follows those
-    // edges, so clear_hover_popup here erases a hovered selected-marker stem when
-    // the pointer slides out the window edge (the ruled hide-on-hover-out). It
-    // owns the erase damage; re-entry's synthesized motion re-resolves hover.
+    // edges, so clear_hover_popup here erases the hover POPUP / marker-text run /
+    // readout when the pointer slides out the window edge. It is NOT a
+    // stem-visibility arm — the selected-marker stem is always-on for a singleton
+    // (the blue-focus pivot) and clear_hover_popup no longer touches stem pixels;
+    // re-entry's synthesized motion re-resolves the hover surfaces.
     gui.set_pointer_left_hook([&] { viewport.clear_hover_popup(); });
 
     gui.set_on_motion([&](int mouse_x, int mouse_y, GuiInputState mods) {

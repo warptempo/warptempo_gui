@@ -389,7 +389,6 @@ void render_playhead(cairo_t* cr,
                      double  playhead_pixel_x,
                      GuiColor color,
                      bool draw_triangle,
-                     bool draw_line,
                      cairo_surface_t* ink_plate) {
     if (area.w <= 0 || area.h <= 0) return;
     // Allow partial render at file start / end: the triangle's nearer
@@ -406,10 +405,10 @@ void render_playhead(cairo_t* cr,
     const double x_px = area.x + col + 0.5;
 
     cairo_save(cr);
-    // The 1px vertical line is suppressed in the triangle-only form
-    // (draw_line = false — currently unused, see the declaration) as well as when
-    // the column clips out; the triangle below is unaffected.
-    if (draw_line && col >= 0.0 && col < static_cast<double>(area.w)) {
+    // The 1px vertical line paints whenever its column is onscreen (it is
+    // column-gated only, so it never leaks into an adjacent region); the triangle
+    // below is independently gated by draw_triangle.
+    if (col >= 0.0 && col < static_cast<double>(area.w)) {
         cairo_set_source_rgb(cr, color.r, color.g, color.b);
         cairo_set_line_width(cr, 1.0);
         cairo_move_to(cr, x_px, area.y);

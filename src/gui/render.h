@@ -562,18 +562,16 @@ void render_waveform(cairo_t* cr,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
 
 // Draws a thin 1px vertical line across `area` at column `playhead_pixel_x`
-// (offset from area.x, float for subpixel centering). No-op if outside.
-// The inverted-triangle indicator comes from the code-generated mask
-// (playhead_triangle_mask(), cached in this module's file-scope state);
-// it's stamped above the stem via cairo_mask_surface, tinted with `color`.
-// The triangle belongs to the cursor exclusively under the split-playhead
-// model; pass `draw_triangle = false` for the scanner call so only the
-// vertical line is drawn. `draw_line = false` is the complementary suppression:
-// the triangle draws but the 1px vertical line does not — a triangle-only form
-// with no current consumer (the grey selected-marker focus triangle it once
-// served was retired in the blue-focus pivot, architect 2026-07-25); the flag
-// stays as a general primitive. The two flags are independent: the scanner is
-// line-only (triangle off, line on), and the waveform-focus cursor is both on.
+// (offset from area.x, float for subpixel centering) plus, when `draw_triangle`,
+// an inverted-triangle indicator above it. No-op if outside. The line always
+// paints (column-gated only); the triangle comes from the code-generated mask
+// (playhead_triangle_mask(), cached in this module's file-scope state), stamped
+// above the stem via cairo_mask_surface and tinted with `color`. The triangle
+// belongs to the cursor exclusively under the split-playhead model; pass
+// `draw_triangle = false` for the scanner and the selected-marker stem so only
+// the vertical line is drawn. (The complementary triangle-only form was retired
+// with the grey selected-marker focus triangle in the blue-focus pivot, architect
+// 2026-07-25, so there is no draw_line flag — the line is unconditional.)
 //
 // `ink_plate` (default null) is the displayed waveform plate — an ARGB32 image
 // surface whose alpha is opaque exactly where a sample column was painted and
@@ -589,7 +587,6 @@ void render_playhead(cairo_t* cr,
                      double  playhead_pixel_x,
                      GuiColor color,
                      bool draw_triangle = true,
-                     bool draw_line = true,
                      cairo_surface_t* ink_plate = nullptr);
 
 // Draws the SPLIT playhead shown while a region-select is active: the normal
@@ -634,9 +631,10 @@ void render_strip_anchor_stem(cairo_t* cr,
 // (The cached marker-stem renderers render_markers / render_phaseresetmarkers
 // are retired: the marker stem became a live overlay,
 // GuiPaintHandler::paint_selected_stem — the SINGLE selected marker's stem, shown
-// while it is hovered / dragged / nudged — round 3, refined round 4, architect
-// 2026-07-23. The trim stems below are live too — GuiPaintHandler::paint_trim,
-// below the playheads; no stem is cached anywhere.)
+// ALWAYS for a singleton selection (the blue-focus pivot, architect 2026-07-25;
+// a live position drag tracks the proposed position). The trim stems below are
+// live too — GuiPaintHandler::paint_trim, below the playheads; no stem is cached
+// anywhere.)
 
 // The ONE trim bound-to-column geometry owner (audit C1). Every consumer of a
 // trim bound's pixel column funnels here: the two paint sites (render_trim_stems'

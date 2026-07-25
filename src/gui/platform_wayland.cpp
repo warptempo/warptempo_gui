@@ -1340,7 +1340,8 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         wl_pointer_ = nullptr;
         pointer_focused_   = false;
         // Same hover drop as wl_pointer.leave: capability loss ends the pointer
-        // stream with no leave/motion to follow, so erase any hovered stem here.
+        // stream with no leave/motion to follow, so clear the hover popup /
+        // marker-text / readout here (the stem is always-on and unaffected).
         if (pointer_left_hook_) pointer_left_hook_();
 
         // Capability loss is the hard end of this wl_pointer event stream:
@@ -1696,10 +1697,12 @@ void GuiPlatform::on_pointer_leave(uint32_t /*serial*/,
                                    struct wl_surface* surface) {
     if (surface != wl_surface_) return;
     pointer_focused_ = false;
-    // Drop hover: no motion event follows a leave, so without this a hovered
-    // selected-marker stem would keep painting after the pointer slid out the
-    // window edge (the ruled hide-on-hover-out). The hook owns the erase damage
-    // (clear_hover_popup); re-entry fires a synthesized motion (on_pointer_enter)
+    // Drop hover: no motion event follows a leave, so without this a hover POPUP /
+    // marker-text run / readout would keep showing the marker under the old pointer
+    // position after the pointer slid out the window edge. The hook owns the erase
+    // damage (clear_hover_popup) — hover surfaces only; the selected-marker stem is
+    // always-on for a singleton and NOT touched here (clear_hover_popup no longer
+    // damages stem pixels). Re-entry fires a synthesized motion (on_pointer_enter)
     // that re-resolves — and since the clear reset hover_popup to no marker, that
     // first re-entry motion cannot short-circuit on a stale cached hit.
     if (pointer_left_hook_) pointer_left_hook_();
