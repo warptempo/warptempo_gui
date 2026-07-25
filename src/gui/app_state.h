@@ -959,6 +959,15 @@ constexpr int     kDragMovedThresholdPx = 8;
 // result is dropped.
 struct HoverPopupState {
     int         marker_index = -1;
+    // WHICH part of the unified marker item the hover hit came from (MarkerHit::
+    // on_flag): true = the FLAG shape, false = the rendered lane RUN. The lane's
+    // TEXT-HOVER EXPANSION keys on this — a run whose full composed text exceeds
+    // the ambient budget expands to full text ONLY while its own TEXT run is
+    // hovered (on_flag == false), not its flag. The recompute short-circuit
+    // compares this alongside marker_index (a flag->run move is the same index but
+    // a different part, and must recompute so the expansion appears). Irrelevant
+    // when marker_index < 0.
+    bool        on_flag = false;
     // Marker-store generations captured at set time, one per column (the same
     // counters the stem/flag caches fingerprint). marker_index alone identifies
     // WHICH marker is hovered, but every derived field (lane_text, readout_text,

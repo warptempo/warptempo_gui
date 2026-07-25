@@ -1033,11 +1033,26 @@ struct LaneTextRun {
 // (hover_popup.lane_text), else tier 2 the LAST-SELECTED marker's value composed
 // from the live store (flag_text_iter for a warp marker, "p" for a phase reset),
 // with the mid-drag DragOverlay substitution and the painted-column offscreen
-// cull the flags apply; the fallback run keeps its FULL (untruncated) text.
+// cull the flags apply. TRUNCATION IS PERMANENT: every ambient run — both the
+// all-visible set AND the fallback single run — caps at the 9-glyph budget (8
+// bytes + U+2026), so a dragged/selected truncated marker stays truncated when
+// the verdict fails (it does NOT spell out in full). The editor seed, hover
+// readout, and copy payload keep full text; the lane run is display-only.
 //
-// all_visible == true: `runs` is the whole visible set (capped display text).
-// all_visible == false: `runs` is the 0-or-1 fallback run (full text). All lane
-// geometry is on the DISPLAYED viewport basis (displayed_viewport_basis) and
+// TEXT-HOVER EXPANSION (has_expanded / expanded): the ONE expansion — when the
+// pointer hovers a marker's rendered TEXT RUN (not its flag; hover_popup.on_flag
+// == false) and that marker's full composed text exceeds the budget, that run
+// EXPANDS to the full text in place, painted LAST among the ambient runs (on top,
+// occluding neighbors — the one text occlusion) and hit FIRST. It is display+hit
+// only: the occlusion VERDICT still runs on the 9-glyph-capped widths (the
+// expanded width never participates), and it applies in BOTH modes (in fallback
+// the hover-via-TEXT single run expands, reproducing the pre-cap full-text bytes;
+// fallback hover-via-FLAG and the last-selected tier stay truncated). Phase "p"
+// never exceeds the budget, so never expands.
+//
+// all_visible == true: `runs` is the whole visible set (capped). all_visible ==
+// false: `runs` is the 0-or-1 fallback run (capped). All lane geometry is on the
+// DISPLAYED viewport basis (displayed_viewport_basis) and
 // displayed_or_live_target_map — the flag pixels' own basis. The open FlagPayload
 // editor is NOT resolved here (it is an OVERLAY: the ambient runs still resolve,
 // paint suppresses the editor marker's ambient run and draws the editor box on
@@ -1045,6 +1060,8 @@ struct LaneTextRun {
 struct LaneRunSet {
     bool all_visible = false;
     std::vector<LaneTextRun> runs;
+    bool        has_expanded = false;  // a text-hover expansion is active
+    LaneTextRun expanded;              // full-text run: paint LAST, hit FIRST
 };
 
 // Resolve the current marker-text-lane run set (the occlusion arbitration above),
@@ -1061,13 +1078,16 @@ LaneRunSet current_marker_lane_runs(const AppState& app, const GuiAudio& audio);
 // set current_marker_lane_runs resolves — the ONE arbitration the lane paint
 // also reads — when the point lands inside a run's screen rect, derived exactly
 // as paint derives it: lane_text_left_x_at_frame for the left edge, glyphs times
-// monospace_advance for the width, top_marker_text_row_area for the y-band). In
-// all-visible mode every run is tested with HALF-OPEN x intervals (abutting runs
-// cannot double-hit); in fallback mode the single run keeps the closed-interval
-// test. `on_flag` records WHICH part was hit for the one asymmetry the parts
-// keep: the flag is the sole DRAG handle (a run press selects / double-clicks /
-// lands but never arms a reposition; the hover recompute reads only .index, the
-// surface not mattering to hover). index is the active-column store index, -1
+// monospace_advance for the width, top_marker_text_row_area for the y-band). The
+// EXPANDED run (a text-hover expansion) paints on top, so it is hit FIRST (a
+// point over a neighbor's occluded pixels resolves to the expanded run — WYSIWYG)
+// with a HALF-OPEN interval; then the ambient runs — all-visible with HALF-OPEN
+// intervals (abutting runs cannot double-hit), fallback single run with the
+// closed-interval test. `on_flag` records WHICH part was hit: the flag is the
+// sole DRAG handle (a run press selects / double-clicks / lands but never arms a
+// reposition), AND the hover recompute now reads it (the lane's text-hover
+// expansion keys on hovering the RUN, not the flag — see current_marker_lane_runs
+// and the recompute short-circuit). index is the active-column store index, -1
 // when neither part is under the point. Pure geometry over app/audio (no cairo
 // context); homed here beside current_marker_lane_runs so the press chain
 // (input_pointer.cpp) and the hover recompute (viewport.cpp) share one resolver.

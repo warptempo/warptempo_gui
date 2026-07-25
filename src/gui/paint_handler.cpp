@@ -97,17 +97,18 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
     // The marker-text lane (top lane 2, between the trim chips and the flags).
     // THE OCCLUSION MODEL: the lane shows EVERY onscreen marker's text ambiently
     // when the whole visible set fits unoccluded at the 9-glyph budget, else it
-    // falls back to the ONE-run arbitration (hover, else last-selected). The
-    // FlagPayload flag editor is now an OVERLAY, not an exclusive occupant: the
-    // ambient runs still paint per the verdict, the editor's OWN marker's ambient
-    // run is suppressed, and the editor's full-text box paints LAST on top. All
-    // paint live here (per-keystroke editor, per-motion hover, per-frame ambient
-    // set), after the flag-cache blit — no cache, the live-overlay role the
-    // bottom strip's editor/hover paints had before the lane existed. Each run
-    // centers its monospace text over its marker's painted column and clamps it
-    // fully onscreen (lane_text_left_x_at_frame) on a kBackground fill behind the
-    // run with no border. The editor box flashes its fill kAccent on an invalid
-    // commit.
+    // falls back to the ONE-run arbitration (hover, else last-selected). Every
+    // ambient run is CAPPED at the budget (truncation is permanent). Two OVERLAYS
+    // paint on top of the ambient runs (each suppresses its own marker's ambient
+    // run, then draws its replacement last — the same pattern): the TEXT-HOVER
+    // EXPANSION (a run whose full text exceeds the budget, drawn in full while its
+    // TEXT is hovered) and, above it, the FlagPayload editor box. All paint live
+    // here (per-keystroke editor, per-motion hover, per-frame ambient set), after
+    // the flag-cache blit — no cache, the live-overlay role the bottom strip's
+    // editor/hover paints had before the lane existed. Each run centers its
+    // monospace text over its marker's painted column and clamps it fully onscreen
+    // (lane_text_left_x_at_frame) on a kBackground fill behind the run with no
+    // border. The editor box flashes its fill kAccent on an invalid commit.
     const GuiRect lane      = top_marker_text_row_area(app);
     const double  baseline  = lane.y + monospace_row_baseline_offset();
     const double  advance   = monospace_advance();
@@ -148,14 +149,27 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
     // Every ambient run (all-visible: the whole set; fallback: the 0/1 run),
     // resolved by the shared owner current_marker_lane_runs — the ONE arbitration
     // the unified marker hit resolver (marker_hit_at) also reads, so the painted
-    // runs and the clickable runs cannot drift. While the editor is open, SKIP
-    // its own marker's ambient run (the editor box below replaces it); its capped
-    // run still participated in the verdict.
+    // runs and the clickable runs cannot drift. Two overlay suppressions: while
+    // the editor is open SKIP its own marker's ambient run (the editor box below
+    // replaces it), and while a text-hover expansion is active SKIP the expanded
+    // marker's capped run (the full-text run below replaces it). Both suppressed
+    // markers' CAPPED runs still participated in the verdict.
     const LaneRunSet set = current_marker_lane_runs(app, audio);
+    const int expanded_target = set.has_expanded ? set.expanded.marker_index : -1;
     for (const LaneTextRun& run : set.runs) {
         if (editor_active && run.marker_index == editor_target) continue;
+        if (run.marker_index == expanded_target) continue;
         paint_run(run.source_frame, run.text, run.glyphs);
     }
+
+    // The text-hover EXPANDED run paints LAST among the ambient runs (on top,
+    // occluding the neighbors it overlaps — the one text occlusion), before the
+    // editor box. Full text, centered on the marker's column exactly like its
+    // capped run was. (Hover is cleared while any editor is open, so an expansion
+    // and the editor box never coexist.)
+    if (set.has_expanded)
+        paint_run(set.expanded.source_frame, set.expanded.text,
+                  set.expanded.glyphs);
 
     // The FlagPayload editor box LAST, overlaying any ambient run it overlaps.
     if (editor_active) {

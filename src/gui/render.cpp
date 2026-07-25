@@ -1589,12 +1589,14 @@ void cap_lane_run_text(std::string& text, size_t& glyphs) {
     }
 }
 
-// The FALLBACK single run — today's one-run arbitration, kept byte-identical
-// (modulo the displayed-viewport basis, which the cull now reads too): tier 1
-// the HOVERED marker's value, else tier 2 the LAST-SELECTED marker's value
-// composed from the live store, with the mid-drag DragOverlay substitution and
-// the painted-column offscreen cull the flags apply. The fallback run carries
-// FULL (untruncated) text; glyphs = text.size() (ASCII, byte == glyph).
+// The FALLBACK single run — the one-run arbitration: tier 1 the HOVERED marker's
+// value, else tier 2 the LAST-SELECTED marker's value composed from the live
+// store, with the mid-drag DragOverlay substitution and the painted-column
+// offscreen cull the flags apply. TRUNCATION IS PERMANENT (architect): the
+// fallback run CAPS at the 9-glyph budget too, so a dragged/selected truncated
+// marker stays truncated here — it does NOT spell out in full when the verdict
+// fails. The text-hover EXPANSION (applied to the returned set) is the sole
+// route back to the full text, and only while the run's TEXT is hovered.
 LaneTextRun current_marker_lane_run_fallback(const AppState& app,
                                              const GuiAudio& audio) {
     LaneTextRun run;
@@ -1610,7 +1612,7 @@ LaneTextRun current_marker_lane_run_fallback(const AppState& app,
         run.marker_index = app.hover_popup.marker_index;
         run.source_frame = static_cast<double>(app.hover_popup.source_frame);
         run.text         = app.hover_popup.lane_text;
-        run.glyphs       = run.text.size();
+        cap_lane_run_text(run.text, run.glyphs);
         return run;
     }
 
@@ -1666,7 +1668,7 @@ LaneTextRun current_marker_lane_run_fallback(const AppState& app,
     run.marker_index = idx;
     run.source_frame = display_src_f;
     run.text         = std::move(txt);
-    run.glyphs       = run.text.size();
+    cap_lane_run_text(run.text, run.glyphs);
     return run;
 }
 
@@ -1679,9 +1681,44 @@ LaneRunSet lane_run_set_fallback(const AppState& app, const GuiAudio& audio) {
     return set;
 }
 
+// THE TEXT-HOVER EXPANSION (applied to the base set in BOTH modes): when the
+// pointer hovers a marker's rendered TEXT RUN — not its flag (hover_popup.on_flag
+// == false) — and that marker's FULL composed text (hover_popup.lane_text, which
+// the recompose keeps uncapped) exceeds the budget, expand that run to the full
+// text. The expanded run reuses its ambient run's source_frame so it centers on
+// the SAME column (the expanded rect always CONTAINS the capped one — both center
+// on that column and the expanded is wider — so a pointer in the capped rect is
+// in the expanded rect, the hysteresis latch the recompute convergence relies
+// on). It paints LAST / hits FIRST (LaneRunSet contract). The verdict is already
+// decided on the capped widths; this never touches it. Phase "p" is 1 glyph, so
+// it never reaches this. Only expands a marker actually IN the base set (onscreen)
+// — a hover is always over an onscreen run, but the search also fixes the exact
+// centering frame.
+void apply_hover_expansion(LaneRunSet& set, const AppState& app) {
+    if (app.hover_popup.on_flag) return;               // hovering the flag, not the run
+    const int idx = app.hover_popup.marker_index;
+    if (idx < 0) return;
+    if (app.hover_popup.lane_text.size() <= kLaneAmbientGlyphBudget) return;
+    for (const LaneTextRun& r : set.runs) {
+        if (r.marker_index != idx) continue;
+        set.expanded.valid        = true;
+        set.expanded.marker_index = idx;
+        set.expanded.source_frame = r.source_frame;    // same column as its capped run
+        set.expanded.text         = app.hover_popup.lane_text;   // FULL (uncapped)
+        set.expanded.glyphs       = set.expanded.text.size();    // ASCII: byte == glyph
+        set.has_expanded          = true;
+        return;
+    }
+}
+
 } // namespace
 
-LaneRunSet current_marker_lane_runs(const AppState& app, const GuiAudio& audio)
+// The base run set (capped, mode decided) WITHOUT the text-hover expansion —
+// current_marker_lane_runs wraps this and applies apply_hover_expansion to the
+// result, so both the all-visible and fallback returns pick up the expansion at
+// one site.
+static LaneRunSet resolve_base_lane_run_set(const AppState& app,
+                                            const GuiAudio& audio)
 {
     // The occlusion arbitration the paint pass and the unified marker hit
     // resolver (marker_hit_at) share (contract at the declaration). The open
@@ -1787,6 +1824,15 @@ LaneRunSet current_marker_lane_runs(const AppState& app, const GuiAudio& audio)
     return set;
 }
 
+LaneRunSet current_marker_lane_runs(const AppState& app, const GuiAudio& audio)
+{
+    // Resolve the capped base set (mode decided on the capped widths), then layer
+    // the text-hover expansion on top — one application site covering both modes.
+    LaneRunSet set = resolve_base_lane_run_set(app, audio);
+    apply_hover_expansion(set, app);
+    return set;
+}
+
 MarkerHit marker_hit_at(const AppState& app, const GuiAudio& audio,
                         int x, int y) {
     MarkerHit h;
@@ -1805,6 +1851,25 @@ MarkerHit marker_hit_at(const AppState& app, const GuiAudio& audio,
     if (y < lane.y || y >= lane.y + lane.h) return h;   // y-band already half-open
 
     const LaneRunSet set = current_marker_lane_runs(app, audio);
+    // The expanded run (text-hover expansion) paints on top, so it is hit FIRST —
+    // a point over a neighbor's occluded pixels resolves to the expanded run
+    // (WYSIWYG). Its rect CONTAINS the marker's capped rect, so once expanded the
+    // pointer stays inside it across the whole capped area and beyond — the
+    // hysteresis latch the hover convergence relies on. HALF-OPEN, like the
+    // all-visible runs.
+    if (set.has_expanded) {
+        const LaneTextRun& e = set.expanded;
+        const double left = lane_text_left_x_at_frame(
+            app, audio, e.source_frame, e.glyphs);
+        if (left >= 0.0) {
+            const double run_w = static_cast<double>(e.glyphs) * advance;
+            if (static_cast<double>(x) >= left &&
+                static_cast<double>(x) < left + run_w) {
+                h.index = e.marker_index;
+                return h;
+            }
+        }
+    }
     if (set.all_visible) {
         // Every run's rect is disjoint by construction (the verdict passed), so
         // order is irrelevant; test with HALF-OPEN x intervals [left, left+w) so
