@@ -1570,8 +1570,17 @@ struct AppState {
     // every clear site (source load / `'` adopt / view toggle). Deliberately
     // SEPARATE from GuiPaintHandler::displayed_viewport_basis, which reads the
     // LIVE wf_cache.fp_* so the PLATE-registered overlays (region wash, playheads)
-    // stay locked to the just-blitted plate — the two register with different
-    // surfaces (plate vs the flag/stem item caches) and can transiently diverge.
+    // stay locked to the just-blitted plate. The split PERSISTS as a
+    // mechanism/lifecycle distinction (direct fp read for plate-registered
+    // overlays vs this staged/promoted mirror for item-registered geometry), but
+    // the two are now NUMERICALLY EQUAL at every committing paint: since the worker
+    // publish rebuilds the item caches inline before its damage (as the pan and
+    // sync writers already did — closure dates to that inline publish rebuild), all
+    // three plate writers commit new plate + new items together, and the mirror
+    // promote runs at the top of the committing frame's paint, so the plate-fp
+    // accessor and this promoted mirror agree by construction. Keeping the two
+    // owners is the mechanism/lifecycle split, not a live divergence; unifying them
+    // is a possible future collapse, out of scope here.
     int64_t displayed_vp_start = 0;
     int64_t displayed_vp_end   = 0;
     int     displayed_area_w   = 0;
@@ -2287,9 +2296,16 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // PLATE-locked overlays (region wash, playheads, phase-reset overlay) with the
 // just-blitted plate, whereas this owner registers the flag/chip/lane/hit
 // geometry with the committed FLAG/STEM item caches (the promoted mirror). The
-// two surfaces are keyed off the same fp_* at rest but can transiently diverge —
-// plate published NEW while the flag cache still shows OLD for one frame — so
-// they are two owners by construction, not accidental duplication.
+// two are now NUMERICALLY EQUAL at every committing paint: the one-frame
+// plate-published-NEW-while-items-show-OLD divergence is RETIRED — all three
+// plate writers (worker publish, incremental pan, synchronous rebuild) rebuild
+// the item caches inline before their committing damage, and this mirror promotes
+// at the top of that frame's paint, so the plate fp and the promoted mirror agree
+// by construction (closure dates to the worker-publish inline rebuild). The two
+// owners PERSIST as a mechanism/lifecycle split — direct fp read for
+// plate-registered overlays vs the staged/promoted mirror for item-registered
+// geometry — not a live divergence; unifying them is a possible future collapse,
+// out of scope here.
 //
 // The double vp_start/spp serve the lane column math (painted_column_of_source_
 // frame_on_basis); the int64 vp_start_frame/vp_end_frame/area_w serve the hit

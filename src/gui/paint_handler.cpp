@@ -264,11 +264,13 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
         // left as background. ATOP would key on the WINDOW's alpha,
         // which is already opaque post-blit, so it can't serve as the
         // sample mask and fills the whole rect solid; the plate
-        // surface's alpha can. We clip to the LIVE out-of-trim
-        // rect(s) (trim + viewport), so a trim drag tracks the stem
-        // frame-for-frame with no plate rebuild, then mask the dim
-        // color through the plate (blitted at (area.x, area.y), so
-        // the mask uses the same origin). OVER + mask is exactly
+        // surface's alpha can. We clip to the out-of-trim rect(s) —
+        // LIVE trim frames on the PLATE fingerprint's viewport/spp
+        // (compute_out_of_trim_rects' split basis), so a trim drag
+        // tracks the stem frame-for-frame with no plate rebuild while
+        // an async publish keeps the edge on the just-blitted plate —
+        // then mask the dim color through the plate (blitted at
+        // (area.x, area.y), so the mask uses the same origin). OVER + mask is exactly
         // "color where the plate is opaque, within the clip" — no
         // operator change. cairo_save/restore brackets the clip so
         // the marker, stem, flag, and playhead passes that follow run

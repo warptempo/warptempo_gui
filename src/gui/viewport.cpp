@@ -93,11 +93,21 @@ void Viewport::invalidate_hover_stem_column(int idx, int64_t source_frame) {
     if (audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
     if (area.w <= 0) return;
-    // The stem's column, the painters' own math over the displayed map (live
-    // viewport — equal to the displayed viewport whenever hover shows, at rest).
-    const int col = painted_column_of_source_frame(
+    // The stem's column on the DISPLAYED item basis — the honest source, since the
+    // selected-marker stem paints against the promoted item mirror
+    // (displayed_viewport_basis), not the live viewport. Both the displayed MAP
+    // and the displayed VIEWPORT/spp: at rest they equal live (the "hover shows =>
+    // live == displayed" case still holds), but during an async publish window the
+    // live viewport already holds the NEW span while the stem still paints at the
+    // OLD displayed column — a live-basis column would then miss the stem entirely
+    // (the mixed-basis hazard the pin stamp went full-area to avoid). Both
+    // consumers inherit this: suppress_hover_stem's disappear damage and the hover
+    // recompute's appear/disappear transitions (old + new columns).
+    const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
+    const int col = painted_column_of_source_frame_on_basis(
         app, audio, static_cast<double>(source_frame),
-        displayed_or_live_target_map(app, audio));
+        displayed_or_live_target_map(app, audio),
+        basis.vp_start, basis.spp);
     if (col < 0 || col >= area.w) return;
     // A narrow full-waveform-height band around the 1px stem (+AA slack).
     constexpr int kStemPad = 2;

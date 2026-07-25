@@ -454,11 +454,16 @@ private:
     // Painted by on_redraw as a CAIRO_OPERATOR_ATOP overlay right after the
     // waveform plate blit, so the dim recolors only the out-of-trim sample
     // pixels (the plate itself is trim-agnostic — see render_waveform).
-    // Resolved from the LIVE viewport (app.viewport_start_sample + live spp)
-    // and the displayed-domain trim frames compute_displayed_trim() returns
-    // (the SAME source the trim stems use), so the dim edge stays locked to
-    // the trim stem across a drag with no cache rebuild. Both rects span the
-    // full waveform height; ATOP confines the recolor to sample pixels.
+    // A SPLIT basis: the trim FRAMES are the LIVE bounds mapped through the
+    // displayed map (compute_displayed_trim() — the SAME source the trim stems
+    // use), positioned on the PLATE fingerprint's viewport/spp
+    // (displayed_viewport_basis, the plate-registered owner region wash and
+    // playheads share). The dim is a plate composite, so it registers with the
+    // plate: across a drag the viewport is fixed (plate == live) and the edge
+    // stays locked to the trim stem, while during an async publish window the
+    // plate basis keeps the edge on the just-blitted plate instead of the
+    // not-yet-blitted live span. Both rects span the full waveform height; ATOP
+    // confines the recolor to sample pixels.
     struct OutOfTrimRects {
         bool    has_left  = false;
         GuiRect left{};
