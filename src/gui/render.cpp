@@ -94,45 +94,6 @@ static inline double frame_to_paint_sample(
     return std::nearbyint(eff_frame);
 }
 
-// Caller must cairo_surface_flush(ink_plate) before calling. Collect
-// contiguous opaque ink runs down one plate column and overdraw them as
-// kBackground 1px rectangles at dest_x + icol, dest_y + run start.
-void fill_column_ink_runs(cairo_t* cr, int dest_x, int dest_y, int area_h,
-                          cairo_surface_t* ink_plate, int icol) {
-    if (!ink_plate) return;
-    if (cairo_image_surface_get_format(ink_plate) != CAIRO_FORMAT_ARGB32) return;
-    const int plate_w = cairo_image_surface_get_width(ink_plate);
-    const int plate_h = cairo_image_surface_get_height(ink_plate);
-    if (icol < 0 || icol >= plate_w) return;
-    const unsigned char* data = cairo_image_surface_get_data(ink_plate);
-    const int stride  = cairo_image_surface_get_stride(ink_plate);
-    const int y_max   = std::min(area_h, plate_h);
-
-    cairo_set_source_rgb(cr, kBackground.r, kBackground.g, kBackground.b);
-    int run_start = -1;
-    for (int y = 0; y < y_max; ++y) {
-        const bool ink = data[y * stride + icol * 4 + 3] > 127;
-        if (ink && run_start < 0) {
-            run_start = y;
-        } else if (!ink && run_start >= 0) {
-            cairo_rectangle(cr,
-                            static_cast<double>(dest_x + icol),
-                            static_cast<double>(dest_y + run_start),
-                            1.0,
-                            static_cast<double>(y - run_start));
-            run_start = -1;
-        }
-    }
-    if (run_start >= 0) {
-        cairo_rectangle(cr,
-                        static_cast<double>(dest_x + icol),
-                        static_cast<double>(dest_y + run_start),
-                        1.0,
-                        static_cast<double>(y_max - run_start));
-    }
-    cairo_fill(cr);
-}
-
 // Fills and outlines ONE marker/phase-reset/trim flag SHAPE at `center_x` (the
 // item's pixel column). `anchor` places the rectangle relative to that column:
 // Center (markers/phase resets — straddles the column, may hang half offscreen)
@@ -281,6 +242,14 @@ void render_background(cairo_t* cr, int x, int y, int w, int h) {
     cairo_restore(cr);
 }
 
+void render_canvas(cairo_t* cr, int x, int y, int w, int h) {
+    cairo_save(cr);
+    cairo_set_source_rgb(cr, kCanvas.r, kCanvas.g, kCanvas.b);
+    cairo_rectangle(cr, x, y, w, h);
+    cairo_fill(cr);
+    cairo_restore(cr);
+}
+
 void render_waveform(cairo_t* cr,
                      GuiRect area,
                      const GuiAudio& audio,
@@ -388,8 +357,7 @@ void render_playhead(cairo_t* cr,
                      GuiRect area,
                      double  playhead_pixel_x,
                      GuiColor color,
-                     bool draw_triangle,
-                     cairo_surface_t* ink_plate) {
+                     bool draw_triangle) {
     if (area.w <= 0 || area.h <= 0) return;
     // Allow partial render at file start / end: the triangle's nearer
     // half stays onscreen even when the tip column itself has clipped
@@ -408,25 +376,15 @@ void render_playhead(cairo_t* cr,
     // The 1px vertical line paints whenever its column is onscreen (it is
     // column-gated only, so it never leaks into an adjacent region); the triangle
     // below is independently gated by draw_triangle.
+    // ONE SOLID LINE, straight over whatever it crosses — waveform ink included.
+    // A saturated stem over the dark ink reads without any cut, so there is no
+    // two-tone overdraw here (see the declaration for the retirement).
     if (col >= 0.0 && col < static_cast<double>(area.w)) {
         cairo_set_source_rgb(cr, color.r, color.g, color.b);
         cairo_set_line_width(cr, 1.0);
         cairo_move_to(cr, x_px, area.y);
         cairo_line_to(cr, x_px, area.y + area.h);
         cairo_stroke(cr);
-
-        // Two-tone overdraw: where this column crosses opaque waveform ink,
-        // recolor the green line to kBackground so it reads as a dark notch
-        // cut through the light fill (DAW-style), while it stays green over
-        // the dark background and the transparent gaps. The displayed plate
-        // is the single source of ink truth — its per-sample alpha is the
-        // exact mask the out-of-trim dim pass already uses, so this needs no
-        // new geometry and is correct across all views and the shifted plate.
-        if (ink_plate) {
-            cairo_surface_flush(ink_plate);
-            const int icol    = static_cast<int>(col);
-            fill_column_ink_runs(cr, area.x, area.y, area.h, ink_plate, icol);
-        }
     }
 
     // Inverted-triangle indicator: stamped from the cached ANTIALIASED A8 mask
@@ -519,8 +477,7 @@ void render_split_playhead(cairo_t* cr,
     stamp_half(right_col, center, img_w - 1);
 }
 
-void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col,
-                              cairo_surface_t* ink_plate) {
+void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
     if (area.w <= 0 || area.h <= 0) return;
     // The clamp is where the affordance lives: an anchor pushed to (or past) a
     // song edge pins to the edge column, so the stem draws exactly there.
@@ -535,12 +492,6 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col,
     cairo_move_to(cr, x_px, static_cast<double>(area.y));
     cairo_line_to(cr, x_px, static_cast<double>(area.y + area.h));
     cairo_stroke(cr);
-    // The dark ink notch: the same kBackground overdraw the marker stems apply
-    // where the column crosses opaque waveform ink.
-    if (ink_plate) {
-        cairo_surface_flush(ink_plate);
-        fill_column_ink_runs(cr, area.x, area.y, area.h, ink_plate, col);
-    }
     cairo_restore(cr);
 }
 
@@ -637,8 +588,7 @@ void render_trim_stems(cairo_t* cr,
                        long long viewport_end_sample,
                        const TrimRange& trim,
                        bool has_begin,
-                       bool has_end,
-                       cairo_surface_t* ink_plate) {
+                       bool has_end) {
     if (waveform_area.w <= 0 || waveform_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (!has_begin && !has_end) return;
@@ -657,7 +607,6 @@ void render_trim_stems(cairo_t* cr,
 
     cairo_save(cr);
     cairo_set_line_width(cr, 1.0);
-    if (ink_plate) cairo_surface_flush(ink_plate);
 
     auto paint_bound = [&](int64_t frame) {
         // `frame` is already the displayed-domain position (the live trim pass
@@ -674,8 +623,6 @@ void render_trim_stems(cairo_t* cr,
         cairo_move_to(cr, x_px, y_stem_top);
         cairo_line_to(cr, x_px, y1);
         cairo_stroke(cr);
-        fill_column_ink_runs(cr, waveform_area.x, waveform_area.y,
-                             waveform_area.h, ink_plate, c.col);
     };
 
     if (has_begin) paint_bound(trim.begin);

@@ -14,10 +14,10 @@ void Selection::damage_playhead_if_focus_flipped(bool was_empty) {
     // Damage the playhead column (line span + triangle lane). The two-argument
     // form with equal endpoints damages exactly that one column — the playhead
     // itself has not moved, only its PRESENCE at the cursor changed with the
-    // selection emptiness: empty paints the green line+triangle there; non-empty
-    // conceptually moves the cursor COINCIDENT with the marker (hidden behind it —
-    // the blue stem is the cursor line, the flag occludes the triangle), so the
-    // green cursor form stops painting there (the blue-focus pivot).
+    // selection emptiness: empty paints the blue cursor line+triangle there;
+    // non-empty conceptually moves the cursor COINCIDENT with the marker (hidden
+    // behind it — the blue stem is the cursor line, the flag occludes the
+    // triangle), so the cursor form stops painting there (the blue-focus pivot).
     const double px = playhead_pixel_x(app, audio);
     viewport.invalidate_playhead_columns(px, px);
 }
@@ -185,8 +185,8 @@ void Selection::clear_selection() {
     viewport.invalidate_timestamp_area();
     // Non-empty -> empty is always a focus flip here (the already-empty case
     // returned above), so the playhead column repaints — nothing at the cursor
-    // (non-empty) back to the green line+triangle (empty) — even with no playhead
-    // move.
+    // (non-empty) back to the blue cursor line+triangle (empty) — even with no
+    // playhead move.
     damage_playhead_if_focus_flipped(/*was_empty=*/false);
     // Clearing the focus erases any overlay it annotated (subject frame -> none)
     // and any singleton stem (its subject -> none).

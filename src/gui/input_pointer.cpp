@@ -325,7 +325,7 @@ bool GuiInputHandler::handle_escape_selection_region() {
         // No region + SINGLETON: deselect + land the playhead ON the marker (the
         // playhead is usually already coincident from the re-coupling land, so the
         // land is a safety re-affirm; deselecting then flips the playhead form back
-        // to the green waveform focus). Land BEFORE the clear so the marker index
+        // to the blue waveform focus). Land BEFORE the clear so the marker index
         // is still resolvable. Full waveform damage: the deselect un-shows a wider
         // WAVEFORM overlay than the playhead-column / top-strip damage covers — the
         // phase-reset lead-in overlay (P+target) and the selected-marker stem.

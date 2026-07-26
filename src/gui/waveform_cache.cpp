@@ -46,8 +46,9 @@ void render_waveform_to_cache_surface(
     if (!dest || area_w <= 0 || area_h <= 0) return;
 
     cairo_t* ccr = cairo_create(dest);
-    // Clear to transparent — the pixmap's background fill shows through
-    // wherever the waveform strokes don't paint.
+    // Clear to transparent — the waveform area's kCanvas ground shows through
+    // wherever the waveform strokes don't paint. No ground color is ever baked
+    // into the plate; its alpha is the sample mask the out-of-trim dim pass reads.
     cairo_save(ccr);
     cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);
     cairo_paint(ccr);

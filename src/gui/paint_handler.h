@@ -389,7 +389,8 @@ private:
     // INVERTED trim — begin strictly later than end in the displayed domain
     // shades nothing; a mid-gesture-only state, since crossed bounds
     // cannot rest past the commit auto-clear).
-    // Painted by on_redraw as a CAIRO_OPERATOR_ATOP overlay right after the
+    // Painted by on_redraw as a MASKED OVER pass (cairo_mask_surface with the
+    // plate alpha as the mask) right after the
     // waveform plate blit, so the dim recolors only the out-of-trim sample
     // pixels (the plate itself is trim-agnostic — see render_waveform).
     // A SPLIT basis: the trim FRAMES are the LIVE bounds mapped through the
@@ -405,8 +406,8 @@ private:
     // so dim edge and trim stem coincide there; inside the accepted resize
     // item-only-promotion window the two bases diverge and the dim edge can
     // sit a hair off the stem until the plate republishes — see the basis
-    // comment at paint_trim.) Both rects span the full waveform height; ATOP
-    // confines the recolor to sample pixels.
+    // comment at paint_trim.) Both rects span the full waveform height; the
+    // plate-alpha MASK confines the recolor to sample pixels.
     struct OutOfTrimRects {
         bool    has_left  = false;
         GuiRect left{};
