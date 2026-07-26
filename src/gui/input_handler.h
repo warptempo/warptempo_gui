@@ -774,8 +774,8 @@ private:
     // when a pan carries it offscreen (the edge trick). `final_event` is true on
     // the terminating event (release / button-lost) for the one synchronous
     // rebuild plus predictor resync; motion events pass false and repaint
-    // synchronously too (a full rebuild on a level change, the incremental pan
-    // fast-path on a pan-only frame).
+    // synchronously too — one full rebuild per pointer frame whether the level
+    // changed or only the viewport moved.
     void apply_strip_drag_at(int x, int y, bool final_event);
 
     bool route_trim_chip_press(int mouse_x, int mouse_y);

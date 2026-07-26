@@ -366,9 +366,9 @@ void render_waveform(cairo_surface_t* dest,
         px[x] = word;
     };
 
-    // Global column c's display-domain left edge. ONE expression, shared by
-    // full and strip renders (see WaveformBasis) — the strip's column c and the
-    // full render's column c are the same double by construction.
+    // Global column c's display-domain left edge. ONE expression over the
+    // PLATE's basis and the GLOBAL column index (see WaveformBasis), so a
+    // column's frames never depend on which render produced it.
     const auto edge_at = [&](long long c) {
         return static_cast<double>(basis.vp_start) +
                (span * static_cast<double>(c)) /

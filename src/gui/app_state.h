@@ -1433,8 +1433,8 @@ struct AppState {
     // stay locked to the just-blitted plate. The split PERSISTS as a
     // mechanism/lifecycle distinction (direct fp read for plate-registered
     // overlays vs this staged/promoted mirror for item-registered geometry), and
-    // the two are NUMERICALLY EQUAL at every frame committed by the THREE PLATE
-    // WRITERS (worker publish, incremental pan, synchronous rebuild): each
+    // the two are NUMERICALLY EQUAL at every frame committed by the TWO PLATE
+    // WRITERS (worker publish, synchronous rebuild): each
     // rebuilds the flag cache inline before the damaged frame can paint or
     // commit (the sync writer queues its invalidation first, but
     // invalidate_region only QUEUES and nothing paints re-entrantly inside the
@@ -2137,8 +2137,8 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // PLATE-locked overlays (region wash, playheads, phase-reset overlay) with the
 // just-blitted plate, whereas this owner registers the flag/chip/lane/hit
 // geometry with the committed FLAG item cache (the promoted mirror). The two
-// are NUMERICALLY EQUAL at every frame committed by the THREE PLATE WRITERS
-// (worker publish, incremental pan, synchronous rebuild) — the old one-frame
+// are NUMERICALLY EQUAL at every frame committed by the TWO PLATE WRITERS
+// (worker publish, synchronous rebuild) — the old one-frame
 // plate-published-NEW-while-items-show-OLD divergence is retired, since each
 // writer rebuilds the flag cache inline before the damaged frame paints or
 // commits (damage-REQUEST order varies — the sync writer queues its

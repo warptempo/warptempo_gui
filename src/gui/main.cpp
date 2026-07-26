@@ -709,17 +709,12 @@ int main(int argc, char** argv) {
     viewport.request_waveform_render_ =
         [&]() { paint_handler.maybe_enqueue_waveform_render(); };
 
-    // Pure-pan fast-path: scroll_viewport drives this instead of the full
-    // worker kick. Shifts the live plate by the pixel delta and renders only
-    // the newly exposed edge strip inline, so fast touchpad scroll stays
-    // continuous. Falls back to the worker for any non-pan case. See
-    // Viewport::kick_waveform_pan and GuiPaintHandler::pan_waveform_incremental.
-    viewport.request_waveform_pan_ =
-        [&](int64_t new_vp, bool sync) {
-            paint_handler.pan_waveform_incremental(new_vp, sync);
-        };
+    // (No pan callback: scroll_viewport routes through request_waveform_sync_
+    // below, like zoom. The incremental shift-and-strip pan was retired
+    // 2026-07-26 — one render path for moving and resting plates.)
 
-    // One-shot discrete jumps route here instead of the async worker: render
+    // Every user-driven viewport change routes here instead of the async
+    // worker — zoom, scroll/pan, and the one-shot jumps alike: render
     // the plate synchronously and publish the displayed fingerprint now so the
     // overlays and waveform land in the same frame. See
     // Viewport::kick_waveform_sync and

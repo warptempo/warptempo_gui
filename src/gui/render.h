@@ -583,13 +583,15 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 // Global column c's display-domain span is, by definition,
 //     [vp_start + span*c/full_width, vp_start + span*(c+1)/full_width)
 // with span = vp_end - vp_start. Every render evaluates that ONE expression for
-// the global column it is drawing, so a strip (incremental-pan) render of
-// column c produces byte-identical endpoints to a full render of column c.
-// This is why the strip does NOT derive a miniature viewport of its own: a
-// rounded strip-local viewport renormalized across the strip width is not
-// guaranteed to reproduce the full render's endpoints, and the disagreement
-// shows as a seam at the strip boundary (worse once columns are bridged, since
-// a bad endpoint then propagates one column further).
+// the global column it is drawing. Every render today is a full-plate render
+// (col0 = 0, area.w == full_width), so the basis and the sub-range collapse to
+// the same thing; the global-column form is kept because it is the honest
+// statement of the mapping — a column's frames are a function of the PLATE's
+// viewport and width and that column's index, never of whatever window happens
+// to be drawing it. It also keeps partial renders correct by construction if
+// one is ever reintroduced (a partial render that renormalized a viewport of
+// its own across its own width would not reproduce these endpoints, and the
+// disagreement would show as a seam — the defect that retired the last one).
 struct WaveformBasis {
     long long vp_start   = 0;   // full-plate viewport start, display domain
     long long vp_end     = 0;   // full-plate viewport end, display domain
@@ -598,9 +600,8 @@ struct WaveformBasis {
 
 // Draws one channel's waveform into `area`, which holds the `area.w` columns
 // starting at GLOBAL column `col0` — i.e. the column sub-range [col0,
-// col0+area.w) of `basis`. A full render passes col0 = 0 and area.w ==
-// basis.full_width; a strip render passes its plate x as col0 and its own
-// narrower area.w. When `warp_frame_map` is null (source view) the basis
+// col0+area.w) of `basis`. Both callers are full-plate renders and pass
+// col0 = 0 with area.w == basis.full_width. When `warp_frame_map` is null (source view) the basis
 // viewport is source-frame and each column reads `audio.get_peak_range`
 // directly. When non-null (target view) it is target-frame: each column's
 // [t0, t1) is translated to source-frame via `map_target_to_source` before the
@@ -618,17 +619,14 @@ struct WaveformBasis {
 //
 // THE LEFT HALO: because column col0 has a left neighbour that this call does
 // not draw, the render evaluates a one-column RAW halo at global column col0-1
-// and bridges col0 against it. For a strip that halo is a reused column, re-read
-// from its SAMPLE SPAN through this same basis (never by reading pixels back);
-// for a full render it is the offscreen column just left of the viewport. At the
-// song wall the halo has no span to the left, so it is EMPTY and column col0
-// goes unbridged on its left. Because column 0 is always bridged against an
-// offscreen halo rather than left deliberately unbridged, this one rule serves
-// full renders, strip renders, and the pan's boundary-column repair alike —
-// each just names the col0 it wants re-rendered. It does NOT by itself make a
-// panned plate whole: the pan's integer memmove leaves one reused column whose
-// bridge predecessor was discarded or replaced, and the caller repairs that
-// column by re-rendering it (see pan_waveform_incremental).
+// and bridges col0 against it — for a full render, the offscreen column just
+// left of the viewport. It is a SAMPLE-SPAN read through this same basis, never
+// a read-back of painted pixels. At the song wall the halo has no span to the
+// left, so it is EMPTY and column col0 goes unbridged on its left. Bridging the
+// first column against an offscreen neighbour rather than leaving it
+// deliberately unbridged is what makes a render's output depend only on its
+// basis and column range — two renders of the same columns at the same basis
+// agree exactly, with no first-column special case to reconcile.
 //
 // THE WRITER: this function does NOT draw through cairo. It writes `dest`'s
 // ARGB32 pixel words directly, which is why it takes the surface rather than a

@@ -14,8 +14,8 @@
 #include <vector>
 
 // Waveform / flag cache production. The off-screen surfaces
-// on_redraw blits — the waveform plate (worker-rendered, incrementally
-// panned, or synchronously rebuilt) and the
+// on_redraw blits — the waveform plate (worker-rendered or synchronously
+// rebuilt; the incremental shift-and-strip pan was retired 2026-07-26) and the
 // flag-rect cache — are produced here, away from the on-screen paint
 // path in paint_handler.cpp. (Trim is a LIVE paint pass now —
 // GuiPaintHandler::paint_trim, below the playheads — so no trim pixel is
@@ -81,8 +81,6 @@ void render_waveform_to_cache_surface(
     const GuiRect ch0{0, cache_area.y, cache_area.w, ch_h};
     const GuiRect ch1{0, cache_area.y + ch_h, cache_area.w, ch_h};
     // The full render IS the basis: global column 0 at the plate's own width.
-    // The strip render below passes this same basis with its own col0, so the
-    // two agree column-for-column.
     const WaveformBasis basis{vp_start, vp_end, area_w};
     render_waveform(dest, ch0, /*col0=*/0, audio, 0,
                     basis, kWaveform,
@@ -90,89 +88,6 @@ void render_waveform_to_cache_surface(
     render_waveform(dest, ch1, /*col0=*/0, audio, 1,
                     basis, kWaveform,
                     warp_frame_map_or_null);
-}
-
-// -- render_waveform_strip_to_cache_surface ------------------------------
-//
-// Incremental-pan strip render. Redraws only the [strip_x, strip_x+strip_w)
-// column of the plate (full height, including the inset bands) and leaves
-// every other column untouched — the caller has already memmove'd the
-// reusable pixels into place, and this fills the newly exposed edge.
-//
-// vp_start_full / vp_end_full describe the WHOLE plate's displayed viewport
-// (not the strip's), and they are handed to render_waveform AS the mapping
-// basis together with the plate width and the strip's global column offset
-// (strip_x). The strip therefore evaluates the SAME per-column expression a
-// full render would for those global columns, so its columns are byte-identical
-// to a full render's and the shifted pixels meet the fresh strip with no seam.
-// This replaced an earlier derivation that rounded a strip-local
-// vp_start/vp_end and renormalized it across strip_w: that is not guaranteed to
-// reproduce the full render's endpoints (wider strips and target-map
-// breakpoints diverge most), a latent seam that column bridging would amplify
-// by carrying a bad endpoint one column further.
-//
-// Bridging needs the strip's first column to know its left neighbour: that is
-// render_waveform's left-halo contract, which re-reads global column
-// strip_x-1's SAMPLE SPAN through this same basis. It never reads back painted
-// pixels, so it is indifferent to the memmove having just moved them.
-//
-// Mirrors render_waveform_to_cache_surface's inset + stereo split, restricted
-// to the strip columns. It needs no bleed clip: render_waveform writes pixel
-// words at exactly the columns of the rect it is given, so a strip render
-// cannot touch a reused column by construction. (The cairo clip that used to
-// guard the old 1px-stroke path against bleeding out of the strip was retired
-// with the stroke; the CLEAR below keeps its own clip, which is doing real work.)
-//
-// Runs inline on the GUI thread (the strip is at most a window wide; see
-// pan_waveform_incremental's over-a-window fallback), so unlike the worker
-// render it touches the LIVE wf_cache.surface directly. Safe because the pan
-// path only takes this branch when the worker is idle. It has no font-scale
-// race (GUI thread), but takes inset_px explicitly for sibling symmetry with
-// render_waveform_to_cache_surface — the caller passes the same freshly
-// GUI-computed value it would read from waveform_inset_px().
-static void render_waveform_strip_to_cache_surface(
-    cairo_surface_t* dest,
-    int area_w,
-    int area_h,
-    int strip_x,
-    int strip_w,
-    int inset_px,
-    const GuiAudio& audio,
-    int64_t vp_start_full,
-    int64_t vp_end_full,
-    const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null) {
-    if (!dest || area_w <= 0 || area_h <= 0) return;
-    if (strip_w <= 0 || strip_x < 0 || strip_x + strip_w > area_w) return;
-    if (vp_end_full <= vp_start_full) return;
-
-    // Clear only the strip columns (full height, incl. the inset bands) so the
-    // shifted-in pixels in the rest of the plate are left intact. This is the
-    // LAST cairo drawing on the surface — the context is destroyed before
-    // render_waveform's direct pixel writes begin.
-    {
-        cairo_t* ccr = cairo_create(dest);
-        cairo_rectangle(ccr, strip_x, 0, strip_w, area_h);
-        cairo_clip(ccr);
-        cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);
-        cairo_paint(ccr);
-        cairo_destroy(ccr);
-    }
-
-    const int inset_h = area_h - 2 * inset_px;
-    if (inset_h <= 0) return;
-    // Stereo is structural — channels != 2 refuses at load (see file_loader) —
-    // so both channels always render.
-    const int ch_h = inset_h / 2;
-    const GuiRect ch0{strip_x, inset_px, strip_w, ch_h};
-    const GuiRect ch1{strip_x, inset_px + ch_h, strip_w, ch_h};
-    // The FULL plate's basis, with strip_x as the global column offset — the
-    // plate's x origin is 0, so the strip's destination x and its global column
-    // index are the same number.
-    const WaveformBasis basis{vp_start_full, vp_end_full, area_w};
-    render_waveform(dest, ch0, /*col0=*/strip_x, audio, 0,
-                    basis, kWaveform, warp_frame_map_or_null);
-    render_waveform(dest, ch1, /*col0=*/strip_x, audio, 1,
-                    basis, kWaveform, warp_frame_map_or_null);
 }
 
 // -- Waveform-worker dirty-detect and completion -------------------------
@@ -478,8 +393,8 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     std::swap(wf_cache.fp_warp_frame_map,     wf_cache.pending_fp_warp_frame_map);
 
     // Rebuild the flag cache INLINE now, against the fingerprint just published
-    // — the same shape the incremental-pan and synchronous-rebuild paths already
-    // use (pan_waveform_incremental / force_synchronous_waveform_rebuild). The run
+    // — the same shape the synchronous-rebuild path already
+    // uses (force_synchronous_waveform_rebuild). The run
     // loop can service the wl_display fd (the frame callback that PAINTS) before
     // the timerfd tick that runs the on_tick dirty-check, so deferring the
     // flag rebuild to the tick let a frame blit the NEW plate over an OLD
@@ -526,23 +441,32 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 // plate catches up — a cross-layer desync that surfaced as zoom lag, the A/B-tab
 // and Tab recenter jump, and the source/target toggle smear.
 //
-// The rule, realized three ways — render the correct frame before painting:
-//   1. One-shot discrete viewport/view jumps render synchronously, through this
-//      function. The jumps this governs: zoom, center-on-playhead, the
+// The rule, realized two ways — render the correct frame before painting:
+//   1. EVERY user-driven viewport/view change renders synchronously, through
+//      this function. The jumps this governs: zoom, center-on-playhead, the
 //      viewport-shift playhead moves (Home / End and navigate-to-marker), the
-//      A/B tab switch, the source/target toggle, and undo / redo. They arrive
-//      at a bounded rate: pointer detents
+//      A/B tab switch, the source/target toggle, undo / redo — AND ALL PANNING
+//      (touchpad scroll, Alt+wheel, PageUp/PageDown, the Alt+drag grab-pan).
+//      They arrive at a bounded rate: pointer detents
 //      coalesce to one action per pointer frame, and key repeat is compositor-
 //      throttled, so a full inline render per event is affordable. The pyramid
 //      bounds per-column cost, so the render is O(area_width) at any zoom level.
-//   2. The one sustained pointer gesture (pan / scroll) uses the incremental
-//      shift-and-strip path (pan_waveform_incremental) — also synchronous in
-//      frame, just a partial render. The built-in touchpad emits a high-rate
-//      continuous stream a full-render-per-event model cannot keep up with, so
-//      pan must NOT be converted to a full sync render. The over-a-window
-//      fast-flick fallback in pan_waveform_incremental already drops to this
-//      full sync rebuild.
-//   3. The async worker (maybe_enqueue_waveform_render) is the backstop for
+//
+//      PAN JOINED THIS ROUTE (architect 2026-07-26): "i prefer smooth movement
+//      (ie, no special handling for during movement and at-standstill — ableton
+//      looks identical in both) over theoretical accuracy." The incremental
+//      shift-and-strip pan is retired with its memmove, its edge strip, and its
+//      boundary-column bridge repair; a pan is now just another full render, so
+//      moving and resting plates are produced by one code path and cannot
+//      disagree. The performance license is precedent plus the step-2 writer:
+//      the strip-drag ZOOM already took a full synchronous rebuild per pointer
+//      frame at this exact cost class, and the direct ARGB32 column writer
+//      replaced the per-column cairo rect-fill, so pan now pays what zoom
+//      always paid. (The older claim here — that the touchpad's high-rate
+//      stream outruns a full-render-per-event model — is superseded by that
+//      ruling; if the torrent ever does outrun it, the answer is coalescing at
+//      the input edge, not a second rendering path.)
+//   2. The async worker (maybe_enqueue_waveform_render) is the backstop for
 //      changes the user is not actively driving: resize, the launch file
 //      load, follow_scroll_if_needed during playback, and the on_tick safety
 //      net that catches residual fingerprint drift. The marker, trim, and
@@ -559,9 +483,12 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 //      once at release — so the worker stays frozen through every step for
 //      that reason, not because a drag is idle.
 //
-// This is NOT "make everything synchronous." Async earns its keep for the
-// touchpad torrent and for undriven / playback-adjacent changes; the rule is
-// only that a one-shot jump must not paint its overlays against a stale plate.
+// This is still NOT "make everything synchronous." Async earns its keep for
+// UNDRIVEN and playback-adjacent changes — resize, the launch load, follow
+// scrolling, the tick's drift net — where no gesture is waiting on the frame.
+// What is synchronous is everything the user is actively driving, pan included;
+// the rule is that a user-driven change must not paint its overlays against a
+// stale plate.
 void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     const WaveformRenderInputs in = compute_waveform_render_inputs();
     if (!in.valid) return;
@@ -643,296 +570,6 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     // here closes the hit-test staleness window that otherwise lasts until the
     // next tick.
     maybe_rebuild_flag_cache();
-}
-
-// -- Incremental pan (shift-and-strip) -----------------------------------
-//
-// Pan fast-path: instead of re-rendering the whole window on the worker for a
-// pure horizontal pan, shift the already-rendered plate by the pixel delta and
-// render only the thin newly-exposed edge strip inline. O(strip) per frame
-// instead of O(window), so the pipeline keeps pace with fast touchpad scroll.
-//
-// Routed here from Viewport::scroll_viewport (a pure pan — spp and view are
-// unchanged) via the request_waveform_pan_ callback. new_vp_start is the
-// post-clamp app.viewport_start_sample in the displayed domain (source frames
-// in source view, target frames in target view).
-//
-// Target view uses this path too: a pan is a translation in the DISPLAYED
-// (target) domain, the plate is uniformly indexed in that domain
-// (render_waveform maps column i -> vp_start + spp*i, then target->source via
-// the warp_frame_map), and the warp_frame_map is invariant across a pan (marker/scale edits
-// rebuild it and stay on the worker path, caught by the fp_warp_frame_map_hash gate
-// below). So a uniform pixel shift is no less correct in target view than in
-// source view — both carry the SAME residual, and neither is exact: delta_px is
-// rounded, so reused columns sit a sub-pixel offset from where this basis would
-// place them (see the boundary-column repair and the approximation note at the
-// strip render). Target view does not add error of its own here; it inherits
-// this one, which the next full render resolves.
-//
-// This is an optimization layered over the worker backstop: every exit that is
-// not a clean shift falls back to the worker (maybe_enqueue) or a synchronous
-// full render, and the on_tick dirty-check re-renders if the fingerprint ever
-// drifts.
-void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
-                                               bool synchronous) {
-    // The mid-gesture guarantee (synchronous mode, the Alt+drag grab-pan): no
-    // frame this event paints shows the plate from a basis older than the
-    // viewport. Every path that would otherwise leave the frame on a stale-basis
-    // plate — a busy worker, or a non-shift precondition failure — is resolved
-    // in-frame (drain-and-proceed, or a full synchronous rebuild) rather than
-    // deferred to the async worker. The async caller class (wheel pan,
-    // PageUp/PageDown) keeps the worker/enqueue fallbacks: those gestures are not
-    // the live-basis-overlay ride the grab-pan is, and the on_tick backstop
-    // covers their drift.
-    auto fall_back = [&]() {
-        if (synchronous) force_synchronous_waveform_rebuild();
-        else             maybe_enqueue_waveform_render();
-    };
-
-    const WaveformRenderInputs in = compute_waveform_render_inputs();
-    if (!in.valid) { fall_back(); return; }
-
-    // Synchronous mode drains a busy worker rather than deferring to it. Deferring
-    // (the async model) would leave THIS frame on the live plate, whose basis
-    // predates the viewport we are about to paint — the mid-gesture desync this
-    // path exists to prevent. wait_until_idle absorbs/discards the in-flight
-    // completion coherently (the same drain force_synchronous_waveform_rebuild
-    // relies on): after it the worker holds no reference to the cache surfaces and
-    // wf_cache.fp_* is mutually consistent with wf_cache.surface, whether the job
-    // published (swap + fp update) or was cancelled (no swap, fp unchanged). We
-    // then continue to the precondition gate against that drained state — the
-    // clean-shift case takes the fast path, the rest fall through to the full
-    // rebuild below.
-    if (synchronous && waveform_worker.is_busy()) {
-        waveform_worker.wait_until_idle();
-    }
-
-    // Fallbacks: anything that is not a clean translate of the live plate goes to
-    // the fall_back path (async: worker/enqueue; synchronous: full rebuild).
-    //  - no plate yet (just after load)
-    //  - worker mid-render: async leaves it to the worker (superseding keeps the
-    //    latest viewport without racing a swap against our in-place shift);
-    //    synchronous already drained above, so this only trips on a wait timeout
-    //  - active drag: the plate is held still by the frozen-coordinate regime
-    //    while the overlay repositions markers, so this is not a clean pan
-    //  - dimension mismatch (resize since the plate was rendered)
-    //  - view / warp_frame_map mismatch: not a pure pan (e.g. 't' toggle, marker edit)
-    if (!wf_cache.surface ||
-        waveform_worker.is_busy() ||
-        app.drag.active ||
-        wf_cache.fp_area_w != in.area_w ||
-        wf_cache.fp_area_h != in.area_h ||
-        wf_cache.width     != in.area_w ||
-        wf_cache.height    != in.area_h ||
-        wf_cache.fp_target       != in.is_target ||
-        wf_cache.fp_warp_frame_map_hash != in.warp_frame_map_hash) {
-        fall_back();
-        return;
-    }
-
-    const int64_t old_vp_start = wf_cache.fp_vp_start;
-    const int64_t old_vp_end   = wf_cache.fp_vp_end;
-    const int     plate_w      = wf_cache.fp_area_w;
-    const double  disp_spp =
-        static_cast<double>(old_vp_end - old_vp_start) / plate_w;
-    if (disp_spp <= 0.0) { fall_back(); return; }
-
-    const int delta_px = static_cast<int>(
-        std::nearbyint(static_cast<double>(new_vp_start - old_vp_start) /
-                       disp_spp));
-
-    // Sub-pixel move: nothing to redraw, just advance the plate bookkeeping so
-    // the dim/cursor/markers track the new viewport and the dirty-check no-ops.
-    if (delta_px == 0) {
-        wf_cache.fp_vp_start         = in.vp_start;
-        wf_cache.fp_vp_end           = in.vp_end;
-        // Repair the COMPLETE pending fingerprint, not just the viewport — see
-        // the memmove publish below for the full render/cancel-loop rationale.
-        // A synchronous drain above may have poisoned pending_fp_area_w = -1;
-        // the plate's basis (area, target, warp_frame_map) is unchanged by a
-        // pure pan and equals in.* by the fallback gate, so these are the
-        // correct published values on every route.
-        wf_cache.pending_fp_vp_start    = in.vp_start;
-        wf_cache.pending_fp_vp_end      = in.vp_end;
-        wf_cache.pending_fp_area_w      = in.area_w;
-        wf_cache.pending_fp_area_h      = in.area_h;
-        wf_cache.pending_fp_target      = in.is_target;
-        wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
-        wf_cache.pending_fp_warp_frame_map      = in.warp_frame_map;
-        // Plate bookkeeping advanced to the new viewport; bring the flag
-        // cache with it so flags / dim do not lag the plate.
-        maybe_rebuild_flag_cache();
-        const GuiRect a = waveform_area(app);
-        gui.invalidate_region(0, 0, app.width, a.y + a.h);
-        return;
-    }
-
-    // Over-a-full-window pan: nothing to reuse. Synchronous full render
-    // guarantees a correct frame (the rare fast-flick case), and keeps the
-    // inline strip work strictly bounded to at most a window width.
-    if (delta_px >= plate_w || delta_px <= -plate_w) {
-        // force_synchronous_waveform_rebuild rebuilds the flag
-        // cache inline at its tail, so the fast-flick frame is already fully
-        // consistent — plate and overlays commit together, no reliance on an
-        // on_tick that may not run before the next paint.
-        force_synchronous_waveform_rebuild();
-        return;
-    }
-
-    // Shift the plate in place. Content moves opposite the viewport: panning
-    // toward later audio (delta_px > 0) slides pixels left and exposes the
-    // right edge; panning toward earlier audio exposes the left edge.
-    cairo_surface_flush(wf_cache.surface);
-    unsigned char* data = cairo_image_surface_get_data(wf_cache.surface);
-    const int stride     = cairo_image_surface_get_stride(wf_cache.surface);
-    const int surf_h     = cairo_image_surface_get_height(wf_cache.surface);
-    if (!data) { fall_back(); return; }
-
-    // THE BOUNDARY-COLUMN BRIDGE REPAIR. The memmove is an INTEGER translation
-    // (delta_px is rounded), so a reused column's stored bridge was computed
-    // against a predecessor at the OLD basis. For interior reused columns that
-    // is the standing sub-pixel approximation — the column and its predecessor
-    // moved together, so the block stays internally coherent. But at the seam
-    // the predecessor is not merely offset, it is GONE:
-    //   - later-audio pan  (delta_px > 0): reused new column 0 was bridged
-    //     against a column that has scrolled off the plate entirely;
-    //   - earlier-audio pan (delta_px < 0): the first reused column right of the
-    //     fresh strip is still bridged against the OLD offscreen halo, while the
-    //     column now painted to its left is the strip's freshly rendered last
-    //     column.
-    // Either way one painted column's bridge points at something other than the
-    // column actually beside it, exactly where the strip's fresh pixels abut the
-    // reused ones — the seam bridging exists to prevent. So that ONE column is
-    // re-rendered at the new basis: on an earlier-audio pan by widening the left
-    // strip one column into the reused region, on a later-audio pan by a second
-    // one-column strip render at plate column 0 (the two are not adjacent there).
-    int strip_x = 0;
-    int strip_w = 0;
-    int repair_x = -1;   // later-audio pan only; the widen covers the other arm
-    if (delta_px > 0) {
-        const int shift = delta_px;
-        const size_t move_bytes =
-            static_cast<size_t>(plate_w - shift) * 4;
-        for (int row = 0; row < surf_h; ++row) {
-            unsigned char* p = data + static_cast<size_t>(row) * stride;
-            std::memmove(p, p + static_cast<size_t>(shift) * 4, move_bytes);
-        }
-        strip_x = plate_w - shift;
-        strip_w = shift;
-        // Column 0 is always reused here (shift < plate_w by the over-a-window
-        // fallback above), and never adjacent to the right-edge strip.
-        repair_x = 0;
-    } else {
-        const int shift = -delta_px;
-        const size_t move_bytes =
-            static_cast<size_t>(plate_w - shift) * 4;
-        for (int row = 0; row < surf_h; ++row) {
-            unsigned char* p = data + static_cast<size_t>(row) * stride;
-            std::memmove(p + static_cast<size_t>(shift) * 4, p, move_bytes);
-        }
-        strip_x = 0;
-        strip_w = shift;
-        // The repair column sits immediately right of the strip, so it costs one
-        // extra column on the same render rather than a second pass. shift <
-        // plate_w, so the widened strip still fits the plate.
-        if (strip_w < plate_w) ++strip_w;
-    }
-    cairo_surface_mark_dirty(wf_cache.surface);
-
-    // Render the newly exposed edge strip at the new viewport. in.vp_start /
-    // in.vp_end are the full plate's displayed viewport (the span is preserved,
-    // since spp and area_w are unchanged), and they go in as the MAPPING BASIS
-    // with strip_x as the global column offset, so the strip columns map to the
-    // identical frames a full render would produce.
-    //
-    // HOW THE MEMMOVED COLUMNS STAND UNDER BRIDGING. A painted column encodes
-    // its own raw extrema bridged against its LEFT NEIGHBOUR's raw extrema, and
-    // a pan translates both together, so an interior reused column and the
-    // predecessor its bridge referenced keep the same relative position: the
-    // reused block stays internally coherent, carrying the standing sub-pixel
-    // pan approximation (delta_px is rounded) in its pixel CONTENT, which the
-    // next full render resolves. Nothing reads painted pixels back, so the
-    // memmove itself cannot corrupt a bridge.
-    //
-    // What the translation does NOT preserve is the one boundary column whose
-    // predecessor was discarded or replaced — repaired above by re-rendering
-    // that column at the new basis (widened strip, or the second one-column
-    // render below). Scope of the repair, precisely: the REPAIRED column's
-    // bridge is now identical to what a full render at this basis computes,
-    // because it is rendered by that same code against the same basis and halo.
-    // It does not make the whole plate full-render-identical — the other reused
-    // columns keep the standing approximation in both their extrema and their
-    // predecessor's, and the fresh/reused junction still meets across two bases.
-    // What it buys is that no painted column bridges against a predecessor that
-    // is not the column beside it, which is the case bridging exists to prevent.
-    render_waveform_strip_to_cache_surface(
-        wf_cache.surface,
-        in.area_w, in.area_h,
-        strip_x, strip_w, in.inset_px,
-        *in.audio,
-        in.vp_start, in.vp_end,
-        in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
-
-    // The later-audio arm's repair column (plate column 0) is not adjacent to
-    // the right-edge strip, so it takes its own one-column render. Same basis
-    // and the same global-column offset rule, so its left halo is the offscreen
-    // column just left of the new viewport — exactly a full render's column 0.
-    if (repair_x >= 0) {
-        render_waveform_strip_to_cache_surface(
-            wf_cache.surface,
-            in.area_w, in.area_h,
-            repair_x, 1, in.inset_px,
-            *in.audio,
-            in.vp_start, in.vp_end,
-            in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
-    }
-
-    // Advance the plate's viewport bookkeeping. fp_vp_start / disp_spp key the
-    // live dim composite, markers, flags, and the cursor; pending_fp_* mirrors
-    // it so the on_tick dirty-check sees the fingerprint already satisfied and
-    // does not redundantly re-render the whole window.
-    //
-    // Repair the COMPLETE pending fingerprint, not just the viewport. In
-    // synchronous mode this event may have DRAINED a running worker job above
-    // (wait_until_idle cancels it), which lands on_waveform_render_done with
-    // ok==false and poisons pending_fp_area_w = -1 as the tick-retry marker. A
-    // viewport-only update would leave that poison in place: the next on_tick's
-    // fingerprint_differs test would trip and enqueue a redundant full render,
-    // which the next synchronous frame drains and cancels again, poisoning
-    // anew — a render/cancel loop that runs until release. Rewriting every
-    // pending_fp_* field (the same set force_synchronous_waveform_rebuild
-    // republishes) closes it: drain -> cancel-poison -> shift-repair -> the tick
-    // sees a satisfied fingerprint. The poison is only ever produced by the
-    // synchronous drain (wait_until_idle is the waveform worker's sole cancel
-    // route, called only from the two synchronous paths); the async caller
-    // falls back to the worker whenever a job is in flight, so it can never
-    // reach this clean-shift publish carrying a poison. The rewrite runs on
-    // both routes anyway because everything but the viewport (area, target,
-    // warp_frame_map) is unchanged by a pure pan and equals in.* by the
-    // fallback gate above — so these are the correct published values whether
-    // or not a poison was present, and the publish leaves a self-consistent
-    // fingerprint by construction.
-    wf_cache.fp_vp_start         = in.vp_start;
-    wf_cache.fp_vp_end           = in.vp_end;
-    wf_cache.pending_fp_vp_start = in.vp_start;
-    wf_cache.pending_fp_vp_end   = in.vp_end;
-    wf_cache.pending_fp_area_w   = in.area_w;
-    wf_cache.pending_fp_area_h   = in.area_h;
-    wf_cache.pending_fp_target   = in.is_target;
-    wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
-    wf_cache.pending_fp_warp_frame_map      = in.warp_frame_map;
-
-    // The plate advanced synchronously in this event. Rebuild the
-    // flag cache now, against the just-published fingerprint, so the overlay
-    // layers (flags, and the dim) move in
-    // lockstep with the plate. Without this they lag until the next on_tick
-    // dirty-check, and a continuous drag shows the markers and their dim
-    // trailing the waveform by a step. The rebuild is fingerprint-guarded
-    // and cheap; this is the same inline rebuild the synchronous path runs.
-    maybe_rebuild_flag_cache();
-
-    const GuiRect a = waveform_area(app);
-    gui.invalidate_region(0, 0, app.width, a.y + a.h);
 }
 
 // -- Flag-cache fingerprint hashes ---------------------------------------

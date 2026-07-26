@@ -46,28 +46,11 @@ struct Viewport {
         if (request_waveform_render_) request_waveform_render_();
     }
 
-    // Incremental-pan kick: for a pure horizontal pan, drive the shift-and-
-    // strip fast-path instead of the full worker re-render. Set from main.cpp
-    // to paint_handler.pan_waveform_incremental(new_vp_start, synchronous); held
-    // as a std::function for the same no-compile-time-edge reason as the kick
-    // above. When unset (before main.cpp wires it) kick_waveform_pan falls
-    // back to the full worker kick, so the pan path stays correct either way.
-    // The incremental path itself falls back to the worker for any non-pure-
-    // pan case, and the on_tick backstop catches residual drift.
-    //
-    // `synchronous` distinguishes the two pan drivers. Async (default): the wheel
-    // pan and PageUp/PageDown steps in scroll_viewport — a busy worker or any
-    // non-shift case defers to the worker, and the on_tick backstop catches the
-    // rest. Synchronous (true): the Alt+drag grab-pan (through scroll_viewport)
-    // and the strip drag's pan-only frames (through apply_strip_drag_zoom) — the
-    // mid-gesture frame must never paint over a stale-basis plate, so a busy
-    // worker is drained rather than deferred to, and a non-shift case falls back
-    // to a full synchronous rebuild instead of enqueue-and-return.
-    std::function<void(int64_t, bool)> request_waveform_pan_;
-    void kick_waveform_pan(int64_t new_vp_start, bool synchronous = false) {
-        if (request_waveform_pan_) request_waveform_pan_(new_vp_start, synchronous);
-        else                       kick_waveform_render();
-    }
+    // (There is no separate pan kick. Panning routes through
+    // kick_waveform_sync below like every other user-driven viewport change —
+    // the incremental shift-and-strip fast-path and its request_waveform_pan_
+    // callback were retired 2026-07-26 so that moving and resting plates are
+    // produced by one path.)
 
     // One-shot synchronous rebuild kick: for a discrete viewport/view jump,
     // render the waveform plate inline and publish the displayed fingerprint in
@@ -88,7 +71,9 @@ struct Viewport {
     //  - GENERIC viewport / view jumps: the plate CONTENT is unchanged but the
     //    viewport, zoom, or displayed DOMAIN moved. Viewport's own mutators
     //    (move_playhead_to's offscreen-follow shift, apply_zoom_change,
-    //    apply_zoom_to_start, center_viewport_on_playhead, apply_strip_drag_zoom),
+    //    apply_zoom_to_start, center_viewport_on_playhead, apply_strip_drag_zoom,
+    //    and scroll_viewport — every pan/scroll class, which joined this route
+    //    2026-07-26 when the incremental shift-and-strip path was retired),
     //    the S/T view toggle and the Ctrl+Tab A/B tab switch (domain flips), the
     //    settings tab_X_viewport_start commit, the strip-drag Esc/stop finalize,
     //    and main.cpp's tick backstop for an ASYNC total change (a preview
@@ -112,14 +97,15 @@ struct Viewport {
     // (the keyboard zoom's cost paid per pointer frame — and deliberately NO
     // target_render.trigger there, the preview fires once at gesture end), and
     // cancel_tempo_drag re-warps once on the Esc-restore when it rewound cents.
-    // (apply_strip_drag_zoom is the only OTHER live-per-event kick, a generic
-    // viewport rebuild, not a map edit.)
+    // (The OTHER live-per-event kicks are apply_strip_drag_zoom and
+    // scroll_viewport — generic viewport rebuilds, not map edits. Both are
+    // sustained pointer gestures paying one full rebuild per pointer frame.)
     //
     // The ASYNC worker path (the request_waveform_sync_ fallback above,
-    // kick_waveform_render) is not a map-edit route: it serves viewport navigation
-    // (pan / follow / resize) and repaints the plate on preview completion — both
-    // undriven-by-a-discrete-edit cases the key-repeat-rate argument for staying
-    // async never applied to.
+    // kick_waveform_render) is not a map-edit route: it serves the UNDRIVEN
+    // changes — follow-scroll during playback, resize — and repaints the plate
+    // on preview completion. Panning left this list 2026-07-26: it is
+    // user-driven, so it renders synchronously like zoom.
     std::function<void()> request_waveform_sync_;
     void kick_waveform_sync() {
         // Render FINAL clamped geometry: reclamp through the one zoom/viewport
@@ -163,9 +149,9 @@ struct Viewport {
     // exactly. Never touches the playhead or selection. Repaint dispatch: a
     // mid-gesture event (final=false) with the level AND viewport both unchanged
     // after the clamp is a true NO-OP and returns without repainting; a
-    // level-changed event runs one full synchronous rebuild; a level-unchanged
-    // but viewport-moved event (a pure pan) rides the synchronous incremental pan
-    // fast-path. The terminating event (final=true) always runs the one
+    // moved event runs one full synchronous rebuild, whichever axis moved (the
+    // incremental pan fast-path that pan-only frames once used was retired
+    // 2026-07-26). The terminating event (final=true) always runs the one
     // synchronous rebuild plus the predictor resync so the rest state is exact.
     void apply_strip_drag_zoom(double new_zoom_level, double anchor_sample,
                                double anchor_x, bool final);
@@ -189,8 +175,11 @@ struct Viewport {
     // pointer frame instead of once per detent. in_steps == +/-1 reproduces
     // zoom_in()/zoom_out() exactly.
     void zoom_steps(int in_steps);
-    void scroll_viewport(int64_t delta_samples, bool continuous = false,
-                         bool synchronous = false);
+    // `continuous` marks a drag-driven scroll, which suppresses the per-event
+    // playback predictor resync (re-anchored once at gesture end). There is no
+    // longer a `synchronous` flag: it selected between the two pan drivers, and
+    // with the incremental path retired every scroll renders synchronously.
+    void scroll_viewport(int64_t delta_samples, bool continuous = false);
     void center_viewport_on_playhead();
     void follow_scroll_if_needed();
 

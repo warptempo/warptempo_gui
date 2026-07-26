@@ -217,28 +217,24 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
 // -- GuiPaintHandler::paint_waveform_plate -------------------------------
 
 void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
-    // wf_cache.surface is produced by one of three paths, all of which
+    // wf_cache.surface is produced by one of two paths, both of which
     // leave this paint path blit-only:
     //   1. Worker full render — maybe_enqueue_waveform_render
     //      dispatches a full-window render on GuiWaveformWorker,
     //      which swaps into wf_cache.surface on completion. Fires
-    //      on the on_tick backstop and on non-pan viewport changes
-    //      (zoom, center-on-playhead, follow-scroll), plus resize,
-    //      the launch load, and target-view warp_frame_map changes.
-    //   2. Incremental shift-and-strip — a pure horizontal pan
-    //      (scroll_viewport) calls pan_waveform_incremental, which
-    //      shifts the existing plate pixels by the pan delta and
-    //      synchronously renders only the newly-exposed edge strip.
-    //      Pans bypass the worker entirely; this is the fast path
-    //      that keeps fast scrolling continuous.
-    //   3. Synchronous full render — force_synchronous_waveform_
-    //      rebuild renders the full window inline on the GUI thread,
-    //      as does the pan_waveform_incremental fallback when a
-    //      single pan exceeds a window width (nothing to shift).
+    //      on the on_tick backstop and for UNDRIVEN changes: resize,
+    //      the launch load, follow-scroll during playback, and
+    //      target-view warp_frame_map changes.
+    //   2. Synchronous full render — force_synchronous_waveform_rebuild
+    //      renders the full window inline on the GUI thread for every
+    //      USER-DRIVEN viewport change: zoom, center-on-playhead, the
+    //      one-shot jumps, and panning/scrolling (which had its own
+    //      incremental shift-and-strip path until 2026-07-26 — retired so
+    //      a moving plate and a resting one come off one route).
     // The paint path is blit-only — it draws whatever pixels the
     // live surface currently holds. For worker-path renders that may
     // be a one- or two-frame-old viewport during the worker-rebuild
-    // window; the incremental pan path updates the plate in the same
+    // window; the synchronous path updates the plate in the same
     // frame, so it has no such lag. The flag layer closes
     // any mismatch by layering flags onto a surface keyed
     // off the same displayed-viewport.

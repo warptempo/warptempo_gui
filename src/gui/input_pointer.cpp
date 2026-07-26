@@ -502,7 +502,7 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
     // clamp. IDENTITY PROOFS: pure pan (dy=0) is EXACT — new_level == old, so
     // apply reproduces vp = anchor_sample - anchor_col·spp_old bit-for-bit (the
     // column was derived from that same vp), and the level-unchanged dispatch
-    // rides the synchronous incremental pan path. Off the walls the pan arithmetic
+    // takes the same synchronous full rebuild. Off the walls the pan arithmetic
     // is unchanged, so the identity holds as before; AT a wall the clamped vp
     // equals the viewport that will rest, the anchor column re-derives against it
     // consistently, and apply reproduces the wall value — a saturated pan is a
@@ -1917,8 +1917,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // Dual-axis strip drag (the incremental v6 model; see apply_strip_drag_at).
     // Each event pans by its dx at the live level and zooms by its dy off the
     // live level, pivoting the zoom around the (edge-rebindable) song anchor. The
-    // repaint is SYNCHRONOUS (final_event=false): a full rebuild when the level
-    // changed, the incremental pan fast-path when only the viewport moved, a true
+    // repaint is SYNCHRONOUS (final_event=false): one full rebuild whenever the
+    // level or the viewport moved, a true
     // no-op when neither did — affordable because the platform coalesces captured
     // motion to one event per pointer frame. The release runs the one synchronous
     // rebuild plus the predictor resync. A lost button finalizes like release.
@@ -1962,8 +1962,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // Alt+drag grab-pan (continuous 1:1). The viewport snaps to whole pixels in
     // clamp_viewport_start (reached through scroll_viewport), so a per-event pan
     // re-anchored by that snap tracks the cursor 1:1 without drift — no carried
-    // sample remainder. scroll_viewport drives the incremental shift-and-strip
-    // fast-path, so per-event work is a memmove plus a dx-wide strip render. A
+    // sample remainder. scroll_viewport renders the plate synchronously, so
+    // per-event work is one full-width render — the cost zoom already paid per
+    // pointer frame, and the reason a panning plate looks identical to a resting
+    // one (architect 2026-07-26). A
     // lost button ends it like release (re-anchor the predictor once). The
     // wheel keeps its quantized detent step; only the drag is continuous.
     if (app.scroll_drag.active) {
@@ -1979,15 +1981,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         const int64_t delta =
             static_cast<int64_t>(std::nearbyint(static_cast<double>(dx) * spp));
         if (delta != 0) {
-            // Grab-pan: drag right (dx>0) reveals earlier content, viewport moves
-            // left. The pan rides the SYNCHRONOUS pan mode (drain-when-busy): the
-            // old design deferred a busy-worker frame to the async worker, which
-            // was later convicted as a mid-gesture staleness mechanism (the frame
-            // could paint over a stale-basis plate), so this reverted pan takes
-            // the reviewer-verified drain path instead — the one departure from
-            // the pre-retirement design.
-            viewport.scroll_viewport(-delta, /*continuous=*/true,
-                                     /*synchronous=*/true);
+            // Grab-pan: drag right (dx>0) reveals earlier content, viewport
+            // moves left. The mid-gesture guarantee this gesture needed — never
+            // painting over a plate from an older basis, a staleness mechanism
+            // the async deferral was once convicted of — now comes free: every
+            // scroll renders synchronously and drains a busy worker, so it no
+            // longer has to ask for a distinct pan mode.
+            viewport.scroll_viewport(-delta, /*continuous=*/true);
         }
         viewport.clear_hover_popup();
         return;

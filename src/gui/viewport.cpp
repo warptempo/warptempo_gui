@@ -358,19 +358,14 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // Rest state (final) re-anchors the playback predictor once, like the
     // continuous pan's release; mid-gesture events do NOT resync (the predictor
     // keeps extrapolating smoothly for the drag's duration). Repaint dispatch:
-    // the terminating event and every level-CHANGED frame rescale the whole plate
-    // and take one SYNCHRONOUS full rebuild (the exact cost a keyboard zoom pays
-    // per press, capped at once per pointer frame by the platform's motion
-    // coalescing); a level-UNCHANGED but viewport-moved frame is a pure pan and
-    // rides the synchronous incremental shift-and-strip fast-path instead.
-    if (final) {
-        if (playback.is_playing()) playback.resync_predictor();
-        kick_waveform_sync();
-    } else if (level_changed) {
-        kick_waveform_sync();
-    } else {
-        kick_waveform_pan(app.viewport_start_sample, /*synchronous=*/true);
-    }
+    // EVERY frame of the drag takes one SYNCHRONOUS full rebuild — the exact
+    // cost a keyboard zoom pays per press, capped at once per pointer frame by
+    // the platform's motion coalescing. Level-changed and pan-only frames are
+    // no longer distinguished: the incremental shift-and-strip fast-path the
+    // pan-only frames used was retired 2026-07-26, so the drag renders the same
+    // way whichever axis moved.
+    if (final && playback.is_playing()) playback.resync_predictor();
+    kick_waveform_sync();
 }
 
 void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
@@ -479,8 +474,7 @@ void Viewport::zoom_steps(int in_steps) {
     apply_zoom_change(target);
 }
 
-void Viewport::scroll_viewport(int64_t delta_samples, bool continuous,
-                               bool synchronous) {
+void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
     if (audio.total_frames() <= 0) return;
     const int64_t old_vp = app.viewport_start_sample;
     app.viewport_start_sample += delta_samples;
@@ -503,15 +497,15 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous,
         // predictor keeps extrapolating smoothly for the gesture's
         // duration and is re-anchored once when the drag ends.
         if (!continuous && playback.is_playing()) playback.resync_predictor();
-        // Viewport actually moved (inside the changed guard). A scroll is a
-        // pure horizontal pan, so drive the incremental shift-and-strip
-        // fast-path rather than a full worker re-render — this is what keeps
-        // fast touchpad scroll continuous instead of leaping. Pass the
-        // post-clamp viewport start. `synchronous` selects the pan driver: the
-        // Alt+drag grab-pan passes true so a busy worker is DRAINED (never a
-        // mid-gesture frame over a stale-basis plate); the discrete pans
-        // (Alt+wheel, PageUp/PageDown) keep the default async routing.
-        kick_waveform_pan(app.viewport_start_sample, synchronous);
+        // Viewport actually moved (inside the changed guard). Render the plate
+        // synchronously, the same route zoom and every other user-driven
+        // viewport change takes: the incremental shift-and-strip fast-path this
+        // used to drive was retired 2026-07-26 so a scrolling plate and a
+        // resting one come off one code path. Every scroll class lands here —
+        // touchpad, Alt+wheel, PageUp/PageDown, the Alt+drag grab-pan — and the
+        // synchronous render also gives them all the grab-pan's old guarantee:
+        // no frame paints overlays against a plate from an older basis.
+        kick_waveform_sync();
     }
 }
 
