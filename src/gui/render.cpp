@@ -328,13 +328,18 @@ void render_waveform(cairo_surface_t* dest,
     const double y_center = area.y + area.h * 0.5;
     const double half_h   = area.h * 0.5;
 
-    // Each column is written straight into the plate's pixel words: opaque
-    // interior rows, FRACTIONAL COVERAGE on the two silhouette boundary rows,
-    // and a one-row opaque spine when the interval is too thin to have an
-    // interior. Per-column min/max extents are raw and unsmoothed apart from the
-    // bridge below, which extends a column's interval to meet its neighbour's so
-    // the silhouette reads as one connected envelope instead of disjoint
-    // one-column bars.
+    // Each column is written straight into the plate's pixel words, in ONE OF
+    // TWO REGIMES chosen by its own raw extent (see the regime decision in the
+    // loop, and the contract at the declaration):
+    //   TALL — the column has envelope mass: opaque interior rows plus
+    //     FRACTIONAL COVERAGE on the two silhouette boundary rows. Its
+    //     connectivity is the raw-to-raw BRIDGE below, which extends the
+    //     interval to meet its neighbour's so the silhouette reads as one
+    //     connected envelope instead of disjoint one-column bars.
+    //   THIN — the column is a point on a line: a Wu-style antialiased SEGMENT
+    //     to its neighbour's centre, which is both its rendering and its
+    //     connectivity (no bridging, and no opaque spine — the segment carries
+    //     the never-fade guarantee instead).
     //
     // THE PREMULTIPLIED WORD TABLE: one ink colour per render, so the 256
     // possible coverage bytes have only 256 possible words. cairo ARGB32 is a
@@ -343,6 +348,14 @@ void render_waveform(cairo_surface_t* dest,
     // not be. Channels are PREMULTIPLIED by the coverage, as ARGB32 requires.
     // Entry 255 is the opaque interior word; entry 0 is never written (a
     // zero-coverage row writes nothing at all).
+    // THE REGIME THRESHOLD, in screen rows. A column whose own raw min/max
+    // spans more than this has envelope mass and paints as one; at or below it
+    // the column is a point on a line and paints as a segment to its
+    // neighbour's centre. 1.0 is the natural split (below one pixel there is no
+    // interior to fill) and it is the tuning knob if the two regimes ever want
+    // to meet somewhere else.
+    constexpr double kThinIntervalPx = 1.0;
+
     const double ink_r = color.r * 255.0;
     const double ink_g = color.g * 255.0;
     const double ink_b = color.b * 255.0;
@@ -364,12 +377,100 @@ void render_waveform(cairo_surface_t* dest,
     if (y_hi > surf_h) y_hi = surf_h;
     if (y_hi <= y_lo) return;
 
-    // Write one pixel word. Row/column bounds are already established by the
-    // callers below; this is the single store site.
+    // Write one pixel word, REPLACING what is there. Row/column bounds are
+    // already established by the envelope callers below; this is their single
+    // store site. Replace is correct for them because the caller cleared every
+    // column this call regenerates, and each envelope column is written once.
     const auto put = [&](int x, int y, uint32_t word) {
         auto* px = reinterpret_cast<uint32_t*>(
             surf_data + static_cast<size_t>(y) * surf_stride);
         px[x] = word;
+    };
+
+    // -- The thin-interval LINE regime's writers --------------------------
+    //
+    // MAX-COVERAGE COMPOSITING, the standard rule for Wu-style overlap, and the
+    // rule for EVERY segment write so the regime is uniform. A segment spans two
+    // columns, so it necessarily writes into column x-1, which was already
+    // rendered — a replace there would punch holes in the neighbour wherever the
+    // new coverage is lower. Taking the max instead can only add ink. The
+    // existing alpha byte IS the table index that produced the pixel (every word
+    // on the plate comes from cov_word), so the read-modify-write needs no
+    // separate coverage buffer. Bounds are enforced here, once, for every
+    // segment write: a deposit outside the channel band or the surface is
+    // dropped rather than clamped, since clamping would pile a segment's tail
+    // onto the band edge.
+    const auto blend_max = [&](int x, int y, double cov) {
+        if (!(cov > 0.0)) return;
+        int a = static_cast<int>(std::lround(cov * 255.0));
+        if (a <= 0) return;
+        if (a > 255) a = 255;
+        if (x < 0 || x >= surf_w) return;
+        if (y < y_lo || y >= y_hi) return;
+        auto* px = reinterpret_cast<uint32_t*>(
+            surf_data + static_cast<size_t>(y) * surf_stride);
+        if (a > static_cast<int>(px[x] >> 24)) px[x] = cov_word[a];
+    };
+
+    // One unit of coverage at a fractional ROW position, split between the two
+    // rows a 1px-thick line centred there would touch. The line spans
+    // [y-0.5, y+0.5), so with u = y-0.5 the split is (1-frac) to floor(u) and
+    // frac to floor(u)+1 — which correctly puts ALL the ink in one row when the
+    // centre sits at that row's midpoint. Total deposited is exactly 1.0.
+    const auto deposit_v = [&](int x, double y, double weight) {
+        const double u  = y - 0.5;
+        const double fr = std::floor(u);
+        blend_max(x, static_cast<int>(fr),     weight * (1.0 - (u - fr)));
+        blend_max(x, static_cast<int>(fr) + 1, weight * (u - fr));
+    };
+    // The same split on the horizontal axis, for the steep walk below.
+    const auto deposit_h = [&](double x, int y, double weight) {
+        const double u  = x - 0.5;
+        const double fc = std::floor(u);
+        blend_max(static_cast<int>(fc),     y, weight * (1.0 - (u - fc)));
+        blend_max(static_cast<int>(fc) + 1, y, weight * (u - fc));
+    };
+
+    // A Wu-style antialiased segment between two ADJACENT column centres, the
+    // thin regime's whole rendering. dx is always exactly 1 column; dy is
+    // unbounded, since a transient can step hundreds of rows between one column
+    // and the next. So the walk follows the MAJOR axis:
+    //   SHALLOW (|dy| <= 1): one vertical two-row split per endpoint column.
+    //   STEEP   (|dy| >  1): walk the rows the segment crosses, and split each
+    //                        row's unit of coverage between columns x-1 and x by
+    //                        where the segment crosses that row's centre.
+    // Either way every column the segment touches receives at least one full
+    // pixel-equivalent of ink (the shallow split sums to 1.0 by construction;
+    // the steep walk gives the column many partial rows) — the guarantee that
+    // replaced the opaque spine, so flat material softens but can never fade out
+    // or vanish.
+    const auto draw_segment = [&](int xa, double ya, int xb, double yb_) {
+        const double x0  = static_cast<double>(xa) + 0.5;
+        const double x1  = static_cast<double>(xb) + 0.5;
+        const double dxs = x1 - x0;
+        const double dys = yb_ - ya;
+        if (std::fabs(dys) <= std::fabs(dxs)) {
+            deposit_v(xa, ya,  1.0);
+            deposit_v(xb, yb_, 1.0);
+            return;
+        }
+        // Bound the row walk to the band before iterating — a steep segment can
+        // otherwise sweep far more rows than the channel has. The x
+        // interpolation still uses the UNCLAMPED endpoints, so the visible part
+        // of the segment keeps the true slope.
+        double ylo = std::min(ya, yb_);
+        double yhi = std::max(ya, yb_);
+        if (ylo < static_cast<double>(y_lo)) ylo = static_cast<double>(y_lo);
+        if (yhi > static_cast<double>(y_hi)) yhi = static_cast<double>(y_hi);
+        if (yhi < ylo) return;
+        const int r_first = static_cast<int>(std::floor(ylo));
+        const int r_last  = static_cast<int>(std::floor(yhi));
+        for (int r = r_first; r <= r_last; ++r) {
+            double t = ((static_cast<double>(r) + 0.5) - ya) / dys;
+            if (t < 0.0) t = 0.0;
+            if (t > 1.0) t = 1.0;
+            deposit_h(x0 + t * dxs, r, 1.0);
+        }
     };
 
     // Global column c's display-domain left edge. ONE expression over the
@@ -405,6 +506,12 @@ void render_waveform(cairo_surface_t* dest,
     bool   have_prev  = false;
     double prev_raw_min = 0.0;
     double prev_raw_max = 0.0;
+    // The line regime's carry: the previous column's RAW-interval centre in
+    // float rows, and whether that column was thin. The halo supplies both for
+    // the first drawn column, so a first column connects exactly like an
+    // interior one — no special case at a strip or full-render boundary.
+    double prev_center_y = 0.0;
+    bool   prev_thin     = false;
 
     // g_prev is the running left edge in SOURCE frames. Seeding it from the halo
     // column's left edge means the carried-endpoint chain (column i's left edge
@@ -424,6 +531,10 @@ void render_waveform(cairo_surface_t* dest,
             prev_raw_min = hm.first;
             prev_raw_max = hm.second;
             have_prev    = true;
+            prev_center_y =
+                y_center - (prev_raw_min + prev_raw_max) * 0.5 * half_h;
+            prev_thin =
+                (prev_raw_max - prev_raw_min) * half_h <= kThinIntervalPx;
         }
     }
 
@@ -442,13 +553,39 @@ void render_waveform(cairo_surface_t* dest,
         const double raw_min = mm.first;
         const double raw_max = mm.second;
 
+        const int x = area.x + i;
+
+        // WHICH REGIME — decided on this column's OWN RAW extent, before any
+        // bridging. A column whose samples span more than kThinIntervalPx of
+        // screen has real envelope mass to draw; one that does not is a point on
+        // a line. Deciding on the raw extent (not the bridged one) is what keeps
+        // a thin column thin: bridging a lone thin column against a distant
+        // neighbour would inflate it into exactly the tall bar this regime
+        // exists to replace.
+        const double cur_center_y = y_center - (raw_min + raw_max) * 0.5 * half_h;
+        const bool   cur_thin = (raw_max - raw_min) * half_h <= kThinIntervalPx;
+
+        // THE CONNECTING SEGMENT — the thin regime's connectivity, drawn
+        // whenever this column is thin, and also when a thin run ENTERS a tall
+        // column so the line runs into the envelope mass rather than stopping
+        // short of it (the envelope overpaints most of that last segment, which
+        // is harmless). Two adjacent TALL columns draw none: bridging is their
+        // connectivity, exactly as before.
+        if (have_prev && (cur_thin || prev_thin))
+            draw_segment(x - 1, prev_center_y, x, cur_center_y);
+        // A thin FIRST column with no halo (the song wall) still owes its one
+        // pixel-equivalent: deposit it as a zero-length segment at its centre.
+        if (cur_thin && !have_prev) deposit_v(x, cur_center_y, 1.0);
+
         // Bridge in FLOAT value space, against the previous column's RAW
         // extrema (never its widened output — the dependency stays one column
         // deep). Disjoint intervals get pulled together into one connected
-        // envelope; overlapping intervals come through untouched.
+        // envelope; overlapping intervals come through untouched. TALL REGIME
+        // ONLY — a thin column is connected by its segment instead, so bridging
+        // never runs on one in either role.
         double lo_val = raw_min;
         double hi_val = raw_max;
-        if (have_prev) {
+        if (have_prev && !cur_thin && !prev_thin) {
             lo_val = std::min(lo_val, prev_raw_max);
             hi_val = std::max(hi_val, prev_raw_min);
         }
@@ -467,58 +604,43 @@ void render_waveform(cairo_surface_t* dest,
         if (yt > row_hi) yt = row_hi;
         if (yb > row_hi) yb = row_hi;
 
-        const int x = area.x + i;
-        if (x >= 0 && x < surf_w) {
-            if (yb - yt <= 1.0) {
-                // THE OPAQUE SPINE: too thin to have an interior, so one fully
-                // opaque row — the row CONTAINING the interval's centre. No
-                // amount of thinness can fade this row out, which is what keeps
-                // silence and near-flat material visible.
-                //
-                // floor, not a round-to-nearest: the centre is a continuous
-                // coordinate and row r covers [r, r+1), so the row holding it is
-                // floor(centre). Rounding would pick the NEIGHBOUR whenever the
-                // centre sits in a row's upper half — e.g. the interval
-                // [30.0, 31.0), which lies exactly on row 30, has centre 30.5 and
-                // would round to 31. It also keeps this path indexing rows the
-                // same way the fractional path below does.
-                int row = static_cast<int>(std::floor((yt + yb) * 0.5));
-                if (row < y_lo)     row = y_lo;
-                if (row > y_hi - 1) row = y_hi - 1;
-                put(x, row, opaque_word);
-            } else {
-                // Wider than a pixel, so floor(yt) and floor(yb) are necessarily
-                // DIFFERENT rows — the top and bottom coverage writes can never
-                // collide, and the coincident-edge case cannot arise here.
-                const int row_t = static_cast<int>(std::floor(yt));
-                const int row_b = static_cast<int>(std::floor(yb));
+        // THE ENVELOPE, tall regime only — the thin regime drew its segment
+        // above and emits nothing here. The interval is wider than
+        // kThinIntervalPx, so floor(yt) and floor(yb) are necessarily DIFFERENT
+        // rows: the top and bottom coverage writes can never collide, and the
+        // coincident-edge case cannot arise. (That argument is unchanged; the
+        // line regime handles overlap by max-compositing instead.)
+        if (!cur_thin && x >= 0 && x < surf_w) {
+            const int row_t = static_cast<int>(std::floor(yt));
+            const int row_b = static_cast<int>(std::floor(yb));
 
-                // Interior: fully opaque rows strictly between the two edges.
-                int i0 = row_t + 1;
-                int i1 = row_b - 1;
-                if (i0 < y_lo)     i0 = y_lo;
-                if (i1 > y_hi - 1) i1 = y_hi - 1;
-                for (int y = i0; y <= i1; ++y) put(x, y, opaque_word);
+            // Interior: fully opaque rows strictly between the two edges.
+            int i0 = row_t + 1;
+            int i1 = row_b - 1;
+            if (i0 < y_lo)     i0 = y_lo;
+            if (i1 > y_hi - 1) i1 = y_hi - 1;
+            for (int y = i0; y <= i1; ++y) put(x, y, opaque_word);
 
-                // Top edge: the fraction of row_t that lies below yt.
-                if (row_t >= y_lo && row_t <= y_hi - 1) {
-                    const double cov = static_cast<double>(row_t + 1) - yt;
-                    const int    a   = static_cast<int>(std::lround(cov * 255.0));
-                    if (a > 0) put(x, row_t, cov_word[a < 255 ? a : 255]);
-                }
-                // Bottom edge: the fraction of row_b that lies above yb.
-                if (row_b >= y_lo && row_b <= y_hi - 1) {
-                    const double cov = yb - static_cast<double>(row_b);
-                    const int    a   = static_cast<int>(std::lround(cov * 255.0));
-                    if (a > 0) put(x, row_b, cov_word[a < 255 ? a : 255]);
-                }
+            // Top edge: the fraction of row_t that lies below yt.
+            if (row_t >= y_lo && row_t <= y_hi - 1) {
+                const double cov = static_cast<double>(row_t + 1) - yt;
+                const int    a   = static_cast<int>(std::lround(cov * 255.0));
+                if (a > 0) put(x, row_t, cov_word[a < 255 ? a : 255]);
+            }
+            // Bottom edge: the fraction of row_b that lies above yb.
+            if (row_b >= y_lo && row_b <= y_hi - 1) {
+                const double cov = yb - static_cast<double>(row_b);
+                const int    a   = static_cast<int>(std::lround(cov * 255.0));
+                if (a > 0) put(x, row_b, cov_word[a < 255 ? a : 255]);
             }
         }
 
-        prev_raw_min = raw_min;
-        prev_raw_max = raw_max;
-        have_prev    = true;
-        g_prev       = g1;
+        prev_raw_min  = raw_min;
+        prev_raw_max  = raw_max;
+        prev_center_y = cur_center_y;
+        prev_thin     = cur_thin;
+        have_prev     = true;
+        g_prev        = g1;
     }
 
     // Last CPU write is done — hand the buffer back to cairo.

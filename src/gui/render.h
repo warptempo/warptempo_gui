@@ -637,17 +637,33 @@ struct WaveformBasis {
 // antialiaser — the coverage is known exactly, so no rasterizer is involved.
 // A zero-coverage boundary row writes nothing.
 //
-// THE THIN-INTERVAL OPAQUE SPINE: when yb-yt <= 1.0 the column instead paints
-// exactly ONE fully opaque row — the row CONTAINING the interval's centre,
-// i.e. floor(centre), NOT a round-to-nearest (which would pick the neighbouring
-// row whenever the centre sits in a row's upper half; the implementation
-// comment works the case through). That keeps silence/flat material at a centre
-// line that can never fade out or vanish, and it is a deliberate one-row
-// correction to the pre-writer behaviour, pending the labwc pass. Because any
-// interval wider than 1px necessarily spans two or
-// more distinct rows, it also means the fractional path can never emit a
-// coincident top/bottom write — the coincident-edge case is discharged by
-// construction rather than by a combining rule.
+// THE THIN-INTERVAL LINE REGIME: a column whose OWN RAW extent is at most
+// kThinIntervalPx (1.0 row, tunable) has no envelope mass to draw, so instead of
+// a bar it paints a Wu-style antialiased SEGMENT from the previous column's raw
+// centre to its own — slope-aware, in float y, never snapped. That is the whole
+// rendering for such a column, and it is also its CONNECTIVITY: bridging applies
+// to the tall regime alone, since bridging a lone thin column against a distant
+// neighbour would inflate it into the very bar this regime replaces. At spp 1-8
+// nearly every column is thin, which is exactly the thin-signal material the
+// bar-chart look was worst on.
+//
+// The segment spans one column horizontally and an unbounded number of rows
+// vertically, so it walks its MAJOR axis: a shallow segment splits one unit of
+// coverage between two rows at each endpoint column, a steep one walks the rows
+// it crosses and splits each row between the two columns. Every column a segment
+// touches therefore receives at least a full pixel-equivalent of ink, which is
+// the guarantee the retired opaque spine used to provide: flat material softens
+// into a hairline but can never fade out or vanish. Segment writes MAX-COMPOSITE
+// (a segment necessarily writes into the already-rendered column to its left, so
+// replacing there would punch holes in it); envelope writes still replace.
+//
+// The two regimes meet cleanly. A thin run entering a tall column still draws
+// its last segment into that column's centre so the line runs into the mass
+// rather than stopping short — the envelope then overpaints most of it,
+// harmlessly. And because a tall interval is wider than a pixel it necessarily
+// spans two or more distinct rows, so the envelope's fractional path can never
+// emit a coincident top/bottom write: that case stays discharged by
+// construction, with max-compositing covering overlap on the line side.
 //
 // Words are PREMULTIPLIED (coverage a gives alpha round(a*255) and channels
 // round(a*C)) and come from a 256-entry table built once per call for the one
