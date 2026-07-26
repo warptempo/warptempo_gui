@@ -318,7 +318,7 @@ void render_waveform(cairo_surface_t* dest,
     //
     // Consequence, accepted: where the map slope crosses a stride threshold,
     // adjacent target-view columns may read different levels, a per-column
-    // statistics discontinuity that bridging carries at most one column
+    // statistics discontinuity that the tip segments carry at most one column
     // further. Aesthetic only.
     const auto level_for_column = [&](double src_width) {
         return audio.level_for_span(warp_frame_map ? src_width
@@ -328,18 +328,22 @@ void render_waveform(cairo_surface_t* dest,
     const double y_center = area.y + area.h * 0.5;
     const double half_h   = area.h * 0.5;
 
-    // Each column is written straight into the plate's pixel words, in ONE OF
-    // TWO REGIMES chosen by its own raw extent (see the regime decision in the
-    // loop, and the contract at the declaration):
-    //   TALL — the column has envelope mass: opaque interior rows plus
-    //     FRACTIONAL COVERAGE on the two silhouette boundary rows. Its
-    //     connectivity is the raw-to-raw BRIDGE below, which extends the
-    //     interval to meet its neighbour's so the silhouette reads as one
-    //     connected envelope instead of disjoint one-column bars.
-    //   THIN — the column is a point on a line: a Wu-style antialiased SEGMENT
-    //     to its neighbour's centre, which is both its rendering and its
-    //     connectivity (no bridging, and no opaque spine — the segment carries
-    //     the never-fade guarantee instead).
+    // Each column is written straight into the plate's pixel words. A column
+    // reduces to two TIPS (raw max -> top, raw min -> bottom) and paints in two
+    // parts, in this order:
+    //   1. ITS INTERIOR, if TALL (tips more than kThinIntervalPx apart): opaque
+    //      rows between the tips with FRACTIONAL COVERAGE on the two boundary
+    //      rows, REPLACE-written into the cleared column. A THIN column has no
+    //      interior.
+    //   2. ITS TWO CONNECTING SEGMENTS back to the previous column — top tip to
+    //      top tip, bottom tip to bottom tip — MAX-composited. These are the
+    //      silhouette and the only inter-column connectivity there is; the
+    //      raw-to-raw bridge that used to widen intervals into each other is
+    //      retired, because it joined a spike to a short neighbour with a hard
+    //      block instead of an antialiased slope. A thin column's two segments
+    //      coincide into one centre line.
+    // Max-compositing is what makes the order safe: an interior's opaque pixels
+    // stay opaque no matter what segment crosses them afterwards.
     //
     // THE PREMULTIPLIED WORD TABLE: one ink colour per render, so the 256
     // possible coverage bytes have only 256 possible words. cairo ARGB32 is a
@@ -417,8 +421,22 @@ void render_waveform(cairo_surface_t* dest,
     // [y-0.5, y+0.5), so with u = y-0.5 the split is (1-frac) to floor(u) and
     // frac to floor(u)+1 — which correctly puts ALL the ink in one row when the
     // centre sits at that row's midpoint. Total deposited is exactly 1.0.
+    //
+    // THE CENTRE IS CLAMPED INTO THE BAND FIRST, to [y_lo+0.5, y_hi-0.5]. A tip
+    // sitting exactly on a rail is reachable in ordinary material — PCM -1.0
+    // maps to the bottom rail exactly — and splitting there would throw half the
+    // unit out of band and render the rail row at half alpha. Clamping the
+    // centre instead lands the whole unit in the one in-band row, which is what
+    // a rail-hugging line should look like. (The steep WALK below does NOT
+    // clamp: dropping a diagonal's out-of-band tail is geometrically right, and
+    // it can no longer starve a column now that endpoints deposit separately.)
     const auto deposit_v = [&](int x, double y, double weight) {
-        const double u  = y - 0.5;
+        const double lo_c = static_cast<double>(y_lo) + 0.5;
+        const double hi_c = static_cast<double>(y_hi) - 0.5;
+        double cy = y;
+        if (cy < lo_c) cy = lo_c;
+        if (cy > hi_c) cy = hi_c;
+        const double u  = cy - 0.5;
         const double fr = std::floor(u);
         blend_max(x, static_cast<int>(fr),     weight * (1.0 - (u - fr)));
         blend_max(x, static_cast<int>(fr) + 1, weight * (u - fr));
@@ -431,29 +449,34 @@ void render_waveform(cairo_surface_t* dest,
         blend_max(static_cast<int>(fc) + 1, y, weight * (u - fc));
     };
 
-    // A Wu-style antialiased segment between two ADJACENT column centres, the
-    // thin regime's whole rendering. dx is always exactly 1 column; dy is
-    // unbounded, since a transient can step hundreds of rows between one column
-    // and the next. So the walk follows the MAJOR axis:
-    //   SHALLOW (|dy| <= 1): one vertical two-row split per endpoint column.
-    //   STEEP   (|dy| >  1): walk the rows the segment crosses, and split each
-    //                        row's unit of coverage between columns x-1 and x by
-    //                        where the segment crosses that row's centre.
-    // Either way every column the segment touches receives at least one full
-    // pixel-equivalent of ink (the shallow split sums to 1.0 by construction;
-    // the steep walk gives the column many partial rows) — the guarantee that
-    // replaced the opaque spine, so flat material softens but can never fade out
-    // or vanish.
+    // A Wu-style antialiased segment between two ADJACENT columns' tips. dx is
+    // always exactly 1 column; dy is unbounded, since a transient can step
+    // hundreds of rows between one column and the next.
+    //
+    // ENDPOINTS FIRST, ALWAYS: each endpoint column gets a full one-unit
+    // vertical split at its own tip. That is not an optimisation — the row walk
+    // alone leaves an endpoint at whatever fraction its row phase happens to
+    // give, so a V-vertex (a centre with both neighbours just past it) could
+    // composite to about half alpha and read as a dropout. Depositing the unit
+    // unconditionally also removes the old shallow/steep discontinuity at
+    // |dy| == 1: the walk is no longer a different regime, just the extra rows
+    // that exist when the segment spans more than one.
+    //
+    // THEN THE DIAGONAL: when the segment spans more than a row, walk the rows
+    // it crosses and split each row's unit between columns x-1 and x by where
+    // the segment crosses that row's centre. Every column a segment touches
+    // therefore carries at least one full pixel-equivalent at every slope and at
+    // the band rails, so flat material softens to a hairline but can never fade
+    // out or vanish.
     const auto draw_segment = [&](int xa, double ya, int xb, double yb_) {
-        const double x0  = static_cast<double>(xa) + 0.5;
-        const double x1  = static_cast<double>(xb) + 0.5;
-        const double dxs = x1 - x0;
+        deposit_v(xa, ya,  1.0);
+        deposit_v(xb, yb_, 1.0);
+
         const double dys = yb_ - ya;
-        if (std::fabs(dys) <= std::fabs(dxs)) {
-            deposit_v(xa, ya,  1.0);
-            deposit_v(xb, yb_, 1.0);
-            return;
-        }
+        if (std::fabs(dys) <= 1.0) return;   // no in-between rows to walk
+
+        const double x0 = static_cast<double>(xa) + 0.5;
+        const double x1 = static_cast<double>(xb) + 0.5;
         // Bound the row walk to the band before iterating — a steep segment can
         // otherwise sweep far more rows than the channel has. The x
         // interpolation still uses the UNCLAMPED endpoints, so the visible part
@@ -469,7 +492,7 @@ void render_waveform(cairo_surface_t* dest,
             double t = ((static_cast<double>(r) + 0.5) - ya) / dys;
             if (t < 0.0) t = 0.0;
             if (t > 1.0) t = 1.0;
-            deposit_h(x0 + t * dxs, r, 1.0);
+            deposit_h(x0 + t * (x1 - x0), r, 1.0);
         }
     };
 
@@ -494,24 +517,23 @@ void render_waveform(cairo_surface_t* dest,
     };
 
     // THE LEFT HALO: the raw extrema of global column col0-1, the offscreen
-    // neighbour this call does not draw. The first drawn column bridges against
-    // it, so it is bridged on the same rule as every interior column and needs
-    // no first-column special case. The halo is a SAMPLE-SPAN read through this
-    // same basis — never a read-back of already-painted pixels.
+    // neighbour this call does not draw. It supplies the PREVIOUS TIPS that the
+    // first drawn column's two connecting segments run back to, so a first
+    // column connects exactly like an interior one — no special case at a strip
+    // or full-render boundary. The halo is a SAMPLE-SPAN read through this same
+    // basis — never a read-back of already-painted pixels.
     //
     // THE SONG-WALL CLAMP: the halo's span is clamped to start at source frame
     // 0, and if nothing is left of the first drawn column (s1_halo <= s0_halo —
     // the viewport sitting at frame 0, so there is no audio to the left) the
-    // halo is EMPTY and column col0 goes unbridged on its left.
+    // halo is EMPTY and the first column has no left neighbour to connect to.
     bool   have_prev  = false;
-    double prev_raw_min = 0.0;
-    double prev_raw_max = 0.0;
-    // The line regime's carry: the previous column's RAW-interval centre in
-    // float rows, and whether that column was thin. The halo supplies both for
-    // the first drawn column, so a first column connects exactly like an
-    // interior one — no special case at a strip or full-render boundary.
-    double prev_center_y = 0.0;
-    bool   prev_thin     = false;
+    // The previous column's TIPS in float rows: its raw maximum mapped to the
+    // top tip, its raw minimum to the bottom. These are the only carry the
+    // connectivity needs now — the retired bridge's prev_raw_* widen state went
+    // with it.
+    double prev_top_y = 0.0;
+    double prev_bot_y = 0.0;
 
     // g_prev is the running left edge in SOURCE frames. Seeding it from the halo
     // column's left edge means the carried-endpoint chain (column i's left edge
@@ -528,13 +550,9 @@ void render_waveform(cairo_surface_t* dest,
             // column, so it reads the same statistics its neighbour would.
             const int hlevel = level_for_column(g_prev - g_halo0);
             const auto hm = audio.get_peak_range(channel, hlevel, hs0, hs1);
-            prev_raw_min = hm.first;
-            prev_raw_max = hm.second;
-            have_prev    = true;
-            prev_center_y =
-                y_center - (prev_raw_min + prev_raw_max) * 0.5 * half_h;
-            prev_thin =
-                (prev_raw_max - prev_raw_min) * half_h <= kThinIntervalPx;
+            prev_top_y = y_center - static_cast<double>(hm.second) * half_h;
+            prev_bot_y = y_center - static_cast<double>(hm.first)  * half_h;
+            have_prev  = true;
         }
     }
 
@@ -555,62 +573,32 @@ void render_waveform(cairo_surface_t* dest,
 
         const int x = area.x + i;
 
-        // WHICH REGIME — decided on this column's OWN RAW extent, before any
-        // bridging. A column whose samples span more than kThinIntervalPx of
-        // screen has real envelope mass to draw; one that does not is a point on
-        // a line. Deciding on the raw extent (not the bridged one) is what keeps
-        // a thin column thin: bridging a lone thin column against a distant
-        // neighbour would inflate it into exactly the tall bar this regime
-        // exists to replace.
-        const double cur_center_y = y_center - (raw_min + raw_max) * 0.5 * half_h;
-        const bool   cur_thin = (raw_max - raw_min) * half_h <= kThinIntervalPx;
+        // THE COLUMN'S TIPS: raw maximum -> top tip, raw minimum -> bottom tip,
+        // in float rows, never snapped. THIN means the two are within
+        // kThinIntervalPx of each other: no envelope mass to fill, so the column
+        // is just a point on the silhouette and its two tip segments collapse
+        // onto each other. That is the only thing the regime distinction decides
+        // now — whether an interior gets filled.
+        const double cur_top_y = y_center - raw_max * half_h;
+        const double cur_bot_y = y_center - raw_min * half_h;
+        const bool   cur_thin  = (cur_bot_y - cur_top_y) <= kThinIntervalPx;
 
-        // THE CONNECTING SEGMENT — the thin regime's connectivity, drawn
-        // whenever this column is thin, and also when a thin run ENTERS a tall
-        // column so the line runs into the envelope mass rather than stopping
-        // short of it (the envelope overpaints most of that last segment, which
-        // is harmless). Two adjacent TALL columns draw none: bridging is their
-        // connectivity, exactly as before.
-        if (have_prev && (cur_thin || prev_thin))
-            draw_segment(x - 1, prev_center_y, x, cur_center_y);
-        // A thin FIRST column with no halo (the song wall) still owes its one
-        // pixel-equivalent: deposit it as a zero-length segment at its centre.
-        if (cur_thin && !have_prev) deposit_v(x, cur_center_y, 1.0);
-
-        // Bridge in FLOAT value space, against the previous column's RAW
-        // extrema (never its widened output — the dependency stays one column
-        // deep). Disjoint intervals get pulled together into one connected
-        // envelope; overlapping intervals come through untouched. TALL REGIME
-        // ONLY — a thin column is connected by its segment instead, so bridging
-        // never runs on one in either role.
-        double lo_val = raw_min;
-        double hi_val = raw_max;
-        if (have_prev && !cur_thin && !prev_thin) {
-            lo_val = std::min(lo_val, prev_raw_max);
-            hi_val = std::max(hi_val, prev_raw_min);
-        }
-
-        // The FLOAT row interval — no integer snap. +value is up the screen, so
-        // hi_val gives the TOP edge and lo_val the bottom.
-        double yt = y_center - hi_val * half_h;
-        double yb = y_center - lo_val * half_h;
-        if (yt > yb) std::swap(yt, yb);
-        // Clamp to this channel's rows before any row index is derived, so a
-        // clipped interval cannot address outside the band.
-        const double row_lo = static_cast<double>(y_lo);
-        const double row_hi = static_cast<double>(y_hi);   // exclusive bound
-        if (yt < row_lo) yt = row_lo;
-        if (yb < row_lo) yb = row_lo;
-        if (yt > row_hi) yt = row_hi;
-        if (yb > row_hi) yb = row_hi;
-
-        // THE ENVELOPE, tall regime only — the thin regime drew its segment
-        // above and emits nothing here. The interval is wider than
-        // kThinIntervalPx, so floor(yt) and floor(yb) are necessarily DIFFERENT
-        // rows: the top and bottom coverage writes can never collide, and the
-        // coincident-edge case cannot arise. (That argument is unchanged; the
-        // line regime handles overlap by max-compositing instead.)
+        // 1. INTERIOR FIRST (tall only), REPLACE-written into the cleared
+        //    column. Its extent is this column's OWN raw interval: there is no
+        //    bridge widening it toward a neighbour any more, so a tall column
+        //    next to a short one no longer grows a hard solid block down to it.
         if (!cur_thin && x >= 0 && x < surf_w) {
+            double yt = cur_top_y;
+            double yb = cur_bot_y;
+            // Clamp to this channel's rows before any row index is derived, so
+            // a clipped interval cannot address outside the band.
+            const double row_lo = static_cast<double>(y_lo);
+            const double row_hi = static_cast<double>(y_hi);   // exclusive
+            if (yt < row_lo) yt = row_lo;
+            if (yb < row_lo) yb = row_lo;
+            if (yt > row_hi) yt = row_hi;
+            if (yb > row_hi) yb = row_hi;
+
             const int row_t = static_cast<int>(std::floor(yt));
             const int row_b = static_cast<int>(std::floor(yb));
 
@@ -635,10 +623,32 @@ void render_waveform(cairo_surface_t* dest,
             }
         }
 
-        prev_raw_min  = raw_min;
-        prev_raw_max  = raw_max;
-        prev_center_y = cur_center_y;
-        prev_thin     = cur_thin;
+        // 2. THEN THE TWO TIP SEGMENTS back to the previous column — top tip to
+        //    top tip, bottom tip to bottom tip. These are the silhouette, and
+        //    they are the ONLY inter-column connectivity at every regime: a
+        //    spike beside a short column is joined by two steep antialiased
+        //    diagonals rather than the retired bridge's hard block, which is
+        //    what puts a soft slope on a spike's SIDES and not just its tip.
+        //    A thin column's two segments coincide, degenerating to the single
+        //    centre line.
+        //
+        //    ORDER AND COMPOSITING: segments run AFTER this column's interior
+        //    and MAX-composite, so an opaque interior pixel stays opaque and a
+        //    segment can only add ink. That arithmetic — not the paint order —
+        //    is what keeps a segment entering an envelope from eroding it.
+        if (have_prev) {
+            draw_segment(x - 1, prev_top_y, x, cur_top_y);
+            draw_segment(x - 1, prev_bot_y, x, cur_bot_y);
+        } else if (cur_thin) {
+            // A thin FIRST column with no halo (the song wall) has no segment
+            // to carry its ink, so it deposits its own unit. A tall one needs
+            // nothing: its interior is already painted.
+            deposit_v(x, cur_top_y, 1.0);
+            deposit_v(x, cur_bot_y, 1.0);
+        }
+
+        prev_top_y    = cur_top_y;
+        prev_bot_y    = cur_bot_y;
         have_prev     = true;
         g_prev        = g1;
     }

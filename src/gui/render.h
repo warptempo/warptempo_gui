@@ -607,69 +607,75 @@ struct WaveformBasis {
 // [t0, t1) is translated to source-frame via `map_target_to_source` before the
 // pyramid read, producing the deformed-waveform display.
 //
-// COLUMN BRIDGING (the connected-silhouette rule): a column's drawn interval is
-// its own raw [min, max] extended to meet the PREVIOUS column's RAW extrema —
-// lo = min(min_i, prev_raw_max), hi = max(max_i, prev_raw_min) — which widens
-// only when the two intervals are disjoint and leaves overlapping ones exactly
-// as they were. Bridging is raw-to-raw (never against the previous column's
-// already-widened output), so the dependency is exactly one column deep, and it
-// runs in FLOAT value space BEFORE the y-mapping; bridging already-snapped
-// rectangles would exaggerate the steps. The interval reaches the writer as
-// floats — there is no integer snap any more (see the writer contract below).
+// THE SILHOUETTE IS A TIP POLYLINE. Each column reduces to two TIPS in float
+// rows — its raw maximum as the top tip, its raw minimum as the bottom — and
+// every adjacent pair is joined by TWO Wu-style antialiased segments, top tip to
+// top tip and bottom tip to bottom tip. Those segments are the whole of the
+// inter-column connectivity, at every scale. The earlier raw-to-raw BRIDGE that
+// widened a column's interval to overlap its neighbour's is RETIRED with them:
+// it joined a spike to a short neighbour by filling the gap with a hard solid
+// block, so a spike had soft tips but hard 1-px vertical sides. Two steep
+// diagonals put an antialiased slope on those sides instead, which is what the
+// level-1 jaggedness needed.
 //
-// THE LEFT HALO: because column col0 has a left neighbour that this call does
-// not draw, the render evaluates a one-column RAW halo at global column col0-1
-// and bridges col0 against it — for a full render, the offscreen column just
+// A column additionally fills an INTERIOR when it is TALL — its two tips more
+// than kThinIntervalPx (1.0 row, tunable) apart, i.e. it has real envelope mass:
+// opaque rows between the tips, with the two boundary rows taking FRACTIONAL
+// COVERAGE (row floor(yt) gets floor(yt)+1-yt, row floor(yb) gets
+// yb-floor(yb)). A THIN column has no interior to fill and its two tip segments
+// collapse onto each other into a single centre line — which at spp 1-8, where
+// nearly every column is thin, is the whole rendering and exactly the
+// thin-signal material the old bar-chart look was worst on. That is the only
+// thing the tall/thin distinction still decides: whether an interior is filled.
+//
+// SEGMENT GEOMETRY: dx is always one column, dy unbounded (a transient can step
+// hundreds of rows between neighbours). Each segment first deposits a FULL unit
+// of coverage at both endpoint tips — unconditionally, so an endpoint can never
+// be left at a fraction by its row phase, which is what would otherwise let a
+// V-vertex composite to half alpha and read as a dropout — and then, when it
+// spans more than one row, walks those rows and splits each one's unit between
+// the two columns by where the segment crosses that row's centre. Deposits
+// clamp their CENTRE into the band so a tip resting exactly on a rail (PCM -1.0
+// does) still renders one full in-band row; the diagonal's walk instead DROPS
+// out-of-band rows, which is geometrically right for a clipped tail. So every
+// column carries at least one full pixel-equivalent at every slope and at the
+// rails: flat material softens to a hairline but can never fade out or vanish.
+//
+// THE LEFT HALO: because column col0's left neighbour is not drawn by this call,
+// the render evaluates a one-column RAW halo at global column col0-1 and takes
+// its tips as the previous tips — for a full render, the offscreen column just
 // left of the viewport. It is a SAMPLE-SPAN read through this same basis, never
 // a read-back of painted pixels. At the song wall the halo has no span to the
-// left, so it is EMPTY and column col0 goes unbridged on its left. Bridging the
-// first column against an offscreen neighbour rather than leaving it
-// deliberately unbridged is what makes a render's output depend only on its
-// basis and column range — two renders of the same columns at the same basis
-// agree exactly, with no first-column special case to reconcile.
+// left, so it is EMPTY and the first column has no left neighbour to connect to
+// (a thin one then deposits its own unit so it still cannot vanish). Connecting
+// the first column to an offscreen neighbour rather than special-casing it is
+// what makes a render's output depend only on its basis and column range — two
+// renders of the same columns at the same basis agree exactly.
 //
 // THE WRITER: this function does NOT draw through cairo. It writes `dest`'s
 // ARGB32 pixel words directly, which is why it takes the surface rather than a
-// context. Per column the bridged interval maps to a float row interval
-// [yt, yb]; interior rows are opaque and the two boundary rows take FRACTIONAL
-// COVERAGE (row floor(yt) gets floor(yt)+1-yt, row floor(yb) gets
-// yb-floor(yb)), softening the upper and lower silhouette without a general
-// antialiaser — the coverage is known exactly, so no rasterizer is involved.
-// A zero-coverage boundary row writes nothing.
+// context. TWO COMPOSITING RULES, side by side:
+//   INTERIORS REPLACE. Each tall column's interior is written once into a
+//     column the caller already cleared, so replacing is correct and idempotent.
+//   SEGMENTS MAX-COMPOSITE. A segment necessarily writes into the column to its
+//     left, which is already rendered, so replacing there would punch holes in
+//     it; taking the max can only add ink.
+// Per column the interior is painted FIRST and its segments after. Because
+// segments take the max, an opaque interior pixel stays opaque and a segment
+// entering an envelope cannot erode it — that intent rides on the arithmetic,
+// not on the paint order. A zero-coverage row writes nothing at all.
 //
-// THE THIN-INTERVAL LINE REGIME: a column whose OWN RAW extent is at most
-// kThinIntervalPx (1.0 row, tunable) has no envelope mass to draw, so instead of
-// a bar it paints a Wu-style antialiased SEGMENT from the previous column's raw
-// centre to its own — slope-aware, in float y, never snapped. That is the whole
-// rendering for such a column, and it is also its CONNECTIVITY: bridging applies
-// to the tall regime alone, since bridging a lone thin column against a distant
-// neighbour would inflate it into the very bar this regime replaces. At spp 1-8
-// nearly every column is thin, which is exactly the thin-signal material the
-// bar-chart look was worst on.
-//
-// The segment spans one column horizontally and an unbounded number of rows
-// vertically, so it walks its MAJOR axis: a shallow segment splits one unit of
-// coverage between two rows at each endpoint column, a steep one walks the rows
-// it crosses and splits each row between the two columns. Every column a segment
-// touches therefore receives at least a full pixel-equivalent of ink, which is
-// the guarantee the retired opaque spine used to provide: flat material softens
-// into a hairline but can never fade out or vanish. Segment writes MAX-COMPOSITE
-// (a segment necessarily writes into the already-rendered column to its left, so
-// replacing there would punch holes in it); envelope writes still replace.
-//
-// The two regimes meet cleanly. A thin run entering a tall column still draws
-// its last segment into that column's centre so the line runs into the mass
-// rather than stopping short — the envelope then overpaints most of it,
-// harmlessly. And because a tall interval is wider than a pixel it necessarily
-// spans two or more distinct rows, so the envelope's fractional path can never
-// emit a coincident top/bottom write: that case stays discharged by
-// construction, with max-compositing covering overlap on the line side.
+// Because a tall interval is wider than a pixel it necessarily spans two or more
+// distinct rows, so the interior's fractional path can never emit a coincident
+// top/bottom write: that case stays discharged by construction, with
+// max-compositing covering overlap on the segment side.
 //
 // Words are PREMULTIPLIED (coverage a gives alpha round(a*255) and channels
 // round(a*C)) and come from a 256-entry table built once per call for the one
-// ink colour; entry 255 is the opaque interior word. Writes REPLACE rather than
-// blend, which is correct and idempotent because the caller has already cleared
-// every column this call regenerates. The surface is flushed before the first
+// ink colour; entry 255 is the opaque interior word, and the alpha byte of any
+// pixel on the plate is the table index that produced it — which is what lets a
+// segment's max-composite read back a coverage without a side buffer. The
+// surface is flushed before the first
 // CPU write and marked dirty after the last, so later cairo use sees the
 // pixels.
 //
