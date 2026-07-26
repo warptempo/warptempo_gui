@@ -75,22 +75,38 @@ public:
     // the same factor. Span is a double so a caller can pass the exact
     // fractional mapped width rather than a rounded one.
     //
-    // THE RESULTING PER-COLUMN READ BOUND, per channel — UNCONDITIONAL, for
-    // every input the loader accepts:
-    //   - a cached level reads AT MOST 5 pairs. The level is chosen so
-    //     stride <= span < kReductionFactor*stride, and get_peak_range expands
-    //     to whole bins, so it touches ceil(span/stride)+1 <= 5 of them.
-    //   - raw (level 0) reads AT MOST 16 samples — one more than the finest
-    //     stride, NOT one less. Raw is selected for a span strictly below 16,
-    //     but the caller rounds the two endpoints INDEPENDENTLY, which can
-    //     widen a sub-16 float span to a 16-sample integer range (0.49 -> 16.48
-    //     is a width of 15.99 that rounds to [0, 16)).
-    // There is no saturation exception at the coarse end: the ladder's top
-    // stride is chosen to exceed the worst valid column span (see the reach
-    // derivation at kStrides), so the "stride <= span < 4*stride" premise the
-    // 5-pair bound rests on holds at every level including the last. A ladder
-    // too short for some source would silently break that premise, which is why
-    // the top rung is derived rather than picked.
+    // THE RESULTING PER-COLUMN READ BOUND, per channel. The shape of the bound
+    // is: a level is chosen so stride <= span < kReductionFactor*stride, and
+    // get_peak_range expands to whole bins, so it touches ceil(span/stride)+1
+    // <= 5 pairs; below the finest stride, raw reads AT MOST 16 samples — one
+    // more than that stride, NOT one less, because the caller rounds the two
+    // endpoints INDEPENDENTLY and that can widen a sub-16 float span to a
+    // 16-sample integer range (0.49 -> 16.48 is a width of 15.99 that rounds to
+    // [0, 16)). Where that shape actually holds, in three parts:
+    //
+    //   (a) SOURCE VIEW — UNCONDITIONAL, for every input the loader accepts.
+    //       A column's span is at most total_frames/width, and the worst valid
+    //       case (a near-RIFF-limit 16-bit stereo source at the 640 px window
+    //       floor, ~1.68M frames per column) sits under FOUR TIMES the top
+    //       stride, which is the quantity that has to exceed it — not the top
+    //       stride itself. See the reach derivation at kStrides.
+    //
+    //   (b) TARGET VIEW — holds for any column whose MAPPED source span is at
+    //       most kReductionFactor x the top stride (~4.19M frames). That covers
+    //       real material with margin: a 13.2M-frame source at tempo 4, with
+    //       the local slope concentrated at its 16x maximum, yields ~1.32M
+    //       frames in the worst column at 640 px — roughly a 3x margin.
+    //
+    //   (c) BEYOND THAT the top rung SATURATES and reads grow linearly, about
+    //       span/1048576 + 1 pairs. Target length is not RIFF-bounded the way
+    //       source length is (tempo multiplies it), so a legal but synthetic
+    //       case can exceed the premise — a ~60M-frame source at tempo 4 with
+    //       16x concentration puts ~6M source frames in one column, seven pairs
+    //       instead of five. Output stays correct and the growth is graceful,
+    //       and this is ACCEPTED rather than designed out: no finite ladder
+    //       makes the target-view claim unconditional, so extending further
+    //       would be engineering against synthetic adversaries instead of
+    //       measured material.
     int level_for_span(double span_samples) const;
 
     // Returns (min, max) over source-sample indices [start_sample, end_sample)

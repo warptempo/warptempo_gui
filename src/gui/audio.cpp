@@ -21,11 +21,11 @@
 
 namespace {
 
-// `.peaks` v5 format -------------------------------------------------------
+// `.peaks` v6 format -------------------------------------------------------
 //
 // 32-byte fixed preamble:
 //   off 0  | 8  | private cache magic
-//   off 8  | 2  | version (uint16, currently 5)
+//   off 8  | 2  | version (uint16, currently 6)
 //   off 10 | 2  | flags   (uint16, written 0)
 //   off 12 | 8  | source_size  (int64, bytes)
 //   off 20 | 8  | source_mtime (int64, nanoseconds)
@@ -86,16 +86,26 @@ constexpr uint32_t kMaxOwnerBytes         = 4096;
 // first folds from the PREVIOUS level by kReductionFactor, so the ratio is the
 // reduction factor by construction.
 //
-// WHY IT REACHES 1048576 — the ladder must have a rung coarse enough for the
-// WORST VALID column, or level_for_span saturates at the top and the per-column
-// read bound stops holding. Worst case: a near-RIFF-limit 16-bit stereo source
-// is ~1.07G frames (4 GiB / 4 bytes per frame), and the narrowest window is the
-// 640 px defensive floor (clamp_dims), giving ~1.68M frames per column.
-// level_for_span picks the coarsest stride <= the span, so a span stays inside
-// the <=5-pair bound as long as it is under kReductionFactor x the top stride =
-// 4 x 1048576 ~= 4.19M — comfortably above that 1.68M worst case. The bound is
-// therefore unconditional over every input the loader accepts, which is what
-// makes the O(area_width) cost claim true rather than typical.
+// WHY IT REACHES 1048576 — the top rung is derived, not picked. A span stays
+// inside the <=5-pair read bound while it is under kReductionFactor x the top
+// stride = 4 x 1048576 ~= 4.19M frames (that PRODUCT is the quantity that must
+// exceed the worst span, not the top stride alone).
+//
+// SOURCE VIEW is covered unconditionally: a column spans at most
+// total_frames/width, and the worst valid input — a near-RIFF-limit 16-bit
+// stereo source, ~1.07G frames (4 GiB / 4 bytes per frame), at the 640 px
+// defensive window floor (clamp_dims) — is ~1.68M frames per column, well under
+// 4.19M.
+//
+// TARGET VIEW cannot be covered by any finite ladder, because tempo multiplies
+// the target timeline and target length is not RIFF-bounded the way source
+// length is. The bound holds for every column whose MAPPED source span is under
+// 4.19M, which carries real material with room (a 13.2M-frame source at tempo 4
+// with the slope concentrated at its 16x maximum yields ~1.32M in the worst
+// column at 640 px, ~3x margin); past that the top rung saturates and reads grow
+// linearly at about span/1048576 + 1 pairs. ACCEPTED, not designed out —
+// chasing it would mean sizing the ladder for synthetic adversaries rather than
+// measured material. See the three-part statement at level_for_span.
 //
 // THE STANDING NEXT KNOB: a level switch still changes both quantization and
 // bin alignment, so a crossing can still pop — 4x makes it small, it does not
