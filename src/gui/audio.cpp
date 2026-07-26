@@ -57,13 +57,23 @@ namespace {
 // Out-of-range source peaks clip at the boundary.
 
 constexpr char     kCacheMagic[8]         = "WTPEAKS";
-// v5 densified the stride ladder (see kStrides). A v4 file therefore fails the
-// version compare and takes the ordinary STALE path — logged, rebuilt, never
-// partially accepted and never surfaced to the user as an error. The rebuild
-// writes a larger sidecar (the pair count is ~1/16 + 1/64 + ... of the raw
-// frames instead of ~1/32 + ...): architect-granted 2026-07-26, "ok to bump
-// cache file size", the cost of the smoother zoom ladder.
-constexpr uint16_t kCacheVersion          = 5;
+// Bumped whenever the ladder changes shape: v5 densified it to powers of four,
+// v6 extended it to nine rungs. An older file therefore fails the version
+// compare and takes the ordinary STALE path — logged, rebuilt, never partially
+// accepted and never surfaced to the user as an error.
+//
+// THE BUMP IS LOAD-BEARING, not bookkeeping: the version compare runs BEFORE
+// the level-count compare in try_load_cache, so an old file exits through
+// stale() and never reaches the hdr_nl != kNumLevels branch, which would report
+// CORRUPT for what is merely an older schema. Any future change to kStrides or
+// kNumLevels must bump this in the same commit for that reason.
+//
+// The rebuild writes a larger sidecar (the pair count is ~1/16 + 1/64 + ... of
+// the raw frames instead of ~1/32 + ...): architect-granted 2026-07-26, "ok to
+// bump cache file size", the cost of the smoother zoom ladder. The three rungs
+// v6 added cost almost nothing on top — each is a quarter of the one before, so
+// the whole tail past 16384 is under 0.03% of the raw frame count.
+constexpr uint16_t kCacheVersion          = 6;
 constexpr int      kStreamFramesPerChunk  = 65536;
 // Bounds the owner-discriminator string so a corrupt header is a cheap cache
 // miss rather than a memory-pressure event.
@@ -76,6 +86,17 @@ constexpr uint32_t kMaxOwnerBytes         = 4096;
 // first folds from the PREVIOUS level by kReductionFactor, so the ratio is the
 // reduction factor by construction.
 //
+// WHY IT REACHES 1048576 — the ladder must have a rung coarse enough for the
+// WORST VALID column, or level_for_span saturates at the top and the per-column
+// read bound stops holding. Worst case: a near-RIFF-limit 16-bit stereo source
+// is ~1.07G frames (4 GiB / 4 bytes per frame), and the narrowest window is the
+// 640 px defensive floor (clamp_dims), giving ~1.68M frames per column.
+// level_for_span picks the coarsest stride <= the span, so a span stays inside
+// the <=5-pair bound as long as it is under kReductionFactor x the top stride =
+// 4 x 1048576 ~= 4.19M — comfortably above that 1.68M worst case. The bound is
+// therefore unconditional over every input the loader accepts, which is what
+// makes the O(area_width) cost claim true rather than typical.
+//
 // THE STANDING NEXT KNOB: a level switch still changes both quantization and
 // bin alignment, so a crossing can still pop — 4x makes it small, it does not
 // make it impossible. If a pop is still visible on the labwc pass, the next
@@ -83,7 +104,8 @@ constexpr uint32_t kMaxOwnerBytes         = 4096;
 // (blending the two levels' values); it is deliberately not built yet, since it
 // doubles the peak reads and the denser ladder may well be enough.
 constexpr int      kNumLevels             = GuiAudio::kCacheLevels;
-constexpr int32_t  kStrides[kNumLevels]   = { 16, 64, 256, 1024, 4096, 16384 };
+constexpr int32_t  kStrides[kNumLevels]   = { 16, 64, 256, 1024, 4096, 16384,
+                                              65536, 262144, 1048576 };
 constexpr int      kReductionFactor       = 4;
 constexpr float    kQuantScale            = 32767.0f;
 // Reserve the first 95% of the progress budget for the dominant level-1 pass;

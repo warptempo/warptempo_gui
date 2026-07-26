@@ -20,7 +20,7 @@ public:
     // them — see num_levels()). The strides themselves live in exactly one
     // place, audio.cpp's kStrides; this is the count both that list and the
     // storage array below are sized by, so the two cannot drift.
-    static constexpr int kCacheLevels = 6;
+    static constexpr int kCacheLevels = 9;
 
     // Implementation detail of the peak cache. Public only so the cache
     // reader/writer free functions in audio.cpp can name the type.
@@ -75,7 +75,8 @@ public:
     // the same factor. Span is a double so a caller can pass the exact
     // fractional mapped width rather than a rounded one.
     //
-    // THE RESULTING PER-COLUMN READ BOUND, per channel:
+    // THE RESULTING PER-COLUMN READ BOUND, per channel — UNCONDITIONAL, for
+    // every input the loader accepts:
     //   - a cached level reads AT MOST 5 pairs. The level is chosen so
     //     stride <= span < kReductionFactor*stride, and get_peak_range expands
     //     to whole bins, so it touches ceil(span/stride)+1 <= 5 of them.
@@ -84,6 +85,12 @@ public:
     //     but the caller rounds the two endpoints INDEPENDENTLY, which can
     //     widen a sub-16 float span to a 16-sample integer range (0.49 -> 16.48
     //     is a width of 15.99 that rounds to [0, 16)).
+    // There is no saturation exception at the coarse end: the ladder's top
+    // stride is chosen to exceed the worst valid column span (see the reach
+    // derivation at kStrides), so the "stride <= span < 4*stride" premise the
+    // 5-pair bound rests on holds at every level including the last. A ladder
+    // too short for some source would silently break that premise, which is why
+    // the top rung is derived rather than picked.
     int level_for_span(double span_samples) const;
 
     // Returns (min, max) over source-sample indices [start_sample, end_sample)

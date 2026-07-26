@@ -707,9 +707,11 @@ int main(int argc, char** argv) {
     // kick_waveform_render call site outside kick_waveform_sync's
     // callback-unwired fallback). The worker's OTHER undriven work — a
     // compositor resize and the launch load, both of which run on_resize, which
-    // re-clamps geometry and rebuilds caches but enqueues nothing — is
-    // discovered instead by maybe_enqueue_waveform_render's dirty-detect on the
-    // next tick. (Pan, zoom, center and the one-shot jumps do NOT come here at
+    // only stores the new dimensions, re-clamps zoom/viewport, and re-anchors
+    // the playback predictor if the level moved: no enqueue and no cache
+    // rebuild there — is discovered instead when
+    // maybe_enqueue_waveform_render's dirty-detect sees the changed fingerprint
+    // on the next tick, which is also where the cache rebuild happens. (Pan, zoom, center and the one-shot jumps do NOT come here at
     // all: they are user-driven and render synchronously through
     // request_waveform_sync_ below.) maybe_enqueue_waveform_render is
     // main-thread-safe and idempotent
