@@ -261,7 +261,9 @@ void render_waveform(cairo_surface_t* dest,
     if (!dest) return;
     if (area.w <= 0 || area.h <= 2) return;
     if (basis.full_width <= 0) return;
-    if (basis.vp_end <= basis.vp_start) return;
+    // The lattice step must be numeric and positive; a degenerate zoom refuses
+    // here exactly as the old empty-viewport check did.
+    if (!(basis.spp > 0.0)) return;
 
     const int num_levels = audio.num_levels();
     if (num_levels <= 0) return;
@@ -283,16 +285,17 @@ void render_waveform(cairo_surface_t* dest,
     const int surf_h      = cairo_image_surface_get_height(dest);
     if (surf_w <= 0 || surf_h <= 0) return;
 
-    // The mapping basis is the PLATE's, never this call's sub-range: the
-    // denominator is basis.full_width and columns are indexed globally from
-    // col0, so a column's frames are a function of the basis and the global
-    // index alone — never of which window happened to draw it. Every caller at
-    // present is a full-plate render (col0 = 0, area.w == full_width); the
-    // global-column form is what would keep a partial render correct by
-    // construction if one were ever reintroduced.
-    const double span = static_cast<double>(basis.vp_end - basis.vp_start);
-    const double samples_per_pixel = span /
-                                     static_cast<double>(basis.full_width);
+    // THE AUTHORING LATTICE (see WaveformBasis). Recover the viewport's lattice
+    // index with the SAME expression clamp_viewport_start uses to snap onto it,
+    // so a resting viewport round-trips exactly; an off-lattice mid-gesture
+    // viewport quantizes to its nearest rest. Columns are then indexed globally
+    // from k0, which is what makes a pan a pure index shift — a column's frames
+    // depend on k0+c and nothing else, never on which window drew it.
+    const double samples_per_pixel = basis.spp;
+    double k0d = std::nearbyint(static_cast<double>(basis.vp_start) /
+                                samples_per_pixel);
+    if (!(k0d >= 0.0)) k0d = 0.0;          // also rejects NaN
+    const long long k0 = static_cast<long long>(k0d);
 
     // PYRAMID LEVEL IS CHOSEN PER COLUMN, from that column's own mapped SOURCE
     // width, through the one level-choosing owner (GuiAudio::level_for_span —
@@ -340,8 +343,9 @@ void render_waveform(cairo_surface_t* dest,
     //      silhouette and the only inter-column connectivity there is; the
     //      raw-to-raw bridge that used to widen intervals into each other is
     //      retired, because it joined a spike to a short neighbour with a hard
-    //      block instead of an antialiased slope. A thin column's two segments
-    //      coincide into one centre line.
+    //      block instead of an antialiased slope. A thin column keeps BOTH
+    //      segments — its subpixel extent renders as a soft partial-coverage
+    //      band, and the two meet only at exactly zero extent.
     // Max-compositing is what makes the order safe: an interior's opaque pixels
     // stay opaque no matter what segment crosses them afterwards.
     //
@@ -381,6 +385,17 @@ void render_waveform(cairo_surface_t* dest,
     if (y_hi > surf_h) y_hi = surf_h;
     if (y_hi <= y_lo) return;
 
+    // COLUMNS THIS CALL OWNS. Every segment deposit is clipped to them, so a
+    // halo's share of the offscreen column beyond the range is dropped by
+    // construction rather than by happening to fall off the surface — and a
+    // partial render, if one is ever reintroduced, cannot bleed into a
+    // neighbour's columns.
+    int col_lo = area.x;
+    int col_hi = area.x + area.w;
+    if (col_lo < 0)      col_lo = 0;
+    if (col_hi > surf_w) col_hi = surf_w;
+    if (col_hi <= col_lo) return;
+
     // Write one pixel word, REPLACING what is there. Row/column bounds are
     // already established by the envelope callers below; this is their single
     // store site. Replace is correct for them because the caller cleared every
@@ -391,7 +406,7 @@ void render_waveform(cairo_surface_t* dest,
         px[x] = word;
     };
 
-    // -- The thin-interval LINE regime's writers --------------------------
+    // -- The tip-polyline segment writers ---------------------------------
     //
     // MAX-COVERAGE COMPOSITING, the standard rule for Wu-style overlap, and the
     // rule for EVERY segment write so the regime is uniform. A segment spans two
@@ -409,7 +424,7 @@ void render_waveform(cairo_surface_t* dest,
         int a = static_cast<int>(std::lround(cov * 255.0));
         if (a <= 0) return;
         if (a > 255) a = 255;
-        if (x < 0 || x >= surf_w) return;
+        if (x < col_lo || x >= col_hi) return;
         if (y < y_lo || y >= y_hi) return;
         auto* px = reinterpret_cast<uint32_t*>(
             surf_data + static_cast<size_t>(y) * surf_stride);
@@ -496,13 +511,12 @@ void render_waveform(cairo_surface_t* dest,
         }
     };
 
-    // Global column c's display-domain left edge. ONE expression over the
-    // PLATE's basis and the GLOBAL column index (see WaveformBasis), so a
-    // column's frames never depend on which render produced it.
+    // Global column c's display-domain left edge, ON THE LATTICE: the k0+c'th
+    // lattice point. Through the nearbyint below this is exactly
+    // clamp_viewport_start's grid(k0+c), so a pan by n columns reproduces each
+    // column's span bit-for-bit at index+n (see WaveformBasis).
     const auto edge_at = [&](long long c) {
-        return static_cast<double>(basis.vp_start) +
-               (span * static_cast<double>(c)) /
-               static_cast<double>(basis.full_width);
+        return static_cast<double>(k0 + c) * samples_per_pixel;
     };
     // Display-domain edge -> source frame. Identity in source view; in target
     // view the warp_frame_map translates so the pyramid read lands at the
@@ -516,17 +530,27 @@ void render_waveform(cairo_surface_t* dest,
                    : f;
     };
 
-    // THE LEFT HALO: the raw extrema of global column col0-1, the offscreen
-    // neighbour this call does not draw. It supplies the PREVIOUS TIPS that the
-    // first drawn column's two connecting segments run back to, so a first
-    // column connects exactly like an interior one — no special case at a strip
-    // or full-render boundary. The halo is a SAMPLE-SPAN read through this same
-    // basis — never a read-back of already-painted pixels.
+    // THE TWO HALOS. Both edge columns have a neighbour this call does not draw,
+    // and each needs it for the same reason: a drawn column's ink comes from the
+    // segments on BOTH its sides, so an edge column missing one is under-covered
+    // relative to the same audio rendered interior — and it pops during a pan.
+    //   LEFT  (global column col0-1, read before the loop): supplies the PREVIOUS
+    //     TIPS the first drawn column's incoming segments run back to.
+    //   RIGHT (global column col0+area.w, read after the loop): supplies the tips
+    //     the LAST drawn column's outgoing segments run forward to. Only its
+    //     share of the last column lands — the deposits aimed at the offscreen
+    //     column itself are outside the owned range and dropped.
+    // Both are SAMPLE-SPAN reads through this same basis, never read-backs of
+    // painted pixels, and both pick their level from their own span exactly as a
+    // drawn column does.
     //
-    // THE SONG-WALL CLAMP: the halo's span is clamped to start at source frame
-    // 0, and if nothing is left of the first drawn column (s1_halo <= s0_halo —
-    // the viewport sitting at frame 0, so there is no audio to the left) the
-    // halo is EMPTY and the first column has no left neighbour to connect to.
+    // THE TWO WALL CLAMPS MIRROR. Left, at the song wall: the span is clamped to
+    // start at source frame 0, and if nothing remains (hs1 <= hs0 — the viewport
+    // sitting at frame 0) the halo is EMPTY and the first column simply has no
+    // left neighbour. Right, at the EOF wall: the span is clamped to END at
+    // total_frames, and if nothing remains (rs1 <= rs0 — the last column already
+    // reaching EOF) that halo is EMPTY too and the last column keeps exactly the
+    // ink it has, which is the flush-right rest's contract.
     bool   have_prev  = false;
     // The previous column's TIPS in float rows: its raw maximum mapped to the
     // top tip, its raw minimum to the bottom. These are the only carry the
@@ -575,10 +599,11 @@ void render_waveform(cairo_surface_t* dest,
 
         // THE COLUMN'S TIPS: raw maximum -> top tip, raw minimum -> bottom tip,
         // in float rows, never snapped. THIN means the two are within
-        // kThinIntervalPx of each other: no envelope mass to fill, so the column
-        // is just a point on the silhouette and its two tip segments collapse
-        // onto each other. That is the only thing the regime distinction decides
-        // now — whether an interior gets filled.
+        // kThinIntervalPx of each other: no envelope mass to fill, so the two
+        // tip segments alone render the column, as a soft partial-coverage band
+        // across its subpixel extent (they meet only at exactly zero extent).
+        // That is the only thing the regime distinction decides now — whether an
+        // interior gets filled.
         const double cur_top_y = y_center - raw_max * half_h;
         const double cur_bot_y = y_center - raw_min * half_h;
         const bool   cur_thin  = (cur_bot_y - cur_top_y) <= kThinIntervalPx;
@@ -629,8 +654,10 @@ void render_waveform(cairo_surface_t* dest,
         //    spike beside a short column is joined by two steep antialiased
         //    diagonals rather than the retired bridge's hard block, which is
         //    what puts a soft slope on a spike's SIDES and not just its tip.
-        //    A thin column's two segments coincide, degenerating to the single
-        //    centre line.
+        //    A thin column keeps both: they render its subpixel extent as a soft
+        //    band, and are skipped down to one only when the tips are EXACTLY
+        //    equal (a zero-extent column, where the second traversal would
+        //    deposit nothing new).
         //
         //    ORDER AND COMPOSITING: segments run AFTER this column's interior
         //    and MAX-composite, so an opaque interior pixel stays opaque and a
@@ -638,7 +665,12 @@ void render_waveform(cairo_surface_t* dest,
         //    is what keeps a segment entering an envelope from eroding it.
         if (have_prev) {
             draw_segment(x - 1, prev_top_y, x, cur_top_y);
-            draw_segment(x - 1, prev_bot_y, x, cur_bot_y);
+            // Skip the second traversal only when BOTH endpoints coincide with
+            // the first — then it would deposit nothing the top segment has not
+            // already deposited. Any nonzero extent at either end still draws
+            // both, which is what renders a subpixel column as a band.
+            if (prev_bot_y != prev_top_y || cur_bot_y != cur_top_y)
+                draw_segment(x - 1, prev_bot_y, x, cur_bot_y);
         } else if (cur_thin) {
             // A thin FIRST column with no halo (the song wall) has no segment
             // to carry its ink, so it deposits its own unit. A tall one needs
@@ -651,6 +683,36 @@ void render_waveform(cairo_surface_t* dest,
         prev_bot_y    = cur_bot_y;
         have_prev     = true;
         g_prev        = g1;
+    }
+
+    // THE RIGHT HALO (see the halo contract above): the last drawn column's
+    // outgoing segments, without which it carries only half the ink an interior
+    // column gets from the same audio and shifts under a pan. The carried-edge
+    // chain already left g_prev at the last column's RIGHT edge — global column
+    // col0+area.w's left edge — so this costs one more map call in target view.
+    // Only the deposits landing on the last drawn column survive the owned-column
+    // clip; the ones aimed at the offscreen column are dropped.
+    if (have_prev) {
+        const double rg0 = g_prev;
+        const double rg1 =
+            to_source(edge_at(static_cast<long long>(col0) + area.w + 1));
+        const long long rs0 = static_cast<long long>(std::nearbyint(rg0));
+        long long       rs1 = static_cast<long long>(std::nearbyint(rg1));
+        // EOF-wall clamp, the mirror of the song wall's clamp-to-0: a span that
+        // begins at or past total has nothing to read, so rs1 <= rs0 and the
+        // halo is empty.
+        const long long total = static_cast<long long>(audio.total_frames());
+        if (rs1 > total) rs1 = total;
+        if (rs1 > rs0) {
+            const int rlevel = level_for_column(rg1 - rg0);
+            const auto rm = audio.get_peak_range(channel, rlevel, rs0, rs1);
+            const double rtop = y_center - static_cast<double>(rm.second) * half_h;
+            const double rbot = y_center - static_cast<double>(rm.first)  * half_h;
+            const int    xl   = area.x + area.w - 1;
+            draw_segment(xl, prev_top_y, xl + 1, rtop);
+            if (prev_bot_y != prev_top_y || rbot != rtop)
+                draw_segment(xl, prev_bot_y, xl + 1, rbot);
+        }
     }
 
     // Last CPU write is done — hand the buffer back to cairo.

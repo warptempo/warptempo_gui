@@ -579,24 +579,43 @@ struct FlagHitRect {
 void render_background(cairo_t* cr, int x, int y, int w, int h);
 void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 
-// THE COLUMN MAPPING BASIS — the FULL plate's displayed viewport and width.
-// Global column c's display-domain span is, by definition,
-//     [vp_start + span*c/full_width, vp_start + span*(c+1)/full_width)
-// with span = vp_end - vp_start. Every render evaluates that ONE expression for
-// the global column it is drawing. Every render today is a full-plate render
-// (col0 = 0, area.w == full_width), so the basis and the sub-range collapse to
-// the same thing; the global-column form is kept because it is the honest
-// statement of the mapping — a column's frames are a function of the PLATE's
-// viewport and width and that column's index, never of whatever window happens
-// to be drawing it. It also keeps partial renders correct by construction if
-// one is ever reintroduced (a partial render that renormalized a viewport of
-// its own across its own width would not reproduce these endpoints, and the
-// disagreement would show as a seam — the defect that retired the last one).
+// THE COLUMN MAPPING BASIS — the plate's viewport start, the PAINTER's
+// samples-per-pixel, and the plate width.
+//
+// Columns are mapped on THE AUTHORING LATTICE, not by interpolating between
+// integer viewport endpoints. `spp` is painter_samples_per_pixel's value (its
+// one owner) — the very q that clamp_viewport_start snaps the viewport onto, so
+// every RESTING viewport is a lattice point grid(k) = nearbyint(k*q). The
+// renderer recovers that k and maps global column c to the display-domain edge
+//     edge(c) = (k0 + c) * spp,   k0 = nearbyint(vp_start / spp)
+// which, fed through the renderer's existing nearbyint, is literally
+// clamp_viewport_start's own grid(k0 + c). Recovering k0 uses the same
+// expression the snap itself uses to produce the rest, so the two agree by
+// construction rather than by coincidence.
+//
+// WHY IT MUST BE THE LATTICE (the shimmer fix). Interpolating edges as
+// vp_start + span*c/W from integer endpoints gives each column a rounding
+// residual that CHANGES when the viewport moves. A one-pixel pan therefore did
+// not hand each column its neighbour's exact span: nearbyint ties flipped,
+// pyramid-bin membership flipped with them, extrema jumped, and the tip
+// segments amplified every flip into both neighbours — two screenshots one
+// alt+drag pixel apart differed in most of their columns. On the lattice a pan
+// by n pixels moves k0 by exactly n, so column c simply becomes what column c+n
+// was: same k0+c, therefore the same double, therefore the same nearbyint, the
+// same bins and the same extrema. Bit-identical shifted pixels, in both views —
+// in target view the lattice lives in the display domain and the map consumes
+// the same doubles.
+//
+// Mid-gesture a viewport can sit OFF the lattice; k0 then quantizes the render
+// to the nearest lattice rest, at most half a column of display quantization
+// while the drag moves, healing exactly when it comes to rest. That is the
+// architect's smooth-movement ruling, and Ableton pans by whole columns too.
 struct WaveformBasis {
-    long long vp_start   = 0;   // full-plate viewport start, display domain
-    long long vp_end     = 0;   // full-plate viewport end, display domain
-    int       full_width = 0;   // full-plate column count = mapping denominator
+    long long vp_start   = 0;   // plate viewport start, display domain
+    double    spp        = 0.0; // painter_samples_per_pixel — the lattice step
+    int       full_width = 0;   // full-plate column count
 };
+
 
 // Draws one channel's waveform into `area`, which holds the `area.w` columns
 // starting at GLOBAL column `col0` — i.e. the column sub-range [col0,
@@ -622,9 +641,13 @@ struct WaveformBasis {
 // than kThinIntervalPx (1.0 row, tunable) apart, i.e. it has real envelope mass:
 // opaque rows between the tips, with the two boundary rows taking FRACTIONAL
 // COVERAGE (row floor(yt) gets floor(yt)+1-yt, row floor(yb) gets
-// yb-floor(yb)). A THIN column has no interior to fill and its two tip segments
-// collapse onto each other into a single centre line — which at spp 1-8, where
-// nearly every column is thin, is the whole rendering and exactly the
+// yb-floor(yb)). A THIN column has no interior to fill, so its two tip segments
+// ARE its whole rendering: they stay separate and render the subpixel extent as
+// a soft partial-coverage BAND — which is the honest antialiasing of a feature
+// narrower than a pixel, and the look the arc was after. They land on the same
+// centre line only at exactly ZERO extent. The never-fade floor is unaffected
+// either way, since it comes from each segment's endpoint units. At spp 1-8
+// nearly every column is thin, so this band IS the rendering there — exactly the
 // thin-signal material the old bar-chart look was worst on. That is the only
 // thing the tall/thin distinction still decides: whether an interior is filled.
 //

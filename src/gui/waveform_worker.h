@@ -36,6 +36,10 @@ struct WaveformJob {
     // are updated from these AT THE COMPLETION SWAP, not at dispatch.
     int64_t   vp_start         = 0;
     int64_t   vp_end           = 0;
+    // The painter's samples-per-pixel, captured on the GUI thread with the rest
+    // of the geometry: the render maps columns on the authoring lattice this
+    // defines, and the worker must not re-derive it from live state.
+    double    painter_spp      = 0.0;
     int       area_w           = 0;
     int       area_h           = 0;
     bool      target           = false;
@@ -175,5 +179,5 @@ void render_waveform_to_cache_surface(
     int inset_px,
     const GuiAudio& audio,
     int64_t vp_start,
-    int64_t vp_end,
+    double  painter_spp,
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null);

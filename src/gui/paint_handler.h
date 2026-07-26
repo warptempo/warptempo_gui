@@ -142,6 +142,7 @@ struct WaveformCache {
     bool      supersede             = false;
     int64_t   supersede_vp_start    = 0;
     int64_t   supersede_vp_end      = 0;
+    double    supersede_painter_spp = 0.0;  // the lattice q, like the job's
     int       supersede_area_w      = 0;
     int       supersede_area_h      = 0;
     int       supersede_inset_px    = 0;   // GUI-captured font-dependent inset
@@ -328,6 +329,12 @@ private:
     struct WaveformRenderInputs {
         int64_t  vp_start      = 0;
         int64_t  vp_end        = 0;
+        // The PAINTER's samples-per-pixel (painter_samples_per_pixel, the one
+        // owner) — the same q clamp_viewport_start snaps the viewport onto. The
+        // renderer needs the exact double, not a re-derivation from vp_end -
+        // vp_start, because the authoring lattice is defined in terms of it.
+        // vp_end above stays: it is a FINGERPRINT input and unrelated to this.
+        double   painter_spp   = 0.0;
         int      area_w        = 0;
         int      area_h        = 0;
         // Font-dependent waveform inset (waveform_inset_px()), captured on the

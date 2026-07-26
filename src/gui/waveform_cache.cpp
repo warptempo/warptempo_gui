@@ -41,7 +41,7 @@ void render_waveform_to_cache_surface(
     int inset_px,
     const GuiAudio& audio,
     int64_t vp_start,
-    int64_t vp_end,
+    double  painter_spp,
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null) {
     if (!dest || area_w <= 0 || area_h <= 0) return;
 
@@ -81,7 +81,7 @@ void render_waveform_to_cache_surface(
     const GuiRect ch0{0, cache_area.y, cache_area.w, ch_h};
     const GuiRect ch1{0, cache_area.y + ch_h, cache_area.w, ch_h};
     // The full render IS the basis: global column 0 at the plate's own width.
-    const WaveformBasis basis{vp_start, vp_end, area_w};
+    const WaveformBasis basis{vp_start, painter_spp, area_w};
     render_waveform(dest, ch0, /*col0=*/0, audio, 0,
                     basis, kWaveform,
                     warp_frame_map_or_null);
@@ -113,6 +113,9 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     if (area.w <= 0 || area.h <= 0) return in;
 
     const double  spp      = current_samples_per_pixel(app, audio);
+    // The PAINTER's q — the lattice the viewport snaps onto and the renderer
+    // maps columns on. Distinct from `spp` above, which only derives vp_end.
+    const double  painter_q = painter_samples_per_pixel(app, audio, area);
     const int64_t vp_start = app.viewport_start_sample;
     const int64_t vp_end   = viewport_end_sample(vp_start, spp, area.w);
     const int     sr       = audio.sample_rate();
@@ -131,6 +134,7 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
 
     in.vp_start      = vp_start;
     in.vp_end        = vp_end;
+    in.painter_spp   = painter_q;
     in.area_w        = area.w;
     in.area_h        = area.h;
     in.inset_px      = waveform_inset_px();
@@ -208,6 +212,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.supersede             = true;
         wf_cache.supersede_vp_start    = in.vp_start;
         wf_cache.supersede_vp_end      = in.vp_end;
+        wf_cache.supersede_painter_spp = in.painter_spp;
         wf_cache.supersede_area_w      = in.area_w;
         wf_cache.supersede_area_h      = in.area_h;
         wf_cache.supersede_inset_px    = in.inset_px;
@@ -235,6 +240,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     WaveformJob job;
     job.vp_start       = in.vp_start;
     job.vp_end         = in.vp_end;
+    job.painter_spp    = in.painter_spp;
     job.area_w         = in.area_w;
     job.area_h         = in.area_h;
     job.inset_px       = in.inset_px;
@@ -345,6 +351,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         WaveformJob job;
         job.vp_start       = wf_cache.supersede_vp_start;
         job.vp_end         = wf_cache.supersede_vp_end;
+        job.painter_spp    = wf_cache.supersede_painter_spp;
         job.area_w         = sw;
         job.area_h         = sh;
         job.inset_px       = wf_cache.supersede_inset_px;
@@ -535,7 +542,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
         wf_cache.surface,
         in.area_w, in.area_h, in.inset_px,
         *in.audio,
-        in.vp_start, in.vp_end,
+        in.vp_start, in.painter_spp,
         in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
 
     // Publish the displayed fingerprint NOW so the flag rebuild at
