@@ -623,8 +623,12 @@ struct WaveformBasis {
 // for a full render it is the offscreen column just left of the viewport. At the
 // song wall the halo has no span to the left, so it is EMPTY and column col0
 // goes unbridged on its left. Because column 0 is always bridged against an
-// offscreen halo rather than left deliberately unbridged, a pan's memmoved
-// columns stay valid by construction and need no direction-specific repair.
+// offscreen halo rather than left deliberately unbridged, this one rule serves
+// full renders, strip renders, and the pan's boundary-column repair alike —
+// each just names the col0 it wants re-rendered. It does NOT by itself make a
+// panned plate whole: the pan's integer memmove leaves one reused column whose
+// bridge predecessor was discarded or replaced, and the caller repairs that
+// column by re-rendering it (see pan_waveform_incremental).
 //
 // THE WRITER: this function does NOT draw through cairo. It writes `dest`'s
 // ARGB32 pixel words directly, which is why it takes the surface rather than a
@@ -636,9 +640,13 @@ struct WaveformBasis {
 // A zero-coverage boundary row writes nothing.
 //
 // THE THIN-INTERVAL OPAQUE SPINE: when yb-yt <= 1.0 the column instead paints
-// exactly ONE fully opaque row at the rounded interval centre. That preserves
-// today's silence/flat-material look (a centre line that can never fade out or
-// vanish) and, because any interval wider than 1px necessarily spans two or
+// exactly ONE fully opaque row — the row CONTAINING the interval's centre,
+// i.e. floor(centre), NOT a round-to-nearest (which would pick the neighbouring
+// row whenever the centre sits in a row's upper half; the implementation
+// comment works the case through). That keeps silence/flat material at a centre
+// line that can never fade out or vanish, and it is a deliberate one-row
+// correction to the pre-writer behaviour, pending the labwc pass. Because any
+// interval wider than 1px necessarily spans two or
 // more distinct rows, it also means the fractional path can never emit a
 // coincident top/bottom write — the coincident-edge case is discharged by
 // construction rather than by a combining rule.

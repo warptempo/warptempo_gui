@@ -74,6 +74,16 @@ public:
     // global estimate therefore understates a compressed column's true span by
     // the same factor. Span is a double so a caller can pass the exact
     // fractional mapped width rather than a rounded one.
+    //
+    // THE RESULTING PER-COLUMN READ BOUND, per channel:
+    //   - a cached level reads AT MOST 5 pairs. The level is chosen so
+    //     stride <= span < kReductionFactor*stride, and get_peak_range expands
+    //     to whole bins, so it touches ceil(span/stride)+1 <= 5 of them.
+    //   - raw (level 0) reads AT MOST 16 samples — one more than the finest
+    //     stride, NOT one less. Raw is selected for a span strictly below 16,
+    //     but the caller rounds the two endpoints INDEPENDENTLY, which can
+    //     widen a sub-16 float span to a 16-sample integer range (0.49 -> 16.48
+    //     is a width of 15.99 that rounds to [0, 16)).
     int level_for_span(double span_samples) const;
 
     // Returns (min, max) over source-sample indices [start_sample, end_sample)

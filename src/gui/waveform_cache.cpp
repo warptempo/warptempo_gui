@@ -662,8 +662,12 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
 // (render_waveform maps column i -> vp_start + spp*i, then target->source via
 // the warp_frame_map), and the warp_frame_map is invariant across a pan (marker/scale edits
 // rebuild it and stay on the worker path, caught by the fp_warp_frame_map_hash gate
-// below). So a uniform pixel shift is exactly as correct in target view as in
-// source view.
+// below). So a uniform pixel shift is no less correct in target view than in
+// source view — both carry the SAME residual, and neither is exact: delta_px is
+// rounded, so reused columns sit a sub-pixel offset from where this basis would
+// place them (see the boundary-column repair and the approximation note at the
+// strip render). Target view does not add error of its own here; it inherits
+// this one, which the next full render resolves.
 //
 // This is an optimization layered over the worker backstop: every exit that is
 // not a clean shift falls back to the worker (maybe_enqueue) or a synchronous
@@ -784,8 +788,27 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
     const int surf_h     = cairo_image_surface_get_height(wf_cache.surface);
     if (!data) { fall_back(); return; }
 
+    // THE BOUNDARY-COLUMN BRIDGE REPAIR. The memmove is an INTEGER translation
+    // (delta_px is rounded), so a reused column's stored bridge was computed
+    // against a predecessor at the OLD basis. For interior reused columns that
+    // is the standing sub-pixel approximation — the column and its predecessor
+    // moved together, so the block stays internally coherent. But at the seam
+    // the predecessor is not merely offset, it is GONE:
+    //   - later-audio pan  (delta_px > 0): reused new column 0 was bridged
+    //     against a column that has scrolled off the plate entirely;
+    //   - earlier-audio pan (delta_px < 0): the first reused column right of the
+    //     fresh strip is still bridged against the OLD offscreen halo, while the
+    //     column now painted to its left is the strip's freshly rendered last
+    //     column.
+    // Either way one painted column's bridge points at something other than the
+    // column actually beside it, exactly where the strip's fresh pixels abut the
+    // reused ones — the seam bridging exists to prevent. So that ONE column is
+    // re-rendered at the new basis: on an earlier-audio pan by widening the left
+    // strip one column into the reused region, on a later-audio pan by a second
+    // one-column strip render at plate column 0 (the two are not adjacent there).
     int strip_x = 0;
     int strip_w = 0;
+    int repair_x = -1;   // later-audio pan only; the widen covers the other arm
     if (delta_px > 0) {
         const int shift = delta_px;
         const size_t move_bytes =
@@ -796,6 +819,9 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
         }
         strip_x = plate_w - shift;
         strip_w = shift;
+        // Column 0 is always reused here (shift < plate_w by the over-a-window
+        // fallback above), and never adjacent to the right-edge strip.
+        repair_x = 0;
     } else {
         const int shift = -delta_px;
         const size_t move_bytes =
@@ -806,6 +832,10 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
         }
         strip_x = 0;
         strip_w = shift;
+        // The repair column sits immediately right of the strip, so it costs one
+        // extra column on the same render rather than a second pass. shift <
+        // plate_w, so the widened strip still fits the plate.
+        if (strip_w < plate_w) ++strip_w;
     }
     cairo_surface_mark_dirty(wf_cache.surface);
 
@@ -815,18 +845,26 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
     // with strip_x as the global column offset, so the strip columns map to the
     // identical frames a full render would produce.
     //
-    // WHY THE MEMMOVED COLUMNS STAY VALID UNDER BRIDGING: a painted column
-    // encodes its own raw extrema bridged against its LEFT NEIGHBOUR's raw
-    // extrema, and a pan translates both together — the pair sits at the same
-    // relative offset after the shift, so every reused column's dependency is
-    // still the column now to its left. The one column whose left neighbour
-    // changes is the strip's first, and render_waveform's left halo re-reads
-    // exactly that neighbour's sample span. Nothing reads painted pixels back,
-    // so the bridge survives the memmove by construction and needs no
-    // direction-specific repair pass. (Reused pixels still carry the standing
-    // sub-pixel pan approximation — delta_px is a rounded integer — which the
-    // next full render resolves; bridging neither adds to nor is confused by
-    // that, since it is a property of the pixels, not of the dependency.)
+    // HOW THE MEMMOVED COLUMNS STAND UNDER BRIDGING. A painted column encodes
+    // its own raw extrema bridged against its LEFT NEIGHBOUR's raw extrema, and
+    // a pan translates both together, so an interior reused column and the
+    // predecessor its bridge referenced keep the same relative position: the
+    // reused block stays internally coherent, carrying the standing sub-pixel
+    // pan approximation (delta_px is rounded) in its pixel CONTENT, which the
+    // next full render resolves. Nothing reads painted pixels back, so the
+    // memmove itself cannot corrupt a bridge.
+    //
+    // What the translation does NOT preserve is the one boundary column whose
+    // predecessor was discarded or replaced — repaired above by re-rendering
+    // that column at the new basis (widened strip, or the second one-column
+    // render below). Scope of the repair, precisely: the REPAIRED column's
+    // bridge is now identical to what a full render at this basis computes,
+    // because it is rendered by that same code against the same basis and halo.
+    // It does not make the whole plate full-render-identical — the other reused
+    // columns keep the standing approximation in both their extrema and their
+    // predecessor's, and the fresh/reused junction still meets across two bases.
+    // What it buys is that no painted column bridges against a predecessor that
+    // is not the column beside it, which is the case bridging exists to prevent.
     render_waveform_strip_to_cache_surface(
         wf_cache.surface,
         in.area_w, in.area_h,
@@ -834,6 +872,20 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
         *in.audio,
         in.vp_start, in.vp_end,
         in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
+
+    // The later-audio arm's repair column (plate column 0) is not adjacent to
+    // the right-edge strip, so it takes its own one-column render. Same basis
+    // and the same global-column offset rule, so its left halo is the offscreen
+    // column just left of the new viewport — exactly a full render's column 0.
+    if (repair_x >= 0) {
+        render_waveform_strip_to_cache_surface(
+            wf_cache.surface,
+            in.area_w, in.area_h,
+            repair_x, 1, in.inset_px,
+            *in.audio,
+            in.vp_start, in.vp_end,
+            in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
+    }
 
     // Advance the plate's viewport bookkeeping. fp_vp_start / disp_spp key the
     // live dim composite, markers, flags, and the cursor; pending_fp_* mirrors

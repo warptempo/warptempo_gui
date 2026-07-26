@@ -92,14 +92,19 @@ constexpr float    kQuantScale            = 32767.0f;
 constexpr float    kLevel1Share           = 0.95f;
 
 static_assert(kStrides[0] > 0, "finest stride must be positive");
-static_assert(kStrides[kNumLevels - 1] ==
-                  kStrides[0] * [] {
-                      int m = 1;
-                      for (int i = 1; i < kNumLevels; ++i) m *= kReductionFactor;
-                      return m;
-                  }(),
-              "kStrides must be kStrides[0] scaled by kReductionFactor per level "
-              "— the fold builds each level from the previous one");
+// EVERY adjacent rung, not just the endpoints: the builder folds level L from
+// level L-1 over exactly kReductionFactor bins and then labels the result with
+// the explicit kStrides[L], so any rung that is not its predecessor times the
+// reduction factor would ship data whose real stride disagrees with its own
+// header. Checking only first-vs-last would let an intermediate edit (say 64 ->
+// 80, endpoints untouched) through.
+static_assert([] {
+    for (int L = 1; L < kNumLevels; ++L) {
+        if (kStrides[L] != kStrides[L - 1] * kReductionFactor) return false;
+    }
+    return true;
+}(), "each kStrides rung must be its predecessor times kReductionFactor — the "
+     "fold builds every level from the previous one");
 
 inline int16_t quantize_f32(float v) {
     if (v < -1.0f) v = -1.0f;
@@ -590,8 +595,9 @@ int GuiAudio::level_for_span(double span_samples) const {
     if (nl <= 1) return 0;
     // Coarsest cached level whose stride still fits inside the span; below the
     // finest stride there is no useful cached level and the raw samples win.
-    // Walking from the top means the first fit is the coarsest, so a column
-    // never scans more than kReductionFactor bins' worth of pairs.
+    // Walking from the top means the first fit is the coarsest, which is what
+    // holds a column to at most 5 pair reads (or at most 16 raw samples below
+    // the finest stride — see the bound derivation at the declaration).
     int level = 0;
     for (int L = kNumLevels - 1; L >= 0; --L) {
         if (span_samples >= static_cast<double>(kStrides[L])) {
