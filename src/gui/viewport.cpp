@@ -303,10 +303,9 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     // discrete jump: render the plate synchronously and publish the displayed
     // fingerprint now so the top-strip flags and the playhead column do not
     // jump a frame ahead of the waveform. The pyramid bounds per-column cost at
-    // every level, so a full render is O(area_width) at any zoom (bounded
-    // outright in source view, and in target view for any column under the
-    // ladder's reach — see the three-part bound at GuiAudio::level_for_span);
-    // coalesced
+    // every level — unconditionally, in both views (the bound and its proof
+    // live at GuiAudio::level_for_span) — so a full render is O(area_width) at
+    // any zoom; coalesced
     // pointer detents resolve to one apply_zoom_change per frame, so this is one
     // sync render per frame, not per detent. zoom_in / zoom_out / zoom_steps
     // delegate here, so they are covered without a separate kick.

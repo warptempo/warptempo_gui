@@ -457,10 +457,9 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 //      They arrive at a bounded rate: pointer detents
 //      coalesce to one action per pointer frame, and key repeat is compositor-
 //      throttled, so a full inline render per event is affordable. The pyramid
-//      bounds per-column cost, so the render is O(area_width) at any zoom level
-//      — outright in source view, and in target view for any column within the
-//      ladder's reach, past which reads degrade gracefully rather than jumping
-//      a cost class (the three-part bound at GuiAudio::level_for_span).
+//      bounds per-column cost unconditionally, in both views (the bound and its
+//      proof live at GuiAudio::level_for_span), so the render is O(area_width)
+//      at any zoom level.
 //
 //      PAN JOINED THIS ROUTE (architect 2026-07-26): "i prefer smooth movement
 //      (ie, no special handling for during movement and at-standstill — ableton

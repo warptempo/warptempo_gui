@@ -311,7 +311,9 @@ void render_waveform(cairo_surface_t* dest,
     // the legal local slope reaches 16x (tempo 4 * marker scale 2 * settings
     // scale 2) — so a tempo-compressed column could read a far finer level than
     // its span warranted, up to hundreds of samples in one column. Selecting
-    // from the column's own span restores the intended per-column bound and is
+    // from the column's own span restores the intended per-column bound (<=5
+    // pairs or <=16 raw samples, unconditionally — the statement and its proof
+    // live at GuiAudio::level_for_span) and is
     // strictly MORE accurate than the global estimate it replaces.
     //
     // Consequence, accepted: where the map slope crosses a stride threshold,

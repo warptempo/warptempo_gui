@@ -20,7 +20,7 @@ public:
     // them — see num_levels()). The strides themselves live in exactly one
     // place, audio.cpp's kStrides; this is the count both that list and the
     // storage array below are sized by, so the two cannot drift.
-    static constexpr int kCacheLevels = 9;
+    static constexpr int kCacheLevels = 13;
 
     // Implementation detail of the peak cache. Public only so the cache
     // reader/writer free functions in audio.cpp can name the type.
@@ -75,38 +75,23 @@ public:
     // the same factor. Span is a double so a caller can pass the exact
     // fractional mapped width rather than a rounded one.
     //
-    // THE RESULTING PER-COLUMN READ BOUND, per channel. The shape of the bound
-    // is: a level is chosen so stride <= span < kReductionFactor*stride, and
-    // get_peak_range expands to whole bins, so it touches ceil(span/stride)+1
-    // <= 5 pairs; below the finest stride, raw reads AT MOST 16 samples — one
-    // more than that stride, NOT one less, because the caller rounds the two
-    // endpoints INDEPENDENTLY and that can widen a sub-16 float span to a
-    // 16-sample integer range (0.49 -> 16.48 is a width of 15.99 that rounds to
-    // [0, 16)). Where that shape actually holds, in three parts:
+    // THE RESULTING PER-COLUMN READ BOUND, per channel — UNCONDITIONAL, in
+    // BOTH views, for every input the loader accepts:
+    //   - a cached level reads AT MOST 5 pairs. The level is chosen so
+    //     stride <= span < kReductionFactor*stride, and get_peak_range expands
+    //     to whole bins, so it touches ceil(span/stride)+1 <= 5 of them.
+    //   - raw (level 0) reads AT MOST 16 samples — one more than the finest
+    //     stride, NOT one less. Raw is selected for a span strictly below 16,
+    //     but the caller rounds the two endpoints INDEPENDENTLY, which can
+    //     widen a sub-16 float span to a 16-sample integer range (0.49 -> 16.48
+    //     is a width of 15.99 that rounds to [0, 16)).
     //
-    //   (a) SOURCE VIEW — UNCONDITIONAL, for every input the loader accepts.
-    //       A column's span is at most total_frames/width, and the worst valid
-    //       case (a near-RIFF-limit 16-bit stereo source at the 640 px window
-    //       floor, ~1.68M frames per column) sits under FOUR TIMES the top
-    //       stride, which is the quantity that has to exceed it — not the top
-    //       stride itself. See the reach derivation at kStrides.
-    //
-    //   (b) TARGET VIEW — holds for any column whose MAPPED source span is at
-    //       most kReductionFactor x the top stride (~4.19M frames). That covers
-    //       real material with margin: a 13.2M-frame source at tempo 4, with
-    //       the local slope concentrated at its 16x maximum, yields ~1.32M
-    //       frames in the worst column at 640 px — roughly a 3x margin.
-    //
-    //   (c) BEYOND THAT the top rung SATURATES and reads grow linearly, about
-    //       span/1048576 + 1 pairs. Target length is not RIFF-bounded the way
-    //       source length is (tempo multiplies it), so a legal but synthetic
-    //       case can exceed the premise — a ~60M-frame source at tempo 4 with
-    //       16x concentration puts ~6M source frames in one column, seven pairs
-    //       instead of five. Output stays correct and the growth is graceful,
-    //       and this is ACCEPTED rather than designed out: no finite ladder
-    //       makes the target-view claim unconditional, so extending further
-    //       would be engineering against synthetic adversaries instead of
-    //       measured material.
+    // It holds in TARGET view too, with no scoping or tempo caveat, because
+    // get_peak_range clamps end_sample to total_frames_: no column can read
+    // past the source however long tempo makes the target timeline or however
+    // sharply the local slope concentrates. The source is RIFF-bounded, and the
+    // ladder's top rung is sized so that four times it exceeds that bound — see
+    // the reach derivation at kStrides for the arithmetic.
     int level_for_span(double span_samples) const;
 
     // Returns (min, max) over source-sample indices [start_sample, end_sample)

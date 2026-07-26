@@ -58,9 +58,9 @@ namespace {
 
 constexpr char     kCacheMagic[8]         = "WTPEAKS";
 // Bumped whenever the ladder changes shape: v5 densified it to powers of four,
-// v6 extended it to nine rungs. An older file therefore fails the version
-// compare and takes the ordinary STALE path — logged, rebuilt, never partially
-// accepted and never surfaced to the user as an error.
+// v6 extended it to nine rungs, v7 to thirteen. An older file therefore fails
+// the version compare and takes the ordinary STALE path — logged, rebuilt,
+// never partially accepted and never surfaced to the user as an error.
 //
 // THE BUMP IS LOAD-BEARING, not bookkeeping: the version compare runs BEFORE
 // the level-count compare in try_load_cache, so an old file exits through
@@ -70,10 +70,11 @@ constexpr char     kCacheMagic[8]         = "WTPEAKS";
 //
 // The rebuild writes a larger sidecar (the pair count is ~1/16 + 1/64 + ... of
 // the raw frames instead of ~1/32 + ...): architect-granted 2026-07-26, "ok to
-// bump cache file size", the cost of the smoother zoom ladder. The three rungs
-// v6 added cost almost nothing on top — each is a quarter of the one before, so
-// the whole tail past 16384 is under 0.03% of the raw frame count.
-constexpr uint16_t kCacheVersion          = 6;
+// bump cache file size", the cost of the smoother zoom ladder. Every rung past
+// the first costs a quarter of the one before it, so the deep tail is free in
+// practice — on 13.2M-frame material the four rungs v7 added hold about 4, 1, 1
+// and 1 pairs.
+constexpr uint16_t kCacheVersion          = 7;
 constexpr int      kStreamFramesPerChunk  = 65536;
 // Bounds the owner-discriminator string so a corrupt header is a cheap cache
 // miss rather than a memory-pressure event.
@@ -86,26 +87,22 @@ constexpr uint32_t kMaxOwnerBytes         = 4096;
 // first folds from the PREVIOUS level by kReductionFactor, so the ratio is the
 // reduction factor by construction.
 //
-// WHY IT REACHES 1048576 — the top rung is derived, not picked. A span stays
-// inside the <=5-pair read bound while it is under kReductionFactor x the top
-// stride = 4 x 1048576 ~= 4.19M frames (that PRODUCT is the quantity that must
-// exceed the worst span, not the top stride alone).
+// WHY IT REACHES 268435456 — the top rung is derived, not picked, and it closes
+// the per-column read bound for EVERY accepted input in BOTH views.
 //
-// SOURCE VIEW is covered unconditionally: a column spans at most
-// total_frames/width, and the worst valid input — a near-RIFF-limit 16-bit
-// stereo source, ~1.07G frames (4 GiB / 4 bytes per frame), at the 640 px
-// defensive window floor (clamp_dims) — is ~1.68M frames per column, well under
-// 4.19M.
+// A span stays inside the <=5-pair bound while it is under kReductionFactor x
+// the top stride (that PRODUCT is what must exceed the worst span, not the top
+// stride alone): 4 x 268435456 = 1073741824 = 2^30 frames.
 //
-// TARGET VIEW cannot be covered by any finite ladder, because tempo multiplies
-// the target timeline and target length is not RIFF-bounded the way source
-// length is. The bound holds for every column whose MAPPED source span is under
-// 4.19M, which carries real material with room (a 13.2M-frame source at tempo 4
-// with the slope concentrated at its 16x maximum yields ~1.32M in the worst
-// column at 640 px, ~3x margin); past that the top rung saturates and reads grow
-// linearly at about span/1048576 + 1 pairs. ACCEPTED, not designed out —
-// chasing it would mean sizing the ladder for synthetic adversaries rather than
-// measured material. See the three-part statement at level_for_span.
+// The worst span any read can present is bounded by the SOURCE total, because
+// get_peak_range CLAMPS end_sample to total_frames_ before touching a level. So
+// however long a target timeline grows under tempo, and however sharply the
+// local slope concentrates, a column can never read past the source. And the
+// source is RIFF-bounded: the format accepting the most frames per byte is
+// 16-bit stereo at 4 bytes/frame, giving under 2^30 frames inside the 4 GiB
+// ceiling (strictly under, once headers are counted). Worst span < 2^30 = 4 x
+// top stride, hence ceil(span/top) <= 4 and reads stay <= 5 pairs — no view
+// scoping, no tempo caveat, no saturation case.
 //
 // THE STANDING NEXT KNOB: a level switch still changes both quantization and
 // bin alignment, so a crossing can still pop — 4x makes it small, it does not
@@ -115,7 +112,8 @@ constexpr uint32_t kMaxOwnerBytes         = 4096;
 // doubles the peak reads and the denser ladder may well be enough.
 constexpr int      kNumLevels             = GuiAudio::kCacheLevels;
 constexpr int32_t  kStrides[kNumLevels]   = { 16, 64, 256, 1024, 4096, 16384,
-                                              65536, 262144, 1048576 };
+                                              65536, 262144, 1048576, 4194304,
+                                              16777216, 67108864, 268435456 };
 constexpr int      kReductionFactor       = 4;
 constexpr float    kQuantScale            = 32767.0f;
 // Reserve the first 95% of the progress budget for the dominant level-1 pass;
