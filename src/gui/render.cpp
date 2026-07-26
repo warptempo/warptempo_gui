@@ -250,7 +250,7 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h) {
     cairo_restore(cr);
 }
 
-void render_waveform(cairo_t* cr,
+void render_waveform(cairo_surface_t* dest,
                      GuiRect area,
                      int col0,
                      const GuiAudio& audio,
@@ -258,12 +258,30 @@ void render_waveform(cairo_t* cr,
                      const WaveformBasis& basis,
                      GuiColor color,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map) {
+    if (!dest) return;
     if (area.w <= 0 || area.h <= 2) return;
     if (basis.full_width <= 0) return;
     if (basis.vp_end <= basis.vp_start) return;
 
     const int num_levels = audio.num_levels();
     if (num_levels <= 0) return;
+
+    // ARGB32 ONLY: the writer stores 32-bit premultiplied words, so any other
+    // format would be silently misinterpreted. Both plate surfaces are created
+    // CAIRO_FORMAT_ARGB32 (waveform_cache.cpp); this is the guard that keeps
+    // that true. Geometry comes from the surface itself — the stride accessor,
+    // never width*4, since cairo is free to pad rows.
+    if (cairo_image_surface_get_format(dest) != CAIRO_FORMAT_ARGB32) return;
+    // Flush BEFORE the first CPU access so any pending cairo drawing (the
+    // caller's CLEAR of the columns this call regenerates) has landed in the
+    // buffer. Paired with the cairo_surface_mark_dirty after the last write.
+    cairo_surface_flush(dest);
+    unsigned char* const surf_data = cairo_image_surface_get_data(dest);
+    if (!surf_data) return;
+    const int surf_stride = cairo_image_surface_get_stride(dest);
+    const int surf_w      = cairo_image_surface_get_width(dest);
+    const int surf_h      = cairo_image_surface_get_height(dest);
+    if (surf_w <= 0 || surf_h <= 0) return;
 
     // The mapping basis is the FULL plate's, never this call's sub-range: the
     // denominator is basis.full_width and columns are indexed globally from
@@ -291,19 +309,49 @@ void render_waveform(cairo_t* cr,
     const double y_center = area.y + area.h * 0.5;
     const double half_h   = area.h * 0.5;
 
-    // Each column becomes a 1px-wide integer-row rectangle so the plate is
-    // binary: every pixel is either the color at full alpha or fully
-    // transparent, no antialiased tips. Per-column min/max extents are raw and
-    // unsmoothed apart from the bridge below, which extends a column's interval
-    // to meet its neighbour's so the silhouette reads as one connected envelope
-    // instead of disjoint one-column bars; only the y endpoints are snapped to
-    // whole pixel rows.
-    struct ColRect { int x, y0, y1; };
-    std::vector<ColRect> rects;
-    rects.reserve(static_cast<size_t>(area.w));
+    // Each column is written straight into the plate's pixel words: opaque
+    // interior rows, FRACTIONAL COVERAGE on the two silhouette boundary rows,
+    // and a one-row opaque spine when the interval is too thin to have an
+    // interior. Per-column min/max extents are raw and unsmoothed apart from the
+    // bridge below, which extends a column's interval to meet its neighbour's so
+    // the silhouette reads as one connected envelope instead of disjoint
+    // one-column bars.
+    //
+    // THE PREMULTIPLIED WORD TABLE: one ink colour per render, so the 256
+    // possible coverage bytes have only 256 possible words. cairo ARGB32 is a
+    // native-endian 32-bit quantity — (A<<24)|(R<<16)|(G<<8)|B written as a
+    // uint32_t word is correct on any byte order, which indexing bytes would
+    // not be. Channels are PREMULTIPLIED by the coverage, as ARGB32 requires.
+    // Entry 255 is the opaque interior word; entry 0 is never written (a
+    // zero-coverage row writes nothing at all).
+    const double ink_r = color.r * 255.0;
+    const double ink_g = color.g * 255.0;
+    const double ink_b = color.b * 255.0;
+    uint32_t cov_word[256];
+    for (int a = 0; a < 256; ++a) {
+        const double f = static_cast<double>(a) / 255.0;
+        cov_word[a] =
+            (static_cast<uint32_t>(a) << 24) |
+            (static_cast<uint32_t>(std::lround(f * ink_r)) << 16) |
+            (static_cast<uint32_t>(std::lround(f * ink_g)) <<  8) |
+            (static_cast<uint32_t>(std::lround(f * ink_b)));
+    }
+    const uint32_t opaque_word = cov_word[255];
 
-    const int y_lo = area.y;
-    const int y_hi = area.y + area.h;
+    // Row bounds: this channel's band, intersected with the surface.
+    int y_lo = area.y;
+    int y_hi = area.y + area.h;          // exclusive
+    if (y_lo < 0)      y_lo = 0;
+    if (y_hi > surf_h) y_hi = surf_h;
+    if (y_hi <= y_lo) return;
+
+    // Write one pixel word. Row/column bounds are already established by the
+    // callers below; this is the single store site.
+    const auto put = [&](int x, int y, uint32_t word) {
+        auto* px = reinterpret_cast<uint32_t*>(
+            surf_data + static_cast<size_t>(y) * surf_stride);
+        px[x] = word;
+    };
 
     // Global column c's display-domain left edge. ONE expression, shared by
     // full and strip renders (see WaveformBasis) — the strip's column c and the
@@ -382,17 +430,67 @@ void render_waveform(cairo_t* cr,
             hi_val = std::max(hi_val, prev_raw_min);
         }
 
-        int y0 = static_cast<int>(std::lround(y_center - hi_val * half_h));
-        int y1 = static_cast<int>(std::lround(y_center - lo_val * half_h));
-        // Any signal keeps at least one pixel.
-        if (y1 <= y0) y1 = y0 + 1;
-        // Clamp to the waveform area's pixel rows.
-        if (y0 < y_lo) y0 = y_lo;
-        if (y0 > y_hi) y0 = y_hi;
-        if (y1 < y_lo) y1 = y_lo;
-        if (y1 > y_hi) y1 = y_hi;
+        // The FLOAT row interval — no integer snap. +value is up the screen, so
+        // hi_val gives the TOP edge and lo_val the bottom.
+        double yt = y_center - hi_val * half_h;
+        double yb = y_center - lo_val * half_h;
+        if (yt > yb) std::swap(yt, yb);
+        // Clamp to this channel's rows before any row index is derived, so a
+        // clipped interval cannot address outside the band.
+        const double row_lo = static_cast<double>(y_lo);
+        const double row_hi = static_cast<double>(y_hi);   // exclusive bound
+        if (yt < row_lo) yt = row_lo;
+        if (yb < row_lo) yb = row_lo;
+        if (yt > row_hi) yt = row_hi;
+        if (yb > row_hi) yb = row_hi;
 
-        rects.push_back({area.x + i, y0, y1});
+        const int x = area.x + i;
+        if (x >= 0 && x < surf_w) {
+            if (yb - yt <= 1.0) {
+                // THE OPAQUE SPINE: too thin to have an interior, so one fully
+                // opaque row — the row CONTAINING the interval's centre. No
+                // amount of thinness can fade this row out, which is what keeps
+                // silence and near-flat material visible.
+                //
+                // floor, not a round-to-nearest: the centre is a continuous
+                // coordinate and row r covers [r, r+1), so the row holding it is
+                // floor(centre). Rounding would pick the NEIGHBOUR whenever the
+                // centre sits in a row's upper half — e.g. the interval
+                // [30.0, 31.0), which lies exactly on row 30, has centre 30.5 and
+                // would round to 31. It also keeps this path indexing rows the
+                // same way the fractional path below does.
+                int row = static_cast<int>(std::floor((yt + yb) * 0.5));
+                if (row < y_lo)     row = y_lo;
+                if (row > y_hi - 1) row = y_hi - 1;
+                put(x, row, opaque_word);
+            } else {
+                // Wider than a pixel, so floor(yt) and floor(yb) are necessarily
+                // DIFFERENT rows — the top and bottom coverage writes can never
+                // collide, and the coincident-edge case cannot arise here.
+                const int row_t = static_cast<int>(std::floor(yt));
+                const int row_b = static_cast<int>(std::floor(yb));
+
+                // Interior: fully opaque rows strictly between the two edges.
+                int i0 = row_t + 1;
+                int i1 = row_b - 1;
+                if (i0 < y_lo)     i0 = y_lo;
+                if (i1 > y_hi - 1) i1 = y_hi - 1;
+                for (int y = i0; y <= i1; ++y) put(x, y, opaque_word);
+
+                // Top edge: the fraction of row_t that lies below yt.
+                if (row_t >= y_lo && row_t <= y_hi - 1) {
+                    const double cov = static_cast<double>(row_t + 1) - yt;
+                    const int    a   = static_cast<int>(std::lround(cov * 255.0));
+                    if (a > 0) put(x, row_t, cov_word[a < 255 ? a : 255]);
+                }
+                // Bottom edge: the fraction of row_b that lies above yb.
+                if (row_b >= y_lo && row_b <= y_hi - 1) {
+                    const double cov = yb - static_cast<double>(row_b);
+                    const int    a   = static_cast<int>(std::lround(cov * 255.0));
+                    if (a > 0) put(x, row_b, cov_word[a < 255 ? a : 255]);
+                }
+            }
+        }
 
         prev_raw_min = raw_min;
         prev_raw_max = raw_max;
@@ -400,17 +498,8 @@ void render_waveform(cairo_t* cr,
         g_prev       = g1;
     }
 
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-
-    cairo_set_source_rgb(cr, color.r, color.g, color.b);
-    for (const auto& R : rects) {
-        if (R.y1 <= R.y0) continue;
-        cairo_rectangle(cr, R.x, R.y0, 1, R.y1 - R.y0);
-    }
-    cairo_fill(cr);
-
-    cairo_restore(cr);
+    // Last CPU write is done — hand the buffer back to cairo.
+    cairo_surface_mark_dirty(dest);
 }
 
 void render_playhead(cairo_t* cr,

@@ -261,9 +261,25 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
         // Out-of-trim dim, composited live over the just-blitted
         // plate (which is trim-agnostic). The dim is the
         // kWaveformDimmed color masked through the plate surface's
-        // own alpha: opaque sample pixels are recolored — at the
+        // own alpha: fully opaque sample pixels are recolored — at the
         // exact tuned RGB, no blend — and the transparent gaps are
-        // left as canvas. ATOP would key on the WINDOW's alpha,
+        // left as canvas.
+        //
+        // THE FRACTIONAL-EDGE MIX (architect-accepted 2026-07-26): the plate's
+        // alpha is no longer binary — the silhouette's top/bottom rows carry
+        // fractional coverage from the direct writer. Such a pixel is blitted
+        // FIRST as a*waveform + (1-a)*canvas, and this pass then composites dim
+        // over that, giving a*dim + (1-a)*[a*waveform + (1-a)*canvas]. So an
+        // out-of-trim TIP pixel is a mix carrying some normal ink and reads
+        // slightly darker than a pure a*dim + (1-a)*canvas edge would. Accepted
+        // deliberately: it is sub-pixel, confined to the silhouette boundary in
+        // already-de-emphasized out-of-trim material. Opaque interiors still
+        // land exactly kWaveformDimmed and gaps stay canvas, so the only
+        // affected pixels are the fractional tips. (Exact dim edges would mean
+        // repainting the clipped region from canvas plus the plate mask instead
+        // of masking over the already-blitted normal edge — not done.)
+        //
+        // ATOP would key on the WINDOW's alpha,
         // which is already opaque post-blit, so it can't serve as the
         // sample mask and fills the whole rect solid; the plate
         // surface's alpha can. We clip to the out-of-trim rect(s) —

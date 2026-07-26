@@ -45,14 +45,18 @@ void render_waveform_to_cache_surface(
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null) {
     if (!dest || area_w <= 0 || area_h <= 0) return;
 
-    cairo_t* ccr = cairo_create(dest);
     // Clear to transparent — the waveform area's kCanvas ground shows through
-    // wherever the waveform strokes don't paint. No ground color is ever baked
+    // wherever the waveform samples don't paint. No ground color is ever baked
     // into the plate; its alpha is the sample mask the out-of-trim dim pass reads.
-    cairo_save(ccr);
-    cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);
-    cairo_paint(ccr);
-    cairo_restore(ccr);
+    // This is the LAST cairo drawing on the surface: render_waveform writes the
+    // pixel words directly, so the context is destroyed before those CPU writes
+    // begin (render_waveform still flushes defensively, per its contract).
+    {
+        cairo_t* ccr = cairo_create(dest);
+        cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);
+        cairo_paint(ccr);
+        cairo_destroy(ccr);
+    }
     // Samples draw into an inset sub-rect of the full-height cache surface:
     // inset_px clear at top and bottom (the top band holds the cursor
     // triangle; the bottom mirrors it so the waveform is centered in its area).
@@ -63,7 +67,7 @@ void render_waveform_to_cache_surface(
     // the cache fingerprint and blit are unaffected — the inset is
     // a property of sample drawing only.
     const int inset_h = area_h - 2 * inset_px;
-    if (inset_h <= 0) { cairo_destroy(ccr); return; }
+    if (inset_h <= 0) return;
     const GuiRect cache_area{0, inset_px, area_w, inset_h};
     // Stereo is structural — channels != 2 refuses at load (see file_loader) —
     // so both channels always render. No channel gap: the 1972 Krips material
@@ -80,13 +84,12 @@ void render_waveform_to_cache_surface(
     // The strip render below passes this same basis with its own col0, so the
     // two agree column-for-column.
     const WaveformBasis basis{vp_start, vp_end, area_w};
-    render_waveform(ccr, ch0, /*col0=*/0, audio, 0,
+    render_waveform(dest, ch0, /*col0=*/0, audio, 0,
                     basis, kWaveform,
                     warp_frame_map_or_null);
-    render_waveform(ccr, ch1, /*col0=*/0, audio, 1,
+    render_waveform(dest, ch1, /*col0=*/0, audio, 1,
                     basis, kWaveform,
                     warp_frame_map_or_null);
-    cairo_destroy(ccr);
 }
 
 // -- render_waveform_strip_to_cache_surface ------------------------------
@@ -114,8 +117,11 @@ void render_waveform_to_cache_surface(
 // pixels, so it is indifferent to the memmove having just moved them.
 //
 // Mirrors render_waveform_to_cache_surface's inset + stereo split, restricted
-// to the strip columns and clipped so a 1px stroke cannot bleed past the strip
-// edge into the reused pixels.
+// to the strip columns. It needs no bleed clip: render_waveform writes pixel
+// words at exactly the columns of the rect it is given, so a strip render
+// cannot touch a reused column by construction. (The cairo clip that used to
+// guard the old 1px-stroke path against bleeding out of the strip was retired
+// with the stroke; the CLEAR below keeps its own clip, which is doing real work.)
 //
 // Runs inline on the GUI thread (the strip is at most a window wide; see
 // pan_waveform_incremental's over-a-window fallback), so unlike the worker
@@ -139,25 +145,21 @@ static void render_waveform_strip_to_cache_surface(
     if (strip_w <= 0 || strip_x < 0 || strip_x + strip_w > area_w) return;
     if (vp_end_full <= vp_start_full) return;
 
-    cairo_t* ccr = cairo_create(dest);
-
-    // Clear only the strip column (full height, incl. the inset bands) so the
-    // shifted-in pixels in the rest of the plate are left intact.
-    cairo_save(ccr);
-    cairo_rectangle(ccr, strip_x, 0, strip_w, area_h);
-    cairo_clip(ccr);
-    cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);
-    cairo_paint(ccr);
-    cairo_restore(ccr);
-
-    // Re-clip for the strokes so render_waveform's 1px line width cannot bleed
-    // out of the strip into the reused columns.
-    cairo_save(ccr);
-    cairo_rectangle(ccr, strip_x, 0, strip_w, area_h);
-    cairo_clip(ccr);
+    // Clear only the strip columns (full height, incl. the inset bands) so the
+    // shifted-in pixels in the rest of the plate are left intact. This is the
+    // LAST cairo drawing on the surface — the context is destroyed before
+    // render_waveform's direct pixel writes begin.
+    {
+        cairo_t* ccr = cairo_create(dest);
+        cairo_rectangle(ccr, strip_x, 0, strip_w, area_h);
+        cairo_clip(ccr);
+        cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);
+        cairo_paint(ccr);
+        cairo_destroy(ccr);
+    }
 
     const int inset_h = area_h - 2 * inset_px;
-    if (inset_h <= 0) { cairo_restore(ccr); cairo_destroy(ccr); return; }
+    if (inset_h <= 0) return;
     // Stereo is structural — channels != 2 refuses at load (see file_loader) —
     // so both channels always render.
     const int ch_h = inset_h / 2;
@@ -167,12 +169,10 @@ static void render_waveform_strip_to_cache_surface(
     // plate's x origin is 0, so the strip's destination x and its global column
     // index are the same number.
     const WaveformBasis basis{vp_start_full, vp_end_full, area_w};
-    render_waveform(ccr, ch0, /*col0=*/strip_x, audio, 0,
+    render_waveform(dest, ch0, /*col0=*/strip_x, audio, 0,
                     basis, kWaveform, warp_frame_map_or_null);
-    render_waveform(ccr, ch1, /*col0=*/strip_x, audio, 1,
+    render_waveform(dest, ch1, /*col0=*/strip_x, audio, 1,
                     basis, kWaveform, warp_frame_map_or_null);
-    cairo_restore(ccr);
-    cairo_destroy(ccr);
 }
 
 // -- Waveform-worker dirty-detect and completion -------------------------
@@ -457,8 +457,10 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     }
 
     // Swap the pending surface into the live slot. Cairo surface ownership
-    // transfers cleanly via pointer swap; no flush needed because the
-    // worker's cairo_destroy(ccr) committed the surface fully.
+    // transfers cleanly via pointer swap; no flush needed because the worker's
+    // render already committed the surface fully — its CLEAR context was
+    // destroyed and render_waveform's direct pixel writes end in a
+    // cairo_surface_mark_dirty, so the buffer and cairo agree before the swap.
     std::swap(wf_cache.surface,        wf_cache.pending_surface);
     std::swap(wf_cache.width,          wf_cache.pending_width);
     std::swap(wf_cache.height,         wf_cache.pending_height);

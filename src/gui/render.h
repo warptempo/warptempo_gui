@@ -612,9 +612,9 @@ struct WaveformBasis {
 // only when the two intervals are disjoint and leaves overlapping ones exactly
 // as they were. Bridging is raw-to-raw (never against the previous column's
 // already-widened output), so the dependency is exactly one column deep, and it
-// runs in FLOAT value space BEFORE the y-mapping and integer snap; bridging
-// already-snapped rectangles would exaggerate the steps. The "any signal keeps
-// at least one pixel" rule still applies after snapping.
+// runs in FLOAT value space BEFORE the y-mapping; bridging already-snapped
+// rectangles would exaggerate the steps. The interval reaches the writer as
+// floats — there is no integer snap any more (see the writer contract below).
 //
 // THE LEFT HALO: because column col0 has a left neighbour that this call does
 // not draw, the render evaluates a one-column RAW halo at global column col0-1
@@ -626,12 +626,40 @@ struct WaveformBasis {
 // offscreen halo rather than left deliberately unbridged, a pan's memmoved
 // columns stay valid by construction and need no direction-specific repair.
 //
-// The plate paints uniformly in `color` — it is trim-agnostic. The
-// out-of-trim dim is NOT baked here; on_redraw paints it as a MASKED OVER
-// pass over the blitted plate (cairo_mask_surface with the plate alpha as the
-// mask — see kWaveformDimmed and compute_out_of_trim_rects), so a trim
-// set/clear/drag never re-rasterizes these pixels.
-void render_waveform(cairo_t* cr,
+// THE WRITER: this function does NOT draw through cairo. It writes `dest`'s
+// ARGB32 pixel words directly, which is why it takes the surface rather than a
+// context. Per column the bridged interval maps to a float row interval
+// [yt, yb]; interior rows are opaque and the two boundary rows take FRACTIONAL
+// COVERAGE (row floor(yt) gets floor(yt)+1-yt, row floor(yb) gets
+// yb-floor(yb)), softening the upper and lower silhouette without a general
+// antialiaser — the coverage is known exactly, so no rasterizer is involved.
+// A zero-coverage boundary row writes nothing.
+//
+// THE THIN-INTERVAL OPAQUE SPINE: when yb-yt <= 1.0 the column instead paints
+// exactly ONE fully opaque row at the rounded interval centre. That preserves
+// today's silence/flat-material look (a centre line that can never fade out or
+// vanish) and, because any interval wider than 1px necessarily spans two or
+// more distinct rows, it also means the fractional path can never emit a
+// coincident top/bottom write — the coincident-edge case is discharged by
+// construction rather than by a combining rule.
+//
+// Words are PREMULTIPLIED (coverage a gives alpha round(a*255) and channels
+// round(a*C)) and come from a 256-entry table built once per call for the one
+// ink colour; entry 255 is the opaque interior word. Writes REPLACE rather than
+// blend, which is correct and idempotent because the caller has already cleared
+// every column this call regenerates. The surface is flushed before the first
+// CPU write and marked dirty after the last, so later cairo use sees the
+// pixels.
+//
+// The plate paints uniformly in `color` — it is trim-agnostic. Its alpha is no
+// longer binary: opaque interiors, fractional silhouette edges, transparent
+// gaps. That alpha remains the out-of-trim dim's mask — on_redraw paints the dim
+// as a MASKED OVER pass over the blitted plate (cairo_mask_surface with the
+// plate alpha as the mask — see kWaveformDimmed and compute_out_of_trim_rects),
+// so a trim set/clear/drag never re-rasterizes these pixels, and a fractional
+// edge pixel out of trim reads as a MIX of normal and dim ink (recorded and
+// accepted at that pass).
+void render_waveform(cairo_surface_t* dest,
                      GuiRect area,
                      int col0,
                      const GuiAudio& audio,
