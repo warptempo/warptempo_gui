@@ -222,9 +222,10 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     //   1. Worker full render — maybe_enqueue_waveform_render
     //      dispatches a full-window render on GuiWaveformWorker,
     //      which swaps into wf_cache.surface on completion. Fires
-    //      on the on_tick backstop and for UNDRIVEN changes: resize,
-    //      the launch load, follow-scroll during playback, and
-    //      target-view warp_frame_map changes.
+    //      for UNDRIVEN changes — resize, the launch load, follow-scroll
+    //      during playback — and as the on_tick backstop for any residual
+    //      fingerprint drift (a warp_frame_map hash included). Map EDITS
+    //      themselves are user-driven and take path 2.
     //   2. Synchronous full render — force_synchronous_waveform_rebuild
     //      renders the full window inline on the GUI thread for every
     //      USER-DRIVEN viewport change: zoom, center-on-playhead, the
@@ -1269,8 +1270,9 @@ GuiPaintHandler::compute_out_of_trim_rects(const GuiRect& area) const {
     // the playheads use), NOT the live viewport: the dim is a PLATE COMPOSITE
     // (paint_waveform_plate masks it through the just-blitted plate's alpha), so
     // it must register with the plate's viewport, not the live one. During an
-    // async viewport window (follow_scroll always, the discrete-pan worker
-    // fallback) the live viewport already holds the not-yet-blitted span, so a
+    // async viewport window (follow_scroll during playback, resize — the
+    // undriven changes the worker still serves) the live viewport already holds
+    // the not-yet-blitted span, so a
     // live basis snapped the dim edge off both the plate and the trim stems until
     // publish. Trim-drag live tracking is preserved: the gesture holds the
     // viewport fixed (so the plate basis equals live), and the trim FRAMES stay

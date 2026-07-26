@@ -342,7 +342,7 @@ private:
         std::vector<WarpFrameMapSegment> warp_frame_map;
         // The audio the plate reads from: always the one process-immortal
         // source audio. Set by compute_waveform_render_inputs; routed into
-        // WaveformJob.audio and into the synchronous / pan render paths.
+        // WaveformJob.audio and into the synchronous render path.
         const GuiAudio* audio = nullptr;
         bool     valid         = false;        // false if degenerate / loading
     };

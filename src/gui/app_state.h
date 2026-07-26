@@ -1440,7 +1440,7 @@ struct AppState {
     // invalidate_region only QUEUES and nothing paints re-entrantly inside the
     // synchronous call, so the rebuild/stage still completes ahead of the
     // frame; closure dates to the
-    // worker publish joining the pan and sync writers' inline shape), so those
+    // worker publish joining the synchronous writer's inline shape), so those
     // frames commit new plate + new items together and the mirror promote at the
     // top of the committing paint agrees with the plate fp by construction. The
     // equality is NOT unconditional, though — the accepted RESIZE

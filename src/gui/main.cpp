@@ -701,9 +701,11 @@ int main(int argc, char** argv) {
     // pointer set).
     phase_reset_propagate.input = &input_handler;
 
-    // Viewport worker kick: any viewport mutation (pan/zoom/center/follow)
-    // requests the new waveform immediately rather than waiting for the next
-    // tick. maybe_enqueue_waveform_render is main-thread-safe and idempotent
+    // Viewport worker kick: the UNDRIVEN waveform changes — follow-scroll
+    // during playback, resize, the launch load — request the new waveform
+    // immediately rather than waiting for the next tick. (Pan, zoom, center and
+    // the one-shot jumps do NOT come here: they are user-driven and render
+    // synchronously through request_waveform_sync_ below.) maybe_enqueue_waveform_render is main-thread-safe and idempotent
     // against the on_tick backstop, so the earlier trigger only shortens
     // input-to-render latency. See Viewport::kick_waveform_render.
     viewport.request_waveform_render_ =

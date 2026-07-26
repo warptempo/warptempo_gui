@@ -283,9 +283,13 @@ void render_waveform(cairo_surface_t* dest,
     const int surf_h      = cairo_image_surface_get_height(dest);
     if (surf_w <= 0 || surf_h <= 0) return;
 
-    // The mapping basis is the FULL plate's, never this call's sub-range: the
+    // The mapping basis is the PLATE's, never this call's sub-range: the
     // denominator is basis.full_width and columns are indexed globally from
-    // col0, so a strip column reproduces the full render's endpoints exactly.
+    // col0, so a column's frames are a function of the basis and the global
+    // index alone — never of which window happened to draw it. Every caller at
+    // present is a full-plate render (col0 = 0, area.w == full_width); the
+    // global-column form is what would keep a partial render correct by
+    // construction if one were ever reintroduced.
     const double span = static_cast<double>(basis.vp_end - basis.vp_start);
     const double samples_per_pixel = span /
                                      static_cast<double>(basis.full_width);
@@ -386,11 +390,11 @@ void render_waveform(cairo_surface_t* dest,
                    : f;
     };
 
-    // THE LEFT HALO: the raw extrema of global column col0-1, the neighbour this
-    // call does not draw. Column col0 bridges against it, so a strip seam and a
-    // full render's first column are bridged on the same rule as every interior
-    // column. The halo is a SAMPLE-SPAN re-read through this same basis — never
-    // a read-back of already-painted pixels.
+    // THE LEFT HALO: the raw extrema of global column col0-1, the offscreen
+    // neighbour this call does not draw. The first drawn column bridges against
+    // it, so it is bridged on the same rule as every interior column and needs
+    // no first-column special case. The halo is a SAMPLE-SPAN read through this
+    // same basis — never a read-back of already-painted pixels.
     //
     // THE SONG-WALL CLAMP: the halo's span is clamped to start at source frame
     // 0, and if nothing is left of the first drawn column (s1_halo <= s0_halo —

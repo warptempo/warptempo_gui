@@ -165,8 +165,11 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // press so no follow scroll fires, and a compositor resize simply catches
     // up at the first post-gesture tick. With no mid-drag dispatch the
     // completion drop fires AT MOST ONCE (the one job in flight at the grab).
-    // The strip drag, alt-pan, and region drag are deliberately NOT here — they
-    // dispatch their own mid-gesture jobs and must keep rendering.
+    // The strip drag, alt-pan, and region drag are deliberately NOT here. The
+    // first two drive their own SYNCHRONOUS per-frame renders (kick_waveform_sync,
+    // which drains this worker rather than queuing behind it) and must keep
+    // rendering; the region drag moves no viewport, so it never reaches the
+    // plate at all.
     if (app.drag.active || app.tempo_drag.active || app.trim_drag.active)
         return;
 
@@ -284,8 +287,9 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // would paint a stale plate over the step-fresh one (its rewind then
     // points pending_fp_* at whatever the last sync step published — fp_* —
     // which is exactly what is on screen). Gated on the marker/tempo/trim
-    // drags ALONE — the strip drag, alt-pan, and region
-    // drag dispatch their own mid-gesture jobs and must keep publishing.
+    // drags ALONE — the strip drag and alt-pan render synchronously per frame
+    // (draining this worker) and must keep rendering, and the region drag never
+    // touches the plate.
     if (app.drag.active || app.tempo_drag.active || app.trim_drag.active) {
         wf_cache.supersede = false;
         wf_cache.supersede_warp_frame_map.clear();
@@ -401,7 +405,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // flag cache — and the plate-registered overlays (selected stem,
     // phase-reset overlay), which read the NEW fp_* via
     // displayed_viewport_basis, visibly left their flags for one frame during a
-    // follow-scroll / resize / pan-fallback publish. Doing the rebuild here makes
+    // follow-scroll / resize / drift-catchup publish. Doing the rebuild here makes
     // the committing frame blit new plate + new items together and promote the
     // staged basis atomically. The two-phase stage/promote ruling is UNCHANGED:
     // the rebuild STAGES the displayed hit map (app.staged_displayed_*), and
@@ -417,14 +421,17 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     gui.invalidate_region(0, 0, app.width, a.y + a.h);
 }
 
-// -- Synchronous waveform rebuild (discrete marker-cycle jump) -----------
+// -- Synchronous waveform rebuild (THE user-driven render route) ---------
 //
-// Tab / Shift+Tab / Ctrl+Shift+Tab routes through here from the input
-// handler. The async worker rebuilds the waveform one frame late, so the
-// same-tick flag rebuild keys off the lagging wf_cache.fp_* and the
-// selection rectangle on the newly focused marker blinks across the
-// worker window. Forcing a sync render + fp publish here makes the
-// flag cache converge against the final viewport this tick.
+// Every frame of every user-driven viewport change routes through here: pans
+// and scrolls, the strip drag's zoom frames, the one-shot jumps (Tab /
+// Shift+Tab / Ctrl+Shift+Tab, Home / End, center-on-playhead), the A/B and
+// source/target switches, undo / redo, and the map edits. Leaving any of them
+// to the async worker rebuilds the waveform one frame late, so the same-tick
+// flag rebuild keys off the lagging wf_cache.fp_* and the overlays — the
+// selection rectangle on a newly focused marker, say — blink across the worker
+// window. Rendering + publishing the fp here makes the flag cache converge
+// against the final viewport this tick.
 //
 // Writing into wf_cache.surface directly (not pending_surface + swap) is
 // safe only because wait_until_idle() ran first — the worker is Idle and
