@@ -701,11 +701,18 @@ int main(int argc, char** argv) {
     // pointer set).
     phase_reset_propagate.input = &input_handler;
 
-    // Viewport worker kick: the UNDRIVEN waveform changes — follow-scroll
-    // during playback, resize, the launch load — request the new waveform
-    // immediately rather than waiting for the next tick. (Pan, zoom, center and
-    // the one-shot jumps do NOT come here: they are user-driven and render
-    // synchronously through request_waveform_sync_ below.) maybe_enqueue_waveform_render is main-thread-safe and idempotent
+    // Viewport worker kick: FOLLOW-SCROLL during playback is the one caller
+    // that requests the new waveform immediately rather than waiting for the
+    // next tick (Viewport::follow_scroll_if_needed, the sole
+    // kick_waveform_render call site outside kick_waveform_sync's
+    // callback-unwired fallback). The worker's OTHER undriven work — a
+    // compositor resize and the launch load, both of which run on_resize, which
+    // re-clamps geometry and rebuilds caches but enqueues nothing — is
+    // discovered instead by maybe_enqueue_waveform_render's dirty-detect on the
+    // next tick. (Pan, zoom, center and the one-shot jumps do NOT come here at
+    // all: they are user-driven and render synchronously through
+    // request_waveform_sync_ below.) maybe_enqueue_waveform_render is
+    // main-thread-safe and idempotent
     // against the on_tick backstop, so the earlier trigger only shortens
     // input-to-render latency. See Viewport::kick_waveform_render.
     viewport.request_waveform_render_ =
