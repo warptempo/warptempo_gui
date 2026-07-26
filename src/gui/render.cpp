@@ -356,12 +356,14 @@ void render_waveform(cairo_surface_t* dest,
     // not be. Channels are PREMULTIPLIED by the coverage, as ARGB32 requires.
     // Entry 255 is the opaque interior word; entry 0 is never written (a
     // zero-coverage row writes nothing at all).
-    // THE REGIME THRESHOLD, in screen rows. A column whose own raw min/max
-    // spans more than this has envelope mass and paints as one; at or below it
-    // the column is a point on a line and paints as a segment to its
-    // neighbour's centre. 1.0 is the natural split (below one pixel there is no
-    // interior to fill) and it is the tuning knob if the two regimes ever want
-    // to meet somewhere else.
+    // THE REGIME THRESHOLD, in screen rows. A column whose own raw min/max spans
+    // more than this has envelope mass and fills an interior; at or below it
+    // there is no interior and the column's two TIP SEGMENTS are its whole
+    // rendering, drawing its subpixel extent as a soft partial-coverage band.
+    // Both segments run at any nonzero extent — they reduce to one only when the
+    // tips are exactly equal. 1.0 is the natural split (below one pixel there is
+    // nothing to fill) and it is the tuning knob if the two regimes ever want to
+    // meet somewhere else.
     constexpr double kThinIntervalPx = 1.0;
 
     const double ink_r = color.r * 255.0;
@@ -511,15 +513,27 @@ void render_waveform(cairo_surface_t* dest,
         }
     };
 
-    // Global column c's display-domain left edge, ON THE LATTICE: the k0+c'th
-    // lattice point. Through the nearbyint below this is exactly
-    // clamp_viewport_start's grid(k0+c), so a pan by n columns reproduces each
-    // column's span bit-for-bit at index+n (see WaveformBasis).
+    // Global column c's display-domain edge, AS THE LATTICE POINT ITSELF:
+    // g(k0+c) = nearbyint((k0+c)*spp), bit-for-bit the integer
+    // clamp_viewport_start's grid() lambda produces. THE QUANTIZE LIVES HERE,
+    // once, so every consumer — both halos, the loop, and the carried-endpoint
+    // chain — receives the same already-rounded lattice point and BOTH VIEWS
+    // consume the identical integer. Rounding here rather than downstream is
+    // what makes the target-view path honest: to_source used to truncate the
+    // raw product through its size_t cast, so target view mapped
+    // floor((k0+c)*spp) — a frame below the documented g(k0+c) whenever the
+    // fraction would have rounded up, with ties following truncation instead of
+    // banker's rounding. The pan invariant held either way (floor of a lattice
+    // point is still a pure function of the global index), but the geometry sat
+    // off the lattice this contract declares.
     const auto edge_at = [&](long long c) {
-        return static_cast<double>(k0 + c) * samples_per_pixel;
+        return std::nearbyint(static_cast<double>(k0 + c) * samples_per_pixel);
     };
-    // Display-domain edge -> source frame. Identity in source view; in target
-    // view the warp_frame_map translates so the pyramid read lands at the
+    // Display-domain lattice point -> source frame. `f` arrives INTEGRAL from
+    // edge_at, so the size_t cast below is exact, not a second quantization.
+    // Source view is the identity: the value is already g(k0+c), and the
+    // caller's nearbyint on it is idempotent. Target view maps exactly that same
+    // g(k0+c) through the warp_frame_map, so the pyramid read lands at the
     // matching authored audio. Negative display positions clamp at 0 (the map
     // takes an unsigned frame); callers treat a wholly-left-of-zero span as
     // empty rather than relying on this clamp.

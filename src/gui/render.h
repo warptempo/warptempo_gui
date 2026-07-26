@@ -664,16 +664,30 @@ struct WaveformBasis {
 // column carries at least one full pixel-equivalent at every slope and at the
 // rails: flat material softens to a hairline but can never fade out or vanish.
 //
-// THE LEFT HALO: because column col0's left neighbour is not drawn by this call,
-// the render evaluates a one-column RAW halo at global column col0-1 and takes
-// its tips as the previous tips — for a full render, the offscreen column just
-// left of the viewport. It is a SAMPLE-SPAN read through this same basis, never
-// a read-back of painted pixels. At the song wall the halo has no span to the
-// left, so it is EMPTY and the first column has no left neighbour to connect to
-// (a thin one then deposits its own unit so it still cannot vanish). Connecting
-// the first column to an offscreen neighbour rather than special-casing it is
-// what makes a render's output depend only on its basis and column range — two
-// renders of the same columns at the same basis agree exactly.
+// THE TWO HALOS: both edge columns have a neighbour this call does not draw, and
+// each needs it for the same reason — a column's ink comes from the segments on
+// BOTH its sides, so an edge column missing one is under-covered relative to the
+// same audio rendered interior, and it shifts under a pan.
+//   LEFT, global column col0-1, read before the loop: supplies the previous tips
+//     the FIRST drawn column's incoming segments run back to.
+//   RIGHT, global column col0+area.w, read after the loop: supplies the tips the
+//     LAST drawn column's outgoing segments run forward to. Only that column's
+//     share lands — deposits aimed at the offscreen column fall outside the
+//     columns this call owns and are dropped.
+// Both are SAMPLE-SPAN reads through this same basis, never read-backs of
+// painted pixels, and both pick their pyramid level from their own span exactly
+// as a drawn column does.
+//
+// THE TWO WALL CLAMPS MIRROR. At the SONG wall the left halo's span is clamped
+// to start at frame 0, and if nothing remains it is EMPTY and the first column
+// simply has no left neighbour (a thin one then deposits its own unit, so it
+// still cannot vanish). At the EOF wall the right halo's span is clamped to END
+// at total_frames, and if nothing remains it is EMPTY too and the last column
+// keeps exactly the ink it has — the flush-right rest's contract. Connecting the
+// edge columns to offscreen neighbours rather than special-casing them is what
+// makes a render's output depend only on its basis and column range — two
+// renders of the same columns at the same basis agree exactly, and an edge
+// column matches the same audio rendered interior.
 //
 // THE WRITER: this function does NOT draw through cairo. It writes `dest`'s
 // ARGB32 pixel words directly, which is why it takes the surface rather than a
