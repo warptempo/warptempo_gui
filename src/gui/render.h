@@ -579,14 +579,52 @@ struct FlagHitRect {
 void render_background(cairo_t* cr, int x, int y, int w, int h);
 void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 
-// Draws one channel's waveform into `area`, displaying samples in
-// [viewport_start_sample, viewport_end_sample). When `warp_frame_map` is null
-// (source view) the viewport range is interpreted in source-frame and
-// each column reads `audio.get_peak_range` directly. When `warp_frame_map` is
-// non-null (target view) the viewport range is target-frame: each
-// column's [t0, t1) is translated to source-frame via
-// `map_target_to_source` before the pyramid read, producing the
-// deformed-waveform display.
+// THE COLUMN MAPPING BASIS — the FULL plate's displayed viewport and width.
+// Global column c's display-domain span is, by definition,
+//     [vp_start + span*c/full_width, vp_start + span*(c+1)/full_width)
+// with span = vp_end - vp_start. Every render evaluates that ONE expression for
+// the global column it is drawing, so a strip (incremental-pan) render of
+// column c produces byte-identical endpoints to a full render of column c.
+// This is why the strip does NOT derive a miniature viewport of its own: a
+// rounded strip-local viewport renormalized across the strip width is not
+// guaranteed to reproduce the full render's endpoints, and the disagreement
+// shows as a seam at the strip boundary (worse once columns are bridged, since
+// a bad endpoint then propagates one column further).
+struct WaveformBasis {
+    long long vp_start   = 0;   // full-plate viewport start, display domain
+    long long vp_end     = 0;   // full-plate viewport end, display domain
+    int       full_width = 0;   // full-plate column count = mapping denominator
+};
+
+// Draws one channel's waveform into `area`, which holds the `area.w` columns
+// starting at GLOBAL column `col0` — i.e. the column sub-range [col0,
+// col0+area.w) of `basis`. A full render passes col0 = 0 and area.w ==
+// basis.full_width; a strip render passes its plate x as col0 and its own
+// narrower area.w. When `warp_frame_map` is null (source view) the basis
+// viewport is source-frame and each column reads `audio.get_peak_range`
+// directly. When non-null (target view) it is target-frame: each column's
+// [t0, t1) is translated to source-frame via `map_target_to_source` before the
+// pyramid read, producing the deformed-waveform display.
+//
+// COLUMN BRIDGING (the connected-silhouette rule): a column's drawn interval is
+// its own raw [min, max] extended to meet the PREVIOUS column's RAW extrema —
+// lo = min(min_i, prev_raw_max), hi = max(max_i, prev_raw_min) — which widens
+// only when the two intervals are disjoint and leaves overlapping ones exactly
+// as they were. Bridging is raw-to-raw (never against the previous column's
+// already-widened output), so the dependency is exactly one column deep, and it
+// runs in FLOAT value space BEFORE the y-mapping and integer snap; bridging
+// already-snapped rectangles would exaggerate the steps. The "any signal keeps
+// at least one pixel" rule still applies after snapping.
+//
+// THE LEFT HALO: because column col0 has a left neighbour that this call does
+// not draw, the render evaluates a one-column RAW halo at global column col0-1
+// and bridges col0 against it. For a strip that halo is a reused column, re-read
+// from its SAMPLE SPAN through this same basis (never by reading pixels back);
+// for a full render it is the offscreen column just left of the viewport. At the
+// song wall the halo has no span to the left, so it is EMPTY and column col0
+// goes unbridged on its left. Because column 0 is always bridged against an
+// offscreen halo rather than left deliberately unbridged, a pan's memmoved
+// columns stay valid by construction and need no direction-specific repair.
 //
 // The plate paints uniformly in `color` — it is trim-agnostic. The
 // out-of-trim dim is NOT baked here; on_redraw paints it as a MASKED OVER
@@ -595,10 +633,10 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 // set/clear/drag never re-rasterizes these pixels.
 void render_waveform(cairo_t* cr,
                      GuiRect area,
+                     int col0,
                      const GuiAudio& audio,
                      int channel,
-                     long long viewport_start_sample,
-                     long long viewport_end_sample,
+                     const WaveformBasis& basis,
                      GuiColor color,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
 

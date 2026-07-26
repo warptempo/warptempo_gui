@@ -252,21 +252,25 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h) {
 
 void render_waveform(cairo_t* cr,
                      GuiRect area,
+                     int col0,
                      const GuiAudio& audio,
                      int channel,
-                     long long viewport_start_sample,
-                     long long viewport_end_sample,
+                     const WaveformBasis& basis,
                      GuiColor color,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map) {
     if (area.w <= 0 || area.h <= 2) return;
-    if (viewport_end_sample <= viewport_start_sample) return;
+    if (basis.full_width <= 0) return;
+    if (basis.vp_end <= basis.vp_start) return;
 
     const int num_levels = audio.num_levels();
     if (num_levels <= 0) return;
 
-    const double span = static_cast<double>(viewport_end_sample -
-                                            viewport_start_sample);
-    const double samples_per_pixel = span / static_cast<double>(area.w);
+    // The mapping basis is the FULL plate's, never this call's sub-range: the
+    // denominator is basis.full_width and columns are indexed globally from
+    // col0, so a strip column reproduces the full render's endpoints exactly.
+    const double span = static_cast<double>(basis.vp_end - basis.vp_start);
+    const double samples_per_pixel = span /
+                                     static_cast<double>(basis.full_width);
 
     // Cache layout (must match audio.cpp): level 0 = raw samples;
     // levels 1, 2, 3 = stride 32, 1024, 32768. Pick the coarsest cache
@@ -289,8 +293,11 @@ void render_waveform(cairo_t* cr,
 
     // Each column becomes a 1px-wide integer-row rectangle so the plate is
     // binary: every pixel is either the color at full alpha or fully
-    // transparent, no antialiased tips. Per-column min/max extents stay raw
-    // and unsmoothed; only the y endpoints are snapped to whole pixel rows.
+    // transparent, no antialiased tips. Per-column min/max extents are raw and
+    // unsmoothed apart from the bridge below, which extends a column's interval
+    // to meet its neighbour's so the silhouette reads as one connected envelope
+    // instead of disjoint one-column bars; only the y endpoints are snapped to
+    // whole pixel rows.
     struct ColRect { int x, y0, y1; };
     std::vector<ColRect> rects;
     rects.reserve(static_cast<size_t>(area.w));
@@ -298,36 +305,85 @@ void render_waveform(cairo_t* cr,
     const int y_lo = area.y;
     const int y_hi = area.y + area.h;
 
-    // Column i's left edge (f0) is column i-1's right edge (f1) — the same
-    // expression yields the same double, so its translation is the same too.
-    // Carry the prior column's right edge forward instead of retranslating it,
-    // halving the warp_frame_map calls per column in target view (no-op in source view).
-    double f_prev = static_cast<double>(viewport_start_sample);
-    double g_prev = warp_frame_map ? map_target_to_source(
-                        static_cast<size_t>(f_prev < 0.0 ? 0.0 : f_prev),
-                        *warp_frame_map)
-                            : f_prev;
+    // Global column c's display-domain left edge. ONE expression, shared by
+    // full and strip renders (see WaveformBasis) — the strip's column c and the
+    // full render's column c are the same double by construction.
+    const auto edge_at = [&](long long c) {
+        return static_cast<double>(basis.vp_start) +
+               (span * static_cast<double>(c)) /
+               static_cast<double>(basis.full_width);
+    };
+    // Display-domain edge -> source frame. Identity in source view; in target
+    // view the warp_frame_map translates so the pyramid read lands at the
+    // matching authored audio. Negative display positions clamp at 0 (the map
+    // takes an unsigned frame); callers treat a wholly-left-of-zero span as
+    // empty rather than relying on this clamp.
+    const auto to_source = [&](double f) {
+        return warp_frame_map
+                   ? map_target_to_source(
+                         static_cast<size_t>(f < 0.0 ? 0.0 : f), *warp_frame_map)
+                   : f;
+    };
+
+    // THE LEFT HALO: the raw extrema of global column col0-1, the neighbour this
+    // call does not draw. Column col0 bridges against it, so a strip seam and a
+    // full render's first column are bridged on the same rule as every interior
+    // column. The halo is a SAMPLE-SPAN re-read through this same basis — never
+    // a read-back of already-painted pixels.
+    //
+    // THE SONG-WALL CLAMP: the halo's span is clamped to start at source frame
+    // 0, and if nothing is left of the first drawn column (s1_halo <= s0_halo —
+    // the viewport sitting at frame 0, so there is no audio to the left) the
+    // halo is EMPTY and column col0 goes unbridged on its left.
+    bool   have_prev  = false;
+    double prev_raw_min = 0.0;
+    double prev_raw_max = 0.0;
+
+    // g_prev is the running left edge in SOURCE frames. Seeding it from the halo
+    // column's left edge means the carried-endpoint chain (column i's left edge
+    // is column i-1's right edge, so each edge is translated once, not twice)
+    // simply starts one column earlier in target view.
+    const double g_halo0 = to_source(edge_at(static_cast<long long>(col0) - 1));
+    double       g_prev  = to_source(edge_at(static_cast<long long>(col0)));
+    {
+        long long hs0 = static_cast<long long>(std::nearbyint(g_halo0));
+        const long long hs1 = static_cast<long long>(std::nearbyint(g_prev));
+        if (hs0 < 0) hs0 = 0;
+        if (hs1 > hs0) {
+            const auto hm = audio.get_peak_range(channel, level, hs0, hs1);
+            prev_raw_min = hm.first;
+            prev_raw_max = hm.second;
+            have_prev    = true;
+        }
+    }
+
     for (int i = 0; i < area.w; i++) {
-        const double f1 = static_cast<double>(viewport_start_sample) +
-                          (span * (i+1)) / area.w;
-        // Target view: translate each column's [t0, t1) endpoint into
-        // source-frame via the warp_frame_map so the pyramid read lands at the
-        // matching authored audio. Source view: identity.
-        const double g0 = g_prev;
-        const double g1 = warp_frame_map ? map_target_to_source(
-                              static_cast<size_t>(f1 < 0.0 ? 0.0 : f1),
-                              *warp_frame_map)
-                                  : f1;
+        const long long c  = static_cast<long long>(col0) + i;
+        const double    f1 = edge_at(c + 1);
+        const double    g0 = g_prev;
+        const double    g1 = to_source(f1);
+
         const long long s0 = static_cast<long long>(std::nearbyint(g0));
         long long       s1 = static_cast<long long>(std::nearbyint(g1));
         if (s1 <= s0) s1 = s0 + 1;
 
         const auto mm = audio.get_peak_range(channel, level, s0, s1);
-        const double min_val = mm.first;
-        const double max_val = mm.second;
+        const double raw_min = mm.first;
+        const double raw_max = mm.second;
 
-        int y0 = static_cast<int>(std::lround(y_center - max_val * half_h));
-        int y1 = static_cast<int>(std::lround(y_center - min_val * half_h));
+        // Bridge in FLOAT value space, against the previous column's RAW
+        // extrema (never its widened output — the dependency stays one column
+        // deep). Disjoint intervals get pulled together into one connected
+        // envelope; overlapping intervals come through untouched.
+        double lo_val = raw_min;
+        double hi_val = raw_max;
+        if (have_prev) {
+            lo_val = std::min(lo_val, prev_raw_max);
+            hi_val = std::max(hi_val, prev_raw_min);
+        }
+
+        int y0 = static_cast<int>(std::lround(y_center - hi_val * half_h));
+        int y1 = static_cast<int>(std::lround(y_center - lo_val * half_h));
         // Any signal keeps at least one pixel.
         if (y1 <= y0) y1 = y0 + 1;
         // Clamp to the waveform area's pixel rows.
@@ -337,7 +393,11 @@ void render_waveform(cairo_t* cr,
         if (y1 > y_hi) y1 = y_hi;
 
         rects.push_back({area.x + i, y0, y1});
-        g_prev = g1;
+
+        prev_raw_min = raw_min;
+        prev_raw_max = raw_max;
+        have_prev    = true;
+        g_prev       = g1;
     }
 
     cairo_save(cr);

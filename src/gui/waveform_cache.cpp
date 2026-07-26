@@ -76,13 +76,15 @@ void render_waveform_to_cache_surface(
     const int ch_h = cache_area.h / 2;
     const GuiRect ch0{0, cache_area.y, cache_area.w, ch_h};
     const GuiRect ch1{0, cache_area.y + ch_h, cache_area.w, ch_h};
-    render_waveform(ccr, ch0, audio, 0,
-                    vp_start, vp_end,
-                    kWaveform,
+    // The full render IS the basis: global column 0 at the plate's own width.
+    // The strip render below passes this same basis with its own col0, so the
+    // two agree column-for-column.
+    const WaveformBasis basis{vp_start, vp_end, area_w};
+    render_waveform(ccr, ch0, /*col0=*/0, audio, 0,
+                    basis, kWaveform,
                     warp_frame_map_or_null);
-    render_waveform(ccr, ch1, audio, 1,
-                    vp_start, vp_end,
-                    kWaveform,
+    render_waveform(ccr, ch1, /*col0=*/0, audio, 1,
+                    basis, kWaveform,
                     warp_frame_map_or_null);
     cairo_destroy(ccr);
 }
@@ -95,12 +97,25 @@ void render_waveform_to_cache_surface(
 // reusable pixels into place, and this fills the newly exposed edge.
 //
 // vp_start_full / vp_end_full describe the WHOLE plate's displayed viewport
-// (not the strip's). The strip's own sample range is derived from them so the
-// strip columns land at the exact frames a full-plate render at this viewport
-// would produce; the shifted pixels and the freshly rendered strip then meet
-// seamlessly at the strip boundary. Mirrors render_waveform_to_cache_surface's
-// inset + stereo split, restricted to the strip columns and clipped so a
-// 1px stroke cannot bleed past the strip edge into the reused pixels.
+// (not the strip's), and they are handed to render_waveform AS the mapping
+// basis together with the plate width and the strip's global column offset
+// (strip_x). The strip therefore evaluates the SAME per-column expression a
+// full render would for those global columns, so its columns are byte-identical
+// to a full render's and the shifted pixels meet the fresh strip with no seam.
+// This replaced an earlier derivation that rounded a strip-local
+// vp_start/vp_end and renormalized it across strip_w: that is not guaranteed to
+// reproduce the full render's endpoints (wider strips and target-map
+// breakpoints diverge most), a latent seam that column bridging would amplify
+// by carrying a bad endpoint one column further.
+//
+// Bridging needs the strip's first column to know its left neighbour: that is
+// render_waveform's left-halo contract, which re-reads global column
+// strip_x-1's SAMPLE SPAN through this same basis. It never reads back painted
+// pixels, so it is indifferent to the memmove having just moved them.
+//
+// Mirrors render_waveform_to_cache_surface's inset + stereo split, restricted
+// to the strip columns and clipped so a 1px stroke cannot bleed past the strip
+// edge into the reused pixels.
 //
 // Runs inline on the GUI thread (the strip is at most a window wide; see
 // pan_waveform_incremental's over-a-window fallback), so unlike the worker
@@ -123,13 +138,6 @@ static void render_waveform_strip_to_cache_surface(
     if (!dest || area_w <= 0 || area_h <= 0) return;
     if (strip_w <= 0 || strip_x < 0 || strip_x + strip_w > area_w) return;
     if (vp_end_full <= vp_start_full) return;
-
-    const double disp_spp =
-        static_cast<double>(vp_end_full - vp_start_full) / area_w;
-    const int64_t strip_vp_start = vp_start_full +
-        static_cast<int64_t>(std::nearbyint(disp_spp * strip_x));
-    const int64_t strip_vp_end   = vp_start_full +
-        static_cast<int64_t>(std::nearbyint(disp_spp * (strip_x + strip_w)));
 
     cairo_t* ccr = cairo_create(dest);
 
@@ -155,12 +163,14 @@ static void render_waveform_strip_to_cache_surface(
     const int ch_h = inset_h / 2;
     const GuiRect ch0{strip_x, inset_px, strip_w, ch_h};
     const GuiRect ch1{strip_x, inset_px + ch_h, strip_w, ch_h};
-    render_waveform(ccr, ch0, audio, 0,
-                    strip_vp_start, strip_vp_end,
-                    kWaveform, warp_frame_map_or_null);
-    render_waveform(ccr, ch1, audio, 1,
-                    strip_vp_start, strip_vp_end,
-                    kWaveform, warp_frame_map_or_null);
+    // The FULL plate's basis, with strip_x as the global column offset — the
+    // plate's x origin is 0, so the strip's destination x and its global column
+    // index are the same number.
+    const WaveformBasis basis{vp_start_full, vp_end_full, area_w};
+    render_waveform(ccr, ch0, /*col0=*/strip_x, audio, 0,
+                    basis, kWaveform, warp_frame_map_or_null);
+    render_waveform(ccr, ch1, /*col0=*/strip_x, audio, 1,
+                    basis, kWaveform, warp_frame_map_or_null);
     cairo_restore(ccr);
     cairo_destroy(ccr);
 }
@@ -797,10 +807,24 @@ void GuiPaintHandler::pan_waveform_incremental(int64_t new_vp_start,
     }
     cairo_surface_mark_dirty(wf_cache.surface);
 
-    // Render the newly exposed edge strip at the new viewport. in.vp_end is
-    // the full plate's displayed end (== new_vp_start + the preserved span,
-    // since spp and area_w are unchanged), so the strip columns map to the
+    // Render the newly exposed edge strip at the new viewport. in.vp_start /
+    // in.vp_end are the full plate's displayed viewport (the span is preserved,
+    // since spp and area_w are unchanged), and they go in as the MAPPING BASIS
+    // with strip_x as the global column offset, so the strip columns map to the
     // identical frames a full render would produce.
+    //
+    // WHY THE MEMMOVED COLUMNS STAY VALID UNDER BRIDGING: a painted column
+    // encodes its own raw extrema bridged against its LEFT NEIGHBOUR's raw
+    // extrema, and a pan translates both together — the pair sits at the same
+    // relative offset after the shift, so every reused column's dependency is
+    // still the column now to its left. The one column whose left neighbour
+    // changes is the strip's first, and render_waveform's left halo re-reads
+    // exactly that neighbour's sample span. Nothing reads painted pixels back,
+    // so the bridge survives the memmove by construction and needs no
+    // direction-specific repair pass. (Reused pixels still carry the standing
+    // sub-pixel pan approximation — delta_px is a rounded integer — which the
+    // next full render resolves; bridging neither adds to nor is confused by
+    // that, since it is a property of the pixels, not of the dependency.)
     render_waveform_strip_to_cache_surface(
         wf_cache.surface,
         in.area_w, in.area_h,
