@@ -9,12 +9,18 @@
 #include <vector>
 
 // Owns an audio file's sample buffer and a fixed-stride min/max peak pyramid
-// (three int16 cache levels at strides 32, 1024, 32768). No knowledge of X11,
+// (int16 cache levels on a powers-of-4 stride ladder). No knowledge of X11,
 // Cairo, or progress UI. Synchronous loader with a progress callback that the
 // caller wires up to its UI.
 class GuiAudio {
 public:
     using ProgressCallback = std::function<void(float)>;
+
+    // Number of CACHED pyramid levels (level 0, the raw samples, is not one of
+    // them — see num_levels()). The strides themselves live in exactly one
+    // place, audio.cpp's kStrides; this is the count both that list and the
+    // storage array below are sized by, so the two cannot drift.
+    static constexpr int kCacheLevels = 6;
 
     // Implementation detail of the peak cache. Public only so the cache
     // reader/writer free functions in audio.cpp can name the type.
@@ -56,11 +62,25 @@ public:
     // Total number of pyramid levels, counting level 0 (raw samples).
     int num_levels() const;
 
+    // The level to read for a column covering `span_samples` SOURCE samples:
+    // the coarsest cached level whose stride still fits inside the span, else 0
+    // (raw) when the span is finer than the finest stride. Result is always a
+    // valid argument for get_peak_range — clamped into [0, num_levels()-1].
+    //
+    // This is the ONE level-choosing owner, so no caller needs to know the
+    // stride ladder. Choosing from the column's own mapped SOURCE span (rather
+    // than a viewport-wide estimate) is what bounds the per-column work in
+    // target view, where the local source/target slope can reach 16x and a
+    // global estimate therefore understates a compressed column's true span by
+    // the same factor. Span is a double so a caller can pass the exact
+    // fractional mapped width rather than a rounded one.
+    int level_for_span(double span_samples) const;
+
     // Returns (min, max) over source-sample indices [start_sample, end_sample)
     // on `channel`, read at pyramid `level`. Level 0 is raw samples; levels
-    // 1..3 select cached min/max pairs at strides 32, 1024, 32768
-    // respectively. Levels above the deepest cached level clamp to it.
-    // Inputs are clamped; an empty range returns (0, 0).
+    // 1..kCacheLevels select cached min/max pairs on the powers-of-4 stride
+    // ladder (see kStrides in audio.cpp). Levels above the deepest cached level
+    // clamp to it. Inputs are clamped; an empty range returns (0, 0).
     std::pair<float,float> get_peak_range(int channel,
                                           int level,
                                           int64_t start_sample,
@@ -83,10 +103,10 @@ private:
     uint64_t load_identity_size_ = 0;
     int64_t  load_identity_mtime_ = 0;
 
-    // Three fixed-stride cache levels (strides 32, 1024, 32768). Populated
-    // either from the on-disk `<basename>.peaks` v4 sidecar or by streaming
-    // over the freshly built sample buffer on cache miss.
-    std::array<PyramidLevel, 3> levels_;
+    // The fixed-stride cache levels (powers-of-4 ladder, see kStrides in
+    // audio.cpp). Populated either from the on-disk `<basename>.peaks` sidecar
+    // or by streaming over the freshly built sample buffer on cache miss.
+    std::array<PyramidLevel, kCacheLevels> levels_;
 };
 
 bool is_peaks_cache_path(const std::string& path);

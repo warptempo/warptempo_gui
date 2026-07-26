@@ -21,11 +21,11 @@
 
 namespace {
 
-// `.peaks` v4 format -------------------------------------------------------
+// `.peaks` v5 format -------------------------------------------------------
 //
 // 32-byte fixed preamble:
 //   off 0  | 8  | private cache magic
-//   off 8  | 2  | version (uint16, currently 4)
+//   off 8  | 2  | version (uint16, currently 5)
 //   off 10 | 2  | flags   (uint16, written 0)
 //   off 12 | 8  | source_size  (int64, bytes)
 //   off 20 | 8  | source_mtime (int64, nanoseconds)
@@ -43,7 +43,7 @@ namespace {
 // Body header (16 bytes):
 //   8 | total_frames    (int64)
 //   1 | render_channels (uint8, 1 or 2)
-//   1 | num_levels      (uint8, 3)
+//   1 | num_levels      (uint8, = kNumLevels)
 //   6 | reserved (zero)
 //
 // Then for each level in ascending stride order:
@@ -57,18 +57,49 @@ namespace {
 // Out-of-range source peaks clip at the boundary.
 
 constexpr char     kCacheMagic[8]         = "WTPEAKS";
-constexpr uint16_t kCacheVersion          = 4;
+// v5 densified the stride ladder (see kStrides). A v4 file therefore fails the
+// version compare and takes the ordinary STALE path — logged, rebuilt, never
+// partially accepted and never surfaced to the user as an error. The rebuild
+// writes a larger sidecar (the pair count is ~1/16 + 1/64 + ... of the raw
+// frames instead of ~1/32 + ...): architect-granted 2026-07-26, "ok to bump
+// cache file size", the cost of the smoother zoom ladder.
+constexpr uint16_t kCacheVersion          = 5;
 constexpr int      kStreamFramesPerChunk  = 65536;
 // Bounds the owner-discriminator string so a corrupt header is a cheap cache
 // miss rather than a memory-pressure event.
 constexpr uint32_t kMaxOwnerBytes         = 4096;
-constexpr int      kNumLevels             = 3;
-constexpr int32_t  kStrides[kNumLevels]   = { 32, 1024, 32768 };
-constexpr int      kReductionFactor       = 32;  // 1024/32 = 32; 32768/1024 = 32.
+
+// THE STRIDE LADDER — the single authoritative list. Powers of four, so each
+// level covers 4x its predecessor: the zoom texture changes in small steps
+// instead of the 32x jumps the old 32/1024/32768 ladder made, whose threshold
+// crossings visibly re-textured the waveform mid-zoom. Every level after the
+// first folds from the PREVIOUS level by kReductionFactor, so the ratio is the
+// reduction factor by construction.
+//
+// THE STANDING NEXT KNOB: a level switch still changes both quantization and
+// bin alignment, so a crossing can still pop — 4x makes it small, it does not
+// make it impossible. If a pop is still visible on the labwc pass, the next
+// step is min/max INTERPOLATION across a narrow log-span transition band
+// (blending the two levels' values); it is deliberately not built yet, since it
+// doubles the peak reads and the denser ladder may well be enough.
+constexpr int      kNumLevels             = GuiAudio::kCacheLevels;
+constexpr int32_t  kStrides[kNumLevels]   = { 16, 64, 256, 1024, 4096, 16384 };
+constexpr int      kReductionFactor       = 4;
 constexpr float    kQuantScale            = 32767.0f;
 // Reserve the first 95% of the progress budget for the dominant level-1 pass;
-// levels 2 and 3 fold from in-memory int16 buffers and finish in microseconds.
+// the deeper levels fold from in-memory int16 buffers and finish in
+// microseconds.
 constexpr float    kLevel1Share           = 0.95f;
+
+static_assert(kStrides[0] > 0, "finest stride must be positive");
+static_assert(kStrides[kNumLevels - 1] ==
+                  kStrides[0] * [] {
+                      int m = 1;
+                      for (int i = 1; i < kNumLevels; ++i) m *= kReductionFactor;
+                      return m;
+                  }(),
+              "kStrides must be kStrides[0] scaled by kReductionFactor per level "
+              "— the fold builds each level from the previous one");
 
 inline int16_t quantize_f32(float v) {
     if (v < -1.0f) v = -1.0f;
@@ -121,7 +152,7 @@ bool stat_size_mtime(const std::string& path, int64_t& size, int64_t& mtime) {
     return true;
 }
 
-void reset_levels(std::array<GuiAudio::PyramidLevel, 3>& levels) {
+void reset_levels(std::array<GuiAudio::PyramidLevel, kNumLevels>& levels) {
     for (auto& L : levels) {
         L.stride     = 0;
         L.pair_count = 0;
@@ -131,10 +162,12 @@ void reset_levels(std::array<GuiAudio::PyramidLevel, 3>& levels) {
 }
 
 // Pyramid build over the fully-loaded in-memory sample buffer. Reads
-// `samples` (interleaved, `channels` per frame) in place, accumulating
-// level-1 (stride 32) pairs directly. Levels 2 and 3 fold from level 1 in
-// memory. The on_progress callback pumps the compositor during load and is
-// invoked at roughly kStreamFramesPerChunk-frame boundaries.
+// `samples` (interleaved, `channels` per frame) in place, accumulating the
+// FINEST level's pairs (stride kStrides[0]) directly from the raw samples; each
+// deeper level then folds from the one before it in memory, so the ladder is
+// built once per level and never re-scans the samples. The on_progress callback
+// pumps the compositor during load and is invoked at roughly
+// kStreamFramesPerChunk-frame boundaries.
 //
 // `channels` is the source's interleaved channel count; `render_channels` is
 // always 2 (stereo-only sources; the .peaks format field keeps its 1-or-2
@@ -144,7 +177,7 @@ void build_pyramid_streaming(const float* samples,
                              int channels,
                              int render_channels,
                              const GuiAudio::ProgressCallback& on_progress,
-                             std::array<GuiAudio::PyramidLevel, 3>& out) {
+                             std::array<GuiAudio::PyramidLevel, kNumLevels>& out) {
     reset_levels(out);
 
     const int64_t pc1_hint = (total_frames + kStrides[0] - 1) / kStrides[0];
@@ -203,9 +236,11 @@ void build_pyramid_streaming(const float* samples,
         out[0].pairs[ch].shrink_to_fit();
     }
 
-    // Levels 2 and 3 fold by min-of-mins / max-of-maxes over kReductionFactor
-    // adjacent pairs of the previous level. Already-quantized int16 in, no
-    // requantization.
+    // Every deeper level folds by min-of-mins / max-of-maxes over
+    // kReductionFactor adjacent pairs of the PREVIOUS level (a level's stride is
+    // therefore its predecessor's times kReductionFactor, which is what makes
+    // the ladder powers-of-four). Already-quantized int16 in, no requantization,
+    // so a folded extreme is bit-identical to the raw extreme it came from.
     for (int L = 1; L < kNumLevels; L++) {
         const int64_t prev_pc = out[L - 1].pair_count;
         const int64_t cur_pc  = (prev_pc + kReductionFactor - 1) / kReductionFactor;
@@ -245,7 +280,7 @@ bool try_load_cache(const std::string& source_path,
                     int64_t total_frames,
                     int     render_channels,
                     int     sample_rate,
-                    std::array<GuiAudio::PyramidLevel, 3>& levels) {
+                    std::array<GuiAudio::PyramidLevel, kNumLevels>& levels) {
 
     const std::string cpath = cache_path_for(source_path);
     FILE* f = std::fopen(cpath.c_str(), "rb");
@@ -371,7 +406,7 @@ bool write_cache_to_disk(const std::string& source_path,
                          int64_t total_frames,
                          int     render_channels,
                          int     sample_rate,
-                         const std::array<GuiAudio::PyramidLevel, 3>& levels) {
+                         const std::array<GuiAudio::PyramidLevel, kNumLevels>& levels) {
 
     const std::string cpath = cache_path_for(source_path);
     const std::string tpath = cpath + ".tmp";
@@ -503,7 +538,7 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
         static_cast<int64_t>(next_samples.size() /
                              static_cast<size_t>(next_channels));
 
-    std::array<PyramidLevel, 3> next_levels;
+    std::array<PyramidLevel, kCacheLevels> next_levels;
     reset_levels(next_levels);
 
     auto publish = [&]() {
@@ -547,7 +582,25 @@ std::shared_ptr<const std::vector<float>> GuiAudio::samples_shared() const {
 
 int GuiAudio::num_levels() const {
     if (total_frames_ <= 0) return 0;
-    return 1 + kNumLevels;  // level 0 (raw) + three cache levels
+    return 1 + kNumLevels;  // level 0 (raw) + the cached ladder
+}
+
+int GuiAudio::level_for_span(double span_samples) const {
+    const int nl = num_levels();
+    if (nl <= 1) return 0;
+    // Coarsest cached level whose stride still fits inside the span; below the
+    // finest stride there is no useful cached level and the raw samples win.
+    // Walking from the top means the first fit is the coarsest, so a column
+    // never scans more than kReductionFactor bins' worth of pairs.
+    int level = 0;
+    for (int L = kNumLevels - 1; L >= 0; --L) {
+        if (span_samples >= static_cast<double>(kStrides[L])) {
+            level = L + 1;
+            break;
+        }
+    }
+    if (level > nl - 1) level = nl - 1;
+    return level;
 }
 
 std::pair<float,float> GuiAudio::get_peak_range(int channel,

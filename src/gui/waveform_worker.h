@@ -149,9 +149,10 @@ private:
     int completion_fd_ = -1;
 };
 
-// Render the waveform into `dest` from scratch (clears to transparent
-// first, then strokes peaks for both stereo channels — stereo is structural,
-// channels != 2 refuses at load; see file_loader). Thread-agnostic: it runs
+// Render the waveform into `dest` from scratch (clears to transparent first,
+// then writes the peak columns for both stereo channels DIRECTLY into the plate
+// buffer — no cairo strokes; see render_waveform's writer contract — stereo is
+// structural, channels != 2 refuses at load; see file_loader). Thread-agnostic: it runs
 // either on the waveform worker thread (the async dispatch) or synchronously on
 // the GUI thread (force_synchronous_waveform_rebuild), touching only the
 // supplied dest surface, the audio handle's peak pyramid (read-only after

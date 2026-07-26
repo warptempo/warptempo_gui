@@ -290,21 +290,34 @@ void render_waveform(cairo_surface_t* dest,
     const double samples_per_pixel = span /
                                      static_cast<double>(basis.full_width);
 
-    // Cache layout (must match audio.cpp): level 0 = raw samples;
-    // levels 1, 2, 3 = stride 32, 1024, 32768. Pick the coarsest cache
-    // level whose stride is <= spp; below stride 32, fall through to raw.
+    // PYRAMID LEVEL IS CHOSEN PER COLUMN, from that column's own mapped SOURCE
+    // width, through the one level-choosing owner (GuiAudio::level_for_span —
+    // the stride ladder lives there and nothing here knows it).
     //
-    // In target view (warp_frame_map != nullptr) `samples_per_pixel` is in
-    // target-frame units. The resulting imprecision is accepted —
-    // tempo-compressed regions paint from a coarser pyramid level than
-    // they "should," and stretched regions from a finer one. Aesthetic,
-    // not functional.
-    int level;
-    if      (samples_per_pixel >= 32768.0) level = 3;
-    else if (samples_per_pixel >= 1024.0)  level = 2;
-    else if (samples_per_pixel >= 32.0)    level = 1;
-    else                                   level = 0;
-    if (level > num_levels - 1) level = num_levels - 1;
+    // Source view: the mapped width is the basis spp for EVERY column — one
+    // uniform value, so per-column selection provably yields the identical
+    // level throughout and this is not a behavior change (only the denser
+    // ladder is). It is passed as the exact spp rather than a per-column
+    // rounded span precisely so that invariance holds by construction and
+    // cannot wobble across a stride threshold on a rounding tie.
+    //
+    // Target view: the width is the column's TRUE local mapped span (g1 - g0),
+    // which is what the read actually costs. The old single pick came from the
+    // viewport-wide TARGET-domain spp while the reads are source-domain, and
+    // the legal local slope reaches 16x (tempo 4 * marker scale 2 * settings
+    // scale 2) — so a tempo-compressed column could read a far finer level than
+    // its span warranted, up to hundreds of samples in one column. Selecting
+    // from the column's own span restores the intended per-column bound and is
+    // strictly MORE accurate than the global estimate it replaces.
+    //
+    // Consequence, accepted: where the map slope crosses a stride threshold,
+    // adjacent target-view columns may read different levels, a per-column
+    // statistics discontinuity that bridging carries at most one column
+    // further. Aesthetic only.
+    const auto level_for_column = [&](double src_width) {
+        return audio.level_for_span(warp_frame_map ? src_width
+                                                   : samples_per_pixel);
+    };
 
     const double y_center = area.y + area.h * 0.5;
     const double half_h   = area.h * 0.5;
@@ -398,7 +411,10 @@ void render_waveform(cairo_surface_t* dest,
         const long long hs1 = static_cast<long long>(std::nearbyint(g_prev));
         if (hs0 < 0) hs0 = 0;
         if (hs1 > hs0) {
-            const auto hm = audio.get_peak_range(channel, level, hs0, hs1);
+            // The halo picks its level from its own span, exactly like a drawn
+            // column, so it reads the same statistics its neighbour would.
+            const int hlevel = level_for_column(g_prev - g_halo0);
+            const auto hm = audio.get_peak_range(channel, hlevel, hs0, hs1);
             prev_raw_min = hm.first;
             prev_raw_max = hm.second;
             have_prev    = true;
@@ -415,6 +431,7 @@ void render_waveform(cairo_surface_t* dest,
         long long       s1 = static_cast<long long>(std::nearbyint(g1));
         if (s1 <= s0) s1 = s0 + 1;
 
+        const int level = level_for_column(g1 - g0);
         const auto mm = audio.get_peak_range(channel, level, s0, s1);
         const double raw_min = mm.first;
         const double raw_max = mm.second;
