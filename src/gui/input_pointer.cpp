@@ -326,10 +326,11 @@ bool GuiInputHandler::handle_escape_selection_region() {
         // No region + SINGLETON: deselect + land the playhead ON the marker (the
         // playhead is usually already coincident from the re-coupling land, so the
         // land is a safety re-affirm; deselecting then flips the playhead form back
-        // to the blue waveform focus). Land BEFORE the clear so the marker index
-        // is still resolvable. Full waveform damage: the deselect un-shows a wider
-        // WAVEFORM overlay than the playhead-column / top-strip damage covers — the
-        // phase-reset lead-in overlay (P+target) and the selected-marker stem.
+        // to the waveform's own cursor focus). Land BEFORE the clear so the
+        // marker index is still resolvable. Full waveform damage: the deselect
+        // un-shows a wider WAVEFORM overlay than the playhead-column / top-strip
+        // damage covers — the phase-reset lead-in overlay (P+target) and the
+        // selected-marker stem.
         const int idx = *app.selected_markers.begin();
         land_playhead_on_marker(app, audio, viewport, idx);
         selection.clear_selection();
@@ -677,8 +678,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // hover-driven POPUP / lane-text surfaces would be stale after a
             // fall-through marker click. Recomputing here reflects the pointer's
             // true position so the popup/lane text settle correctly (one of the
-            // 57f7196 hover-settling fixes; the stem no longer keys on hover under
-            // the blue-focus pivot). Placed before any pending-drag arm on purpose:
+            // 57f7196 hover-settling fixes; the always-on stem does not key on
+            // hover). Placed before any pending-drag arm on purpose:
             // a recompute AFTER an arm would hit the drags-suppress-hover rule
             // (any_pointer_gesture_active) and clear it again; here no gesture is
             // active yet, so this is a genuine resolve.
@@ -913,10 +914,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // top-strip press stop already halted playback above.
             if (inside_top && mh.index >= 0) {
                 selection.toggle_selection_membership(mh.index);
-                // The selected-marker stem is always-on for a singleton (the
-                // blue-focus pivot); toggle_selection_membership owns its
-                // appear/move/disappear damage via the subject-change owner, so no
-                // explicit stem damage is needed here.
+                // The selected-marker stem is always-on for a singleton;
+                // toggle_selection_membership owns its appear/move/disappear
+                // damage via the subject-change owner, so no explicit stem
+                // damage is needed here.
                 if (!app.selected_markers.empty())
                     land_playhead_on_marker(app, audio, viewport,
                                             *app.selected_markers.begin());
@@ -1178,8 +1179,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // this double-click). Selection is navigation, allowed in
                     // read-only.
                     selection.set_single_selection(hit);
-                    // The clicked marker's always-on blue stem (the blue-focus
-                    // pivot) appears/moves here through set_single_selection's
+                    // The clicked marker's always-on focus stem appears/moves
+                    // here through set_single_selection's
                     // subject-change owner — including the click-an-already-selected
                     // no-op case (same subject, no stem damage needed, the stem is
                     // already painting there). Covers the double-click-consume path
@@ -1795,7 +1796,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
             if (m >= 0 && m < n) {
                 selection.set_single_selection(m);
                 // Deferred click completes on marker m: set_single_selection owns
-                // the always-on stem's subject-change damage (the blue-focus pivot).
+                // the always-on stem's subject-change damage.
                 land_playhead_on_marker(app, audio, viewport, m);
             }
         }
@@ -1854,7 +1855,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
             if (m >= 0 && m < n) {
                 selection.set_single_selection(m);
                 // Deferred click completes on marker m: set_single_selection owns
-                // the always-on stem's subject-change damage (the blue-focus pivot).
+                // the always-on stem's subject-change damage.
                 land_playhead_on_marker(app, audio, viewport, m);
             }
         }
@@ -2200,8 +2201,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 if (m >= 0 && m < n) {
                     selection.set_single_selection(m);
                     // Deferred click completes on marker m: set_single_selection
-                    // owns the always-on stem's subject-change damage (blue-focus
-                    // pivot).
+                    // owns the always-on stem's subject-change damage.
                     land_playhead_on_marker(app, audio, viewport, m);
                 }
             }
@@ -2259,8 +2259,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 if (m >= 0 && m < n) {
                     selection.set_single_selection(m);
                     // Deferred click completes on marker m: set_single_selection
-                    // owns the always-on stem's subject-change damage (blue-focus
-                    // pivot).
+                    // owns the always-on stem's subject-change damage.
                     land_playhead_on_marker(app, audio, viewport, m);
                 }
             }

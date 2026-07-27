@@ -333,7 +333,7 @@ GuiPaintHandler::region_columns(const DisplayedViewportBasis& basis) const {
 // ground and its antialiased fringes blend against it — the ink over a
 // highlighted span is bit-identical to ink over plain canvas wherever coverage
 // is full, and only the ground carries the highlight. The retired form was a
-// translucent blue wash painted OVER the plate, which lifted the ink itself —
+// translucent wash painted OVER the plate, which lifted the ink itself —
 // exactly what the recolor model rejects.
 // Session-only, nothing persisted; not part of the plate/flag caches — a direct
 // per-frame pass, so no cache is involved. AA off, integer edges. The fill is
@@ -650,18 +650,19 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 
 // -- GuiPaintHandler::paint_selected_stem --------------------------------
 
-// Selected-marker stem (blue-focus pivot, architect 2026-07-25, superseding the
+// Selected-marker stem (architect 2026-07-25, superseding the
 // conditional-stem round-4 model): the stem is the SINGLETON selection's focus
 // visual — it marks where the playhead sits/would land on the one selected
 // marker, and it ALWAYS paints for that marker. The visibility predicate is
 // simply "exactly ONE marker selected" (+ the bounds checks below): the hover,
 // lateral-gesture PIN, and tempo-drag arms are GONE as gates (the whole
 // conditional-stem apparatus — stem_pin_*, the hover arm, the click-site stem
-// damages — was harvested with this pivot). "Always" replaces every prior expiry
-// semantic: the stem is hover-INDEPENDENT (a keyboard-only selection shows it too)
-// and playback-INDEPENDENT (it persists through scrubs and auditions), because it
-// is the selection's focus cue, not a working affordance. A grabbed marker (a
-// live position drag, or a W+target tempo drag) is itself the singleton selection,
+// damages — was harvested when the stem became unconditional). "Always" replaces
+// every prior expiry semantic: the stem is hover-INDEPENDENT (a keyboard-only
+// selection shows it too) and playback-INDEPENDENT (it persists through scrubs
+// and auditions), because it is the selection's focus cue, not a working
+// affordance. A grabbed marker (a live position drag, or a W+target tempo
+// drag) is itself the singleton selection,
 // so the stem paints anyway — no gesture arm is needed. The ONE non-selection
 // input is the DragOverlay proposal override below: under a live POSITION drag the
 // stem tracks the flag 1:1 at the mid-gesture proposed frame; a tempo drag never
@@ -824,16 +825,16 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // 2026-07-23). The split halves paint FULL-OPACITY kPlayheadCursor — the
     // CURSOR's own key, because that is literally what they are: the cursor
     // dissolved into its two ends, marking the region bounds where its split form
-    // sits. They ride the cursor's key rather than the selection's so that
+    // sits. They ride the cursor's key rather than any selection key so that
     // retuning the SELECTION cannot drag them off the cursor they stand in for
-    // (architect 2026-07-27). Under the tuned defaults the two keys hold
-    // different values outright — the cursor family is the calm icon grey, the
-    // selection pair the marker blue — so the halves visibly follow the cursor,
-    // which is the point of the key choice. The exclusivity is structural, not
-    // per-former: paint_region_ground gates on the same app.region.active this
-    // if/else branches
-    // on, and the CURSOR forms emit only here — the region branch owns the split,
-    // the empty-selection else owns the cursor (a NON-EMPTY
+    // (architect 2026-07-27). Under the compiled defaults kPlayheadCursor and
+    // the region's own kRegionCanvas hold different values outright, so the
+    // halves read as the cursor's two ends rather than as part of the ground
+    // they bound — which is the point of the key choice. The exclusivity is
+    // structural, not per-former: paint_region_ground gates on the same
+    // app.region.active this if/else branches on, and the CURSOR forms emit only
+    // here — the region branch owns the split, the empty-selection else owns the
+    // cursor (a NON-EMPTY
     // selection moves the cursor COINCIDENT with the marker — hidden behind it, its
     // line coinciding with the focus stem; the stem/ground are the focus visuals —
     // the stem for a singleton, the extent-region ground for a group).
@@ -1135,14 +1136,14 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     contributes no ground at all (architect 2026-07-27): its 1px RING
         //     is its whole visual, and a boundary line paints AFTER the plate,
         //     crossing the ink like the stems do.
-        //   THE Z-ORDER FLIP (architect 2026-07-23) — the cursor playhead (blue
+        //   THE Z-ORDER FLIP (architect 2026-07-23) — the cursor playhead (its
         //     line+triangle) and the region SPLIT half-triangles pass UNDER
         //     marker flags, so on a multimarker select the extent region's
         //     half-triangles rest hidden behind the earliest/latest members'
         //     flags (identical 15-wide triangle geometry at the same column);
-        //     the grey selected-marker focus triangles are GONE (the blue-focus
-        //     pivot, architect 2026-07-25 — a singleton's focus is its STEM, a
-        //     group's is the extent-region ground).
+        //     the grey selected-marker focus triangles are GONE (architect
+        //     2026-07-25 — a singleton's focus is its STEM, a group's is the
+        //     extent-region ground).
         //   TRIM BELOW THE PLAYHEAD (architect 2026-07-25) — every trim pixel
         //     paints before every playhead element, so the playhead triangle
         //     sits over a trim stem crossing the triangle lane:
@@ -1177,8 +1178,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         if (rects_intersect(exposed, area)) {
             // Selected-marker stem over the plate + trim, under the playhead and
             // the flags: the single selected marker's focus column, live per-frame
-            // (not cached), ALWAYS painted for a singleton selection (the blue-focus
-            // pivot — no hover/pin/gesture condition).
+            // (not cached), ALWAYS painted for a singleton selection (no
+            // hover/pin/gesture condition).
             paint_selected_stem(cr, area);
         }
 

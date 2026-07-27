@@ -496,7 +496,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
-    // The singleton selection's always-on blue stem does not MOVE for its own
+    // The singleton selection's always-on focus stem does not MOVE for its own
     // tempo step: the stepped marker's OWN image is fixed by construction (its
     // tempo shapes only the segment AFTER it, sliding only DOWNSTREAM images), so
     // the subject frame is unchanged and no stem repaint is needed here — the
@@ -620,9 +620,9 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
             viewport.move_playhead_to(source_frame_to_active_domain(
                 app, audio, app.warpmarkers.markers()[f].time_frame));
         }
-        // No stem to move here: a 2+ selection paints no stem under the blue-focus
-        // pivot (its cue is the extent region's ground, re-derived below). The
-        // kick_waveform_sync above already repainted the moved images.
+        // No stem to move here: a 2+ selection paints no stem at all (its cue is
+        // the extent region's ground, re-derived below). The kick_waveform_sync
+        // above already repainted the moved images.
         // Region follows the images (architect 2026-07-23): the group step moved
         // the selected markers' target IMAGES (tempos changed, source frames did
         // not).
@@ -771,8 +771,8 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
         undo.refresh_coalesced_touched_live(std::move(touched_live));
     } else {
         // The warp POSITION NUDGE (the receiving marker's own image slides). A
-        // singleton restore's always-on blue stem follows from the selection (the
-        // blue-focus pivot — no lateral bit).
+        // singleton restore's always-on focus stem follows from the selection —
+        // no lateral bit.
         undo.push_undo_warp(std::move(pre_state),
                             /*affects_persistence=*/true,
                             std::move(touched_snapshot),

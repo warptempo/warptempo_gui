@@ -704,9 +704,8 @@ void MarkerDragOps::commit_drag() {
         std::move(app.drag.pre_drag_phase_reset_snapshot);
     app.drag = DragState{};
     if (net_changed) {
-        // The position-DRAG commit (both columns). A singleton restore's always-on
-        // blue stem follows from the selection (the blue-focus pivot — no lateral
-        // bit).
+        // The position-DRAG commit (both columns). A singleton restore's
+        // always-on focus stem follows from the selection — no lateral bit.
         if (phase_reset) {
             undo.push_undo_phase_reset(std::move(snap_t),
                                        std::move(touched_snapshot),
@@ -741,9 +740,9 @@ void MarkerDragOps::commit_drag() {
     }
     // The selected-marker stem's move at commit is owned by the full-waveform
     // invalidate_waveform_area above (a position drag of a SINGLETON selection
-    // shifts its frame, so its always-on blue stem — the blue-focus pivot — repaints
-    // at the committed column). A group drag paints no stem (its cue is the extent
-    // region's recolored ground), so nothing to move there.
+    // shifts its frame, so its always-on focus stem repaints at the committed
+    // column). A group drag paints no stem (its cue is the extent region's
+    // recolored ground), so nothing to move there.
     // Region re-derive (GROUP drag only — a single-marker drag never has an
     // active region here, its press cleared it). apply_drag_motion live-tracked
     // the region to the moving group during motion; snap it back to the RESTING
@@ -1411,10 +1410,10 @@ void MarkerDragOps::end_tempo_drag() {
         std::move(app.tempo_drag.pre_drag_snapshot);
     app.tempo_drag = TempoDragState{};
     if (net_changed) {
-        // The TEMPO DRAG end. A singleton restore's always-on blue stem follows
-        // from the selection (the blue-focus pivot — no lateral bit); the restored
-        // selection is the TOUCHED (predecessor) row, whose image the re-warp
-        // repaints. No touched hints (diff matcher).
+        // The TEMPO DRAG end. A singleton restore's always-on focus stem follows
+        // from the selection — no lateral bit; the restored selection is the
+        // TOUCHED (predecessor) row, whose image the re-warp repaints. No
+        // touched hints (diff matcher).
         undo.push_undo_warp(std::move(pre_state),
                             /*affects_persistence=*/true,
                             /*touched_snapshot=*/{}, /*touched_live=*/{});
@@ -1433,8 +1432,8 @@ void MarkerDragOps::end_tempo_drag() {
             source_frame_to_active_domain(app, audio, mv[mi].time_frame));
     }
     // No stem damage at release: the dragged marker IS the singleton selection, so
-    // its always-on blue stem (the blue-focus pivot) painted throughout the drag
-    // and stays painted after it — release moves nothing (tempo_drag.active going
+    // its always-on focus stem painted throughout the drag and stays painted
+    // after it — release moves nothing (tempo_drag.active going
     // false changes no stem input). A net-changed drag already repainted the stem's
     // moving image via each per-cent-step kick_waveform_sync; a walled / zero-commit
     // drag changed nothing at all. (The former lateral-gesture pin stamp + its
@@ -1536,8 +1535,8 @@ void MarkerDragOps::cancel_tempo_drag() {
 // decision, ONE synchronous re-warp, post-kick playhead re-land on the FOCUSED
 // marker's image, and a per-press preview trigger. The FOCUSED marker's image
 // moves here (unlike the Alt+Up/Down tempo step, whose stepped marker's own
-// image is fixed by construction), so its always-on blue stem (the blue-focus
-// pivot) rides the re-warp's full-waveform damage to its new column.
+// image is fixed by construction), so its always-on focus stem rides the
+// re-warp's full-waveform damage to its new column.
 void MarkerDragOps::step_tempo_image(int direction) {
     // Guards (silent refusals, navigation-class). The dispatch site already
     // routes only W+target here; the view test is kept defensive, the shape of
@@ -1669,8 +1668,8 @@ void MarkerDragOps::step_tempo_image(int direction) {
     }
     // The TEMPO-IMAGE STEP. The entry's touched hints are seed.participants (the
     // PREDECESSOR / cents receiver), so a singleton restore selects and lands on
-    // the PREDECESSOR, its always-on blue stem following from the selection (the
-    // blue-focus pivot — no lateral bit; the undo visual follows the TOUCHED row).
+    // the PREDECESSOR, its always-on focus stem following from the selection (no
+    // lateral bit; the undo visual follows the TOUCHED row).
     if (merge) undo.note_coalesced_commit();
     else       undo.push_undo_warp(std::move(pre_state),
                                    /*affects_persistence=*/true,
@@ -1699,10 +1698,10 @@ void MarkerDragOps::step_tempo_image(int direction) {
         source_frame_to_active_domain(app, audio, mv[f].time_frame));
     if (follow_extent)      set_region_to_selection_extent(app, audio, viewport);
     else if (trim_resync)   sync_region_to_trim_window(app, audio, viewport);
-    // The focused marker's always-on blue stem (the blue-focus pivot) rides the
-    // FOCUSED image's slide on the kick_waveform_sync full-waveform re-warp above —
-    // its source frame never moved (tempo only), but the re-warp repaints its
-    // moved image column. No pin stamp is needed; the singleton stays selected, so
-    // the stem was and remains painting.
+    // The focused marker's always-on focus stem rides the FOCUSED image's slide
+    // on the kick_waveform_sync full-waveform re-warp above — its source frame
+    // never moved (tempo only), but the re-warp repaints its moved image column.
+    // No pin stamp is needed; the singleton stays selected, so the stem was and
+    // remains painting.
     target_render.trigger();
 }

@@ -313,8 +313,8 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         undo.note_coalesced_commit();
         undo.refresh_coalesced_touched_live(std::move(touched_live));
     } else {
-        // The phase-reset POSITION NUDGE. A singleton restore's always-on blue stem
-        // follows from the selection (the blue-focus pivot — no lateral bit).
+        // The phase-reset POSITION NUDGE. A singleton restore's always-on focus
+        // stem follows from the selection — no lateral bit.
         undo.push_undo_phase_reset(std::move(pre_state),
                                    std::move(touched_snapshot),
                                    std::move(touched_live));

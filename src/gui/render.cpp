@@ -1216,7 +1216,12 @@ void render_trim_flags(cairo_t* cr,
     // Each chip is a plain kTrimChip rectangle with a kTrimChipOutline border,
     // no triangle; the bottom argument is unused for the rectangle shape. The
     // calm pair, not the bar's bright one — the chips are the handles, the bar
-    // between them is the window.
+    // between them is the window. THE FILL IS MEANT TO DISAPPEAR: kTrimChip's
+    // compiled default is the kBackground chrome value exactly, so the rectangle
+    // below draws in the lane's own color and what actually marks the bound is
+    // its RING plus its stems. A chip whose interior is indistinguishable from
+    // the strip is the designed result, not a painter that failed to draw; the
+    // trim palette block in render.h carries the rationale.
     for (auto it = chips.rbegin(); it != chips.rend(); ++it) {
         // The chip rect (edge-anchored begin/end) comes from the shared owner
         // trim_chip_rect, handed the lane band `chip_row` itself (the owner

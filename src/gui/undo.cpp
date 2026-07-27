@@ -457,9 +457,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // language, superseding "undo/redo shows its target WITHOUT the playhead"):
     // a SINGLETON restore LANDS the playhead on its touched marker (the region
     // dissolves via the land, exactly the plain marker-click land) and its
-    // always-on blue stem follows from the selection (the blue-focus pivot — no
-    // stamp); a GROUP restore re-selects the touched set (done above), LANDS the
-    // playhead on the EARLIEST touched member, AND sets the SelectionExtent REGION
+    // always-on focus stem follows from the selection (no stamp); a GROUP
+    // restore re-selects the touched set (done above), LANDS the playhead on the
+    // EARLIEST touched member, AND sets the SelectionExtent REGION
     // — undo/redo joins the extent-region writers, then, when any member is
     // offscreen, PREFERS a plain scroll and only ZOOMS OUT if the group cannot fit
     // at the current level (the group arm below). The extent's split half-triangles
@@ -514,11 +514,11 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                     app.viewport_start_sample = domain_frame - visible / 2;
                     clamp_viewport_start(app, viewport.audio);
                 }
-                // The restored singleton's always-on blue stem (the blue-focus
-                // pivot) follows automatically from the selection — sanitize's
-                // subject-change owner plus the full-waveform invalidate below
-                // repaint it on the touched marker. No pin stamp is needed (the
-                // whole conditional-stem apparatus was harvested).
+                // The restored singleton's always-on focus stem follows
+                // automatically from the selection — sanitize's subject-change
+                // owner plus the full-waveform invalidate below repaint it on
+                // the touched marker. No pin stamp is needed (the whole
+                // conditional-stem apparatus was harvested).
             }
         } else if (sel_size >= 2) {
             // GROUP: LAND the playhead on the EARLIEST touched member, THEN set the

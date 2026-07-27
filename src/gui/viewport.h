@@ -201,7 +201,7 @@ struct Viewport {
     void invalidate_waveform_area();
     void invalidate_timestamp_area();
     void invalidate_playhead_columns(double old_px, double new_px);
-    // Low-level SELECTED-marker stem column damage (blue-focus pivot, architect
+    // Low-level SELECTED-marker stem column damage (architect
     // 2026-07-25): damage the stem column at the given SOURCE FRAME on the DISPLAYED
     // item basis (waveform height, +AA slack). The stem (paint_selected_stem) paints
     // against the promoted item mirror (displayed_viewport_basis), not the live

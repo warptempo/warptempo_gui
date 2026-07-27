@@ -182,8 +182,8 @@ inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
 // waveform, so a bright ring wants a calmer stem and the two must tune
 // independently. With the flag carrying no selection color at all, this stem is
 // the singleton's whole colour cue, and it takes the calm breeze-icons grey
-// (the kPlayheadCursor value) rather than a ring blue — a full-height line at
-// ring brightness would shout.
+// (the kPlayheadCursor value) rather than a ring value like kMarkerOutline — a
+// full-height line at ring brightness would shout.
 inline GuiColor kSelectedStem     = hex(0x7F8C8D);
 
 // DEFAULT — the pair every marker paints unless it is disabled or red. Both
@@ -214,16 +214,16 @@ inline GuiColor kMarkerOutline    = hex(0x3895C7);
 // Opaque, not an alpha fade, and not computed from the default pair: both halves
 // come from the same KColorScheme disabled set as kTextDisabled — the fill is
 // the disabled LINK role (Breeze's link blue #1d99f3 faded 65% toward the
-// darkened view ground, which is exactly why a disabled marker stays in the blue
-// family while sitting darker than the live fill), the ring its PlaceholderText
-// grey. It is NOT the disabled Highlight, which is the grey window ground
-// #1f2124 and would be useless as a marker fill. The disabled lane text
-// (kTextDisabled) is that set's Text, so shape and glyph grey out together by
-// provenance. It WINS over red and over the default class, and there is nothing
-// left for it to compose with: a disabled marker paints BOTH halves of this pair
-// whatever its red-flag status and whatever its selection, since selection
-// carries no color. A selected disabled marker is marked by the paint order and
-// by the stem.
+// darkened view ground, which is exactly why a disabled marker stays in the
+// default fill's family while sitting darker than it), the ring its
+// PlaceholderText grey. It is NOT the disabled Highlight, which is the grey
+// window ground #1f2124 and would be useless as a marker fill. The disabled
+// lane text (kTextDisabled) is that set's Text, so shape and glyph grey out
+// together by provenance. It WINS over red and over the default class, and
+// there is nothing left for it to compose with: a disabled marker paints BOTH
+// halves of this pair whatever its red-flag status and whatever its selection,
+// since selection carries no color. A selected disabled marker is marked by the
+// paint order and by the stem.
 inline GuiColor kMarkerDisabled        = hex(0x164160);
 inline GuiColor kMarkerDisabledOutline = hex(0x42464A);
 
@@ -260,7 +260,8 @@ inline GuiColor kAccentOutline    = hex(0xDA4453);
 // as the two EDGES of a span rather than as a tinted region, which is what a
 // narrow authoring marker wants. So this is a line color, not the outline
 // sibling of any fill — and its default is accordingly the live-1px-mark grey
-// kPlayheadCursor and kSelectedStem also default to, not a blue.
+// kPlayheadCursor and kSelectedStem also default to, not a ring value like
+// kMarkerOutline.
 inline GuiColor kRegionCanvas     = hex(0x42474D);
 inline GuiColor kOverlayOutline   = hex(0x7F8C8D);
 
@@ -530,21 +531,24 @@ inline int playhead_half_px() { return playhead_triangle_h_px() - 1; }
 
 // Pre-first-paint fallback for the measured monospace row height and baseline
 // offset (Liberation Mono at the DEFAULT 11 pt — these stay compile-time and
-// assume the default font size; they only seed geometry before the first
-// measure and are overwritten immediately). on_resize can fire before the
-// first redraw measures the real font; these seed the geometry so it is sane
-// (never a negative waveform) until init_monospace_grid_metrics overwrites
-// them. Both seed the UNPADDED metrics, which no lane takes directly: the -1.0
-// term is the authored flag_pad_y_px value at scale 1, the 1.0 term is
-// kChipOutlinePx, and the 14.0 stands in for the font ascent (approximate — a
-// seed, overwritten by the real measure before any glyph is painted)
-// (round(18 - 2) + 2*1 = 18; baseline -1.0 + 1.0 + 14.0). The TEXT-row
-// accessors derive from these seeds like they do from a real measure, adding
-// kTextBoxPadPx per side for the box (20 tall at scale 1) and kTextBoxMarginPx
-// per side for the lane hosting it (24 tall, lane-relative baseline 17.0).
+// assume the default font size). SEED ONLY, never live geometry:
+// init_monospace_grid_metrics runs at the top of every redraw and overwrites
+// BOTH before anything paints, so no pixel is ever placed against these values.
+// They exist because on_resize can fire before that first redraw, and the
+// geometry it computes must be sane (never a negative waveform) meanwhile.
+// Both seed the UNPADDED metrics, which no lane takes directly: the -1.0 term
+// is the authored flag_pad_y_px value at scale 1, the 1.0 term is
+// kChipOutlinePx, and the 13.0 is the font ascent — the ascent measured for the
+// font `fc-match monospace` resolves to on this host (Liberation Mono at
+// 14.6667 px), the same 13 that puts the row height at 18 (ascent 13 + descent
+// 5 = 18, then round(18 - 2) + 2*1 = 18; baseline -1.0 + 1.0 + 13.0 = 13.0).
+// The TEXT-row accessors derive from these seeds like they do from a real
+// measure, adding kTextBoxPadPx per side for the box (20 tall at scale 1) and
+// kTextBoxMarginPx per side for the lane hosting it (24 tall, lane-relative
+// baseline 16.0).
 constexpr int    kRowHFallbackPx       = 18;
 constexpr double kRowBaselineOffFallbackPx =
-    -1.0 + 1.0 + 14.0;
+    -1.0 + 1.0 + 13.0;
 
 // Forward declarations: defined with their full doc comments below. Needed here
 // because flag_chip_rect (inline) reads the text BOX height and the lane-top
@@ -913,8 +917,9 @@ void render_waveform(cairo_surface_t* dest,
 // belongs to the cursor exclusively under the split-playhead model; pass
 // `draw_triangle = false` for the scanner and the selected-marker stem so only
 // the vertical line is drawn. (The complementary triangle-only form was retired
-// with the grey selected-marker focus triangle in the blue-focus pivot, architect
-// 2026-07-25, so there is no draw_line flag — the line is unconditional.)
+// with the grey selected-marker focus triangle when the singleton's focus became
+// an always-on stem, architect 2026-07-25, so there is no draw_line flag — the
+// line is unconditional.)
 //
 // The line is ONE SOLID `color` end to end, painted straight over whatever it
 // crosses — waveform ink included. The former two-tone form (an `ink_plate`
@@ -969,10 +974,10 @@ void render_strip_anchor_stem(cairo_t* cr,
 // (The cached marker-stem renderers render_markers / render_phaseresetmarkers
 // are retired: the marker stem became a live overlay,
 // GuiPaintHandler::paint_selected_stem — the SINGLE selected marker's stem, shown
-// ALWAYS for a singleton selection (the blue-focus pivot, architect 2026-07-25;
-// a live position drag tracks the proposed position). The trim stems below are
-// live too — GuiPaintHandler::paint_trim, below the playheads; no stem is cached
-// anywhere.)
+// ALWAYS for a singleton selection (no hover, pin, or gesture condition;
+// architect 2026-07-25; a live position drag tracks the proposed position). The
+// trim stems below are live too — GuiPaintHandler::paint_trim, below the
+// playheads; no stem is cached anywhere.)
 
 // The ONE trim bound-to-column geometry owner (audit C1). Every consumer of a
 // trim bound's pixel column funnels here: the two paint sites (render_trim_stems'

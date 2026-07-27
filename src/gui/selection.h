@@ -46,9 +46,10 @@ struct Selection {
     void prune_live_selection();
 
    private:
-    // Focus model (architect 2026-07-23, one-focus-family pivot 2026-07-25): the
-    // cursor playhead's presence depends on selection emptiness — empty =
-    // kPlayheadCursor line + triangle at the cursor (waveform focus); non-empty
+    // Focus model (architect 2026-07-23, unified into one focus family
+    // 2026-07-25): the cursor playhead's presence depends on selection
+    // emptiness — empty = kPlayheadCursor line + triangle at the cursor
+    // (waveform focus); non-empty
     // conceptually moves the cursor COINCIDENT with the selected marker, so its
     // line coincides with the marker's focus stem and its triangle sits hidden
     // BEHIND the flag (the z-order flip) — the cursor form is not painted here
@@ -86,14 +87,14 @@ struct Selection {
     // focus moving between resets at different frames.
     void damage_overlay_on_subject_change(std::optional<int64_t> old_subject);
 
-    // The selected-marker STEM (paint_selected_stem, the blue-focus pivot 2026-07-25)
-    // is the SINGLETON selection's always-on focus visual (BOTH columns, BOTH audio
-    // views — unlike the phase overlay's P+target gate). Its SUBJECT is the one
-    // selected marker's ACTIVE-COLUMN SOURCE frame, or none when the selection is
-    // empty or multi (a group's cue is the extent region's ground, not a stem).
-    // Frame,
-    // not index: a reorder remap preserves frames (subject-stable), exactly like
-    // phase_overlay_subject. Captured BEFORE a selection mutation.
+    // The selected-marker STEM (paint_selected_stem, architect 2026-07-25) is
+    // the SINGLETON selection's always-on focus visual (BOTH columns, BOTH
+    // audio views — unlike the phase overlay's P+target gate). Its SUBJECT is
+    // the one selected marker's ACTIVE-COLUMN SOURCE frame, or none when the
+    // selection is empty or multi (a group's cue is the extent region's ground,
+    // not a stem). Frame, not index: a reorder remap preserves frames
+    // (subject-stable), exactly like phase_overlay_subject. Captured BEFORE a
+    // selection mutation.
     std::optional<int64_t> stem_subject() const;
 
     // Damage the stem's OLD and NEW subject columns when the subject changed across

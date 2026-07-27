@@ -83,8 +83,8 @@ public:
     // the window edge erases any hover POPUP / marker-text run / readout (which no
     // motion event would otherwise damage). It does not change the selected-marker
     // stem's VISIBILITY nor issue any dedicated stem-column damage — that stem is
-    // always-on for a singleton selection (the blue-focus pivot), driven only by the
-    // selection subject, never by hover (the clear's top-strip invalidation only
+    // always-on for a singleton selection, driven only by the selection
+    // subject, never by hover (the clear's top-strip invalidation only
     // incidentally repaints the one-row waveform seam, redrawing the same stem).
     // Null-safe.
     void set_pointer_left_hook(std::function<void()> cb);

@@ -432,12 +432,13 @@ private:
     // repaint the live chips/bridge/strip stems too; the outer Cairo damage
     // clip bounds the actual work. See the definition for the basis contract.
     void paint_trim(cairo_t* cr, const GuiRect& area, const GuiRect& top_strip);
-    // Selected-marker stem (blue-focus pivot, architect 2026-07-25): a per-frame
+    // Selected-marker stem (architect 2026-07-25): a per-frame
     // live overlay marking the SINGLE selected marker's column — where the playhead
     // sits/would land on it — ALWAYS painted for a singleton selection. It is the
     // singleton's focus visual: hover-, pin-, and gesture-INDEPENDENT (the whole
-    // conditional-stem apparatus was harvested with this pivot), so a keyboard-only
-    // selection shows it and it persists through scrubs/auditions. The ONE
+    // conditional-stem apparatus was harvested when the stem became
+    // unconditional), so a keyboard-only selection shows it and it persists
+    // through scrubs/auditions. The ONE
     // non-selection input is a live position DRAG, which overrides the store frame
     // with the proposed position so the stem tracks the flag. Painted in
     // kSelectedStem — its own tunable, independent of every flag fill and ring

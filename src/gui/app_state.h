@@ -849,7 +849,7 @@ struct ScrollDragState {
 // fence cadence is structurally gone). The gesture drives the SCANNER only, never
 // the cursor: selection, region, cursor, follow, and double-click seeding are
 // all untouched, the pure audition gesture. NOT the retired plain-drag scrub
-// of the 61126db pivot — that one MOVED the cursor playhead per column.)
+// (61126db) — that one MOVED the cursor playhead per column.)
 
 // The surface a double-click candidate belongs to. The surface tag is what keeps
 // the three double-click surfaces from cross-firing: a candidate seeded on one
@@ -1313,8 +1313,8 @@ struct AppState {
     // never serialized.
     uint64_t      command_seq = 0;
 
-    // Selected-marker stem visibility model (blue-focus pivot, architect
-    // 2026-07-25, superseding the conditional-stem apparatus). The blue stem
+    // Selected-marker stem visibility model (architect 2026-07-25, superseding
+    // the conditional-stem apparatus). The focus stem
     // (paint_selected_stem) is the SINGLETON selection's focus visual and ALWAYS
     // paints for the one selected marker — no hover, pin, or gesture condition.
     // The former LATERAL-GESTURE PIN (stem_pin_marker / stem_pin_command_seq, the

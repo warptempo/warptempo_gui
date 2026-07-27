@@ -14,10 +14,10 @@ void Selection::damage_playhead_if_focus_flipped(bool was_empty) {
     // Damage the playhead column (line span + triangle lane). The two-argument
     // form with equal endpoints damages exactly that one column — the playhead
     // itself has not moved, only its PRESENCE at the cursor changed with the
-    // selection emptiness: empty paints the blue cursor line+triangle there;
+    // selection emptiness: empty paints the cursor line+triangle there;
     // non-empty conceptually moves the cursor COINCIDENT with the marker (hidden
-    // behind it — the blue stem is the cursor line, the flag occludes the
-    // triangle), so the cursor form stops painting there (the blue-focus pivot).
+    // behind it — the always-on focus stem stands in for the cursor line, the
+    // flag occludes the triangle), so the cursor form stops painting there.
     const double px = playhead_pixel_x(app, audio);
     viewport.invalidate_playhead_columns(px, px);
 }
@@ -62,9 +62,10 @@ void Selection::damage_overlay_on_subject_change(
 
 std::optional<int64_t> Selection::stem_subject() const {
     // The always-on selected-marker stem paints for a SINGLETON selection, BOTH
-    // columns and BOTH audio views (the blue-focus pivot). The subject is that one
-    // marker's ACTIVE-COLUMN SOURCE frame (invalidate_stem_column maps it to the
-    // displayed column, source view identity). Empty or 2+ selected -> no stem.
+    // columns and BOTH audio views, under no further condition. The subject is
+    // that one marker's ACTIVE-COLUMN SOURCE frame (invalidate_stem_column maps
+    // it to the displayed column, source view identity). Empty or 2+ selected ->
+    // no stem.
     // Frame, not index: a reorder remap preserves frames (subject-stable). Reads
     // *selected_markers.begin() to mirror paint_selected_stem's own idx pick.
     if (app.selected_markers.size() != 1) return std::nullopt;
@@ -185,7 +186,7 @@ void Selection::clear_selection() {
     viewport.invalidate_timestamp_area();
     // Non-empty -> empty is always a focus flip here (the already-empty case
     // returned above), so the playhead column repaints — nothing at the cursor
-    // (non-empty) back to the blue cursor line+triangle (empty) — even with no
+    // (non-empty) back to the cursor line+triangle (empty) — even with no
     // playhead move.
     damage_playhead_if_focus_flipped(/*was_empty=*/false);
     // Clearing the focus erases any overlay it annotated (subject frame -> none)

@@ -111,9 +111,9 @@ int64_t stepped_anchor_frame(
 // (b) recompute_dirty;
 // (c) invalidate_waveform_area — this full-waveform damage also OWNS the
 //     selected-marker stem's move: a nudge shifts the focused SINGLETON's frame,
-//     and its always-on blue stem (the blue-focus pivot, architect 2026-07-25)
-//     repaints at the new column here. A 2+ selection paints no stem (its cue is
-//     the extent region's recolored ground), so nothing to move there;
+//     and its always-on focus stem (architect 2026-07-25) repaints at the new
+//     column here. A 2+ selection paints no stem (its cue is the extent
+//     region's recolored ground), so nothing to move there;
 // (d) invalidate_timestamp_area;
 // (e) PLAYHEAD FOLLOW: move_playhead_to the focused item's committed frame
 //     through the two-step placement basis (source_frame_to_active_domain —

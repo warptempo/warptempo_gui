@@ -63,7 +63,7 @@ void finish_group_position_nudge(
     undo.recompute_dirty();
     // (c, d) damage. The full-waveform damage here also owns the selected-marker
     // stem's move: a nudge shifts the focused SINGLETON's frame, so its always-on
-    // blue stem (the blue-focus pivot) repaints at the new column on this repaint.
+    // focus stem repaints at the new column on this repaint.
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     // (e) playhead follows the FOCUSED item's committed frame.
