@@ -952,9 +952,9 @@ constexpr int     kDragMovedThresholdPx = 8;
 // motion follows) re-reads the hovered marker's current fields in place.
 //
 // `lane_text` is the marker's own payload — the canonical flag line
-// (flag_text_iter) for a warp marker, the literal "p.r." for a phase
-// reset marker (display only; a phase reset has no authored payload and
-// serializes as a frame) — sized and centered by `source_frame` in the lane. `readout_text`
+// (flag_text_iter) for a warp marker, kPhaseResetLaneToken for a phase reset
+// marker (render.h: a display-only token, since a phase reset authors no
+// payload) — sized and centered by `source_frame` in the lane. `readout_text`
 // is the pass/ref resolved readout for the bottom strip (compute_hover_popup_text),
 // empty on owners and phase resets. Both are computed once per rect-entry (or
 // per in-place mutation of the hovered marker) and read unchanged by the paint

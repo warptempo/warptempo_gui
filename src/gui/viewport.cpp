@@ -704,11 +704,9 @@ void Viewport::recompute_hover_at_cursor() {
     // back. The LANE shows the hovered marker's own value regardless of
     // eligibility — the canonical flag line for a warp marker (flag_text_iter,
     // the one composer the flag paint, hit-rects, and the Enter editor seed all
-    // share, so lane and editor content always agree) or the literal "p.r." for
-    // a phase reset marker (a DISPLAY token only — phase resets serialize as
-    // frames; its 4 glyphs are what the lane's fit verdict measures, wide enough
-    // that a dense reset cluster fails decisively instead of sitting on the
-    // boundary and toggling all-texts/fallback under small zoom changes). The
+    // share, so lane and editor content always agree) or kPhaseResetLaneToken
+    // for a phase reset marker (render.h owns that token and the reason for its
+    // width; this is one of its three producers). The
     // BOTTOM readout keeps the pass/ref gate
     // (popup_eligible_marker): owners and phase resets have nothing to resolve.
     auto apply_hit = [&](int h, bool on_flag) {
@@ -722,7 +720,7 @@ void Viewport::recompute_hover_at_cursor() {
             if (app.active_markers_view == 'P') {
                 const auto& pv = app.phaseresetmarkers.markers();
                 if (h < static_cast<int>(pv.size())) {
-                    app.hover_popup.lane_text    = "p.r.";
+                    app.hover_popup.lane_text    = kPhaseResetLaneToken;
                     app.hover_popup.source_frame = pv[h].time_frame;
                 }
             } else {

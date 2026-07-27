@@ -819,10 +819,10 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // dissolved into its two ends, marking the region bounds where its split form
     // sits. They ride the cursor's key rather than the selection's so that
     // retuning the SELECTION cannot drag them off the cursor they stand in for
-    // (architect 2026-07-27). Under the compiled defaults kPlayheadCursor and
-    // kSelected coincide at 0x3DAEE9 and the halves look exactly as they always
-    // did — coincidence, not coupling: a config that separates the two keys keeps
-    // the halves with the cursor. The exclusivity is structural, not
+    // (architect 2026-07-27). Under the tuned defaults the two keys hold
+    // different values outright — the cursor family is the calm icon grey, the
+    // selection pair the marker blue — so the halves visibly follow the cursor,
+    // which is the point of the key choice. The exclusivity is structural, not
     // per-former: paint_region_ground gates on the same app.region.active this
     // if/else branches
     // on, and the CURSOR forms emit only here — the region branch owns the split,
@@ -852,8 +852,8 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
                                   kPlayheadCursor);
         }
     } else if (app.selected_markers.empty()) {
-        // WAVEFORM FOCUS (architect 2026-07-23): selection empty — the Breeze
-        // blue (kPlayheadCursor) 1px line + triangle, painted solid straight over
+        // WAVEFORM FOCUS (architect 2026-07-23): selection empty — the
+        // kPlayheadCursor 1px line + triangle, painted solid straight over
         // the plate ink. ONE color for both forms: the line and the tip-down
         // triangle carry the same kPlayheadCursor.
         render_playhead(cr, area, px_x, kPlayheadCursor,
@@ -861,7 +861,7 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     }
     // else: selection non-empty, no region. SEMANTICS (architect 2026-07-25): a
     // selection conceptually moves the cursor COINCIDENT with the selected marker —
-    // the cursor's 1px line coincides with the marker's blue stem, and the cursor
+    // the cursor's 1px line coincides with the marker's focus stem, and the cursor
     // playhead triangle sits BEHIND the marker flag (the Z-ORDER FLIP paints
     // playheads under the flag blit), so the cursor playhead is effectively FULLY
     // HIDDEN behind the marker. Not painting it here is the IMPLEMENTATION of that

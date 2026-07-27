@@ -62,8 +62,17 @@ struct TrimRange {
 // main.cpp. The scheme is Plasma 6 Breeze Dark roles carrying Ableton's value
 // polarity (architect 2026-07-26, the breeze option-a trial): the waveform area
 // is a MID ground with DARK ink, while the surrounding chrome sits DARKER THAN
-// THAT CANVAS at the desktop's panel color. Saturated accents are shipped
-// Breeze roles (see tmp/breeze_dark_reference.md).
+// THAT CANVAS at the desktop's panel color.
+//
+// THE DEFAULTS BELOW ARE THE ARCHITECT'S TUNED SCHEME (2026-07-27), folded in
+// from the config file that carried it, so a fresh machine with no colors.conf
+// looks exactly like the tuned desktop. Its shape: the CHROME and the LINES are
+// the desktop's own greys, and every marker-family shape is a DARK DESATURATED
+// FILL under a BRIGHT RING — the shipped saturated roles survive as the rings
+// and as nothing else. Where a default derives from a Breeze/qt6ct role or from
+// another key, the derivation is recorded at the entry so the architect can
+// re-derive it after retuning a base; where the architect tuned by eye, that is
+// said instead of inventing a formula.
 //
 // MUTABLE, WRITTEN ONCE. Each entry is a plain global holding its compiled
 // default. load_color_config() (color_config.h) overwrites the whole set once
@@ -87,26 +96,32 @@ struct TrimRange {
 //
 // The declaration order below is the config file's canonical key order; the
 // key->global table in color_config.cpp is that order's one authoritative
-// statement, and every derived default records its derivation formula here so
-// the architect can re-derive it after retuning a base.
+// statement, and this block mirrors it for reading only.
 inline GuiColor kBackground       = hex(0x202326);  // Breeze Window
-inline GuiColor kCanvas           = hex(0x31363B);
+// The work surface: the Breeze/qt6ct "Light" bevel role — the desktop's own
+// lifted-panel grey, still clearly lighter than the chrome above, so the
+// inversion the ground split describes reads at a glance.
+inline GuiColor kCanvas           = hex(0x393E43);
 // The ink is DARKER than its ground — the waveform is a dark cut into the
 // canvas, not a bright trace on black (Breeze View, the deepest ground).
 inline GuiColor kWaveform         = hex(0x141618);
 
 inline GuiColor kText             = hex(0xFCFCFC);  // Breeze paper white
-// Disabled text: mix(kText, kBackground, 0.65) — Breeze's own ContrastFade
-// disabled math at amount 0.65, the same fade the disabled marker pair takes.
-// Paints the marker-text-lane run of a disabled marker, the glyph half of the
-// opaque disabled cue whose shape half is kMarkerDisabled.
-inline GuiColor kTextDisabled     = hex(0x6D6F71);
+// Disabled text: the qt6ct Breeze-Dark DISABLED-ROW Text role — the value the
+// desktop itself greys text to, rather than a fade computed from kText. Paints
+// the marker-text-lane run of a disabled marker, the glyph half of the opaque
+// disabled cue whose shape half is kMarkerDisabled (whose default comes from the
+// same disabled row, so the two halves are one family by provenance).
+inline GuiColor kTextDisabled     = hex(0x5C5E5F);
 
-// THE ONE STRUCTURAL LINE COLOR: mix(kBackground, kText, 0.25), the Breeze
-// frame/separator derivation. Every inert structural rule paints in it — the
-// zoom-strip row ring (render_strip_row_ring) and the waveform area's 1px top
-// and bottom border (render_canvas). It is not an accent and never marks state.
-inline GuiColor kLine             = hex(0x57595B);
+// THE ONE STRUCTURAL LINE COLOR: the disabled-row WindowText role — the
+// architect's separator grey, read straight off the desktop rather than blended
+// from the chrome. Every inert structural rule paints in it — the zoom-strip row
+// ring (render_strip_row_ring) and the waveform area's 1px top and bottom border
+// (render_canvas). It is not an accent and never marks state. The trim chips'
+// ring and stems take this same value from their own keys, so every calm 1px
+// rule in the product is one grey.
+inline GuiColor kLine             = hex(0x646668);
 
 // The strip-drag anchor stem: a transient pivot affordance shown only mid-drag,
 // so it reads as a muted structural guide rather than competing with the crisp
@@ -114,66 +129,84 @@ inline GuiColor kLine             = hex(0x57595B);
 // own key so it can be pulled off the line color independently. Dimmed by hue,
 // not alpha; it paints straight over any waveform samples it crosses (no notch
 // — see render_strip_anchor_stem).
-inline GuiColor kStripAnchorStem  = hex(0x57595B);
+inline GuiColor kStripAnchorStem  = hex(0x646668);
 
 // The resting cursor: its 1px line and its tip-down triangle, AND the region
 // SPLIT half-triangles, which are that same cursor dissolved into the two ends
 // of a highlighted span and therefore ride this key rather than any selection
-// color (architect 2026-07-27). Compiled default is Breeze blue, the same value
-// as kSelected (the green cursor is retired with the option-a scheme) — but it
-// is its own key precisely so the cursor and its split form can be tuned off
-// the selection blue together, without either defecting to it.
-inline GuiColor kPlayheadCursor   = hex(0x3DAEE9);
+// color (architect 2026-07-27). The compiled default is the breeze-icons grey —
+// brighter than kLine so the cursor reads as live rather than structural, calmer
+// than kText so it never competes with the glyphs. kSelectedStem and
+// kOverlayOutline default to the same grey: the live 1px marks are one family,
+// each on its own key so any of them can be pulled out of it.
+inline GuiColor kPlayheadCursor   = hex(0x7F8C8D);
 // The moving scanner reads WHITE against the mid canvas (the Ableton play-head
 // cue; also Breeze's text/icon foreground, so it is the scheme's brightest ink).
 inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
 
-// THE FOUR MARKER CLASSES, each a FILL + OUTLINE pair. The outline is the 1px
-// ring painted around a chip or flag shape (see EditorTextBox::outline /
-// kChipOutlinePx) and is a brighter sibling of its fill; both halves of every
-// pair are tuning knobs. The classes resolve in priority order at the flag
-// renderers: disabled, then selected, then red, then default.
+// THE FOUR MARKER CLASSES, each a FILL + OUTLINE pair: a DARK DESATURATED FILL
+// under a brighter 1px RING (see EditorTextBox::outline / kChipOutlinePx) — the
+// live classes carry a genuinely bright ring, the disabled one a grey that only
+// just lifts off its fill, which is exactly how it reads as switched off. Both
+// halves of every pair are tuning knobs. The classes still resolve in priority
+// order at the flag renderers — disabled, then selected, then red, then default
+// — and that ladder is unchanged even where two classes now paint alike.
 //
-// SELECTED. The fill is Breeze blue; the ring's compiled default is not a blend
-// but a shipped role — 0x93CEE9, the KF6 framework's own built-in hover blue
-// (kcolorscheme.cpp's fallback decoration pair; see
-// tmp/breeze_dark_reference.md). The ring is the flag shape's 1px border and
-// nothing else — the selected-marker STEM takes its own key below.
-inline GuiColor kSelected         = hex(0x3DAEE9);  // Breeze blue
-inline GuiColor kSelectedOutline  = hex(0x93CEE9);
+// SELECTED, AND IT IS THE DEFAULT PAIR ON PURPOSE (architect ruling 2026-07-27):
+// kSelected/kSelectedOutline compile to EXACTLY kMarker/kMarkerOutline below, so
+// a selected flag looks IDENTICAL to an unselected one. This is not a
+// copy-paste slip and must not be "fixed" — selection is read from the focus
+// STEM, from the z-order lift (selected shapes paint above unselected), and from
+// the playhead landing on the marker, never from the flag's color. The keys stay
+// separate so the architect can reintroduce a selected tint by editing one line
+// of colors.conf. The ring is the flag shape's border and nothing else — the
+// selected-marker STEM takes its own key below.
+inline GuiColor kSelected         = hex(0x264A5E);
+inline GuiColor kSelectedOutline  = hex(0x3895C7);
 // The SELECTED-MARKER STEM (paint_selected_stem) — the singleton selection's
 // focus column, full waveform height. Its own key by ruling (architect
 // 2026-07-27), SEPARATE from the ring above: the same value that is right for a
 // 1px border around a small shape reads far louder run the whole height of the
 // waveform, so a bright ring wants a calmer stem and the two must tune
-// independently. The compiled defaults COINCIDE — this is the value the stem
-// painted when it rode kSelectedOutline, so compiled appearance is unchanged —
-// but that is coincidence, not coupling: retuning either leaves the other where
-// it is.
-inline GuiColor kSelectedStem     = hex(0x93CEE9);
+// independently. That separation is what carries the flag-color ruling above:
+// with the selected flag painting exactly like an unselected one, this stem is
+// the singleton's whole colour cue, and it takes the calm breeze-icons grey
+// (the kPlayheadCursor value) rather than a ring blue — a full-height line at
+// ring brightness would shout.
+inline GuiColor kSelectedStem     = hex(0x7F8C8D);
 
-// DEFAULT. Breeze's visited purple, its ring the fill blended ~35% toward
-// white, per channel c' = round(c + 0.35*(255-c)): 0x9B59B6 -> 0xBE93D0.
-inline GuiColor kMarker           = hex(0x9B59B6);
-inline GuiColor kMarkerOutline    = hex(0xBE93D0);
+// DEFAULT — and, per the ruling above, the SELECTED pair too. The fill is the
+// desktop's derived INACTIVE-SELECTION blue family: the mix(kWaveform, Breeze
+// blue #3daee9, ~0.33) neighborhood of the measured #204357, then
+// architect-tuned by eye. The ring is Breeze blue itself at ~86%. Fill dark
+// enough to sit quietly on the canvas, ring bright enough to draw the shape —
+// the dark-fill/bright-ring system every marker-family pair follows.
+inline GuiColor kMarker           = hex(0x264A5E);
+inline GuiColor kMarkerOutline    = hex(0x3895C7);
 
 // DISABLED, shared by every marker family (warp flags, phase reset flags).
-// Opaque, not an alpha fade: mix(kMarker, kBackground, 0.65) and
-// mix(kMarkerOutline, kBackground, 0.65) — Breeze's ContrastFade disabled math
-// at amount 0.65 over the default pair above. It WINS over red and over the
-// default class (a disabled marker paints this pair whatever its red-flag
-// status), and a disabled marker that is also SELECTED paints this fill with
-// the kSelectedOutline ring — both cues survive opaquely, and the selected-flag
-// paint order still marks membership.
-inline GuiColor kMarkerDisabled        = hex(0x4B3659);
-inline GuiColor kMarkerDisabledOutline = hex(0x584A62);
+// Opaque, not an alpha fade, and not computed from the default pair: both halves
+// come from the qt6ct Breeze-Dark DISABLED ROW — the fill is that row's
+// Highlight (its desaturated blue: a disabled marker stays in the blue family
+// but sits darker than the live fill), the ring its PlaceholderText grey. The
+// disabled lane text (kTextDisabled) is that same row's Text, so shape and glyph
+// grey out together by provenance. It WINS over red and over the default class
+// (a disabled marker paints this pair whatever its red-flag status), and a
+// disabled marker that is also SELECTED paints this fill with the
+// kSelectedOutline ring — which, under these defaults, is the ordinary marker
+// ring, so what marks membership there is the paint order and the stem.
+inline GuiColor kMarkerDisabled        = hex(0x163E5C);
+inline GuiColor kMarkerDisabledOutline = hex(0x404447);
 
 // RED — the normalization cue: a marker whose render falls back to the 1.00
-// tempo. Breeze's negative red, its ring the same ~35%-toward-white blend the
-// default pair takes: 0xDA4453 -> 0xE7858F. It also paints the editor box's
-// invalid-commit flash, so a parse failure and a red flag read as one family.
-inline GuiColor kAccent           = hex(0xDA4453);
-inline GuiColor kAccentOutline    = hex(0xE7858F);
+// tempo. The RING is the shipped Breeze ForegroundNegative #da4453; the FILL is
+// mix(kWaveform, that same negative, 0.35) — the exact analog of the marker
+// fill's derivation, so the red flag sits in the same dark-fill/bright-ring
+// system as every other class instead of being the one saturated block. It also
+// paints the editor box's invalid-commit flash, so a parse failure and a red
+// flag read as one family.
+inline GuiColor kAccent           = hex(0x59262D);
+inline GuiColor kAccentOutline    = hex(0xDA4453);
 
 // THE GROUND RECOLOR (the Ableton model): the region-select span's CANVAS
 // becomes kRegionCanvas, painted after render_canvas and BEFORE the plate blit,
@@ -181,10 +214,13 @@ inline GuiColor kAccentOutline    = hex(0xE7858F);
 // fringes blend correctly against it. The ink itself is untouched — over a
 // fully covered pixel the result is bit-identical to ink over plain kCanvas.
 // It is the group's focus cue, the singleton focus stem's "spread" form (a stem
-// marks one selected marker, this ground marks many), so it lifts kCanvas in
-// the blue-cast direction the focus family already carries; the split
-// half-triangles at its bounds are the dissolved CURSOR, so they paint
-// kPlayheadCursor, not any selection color. Tuned by eye on the panel.
+// marks one selected marker, this ground marks many). Its default is kCanvas
+// lifted by Breeze's OWN shipped View->ViewAlternate step, #141618 -> #1d1f22 =
+// +9/+9/+10 per channel — the theme's native "subtly lighter than the surface"
+// relationship, applied to our canvas instead of a tint invented for it, so the
+// highlighted span reads as the same surface raised rather than as a colour
+// wash. The split half-triangles at its bounds are the dissolved CURSOR, so they
+// paint kPlayheadCursor, not any selection color.
 //
 // THE OVERLAY IS A RING ONLY (architect 2026-07-27). kOverlayOutline is the 1px
 // border of the phase reset overlay band — the stretch of output immediately
@@ -194,28 +230,31 @@ inline GuiColor kAccentOutline    = hex(0xE7858F);
 // ground: it had one until this ruling, and dropping it leaves the aid reading
 // as the two EDGES of a span rather than as a tinted region, which is what a
 // narrow authoring marker wants. So this is a line color, not the outline
-// sibling of any fill.
-inline GuiColor kRegionCanvas     = hex(0x3D464E);
-inline GuiColor kOverlayOutline   = hex(0x596671);
+// sibling of any fill — and its default is accordingly the live-1px-mark grey
+// kPlayheadCursor and kSelectedStem also default to, not a blue.
+inline GuiColor kRegionCanvas     = hex(0x42474D);
+inline GuiColor kOverlayOutline   = hex(0x7F8C8D);
 
-// THE TRIM FAMILY, in three roles. The BRIGHT pair is the BRIDGE BAR — the
-// chip-lane band spanning the gap between the two chips (render_trim_flags), the
-// pair-drag's grab affordance and the sole "inside the trim window" signal now
-// that the out-of-trim dim is retired: fill kTrimBar (#F67400, a shipped Breeze
-// accent) with a 1px kTrimBarOutline ring, the brighter sibling. The CHIPS are
-// calm by contrast, so the bar carries the loudness: kTrimChip is
-// mix(kBackground, #F67400, 0.30) — the derivation Breeze itself uses for an
-// inactive selection — with the kTrimChipOutline ring, Breeze's own Selection
-// ForegroundNeutral (its darkened orange). The 1px STEMS (the waveform-area
-// segments in render_trim_stems and the strip-crossing segments in
-// render_trim_flags) read as part of the chip handle, so they follow the chips,
-// not the bar: kTrimStem, the chip outline's value. Trim sits outside the
-// selection system, so none of these has a selected variant.
-inline GuiColor kTrimBar          = hex(0xF67400);  // Breeze orange
-inline GuiColor kTrimBarOutline   = hex(0xFFA040);
-inline GuiColor kTrimChip         = hex(0x603B1B);
-inline GuiColor kTrimChipOutline  = hex(0xC65C00);
-inline GuiColor kTrimStem         = hex(0xC65C00);
+// THE TRIM FAMILY, in three roles — no longer an orange family of its own
+// (architect 2026-07-27): it joins the marker system and the structural grey.
+// The BRIDGE BAR is the chip-lane band spanning the gap between the two chips
+// (render_trim_flags), the pair-drag's grab affordance and the sole "inside the
+// trim window" signal now that the out-of-trim dim is retired — and its default
+// pair IS the marker pair (kMarker/kMarkerOutline values), so the bar reads as
+// an ordinary unselected marker stretched across the span it bounds. The CHIPS
+// dissolve into the strip: kTrimChip is the kBackground chrome value exactly, so
+// a chip's fill is invisible against the lane it sits in and what marks the
+// bound is its RING plus its stems — kTrimChipOutline and kTrimStem both take
+// the kLine grey, one calm rule. (The 1px STEMS are the waveform-area segments
+// in render_trim_stems plus the strip-crossing segments in render_trim_flags;
+// they read as part of the chip handle, which is why they follow the chip's ring
+// rather than the bar.) Trim sits outside the selection system, so none of these
+// has a selected variant.
+inline GuiColor kTrimBar          = hex(0x264A5E);
+inline GuiColor kTrimBarOutline   = hex(0x3895C7);
+inline GuiColor kTrimChip         = hex(0x202326);
+inline GuiColor kTrimChipOutline  = hex(0x646668);
+inline GuiColor kTrimStem         = hex(0x646668);
 
 // -- GUI font size ---------------------------------------------------------
 //
@@ -1219,6 +1258,24 @@ double flag_pending_text_left_x(
     const AppState& app, const GuiAudio& audio,
     int marker_idx);
 
+// THE PHASE-RESET LANE DISPLAY TOKEN, and the one statement of it: what the
+// marker-text lane shows over a phase reset, where a warp marker shows its
+// composed flag line (flag_text_iter). DISPLAY ONLY — a phase reset authors no
+// payload and serializes as a bare frame, so this string exists nowhere but the
+// lane. Its three producers are the ambient set builder, the last-selected
+// fallback tier (both render.cpp) and the hover composer (viewport.cpp); they
+// must agree, or the same reset would render at different widths depending on
+// which path resolved it.
+//
+// FOUR GLYPHS BY RULING (architect 2026-07-27). The former one-glyph "p" sat a
+// dense reset cluster right at the marker-text lane's fit verdict threshold, so
+// a small zoom change flipped the whole lane between all-texts and the one-run
+// fallback and back — the lane blinked. A wider token fails that verdict
+// DECISIVELY in a dense cluster and rests in the fallback instead of oscillating
+// across it. It stays well under the 9-glyph ambient budget, so it never
+// truncates and never reaches the text-hover expansion.
+inline constexpr char kPhaseResetLaneToken[] = "p.r.";
+
 // One marker-text-lane run: a marker's composed value at its displayed column.
 // `text` is the DISPLAY bytes (may end in the UTF-8 ellipsis "\xe2\x80\xa6" when
 // the composed value exceeds the 9-glyph ambient budget), and `glyphs` is the
@@ -1242,9 +1299,9 @@ struct LaneTextRun {
 // occluding another (all-or-nothing); when the verdict fails it falls back to
 // the one-run arbitration — tier 1 the HOVERED marker's value
 // (hover_popup.lane_text), else tier 2 the LAST-SELECTED marker's value composed
-// from the live store (flag_text_iter for a warp marker, the 4-glyph display
-// token "p.r." for a phase reset — wide enough that a dense reset cluster fails
-// the fit verdict decisively instead of oscillating across it under zoom),
+// from the live store (flag_text_iter for a warp marker, kPhaseResetLaneToken
+// for a phase reset — whose width is chosen against this very verdict, see
+// there),
 // with the mid-drag DragOverlay substitution and the painted-column offscreen
 // cull the flags apply. TRUNCATION IS PERMANENT: every ambient run — both the
 // all-visible set AND the fallback single run — caps at the 9-glyph budget (8
@@ -1260,8 +1317,8 @@ struct LaneTextRun {
 // only: the occlusion VERDICT still runs on the 9-glyph-capped widths (the
 // expanded width never participates), and it applies in BOTH modes (in fallback
 // the hover-via-TEXT single run expands, reproducing the pre-cap full-text bytes;
-// fallback hover-via-FLAG and the last-selected tier stay truncated). The
-// phase-reset token "p.r." never exceeds the budget, so a reset never expands.
+// fallback hover-via-FLAG and the last-selected tier stay truncated).
+// kPhaseResetLaneToken never exceeds the budget, so a reset never expands.
 //
 // all_visible == true: `runs` is the whole visible set (capped). all_visible ==
 // false: `runs` is the 0-or-1 fallback run (capped). All lane geometry is on the

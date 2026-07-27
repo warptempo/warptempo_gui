@@ -46,14 +46,15 @@ struct Selection {
     void prune_live_selection();
 
    private:
-    // Focus model (architect 2026-07-23, blue-focus pivot 2026-07-25): the cursor
-    // playhead's presence depends on selection emptiness — empty = Breeze blue line
-    // + triangle at the cursor (waveform focus); non-empty conceptually moves the
-    // cursor COINCIDENT with the selected marker, so its line coincides with the
-    // marker's blue stem and its triangle sits hidden BEHIND the flag (the z-order
-    // flip) — the cursor form is not painted here because the stem IS it (a
-    // singleton) / the extent region's recolored ground is its spread (a group).
-    // A change that CROSSES the emptiness boundary makes the blue cursor
+    // Focus model (architect 2026-07-23, one-focus-family pivot 2026-07-25): the
+    // cursor playhead's presence depends on selection emptiness — empty =
+    // kPlayheadCursor line + triangle at the cursor (waveform focus); non-empty
+    // conceptually moves the cursor COINCIDENT with the selected marker, so its
+    // line coincides with the marker's focus stem and its triangle sits hidden
+    // BEHIND the flag (the z-order flip) — the cursor form is not painted here
+    // because the stem IS it (a singleton) / the extent region's recolored ground
+    // is its spread (a group).
+    // A change that CROSSES the emptiness boundary makes the cursor
     // line+triangle appear or disappear, so the playhead COLUMN must repaint even
     // when the playhead itself does not move. The mutators already emit
     // top-strip/timestamp damage (which covers the triangle lane) but not the
