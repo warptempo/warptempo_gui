@@ -240,13 +240,10 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
         drag_overlay = &drag_overlay_storage;
     }
     // This two-way branch chain is the sole hit-rect builder: the flag paint
-    // and this hit test share the fixed flag rectangle AND the shown set (via
-    // compute_flag_hit_rects / resolve_visible_flags) on the same displayed
+    // and this hit test share the fixed flag rectangle (via
+    // compute_flag_hit_rects / iterate_visible_flags_impl) on the same displayed
     // viewport + width, so the rects computed here are exactly the painted flag
-    // rectangles — a disabled flag the occlusion verdict hides is absent from
-    // both, and its marker-text run is gated by the same verdict, so the marker
-    // has NO pointer target at all while hidden (accepted: the keyboard and
-    // selection routes remain, and Tab already skips disabled markers).
+    // rectangles.
     std::vector<FlagHitRect> rects;
     if (app.active_markers_view == 'P') {
         rects = compute_phase_reset_flag_hit_rects(

@@ -2048,15 +2048,9 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // signatures stay free of cairo so the header keeps a clean include list.
 //
 // hit_test_flag: scan the flag rectangles in the top strip and return the
-// marker index under (mouse_x, mouse_y), or -1. The rects are the REPRESENTATION
-// of the SHOWN flags — the fixed flag rectangle each, with the fused tip-down
-// triangle DERIVED from it at test time (same centerline, tapering below the
-// rect's bottom edge through the shared flag_triangle_half_width_at owner), so
-// the marker's triangle IS clickable; the PLAYHEAD triangle is the shape that is
-// never a target, since it is in no rect list. A disabled flag hidden by the
-// occlusion verdict at render.cpp's resolve_visible_flags contributes no rect,
-// exactly as it contributes no pixels. Rects may overlap, and the walk resolves
-// an overlap to the topmost-painted flag. Mirror of the painters'
+// marker index under (mouse_x, mouse_y), or -1. Rects are the fixed flag
+// rectangles (the triangle is not a hit target); they may overlap, and the walk
+// resolves an overlap to the topmost-painted flag. Mirror of the painters'
 // z-order (render_flags / render_phase_reset_flags): the SELECTED shapes paint
 // above the unselected, and within each class the leftmost paints on top. So
 // the walk runs twice — first the first-containing rect whose marker is

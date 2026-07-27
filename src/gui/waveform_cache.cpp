@@ -648,23 +648,12 @@ uint64_t hash_selection(const std::set<int>& s,
 // Called from on_tick AFTER maybe_enqueue_waveform_render: wf_cache.fp_*
 // coupling for the displayed-viewport half of the fingerprint, live-app-state
 // reads for the marker-driven half. The cache holds
-// every SHOWN flag shape (marker + phase reset — shown per the disabled-flag
-// occlusion verdict at render.cpp's resolve_visible_flags) — the flag editor's
-// text renders live in the marker-text lane, not in this cache, so the editing
-// target's flag is an ordinary cached shape (no skip-guard). Trim's chips/stems
-// left this cache and the retired trim-stem cache for the live paint_trim pass,
-// so no trim field remains in the fingerprint (a trim edit repaints through its
-// own mutation damage, no cache rebuild).
-//
-// The fingerprint below already covers every input that verdict reads: the
-// displayed viewport span + target bit + map hash and the top-strip dims (its
-// emit columns), the two store generations (marker positions AND the disabled
-// bits — every disabled toggle goes through marker_mut / the proposed-vector
-// swap, both of which bump generation_), the drag-overlay hash (mid-drag
-// proposed columns, so the verdict can flip within a drag and the cache follows)
-// and the active view. The flag WIDTH the verdict compares against scales with
-// font_size, which moves fp_area_h through the lane heights, so a font change
-// rebuilds too.
+// EVERY flag shape (marker + phase reset) — the flag editor's text renders live
+// in the marker-text lane, not in this cache, so the editing target's flag is an
+// ordinary cached shape (no skip-guard). Trim's chips/stems left this cache and
+// the retired trim-stem cache for the live paint_trim pass, so no trim field
+// remains in the fingerprint (a trim edit repaints through its own mutation
+// damage, no cache rebuild).
 
 void GuiPaintHandler::maybe_rebuild_flag_cache() {
     if (app.loading || audio.total_frames() <= 0) return;

@@ -97,11 +97,8 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
 
 void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
     // The marker-text lane (top lane 2, between the trim chips and the flags).
-    // THE OCCLUSION MODEL, in two verdicts: the FLAG occlusion verdict first
-    // picks the candidates — a marker has a lane run iff its flag is shown, so a
-    // disabled marker hidden by that verdict shows no text either (it vanishes
-    // wholesale) — then the lane shows EVERY candidate's text ambiently
-    // when the whole set fits unoccluded at the 9-glyph budget, else it
+    // THE OCCLUSION MODEL: the lane shows EVERY onscreen marker's text ambiently
+    // when the whole visible set fits unoccluded at the 9-glyph budget, else it
     // falls back to the ONE-run arbitration (hover, else last-selected). Every
     // ambient run is CAPPED at the budget (truncation is permanent). Two OVERLAYS
     // paint on top of the ambient runs (each suppresses its own marker's ambient

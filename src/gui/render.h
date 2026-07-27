@@ -1052,16 +1052,8 @@ void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width);
 // rectangle in the FLAG LANE plus the tip-down triangle directly beneath it in
 // the TRIANGLE LANE, treated as one shape and filled in the marker's color
 // class. There is NO TEXT (the payload lives in the marker-text lane, shown on
-// hover and edited in the Enter flag editor). Overlapping shapes occlude
-// instead of eliding, with ONE exception — THE DISABLED-FLAG OCCLUSION VERDICT
-// (the marker-text lane's all-or-fallback rule, applied to flags): when any two
-// visible flags in the active column would overlap, every DISABLED marker's
-// flag is dropped from the painted set; when the whole visible set stands clear,
-// every flag paints. One owner resolves the shown set for both painters, both
-// hit-rect builders AND the marker-text lane's candidate set (
-// resolve_visible_flags, render.cpp — predicate, drag behavior and accepted
-// consequences stated there), so paint == hit by construction and a hidden
-// disabled marker vanishes wholesale, flag and text alike.
+// hover and edited in the Enter flag editor). There is no elision — overlapping
+// shapes occlude instead.
 //
 // Color class (`red_set` = the store indices whose render normalizes to the
 // 1.00 fallback, from warp_red_flag_set_cached), in priority order — ONE opaque
@@ -1098,15 +1090,9 @@ void render_flags(cairo_t* cr,
                   const DragOverlay* drag_overlay = nullptr);
 
 // Same column placement as render_flags, without drawing — returns the
-// screen-coord rects of the flag RECTANGLES that would be rendered, one per
-// SHOWN flag. The rect is the whole REPRESENTATION of the shape: hit_test_flag
-// derives the fused tip-down triangle from it (same centerline, tapering below
-// the rect's bottom edge through flag_triangle_half_width_at), so the marker
-// triangle is clickable too — what is never a target is the PLAYHEAD triangle,
-// which appears in no rect list. Shown means what render_flags paints: the same
-// resolve_visible_flags list, so a flag the disabled-flag occlusion verdict
-// hides emits no rect and is not clickable, while every painted flag has exactly
-// one. Overlapping shapes yield overlapping rects. The caller
+// screen-coord rects of the flag RECTANGLES that would be rendered (one per
+// visible flag; the triangle is not a hit target). One per visible flag, no
+// elision, so overlapping shapes yield overlapping rects. The caller
 // (hit_test_flag) resolves an overlap with two forward passes mirroring the
 // painters' two reverse passes — the leftmost SELECTED containing rect, else
 // the leftmost containing rect = the topmost-painted flag. No cairo context is
@@ -1139,10 +1125,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
 // `waveform_width` is the effective waveform width (see render_flags), the
 // column-mapping denominator shared with the phase-reset stems. Painting is two
 // reverse passes keyed on `selected_set` — selected shapes above unselected,
-// leftmost on top within each class (see render.cpp) — over the same
-// resolve_visible_flags shown set the warp column paints, so the disabled-flag
-// occlusion verdict is one rule across both columns (a phase reset's disabled
-// verdict is its bool, no cascade).
+// leftmost on top within each class (see render.cpp).
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
                             int waveform_width,
@@ -1155,8 +1138,7 @@ void render_phase_reset_flags(cairo_t* cr,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                             const DragOverlay* drag_overlay = nullptr);
 
-// `waveform_width` is the effective waveform width (see compute_flag_hit_rects);
-// the shown set and the disabled-flag occlusion verdict are that helper's too.
+// `waveform_width` is the effective waveform width (see compute_flag_hit_rects).
 std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     GuiRect top_strip_area,
     int waveform_width,
@@ -1255,23 +1237,14 @@ struct LaneTextRun {
 
 // The marker-text lane's current run SET, arbitrated once so the paint pass and
 // the unified marker hit resolver (marker_hit_at, below) read the SAME runs and
-// cannot drift. TWO VERDICTS RUN IN SEQUENCE. First the FLAG occlusion verdict
-// picks WHO may show: a marker has a lane run IFF its flag is shown, so a
-// disabled marker the flag verdict hides vanishes wholesale — no ambient run, no
-// one-run fallback pick, no hover-expansion source (render.cpp's
-// resolve_visible_flags owns the verdict; its shown list is the ambient
-// candidate set, and the fallback tiers apply the disabled-exclusion alone,
-// keeping their own visibility rules for enabled markers). Then THE LANE'S OWN
-// OCCLUSION RULE picks HOW the survivors show: the lane shows EVERY candidate's
-// text ambiently IFF the whole set fits without any 9-glyph-capped run occluding
-// another (all-or-nothing); when the verdict fails it falls back to
+// cannot drift. THE OCCLUSION RULE: the lane shows EVERY onscreen marker's text
+// ambiently IFF the whole visible set fits without any 9-glyph-capped run
+// occluding another (all-or-nothing); when the verdict fails it falls back to
 // the one-run arbitration — tier 1 the HOVERED marker's value
 // (hover_popup.lane_text), else tier 2 the LAST-SELECTED marker's value composed
 // from the live store (flag_text_iter for a warp marker, "p" for a phase reset),
-// with the mid-drag DragOverlay substitution and a painted-column offscreen cull
-// (tier 2 only, and STRICTER than the flags' half-offscreen cull — the tiers
-// keep their own visibility rules; only the disabled-exclusion comes from the
-// flag verdict). TRUNCATION IS PERMANENT: every ambient run — both the
+// with the mid-drag DragOverlay substitution and the painted-column offscreen
+// cull the flags apply. TRUNCATION IS PERMANENT: every ambient run — both the
 // all-visible set AND the fallback single run — caps at the 9-glyph budget (8
 // bytes + U+2026), so a dragged/selected truncated marker stays truncated when
 // the verdict fails (it does NOT spell out in full). The editor seed, hover
@@ -1288,7 +1261,7 @@ struct LaneTextRun {
 // fallback hover-via-FLAG and the last-selected tier stay truncated). Phase "p"
 // never exceeds the budget, so never expands.
 //
-// all_visible == true: `runs` is the whole candidate set (capped). all_visible ==
+// all_visible == true: `runs` is the whole visible set (capped). all_visible ==
 // false: `runs` is the 0-or-1 fallback run (capped). All lane geometry is on the
 // DISPLAYED viewport basis (displayed_viewport_basis) and
 // displayed_or_live_target_map — the flag pixels' own basis. The open FlagPayload
