@@ -1729,9 +1729,8 @@ void GuiPlatform::flush_deferred_motion() {
     // any button, guarantees the button handler runs against the latest
     // accumulated position: a press -> threshold-crossing motion -> release inside
     // one frame then reaches the release with StripDragState.moved already true,
-    // so the drag runs its final apply and clears any double-click candidate
-    // instead of resting as a motionless press-release that commits nothing.
-    // Clearing the flag means on_pointer_frame's trailing
+    // so the drag commits and a zoom-row release does not wrongly seed a
+    // double-click candidate. Clearing the flag means on_pointer_frame's trailing
     // delivery does not double-fire the same motion.
     if (frame_have_relmotion_ && on_motion_) {
         on_motion_(pointer_x_, pointer_y_, current_mods());
@@ -1790,8 +1789,8 @@ void GuiPlatform::on_pointer_button(uint32_t /*serial*/, uint32_t /*time*/,
     // clear. This is what makes the two release/motion delivery orders in one
     // pointer frame converge — a flushed threshold-crossing motion routes
     // through the normal live-drag path (threshold, moved latch, apply) instead
-    // of the button-lost teardown, so an unmoved-until-now fast drag commits
-    // through its own release path.
+    // of the button-lost teardown, so an unmoved-until-now fast drag commits and
+    // a fast zoom-row click seeds its double-click candidate.
     if (button == BTN_LEFT) {
         const bool was_held = pointer_left_held_ || synth_left_held_;
         const bool now_held = pressed || synth_left_held_;

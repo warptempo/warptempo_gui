@@ -523,13 +523,8 @@ void GuiInputHandler::cancel_active_drags() {
     // BOUND-SET-armed pending (set_click) already mutated a bound at the press,
     // so an Esc undoes the whole gesture — restore the pre-press pair and re-sync
     // the coupled REGION highlight to the rolled-back window (the selection is
-    // never touched). Either way drop the TrimRow double-click candidate a plain
-    // arming press seeded — a cancelled gesture is not a clean click sequence,
-    // the load-bearing case being the non-keyboard cancel (resize / WM-close /
-    // prompt call cancel_active_drags directly), exactly as at the marker and
-    // tempo pendings above.
+    // never touched).
     if (app.pending_trim_drag.active) {
-        app.double_click = DoubleClickCandidate{};
         if (app.pending_trim_drag.set_click) {
             app.trim.begin_frame = app.pending_trim_drag.preset_begin_frame;
             app.trim.end_frame   = app.pending_trim_drag.preset_end_frame;

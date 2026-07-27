@@ -96,7 +96,7 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
 // -- GuiPaintHandler::paint_marker_text_lane -----------------------------
 
 void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
-    // The marker-text lane (top lane 1, between the trim chips and the flags).
+    // The marker-text lane (top lane 2, between the trim chips and the flags).
     // THE OCCLUSION MODEL: the lane shows EVERY onscreen marker's text ambiently
     // when the whole visible set fits unoccluded at the 9-glyph budget, else it
     // falls back to the ONE-run arbitration (hover, else last-selected). Every
@@ -888,8 +888,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // label_ref marker; a marker's OWN value shows in the marker-text lane —
     // paint_marker_text_lane.) Each row's baseline is derived from its row rect, not
     // from the window bottom. (The former pan-strip row retired — pan lives on
-    // the Alt+drag waveform grab and the ctrl+drag strip drag's horizontal
-    // axis.)
+    // the Alt+drag waveform grab and the zoom strip's horizontal drag axis.)
     const GuiRect lower_row = bottom_lower_row_area(app);
     const GuiRect upper_row = bottom_upper_row_area(app);
 
@@ -1193,10 +1192,18 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
         if (rects_intersect(exposed, top_strip)) {
             paint_flag_annotations(cr, top_strip);
-            // Marker-text lane (top row 1): the hover popup and the flag
+            // Marker-text lane (top row 2): the hover popup and the flag
             // editor's live text, painted over the just-blitted flag cache —
             // the same layering role the bottom strip's hover/editor paints had.
             paint_marker_text_lane(cr);
+            // Zoom-strip row (top row 0, at the window edge): painted on
+            // top of the just-blitted flag cache, which is transparent over
+            // this row (it carries no chips there). The ring is the row's
+            // only paint; it is a live drag surface (see the strip-drag
+            // routing in input_pointer.cpp) that also owns the double-click
+            // zoom toggle.
+            render_strip_row_ring(cr, top_zoom_row_area(app),
+                                  waveform_area(app).w);
         }
 
         // Strip-drag anchor stem: over the plate/stems in the waveform area

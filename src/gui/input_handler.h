@@ -208,14 +208,14 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 // [kMinZoom, effective ceiling]) and CENTER the span in the window, then apply
 // through Viewport::apply_zoom_to_start (pre-clamps the level, funnels through
 // clamp_viewport_start, keeps the idempotent current-vs-target no-op, kicks one
-// sync render). `margin` adds a 2.5%-per-side inset around the span; both
-// current callers pass true. The centering formula uses the UNROUNDED
+// sync render). `margin` adds a 2.5%-per-side (region / trim / group cases); the
+// whole-song case passes margin=false. The centering formula uses the UNROUNDED
 // visible width (spp_t * W) — grid quantization is owned downstream by
 // clamp_viewport_start, so NO painter-quantized pre-rounding is applied here
 // (only the final start is rounded). A floor-saturated span rests CENTERED rather
 // than left-aligned, and the unclamped case degenerates to the span's left edge
 // (unrounded spp_t * W == the margined span by the solve). Shared by
-// run_trim_frame_command and the GROUP undo/redo
+// run_zoom_double_click_command (all three arms) and the GROUP undo/redo
 // restore's offscreen framing. Definition in input_handler.cpp.
 void frame_span_into_view(AppState& app, const GuiAudio& audio,
                           Viewport& viewport, int64_t lo, int64_t hi,
@@ -625,15 +625,14 @@ private:
     // apply_zoom_change.
     void run_zoom_toggle_command();
 
-    // The trim-chip-row DOUBLE-CLICK command: FRAME THE TRIM WINDOW, never the
-    // working zoom. The window is the trim completed to its extremes (missing
-    // begin → 0, missing end → total), expressed in the active domain, so a LONE
-    // bound frames what it actually renders; with no trim set at all there is
-    // nothing to frame and the command returns. Framed with a 2.5%-per-side
+    // The zoom-strip DOUBLE-CLICK command: ZOOM TO A SPAN, never the working
+    // zoom. Span priority — a live region (wins over trim) → a set trim
+    // (completed to its extremes, expressed in the active domain) → the whole
+    // song (full zoom-out). The region/trim span is framed with a 2.5%-per-side
     // margin; the fit level and span-start are set through the clamp chokepoints
     // via Viewport::apply_zoom_to_start (NOT apply_zoom_change — no playhead
     // recenter). Idempotent: a second click with the viewport unchanged no-ops.
-    void run_trim_frame_command();
+    void run_zoom_double_click_command();
 
     // Esc-cancel handlers: while a render or queued batch is in flight, Esc
     // cancels it. Returns true if it consumed the key (on_key then returns).
@@ -874,20 +873,20 @@ private:
     // Sole caller: the one-shot scrub press body (scrub_press_at).
     void scrub_act_at(int64_t frame);
 
-    // The scanner scrub press body, called from the waveform lower-half plain
-    // press — its ONE caller, the whole scrub surface. Given
+    // The scanner scrub press body, shared by the waveform lower-half plain press
+    // and the marker-text-lane plain press (R3.3, architect 2026-07-23). Given
     // the click's waveform-relative column, run ONE scrub act (scrub_act_at —
     // kill-and-revive) at that column's frame — the scrub is ONE-SHOT
     // play-from-here per click (architect 2026-07-23, the Ableton model): the
     // press arms NOTHING, a held press does nothing further, and motion over
-    // the scrub surface is inert (the scrub drag is removed, so each click
+    // the scrub surfaces is inert (the scrub drag is removed, so each click
     // pays AT MOST one kill quiescence fence — a dead session's revive pays
     // none, and the live same-frame skip returns before stopping). A gutter/invalid column
     // (outside [0, area.w)) is a silent no-op (no launch position). Touches
     // NOTHING else — no selection, region, cursor, follow, or double-click seed.
-    // The caller keeps playback alive across the press (the lower half is not
-    // a top-strip press, so the standing top-strip stop never runs), so the act
-    // sees the live session — load-bearing for its
+    // Both callers keep playback alive across the press (the lower half is not
+    // a top-strip press; the text-lane scrub is exempted from the top-strip
+    // stop), so the act sees the live session — load-bearing for its
     // same-frame skip, which keeps an in-place audition uninterrupted instead
     // of restarting it.
     void scrub_press_at(int click_rel_x);

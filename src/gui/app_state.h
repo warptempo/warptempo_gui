@@ -64,10 +64,10 @@ constexpr int64_t kViewportLeadDivisor = 10;
 // the render boundary, not at authoring time.
 constexpr int kMarkerHitHalfPx    = 4;
 
-// Vertical drag distance (px) that moves the dual-axis strip drag (the
-// ctrl-exact waveform grab) by one continuous level. It drags DOWN to zoom in
-// (deeper, lower level) and UP to zoom out. Both this scale and that direction
-// are architect-tunable on the labwc pass.
+// Vertical drag distance (px) that moves the zoom-strip drag by one continuous
+// level. The strip zoom drags DOWN to zoom in (deeper, lower level) and UP to
+// zoom out. Both this scale and that direction are architect-tunable on the
+// labwc pass.
 constexpr double kZoomStripPxPerLevel = 60.0;
 
 // Wholesale snapshot of the undo-tracked settings. Holds the typed
@@ -774,8 +774,9 @@ struct TrimDragState {
     bool    set_click            = false;
 };
 
-// Dual-axis zoom/pan drag (Ableton-style navigation), armed by ONE surface: a
-// CTRL-exact left-drag inside the waveform. The
+// Dual-axis zoom/pan drag (Ableton-style navigation), armed by TWO surfaces: a
+// plain left-drag on the live zoom-strip row, and a CTRL-exact left-drag inside
+// the waveform (the same gesture, triggered on the waveform for reach). The
 // gesture is DUAL-AXIS, freely composed with no axis lock: vertical motion
 // drives the zoom level and horizontal motion pans the viewport, both applied
 // per motion event. It is INCREMENTAL — each event reads the LIVE zoom level and
@@ -794,6 +795,12 @@ struct StripDragState {
     // press-release must commit nothing, so the terminating event finalizes
     // (one final apply + synchronous rebuild) only when this is set.
     bool   moved     = false;
+    // True for the zoom-row arm, FALSE for the ctrl-exact waveform arm. A
+    // motionless release seeds a ZoomRow double-click candidate only when this
+    // is set, so the zoom-bar double-click stays a zoom-row-only affordance — a
+    // ctrl+waveform press-release commits and seeds nothing. Every other
+    // release / motion-lost / cancel path is origin-agnostic (keys on `active`).
+    bool   double_click_seed = true;
     // Pointer position at the press (window px) — the drag-threshold reference
     // ONLY (the Chebyshev gate deciding press-becomes-drag). Not a zoom or pan
     // baseline: the incremental model reads no press level and no fixed column.
@@ -812,13 +819,12 @@ struct StripDragState {
 
 // Alt+drag on the waveform: continuous 1:1 grab-pan of the viewport, driven by
 // pointer motion, panning by the exact per-event pixel delta. It CAPTURES the
-// pointer (begin_strip_pointer_capture, the same cursor-hide + lock the
-// ctrl-exact strip drag uses): while captured the platform delivers unbounded
-// virtual coordinates, so the pan travels infinitely while the viewport clamps
-// at the song walls; the cursor reappears at the raw traveled
-// virtual_pointer_x_ (the compositor clamps an off-window hint on-screen), y at
-// the press row — the pan sets no anchor-stem restore override, unlike the
-// strip drag. PAN-ONLY,
+// pointer (begin_strip_pointer_capture, the same cursor-hide + lock the zoom
+// strip uses): while captured the platform delivers unbounded virtual
+// coordinates, so the pan travels infinitely while the viewport clamps at the
+// song walls; the cursor reappears at the raw traveled virtual_pointer_x_ (the
+// compositor clamps an off-window hint on-screen), y at the press row — the
+// pan sets no anchor-stem restore override, unlike the strip drags. PAN-ONLY,
 // though — no zoom axis and no anchor stem (the stem is the zoom pivot
 // affordance, gated on strip_drag.active). Navigation-class: allowed in
 // read-only, deliberately does NOT override follow, never touches the playhead
@@ -832,11 +838,11 @@ struct ScrollDragState {
     int    last_x   = 0;
 };
 
-// (The SCRUB has no drag state: the plain lower-half waveform press is a
-// ONE-SHOT play-from-here scrub act
+// (The SCRUB has no drag state: the plain lower-half waveform press and the
+// empty marker-text-lane press are ONE-SHOT play-from-here scrub acts
 // (scrub_act_at, kill-and-revive), issued once per click — the press arms
 // nothing, a held press does nothing further, and motion over the scrub
-// surface is inert (architect 2026-07-23, the Ableton model; the former
+// surfaces is inert (architect 2026-07-23, the Ableton model; the former
 // per-column re-scrub drag and its drag-state struct are removed — each
 // click pays AT MOST one stop-quiescence fence (a dead session's revive pays
 // none; the live same-frame skip returns before stopping), so the per-column
@@ -846,32 +852,21 @@ struct ScrollDragState {
 // of the 61126db pivot — that one MOVED the cursor playhead per column.)
 
 // The surface a double-click candidate belongs to. The surface tag is what keeps
-// the four double-click surfaces from cross-firing: a candidate seeded on one
-// surface can only be consumed by a press on the SAME surface (a trim-row click
+// the three double-click surfaces from cross-firing: a candidate seeded on one
+// surface can only be consumed by a press on the SAME surface (a zoom-row click
 // then a marker click within the window can never consume). None = no candidate.
-enum class DoubleClickSurface { None, TrimRow, Marker, EditorText, EmptyLane };
+enum class DoubleClickSurface { None, ZoomRow, Marker, EditorText, EmptyLane };
 
 // Double-click detection (Wayland delivers no double-click event, so it is
 // hand-rolled from two plain clicks). A click on a double-click-bearing surface
-// records this candidate (at a motionless release for EditorText; at the PRESS
-// for TrimRow / Marker / EmptyLane — see below); the NEXT plain press on the
-// SAME surface, if it lands within kDoubleClickMs and kDoubleClickSlackPx of
-// the recorded position AND (for Marker) targets the same marker, is consumed
-// as that surface's double-click action instead of the single-click action. A
-// drag that MOVED records nothing and clears any candidate. Surfaces:
-//   TrimRow    -> frames the trim window into view on the trim chip row
-//                 (run_trim_frame_command; target unused). Only press_x slack is
-//                 compared: both presses are already gated to the chip row's
-//                 band and that band IS the y constraint, while
-//                 kDoubleClickSlackPx (8) is well under the row's flag height,
-//                 so a y compare would wrongly reject a legitimate double-click
-//                 spanning the row's edges. Seeded at the PRESS
-//                 (position-keyed), like EmptyLane and Marker — the chip row has
-//                 no single release path an unclaimed press reaches. The first
-//                 press still performs its ordinary single-click action (arm a
-//                 chip/bridge drag, or sync the highlight to the trim window);
-//                 a trim drag that crosses the movement threshold drops the
-//                 candidate, so a moved drag never carries one.
+// records this candidate (at a motionless release for ZoomRow / EditorText; at
+// the PRESS for Marker — see below); the NEXT plain press on the SAME surface,
+// if it lands within kDoubleClickMs and kDoubleClickSlackPx of the recorded
+// position AND (for Marker) targets the same marker, is consumed as that
+// surface's double-click action instead of the single-click action. A drag that
+// MOVED records nothing and clears any candidate. Surfaces:
+//   ZoomRow    -> the zoom-bar double-click zoom command (target unused; the
+//                 zoom row is thin, so only press_x slack is compared).
 //   Marker     -> opens the marker's flag editor (target = marker index; both
 //                 axes' slack compared). The marker is ONE pointer item: the hit
 //                 is its flag SHAPE or its rendered marker-text LANE RUN, and a
@@ -904,9 +899,8 @@ enum class DoubleClickSurface { None, TrimRow, Marker, EditorText, EmptyLane };
 struct DoubleClickCandidate {
     DoubleClickSurface surface = DoubleClickSurface::None;
     int64_t time_ms   = 0;      // CLOCK_MONOTONIC ms at the seeding press/release
-    int     press_x   = 0;      // seed x (TrimRow / Marker / EmptyLane seed at
-    int     press_y   = 0;      //   the press; EditorText at a motionless
-                                //   release)
+    int     press_x   = 0;      // seed x (Marker seeds at the press; ZoomRow /
+    int     press_y   = 0;      //   EditorText at a motionless release)
     int     target    = -1;     // marker index for Marker; unused otherwise
 };
 
@@ -1522,15 +1516,14 @@ struct AppState {
     // release, Escape, and file load.
     TrimDragState trim_drag;
 
-    // Ctrl-exact left-drag on the waveform (dual-axis zoom/pan navigation).
-    // Cleared on button release and file load.
+    // Plain left-drag on a live strip row (zoom/pan navigation). Cleared on
+    // button release and file load.
     StripDragState strip_drag;
 
-    // Double-click candidate, shared by the trim-row, marker, editor-text, and
-    // empty-lane surfaces (the surface tag prevents cross-firing). Seeded at the
-    // press on every surface but the editor text, which seeds at a motionless
-    // press-release; cleared on file load and when the double-click action
-    // fires.
+    // Double-click candidate, shared by the zoom-row, flag, and editor-text
+    // surfaces (the surface tag prevents cross-firing). Seeded by a motionless
+    // press-release on a double-click-bearing surface; cleared on file load and
+    // when the double-click action fires.
     DoubleClickCandidate double_click;
 
     // Alt+drag on the waveform (continuous 1:1 grab-pan). Cleared on button
@@ -1780,6 +1773,7 @@ GuiRect bottom_strip_area(const AppState& a);
 // window edge, 0 = edge-most. The named lane accessors below delegate to it.
 GuiRect strip_row_rect(const AppState& a, bool top_strip,
                        int lane_from_window_edge);
+GuiRect top_zoom_row_area(const AppState& a);
 GuiRect top_upper_row_area(const AppState& a);
 GuiRect top_marker_text_row_area(const AppState& a);
 GuiRect top_flag_row_area(const AppState& a);

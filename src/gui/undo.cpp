@@ -603,14 +603,14 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             //     visible — the standing flags-may-hang-half-offscreen geometry (cull
             //     only when FULLY out), the SAME cull the level-preserving
             //     navigation routes show there (Tab, which keeps the level; the
-            //     marker-click land, which writes no viewport; and the trim-row
+            //     marker-click land, which writes no viewport; and the zoom-row
             //     double-click framer itself, no-op under this conjunction) — not a
             //     framing defect, and identical
             //     under every option reachable within the whole-song-ceiling and
             //     centered-flag rulings. The futile framer call is left as-is (a
             //     harmless no-op there); a ceiling special-case would be a branch for
             //     ZERO behavioral difference. This whole arm diverges from the
-            //     trim-row DOUBLE-CLICK's unconditional framing; the framer
+            //     zoom-row DOUBLE-CLICK's unconditional zoom-to-span; the framer
             //     itself is untouched, an undo-tail rule only.
             // ACCEPTED COST on the framer arm: apply_zoom_to_start runs one sync
             // render and the unconditional kick_waveform_sync below runs a second

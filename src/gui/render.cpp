@@ -1045,13 +1045,12 @@ void render_trim_flags(cairo_t* cr,
         span / static_cast<double>(waveform_area.w);
     if (samples_per_pixel <= 0.0) return;
 
-    // Trim chip lane (top-strip lane 0): the edge-most lane, so its top is the
-    // outer gap kFlagBottomLiftPx inward from the strip's top, and its height is
-    // the flag height. Screen
+    // Trim chip lane (top-strip lane 1): directly below the zoom lane, so its
+    // top is one row height inward, and its height is the flag height. Screen
     // and top-strip-local coords coincide (the top strip sits at y=0), so this
     // is exactly top_upper_row_area(app), the band the bridge hit test gates on.
     const int chip_w    = flag_lane_w_px();
-    const int chip_top  = top_strip_area.y + static_cast<int>(kFlagBottomLiftPx);
+    const int chip_top  = top_strip_area.y + monospace_row_h();
     const int chip_h    = flag_lane_h_px();
     const int chip_bottom = chip_top + chip_h;
     // Waveform top edge in this (top-strip-local) coord system: the strip sits
@@ -1229,6 +1228,28 @@ void render_trim_flags(cairo_t* cr,
                          FlagHAnchor::LeftEdge);
     }
 
+    cairo_restore(cr);
+}
+
+void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width) {
+    // Inert full-width ring around a strip row's bounding box: 1px opaque
+    // kLine edges, antialias off — the ONE structural line color, the same rule
+    // the waveform area's top/bottom border takes, with no fill. It marks a
+    // surface, never a state, which is why it is not in an accent family.
+    // Spans the EFFECTIVE waveform width (x from the row's left edge),
+    // not the strip's full width, so the <=15px right gutter at a
+    // non-multiple-of-16 window stays outside the ring, matching every other
+    // grid-aligned surface.
+    if (row.w <= 0 || row.h <= 0 || waveform_width <= 0) return;
+    const int rw = std::min(waveform_width, row.w);
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    cairo_set_source_rgb(cr, kLine.r, kLine.g, kLine.b);
+    cairo_rectangle(cr, row.x, row.y, rw, 1);                 // top
+    cairo_rectangle(cr, row.x, row.y + row.h - 1, rw, 1);     // bottom
+    cairo_rectangle(cr, row.x, row.y, 1, row.h);              // left
+    cairo_rectangle(cr, row.x + rw - 1, row.y, 1, row.h);     // right
+    cairo_fill(cr);
     cairo_restore(cr);
 }
 
