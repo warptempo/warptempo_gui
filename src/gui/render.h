@@ -1062,9 +1062,15 @@ void render_trim_stems(cairo_t* cr,
                        bool has_begin,
                        bool has_end);
 
-// Draws the begin/end trim-boundary chips in the TRIM CHIP LANE (top-strip
-// lane 1), plus the strip-crossing portion of their stems and the inter-chip
-// bridge band. Each set bound (gated by `has_begin` / `has_end`) paints a
+// Draws the begin/end trim-boundary chips in the TRIM CHIP LANE, plus the
+// strip-crossing portion of their stems and the inter-chip bridge band. The
+// lane band is the `chip_row` PARAMETER — the caller passes
+// top_upper_row_area(app) (top-strip lane 1), the same accessor
+// hit_test_trim_chip's y-gate and route_trim_chip_press' bridge y-gate read, so
+// paint and hit take the band from ONE owner and cannot drift; nothing in here
+// re-derives the lane's y from the row heights above it. Only the band's y/h
+// are consumed (the chip width is the flag width, the horizontal origin is
+// top_strip_area.x). Each set bound (gated by `has_begin` / `has_end`) paints a
 // TEXTLESS rectangle of the flag's exact width/height (flag_lane_w_px() x
 // flag_lane_h_px(), no glyph, no triangle — Ableton's loop bounds carry none),
 // EDGE-ANCHORED on its bound column: the begin chip's LEFT edge on the column
@@ -1074,9 +1080,11 @@ void render_trim_stems(cairo_t* cr,
 // CALM pair kTrimChip with a kTrimChipOutline border — the bright pair belongs
 // to the bridge bar below, which carries the family's loudness (a chip is a
 // handle, the bar is the window). `waveform_area` is the real
-// waveform rect; its top edge locates the lanes and its `.w` is the
-// column-mapping denominator. Column placement matches render_trim_stems against
-// the same viewport — `trim.begin` / `trim.end` are already in the displayed
+// waveform rect, read for its `.w` only — the column-mapping denominator (the
+// strip-crossing stems end at the waveform top edge, which this function takes
+// from `top_strip_area.y + .h`, the strip's own bottom). Column placement
+// matches render_trim_stems against the same viewport — `trim.begin` /
+// `trim.end` are already in the displayed
 // domain, so no further translation happens here. The chip has NO editable
 // payload; it is a plain-press grab target only (trim is outside the selection
 // system). Below each chip, a 1px stem segment runs from the chip's bottom edge
@@ -1099,6 +1107,7 @@ void render_trim_stems(cairo_t* cr,
 // so the clickable bridge equals the painted bar exactly.
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
+                       GuiRect chip_row,
                        GuiRect waveform_area,
                        long long viewport_start_sample,
                        long long viewport_end_sample,

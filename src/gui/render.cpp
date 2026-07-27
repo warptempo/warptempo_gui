@@ -1024,6 +1024,7 @@ void render_trim_stems(cairo_t* cr,
 
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
+                       GuiRect chip_row,
                        GuiRect waveform_area,
                        long long viewport_start_sample,
                        long long viewport_end_sample,
@@ -1045,13 +1046,17 @@ void render_trim_flags(cairo_t* cr,
         span / static_cast<double>(waveform_area.w);
     if (samples_per_pixel <= 0.0) return;
 
-    // Trim chip lane (top-strip lane 1): directly below the zoom lane, so its
-    // top is one row height inward, and its height is the flag height. Screen
-    // and top-strip-local coords coincide (the top strip sits at y=0), so this
-    // is exactly top_upper_row_area(app), the band the bridge hit test gates on.
+    // Trim chip lane band. `chip_row` ARRIVES from the caller as
+    // top_upper_row_area(app) — the same accessor hit_test_trim_chip's y-gate
+    // and the pair drag's bridge y-gate read — so paint and hit take the lane
+    // from ONE owner and cannot drift; nothing here re-derives a lane position
+    // from the row heights above it. Only the y-band comes from the row: the
+    // chip WIDTH is the flag width, and the horizontal origin stays
+    // top_strip_area.x (the strip and the row share it). Screen and
+    // top-strip-local coords coincide (the top strip sits at y=0).
     const int chip_w    = flag_lane_w_px();
-    const int chip_top  = top_strip_area.y + monospace_row_h();
-    const int chip_h    = flag_lane_h_px();
+    const int chip_top  = chip_row.y;
+    const int chip_h    = chip_row.h;
     const int chip_bottom = chip_top + chip_h;
     // Waveform top edge in this (top-strip-local) coord system: the strip sits
     // at y=0, so it is the strip's own height. The strip-crossing stem segment
@@ -1210,13 +1215,14 @@ void render_trim_flags(cairo_t* cr,
     // no triangle; the bottom argument is unused for the rectangle shape. The
     // calm pair, not the bar's bright one — the chips are the handles, the bar
     // between them is the window.
-    const GuiRect chip_row{top_strip_area.x, chip_top, waveform_area.w, chip_h};
     for (auto it = chips.rbegin(); it != chips.rend(); ++it) {
         // The chip rect (edge-anchored begin/end) comes from the shared owner
-        // trim_chip_rect — the SAME rule hit_test_trim_chip uses. paint_flag_shape
-        // then draws the rectangle with its left column ON rect.x (LeftEdge means
-        // "rect left = center_x"), so the begin/end asymmetry lives only in
-        // trim_chip_rect. chip_bottom is the tri-top row (no triangle here).
+        // trim_chip_rect, handed the lane band `chip_row` itself (the owner
+        // reads only the row's y/h) — the SAME rule AND the SAME band
+        // hit_test_trim_chip uses. paint_flag_shape then draws the rectangle
+        // with its left column ON rect.x (LeftEdge means "rect left =
+        // center_x"), so the begin/end asymmetry lives only in trim_chip_rect.
+        // chip_bottom is the tri-top row (no triangle here).
         const GuiRect r =
             trim_chip_rect(it->is_begin, top_strip_area.x, it->col, chip_row);
         paint_flag_shape(cr, static_cast<double>(r.x),

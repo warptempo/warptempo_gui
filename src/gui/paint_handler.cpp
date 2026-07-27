@@ -634,10 +634,16 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // the side-aware offscreen sentinels and the effective-width clip inside
     // render_trim_flags). The two halves are geometrically disjoint and meet
     // at the waveform top edge, so their relative order is cosmetic.
+    //
+    // The chip lane's y-band is THREADED IN as top_upper_row_area(app) rather
+    // than re-derived inside the painter: this is the same accessor
+    // hit_test_trim_chip's y-gate and route_trim_chip_press' bridge y-gate
+    // read, so the painted band and the clickable band have ONE owner and
+    // cannot drift if the lanes above the chip row ever change.
     render_trim_stems(cr, wave_rect,
                       basis.vp_start_frame, basis.vp_end_frame,
                       trim, app.trim.has_begin, app.trim.has_end);
-    render_trim_flags(cr, top_strip, wave_rect,
+    render_trim_flags(cr, top_strip, top_upper_row_area(app), wave_rect,
                       basis.vp_start_frame, basis.vp_end_frame,
                       trim, app.trim.has_begin, app.trim.has_end);
 }

@@ -235,9 +235,13 @@ GuiRect waveform_area(const AppState& a) {
 // mirrors it about the window midline (`h - inset - lane_h`).
 //
 // Paint/hit agreement invariant: the trim-chip row is TOP lane 1, and
-// hit_test_trim_chip / the pair-drag y-gate read top_upper_row_area(app), the
-// exact band render_trim_flags paints the b/e chips in. Because both derive
-// that band from this one helper, paint and hit cannot drift.
+// hit_test_trim_chip / the pair-drag y-gate read top_upper_row_area(app) — the
+// exact band render_trim_flags paints the b/e chips in, because the PAINTER is
+// handed that band as a parameter (GuiPaintHandler::paint_trim passes
+// top_upper_row_area(app) as render_trim_flags' `chip_row`) instead of
+// re-deriving a lane y from the row heights above it. Both sides therefore
+// reach the band through this one helper, so paint and hit cannot drift when a
+// lane above the chip row changes height, is removed, or gains a gap.
 GuiRect strip_row_rect(const AppState& a, bool top_strip,
                        int lane_from_window_edge) {
     int w = a.width, h = a.height;
