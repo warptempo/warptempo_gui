@@ -144,40 +144,40 @@ inline GuiColor kPlayheadCursor   = hex(0x7F8C8D);
 // cue; also Breeze's text/icon foreground, so it is the scheme's brightest ink).
 inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
 
-// THE FOUR MARKER CLASSES, each a FILL + OUTLINE pair: a DARK DESATURATED FILL
+// THE THREE MARKER CLASSES, each a FILL + OUTLINE pair: a DARK DESATURATED FILL
 // under a brighter 1px RING (see EditorTextBox::outline / kChipOutlinePx) — the
 // live classes carry a genuinely bright ring, the disabled one a grey that only
 // just lifts off its fill, which is exactly how it reads as switched off. Both
-// halves of every pair are tuning knobs. The classes still resolve in priority
-// order at the flag renderers — disabled, then selected, then red, then default
-// — and that ladder is unchanged even where two classes now paint alike.
+// halves of every pair are tuning knobs. The classes resolve in priority order
+// at the flag renderers — disabled, then red, then default.
 //
-// SELECTED, AND IT IS THE DEFAULT PAIR ON PURPOSE (architect ruling 2026-07-27):
-// kSelected/kSelectedOutline compile to EXACTLY kMarker/kMarkerOutline below, so
-// a selected flag looks IDENTICAL to an unselected one. This is not a
-// copy-paste slip and must not be "fixed" — selection is read from the focus
-// STEM, from the z-order lift (selected shapes paint above unselected), and from
-// the playhead landing on the marker, never from the flag's color. The keys stay
-// separate so the architect can reintroduce a selected tint by editing one line
-// of colors.conf. The ring is the flag shape's border and nothing else — the
-// selected-marker STEM takes its own key below.
-inline GuiColor kSelected         = hex(0x264A5E);
-inline GuiColor kSelectedOutline  = hex(0x3895C7);
+// SELECTION HAS NO COLOR (architect ruling 2026-07-27). There is no fourth
+// class and no selected pair: a selected marker paints EXACTLY the pair it would
+// paint unselected, whichever of the three it belongs to. That was the intent
+// while a selected pair still existed too, but it was carried by two keys merely
+// HOLDING the default pair's values rather than by the structure — and the
+// outline arm preferred the selected ring over the disabled one, so a disabled
+// marker that was ALSO selected took the live bright ring and read as switched
+// on. With the class deleted the property cannot regress under retuning, and a
+// selected marker whose render normalizes to 1.00 keeps its red cue instead of
+// having it masked. Selection reads from the focus STEM (kSelectedStem below),
+// from the z-order lift (selected shapes paint above unselected), and from the
+// playhead landing on the marker.
+//
 // The SELECTED-MARKER STEM (paint_selected_stem) — the singleton selection's
 // focus column, full waveform height. Its own key by ruling (architect
-// 2026-07-27), SEPARATE from the ring above: the same value that is right for a
+// 2026-07-27), separate from every flag ring: the same value that is right for a
 // 1px border around a small shape reads far louder run the whole height of the
 // waveform, so a bright ring wants a calmer stem and the two must tune
-// independently. That separation is what carries the flag-color ruling above:
-// with the selected flag painting exactly like an unselected one, this stem is
+// independently. With the flag carrying no selection color at all, this stem is
 // the singleton's whole colour cue, and it takes the calm breeze-icons grey
 // (the kPlayheadCursor value) rather than a ring blue — a full-height line at
 // ring brightness would shout.
 inline GuiColor kSelectedStem     = hex(0x7F8C8D);
 
-// DEFAULT — and, per the ruling above, the SELECTED pair too. The fill is the
-// desktop's derived INACTIVE-SELECTION blue family: the mix(kWaveform, Breeze
-// blue #3daee9, ~0.33) neighborhood of the measured #204357, then
+// DEFAULT — the pair every marker paints unless it is disabled or red. The fill
+// is the desktop's derived INACTIVE-SELECTION blue family: the mix(kWaveform,
+// Breeze blue #3daee9, ~0.33) neighborhood of the measured #204357, then
 // architect-tuned by eye. The ring is Breeze blue itself at ~86%. Fill dark
 // enough to sit quietly on the canvas, ring bright enough to draw the shape —
 // the dark-fill/bright-ring system every marker-family pair follows.
@@ -190,11 +190,11 @@ inline GuiColor kMarkerOutline    = hex(0x3895C7);
 // Highlight (its desaturated blue: a disabled marker stays in the blue family
 // but sits darker than the live fill), the ring its PlaceholderText grey. The
 // disabled lane text (kTextDisabled) is that same row's Text, so shape and glyph
-// grey out together by provenance. It WINS over red and over the default class
-// (a disabled marker paints this pair whatever its red-flag status), and a
-// disabled marker that is also SELECTED paints this fill with the
-// kSelectedOutline ring — which, under these defaults, is the ordinary marker
-// ring, so what marks membership there is the paint order and the stem.
+// grey out together by provenance. It WINS over red and over the default class,
+// and there is nothing left for it to compose with: a disabled marker paints
+// BOTH halves of this pair whatever its red-flag status and whatever its
+// selection, since selection carries no color. A selected disabled marker is
+// marked by the paint order and by the stem.
 inline GuiColor kMarkerDisabled        = hex(0x163E5C);
 inline GuiColor kMarkerDisabledOutline = hex(0x404447);
 
@@ -248,8 +248,8 @@ inline GuiColor kOverlayOutline   = hex(0x7F8C8D);
 // the kLine grey, one calm rule. (The 1px STEMS are the waveform-area segments
 // in render_trim_stems plus the strip-crossing segments in render_trim_flags;
 // they read as part of the chip handle, which is why they follow the chip's ring
-// rather than the bar.) Trim sits outside the selection system, so none of these
-// has a selected variant.
+// rather than the bar.) Trim sits outside the selection system entirely — a
+// trim bound is never a selection member.
 inline GuiColor kTrimBar          = hex(0x264A5E);
 inline GuiColor kTrimBarOutline   = hex(0x3895C7);
 inline GuiColor kTrimChip         = hex(0x202326);
@@ -1096,14 +1096,13 @@ void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width);
 //
 // Color class (`red_set` = the store indices whose render normalizes to the
 // 1.00 fallback, from warp_red_flag_set_cached), in priority order — ONE opaque
-// pair per shape, no alpha anywhere:
-//   Disabled:          fill kMarkerDisabled (WINS over red and default), with
-//                      kSelectedOutline as the ring when the marker is ALSO
-//                      selected, else kMarkerDisabledOutline — both cues
-//                      survive opaquely on the one shape.
-//   Selected:          fill kSelected, outline kSelectedOutline.
-//   Red (in red_set):  fill kAccent,   outline kAccentOutline.
-//   Otherwise:         fill kMarker,   outline kMarkerOutline.
+// pair per shape, no alpha anywhere, and THREE classes only: selection
+// contributes no color, so a selected flag paints exactly the pair it would
+// paint unselected.
+//   Disabled:          fill kMarkerDisabled, outline kMarkerDisabledOutline
+//                      (WINS over red and default; selection does not alter it).
+//   Red (in red_set):  fill kAccent,         outline kAccentOutline.
+//   Otherwise:         fill kMarker,         outline kMarkerOutline.
 // Trim membership has no effect on flags.
 //
 // `warp_frame_map`: the displayed-axis translation the painters share (the
@@ -1155,12 +1154,12 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
 
 // The phase-reset flag is the same fixed shape as a warp flag (rectangle +
 // triangle centered on the column), textless, and takes the identical
-// color-class ladder render_flags documents above: a disabled reset paints the
-// opaque `kMarkerDisabled` pair (WINNING over red and default, keeping
-// `kSelectedOutline` as its ring when also selected), else selected fill
-// `kSelected`, else red (in `red_set` — a coincident-collapse member from
+// color-class ladder render_flags documents above — three classes, selection
+// none of them: a disabled reset paints the opaque `kMarkerDisabled` /
+// `kMarkerDisabledOutline` pair (WINNING over red and default, and unaltered by
+// selection), else red (in `red_set` — a coincident-collapse member from
 // phase_reset_red_flag_set_cached) fill `kAccent` with `kAccentOutline`, else
-// default fill `kMarker`. Trim membership has no effect.
+// the default `kMarker` / `kMarkerOutline`. Trim membership has no effect.
 // `waveform_width` is the effective waveform width (see render_flags), the
 // column-mapping denominator shared with the phase-reset stems. Painting is two
 // reverse passes keyed on `selected_set` — selected shapes above unselected,

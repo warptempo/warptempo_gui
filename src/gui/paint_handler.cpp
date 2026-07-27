@@ -216,15 +216,16 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
         box.prefix          = "";
         box.text            = ed.pending;
         box.hl_pad          = flag_glyph_inset_px();
-        // The open editor paints like a SELECTED marker chip: kSelected fill +
-        // kSelectedOutline ring (the same pair a selected chip paints), so the
-        // box reads as "this marker, selected for editing" instead of an
-        // invisible bg-on-bg box. On an invalid commit both flash to kAccent —
-        // a color CHANGE on an already-visible box, not a box appearing from
-        // nowhere. Text stays kText and readable on kSelected (the same pairing
-        // a selected chip's context uses).
-        box.fill            = ed.red ? kAccent        : kSelected;
-        box.outline         = ed.red ? kAccentOutline : kSelectedOutline;
+        // The open editor paints like an ordinary MARKER chip: kMarker fill +
+        // kMarkerOutline ring — the one live marker pair, which is what a
+        // selected chip paints too, selection having no color of its own. So the
+        // box reads as "this marker, open for editing" instead of an invisible
+        // bg-on-bg box. On an invalid commit both flash to kAccent — a color
+        // CHANGE on an already-visible box, not a box appearing from nowhere.
+        // Text stays kText and readable on kMarker (the same pairing a chip's
+        // context uses).
+        box.fill            = ed.red ? kAccent        : kMarker;
+        box.outline         = ed.red ? kAccentOutline : kMarkerOutline;
         box.text_color      = kText;
         box.has_selection   = text_editor::has_selection(ed);
         box.selection_start = text_editor::selection_start(ed);
@@ -662,9 +663,9 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // image under the per-step re-warped displayed map), so the store frame is
 // correct there with no override.
 // Painted in kSelectedStem — its OWN palette key (architect 2026-07-27), tuned
-// independently of both the selected fill and the selected ring: a line run the
-// full height of the waveform reads far louder than the same value does as a 1px
-// border around a flag, so what is right for the ring is not right here — through
+// independently of every flag fill and ring: a line run the full height of the
+// waveform reads far louder than the same value does as a 1px border around a
+// flag, so what is right for the ring is not right here — through
 // render_playhead's line-only form (draw_triangle=false): one solid line
 // straight over whatever it crosses, the waveform ink included (the former
 // ink-notch two-tone is retired). It lives OUT of the stem cache as a per-frame

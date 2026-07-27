@@ -1583,21 +1583,20 @@ void render_flags(cairo_t* cr,
         });
 
     auto paint_emit = [&](const FlagEmit& e) {
-        // Color class priority: DISABLED wins over selection, red and default;
-        // then selection over red, red over default. Every class is one opaque
-        // fill/outline pair — the former disabled ALPHA is gone, so a disabled
-        // marker no longer composes with a color class, it IS one. The single
-        // composition left is the disabled+SELECTED shape, which keeps the
-        // disabled fill and takes the selected ring so both cues read at once
-        // (the two-pass paint order still lifts it above the unselected flags).
+        // THREE color classes, resolved in priority order: DISABLED wins over
+        // red and default, red over default. Each is one opaque fill/outline
+        // pair and nothing composes with anything — a disabled marker no longer
+        // combines with a color class, it IS one. SELECTION CONTRIBUTES NO
+        // COLOR: it only orders the two paint passes below (selected shapes
+        // above unselected), so a selected flag paints exactly the pair it would
+        // paint unselected. That is why `red` tests only `!dis` — a selected
+        // marker whose render normalizes to 1.00 keeps its red cue rather than
+        // having it masked by a selection color.
         const bool dis = effective_disabled(markers, e.i);
-        const bool sel = selected_set.count(e.i) > 0;
-        const bool red = !dis && !sel && red_set.count(e.i) > 0;
+        const bool red = !dis && red_set.count(e.i) > 0;
         const GuiColor fill    = dis ? kMarkerDisabled
-                               : sel ? kSelected
                                : red ? kAccent : kMarker;
-        const GuiColor outline = sel ? kSelectedOutline
-                               : dis ? kMarkerDisabledOutline
+        const GuiColor outline = dis ? kMarkerDisabledOutline
                                : red ? kAccentOutline : kMarkerOutline;
         paint_flag_shape(cr, e.center_x, g.flag_top, g.tri_top, g.tip_y,
                          fill, outline, /*with_triangle=*/true);
@@ -1710,18 +1709,17 @@ void render_phase_reset_flags(cairo_t* cr,
         });
 
     auto paint_emit = [&](const PhaseResetEmit& e) {
-        // The identical color-class ladder render_flags resolves (disabled wins,
-        // then selection, then red, then default; disabled+selected keeps the
-        // disabled fill with the selected ring). A phase reset carries no
-        // label_ref cascade, so its disabled verdict is the bool itself.
+        // The identical three-class ladder render_flags resolves: disabled wins
+        // over red, red over default, and selection contributes no color at all
+        // (it only orders the two paint passes below), so `red` tests only
+        // `!dis` and a selected reset keeps its normalization cue. A phase reset
+        // carries no label_ref cascade, so its disabled verdict is the bool
+        // itself.
         const bool dis = phase_resets[e.i].disabled;
-        const bool sel = selected_set.count(e.i) > 0;
-        const bool red = !dis && !sel && red_set.count(e.i) > 0;
+        const bool red = !dis && red_set.count(e.i) > 0;
         const GuiColor fill    = dis ? kMarkerDisabled
-                               : sel ? kSelected
                                : red ? kAccent : kMarker;
-        const GuiColor outline = sel ? kSelectedOutline
-                               : dis ? kMarkerDisabledOutline
+        const GuiColor outline = dis ? kMarkerDisabledOutline
                                : red ? kAccentOutline : kMarkerOutline;
         paint_flag_shape(cr, e.center_x, g.flag_top, g.tri_top, g.tip_y,
                          fill, outline, /*with_triangle=*/true);

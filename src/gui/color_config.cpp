@@ -36,8 +36,6 @@ const ColorKey kColorKeys[] = {
     {"strip_anchor_stem",       &kStripAnchorStem},
     {"playhead_cursor",         &kPlayheadCursor},
     {"playhead_scanner",        &kPlayheadScanner},
-    {"selected",                &kSelected},
-    {"selected_outline",        &kSelectedOutline},
     {"selected_stem",           &kSelectedStem},
     {"marker",                  &kMarker},
     {"marker_outline",          &kMarkerOutline},
@@ -164,16 +162,16 @@ void load_color_config() {
         const std::string_view line(text.data() + pos, nl - pos);
         pos = nl + 1;
 
-        // `<key> = ` exactly: single spaces around the one separator. A
-        // mismatch here is every key-side deviation at once — an unknown key, a
-        // duplicate, a key out of the canonical order, a missing or padded
-        // separator — so the message names what was EXPECTED rather than
-        // echoing the file's own bytes back (which are not ours and need not be
-        // lowercase).
-        const size_t head = name.size() + 3;
+        // `<key>=` exactly: the one separator is a single byte with no spaces
+        // anywhere on the line. A mismatch here is every key-side deviation at
+        // once — an unknown key, a duplicate, a key out of the canonical order,
+        // a missing or padded separator — so the message names what was
+        // EXPECTED rather than echoing the file's own bytes back (which are not
+        // ours and need not be lowercase).
+        const size_t head = name.size() + 1;
         if (line.size() < head ||
             line.compare(0, name.size(), name) != 0 ||
-            line.compare(name.size(), 3, " = ") != 0) {
+            line.compare(name.size(), 1, "=") != 0) {
             reject_line(path, line_no,
                         "expected key " + std::string(name));
             return;
