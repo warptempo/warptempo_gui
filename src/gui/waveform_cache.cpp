@@ -411,9 +411,11 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // loop can service the wl_display fd (the frame callback that PAINTS) before
     // the timerfd tick that runs the on_tick dirty-check, so deferring the
     // flag rebuild to the tick let a frame blit the NEW plate over an OLD
-    // flag cache — and the plate-registered overlays (selected stem,
-    // phase-reset overlay), which read the NEW fp_* via
-    // displayed_viewport_basis, visibly left their flags for one frame during a
+    // flag cache — and EVERY plate-registered overlay, which by definition reads
+    // the NEW fp_* through GuiPaintHandler::displayed_viewport_basis (its
+    // declaration in paint_handler.h enumerates which overlays those are; the
+    // hazard here is the whole class, not any member of it), visibly left its
+    // flags for one frame during a
     // follow-scroll / resize / drift-catchup publish. Doing the rebuild here makes
     // the committing frame blit new plate + new items together and promote the
     // staged basis atomically. The two-phase stage/promote ruling is UNCHANGED:
