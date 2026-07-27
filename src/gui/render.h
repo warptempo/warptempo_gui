@@ -74,7 +74,7 @@ struct TrimRange {
 // every use site treats them as constants.
 //
 // EVERY ENTRY IS OPAQUE — the palette carries no compositing alpha at all. A
-// highlight recolors the GROUND UNDER the ink (kRegionCanvas, kOverlayCanvas)
+// highlight recolors the GROUND UNDER the ink (kRegionCanvas)
 // rather than washing over it, so ink over a highlighted span is the same ink
 // and only the ground reads the highlight; a disabled item takes its own
 // opaque pair (kMarkerDisabled) rather than fading.
@@ -171,29 +171,26 @@ inline GuiColor kMarkerDisabledOutline = hex(0x584A62);
 inline GuiColor kAccent           = hex(0xDA4453);
 inline GuiColor kAccentOutline    = hex(0xE7858F);
 
-// THE TWO GROUND RECOLORS (the Ableton model): a highlighted span's CANVAS
-// becomes one of these, painted after render_canvas and BEFORE the plate blit,
+// THE GROUND RECOLOR (the Ableton model): the region-select span's CANVAS
+// becomes kRegionCanvas, painted after render_canvas and BEFORE the plate blit,
 // so the ARGB32 plate composites over the recolored ground and its antialiased
 // fringes blend correctly against it. The ink itself is untouched — over a
 // fully covered pixel the result is bit-identical to ink over plain kCanvas.
+// It is the group's focus cue, the singleton focus stem's "spread" form (a stem
+// marks one selected marker, this ground marks many), so it lifts kCanvas in
+// the blue-cast direction the focus family already carries; the split
+// half-triangles at its bounds stay full kSelected. Tuned by eye on the panel.
 //
-// kRegionCanvas is the region-select span's ground: the group's focus cue, the
-// singleton focus stem's "spread" form (a blue stem marks one selected marker,
-// this ground marks many), so it lifts kCanvas in the blue-cast direction the
-// focus family already carries. The split half-triangles at its bounds stay
-// full kSelected.
-//
-// kOverlayCanvas is the phase reset overlay band's ground — the stretch of
-// output immediately following the focused reset over which the re-seeded phase
-// takes hold. A smaller lift than the region's: it is the narrower, finer
-// authoring aid, and where the two grounds cover the same column the OVERLAY
-// wins (it is painted second). Both lifts are tuned by eye on the panel.
-//
-// kOverlayOutline is that band's 1px ring, painted OVER the plate — a boundary
-// line like the playheads and the stems, so an opaque line crossing ink is
-// correct and intended. The brighter outline sibling of kOverlayCanvas.
+// THE OVERLAY IS A RING ONLY (architect 2026-07-27). kOverlayOutline is the 1px
+// border of the phase reset overlay band — the stretch of output immediately
+// following the focused reset over which the re-seeded phase takes hold —
+// painted OVER the plate, a boundary line like the playheads and the stems, so
+// an opaque line crossing ink is correct and intended. The band recolors NO
+// ground: it had one until this ruling, and dropping it leaves the aid reading
+// as the two EDGES of a span rather than as a tinted region, which is what a
+// narrow authoring marker wants. So this is a line color, not the outline
+// sibling of any fill.
 inline GuiColor kRegionCanvas     = hex(0x3D464E);
-inline GuiColor kOverlayCanvas    = hex(0x383E44);
 inline GuiColor kOverlayOutline   = hex(0x596671);
 
 // THE TRIM FAMILY, in three roles. The BRIGHT pair is the BRIDGE BAR — the
@@ -599,8 +596,8 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 
 // The waveform area's CONTENT band: the area minus the two kLine border rows
 // render_canvas paints at its top and bottom. Every pass that fills a BAND
-// inside the area clips to this — the plate blit and both ground recolors
-// (region, phase-reset overlay) — so the border rows survive the frame no
+// inside the area clips to this — the plate blit, the region ground recolor,
+// and the overlay ring's runs — so the border rows survive the frame no
 // matter what covers the area. 1px VERTICALS deliberately do not: the
 // playheads, the marker/trim stems, and the strip-drag anchor stem run the full
 // area height and cross the border, which is correct for a position line and is
@@ -753,7 +750,7 @@ struct WaveformBasis {
 // color through this alpha is retired, the trim bridge bar being the whole
 // inside-the-window signal now. Its alpha is not binary: opaque interiors,
 // fractional silhouette edges, transparent gaps. The gaps are what let a
-// recolored GROUND (kRegionCanvas / kOverlayCanvas, painted before the blit)
+// recolored GROUND (kRegionCanvas, painted before the blit)
 // show through, and the fractional edges blend against whichever ground is
 // under them.
 void render_waveform(cairo_surface_t* dest,

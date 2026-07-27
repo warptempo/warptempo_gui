@@ -46,7 +46,6 @@ const ColorKey kColorKeys[] = {
     {"accent_red",              &kAccent},
     {"accent_red_outline",      &kAccentOutline},
     {"region_canvas",           &kRegionCanvas},
-    {"overlay_canvas",          &kOverlayCanvas},
     {"overlay_outline",         &kOverlayOutline},
     {"trim_bar",                &kTrimBar},
     {"trim_bar_outline",        &kTrimBarOutline},

@@ -197,7 +197,6 @@ marker_disabled_outline = #584a62
 accent_red = #da4453
 accent_red_outline = #e7858f
 region_canvas = #3d464e
-overlay_canvas = #383e44
 overlay_outline = #596671
 trim_bar = #f67400
 trim_bar_outline = #ffa040
@@ -206,7 +205,7 @@ trim_chip_outline = #c65c00
 trim_stem = #c65c00
 ```
 
-The keys name their surfaces: the two grounds (`background` chrome, `canvas` waveform area) and the ink; text and its disabled shade; the one structural `line` color (strip-row ring and the waveform border) and the strip-drag anchor stem; the two playheads; the selected trio (fill, outline, and the selected marker's stem — the stem is its own key because a full-height line carries a color differently than a 1px flag ring); the marker pair, its disabled pair, and the red-flag pair; the region and phase-overlay background lifts plus the overlay's outline; and the trim family — the bright bar pair, the calm chip pair, and the stems. Every value is opaque — there are no alpha channels: highlights recolor the background under the waveform ink rather than washing over it, and disabled markers use their own opaque pair rather than fading. The CLI renderer never reads this file; colors are display-only.
+The keys name their surfaces: the two grounds (`background` chrome, `canvas` waveform area) and the ink; text and its disabled shade; the one structural `line` color (strip-row ring and the waveform border) and the strip-drag anchor stem; the two playheads; the selected trio (fill, outline, and the selected marker's stem — the stem is its own key because a full-height line carries a color differently than a 1px flag ring); the marker pair, its disabled pair, and the red-flag pair; the region highlight's background lift and the phase overlay's outline (the overlay is a 1px frame around its span — it recolors nothing inside); and the trim family — the bright bar pair, the calm chip pair, and the stems. Every value is opaque — there are no alpha channels: highlights recolor the background under the waveform ink rather than washing over it, and disabled markers use their own opaque pair rather than fading. The CLI renderer never reads this file; colors are display-only.
 
 ## Hotkey reference
 

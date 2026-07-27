@@ -363,9 +363,8 @@ private:
 
     // The displayed-viewport paint basis: vp_start and samples-per-pixel LOCKED
     // to the blitted plate (wf_cache.fp_*) while the worker rebuilds against a
-    // viewport change, so every live overlay (the region and overlay grounds,
-    // the overlay ring, the selected stem, the strip-drag anchor, the
-    // playheads) stays
+    // viewport change, so every live overlay (the region ground, the overlay
+    // ring, the selected stem, the strip-drag anchor, the playheads) stays
     // registered with the cached pixels instead of the not-yet-painted live
     // viewport. spp falls back to the LIVE current_samples_per_pixel when no
     // plate has published a span yet (fp_area_w <= 0, cold before the first
@@ -393,9 +392,11 @@ private:
     // The phase-reset overlay band's clipped screen-x span for this frame, or
     // valid == false when no band shows (wrong view, no eligible focused reset,
     // a suppressing selection/region, a sub-pixel width, or a span clipped
-    // wholly offscreen). The ONE geometry owner the band's two passes share —
-    // the GROUND recolor under the plate and the RING over it — so the two can
-    // never disagree about where the band is.
+    // wholly offscreen). Kept SEPARATE from its one consumer
+    // (paint_phase_reset_overlay_ring): it owns every visibility gate as well as
+    // the span, and Selection::phase_overlay_subject mirrors its selection-state
+    // gates to decide when a subject change needs waveform damage — two readers
+    // of one rule.
     struct PhaseResetOverlayBand {
         bool   valid = false;
         double x0    = 0.0;   // left screen x, clipped to the area
@@ -408,13 +409,14 @@ private:
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip);
     void paint_marker_text_lane(cairo_t* cr);
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
-    // THE TWO GROUND RECOLORS, both painted after render_canvas and BEFORE the
-    // plate blit (the Ableton model — the highlight changes the ground, the ink
-    // is untouched), overlay second so it wins where the two spans overlap.
+    // THE GROUND RECOLOR, painted after render_canvas and BEFORE the plate blit
+    // (the Ableton model — the highlight changes the ground, the ink is
+    // untouched). The region highlight is the only one: the phase-reset overlay
+    // recolors no ground (architect 2026-07-27).
     void paint_region_ground(cairo_t* cr, const GuiRect& area);
-    void paint_phase_reset_overlay_ground(cairo_t* cr, const GuiRect& area);
-    // The overlay band's 1px ring, painted AFTER the plate — a boundary line
-    // like the playheads, so it crosses the ink deliberately.
+    // The overlay band's 1px ring — the phase-reset overlay's whole visual —
+    // painted AFTER the plate, a boundary line like the playheads, so it
+    // crosses the ink deliberately.
     void paint_phase_reset_overlay_ring(cairo_t* cr, const GuiRect& area);
     // The LIVE trim pass (architect 2026-07-25 — trim z-order below the
     // playhead): paints EVERY trim pixel per frame — the b/e chips, the bridge

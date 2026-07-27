@@ -274,7 +274,7 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     // with the opaque recolor model (architect 2026-07-26). The trim bridge bar
     // is the whole inside-the-window signal now, and the plate's pixels are
     // exactly what the renderer wrote, composited once over whichever ground —
-    // kCanvas, or a kRegionCanvas / kOverlayCanvas recolor — the passes before
+    // kCanvas, or a kRegionCanvas recolor — the pass before
     // this one left. That is what makes ink over a highlighted span identical
     // to ink over plain canvas wherever coverage is full.
     //
@@ -371,7 +371,7 @@ void GuiPaintHandler::paint_region_ground(cairo_t* cr, const GuiRect& area) {
     cairo_restore(cr);
 }
 
-// -- GuiPaintHandler::phase_reset_overlay_band / its two paint passes -----
+// -- GuiPaintHandler::phase_reset_overlay_band / its ring pass ------------
 
 // Paint-only overlay width: two synthesis hops of target/output time, the
 // scale of the reset's local effect — the stretch of output immediately
@@ -388,10 +388,15 @@ const int64_t kPhaseResetOverlaySamples = static_cast<int64_t>(
 // which the re-seeded phase takes hold. Paint-only: no persisted state,
 // nothing on disk, no settings key, no undo interaction.
 //
-// THE ONE GEOMETRY OWNER for both of the band's passes — the GROUND recolor
-// under the plate and the RING over it — so the ring can never land off the
-// ground it outlines. Every visibility gate lives here too, so the two passes
-// appear and disappear together by construction.
+// THE GEOMETRY AND VISIBILITY OWNER, kept SEPARATE from its one consumer
+// (paint_phase_reset_overlay_ring) rather than folded into it. It carries every
+// visibility gate — view, focus, the R3 span suppressions, the eligible-marker
+// resolve, the sub-pixel and offscreen refusals — plus the clipped span, and
+// Selection::phase_overlay_subject MIRRORS its selection-state gates to decide
+// when a subject change needs waveform damage. Two readers of one rule, so the
+// rule stays one function. (It served a second pass, an opaque ground recolor
+// under the plate, until the ring became the overlay's whole visual — architect
+// 2026-07-27.)
 //
 // Painted in TARGET view, never source view, and this is a
 // phase-reset-only surface with no warp sibling (naming-symmetry asymmetry,
@@ -512,37 +517,13 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     return out;
 }
 
-// THE OVERLAY GROUND: the band's CANVAS becomes the opaque kOverlayCanvas, the
-// same recolor model the region highlight takes (architect 2026-07-26) — an
-// opaque ground under the ink, not a translucent wash over it. Painted after
-// paint_region_ground and BEFORE the plate blit, so where a region ground and
-// this one cover the same column the OVERLAY wins: it is the narrower, finer
-// authoring aid. (The R3 suppression above means a region and this band cannot
-// actually co-display today; painting second is the ruling either way.)
-// Integer pixel edges, AA off, clipped to the CONTENT band so it cannot cover
-// the area's kLine border rows.
-void GuiPaintHandler::paint_phase_reset_overlay_ground(
-    cairo_t* cr, const GuiRect& area) {
-    const PhaseResetOverlayBand band = phase_reset_overlay_band(area);
-    if (!band.valid) return;
-
-    const GuiRect content = waveform_content_rect(area);
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_source_rgb(cr, kOverlayCanvas.r, kOverlayCanvas.g,
-                         kOverlayCanvas.b);
-    cairo_rectangle(cr, band.x0, static_cast<double>(content.y),
-                    band.x1 - band.x0, static_cast<double>(content.h));
-    cairo_fill(cr);
-    cairo_restore(cr);
-}
-
-// THE OVERLAY RING: the band's 1px opaque kOverlayOutline border, painted AFTER
-// the plate — it is a BOUNDARY LINE, like the playheads and the stems, so an
-// opaque line crossing waveform ink is correct and intended (the ground below
-// carries the fill role, and a translucent ring would read as neither).
-// Same band owner, so the ring lands exactly on the recolored ground's edges;
-// same CONTENT band, so the top and bottom runs sit inside the kLine border
+// THE OVERLAY RING — the phase-reset overlay's WHOLE visual (architect
+// 2026-07-27): the band's 1px opaque kOverlayOutline border and nothing else,
+// painted AFTER the plate. It is a BOUNDARY LINE, like the playheads and the
+// stems, so an opaque line crossing waveform ink is correct and intended, and
+// with no fill inside it the band now READS as the two edges of a span rather
+// than as a tinted region. The CONTENT band bounds it, so the top and bottom
+// runs sit inside the kLine border
 // rather than on them. A vertical side is drawn only where the band's own edge
 // is the true edge — both x0 and x1 come back already clipped to the area, so a
 // band running past a viewport edge draws its border there too; that is the
@@ -1134,15 +1115,17 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //
         // Final paint order (bottom to top of the stack): canvas ground + its
         // kLine border (painted above, unconditionally) -> region ground ->
-        // phase-reset overlay ground -> waveform plate -> overlay ring -> LIVE
+        // waveform plate -> overlay ring -> LIVE
         // TRIM (chips + bridge bar + strip and waveform stem segments, one pass)
         // -> selected stem -> playheads (scanner + split/cursor) -> flag blit ->
         // marker-text lane / zoom ring -> strip-drag anchor -> bottom strip.
         // Three structural rulings live in this sequence:
         //   THE RECOLOR MODEL (architect 2026-07-26) — a highlight changes the
-        //     GROUND, so both ground recolors paint BEFORE the plate and the ink
-        //     composites over them; only the overlay's 1px RING is a boundary
-        //     line and paints after, crossing the ink like the stems do.
+        //     GROUND, so the ONE ground recolor (the region's) paints BEFORE the
+        //     plate and the ink composites over it. The phase-reset overlay
+        //     contributes no ground at all (architect 2026-07-27): its 1px RING
+        //     is its whole visual, and a boundary line paints AFTER the plate,
+        //     crossing the ink like the stems do.
         //   THE Z-ORDER FLIP (architect 2026-07-23) — the cursor playhead (blue
         //     line+triangle) and the region SPLIT half-triangles pass UNDER
         //     marker flags, so on a multimarker select the extent region's
@@ -1157,16 +1140,14 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     trim < selected stem < playheads < marker flags.
 
         if (rects_intersect(exposed, area)) {
-            // THE GROUND RECOLORS, both under the plate. render_canvas already
-            // laid the kCanvas ground for the whole area above; these two
-            // repaint their spans of it opaquely, so the plate's ink and its
-            // antialiased fringes composite against the recolored ground. The
-            // overlay goes second and wins any shared column — the narrower,
-            // finer aid.
+            // THE GROUND RECOLOR, under the plate. render_canvas already laid
+            // the kCanvas ground for the whole area above; this repaints the
+            // region's span of it opaquely, so the plate's ink and its
+            // antialiased fringes composite against the recolored ground.
             paint_region_ground(cr, area);
-            paint_phase_reset_overlay_ground(cr, area);
             paint_waveform_plate(cr, area);
-            // The overlay band's boundary ring, over the plate and under trim
+            // The overlay band's boundary ring — the phase-reset overlay's whole
+            // visual — over the plate and under trim
             // and the stems, so the focused reset's own stem stays crisp on top
             // of the left seam.
             paint_phase_reset_overlay_ring(cr, area);

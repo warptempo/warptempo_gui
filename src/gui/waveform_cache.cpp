@@ -46,7 +46,7 @@ void render_waveform_to_cache_surface(
     if (!dest || area_w <= 0 || area_h <= 0) return;
 
     // Clear to transparent — whatever ground the paint pass laid under the plate
-    // (kCanvas, or a kRegionCanvas / kOverlayCanvas recolor) shows through
+    // (kCanvas, or a kRegionCanvas recolor) shows through
     // wherever the waveform samples don't paint. No ground color is ever baked
     // into the plate: its alpha is exactly what composites the ink over that
     // ground, gaps and antialiased fringes alike, which is why a highlighted
