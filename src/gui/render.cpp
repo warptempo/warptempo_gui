@@ -1539,14 +1539,17 @@ void iterate_visible_flags_impl(
         // invisible flag could supply the only under-width adjacent pair and hide
         // every genuinely visible disabled flag across a one-pixel pan band.
         //
-        // The LEFT edge cannot produce this: the rect covers columns
-        // [cx - flag_w/2, cx + flag_w/2] INCLUSIVE (integer division, odd
-        // width), so coverage survives down to cx == -(flag_w/2), and the coarse
-        // cull's floor x_raw == -flag_w/2.0 rounds to exactly that value. The
-        // asymmetry is in the bound itself, not the rounding: -(flag_w/2) is the
-        // LAST covering column on the left, while +W + flag_w/2 is the FIRST
-        // non-covering one on the right. The guard is written for both edges
-        // anyway, so the invariant holds structurally.
+        // THE LEFT EDGE DEPENDS ON THE SCALED WIDTH'S PARITY, so its guard is
+        // not decoration. The rect covers columns [cx - k, cx + k] INCLUSIVE
+        // with k = flag_w/2 (integer division, odd width), so coverage survives
+        // down to cx == -k, and the coarse cull's floor is x_raw == -(k + 0.5),
+        // whose banker's rounding takes the EVEN neighbour: k even -> cx == -k,
+        // the last covering column (the default 17 px, k = 8 — the guard is
+        // structural insurance there); k odd -> cx == -(k + 1), one column past
+        // coverage (flag_lane_w_px scales with font_size and is only forced ODD,
+        // so 19 px, k = 9, is reachable — the guard is behaviorally NECESSARY
+        // there). The right edge needs no parity argument: W + k is the FIRST
+        // non-covering column whatever the parity, and the coarse cull admits it.
         //
         // Culling here rather than downstream gives every consumer the same
         // shown set: the painters lose no pixels (there are none), the hit rects
@@ -2150,25 +2153,28 @@ void cap_lane_run_text(std::string& text, size_t& glyphs) {
 // marker stays truncated here — it does NOT spell out in full when the verdict
 // fails. The text-hover EXPANSION (applied to the returned set) is the sole
 // route back to the full text, and only while the run's TEXT is hovered.
-LaneTextRun current_marker_lane_run_fallback(const AppState& app,
-                                             const GuiAudio& audio) {
+LaneTextRun current_marker_lane_run_fallback(
+    const AppState& app, const GuiAudio& audio,
+    bool flag_verdict_hides_disabled) {
     LaneTextRun run;
 
     // THE DISABLED-EXCLUSION half of the flag occlusion verdict, applied to a
     // single picked index: when the verdict fires, a disabled marker shows no
     // fallback run either — it vanishes wholesale, exactly as it loses its flag,
-    // its hit rect and its ambient run. Only the VERDICT is consulted here, not
+    // its hit rect and its ambient run. Only the VERDICT BIT reaches here, never
     // the shown list: both tiers keep their OWN visibility rules for enabled
     // markers, which deliberately DIFFER from the flags' half-offscreen cull
     // (tier 1 culls not at all — a shown hover always paints; tier 2 culls on
     // the painted column being onscreen, stricter than the flags' half-offscreen
-    // rule), and the ruling changes only the disabled case. The cheap per-index
-    // disabled test runs first, so the emit walk happens only for a disabled
-    // candidate. It also covers a STALE hover captured before the verdict
-    // flipped (a drag can flip it mid-gesture).
+    // rule), and the ruling changes only the disabled case — passing the bit
+    // alone makes that impossible to widen by accident. The caller resolved it
+    // ONCE for this lane resolution (resolve_base_lane_run_set), so no tier
+    // re-enters the flag walk however many candidates it rejects. It also covers
+    // a STALE hover captured before the verdict flipped (a drag can flip it
+    // mid-gesture).
     auto hidden_by_flag_verdict = [&](int idx) -> bool {
-        if (!active_column_flag_disabled(app, idx)) return false;
-        return active_column_shown_flags(app, audio).hide_disabled;
+        return flag_verdict_hides_disabled &&
+               active_column_flag_disabled(app, idx);
     };
 
     // Tier 1: the HOVERED marker's own value wins whenever a hover is showing.
@@ -2248,11 +2254,14 @@ LaneTextRun current_marker_lane_run_fallback(const AppState& app,
     return run;
 }
 
-// Wrap the fallback single run in a LaneRunSet (all_visible = false).
-LaneRunSet lane_run_set_fallback(const AppState& app, const GuiAudio& audio) {
+// Wrap the fallback single run in a LaneRunSet (all_visible = false). The
+// verdict bit is the caller's single resolution, threaded through unchanged.
+LaneRunSet lane_run_set_fallback(const AppState& app, const GuiAudio& audio,
+                                 bool flag_verdict_hides_disabled) {
     LaneRunSet set;
     set.all_visible = false;
-    const LaneTextRun run = current_marker_lane_run_fallback(app, audio);
+    const LaneTextRun run = current_marker_lane_run_fallback(
+        app, audio, flag_verdict_hides_disabled);
     if (run.valid) set.runs.push_back(run);
     return set;
 }
@@ -2304,36 +2313,48 @@ static LaneRunSet resolve_base_lane_run_set(const AppState& app,
     // FlagPayload editor is NOT handled here — it is an overlay resolved by the
     // paint pass (its marker's capped ambient run still participates in the
     // verdict; the editor's full-width box never does).
+    //
+    // THE FLAG VERDICT RESOLVES EXACTLY ONCE PER LANE RESOLUTION, here at the
+    // top, and every path below reads this one result: the ambient candidate
+    // membership (shown_flags.shown) and, threaded into every fallback return,
+    // the disabled-exclusion bit. The walk it runs is O(store) plus a sort, so
+    // re-deriving it per rejected fallback candidate would scale with the store
+    // on every paint and every hover hit-test. One resolution also makes the two
+    // paths agree by construction: the same frame's candidates decide who may
+    // show whether the lane ends up ambient or falls back.
+    const ActiveColumnShownFlags shown_flags =
+        active_column_shown_flags(app, audio);
+    const bool hide_disabled = shown_flags.hide_disabled;
+
     const double advance = monospace_advance();
     // Font not measured yet — the whole geometry is undefined. Return the empty
     // fallback shape; paint/hit keep their own advance guards.
-    if (advance <= 0.0) return lane_run_set_fallback(app, audio);
+    if (advance <= 0.0) return lane_run_set_fallback(app, audio, hide_disabled);
 
     const GuiRect area = waveform_area(app);
-    if (area.w <= 0) return lane_run_set_fallback(app, audio);
+    if (area.w <= 0) return lane_run_set_fallback(app, audio, hide_disabled);
 
     // The displayed VIEWPORT basis the flag pixels were painted with — the run
-    // columns and this function's verdict read it through
-    // lane_text_left_x_at_frame (its basis contract), and the candidate set
-    // below reads the displayed MAP + basis pair inside the shared flag owner.
-    // A degenerate basis leaves the whole geometry undefined: take the fallback
-    // shape, as the advance and width guards above do.
+    // columns and this function's own verdict read it through
+    // lane_text_left_x_at_frame (its basis contract); the candidate set resolved
+    // above read the same displayed MAP + basis pair inside the shared flag
+    // owner. A degenerate basis leaves the whole geometry undefined: take the
+    // fallback shape, as the advance and width guards above do.
     const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
-    if (basis.spp <= 0.0) return lane_run_set_fallback(app, audio);
+    if (basis.spp <= 0.0) return lane_run_set_fallback(app, audio, hide_disabled);
 
-    // THE CANDIDATE SET IS THE SHOWN FLAGS, no cull of its own: a marker has a
-    // lane run IFF its flag is shown (active_column_shown_flags → the ONE
-    // resolve_visible_flags owner, on this same displayed basis). That folds in
-    // the flags' half-offscreen cull — a fully-offscreen marker paints no flag,
-    // so it shows no run — AND the disabled-flag occlusion verdict: when the
-    // verdict fires, a disabled marker vanishes WHOLESALE (flag, hit rect,
-    // ambient run, and, through the searches below, the fallback pick and the
-    // hover expansion). The lane's own glyph-fit verdict then runs on whatever
-    // candidates remain — two verdicts in sequence, the flag one choosing WHO
-    // may show, this one choosing HOW the texts show.
-    const ActiveColumnShownFlags shown_flags =
-        active_column_shown_flags(app, audio);
-
+    // THE CANDIDATE SET IS THE SHOWN FLAGS resolved above, no cull of its own: a
+    // marker has a lane run IFF its flag is shown (active_column_shown_flags →
+    // the ONE resolve_visible_flags owner, on this same displayed basis). That
+    // folds in the flags' half-offscreen and zero-coverage culls — a marker with
+    // no flag pixels shows no run — AND the disabled-flag occlusion verdict:
+    // when the verdict fires, a disabled marker vanishes WHOLESALE (flag, hit
+    // rect, ambient run, and, through the fallback's threaded bit and the
+    // expansion's own search, the fallback pick and the hover expansion). The
+    // lane's own glyph-fit verdict then runs on whatever candidates remain — two
+    // verdicts in sequence, the flag one choosing WHO may show, this one
+    // choosing HOW the texts show.
+    //
     // Positions ride the DragOverlay when a drag is active (every dragged
     // member's run tracks its live proposed position, matching the flags).
     DragOverlay overlay_storage{&app.drag.dragging_markers,
@@ -2374,7 +2395,7 @@ static LaneRunSet resolve_base_lane_run_set(const AppState& app,
     // fallback shape (its arbitration also finds nothing onscreen, so behavior
     // is identical; the fallback keeps the tier code as the ONE owner of "no
     // ambient set" too).
-    if (set.runs.empty()) return lane_run_set_fallback(app, audio);
+    if (set.runs.empty()) return lane_run_set_fallback(app, audio, hide_disabled);
 
     // THE VERDICT: pass iff no two capped runs' rects overlap. Each rect's left
     // comes from the shared placement owner (clamped fully onscreen), width =
@@ -2393,8 +2414,10 @@ static LaneRunSet resolve_base_lane_run_set(const AppState& app,
               [](const RunRect& a, const RunRect& b) { return a.left < b.left; });
     for (size_t i = 1; i < rects.size(); ++i) {
         if (rects[i - 1].right > rects[i].left) {
-            // Occlusion — fall back to the one-run arbitration EXACTLY.
-            return lane_run_set_fallback(app, audio);
+            // Occlusion — fall back to the one-run arbitration EXACTLY. The
+            // flag verdict carried over unchanged: the two verdicts are
+            // independent, and this one failing says nothing about that one.
+            return lane_run_set_fallback(app, audio, hide_disabled);
         }
     }
 
