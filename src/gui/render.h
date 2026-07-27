@@ -1189,12 +1189,15 @@ void render_flags(cairo_t* cr,
 
 // Same column placement as render_flags, without drawing — returns the
 // screen-coord rects of the flag RECTANGLES that would be rendered (one per
-// visible flag; the triangle is not a hit target). One per visible flag, no
-// elision, so overlapping shapes yield overlapping rects. The caller
-// (hit_test_flag) resolves an overlap with two forward passes mirroring the
-// painters' two reverse passes — the leftmost SELECTED containing rect, else
-// the leftmost containing rect = the topmost-painted flag. No cairo context is
-// needed: the rect is the fixed flag width/height centered on the column.
+// visible flag, no elision, so overlapping shapes yield overlapping rects).
+// This builder emits the rectangle only — the geometric base the fused
+// tip-down triangle is derived from; the caller (hit_test_flag) additionally
+// derives and tests that triangle from each rect, so the actual clickable
+// area is the rectangle plus the triangle. The caller resolves a rect
+// overlap with two forward passes mirroring the painters' two reverse
+// passes — the leftmost SELECTED containing rect, else the leftmost
+// containing rect = the topmost-painted flag. No cairo context is needed:
+// the rect is the fixed flag width/height centered on the column.
 // `warp_frame_map` mirrors render_flags so the two stay in sync. In target
 // view the flags paint at translated positions, so this helper is called with a
 // non-null warp_frame_map and the hit-rects walk the same map (see app_state's

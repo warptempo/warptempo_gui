@@ -1637,14 +1637,17 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     if (viewport_end_sample <= viewport_start_sample) return out;
     if (sample_rate <= 0) return out;
 
-    // The hit rect is the flag RECTANGLE only (the triangle is not a hit
-    // target), sized and placed EXACTLY as paint_flag_shape draws the
-    // rectangle: centered on the column, width flag_lane_w_px(), top/bottom the
-    // flag lane. One rect per VISIBLE flag (no elision), emitted in ascending-x
-    // order, so overlapping flags yield overlapping rects; the caller
-    // (hit_test_flag) resolves an overlap with two forward passes mirroring the
-    // painters' two reverse passes — the leftmost SELECTED containing rect, else
-    // the leftmost containing rect = the topmost-painted flag.
+    // The emitted rect is the flag RECTANGLE only, sized and placed EXACTLY as
+    // paint_flag_shape draws the rectangle: centered on the column, width
+    // flag_lane_w_px(), top/bottom the flag lane. It is also the geometric
+    // base the fused tip-down triangle is derived from: the caller
+    // (hit_test_flag) additionally derives and tests that triangle from each
+    // rect, so the actual hit area is the rectangle plus the triangle. One
+    // rect per VISIBLE flag (no elision), emitted in ascending-x order, so
+    // overlapping flags yield overlapping rects; the caller resolves an
+    // overlap with two forward passes mirroring the painters' two reverse
+    // passes — the leftmost SELECTED containing rect, else the leftmost
+    // containing rect = the topmost-painted flag.
     const FlagLaneY g = flag_lane_geometry(top_strip_area);
     const int flag_w = flag_lane_w_px();
     const int ry     = static_cast<int>(std::round(g.flag_top));

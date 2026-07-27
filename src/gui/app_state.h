@@ -2049,8 +2049,10 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // signatures stay free of cairo so the header keeps a clean include list.
 //
 // hit_test_flag: scan the flag rectangles in the top strip and return the
-// marker index under (mouse_x, mouse_y), or -1. Rects are the fixed flag
-// rectangles (the triangle is not a hit target); they may overlap, and the walk
+// marker index under (mouse_x, mouse_y), or -1. The hit area is each fixed
+// flag rectangle PLUS its fused tip-down triangle, derived from the rect via
+// flag_triangle_half_width_at (the same taper owner paint_flag_shape fills
+// with) — see the body for the exact test. Rects may overlap, and the walk
 // resolves an overlap to the topmost-painted flag. Mirror of the painters'
 // z-order (render_flags / render_phase_reset_flags): the SELECTED shapes paint
 // above the unselected, and within each class the leftmost paints on top. So

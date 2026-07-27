@@ -531,10 +531,12 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // route the geometry consequences through the same rebuild path a
     // window resize performs: on_resize re-clamps zoom/viewport against
     // the (possibly changed) strip geometry, the next redraw re-measures
-    // the grid metrics, and the cache fingerprints (area dims keyed off
-    // monospace_row_h()) rebuild the waveform/flag surfaces. The
-    // full-window invalidation at the end of this load supplies the
-    // damage, mirroring the resize path's full-surface damage.
+    // the grid metrics, and the cache fingerprints (area dims keyed off the
+    // strip row metrics — monospace_row_h() for the textless zoom row and
+    // monospace_text_row_h() for the text-bearing lanes) rebuild the
+    // waveform/flag surfaces. The full-window invalidation at the end of
+    // this load supplies the damage, mirroring the resize path's
+    // full-surface damage.
     set_gui_font_size_pt(app.font_size);
     paint_handler.on_resize(app.width, app.height);
 
