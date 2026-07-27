@@ -1052,8 +1052,15 @@ void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width);
 // rectangle in the FLAG LANE plus the tip-down triangle directly beneath it in
 // the TRIANGLE LANE, treated as one shape and filled in the marker's color
 // class. There is NO TEXT (the payload lives in the marker-text lane, shown on
-// hover and edited in the Enter flag editor). There is no elision — overlapping
-// shapes occlude instead.
+// hover and edited in the Enter flag editor). Overlapping shapes occlude
+// instead of eliding, with ONE exception — THE DISABLED-FLAG OCCLUSION VERDICT
+// (the marker-text lane's all-or-fallback rule, applied to flags): when any two
+// visible flags in the active column would overlap, every DISABLED marker's
+// flag is dropped from the painted set; when the whole visible set stands clear,
+// every flag paints. One owner resolves the shown set for both painters and
+// both hit-rect builders (resolve_visible_flags, render.cpp — predicate, drag
+// behavior and accepted consequences stated there), so paint == hit by
+// construction.
 //
 // Color class (`red_set` = the store indices whose render normalizes to the
 // 1.00 fallback, from warp_red_flag_set_cached), in priority order — ONE opaque
@@ -1091,8 +1098,11 @@ void render_flags(cairo_t* cr,
 
 // Same column placement as render_flags, without drawing — returns the
 // screen-coord rects of the flag RECTANGLES that would be rendered (one per
-// visible flag; the triangle is not a hit target). One per visible flag, no
-// elision, so overlapping shapes yield overlapping rects. The caller
+// SHOWN flag; the triangle is not a hit target). Shown means what render_flags
+// paints: the same resolve_visible_flags list, so a flag the disabled-flag
+// occlusion verdict hides emits no rect and is not clickable, while every
+// painted flag has exactly one. Overlapping shapes yield overlapping rects. The
+// caller
 // (hit_test_flag) resolves an overlap with two forward passes mirroring the
 // painters' two reverse passes — the leftmost SELECTED containing rect, else
 // the leftmost containing rect = the topmost-painted flag. No cairo context is
@@ -1125,7 +1135,10 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
 // `waveform_width` is the effective waveform width (see render_flags), the
 // column-mapping denominator shared with the phase-reset stems. Painting is two
 // reverse passes keyed on `selected_set` — selected shapes above unselected,
-// leftmost on top within each class (see render.cpp).
+// leftmost on top within each class (see render.cpp) — over the same
+// resolve_visible_flags shown set the warp column paints, so the disabled-flag
+// occlusion verdict is one rule across both columns (a phase reset's disabled
+// verdict is its bool, no cascade).
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
                             int waveform_width,
@@ -1138,7 +1151,8 @@ void render_phase_reset_flags(cairo_t* cr,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                             const DragOverlay* drag_overlay = nullptr);
 
-// `waveform_width` is the effective waveform width (see compute_flag_hit_rects).
+// `waveform_width` is the effective waveform width (see compute_flag_hit_rects);
+// the shown set and the disabled-flag occlusion verdict are that helper's too.
 std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     GuiRect top_strip_area,
     int waveform_width,

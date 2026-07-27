@@ -2049,8 +2049,10 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 //
 // hit_test_flag: scan the flag rectangles in the top strip and return the
 // marker index under (mouse_x, mouse_y), or -1. Rects are the fixed flag
-// rectangles (the triangle is not a hit target); they may overlap, and the walk
-// resolves an overlap to the topmost-painted flag. Mirror of the painters'
+// rectangles of the SHOWN flags (the triangle is not a hit target; a disabled
+// flag hidden by the occlusion verdict at render.cpp's resolve_visible_flags
+// contributes no rect, exactly as it contributes no pixels); they may overlap,
+// and the walk resolves an overlap to the topmost-painted flag. Mirror of the painters'
 // z-order (render_flags / render_phase_reset_flags): the SELECTED shapes paint
 // above the unselected, and within each class the leftmost paints on top. So
 // the walk runs twice — first the first-containing rect whose marker is

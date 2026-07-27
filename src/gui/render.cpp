@@ -1420,11 +1420,13 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
 
 namespace {
 
-// Shared flag iteration used by render_flags / compute_flag_hit_rects and their
-// phase-reset analogues. Invokes `emit(i, center_x)` for EVERY visible marker,
-// in ascending painted-x order (equal columns tie-break by ascending store
-// index via the stable sort below). There is no elision: overlapping shapes
-// occlude instead.
+// Shared flag iteration under resolve_visible_flags (below), the one gate every
+// painter and hit-rect builder enters through. Invokes `emit(i, center_x)` for
+// EVERY visible marker, in ascending painted-x order (equal columns tie-break by
+// ascending store index via the stable sort below). This walk itself elides
+// nothing — overlapping shapes occlude instead; the ONE elision in the flag
+// family is the disabled-flag occlusion verdict resolve_visible_flags applies to
+// this walk's output.
 //
 // THE PAINT/HIT INVARIANT. `center_x` — the marker's painted pixel column — is
 // computed ONCE here, and every flag is CENTERED on it (rectangle in the flag
@@ -1522,6 +1524,98 @@ void iterate_visible_flags_impl(
     }
 }
 
+// One emitted flag: the store index plus the painted center column
+// iterate_visible_flags_impl resolved for it. The painters and the hit-rect
+// builder share this type so all three consume the SAME emit list, hence the
+// same occlusion verdict.
+struct FlagEmit {
+    int    i;
+    double center_x;
+};
+
+// The disabled verdict per column — the same split the color-class ladder and
+// the lane's glyph color make: the warp side honors the label_ref cascade
+// through effective_disabled, the phase-reset side reads its own bool (it has
+// no cascade).
+bool flag_disabled_at(const std::vector<GuiWarpMarker>& markers, int i) {
+    return effective_disabled(markers, i);
+}
+bool flag_disabled_at(const std::vector<GuiPhaseResetMarker>& phase_resets,
+                      int i) {
+    return phase_resets[static_cast<size_t>(i)].disabled;
+}
+
+// THE DISABLED-FLAG OCCLUSION VERDICT, and the ONE owner of it: the flag
+// sibling of the marker-text lane's all-or-fallback rule. Disabled markers'
+// flags are HIDDEN whenever occlusion is needed anywhere in the visible set, and
+// shown only when NO marker needs occluding — even where a particular overlap
+// would have gone in the disabled flag's own favor. The verdict's input set
+// INCLUDES the disabled flags, so a disabled flag that would create the only
+// overlap hides itself.
+//
+// THE PREDICATE: over the visible center columns in ascending order — the walk
+// above emits sorted by painted sample position and center_x is monotone in it,
+// so consecutive entries ARE the adjacent columns and their difference is
+// non-negative (no re-sort, no fabs) — occlusion is needed iff any ADJACENT
+// pair sits closer than the flag width, |dx| < flag_lane_w_px().
+// Every flag is that same fixed width centered on its column, so non-adjacent
+// pairs cannot overlap without an adjacent pair overlapping first; exact
+// abutment (|dx| == the flag width, the rects sharing an edge) is NOT occlusion
+// — the half-open reading the lane's run verdict uses.
+//
+// Returning the FILTERED list from one owner is what makes paint == hit: the
+// painters and compute_flag_hit_rects_impl each walk exactly what this returns,
+// so a hidden flag cannot keep a click target and a shown flag cannot lose one.
+// The verdict rides the emit list the renderer and hit walk derive
+// (DragOverlay-aware through iterate_visible_flags_impl), so mid-drag proposals
+// and paint agree frame for frame — like the lane's, the verdict is live truth
+// and may flip during a drag.
+//
+// ACCEPTED CONSEQUENCES:
+//  - a SELECTED disabled marker whose flag hides STAYS SELECTED and still shows
+//    its selection stem (the stem pass is selection-keyed and paints live in the
+//    waveform, not from this list); only its flag pixels and its flag click
+//    target vanish. Its marker-text run remains a click target too — the lane
+//    runs its own verdict on its own glyph widths, so the marker is still one
+//    pointer item by its run.
+//  - any EXACT STACK on screen (coincident markers, |dx| == 0) forces the
+//    verdict for the whole visible set, so every disabled flag hides while the
+//    stack is visible — the stack is precisely the case where one flag can hide
+//    another completely.
+template <typename MarkerVec>
+std::vector<FlagEmit> resolve_visible_flags(
+    GuiRect top_strip_area,
+    int waveform_width,
+    const MarkerVec& markers,
+    long long viewport_start_sample,
+    long long viewport_end_sample,
+    const std::vector<WarpFrameMapSegment>* warp_frame_map,
+    const DragOverlay* drag_overlay) {
+    std::vector<FlagEmit> emits;
+    iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
+                               viewport_start_sample, viewport_end_sample,
+                               warp_frame_map, drag_overlay,
+        [&](int i, double center_x) {
+            emits.push_back({i, center_x});
+        });
+
+    const double flag_w = static_cast<double>(flag_lane_w_px());
+    bool occlusion_needed = false;
+    for (size_t k = 1; k < emits.size(); ++k) {
+        if (emits[k].center_x - emits[k - 1].center_x < flag_w) {
+            occlusion_needed = true;
+            break;
+        }
+    }
+    if (!occlusion_needed) return emits;
+
+    std::vector<FlagEmit> shown;
+    shown.reserve(emits.size());
+    for (const FlagEmit& e : emits)
+        if (!flag_disabled_at(markers, e.i)) shown.push_back(e);
+    return shown;
+}
+
 // Resolves the flag lane / triangle lane / tip Y from the top strip rect. The
 // top strip sits at screen y=0, so screen and top-strip-local coords coincide;
 // the triangle lane is the innermost lane (flush on the waveform), the flag lane
@@ -1564,23 +1658,19 @@ void render_flags(cairo_t* cr,
 
     const FlagLaneY g = flag_lane_geometry(top_strip_area);
 
-    // Collect flag centers in ascending-x order, then paint in TWO reverse
-    // passes keyed on selection: UNSELECTED in reverse, then SELECTED in
+    // The SHOWN flags in ascending-x order (resolve_visible_flags: the visible
+    // set minus the disabled flags whenever its occlusion verdict fires — the
+    // ruling and its accepted costs live at that owner), then paint in TWO
+    // reverse passes keyed on selection: UNSELECTED in reverse, then SELECTED in
     // reverse. So every selected shape lands above every unselected one, and
     // within each class the leftmost (lowest-index on ties) paints last = on
     // top. Selection drives the flag-cache fingerprint, so a selection change
-    // rebuilds the cache and this z-order follows.
-    struct FlagEmit {
-        int    i;
-        double center_x;
-    };
-    std::vector<FlagEmit> emits;
-    iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
-                               viewport_start_sample, viewport_end_sample,
-                               warp_frame_map, drag_overlay,
-        [&](int i, double center_x) {
-            emits.push_back({i, center_x});
-        });
+    // rebuilds the cache and this z-order follows. Hiding a disabled flag
+    // changes no z-order: the passes just have one fewer member.
+    const std::vector<FlagEmit> emits =
+        resolve_visible_flags(top_strip_area, waveform_width, markers,
+                              viewport_start_sample, viewport_end_sample,
+                              warp_frame_map, drag_overlay);
 
     auto paint_emit = [&](const FlagEmit& e) {
         // Color class priority: DISABLED wins over selection, red and default;
@@ -1590,7 +1680,10 @@ void render_flags(cairo_t* cr,
         // composition left is the disabled+SELECTED shape, which keeps the
         // disabled fill and takes the selected ring so both cues read at once
         // (the two-pass paint order still lifts it above the unselected flags).
-        const bool dis = effective_disabled(markers, e.i);
+        // The disabled bit comes from the SAME reader the occlusion verdict
+        // filters with (flag_disabled_at), so the flag that hides and the flag
+        // that paints kMarkerDisabled can never be different flags.
+        const bool dis = flag_disabled_at(markers, e.i);
         const bool sel = selected_set.count(e.i) > 0;
         const bool red = !dis && !sel && red_set.count(e.i) > 0;
         const GuiColor fill    = dis ? kMarkerDisabled
@@ -1630,28 +1723,32 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     // The hit rect is the flag RECTANGLE only (the triangle is not a hit
     // target), sized and placed EXACTLY as paint_flag_shape draws the
     // rectangle: centered on the column, width flag_lane_w_px(), top/bottom the
-    // flag lane. One rect per VISIBLE flag (no elision), emitted in ascending-x
-    // order, so overlapping flags yield overlapping rects; the caller
-    // (hit_test_flag) resolves an overlap with two forward passes mirroring the
-    // painters' two reverse passes — the leftmost SELECTED containing rect, else
-    // the leftmost containing rect = the topmost-painted flag.
+    // flag lane. One rect per SHOWN flag — the painters' own list, from the same
+    // resolve_visible_flags owner, so a disabled flag the occlusion verdict
+    // hides emits NO hit rect (paint == hit; the ruling is at that owner) and
+    // every painted flag has exactly one. Emitted in ascending-x order, so
+    // overlapping flags yield overlapping rects; the caller (hit_test_flag)
+    // resolves an overlap with two forward passes mirroring the painters' two
+    // reverse passes — the leftmost SELECTED containing rect, else the leftmost
+    // containing rect = the topmost-painted flag.
     const FlagLaneY g = flag_lane_geometry(top_strip_area);
     const int flag_w = flag_lane_w_px();
     const int ry     = static_cast<int>(std::round(g.flag_top));
     const int rh     = static_cast<int>(std::round(g.tri_top)) - ry;
-    iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
-                               viewport_start_sample, viewport_end_sample,
-                               warp_frame_map, drag_overlay,
-        [&](int i, double center_x) {
-            const int cx = static_cast<int>(std::round(center_x));
-            FlagHitRect r;
-            r.marker_index = i;
-            r.x = cx - flag_w / 2;
-            r.y = ry;
-            r.w = flag_w;
-            r.h = rh;
-            out.push_back(r);
-        });
+    const std::vector<FlagEmit> emits =
+        resolve_visible_flags(top_strip_area, waveform_width, markers,
+                              viewport_start_sample, viewport_end_sample,
+                              warp_frame_map, drag_overlay);
+    for (const FlagEmit& e : emits) {
+        const int cx = static_cast<int>(std::round(e.center_x));
+        FlagHitRect r;
+        r.marker_index = e.i;
+        r.x = cx - flag_w / 2;
+        r.y = ry;
+        r.w = flag_w;
+        r.h = rh;
+        out.push_back(r);
+    }
 
     return out;
 }
@@ -1696,25 +1793,23 @@ void render_phase_reset_flags(cairo_t* cr,
     // Collect-then-paint in TWO reverse passes keyed on selection, mirroring
     // render_flags: UNSELECTED in reverse, then SELECTED in reverse, so every
     // selected shape lands above every unselected one and within each class the
-    // leftmost (lowest-index on ties) paints last = on top.
-    struct PhaseResetEmit {
-        int    i;
-        double center_x;
-    };
-    std::vector<PhaseResetEmit> emits;
-    iterate_visible_flags_impl(top_strip_area, waveform_width, phase_resets,
-                               viewport_start_sample, viewport_end_sample,
-                               warp_frame_map, drag_overlay,
-        [&](int i, double center_x) {
-            emits.push_back({i, center_x});
-        });
+    // leftmost (lowest-index on ties) paints last = on top. The shown set comes
+    // from the SAME resolve_visible_flags owner render_flags and both hit-rect
+    // builders use, so the disabled-flag occlusion verdict is one rule across
+    // both columns (its phase-reset disabled read is the bool, no cascade).
+    const std::vector<FlagEmit> emits =
+        resolve_visible_flags(top_strip_area, waveform_width, phase_resets,
+                              viewport_start_sample, viewport_end_sample,
+                              warp_frame_map, drag_overlay);
 
-    auto paint_emit = [&](const PhaseResetEmit& e) {
+    auto paint_emit = [&](const FlagEmit& e) {
         // The identical color-class ladder render_flags resolves (disabled wins,
         // then selection, then red, then default; disabled+selected keeps the
         // disabled fill with the selected ring). A phase reset carries no
-        // label_ref cascade, so its disabled verdict is the bool itself.
-        const bool dis = phase_resets[e.i].disabled;
+        // label_ref cascade, so its disabled verdict is the bool itself — read
+        // through the same flag_disabled_at owner the occlusion verdict filters
+        // with, as on the warp side.
+        const bool dis = flag_disabled_at(phase_resets, e.i);
         const bool sel = selected_set.count(e.i) > 0;
         const bool red = !dis && !sel && red_set.count(e.i) > 0;
         const GuiColor fill    = dis ? kMarkerDisabled
@@ -2089,7 +2184,12 @@ static LaneRunSet resolve_base_lane_run_set(const AppState& app,
     // space, on the displayed basis — the EXACT committed vp span (vp_start_frame/
     // vp_end_frame, the flag cache's own fp_vp span), the same {span, width} the
     // flags divided by, so the cull matches the flags' visibility on the
-    // committing frame, not just at rest.
+    // committing frame, not just at rest. The lane's visible set is this cull
+    // ALONE: the flags' disabled-flag occlusion verdict (resolve_visible_flags)
+    // does not gate runs, so a disabled marker whose FLAG hides still shows its
+    // text run and stays clickable by it — the two verdicts are deliberately
+    // independent, each measuring its own geometry (17px shapes vs glyph runs)
+    // on its own lane.
     const double vp_end   = static_cast<double>(basis.vp_end_frame);
     const double half_flag =
         static_cast<double>(flag_lane_w_px()) / 2.0;
