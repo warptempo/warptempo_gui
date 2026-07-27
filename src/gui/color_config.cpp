@@ -38,6 +38,7 @@ const ColorKey kColorKeys[] = {
     {"playhead_scanner",        &kPlayheadScanner},
     {"selected",                &kSelected},
     {"selected_outline",        &kSelectedOutline},
+    {"selected_stem",           &kSelectedStem},
     {"marker",                  &kMarker},
     {"marker_outline",          &kMarkerOutline},
     {"marker_disabled",         &kMarkerDisabled},

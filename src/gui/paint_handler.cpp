@@ -680,9 +680,10 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // moves the marker's store frame (it rewrites a predecessor's tempo, sliding the
 // image under the per-step re-warped displayed map), so the store frame is
 // correct there with no override.
-// Painted in kSelectedOutline (architect 2026-07-26) — the selected flag's own
-// RING color rather than its fill, so the stem reads as that ring drawn down the
-// column instead of as a second solid blue beside the flag — through
+// Painted in kSelectedStem — its OWN palette key (architect 2026-07-27), tuned
+// independently of both the selected fill and the selected ring: a line run the
+// full height of the waveform reads far louder than the same value does as a 1px
+// border around a flag, so what is right for the ring is not right here — through
 // render_playhead's line-only form (draw_triangle=false): one solid line
 // straight over whatever it crosses, the waveform ink included (the former
 // ink-notch two-tone is retired). It lives OUT of the stem cache as a per-frame
@@ -750,7 +751,7 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
     // render_playhead draws only the 1px line here (draw_triangle=false), which
     // is exactly the stem; it column-culls px_x itself, so a stem off the visible
     // strip paints nothing.
-    render_playhead(cr, area, px_x, kSelectedOutline,
+    render_playhead(cr, area, px_x, kSelectedStem,
                     /*draw_triangle=*/false);
 }
 

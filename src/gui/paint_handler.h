@@ -438,8 +438,9 @@ private:
     // selection shows it and it persists through scrubs/auditions. The ONE
     // non-selection input is a live position DRAG, which overrides the store frame
     // with the proposed position so the stem tracks the flag. Painted in
-    // kSelectedOutline — the selected flag's own RING color, so the stem reads as
-    // that ring drawn down the column — through render_playhead's line-only form
+    // kSelectedStem — its own tunable, independent of the selected fill and ring
+    // (a full-height line carries a color differently than a 1px flag border) —
+    // through render_playhead's line-only form
     // over the plate; a live overlay, so selection changes never rebuild a cache.
     // A focused GROUP (2+ selected) shows no stem — its focus cue is the extent
     // region's recolored ground (kRegionCanvas), the stem's "spread" form.

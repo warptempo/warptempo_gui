@@ -130,14 +130,23 @@ inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
 // pair are tuning knobs. The classes resolve in priority order at the flag
 // renderers: disabled, then selected, then red, then default.
 //
-// SELECTED. The fill is Breeze blue; the ring is not a blend but a shipped role
-// — 0x93CEE9, the KF6 framework's own built-in hover blue (kcolorscheme.cpp's
-// fallback decoration pair; see tmp/breeze_dark_reference.md). kSelectedOutline
-// carries one extra duty: it is the SELECTED-MARKER STEM's color
-// (paint_selected_stem), so the focus stem reads as the selected flag's ring
-// drawn down the column rather than as a second solid blue.
+// SELECTED. The fill is Breeze blue; the ring's compiled default is not a blend
+// but a shipped role — 0x93CEE9, the KF6 framework's own built-in hover blue
+// (kcolorscheme.cpp's fallback decoration pair; see
+// tmp/breeze_dark_reference.md). The ring is the flag shape's 1px border and
+// nothing else — the selected-marker STEM takes its own key below.
 inline GuiColor kSelected         = hex(0x3DAEE9);  // Breeze blue
 inline GuiColor kSelectedOutline  = hex(0x93CEE9);
+// The SELECTED-MARKER STEM (paint_selected_stem) — the singleton selection's
+// focus column, full waveform height. Its own key by ruling (architect
+// 2026-07-27), SEPARATE from the ring above: the same value that is right for a
+// 1px border around a small shape reads far louder run the whole height of the
+// waveform, so a bright ring wants a calmer stem and the two must tune
+// independently. The compiled defaults COINCIDE — this is the value the stem
+// painted when it rode kSelectedOutline, so compiled appearance is unchanged —
+// but that is coincidence, not coupling: retuning either leaves the other where
+// it is.
+inline GuiColor kSelectedStem     = hex(0x93CEE9);
 
 // DEFAULT. Breeze's visited purple, its ring the fill blended ~35% toward
 // white, per channel c' = round(c + 0.35*(255-c)): 0x9B59B6 -> 0xBE93D0.
