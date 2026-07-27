@@ -1422,11 +1422,14 @@ namespace {
 
 // Shared flag iteration under resolve_visible_flags (below), the one gate every
 // painter and hit-rect builder enters through. Invokes `emit(i, center_x)` for
-// EVERY visible marker, in ascending painted-x order (equal columns tie-break by
-// ascending store index via the stable sort below). This walk itself elides
-// nothing — overlapping shapes occlude instead; the ONE elision in the flag
-// family is the disabled-flag occlusion verdict resolve_visible_flags applies to
-// this walk's output.
+// every marker whose rounded flag rectangle covers at least one waveform column
+// (the zero-coverage cull at the emit site — the visibility test is the PAINTED
+// rectangle, not the coarse sample-space window that precedes the rounding), in
+// ascending painted-x order (equal columns tie-break by ascending store index
+// via the stable sort below). Beyond that, this walk elides nothing —
+// overlapping shapes occlude instead; the other elision in the flag family is
+// the disabled-flag occlusion verdict resolve_visible_flags applies to this
+// walk's output.
 //
 // THE PAINT/HIT INVARIANT. `center_x` — the marker's painted pixel column — is
 // computed ONCE here, and every flag is CENTERED on it (rectangle in the flag
@@ -1482,9 +1485,11 @@ void iterate_visible_flags_impl(
     candidates.reserve(markers.size());
     // A flag may hang up to HALF offscreen at the viewport edges (like the
     // playhead triangle always did): cull only when the shape is fully
-    // offscreen. The horizontal half-footprint is half the flag width.
-    const double half_flag =
-        static_cast<double>(flag_lane_w_px()) / 2.0;
+    // offscreen. The horizontal half-footprint is half the flag width. This
+    // sample-space pass runs BEFORE the column rounding, so it is a coarse
+    // admit — the exact zero-coverage cull sits after the rounding below.
+    const int    flag_w    = flag_lane_w_px();
+    const double half_flag = static_cast<double>(flag_w) / 2.0;
     const double cull_lo = static_cast<double>(viewport_start_sample) -
                            half_flag * samples_per_pixel;
     const double cull_hi = static_cast<double>(viewport_end_sample) +
@@ -1519,6 +1524,40 @@ void iterate_visible_flags_impl(
         // offscreen exactly as its column dictates.
         const double center_x =
             static_cast<double>(top_strip_area.x) + std::nearbyint(x_raw);
+
+        // THE ZERO-COVERAGE CULL, on the ROUNDED rectangle the painter and the
+        // hit builder both derive (rx = cx - flag_w/2, width flag_w — the one
+        // rect paint_flag_shape fills): a flag with no pixel inside the waveform
+        // columns [x, x + waveform_width) is not emitted at all. The coarse
+        // sample-space cull above admits x_raw out to +/- flag_w/2.0 (8.5 at the
+        // 17 px flag) INCLUSIVE, before rounding, so it lets through one
+        // degenerate column — at a multiple-of-16 width W, x_raw in
+        // [W + 7.5, W + 8.5] rounds to cx = W + 8, whose rect starts at exactly
+        // column W: entirely in the inert right gutter, zero coverage. It cost
+        // nothing while flags merely occluded each other, but it is a full
+        // participant in the disabled-flag occlusion verdict downstream, where an
+        // invisible flag could supply the only under-width adjacent pair and hide
+        // every genuinely visible disabled flag across a one-pixel pan band.
+        //
+        // The LEFT edge cannot produce this: the rect covers columns
+        // [cx - flag_w/2, cx + flag_w/2] INCLUSIVE (integer division, odd
+        // width), so coverage survives down to cx == -(flag_w/2), and the coarse
+        // cull's floor x_raw == -flag_w/2.0 rounds to exactly that value. The
+        // asymmetry is in the bound itself, not the rounding: -(flag_w/2) is the
+        // LAST covering column on the left, while +W + flag_w/2 is the FIRST
+        // non-covering one on the right. The guard is written for both edges
+        // anyway, so the invariant holds structurally.
+        //
+        // Culling here rather than downstream gives every consumer the same
+        // shown set: the painters lose no pixels (there are none), the hit rects
+        // gain correctness (a zero-coverage rect could otherwise be clicked in
+        // the inert right gutter, breaking paint == hit), the verdict stops
+        // seeing invisible flags, and the marker-text lane inherits all of it
+        // through the shown list.
+        const int rect_left = static_cast<int>(std::round(center_x)) -
+                              flag_w / 2;
+        if (rect_left >= top_strip_area.x + waveform_width) continue;
+        if (rect_left + flag_w <= top_strip_area.x) continue;
 
         emit(i, center_x);
     }
@@ -1566,24 +1605,35 @@ bool flag_disabled_at(const std::vector<GuiPhaseResetMarker>& phase_resets,
 // Returning the FILTERED list from one owner is what makes paint == hit: the
 // painters and compute_flag_hit_rects_impl each walk exactly what this returns,
 // so a hidden flag cannot keep a click target and a shown flag cannot lose one.
+// THE MARKER-TEXT LANE RIDES IT TOO (active_column_shown_flags below): a marker
+// has a lane run IFF its flag is shown, so a hidden disabled marker disappears
+// WHOLESALE — flag, hit rect, ambient run, fallback pick, hover expansion. The
+// two verdicts then run in sequence: this one picks WHO may show, the lane's own
+// glyph-fit verdict picks HOW the survivors' texts show.
 // The verdict rides the emit list the renderer and hit walk derive
 // (DragOverlay-aware through iterate_visible_flags_impl), so mid-drag proposals
 // and paint agree frame for frame — like the lane's, the verdict is live truth
 // and may flip during a drag.
 //
 // ACCEPTED CONSEQUENCES:
+//  - a hidden marker is POINTER-UNREACHABLE (no flag rect, no lane run): the
+//    keyboard and selection routes remain its handles, and Tab's focus cycle
+//    already skips disabled markers.
 //  - a SELECTED disabled marker whose flag hides STAYS SELECTED and still shows
 //    its selection stem (the stem pass is selection-keyed and paints live in the
-//    waveform, not from this list); only its flag pixels and its flag click
-//    target vanish. Its marker-text run remains a click target too — the lane
-//    runs its own verdict on its own glyph widths, so the marker is still one
-//    pointer item by its run.
+//    waveform, not from this list); it also keeps an OPEN flag editor, which is
+//    its own overlay surface and never consulted this list.
 //  - any EXACT STACK on screen (coincident markers, |dx| == 0) forces the
 //    verdict for the whole visible set, so every disabled flag hides while the
 //    stack is visible — the stack is precisely the case where one flag can hide
 //    another completely.
+struct ShownFlags {
+    std::vector<FlagEmit> emits;          // the flags that PAINT, ascending-x
+    bool                  hide_disabled = false;   // the verdict fired
+};
+
 template <typename MarkerVec>
-std::vector<FlagEmit> resolve_visible_flags(
+ShownFlags resolve_visible_flags(
     GuiRect top_strip_area,
     int waveform_width,
     const MarkerVec& markers,
@@ -1600,20 +1650,83 @@ std::vector<FlagEmit> resolve_visible_flags(
         });
 
     const double flag_w = static_cast<double>(flag_lane_w_px());
-    bool occlusion_needed = false;
+    ShownFlags out;
     for (size_t k = 1; k < emits.size(); ++k) {
         if (emits[k].center_x - emits[k - 1].center_x < flag_w) {
-            occlusion_needed = true;
+            out.hide_disabled = true;
             break;
         }
     }
-    if (!occlusion_needed) return emits;
+    if (!out.hide_disabled) {
+        out.emits = std::move(emits);
+        return out;
+    }
 
-    std::vector<FlagEmit> shown;
-    shown.reserve(emits.size());
+    out.emits.reserve(emits.size());
     for (const FlagEmit& e : emits)
-        if (!flag_disabled_at(markers, e.i)) shown.push_back(e);
-    return shown;
+        if (!flag_disabled_at(markers, e.i)) out.emits.push_back(e);
+    return out;
+}
+
+// The active column's shown flags, resolved from AppState on the DISPLAYED
+// basis — the marker-text lane's gate into the verdict owner above. The
+// arguments are exactly hit_test_flag's (top strip rect, effective waveform
+// width, the displayed viewport span, the displayed map, the live DragOverlay),
+// so `shown` is the same membership the flag pixels and the flag hit rects
+// carry: index into the ACTIVE column's store. `hide_disabled` is the raw
+// verdict, for the one consumer that needs the disabled-exclusion WITHOUT the
+// flags' visibility cull (the lane's one-run fallback, whose own culls differ —
+// stated there).
+struct ActiveColumnShownFlags {
+    std::set<int> shown;
+    bool          hide_disabled = false;
+};
+
+ActiveColumnShownFlags active_column_shown_flags(const AppState& app,
+                                                 const GuiAudio& audio) {
+    ActiveColumnShownFlags out;
+    const GuiRect top = top_strip_area(app);
+    const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
+    // The DISPLAYED effective waveform width (basis.area_w — the width the flag
+    // pixels were column-mapped against), not the live waveform_area().w: the
+    // hit rects pass exactly this, and the lane's own column math divides by it
+    // through basis.spp.
+    const int ww = basis.area_w;
+    if (top.w <= 0 || top.h <= 0 || ww <= 0) return out;
+    if (basis.vp_end_frame <= basis.vp_start_frame) return out;
+    const std::vector<WarpFrameMapSegment>& map =
+        displayed_or_live_target_map(app, audio);
+    const std::vector<WarpFrameMapSegment>* map_arg =
+        map.empty() ? nullptr : &map;
+    DragOverlay overlay_storage{&app.drag.dragging_markers,
+                                &app.drag.moveable_times};
+    const DragOverlay* overlay = app.drag.active ? &overlay_storage : nullptr;
+
+    ShownFlags sf;
+    if (app.active_markers_view == 'P') {
+        sf = resolve_visible_flags(top, ww, app.phaseresetmarkers.markers(),
+                                   basis.vp_start_frame, basis.vp_end_frame,
+                                   map_arg, overlay);
+    } else {
+        sf = resolve_visible_flags(top, ww, app.warpmarkers.markers(),
+                                   basis.vp_start_frame, basis.vp_end_frame,
+                                   map_arg, overlay);
+    }
+    out.hide_disabled = sf.hide_disabled;
+    for (const FlagEmit& e : sf.emits) out.shown.insert(e.i);
+    return out;
+}
+
+// The active column's disabled verdict for one index — the W/P split
+// flag_disabled_at owns, applied to whichever store the active view shows.
+bool active_column_flag_disabled(const AppState& app, int idx) {
+    if (idx < 0) return false;
+    if (app.active_markers_view == 'P') {
+        const auto& pv = app.phaseresetmarkers.markers();
+        return idx < static_cast<int>(pv.size()) && flag_disabled_at(pv, idx);
+    }
+    const auto& mv = app.warpmarkers.markers();
+    return idx < static_cast<int>(mv.size()) && flag_disabled_at(mv, idx);
 }
 
 // Resolves the flag lane / triangle lane / tip Y from the top strip rect. The
@@ -1670,7 +1783,7 @@ void render_flags(cairo_t* cr,
     const std::vector<FlagEmit> emits =
         resolve_visible_flags(top_strip_area, waveform_width, markers,
                               viewport_start_sample, viewport_end_sample,
-                              warp_frame_map, drag_overlay);
+                              warp_frame_map, drag_overlay).emits;
 
     auto paint_emit = [&](const FlagEmit& e) {
         // Color class priority: DISABLED wins over selection, red and default;
@@ -1720,10 +1833,12 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     if (viewport_end_sample <= viewport_start_sample) return out;
     if (sample_rate <= 0) return out;
 
-    // The hit rect is the flag RECTANGLE only (the triangle is not a hit
-    // target), sized and placed EXACTLY as paint_flag_shape draws the
-    // rectangle: centered on the column, width flag_lane_w_px(), top/bottom the
-    // flag lane. One rect per SHOWN flag — the painters' own list, from the same
+    // The emitted rect is the flag RECTANGLE, sized and placed EXACTLY as
+    // paint_flag_shape draws it: centered on the column, width flag_lane_w_px(),
+    // top/bottom the flag lane. It REPRESENTS the whole shape — hit_test_flag
+    // derives the fused triangle's taper from this rect, so the marker triangle
+    // is clickable although it is not a rect of its own (the PLAYHEAD triangle,
+    // in no list, is the shape that is never a target). One rect per SHOWN flag — the painters' own list, from the same
     // resolve_visible_flags owner, so a disabled flag the occlusion verdict
     // hides emits NO hit rect (paint == hit; the ruling is at that owner) and
     // every painted flag has exactly one. Emitted in ascending-x order, so
@@ -1738,7 +1853,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     const std::vector<FlagEmit> emits =
         resolve_visible_flags(top_strip_area, waveform_width, markers,
                               viewport_start_sample, viewport_end_sample,
-                              warp_frame_map, drag_overlay);
+                              warp_frame_map, drag_overlay).emits;
     for (const FlagEmit& e : emits) {
         const int cx = static_cast<int>(std::round(e.center_x));
         FlagHitRect r;
@@ -1800,7 +1915,7 @@ void render_phase_reset_flags(cairo_t* cr,
     const std::vector<FlagEmit> emits =
         resolve_visible_flags(top_strip_area, waveform_width, phase_resets,
                               viewport_start_sample, viewport_end_sample,
-                              warp_frame_map, drag_overlay);
+                              warp_frame_map, drag_overlay).emits;
 
     auto paint_emit = [&](const FlagEmit& e) {
         // The identical color-class ladder render_flags resolves (disabled wins,
@@ -2027,8 +2142,10 @@ void cap_lane_run_text(std::string& text, size_t& glyphs) {
 
 // The FALLBACK single run — the one-run arbitration: tier 1 the HOVERED marker's
 // value, else tier 2 the LAST-SELECTED marker's value composed from the live
-// store, with the mid-drag DragOverlay substitution and the painted-column
-// offscreen cull the flags apply. TRUNCATION IS PERMANENT (architect): the
+// store, with the mid-drag DragOverlay substitution and tier 2's own
+// painted-column offscreen cull. Both tiers are additionally gated by the flag
+// occlusion verdict's disabled-exclusion (below): a marker whose flag is hidden
+// is no pick. TRUNCATION IS PERMANENT (architect): the
 // fallback run CAPS at the 9-glyph budget too, so a dragged/selected truncated
 // marker stays truncated here — it does NOT spell out in full when the verdict
 // fails. The text-hover EXPANSION (applied to the returned set) is the sole
@@ -2037,13 +2154,32 @@ LaneTextRun current_marker_lane_run_fallback(const AppState& app,
                                              const GuiAudio& audio) {
     LaneTextRun run;
 
+    // THE DISABLED-EXCLUSION half of the flag occlusion verdict, applied to a
+    // single picked index: when the verdict fires, a disabled marker shows no
+    // fallback run either — it vanishes wholesale, exactly as it loses its flag,
+    // its hit rect and its ambient run. Only the VERDICT is consulted here, not
+    // the shown list: both tiers keep their OWN visibility rules for enabled
+    // markers, which deliberately DIFFER from the flags' half-offscreen cull
+    // (tier 1 culls not at all — a shown hover always paints; tier 2 culls on
+    // the painted column being onscreen, stricter than the flags' half-offscreen
+    // rule), and the ruling changes only the disabled case. The cheap per-index
+    // disabled test runs first, so the emit walk happens only for a disabled
+    // candidate. It also covers a STALE hover captured before the verdict
+    // flipped (a drag can flip it mid-gesture).
+    auto hidden_by_flag_verdict = [&](int idx) -> bool {
+        if (!active_column_flag_disabled(app, idx)) return false;
+        return active_column_shown_flags(app, audio).hide_disabled;
+    };
+
     // Tier 1: the HOVERED marker's own value wins whenever a hover is showing.
     // recompute_hover_at_cursor already composed lane_text (flag_text_iter for a
     // warp marker, the "p" literal for a phase reset) and captured the hovered
     // marker's index and source_frame. No painted-column cull here — matching
     // paint, a shown hover always paints (subject only to the caller's advance
-    // guard).
-    if (!app.hover_popup.lane_text.empty()) {
+    // guard). A hover on a marker the flag verdict hides is no pick at all: fall
+    // through to tier 2 rather than showing the hidden marker's text.
+    if (!app.hover_popup.lane_text.empty() &&
+        !hidden_by_flag_verdict(app.hover_popup.marker_index)) {
         run.valid        = true;
         run.marker_index = app.hover_popup.marker_index;
         run.source_frame = static_cast<double>(app.hover_popup.source_frame);
@@ -2058,6 +2194,10 @@ LaneTextRun current_marker_lane_run_fallback(const AppState& app,
     // the active view's list.
     const int idx = app.last_selected_marker;
     if (idx < 0) return run;
+    // A hidden disabled marker is not a fallback pick, selected or not (the
+    // selection itself survives — only its painted surfaces and pointer targets
+    // go).
+    if (hidden_by_flag_verdict(idx)) return run;
     int64_t     src_f;
     std::string txt;
     if (app.active_markers_view == 'P') {
@@ -2129,7 +2269,10 @@ LaneRunSet lane_run_set_fallback(const AppState& app, const GuiAudio& audio) {
 // decided on the capped widths; this never touches it. Phase "p" is 1 glyph, so
 // it never reaches this. Only expands a marker actually IN the base set (onscreen)
 // — a hover is always over an onscreen run, but the search also fixes the exact
-// centering frame.
+// centering frame. That search is ALSO the expansion's gate against the flag
+// occlusion verdict: a marker the verdict hides contributes no ambient run and
+// is no fallback pick, so it cannot be found here — no run to expand, by
+// construction, no third gate needed.
 void apply_hover_expansion(LaneRunSet& set, const AppState& app) {
     if (app.hover_popup.on_flag) return;               // hovering the flag, not the run
     const int idx = app.hover_popup.marker_index;
@@ -2169,32 +2312,27 @@ static LaneRunSet resolve_base_lane_run_set(const AppState& app,
     const GuiRect area = waveform_area(app);
     if (area.w <= 0) return lane_run_set_fallback(app, audio);
 
-    // The displayed MAP + VIEWPORT basis the flag pixels were painted with, so
-    // the visible-set cull, the run columns, and the verdict all read the same
-    // basis the flags do (see lane_text_left_x_at_frame's basis contract).
-    const std::vector<WarpFrameMapSegment>& map =
-        displayed_or_live_target_map(app, audio);
-    const std::vector<WarpFrameMapSegment>* map_arg =
-        map.empty() ? nullptr : &map;
+    // The displayed VIEWPORT basis the flag pixels were painted with — the run
+    // columns and this function's verdict read it through
+    // lane_text_left_x_at_frame (its basis contract), and the candidate set
+    // below reads the displayed MAP + basis pair inside the shared flag owner.
+    // A degenerate basis leaves the whole geometry undefined: take the fallback
+    // shape, as the advance and width guards above do.
     const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
     if (basis.spp <= 0.0) return lane_run_set_fallback(app, audio);
 
-    // The flags' own half-offscreen cull (iterate_visible_flags_impl): a flag may
-    // hang up to half its width offscreen; cull only when FULLY offscreen. Sample
-    // space, on the displayed basis — the EXACT committed vp span (vp_start_frame/
-    // vp_end_frame, the flag cache's own fp_vp span), the same {span, width} the
-    // flags divided by, so the cull matches the flags' visibility on the
-    // committing frame, not just at rest. The lane's visible set is this cull
-    // ALONE: the flags' disabled-flag occlusion verdict (resolve_visible_flags)
-    // does not gate runs, so a disabled marker whose FLAG hides still shows its
-    // text run and stays clickable by it — the two verdicts are deliberately
-    // independent, each measuring its own geometry (17px shapes vs glyph runs)
-    // on its own lane.
-    const double vp_end   = static_cast<double>(basis.vp_end_frame);
-    const double half_flag =
-        static_cast<double>(flag_lane_w_px()) / 2.0;
-    const double cull_lo  = basis.vp_start - half_flag * basis.spp;
-    const double cull_hi  = vp_end + half_flag * basis.spp;
+    // THE CANDIDATE SET IS THE SHOWN FLAGS, no cull of its own: a marker has a
+    // lane run IFF its flag is shown (active_column_shown_flags → the ONE
+    // resolve_visible_flags owner, on this same displayed basis). That folds in
+    // the flags' half-offscreen cull — a fully-offscreen marker paints no flag,
+    // so it shows no run — AND the disabled-flag occlusion verdict: when the
+    // verdict fires, a disabled marker vanishes WHOLESALE (flag, hit rect,
+    // ambient run, and, through the searches below, the fallback pick and the
+    // hover expansion). The lane's own glyph-fit verdict then runs on whatever
+    // candidates remain — two verdicts in sequence, the flag one choosing WHO
+    // may show, this one choosing HOW the texts show.
+    const ActiveColumnShownFlags shown_flags =
+        active_column_shown_flags(app, audio);
 
     // Positions ride the DragOverlay when a drag is active (every dragged
     // member's run tracks its live proposed position, matching the flags).
@@ -2203,15 +2341,14 @@ static LaneRunSet resolve_base_lane_run_set(const AppState& app,
     const DragOverlay* overlay = app.drag.active ? &overlay_storage : nullptr;
     const bool is_phase = (app.active_markers_view == 'P');
 
-    // Compose the visible set: every active-column marker whose flag paints, its
-    // capped display run, centered on the displayed column.
+    // Compose the visible set: every active-column marker whose flag is shown,
+    // its capped display run, centered on the displayed column.
     LaneRunSet set;
     auto add_visible = [&](int idx, int64_t time_frame, std::string text) {
+        if (shown_flags.shown.count(idx) == 0) return;   // no flag → no run
         const double eff_time = overlay
             ? overlay->effective_time(idx, static_cast<double>(time_frame))
             : static_cast<double>(time_frame);
-        const double ms = frame_to_paint_sample(eff_time, map_arg);
-        if (ms < cull_lo || ms > cull_hi) return;   // fully offscreen — no flag
         LaneTextRun run;
         run.valid        = true;
         run.marker_index = idx;

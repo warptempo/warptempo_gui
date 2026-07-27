@@ -244,7 +244,9 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // compute_flag_hit_rects / resolve_visible_flags) on the same displayed
     // viewport + width, so the rects computed here are exactly the painted flag
     // rectangles — a disabled flag the occlusion verdict hides is absent from
-    // both, so it simply has no click target (its lane run still does).
+    // both, and its marker-text run is gated by the same verdict, so the marker
+    // has NO pointer target at all while hidden (accepted: the keyboard and
+    // selection routes remain, and Tab already skips disabled markers).
     std::vector<FlagHitRect> rects;
     if (app.active_markers_view == 'P') {
         rects = compute_phase_reset_flag_hit_rects(
