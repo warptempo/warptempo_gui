@@ -103,12 +103,12 @@ public:
     // the press position, feed subsequent relative-pointer motion into the
     // gesture as UNBOUNDED virtual coordinates so zoom travel is infinite.
     // Wired from main.cpp into the input handler's strip-drag begin/end hooks;
-    // capture is SHARED by three gestures — the zoom-strip drag, the
-    // ctrl+waveform strip drag, and the alt-pan. On release the restore x
-    // differs: the STRIP drags reappear the cursor at the anchor-stem column
+    // capture is SHARED by two gestures — the ctrl+waveform dual-axis strip
+    // drag and the alt-pan. On release the restore x
+    // differs: the STRIP drag reappears the cursor at the anchor-stem column
     // (the capture_restore_x_override_ the GUI supplies via set_capture_restore_x
     // below), the alt-pan at the raw traveled virtual_pointer_x_; y is frozen at
-    // the press row for all three. Both degrade to a silent no-op when the
+    // the press row for both. Both degrade to a silent no-op when the
     // compositor advertises neither pointer-constraints nor relative-pointer
     // (the gesture then runs with clamped absolute motion, exactly as before).
     // begin is a guarded no-op when a capture is already active; end is

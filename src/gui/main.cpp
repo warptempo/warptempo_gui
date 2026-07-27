@@ -138,9 +138,9 @@ namespace {
 //
 // Per-strip lane stacks with per-lane heights (the former uniform-row contract
 // is superseded). Top and bottom strips now DIFFER in height; the waveform
-// flexes between them. The TOP strip is FIVE lanes (from the window edge
-// inward): zoom row (monospace_row_h()), trim-chip row (the flag height),
-// marker-text row (monospace_row_h()), flag row (the flag height), and the
+// flexes between them. The TOP strip is FOUR lanes (from the window edge
+// inward): trim-chip row (the flag height), marker-text row
+// (monospace_row_h()), flag row (the flag height), and the
 // triangle row (the triangle height) flush on the waveform. The BOTTOM strip is
 // TWO lanes: the status row (outer) and the editor/modal row (inner). The lanes
 // pack tight — the inter-lane gaps kRowGapPx and the outer/waveform-side gaps
@@ -160,18 +160,17 @@ static void clamp_dims(int& w, int& h) {
 
 namespace {
 // Per-lane pixel heights, indexed from each strip's window edge inward. The top
-// strip's flag and trim-chip rows carry the flag height; its zoom and
-// marker-text rows carry the monospace row height; its innermost lane carries
+// strip's trim-chip and flag rows carry the flag height; its marker-text row
+// carries the monospace row height; its innermost lane carries
 // the triangle height. Both bottom lanes are monospace rows.
-constexpr int kTopLaneCount    = 5;
+constexpr int kTopLaneCount    = 4;
 constexpr int kBottomLaneCount = 2;
 int top_lane_height(int lane) {
     switch (lane) {
-        case 0: return monospace_row_h();        // zoom row
-        case 1: return flag_lane_h_px();         // trim-chip row
-        case 2: return monospace_row_h();        // marker-text row
-        case 3: return flag_lane_h_px();         // flag row
-        case 4: return playhead_triangle_h_px(); // triangle row (flush on waveform)
+        case 0: return flag_lane_h_px();         // trim-chip row
+        case 1: return monospace_row_h();        // marker-text row
+        case 2: return flag_lane_h_px();         // flag row
+        case 3: return playhead_triangle_h_px(); // triangle row (flush on waveform)
         default: return 0;
     }
 }
@@ -234,7 +233,7 @@ GuiRect waveform_area(const AppState& a) {
 // further inward. The top strip counts downward from y=0; the bottom strip
 // mirrors it about the window midline (`h - inset - lane_h`).
 //
-// Paint/hit agreement invariant: the trim-chip row is TOP lane 1, and
+// Paint/hit agreement invariant: the trim-chip row is TOP lane 0, and
 // hit_test_trim_chip / the pair-drag y-gate read top_upper_row_area(app), the
 // exact band render_trim_flags paints the b/e chips in. Because both derive
 // that band from this one helper, paint and hit cannot drift.
@@ -254,31 +253,26 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 }
 
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
-// Lane 0 is the zoom-strip row (a live drag surface painted as an empty ring, at
-// the window edge); lane 1 is the b/e trim-chip row; lane 2 is the marker-text
+// Lane 0 is the b/e trim-chip row, at the window edge; lane 1 is the marker-text
 // row (hosts the hover popup and the flag editor's live text, one at a time —
-// paint_marker_text_lane); lane 3 is the
-// flag row (the marker flag rectangles); lane 4 is the triangle row, whose
+// paint_marker_text_lane); lane 2 is the
+// flag row (the marker flag rectangles); lane 3 is the triangle row, whose
 // bottom edge is flush with the waveform area top and which holds the flags' and
 // the playhead's triangles.
-GuiRect top_zoom_row_area(const AppState& a) {
+GuiRect top_upper_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 0);
 }
 
-GuiRect top_upper_row_area(const AppState& a) {
+GuiRect top_marker_text_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 1);
 }
 
-GuiRect top_marker_text_row_area(const AppState& a) {
+GuiRect top_flag_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 2);
 }
 
-GuiRect top_flag_row_area(const AppState& a) {
-    return strip_row_rect(a, /*top_strip=*/true, 3);
-}
-
 GuiRect top_triangle_row_area(const AppState& a) {
-    return strip_row_rect(a, /*top_strip=*/true, 4);
+    return strip_row_rect(a, /*top_strip=*/true, 3);
 }
 
 // Bottom strip lanes, counted up from the window bottom (index 0 = the window
@@ -287,7 +281,7 @@ GuiRect top_triangle_row_area(const AppState& a) {
 // below it, the pass/ref resolved hover readout (a marker's own value shows in
 // the top strip's marker-text lane).
 // (The former pan-strip row retired — pan lives on the Alt+drag waveform grab
-// and the zoom strip's horizontal drag axis.)
+// and the ctrl+drag waveform strip drag's horizontal axis.)
 GuiRect bottom_upper_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/false, 1);
 }
@@ -742,9 +736,9 @@ int main(int argc, char** argv) {
         [&]() { paint_handler.force_synchronous_waveform_rebuild(); };
 
     // Pointer capture: the input handler's begin/end hooks drive the platform's
-    // cursor lock (pointer-constraints + relative-pointer). Shared by three
-    // waveform/strip gestures — the zoom-strip drag, the ctrl-exact waveform
-    // strip drag, and the alt-exact waveform pan — for infinite pan/zoom travel.
+    // cursor lock (pointer-constraints + relative-pointer). Shared by two
+    // waveform gestures — the ctrl-exact dual-axis strip drag and the alt-exact
+    // pan — for infinite pan/zoom travel.
     // Both platform methods self-guard (begin no-ops when a capture is live or
     // the compositor lacks the managers; end is idempotent), so the input layer
     // stays agnostic to whether capture is available.

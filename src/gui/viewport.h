@@ -163,8 +163,9 @@ struct Viewport {
     // (level, start) after clamping equals the current viewport, it is a true
     // no-op — no repaint, and the scanner ghost-repair stash is left untouched —
     // so a second identical framing does nothing, while any pan/zoom in between
-    // makes the target differ and this re-frames. The sole caller is the
-    // zoom-strip double-click (run_zoom_double_click_command).
+    // makes the target differ and this re-frames. The sole caller is the shared
+    // span framer frame_span_into_view (itself called by the trim-chip-row
+    // double-click's run_trim_frame_command and the group undo/redo restore).
     void apply_zoom_to_start(double new_zoom_level, int64_t new_start);
     void zoom_in();
     void zoom_out();

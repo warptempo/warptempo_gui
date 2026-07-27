@@ -44,8 +44,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // correctly coalesce.
     ++app.command_seq;
     // Double-click lifecycle, KEYBOARD half: any keyboard command between two
-    // clicks breaks EVERY pending double-click candidate (ZoomRow, Marker,
-    // EmptyLane alike) at this one chokepoint — no legitimate double-click types
+    // clicks breaks EVERY pending double-click candidate (TrimRow, Marker,
+    // EditorText, EmptyLane alike) at this one chokepoint — no legitimate
+    // double-click types
     // a key between its two presses, and a cross-context consume (seed a
     // candidate, run a command, click again to consume in a different context)
     // must not fire. The consume lives entirely in on_button_press (nothing on
@@ -454,9 +455,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // Bare 0 toggles between the working zoom and full zoom-out
-    // (run_zoom_toggle_command). The zoom-strip double-click deliberately
-    // DIVERGES from this (run_zoom_double_click_command — it zooms to the region
-    // / trim / whole-song span, never the working zoom); the key keeps the plain
+    // (run_zoom_toggle_command). The trim-chip-row double-click deliberately
+    // DIVERGES from this (run_trim_frame_command — it frames the trim window,
+    // never the working zoom); the key keeps the plain
     // toggle. C remains the direct working-zoom-and-center gesture. Digits 1..9
     // are intentionally unbound.
     if (!ctrl && !alt && !shift && key == GuiKeys::Digit0) {
@@ -773,15 +774,16 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
 void GuiInputHandler::run_zoom_toggle_command() {
     // The bare `0` key toggle: at the working zoom → full zoom-out (the per-file
     // effective ceiling, whole song visible); anywhere else → the working zoom,
-    // centered on the playhead via apply_zoom_change. The zoom-strip DOUBLE-CLICK
-    // deliberately DIVERGES from this (see run_zoom_double_click_command): the
+    // centered on the playhead via apply_zoom_change. The trim-chip-row
+    // DOUBLE-CLICK
+    // deliberately DIVERGES from this (see run_trim_frame_command): the
     // toggle here returns any non-working level to the working zoom, whereas the
-    // double-click zooms to the region / trim / whole-song span.
+    // double-click frames the trim window.
     //
     // Bare `0` recenters the view on the playhead (apply_zoom_change), so the
     // region highlight is stale context — clear it (architect-listed
-    // explicitly). The zoom-strip double-click does NOT come through here, so
-    // its span-framing keeps any live region.
+    // explicitly). The trim-row double-click does NOT come through here, so
+    // its framing keeps any live region.
     clear_region_highlight(app, viewport);
     if (app.zoom_level == kWorkingZoomLevel) {
         viewport.apply_zoom_change(effective_max_zoom_level(
@@ -857,16 +859,19 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     viewport.apply_zoom_to_start(target_level, target_start);
 }
 
-void GuiInputHandler::run_zoom_double_click_command() {
-    // The zoom-strip double-click ZOOMS TO A SPAN, split from
+void GuiInputHandler::run_trim_frame_command() {
+    // The trim-chip-row double-click FRAMES THE TRIM WINDOW, split from
     // run_zoom_toggle_command so the bare `0` key keeps its working-zoom toggle
     // and `c` keeps its marker-jump working zoom. It only ever FRAMES a span,
-    // never the fine working zoom. Span priority: a live region wins (over a
-    // trim); else a set trim completed to its extremes; else the whole song
-    // (full zoom-out). The framing is idempotent — a second double-click with
+    // never the fine working zoom. With NO trim set there is nothing to frame
+    // and the command returns; a LONE bound still frames its COMPLETED window,
+    // which is what the trim actually renders and what playback actually uses.
+    // A live region does not frame — the trim window is the row's subject. The
+    // framing is idempotent — a second double-click with
     // the viewport unchanged is a no-op (apply_zoom_to_start's current-vs-target
     // compare), while any pan/zoom between clicks re-frames.
     if (audio.total_frames() <= 0) return;
+    if (!app.trim.has_begin && !app.trim.has_end) return;
 
     const GuiRect area = waveform_area(app);
     const int     W    = area.w;
@@ -875,43 +880,27 @@ void GuiInputHandler::run_zoom_double_click_command() {
     const int64_t total = live_total_frames(app, audio);
     if (total <= 0) return;
 
-    // The target span in ACTIVE-domain frames [lo, hi], and whether it takes the
-    // framing margin (region / trim) or none (the whole song already fills the
-    // window at the effective ceiling).
-    int64_t lo = 0, hi = total;
-    bool    margin = false;
-    if (app.region.active) {
-        // Region endpoints are already active-domain frames; the region wins
-        // over any set trim.
-        lo = std::min(app.region.a_frame, app.region.b_frame);
-        hi = std::max(app.region.a_frame, app.region.b_frame);
-        margin = true;
-    } else if (app.trim.has_begin || app.trim.has_end) {
-        // A set trim completed to its extremes exactly as playback does (missing
-        // begin -> 0, missing end -> total; compute_trim_samples owns that in
-        // source frames). Express both bounds in the ACTIVE domain: source view
-        // uses the source frames directly; target view maps each through
-        // displayed_or_live_target_map — the same basis the flags, chips and
-        // region paint at — which is identity on the empty source-view map, so
-        // one call covers both views.
-        const std::pair<long long, long long> trim_src =
-            compute_trim_samples(app, audio.total_frames());
-        const std::vector<WarpFrameMapSegment>& dmap =
-            displayed_or_live_target_map(app, audio);
-        lo = static_cast<int64_t>(std::nearbyint(
-            map_source_to_target(static_cast<double>(trim_src.first), dmap)));
-        hi = static_cast<int64_t>(std::nearbyint(
-            map_source_to_target(static_cast<double>(trim_src.second), dmap)));
-        if (hi < lo) std::swap(lo, hi);  // defensive; the monotone map keeps order
-        margin = true;
-    }
+    // The trim window in ACTIVE-domain frames [lo, hi]: completed to its
+    // extremes exactly as playback does (missing
+    // begin -> 0, missing end -> total; compute_trim_samples owns that in
+    // source frames). Express both bounds in the ACTIVE domain: source view
+    // uses the source frames directly; target view maps each through
+    // displayed_or_live_target_map — the same basis the flags, chips and
+    // region paint at — which is identity on the empty source-view map, so
+    // one call covers both views.
+    const std::pair<long long, long long> trim_src =
+        compute_trim_samples(app, audio.total_frames());
+    const std::vector<WarpFrameMapSegment>& dmap =
+        displayed_or_live_target_map(app, audio);
+    int64_t lo = static_cast<int64_t>(std::nearbyint(
+        map_source_to_target(static_cast<double>(trim_src.first), dmap)));
+    int64_t hi = static_cast<int64_t>(std::nearbyint(
+        map_source_to_target(static_cast<double>(trim_src.second), dmap)));
+    if (hi < lo) std::swap(lo, hi);  // defensive; the monotone map keeps order
 
-    // Frame the span through the shared framer (2.5%-per-side for region / trim,
-    // none for the whole song — already whole-song at the effective ceiling,
-    // start 0). Centering + the wall clamp make the whole-song arm degenerate to
-    // the effective ceiling at start 0. The idempotent no-op lives in
-    // apply_zoom_to_start inside the framer.
-    frame_span_into_view(app, audio, viewport, lo, hi, margin);
+    // Frame the window through the shared framer, 2.5% margin per side. The
+    // idempotent no-op lives in apply_zoom_to_start inside the framer.
+    frame_span_into_view(app, audio, viewport, lo, hi, /*margin=*/true);
 }
 
 // Shared wheel handler. Verbatim from the lambda at the original

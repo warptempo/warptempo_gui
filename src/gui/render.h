@@ -127,9 +127,9 @@ inline GuiColor kTextDisabled     = hex(0x606263);
 // THE ONE STRUCTURAL LINE COLOR: the DISABLED WindowText role, from the same
 // KColorScheme pass over the shipped scheme as kTextDisabled — the architect's
 // separator grey, the desktop's own arithmetic rather than a blend invented
-// against the chrome. Every inert structural rule paints in it — the zoom-strip
-// row ring (render_strip_row_ring) and the waveform area's 1px top and bottom
-// border (render_canvas). It is not an accent and never marks state. The trim
+// against the chrome. Its own paint is the waveform area's 1px top and bottom
+// border (render_canvas), the one inert structural rule left holding this key
+// directly. It is not an accent and never marks state. The trim
 // chips' ring and stems take this same value from their own keys, so every calm
 // 1px rule in the product is one grey.
 inline GuiColor kLine             = hex(0x686A6C);
@@ -1063,7 +1063,7 @@ void render_trim_stems(cairo_t* cr,
                        bool has_end);
 
 // Draws the begin/end trim-boundary chips in the TRIM CHIP LANE (top-strip
-// lane 1), plus the strip-crossing portion of their stems and the inter-chip
+// lane 0), plus the strip-crossing portion of their stems and the inter-chip
 // bridge band. Each set bound (gated by `has_begin` / `has_end`) paints a
 // TEXTLESS rectangle of the flag's exact width/height (flag_lane_w_px() x
 // flag_lane_h_px(), no glyph, no triangle — Ableton's loop bounds carry none),
@@ -1105,14 +1105,6 @@ void render_trim_flags(cairo_t* cr,
                        const TrimRange& trim,
                        bool has_begin,
                        bool has_end);
-
-// Paints an inert full-width ring around a single strip row's bounding box:
-// 1px opaque kLine edges, antialias off — a structural rule, the same color the
-// waveform area's border takes (no fill). `waveform_width` is the effective
-// waveform width (waveform_area.w); the ring spans [row.x, row.x + width) so
-// the non-multiple-of-16 right gutter stays outside it. Used by the top
-// zoom-strip row (the sole live-drag ring row — the bottom pan row retired).
-void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width);
 
 // Draws marker flags in `top_strip_area` above visible markers. Each flag is a
 // FIXED-WIDTH SHAPE centered on its marker's pixel column (see
