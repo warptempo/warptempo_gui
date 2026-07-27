@@ -532,7 +532,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // window resize performs: on_resize re-clamps zoom/viewport against
     // the (possibly changed) strip geometry, the next redraw re-measures
     // the grid metrics, and the cache fingerprints (area dims keyed off the
-    // strip row metrics — monospace_row_h() for the textless zoom row and
+    // strip row metrics — zoom_row_h_px() for the textless zoom row and
     // monospace_text_row_h() for the text-bearing lanes) rebuild the
     // waveform/flag surfaces. The full-window invalidation at the end of
     // this load supplies the damage, mirroring the resize path's

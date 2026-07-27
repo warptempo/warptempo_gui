@@ -326,16 +326,18 @@ double flag_font_size_px();
 // glyph_advance + 2*(flag_pad_x_px() + text_box_pad_px()) + 2*kChipOutlinePx
 // (the outline ring sits outside the padding).
 //
-// flag_pad_y_px sets the UNPADDED row height — monospace_row_h(), the metric
-// the textless zoom lane takes: font (ascent+descent) + 2*flag_pad_y_px() +
-// 2*kChipOutlinePx, with a baseline offset of flag_pad_y_px() +
-// kChipOutlinePx + ascent. The authored pad_y is NEGATIVE (-1) by deliberate
-// design: the measured cairo font band (ascent+descent) carries internal
-// leading, so at pad_y = -1 that row is round(font_height - 2) +
-// 2*kChipOutlinePx = font_height at scale 1, the ring landing ON the band's
-// outermost row (top and bottom) — empty leading, not glyph ink. Every TEXT
-// row adds text_box_pad_px() per side on top of it (monospace_text_row_h),
-// which lifts the ring clear of the band.
+// flag_pad_y_px sets the UNPADDED row height — monospace_row_h(), which no lane
+// takes: it is the internal ingredient a text BOX is built from. It is font
+// (ascent+descent) + 2*flag_pad_y_px() + 2*kChipOutlinePx, with a baseline
+// offset of flag_pad_y_px() + kChipOutlinePx + ascent. The authored pad_y is
+// NEGATIVE (-1) by deliberate design: the measured cairo font band
+// (ascent+descent) carries internal leading, so at pad_y = -1 that height is
+// round(font_height - 2) + 2*kChipOutlinePx = font_height at scale 1, the ring
+// landing ON the band's outermost row (top and bottom) — empty leading, not
+// glyph ink. Every text BOX adds text_box_pad_px() per side on top of it
+// (monospace_text_box_h), which lifts the ring clear of the band, and the LANE
+// hosting that box adds text_box_margin_px() per side outside the ring
+// (monospace_text_row_h).
 inline double flag_pad_x_px() { return std::nearbyint(1.0 * gui_font_scale()); }
 inline double flag_pad_y_px() { return std::nearbyint(-1.0 * gui_font_scale()); }
 
@@ -349,18 +351,35 @@ inline constexpr int kChipOutlinePx = 1;
 // The ring-to-glyph gap a TEXT BOX carries on ALL FOUR sides: one authored
 // pixel, scaled like the pads above so it stays an integer at every font size.
 // It widens every text box by 2 (left + right, through flag_glyph_inset_px and
-// flag_chip_width_px) and grows every TEXT row by 2 (top + bottom, through
-// monospace_text_row_h), so the outline ring no longer overlaps the glyph
+// flag_chip_width_px) and grows every text box by 2 (top + bottom, through
+// monospace_text_box_h), so the outline ring no longer overlaps the glyph
 // band: at scale 1 the band sits exactly inside the ring, its blank leading
 // row separating the ring from the first row of ink. Textless surfaces never
-// see it — the zoom lane's ring row keeps the unpadded monospace_row_h(), and
-// the marker/trim shapes size from kFlagWidthPx / kFlagHeightPx, which no pad
-// feeds. std::nearbyint is odd-symmetric, so this cancels flag_pad_y_px()
-// exactly at every scale (their sum is 0, whatever the font size).
+// see it — the zoom lane sizes from its own kZoomRowHeightPx and the
+// marker/trim shapes from kFlagWidthPx / kFlagHeightPx, which no pad feeds.
+// std::nearbyint is odd-symmetric, so this cancels flag_pad_y_px() exactly at
+// every scale (their sum is 0, whatever the font size).
 inline constexpr int kTextBoxPadPx = 1;
 inline double text_box_pad_px() {
     return std::nearbyint(
         static_cast<double>(kTextBoxPadPx) * gui_font_scale());
+}
+
+// The empty gap a text box carries OUTSIDE its ring, VERTICAL ONLY: two
+// authored pixels of bare lane above the box and two below. The distinction
+// from kTextBoxPadPx is exactly css's — PADDING is inside the border (glyph
+// band to ring), MARGIN is outside it (ring to lane edge) — and this is the one
+// term that makes a text LANE taller than the text BOX it hosts:
+// monospace_text_row_h() (the lane) is monospace_text_box_h() (the box) plus one
+// margin per side, flag_chip_rect insets the box top by one margin from the lane
+// top, and the lane-top-relative baseline offset carries the same term so the
+// glyphs travel with the box. Horizontal geometry is untouched — a box's left
+// and right edges still sit exactly where its caller places them. Scaled and
+// rounded like the pads above so it stays an integer at every font size.
+inline constexpr int kTextBoxMarginPx = 2;
+inline double text_box_margin_px() {
+    return std::nearbyint(
+        static_cast<double>(kTextBoxMarginPx) * gui_font_scale());
 }
 
 // The glyph-run inset from a chip's left edge: the outline ring plus the left
@@ -408,9 +427,11 @@ inline constexpr int kFlagWidthPx  = 15;
 inline constexpr int kFlagHeightPx = 17;
 
 // The flag rectangle's painted width / height for the current font size. The
-// TRIM b/e chips are textless rectangles of this exact width/height too. Both
-// carry a >= 5 px floor so a tiny font still leaves a usable, outline-able
-// shape.
+// TRIM b/e chips are textless rectangles of this WIDTH on BOTH axes — square,
+// and so shorter than a marker flag: their lane's height is flag_lane_w_px()
+// too (the top lane table in main.cpp), which is where a chip's height comes
+// from. Both accessors carry a >= 5 px floor so a tiny font still leaves a
+// usable, outline-able shape.
 inline int flag_lane_w_px() {
     int w = static_cast<int>(std::nearbyint(
         static_cast<double>(kFlagWidthPx) * gui_font_scale()));
@@ -428,6 +449,20 @@ inline int flag_lane_w_px() {
 inline int flag_lane_h_px() {
     const int h = static_cast<int>(std::nearbyint(
         static_cast<double>(kFlagHeightPx) * gui_font_scale()));
+    return h < 5 ? 5 : h;
+}
+
+// Authored pixel height of the ZOOM row — the top strip's window-edge lane, a
+// bare drag surface painted as an empty ring (render_strip_row_ring) that hosts
+// no glyph and no shape. Its own authored constant rather than a borrowed text
+// metric: nothing about a font band describes a lane that carries no text.
+// Scaled and floored exactly like the flag dimensions above (the >= 5 px floor
+// keeps the ring's top and bottom edges apart at any font size); 15 at the
+// default font size.
+inline constexpr int kZoomRowHeightPx = 15;
+inline int zoom_row_h_px() {
+    const int h = static_cast<int>(std::nearbyint(
+        static_cast<double>(kZoomRowHeightPx) * gui_font_scale()));
     return h < 5 ? 5 : h;
 }
 
@@ -499,19 +534,23 @@ inline int playhead_half_px() { return playhead_triangle_h_px() - 1; }
 // measure and are overwritten immediately). on_resize can fire before the
 // first redraw measures the real font; these seed the geometry so it is sane
 // (never a negative waveform) until init_monospace_grid_metrics overwrites
-// them. Both seed the UNPADDED metrics (the zoom lane's): the -1.0 term is the
-// authored flag_pad_y_px value at scale 1 and the 1.0 term is kChipOutlinePx
-// (round(18 - 2) + 2*1 = 18; baseline -1.0 + 1.0 + 14.0). The padded TEXT-row
+// them. Both seed the UNPADDED metrics, which no lane takes directly: the -1.0
+// term is the authored flag_pad_y_px value at scale 1, the 1.0 term is
+// kChipOutlinePx, and the 14.0 stands in for the font ascent (approximate — a
+// seed, overwritten by the real measure before any glyph is painted)
+// (round(18 - 2) + 2*1 = 18; baseline -1.0 + 1.0 + 14.0). The TEXT-row
 // accessors derive from these seeds like they do from a real measure, adding
-// kTextBoxPadPx per side (20 tall, baseline 15.0 at scale 1).
+// kTextBoxPadPx per side for the box (20 tall at scale 1) and kTextBoxMarginPx
+// per side for the lane hosting it (24 tall, lane-relative baseline 17.0).
 constexpr int    kRowHFallbackPx       = 18;
 constexpr double kRowBaselineOffFallbackPx =
     -1.0 + 1.0 + 14.0;
 
 // Forward declarations: defined with their full doc comments below. Needed here
-// because flag_chip_rect (inline) reads the TEXT row height and baseline — a
-// text box is a text row, never the unpadded zoom-lane one.
-int monospace_text_row_h();
+// because flag_chip_rect (inline) reads the text BOX height and the lane-top
+// baseline offset — the box is the padded metric, never the unpadded one and
+// never the lane it sits inside.
+int monospace_text_box_h();
 double monospace_text_row_baseline_offset();
 // Forward declaration: defined with its full doc comment below. Needed here
 // because flag_chip_rect (inline) computes the chip width from it.
@@ -555,10 +594,13 @@ inline int flag_chip_width_px(size_t glyph_count) {
 // the box's left edge as the caller already positioned it: r.x = round(text_left).
 // The fill starts one pixel right of the left edge, and the glyph run sits
 // kChipOutlinePx + flag_pad_x_px() + text_box_pad_px() (=
-// flag_glyph_inset_px()) inside the chip edge. The vertical geometry is carried
-// by monospace_text_row_h() / monospace_text_row_baseline_offset() — the PADDED
-// text-row pair (ring + four-side gap baked in), never the unpadded zoom-lane
-// metric — so r.y / r.h track the row a text box actually sits in.
+// flag_glyph_inset_px()) inside the chip edge. The vertical geometry is the BOX
+// pair, not the LANE's: the height is monospace_text_box_h() (ring + four-side
+// pad baked in, never the unpadded metric) and the top is the lane top —
+// baseline_y - monospace_text_row_baseline_offset(), that offset being measured
+// from the LANE top — INSET DOWNWARD by text_box_margin_px(). So the box sits
+// centered in its lane with one clear margin above and below, and r.h is
+// strictly less than the lane height it sits in.
 //
 // Width is computed from the cached per-character monospace advance
 // (flag_chip_width_px -> monospace_advance(), measured once on the real paint
@@ -578,9 +620,12 @@ inline int flag_chip_width_px(size_t glyph_count) {
 //                 vs. text_left (see consumers).
 //   glyph_count - number of glyphs in the box's text (== text.length()).
 //                 Width = flag_chip_width_px(glyph_count).
-//   baseline_y  - the text baseline y the caller solved for its row. The box
-//                 top is baseline_y - monospace_text_row_baseline_offset(); the
-//                 height is the full monospace_text_row_h() slot.
+//   baseline_y  - the text baseline y the caller solved for its row (every
+//                 caller solves it as lane.y + the lane-top baseline offset).
+//                 The lane top is baseline_y -
+//                 monospace_text_row_baseline_offset(); the box top is one
+//                 text_box_margin_px() below it and the height is
+//                 monospace_text_box_h().
 //
 // Returns the integer GuiRect [x, y, w, h]; rounding happens here, once.
 // Consumers use the returned ints directly — no consumer re-rounds or
@@ -589,10 +634,11 @@ inline GuiRect flag_chip_rect(double text_left, size_t glyph_count,
                               double baseline_y) {
     GuiRect r;
     r.x = static_cast<int>(std::round(text_left));
-    r.y = static_cast<int>(std::round(
+    const int lane_top = static_cast<int>(std::round(
               baseline_y - monospace_text_row_baseline_offset()));
+    r.y = lane_top + static_cast<int>(text_box_margin_px());
     r.w = flag_chip_width_px(glyph_count);
-    r.h = monospace_text_row_h();
+    r.h = monospace_text_box_h();
     return r;
 }
 
@@ -612,14 +658,15 @@ inline GuiRect flag_chip_rect(double text_left, size_t glyph_count,
 // text when `prefix` is empty). The editable region paints at
 // `anchor_x + prefix_advance`; the solid fill covers only the editable
 // region (the prefix, if any, sits to its left on the canvas), via the
-// shared flag_chip_rect helper. The box height is the cached
-// monospace_text_row_h() (the same metric every TEXT row uses) and the top is
-// `baseline_y - monospace_text_row_baseline_offset()`, so the box fills its
-// full row slot — callers solve baseline_y so the box bottom lands at the slot
-// bottom. The cursor uses the std::round(x)+0.5 half-pixel convention for a
+// shared flag_chip_rect helper. The box height is monospace_text_box_h() and
+// its top is one text_box_margin_px() below the lane top (`baseline_y -
+// monospace_text_row_baseline_offset()`), so the box sits centered in its lane
+// with a clear margin above and below — callers solve baseline_y from their
+// lane rect and the box lands inside it. The cursor uses the std::round(x)+0.5
+// half-pixel convention for a
 // crisp single-pixel column. The cursor and the selection highlight span only
-// the glyph ink band (ascent-to-descent) — NOT the full slot; only the step-1
-// fill spans the full padded slot.
+// the glyph ink band (ascent-to-descent) — NOT the whole box; only the step-1
+// fill spans the full padded box. Nothing paints in the lane's margin.
 //
 // Colors are pre-resolved by the caller: `fill` is the resolved chip
 // color and `text_color` is kText. The selection swap fills the selected
@@ -1051,8 +1098,9 @@ double displayed_trim_ms(int64_t frame,
 // test (hit_test_trim_chip). A trim bound is an EDGE, not a point: the begin
 // chip's LEFT edge sits ON the bound column (rect left = strip_x+col), the end
 // chip's RIGHT edge sits on it (rightmost pixel = strip_x+col, so rect left =
-// strip_x+col - flag_w + 1). The chip is flag-sized (flag_lane_w_px() wide); its
-// y-band comes from `row` (the trim chip lane = top_upper_row_area). Deliberate
+// strip_x+col - flag_w + 1). The chip is flag_lane_w_px() wide; its y-band comes
+// from `row` (the trim chip lane = top_upper_row_area), whose height is that
+// same accessor, so the chip is SQUARE at every font size. Deliberate
 // asymmetry vs centered marker flags: a bound at frame 0 / EOF shows its chip
 // fully onscreen.
 GuiRect trim_chip_rect(bool is_begin, int strip_x, int col, GuiRect row);
@@ -1093,8 +1141,9 @@ void render_trim_stems(cairo_t* cr,
 // re-derives the lane's y from the row heights above it. Only the band's y/h
 // are consumed (the chip width is the flag width, the horizontal origin is
 // top_strip_area.x). Each set bound (gated by `has_begin` / `has_end`) paints a
-// TEXTLESS rectangle of the flag's exact width/height (flag_lane_w_px() x
-// flag_lane_h_px(), no glyph, no triangle — Ableton's loop bounds carry none),
+// TEXTLESS SQUARE (flag_lane_w_px() on both axes — the chip lane's height is
+// that same accessor, so a chip is shorter than a marker flag and can never go
+// non-square; no glyph, no triangle — Ableton's loop bounds carry none),
 // EDGE-ANCHORED on its bound column: the begin chip's LEFT edge on the column
 // (body rightward), the end chip's RIGHT edge on it (body leftward). A bound is
 // an EDGE, not a point — the deliberate asymmetry vs centered marker flags — so
@@ -1265,30 +1314,42 @@ std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
 // editor (input_handler.cpp -> flag_editor.cpp).
 double monospace_advance();
 
-// UNPADDED fixed-pixel row height, measured from cairo_font_extents (ascent +
-// descent) at flag_font_size_px() plus 2*flag_pad_y_px() plus 2*kChipOutlinePx
-// (the outline ring is baked in here). Returns kRowHFallbackPx until
-// init_monospace_grid_metrics has measured the real font. The vertical twin of
-// monospace_advance(); consumed by the strip/row geometry helpers (which have
-// no cairo context of their own). SOLE consumer today: the ZOOM lane, a bare
-// drag surface painted as an empty ring that hosts no glyph and therefore takes
-// no text-box padding. Anything carrying text takes monospace_text_row_h().
+// UNPADDED fixed-pixel height of the bare glyph slot, measured from
+// cairo_font_extents (ascent + descent) at flag_font_size_px() plus
+// 2*flag_pad_y_px() plus 2*kChipOutlinePx (the outline ring is baked in here).
+// Returns kRowHFallbackPx until init_monospace_grid_metrics has measured the
+// real font. The vertical twin of monospace_advance(). NO LANE takes this: it
+// is purely the ingredient monospace_text_box_h() adds the text-box padding to
+// (every textless lane sizes from its own authored constant — kZoomRowHeightPx,
+// kFlagWidthPx / kFlagHeightPx). Anything carrying text takes the box/lane pair
+// below.
 int monospace_row_h();
 
-// Baseline offset from an unpadded row rect's top edge: flag_pad_y_px() +
+// Baseline offset from an unpadded slot's top edge: flag_pad_y_px() +
 // kChipOutlinePx + font ascent. Paired with monospace_row_h(); no painter reads
-// it today (the zoom lane draws no text), and a text row uses
+// it (nothing paints against the unpadded slot), and a text row uses
 // monospace_text_row_baseline_offset() instead.
 double monospace_row_baseline_offset();
 
-// The TEXT row pair: the unpadded metrics above plus kTextBoxPadPx per side, so
+// The text BOX height: the unpadded slot above plus kTextBoxPadPx per side, so
 // the outline ring clears the glyph band on all four sides (the horizontal half
-// of that gap rides flag_glyph_inset_px / flag_chip_width_px). Height is
-// monospace_row_h() + 2*text_box_pad_px() and the baseline drops one pad
-// further, keeping the glyphs centered in the taller row. EVERY text-bearing
-// surface reads these: the marker-text lane, both bottom-strip lanes, and the
-// editor text box's own rect (flag_chip_rect).
+// of that gap rides flag_glyph_inset_px / flag_chip_width_px). This is the
+// PAINTED box — the rect flag_chip_rect returns and render_editor_text_box
+// fills and rings.
+int monospace_text_box_h();
+
+// The text LANE height: the box above plus kTextBoxMarginPx per side, the empty
+// margin outside the ring. A lane is therefore TALLER than the box it hosts —
+// the two are separate metrics and must not be substituted for each other. The
+// lanes that read this are the marker-text lane and both bottom-strip lanes
+// (main.cpp's lane tables).
 int monospace_text_row_h();
+
+// Baseline offset from a text LANE's top edge: the unpadded offset plus one
+// text_box_pad_px() (the box's own top pad) plus one text_box_margin_px() (the
+// lane's margin above the box), so the glyphs sit centered in the box wherever
+// the margin puts it. EVERY text-row painter solves its baseline as
+// lane.y + this, and flag_chip_rect inverts it to recover the lane top.
 double monospace_text_row_baseline_offset();
 
 // Measure and cache the advance width and row metrics. Runs at the top of

@@ -1183,13 +1183,15 @@ void render_trim_flags(cairo_t* cr,
         cairo_restore(cr);
     }
 
-    // The b/e chips are TEXTLESS rectangles of the flag's exact width/height,
-    // EDGE-ANCHORED on their bound columns (begin left-edge, end right-edge), no
-    // triangle (Ableton's loop bounds carry none). Deliberate asymmetry vs marker
-    // flags: a marker is a POINT (its flag centers and may hang half offscreen),
-    // a trim bound is an EDGE (its chip sits fully to one side, so a bound at
-    // frame 0 / EOF shows its chip fully onscreen). Build the visible list
-    // carrying each chip's bound column and role, sorted by column ascending.
+    // The b/e chips are TEXTLESS SQUARES of the flag's width on both axes (the
+    // chip lane's height is that same accessor, so they are shorter than a
+    // marker flag), EDGE-ANCHORED on their bound columns (begin left-edge, end
+    // right-edge), no triangle (Ableton's loop bounds carry none). Deliberate
+    // asymmetry vs marker flags: a marker is a POINT (its flag centers and may
+    // hang half offscreen), a trim bound is an EDGE (its chip sits fully to one
+    // side, so a bound at frame 0 / EOF shows its chip fully onscreen). Build
+    // the visible list carrying each chip's bound column and role, sorted by
+    // column ascending.
     struct TrimChip {
         int  col;
         bool is_begin;
@@ -1273,28 +1275,31 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     cairo_text_extents_t text_ext;
     cairo_text_extents(cr, s.text.c_str(), &text_ext);
 
-    // The step-1 fill box fills its full row slot rather than the tight glyph
-    // bounding box — that geometry now lives entirely inside flag_chip_rect
-    // (height = monospace_text_row_h(), top = baseline lifted by
-    // monospace_text_row_baseline_offset()), so baseline_y sits centered in the
-    // row and the box bottom lands flush at the slot bottom. Callers (the
-    // bottom-strip editors) solve baseline_y so the box bottom coincides with
-    // their row rect.
+    // The step-1 fill box fills its whole BOX rect rather than the tight glyph
+    // bounding box — that geometry lives entirely inside flag_chip_rect (height
+    // = monospace_text_box_h(), top = the lane top the baseline offset recovers,
+    // inset downward by text_box_margin_px()), so baseline_y sits centered in
+    // the box and the box sits centered in its lane with a clear margin above
+    // and below. Callers solve baseline_y as lane.y +
+    // monospace_text_row_baseline_offset(); the box lands inside that lane.
     //
     // The cursor (step 5) and the selection highlight (step 4) span exactly the
     // glyph ink band (ascent-to-descent), no vertical padding. The band is
-    // recovered by INVERTING the text-row formula, term for term: the padded
-    // baseline offset is text_box_pad_px() + flag_pad_y_px() + kChipOutlinePx +
-    // ascent, and the padded height is 2*text_box_pad_px() +
+    // recovered by INVERTING the BOX formula, term for term — never the LANE's,
+    // which carries a margin the box does not: the lane-top baseline offset is
+    // text_box_margin_px() + text_box_pad_px() + flag_pad_y_px() +
+    // kChipOutlinePx + ascent, and the box height is 2*text_box_pad_px() +
     // round(font_height + 2*flag_pad_y_px()) + 2*kChipOutlinePx — so every pad
-    // the row added comes back off here. These two lines MUST move with the row
-    // formula. The round() on the row height can leak a sub-pixel into the
-    // derived descent; that is cosmetically irrelevant here and saves adding a
-    // new metric accessor.
-    const double bg_h        = static_cast<double>(monospace_text_row_h());
+    // and margin the metrics added comes back off here. Taking bg_h from the
+    // LANE instead would inflate the derived font_height by both margins and
+    // mis-span the band. These three lines MUST move with the box/lane formulas.
+    // The round() on the box height can leak a sub-pixel into the derived
+    // descent; that is cosmetically irrelevant here and saves adding a new
+    // metric accessor.
+    const double bg_h        = static_cast<double>(monospace_text_box_h());
     const double ascent      = monospace_text_row_baseline_offset()
-                             - text_box_pad_px() - flag_pad_y_px()
-                             - kChipOutlinePx;
+                             - text_box_margin_px() - text_box_pad_px()
+                             - flag_pad_y_px() - kChipOutlinePx;
     const double font_height = bg_h - 2.0 * text_box_pad_px()
                              - 2.0 * flag_pad_y_px()
                              - 2.0 * kChipOutlinePx;
@@ -1318,12 +1323,13 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     // tip defect corrected in render_waveform. Glyph text (steps 2-3) keeps
     // antialiasing and is untouched.
     //
-    // The band is CLAMPED to the fill interior [fr.y + kChipOutlinePx,
+    // The band is CLAMPED to the BOX's fill interior [fr.y + kChipOutlinePx,
     // fr.y + fr.h - kChipOutlinePx] so a cursor/highlight rect can never punch
-    // through the ring top or bottom (the standing rule). text_box_pad_px()
+    // through the ring top or bottom (the standing rule) — and, since fr is the
+    // margin-inset box, never into the lane's margin either. text_box_pad_px()
     // cancels flag_pad_y_px() exactly, so the band lands ON the interior edges
-    // and the clamp is a no-op whenever the row height rounds cleanly; it stays
-    // as the guard for the sub-pixel the row's round() can leak at other font
+    // and the clamp is a no-op whenever the box height rounds cleanly; it stays
+    // as the guard for the sub-pixel the box's round() can leak at other font
     // sizes. The antialiased glyph text and the selection substring repaint are
     // NOT clamped — their extreme leading rows are blank, the ring paints
     // first, and only these filled rects could otherwise show through it.
@@ -1833,13 +1839,21 @@ double monospace_advance() { return g_advance; }
 int    monospace_row_h()   { return g_row_h; }
 double monospace_row_baseline_offset() { return g_row_baseline_off; }
 
-// The padded TEXT row: the measured pair above plus kTextBoxPadPx on each side,
-// derived rather than cached so a font_size change needs no second measure.
-int monospace_text_row_h() {
+// The text BOX: the measured slot above plus kTextBoxPadPx on each side.
+// The text LANE: that box plus kTextBoxMarginPx on each side — the margin is
+// empty lane outside the ring, so the lane is strictly taller than the box.
+// The lane-top baseline offset carries both terms, since it is measured from
+// the LANE top while the glyphs sit in the box the margin pushed down. All
+// three are derived rather than cached so a font_size change needs no second
+// measure.
+int monospace_text_box_h() {
     return g_row_h + 2 * static_cast<int>(text_box_pad_px());
 }
+int monospace_text_row_h() {
+    return monospace_text_box_h() + 2 * static_cast<int>(text_box_margin_px());
+}
 double monospace_text_row_baseline_offset() {
-    return g_row_baseline_off + text_box_pad_px();
+    return g_row_baseline_off + text_box_pad_px() + text_box_margin_px();
 }
 
 void init_monospace_grid_metrics(cairo_t* cr) {
@@ -1855,10 +1869,11 @@ void init_monospace_grid_metrics(cairo_t* cr) {
     cairo_font_extents_t fe;
     cairo_font_extents(cr, &fe);
     const double font_height = fe.ascent + fe.descent;
-    // The UNPADDED row pair (the zoom lane's; the text rows add kTextBoxPadPx
-    // per side on top of it in monospace_text_row_h). The outline ring sits
+    // The UNPADDED pair, which no lane takes: the text BOX adds kTextBoxPadPx
+    // per side on top of it (monospace_text_box_h) and the text LANE another
+    // kTextBoxMarginPx per side (monospace_text_row_h). The outline ring sits
     // outside the padding, so both formulas add 2*kChipOutlinePx /
-    // kChipOutlinePx: the row is font_height + 2*flag_pad_y_px() +
+    // kChipOutlinePx: the slot is font_height + 2*flag_pad_y_px() +
     // 2*kChipOutlinePx tall, and the baseline drops by flag_pad_y_px() +
     // kChipOutlinePx + ascent from the top.
     g_row_h = static_cast<int>(std::nearbyint(

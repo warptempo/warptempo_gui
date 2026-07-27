@@ -87,9 +87,10 @@ namespace {
 // below are paint-handler-independent and stay file-local.
 
 // The strip/lane geometry is a fixed-pixel per-strip lane stack derived from
-// monospace_row_h() / monospace_text_row_h(), flag_lane_h_px(),
-// playhead_triangle_h_px(), kRowGapPx, and kFlagBottomLiftPx (see the geometry
-// helpers below); nothing is window-proportional.
+// zoom_row_h_px(), flag_lane_w_px() / flag_lane_h_px(),
+// monospace_text_row_h(), playhead_triangle_h_px(), kRowGapPx, and
+// kFlagBottomLiftPx (see the geometry helpers below); nothing is
+// window-proportional.
 
 // kMarkerHitHalfPx lives in app_state.h so the hit_test_* free
 // functions and the GuiInputHandler mouse handler can reach it.
@@ -139,12 +140,13 @@ namespace {
 // Per-strip lane stacks with per-lane heights (the former uniform-row contract
 // is superseded). Top and bottom strips now DIFFER in height; the waveform
 // flexes between them. The TOP strip is FIVE lanes (from the window edge
-// inward): zoom row (the textless monospace_row_h()), trim-chip row (the flag
-// height), marker-text row (the padded monospace_text_row_h()), flag row (the
-// flag height), and the triangle row (the triangle height) flush on the
-// waveform. The BOTTOM strip is TWO lanes: the status row (outer) and the
-// editor/modal row (inner), both padded text rows. The lanes pack tight — the
-// inter-lane gaps kRowGapPx and the outer/waveform-side gaps
+// inward): zoom row (its own authored zoom_row_h_px()), trim-chip row (the flag
+// WIDTH, so the chips are square), marker-text row (the text-lane
+// monospace_text_row_h()), flag row (the flag height), and the triangle row
+// (the triangle height) flush on the waveform. The BOTTOM strip is TWO lanes:
+// the status row (outer) and the editor/modal row (inner), both text lanes.
+// The lanes pack tight — the inter-lane gaps kRowGapPx and the
+// outer/waveform-side gaps
 // kFlagBottomLiftPx are all 0 — but the derivation below keeps them explicit so
 // they reappear structurally if ever un-zeroed. ONE shared helper —
 // strip_row_rect — is the single geometry owner; every named accessor delegates
@@ -160,18 +162,28 @@ static void clamp_dims(int& w, int& h) {
 }
 
 namespace {
-// Per-lane pixel heights, indexed from each strip's window edge inward. The top
-// strip's flag and trim-chip rows carry the flag height; its innermost lane
-// carries the triangle height. The TEXT-BEARING lanes — the marker-text row and
-// both bottom lanes — carry the PADDED monospace row (glyph band, ring, and the
-// four-side text-box gap); the zoom row is a bare drag surface painted as an
-// empty ring, hosts no glyph, and keeps the unpadded metric.
+// Per-lane pixel heights, indexed from each strip's window edge inward. Every
+// lane sizes from the metric that DESCRIBES it: the zoom row from its own
+// authored constant (a bare ring surface, no glyph, no shape), the flag row
+// from the flag height, the innermost lane from the triangle height, and the
+// trim-chip row from the flag WIDTH (see the case below). The TEXT-BEARING
+// lanes — the marker-text row and both bottom lanes — carry the LANE metric,
+// which is the text box (glyph band, ring, four-side pad) plus the vertical
+// margin outside its ring; the box itself is shorter and is placed inside this
+// band by flag_chip_rect.
 constexpr int kTopLaneCount    = 5;
 constexpr int kBottomLaneCount = 2;
 int top_lane_height(int lane) {
     switch (lane) {
-        case 0: return monospace_row_h();        // zoom row (textless)
-        case 1: return flag_lane_h_px();         // trim-chip row
+        case 0: return zoom_row_h_px();          // zoom row (textless)
+        // The trim-chip row takes the chip's own WIDTH as its height, so the
+        // b/e chips are SQUARE BY CONSTRUCTION: trim_chip_rect reads its width
+        // from flag_lane_w_px() and its height from this band, and both axes now
+        // resolve through the one accessor. A plain 15 here, or the flag height
+        // the row used to borrow, would leave squareness a numeric coincidence
+        // that a retune of kFlagHeightPx (or of the scaling) could silently
+        // break.
+        case 1: return flag_lane_w_px();         // trim-chip row (square chips)
         case 2: return monospace_text_row_h();   // marker-text row
         case 3: return flag_lane_h_px();         // flag row
         case 4: return playhead_triangle_h_px(); // triangle row (flush on waveform)

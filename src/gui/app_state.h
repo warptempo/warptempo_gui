@@ -2075,11 +2075,12 @@ enum class TrimHit { None, Begin, End };
 // is set — the sole consumer (route_trim_chip_press) routes here only then (a
 // lone bound is gesture-inert), so both bounds are guaranteed present.
 // AUTHORING views — the active tab's live pair, project-level in both 'W' and
-// 'P' views. Each chip is a textless flag-sized rectangle (flag_lane_w_px()
-// wide) EDGE-ANCHORED on the bound's painted column — the begin chip's LEFT edge
-// on it, the end chip's RIGHT edge on it — exactly what render_trim_flags fills,
-// this rect built the same way, so paint and hit cannot drift. Tests both mouse_x and mouse_y. Walks the display
-// warp_frame_map in target view so the hit lands on the visually-drawn chip.
+// 'P' views. Each chip is a textless SQUARE (flag_lane_w_px() wide, and as tall
+// — its lane's height is that same accessor) EDGE-ANCHORED on the bound's
+// painted column — the begin chip's LEFT edge on it, the end chip's RIGHT edge
+// on it — exactly what render_trim_flags fills, this rect built the same way,
+// so paint and hit cannot drift. Tests both mouse_x and mouse_y. Walks the
+// display warp_frame_map in target view so the hit lands on the drawn chip.
 // The chip and the inter-chip bridge are the ONLY trim grab handles (the
 // waveform stem grab retired).
 TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,

@@ -115,9 +115,9 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     const int64_t begin_frame = app.trim.begin_frame;
     const int64_t end_frame   = app.trim.end_frame;
 
-    // The b/e chips are flag-sized rectangles in the trim-chip lane
-    // (top_upper_row_area, whose height is the flag height). A press outside
-    // that vertical band is not on a chip.
+    // The b/e chips are SQUARES in the trim-chip lane (top_upper_row_area,
+    // whose height is the chip width flag_lane_w_px()). A press outside that
+    // vertical band is not on a chip.
     const GuiRect row = top_upper_row_area(app);
     if (mouse_y < row.y || mouse_y >= row.y + row.h) return TrimHit::None;
 
