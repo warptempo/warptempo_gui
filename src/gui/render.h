@@ -116,9 +116,13 @@ inline GuiColor kLine             = hex(0x57595B);
 // — see render_strip_anchor_stem).
 inline GuiColor kStripAnchorStem  = hex(0x57595B);
 
-// The resting cursor is Breeze blue — the same value as kSelected, the focus
-// family's one color (the green cursor is retired with the option-a scheme),
-// kept as its own key so the cursor can be tuned off the selection blue.
+// The resting cursor: its 1px line and its tip-down triangle, AND the region
+// SPLIT half-triangles, which are that same cursor dissolved into the two ends
+// of a highlighted span and therefore ride this key rather than any selection
+// color (architect 2026-07-27). Compiled default is Breeze blue, the same value
+// as kSelected (the green cursor is retired with the option-a scheme) — but it
+// is its own key precisely so the cursor and its split form can be tuned off
+// the selection blue together, without either defecting to it.
 inline GuiColor kPlayheadCursor   = hex(0x3DAEE9);
 // The moving scanner reads WHITE against the mid canvas (the Ableton play-head
 // cue; also Breeze's text/icon foreground, so it is the scheme's brightest ink).
@@ -179,7 +183,8 @@ inline GuiColor kAccentOutline    = hex(0xE7858F);
 // It is the group's focus cue, the singleton focus stem's "spread" form (a stem
 // marks one selected marker, this ground marks many), so it lifts kCanvas in
 // the blue-cast direction the focus family already carries; the split
-// half-triangles at its bounds stay full kSelected. Tuned by eye on the panel.
+// half-triangles at its bounds are the dissolved CURSOR, so they paint
+// kPlayheadCursor, not any selection color. Tuned by eye on the panel.
 //
 // THE OVERLAY IS A RING ONLY (architect 2026-07-27). kOverlayOutline is the 1px
 // border of the phase reset overlay band — the stretch of output immediately

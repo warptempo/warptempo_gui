@@ -814,13 +814,15 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // THIS BRANCH IS THE HIGHLIGHT<->CURSOR EXCLUSIVITY OWNER (the highlight IS
     // the playhead stretched out — the split halves are its two ends, so a
     // highlighted region and a cursor must never co-display; architect
-    // 2026-07-23). The split halves are
-    // FULL-OPACITY Breeze blue (kSelected), part of the REGION's blue focus family
-    // — the "spread-stem" read: they MARK the region bounds where the cursor's
-    // split form sits. Under the option-a scheme the cursor is that SAME Breeze
-    // blue (kPlayheadCursor == kSelected == 0x3DAEE9), so the halves and the
-    // cursor they stand in for are literally one color — a recolored ground
-    // between two full-blue bound marks. The exclusivity is structural, not
+    // 2026-07-23). The split halves paint FULL-OPACITY kPlayheadCursor — the
+    // CURSOR's own key, because that is literally what they are: the cursor
+    // dissolved into its two ends, marking the region bounds where its split form
+    // sits. They ride the cursor's key rather than the selection's so that
+    // retuning the SELECTION cannot drag them off the cursor they stand in for
+    // (architect 2026-07-27). Under the compiled defaults kPlayheadCursor and
+    // kSelected coincide at 0x3DAEE9 and the halves look exactly as they always
+    // did — coincidence, not coupling: a config that separates the two keys keeps
+    // the halves with the cursor. The exclusivity is structural, not
     // per-former: paint_region_ground gates on the same app.region.active this
     // if/else branches
     // on, and the CURSOR forms emit only here — the region branch owns the split,
@@ -843,11 +845,11 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
             // Same displayed basis and region_columns owner as
             // paint_region_ground, so the split halves' shared edges land exactly
             // on the recolored ground's left/right edges. Painted full-opacity
-            // kSelected (blue) — the region's blue focus family (the spread-stem
-            // read); the same Breeze blue the cursor itself carries.
+            // kPlayheadCursor — the cursor's key, since the halves ARE the
+            // dissolved cursor (see the exclusivity block above).
             const RegionColumns cols = region_columns(basis);
             render_split_playhead(cr, area, cols.lo_col, cols.hi_col,
-                                  kSelected);
+                                  kPlayheadCursor);
         }
     } else if (app.selected_markers.empty()) {
         // WAVEFORM FOCUS (architect 2026-07-23): selection empty — the Breeze
