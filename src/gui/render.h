@@ -69,10 +69,12 @@ struct TrimRange {
 // looks exactly like the tuned desktop. Its shape: the CHROME and the LINES are
 // the desktop's own greys, and every marker-family shape is a DARK DESATURATED
 // FILL under a BRIGHT RING — the shipped saturated roles survive as the rings
-// and as nothing else. Where a default derives from a Breeze/qt6ct role or from
-// another key, the derivation is recorded at the entry so the architect can
-// re-derive it after retuning a base; where the architect tuned by eye, that is
-// said instead of inventing a formula.
+// and as nothing else. NOTHING BELOW IS TUNED BY EYE: every default is one of
+// three kinds — a shipped Breeze role (live, or disabled as KColorScheme
+// computes it), a documented blend of such a role with another key, or a PIXEL
+// SAMPLED from a named screenshot of the desktop. Each entry records which kind
+// it is, so the architect can re-derive it after retuning a base; where a
+// sampled value has no closed form, that is said instead of inventing one.
 //
 // MUTABLE, WRITTEN ONCE. Each entry is a plain global holding its compiled
 // default. load_color_config() (color_config.h) overwrites the whole set once
@@ -107,21 +109,30 @@ inline GuiColor kCanvas           = hex(0x393E43);
 inline GuiColor kWaveform         = hex(0x141618);
 
 inline GuiColor kText             = hex(0xFCFCFC);  // Breeze paper white
-// Disabled text: the qt6ct Breeze-Dark DISABLED-ROW Text role — the value the
-// desktop itself greys text to, rather than a fade computed from kText. Paints
-// the marker-text-lane run of a disabled marker, the glyph half of the opaque
+// Disabled text: Breeze Dark's DISABLED Text role, the View set's faded
+// foreground — the value the desktop itself greys text to, rather than a fade
+// computed from kText. THE SOURCE OF TRUTH FOR THE WHOLE DISABLED FAMILY (this
+// key, kLine, kStripAnchorStem, the kMarkerDisabled pair, the trim chip ring and
+// stem) is the shipped /usr/share/color-schemes/BreezeDark.colors run through
+// KColorScheme, which applies Breeze's own [ColorEffects:Disabled] block: an
+// intensity Darken of 0.10 on the backgrounds, then a contrast Fade of 0.65 of
+// each foreground toward that darkened ground. Re-derive from those, never from
+// a qt6ct conf — the one this family was first read off had been built with a
+// darken of about 0.20, so its every entry ran 2-4 units dark. Paints the
+// marker-text-lane run of a disabled marker, the glyph half of the opaque
 // disabled cue whose shape half is kMarkerDisabled (whose default comes from the
-// same disabled row, so the two halves are one family by provenance).
-inline GuiColor kTextDisabled     = hex(0x5C5E5F);
+// same disabled set, so the two halves are one family by provenance).
+inline GuiColor kTextDisabled     = hex(0x606263);
 
-// THE ONE STRUCTURAL LINE COLOR: the disabled-row WindowText role — the
-// architect's separator grey, read straight off the desktop rather than blended
-// from the chrome. Every inert structural rule paints in it — the zoom-strip row
-// ring (render_strip_row_ring) and the waveform area's 1px top and bottom border
-// (render_canvas). It is not an accent and never marks state. The trim chips'
-// ring and stems take this same value from their own keys, so every calm 1px
-// rule in the product is one grey.
-inline GuiColor kLine             = hex(0x646668);
+// THE ONE STRUCTURAL LINE COLOR: the DISABLED WindowText role, from the same
+// KColorScheme pass over the shipped scheme as kTextDisabled — the architect's
+// separator grey, the desktop's own arithmetic rather than a blend invented
+// against the chrome. Every inert structural rule paints in it — the zoom-strip
+// row ring (render_strip_row_ring) and the waveform area's 1px top and bottom
+// border (render_canvas). It is not an accent and never marks state. The trim
+// chips' ring and stems take this same value from their own keys, so every calm
+// 1px rule in the product is one grey.
+inline GuiColor kLine             = hex(0x686A6C);
 
 // The strip-drag anchor stem: a transient pivot affordance shown only mid-drag,
 // so it reads as a muted structural guide rather than competing with the crisp
@@ -129,7 +140,7 @@ inline GuiColor kLine             = hex(0x646668);
 // own key so it can be pulled off the line color independently. Dimmed by hue,
 // not alpha; it paints straight over any waveform samples it crosses (no notch
 // — see render_strip_anchor_stem).
-inline GuiColor kStripAnchorStem  = hex(0x646668);
+inline GuiColor kStripAnchorStem  = hex(0x686A6C);
 
 // The resting cursor: its 1px line and its tip-down triangle, AND the region
 // SPLIT half-triangles, which are that same cursor dissolved into the two ends
@@ -175,36 +186,54 @@ inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
 // ring brightness would shout.
 inline GuiColor kSelectedStem     = hex(0x7F8C8D);
 
-// DEFAULT — the pair every marker paints unless it is disabled or red. The fill
-// is the desktop's derived INACTIVE-SELECTION blue family: the mix(kWaveform,
-// Breeze blue #3daee9, ~0.33) neighborhood of the measured #204357, then
-// architect-tuned by eye. The ring is Breeze blue itself at ~86%. Fill dark
-// enough to sit quietly on the canvas, ring bright enough to draw the shape —
-// the dark-fill/bright-ring system every marker-family pair follows.
+// DEFAULT — the pair every marker paints unless it is disabled or red. Both
+// halves are pixels SAMPLED FROM ONE WIDGET: a Breeze-hovered file-list row in
+// the last of the pcmanfm-qt shots under tmp/screenshots/ (2026-07-26; tmp/ is
+// untracked, so the closed form below is what actually reproduces off a fresh
+// clone). The row's low-alpha highlight wash is the fill, the 1px
+// highlight-colored border along its top edge is the ring — the fill and ring of
+// the same thing, which is why they work as a fill/ring pair here. It is the
+// HOVER treatment, not a selection: the selected row in that shot is a separate
+// full-saturation #3daee9 one, and the same wash appears elsewhere in the series
+// with no selected row present anywhere.
+//
+// THE FILL HAS AN EXACT CLOSED FORM: Breeze blue #3daee9 composited at alpha
+// 77/255 over the View-ALTERNATE row ground #1d1f22 reproduces #264a5e
+// byte-exact on all three channels under Qt's 8-bit integer compositing. (That
+// same blend over the plain View row ground #141618 gives #204357 — one formula,
+// the two alternating row grounds.) THE RING HAS NONE: the border carries a
+// slight vertical gradient, #3895c7 at its top edge and #3794c5 at its bottom,
+// so no single blend factor reproduces the whole of it; #3895c7 is the top-edge
+// sample and no scalar substitutes for it. Fill dark enough to sit quietly on
+// the canvas, ring bright enough to draw the shape — the dark-fill/bright-ring
+// system every marker-family pair follows.
 inline GuiColor kMarker           = hex(0x264A5E);
 inline GuiColor kMarkerOutline    = hex(0x3895C7);
 
 // DISABLED, shared by every marker family (warp flags, phase reset flags).
 // Opaque, not an alpha fade, and not computed from the default pair: both halves
-// come from the qt6ct Breeze-Dark DISABLED ROW — the fill is that row's
-// Highlight (its desaturated blue: a disabled marker stays in the blue family
-// but sits darker than the live fill), the ring its PlaceholderText grey. The
-// disabled lane text (kTextDisabled) is that same row's Text, so shape and glyph
-// grey out together by provenance. It WINS over red and over the default class,
-// and there is nothing left for it to compose with: a disabled marker paints
-// BOTH halves of this pair whatever its red-flag status and whatever its
-// selection, since selection carries no color. A selected disabled marker is
-// marked by the paint order and by the stem.
-inline GuiColor kMarkerDisabled        = hex(0x163E5C);
-inline GuiColor kMarkerDisabledOutline = hex(0x404447);
+// come from the same KColorScheme disabled set as kTextDisabled — the fill is
+// the disabled LINK role (Breeze's link blue #1d99f3 faded 65% toward the
+// darkened view ground, which is exactly why a disabled marker stays in the blue
+// family while sitting darker than the live fill), the ring its PlaceholderText
+// grey. It is NOT the disabled Highlight, which is the grey window ground
+// #1f2124 and would be useless as a marker fill. The disabled lane text
+// (kTextDisabled) is that set's Text, so shape and glyph grey out together by
+// provenance. It WINS over red and over the default class, and there is nothing
+// left for it to compose with: a disabled marker paints BOTH halves of this pair
+// whatever its red-flag status and whatever its selection, since selection
+// carries no color. A selected disabled marker is marked by the paint order and
+// by the stem.
+inline GuiColor kMarkerDisabled        = hex(0x164160);
+inline GuiColor kMarkerDisabledOutline = hex(0x42464A);
 
 // RED — the normalization cue: a marker whose render falls back to the 1.00
 // tempo. The RING is the shipped Breeze ForegroundNegative #da4453; the FILL is
-// mix(kWaveform, that same negative, 0.35) — the exact analog of the marker
-// fill's derivation, so the red flag sits in the same dark-fill/bright-ring
-// system as every other class instead of being the one saturated block. It also
-// paints the editor box's invalid-commit flash, so a parse failure and a red
-// flag read as one family.
+// mix(kWaveform, that same negative, 0.35), a deliberate blend rather than a
+// sample: it puts the red flag in the same dark-fill/bright-ring system as the
+// sampled default pair — comparably dark, comparably desaturated — instead of
+// leaving it the one saturated block. It also paints the editor box's
+// invalid-commit flash, so a parse failure and a red flag read as one family.
 inline GuiColor kAccent           = hex(0x59262D);
 inline GuiColor kAccentOutline    = hex(0xDA4453);
 
@@ -253,8 +282,8 @@ inline GuiColor kOverlayOutline   = hex(0x7F8C8D);
 inline GuiColor kTrimBar          = hex(0x264A5E);
 inline GuiColor kTrimBarOutline   = hex(0x3895C7);
 inline GuiColor kTrimChip         = hex(0x202326);
-inline GuiColor kTrimChipOutline  = hex(0x646668);
-inline GuiColor kTrimStem         = hex(0x646668);
+inline GuiColor kTrimChipOutline  = hex(0x686A6C);
+inline GuiColor kTrimStem         = hex(0x686A6C);
 
 // -- GUI font size ---------------------------------------------------------
 //
