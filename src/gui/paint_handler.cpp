@@ -15,8 +15,8 @@
 #include <utility>
 #include <vector>
 
-// On-screen paint handler: on_redraw and its per-strip paint passes, the
-// out-of-trim geometry they use, and on_resize. The off-screen surfaces
+// On-screen paint handler: on_redraw and its per-strip paint passes, and
+// on_resize. The off-screen surfaces
 // these passes blit — the waveform plate and the flag-rect
 // cache — are produced in waveform_cache.cpp. Trim paints live per frame
 // (paint_trim), out of any cache.
@@ -121,8 +121,27 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
         app.top_flag_editor.kind == text_editor::Kind::FlagPayload;
     const int editor_target = editor_active ? app.top_flag_editor.target : -1;
 
+    // A run's marker is DISABLED — the glyph half of the opaque disabled cue
+    // whose shape half is the flag's kMarkerDisabled pair. Runs are indexed in
+    // the ACTIVE column's store (see LaneTextRun), so the verdict follows that
+    // column: the warp side respects the label_ref cascade through
+    // effective_disabled, the phase-reset side reads its bool (it has no
+    // cascade) — the same split the selection walk's disabled-skip uses.
+    const bool phase_reset_column = app.active_markers_view == 'P';
+    auto run_disabled = [&](int idx) -> bool {
+        if (idx < 0) return false;
+        if (phase_reset_column) {
+            const auto& pv = app.phaseresetmarkers.markers();
+            return idx < static_cast<int>(pv.size()) && pv[idx].disabled;
+        }
+        const auto& mv = app.warpmarkers.markers();
+        return idx < static_cast<int>(mv.size()) && effective_disabled(mv, idx);
+    };
+
     // Per-run painter: kBackground fill exactly behind the run (AA off for a
-    // crisp edge), then the display text — no border, no caret. WIDTH uses the
+    // crisp edge), then the display text — no border, no caret. Glyphs paint
+    // kText, or the opaque kTextDisabled when the run's marker is disabled (a
+    // color class, never an alpha fade). WIDTH uses the
     // run's glyph count (never txt.size(): a truncated run is 11 bytes / 9
     // glyphs), while cairo receives the whole UTF-8 display string (the toy API
     // draws U+2026 at the uniform mono advance). source_frame centers the run on
@@ -131,7 +150,7 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
     // or clamp yields left<0 and skips. source_frame is a DOUBLE so a mid-drag run
     // centers on the dragged member's free proposed position.
     auto paint_run = [&](double source_frame, const std::string& txt,
-                         size_t glyphs) {
+                         size_t glyphs, bool disabled) {
         if (glyphs == 0) return;
         const double left = lane_text_left_x_at_frame(
             app, audio, source_frame, glyphs);
@@ -144,7 +163,8 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
                         run_w, static_cast<double>(lane.h));
         cairo_fill(cr);
         cairo_restore(cr);
-        text_display::draw_line(cr, left, baseline, txt, kText,
+        text_display::draw_line(cr, left, baseline, txt,
+                                disabled ? kTextDisabled : kText,
                                 flag_font_size_px());
     };
 
@@ -161,7 +181,8 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
     for (const LaneTextRun& run : set.runs) {
         if (editor_active && run.marker_index == editor_target) continue;
         if (run.marker_index == expanded_target) continue;
-        paint_run(run.source_frame, run.text, run.glyphs);
+        paint_run(run.source_frame, run.text, run.glyphs,
+                  run_disabled(run.marker_index));
     }
 
     // The text-hover EXPANDED run paints LAST among the ambient runs (on top,
@@ -171,7 +192,8 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
     // and the editor box never coexist.)
     if (set.has_expanded)
         paint_run(set.expanded.source_frame, set.expanded.text,
-                  set.expanded.glyphs);
+                  set.expanded.glyphs,
+                  run_disabled(set.expanded.marker_index));
 
     // The FlagPayload editor box LAST, overlaying any ambient run it overlaps.
     if (editor_active) {
@@ -246,65 +268,30 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     // extra paint frame of empty canvas between load and first
     // waveform display, masked by the existing load-time progress
     // bar.
+    //
+    // BLIT-ONLY, AND NOTHING RECOLORS IT AFTER: the out-of-trim dim (a second
+    // ink color masked through the plate's own alpha) is retired
+    // with the opaque recolor model (architect 2026-07-26). The trim bridge bar
+    // is the whole inside-the-window signal now, and the plate's pixels are
+    // exactly what the renderer wrote, composited once over whichever ground —
+    // kCanvas, or a kRegionCanvas / kOverlayCanvas recolor — the passes before
+    // this one left. That is what makes ink over a highlighted span identical
+    // to ink over plain canvas wherever coverage is full.
+    //
+    // The clip is the CONTENT band, not the full area: the area's top and
+    // bottom rows are render_canvas's kLine border and no band-filling pass may
+    // cover them. (The plate's own inset band leaves those rows transparent
+    // anyway, so this is the structural statement of the rule rather than a
+    // pixel change.)
     if (wf_cache.surface) {
+        const GuiRect content = waveform_content_rect(area);
         cairo_save(cr);
-        cairo_rectangle(cr, area.x, area.y, area.w, area.h);
+        cairo_rectangle(cr, content.x, content.y, content.w, content.h);
         cairo_clip(cr);
         cairo_set_source_surface(cr, wf_cache.surface,
                                  area.x, area.y);
         cairo_paint(cr);
         cairo_restore(cr);
-
-        // Out-of-trim dim, composited live over the just-blitted
-        // plate (which is trim-agnostic). The dim is the
-        // kWaveformDimmed color masked through the plate surface's
-        // own alpha: fully opaque sample pixels are recolored — at the
-        // exact tuned RGB, no blend — and the transparent gaps are
-        // left as canvas.
-        //
-        // THE FRACTIONAL-EDGE MIX (architect-accepted 2026-07-26): the plate's
-        // alpha is no longer binary — the silhouette's top/bottom rows carry
-        // fractional coverage from the direct writer. Such a pixel is blitted
-        // FIRST as a*waveform + (1-a)*canvas, and this pass then composites dim
-        // over that, giving a*dim + (1-a)*[a*waveform + (1-a)*canvas]. So an
-        // out-of-trim TIP pixel is a mix carrying some normal ink and reads
-        // slightly darker than a pure a*dim + (1-a)*canvas edge would. Accepted
-        // deliberately: it is sub-pixel, confined to the silhouette boundary in
-        // already-de-emphasized out-of-trim material. Opaque interiors still
-        // land exactly kWaveformDimmed and gaps stay canvas, so the only
-        // affected pixels are the fractional tips. (Exact dim edges would mean
-        // repainting the clipped region from canvas plus the plate mask instead
-        // of masking over the already-blitted normal edge — not done.)
-        //
-        // ATOP would key on the WINDOW's alpha,
-        // which is already opaque post-blit, so it can't serve as the
-        // sample mask and fills the whole rect solid; the plate
-        // surface's alpha can. We clip to the out-of-trim rect(s) —
-        // LIVE trim frames on the PLATE fingerprint's viewport/spp
-        // (compute_out_of_trim_rects' split basis), so a trim drag
-        // tracks the stem frame-for-frame with no plate rebuild while
-        // an async publish keeps the edge on the just-blitted plate —
-        // then mask the dim color through the plate (blitted at
-        // (area.x, area.y), so the mask uses the same origin). OVER + mask is exactly
-        // "color where the plate is opaque, within the clip" — no
-        // operator change. cairo_save/restore brackets the clip so
-        // the marker, stem, flag, and playhead passes that follow run
-        // unclipped with the default OVER.
-        const OutOfTrimRects dim = compute_out_of_trim_rects(area);
-        if (dim.has_left || dim.has_right) {
-            cairo_save(cr);
-            if (dim.has_left)
-                cairo_rectangle(cr, dim.left.x, dim.left.y,
-                                dim.left.w, dim.left.h);
-            if (dim.has_right)
-                cairo_rectangle(cr, dim.right.x, dim.right.y,
-                                dim.right.w, dim.right.h);
-            cairo_clip(cr);
-            cairo_set_source_rgb(cr, kWaveformDimmed.r,
-                                 kWaveformDimmed.g, kWaveformDimmed.b);
-            cairo_mask_surface(cr, wf_cache.surface, area.x, area.y);
-            cairo_restore(cr);
-        }
     }
 }
 
@@ -336,23 +323,27 @@ GuiPaintHandler::region_columns(const DisplayedViewportBasis& basis) const {
     return c;
 }
 
-// -- GuiPaintHandler::paint_region_wash ----------------------------------
+// -- GuiPaintHandler::paint_region_ground --------------------------------
 
-// Paints the region-select span as a flat translucent brightening wash over
-// the full waveform height. Called from on_redraw right after
-// paint_waveform_plate, so it composites over the just-blitted plate AND the
-// out-of-trim dim (a region inside a dimmed area lifts the dimmed pixels —
-// accepted, it stays visible). Session-only, nothing persisted; not part of
-// the plate/flag caches — a direct per-frame overlay like the phase reset
-// overlay and the out-of-trim dim, so no cache is involved. AA off on the edges
-// like the other overlay rects.
-void GuiPaintHandler::paint_region_wash(cairo_t* cr, const GuiRect& area) {
+// THE REGION HIGHLIGHT IS A GROUND RECOLOR (the Ableton model, architect
+// 2026-07-26): the span's CANVAS becomes the opaque kRegionCanvas over the full
+// content height. Called from on_redraw after render_canvas and BEFORE
+// paint_waveform_plate, so the ARGB32 plate composites over the recolored
+// ground and its antialiased fringes blend against it — the ink over a
+// highlighted span is bit-identical to ink over plain canvas wherever coverage
+// is full, and only the ground carries the highlight. The retired form was a
+// translucent blue wash painted OVER the plate, which lifted the ink itself —
+// exactly what the recolor model rejects.
+// Session-only, nothing persisted; not part of the plate/flag caches — a direct
+// per-frame pass, so no cache is involved. AA off, integer edges. The fill is
+// clipped to the CONTENT band so it cannot cover the area's kLine border rows.
+void GuiPaintHandler::paint_region_ground(cairo_t* cr, const GuiRect& area) {
     if (!app.region.active) return;
     if (area.w <= 0 || area.h <= 0) return;
 
     // Displayed-viewport recipe: the same fp_* fingerprint paint_playheads and
-    // paint_phase_reset_overlay use, so the wash stays locked to the blitted
-    // plate while the worker rebuilds against a viewport change.
+    // the overlay band use, so the ground stays locked to the blitted plate
+    // while the worker rebuilds against a viewport change.
     const DisplayedViewportBasis basis = displayed_viewport_basis();
     if (basis.spp <= 0.0) return;
 
@@ -369,17 +360,18 @@ void GuiPaintHandler::paint_region_wash(cairo_t* cr, const GuiRect& area) {
     x1 = std::min(x1, static_cast<double>(area.x + area.w));
     if (x1 <= x0) return;
 
+    const GuiRect content = waveform_content_rect(area);
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_source_rgba(cr, kSelectedLight.r, kSelectedLight.g,
-                          kSelectedLight.b, kRegionWashAlpha);
-    cairo_rectangle(cr, x0, static_cast<double>(area.y),
-                    x1 - x0, static_cast<double>(area.h));
+    cairo_set_source_rgb(cr, kRegionCanvas.r, kRegionCanvas.g,
+                         kRegionCanvas.b);
+    cairo_rectangle(cr, x0, static_cast<double>(content.y),
+                    x1 - x0, static_cast<double>(content.h));
     cairo_fill(cr);
     cairo_restore(cr);
 }
 
-// -- GuiPaintHandler::paint_phase_reset_overlay ---------------------------
+// -- GuiPaintHandler::phase_reset_overlay_band / its two paint passes -----
 
 // Paint-only overlay width: two synthesis hops of target/output time, the
 // scale of the reset's local effect — the stretch of output immediately
@@ -390,13 +382,16 @@ constexpr double kPhaseResetOverlayHops = 2.0;
 const int64_t kPhaseResetOverlaySamples = static_cast<int64_t>(
     std::nearbyint(kPhaseResetOverlayHops * static_cast<double>(kRs)));
 
-// Paints a transient translucent rectangle ahead of the focused phase reset
-// marker: a fixed-width forward span in target time starting at the marker's
-// stem column, showing the stretch of output immediately following the reset
-// over which the re-seeded phase takes hold. Paint-only: no persisted state,
-// nothing on disk, no settings key, no undo interaction; render_background
-// refills the exposed region every frame, so the fill composites over fresh
-// pixels and never accumulates.
+// Resolves the band shown ahead of the focused phase reset marker: a
+// fixed-width forward span in target time starting at the marker's stem
+// column, showing the stretch of output immediately following the reset over
+// which the re-seeded phase takes hold. Paint-only: no persisted state,
+// nothing on disk, no settings key, no undo interaction.
+//
+// THE ONE GEOMETRY OWNER for both of the band's passes — the GROUND recolor
+// under the plate and the RING over it — so the ring can never land off the
+// ground it outlines. Every visibility gate lives here too, so the two passes
+// appear and disappear together by construction.
 //
 // Painted in TARGET view, never source view, and this is a
 // phase-reset-only surface with no warp sibling (naming-symmetry asymmetry,
@@ -405,13 +400,14 @@ const int64_t kPhaseResetOverlaySamples = static_cast<int64_t>(
 // map-dependent, varying width — misrepresenting a constant span — so the
 // overlay is not drawn there. The reset's local take-hold stretch is a
 // phase-reset-only concept, so there is nothing on the warp axis to mirror.
-void GuiPaintHandler::paint_phase_reset_overlay(
-    cairo_t* cr, const GuiRect& area) {
+GuiPaintHandler::PhaseResetOverlayBand
+GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
+    PhaseResetOverlayBand out;
     // Visibility: always-on for the focused enabled marker while the global
     // W/P mode is on P, in target view; never source view. Everything
     // downstream is domain-agnostic.
-    if (app.active_markers_view != 'P') return;
-    if (area.w <= 0 || area.h <= 0) return;
+    if (app.active_markers_view != 'P') return out;
+    if (area.w <= 0 || area.h <= 0) return out;
     // R3 suppression (architect 2026-07-23): the overlay depicts ONE focused
     // reset's lead-in, a single-focus authoring aid. Suppress it when the state
     // is about a SPAN rather than a single focus — a MULTI-select (2+ members) or
@@ -419,23 +415,23 @@ void GuiPaintHandler::paint_phase_reset_overlay(
     // selection with no region shows it as before; the states that toggle these
     // conditions — the multi-select builders and every region former/clear — all
     // damage the waveform, so the overlay's appear/disappear rides their damage.)
-    if (app.selected_markers.size() >= 2) return;
-    if (app.region.active) return;
+    if (app.selected_markers.size() >= 2) return out;
+    if (app.region.active) return out;
 
     // Paint sample: the exact expression render.cpp's file-local
     // frame_to_paint_sample uses, so marker and overlay can never disagree.
     double ms;
     {
-        if (app.active_audio_view != 'T') return;
+        if (app.active_audio_view != 'T') return out;
 
         const auto& markers = app.phaseresetmarkers.markers();
         const int idx = app.last_selected_marker;
-        if (idx < 0 || idx >= static_cast<int>(markers.size())) return;
+        if (idx < 0 || idx >= static_cast<int>(markers.size())) return out;
         const auto& marker = markers[idx];
         // Skip a disabled focused reset — a disabled phase reset paints no
         // overlay, reading its `disabled` bool directly (phase resets carry no
         // label cascade).
-        if (marker.disabled) return;
+        if (marker.disabled) return out;
 
         // Map selection: the DISPLAYED paint basis (displayed_or_live_target_map
         // — the SAME map the flags, stems, drag overlay and riding playhead read,
@@ -475,7 +471,7 @@ void GuiPaintHandler::paint_phase_reset_overlay(
     // rebuilds against a viewport change.
     const DisplayedViewportBasis basis = displayed_viewport_basis();
     const double spp = basis.spp;
-    if (spp <= 0.0) return;
+    if (spp <= 0.0) return out;
     const double vp_start = basis.vp_start;
 
     // Columns: left_col uses the same std::nearbyint-to-int placement the stem
@@ -493,36 +489,82 @@ void GuiPaintHandler::paint_phase_reset_overlay(
 
     // Too-zoomed-out: if the fixed forward extent rounds below one pixel,
     // paint nothing at all — no sliver, no clamped minimum.
-    if (width_px < 1) return;
+    if (width_px < 1) return out;
 
     const int right_col = left_col + width_px;
 
-    // Rectangle spans columns [left_col, right_col): the stem's own column
-    // (left_col) sits under the rectangle, and the stems paint after the
-    // overlay, so the stem stays crisp on top of the left seam. Vertical
-    // extent is the marker stem's exact span — the waveform top down to the
-    // waveform bottom.
-    const double y_top = static_cast<double>(area.y);
-    const double y_bottom = static_cast<double>(area.y + area.h);
+    // The band spans columns [left_col, right_col): the stem's own column
+    // (left_col) sits inside it, and the stems paint after both of the band's
+    // passes, so the stem stays crisp on top of the left seam.
     double x0 = static_cast<double>(area.x + left_col);
     double x1 = static_cast<double>(area.x + right_col);
 
-    // Horizontal clip to [area.x, area.x + area.w); draw whenever the
+    // Horizontal clip to [area.x, area.x + area.w); the band shows whenever the
     // intersection is non-empty even if the stem column is off-screen left
     // (the tail can be visible while the stem is not).
     x0 = std::max(x0, static_cast<double>(area.x));
     x1 = std::min(x1, static_cast<double>(area.x + area.w));
-    if (x1 <= x0) return;
+    if (x1 <= x0) return out;
 
-    // Flat translucent fill, integer pixel edges, no blur or plate masking,
-    // so it lightens background and waveform pixels alike (including
-    // already-dimmed out-of-trim pixels — that layering is intended).
+    out.valid = true;
+    out.x0    = x0;
+    out.x1    = x1;
+    return out;
+}
+
+// THE OVERLAY GROUND: the band's CANVAS becomes the opaque kOverlayCanvas, the
+// same recolor model the region highlight takes (architect 2026-07-26) — an
+// opaque ground under the ink, not a translucent wash over it. Painted after
+// paint_region_ground and BEFORE the plate blit, so where a region ground and
+// this one cover the same column the OVERLAY wins: it is the narrower, finer
+// authoring aid. (The R3 suppression above means a region and this band cannot
+// actually co-display today; painting second is the ruling either way.)
+// Integer pixel edges, AA off, clipped to the CONTENT band so it cannot cover
+// the area's kLine border rows.
+void GuiPaintHandler::paint_phase_reset_overlay_ground(
+    cairo_t* cr, const GuiRect& area) {
+    const PhaseResetOverlayBand band = phase_reset_overlay_band(area);
+    if (!band.valid) return;
+
+    const GuiRect content = waveform_content_rect(area);
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_source_rgba(cr, kOverlay.r,
-                          kOverlay.g, kOverlay.b,
-                          kOverlayAlpha);
-    cairo_rectangle(cr, x0, y_top, x1 - x0, y_bottom - y_top);
+    cairo_set_source_rgb(cr, kOverlayCanvas.r, kOverlayCanvas.g,
+                         kOverlayCanvas.b);
+    cairo_rectangle(cr, band.x0, static_cast<double>(content.y),
+                    band.x1 - band.x0, static_cast<double>(content.h));
+    cairo_fill(cr);
+    cairo_restore(cr);
+}
+
+// THE OVERLAY RING: the band's 1px opaque kOverlayOutline border, painted AFTER
+// the plate — it is a BOUNDARY LINE, like the playheads and the stems, so an
+// opaque line crossing waveform ink is correct and intended (the ground below
+// carries the fill role, and a translucent ring would read as neither).
+// Same band owner, so the ring lands exactly on the recolored ground's edges;
+// same CONTENT band, so the top and bottom runs sit inside the kLine border
+// rather than on them. A vertical side is drawn only where the band's own edge
+// is the true edge — both x0 and x1 come back already clipped to the area, so a
+// band running past a viewport edge draws its border there too; that is the
+// same flush-to-the-edge reading the trim bridge's clipped fill has, and the
+// band is an aid rather than a hit target, so no sentinel machinery is needed.
+void GuiPaintHandler::paint_phase_reset_overlay_ring(
+    cairo_t* cr, const GuiRect& area) {
+    const PhaseResetOverlayBand band = phase_reset_overlay_band(area);
+    if (!band.valid) return;
+
+    const GuiRect content = waveform_content_rect(area);
+    const double w = band.x1 - band.x0;
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    cairo_set_source_rgb(cr, kOverlayOutline.r, kOverlayOutline.g,
+                         kOverlayOutline.b);
+    const double y0 = static_cast<double>(content.y);
+    const double h  = static_cast<double>(content.h);
+    cairo_rectangle(cr, band.x0, y0, w, 1.0);            // top
+    cairo_rectangle(cr, band.x0, y0 + h - 1.0, w, 1.0);  // bottom
+    cairo_rectangle(cr, band.x0, y0, 1.0, h);            // left
+    cairo_rectangle(cr, band.x1 - 1.0, y0, 1.0, h);      // right
     cairo_fill(cr);
     cairo_restore(cr);
 }
@@ -530,9 +572,9 @@ void GuiPaintHandler::paint_phase_reset_overlay(
 // -- GuiPaintHandler::paint_trim -----------------------------------------
 
 // The LIVE trim pass (architect 2026-07-25 — trim z-order below the playhead):
-// every trim pixel — both b/e chips, the bridge wash, the strip-crossing stem
+// every trim pixel — both b/e chips, the bridge bar, the strip-crossing stem
 // segments, and the waveform stem segments — paints here per frame, in the old
-// trim-stem-cache slot (after paint_phase_reset_overlay, before
+// trim-stem-cache slot (after the phase-reset overlay's ring, before
 // paint_selected_stem and hence before every playhead element), so the playhead
 // triangle sits OVER a trim stem crossing the triangle lane while marker flags
 // stay above the playheads (the z-order flip untouched). "Markers over trim" is
@@ -605,8 +647,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     const GuiRect wave_rect{area.x, area.y, basis.area_w, area.h};
 
     // Waveform stem segments first (verbatim geometry: hard-aliased 1-px
-    // verticals, solid kTrimMarker straight over the ink),
-    // then the top-strip half (chips + bridge wash + strip stem segments, with
+    // verticals, solid kTrimStem straight over the ink),
+    // then the top-strip half (chips + bridge bar + strip stem segments, with
     // the side-aware offscreen sentinels and the effective-width clip inside
     // render_trim_flags). The two halves are geometrically disjoint and meet
     // at the waveform top edge, so their relative order is cosmetic.
@@ -638,20 +680,23 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // moves the marker's store frame (it rewrites a predecessor's tempo, sliding the
 // image under the per-step re-warped displayed map), so the store frame is
 // correct there with no override.
-// Painted BLUE (kSelected — it marks the selected marker, like its flag) through
-// render_playhead's line-only form (draw_triangle=false) — one solid blue line
+// Painted in kSelectedOutline (architect 2026-07-26) — the selected flag's own
+// RING color rather than its fill, so the stem reads as that ring drawn down the
+// column instead of as a second solid blue beside the flag — through
+// render_playhead's line-only form (draw_triangle=false): one solid line
 // straight over whatever it crosses, the waveform ink included (the former
 // ink-notch two-tone is retired). It lives OUT of the stem cache as a per-frame
 // one-column overlay
-// over the plate; a disabled marker is not dimmed here (the flag conveys it). The
+// over the plate; a disabled marker's stem is not recolored here (the flag's
+// opaque disabled pair conveys it). The
 // displayed paint basis (fp_vp_start + disp_spp + the displayed map) matches
 // paint_playheads / the cached flags, so the stem lands on the flag's own column;
 // the drag override reads the frozen displayed map its proposal was computed
-// against. A focused GROUP (2+ selected) paints no stem — its blue focus cue is
-// the extent region's wash (kSelectedLight), the stem's "spread" form.
+// against. A focused GROUP (2+ selected) paints no stem — its focus cue is the
+// extent region's recolored ground (kRegionCanvas), the stem's "spread" form.
 void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
-    // A single selected marker, else no stem (a group's cue is the blue wash).
+    // A single selected marker, else no stem (a group's cue is its ground).
     if (app.selected_markers.size() != 1) return;
     const int idx = *app.selected_markers.begin();
     if (idx < 0) return;
@@ -705,7 +750,7 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
     // render_playhead draws only the 1px line here (draw_triangle=false), which
     // is exactly the stem; it column-culls px_x itself, so a stem off the visible
     // strip paints nothing.
-    render_playhead(cr, area, px_x, kSelected,
+    render_playhead(cr, area, px_x, kSelectedOutline,
                     /*draw_triangle=*/false);
 }
 
@@ -717,8 +762,8 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
 // shows nothing and it vanishes the moment the drag ends (release/Esc/button
 // loss clear strip_drag before the next paint). The anchor column is recomputed
 // each frame from the persisted anchor_sample against the DISPLAYED viewport
-// (wf_cache.fp_*), the same basis paint_region_wash and paint_playheads use, so
-// the stem stays locked to the blitted plate while the worker rebuilds. The
+// (wf_cache.fp_*), the same basis paint_region_ground and paint_playheads use,
+// so the stem stays locked to the blitted plate while the worker rebuilds. The
 // anchor lives in the active display domain (viewport_start + col*spp), so no
 // warp map is walked. render_strip_anchor_stem clamps the column to the visible
 // edges — an edge-pinned anchor draws the clamp itself.
@@ -766,7 +811,7 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // the split half-triangles below. The scanner issues from and tracks the
     // audition normally, so region playback shows the moving scanner line
     // (launched from the region's left bound) alongside the two static split
-    // half-triangles and the wash.
+    // half-triangles and the recolored ground.
     if (app.playhead_scanner_active) {
         const double scan_px = scanner_pixel_x(app, wf_cache.fp_vp_start,
                                                disp_spp);
@@ -778,47 +823,46 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // neither its 1px vertical line nor its single triangle paints — and the
     // split playhead takes its place: two half-triangles, one on each region
     // bound. The bound columns use the SAME displayed-viewport recipe (disp_spp
-    // + wf_cache.fp_vp_start) as paint_region_wash, so the halves' shared edges
-    // land exactly on the wash's left/right edges. Region endpoints are
-    // active-domain frames already in the displayed domain, so their column is
-    // the plain viewport transform (no warp map walked, matching the wash). The
-    // scanner is untouched — only the cursor splits.
+    // + wf_cache.fp_vp_start) as paint_region_ground, so the halves' shared edges
+    // land exactly on the recolored ground's left/right edges. Region endpoints
+    // are active-domain frames already in the displayed domain, so their column
+    // is the plain viewport transform (no warp map walked, matching the ground).
+    // The scanner is untouched — only the cursor splits.
     //
-    // THIS BRANCH IS THE WASH<->CURSOR EXCLUSIVITY OWNER (the highlight IS the
-    // playhead stretched out — the split halves are its two ends, so a wash and
-    // a cursor must never co-display; architect 2026-07-23). The split halves are
+    // THIS BRANCH IS THE HIGHLIGHT<->CURSOR EXCLUSIVITY OWNER (the highlight IS
+    // the playhead stretched out — the split halves are its two ends, so a
+    // highlighted region and a cursor must never co-display; architect
+    // 2026-07-23). The split halves are
     // FULL-OPACITY Breeze blue (kSelected), part of the REGION's blue focus family
     // — the "spread-stem" read: they MARK the region bounds where the cursor's
     // split form sits. Under the option-a scheme the cursor is that SAME Breeze
     // blue (kPlayheadCursor == kSelected == 0x3DAEE9), so the halves and the
-    // cursor they stand in for are literally one color — a blue wash between two
-    // full-blue bound marks. The exclusivity is structural, not per-former:
-    // paint_region_wash gates on the same app.region.active this if/else branches
+    // cursor they stand in for are literally one color — a recolored ground
+    // between two full-blue bound marks. The exclusivity is structural, not
+    // per-former: paint_region_ground gates on the same app.region.active this
+    // if/else branches
     // on, and the CURSOR forms emit only here — the region branch owns the split,
     // the empty-selection else owns the cursor (a NON-EMPTY
     // selection moves the cursor COINCIDENT with the marker — hidden behind it, its
-    // line coinciding with the blue stem; the stem/wash are the focus visuals — the
-    // stem for a singleton, the extent-region wash for a group).
+    // line coinciding with the focus stem; the stem/ground are the focus visuals —
+    // the stem for a singleton, the extent-region ground for a group).
     // render_split_playhead has no other caller and the cursor is emitted
     // only in the else below (paint_selected_stem also calls render_playhead, but
-    // as a marker overlay, never as the cursor), so within any one frame the wash
-    // and the cursor are mutually exclusive by state.
+    // as a marker overlay, never as the cursor), so within any one frame the
+    // region ground and the cursor are mutually exclusive by state.
     // Across frames it holds because every
     // app.region write is paired with waveform-area damage at its site (the
     // formers, the clears, clear_region_highlight, the Esc pre_region restore,
     // the tick repair, and the undo/redo restore's land-clear / group-extent
     // set), so the frame that first paints one has already erased
-    // the other — no stale co-display window exists. What CAN legitimately
-    // co-display with the cursor is the out-of-trim DIM contrast (a resting
-    // trim window with no active region — e.g. a lone bound, or after any
-    // region clear): that is trim's own display, not the region highlight.
+    // the other — no stale co-display window exists.
     if (app.region.active) {
         if (disp_spp > 0.0) {
             // Same displayed basis and region_columns owner as
-            // paint_region_wash, so the split halves' shared edges land exactly
-            // on the wash's left/right edges. Painted full-opacity kSelected (blue)
-            // — the region's blue focus family (the spread-stem read); the same
-            // Breeze blue the cursor itself carries under the option-a scheme.
+            // paint_region_ground, so the split halves' shared edges land exactly
+            // on the recolored ground's left/right edges. Painted full-opacity
+            // kSelected (blue) — the region's blue focus family (the spread-stem
+            // read); the same Breeze blue the cursor itself carries.
             const RegionColumns cols = region_columns(basis);
             render_split_playhead(cr, area, cols.lo_col, cols.hi_col,
                                   kSelected);
@@ -837,9 +881,9 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // playhead triangle sits BEHIND the marker flag (the Z-ORDER FLIP paints
     // playheads under the flag blit), so the cursor playhead is effectively FULLY
     // HIDDEN behind the marker. Not painting it here is the IMPLEMENTATION of that
-    // hiding, not a semantic absence: the blue stem IS where the cursor line would
-    // be (a singleton), and the flag occludes the triangle. (For a group the
-    // hidden cursor's spread form is the blue extent-region wash + split halves.)
+    // hiding, not a semantic absence: the focus stem IS where the cursor line
+    // would be (a singleton), and the flag occludes the triangle. (For a group the
+    // hidden cursor's spread form is the extent-region ground + split halves.)
     // The scanner above is unaffected — it launches from this resting cursor and
     // paints its own color.
 }
@@ -1087,34 +1131,44 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // flag strips as blit-then-overlay paths. Trim is a live pass
         // (paint_trim) on the free item-basis owners.
         //
-        // Final paint order (top to bottom of the stack): waveform plate ->
-        // region wash -> phase-reset overlay -> LIVE TRIM (chips + bridge wash
-        // + strip and waveform stem segments, one pass) -> selected stem ->
-        // playheads (scanner + split/cursor) -> flag blit -> marker-text lane /
-        // zoom ring -> strip-drag anchor -> bottom strip. Two structural z-order
-        // rulings live in this sequence: the Z-ORDER FLIP (architect 2026-07-23)
-        // — the cursor playhead (blue line+triangle) and the region SPLIT
-        // half-triangles pass UNDER marker flags, so on a multimarker select
-        // the extent region's half-triangles rest hidden behind the
-        // earliest/latest members' flags (identical 17-wide triangle geometry
-        // at the same column); the grey selected-marker focus triangles are GONE
-        // (the blue-focus pivot, architect 2026-07-25 — a singleton's focus is
-        // its blue STEM, a group's is the extent-region wash) — and TRIM BELOW
-        // THE PLAYHEAD (architect 2026-07-25) — every trim pixel paints before
-        // every playhead element, so the playhead triangle sits over a trim stem
-        // crossing the triangle lane:
-        // trim < selected stem < playheads < marker flags.
+        // Final paint order (bottom to top of the stack): canvas ground + its
+        // kLine border (painted above, unconditionally) -> region ground ->
+        // phase-reset overlay ground -> waveform plate -> overlay ring -> LIVE
+        // TRIM (chips + bridge bar + strip and waveform stem segments, one pass)
+        // -> selected stem -> playheads (scanner + split/cursor) -> flag blit ->
+        // marker-text lane / zoom ring -> strip-drag anchor -> bottom strip.
+        // Three structural rulings live in this sequence:
+        //   THE RECOLOR MODEL (architect 2026-07-26) — a highlight changes the
+        //     GROUND, so both ground recolors paint BEFORE the plate and the ink
+        //     composites over them; only the overlay's 1px RING is a boundary
+        //     line and paints after, crossing the ink like the stems do.
+        //   THE Z-ORDER FLIP (architect 2026-07-23) — the cursor playhead (blue
+        //     line+triangle) and the region SPLIT half-triangles pass UNDER
+        //     marker flags, so on a multimarker select the extent region's
+        //     half-triangles rest hidden behind the earliest/latest members'
+        //     flags (identical 17-wide triangle geometry at the same column);
+        //     the grey selected-marker focus triangles are GONE (the blue-focus
+        //     pivot, architect 2026-07-25 — a singleton's focus is its STEM, a
+        //     group's is the extent-region ground).
+        //   TRIM BELOW THE PLAYHEAD (architect 2026-07-25) — every trim pixel
+        //     paints before every playhead element, so the playhead triangle
+        //     sits over a trim stem crossing the triangle lane:
+        //     trim < selected stem < playheads < marker flags.
 
         if (rects_intersect(exposed, area)) {
+            // THE GROUND RECOLORS, both under the plate. render_canvas already
+            // laid the kCanvas ground for the whole area above; these two
+            // repaint their spans of it opaquely, so the plate's ink and its
+            // antialiased fringes composite against the recolored ground. The
+            // overlay goes second and wins any shared column — the narrower,
+            // finer aid.
+            paint_region_ground(cr, area);
+            paint_phase_reset_overlay_ground(cr, area);
             paint_waveform_plate(cr, area);
-            // Region-select wash: over the plate and the out-of-trim dim,
-            // under the phase reset overlay, trim, and playheads.
-            paint_region_wash(cr, area);
-            // Over the plate and dim, under trim and the stems: the phase
-            // reset overlay lightens the span ahead of the focused phase
-            // reset, then the trim/stem verticals paint on top so the focused
-            // stem stays crisp.
-            paint_phase_reset_overlay(cr, area);
+            // The overlay band's boundary ring, over the plate and under trim
+            // and the stems, so the focused reset's own stem stays crisp on top
+            // of the left seam.
+            paint_phase_reset_overlay_ring(cr, area);
         }
 
         // LIVE TRIM PASS — the old trim-stem-cache slot, now covering ALL trim
@@ -1191,122 +1245,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // Force any pending Cairo ops out to the X server. The subsequent flush
     // in GuiPlatform::dispatch_event is then a cheap no-op.
     cairo_surface_flush(cairo_get_target(cr));
-}
-
-// -- Out-of-trim geometry (displayed trim + dim rects) -------------------
-
-GuiPaintHandler::DisplayedTrim
-GuiPaintHandler::compute_displayed_trim() const {
-    DisplayedTrim out;
-
-    // has-set bits come live from the active tab's trim.
-    out.has_begin      = app.trim.has_begin;
-    out.has_end        = app.trim.has_end;
-
-    // Positions read LIVE from app state: trim
-    // no longer affects waveform pixels, so they must follow the cursor every
-    // motion tick rather than lagging a worker-completion swap. Target-view
-    // positions map through the PLATE's warp_frame_map
-    // (wf_cache.fp_warp_frame_map) — the dim is a plate composite (the sole
-    // consumer, compute_out_of_trim_rects, masks through the plate's alpha on
-    // the plate's viewport basis) — which trim does not
-    // perturb, so it is stable across a trim drag. The live trim pass
-    // (paint_trim) maps its own frames through the ITEM-basis owners instead;
-    // the two maps agree at every committing paint.
-    //
-    // Positions are the AUTHORED frames, per side, unclamped and unordered
-    // (NOT compute_trim_samples, whose per-side [0, total] clamp serves
-    // playback ranges): the dim edges rest at the authored spot — past
-    // EOF included.
-    // Bounds may be inverted mid-gesture (crossed cannot rest; this runs
-    // per frame); the helper is position-only and needs no order (the
-    // dim-rect consumer applies its own inverted-window rule).
-    std::pair<long long, long long> t{0, audio.total_frames()};
-    if (app.trim.has_begin) {
-        t.first = app.trim.begin_frame;
-    }
-    if (app.trim.has_end) {
-        t.second = app.trim.end_frame;
-    }
-    if (wf_cache.fp_target && !wf_cache.fp_warp_frame_map.empty()) {
-        t.first = static_cast<long long>(std::nearbyint(
-            map_source_to_target(
-                static_cast<double>(t.first < 0 ? 0 : t.first),
-                wf_cache.fp_warp_frame_map)));
-        t.second = static_cast<long long>(std::nearbyint(
-            map_source_to_target(
-                static_cast<double>(t.second < 0 ? 0 : t.second),
-                wf_cache.fp_warp_frame_map)));
-    }
-    out.begin = t.first;
-    out.end   = t.second;
-    return out;
-}
-
-GuiPaintHandler::OutOfTrimRects
-GuiPaintHandler::compute_out_of_trim_rects(const GuiRect& area) const {
-    OutOfTrimRects out;
-    if (area.w <= 0) return out;
-
-    // Frames in the same paint domain the trim stems use. begin/end are
-    // already mapped through the displayed warp_frame_map in target view.
-    const DisplayedTrim dtrim = compute_displayed_trim();
-    if (!dtrim.has_begin && !dtrim.has_end) return out;
-
-    // Inverted trim does not dim: with both bounds set and begin strictly
-    // later than end (compared here in the displayed domain the rects are
-    // computed in) there is no coherent window to shade, so no dim rects at
-    // all — no negative-width shading, no misleading window. Inverted is a
-    // MID-GESTURE-only state now (crossed/equal cannot rest — the commit
-    // auto-clear destroys the pair), so this paints the free crossing
-    // during a drag; the stems and chips still paint at their authored
-    // positions. Equal bounds are NOT inverted: the two rects meet at the
-    // shared stem naturally.
-    if (dtrim.has_begin && dtrim.has_end && dtrim.begin > dtrim.end) {
-        return out;
-    }
-
-    // PLATE basis (displayed_viewport_basis — the same owner the region wash and
-    // the playheads use), NOT the live viewport: the dim is a PLATE COMPOSITE
-    // (paint_waveform_plate masks it through the just-blitted plate's alpha), so
-    // it must register with the plate's viewport, not the live one. During an
-    // async viewport window (follow_scroll during playback, resize — the
-    // undriven changes the worker still serves) the live viewport already holds
-    // the not-yet-blitted span, so a
-    // live basis snapped the dim edge off both the plate and the trim stems until
-    // publish. Trim-drag live tracking is preserved: the gesture holds the
-    // viewport fixed (so the plate basis equals live), and the trim FRAMES stay
-    // live through compute_displayed_trim / app.trim.
-    const DisplayedViewportBasis basis = displayed_viewport_basis();
-    const double spp = basis.spp;
-    if (spp <= 0.0) return out;
-    const double vp_start = basis.vp_start;
-    const int x_lo = area.x;
-    const int x_hi = area.x + area.w;
-
-    auto frame_to_x = [&](int64_t frame) -> int {
-        double x = area.x +
-            std::nearbyint((static_cast<double>(frame) - vp_start) / spp);
-        if (x < x_lo) x = x_lo;
-        if (x > x_hi) x = x_hi;
-        return static_cast<int>(x);
-    };
-
-    if (dtrim.has_begin) {
-        const int x_begin = frame_to_x(dtrim.begin);
-        if (x_begin > x_lo) {
-            out.has_left = true;
-            out.left = GuiRect{x_lo, area.y, x_begin - x_lo, area.h};
-        }
-    }
-    if (dtrim.has_end) {
-        const int x_end = frame_to_x(dtrim.end);
-        if (x_end < x_hi) {
-            out.has_right = true;
-            out.right = GuiRect{x_end, area.y, x_hi - x_end, area.h};
-        }
-    }
-    return out;
 }
 
 // -- GuiPaintHandler::on_resize ------------------------------------------

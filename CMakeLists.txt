@@ -138,6 +138,10 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/waveform_worker.cpp
         src/gui/platform_wayland.cpp
         src/gui/audio.cpp
+        # GUI-ONLY: colors exist only here, so this is deliberately not in any
+        # of the four shared per-directory source lists — warptempo_cli must
+        # never carry it.
+        src/gui/color_config.cpp
         src/gui/render.cpp
         src/gui/warpmarkers.cpp
         src/gui/text_editor.cpp

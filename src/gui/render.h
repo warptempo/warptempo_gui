@@ -56,151 +56,147 @@ struct TrimRange {
     int64_t end;
 };
 
-// Palette: bases shared across the renderer module and
-// main.cpp. The scheme is Plasma 6 Breeze Dark roles carrying Ableton's
-// value polarity (architect 2026-07-26, the breeze option-a trial): the
-// waveform area is a MID ground with DARK ink, while the surrounding chrome
-// sits DARKER THAN THAT CANVAS at the desktop's panel color. Saturated accents
-// are shipped Breeze roles (see tmp/breeze_dark_reference.md).
+// -- Palette ---------------------------------------------------------------
+//
+// The GUI's colors, shared across the renderer module, the paint handler, and
+// main.cpp. The scheme is Plasma 6 Breeze Dark roles carrying Ableton's value
+// polarity (architect 2026-07-26, the breeze option-a trial): the waveform area
+// is a MID ground with DARK ink, while the surrounding chrome sits DARKER THAN
+// THAT CANVAS at the desktop's panel color. Saturated accents are shipped
+// Breeze roles (see tmp/breeze_dark_reference.md).
+//
+// MUTABLE, WRITTEN ONCE. Each entry is a plain global holding its compiled
+// default. load_color_config() (color_config.h) overwrites the whole set once
+// at startup in main(), before the first paint and before anything derives a
+// value from the palette; nothing writes them afterwards. So the waveform
+// worker thread's kWaveform read needs no synchronization, no surface needs
+// invalidating, and a retune is a restart. The names stay k-prefixed because
+// every use site treats them as constants.
+//
+// EVERY ENTRY IS OPAQUE — the palette carries no compositing alpha at all. A
+// highlight recolors the GROUND UNDER the ink (kRegionCanvas, kOverlayCanvas)
+// rather than washing over it, so ink over a highlighted span is the same ink
+// and only the ground reads the highlight; a disabled item takes its own
+// opaque pair (kMarkerDisabled) rather than fading.
 //
 // THE GROUND SPLIT: two grounds, by surface. kBackground is the CHROME —
 // the top-strip lanes, the bottom strip, editor boxes, every erased pixel
 // OUTSIDE the waveform area (Breeze Window). kCanvas is the WAVEFORM AREA's
 // ground, deliberately lighter than the chrome so the work surface lifts out
 // of the panel around it. Wherever waveform ink paints, the ground is kCanvas.
-inline constexpr GuiColor kBackground       = hex(0x202326);  // Breeze Window
-inline constexpr GuiColor kCanvas           = hex(0x31363B);
+//
+// The declaration order below is the config file's canonical key order; the
+// key->global table in color_config.cpp is that order's one authoritative
+// statement, and every derived default records its derivation formula here so
+// the architect can re-derive it after retuning a base.
+inline GuiColor kBackground       = hex(0x202326);  // Breeze Window
+inline GuiColor kCanvas           = hex(0x31363B);
 // The ink is DARKER than its ground — the waveform is a dark cut into the
 // canvas, not a bright trace on black (Breeze View, the deepest ground).
-inline constexpr GuiColor kWaveform         = hex(0x141618);
+inline GuiColor kWaveform         = hex(0x141618);
 
-// Out-of-trim waveform sample color. Applied by on_redraw as a MASKED OVER
-// pass over the out-of-trim sample pixels of the blitted plate — NOT baked
-// into the plate, which is trim-agnostic. The pass is cairo_mask_surface with
-// the PLATE ALPHA as the mask under the default OVER operator, so only painted
-// sample pixels are recolored (gaps stay canvas) at the exact tuned RGB, no
-// blend. The mask must be the PLATE's alpha, not the window's — post-blit the
-// window is opaque, so keying on it would fill the whole rect (the operator
-// choice is argued at the pass itself, paint_handler.cpp). This
-// is a standalone tunable color, NOT a global dim factor — the global
-// out-of-trim dim was retired and stays retired; nothing but the sample
-// pixels dim. Under the inverted polarity the dim LIFTS the dark ink toward
-// kCanvas rather than darkening a bright ink — the direction flipped with the
-// scheme, the "faded but clearly a waveform" intent did not. Tune by eye/ear
-// in the car loop.
-inline constexpr GuiColor kWaveformDimmed   = hex(0x232629);
+inline GuiColor kText             = hex(0xFCFCFC);  // Breeze paper white
+// Disabled text: mix(kText, kBackground, 0.65) — Breeze's own ContrastFade
+// disabled math at amount 0.65, the same fade the disabled marker pair takes.
+// Paints the marker-text-lane run of a disabled marker, the glyph half of the
+// opaque disabled cue whose shape half is kMarkerDisabled.
+inline GuiColor kTextDisabled     = hex(0x6D6F71);
 
-// Shared overlay wash, used by BOTH the phase reset overlay (waveform /
-// target view) and the trim pair-drag chip-row band (top strip). A flat
-// translucent fill composited at a small alpha so it lifts whatever it
-// covers (canvas, waveform, and already-dimmed out-of-trim pixels alike).
-// Under the inverted polarity the out-of-trim dim LIFTS too (kWaveformDimmed
-// 0x232629 is lighter than the 0x141618 ink), so the two are no longer
-// opposed in direction: what distinguishes them is that the dim is
-// PLATE-MASKED to sample pixels while this wash is a FLAT FILL. The phase reset
-// overlay is a rectangle spanning forward in target time from the focused
-// phase reset marker — the stretch of output immediately following the reset
-// over which the re-seeded phase takes hold before normal propagation
-// resumes. GuiColor carries no alpha, so the alpha is the separate constexpr
-// double below.
-//
-// Flat fill, not a plate-masked recolor: a recolor was tried and rejected
-// because it goes invisible on the silent stretches where phase resets often
-// sit, whereas a flat fill keeps the span legible everywhere. Pale azure
-// rather than white: both grounds it covers are blue-cast (the waveform's
-// kCanvas 0x31363B and the strip's kBackground 0x202326), and white's neutral
-// lightening pulls the covered pixels toward gray, which reads greenish by
-// contrast against the surrounding blue-cast dark; a color in the kSelected
-// hue family preserves that cast
-// instead of neutralizing it. A tinted source lifts less per alpha unit than
-// white (the per-channel add is alpha times source-minus-dest). Both values
-// tuned by eye on the panel.
-inline constexpr GuiColor kOverlay      = hex(0xB8D4F0);
-inline constexpr double    kOverlayAlpha = 0.05;
+// THE ONE STRUCTURAL LINE COLOR: mix(kBackground, kText, 0.25), the Breeze
+// frame/separator derivation. Every inert structural rule paints in it — the
+// zoom-strip row ring (render_strip_row_ring) and the waveform area's 1px top
+// and bottom border (render_canvas). It is not an accent and never marks state.
+inline GuiColor kLine             = hex(0x57595B);
 
-// The pair-drag band's ring strength — the ring paints in kOverlay at this
-// alpha (the band's own hue, stronger than the kOverlayAlpha wash), the
-// outline-palette relationship (a brighter sibling of the fill) expressed
-// in alpha; the tuning knob.
-inline constexpr double    kOverlayOutlineAlpha = 0.30;
+// The strip-drag anchor stem: a transient pivot affordance shown only mid-drag,
+// so it reads as a muted structural guide rather than competing with the crisp
+// marker/text ink — which is why its default is the kLine default. It stays its
+// own key so it can be pulled off the line color independently. Dimmed by hue,
+// not alpha; it paints straight over any waveform samples it crosses (no notch
+// — see render_strip_anchor_stem).
+inline GuiColor kStripAnchorStem  = hex(0x57595B);
 
-// Region-select wash — the alpha brightening painted over the region span,
-// Ableton-style. Both this and the out-of-trim dim LIFT under the inverted
-// polarity (kWaveformDimmed 0x232629 is lighter than the 0x141618 ink), so
-// they differ not in direction but in reach: the dim is PLATE-MASKED to sample
-// pixels, this wash is a FLAT FILL
-// over the full waveform height, composited AFTER the plate and
-// the out-of-trim dim, so a region inside a dimmed area lifts the dimmed pixels
-// — accepted, it stays visible. Painted in kSelectedLight (the selected-marker
-// blue lightened toward white) at this alpha, so a live region reads as a blue
-// brightening in the FOCUS color family: a blue stem (kSelected) marks one
-// selected marker, this blue wash marks a group — the extent region is the
-// singleton stem's "spread" form (architect 2026-07-25, replacing the earlier
-// playhead-green wash). The split half-triangles at the bounds are full-opacity
-// kSelected (blue) too — the same blue focus family as the wash and stem (the
-// veto conversion), marking the region bounds where the hidden cursor's split
-// form sits. Architect-tunable on the labwc pass; start subtle.
-inline constexpr double    kRegionWashAlpha = 0.10;
-
-inline constexpr GuiColor kMarker           = hex(0x9B59B6);  // Breeze visited purple
-inline constexpr GuiColor kSelected         = hex(0x3DAEE9);  // Breeze blue
-// kSelected (Breeze blue) blended ~55% toward white, per channel
-// c' = round(c + 0.55*(255-c)): 0x3D->0xA8, 0xAE->0xDB, 0xE9->0xF5. A lighter
-// tint of the selected-marker blue, used for the region-select wash
-// (kRegionWashAlpha) so a live region reads as a translucent brightening in the
-// same blue family as the singleton's focus stem (kSelected) — one focus color
-// family: a blue stem for one selected marker, a blue wash for many (the extent
-// region is the stem's "spread" form). This is the SAME per-channel blend that
-// produced the retired kPlayheadCursorLight from kPlayheadCursor, re-applied to
-// the blue base (architect 2026-07-25, the blue-focus pivot).
-inline constexpr GuiColor kSelectedLight    = hex(0xA8DBF5);
+// The resting cursor is Breeze blue — the same value as kSelected, the focus
+// family's one color (the green cursor is retired with the option-a scheme),
+// kept as its own key so the cursor can be tuned off the selection blue.
+inline GuiColor kPlayheadCursor   = hex(0x3DAEE9);
 // The moving scanner reads WHITE against the mid canvas (the Ableton play-head
 // cue; also Breeze's text/icon foreground, so it is the scheme's brightest ink).
-inline constexpr GuiColor kPlayheadScanner  = hex(0xFCFCFC);
-// The resting cursor is Breeze blue — the same accent as kSelected, the focus
-// family's one color (the green cursor is retired with the option-a scheme).
-inline constexpr GuiColor kPlayheadCursor   = hex(0x3DAEE9);
-inline constexpr GuiColor kAccent           = hex(0xDA4453);  // Breeze negative red
-inline constexpr GuiColor kText             = hex(0xFCFCFC);  // Breeze paper white
+inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
 
-// The strip-drag anchor stem's grey — plainly dimmer than kText (#fcfcfc) and
-// clearly brighter than its kCanvas ground (#31363b). The anchor stem is a
-// transient pivot affordance shown only mid-drag, so it reads as a muted guide
-// rather than competing with the crisp white marker/text ink. Dimmed by hue, not
-// alpha; it paints straight over any waveform samples it crosses (no notch —
-// see render_strip_anchor_stem).
-inline constexpr GuiColor kStripAnchorStem  = hex(0x8C8C8C);
+inline GuiColor kSelected         = hex(0x3DAEE9);  // Breeze blue
+inline GuiColor kMarker           = hex(0x9B59B6);  // Breeze visited purple
+inline GuiColor kAccent           = hex(0xDA4453);  // Breeze negative red
 
-// The chip outline palette — a brighter sibling of each fill
-// (kMarker / kSelected / kAccent / kTrimMarker). Painted as the solid 1px
-// outline ring around a chip (see EditorTextBox::outline / kChipOutlinePx);
-// these are the tuning knobs. The purple and red siblings are their fills
-// blended ~35% toward white, per channel c' = round(c + 0.35*(255-c)):
-// 0x9B59B6 -> 0xBE93D0 and 0xDA4453 -> 0xE7858F. The selected sibling is not a
-// blend but a shipped role — 0x93CEE9, the KF6 framework's own built-in hover
-// blue (kcolorscheme.cpp's fallback decoration pair; see
-// tmp/breeze_dark_reference.md).
-inline constexpr GuiColor kMarkerOutline    = hex(0xBE93D0);
-inline constexpr GuiColor kSelectedOutline  = hex(0x93CEE9);
-inline constexpr GuiColor kAccentOutline    = hex(0xE7858F);
-inline constexpr GuiColor kTrimMarkerOutline = hex(0xFFA040);
+// The outline palette — a brighter sibling of each fill (kSelected / kMarker /
+// kAccent). Painted as the solid 1px outline ring around a chip or flag shape
+// (see EditorTextBox::outline / kChipOutlinePx); these are the tuning knobs.
+// The purple and red siblings are their fills blended ~35% toward white, per
+// channel c' = round(c + 0.35*(255-c)): 0x9B59B6 -> 0xBE93D0 and
+// 0xDA4453 -> 0xE7858F. The selected sibling is not a blend but a shipped role
+// — 0x93CEE9, the KF6 framework's own built-in hover blue (kcolorscheme.cpp's
+// fallback decoration pair; see tmp/breeze_dark_reference.md). kSelectedOutline
+// carries one extra duty: it is the SELECTED-MARKER STEM's color
+// (paint_selected_stem), so the focus stem reads as the selected flag's ring
+// drawn down the column rather than as a second solid blue.
+inline GuiColor kSelectedOutline  = hex(0x93CEE9);
+inline GuiColor kMarkerOutline    = hex(0xBE93D0);
+inline GuiColor kAccentOutline    = hex(0xE7858F);
 
-// Single dimming factor for a DISABLED marker, applied uniformly across its
-// whole unified textless shape — the rectangle fill, its single outside-only
-// outline ring, and the fused tip-down triangle (all drawn by paint_flag_shape).
-// This alpha is the disabled cue on the FLAG; selection controls the color class
-// (kSelected family) and disablement this alpha, and the two compose. (The stem
-// no longer takes this alpha: it became the selected-marker live overlay
-// paint_selected_stem — a positional cue that deliberately does not dim for a
-// disabled marker, the dimmed flag already conveying disablement.)
-// Architect-tunable.
-inline constexpr double kDisabledMarkerAlpha = 0.25;
+// THE DISABLED MARKER PAIR, shared by every marker family (warp flags, phase
+// reset flags). Opaque, not an alpha fade: mix(kMarker, kBackground, 0.65) and
+// mix(kMarkerOutline, kBackground, 0.65) — Breeze's ContrastFade disabled math
+// at amount 0.65 over the default pair. COLOR-CLASS PRIORITY: disabled WINS
+// over red and over the default class (a disabled marker paints this pair
+// whatever its red-flag status), and a disabled marker that is also SELECTED
+// paints this fill with the kSelectedOutline ring — both cues survive opaquely,
+// and the selected-flag paint order still marks membership.
+inline GuiColor kMarkerDisabled        = hex(0x4B3659);
+inline GuiColor kMarkerDisabledOutline = hex(0x584A62);
 
-// Trim boundary stem color (#F67400 orange, already a shipped Breeze accent).
-// Distinct from kMarker, kSelected, the blue cursor, and the white scanner. A set
-// trim begin/end always paints as a vertical stem in this one color —
-// trim is outside the selection system, so there is no selected variant.
-inline constexpr GuiColor kTrimMarker       = hex(0xF67400);  // Breeze orange
+// THE TWO GROUND RECOLORS (the Ableton model): a highlighted span's CANVAS
+// becomes one of these, painted after render_canvas and BEFORE the plate blit,
+// so the ARGB32 plate composites over the recolored ground and its antialiased
+// fringes blend correctly against it. The ink itself is untouched — over a
+// fully covered pixel the result is bit-identical to ink over plain kCanvas.
+//
+// kRegionCanvas is the region-select span's ground: the group's focus cue, the
+// singleton focus stem's "spread" form (a blue stem marks one selected marker,
+// this ground marks many), so it lifts kCanvas in the blue-cast direction the
+// focus family already carries. The split half-triangles at its bounds stay
+// full kSelected.
+//
+// kOverlayCanvas is the phase reset overlay band's ground — the stretch of
+// output immediately following the focused reset over which the re-seeded phase
+// takes hold. A smaller lift than the region's: it is the narrower, finer
+// authoring aid, and where the two grounds cover the same column the OVERLAY
+// wins (it is painted second). Both lifts are tuned by eye on the panel.
+//
+// kOverlayOutline is that band's 1px ring, painted OVER the plate — a boundary
+// line like the playheads and the stems, so an opaque line crossing ink is
+// correct and intended. The brighter outline sibling of kOverlayCanvas.
+inline GuiColor kRegionCanvas     = hex(0x3D464E);
+inline GuiColor kOverlayCanvas    = hex(0x383E44);
+inline GuiColor kOverlayOutline   = hex(0x596671);
+
+// THE TRIM FAMILY, in three roles. The BRIGHT pair is the BRIDGE BAR — the
+// chip-lane band spanning the gap between the two chips (render_trim_flags), the
+// pair-drag's grab affordance and the sole "inside the trim window" signal now
+// that the out-of-trim dim is retired: fill kTrimBar (#F67400, a shipped Breeze
+// accent) with a 1px kTrimBarOutline ring, the brighter sibling. The CHIPS are
+// calm by contrast, so the bar carries the loudness: kTrimChip is
+// mix(kBackground, #F67400, 0.30) — the derivation Breeze itself uses for an
+// inactive selection — with the kTrimChipOutline ring, Breeze's own Selection
+// ForegroundNeutral (its darkened orange). The 1px STEMS (the waveform-area
+// segments in render_trim_stems and the strip-crossing segments in
+// render_trim_flags) read as part of the chip handle, so they follow the chips,
+// not the bar: kTrimStem, the chip outline's value. Trim sits outside the
+// selection system, so none of these has a selected variant.
+inline GuiColor kTrimBar          = hex(0xF67400);  // Breeze orange
+inline GuiColor kTrimBarOutline   = hex(0xFFA040);
+inline GuiColor kTrimChip         = hex(0x603B1B);
+inline GuiColor kTrimChipOutline  = hex(0xC65C00);
+inline GuiColor kTrimStem         = hex(0xC65C00);
 
 // -- GUI font size ---------------------------------------------------------
 //
@@ -549,13 +545,11 @@ struct EditorTextBox {
     int                  cursor_pos       = 0;
     GuiColor             outline          = kMarker;
 };
-// `alpha` (default opaque) dims the whole composited box uniformly — the
-// disabled-marker cue for a chip (flag). It is applied by rendering the box
-// into a group and compositing it with alpha, so the ring, fill, and glyphs
-// dim together. Every non-chip caller (bottom-strip editors, trim chips) leaves
-// it at 1.0 and paints byte-identically.
-void render_editor_text_box(cairo_t* cr, const EditorTextBox& s,
-                            double alpha = 1.0);
+// The box always paints fully opaque. (It once took an `alpha` that composited
+// the whole box through a cairo group as a disabled chip's dim cue; disablement
+// is an opaque color class now — kTextDisabled for the glyphs, kMarkerDisabled
+// for a shape — so the parameter had no producer left and went with the group.)
+void render_editor_text_box(cairo_t* cr, const EditorTextBox& s);
 
 // Screen-coord rect of one rendered flag, keyed back to its marker index.
 // Emitted in the same order flags appear left-to-right.
@@ -574,10 +568,31 @@ struct FlagHitRect {
 // render_background erases CHROME in kBackground, render_canvas erases the
 // WAVEFORM AREA in the lighter kCanvas. on_redraw calls the first over the whole
 // exposed rect, then the second over the exposed part of the waveform area, so
-// the canvas wins exactly the pixels the plate, playheads, region wash, and trim
-// stems paint on — cold frames (no plate yet) included.
+// the canvas wins exactly the pixels the plate, playheads, ground recolors, and
+// trim stems paint on — cold frames (no plate yet) included.
+//
+// render_canvas ALSO owns the waveform area's 1px BORDER: after the kCanvas
+// fill it paints the area's topmost and bottommost pixel rows in kLine. The
+// border is taken FROM the area, not added to it — the waveform area rect is
+// unchanged and the CONTENT band shrinks by one row at each end
+// (waveform_content_rect below). Top and bottom only; the area's sides are the
+// window edges (and the inert right gutter), which need no rule.
 void render_background(cairo_t* cr, int x, int y, int w, int h);
 void render_canvas(cairo_t* cr, int x, int y, int w, int h);
+
+// The waveform area's CONTENT band: the area minus the two kLine border rows
+// render_canvas paints at its top and bottom. Every pass that fills a BAND
+// inside the area clips to this — the plate blit and both ground recolors
+// (region, phase-reset overlay) — so the border rows survive the frame no
+// matter what covers the area. 1px VERTICALS deliberately do not: the
+// playheads, the marker/trim stems, and the strip-drag anchor stem run the full
+// area height and cross the border, which is correct for a position line and is
+// not special-cased anywhere. Degenerate areas (h <= 2, unreachable under the
+// window floor) pass through unshrunk rather than inverting.
+inline GuiRect waveform_content_rect(GuiRect area) {
+    if (area.h <= 2) return area;
+    return GuiRect{area.x, area.y + 1, area.w, area.h - 2};
+}
 
 // THE COLUMN MAPPING BASIS — the plate's viewport start, the PAINTER's
 // samples-per-pixel, and the plate width.
@@ -716,14 +731,14 @@ struct WaveformBasis {
 // CPU write and marked dirty after the last, so later cairo use sees the
 // pixels.
 //
-// The plate paints uniformly in `color` — it is trim-agnostic. Its alpha is no
-// longer binary: opaque interiors, fractional silhouette edges, transparent
-// gaps. That alpha remains the out-of-trim dim's mask — on_redraw paints the dim
-// as a MASKED OVER pass over the blitted plate (cairo_mask_surface with the
-// plate alpha as the mask — see kWaveformDimmed and compute_out_of_trim_rects),
-// so a trim set/clear/drag never re-rasterizes these pixels, and a fractional
-// edge pixel out of trim reads as a MIX of normal and dim ink (recorded and
-// accepted at that pass).
+// The plate paints uniformly in `color` — it is trim-agnostic, and nothing
+// recolors it after the fact: the out-of-trim dim that once masked a second
+// color through this alpha is retired, the trim bridge bar being the whole
+// inside-the-window signal now. Its alpha is not binary: opaque interiors,
+// fractional silhouette edges, transparent gaps. The gaps are what let a
+// recolored GROUND (kRegionCanvas / kOverlayCanvas, painted before the blit)
+// show through, and the fractional edges blend against whichever ground is
+// under them.
 void render_waveform(cairo_surface_t* dest,
                      GuiRect area,
                      int col0,
@@ -943,12 +958,13 @@ GuiRect trim_chip_rect(bool is_begin, int strip_x, int col, GuiRect row);
 // unbroken line at the bound column. Trim bounds carry NO
 // triangle frame tick (unlike markers): Ableton's loop bounds carry none, so
 // the stem+chip pair is the whole waveform-side cue. Color is always
-// kTrimMarker — trim has no
+// kTrimStem — the stem reads as part of the chip handle, so it follows the
+// calm chip pair rather than the bright bridge bar; trim has no
 // selected variant. `trim.begin` /
 // `trim.end` are in the displayed domain (already warp_frame_map-translated by the
 // caller), so no further translation happens here — the columns are placed
 // exactly like marker stems against the same viewport. View-independent: drawn
-// identically in 'W' and 'P' views. The stem paints solid kTrimMarker straight
+// identically in 'W' and 'P' views. The stem paints solid kTrimStem straight
 // over the waveform ink — the ink-notch overdraw and its plate parameter are
 // retired (architect 2026-07-26, with the polarity inversion).
 void render_trim_stems(cairo_t* cr,
@@ -967,8 +983,10 @@ void render_trim_stems(cairo_t* cr,
 // EDGE-ANCHORED on its bound column: the begin chip's LEFT edge on the column
 // (body rightward), the end chip's RIGHT edge on it (body leftward). A bound is
 // an EDGE, not a point — the deliberate asymmetry vs centered marker flags — so
-// a bound at frame 0 / EOF shows its chip fully onscreen. Chip color is
-// kTrimMarker with a kTrimMarkerOutline border. `waveform_area` is the real
+// a bound at frame 0 / EOF shows its chip fully onscreen. Chip color is the
+// CALM pair kTrimChip with a kTrimChipOutline border — the bright pair belongs
+// to the bridge bar below, which carries the family's loudness (a chip is a
+// handle, the bar is the window). `waveform_area` is the real
 // waveform rect; its top edge locates the lanes and its `.w` is the
 // column-mapping denominator. Column placement matches render_trim_stems against
 // the same viewport — `trim.begin` / `trim.end` are already in the displayed
@@ -977,11 +995,12 @@ void render_trim_stems(cairo_t* cr,
 // system). Below each chip, a 1px stem segment runs from the chip's bottom edge
 // down to the waveform top, meeting the render_trim_stems waveform segment there
 // as one unbroken line at the bound column.
-// With BOTH bounds set, a wash band fills the GAP between the two edge-anchored
-// chips — the visual affordance of the pair (bridge) drag's grab band. It
-// occupies the trim-chip lane's vertical band and uses the shared overlay wash
-// (kOverlay / kOverlayAlpha, the same pair the phase reset overlay paints with)
-// with a 1px ring around it, over the strip background. The gap interval is the
+// With BOTH bounds set, the BRIDGE BAR fills the GAP between the two
+// edge-anchored chips — the visual affordance of the pair (bridge) drag's grab
+// band, and the one "this is the trim window" signal (the out-of-trim dim is
+// retired). It occupies the trim-chip lane's vertical band and is the family's
+// BRIGHT pair: an opaque kTrimBar fill with a 1px kTrimBarOutline ring, over the
+// strip background. The gap interval is the
 // shared trim_bridge_gap owner (computed unconditionally, independent of the
 // chips' viewport cull): an in_viewport bound bounds the gap at its drawn chip's
 // inner edge; an OFFSCREEN bound runs the wash FLUSH via a side-specific sentinel.
@@ -1001,8 +1020,8 @@ void render_trim_flags(cairo_t* cr,
                        bool has_end);
 
 // Paints an inert full-width ring around a single strip row's bounding box:
-// 1px edges in kOverlay at kOverlayOutlineAlpha, antialias off (the trim
-// pair-drag band's ring style, no wash fill). `waveform_width` is the effective
+// 1px opaque kLine edges, antialias off — a structural rule, the same color the
+// waveform area's border takes (no fill). `waveform_width` is the effective
 // waveform width (waveform_area.w); the ring spans [row.x, row.x + width) so
 // the non-multiple-of-16 right gutter stays outside it. Used by the top
 // zoom-strip row (the sole live-drag ring row — the bottom pan row retired).
@@ -1018,14 +1037,16 @@ void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width);
 // shapes occlude instead.
 //
 // Color class (`red_set` = the store indices whose render normalizes to the
-// 1.00 fallback, from warp_red_flag_set_cached):
-//   Selected:          fill kSelected, outline kSelectedOutline (wins).
+// 1.00 fallback, from warp_red_flag_set_cached), in priority order — ONE opaque
+// pair per shape, no alpha anywhere:
+//   Disabled:          fill kMarkerDisabled (WINS over red and default), with
+//                      kSelectedOutline as the ring when the marker is ALSO
+//                      selected, else kMarkerDisabledOutline — both cues
+//                      survive opaquely on the one shape.
+//   Selected:          fill kSelected, outline kSelectedOutline.
 //   Red (in red_set):  fill kAccent,   outline kAccentOutline.
 //   Otherwise:         fill kMarker,   outline kMarkerOutline.
-// A DISABLED marker's whole shape (rect + triangle + outline) dims under
-// kDisabledMarkerAlpha, applied on top of whichever color class. (Selection wins
-// the COLOR class over red, disablement owns the ALPHA.) Trim membership has no
-// effect on flags.
+// Trim membership has no effect on flags.
 //
 // `warp_frame_map`: the displayed-axis translation the painters share (the
 // live map in target view). Shapes are collected in ascending painted-x order,
@@ -1075,11 +1096,13 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     const DragOverlay* drag_overlay = nullptr);
 
 // The phase-reset flag is the same fixed shape as a warp flag (rectangle +
-// triangle centered on the column), textless. Color class: selected fill
-// `kSelected` (wins), else red (in `red_set` — a coincident-collapse member
-// from phase_reset_red_flag_set_cached) fill `kAccent` with `kAccentOutline`,
-// else default fill `kMarker`; a disabled phase reset dims the whole shape
-// under kDisabledMarkerAlpha on top. Trim membership has no effect.
+// triangle centered on the column), textless, and takes the identical
+// color-class ladder render_flags documents above: a disabled reset paints the
+// opaque `kMarkerDisabled` pair (WINNING over red and default, keeping
+// `kSelectedOutline` as its ring when also selected), else selected fill
+// `kSelected`, else red (in `red_set` — a coincident-collapse member from
+// phase_reset_red_flag_set_cached) fill `kAccent` with `kAccentOutline`, else
+// default fill `kMarker`. Trim membership has no effect.
 // `waveform_width` is the effective waveform width (see render_flags), the
 // column-mapping denominator shared with the phase-reset stems. Painting is two
 // reverse passes keyed on `selected_set` — selected shapes above unselected,

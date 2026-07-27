@@ -19,6 +19,7 @@
 #include "app_state.h"
 #include "async_renderer.h"
 #include "audio.h"
+#include "color_config.h"
 #include "env_fingerprint.h"
 #include "waveform_worker.h"
 #include "warpmarkers.h"
@@ -578,6 +579,13 @@ int main(int argc, char** argv) {
         return 1;
     }
     const char* cli_path = argv[1];
+
+    // The palette, before anything can paint or derive from a color. Missing
+    // config is silent (compiled defaults); a malformed one prints one line and
+    // keeps the compiled defaults. Nothing writes the palette after this point,
+    // so every later reader — including the waveform worker thread — sees one
+    // fixed set of colors for the process's life.
+    load_color_config();
 
     AppState     app;
     GuiAudio     audio;

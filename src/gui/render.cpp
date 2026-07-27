@@ -115,10 +115,12 @@ static inline double frame_to_paint_sample(
 // sides, top, base) use the +0.5 half-pixel convention for crisp 1px lines; the
 // two diagonal slopes antialias (the relaxed rule — only verticals/horizontals
 // are hard-aliased). Trim chips pass with_triangle=false — a plain rectangle, no
-// triangle (Ableton's loop bounds carry none). `alpha` < 1 dims the whole shape
-// as one cairo group (the disabled cue). The triangle is the identical geometry
-// the cached playhead mask stamps, so a flag's triangle and the playhead's
-// coincide when the cursor sits on it.
+// triangle (Ableton's loop bounds carry none). The shape is always OPAQUE: a
+// disabled marker is a color class (the kMarkerDisabled pair its caller
+// resolves), not a faded one, so the cairo-group dim this once took an `alpha`
+// for is gone. The triangle is the identical geometry the cached playhead mask
+// stamps, so a flag's triangle and the playhead's coincide when the cursor sits
+// on it.
 // Horizontal anchor of the shape's rectangle relative to `center_x`'s column.
 // Center is the marker-flag default (and the playhead triangle) — straddles the
 // column and may hang half offscreen. LeftEdge puts the rect's LEFT column ON
@@ -130,7 +132,7 @@ enum class FlagHAnchor { Center, LeftEdge };
 void paint_flag_shape(cairo_t* cr, double center_x,
                       double flag_top_d, double tri_top_d, double tip_y_d,
                       GuiColor fill, GuiColor outline,
-                      bool with_triangle, double alpha,
+                      bool with_triangle,
                       FlagHAnchor anchor = FlagHAnchor::Center) {
     const int flag_w = flag_lane_w_px();
 
@@ -156,8 +158,6 @@ void paint_flag_shape(cairo_t* cr, double center_x,
     const double tri_bhalf = flag_triangle_half_width_at(0.0);
 
     cairo_save(cr);
-    const bool dim = alpha < 1.0;
-    if (dim) cairo_push_group(cr);
 
     // Fill: rectangle crisp (AA off) then, if present, the triangle as an AA path
     // whose base is the rect's full-width bottom edge and whose apex is the
@@ -196,10 +196,6 @@ void paint_flag_shape(cairo_t* cr, double center_x,
     cairo_close_path(cr);                                     // up the left edge
     cairo_stroke(cr);
 
-    if (dim) {
-        cairo_pop_group_to_source(cr);
-        cairo_paint_with_alpha(cr, alpha);
-    }
     cairo_restore(cr);
 }
 
@@ -244,9 +240,24 @@ void render_background(cairo_t* cr, int x, int y, int w, int h) {
 
 void render_canvas(cairo_t* cr, int x, int y, int w, int h) {
     cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     cairo_set_source_rgb(cr, kCanvas.r, kCanvas.g, kCanvas.b);
     cairo_rectangle(cr, x, y, w, h);
     cairo_fill(cr);
+    // The 1px kLine border, taken FROM the area: the topmost and bottommost
+    // pixel rows of the same rect, painted in the same pass as the ground so
+    // the two can never disagree about where the area ends. Every band-filling
+    // pass that follows clips to waveform_content_rect (the rows between them),
+    // so nothing covers the border but the deliberate full-height 1px verticals
+    // (playheads, stems). Integer-edged rects with AA off, the crisp-line
+    // convention. A degenerate area (h <= 2) draws no border rather than
+    // overlapping them.
+    if (h > 2) {
+        cairo_set_source_rgb(cr, kLine.r, kLine.g, kLine.b);
+        cairo_rectangle(cr, x, y, w, 1);
+        cairo_rectangle(cr, x, y + h - 1, w, 1);
+        cairo_fill(cr);
+    }
     cairo_restore(cr);
 }
 
@@ -998,7 +1009,7 @@ void render_trim_stems(cairo_t* cr,
             static_cast<double>(frame), viewport_start_sample,
             viewport_end_sample, waveform_area.w);
         if (!c.in_viewport) return;
-        cairo_set_source_rgb(cr, kTrimMarker.r, kTrimMarker.g, kTrimMarker.b);
+        cairo_set_source_rgb(cr, kTrimStem.r, kTrimStem.g, kTrimStem.b);
         const double x_px = waveform_area.x + c.col + 0.5;
         cairo_move_to(cr, x_px, y_stem_top);
         cairo_line_to(cr, x_px, y1);
@@ -1066,15 +1077,16 @@ void render_trim_flags(cairo_t* cr,
 
     cairo_save(cr);
 
-    // With both bounds set, a wash band fills the trim-chip-lane GAP between the
-    // two edge-anchored chips: from the begin chip's inner (right) edge to the
+    // With both bounds set, the BRIDGE BAR fills the trim-chip-lane GAP between
+    // the two edge-anchored chips: from the begin chip's inner (right) edge to the
     // end chip's inner (left) edge. The chips edge-anchor ON their bound columns
     // (begin left-edge, end right-edge, bodies facing inward), so this gap is the
     // span the pair (bridge) drag grabs — route_trim_chip_press tests the SAME gap
     // interval (the shared trim_bridge_gap owner below), so the clickable band is
-    // exactly the painted wash. The wash is the shared overlay pair (kOverlay /
-    // kOverlayAlpha, the phase reset overlay's pair) with a 1px ring at ring
-    // strength (kOverlayOutlineAlpha) around it. Columns are computed
+    // exactly the painted bar. The bar carries the trim family's BRIGHT pair — an
+    // opaque kTrimBar fill with a 1px kTrimBarOutline ring — because it is the
+    // sole "this is the trim window" signal now that the out-of-trim dim is
+    // retired; the chips beside it stay calm. Columns are computed
     // unconditionally (a chip's viewport cull must not suppress the band). A gap
     // exists only when the begin chip sits fully left of the end chip
     // (wide-enough, non-inverted span); an inverted or narrow trim shows no
@@ -1107,8 +1119,7 @@ void render_trim_flags(cairo_t* cr,
         const int clip_lo = std::max(gap.lo, 0);
         const int clip_hi = std::min(gap.hi, waveform_area.w);
         if (clip_hi > clip_lo) {
-            cairo_set_source_rgba(cr, kOverlay.r, kOverlay.g,
-                                  kOverlay.b, kOverlayAlpha);
+            cairo_set_source_rgb(cr, kTrimBar.r, kTrimBar.g, kTrimBar.b);
             cairo_rectangle(cr, static_cast<double>(top_strip_area.x + clip_lo),
                             static_cast<double>(chip_top),
                             static_cast<double>(clip_hi - clip_lo),
@@ -1125,8 +1136,8 @@ void render_trim_flags(cairo_t* cr,
             const int right_col = gap.hi - 1;
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            cairo_set_source_rgba(cr, kOverlay.r, kOverlay.g, kOverlay.b,
-                                  kOverlayOutlineAlpha);
+            cairo_set_source_rgb(cr, kTrimBarOutline.r, kTrimBarOutline.g,
+                                 kTrimBarOutline.b);
             cairo_rectangle(cr, rx, chip_top, rw, 1);              // top
             cairo_rectangle(cr, rx, chip_top + chip_h - 1, rw, 1); // bottom
             if (left_col >= 0 && left_col < waveform_area.w)
@@ -1147,11 +1158,12 @@ void render_trim_flags(cairo_t* cr,
     // edge and the end chip's rightmost edge — so the chip's anchored edge and
     // its stem share one column and read as a single handle. Marker stems stay
     // waveform-only; this strip-crossing gap-closing segment is TRIM-only. 1px,
-    // AA off (axis-aligned, +0.5), kTrimMarker.
+    // AA off (axis-aligned, +0.5), kTrimStem — the same stem color the
+    // waveform-side segment takes, so the joined line is one color end to end.
     {
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, kTrimMarker.r, kTrimMarker.g, kTrimMarker.b);
+        cairo_set_source_rgb(cr, kTrimStem.r, kTrimStem.g, kTrimStem.b);
         cairo_set_line_width(cr, 1.0);
         auto paint_strip_stem = [&](const TrimBoundColumn& c) {
             if (!c.in_viewport) return;
@@ -1194,8 +1206,10 @@ void render_trim_flags(cairo_t* cr,
     // Overlapping chips occlude rather than elide (as the marker flags do):
     // paint the sorted list in REVERSE order so the leftmost lands on top. Trim
     // bounds are unselectable (recorded asymmetry), so there is no selected pass.
-    // Each chip is a plain kTrimMarker rectangle with a kTrimMarkerOutline
-    // border, no triangle; the bottom argument is unused for the rectangle shape.
+    // Each chip is a plain kTrimChip rectangle with a kTrimChipOutline border,
+    // no triangle; the bottom argument is unused for the rectangle shape. The
+    // calm pair, not the bar's bright one — the chips are the handles, the bar
+    // between them is the window.
     const GuiRect chip_row{top_strip_area.x, chip_top, waveform_area.w, chip_h};
     for (auto it = chips.rbegin(); it != chips.rend(); ++it) {
         // The chip rect (edge-anchored begin/end) comes from the shared owner
@@ -1209,8 +1223,8 @@ void render_trim_flags(cairo_t* cr,
                          static_cast<double>(chip_top),
                          static_cast<double>(chip_bottom),
                          static_cast<double>(chip_bottom),
-                         kTrimMarker, kTrimMarkerOutline,
-                         /*with_triangle=*/false, /*alpha=*/1.0,
+                         kTrimChip, kTrimChipOutline,
+                         /*with_triangle=*/false,
                          FlagHAnchor::LeftEdge);
     }
 
@@ -1218,10 +1232,11 @@ void render_trim_flags(cairo_t* cr,
 }
 
 void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width) {
-    // Inert full-width ring around a strip row's bounding box: 1px edges in
-    // kOverlay at ring strength (kOverlayOutlineAlpha), antialias off — the
-    // same crisp-edge style the trim pair-drag band's ring uses, with no wash
-    // fill. Spans the EFFECTIVE waveform width (x from the row's left edge),
+    // Inert full-width ring around a strip row's bounding box: 1px opaque
+    // kLine edges, antialias off — the ONE structural line color, the same rule
+    // the waveform area's top/bottom border takes, with no fill. It marks a
+    // surface, never a state, which is why it is not in an accent family.
+    // Spans the EFFECTIVE waveform width (x from the row's left edge),
     // not the strip's full width, so the <=15px right gutter at a
     // non-multiple-of-16 window stays outside the ring, matching every other
     // grid-aligned surface.
@@ -1229,8 +1244,7 @@ void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width) 
     const int rw = std::min(waveform_width, row.w);
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_source_rgba(cr, kOverlay.r, kOverlay.g, kOverlay.b,
-                          kOverlayOutlineAlpha);
+    cairo_set_source_rgb(cr, kLine.r, kLine.g, kLine.b);
     cairo_rectangle(cr, row.x, row.y, rw, 1);                 // top
     cairo_rectangle(cr, row.x, row.y + row.h - 1, rw, 1);     // bottom
     cairo_rectangle(cr, row.x, row.y, 1, row.h);              // left
@@ -1239,14 +1253,8 @@ void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width) 
     cairo_restore(cr);
 }
 
-void render_editor_text_box(cairo_t* cr, const EditorTextBox& s, double alpha) {
+void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     cairo_save(cr);
-    // When dimming (a disabled marker's chip), render the whole box into a
-    // group and composite it once with `alpha` so the ring, fill, and glyphs
-    // dim uniformly rather than per-element. At full opacity the group is
-    // skipped and the paint path is byte-identical to the undimmed form.
-    const bool dim = alpha < 1.0;
-    if (dim) cairo_push_group(cr);
     cairo_select_font_face(cr, "monospace",
                            CAIRO_FONT_SLANT_NORMAL,
                            CAIRO_FONT_WEIGHT_NORMAL);
@@ -1405,11 +1413,6 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s, double alpha) {
         cairo_rectangle(cr, cur_col, band_y0, 1, band_h);
         cairo_fill(cr);
         cairo_restore(cr);
-    }
-
-    if (dim) {
-        cairo_pop_group_to_source(cr);
-        cairo_paint_with_alpha(cr, alpha);
     }
 
     cairo_restore(cr);
@@ -1580,17 +1583,24 @@ void render_flags(cairo_t* cr,
         });
 
     auto paint_emit = [&](const FlagEmit& e) {
-        // Color class priority: selection wins over red, red over default.
+        // Color class priority: DISABLED wins over selection, red and default;
+        // then selection over red, red over default. Every class is one opaque
+        // fill/outline pair — the former disabled ALPHA is gone, so a disabled
+        // marker no longer composes with a color class, it IS one. The single
+        // composition left is the disabled+SELECTED shape, which keeps the
+        // disabled fill and takes the selected ring so both cues read at once
+        // (the two-pass paint order still lifts it above the unselected flags).
+        const bool dis = effective_disabled(markers, e.i);
         const bool sel = selected_set.count(e.i) > 0;
-        const bool red = !sel && red_set.count(e.i) > 0;
-        const GuiColor fill    = sel ? kSelected
+        const bool red = !dis && !sel && red_set.count(e.i) > 0;
+        const GuiColor fill    = dis ? kMarkerDisabled
+                               : sel ? kSelected
                                : red ? kAccent : kMarker;
         const GuiColor outline = sel ? kSelectedOutline
+                               : dis ? kMarkerDisabledOutline
                                : red ? kAccentOutline : kMarkerOutline;
-        const double alpha = effective_disabled(markers, e.i)
-            ? kDisabledMarkerAlpha : 1.0;
         paint_flag_shape(cr, e.center_x, g.flag_top, g.tri_top, g.tip_y,
-                         fill, outline, /*with_triangle=*/true, alpha);
+                         fill, outline, /*with_triangle=*/true);
     };
     for (auto it = emits.rbegin(); it != emits.rend(); ++it)
         if (!selected_set.count(it->i)) paint_emit(*it);
@@ -1700,17 +1710,21 @@ void render_phase_reset_flags(cairo_t* cr,
         });
 
     auto paint_emit = [&](const PhaseResetEmit& e) {
-        // Color class priority: selection wins over red, red over default.
+        // The identical color-class ladder render_flags resolves (disabled wins,
+        // then selection, then red, then default; disabled+selected keeps the
+        // disabled fill with the selected ring). A phase reset carries no
+        // label_ref cascade, so its disabled verdict is the bool itself.
+        const bool dis = phase_resets[e.i].disabled;
         const bool sel = selected_set.count(e.i) > 0;
-        const bool red = !sel && red_set.count(e.i) > 0;
-        const GuiColor fill    = sel ? kSelected
+        const bool red = !dis && !sel && red_set.count(e.i) > 0;
+        const GuiColor fill    = dis ? kMarkerDisabled
+                               : sel ? kSelected
                                : red ? kAccent : kMarker;
         const GuiColor outline = sel ? kSelectedOutline
+                               : dis ? kMarkerDisabledOutline
                                : red ? kAccentOutline : kMarkerOutline;
-        const double alpha = phase_resets[e.i].disabled
-            ? kDisabledMarkerAlpha : 1.0;
         paint_flag_shape(cr, e.center_x, g.flag_top, g.tri_top, g.tip_y,
-                         fill, outline, /*with_triangle=*/true, alpha);
+                         fill, outline, /*with_triangle=*/true);
     };
     for (auto it = emits.rbegin(); it != emits.rend(); ++it)
         if (!selected_set.count(it->i)) paint_emit(*it);

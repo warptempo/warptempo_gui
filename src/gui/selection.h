@@ -62,7 +62,7 @@ struct Selection {
     // unchanged (the common case: Tab within a non-empty set, a range shrink).
     void damage_playhead_if_focus_flipped(bool was_empty);
 
-    // The phase-reset lead-in overlay (paint_phase_reset_overlay, architect
+    // The phase-reset lead-in overlay (phase_reset_overlay_band, architect
     // 2026-07-23) annotates the ONE focused enabled reset. Its SUBJECT — the
     // frame it paints at, or none — is the selection-state portion of that
     // paint's visibility rule (P + target view, selection under the 2-member

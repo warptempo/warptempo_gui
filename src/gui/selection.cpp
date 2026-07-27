@@ -23,7 +23,7 @@ void Selection::damage_playhead_if_focus_flipped(bool was_empty) {
 }
 
 std::optional<int64_t> Selection::phase_overlay_subject() const {
-    // Mirror paint_phase_reset_overlay's SELECTION-STATE visibility guards
+    // Mirror phase_reset_overlay_band's SELECTION-STATE visibility guards
     // (paint_handler.cpp) exactly: P view + target view, selection under the
     // 2-member suppression, no active region, and the focused marker a valid
     // ENABLED phase reset. The geometry guards there (area size, samples-per-

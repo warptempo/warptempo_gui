@@ -106,8 +106,7 @@ struct WaveformCache {
     // flags against the same coordinate system the displayed waveform
     // uses (and to stage the displayed hit map), so flags and waveform
     // pixels snap together at the completion swap instead of diverging
-    // during the rebuild window; compute_displayed_trim reads it for the
-    // out-of-trim dim's plate-composite frames. Empty in source view;
+    // during the rebuild window — its one consumer. Empty in source view;
     // empty before the first completion has fired.
     std::vector<WarpFrameMapSegment> fp_warp_frame_map;
 
@@ -183,7 +182,7 @@ struct WaveformCache {
 // -- Off-screen pixel cache for the top-strip flag rects ----------------
 //
 // (The former trim-stem cache is retired: EVERY trim pixel — chips, bridge
-// wash, strip stem segments, waveform stem segments — paints live per frame in
+// bar, strip stem segments, waveform stem segments — paints live per frame in
 // GuiPaintHandler::paint_trim, below the playheads. This flag cache is the one
 // remaining item cache.)
 //
@@ -356,61 +355,17 @@ private:
 
     WaveformRenderInputs compute_waveform_render_inputs() const;
 
-    // Displayed-domain trim boundary state for the out-of-trim DIM
-    // (compute_out_of_trim_rects, its sole consumer now — the live trim pass
-    // paint_trim maps its own frames through the item-basis owners
-    // displayed_trim_ms / displayed_or_live_target_map instead, matching the
-    // trim hit tests; this helper stays on the PLATE's fp map because the dim
-    // is a plate composite). Positions are the AUTHORED
-    // per-bound frames — unordered (bounds may be inverted mid-gesture —
-    // crossed cannot rest — and this paints per frame; past-EOF is load-fatal,
-    // so each bound is within [0, EOF])
-    // — translated into the displayed domain (target-view warp_frame_map from
-    // wf_cache.fp_warp_frame_map, or source-frame).
-    struct DisplayedTrim {
-        int64_t begin          = 0;
-        int64_t end            = 0;
-        bool    has_begin      = false;
-        bool    has_end        = false;
-    };
-    DisplayedTrim compute_displayed_trim() const;
-
-    // Out-of-trim dim rects in SCREEN coordinates for the current frame, or
-    // an empty result when nothing should dim (no trim, or an
-    // INVERTED trim — begin strictly later than end in the displayed domain
-    // shades nothing; a mid-gesture-only state, since crossed bounds
-    // cannot rest past the commit auto-clear).
-    // Painted by on_redraw as a MASKED OVER pass (cairo_mask_surface with the
-    // plate alpha as the mask) right after the
-    // waveform plate blit, so the dim recolors only the out-of-trim sample
-    // pixels (the plate itself is trim-agnostic — see render_waveform).
-    // A SPLIT basis: the trim FRAMES are the LIVE bounds mapped through the
-    // plate's fp map (compute_displayed_trim()), positioned on the PLATE
-    // fingerprint's viewport/spp
-    // (displayed_viewport_basis, the plate-registered owner region wash and
-    // playheads share). The dim is a plate composite, so it registers with the
-    // plate: across a drag the viewport is fixed (plate == live) and the edge
-    // stays locked to the trim stem, while during an async publish window the
-    // plate basis keeps the edge on the just-blitted plate instead of the
-    // not-yet-blitted live span. (The live trim pass paint_trim rides the ITEM
-    // basis instead — equal to this plate basis at every plate-writer commit,
-    // so dim edge and trim stem coincide there; inside the accepted resize
-    // item-only-promotion window the two bases diverge and the dim edge can
-    // sit a hair off the stem until the plate republishes — see the basis
-    // comment at paint_trim.) Both rects span the full waveform height; the
-    // plate-alpha MASK confines the recolor to sample pixels.
-    struct OutOfTrimRects {
-        bool    has_left  = false;
-        GuiRect left{};
-        bool    has_right = false;
-        GuiRect right{};
-    };
-    OutOfTrimRects compute_out_of_trim_rects(const GuiRect& area) const;
+    // (The out-of-trim DIM and its two private helpers — compute_displayed_trim
+    // and compute_out_of_trim_rects — are retired wholesale with the opaque
+    // recolor model, architect 2026-07-26: the plate is never recolored after
+    // the blit, and the trim bridge bar is the whole inside-the-window signal.
+    // Neither helper had any other consumer, so both went with the pass.)
 
     // The displayed-viewport paint basis: vp_start and samples-per-pixel LOCKED
     // to the blitted plate (wf_cache.fp_*) while the worker rebuilds against a
-    // viewport change, so every live overlay (region wash, phase-reset overlay,
-    // selected stem, strip-drag anchor, playheads) stays
+    // viewport change, so every live overlay (the region and overlay grounds,
+    // the overlay ring, the selected stem, the strip-drag anchor, the
+    // playheads) stays
     // registered with the cached pixels instead of the not-yet-painted live
     // viewport. spp falls back to the LIVE current_samples_per_pixel when no
     // plate has published a span yet (fp_area_w <= 0, cold before the first
@@ -426,26 +381,46 @@ private:
     // basis. Endpoints are active-domain frames stored in drag order; normalize
     // to [lo, hi] then map to columns via the plain viewport transform (the
     // endpoints already live in the displayed domain, so no warp map is walked).
-    // Shared by paint_region_wash and the split-playhead branch so the wash edges
-    // and the split half-triangles land on exactly the same columns.
+    // Shared by paint_region_ground and the split-playhead branch so the
+    // recolored ground's edges and the split half-triangles land on exactly the
+    // same columns.
     struct RegionColumns {
         int lo_col = 0;
         int hi_col = 0;
     };
     RegionColumns region_columns(const DisplayedViewportBasis& basis) const;
 
+    // The phase-reset overlay band's clipped screen-x span for this frame, or
+    // valid == false when no band shows (wrong view, no eligible focused reset,
+    // a suppressing selection/region, a sub-pixel width, or a span clipped
+    // wholly offscreen). The ONE geometry owner the band's two passes share —
+    // the GROUND recolor under the plate and the RING over it — so the two can
+    // never disagree about where the band is.
+    struct PhaseResetOverlayBand {
+        bool   valid = false;
+        double x0    = 0.0;   // left screen x, clipped to the area
+        double x1    = 0.0;   // right screen x, exclusive, clipped
+    };
+    PhaseResetOverlayBand phase_reset_overlay_band(const GuiRect& area) const;
+
     // on_redraw paint passes. Each renders one strip/layer; on_redraw keeps
     // the rects_intersect gates and calls these in place.
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip);
     void paint_marker_text_lane(cairo_t* cr);
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
-    void paint_region_wash(cairo_t* cr, const GuiRect& area);
-    void paint_phase_reset_overlay(cairo_t* cr, const GuiRect& area);
+    // THE TWO GROUND RECOLORS, both painted after render_canvas and BEFORE the
+    // plate blit (the Ableton model — the highlight changes the ground, the ink
+    // is untouched), overlay second so it wins where the two spans overlap.
+    void paint_region_ground(cairo_t* cr, const GuiRect& area);
+    void paint_phase_reset_overlay_ground(cairo_t* cr, const GuiRect& area);
+    // The overlay band's 1px ring, painted AFTER the plate — a boundary line
+    // like the playheads, so it crosses the ink deliberately.
+    void paint_phase_reset_overlay_ring(cairo_t* cr, const GuiRect& area);
     // The LIVE trim pass (architect 2026-07-25 — trim z-order below the
     // playhead): paints EVERY trim pixel per frame — the b/e chips, the bridge
-    // wash, the strip-crossing stem segments, and the waveform stem segments —
+    // bar, the strip-crossing stem segments, and the waveform stem segments —
     // in ONE pass, in the old trim-stem-cache slot: after
-    // paint_phase_reset_overlay, before paint_selected_stem and hence before
+    // paint_phase_reset_overlay_ring, before paint_selected_stem and hence before
     // every playhead element, while the flag blit still follows the playheads.
     // "Markers over trim" and "playhead over trim" are therefore STRUCTURAL
     // pass order (trim < selected stem < playheads < flags), not an intra-cache
@@ -462,12 +437,12 @@ private:
     // conditional-stem apparatus was harvested with this pivot), so a keyboard-only
     // selection shows it and it persists through scrubs/auditions. The ONE
     // non-selection input is a live position DRAG, which overrides the store frame
-    // with the proposed position so the stem tracks the flag. Painted BLUE
-    // (kSelected — it marks the selected marker like its flag) through
-    // render_playhead's line-only form over the plate; a live overlay, so
-    // selection changes never rebuild a cache. A focused GROUP (2+ selected) shows
-    // no stem — its blue focus cue is the extent-region wash (kSelectedLight), the
-    // stem's "spread" form.
+    // with the proposed position so the stem tracks the flag. Painted in
+    // kSelectedOutline — the selected flag's own RING color, so the stem reads as
+    // that ring drawn down the column — through render_playhead's line-only form
+    // over the plate; a live overlay, so selection changes never rebuild a cache.
+    // A focused GROUP (2+ selected) shows no stem — its focus cue is the extent
+    // region's recolored ground (kRegionCanvas), the stem's "spread" form.
     void paint_selected_stem(cairo_t* cr, const GuiRect& area);
     void paint_playheads(cairo_t* cr, const GuiRect& area);
     void paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area);
