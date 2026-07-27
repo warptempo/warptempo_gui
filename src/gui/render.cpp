@@ -1944,7 +1944,7 @@ LaneTextRun current_marker_lane_run_fallback(const AppState& app,
 
     // Tier 1: the HOVERED marker's own value wins whenever a hover is showing.
     // recompute_hover_at_cursor already composed lane_text (flag_text_iter for a
-    // warp marker, the "p" literal for a phase reset) and captured the hovered
+    // warp marker, the "p.r." literal for a phase reset) and captured the hovered
     // marker's index and source_frame. No painted-column cull here — matching
     // paint, a shown hover always paints (subject only to the caller's advance
     // guard).
@@ -1959,8 +1959,8 @@ LaneTextRun current_marker_lane_run_fallback(const AppState& app,
 
     // Tier 2: else the LAST-SELECTED marker's own value, composed from the live
     // store the same way the hover composer does — flag_text_iter for a warp
-    // marker, the "p" literal for a phase reset. The index is validated against
-    // the active view's list.
+    // marker, the "p.r." literal for a phase reset. The index is validated
+    // against the active view's list.
     const int idx = app.last_selected_marker;
     if (idx < 0) return run;
     int64_t     src_f;
@@ -1969,7 +1969,7 @@ LaneTextRun current_marker_lane_run_fallback(const AppState& app,
         const auto& pv = app.phaseresetmarkers.markers();
         if (idx >= static_cast<int>(pv.size())) return run;
         src_f = pv[idx].time_frame;
-        txt   = "p";
+        txt   = "p.r.";
     } else {
         const auto& mv = app.warpmarkers.markers();
         if (idx >= static_cast<int>(mv.size())) return run;
@@ -2031,8 +2031,9 @@ LaneRunSet lane_run_set_fallback(const AppState& app, const GuiAudio& audio) {
 // on that column and the expanded is wider — so a pointer in the capped rect is
 // in the expanded rect, the hysteresis latch the recompute convergence relies
 // on). It paints LAST / hits FIRST (LaneRunSet contract). The verdict is already
-// decided on the capped widths; this never touches it. Phase "p" is 1 glyph, so
-// it never reaches this. Only expands a marker actually IN the base set (onscreen)
+// decided on the capped widths; this never touches it. The phase-reset token
+// "p.r." is 4 glyphs, well under the budget, so a reset never reaches this.
+// Only expands a marker actually IN the base set (onscreen)
 // — a hover is always over an onscreen run, but the search also fixes the exact
 // centering frame.
 void apply_hover_expansion(LaneRunSet& set, const AppState& app) {
@@ -2124,7 +2125,7 @@ static LaneRunSet resolve_base_lane_run_set(const AppState& app,
     if (is_phase) {
         const auto& pv = app.phaseresetmarkers.markers();
         for (size_t i = 0; i < pv.size(); ++i)
-            add_visible(static_cast<int>(i), pv[i].time_frame, "p");
+            add_visible(static_cast<int>(i), pv[i].time_frame, "p.r.");
     } else {
         const auto& mv = app.warpmarkers.markers();
         for (size_t i = 0; i < mv.size(); ++i)

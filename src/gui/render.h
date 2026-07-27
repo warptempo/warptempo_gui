@@ -1242,7 +1242,9 @@ struct LaneTextRun {
 // occluding another (all-or-nothing); when the verdict fails it falls back to
 // the one-run arbitration — tier 1 the HOVERED marker's value
 // (hover_popup.lane_text), else tier 2 the LAST-SELECTED marker's value composed
-// from the live store (flag_text_iter for a warp marker, "p" for a phase reset),
+// from the live store (flag_text_iter for a warp marker, the 4-glyph display
+// token "p.r." for a phase reset — wide enough that a dense reset cluster fails
+// the fit verdict decisively instead of oscillating across it under zoom),
 // with the mid-drag DragOverlay substitution and the painted-column offscreen
 // cull the flags apply. TRUNCATION IS PERMANENT: every ambient run — both the
 // all-visible set AND the fallback single run — caps at the 9-glyph budget (8
@@ -1258,8 +1260,8 @@ struct LaneTextRun {
 // only: the occlusion VERDICT still runs on the 9-glyph-capped widths (the
 // expanded width never participates), and it applies in BOTH modes (in fallback
 // the hover-via-TEXT single run expands, reproducing the pre-cap full-text bytes;
-// fallback hover-via-FLAG and the last-selected tier stay truncated). Phase "p"
-// never exceeds the budget, so never expands.
+// fallback hover-via-FLAG and the last-selected tier stay truncated). The
+// phase-reset token "p.r." never exceeds the budget, so a reset never expands.
 //
 // all_visible == true: `runs` is the whole visible set (capped). all_visible ==
 // false: `runs` is the 0-or-1 fallback run (capped). All lane geometry is on the
