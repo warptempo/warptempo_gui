@@ -1429,9 +1429,11 @@ struct AppState {
     // paint-pass promotion; cleared alongside displayed_target_warp_frame_map at
     // every clear site (source load / `'` adopt / view toggle). Deliberately
     // SEPARATE from GuiPaintHandler::displayed_viewport_basis, which reads the
-    // LIVE wf_cache.fp_* so the PLATE-registered overlays (the region ground,
-    // the playheads)
-    // stay locked to the just-blitted plate. The split PERSISTS as a
+    // LIVE wf_cache.fp_* so the PLATE-REGISTERED paint overlays stay locked to
+    // the just-blitted plate; WHICH overlays those are is enumerated at that
+    // accessor's own declaration (paint_handler.h), the one authoritative site —
+    // this comment states only its own side of the split.
+    // The split PERSISTS as a
     // mechanism/lifecycle distinction (direct fp read for plate-registered
     // overlays vs this staged/promoted mirror for item-registered geometry), and
     // the two are NUMERICALLY EQUAL at every frame committed by the TWO PLATE
@@ -2135,8 +2137,8 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // is DELIBERATELY DISTINCT from
 // GuiPaintHandler::displayed_viewport_basis, which reads the LIVE wf_cache.fp_*
 // (the plate's current fingerprint): the paint-handler method registers the
-// PLATE-locked overlays (the region and overlay grounds, the playheads, the
-// overlay ring) with the
+// PLATE-REGISTERED paint overlays — enumerated at its own declaration
+// (paint_handler.h), the one authoritative site for that membership — with the
 // just-blitted plate, whereas this owner registers the flag/chip/lane/hit
 // geometry with the committed FLAG item cache (the promoted mirror). The two
 // are NUMERICALLY EQUAL at every frame committed by the TWO PLATE WRITERS
