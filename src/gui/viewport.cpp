@@ -120,8 +120,8 @@ void Viewport::invalidate_stem_column(int64_t source_frame) {
 
 // move_playhead_to: update playhead, keep viewport so playhead stays
 // visible. Invalidate only what changed. Clamps to the full audio
-// range; trim is purely cosmetic so the playhead is free to sit in
-// the dim region.
+// range; trim is purely cosmetic so the playhead is free to sit
+// outside the trim window.
 //
 // The [0, total - 1] live-domain clamp is the shared ruling spelled at
 // clamp_playhead_to_live_domain (app_state.h) — this gesture route funnels
@@ -215,7 +215,8 @@ void Viewport::clamp_display_state_to_live_domain() {
     // REGION: a live region's endpoints are active-domain frames. If the domain
     // shrank under it and either bound left [0, live_total - 1], CLEAR the
     // highlight (writing app.region directly has precedent in active_views.cpp's
-    // S/T clear). CLEAR, not clamp, by design — the domain shifted under the wash,
+    // S/T clear). CLEAR, not clamp, by design — the domain shifted under the
+    // highlight,
     // so a clamped span would misrepresent what the user selected; this is the
     // S/T-switch precedent (codex P2 fix). A mid-drag shrink-then-grow that loses
     // the region is accepted — the region is session scratch.

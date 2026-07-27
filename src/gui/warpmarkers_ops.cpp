@@ -576,7 +576,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
     // (positions untouched), so touched_snapshot == touched_live == the stepped
     // indices. A coalesced continuation press skips the push (the burst's first
     // entry owns the pre-burst snapshot and its hints). A 2+ selection paints no
-    // stem (its cue is the extent-region wash), so the group step has no stem to
+    // stem (its cue is the extent region's ground), so the group step has no stem to
     // move.
     if (merge) undo.note_coalesced_commit();
     else       undo.push_undo_warp(std::move(pre_state),
@@ -621,7 +621,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
                 app, audio, app.warpmarkers.markers()[f].time_frame));
         }
         // No stem to move here: a 2+ selection paints no stem under the blue-focus
-        // pivot (its cue is the extent-region wash, re-derived below). The
+        // pivot (its cue is the extent region's ground, re-derived below). The
         // kick_waveform_sync above already repainted the moved images.
         // Region follows the images (architect 2026-07-23): the group step moved
         // the selected markers' target IMAGES (tempos changed, source frames did
@@ -629,7 +629,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
         //  - SelectionExtent: re-derive to the selection's NEW extent (re-activates
         //    a region the kick may have cleared).
         //  - TrimWindow: re-sync from app.trim's source-frame bounds through the
-        //    new map (FIX C), so the wash tracks the chips/stems.
+        //    new map (FIX C), so the highlight tracks the chips/stems.
         //  - Free: untouched scratch.
         // Source view needs nothing (identity domain — no image moved), which is
         // why this whole block gates on target view.

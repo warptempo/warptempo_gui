@@ -325,9 +325,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // able to unlock). Pure view-state mutation: not undoable, not dirty;
     // silently persisted on the next Ctrl+S from a writable surface (Ctrl+S
     // drops at the read-only gate, so a tab just locked here reaches disk from
-    // the other, unlocked tab — or after a bare-o unlock). The bottom-strip dim
-    // update lands through invalidate_timestamp_area, which covers the A/B tab
-    // letter glyph.
+    // the other, unlocked tab — or after a bare-o unlock). The bottom strip's
+    // "(read-only)" token is the whole visible cue, and its update lands through
+    // invalidate_timestamp_area, which covers that status line.
     if (key == GuiKeys::O && !ctrl && !shift && !alt) {
         ViewState& vs = active_view_state(app);
         vs.read_only = !vs.read_only;
@@ -688,7 +688,8 @@ void GuiInputHandler::cycle_marker_focus(bool forward) {
 void clear_region_highlight(AppState& app, Viewport& viewport) {
     // The clear+damage shape the existing region-clear sites use (Esc,
     // end_region_drag_min_size_check): reset to a blank RegionState and damage
-    // the waveform area once. The wash and the split playhead repaint away and
+    // the waveform area once. The recolored ground and the split playhead repaint
+    // away and
     // the cursor playhead returns under that same damage. Guarded so a call on
     // the common no-region path costs nothing.
     if (!app.region.active) return;
@@ -1213,7 +1214,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // The region-select span is in the ACTIVE display domain, which just
     // flipped (source <-> target frames). Its endpoints are meaningless in the
     // new domain, so clear it; the full-window invalidate at the tail repaints
-    // the waveform without the wash.
+    // the waveform on its plain canvas ground.
     app.region = RegionState{};
 
     // The S/T toggle translates the active tab's live playhead across the

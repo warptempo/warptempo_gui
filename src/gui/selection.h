@@ -52,7 +52,7 @@ struct Selection {
     // cursor COINCIDENT with the selected marker, so its line coincides with the
     // marker's blue stem and its triangle sits hidden BEHIND the flag (the z-order
     // flip) — the cursor form is not painted here because the stem IS it (a
-    // singleton) / the extent-region wash is its spread (a group).
+    // singleton) / the extent region's recolored ground is its spread (a group).
     // A change that CROSSES the emptiness boundary makes the blue cursor
     // line+triangle appear or disappear, so the playhead COLUMN must repaint even
     // when the playhead itself does not move. The mutators already emit
@@ -89,7 +89,8 @@ struct Selection {
     // is the SINGLETON selection's always-on focus visual (BOTH columns, BOTH audio
     // views — unlike the phase overlay's P+target gate). Its SUBJECT is the one
     // selected marker's ACTIVE-COLUMN SOURCE frame, or none when the selection is
-    // empty or multi (a group's cue is the extent-region wash, not a stem). Frame,
+    // empty or multi (a group's cue is the extent region's ground, not a stem).
+    // Frame,
     // not index: a reorder remap preserves frames (subject-stable), exactly like
     // phase_overlay_subject. Captured BEFORE a selection mutation.
     std::optional<int64_t> stem_subject() const;

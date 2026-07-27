@@ -197,7 +197,7 @@ struct SelectionSnapshot {
 // REPLACE demotes it to Free via demote_region_provenance). TrimWindow — set to
 // the trim window's images (sync_highlight_to_trim_window), selection-independent,
 // re-synced from app.trim's source-frame bounds through the new map at every
-// tempo mutation so the wash tracks the chips/stems.
+// tempo mutation so the highlight tracks the chips/stems.
 //
 // RECORDED BOUNDARY of the follow/re-sync behavior (architect 2026-07-23): the
 // re-derive/re-sync sites are the GROUP STEP and the group tempo DRAG's PER-EVENT
@@ -1326,7 +1326,7 @@ struct AppState {
     // appears/moves/disappears iff the singleton subject changes, and the gestures
     // that move a subject marker's FRAME or IMAGE (nudges, drags, re-warps) already
     // full-damage the waveform. A focused GROUP (2+ selected) shows no stem — its
-    // blue cue is the extent-region wash.
+    // cue is the extent region's recolored ground.
 
     // Active markers view: 'W' = warp markers, 'P' = phase reset markers.
     // Toggled by `p`. Determines which marker collection is visible / edited /
@@ -1429,7 +1429,8 @@ struct AppState {
     // paint-pass promotion; cleared alongside displayed_target_warp_frame_map at
     // every clear site (source load / `'` adopt / view toggle). Deliberately
     // SEPARATE from GuiPaintHandler::displayed_viewport_basis, which reads the
-    // LIVE wf_cache.fp_* so the PLATE-registered overlays (region wash, playheads)
+    // LIVE wf_cache.fp_* so the PLATE-registered overlays (the region ground,
+    // the playheads)
     // stay locked to the just-blitted plate. The split PERSISTS as a
     // mechanism/lifecycle distinction (direct fp read for plate-registered
     // overlays vs this staged/promoted mirror for item-registered geometry), and
@@ -2134,7 +2135,8 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // is DELIBERATELY DISTINCT from
 // GuiPaintHandler::displayed_viewport_basis, which reads the LIVE wf_cache.fp_*
 // (the plate's current fingerprint): the paint-handler method registers the
-// PLATE-locked overlays (region wash, playheads, phase-reset overlay) with the
+// PLATE-locked overlays (the region and overlay grounds, the playheads, the
+// overlay ring) with the
 // just-blitted plate, whereas this owner registers the flag/chip/lane/hit
 // geometry with the committed FLAG item cache (the promoted mirror). The two
 // are NUMERICALLY EQUAL at every frame committed by the TWO PLATE WRITERS

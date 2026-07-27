@@ -124,35 +124,43 @@ inline GuiColor kPlayheadCursor   = hex(0x3DAEE9);
 // cue; also Breeze's text/icon foreground, so it is the scheme's brightest ink).
 inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
 
-inline GuiColor kSelected         = hex(0x3DAEE9);  // Breeze blue
-inline GuiColor kMarker           = hex(0x9B59B6);  // Breeze visited purple
-inline GuiColor kAccent           = hex(0xDA4453);  // Breeze negative red
-
-// The outline palette — a brighter sibling of each fill (kSelected / kMarker /
-// kAccent). Painted as the solid 1px outline ring around a chip or flag shape
-// (see EditorTextBox::outline / kChipOutlinePx); these are the tuning knobs.
-// The purple and red siblings are their fills blended ~35% toward white, per
-// channel c' = round(c + 0.35*(255-c)): 0x9B59B6 -> 0xBE93D0 and
-// 0xDA4453 -> 0xE7858F. The selected sibling is not a blend but a shipped role
+// THE FOUR MARKER CLASSES, each a FILL + OUTLINE pair. The outline is the 1px
+// ring painted around a chip or flag shape (see EditorTextBox::outline /
+// kChipOutlinePx) and is a brighter sibling of its fill; both halves of every
+// pair are tuning knobs. The classes resolve in priority order at the flag
+// renderers: disabled, then selected, then red, then default.
+//
+// SELECTED. The fill is Breeze blue; the ring is not a blend but a shipped role
 // — 0x93CEE9, the KF6 framework's own built-in hover blue (kcolorscheme.cpp's
 // fallback decoration pair; see tmp/breeze_dark_reference.md). kSelectedOutline
 // carries one extra duty: it is the SELECTED-MARKER STEM's color
 // (paint_selected_stem), so the focus stem reads as the selected flag's ring
 // drawn down the column rather than as a second solid blue.
+inline GuiColor kSelected         = hex(0x3DAEE9);  // Breeze blue
 inline GuiColor kSelectedOutline  = hex(0x93CEE9);
-inline GuiColor kMarkerOutline    = hex(0xBE93D0);
-inline GuiColor kAccentOutline    = hex(0xE7858F);
 
-// THE DISABLED MARKER PAIR, shared by every marker family (warp flags, phase
-// reset flags). Opaque, not an alpha fade: mix(kMarker, kBackground, 0.65) and
+// DEFAULT. Breeze's visited purple, its ring the fill blended ~35% toward
+// white, per channel c' = round(c + 0.35*(255-c)): 0x9B59B6 -> 0xBE93D0.
+inline GuiColor kMarker           = hex(0x9B59B6);
+inline GuiColor kMarkerOutline    = hex(0xBE93D0);
+
+// DISABLED, shared by every marker family (warp flags, phase reset flags).
+// Opaque, not an alpha fade: mix(kMarker, kBackground, 0.65) and
 // mix(kMarkerOutline, kBackground, 0.65) — Breeze's ContrastFade disabled math
-// at amount 0.65 over the default pair. COLOR-CLASS PRIORITY: disabled WINS
-// over red and over the default class (a disabled marker paints this pair
-// whatever its red-flag status), and a disabled marker that is also SELECTED
-// paints this fill with the kSelectedOutline ring — both cues survive opaquely,
-// and the selected-flag paint order still marks membership.
+// at amount 0.65 over the default pair above. It WINS over red and over the
+// default class (a disabled marker paints this pair whatever its red-flag
+// status), and a disabled marker that is also SELECTED paints this fill with
+// the kSelectedOutline ring — both cues survive opaquely, and the selected-flag
+// paint order still marks membership.
 inline GuiColor kMarkerDisabled        = hex(0x4B3659);
 inline GuiColor kMarkerDisabledOutline = hex(0x584A62);
+
+// RED — the normalization cue: a marker whose render falls back to the 1.00
+// tempo. Breeze's negative red, its ring the same ~35%-toward-white blend the
+// default pair takes: 0xDA4453 -> 0xE7858F. It also paints the editor box's
+// invalid-commit flash, so a parse failure and a red flag read as one family.
+inline GuiColor kAccent           = hex(0xDA4453);
+inline GuiColor kAccentOutline    = hex(0xE7858F);
 
 // THE TWO GROUND RECOLORS (the Ableton model): a highlighted span's CANVAS
 // becomes one of these, painted after render_canvas and BEFORE the plate blit,
@@ -820,7 +828,7 @@ void render_strip_anchor_stem(cairo_t* cr,
 
 // The ONE trim bound-to-column geometry owner (audit C1). Every consumer of a
 // trim bound's pixel column funnels here: the two paint sites (render_trim_stems'
-// waveform stem, render_trim_flags' chips / strip stems / wash gap) and the two
+// waveform stem, render_trim_flags' chips / strip stems / bridge gap) and the two
 // hit sites (hit_test_trim_chip's chip rects, route_trim_chip_press' bridge
 // test). It replaced five hand-copied `nearbyint` + `clamp(0, W-1)` formulas
 // maintained "byte-identical" by comment discipline.
@@ -853,7 +861,7 @@ void render_strip_anchor_stem(cairo_t* cr,
 // bound-edge pixel and outline to the cache clip and its stems fall offscreen.
 // Clamping lands the wall on the last visible column so the chip stays fully
 // visible and connected. Begin/frame-0 already maps to column 0, unaffected.
-// The wash band (trim_bridge_gap) reads an OFFSCREEN bound's SIDE (below) to pick
+// The bridge bar (trim_bridge_gap) reads an OFFSCREEN bound's SIDE (below) to pick
 // a side-specific flush sentinel past the visible edge, and the painter clips its
 // DRAWN extent to the effective width [0, wave_w) so the fill/ring stop flush at
 // the edge (the inert gutter never paints; col_raw is the sentinel input, not the
@@ -875,11 +883,11 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
                                   long long vp_start, long long vp_end,
                                   int wave_w);
 
-// The inter-chip wash-gap column interval [lo, hi) (waveform-relative,
+// The inter-chip bridge-gap column interval [lo, hi) (waveform-relative,
 // half-open, EMPTY when hi <= lo), the ONE owner shared by the painter
-// (render_trim_flags' wash band + its ring border) and the router
+// (render_trim_flags' bridge bar + its ring border) and the router
 // (route_trim_chip_press' pair-drag between test), so a bridge click lands
-// exactly on the painted wash. Both bounds must be set (callers gate). The
+// exactly on the painted bar. Both bounds must be set (callers gate). The
 // offscreen arms key on the bound's SIDE (TrimBoundColumn::side, the unrounded
 // verdict) — NOT col_raw, which cannot tell the side across the rounding seam
 // (a barely-off-left bound rounds to col_raw == 0). The 4x2 semantics:
@@ -904,7 +912,7 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 //        gave hi = 1 and painted/accepted a column-0 sliver for a window wholly
 //        left of the viewport).
 // The +chip_w inset is the ROOM a PAINTED chip occupies; an offscreen bound
-// paints no chip, so the inset is dropped and the wash fills FLUSH. This interval
+// paints no chip, so the inset is dropped and the bar fills FLUSH. This interval
 // is returned UNCLAMPED (raw sentinels included) — its role is to carry the
 // offscreen-flush and empty semantics past the visible edge; it is NOT the drawn
 // interval. The two consumers own the visible boundary identically: the PAINTER
@@ -997,19 +1005,19 @@ void render_trim_stems(cairo_t* cr,
 // as one unbroken line at the bound column.
 // With BOTH bounds set, the BRIDGE BAR fills the GAP between the two
 // edge-anchored chips — the visual affordance of the pair (bridge) drag's grab
-// band, and the one "this is the trim window" signal (the out-of-trim dim is
-// retired). It occupies the trim-chip lane's vertical band and is the family's
+// band, and the one "this is the trim window" signal. It occupies the trim-chip
+// lane's vertical band and is the family's
 // BRIGHT pair: an opaque kTrimBar fill with a 1px kTrimBarOutline ring, over the
 // strip background. The gap interval is the
 // shared trim_bridge_gap owner (computed unconditionally, independent of the
 // chips' viewport cull): an in_viewport bound bounds the gap at its drawn chip's
-// inner edge; an OFFSCREEN bound runs the wash FLUSH via a side-specific sentinel.
+// inner edge; an OFFSCREEN bound runs the bar FLUSH via a side-specific sentinel.
 // The painter then clips the DRAWN extent to the effective width [0, wave_w) —
 // the inert gutter never paints — so an offscreen side fills flush to the edge
 // with no chip-width gap and its ring border goes offscreen with the chip. A gap
 // shows only when the span is wide enough that the chips do not overlap.
 // route_trim_chip_press consumes the SAME owner under the SAME [0, wave_w) gate,
-// so the clickable bridge equals the painted wash exactly.
+// so the clickable bridge equals the painted bar exactly.
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
                        GuiRect waveform_area,

@@ -175,7 +175,37 @@ The engineering background — why the guarantee is shaped this way, and the per
 
 Every color the GUI paints is tunable through one file: `~/.config/warptempo_gui/colors.conf`, read once at startup (edit it, then relaunch — there is no live reload). The color words in this manual describe the shipped defaults, a Plasma 6 Breeze Dark scheme.
 
-The file is strict in the same spirit as the settings sidecars: it must contain exactly one line per color key, in a fixed canonical order, each line spelled `key = #rrggbb` with lowercase hex and single spaces, nothing else — no comments, no blank lines. A missing file is normal and silently keeps the compiled defaults; any deviation in a present file prints one stderr line naming the offending line and reason, rejects the whole file, and keeps the compiled defaults — never a partial adoption, never a failed launch. The program never writes the file itself; deleting it is always a safe way back to the defaults. Every value is opaque — there are no alpha channels: highlights recolor the background under the waveform ink rather than washing over it, and disabled markers use their own opaque pair rather than fading. The CLI renderer never reads this file; colors are display-only.
+The file is strict in the same spirit as the settings sidecars: it must contain exactly one line per color key, in a fixed canonical order, each line spelled `key = #rrggbb` with lowercase hex and single spaces, nothing else — no comments, no blank lines. A missing file is normal and silently keeps the compiled defaults; any deviation in a present file prints one stderr line naming the offending line and reason, rejects the whole file, and keeps the compiled defaults — never a partial adoption, never a failed launch. The program never writes the file itself; deleting it is always a safe way back to the defaults, and this block IS the canonical file at the shipped defaults — copy it verbatim to start tuning:
+
+```
+background = #202326
+canvas = #31363b
+waveform_ink = #141618
+text = #fcfcfc
+text_disabled = #6d6f71
+line = #57595b
+strip_anchor_stem = #57595b
+playhead_cursor = #3daee9
+playhead_scanner = #fcfcfc
+selected = #3daee9
+selected_outline = #93cee9
+marker = #9b59b6
+marker_outline = #be93d0
+marker_disabled = #4b3659
+marker_disabled_outline = #584a62
+accent_red = #da4453
+accent_red_outline = #e7858f
+region_canvas = #3d464e
+overlay_canvas = #383e44
+overlay_outline = #596671
+trim_bar = #f67400
+trim_bar_outline = #ffa040
+trim_chip = #603b1b
+trim_chip_outline = #c65c00
+trim_stem = #c65c00
+```
+
+The keys name their surfaces: the two grounds (`background` chrome, `canvas` waveform area) and the ink; text and its disabled shade; the one structural `line` color (strip-row ring and the waveform border) and the strip-drag anchor stem; the two playheads; the selected pair (fill and outline — the outline is also the selected marker's stem); the marker pair, its disabled pair, and the red-flag pair; the region and phase-overlay background lifts plus the overlay's outline; and the trim family — the bright bar pair, the calm chip pair, and the stems. Every value is opaque — there are no alpha channels: highlights recolor the background under the waveform ink rather than washing over it, and disabled markers use their own opaque pair rather than fading. The CLI renderer never reads this file; colors are display-only.
 
 ## Hotkey reference
 

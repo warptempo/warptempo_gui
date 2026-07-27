@@ -140,7 +140,8 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
                            double scale, int sample_rate, long total_frames);
 
 // Dissolve a resting region-select highlight, damaging the waveform so the
-// wash and split playhead repaint away and the cursor playhead returns under
+// recolored ground and split playhead repaint away and the cursor playhead
+// returns under
 // the same damage. A no-op when no region is active. Shared by the
 // playhead-jump NAVIGATION commands (architect ruling): any command that jumps
 // the playhead invalidates the auditioning span, and the region suppresses the
@@ -810,7 +811,8 @@ private:
     // the trim-lane click (R4.5), the ctrl / ctrl+shift bound-set (R4.6/R5), and the trim
     // drags' motion / release / cancel live-sync (R7), so window and highlight can
     // never drift. Navigation-class (the region is navigation), so read-only-safe.
-    // Owns its own waveform-wash damage. Never touches the playhead or selection.
+    // Owns its own waveform-highlight damage. Never touches the playhead or
+    // selection.
     void sync_highlight_to_trim_window();
 
     // R4.6: set ONE trim bound (begin or end) at the clicked column — the

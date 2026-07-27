@@ -127,7 +127,8 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // releases near the press — or wanders back toward it — can rest a sliver
 // region a pixel or two wide. That was never an intentional window: a
 // sub-threshold rest reads as a click, so it dissolves exactly as a plain
-// click's would, clearing the wash and the split playhead (the cursor playhead
+// click's would, clearing the highlight and the split playhead (the cursor
+// playhead
 // returns when the region deactivates, which the same damage covers). The
 // resting-region minimum floor SCALES with the gate (deliberate): reading
 // kDragMovedThresholdPx here means the sliver floor rose to 8px when the
@@ -1086,7 +1087,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     selection.select_range_from_anchor(hit);
                     // A range leaving exactly one selected shows its always-on stem;
                     // select_range_from_anchor owns the subject-change damage (a 2+
-                    // range shows the extent-region wash, no stem).
+                    // range shows the extent region's ground, no stem).
                     if (!app.selected_markers.empty())
                         land_playhead_on_marker(app, audio, viewport,
                                                 *app.selected_markers.begin());
@@ -1362,7 +1363,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // scanner to it, overrides follow, and arms the region drag — which
         // also DISSOLVES any resting highlight at this mouse-down
         // (arm_region_drag_at clears it after snapshotting the pre-press
-        // extent for an Esc-mid-drag restore), so the wash vanishes on press
+        // extent for an Esc-mid-drag restore), so the highlight vanishes on press
         // whether the gesture becomes a click or a fresh drag. The LOWER half
         // is the SCRUB surface (the branch below): the press runs one
         // kill-and-revive scrub act — a fresh SCANNER session from the clicked
@@ -1576,8 +1577,8 @@ void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
     // live drag still restores the pre-press highlight.
     app.region_drag.pre_region   = app.region;
     // Clear any resting region immediately at press: a plain upper-half
-    // waveform press dissolves an existing highlight on mouse-down (the wash
-    // repaints away now, not at release; a lower-half scrub press never
+    // waveform press dissolves an existing highlight on mouse-down (the plain
+    // canvas ground repaints back now, not at release; a lower-half scrub press never
     // reaches here — it arms no region drag and leaves the region alone). A
     // moved drag rebuilds a fresh region live; a
     // motionless press-release simply leaves it cleared. pre_region above keeps

@@ -743,7 +743,7 @@ void MarkerDragOps::commit_drag() {
     // invalidate_waveform_area above (a position drag of a SINGLETON selection
     // shifts its frame, so its always-on blue stem — the blue-focus pivot — repaints
     // at the committed column). A group drag paints no stem (its cue is the extent
-    // region wash), so nothing to move there.
+    // region's recolored ground), so nothing to move there.
     // Region re-derive (GROUP drag only — a single-marker drag never has an
     // active region here, its press cleared it). apply_drag_motion live-tracked
     // the region to the moving group during motion; snap it back to the RESTING
@@ -1354,7 +1354,7 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     //    region the kick may have cleared — set_region_to_selection_extent writes
     //    active = true), so it follows even across a domain shrink.
     //  - TrimWindow: re-run the trim SET path, which re-maps app.trim's SOURCE-
-    //    frame bounds through the NEW live map (FIX C), so the wash tracks the
+    //    frame bounds through the NEW live map (FIX C), so the highlight tracks the
     //    chips/stems; a bare x can never inverse-map a stale span. The trim pair
     //    cannot DISSOLVE mid-tempo-gesture (no bound is authored here), so the
     //    no-window arm is not reached FROM tempo gestures — but the coincident

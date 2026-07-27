@@ -534,7 +534,7 @@ void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
             // pre-drag region verbatim; for a RESTING clear (a drag RELEASED while
             // coincident, or a one-shot group STEP that reads live provenance) the
             // user re-clicks the chip row once the images re-separate. Either way,
-            // x with no highlight is a silent no-op (WYSIWYG — no hairline wash).
+            // x with no highlight is a silent no-op (WYSIWYG — no hairline highlight).
             app.region = RegionState{};
         } else {
             app.region.active     = true;
@@ -544,19 +544,19 @@ void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
             // region, but it is NOT that selection's extent — the tempo gestures
             // must never snap it to the selection extent. Instead they RE-SYNC a
             // TrimWindow region from app.trim's source-frame bounds through the new
-            // map (this very function re-run), so the wash tracks the chips/stems
+            // map (this very function re-run), so the highlight tracks the chips/stems
             // across a tempo edit. This is the provenance that lets the
             // trim/highlight coupling and the selection-extent follows both hold.
             app.region.provenance = RegionProvenance::TrimWindow;
         }
     } else {
         // No window (lone / no trim): clear the REGION only (the selection is
-        // untouched — trim never mutates it). A LONE bound still paints its chip,
-        // stem, and one-sided out-of-trim dim — a bright completed-window span
-        // that can READ as a highlight — and the cursor playhead stays painted
-        // beside it. That is deliberate: the wash<->cursor exclusivity
-        // (paint_playheads) is scoped to the REGION highlight, and a
-        // half-authored trim has no window to highlight (the R4 no-window rule).
+        // untouched — trim never mutates it). A LONE bound still paints its chip
+        // and its stem — but no bridge bar, which needs the pair — and the cursor
+        // playhead stays painted beside it. That is deliberate: the
+        // highlight<->cursor exclusivity (paint_playheads) is scoped to the
+        // REGION highlight, and a half-authored trim has no window to highlight
+        // (the R4 no-window rule).
         app.region = RegionState{};
     }
     viewport.invalidate_waveform_area();
@@ -670,10 +670,10 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 //   CHIP HIT: a chip-rect hit (hit_test_trim_chip, itself y-gated to the chip
 //     row) arms that bound's single drag.
 //   BRIDGE: else, a press whose y lies in the chip (upper) row band —
-//     top_upper_row_area, the band the translucent bridge block spans between
+//     top_upper_row_area, the band the bridge bar spans between
 //     the two chips — and whose column falls inside the shared trim_bridge_gap
 //     interval (render.h) arms the pair drag. That is the SAME owner
-//     render_trim_flags' wash uses, so the clickable band IS the painted wash
+//     render_trim_flags' bar uses, so the clickable band IS the painted bar
 //     exactly (no reliance on the CHIP HIT above consuming pixels first — the
 //     chip rects sit outside the gap either way), plus a [0, area_w) click gate so
 //     the inert non-multiple-of-16 gutter cannot arm past the painted surface.
@@ -691,7 +691,7 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // The bridge-region bound columns come from the displayed MAP
 // (displayed_or_live_target_map) AND the displayed VIEWPORT
 // (displayed_viewport_basis) — the EXACT basis and owner chain the live trim
-// pass (GuiPaintHandler::paint_trim) paints the chips/wash from every frame
+// pass (GuiPaintHandler::paint_trim) paints the chips/bar from every frame
 // (displayed_trim_ms -> trim_bound_column -> trim_bridge_gap), so a hit lands
 // on what is drawn BY SHARED OWNERS: paint and hit read the same functions on
 // the same basis (the
@@ -732,8 +732,8 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
 
     // Bridge (pair) drag: the CHIP ROW ONLY — a press whose y lies in the
     // top-strip upper-row band (top_upper_row_area, the exact band
-    // hit_test_trim_chip y-gates on and the band the translucent bridge block
-    // spans between the two chips) and whose column falls inside the painted wash
+    // hit_test_trim_chip y-gates on and the band the bridge bar
+    // spans between the two chips) and whose column falls inside the painted bar's
     // gap between the two chips (both bounds guaranteed set by the gate above). A
     // top-strip press BELOW that band — the marker flag row — is not the bridge
     // handle: it falls through to the caller's flag handling. The pair has no
@@ -754,12 +754,12 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
             displayed_or_live_target_map(app, audio);
         const std::vector<WarpFrameMapSegment>* map =
             dmap.empty() ? nullptr : &dmap;
-        // Bridge hit interval = the PAINTED wash gap EXACTLY, via the shared owner
-        // trim_bridge_gap (render.h) — the SAME owner render_trim_flags' wash uses
-        // — over the two bounds' TrimBoundColumns on the DISPLAYED basis
+        // Bridge hit interval = the PAINTED bar's gap EXACTLY, via the shared
+        // owner trim_bridge_gap (render.h) — the SAME owner render_trim_flags'
+        // bar uses — over the two bounds' TrimBoundColumns on the DISPLAYED basis
         // (vp_start_frame/vp_end_frame/area_w — the same triple the live trim
         // pass paints with), so the columns are exactly where the
-        // wash is painted. The owner already handles the
+        // bar is painted. The owner already handles the
         // offscreen-flush edges (no chip-width inset for an unpainted bound), so
         // this needs no min/max and no reliance on the chip single-hit consuming
         // the chip pixels first (the chip rects sit OUTSIDE the gap either way).
@@ -775,7 +775,7 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
         // The [0, area_w) click gate — the SAME effective-width clip the bridge
         // PAINTER applies (render_trim_flags intersects its drawn extent with
         // [0, wave_w)): the inert non-multiple-of-16 right gutter (or a newly
-        // exposed width over an older committed basis) NEITHER paints wash NOR
+        // exposed width over an older committed basis) NEITHER paints the bar NOR
         // arms, so paint == hit exactly there.
         if (click_rel_x >= 0 && click_rel_x < basis.area_w &&
             click_rel_x >= gap.lo && click_rel_x < gap.hi) {

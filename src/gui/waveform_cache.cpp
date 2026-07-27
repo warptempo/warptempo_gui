@@ -45,9 +45,12 @@ void render_waveform_to_cache_surface(
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null) {
     if (!dest || area_w <= 0 || area_h <= 0) return;
 
-    // Clear to transparent — the waveform area's kCanvas ground shows through
+    // Clear to transparent — whatever ground the paint pass laid under the plate
+    // (kCanvas, or a kRegionCanvas / kOverlayCanvas recolor) shows through
     // wherever the waveform samples don't paint. No ground color is ever baked
-    // into the plate; its alpha is the sample mask the out-of-trim dim pass reads.
+    // into the plate: its alpha is exactly what composites the ink over that
+    // ground, gaps and antialiased fringes alike, which is why a highlighted
+    // span needs no plate of its own.
     // This is the LAST cairo drawing on the surface: render_waveform writes the
     // pixel words directly, so the context is destroyed before those CPU writes
     // begin (render_waveform still flushes defensively, per its contract).
@@ -246,9 +249,8 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.inset_px       = in.inset_px;
     job.target         = in.is_target;
     job.warp_frame_map_hash   = in.warp_frame_map_hash;
-    // Stash a copy of the warp_frame_map on the pending slot so the
-    // flag cache (and the out-of-trim dim) can read it at completion-swap
-    // time. The job consumes
+    // Stash a copy of the warp_frame_map on the pending slot so the flag cache —
+    // its one reader — can consume it at completion-swap time. The job takes
     // the original by move; the copy stays on the cache.
     wf_cache.pending_fp_warp_frame_map = in.warp_frame_map;
     job.warp_frame_map        = std::move(in.warp_frame_map);
@@ -447,7 +449,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 
 // Synchronous-repaint rule (the waveform-layer coherence invariant):
 //
-// The waveform plate and the marker / playhead / dim / trim / flag overlays are
+// The waveform plate and the marker / playhead / trim / flag overlays are
 // separate paint layers. The overlays are computed inline from live state and
 // paint on the next frame; the plate is the expensive layer. If a one-shot
 // state change updates the overlays inline but defers the plate to the async

@@ -443,7 +443,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // and the tail chain's min(total_frames, ...) clamp coincides with the full
     // render's own tail). The completion lives ONLY here — the store, walls,
     // gestures (lone stays gesture-inert, pair required), file grammar, editor,
-    // chips/dim paint, and the fingerprint/recipe all keep the authored lone
+    // chip and stem paint, and the fingerprint/recipe all keep the authored lone
     // bound (total is prepost-legal but store-illegal: the authored wall is
     // total-1). So any set bound reaches plan_trim, which validates the
     // (possibly completed) pair first — validate_trim_frames stays the sole

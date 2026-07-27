@@ -2,13 +2,13 @@
 
 #include "render.h"
 
+#include <cerrno>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
 #include <iterator>
-#include <sstream>
 #include <string>
 #include <string_view>
 
@@ -55,14 +55,26 @@ const ColorKey kColorKeys[] = {
 };
 constexpr size_t kColorKeyCount = std::size(kColorKeys);
 
-// The one rejection site: a single lowercase stderr line naming the file, the
-// 1-based line number and the reason. Every caller RETURNS immediately after
-// it, which is what makes the "first error only, whole file dropped" rule
-// structural rather than a discipline.
-void reject(const std::string& path, size_t line, const std::string& reason) {
+// The two rejection sites, one per fault class. Both print a single lowercase
+// stderr line and every caller RETURNS immediately after, which is what makes
+// the "first error only, whole file dropped" rule structural rather than a
+// discipline.
+//
+// reject_line is the GRAMMAR fault: the file was read, and one 1-based line of
+// it deviates. reject_file is the FILE fault: the bytes never arrived, so there
+// is no line to name. Only genuine ABSENCE is silent (see load_color_config) —
+// a file that exists but cannot be delivered is a fault the architect must see,
+// since the alternative is a retuned scheme silently not taking effect.
+void reject_line(const std::string& path, size_t line,
+                 const std::string& reason) {
     std::fprintf(stderr,
                  "warptempo_gui: %s: line %zu: %s; keeping compiled colors\n",
                  path.c_str(), line, reason.c_str());
+}
+
+void reject_file(const std::string& path, const char* reason) {
+    std::fprintf(stderr, "warptempo_gui: %s: %s; keeping compiled colors\n",
+                 path.c_str(), reason);
 }
 
 // One lowercase hex digit, or -1. Uppercase is deliberately NOT accepted: the
@@ -83,13 +95,44 @@ void load_color_config() {
         std::string(home) + "/.config/warptempo_gui/colors.conf";
 
     // Binary, so the byte-exact grammar below sees the file as written (no
-    // newline translation of any kind). A file that will not open is the
-    // MISSING case and stays silent — the fresh-machine state.
+    // newline translation of any kind).
+    //
+    // ABSENCE IS THE ONLY SILENT FAILURE. No file at all is the fresh-machine
+    // state — the normal way to run on compiled defaults — so ENOENT returns
+    // without a word. Every OTHER open failure (a directory in the way, a
+    // permission bit, an i/o error) means a config the architect wrote is not
+    // being applied, which must be said out loud. errno is cleared first so the
+    // test reads THIS open's result rather than some earlier call's residue.
+    errno = 0;
     std::ifstream f(path, std::ios::binary);
-    if (!f) return;
-    std::ostringstream buf;
-    buf << f.rdbuf();
-    const std::string text = buf.str();
+    if (!f) {
+        if (errno != ENOENT) reject_file(path, "cannot open");
+        return;
+    }
+
+    // THE READ MUST HAVE COMPLETED before a single line is parsed: a truncated
+    // delivery whose prefix happens to be a run of valid lines would otherwise
+    // be adopted as if it were the whole file. Chunked istream::read rather than
+    // a streambuf slurp precisely so a failure lands in THIS stream's state —
+    // an extraction straight from f.rdbuf() bypasses f and leaves it reading
+    // "good" after a short read. The loop appends each full chunk; the read that
+    // ends it (eof or error) leaves its tail count in gcount(), which the final
+    // append takes.
+    std::string text;
+    {
+        char chunk[4096];
+        while (f.read(chunk, sizeof chunk))
+            text.append(chunk, static_cast<size_t>(f.gcount()));
+        text.append(chunk, static_cast<size_t>(f.gcount()));
+    }
+    // badbit is the i/o failure; ending at eof (eofbit + failbit, no badbit) is
+    // the normal exit. An EMPTY file reads cleanly to zero bytes and falls
+    // through to the parser, where it is a grammar fault — its first key's line
+    // is simply missing.
+    if (f.bad()) {
+        reject_file(path, "cannot read");
+        return;
+    }
 
     // Parse into a SCRATCH set first. Adoption is all-or-nothing, so no global
     // is written until every line has validated — a file that goes wrong on its
@@ -104,9 +147,18 @@ void load_color_config() {
 
         const size_t nl = text.find('\n', pos);
         if (nl == std::string::npos) {
-            // Covers both a truncated file and a last line written without its
-            // terminator: every line ends in a newline, the final one included.
-            reject(path, line_no, "missing trailing newline");
+            // Two different faults share this arm, and naming them apart is the
+            // difference between a useful message and a misleading one. Nothing
+            // left at all (an empty file included) means the key's LINE IS
+            // ABSENT — the file simply ran out before it. Bytes left but no
+            // newline among them means the line is there and merely
+            // UNTERMINATED. Every line ends in a newline, the final one
+            // included, so both are fatal.
+            if (pos == text.size())
+                reject_line(path, line_no,
+                            "missing line for key " + std::string(name));
+            else
+                reject_line(path, line_no, "missing trailing newline");
             return;
         }
         const std::string_view line(text.data() + pos, nl - pos);
@@ -122,7 +174,8 @@ void load_color_config() {
         if (line.size() < head ||
             line.compare(0, name.size(), name) != 0 ||
             line.compare(name.size(), 3, " = ") != 0) {
-            reject(path, line_no, "expected key " + std::string(name));
+            reject_line(path, line_no,
+                        "expected key " + std::string(name));
             return;
         }
 
@@ -130,14 +183,14 @@ void load_color_config() {
         const std::string value_error =
             "bad color value for key " + std::string(name);
         if (line.size() != head + 7 || line[head] != '#') {
-            reject(path, line_no, value_error);
+            reject_line(path, line_no, value_error);
             return;
         }
         uint32_t rgb = 0;
         for (size_t d = 0; d < 6; ++d) {
             const int v = hex_digit(line[head + 1 + d]);
             if (v < 0) {
-                reject(path, line_no, value_error);
+                reject_line(path, line_no, value_error);
                 return;
             }
             rgb = (rgb << 4) | static_cast<uint32_t>(v);
@@ -149,7 +202,8 @@ void load_color_config() {
     // not a stray byte. The line number reported is the first line past the
     // table, which is where the offending content begins.
     if (pos != text.size()) {
-        reject(path, kColorKeyCount + 1, "extra content after the last key");
+        reject_line(path, kColorKeyCount + 1,
+                    "extra content after the last key");
         return;
     }
 

@@ -113,7 +113,7 @@ int64_t stepped_anchor_frame(
 //     selected-marker stem's move: a nudge shifts the focused SINGLETON's frame,
 //     and its always-on blue stem (the blue-focus pivot, architect 2026-07-25)
 //     repaints at the new column here. A 2+ selection paints no stem (its cue is
-//     the extent-region wash), so nothing to move there;
+//     the extent region's recolored ground), so nothing to move there;
 // (d) invalidate_timestamp_area;
 // (e) PLAYHEAD FOLLOW: move_playhead_to the focused item's committed frame
 //     through the two-step placement basis (source_frame_to_active_domain —

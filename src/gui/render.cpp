@@ -925,7 +925,7 @@ TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
                               int wave_w) {
     // Contract (4x2 table) at the declaration. A PAINTED (InView) chip bounds the
     // gap at its inner edge (inset by chip_w — the room the chip occupies); an
-    // OFFSCREEN bound paints no chip, so the wash runs FLUSH. The offscreen arms
+    // OFFSCREEN bound paints no chip, so the bar runs FLUSH. The offscreen arms
     // key on the bound's SIDE (not col_raw, which cannot tell the side across the
     // rounding seam), and use side-specific SENTINELS so an offscreen edge lands
     // STRICTLY past the visible range — never col 0 / col wave_w-1 — which is what
@@ -1064,7 +1064,7 @@ void render_trim_flags(cairo_t* cr,
     // pass through displayed_trim_ms), read four ways: .col (clamped), .col_raw
     // (unclamped, the offscreen sentinel input), .in_viewport (visibility), and
     // .side (offscreen left/right, the sentinel selector — trim_bridge_gap).
-    // Computed unconditionally so the wash band spans between the bounds even
+    // Computed unconditionally so the bridge bar spans between the bounds even
     // when a chip is culled; chips and their stems draw only for a visible bound.
     const TrimBoundColumn bc = trim_bound_column(
         static_cast<double>(trim.begin), viewport_start_sample,
@@ -1085,8 +1085,8 @@ void render_trim_flags(cairo_t* cr,
     // interval (the shared trim_bridge_gap owner below), so the clickable band is
     // exactly the painted bar. The bar carries the trim family's BRIGHT pair — an
     // opaque kTrimBar fill with a 1px kTrimBarOutline ring — because it is the
-    // sole "this is the trim window" signal now that the out-of-trim dim is
-    // retired; the chips beside it stay calm. Columns are computed
+    // sole "this is the trim window" signal; the chips beside it stay calm.
+    // Columns are computed
     // unconditionally (a chip's viewport cull must not suppress the band). A gap
     // exists only when the begin chip sits fully left of the end chip
     // (wide-enough, non-inverted span); an inverted or narrow trim shows no
@@ -1096,7 +1096,7 @@ void render_trim_flags(cairo_t* cr,
     // interval comes from the shared owner trim_bridge_gap (the SAME owner
     // route_trim_chip_press' bridge hit consumes, so paint and hit cannot drift):
     // an in_viewport bound bounds the gap at its drawn chip's inner edge; an
-    // OFFSCREEN bound (no chip) runs the wash FLUSH via a side-specific sentinel
+    // OFFSCREEN bound (no chip) runs the bar FLUSH via a side-specific sentinel
     // (keyed on the bound's SIDE, not col_raw — the rounding seam), pushing that
     // edge STRICTLY past the visible range. The interval is RAW; the PAINTER clips
     // the DRAWN extent to the effective width [0, wave_w) (below) — the inert

@@ -93,7 +93,7 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // The region-select span is view-domain scratch; the entering tab restores
     // a different viewport (and, under a differing map, a different active
     // domain), so a resting region cannot carry across. The kick_waveform_sync
-    // below repaints the whole waveform area, clearing the wash.
+    // below repaints the whole waveform area, restoring the plain canvas ground.
     app.region = RegionState{};
     this->refresh_active_tab_view_from_app();
     app.active_tab_view = target_tab;
