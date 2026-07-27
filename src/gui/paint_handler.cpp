@@ -112,7 +112,7 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
     // (lane_text_left_x_at_frame) on a kBackground fill behind the run with no
     // border. The editor box flashes its fill kAccent on an invalid commit.
     const GuiRect lane      = top_marker_text_row_area(app);
-    const double  baseline  = lane.y + monospace_row_baseline_offset();
+    const double  baseline  = lane.y + monospace_text_row_baseline_offset();
     const double  advance   = monospace_advance();
     if (advance <= 0.0) return;
 
@@ -899,9 +899,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     const GuiRect upper_row = bottom_upper_row_area(app);
 
     const double lower_baseline =
-        lower_row.y + monospace_row_baseline_offset();
+        lower_row.y + monospace_text_row_baseline_offset();
     const double upper_baseline =
-        upper_row.y + monospace_row_baseline_offset();
+        upper_row.y + monospace_text_row_baseline_offset();
 
     // --- Lower row: status line (always on). One assembled field
     //     drawn in a single pass; elements are space-separated and
@@ -1105,7 +1105,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // loading (and total_frames is 0 on a cold launch).
         const GuiRect upper_row = bottom_upper_row_area(app);
         const double  upper_baseline =
-            upper_row.y + monospace_row_baseline_offset();
+            upper_row.y + monospace_text_row_baseline_offset();
         text_display::draw_line(
             cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
             app.queue_progress_text, kText, flag_font_size_px());
@@ -1139,7 +1139,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     line+triangle) and the region SPLIT half-triangles pass UNDER
         //     marker flags, so on a multimarker select the extent region's
         //     half-triangles rest hidden behind the earliest/latest members'
-        //     flags (identical 17-wide triangle geometry at the same column);
+        //     flags (identical 15-wide triangle geometry at the same column);
         //     the grey selected-marker focus triangles are GONE (the blue-focus
         //     pivot, architect 2026-07-25 — a singleton's focus is its STEM, a
         //     group's is the extent-region ground).

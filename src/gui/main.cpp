@@ -87,9 +87,9 @@ namespace {
 // below are paint-handler-independent and stay file-local.
 
 // The strip/lane geometry is a fixed-pixel per-strip lane stack derived from
-// monospace_row_h(), flag_lane_h_px(), playhead_triangle_h_px(), kRowGapPx, and
-// kFlagBottomLiftPx (see the geometry helpers below); nothing is
-// window-proportional.
+// monospace_row_h() / monospace_text_row_h(), flag_lane_h_px(),
+// playhead_triangle_h_px(), kRowGapPx, and kFlagBottomLiftPx (see the geometry
+// helpers below); nothing is window-proportional.
 
 // kMarkerHitHalfPx lives in app_state.h so the hit_test_* free
 // functions and the GuiInputHandler mouse handler can reach it.
@@ -139,11 +139,12 @@ namespace {
 // Per-strip lane stacks with per-lane heights (the former uniform-row contract
 // is superseded). Top and bottom strips now DIFFER in height; the waveform
 // flexes between them. The TOP strip is FIVE lanes (from the window edge
-// inward): zoom row (monospace_row_h()), trim-chip row (the flag height),
-// marker-text row (monospace_row_h()), flag row (the flag height), and the
-// triangle row (the triangle height) flush on the waveform. The BOTTOM strip is
-// TWO lanes: the status row (outer) and the editor/modal row (inner). The lanes
-// pack tight — the inter-lane gaps kRowGapPx and the outer/waveform-side gaps
+// inward): zoom row (the textless monospace_row_h()), trim-chip row (the flag
+// height), marker-text row (the padded monospace_text_row_h()), flag row (the
+// flag height), and the triangle row (the triangle height) flush on the
+// waveform. The BOTTOM strip is TWO lanes: the status row (outer) and the
+// editor/modal row (inner), both padded text rows. The lanes pack tight — the
+// inter-lane gaps kRowGapPx and the outer/waveform-side gaps
 // kFlagBottomLiftPx are all 0 — but the derivation below keeps them explicit so
 // they reappear structurally if ever un-zeroed. ONE shared helper —
 // strip_row_rect — is the single geometry owner; every named accessor delegates
@@ -160,23 +161,25 @@ static void clamp_dims(int& w, int& h) {
 
 namespace {
 // Per-lane pixel heights, indexed from each strip's window edge inward. The top
-// strip's flag and trim-chip rows carry the flag height; its zoom and
-// marker-text rows carry the monospace row height; its innermost lane carries
-// the triangle height. Both bottom lanes are monospace rows.
+// strip's flag and trim-chip rows carry the flag height; its innermost lane
+// carries the triangle height. The TEXT-BEARING lanes — the marker-text row and
+// both bottom lanes — carry the PADDED monospace row (glyph band, ring, and the
+// four-side text-box gap); the zoom row is a bare drag surface painted as an
+// empty ring, hosts no glyph, and keeps the unpadded metric.
 constexpr int kTopLaneCount    = 5;
 constexpr int kBottomLaneCount = 2;
 int top_lane_height(int lane) {
     switch (lane) {
-        case 0: return monospace_row_h();        // zoom row
+        case 0: return monospace_row_h();        // zoom row (textless)
         case 1: return flag_lane_h_px();         // trim-chip row
-        case 2: return monospace_row_h();        // marker-text row
+        case 2: return monospace_text_row_h();   // marker-text row
         case 3: return flag_lane_h_px();         // flag row
         case 4: return playhead_triangle_h_px(); // triangle row (flush on waveform)
         default: return 0;
     }
 }
 int bottom_lane_height() {
-    return monospace_row_h();                    // status row, editor/modal row
+    return monospace_text_row_h();               // status row, editor/modal row
 }
 int strip_total_h(bool top_strip) {
     int sum = 2 * static_cast<int>(kFlagBottomLiftPx);  // outer + waveform-side gaps
