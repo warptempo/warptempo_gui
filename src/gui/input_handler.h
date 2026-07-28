@@ -832,7 +832,10 @@ private:
     // pair — ADJUST-ONLY (architect 2026-07-23): the clicks adjust an existing
     // window, never create one (region→x creates; the settings editor is the
     // deliberate lone-bound route). Runs the coupling
-    // sync afterward. is_begin picks the bound: the ctrl chip-row click sets
+    // sync afterward. OWNS the press's playback stop, placed past those
+    // refusals and just ahead of the bound write, so the ctrl / ctrl+shift
+    // chip-row press carries none of its own and a refused click leaves a live
+    // audition playing. is_begin picks the bound: the ctrl chip-row click sets
     // begin, ctrl+shift sets end (R5).
     void set_trim_bound_at_click(bool is_begin, int mouse_x);
 

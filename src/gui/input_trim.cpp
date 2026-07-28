@@ -578,7 +578,11 @@ void GuiInputHandler::sync_highlight_to_trim_window() {
 // directly). The absolute walls [0, total-1] apply after the snap, then the
 // shared crossed-commit auto-clear (a bound onto/across its partner dissolves
 // both). History-less like every trim mutation; the repaint + trigger tail
-// mirrors the drag release. Read-only refuses silently (trim authoring). The
+// mirrors the drag release. Read-only refuses silently (trim authoring). This
+// function OWNS the press's playback stop — placed past every refusal above
+// and immediately ahead of the bound write, so a refused click never stops a
+// live audition (the claim-keyed stop rule at on_button_press's top-strip
+// paragraph, taken inside the gate). The
 // coupling sync runs afterward against whatever the trim now is (the surviving
 // pair -> the REGION highlight takes the window; a crossed dissolve -> the region
 // cleared; the selection is never touched).
@@ -600,6 +604,13 @@ void GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     const int64_t wall = audio.total_frames() - 1;
     if (frame < 0)    frame = 0;
     if (frame > wall) frame = wall;
+    // The act commits from here on, so THIS is where it stops a live audition
+    // (architect 2026-07-27): the trim window is about to change under it,
+    // and every refusal above — read-only, no resting pair, a degenerate
+    // audio/geometry state — has already returned without stopping anything.
+    // The caller (the ctrl / ctrl+shift chip-row press) carries no stop of its
+    // own for exactly that reason. Ahead of the write, like every claim's stop.
+    playback_lifecycle.stop_playback_if_playing();
     if (is_begin) {
         app.trim.begin_frame = frame;
         app.trim.has_begin   = true;

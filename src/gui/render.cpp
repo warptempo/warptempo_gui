@@ -152,16 +152,21 @@ void paint_flag_shape(cairo_t* cr, double center_x,
                       const GuiColor* tri_fill = nullptr) {
     const int flag_w = flag_lane_w_px();
 
-    const int cx     = static_cast<int>(std::round(center_x));
+    // Every one of these four conversions takes an ALREADY-INTEGRAL double —
+    // center_x is a nearbyint'd column (or an int chip rect left), and the three
+    // y edges come from integer lane rects — so the rounding is an identity
+    // here; it is std::nearbyint because that is the project's single
+    // fractional->integer pixel convention.
+    const int cx     = static_cast<int>(std::nearbyint(center_x));
     // Rect left per anchor: Center straddles the column; LeftEdge puts the
     // rect's left column ON it. cx is otherwise the triangle apex (Center only).
     const int rx =
         anchor == FlagHAnchor::LeftEdge ? cx
       :                                   cx - flag_w / 2;   // rect left
     const int rw     = flag_w;
-    const int ry     = static_cast<int>(std::round(flag_top_d));
-    const int rb     = static_cast<int>(std::round(tri_top_d)); // rect bottom = tri top
-    const int tbot   = static_cast<int>(std::round(tip_y_d));   // triangle lane bottom
+    const int ry     = static_cast<int>(std::nearbyint(flag_top_d));
+    const int rb     = static_cast<int>(std::nearbyint(tri_top_d)); // rect bottom = tri top
+    const int tbot   = static_cast<int>(std::nearbyint(tip_y_d));   // triangle lane bottom
 
     // Triangle centerline = the rect's own center, and its base half-width comes
     // from the shared taper owner (flag_triangle_half_width_at at row 0 = the
@@ -763,6 +768,7 @@ void render_waveform(cairo_surface_t* dest,
 
 void render_playhead(cairo_t* cr,
                      GuiRect area,
+                     GuiRect triangle_lane,
                      double  playhead_pixel_x,
                      GuiColor color,
                      bool draw_triangle) {
@@ -800,9 +806,14 @@ void render_playhead(cairo_t* cr,
     // blit with the slope edge alphas already baked in. The mask is 2H-1 x H
     // (odd width) with the tip at column index H-1 (image-local); integer
     // division places that tip column at `area.x + col`. The triangle sits in
-    // the TRIANGLE LANE directly above the waveform (dst_y = area.y - H): its
-    // top row is the lane top and its tip (bottom row) lands one pixel above
-    // the waveform top edge, where the marker/trim stems begin. This is the
+    // the TRIANGLE LANE — dst_y is the LANE RECT's top (`triangle_lane.y`, from
+    // top_triangle_row_area), not `area.y - H` re-derived from the waveform top
+    // edge, so the stamp follows the lane the accessors report wherever the
+    // strip's gaps put it. Its top row is the lane top and its tip (bottom row)
+    // lands one pixel above the waveform top edge, where the marker/trim stems
+    // begin, because the lane stack rests that lane flush on the waveform; the
+    // mask height equals the lane height by construction (both are
+    // playhead_triangle_h_px()). This is the
     // same width and centered column as every marker/trim flag triangle, so when
     // the cursor sits on a marker the two coincide. Skipped for the scanner call
     // (draw_triangle=false): the triangle belongs to the cursor exclusively under
@@ -813,7 +824,7 @@ void render_playhead(cairo_t* cr,
         const int img_w = cairo_image_surface_get_width(triangle_surface);
         const int img_h = cairo_image_surface_get_height(triangle_surface);
         const double dst_x = static_cast<double>(area.x + col - img_w / 2);
-        const double dst_y = static_cast<double>(area.y - img_h);
+        const double dst_y = static_cast<double>(triangle_lane.y);
         cairo_rectangle(cr,
                         static_cast<double>(area.x),
                         dst_y,
@@ -828,6 +839,7 @@ void render_playhead(cairo_t* cr,
 
 void render_split_playhead(cairo_t* cr,
                            GuiRect area,
+                           GuiRect triangle_lane,
                            int left_col,
                            int right_col,
                            GuiColor color) {
@@ -841,9 +853,10 @@ void render_split_playhead(cairo_t* cr,
     const int img_h  = cairo_image_surface_get_height(mask);
     const int center = img_h - 1;
 
-    // Triangle lane: top row at the lane top, tip one pixel above the waveform
-    // top edge — identical to the unsplit playhead triangle.
-    const double dst_y   = static_cast<double>(area.y - img_h);
+    // Triangle lane: top row at the LANE RECT's top, tip one pixel above the
+    // waveform top edge — identical to the unsplit playhead triangle, and taken
+    // from the same passed-in lane rect for the same reason (see render_playhead).
+    const double dst_y   = static_cast<double>(triangle_lane.y);
     const double area_x0 = static_cast<double>(area.x);
     const double area_x1 = static_cast<double>(area.x + area.w);
 
@@ -1355,8 +1368,9 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     // sizes. The antialiased glyph text and the selection substring repaint are
     // NOT clamped — their extreme leading rows are blank, the ring paints
     // first, and only these filled rects could otherwise show through it.
-    int band_y0 = static_cast<int>(std::lround(glyph_top));
-    int band_y1 = static_cast<int>(std::lround(glyph_top + glyph_h));
+    // std::nearbyint, the project's one fractional->integer pixel conversion.
+    int band_y0 = static_cast<int>(std::nearbyint(glyph_top));
+    int band_y1 = static_cast<int>(std::nearbyint(glyph_top + glyph_h));
     const int band_lo = fr.y + kChipOutlinePx;
     const int band_hi = fr.y + fr.h - kChipOutlinePx;
     band_y0 = std::clamp(band_y0, band_lo, band_hi);
@@ -1414,8 +1428,10 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
         const double adv  = monospace_advance();
         const double hi_x = editable_left + s.selection_start * adv;
         const double hi_w = (s.selection_end - s.selection_start) * adv;
-        const int hx0 = static_cast<int>(std::lround(hi_x));
-        const int hx1 = static_cast<int>(std::lround(hi_x + hi_w));
+        // std::nearbyint, the project's one fractional->integer pixel
+        // conversion, the same one the band rows above take.
+        const int hx0 = static_cast<int>(std::nearbyint(hi_x));
+        const int hx1 = static_cast<int>(std::nearbyint(hi_x + hi_w));
         const int hw  = (hx1 > hx0) ? (hx1 - hx0) : 1;
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -1435,16 +1451,17 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
 
     // 5. Cursor (blink-gated): a crisp one-pixel-wide integer rectangle, AA
     //    off, spanning the integer-snapped glyph ink band (band_y0 / band_h),
-    //    not the full step-1 slot. cur_col is the rounded column; the former
-    //    round(x)+0.5 half-pixel was a stroke-aliasing device, unneeded for a
-    //    filled integer rectangle.
+    //    not the full step-1 slot. cur_col is the nearbyint'd column; the
+    //    former round(x)+0.5 half-pixel was a stroke-aliasing device, unneeded
+    //    for a filled integer rectangle.
     if (s.cursor_visible) {
         const double cursor_x_offset = s.cursor_pos * monospace_advance();
         // An integer one-pixel rectangle at cur_col occupies exactly the
         // cursor column with AA off; the former round(x)+0.5 half-pixel was a
-        // stroke-aliasing device and is no longer needed.
+        // stroke-aliasing device and is no longer needed. std::nearbyint, the
+        // project's one fractional->integer pixel conversion.
         const int cur_col =
-            static_cast<int>(std::round(editable_left + cursor_x_offset));
+            static_cast<int>(std::nearbyint(editable_left + cursor_x_offset));
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
         cairo_set_source_rgb(cr,
@@ -1561,30 +1578,27 @@ void iterate_visible_flags_impl(
     }
 }
 
-// Resolves the flag lane / triangle lane / tip Y from the top strip rect. The
-// top strip sits at screen y=0, so screen and top-strip-local coords coincide;
-// the triangle lane is the innermost lane (flush on the waveform), the flag lane
-// directly above it. The waveform top edge is top_strip_area.y + .h.
-//
-// BOTTOM-ANCHORED, and therefore assuming kRowGapPx and kFlagBottomLiftPx are
-// both 0: it stacks upward from the strip bottom instead of summing the lane
-// heights the accessors use. main.cpp's lane-stack comment is the record of
-// that coupling and names the other two sites that share the assumption (the
-// triangle blits in render_playhead and render_split_playhead).
+// Resolves the flag lane / triangle lane / tip Y — a pure READ of the two lane
+// rects the caller resolved from the lane accessors (top_flag_row_area /
+// top_triangle_row_area, both delegating to strip_row_rect). The rectangle spans
+// the flag lane, the triangle spans the triangle lane directly below it, and the
+// tip sits on the triangle lane's bottom edge, which the lane stack places flush
+// on the waveform top. Nothing here is derived by stacking upward from the strip
+// bottom any more, so the shapes and their hit rects follow the lanes wherever
+// the stack puts them — an inter-lane gap (kRowGapPx) or a waveform-side gap
+// (kFlagBottomLiftPx) moves the lanes and these shapes together, and the empty
+// flag/triangle-lane press gate keeps testing the bands the shapes occupy.
 struct FlagLaneY {
     double flag_top;   // flag-lane top (rectangle top)
     double tri_top;    // triangle-lane top (= flag-lane bottom / rect bottom)
     double tip_y;      // triangle-lane bottom (= waveform top edge, triangle tip)
 };
-FlagLaneY flag_lane_geometry(const GuiRect& top_strip_area) {
-    const double wf_top =
-        static_cast<double>(top_strip_area.y + top_strip_area.h);
-    const double tri_h  = static_cast<double>(playhead_triangle_h_px());
-    const double flag_h = static_cast<double>(flag_lane_h_px());
+FlagLaneY flag_lane_geometry(const FlagLaneRects& lanes) {
     FlagLaneY g;
-    g.tip_y    = wf_top;
-    g.tri_top  = wf_top - tri_h;
-    g.flag_top = wf_top - tri_h - flag_h;
+    g.flag_top = static_cast<double>(lanes.flag_lane.y);
+    g.tri_top  = static_cast<double>(lanes.triangle_lane.y);
+    g.tip_y    = static_cast<double>(lanes.triangle_lane.y +
+                                     lanes.triangle_lane.h);
     return g;
 }
 
@@ -1592,6 +1606,7 @@ FlagLaneY flag_lane_geometry(const GuiRect& top_strip_area) {
 
 void render_flags(cairo_t* cr,
                   GuiRect top_strip_area,
+                  FlagLaneRects lanes,
                   int waveform_width,
                   const std::vector<GuiWarpMarker>& markers,
                   long long viewport_start_sample,
@@ -1607,7 +1622,7 @@ void render_flags(cairo_t* cr,
 
     cairo_save(cr);
 
-    const FlagLaneY g = flag_lane_geometry(top_strip_area);
+    const FlagLaneY g = flag_lane_geometry(lanes);
 
     // Collect flag centers in ascending-x order, then paint in TWO reverse
     // passes keyed on selection: UNSELECTED in reverse, then SELECTED in
@@ -1671,6 +1686,7 @@ namespace {
 template <typename MarkerVec>
 std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     GuiRect top_strip_area,
+    FlagLaneRects lanes,
     int waveform_width,
     const MarkerVec& markers,
     long long viewport_start_sample,
@@ -1694,15 +1710,21 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     // overlap with two forward passes mirroring the painters' two reverse
     // passes — the leftmost SELECTED containing rect, else the leftmost
     // containing rect = the topmost-painted flag.
-    const FlagLaneY g = flag_lane_geometry(top_strip_area);
+    //
+    // The rect's vertical span is the painter's exactly: paint_flag_shape fills
+    // rows [flag_top, tri_top), and flag_lane_geometry reports those two edges
+    // as the flag lane's top and the triangle lane's top. Both are already whole
+    // pixels (lane rects are integers), so the nearbyint here is an identity
+    // that keeps the conversion convention rather than a live rounding.
+    const FlagLaneY g = flag_lane_geometry(lanes);
     const int flag_w = flag_lane_w_px();
-    const int ry     = static_cast<int>(std::round(g.flag_top));
-    const int rh     = static_cast<int>(std::round(g.tri_top)) - ry;
+    const int ry     = static_cast<int>(std::nearbyint(g.flag_top));
+    const int rh     = static_cast<int>(std::nearbyint(g.tri_top)) - ry;
     iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
                                viewport_start_sample, viewport_end_sample,
                                warp_frame_map, drag_overlay,
         [&](int i, double center_x) {
-            const int cx = static_cast<int>(std::round(center_x));
+            const int cx = static_cast<int>(std::nearbyint(center_x));
             FlagHitRect r;
             r.marker_index = i;
             r.x = cx - flag_w / 2;
@@ -1719,6 +1741,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
 
 std::vector<FlagHitRect> compute_flag_hit_rects(
     GuiRect top_strip_area,
+    FlagLaneRects lanes,
     int waveform_width,
     const std::vector<GuiWarpMarker>& markers,
     long long viewport_start_sample,
@@ -1726,8 +1749,8 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
     int sample_rate,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay) {
-    return compute_flag_hit_rects_impl(top_strip_area, waveform_width, markers,
-        viewport_start_sample, viewport_end_sample,
+    return compute_flag_hit_rects_impl(top_strip_area, lanes, waveform_width,
+        markers, viewport_start_sample, viewport_end_sample,
         sample_rate, warp_frame_map, drag_overlay);
 }
 
@@ -1735,6 +1758,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
 
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
+                            FlagLaneRects lanes,
                             int waveform_width,
                             const std::vector<GuiPhaseResetMarker>& phase_resets,
                             long long viewport_start_sample,
@@ -1750,7 +1774,7 @@ void render_phase_reset_flags(cairo_t* cr,
 
     cairo_save(cr);
 
-    const FlagLaneY g = flag_lane_geometry(top_strip_area);
+    const FlagLaneY g = flag_lane_geometry(lanes);
 
     // Collect-then-paint in TWO reverse passes keyed on selection, mirroring
     // render_flags: UNSELECTED in reverse, then SELECTED in reverse, so every
@@ -1799,6 +1823,7 @@ void render_phase_reset_flags(cairo_t* cr,
 
 std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     GuiRect top_strip_area,
+    FlagLaneRects lanes,
     int waveform_width,
     const std::vector<GuiPhaseResetMarker>& phase_resets,
     long long viewport_start_sample,
@@ -1806,8 +1831,8 @@ std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     int sample_rate,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
     const DragOverlay* drag_overlay) {
-    return compute_flag_hit_rects_impl(top_strip_area, waveform_width, phase_resets,
-        viewport_start_sample, viewport_end_sample,
+    return compute_flag_hit_rects_impl(top_strip_area, lanes, waveform_width,
+        phase_resets, viewport_start_sample, viewport_end_sample,
         sample_rate, warp_frame_map, drag_overlay);
 }
 
@@ -1930,6 +1955,8 @@ void init_monospace_grid_metrics(cairo_t* cr) {
     cairo_restore(cr);
     g_measured_font_px = px;
 }
+
+double measured_monospace_font_px() { return g_measured_font_px; }
 
 double lane_text_left_x_at_frame(
     const AppState& app, const GuiAudio& audio,

@@ -620,7 +620,9 @@ inline int flag_chip_width_px(size_t glyph_count) {
     const double pad = flag_pad_x_px() + text_box_pad_px();
     const double advance =
         static_cast<double>(glyph_count) * monospace_advance();
-    return static_cast<int>(std::round(advance + 2.0 * pad))
+    // std::nearbyint, the project's one fractional->integer pixel conversion
+    // (banker's rounding, no epsilon nudge), like every other pixel site.
+    return static_cast<int>(std::nearbyint(advance + 2.0 * pad))
         + 2 * kChipOutlinePx;
 }
 
@@ -669,14 +671,17 @@ inline int flag_chip_width_px(size_t glyph_count) {
 //                 text_box_margin_px() below it and the height is
 //                 monospace_text_box_h().
 //
-// Returns the integer GuiRect [x, y, w, h]; rounding happens here, once.
+// Returns the integer GuiRect [x, y, w, h]; rounding happens here, once, through
+// std::nearbyint like every other pixel conversion.
 // Consumers use the returned ints directly — no consumer re-rounds or
 // recomputes any edge.
 inline GuiRect flag_chip_rect(double text_left, size_t glyph_count,
                               double baseline_y) {
     GuiRect r;
-    r.x = static_cast<int>(std::round(text_left));
-    const int lane_top = static_cast<int>(std::round(
+    // Both conversions are std::nearbyint, the project's single rounding
+    // convention for fractional->integer pixels.
+    r.x = static_cast<int>(std::nearbyint(text_left));
+    const int lane_top = static_cast<int>(std::nearbyint(
               baseline_y - monospace_text_row_baseline_offset()));
     r.y = lane_top + static_cast<int>(text_box_margin_px());
     r.w = flag_chip_width_px(glyph_count);
@@ -704,8 +709,9 @@ inline GuiRect flag_chip_rect(double text_left, size_t glyph_count,
 // its top is one text_box_margin_px() below the lane top (`baseline_y -
 // monospace_text_row_baseline_offset()`), so the box sits centered in its lane
 // with a clear margin above and below — callers solve baseline_y from their
-// lane rect and the box lands inside it. The cursor uses the std::round(x)+0.5
-// half-pixel convention for a
+// lane rect and the box lands inside it. The cursor is a filled one-pixel
+// integer rectangle at the nearbyint'd column (the half-pixel +0.5 convention
+// belongs to 1px STROKES and left with the stroked form), AA off, for a
 // crisp single-pixel column. The cursor and the selection highlight span only
 // the glyph ink band (ascent-to-descent) — NOT the whole box; only the step-1
 // fill spans the full padded box. Nothing paints in the lane's margin.
@@ -966,8 +972,17 @@ void render_waveform(cairo_surface_t* dest,
 // 2026-07-26, notch retired with the polarity inversion — the contrast problem
 // it patched is solved by the scheme, so the parameter went with it. The
 // triangle likewise paints in `color` over the line.
+//
+// `triangle_lane` is the TRIANGLE LANE rect as top_triangle_row_area reports it
+// (the caller holds AppState and this module does not); the mask's top row lands
+// on triangle_lane.y. Passing the lane in — rather than deriving it as
+// `area.y - mask height` — is what keeps the stamp on the lane the accessors
+// report even if the strip gained an inter-lane or waveform-side gap. Required
+// on every call, `draw_triangle = false` included, so the parameter cannot be
+// forgotten on a call that later starts drawing one.
 void render_playhead(cairo_t* cr,
                      GuiRect area,
+                     GuiRect triangle_lane,
                      double  playhead_pixel_x,
                      GuiColor color,
                      bool draw_triangle = true);
@@ -982,14 +997,16 @@ void render_playhead(cairo_t* cr,
 // columns [0..center], blitted so the center column lands ON left_col — the
 // full-height edge sits on the bound and the slope flares LEFT, outside the
 // region. The RIGHT half keeps mask columns [center..2*center], center column on
-// right_col, slope flaring RIGHT. Same triangle lane and dst_y as the unsplit
-// playhead triangle, and each half is additionally clipped to the waveform's
-// horizontal span so a bound near an edge partial-renders instead of leaking.
-// left_col == right_col is handled as a special case that stamps the full mask
-// ONCE, yielding exactly the ordinary single cursor triangle (stamping the two
+// right_col, slope flaring RIGHT. Same `triangle_lane` and dst_y as the unsplit
+// playhead triangle (the lane rect from top_triangle_row_area, passed in for the
+// reason stated at render_playhead), and each half is additionally clipped to the
+// waveform's horizontal span so a bound near an edge partial-renders instead of
+// leaking. left_col == right_col is handled as a special case that stamps the full
+// mask ONCE, yielding exactly the ordinary single cursor triangle (stamping the two
 // halves would double-composite the shared AA tip column under OVER).
 void render_split_playhead(cairo_t* cr,
                            GuiRect area,
+                           GuiRect triangle_lane,
                            int left_col,
                            int right_col,
                            GuiColor color);
@@ -1237,6 +1254,21 @@ void render_trim_flags(cairo_t* cr,
 // zoom-strip row (the sole live-drag ring row — the bottom pan row retired).
 void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width);
 
+// The two top-strip lanes a flag shape occupies, exactly as the lane accessors
+// report them: `flag_lane` = top_flag_row_area (the rectangle's band) and
+// `triangle_lane` = top_triangle_row_area (the tip-down triangle's band, whose
+// bottom edge is flush with the waveform top). Both accessors delegate to
+// strip_row_rect, the single strip-geometry owner, and both take AppState —
+// which this module does not see, so the caller resolves them and passes them
+// in. That is the point of the parameter: the flag shapes and their hit rects
+// land on the SAME bands the empty-lane press gate and every other lane
+// consumer read, whatever the strip's gaps and lane heights are, instead of
+// being re-derived by stacking upward from the waveform top edge.
+struct FlagLaneRects {
+    GuiRect flag_lane;
+    GuiRect triangle_lane;
+};
+
 // Draws marker flags in `top_strip_area` above visible markers. Each flag is a
 // FIXED-WIDTH SHAPE centered on its marker's pixel column (see
 // iterate_visible_flags_impl): the flag_lane_w_px() x flag_lane_h_px()
@@ -1272,6 +1304,7 @@ void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width);
 // non-multiple-of-16 window).
 void render_flags(cairo_t* cr,
                   GuiRect top_strip_area,
+                  FlagLaneRects lanes,
                   int waveform_width,
                   const std::vector<GuiWarpMarker>& markers,
                   long long viewport_start_sample,
@@ -1302,6 +1335,7 @@ void render_flags(cairo_t* cr,
 // clickable rect coincides with the painted flag.
 std::vector<FlagHitRect> compute_flag_hit_rects(
     GuiRect top_strip_area,
+    FlagLaneRects lanes,
     int waveform_width,
     const std::vector<GuiWarpMarker>& markers,
     long long viewport_start_sample,
@@ -1324,6 +1358,7 @@ std::vector<FlagHitRect> compute_flag_hit_rects(
 // leftmost on top within each class (see render.cpp).
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
+                            FlagLaneRects lanes,
                             int waveform_width,
                             const std::vector<GuiPhaseResetMarker>& phase_resets,
                             long long viewport_start_sample,
@@ -1337,6 +1372,7 @@ void render_phase_reset_flags(cairo_t* cr,
 // `waveform_width` is the effective waveform width (see compute_flag_hit_rects).
 std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
     GuiRect top_strip_area,
+    FlagLaneRects lanes,
     int waveform_width,
     const std::vector<GuiPhaseResetMarker>& phase_resets,
     long long viewport_start_sample,
@@ -1398,6 +1434,17 @@ double monospace_text_row_baseline_offset();
 // font_size change. The supplied cairo_t* is used only for measurement;
 // the font state is restored on return.
 void init_monospace_grid_metrics(cairo_t* cr);
+
+// The pixel font size the grid metrics currently in effect were measured at
+// (negative before the first measure). It changes EXACTLY when
+// init_monospace_grid_metrics re-measures — that is the whole reason it exists
+// as an accessor: it is the ONE scalar that stands for the whole measured grid
+// (advance, slot height, baseline) and therefore for every lane height and text
+// box derived from it. The pixel caches fold it into their fingerprints so a
+// font change is detected BY FIELD rather than by trusting that some other
+// fingerprinted quantity (an area dimension, a lane split) must have moved with
+// it.
+double measured_monospace_font_px();
 
 // Left x (window pixels) of a transient text run of `glyph_count` monospace
 // glyphs shown in the marker-text lane over marker `marker_idx`'s painted

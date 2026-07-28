@@ -244,15 +244,20 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // compute_flag_hit_rects / iterate_visible_flags_impl) on the same displayed
     // viewport + width, so the rects computed here are exactly the painted flag
     // rectangles.
+    // The lane rects the shapes were painted in, from the same accessors the
+    // painter was handed (top_flag_row_area / top_triangle_row_area) — so the
+    // rect built here is the painted rectangle vertically as well as
+    // horizontally, whatever the strip's lane stack looks like.
+    const FlagLaneRects lanes{top_flag_row_area(app), top_triangle_row_area(app)};
     std::vector<FlagHitRect> rects;
     if (app.active_markers_view == 'P') {
         rects = compute_phase_reset_flag_hit_rects(
-            top, wave_w, app.phaseresetmarkers.markers(),
+            top, lanes, wave_w, app.phaseresetmarkers.markers(),
             vp_start, vp_end, audio.sample_rate(),
             tmap_arg, drag_overlay);
     } else {
         rects = compute_flag_hit_rects(
-            top, wave_w, app.warpmarkers.markers(),
+            top, lanes, wave_w, app.warpmarkers.markers(),
             vp_start, vp_end, audio.sample_rate(),
             tmap_arg, drag_overlay);
     }

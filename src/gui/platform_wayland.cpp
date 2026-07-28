@@ -2126,7 +2126,7 @@ void GuiPlatform::on_relative_pointer_motion(double dx, double dy) {
     if (!pointer_captured_) return;
 
     // Advance the UNBOUNDED virtual position — no clamp to the window is what
-    // makes pan/zoom travel infinite — and write the rounded position into
+    // makes pan/zoom travel infinite — and write the nearbyint'd position into
     // pointer_x_/y_ so a button event dispatched later in the same frame already
     // sees the final coordinates. The on_motion_ DELIVERY is deferred to the
     // pointer-frame boundary (on_pointer_frame): a captured relative pointer
@@ -2144,8 +2144,11 @@ void GuiPlatform::on_relative_pointer_motion(double dx, double dy) {
     // gesture).
     virtual_pointer_x_ += dx;
     virtual_pointer_y_ += dy;
-    pointer_x_ = static_cast<int>(std::lround(virtual_pointer_x_));
-    pointer_y_ = static_cast<int>(std::lround(virtual_pointer_y_));
+    // std::nearbyint, the project's one fractional->integer pixel conversion —
+    // this is the platform boundary where a continuous pointer position becomes
+    // the integer window pixel every gesture reads.
+    pointer_x_ = static_cast<int>(std::nearbyint(virtual_pointer_x_));
+    pointer_y_ = static_cast<int>(std::nearbyint(virtual_pointer_y_));
     frame_have_relmotion_ = true;
 }
 

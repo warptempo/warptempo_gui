@@ -740,8 +740,9 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
 
     // render_playhead draws only the 1px line here (draw_triangle=false), which
     // is exactly the stem; it column-culls px_x itself, so a stem off the visible
-    // strip paints nothing.
-    render_playhead(cr, area, px_x, kSelectedStem,
+    // strip paints nothing. The triangle lane rect is still handed over — the
+    // parameter is unconditional so no call site can drift from the lane owner.
+    render_playhead(cr, area, top_triangle_row_area(app), px_x, kSelectedStem,
                     /*draw_triangle=*/false);
 }
 
@@ -782,6 +783,10 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     const DisplayedViewportBasis basis = displayed_viewport_basis();
     const double disp_spp = basis.spp;
     const double px_x = playhead_pixel_x(app, wf_cache.fp_vp_start, disp_spp);
+    // The lane every playhead triangle — whole or split — is stamped in, from
+    // the lane accessor rather than derived from the waveform top edge, so the
+    // triangles ride the same band as the flag triangles beside them.
+    const GuiRect tri_lane = top_triangle_row_area(app);
 
     // Playheads now paint UNDER the marker flags (the Z-ORDER FLIP, architect
     // 2026-07-23 — see the paint-order block in on_redraw): the cursor line +
@@ -806,7 +811,7 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     if (app.playhead_scanner_active) {
         const double scan_px = scanner_pixel_x(app, wf_cache.fp_vp_start,
                                                disp_spp);
-        render_playhead(cr, area, scan_px, kPlayheadScanner,
+        render_playhead(cr, area, tri_lane, scan_px, kPlayheadScanner,
                         /*draw_triangle=*/false);
     }
 
@@ -857,7 +862,7 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
             // kPlayheadCursor — the cursor's key, since the halves ARE the
             // dissolved cursor (see the exclusivity block above).
             const RegionColumns cols = region_columns(basis);
-            render_split_playhead(cr, area, cols.lo_col, cols.hi_col,
+            render_split_playhead(cr, area, tri_lane, cols.lo_col, cols.hi_col,
                                   kPlayheadCursor);
         }
     } else if (app.selected_markers.empty()) {
@@ -865,7 +870,7 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
         // kPlayheadCursor 1px line + triangle, painted solid straight over
         // the plate ink. ONE color for both forms: the line and the tip-down
         // triangle carry the same kPlayheadCursor.
-        render_playhead(cr, area, px_x, kPlayheadCursor,
+        render_playhead(cr, area, tri_lane, px_x, kPlayheadCursor,
                         /*draw_triangle=*/true);
     }
     // else: selection non-empty, no region. SEMANTICS (architect 2026-07-25): a

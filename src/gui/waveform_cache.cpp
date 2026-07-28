@@ -141,6 +141,9 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.area_w        = area.w;
     in.area_h        = area.h;
     in.inset_px      = waveform_inset_px();
+    // The measured grid the font-derived geometry above came from, captured on
+    // the GUI thread with it — a fingerprint field, not a render input.
+    in.measured_font_px = measured_monospace_font_px();
     in.is_target     = is_target;
     in.warp_frame_map_hash  = target_warp_frame_map_hash;
     in.warp_frame_map       = std::move(target_warp_frame_map);
@@ -183,15 +186,22 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     WaveformRenderInputs in = compute_waveform_render_inputs();
     if (!in.valid) return;
 
+    // fp_font is the measured font pixel size the compared pixels were laid out
+    // under: the plate's inset band is font-derived and is NOT itself a
+    // fingerprint field, and the area dims move with the strip heights only
+    // because the lanes do — so the measure is keyed directly and the detect is
+    // sound by field rather than by that derivation.
     auto fingerprint_differs = [&](
         int64_t fp_vp_s, int64_t fp_vp_e,
         int     fp_aw,   int     fp_ah,
+        double  fp_font,
         bool    fp_t,
         uint64_t fp_h) -> bool {
         if (fp_vp_s != in.vp_start)        return true;
         if (fp_vp_e != in.vp_end)          return true;
         if (fp_aw   != in.area_w)          return true;
         if (fp_ah   != in.area_h)          return true;
+        if (fp_font != in.measured_font_px) return true;
         if (fp_t    != in.is_target)       return true;
         if (fp_h    != in.warp_frame_map_hash) return true;
         return false;
@@ -202,6 +212,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.pending_fp_vp_end,
         wf_cache.pending_fp_area_w,
         wf_cache.pending_fp_area_h,
+        wf_cache.pending_fp_measured_font_px,
         wf_cache.pending_fp_target,
         wf_cache.pending_fp_warp_frame_map_hash);
 
@@ -219,6 +230,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.supersede_area_w      = in.area_w;
         wf_cache.supersede_area_h      = in.area_h;
         wf_cache.supersede_inset_px    = in.inset_px;
+        wf_cache.supersede_measured_font_px = in.measured_font_px;
         wf_cache.supersede_target      = in.is_target;
         wf_cache.supersede_warp_frame_map_hash = in.warp_frame_map_hash;
         wf_cache.supersede_warp_frame_map     = std::move(in.warp_frame_map);
@@ -262,6 +274,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     wf_cache.pending_fp_vp_end      = in.vp_end;
     wf_cache.pending_fp_area_w      = in.area_w;
     wf_cache.pending_fp_area_h      = in.area_h;
+    wf_cache.pending_fp_measured_font_px = in.measured_font_px;
     wf_cache.pending_fp_target      = in.is_target;
     wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
 
@@ -305,6 +318,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_vp_end              = wf_cache.fp_vp_end;
         wf_cache.pending_fp_area_w              = wf_cache.fp_area_w;
         wf_cache.pending_fp_area_h              = wf_cache.fp_area_h;
+        wf_cache.pending_fp_measured_font_px    = wf_cache.fp_measured_font_px;
         wf_cache.pending_fp_target              = wf_cache.fp_target;
         wf_cache.pending_fp_warp_frame_map_hash = wf_cache.fp_warp_frame_map_hash;
         wf_cache.pending_fp_warp_frame_map      = wf_cache.fp_warp_frame_map;
@@ -358,6 +372,8 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         job.area_h         = sh;
         job.inset_px       = wf_cache.supersede_inset_px;
         job.target         = wf_cache.supersede_target;
+        // (measured_font_px is a fingerprint field only — the job needs the
+        // inset it produced, not the measure itself.)
         job.warp_frame_map_hash   = wf_cache.supersede_warp_frame_map_hash;
         // Thread the supersede warp_frame_map into both the job and
         // pending_fp_warp_frame_map, the same way the idle-path dispatch does.
@@ -373,6 +389,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_vp_end      = wf_cache.supersede_vp_end;
         wf_cache.pending_fp_area_w      = sw;
         wf_cache.pending_fp_area_h      = sh;
+        wf_cache.pending_fp_measured_font_px = wf_cache.supersede_measured_font_px;
         wf_cache.pending_fp_target      = wf_cache.supersede_target;
         wf_cache.pending_fp_warp_frame_map_hash = wf_cache.supersede_warp_frame_map_hash;
 
@@ -397,6 +414,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     wf_cache.fp_vp_end       = wf_cache.pending_fp_vp_end;
     wf_cache.fp_area_w       = wf_cache.pending_fp_area_w;
     wf_cache.fp_area_h       = wf_cache.pending_fp_area_h;
+    wf_cache.fp_measured_font_px = wf_cache.pending_fp_measured_font_px;
     wf_cache.fp_rendered     = true;
     wf_cache.fp_target       = wf_cache.pending_fp_target;
     wf_cache.fp_warp_frame_map_hash = wf_cache.pending_fp_warp_frame_map_hash;
@@ -557,6 +575,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.fp_vp_end       = in.vp_end;
     wf_cache.fp_area_w       = in.area_w;
     wf_cache.fp_area_h       = in.area_h;
+    wf_cache.fp_measured_font_px = in.measured_font_px;
     wf_cache.fp_rendered     = true;
     wf_cache.fp_target       = in.is_target;
     wf_cache.fp_warp_frame_map_hash = in.warp_frame_map_hash;
@@ -565,6 +584,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.pending_fp_vp_end       = in.vp_end;
     wf_cache.pending_fp_area_w       = in.area_w;
     wf_cache.pending_fp_area_h       = in.area_h;
+    wf_cache.pending_fp_measured_font_px = in.measured_font_px;
     wf_cache.pending_fp_target       = in.is_target;
     wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
     wf_cache.pending_fp_warp_frame_map      = in.warp_frame_map;
@@ -647,7 +667,11 @@ uint64_t hash_selection(const std::set<int>& s,
 //
 // Called from on_tick AFTER maybe_enqueue_waveform_render: wf_cache.fp_*
 // coupling for the displayed-viewport half of the fingerprint, live-app-state
-// reads for the marker-driven half. The cache holds
+// reads for the marker-driven half, plus the measured font pixel size
+// (measured_monospace_font_px) for the GEOMETRY half — every flag dimension and
+// the lane rects the shapes land in are derived from that measure, so it is
+// keyed directly rather than inferred from the strip dims moving with it. The
+// cache holds
 // EVERY flag shape (marker + phase reset) — the flag editor's text renders live
 // in the marker-text lane, not in this cache, so the editing target's flag is an
 // ordinary cached shape (no skip-guard). Trim's chips/stems left this cache and
@@ -685,6 +709,12 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                                      app.selected_markers,
                                      app.last_selected_marker);
     const char      mv         = app.active_markers_view;
+    // The measured font grid these shapes would be laid out against. The strip
+    // dims above move with it in every ordinary case, but they are the STRIP's
+    // dims, not the flag's: the shape sizes and the flag/triangle lane split are
+    // font-derived independently, so keying the metric itself makes the cache
+    // sound by FIELD instead of by that coupling.
+    const double    font_px    = measured_monospace_font_px();
 
     const bool matches =
         flag_cache.surface &&
@@ -698,7 +728,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_phase_reset_generation  == phase_gen &&
         flag_cache.fp_drag_overlay_hash       == drag_hash &&
         flag_cache.fp_selection_hash          == sel_hash &&
-        flag_cache.fp_active_markers_view     == mv;
+        flag_cache.fp_active_markers_view     == mv &&
+        flag_cache.fp_measured_font_px        == font_px;
 
     if (matches) return;
 
@@ -725,6 +756,12 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // surface rect. The blit at on_redraw time positions the surface back
     // at screen (0, 0).
     const GuiRect local_top_strip{0, 0, surface_w, surface_h};
+    // The flag/triangle LANE rects the shapes occupy, straight from the lane
+    // accessors — the same bands the empty-lane press gate and the hit rects
+    // read. The top strip is anchored at screen y=0 and this surface mirrors it
+    // 1:1, so the screen-coordinate lane rects are already surface-local.
+    const FlagLaneRects flag_lanes{top_flag_row_area(app),
+                                   top_triangle_row_area(app)};
     // Effective waveform width: the flag column mapping divides the displayed
     // span by this width — the same denominator the live trim pass and the hit
     // tests use — so flags stay column-aligned with the trim/stem verticals
@@ -762,7 +799,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         const std::set<int>& pr_red =
             phase_reset_red_flag_set_cached(app).red;
         render_phase_reset_flags(
-            ccr, local_top_strip, wave_w,
+            ccr, local_top_strip, flag_lanes, wave_w,
             app.phaseresetmarkers.markers(),
             vp_start, vp_end, sr,
             app.selected_markers,
@@ -772,7 +809,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     } else {
         const std::set<int>& warp_red = warp_red_flag_set_cached(
             app, sr, static_cast<long>(audio.total_frames())).red;
-        render_flags(ccr, local_top_strip, wave_w,
+        render_flags(ccr, local_top_strip, flag_lanes, wave_w,
                      app.warpmarkers.markers(),
                      vp_start, vp_end, sr,
                      app.selected_markers,
@@ -794,6 +831,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_drag_overlay_hash       = drag_hash;
     flag_cache.fp_selection_hash          = sel_hash;
     flag_cache.fp_active_markers_view     = mv;
+    flag_cache.fp_measured_font_px        = font_px;
 
     // Event-synchronized hit geometry, STAGE phase: these OFFSCREEN flags just
     // rebuilt, so stage the
@@ -804,8 +842,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // deleting that duplicate is safe exactly because THIS rebuild remains the
     // stage owner on every viewport/map/dimension change — every one of those
     // changes moves a field of this cache's fingerprint (fp_vp span, map hash,
-    // target bit, top-strip dims; wave_w changes only with the window width,
-    // which changes surface_w), so the rebuild fires and re-stages. A trim-only
+    // target bit, top-strip dims, measured font px; wave_w changes only with
+    // the window width, which changes surface_w), so the rebuild fires and
+    // re-stages. A trim-only
     // change no longer stages anything, which is correct: trim never entered
     // the staged basis values, and the live trim pass reads the promoted basis
     // per frame. Ruling at the selector.

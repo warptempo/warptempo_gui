@@ -808,7 +808,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // those acts calls stop_playback_if_playing ITSELF at its own site
         // below. THE STOP IS INTENTIONAL, NOT POSITIONAL: a press that claims
         // NOTHING changes no state at all, so there is nothing for a stop to
-        // protect and a live audition survives it. That covers every modified
+        // protect and a live audition survives it. A claim that can still
+        // REFUSE goes one step further (architect 2026-07-27): its stop sits
+        // INSIDE the refusal gate, at the latest point before the mutation, so
+        // a claimed-but-refused press (a bound set with no resting pair or in a
+        // read-only tab, a chip-row consume with no trim window to highlight)
+        // is as playback-inert as an unclaimed one. That covers every modified
         // combination the branches below reject (alt on a marker, ctrl or alt
         // on an empty flag/triangle spot, ctrl+alt, shift+alt, ...), a
         // SHIFT-exact chip-row press (trim is transparent to shift), every
@@ -912,7 +917,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // The toggle is an act, so it owns its stop: selecting while a
                 // session plays is the authoring case the top-strip stop
                 // exists for. It runs AHEAD of the toggle and the land, like
-                // every other claim's stop.
+                // every other claim's stop — and it stays at the TOP of the
+                // branch because this claim cannot refuse: read-only is allowed
+                // (selection is navigation), the hit index is >= 0 by the gate
+                // above (so the mutator's idx < 0 guard is unreachable here),
+                // and every path below changes membership.
                 playback_lifecycle.stop_playback_if_playing();
                 selection.toggle_selection_membership(mh.index);
                 // The selected-marker stem is always-on for a singleton;
@@ -944,9 +953,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             if (inside_top) {
                 const GuiRect chip_row = top_upper_row_area(app);
                 if (y >= chip_row.y && y < chip_row.y + chip_row.h) {
-                    // A bound set is an act, so it owns its stop (the trim
-                    // window is about to change under a live audition).
-                    playback_lifecycle.stop_playback_if_playing();
+                    // NO stop here: the bound set has its own refusals
+                    // (read-only, no resting pair, a degenerate audio/geometry
+                    // state), and a refused press changes nothing, so there is
+                    // nothing for a stop to protect. The stop lives INSIDE
+                    // set_trim_bound_at_click, past every refusal and
+                    // immediately ahead of the bound write.
                     // R3: set the BEGIN bound AND arm the single-bound drag on it,
                     // so motion drags it live (a motionless release rests the set).
                     set_trim_bound_at_click_then_arm_drag(/*is_begin=*/true, x, y);
@@ -980,8 +992,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (ctrl && shift && !alt && inside_top) {
             const GuiRect chip_row = top_upper_row_area(app);
             if (y >= chip_row.y && y < chip_row.y + chip_row.h) {
-                // The END bound set owns its stop, like the BEGIN set above.
-                playback_lifecycle.stop_playback_if_playing();
+                // NO stop here either: like the BEGIN set above, the stop sits
+                // inside set_trim_bound_at_click past that act's refusals, so a
+                // refused END set leaves a live audition alone.
                 // R3: set the END bound AND arm the single-bound drag on it.
                 set_trim_bound_at_click_then_arm_drag(/*is_begin=*/false, x, y);
                 return;
@@ -1052,18 +1065,27 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // R4.5 region-highlight sync now. With BOTH bounds set the window
                 // is taken; lone/no trim is a silent no-op. Either way the chip
                 // row consumes the press — it never falls to the marker handling.
-                // The consume IS the claim, so this press owns the stop for all
-                // three of its arms (read-only sync, armed drag, unclaimed-spot
-                // sync), running ahead of all three.
-                playback_lifecycle.stop_playback_if_playing();
+                // The consume claims the press, but a RESTING FULL PAIR is what
+                // makes it ACT: with the pair set every arm commits something
+                // (read-only syncs the highlight, a chip/bridge hit arms the
+                // drag, an unclaimed spot syncs the highlight), and with a lone
+                // or absent trim every arm is a silent no-op — route_trim_chip_press
+                // refuses at its own pair gate and both sync arms are gated on
+                // the pair too. So the stop is gated on the pair and runs ahead
+                // of all three acting arms; a press with nothing to highlight
+                // leaves a live audition playing. One predicate, read once —
+                // nothing on any arm mutates the trim (the drag arms, it does
+                // not commit), so the three arms and the stop all read the same
+                // verdict.
+                const bool have_window =
+                    (app.trim.has_begin && app.trim.has_end);
+                if (have_window) playback_lifecycle.stop_playback_if_playing();
                 if (active_view_state(app).read_only) {
-                    if (app.trim.has_begin && app.trim.has_end)
-                        sync_highlight_to_trim_window();
+                    if (have_window) sync_highlight_to_trim_window();
                     return;
                 }
                 if (route_trim_chip_press(x, y)) return;
-                if (app.trim.has_begin && app.trim.has_end)
-                    sync_highlight_to_trim_window();
+                if (have_window) sync_highlight_to_trim_window();
                 return;
             }
             if (mh.index >= 0) {
@@ -1072,7 +1094,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // whole branch: selecting or editing under a live audition is
                 // the case the top-strip stop was written for. One site ahead
                 // of every arm below (the range select, the two group
-                // deferrals, the plain single-select + land + editor open).
+                // deferrals, the plain single-select + land + editor open),
+                // and it belongs at the TOP because NO arm here refuses:
+                // read-only still selects and lands, the hit is >= 0 by the
+                // gate (the mutators' idx < 0 guards are unreachable), the two
+                // deferrals arm a pending drag and seed a candidate, and the
+                // plain arm always single-selects and lands. Only the editor
+                // OPEN can decline (read-only / P view / off home), and that is
+                // a second act layered on a click that already committed.
                 playback_lifecycle.stop_playback_if_playing();
                 const int hit = mh.index;
                 if (shift) {

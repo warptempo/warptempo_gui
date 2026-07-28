@@ -94,6 +94,11 @@ struct WaveformCache {
     int64_t   fp_vp_end      = 0;
     int       fp_area_w      = 0;
     int       fp_area_h      = 0;
+    // The measured font pixel size the live pixels were rendered under. The
+    // plate's own font dependence is the inset band and the area height; keying
+    // the measure itself makes both sound by field (see the fingerprint note in
+    // waveform_cache.cpp).
+    double    fp_measured_font_px = -1.0;
     // false until the first worker completion (or synchronous rebuild) has
     // published live pixels. The flag cache gates on it — it holds no
     // sensible displayed-viewport values before the first waveform paint.
@@ -124,6 +129,7 @@ struct WaveformCache {
     int64_t   pending_fp_vp_end      = 0;
     int       pending_fp_area_w      = 0;
     int       pending_fp_area_h      = 0;
+    double    pending_fp_measured_font_px = -1.0;
     bool      pending_fp_target      = false;
     uint64_t  pending_fp_warp_frame_map_hash = 0;
 
@@ -145,6 +151,7 @@ struct WaveformCache {
     int       supersede_area_w      = 0;
     int       supersede_area_h      = 0;
     int       supersede_inset_px    = 0;   // GUI-captured font-dependent inset
+    double    supersede_measured_font_px = -1.0;  // the metrics that inset came from
     bool      supersede_target      = false;
     uint64_t  supersede_warp_frame_map_hash = 0;
     std::vector<WarpFrameMapSegment> supersede_warp_frame_map;
@@ -216,6 +223,12 @@ struct FlagCache {
     uint64_t  fp_drag_overlay_hash        = 0;
     uint64_t  fp_selection_hash           = 0;
     char      fp_active_markers_view      = '\0';
+    // The measured grid's font pixel size (measured_monospace_font_px()) at the
+    // rebuild. Every flag SHAPE dimension and the two lane rects it paints in
+    // are font-derived, so this is the field that says "the metrics these
+    // pixels were laid out with"; without it the cache would rely on some other
+    // fingerprinted quantity happening to move whenever the font does.
+    double    fp_measured_font_px         = -1.0;
 
     void destroy_surface() {
         if (surface) {
@@ -341,6 +354,13 @@ private:
         // gui_font_scale()/g_font_size_pt state (the GUI thread mutates that
         // without draining jobs). All font-derived geometry is snapshotted.
         int      inset_px      = 0;
+        // The measured grid's font pixel size (measured_monospace_font_px()),
+        // a FINGERPRINT input: it is the one field that moves whenever the font
+        // metrics do, and inset_px above is font-derived without being
+        // fingerprinted itself. Keying it makes a font change dirty the plate
+        // BY FIELD rather than through whichever area dimension happens to
+        // shift with the lane heights.
+        double   measured_font_px = -1.0;
         bool     is_target     = false;
         uint64_t warp_frame_map_hash  = 0;
         // The translation map: the target-view map in target view, empty in
