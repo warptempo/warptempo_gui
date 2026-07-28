@@ -65,15 +65,6 @@ namespace GuiKeys {
     constexpr GuiKey Delete     = 0xffff;
 }
 
-// True for the key that toggles playback: Space only. Return / keypad Enter
-// are NOT playback keys — Enter opens the flag editor on the focused marker
-// (see the bare-Enter binding in input_handler.cpp). Shared by the on_key
-// dispatch (input_handler.cpp) and the read-only allowlist predicate
-// (input_key_dispatch.cpp); inline so both TUs see it.
-inline bool is_play_pause_key(GuiKey key) {
-    return key == GuiKeys::Space;
-}
-
 // The keyboard key the platform layer translates into BTN_LEFT (press =
 // button down at the pointer position, hold = button held, release = button
 // up), except while a text editor is open, when it stays a normal letter.
@@ -96,6 +87,18 @@ struct GuiInputState {
     // ignores this.
     uint32_t codepoint           = 0;
 };
+
+// True for the chord that toggles playback: BARE Space only. Modifier-strict —
+// a Space carrying ctrl, shift, or alt has no binding, so it must not reach a
+// toggle (the uniform rule: an unbound modifier combination is a no-op). Return
+// / keypad Enter are NOT playback keys — Enter opens the flag editor on the
+// focused marker (see the bare-Enter binding in input_handler.cpp). Shared by
+// the on_key dispatch (input_handler.cpp) and the read-only allowlist predicate
+// (input_key_dispatch.cpp), which are its only two callers; inline so both TUs
+// see it, and one owner so the two readers cannot drift.
+inline bool is_play_pause_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::Space && !mods.ctrl && !mods.shift && !mods.alt;
+}
 
 enum class GuiMouseButton {
     Left,

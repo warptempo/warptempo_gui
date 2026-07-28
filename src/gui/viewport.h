@@ -79,8 +79,8 @@ struct Viewport {
     //    and main.cpp's tick backstop for an ASYNC total change (a preview
     //    completion) live here.
     //  - TARGET-WARP-MAP mutations: a build_warp_frame_map INPUT changed, so the
-    //    target-view plate itself re-warps. The Alt+Up/Down tempo step
-    //    (adjust_tempo_cents, singleton AND group), the Alt+Left/Right TEMPO-IMAGE
+    //    target-view plate itself re-warps. The bare Up/Down tempo step
+    //    (adjust_tempo_cents, singleton AND group), the bare Left/Right TEMPO-IMAGE
     //    STEP (the tempo drag's keyboard twin, MarkerDragOps::step_tempo_image),
     //    the settings engine-scale commit, undo/redo, adopt, and the TEMPO DRAG
     //    itself each kick so displayed == live at the command boundary, leaving no
@@ -184,7 +184,7 @@ struct Viewport {
     void follow_scroll_if_needed();
 
     // Repair the LIVE display-state fields after a map edit that changed the
-    // active-domain total (a target-view tempo step / drag / Alt+Left/Right
+    // active-domain total (a target-view tempo step / drag / bare Left/Right
     // tempo-image step, the settings engine-scale commit, undo/redo, adopt — every
     // total-changing warp-map edit; the full grep-derived caller inventory lives
     // at kick_waveform_sync above).

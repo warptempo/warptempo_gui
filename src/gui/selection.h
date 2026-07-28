@@ -45,6 +45,26 @@ struct Selection {
     void select_prev_marker();
     void prune_live_selection();
 
+    // The phase-reset lead-in overlay (phase_reset_overlay_band, architect
+    // 2026-07-23) annotates the ONE focused enabled reset. Its SUBJECT — the
+    // frame it paints at, or none — is the SELECTION-STATE portion of that
+    // paint's visibility rule (P + target view, selection under the 2-member
+    // suppression, no active region, a valid enabled focused reset). The band's
+    // geometry gates (area size, samples-per-pixel, sub-pixel forward width,
+    // offscreen refusal) are deliberately NOT here: they are not selection
+    // state. Frame, not index: a reorder remap preserves frames, so a remap is
+    // subject-stable.
+    // THREE READERS. Two are the damage owners just below: the overlay lives in
+    // the WAVEFORM but the selection mutators damage only the top strip /
+    // timestamp (+ the playhead column), so a change of subject needs waveform
+    // damage to paint/erase the overlay's forward span. The third is SPACE
+    // (input_handler.cpp, architect 2026-07-28): a start-edge Space with a
+    // subject launches the lead-in audition at cursor + kN/2. That reader is why
+    // this is public, and why the STATE-ONLY spelling is load-bearing — keying
+    // Space on the painted band instead would let a scroll or a zoom silently
+    // change what Space does.
+    std::optional<int64_t> phase_overlay_subject() const;
+
    private:
     // Focus model (architect 2026-07-23, unified into one focus family
     // 2026-07-25): the cursor playhead's presence depends on selection
@@ -63,17 +83,6 @@ struct Selection {
     // `was_empty` is captured BEFORE the mutation; a no-op when emptiness is
     // unchanged (the common case: Tab within a non-empty set, a range shrink).
     void damage_playhead_if_focus_flipped(bool was_empty);
-
-    // The phase-reset lead-in overlay (phase_reset_overlay_band, architect
-    // 2026-07-23) annotates the ONE focused enabled reset. Its SUBJECT — the
-    // frame it paints at, or none — is the selection-state portion of that
-    // paint's visibility rule (P + target view, selection under the 2-member
-    // suppression, no active region, a valid enabled focused reset). The overlay
-    // lives in the WAVEFORM but these mutators damage only the top strip /
-    // timestamp (+ the playhead column), so a change of subject needs
-    // waveform damage to paint/erase the overlay's forward span. Frame, not
-    // index: a reorder remap preserves frames, so a remap is subject-stable.
-    std::optional<int64_t> phase_overlay_subject() const;
 
     // Damage the waveform when the overlay subject changed across a mutation.
     // `old_subject` is captured BEFORE the mutation via phase_overlay_subject();

@@ -431,7 +431,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // total - 1, the ruled rest domain ([0, total - 1],
     // move_playhead_to). This bounds the value BEFORE any consumer's
     // translation arithmetic (the S/T toggle's double->int64 conversion,
-    // Alt+Space's launch offset) rather than at first gesture use.
+    // Space's lead-in launch offset) rather than at first gesture use.
     app.tab_a.playhead_cursor_sample = clamp_playhead_to_live_domain(
         app.tab_a.playhead_cursor_sample, app, audio);
     app.tab_b.playhead_cursor_sample = clamp_playhead_to_live_domain(

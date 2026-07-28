@@ -13,8 +13,9 @@
 struct GuiTargetRender;
 
 // Rapid-gesture undo coalescing. A burst of eligible keyboard gestures — warp
-// / phase-reset nudges (Alt+Left/Right) and tempo cent steps (Alt+Up/Down;
-// no wheel route) — that land within kGestureCoalesceMs of each other on the
+// / phase-reset nudges (bare Left/Right in the marker lane) and tempo cent
+// steps (bare Up/Down; no wheel route) — that land within kGestureCoalesceMs of
+// each other on the
 // SAME gesture-kind AS CONSECUTIVE COMMANDS collapses into ONE undo entry: the
 // burst's first press pushes the pre-burst snapshot and every continuation
 // press SKIPS its own push, so a single Ctrl+Z reverts the whole burst. The
@@ -25,10 +26,10 @@ struct GuiTargetRender;
 // follow for free: changing any of those requires a command in between.
 enum class GestureKind {
     None, WarpNudge, PhaseResetNudge, TempoStep,
-    // W+target Alt+Left/Right — the tempo drag's keyboard twin
+    // W+target bare Left/Right — the tempo drag's keyboard twin
     // (MarkerDragOps::step_tempo_image). Its own kind so a burst of image
     // steps coalesces with itself and nothing else (never with the position
-    // nudges or the Alt+Up/Down tempo step).
+    // nudges or the Up/Down tempo step).
     TempoImageStep
 };
 

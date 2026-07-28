@@ -168,24 +168,44 @@ enum class KeyAction {
 // State decides EFFECTS within a branch (e.g. Ctrl+C returns CopyRequested vs
 // plain Consumed by has_selection), never whether a key is owned. Three
 // consumers share it: handle_key gates membership on it (NotEditorKey returns
-// NotConsumed before any branch), modal_editor_key_blocked admits exactly the
-// non-NotEditorKey set plus its gate-level carve-outs, and repeat_eligible's
-// in-editor arm repeats exactly MotionEditKey | PrintableKey.
+// NotConsumed before any branch, StrayModifierKey an inert Consumed),
+// modal_editor_key_blocked admits exactly the non-NotEditorKey set plus its
+// gate-level carve-outs, and repeat_eligible's in-editor arm repeats exactly
+// MotionEditKey | PrintableKey. Because all three read this one function, the
+// strict-modifier rule is stated ONCE: no consumer re-enumerates a key.
 enum class KeyClass {
     NotEditorKey,   // falls through to global dispatch (or the modal gate drops it)
-    SessionKey,     // Escape, Return/KpEnter — end the session, never repeat
-    ChordKey,       // Ctrl+A/C/X/V (ctrl alone tested; Shift/Alt mirror through) — one-shot
+    // An owned key SHAPE whose press carries a stray modifier and so has no
+    // binding: a modified Escape/Return/KpEnter, or Ctrl+Shift / Ctrl+Alt on
+    // A/C/X/V. handle_key CLAIMS it (Consumed) and does nothing — inert, never
+    // destructive. It is a class of its own rather than NotEditorKey because the
+    // non-modal top flag editor's NotConsumed tail CANCELS the edit before
+    // letting a key through to global dispatch, so "unbound" and "not ours" must
+    // not look alike: the first is a no-op, the second is a real command.
+    //   Why the PRINTABLE arm is deliberately NOT in this family: every letter
+    //   is bare-printable, so "would be printable without the modifier" would
+    //   swallow Ctrl+S, Ctrl+Z, Ctrl+Q, Ctrl+Tab — the global command chords
+    //   that MUST punch through an open editor, cancelling the edit first. Only
+    //   the two MODIFIER-DEFINED arms (bare-exact session, ctrl-exact chords)
+    //   have a stray-modifier form to name.
+    StrayModifierKey,
+    SessionKey,     // BARE Escape, Return/KpEnter — end the session, never repeat
+    ChordKey,       // CTRL-EXACT A/C/X/V — one-shot
     MotionEditKey,  // Left/Right/Home/End/BackSpace/Delete, ANY modifiers — repeats
     PrintableKey,   // no ctrl/alt, codepoint 0x20..0x7e — repeats
 };
 
 // Classify key+mods against the editor's owned keymap, reproducing handle_key's
-// exact predicates and precedence: Escape/Return before the Ctrl chords, the
-// chords (specific A/C/X/V, ctrl tested alone) before motion, motion (any
-// modifiers) before printable. A key that could satisfy two predicates
-// classifies as the one handle_key acts on (Ctrl+A is ChordKey, not printable —
-// printable already excludes ctrl; Ctrl+Left is MotionEditKey — the chord test
-// is A/C/X/V only).
+// exact predicates and precedence: the session keys before the Ctrl chords, the
+// chords (specific A/C/X/V, ctrl required for the shape test) before motion,
+// motion (any modifiers) before printable. A key that could satisfy two
+// predicates classifies as the one handle_key acts on (Ctrl+A is a chord, not
+// printable — printable already excludes ctrl; Ctrl+Left is MotionEditKey — the
+// chord shape list is A/C/X/V only). The first two arms are the MODIFIER-DEFINED
+// ones — session bare-exact, chords ctrl-exact — and a press matching one of
+// their shapes with a stray modifier classifies StrayModifierKey (see the enum),
+// so it can neither cancel, commit, nor edit, and cannot be mistaken for a
+// global command either.
 KeyClass classify_key(GuiKey key, GuiInputState mods);
 
 KeyAction handle_key(State& s, GuiKey key, GuiInputState mods);

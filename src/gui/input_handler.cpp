@@ -74,9 +74,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Bottom-strip prompt owns input while active. Only the prompt's
     // own response keys do anything; everything else is swallowed so
     // marker edits / playback / viewport keys cannot sneak in while
-    // the prompt is up. Letter keys are case-insensitive; Delete and
-    // Escape map to sentinel chars '\x7f' and '\x1b' so they participate
-    // in the same vector<char> match as letter responses.
+    // the prompt is up. Delete and Escape map to sentinel chars '\x7f' and
+    // '\x1b' so they participate in the same vector<char> match as letter
+    // responses.
+    // EVERY response — letters, Delete, Escape alike — matches BARE ONLY
+    // (architect 2026-07-28): no ctrl, no alt, and no shift. Requiring !shift is
+    // what makes the prompt CASE-SENSITIVE, because the platform boundary
+    // case-folds letters and delivers the unshifted GuiKey with mods.shift set,
+    // so `Y` is not an answer to a `[y]es`. This is also what stops Ctrl+S from
+    // picking `[s]ave` in the close prompt, Alt+Y from applying a confirmed
+    // paste, and Ctrl+O from acknowledging the render-environment prompt.
     if (app.prompt.active) {
         // PASTE_CONFIRM only: Ctrl+Q abandons the pending paste (the real
         // cancel, not a synthesized Esc) and then runs the normal close
@@ -89,12 +96,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         }
         char k = 0;
-        if (key >= GuiKeys::A && key <= GuiKeys::Z) {
-            k = static_cast<char>('a' + (key - GuiKeys::A));
-        } else if (key == GuiKeys::Delete) {
-            k = '\x7f';
-        } else if (key == GuiKeys::Escape) {
-            k = '\x1b';
+        if (!ctrl && !shift && !alt) {
+            if (key >= GuiKeys::A && key <= GuiKeys::Z) {
+                k = static_cast<char>('a' + (key - GuiKeys::A));
+            } else if (key == GuiKeys::Delete) {
+                k = '\x7f';
+            } else if (key == GuiKeys::Escape) {
+                k = '\x1b';
+            }
         }
         if (k != 0) {
             for (char rk : app.prompt.response_keys) {
@@ -138,10 +147,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // editor and global handlers below run Esc (cancel the edit) or
     // Ctrl+Q (tear the edit down, then open the close prompt) exactly as
     // they would with no drag in flight. A text drag is not a navigation
-    // gesture, so it gets no bare-`s` carve-out.
+    // gesture, so it gets no bare-`s` carve-out. BOTH hatches are
+    // modifier-exact: a modified Escape has no binding anywhere, so it is
+    // swallowed here like any other key rather than ending the drag.
     if (app.editor_text_drag.active) {
         const bool escape_hatch =
-            key == GuiKeys::Escape ||
+            (!ctrl && !shift && !alt && key == GuiKeys::Escape) ||
             (ctrl && !shift && !alt && key == GuiKeys::Q);
         if (!escape_hatch) return;
         finalize_editor_text_drag();
@@ -236,7 +247,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         app.scroll_drag.active ||
         app.pending_marker_drag.active || app.pending_tempo_drag.active ||
         app.pending_trim_drag.active) {
-        if (key == GuiKeys::Escape) {
+        // Both hatches are modifier-exact: an Escape carrying a modifier has no
+        // binding, so it drops into the swallow below instead of cancelling.
+        if (!ctrl && !shift && !alt && key == GuiKeys::Escape) {
             cancel_active_drags();
             return;
         }
@@ -254,12 +267,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // toggle-off escape chord. Runs when the active tab's ViewState carries
     // read_only = true.
     //   - Bare o                 → toggle read-only off (escape chord)
-    //   - Space                  → playback toggle
-    //   - Left/Right (no mods)   → playhead-by-pixel scrub
+    //   - Space (no mods)        → playback toggle
+    //   - Left/Right (no mods)   → playhead-by-pixel step, and ONLY with an
+    //                              EMPTY selection (the waveform lane): with one
+    //                              the same press also carries the marker — the
+    //                              marker-lane nudge / tempo-image step — which
+    //                              is authoring and drops here
+    //                              (playhead_in_marker_lane)
     //   - Home/End (no mods)     → playhead to trim region bounds
     //   - PageUp/PageDown        → viewport step scroll by the Alt-wheel
     //     (no mods)                step. Pure navigation, same family as
-    //                              the scrub and Home/End entries.
+    //                              the playhead-step and Home/End entries.
     //   - =/- (no mods)          → zoom in/out
     //   - 0 (no mods)            → working zoom ↔ full zoom-out toggle
     //                              (run_zoom_toggle_command)
@@ -303,8 +321,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // etc.) beside the read-only check above — off home a handler still
     // dispatches here but refuses silently, navigation-class. The TWO ruled
     // exceptions: (1) the TEMPO family in W+target — one motion
-    // (stretch/squish), three flavors: the Alt+Up/Down step (owner-only there),
-    // the tempo drag, and the Alt+Left/Right tempo-image step (the drag's
+    // (stretch/squish), three flavors: the bare Up/Down step (owner-only there),
+    // the tempo drag, and the bare Left/Right tempo-image step (the drag's
     // keyboard twin, dispatched below where the warp column's nudge route
     // splits by view); (2) the phase-reset propagate paste starts in source
     // view and lands in target through the `t` toggle chokepoint. (The
@@ -335,8 +353,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Esc cancels an in-flight render / queued batch.
-    if (handle_escape_cancels(key)) return;
+    // Bare Esc cancels an in-flight render / queued batch.
+    if (handle_escape_cancels(key, mods)) return;
 
     // Esc ladder (architect 2026-07-23, DOWN-ONLY as of round 4): the
     // selection/region collapse rung, placed AFTER the higher-priority consumers —
@@ -349,8 +367,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // never shrinks into a subregion; else a programmatic multi-select drops to its
     // extent region + deselects; else a singleton deselects + lands the playhead on
     // the marker. All navigation-class, so this runs in read-only too (the
-    // allowlist admits Esc). See handle_escape_selection_region for the rungs.
-    if (key == GuiKeys::Escape && handle_escape_selection_region()) return;
+    // allowlist admits Esc). Bare only — a modified Escape has no binding here or
+    // at any other Escape reader. See handle_escape_selection_region for the rungs.
+    if (!ctrl && !shift && !alt && key == GuiKeys::Escape &&
+        handle_escape_selection_region()) return;
 
     // Ctrl+Q: quit (via unsaved-work dialog when dirty).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) {
@@ -363,33 +383,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // opener is bare `'`, handled separately below.)
     if (handle_render_dispatch_keys(key, mods)) return;
 
-    // Alt+Space in actual target view, phase-reset mode: non-destructive
-    // audition of the OLA/Hann synthesis lead-in. Launches the playback scanner
-    // N/2 output samples AHEAD of the resting playhead (full-scale point of a
-    // reset dropped at the playhead) without moving the cursor, so stop just
-    // deactivates the scanner — the cursor it never touched is exactly where
-    // it was. Placed BEFORE the modifier-independent
-    // is_play_pause_key block, which would otherwise swallow Alt+Space and run
-    // a plain toggle. Restricted to Space (not Return/KpEnter). Source view and
-    // warp mode fall through to the normal toggle below.
-    if (key == GuiKeys::Space && alt && !ctrl && !shift &&
-        app.active_markers_view == 'P' &&
-        app.active_audio_view == 'T') {
-        // Mirror the plain-Space target gate: refuse Space-to-play while a
-        // target render is in flight or before any successful render populated
-        // the buffer. Space-to-stop (playing) is always honored.
-        if (!playback.is_playing()) {
-            if (target_render.is_updating()) return;
-            if (app.target_buffer_frames <= 0) return;
-        }
-        playback_lifecycle.toggle_playback(kN / 2);
-        return;
-    }
-
-    // Space is the sole playback toggle, modifier-independent (Return / keypad
-    // Enter are NOT playback keys — they open the flag editor, handled just
-    // below).
-    if (is_play_pause_key(key)) {
+    // Space is the sole playback toggle, and it is modifier-strict — every
+    // modified Space is unbound (is_play_pause_key owns that test). Return /
+    // keypad Enter are NOT playback keys; they open the flag editor, handled
+    // just below.
+    if (is_play_pause_key(key, mods)) {
         // Target-view playback gating: refuse Space-to-play while a
         // target render is in flight (current is stale by
         // definition). Space-to-stop is still honored — if playback
@@ -404,6 +402,29 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             if (target_render.is_updating()) return;
             if (app.target_buffer_frames <= 0) return;
         }
+        // LEAD-IN AUDITION, START EDGE ONLY (architect 2026-07-28): when the
+        // phase-reset lead-in overlay has a SUBJECT, Space launches the scanner
+        // kN/2 output samples AHEAD of the resting playhead — the full-scale
+        // point of a reset dropped at the playhead — without moving the cursor,
+        // so the stop merely deactivates the scanner and the cursor it never
+        // touched is exactly where it was. A non-destructive audition of the
+        // OLA/Hann synthesis lead-in.
+        // THE PREDICATE IS THE SELECTION-STATE ONE (Selection::phase_overlay_
+        // subject), never GuiPaintHandler::phase_reset_overlay_band: the band
+        // layers geometry gates (area size, samples-per-pixel, sub-pixel forward
+        // width, offscreen refusal) on top, so keying Space on it would let a
+        // scroll or a zoom silently change what Space does.
+        // The kN/2 is EXACT output-sample arithmetic. The painted band is a ±1px
+        // approximation for jitter reasons and must never enter this number.
+        // COMPOSITION with the region rule below: the subject predicate
+        // suppresses at 2+ selected and with an active region, so a group
+        // selection takes the ordinary Space and starts at the region's left
+        // bound. Deliberate — the two starts are mutually exclusive by
+        // construction, which is why the offset can be computed before the
+        // region's playhead move without either reading the other.
+        const int64_t launch_offset =
+            (!playback.is_playing() &&
+             selection.phase_overlay_subject().has_value()) ? kN / 2 : 0;
         // With an active region, Space auditions from its LEFT bound — the
         // smaller of the two active-domain endpoints, regardless of drag
         // direction — because the point of the highlight is to hear its start.
@@ -423,7 +444,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             viewport.move_playhead_to(
                 std::min(app.region.a_frame, app.region.b_frame));
         }
-        playback_lifecycle.toggle_playback();
+        playback_lifecycle.toggle_playback(launch_offset);
         return;
     }
 
@@ -481,32 +502,28 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // unshifted GuiKey, so a Shift+letter press arrives as the lowercase
     // GuiKeys::* with mods.shift set — disambiguate via the `shift` bool.
     if (key == GuiKeys::S) {
-        // bare `s` = plain drop, Alt+S = augmented drop; the same bare/Alt
-        // plain/augmented split in both views. In P view the augmented drop is
-        // the target-view lead-in reset — a reset dropped N/2 before the
-        // playhead so its lead-in output reaches full scale at the playhead
-        // (the perceived transient). It exists only in target view, where the
-        // output-domain overlay/lead-in it aligns to lives, so source-view
-        // Alt+S in P mode stays a no-op (falls through). In W view bare `s`
-        // drops a plain neutral 1.00 owner and Alt+S drops an augmented owner
-        // that copies the immediate-prior marker's effective tempo. Ctrl+S
-        // saves; a Shift-modified `s` is unbound (a consumed no-op here).
+        // bare `s` is the ONE drop in both columns, and it is the AUGMENTED one
+        // (architect 2026-07-28). In W view it drops an owner carrying the
+        // immediate-prior marker's effective tempo, which splits a section
+        // WITHOUT changing the map — render-neutral, where a plain 1.00 drop
+        // mid-warp audibly changes the section it lands in. In P view it drops
+        // the lead-in reset: a reset placed N/2 before the playhead so its
+        // OLA/Hann lead-in reaches full scale AT the playhead (the perceived
+        // transient), which composes with Space's lead-in audition — drop then
+        // Space cancels the two N/2 offsets and auditions from exactly where the
+        // cursor was. Ctrl+S saves; every other modifier combination on `s` is
+        // unbound and a consumed no-op here.
         if (ctrl && !shift && !alt) { save_ops.save(); return; }
-        // Every remaining `s` arm is a marker drop (warp bare/Alt copy, phase
-        // bare/Alt lead-in) — home-view authoring. Off home refuses silently
-        // (consumed no-op), covering the warp Alt+S copy-drop that is otherwise
-        // reachable in target view. The Alt+S lead-in arm already requires
-        // P && T = phase's home, so the predicate is a no-op there.
+        // Both drops are home-view authoring, so off home refuses silently
+        // (consumed no-op). The lead-in arm needs no separate target-view test:
+        // P's home IS target, so this one gate already carries it.
         if (!active_column_authoring_allowed(app)) return;
-        if (!ctrl && !shift && !alt &&
-                 app.active_markers_view == 'P') phase_resets.drop_phase_reset_at_playhead();
-        else if (alt && !ctrl && !shift &&
-                 app.active_markers_view == 'P' &&
-                 app.active_audio_view == 'T')   phase_resets.drop_phase_reset_lead_in_at_playhead();
-        else if (!ctrl && !shift && !alt &&
-                 app.active_markers_view == 'W') warpops.drop_marker_at_playhead();
-        else if (alt && !ctrl && !shift &&
-                 app.active_markers_view == 'W') warpops.drop_copy_previous_at_playhead();
+        if (!ctrl && !shift && !alt) {
+            if (app.active_markers_view == 'P')
+                phase_resets.drop_phase_reset_lead_in_at_playhead();
+            else
+                warpops.drop_copy_previous_at_playhead();
+        }
         return;
     }
     // Ctrl+N: toggle pass (inherit) status on the focused warp marker,
@@ -553,15 +570,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // focused marker).
     if (handle_tab_switch_keys(key, mods)) return;
 
-    // Tempo nudge. Alt+Up / Alt+Down only. No view guard here —
-    // adjust_tempo_cents returns at once unless the warp view is active, so
-    // Alt+arrows are an inert (still consumed) no-op in phase-reset view. Bare
-    // Up / Down are unbound (an ordinary no-op at the bare-key tail); `=` / `-`
-    // are the zoom keys (see below).
-    if (alt && !shift && !ctrl && key == GuiKeys::Up) {
+    // Tempo nudge, bare Up / Down (architect 2026-07-28). No view or selection
+    // guard here — adjust_tempo_cents returns at once unless the warp view is
+    // active with a non-empty selection and a valid focus, so the vertical
+    // arrows are an inert (still consumed) no-op everywhere else, phase-reset
+    // view included. `=` / `-` are the zoom keys (see below). Modified Up / Down
+    // are unbound. Read-only tabs refuse upstream: the allowlist does not admit
+    // the vertical arrows in any form.
+    if (!alt && !shift && !ctrl && key == GuiKeys::Up) {
         warpops.adjust_tempo_cents(+1); return;
     }
-    if (alt && !shift && !ctrl && key == GuiKeys::Down) {
+    if (!alt && !shift && !ctrl && key == GuiKeys::Down) {
         warpops.adjust_tempo_cents(-1); return;
     }
     if (key == GuiKeys::Equal && !shift && !ctrl && !alt) {
@@ -614,41 +633,55 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Alt+Left / Alt+Right: nudge the selected markers / phase resets by one
-    // pixel of time. Trim is not part of the selection system, so the nudge
-    // never acts on a bound (trim's pointer route is the plain chip-row
-    // press-drag on its chip / the inter-chip bridge).
-    //
+    // BARE Left / Right, MARKER-LANE half (architect 2026-07-28). The horizontal
+    // arrows are always a PLAYHEAD STEP of one painted column; the selection
+    // decides which LANE the playhead is in, and playhead_in_marker_lane is that
+    // decision. With a selection the cursor playhead stops painting and the
+    // focused flag's ink triangle IS the playhead, so the step moves THAT and
+    // carries the marker under it — the routes below, each of which re-lands the
+    // playhead on its committed focus (finish_group_position_nudge for both
+    // position nudges, the post-re-warp re-land in step_tempo_image), so the lane
+    // model holds on every successful route. With no selection the playhead is in
+    // the waveform lane and this branch does not match: the press falls through
+    // to the bare-key tail, which steps the cursor alone. Esc is the explicit
+    // collapse back to the waveform lane; there is no fallback, so an off-home or
+    // ineligible marker-lane press is a consumed no-op, never a waveform-lane
+    // step. (The AUDITION SCRUB is a different gesture entirely — the waveform
+    // lower-half one-shot press — and no arrow key reaches it.)
+    // ROUTE BEFORE THE STOP: this branch must decide the route ahead of the
+    // waveform-lane body's stop / selection-clear / region-clear, because the two
+    // lanes carry DIFFERENT playback regimes — the position nudges stop in
+    // group_position_nudge_prologue even when they later refuse, while
+    // step_tempo_image deliberately does not stop early (a refused W+target press
+    // leaves a listening session running; a successful one stops through
+    // target_render.trigger()). Merging the regimes would give a refused press a
+    // stop it does not have.
+    // Trim is not part of the selection system, so the nudge never acts on a
+    // bound (trim's pointer route is the plain chip-row press-drag on its chip /
+    // the inter-chip bridge).
     // ROUTING (architect 2026-07-24 second pass, re-ruling the same-day "third
     // exception" away): each column's POSITION nudge runs in its HOME view only
     // — warp in source, phase reset in target (the home-view binding). In
-    // W+TARGET Alt+Left/Right is NOT a position gesture: it dispatches the
+    // W+TARGET the arrows are NOT a position gesture: they dispatch the
     // TEMPO-IMAGE STEP (MarkerDragOps::step_tempo_image), the tempo drag's
     // keyboard twin — steps the FOCUSED marker's IMAGE by one painted column
     // per press where the cent grid allows, else the minimum directional cent
     // (travel can span several columns), via the (deduped participant)
     // predecessor tempo solve, the drag's eligibility legs included. Read-only
-    // tabs refuse all three routes
-    // upstream (read_only_key_blocked — Alt-exact arrows are not allowlisted).
-    if (alt && !shift && !ctrl && key == GuiKeys::Left) {
+    // tabs refuse all three routes upstream: the allowlist admits the bare
+    // horizontal arrows only when playhead_in_marker_lane is false, so a locked
+    // tab with a selection drops them at the gate.
+    if (!alt && !shift && !ctrl &&
+        (key == GuiKeys::Left || key == GuiKeys::Right) &&
+        playhead_in_marker_lane()) {
+        const int direction = (key == GuiKeys::Left) ? -1 : +1;
         if (app.active_markers_view == 'P') {
             if (app.active_audio_view != 'T') return;   // phase home = target
-            phase_resets.nudge_selected_phase_resets(-1);
+            phase_resets.nudge_selected_phase_resets(direction);
         } else if (app.active_audio_view == 'T') {
-            marker_drag.step_tempo_image(-1);   // W+target: tempo-image step
+            marker_drag.step_tempo_image(direction);  // W+target: tempo-image step
         } else {
-            warpops.nudge_selected_markers(-1); // warp home (source): position
-        }
-        return;
-    }
-    if (alt && !shift && !ctrl && key == GuiKeys::Right) {
-        if (app.active_markers_view == 'P') {
-            if (app.active_audio_view != 'T') return;
-            phase_resets.nudge_selected_phase_resets(+1);
-        } else if (app.active_audio_view == 'T') {
-            marker_drag.step_tempo_image(+1);
-        } else {
-            warpops.nudge_selected_markers(+1);
+            warpops.nudge_selected_markers(direction);  // warp home: position
         }
         return;
     }

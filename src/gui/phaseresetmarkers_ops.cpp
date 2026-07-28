@@ -51,23 +51,14 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    // Match drop_marker: re-affirm the playhead on the new phase reset. The
-    // playhead-drop create path (`s`) authors at the playhead, so this is a
-    // no-op there; the target-view lead-in create path (Alt+S) authors N/2
-    // BEFORE the playhead, so the playhead lands on the seeded reset. This is a
-    // drop consequence (the reset is created for the playhead), not a selection
-    // sync.
+    // Match drop_marker: re-affirm the playhead on the new phase reset. The one
+    // create path is the lead-in drop below (bare `s` and the empty-lane
+    // double-click both take it), which authors N/2 BEFORE the playhead, so the
+    // playhead lands back on the seeded reset. This is a drop consequence (the
+    // reset is created for the playhead), not a selection sync.
     const int64_t sample = source_frame_to_active_domain(app, audio, drop_frame);
     viewport.move_playhead_to(sample);
     target_render.trigger();
-}
-
-void GuiPhaseResetMarkersOps::drop_phase_reset_at_playhead() {
-    if (audio.sample_rate() <= 0) return;
-    // Playhead drops produce integer-valued frame positions.
-    const int64_t src_frame =
-        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
-    drop_phase_reset_at_position(static_cast<double>(src_frame));
 }
 
 // Target-view lead-in drop: place a phase reset N/2 output samples BEFORE the
@@ -80,8 +71,9 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_playhead() {
 // offset is plain integer arithmetic (no snap needed); clamped to 0. Reuses
 // drop_phase_reset_at_position so the created reset takes the full create path
 // — walls, undo, selection — unchanged; only the
-// seed frame is offset. The gesture is gated to target view (input_handler.cpp),
-// where the overlay/lead-in exist.
+// seed frame is offset. This is the phase column's ONLY drop (bare `s` and the
+// empty-lane double-click), and both routes gate it on the home-view predicate,
+// whose P arm IS target view — where the overlay/lead-in exist.
 void GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead() {
     if (audio.sample_rate() <= 0) return;
     const int64_t ph =

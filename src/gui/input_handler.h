@@ -148,7 +148,7 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // cursor playhead, so a parked highlight would hide the cursor at its new
 // position. Call sites: jump_playhead_to_focused_marker (the whole Tab family
 // plus `c` through the one tail), run_zoom_toggle_command (bare `0`), the bare
-// Left/Right playhead scrub, Home/End (the trim-bound jumps), the marker-click
+// Left/Right playhead step, Home/End (the trim-bound jumps), the marker-click
 // land (plain / shift-range / ctrl toggle, all landing through
 // land_playhead_on_marker), and the ctrl toggle that EMPTIES the selection
 // (which lands nothing, so it calls this directly). The old mutual-exclusivity
@@ -160,7 +160,8 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // ONLY; set_region_to_selection_extent — a separate call that must run AFTER
 // this clear). DELIBERATELY NOT cleared: the region Space launch (the
 // region IS the launch point there), the nudge/drag playhead follow, marker
-// drops (`s`/Alt+S), and pure viewport moves (PageUp/PageDown, zoom
+// drops (bare `s` / the empty-lane double-click), and pure viewport moves
+// (PageUp/PageDown, zoom
 // steps, pans) — and the lower-half scrub press, which touches no region at
 // all. UNDO/REDO left this list (architect 2026-07-25): a SINGLETON restore now
 // clears the region via its land (like a marker click), and a GROUP restore
@@ -417,12 +418,12 @@ struct GuiInputHandler {
                                        int64_t playhead_at_entry);
 
     // The empty flag/triangle-lane double-click marker CREATE (R6): the bare-`s`
-    // (augmented=false) / Alt+S (augmented=true) drop equivalent at the clicked
-    // column, home-view and read-only gated silently. Places the playhead on the
-    // clicked column first (the shift/augmented first click was a no-op that never
-    // moved it), then drops through the standing _at_playhead paths so the create
-    // takes the full path (walls, undo, selection, the lead-in offset) unchanged.
-    void create_marker_at_empty_lane(int click_rel_x, bool augmented);
+    // drop equivalent at the clicked column — the AUGMENTED drop in both columns,
+    // exactly as bare `s` performs it — home-view and read-only gated silently.
+    // Places the playhead on the clicked column first, then drops through the
+    // standing _at_playhead paths so the create takes the full path (walls, undo,
+    // selection, the lead-in offset) unchanged.
+    void create_marker_at_empty_lane(int click_rel_x);
 
     // Pump half of the kill-and-park dispatch rule, reached through
     // GuiTargetRender's dispatch_pending_archival hook on every
@@ -642,11 +643,13 @@ private:
     // recenter). Idempotent: a second click with the viewport unchanged no-ops.
     void run_zoom_double_click_command();
 
-    // Esc-cancel handlers: while a render or queued batch is in flight, Esc
+    // Esc-cancel handlers: while a render or queued batch is in flight, BARE Esc
     // cancels it. Returns true if it consumed the key (on_key then returns).
     // Routed after the editor modal (which cancels an active edit on Esc
-    // first) and before the rest of the key handlers.
-    bool handle_escape_cancels(GuiKey key);
+    // first) and before the rest of the key handlers. Takes the modifiers
+    // because it runs BEFORE the ladder: without them a modified Escape would
+    // still cancel a running render, which no modified chord may do.
+    bool handle_escape_cancels(GuiKey key, GuiInputState mods);
 
     // Render-trigger chords: Ctrl+Alt+R (single render), Ctrl+Alt+I
     // (render iteration sweep). Returns true if key+mods matched
@@ -665,7 +668,10 @@ private:
     bool handle_tab_switch_keys(GuiKey key, GuiInputState mods);
 
     // Bare-key (no-modifier) dispatch: playhead move / zoom / follow / center /
-    // Home-End / trim begin-end. Caller gates on no modifiers held.
+    // Home-End / trim begin-end. Caller gates on no modifiers held. Its
+    // Left/Right arms are the WAVEFORM-LANE half of the horizontal arrows: the
+    // marker-lane half returns before reaching the tail, so these run only with
+    // an empty selection (playhead_in_marker_lane false).
     void handle_plain_bare_keys(GuiKey key);
 
     // Shared key route for the modal bottom-strip editors (settings
@@ -689,7 +695,13 @@ private:
     // must run. The two kinds split up front: the bpm editor (a modal
     // bottom-strip surface) takes route_modal_editor_key, while the
     // top-strip flag editor (non-modal) keeps its own flow whose command
-    // tail cancels the edit and lets every command fall through.
+    // tail cancels the edit and lets every command fall through. That tail
+    // reaches only real commands: an unbound press wearing a stray modifier on
+    // an owned key shape (Ctrl+Escape, Ctrl+Enter, Ctrl+Shift+V, Ctrl+Alt+A)
+    // comes back from text_editor::handle_key as an inert Consumed
+    // (KeyClass::StrayModifierKey) and stops at the Consumed branch, so the
+    // teardown never runs for a command that does not exist. This file
+    // enumerates none of those keys — the classifier owns them.
     bool handle_top_flag_editor_key(GuiKey key, GuiInputState mods);
 
     // Routes a key to the active settings-prompt editor through
@@ -920,12 +932,36 @@ private:
     // set_gui_font_size_pt, not through here).
     void apply_font_size(double pt);
 
+    // THE LANE MODEL (architect 2026-07-28): true when the playhead currently
+    // lives in the MARKER lane. The bare horizontal arrows are always a PLAYHEAD
+    // STEP — one painted column per press; the lane decides what else rides
+    // along. A selection IS the marker lane: the cursor playhead stops painting
+    // and the focused flag's kWaveform-filled triangle IS the playhead (the
+    // focus model), so the step moves that, carrying the marker under it (the
+    // position nudges / the tempo-image step, each re-landing the playhead on
+    // its committed focus). With no selection the playhead is in the WAVEFORM
+    // lane and the step moves the cursor alone. Esc collapses the marker lane
+    // back to the waveform lane explicitly; there is no fallback, so a
+    // marker-lane step that refuses stays a consumed no-op.
+    // Distinct from the AUDITION SCRUB, which is untouched by all of this: that
+    // is the waveform lower-half one-shot press (scrub_act_at / scrub_press_at),
+    // a pointer gesture on its own surface that starts or stops a scanner and
+    // never moves the resting cursor. "Scrub" names that and only that.
+    // TWO READERS, one owner: the on_key dispatch (which picks the lane) and
+    // read_only_key_blocked's is_playhead_step entry (which admits the bare
+    // horizontal arrows only while this is FALSE — in the marker lane they
+    // author, and this gate is their sole read-only defense).
+    bool playhead_in_marker_lane() const;
+
     // Source-view read-only allowlist. Returns true if key+mods is NOT on the
     // allowlist of navigation / playback / zoom / view-switch / close-prompt
     // keys honored in a read-only source tab — i.e. should be dropped.
     // Authoring-mutation chords (trim gestures, Delete, undo/redo, the
     // propagate commands) are blocked here at the gate, and Ctrl+S is not
-    // admitted either — read-only means no save from a locked tab.
+    // admitted either — read-only means no save from a locked tab. One entry is
+    // STATE-DEPENDENT: the bare horizontal arrows are admitted as navigation
+    // only while playhead_in_marker_lane is false, since in the marker lane the
+    // same press authors.
     bool read_only_key_blocked(GuiKey key, GuiInputState mods);
 
     // Bottom-strip modal-editor predicate + key gate (bodies in

@@ -415,8 +415,9 @@ private:
     // wholly offscreen). Kept SEPARATE from its one consumer
     // (paint_phase_reset_overlay_ring): it owns every visibility gate as well as
     // the span, and Selection::phase_overlay_subject mirrors its selection-state
-    // gates to decide when a subject change needs waveform damage — two readers
-    // of one rule.
+    // gates (never the geometry ones) for the damage owners and for Space's
+    // lead-in audition — one rule, that mirror's readers enumerated at its own
+    // declaration in selection.h.
     struct PhaseResetOverlayBand {
         bool   valid = false;
         double x0    = 0.0;   // left screen x, clipped to the area

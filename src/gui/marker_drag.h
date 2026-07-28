@@ -105,7 +105,7 @@ struct MarkerDragOps {
                                  const std::vector<int>& participants,
                                  bool walled, int64_t& out_delta) const;
 
-    // W+target Alt+Left/Right: the tempo drag's KEYBOARD TWIN (architect
+    // W+target bare Left/Right: the tempo drag's KEYBOARD TWIN (architect
     // 2026-07-24 second pass — replacing the same-day warp position nudge's
     // target-view branch, which read as waveform truncation). One motion, two
     // routes: the drag is pointer-continuous, this steps the FOCUSED marker's
@@ -114,7 +114,7 @@ struct MarkerDragOps {
     // columns (e.g. ~8 px on a 1 s span at working zoom; see step_tempo_image's
     // minimum-step rule) — both authoring the (deduped participant)
     // predecessors' tempo_cents through the same seeding and solve helpers
-    // above. Dispatched from the Alt+Left/Right route in
+    // above. Dispatched from the bare Left/Right marker-lane route in
     // input_handler.cpp; a keyboard command like adjust_tempo_cents, living
     // here because the machinery is the drag's.
     void step_tempo_image(int direction);

@@ -394,11 +394,13 @@ const int64_t kPhaseResetOverlaySamples = static_cast<int64_t>(
 // (paint_phase_reset_overlay_ring) rather than folded into it. It carries every
 // visibility gate — view, focus, the R3 span suppressions, the eligible-marker
 // resolve, the sub-pixel and offscreen refusals — plus the clipped span, and
-// Selection::phase_overlay_subject MIRRORS its selection-state gates to decide
-// when a subject change needs waveform damage. Two readers of one rule, so the
-// rule stays one function. (It served a second pass, an opaque ground recolor
-// under the plate, until the ring became the overlay's whole visual — architect
-// 2026-07-27.)
+// Selection::phase_overlay_subject MIRRORS its selection-state gates — MINUS the
+// geometry ones, which are not selection state — to decide when a subject change
+// needs waveform damage and, since 2026-07-28, whether Space auditions the
+// lead-in. One rule, so it stays one function; that mirror's own reader
+// inventory lives at its declaration in selection.h. (It served a second pass,
+// an opaque ground recolor under the plate, until the ring became the overlay's
+// whole visual — architect 2026-07-27.)
 //
 // Painted in TARGET view, never source view, and this is a
 // phase-reset-only surface with no warp sibling (naming-symmetry asymmetry,

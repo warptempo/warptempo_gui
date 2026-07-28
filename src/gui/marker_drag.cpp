@@ -840,7 +840,7 @@ int MarkerDragOps::tempo_drag_predecessor(int hit) const {
     if (j < 0) return -1;
     // The predecessor reads its own AUTHORED payload — the question is whether
     // it owns a rewritable tempo, which is payload, not the resolved projection
-    // (the owner-only rule the target-view Alt+Up/Down step already applies).
+    // (the owner-only rule the target-view Up/Down tempo step already applies).
     const GuiWarpMarker& p = mv[j];
     if (p.disabled || p.tempo_inherits || !p.label_ref.empty()) return -1;
     // The source span mv[hit] - mv[j] is >= 1 BY CONSTRUCTION of the walk (j
@@ -1486,12 +1486,12 @@ void MarkerDragOps::cancel_tempo_drag() {
     viewport.invalidate_timestamp_area();
 }
 
-// -- W+target Alt+Left/Right: the tempo drag's keyboard twin ---------------
+// -- W+target bare Left/Right: the tempo drag's keyboard twin -------------
 //
 // architect 2026-07-24 second pass (BUG + re-rule): W+target collapses to ONE
 // MOTION — stretch/squish the waveform — reached by two image-lateral routes,
 // the pointer-continuous tempo drag and this one-column-per-press step (plus
-// the direct Alt+Up/Down tempo step on an owner). The same-day warp position
+// the direct Up/Down tempo step on an owner). The same-day warp position
 // nudge's target-view branch (the short-lived "third exception") authored the
 // marker's SOURCE position from target view, deforming the map in a way that
 // read as waveform truncation, and had no eligibility gate (it ran even where
@@ -1509,8 +1509,8 @@ void MarkerDragOps::cancel_tempo_drag() {
 // (the minimum-step rule below). Not "pixel-anchored" — that term is reserved
 // project-wide for the authored-position stored-equals-shown contract, which this
 // cents-authoring gesture deliberately does not carry.
-// Alt+Left = column - 1 -> image earlier -> predecessor tempo UP (faster is
-// shorter); Alt+Right the reverse. No viewport gate: SELECTION/FOCUS, not viewport
+// Left = column - 1 -> image earlier -> predecessor tempo UP (faster is
+// shorter); Right the reverse. No viewport gate: SELECTION/FOCUS, not viewport
 // visibility, decides whether a keyboard edit can act (Ableton-parity — offscreen
 // members of a selection drag as a group, and this step is the drag's keyboard
 // twin; the painter-quantized q basis above keeps the offscreen solve honest). The
@@ -1534,14 +1534,17 @@ void MarkerDragOps::cancel_tempo_drag() {
 // touched_live — tempo only, no reorder ever), capture-before-kick region
 // decision, ONE synchronous re-warp, post-kick playhead re-land on the FOCUSED
 // marker's image, and a per-press preview trigger. The FOCUSED marker's image
-// moves here (unlike the Alt+Up/Down tempo step, whose stepped marker's own
+// moves here (unlike the Up/Down tempo step, whose stepped marker's own
 // image is fixed by construction), so its always-on focus stem rides the
 // re-warp's full-waveform damage to its new column.
 void MarkerDragOps::step_tempo_image(int direction) {
     // Guards (silent refusals, navigation-class). The dispatch site already
     // routes only W+target here; the view test is kept defensive, the shape of
-    // adjust_tempo_cents' own view gate. Read-only tabs refuse upstream
-    // (read_only_key_blocked — Alt-exact arrows are not on the allowlist).
+    // adjust_tempo_cents' own view gate. Read-only tabs refuse upstream, and
+    // that is this routine's SOLE read-only defense — there is no check here:
+    // read_only_key_blocked admits the bare horizontal arrows only while
+    // playhead_in_marker_lane is false, so a locked tab holding the selection
+    // this routine requires never dispatches them.
     // NO early stop_playback_if_playing (unlike the position nudges): every
     // SUCCESSFUL press reaches target_render.trigger() (the function's last line),
     // and target view's trigger synchronously freezes playback before the buffer
@@ -1615,15 +1618,15 @@ void MarkerDragOps::step_tempo_image(int direction) {
     // span gives the adjacent-pixel solve 100.125 / 99.875 cents -> nearbyint ->
     // 100 -> d == 0 both directions, forever (each press re-derives from the
     // unchanged column, so nothing accumulates). A directional press therefore
-    // commits AT LEAST one cent in the pressed direction (the Alt+Up/Down "a step
+    // commits AT LEAST one cent in the pressed direction (the Up/Down "a step
     // always steps" convention), moving the image by that cent's own pixel
     // distance (for THIS example — 1.00 -> 1.01 over a 1 s span at working zoom,
     // 55.125 frames/px — the segment shortens ~436.6 frames ≈ ~7.9 px, not one
     // pixel; longer spans travel further — the pressed direction always wins,
     // the exact pixel count yielded to the grid).
-    // SIGN: d_fallback = -direction — Alt+Left (direction -1) targets an
+    // SIGN: d_fallback = -direction — Left (direction -1) targets an
     // earlier column -> shorter segment -> predecessor tempo UP -> +1 cent;
-    // Alt+Right (direction +1) -> -1 cent (verified against the solve's own
+    // Right (direction +1) -> -1 cent (verified against the solve's own
     // faster-is-shorter derivation: tempo = l_src / (span * s), so a smaller
     // span raises the predecessor tempo). ALL-OR-NOTHING against the
     // participants: every participant must have >= 1 cent of bracket headroom in

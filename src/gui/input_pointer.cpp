@@ -1007,8 +1007,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Ctrl+Shift off the chip row (its one claim is the END bound set
         // above), Shift+Alt, Ctrl+Alt+Shift, ... — no-ops here. Only a plain
         // or Shift-on-the-top-strip base press proceeds (Shift adjusts the
-        // marker selection). The Alt+wheel pan and the Alt keyboard chords are untouched
-        // (separate handlers). Discarding a press here is TOTAL: it claimed
+        // marker selection). Alt is POINTER-ONLY vocabulary: the Alt+wheel
+        // stepped pan and the Alt+drag captured grab-pan are untouched (separate
+        // handlers). On the keyboard alt survives only in the four Ctrl+Alt
+        // render / propagate chords — every other alt keybinding was retired
+        // 2026-07-28, so nothing here defers to one.
+        // Discarding a press here is TOTAL: it claimed
         // nothing, so it stopped no playback on the way down either — the stops
         // live at the claims above and below, never on the route to this gate.
         if (ctrl || alt) return;
@@ -1298,7 +1302,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         // TEMPO drag on an eligible marker — the pointer half
                         // of the home-view binding's tempo exception
                         // (architect 2026-07-22; the keyboard half is the
-                        // owner-only Alt+Up/Down step), an Ableton-style
+                        // owner-only bare Up/Down step), an Ableton-style
                         // stretch that rewrites the GROUP PREDECESSOR's tempo.
                         // Coincident groups drag as ONE — dragging any member
                         // stretches against the marker before the stack (the
@@ -1343,35 +1347,37 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 const bool in_flag_or_tri =
                     (y >= flag_lane.y && y < flag_lane.y + flag_lane.h) ||
                     (y >= tri_lane.y  && y < tri_lane.y  + tri_lane.h);
-                if (in_flag_or_tri) {
+                if (in_flag_or_tri && !shift) {
                     // R6 empty flag/triangle-lane parity (architect 2026-07-23):
                     // the empty lane works like the waveform upper half. A
                     // DOUBLE-CLICK consume creates a marker at the clicked
-                    // position (plain = bare-`s` drop, shift = Alt+S augmented
-                    // drop); otherwise the FIRST press seeds the candidate — a
-                    // PLAIN first press ALSO runs the placement body (deselect +
-                    // playhead + region arm), while a SHIFT first press is a pure
-                    // no-op seed ([CALL]: keeps the shift double-click clean and
-                    // the shift+drag inert — the waveform shift region former does
-                    // not extend to the lane). The consume reads the SECOND
-                    // press's shift state to pick plain vs augmented.
+                    // position — the AUGMENTED drop, the same and only drop bare
+                    // `s` performs (architect 2026-07-28: the lane double-click
+                    // reuses the keyboard's machinery, so it follows it); the
+                    // FIRST press seeds the candidate AND runs the placement body
+                    // (deselect + playhead + region arm).
+                    // PLAIN ONLY: a SHIFT press on the lane claims nothing at all
+                    // and falls to the inert return below, exactly like the
+                    // SHIFT-exact chip-row press — shift has no meaning here (the
+                    // waveform's shift region former does not extend to the lane),
+                    // so it seeds nothing, places nothing, and leaves a shift+drag
+                    // inert. Ctrl and alt never reach this branch (discarded at the
+                    // strict-modifier gate above).
                     // NO STOP HERE, deliberately, and this is the one ACTING
-                    // top-strip press that omits one: parity means a live
-                    // session RESEEKS to the placed playhead
-                    // (place_playhead_and_arm_region's was_playing arm) exactly
-                    // as it does on the waveform upper half, and the shift
-                    // seed leaves playback untouched so a shift+double-click
-                    // augmented drop lands over a live session like the plain
-                    // one. Do not add a stop to make this branch look like its
-                    // siblings — the omission IS the ruling.
+                    // top-strip press that omits one: PARITY is the whole reason —
+                    // a live session RESEEKS to the placed playhead
+                    // (place_playhead_and_arm_region's was_playing arm) exactly as
+                    // it does on the waveform upper half, so a double-click drop
+                    // lands over a live session without cutting it off. Do not add
+                    // a stop to make this branch look like its siblings — the
+                    // omission IS the ruling.
                     const int click_rel_x = x - area.x;
                     const DoubleClickCandidate& dc = dc_at_press;
                     if (dc.surface == DoubleClickSurface::EmptyLane &&
                         monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
                         std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
                         std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
-                        create_marker_at_empty_lane(click_rel_x,
-                                                    /*augmented=*/shift);
+                        create_marker_at_empty_lane(click_rel_x);
                         return;
                     }
                     // SEED an EmptyLane candidate at this PRESS (position-keyed;
@@ -1382,12 +1388,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         .time_ms = monotonic_ms(),
                         .press_x = x, .press_y = y,
                         .target  = -1};
-                    if (!shift) {
-                        place_playhead_and_arm_region(
-                            click_rel_x, x, y, was_playing, playhead_at_entry);
-                    }
-                    // A shift first press only seeds (the pure no-op above): no
-                    // placement, no region arm, no clear.
+                    place_playhead_and_arm_region(
+                        click_rel_x, x, y, was_playing, playhead_at_entry);
                     return;
                 }
                 // Every other empty top-strip spot: NOTHING AT ALL — no
@@ -1398,8 +1400,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // inert by ruling (architect 2026-07-27, the scrub that lived
                 // there deleted), leaving it a pure display surface for the
                 // rendered runs — a run under the point is a marker hit and
-                // never reaches this branch. The inter-lane gaps and the
-                // SHIFT-exact chip-row press land here too, equally inert.
+                // never reaches this branch. The inter-lane gaps, the SHIFT-exact
+                // chip-row press, and the SHIFT-exact flag/triangle-lane press
+                // land here too, equally inert.
                 return;
             }
             return;
@@ -1695,18 +1698,18 @@ void GuiInputHandler::place_playhead_and_arm_region(int click_rel_x, int x,
     arm_region_drag_at(sample, x, y);
 }
 
-void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x,
-                                                  bool augmented) {
-    // R6 empty flag/triangle-lane double-click marker create: the bare-`s`
-    // (augmented=false) / Alt+S (augmented=true) drop equivalent, gated exactly
-    // like the keyboard `s` — home-view (active_column_authoring_allowed) and
-    // read-only refuse SILENTLY. Place the playhead on the clicked column first:
-    // the plain double-click's first click already moved it there, but the
-    // shift/augmented first click was a pure no-op seed, so the move is required
-    // (and a harmless same-value repeat in the plain case). The standing
-    // _at_playhead drops then author at that playhead, taking the full create
-    // path (walls, undo, selection) — the phase-reset lead-in additionally offset
-    // N/2 before the playhead and landing the playhead per that drop's rule.
+void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
+    // R6 empty flag/triangle-lane double-click marker create: the bare-`s` drop
+    // equivalent, and like bare `s` it is the AUGMENTED drop in both columns —
+    // the copy-previous owner in W, the lead-in reset in P. Gated exactly like
+    // the keyboard `s`: home-view (active_column_authoring_allowed) and read-only
+    // refuse SILENTLY. Place the playhead on the clicked column first — the
+    // double-click's first press already moved it there, so this is a harmless
+    // same-value repeat that also covers any first press whose placement was
+    // undone in between. The standing _at_playhead drops then author at that
+    // playhead, taking the full create path (walls, undo, selection) — the
+    // phase-reset lead-in additionally offset N/2 before the playhead and landing
+    // the playhead per that drop's rule.
     const GuiRect area = waveform_area(app);
     if (click_rel_x < 0 || click_rel_x >= area.w) return;
     if (active_view_state(app).read_only) return;
@@ -1718,17 +1721,10 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x,
     // view: W -> source (warp drops legal), P -> target (phase-reset drops legal,
     // the lead-in's target requirement satisfied), so the view dispatch below
     // needs no extra audio-view guard.
-    if (augmented) {
-        if (app.active_markers_view == 'P')
-            phase_resets.drop_phase_reset_lead_in_at_playhead();
-        else
-            warpops.drop_copy_previous_at_playhead();
-    } else {
-        if (app.active_markers_view == 'P')
-            phase_resets.drop_phase_reset_at_playhead();
-        else
-            warpops.drop_marker_at_playhead();
-    }
+    if (app.active_markers_view == 'P')
+        phase_resets.drop_phase_reset_lead_in_at_playhead();
+    else
+        warpops.drop_copy_previous_at_playhead();
 }
 
 void GuiInputHandler::on_button_release(GuiMouseButton button, int x,

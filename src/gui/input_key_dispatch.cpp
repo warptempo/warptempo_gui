@@ -78,6 +78,14 @@ bool spawn_audio_player(const std::string& player,
 
 }  // namespace
 
+// The lane model's one predicate — see the declaration for the two readers and
+// the rationale. A non-empty selection IS the marker lane: the focus model stops
+// painting the cursor playhead and makes the focused flag's triangle the
+// playhead instead.
+bool GuiInputHandler::playhead_in_marker_lane() const {
+    return !app.selected_markers.empty();
+}
+
 // Source-view read-only allowlist. True when key+mods is not on the allowlist
 // and should be dropped.
 // Authoring-mutation chords are blocked here at the gate, not admitted for a
@@ -101,10 +109,25 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool alt   = mods.alt;
     const bool is_o =
         (key == GuiKeys::O && !ctrl && !shift && !alt);
-    const bool is_play_pause = is_play_pause_key(key);
-    const bool is_scrub =
+    const bool is_play_pause = is_play_pause_key(key, mods);
+    // The bare horizontal arrows step the PLAYHEAD by one painted column, and
+    // they are admitted ONLY in the waveform lane, where that step is pure
+    // navigation. In the MARKER lane (a non-empty selection) the very same press
+    // steps the playhead AND the marker under it — a position nudge in either
+    // column, or the W+target tempo-image step — which is authoring, and this
+    // gate is the sole read-only defense on all three routes: neither
+    // group_position_nudge_prologue nor MarkerDragOps::step_tempo_image carries
+    // an internal read-only check, and marker_drag.cpp records that dependency
+    // on this gate explicitly. So a locked tab holding a selection REFUSES the
+    // arrows outright (a consumed no-op); it does not fall back to the
+    // waveform-lane step — this project has no gesture fallbacks, and Esc is the
+    // explicit collapse out of the marker lane.
+    // NOT the audition scrub: that is the waveform LOWER-HALF one-shot press
+    // (scrub_act_at), a different gesture on a different surface, untouched here
+    // and the sole owner of the "scrub" name.
+    const bool is_playhead_step =
         ((key == GuiKeys::Left || key == GuiKeys::Right) &&
-         !ctrl && !shift && !alt);
+         !ctrl && !shift && !alt && !playhead_in_marker_lane());
     const bool is_home_end =
         ((key == GuiKeys::Home || key == GuiKeys::End) &&
          !ctrl && !shift && !alt);
@@ -131,7 +154,10 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
     const bool is_ctrl_shift_tab =
         (ctrl && shift && !alt && key == GuiKeys::Tab);
-    const bool is_esc = (key == GuiKeys::Escape);
+    // Bare Escape only: a modified Escape carries no binding anywhere, so it has
+    // nothing to be admitted FOR.
+    const bool is_esc =
+        (key == GuiKeys::Escape && !ctrl && !shift && !alt);
     const bool is_ctrl_q =
         (ctrl && !shift && !alt && key == GuiKeys::Q);
     // Ctrl+Z (undo) and Ctrl+Shift+Z (redo) are NOT on the allowlist: they
@@ -144,7 +170,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // survives as a backstop for entries that outlive a mid-history lock.
     // The trim gesture (x), Delete, and the propagate copy/paste
     // chords are likewise absent (blocked here).
-    return !(is_o || is_play_pause || is_scrub ||
+    return !(is_o || is_play_pause || is_playhead_step ||
              is_home_end || is_page_updown ||
              is_zoom_symbol || is_zero ||
              is_follow || is_center || is_sub_t || is_sub_p ||
@@ -191,8 +217,9 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     if (any_pointer_gesture_active(app)) return false;
     if (any_text_editor_active()) {
         // Only the editor's motion/edit and printable-insert keys auto-repeat
-        // while held; its session (Escape/Return) and chord (Ctrl+A/C/X/V) keys
-        // are one-shot, and NotEditorKey is not the editor's to repeat. This
+        // while held; its session (bare Escape/Return) and chord (ctrl-exact
+        // A/C/X/V) keys are one-shot, a StrayModifierKey has nothing to repeat
+        // (it is inert), and NotEditorKey is not the editor's to repeat. This
         // consumes the one editor-key owner (audit C6): Tab/IsoLeftTab classify
         // as NotEditorKey (handle_key never consumes Tab — the autocompletes are
         // intercepted at the gate before handle_key) and so do not repeat here,
@@ -201,23 +228,23 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         return kc == text_editor::KeyClass::MotionEditKey ||
                kc == text_editor::KeyClass::PrintableKey;
     }
-    // Global dispatch: only the continuous step gestures repeat — bare
-    // Left/Right scrub, bare PageUp/PageDown, bare Equal/Minus zoom, the
-    // Alt-exact Left/Right/Up/Down nudges and tempo steps, the
-    // marker-focus cycle (bare Tab / Shift+Tab / IsoLeftTab), and the THREE
+    // Global dispatch: only the continuous step gestures repeat — the bare
+    // ARROWS all four (Left/Right being the playhead step in the waveform lane
+    // and the position nudge / tempo-image step in the marker lane, Up/Down the
+    // tempo cent step; the lane split is decided per fire at dispatch, so the
+    // arrows repeat as one family), bare PageUp/PageDown, bare Equal/Minus zoom,
+    // the marker-focus cycle (bare Tab / Shift+Tab / IsoLeftTab), and the THREE
     // repeating Ctrl chords — the Ctrl+Shift+Tab march plus Ctrl+Z / Ctrl+Shift+Z
     // (undo / redo), each a continuous step gesture like the cycle, not a
     // one-shot command (Ctrl+Tab, the A/B switch, stays one-shot). Every
     // letter, toggle, opener, other Ctrl / Ctrl+Alt chord, Space, Home/End,
-    // and Delete is one-shot.
+    // and Delete is one-shot. No MODIFIED arrow repeats at all: the arrows carry
+    // no modified binding to repeat.
     if (!mods.ctrl && !mods.shift && !mods.alt &&
         (key == GuiKeys::Left || key == GuiKeys::Right ||
+         key == GuiKeys::Up || key == GuiKeys::Down ||
          key == GuiKeys::PageUp || key == GuiKeys::PageDown ||
          key == GuiKeys::Equal || key == GuiKeys::Minus))
-        return true;
-    if (mods.alt && !mods.ctrl && !mods.shift &&
-        (key == GuiKeys::Left || key == GuiKeys::Right ||
-         key == GuiKeys::Up || key == GuiKeys::Down))
         return true;
     // Marker-focus cycle keys auto-advance while held (fast marker walking):
     // bare Tab and Shift+Tab both cycle, and IsoLeftTab cycles shift-agnostic
@@ -244,15 +271,21 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // Bottom-strip modal-editor key gate, the sibling of
 // read_only_key_blocked's allowlist shape. True when key+mods is not on
 // the allowlist and should be dropped. While a bottom-strip editor is open
-// the user can reach the editor itself, Esc (exit), Ctrl+S (save; the
+// the user can reach the editor itself, bare Esc (exit), Ctrl+S (save; the
 // editor stays open), and Ctrl+Q (close routing) —
 // nothing else: Space-as-playback, zoom, mode toggles, tab switches,
 // undo/redo, and the marker / trim chords all drop here. "The editor
 // itself" CONSUMES the one editor-key owner (audit C6):
 // text_editor::classify_key — the modal gate admits exactly the non-NotEditorKey
-// set (Escape/Enter, Ctrl+A/C/X/V, the cursor/editing keys Left / Right / Home /
-// End / BackSpace / Delete under any modifiers, and printable insertion; Space
-// lands in the buffer as a typed character, not as playback). The gate-level
+// set (BARE Escape/Enter, CTRL-EXACT A/C/X/V, the cursor/editing keys Left /
+// Right / Home / End / BackSpace / Delete under any modifiers, and printable
+// insertion; Space lands in the buffer as a typed character, not as playback).
+// The strict-modifier rule holds inside a modal editor by TWO routes, both
+// ending in nothing happening: a stray-modifier press on an owned key shape
+// (Ctrl+Escape, Ctrl+Enter, Ctrl+Shift+V, Ctrl+Alt+A) classifies
+// StrayModifierKey — admitted here, then claimed inert by handle_key, so it
+// cannot cancel, commit, or paste; every other unbound chord classifies
+// NotEditorKey and drops right here. The gate-level
 // carve-outs below are NOT editor consumption — they are gate policy layered on
 // top: the settings/commit editors' own bare-Tab value autocomplete (their
 // handle_*_editor_key intercepts it before handle_key; the bpm editor has no Tab
@@ -335,8 +368,9 @@ bool GuiInputHandler::cancel_archival_session() {
 
 // Esc-cancel handlers for in-flight operations. See the declaration in
 // input_handler.h for routing order.
-bool GuiInputHandler::handle_escape_cancels(GuiKey key) {
+bool GuiInputHandler::handle_escape_cancels(GuiKey key, GuiInputState mods) {
     if (key != GuiKeys::Escape) return false;
+    if (mods.ctrl || mods.shift || mods.alt) return false;
     return cancel_archival_session();
 }
 
@@ -1591,14 +1625,27 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
     switch (key) {
     case GuiKeys::Escape: /* top-level Escape is a no-op */ break;
     case GuiKeys::Left:
+        // WAVEFORM-LANE playhead step: reached only with an EMPTY selection,
+        // because the
+        // marker-lane branch in on_key claims the press first and returns. The
+        // membership half of the clear below is therefore already satisfied; the
+        // FOCUS half is not — last_selected_marker survives an empty selection
+        // (Esc's singleton rung lands the playhead and leaves the focus), and
+        // clearing it is what stops a stale focus from re-entering the marker
+        // lane on the next selection gesture.
+        // The stop lives HERE, in this lane only: the marker-lane routes carry
+        // their own playback regimes (the position nudges stop in their prologue,
+        // the tempo-image step deliberately does not stop on a refusal), which is
+        // exactly why on_key routes before reaching this body.
         playback_lifecycle.stop_playback_if_playing();
         if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
             selection.clear_selection();
             viewport.invalidate_waveform_area();
         }
-        // Navigation scrub: dissolve a resting region (the playhead is leaving
-        // its span). This dispatch site fires once per press; move_playhead_pixels
-        // is its only caller, so the clear cannot leak to a non-navigation path.
+        // Navigation playhead step: dissolve a resting region (the playhead is
+        // leaving its span). This dispatch site fires once per press;
+        // move_playhead_pixels is its only caller, so the clear cannot leak to a
+        // non-navigation path.
         clear_region_highlight(app, viewport);
         viewport.move_playhead_pixels(-1);
         break;
@@ -1727,7 +1774,14 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
         return true;
     }
     if (action == text_editor::KeyAction::Consumed) {
-        // FlagPayload draws in the top strip.
+        // FlagPayload draws in the top strip. This branch also absorbs the
+        // STRAY-MODIFIER presses (a modified Escape/Return/KpEnter, a
+        // Ctrl+Shift / Ctrl+Alt A/C/X/V): text_editor::handle_key claims them
+        // Consumed without touching the buffer or the session, so they stop
+        // here, inert, instead of reaching the cancel-then-fall-through tail
+        // below. That routing is the classifier's (KeyClass::StrayModifierKey),
+        // not this file's — nothing here enumerates those keys. The repaint is a
+        // harmless no-change blit, exactly like the copy case above.
         viewport.invalidate_top_strip();
         return true;
     }
@@ -1738,6 +1792,11 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
     // command (Ctrl+Q/S, Ctrl+Z, Ctrl+Tab, Ctrl+P, ...) works
     // mid-edit: exit first, then the command. No command list — the editor
     // owns only its editing keymap and everything else punches through.
+    // Reached ONLY by keys the classifier calls NotEditorKey — genuine commands.
+    // An UNBOUND press that merely wears a stray modifier on an owned key shape
+    // never gets here (the Consumed branch above took it), so the teardown keeps
+    // its real job and loses only the case where it was destroying an edit for
+    // a command that does not exist.
     flag_editor.exit_top_flag_edit_no_commit();
     return false;  // not the editor's key — let on_key run the command
 }

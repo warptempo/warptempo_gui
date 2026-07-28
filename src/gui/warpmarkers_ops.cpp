@@ -82,7 +82,8 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     viewport.invalidate_timestamp_area();
 
     // Re-affirm the playhead on the just-dropped marker. The drop is authored
-    // AT the playhead (drop_marker_at_playhead / the `s` command) in warp's
+    // AT the playhead (drop_copy_previous_at_playhead — the `s` command and the
+    // empty-lane double-click) in warp's
     // SOURCE home view (the home-view binding, architect 2026-07-22), where
     // source_frame_to_active_domain is identity, so this is a no-op
     // reaffirmation — the marker is created under the playhead and the playhead
@@ -99,18 +100,7 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     target_render.trigger();
 }
 
-// `s` (W view): drop a plain neutral 1.00 owner at the playhead.
-void GuiWarpMarkersOps::drop_marker_at_playhead() {
-    if (audio.sample_rate() <= 0) return;
-    // Playhead drops produce integer-valued frame positions.
-    const int64_t src_frame =
-        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
-    drop_marker(static_cast<double>(src_frame),
-                /*inherit=*/false, /*tempo_cents=*/100,
-                /*scale=*/std::nullopt);
-}
-
-// `Alt+S` (W view): drop an explicit owner that copies the immediate-prior
+// `s` (W view): drop an explicit owner that copies the immediate-prior
 // marker's effective tempo (base x scale), via the shared resolver also
 // used by the hover popup.
 // Exception: when the prior marker is a label ref, the copy is skipped and a
@@ -389,10 +379,10 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
         adjust_tempo_cents_group(delta_cents);
         return;
     }
-    // architect ruling 2026-07-22: the Alt+Up/Down tempo step stays reachable off
+    // architect ruling 2026-07-22: the Up/Down tempo step stays reachable off
     // its source home (target view is exactly where you want to hear/see a tempo
     // change). It is one flavor of the warp column's TEMPO exception there (the
-    // others are the tempo drag and its keyboard twin, the Alt+Left/Right
+    // others are the tempo drag and its keyboard twin, the bare Left/Right
     // tempo-image step — architect 2026-07-24 second pass; W+target authors
     // tempo only, never position). But the tempo step there is OWNER-ONLY: the
     // focus-collapse target must already own an adjustable tempo, so a pass
@@ -428,14 +418,14 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     // (app.command_seq, bumped once at the on_key / on_wheel dispatch entry
     // that reached this handler), so it is order-independent of the
     // focus-collapse below; it just has to run before record_gesture stamps
-    // this command. Alt+Up/Down is the only route reaching here with kind
+    // this command. The Up/Down step is the only route reaching here with kind
     // TempoStep, so a burst of tempo steps coalesces as intended.
     const bool merge = undo.coalesce_gesture(GestureKind::TempoStep);
     selection.collapse_to_focused();
     const auto& mv_const = app.warpmarkers.markers();
     std::vector<GuiWarpMarker> proposed = mv_const;
     // Single-marker resolve via marker_effective (slice once) — the
-    // projection-aware walk, NOT the raw backward walk. Alt+Up/Down freezes a
+    // projection-aware walk, NOT the raw backward walk. The Up/Down step freezes a
     // pass to owning at the nudged value, so its starting tempo/scale must be
     // the value hover shows and the render produces: under a coincident-stack
     // collapse the raw walk would seed the freeze from a collapsed group
@@ -501,7 +491,8 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     // tempo shapes only the segment AFTER it, sliding only DOWNSTREAM images), so
     // the subject frame is unchanged and no stem repaint is needed here — the
     // target-view re-warp below still repaints the downstream plate.
-    // Discrete warp_frame_map change that CAN run in target view: Alt+Up/Down is a
+    // Discrete warp_frame_map change that CAN run in target view: the Up/Down
+    // step is a
     // warp authoring gesture reachable off its source home (the ruled exception
     // gated above), so it is one of the target-view re-warp sites (the full
     // inventory lives at Viewport::kick_waveform_sync). When it runs in target
@@ -551,7 +542,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
         }
     }
     // Coalesce decision before mutation (command adjacency, order-independent of
-    // the mutation; same as the singleton). Alt+Up/Down is the only route
+    // the mutation; same as the singleton). The Up/Down step is the only route
     // reaching here with kind TempoStep, and coalesce_gesture keys on the kind +
     // command adjacency, NOT on any marker index, so a burst over the SAME group
     // collapses to one entry (a selection change requires an intervening command,
@@ -646,7 +637,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
 //
 // SOURCE HOME VIEW ONLY (the home-view binding, architect 2026-07-22 — restored
 // 2026-07-24 second pass: the same-day "third exception", a both-views warp
-// position branch, was a misreading and is DELETED; in W+target Alt+Left/Right
+// position branch, was a misreading and is DELETED; in W+target bare Left/Right
 // dispatches the TEMPO-IMAGE STEP instead, MarkerDragOps::step_tempo_image —
 // there is no warp position authoring in target view at all, and the dispatch
 // site in input_handler.cpp owns the routing).

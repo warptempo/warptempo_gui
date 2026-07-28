@@ -69,7 +69,7 @@ void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
 // definition under the split-playhead model).
 //
 // The play edge computes the launch position — cursor + launch_offset, the
-// offset non-zero only for the target-view Alt+Space lead-in — and delegates
+// offset non-zero only for the target-view lead-in Space auditions — and delegates
 // to launch_playback_from, the shared launch body the scrub launch also
 // rides; the validation, loop-verdict capture, scanner seed, follow behavior,
 // and play() all live there. What stays HERE is the cursor-relative
@@ -89,9 +89,9 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     // and on a REFUSED launch it leaves the scanner cleanly deactivated
     // instead of scanner-active with the hold flags cleared, which the tick
     // would re-arm into another endpoint hold. Must run while the scanner
-    // fields are still valid (before any flag write below). Alt+Space rides
-    // this same play edge (the offset only shifts the launch position), so it
-    // inherits the teardown.
+    // fields are still valid (before any flag write below). The lead-in
+    // audition rides this same play edge (the offset only shifts the launch
+    // position), so it inherits the teardown.
     if (app.playhead_scanner_active)
         stop_playback_if_playing();
     // Defensive: clear any stale override from an unhandled stop path so
@@ -108,7 +108,7 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     int64_t launch_pos = app.playhead_cursor_sample;
     if (app.active_audio_view == 'T') {
         // Launch = cursor + launch_offset. The offset is 0 for plain Space and
-        // +N/2 for the Alt+Space lead-in audition; the resting cursor is never
+        // +N/2 for the lead-in audition; the resting cursor is never
         // moved either way, so stop just deactivates the scanner and the
         // cursor is right where it was left.
         //

@@ -15,7 +15,8 @@ struct GuiTargetRender;
 // Shared type-free flesh of the two GROUP POSITION nudges — the warp nudge
 // (GuiWarpMarkersOps::nudge_selected_markers, source home view) and the phase
 // reset nudge (GuiPhaseResetMarkersOps::nudge_selected_phase_resets, target home
-// view). Both are Alt+Left/Right, each authoring its own column in its home
+// view). Both are the bare Left/Right press with a non-empty selection (the
+// marker lane), each authoring its own column in its home
 // view; a 2+ selection nudges rigidly, a singleton is the degenerate case. The
 // twins share an identical guard prologue, an identical pixel-column anchor
 // step, and an identical commit tail; only the WALL-REGIME MIDDLE differs by
@@ -37,8 +38,10 @@ struct GroupNudgePrologue {
 // The shared guard prologue of the two group position nudges. Order is IDENTICAL
 // in both twins and preserved exactly: (1) loading / empty-audio refusal;
 // (2) stop_playback_if_playing FIRST — this is a fine-tuning authoring gesture
-// (Alt+Left/Right is the only caller path), and an empty-selection press in home
-// view still stops playback today; (3) empty-selection refusal; (4) no-focus
+// (the bare Left/Right marker-lane press is the only caller path); (3)
+// empty-selection refusal — unreachable from the dispatcher, which routes an
+// empty selection to the waveform-lane playhead step instead and never reaches
+// here, so this is the belt; (4) no-focus
 // refusal; (5) the undo-coalesce verdict, computed before the geometry refusals
 // (a const query — coalesce_gesture keys off command adjacency, app.command_seq
 // bumped once at the on_key dispatch entry that reached the handler, and it just
@@ -91,7 +94,7 @@ GroupNudgePrologue group_position_nudge_prologue(
 // advances at least one whole frame.
 //
 // The contrast is the point, documenting a trap that already bit once: the
-// W+target Alt+Left/Right TEMPO-IMAGE STEP (MarkerDragOps::step_tempo_image) is
+// W+target bare Left/Right TEMPO-IMAGE STEP (MarkerDragOps::step_tempo_image) is
 // NOT a consumer of this guarantee and cannot be — it authors CENTS, a grid
 // COARSER than the pixel grid on ordinary spans (one cent moves the image about
 // 2+ px there), so the guarantee INVERTS and the minimum-step rule at

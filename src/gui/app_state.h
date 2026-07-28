@@ -184,7 +184,8 @@ struct SelectionSnapshot {
 // GROUP marker drag captures the resting region into DragState::pre_drag_region
 // (Esc restore) and live-tracks it to the moving group's extent (apply_drag_
 // motion), re-deriving from the post-commit store at commit. The GROUP POSITION
-// NUDGES (Alt+Left/Right, both columns) re-derive the same way at their commit —
+// NUDGES (bare Left/Right in the marker lane, both columns) re-derive the same
+// way at their commit —
 // MAINTAIN only, per-press, no live track and no Esc restore (a nudge is one
 // atomic step) — so an active SelectionExtent region follows the nudged group.
 // Region PROVENANCE (architect 2026-07-23, three-state ownership): tracks WHO the
@@ -570,7 +571,7 @@ struct PendingMarkerDrag {
 
 // Pending target-view TEMPO drag, armed by a PLAIN (unmodified) warp-flag
 // press in W view + TARGET audio view — the pointer half of the home-view
-// binding's tempo exception (the keyboard half is the Alt+Up/Down step). The
+// binding's tempo exception (the keyboard half is the bare Up/Down step). The
 // press single-selects its marker (the click), verifies eligibility — the
 // marker has a GROUP predecessor (the nearest marker at a strictly earlier
 // frame, walking past same-frame siblings — coincident groups drag as ONE, so
@@ -880,15 +881,14 @@ enum class DoubleClickSurface { None, ZoomRow, Marker, EditorText, EmptyLane };
 //                 / whitespace) in the active text editor (target unused; both
 //                 axes' slack compared).
 //   EmptyLane  -> creates a marker at the clicked position on an EMPTY flag /
-//                 triangle lane spot (R6, architect 2026-07-23): the consuming
-//                 press's shift state picks the drop — plain = the bare-`s` drop
-//                 (warp 1.00 owner / phase reset), shift = the Alt+S augmented
-//                 drop (warp copy-previous / phase reset N/2 lead-in), home-view
-//                 and read-only gated silently. Seeded at the PRESS
-//                 (position-keyed, target unused, both axes' slack compared); a
-//                 plain first press also runs the waveform-parity placement, a
-//                 shift first press is a pure no-op seed. Cleared like every
-//                 candidate when the armed region drag moves.
+//                 triangle lane spot (R6, architect 2026-07-23): the AUGMENTED
+//                 drop, exactly what bare `s` performs (warp copy-previous /
+//                 phase reset N/2 lead-in), home-view and read-only gated
+//                 silently. PLAIN presses only — a modified press on the lane
+//                 claims nothing and seeds nothing. Seeded at the PRESS
+//                 (position-keyed, target unused, both axes' slack compared),
+//                 which also runs the waveform-parity placement. Cleared like
+//                 every candidate when the armed region drag moves.
 // Cleared on file load, the moment an action fires, and — the KEYBOARD and
 // WHEEL halves of the lifetime — at the TOP of every on_key AND on_wheel command
 // (beside the command_seq bump): any keyboard command OR wheel frame between two
@@ -925,8 +925,9 @@ constexpr int     kDoubleClickSlackPx = 8;
 //    a micro-region instead of plain playhead placement.
 //  - MARKER GRAB SLOP (marker / tempo flag): a flag must be easy to click
 //    (select, or double-click to edit) without nudging it, and pixel-exact
-//    fine-tuning lives on Alt+Left/Right rather than the drag — the Ableton
-//    convention. 8px gives that slop; the strip/trim/region surfaces inherit it.
+//    fine-tuning lives on the bare Left/Right nudge rather than the drag — the
+//    Ableton convention. 8px gives that slop; the strip/trim/region surfaces
+//    inherit it.
 // One latch shape everywhere — a motion event below the threshold is ignored
 // outright (moved stays false, no apply, the drag stays armed); once a drag,
 // always a drag, so dragging back near the press has no dead zone. The strip
@@ -1843,10 +1844,10 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // readouts all live; every placement/store mutation refuses silently,
 // navigation-class, exactly the read-only-tab convention). The TWO ruled
 // exceptions live at their sites: (1) the TEMPO family in W+target — ONE motion
-// (stretch/squish the waveform), THREE flavors: the Alt+Up/Down step
+// (stretch/squish the waveform), THREE flavors: the bare Up/Down step
 // (owner-only there, adjust_tempo_cents), the tempo drag, and the
-// Alt+Left/Right tempo-image step (the drag's keyboard twin,
-// MarkerDragOps::step_tempo_image — Alt+Left/Right routes by view at its
+// bare Left/Right tempo-image step (the drag's keyboard twin,
+// MarkerDragOps::step_tempo_image — the marker-lane arrow routes by view at its
 // dispatch site in input_handler.cpp, NOT through this predicate); (2) the
 // phase-reset propagate (a warp-view gesture that authors phase resets; its
 // paste lands in target view). The 2026-07-24 "third exception" — a both-views
@@ -1988,7 +1989,7 @@ int64_t live_total_frames(const AppState& a, const GuiAudio& audio);
 // Ctrl+Tab restore, and the render-entry adopt's tab bands — so an
 // arbitrary non-negative persisted int64 (the settings schema is
 // load-lenient on view scratch) rests in-domain BEFORE any translation
-// arithmetic (the S/T toggle's double->int64 conversion, Alt+Space's
+// arithmetic (the S/T toggle's double->int64 conversion, Space's lead-in
 // launch offset) can consume it. The clamp reads live_total_frames — the
 // active display context's domain total, source-frame total in source view
 // and target-frame total (cached at `t`-toggle) in target view — so it
