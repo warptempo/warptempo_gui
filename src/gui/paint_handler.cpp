@@ -1147,7 +1147,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     marker flags, so on a multimarker select the extent region's
         //     half-triangles rest hidden behind the earliest/latest members'
         //     flags (identical 15-wide triangle geometry at the same column);
-        //     the grey selected-marker focus triangles are GONE (architect
+        //     the selected-marker focus triangles are GONE (architect
         //     2026-07-25 — a singleton's focus is its STEM, a group's is the
         //     extent-region ground).
         //   TRIM BELOW THE PLAYHEAD (architect 2026-07-25) — every trim pixel
@@ -1222,7 +1222,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // Strip-drag anchor stem: over the plate/stems in the waveform area
         // only. It now paints AFTER the playheads (the flip moved them up), so
         // where the pivot column coincides with the cursor/scanner column during
-        // a strip drag the grey anchor stem sits OVER the playhead LINE (both are
+        // a strip drag the anchor stem sits OVER the playhead LINE (both are
         // waveform verticals; the playhead's triangle lane is untouched, the
         // anchor carries no triangle). The anchor shows only mid-strip-drag, so
         // this overlap is transient and the pivot affordance reading on top is

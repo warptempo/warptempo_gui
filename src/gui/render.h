@@ -66,8 +66,8 @@ struct TrimRange {
 //
 // THE DEFAULTS BELOW ARE THE ARCHITECT'S TUNED SCHEME (2026-07-27), folded in
 // from the config file that carried it, so a fresh machine with no colors.conf
-// looks exactly like the tuned desktop. Its shape: the CHROME and the LINES are
-// the desktop's own greys, and every marker-family shape is a DARK DESATURATED
+// looks exactly like the tuned desktop. Its shape: the CHROME and the LINES take
+// the desktop's own values, and every marker-family shape is a DARK DESATURATED
 // FILL under a BRIGHT RING — the shipped saturated roles survive as the rings
 // and as nothing else. NOTHING BELOW IS TUNED BY EYE: every default is one of
 // three kinds — a shipped Breeze role (live, or disabled as KColorScheme
@@ -101,7 +101,7 @@ struct TrimRange {
 // statement, and this block mirrors it for reading only.
 inline GuiColor kBackground       = hex(0x202326);  // Breeze Window
 // The work surface: the Breeze/qt6ct "Light" bevel role — the desktop's own
-// lifted-panel grey, still clearly lighter than the chrome above, so the
+// lifted-panel value, still clearly lighter than the chrome above, so the
 // inversion the ground split describes reads at a glance.
 inline GuiColor kCanvas           = hex(0x393E43);
 // The ink is DARKER than its ground — the waveform is a dark cut into the
@@ -110,7 +110,7 @@ inline GuiColor kWaveform         = hex(0x141618);
 
 inline GuiColor kText             = hex(0xFCFCFC);  // Breeze paper white
 // Disabled text: Breeze Dark's DISABLED Text role, the View set's faded
-// foreground — the value the desktop itself greys text to, rather than a fade
+// foreground — the value the desktop gives disabled text, rather than a fade
 // computed from kText. THE SOURCE OF TRUTH FOR THE WHOLE DISABLED FAMILY (this
 // key, kLine, kStripAnchorStem, the kMarkerDisabled pair, the trim chip ring and
 // stem) is the shipped /usr/share/color-schemes/BreezeDark.colors run through
@@ -135,12 +135,12 @@ inline GuiColor kTextDisabled     = hex(0x606263);
 
 // THE ONE STRUCTURAL LINE COLOR: the DISABLED WindowText role, from the same
 // KColorScheme pass over the shipped scheme as kTextDisabled — the architect's
-// separator grey, the desktop's own arithmetic rather than a blend invented
+// separator value, the desktop's own arithmetic rather than a blend invented
 // against the chrome. Every inert structural rule paints in it — the zoom-strip
 // row ring (render_strip_row_ring) and the waveform area's 1px top and bottom
 // border (render_canvas). It is not an accent and never marks state. The trim
 // chips' ring and stems take this same value from their own keys, so every calm
-// 1px rule in the product is one grey.
+// 1px rule in the product is one color.
 inline GuiColor kLine             = hex(0x686A6C);
 
 // The strip-drag anchor stem: a transient pivot affordance shown only mid-drag,
@@ -157,10 +157,10 @@ inline GuiColor kStripAnchorStem  = hex(0x686A6C);
 // color (architect 2026-07-27). The compiled default is the breeze-icons grey —
 // brighter than kLine so the cursor reads as live rather than structural, calmer
 // than kText so it never competes with the glyphs. kSelectedStem and
-// kOverlayOutline default to the same grey: the live 1px marks are one family,
-// each on its own key so any of them can be pulled out of it.
+// kOverlayOutline default to the same value: the live 1px marks are one
+// family, each on its own key so any of them can be pulled out of it.
 //
-// THAT GREY IS THE PALETTE'S ONE PROVENANCE EXCEPTION, recorded here once for
+// THAT VALUE IS THE PALETTE'S ONE PROVENANCE EXCEPTION, recorded here once for
 // all three keys: every other default traces to a BreezeDark.colors scheme
 // ROLE (directly, or through KColorScheme/KColorUtils), but 127,140,141 appears
 // NOWHERE in BreezeDark.colors. It is the breeze-icons ART grey — 101
@@ -176,7 +176,7 @@ inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
 
 // THE THREE MARKER CLASSES, each a FILL + OUTLINE pair: a DARK DESATURATED FILL
 // under a brighter 1px RING (see EditorTextBox::outline / kChipOutlinePx) — the
-// live classes carry a genuinely bright ring, the disabled one a grey that only
+// live classes carry a genuinely bright ring, the disabled one a ring that only
 // just lifts off its fill, which is exactly how it reads as switched off. Both
 // halves of every pair are tuning knobs. The classes resolve in priority order
 // at the flag renderers — disabled, then red, then default.
@@ -209,7 +209,7 @@ inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
 // waveform, so a bright ring wants a calmer stem and the two must tune
 // independently. It is the singleton's cue in the WAVEFORM, below the strip
 // where the ink triangle reads, and it takes the calm breeze-icons grey
-// (the kPlayheadCursor value — that grey's provenance and its standing as the
+// (the kPlayheadCursor value — its provenance and its standing as the
 // palette's one non-Breeze-Dark-role default are recorded at kPlayheadCursor
 // above) rather than a ring value like kMarkerOutline — a full-height line at
 // ring brightness would shout.
@@ -252,7 +252,7 @@ inline GuiColor kMarkerOutline    = hex(0x3895C7);
 // default fill's family while sitting darker than it), the ring its
 // PlaceholderText grey. It is NOT the disabled Highlight, which is the grey
 // window ground #1f2124 and would be useless as a marker fill. The disabled
-// lane text (kTextDisabled) is that set's Text, so shape and glyph grey out
+// lane text (kTextDisabled) is that set's Text, so shape and glyph go disabled
 // together by provenance. It WINS over red and over the default class, and
 // there is nothing left for it to compose with: a disabled marker paints BOTH
 // halves of this pair whatever its red-flag status. Selection does not alter
@@ -303,7 +303,7 @@ inline GuiColor kRegionCanvas     = hex(0x42474D);
 inline GuiColor kOverlayOutline   = hex(0x7F8C8D);
 
 // THE TRIM FAMILY, in three roles — no longer an orange family of its own
-// (architect 2026-07-27): it joins the marker system and the structural grey.
+// (architect 2026-07-27): it joins the marker system and the structural line.
 // The BRIDGE BAR is the chip-lane band spanning the gap between the two chips
 // (render_trim_flags), the pair-drag's grab affordance and the sole "inside the
 // trim window" signal now that the out-of-trim dim is retired — and its default
@@ -312,7 +312,7 @@ inline GuiColor kOverlayOutline   = hex(0x7F8C8D);
 // dissolve into the strip: kTrimChip is the kBackground chrome value exactly, so
 // a chip's fill is invisible against the lane it sits in and what marks the
 // bound is its RING plus its stems — kTrimChipOutline and kTrimStem both take
-// the kLine grey, one calm rule. (The 1px STEMS are the waveform-area segments
+// the kLine value, one calm rule. (The 1px STEMS are the waveform-area segments
 // in render_trim_stems plus the strip-crossing segments in render_trim_flags;
 // they read as part of the chip handle, which is why they follow the chip's ring
 // rather than the bar.) Trim sits outside the selection system entirely — a
@@ -961,7 +961,7 @@ void render_waveform(cairo_surface_t* dest,
 // belongs to the cursor exclusively under the split-playhead model; pass
 // `draw_triangle = false` for the scanner and the selected-marker stem so only
 // the vertical line is drawn. (The complementary triangle-only form was retired
-// with the grey selected-marker focus triangle when the singleton's focus became
+// with the selected-marker focus triangle when the singleton's focus became
 // an always-on stem, architect 2026-07-25, so there is no draw_line flag — the
 // line is unconditional.)
 //
@@ -1013,7 +1013,7 @@ void render_split_playhead(cairo_t* cr,
 
 // Draws the strip-drag ANCHOR STEM: a 1-pixel vertical line at the drag's pivot
 // column `col` (window pixels within `area`, clamped here to [0, area.w-1]),
-// spanning the full waveform height like a marker stem, in the dimmer-grey
+// spanning the full waveform height like a marker stem, in the dimmer
 // kStripAnchorStem (a transient drag affordance, deliberately less loud than a
 // marker stem). The anchor is
 // the clamped column the strip-drag math pins each event — edge-included, so an
