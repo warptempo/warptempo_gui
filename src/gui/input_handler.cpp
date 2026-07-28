@@ -504,15 +504,36 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::S) {
         // bare `s` is the ONE drop in both columns, and it is the AUGMENTED one
         // (architect 2026-07-28). In W view it drops an owner carrying the
-        // immediate-prior marker's effective tempo, which splits a section
-        // WITHOUT changing the map — render-neutral, where a plain 1.00 drop
-        // mid-warp audibly changes the section it lands in. In P view it drops
-        // the lead-in reset: a reset placed N/2 before the playhead so its
-        // OLA/Hann lead-in reaches full scale AT the playhead (the perceived
-        // transient), which composes with Space's lead-in audition — drop then
-        // Space cancels the two N/2 offsets and auditions from exactly where the
-        // cursor was. Ctrl+S saves; every other modifier combination on `s` is
-        // unbound and a consumed no-op here.
+        // immediate-prior marker's effective tempo: the ORDINARY drop splits a
+        // section WITHOUT changing the map — render-neutral, which is why it
+        // beat the plain 1.00 drop, whose mid-warp landing audibly changes the
+        // section it falls in. Neutrality is the RULE, not a guarantee: two
+        // states break it, and both STAND (architect 2026-07-28):
+        //   - onto an OCCUPIED frame: find_immediate_prior looks strictly BEFORE
+        //     the drop frame while drop_marker deliberately allows landing on an
+        //     occupied one, so dropping where an enabled owner already sits
+        //     builds a 2+-survivor exact-frame group, which the resolver
+        //     replaces with one synthetic 1.00 owner — that section's authored
+        //     tempo is gone.
+        //     It stands because it is LOUD: the affected markers turn
+        //     normalization-red at once, the standing display cue for a state
+        //     the resolver rewrites, so nothing is silently lost. drop_marker
+        //     already rules exact-frame degeneracy the render boundary's to
+        //     collapse, not the drop's.
+        //   - inside a LABEL DEFINITION: only a preceding label REF is
+        //     special-cased, so a preceding label_def takes the ordinary numeric
+        //     arm. Both halves keep their local tempo, but a definition's SPAN
+        //     IS ITS MEANING — the parser caches its target duration from where
+        //     the section ends (warp_frame_map_build.cpp) — so the split reprices
+        //     every reference to that label. A property of definitions, not a
+        //     defect.
+        // In P view it drops the lead-in reset: a reset placed N/2 before the
+        // playhead so its OLA/Hann lead-in reaches full scale AT the playhead
+        // (the perceived transient), which composes with Space's lead-in
+        // audition — drop then Space cancels the two N/2 offsets and auditions
+        // from exactly where the cursor was.
+        // Ctrl+S saves; every other modifier combination on `s` is unbound and a
+        // consumed no-op here.
         if (ctrl && !shift && !alt) { save_ops.save(); return; }
         // Both drops are home-view authoring, so off home refuses silently
         // (consumed no-op). The lead-in arm needs no separate target-view test:
