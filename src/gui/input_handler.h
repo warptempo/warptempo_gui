@@ -873,20 +873,21 @@ private:
     // launches. Sole caller: the one-shot scrub press body (scrub_press_at).
     void scrub_act_at(int64_t frame);
 
-    // The scanner scrub press body, shared by the waveform lower-half plain press
-    // and the marker-text-lane plain press (R3.3, architect 2026-07-23). Given
+    // The scanner scrub press body. SOLE CALLER: the waveform lower-half plain
+    // press — the marker-text lane's empty-spot scrub is DELETED (architect
+    // 2026-07-27), so the lower half is the entire scrub surface. Given
     // the click's waveform-relative column, run ONE scrub act (scrub_act_at —
     // stop a live session, else launch) at that column's frame — the scrub is
     // ONE-SHOT per click (architect 2026-07-23, the Ableton model): the
     // press arms NOTHING, a held press does nothing further, and motion over
-    // the scrub surfaces is inert (the scrub drag is removed, so each click
+    // the scrub surface is inert (the scrub drag is removed, so each click
     // pays AT MOST one stop quiescence fence — a stopped session's launch pays
     // none). A gutter/invalid column
     // (outside [0, area.w)) is a silent no-op (no launch position). Touches
     // NOTHING else — no selection, region, cursor, follow, or double-click seed.
-    // Both callers keep playback alive across the press (the lower half is not
-    // a top-strip press; the text-lane scrub is exempted from the top-strip
-    // stop), so the act sees the LIVE session — load-bearing for the
+    // The caller keeps playback alive across the press (the lower half is not
+    // a top-strip press, so the blanket top-strip stop never runs over it), so
+    // the act sees the LIVE session — load-bearing for the
     // stop-then-start ruling: a press that let the session die first would turn
     // the interrupting click into a launch.
     void scrub_press_at(int click_rel_x);

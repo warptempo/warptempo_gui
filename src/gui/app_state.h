@@ -838,11 +838,12 @@ struct ScrollDragState {
     int    last_x   = 0;
 };
 
-// (The SCRUB has no drag state: the plain lower-half waveform press and the
-// empty marker-text-lane press are ONE-SHOT scrub acts (scrub_act_at — stop a
-// live session, else play from here), issued once per click — the press arms
+// (The SCRUB has no drag state: the plain lower-half waveform press — the ONE
+// scrub surface, the marker-text lane's having been deleted (architect
+// 2026-07-27) — is a ONE-SHOT scrub act (scrub_act_at: stop a live session,
+// else start one at the clicked frame), issued once per click — the press arms
 // nothing, a held press does nothing further, and motion over the scrub
-// surfaces is inert (architect 2026-07-23, the Ableton model; the former
+// surface is inert (architect 2026-07-23, the Ableton model; the former
 // per-column re-scrub drag and its drag-state struct are removed — each
 // click pays AT MOST one stop-quiescence fence (a stopped session's launch
 // pays none), so the per-column fence cadence is structurally gone). The

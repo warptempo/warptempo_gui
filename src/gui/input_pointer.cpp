@@ -389,20 +389,22 @@ void GuiInputHandler::scrub_act_at(int64_t frame) {
         playback_lifecycle.scrub_launch_at(frame);
 }
 
-// The scanner scrub press body, shared by the waveform lower-half plain press
-// and the marker-text-lane plain press (R3.3, architect 2026-07-23). See the
-// declaration for the full contract. ONE-SHOT per click (architect 2026-07-23,
-// the Ableton model): derive the clicked column's frame and run one scrub act
-// — the press arms NOTHING, a held press does nothing further, and motion over
-// the scrub surfaces is inert (the scrub drag is removed; each click pays
-// scrub_act_at's stop quiescence fence AT MOST once — a stopped session's
-// launch pays none — and the per-column fence cadence class is structurally
-// gone). Both callers keep playback alive across the press (the waveform lower
-// half is not a top-strip press; the text-lane scrub is exempted from the
-// top-strip stop), so the scrub act sees the LIVE session — load-bearing for
-// the stop-then-start ruling: a caller that let the session die before the act
-// would turn the interrupting click into a launch, which is precisely the
-// behaviour the ruling removed.
+// The scanner scrub press body. SOLE CALLER: the waveform lower-half plain
+// press — the marker-text lane's empty-spot scrub is DELETED (architect
+// 2026-07-27; that lane touches playback in neither direction now), so the
+// waveform's lower half is the whole scrub surface. See the declaration for
+// the full contract. ONE-SHOT per click (architect 2026-07-23, the Ableton
+// model): derive the clicked column's frame and run one scrub act — the press
+// arms NOTHING, a held press does nothing further, and motion over the scrub
+// surface is inert (the scrub drag is removed; each click pays scrub_act_at's
+// stop quiescence fence AT MOST once — a stopped session's launch pays none —
+// and the per-column fence cadence class is structurally gone). The caller
+// keeps playback alive across the press (the waveform lower half is not a
+// top-strip press, so the blanket top-strip stop never runs over it), so the
+// scrub act sees the LIVE session — load-bearing for the stop-then-start
+// ruling: a caller that let the session die before the act would turn the
+// interrupting click into a launch, which is precisely the behaviour the
+// ruling removed.
 void GuiInputHandler::scrub_press_at(int click_rel_x) {
     const GuiRect area = waveform_area(app);
     // Gutter / invalid column: no launch position exists, silent no-op.
@@ -790,8 +792,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the inter-chip bridge on a PLAIN chip-row press (route_trim_chip_press
         // below); a click over a bound's waveform stem is an ordinary waveform
         // click (the stem grab retired), so no trim hit test runs on the
-        // waveform at all. Resolved BEFORE the top-strip stop below because the
-        // text-lane scrub exemption depends on it.
+        // waveform at all. Resolved BEFORE the top-strip stop below because
+        // both of that stop's exemptions key on mh.index < 0 (an EMPTY lane
+        // spot — a marker run under the point is a marker click and stops).
         MarkerHit mh;
         if (inside_top) mh = marker_hit_at(app, audio, x, y);
 
@@ -802,34 +805,44 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // playhead-drag press site below, gated on was_playing && sample !=
         // playhead_at_entry. Capture the entry state up front so the downstream
         // branches see the same snapshot.
-        // ONE exemption: a plain press in the marker-text lane with no run under
-        // it is the text-lane scrub (R3.3) — a playback navigation, not
-        // authoring, so it reaches the shared scrub act with the session still
-        // live, exactly like the waveform lower-half scrub. Still load-bearing
-        // under the stop-then-start ruling (architect 2026-07-27), for the
-        // opposite reason it once was: the act's playing arm is now a pure STOP,
-        // so letting the blanket stop below fire first would leave the act a
-        // STOPPED session and turn the interrupting click into a launch — the
-        // stop-and-immediately-restart the ruling removed. Every other top-strip
-        // press stops as before.
+        // TWO exemptions, held for OPPOSITE reasons. THE FIRST: an EMPTY
+        // marker-text-lane spot is PLAYBACK-INERT BY RULING (architect
+        // 2026-07-27) — that lane has no relationship with playback in either
+        // direction, exactly as the bottom strip has none. It cannot START
+        // audio (no gesture on the lane launches anything — the scrub that
+        // once did was deleted with this ruling) and it must not STOP audio
+        // either: the blanket stop above is the price of an authoring or a
+        // navigation act, and an empty spot here is neither — the press does
+        // literally nothing (see the empty-top-strip branch below, where it
+        // falls straight to the inert return). SO THIS IS NOT A SCRUB
+        // AFFORDANCE, and not residue of the deleted one: nothing on this lane
+        // reaches a live session any more, and the guard exists only so an
+        // audition survives a press that changes no state at all.
+        // MODIFIER-BLIND, unlike the flag/triangle pair below: NO modifier
+        // combination claims a gesture on an empty text-lane spot (alt-exact
+        // arms the pan on the waveform only, ctrl-exact claims the chip row
+        // only, ctrl+shift likewise, and every other combination falls to the
+        // strict-modifier return), so there is no modified press here whose act
+        // could earn the stop.
         const bool was_playing = playback.is_playing();
         const int64_t playhead_at_entry = app.playhead_cursor_sample;
-        bool text_lane_scrub_press = false;
-        if (inside_top && mh.index < 0 && !ctrl && !shift && !alt) {
+        bool text_lane_press = false;
+        if (inside_top && mh.index < 0) {
             const GuiRect text_lane = top_marker_text_row_area(app);
-            text_lane_scrub_press =
+            text_lane_press =
                 (y >= text_lane.y && y < text_lane.y + text_lane.h);
         }
-        // R6 parity ([CALL], architect 2026-07-23): the EMPTY flag/triangle lane
-        // is the waveform-upper-half's twin, so its plain/shift press is exempt
-        // from the top-strip playback stop exactly as the text-lane scrub is — a
-        // live session reseeks (plain) rather than stopping, and the shift no-op
-        // seed leaves playback untouched, so a shift+double-click augmented drop
-        // lands over a live session like the plain double-click. A MARKER hit
-        // (mh.index >= 0) still stops as today (it is not an empty-lane press),
-        // and ctrl/alt presses there stop too (they claim other gestures). The
-        // exemption spans plain AND shift because both are the parity lane's
-        // gestures; the text-lane scrub stays plain-only.
+        // THE SECOND, and the opposite case: the EMPTY flag/triangle lane is
+        // the waveform-upper-half's twin (R6 parity, architect 2026-07-23), so
+        // its plain/shift press is exempt because it DOES act on playback — a
+        // live session reseeks (plain) rather than stopping, and the shift
+        // no-op seed leaves playback untouched, so a shift+double-click
+        // augmented drop lands over a live session like the plain
+        // double-click. That is a gesture-shaped exemption, so it is
+        // gesture-shaped in extent: it spans plain AND shift because both are
+        // the parity lane's gestures, while ctrl/alt presses there stop as
+        // usual (they claim other gestures elsewhere). A MARKER hit
+        // (mh.index >= 0) still stops as today — it is not an empty-lane press.
         bool empty_lane_press = false;
         if (inside_top && mh.index < 0 && !ctrl && !alt) {
             const GuiRect flag_lane = top_flag_row_area(app);
@@ -838,7 +851,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 (y >= flag_lane.y && y < flag_lane.y + flag_lane.h) ||
                 (y >= tri_lane.y  && y < tri_lane.y  + tri_lane.h);
         }
-        if (inside_top && !text_lane_scrub_press && !empty_lane_press)
+        if (inside_top && !text_lane_press && !empty_lane_press)
             playback_lifecycle.stop_playback_if_playing();
 
         // Clicks in iter/BPM mode route through the unified marker
@@ -1003,9 +1016,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Plain or Shift press. In the waveform area a plain press splits by
         // HALF: the UPPER half clears the marker selection (deselect-all),
         // places the playhead at the clicked column, and arms the
-        // region-select drag; the LOWER half is the scrub surface (a one-shot
-        // play-from-here scrub act, nothing else) — neither ever SELECTS a marker. A
-        // Shift press on the waveform instead FORMS a region waveform-wide
+        // region-select drag; the LOWER half is the scrub surface (one scrub
+        // act, nothing else) — neither ever SELECTS a marker. A Shift press on
+        // the waveform instead FORMS a region waveform-wide
         // (the former / marker demote, one-shot — see the waveform block). In the top strip a plain
         // CHIP-ROW press arms a trim chip/bridge drag (claimed ahead of the
         // marker select); otherwise (a marker click on EITHER part — flag shape
@@ -1295,27 +1308,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             } else {
                 // Empty top-strip spot — no marker run/flag under the point (the
                 // chip row already returned above; mh.index < 0 here).
-                const GuiRect text_lane = top_marker_text_row_area(app);
                 const GuiRect flag_lane = top_flag_row_area(app);
                 const GuiRect tri_lane  = top_triangle_row_area(app);
                 const bool in_flag_or_tri =
                     (y >= flag_lane.y && y < flag_lane.y + flag_lane.h) ||
                     (y >= tri_lane.y  && y < tri_lane.y  + tri_lane.h);
-                if (!shift &&
-                    y >= text_lane.y && y < text_lane.y + text_lane.h) {
-                    // R3.3: the marker-text lane is the play-from-here SCRUB —
-                    // ONE-SHOT per click, nothing armed (the Ableton model),
-                    // PLAIN only. The rendered run keeps precedence — a run hit
-                    // resolved above as mh.index >= 0, so this is reached only on
-                    // an EMPTY text-lane spot. Shares the waveform lower-half
-                    // scrub body; playback stayed alive via the text-lane-scrub
-                    // stop exemption above, so the scrub act sees the live
-                    // session and this click STOPS it (the next click starts a
-                    // fresh audition where it lands). Touches no selection (the
-                    // scrub convention).
-                    scrub_press_at(x - area.x);
-                    return;
-                }
                 if (in_flag_or_tri) {
                     // R6 empty flag/triangle-lane parity (architect 2026-07-23):
                     // the empty lane works like the waveform upper half. A
@@ -1354,8 +1351,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // placement, no region arm, no clear.
                     return;
                 }
-                // A shift press on the text lane, or any other empty top-strip
-                // spot (e.g. a lane gap): nothing.
+                // Every other empty top-strip spot: NOTHING AT ALL — no
+                // playhead, no marker, no selection or region change, and (via
+                // the marker-text-lane exemption at the stop above) no playback
+                // effect either. That covers the whole marker-text lane, plain
+                // or modified: its empty spots are inert by ruling (architect
+                // 2026-07-27, the scrub that lived there deleted), leaving it
+                // a pure display surface for the rendered runs — a run under
+                // the point is a marker hit and never reaches this branch.
+                // Lane gaps land here too.
                 return;
             }
             return;
@@ -1543,10 +1547,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // position exists there, unlike the upper half's
             // deselect-then-return.
             if (y >= area.y + area.h / 2) {
-                // Shared scrub press body (scrub_press_at): gutter no-op,
-                // clamped frame from the column, one scrub act (stop a live
-                // session, else launch), nothing armed. The same body serves
-                // the marker-text-lane scrub (R3.3).
+                // The scrub press body (scrub_press_at): gutter no-op, clamped
+                // frame from the column, one scrub act (stop a live session,
+                // else launch), nothing armed. This is its only caller — the
+                // scrub is the waveform lower half and nothing else.
                 scrub_press_at(click_rel_x);
                 return;
             }
@@ -1751,8 +1755,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         end_strip_pointer_capture();
         return;
     }
-    // (No scrub branch: the scrub is a one-shot play-from-here at the PRESS —
-    // it arms nothing, so its release is an ordinary fall-through.)
+    // (No scrub branch: the scrub is one act at the PRESS — it arms nothing,
+    // so its release is an ordinary fall-through.)
     if (app.region_drag.active) {
         // The region is extended live during the drag (see on_motion); a drag
         // that moved rests the region at its final extent. A MOTIONLESS
