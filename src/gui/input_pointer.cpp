@@ -816,17 +816,19 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // is as playback-inert as an unclaimed one. That covers every modified
         // combination the branches below reject (alt on a marker, ctrl or alt
         // on an empty flag/triangle spot, ctrl+alt, shift+alt, ...), a
-        // SHIFT-exact chip-row press (trim is transparent to shift), every
-        // empty marker-text-lane spot, and the inter-lane gaps — all of which
-        // end at the inert top-strip return far below.
-        // The EMPTY FLAG/TRIANGLE lane is the one ACTING press that still does
-        // not stop: it is the waveform-upper-half's twin (R6 parity, architect
-        // 2026-07-23), and a live session RESEEKS there rather than dying —
-        // its plain press reseeks through place_playhead_and_arm_region and its
-        // shift press is a pure double-click seed. That exemption is stated at
-        // the branch itself, and it needs no ctrl/alt exclusion: those
-        // modifiers claim no gesture on that lane, so they stop nothing there
-        // either.
+        // SHIFT-exact chip-row press (trim is transparent to shift), a
+        // SHIFT-exact empty flag/triangle-lane press (shift binds nothing on
+        // that lane — the waveform's shift region former does not extend to
+        // it), every empty marker-text-lane spot, and the inter-lane gaps — all
+        // of which end at the inert top-strip return far below.
+        // The EMPTY FLAG/TRIANGLE lane's PLAIN press is the one ACTING press
+        // that still does not stop: it is the waveform-upper-half's twin (R6
+        // parity, architect 2026-07-23), and a live session RESEEKS there
+        // rather than dying, through place_playhead_and_arm_region. That
+        // exemption is stated at the branch itself and is PLAIN-ONLY by
+        // construction — the branch matches no modified press at all, so shift
+        // sits with ctrl and alt in the inert list above and stops nothing
+        // there either.
         // Waveform clicks keep playback alive as ever — the per-press reseek to
         // the click sample happens at the playhead-drag press site below, gated
         // on was_playing && sample != playhead_at_entry. Capture the entry
