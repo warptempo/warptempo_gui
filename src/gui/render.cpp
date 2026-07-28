@@ -1565,6 +1565,12 @@ void iterate_visible_flags_impl(
 // top strip sits at screen y=0, so screen and top-strip-local coords coincide;
 // the triangle lane is the innermost lane (flush on the waveform), the flag lane
 // directly above it. The waveform top edge is top_strip_area.y + .h.
+//
+// BOTTOM-ANCHORED, and therefore assuming kRowGapPx and kFlagBottomLiftPx are
+// both 0: it stacks upward from the strip bottom instead of summing the lane
+// heights the accessors use. main.cpp's lane-stack comment is the record of
+// that coupling and names the other two sites that share the assumption (the
+// triangle blits in render_playhead and render_split_playhead).
 struct FlagLaneY {
     double flag_top;   // flag-lane top (rectangle top)
     double tri_top;    // triangle-lane top (= flag-lane bottom / rect bottom)
@@ -1875,10 +1881,13 @@ cairo_surface_t* playhead_triangle_mask() {
 }
 
 double monospace_advance() { return g_advance; }
-int    monospace_row_h()   { return g_row_h; }
-double monospace_row_baseline_offset() { return g_row_baseline_off; }
 
-// The text BOX: the measured slot above plus kTextBoxPadPx on each side.
+// g_row_h / g_row_baseline_off — the measured UNPADDED glyph slot and its
+// baseline — are deliberately accessor-less: nothing outside this file has any
+// use for the bare slot, so the box/lane accessors below read the globals
+// directly and the slot never becomes a metric a lane could take by mistake.
+//
+// The text BOX: that measured slot plus kTextBoxPadPx on each side.
 // The text LANE: that box plus kTextBoxMarginPx on each side — the margin is
 // empty lane outside the ring, so the lane is strictly taller than the box.
 // The lane-top baseline offset carries both terms, since it is measured from

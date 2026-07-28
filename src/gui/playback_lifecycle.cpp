@@ -332,14 +332,18 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
 // range policy: source view against [trim_begin_sample(), trim_end_sample()),
 // target view against the bound buffer's [domain_begin(),
 // domain_end()). `sample` is a paint-domain coordinate, the same domain
-// playback's public API speaks in every view. ONE caller (input_pointer.cpp),
-// always with playback alive at call time: the upper-half plain waveform
-// press that places the playhead — keep-alive is exactly that press's point
+// playback's public API speaks in every view. ONE call site
+// (place_playhead_and_arm_region, input_pointer.cpp), always with playback
+// alive at call time; that shared placement body serves TWO presses — the
+// upper-half plain waveform press and the empty flag/triangle-lane parity
+// press, the latter stop-free by the claim-keyed stop design precisely so this
+// reseek can reach a live session. Keep-alive is exactly those presses' point
 // (reposition the running audition under the freshly-placed cursor without a
 // restart glitch, preserving the session's launch-captured loop verdict). The
-// scrub paths no longer come here: every scrub act is KILL-AND-REVIVE
-// (scrub_act_at — a fresh session per act, re-capturing the loop verdict and
-// end bound each time).
+// scrub paths never come here: a scrub act over a LIVE session is a pure STOP
+// (scrub_act_at — the clicked frame is ignored, and the NEXT click launches a
+// fresh session from where it lands), so only a stopped session ever reaches
+// scrub_launch_at and no scrub ever repositions a running one.
 // Both arms carry the same two-frame remainder gate as the launch body (see
 // the rationale at its source arm): a reseek that would leave fewer than two
 // playable frames is out of range, so a live-playback click at the last frame

@@ -147,8 +147,20 @@ namespace {
 // the status row (outer) and the editor/modal row (inner), both text lanes.
 // The lanes pack tight — the inter-lane gaps kRowGapPx and the
 // outer/waveform-side gaps
-// kFlagBottomLiftPx are all 0 — but the derivation below keeps them explicit so
-// they reappear structurally if ever un-zeroed. ONE shared helper —
+// kFlagBottomLiftPx are all 0 — and the derivation below keeps them explicit so
+// that strip_row_rect and strip_total_h, THESE TWO, reappear correct if either
+// constant is ever un-zeroed. That is the whole extent of the property; it is
+// not product-wide. Three render.cpp sites derive their bands BOTTOM-ANCHORED
+// off the waveform top edge and silently assume both constants are zero:
+// flag_lane_geometry (tip at the strip bottom, triangle then flag rect stacked
+// upward from it — the shared owner of both the painted marker shapes and their
+// hit rects) and the triangle blits in render_playhead and
+// render_split_playhead (dst_y = waveform area.y - triangle height). Un-zeroing
+// either constant would move the lanes these accessors report without moving
+// those three, splitting the painted flags and the playhead triangle from the
+// lane rects top_flag_row_area / top_triangle_row_area hand the empty-lane
+// press gate. Marker paint and marker hit-testing stay coherent with each other
+// either way, both riding flag_lane_geometry. ONE shared helper —
 // strip_row_rect — is the single geometry owner; every named accessor delegates
 // to it, so a lane is a pure index from its strip's window edge, and a bottom
 // lane's y is its inset flipped about the window midline.

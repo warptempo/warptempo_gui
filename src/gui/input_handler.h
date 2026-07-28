@@ -402,9 +402,16 @@ struct GuiInputHandler {
     // overridden), and arm the region drag (which dissolves any resting highlight
     // at mouse-down). `click_rel_x` is x - waveform_area.x; the gutter
     // (click_rel_x outside [0, area.w)) still deselects but seats no playhead and
-    // arms no drag. `was_playing` / `playhead_at_entry` are the pre-stop snapshot
-    // the caller captured so the reseek fires only on a real move of a live
-    // session.
+    // arms no drag. `was_playing` / `playhead_at_entry` are the snapshot the
+    // caller captures AT PRESS ENTRY, ahead of every branch. Neither is a
+    // pre-stop reading any more: the playback stops are claim-keyed and sit at
+    // the branches that claim a gesture, and both presses reaching this body are
+    // stop-free ones, so no stop stands between the capture and either reader.
+    // What each parameter really predates is a write of its own —
+    // playhead_at_entry predates move_playhead_to's cursor write, and
+    // was_playing predates the stop that reseek_keeping_alive may run internally
+    // on an out-of-range position — and together they fire the reseek only on a
+    // real move of a live session.
     void place_playhead_and_arm_region(int click_rel_x, int x, int y,
                                        bool was_playing,
                                        int64_t playhead_at_entry);

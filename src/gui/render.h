@@ -115,10 +115,19 @@ inline GuiColor kText             = hex(0xFCFCFC);  // Breeze paper white
 // key, kLine, kStripAnchorStem, the kMarkerDisabled pair, the trim chip ring and
 // stem) is the shipped /usr/share/color-schemes/BreezeDark.colors run through
 // KColorScheme, which applies Breeze's own [ColorEffects:Disabled] block: an
-// intensity Darken of 0.10 on the backgrounds, then a contrast Fade of 0.65 of
-// each foreground toward that darkened ground. Re-derive from those, never from
-// a qt6ct conf — the one this family was first read off had been built with a
-// darken of about 0.20, so its every entry ran 2-4 units dark. Paints the
+// intensity Darken of 0.10 on the backgrounds, then a contrast Fade of 0.65 on
+// each foreground. THE RECIPE IS "RUN KColorScheme", not those two numbers: the
+// darken half IS reproducible standalone (KColorUtils::darken(#141618, 0.10) =
+// #131517, byte-identical to the disabled View ground), but the fade half is
+// NOT a per-channel mix of the foreground toward that darkened ground — applied
+// literally it lands 3-5 units off every value here (mix(#fcfcfc, #131517,
+// 0.65) = #656667 against the true #606263), and no consistent mix target
+// reproduces the set. "Contrast Fade 0.65" is the EFFECT'S NAME out of the
+// .colors block, quoted so the source is identifiable; only KColorScheme
+// evaluates it. Re-derive from the shipped scheme, never from a qt6ct conf —
+// the one this family was first read off ran 0-4 units dark per channel and no
+// single darken amount reproduces it (best fit ~0.17-0.18), so that row was
+// never a clean KColorScheme pass at any setting. Paints the
 // marker-text-lane run of a disabled marker, the glyph half of the opaque
 // disabled cue whose shape half is kMarkerDisabled (whose default comes from the
 // same disabled set, so the two halves are one family by provenance).
@@ -150,6 +159,16 @@ inline GuiColor kStripAnchorStem  = hex(0x686A6C);
 // than kText so it never competes with the glyphs. kSelectedStem and
 // kOverlayOutline default to the same grey: the live 1px marks are one family,
 // each on its own key so any of them can be pulled out of it.
+//
+// THAT GREY IS THE PALETTE'S ONE PROVENANCE EXCEPTION, recorded here once for
+// all three keys: every other default traces to a BreezeDark.colors scheme
+// ROLE (directly, or through KColorScheme/KColorUtils), but 127,140,141 appears
+// NOWHERE in BreezeDark.colors. It is the breeze-icons ART grey — 101
+// occurrences across the breeze-dark icon SVGs — and its nearest scheme home is
+// BreezeClassic.colors' ForegroundInactive, a DIFFERENT scheme's role. So it is
+// the desktop's own value either way, but it is not a Breeze Dark role and
+// cannot be re-derived from that file; take it from the icon art or from
+// BreezeClassic, not by hunting BreezeDark for a role that does not exist.
 inline GuiColor kPlayheadCursor   = hex(0x7F8C8D);
 // The moving scanner reads WHITE against the mid canvas (the Ableton play-head
 // cue; also Breeze's text/icon foreground, so it is the scheme's brightest ink).
@@ -190,8 +209,10 @@ inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
 // waveform, so a bright ring wants a calmer stem and the two must tune
 // independently. It is the singleton's cue in the WAVEFORM, below the strip
 // where the ink triangle reads, and it takes the calm breeze-icons grey
-// (the kPlayheadCursor value) rather than a ring value like kMarkerOutline — a
-// full-height line at ring brightness would shout.
+// (the kPlayheadCursor value — that grey's provenance and its standing as the
+// palette's one non-Breeze-Dark-role default are recorded at kPlayheadCursor
+// above) rather than a ring value like kMarkerOutline — a full-height line at
+// ring brightness would shout.
 inline GuiColor kSelectedStem     = hex(0x7F8C8D);
 
 // DEFAULT — the pair every marker paints unless it is disabled or red. Both
@@ -205,14 +226,19 @@ inline GuiColor kSelectedStem     = hex(0x7F8C8D);
 // full-saturation #3daee9 one, and the same wash appears elsewhere in the series
 // with no selected row present anywhere.
 //
-// THE FILL HAS AN EXACT CLOSED FORM: Breeze blue #3daee9 composited at alpha
-// 77/255 over the View-ALTERNATE row ground #1d1f22 reproduces #264a5e
-// byte-exact on all three channels under Qt's 8-bit integer compositing. (That
-// same blend over the plain View row ground #141618 gives #204357 — one formula,
-// the two alternating row grounds.) THE RING HAS NONE: the border carries a
-// slight vertical gradient, #3895c7 at its top edge and #3794c5 at its bottom,
-// so no single blend factor reproduces the whole of it; #3895c7 is the top-edge
-// sample and no scalar substitutes for it. Fill dark enough to sit quietly on
+// THE FILL HAS AN EXACT CLOSED FORM: Breeze blue #3daee9 at alphaF 0.3 —
+// Breeze's own 30% hover wash (Helper::alphaColor(highlight, 0.3)), composited
+// by Qt's FLOAT-alpha path — over the View-ALTERNATE row ground #1d1f22
+// reproduces #264a5e byte-exact on all three channels, and that same wash over
+// the plain View row ground #141618 gives #204357 byte-exact too: one formula,
+// the two alternating row grounds. The factor must stay the float 0.3; the
+// 8-bit integer restatement 77/255 is lossy and reproduces NEITHER ground's
+// sample (it lands green +1 on both, #264b5e and #204457). THE RING HAS NO
+// SINGLE FORM: the border carries a slight vertical gradient, #3895c7 at its
+// top edge and #3794c5 at its bottom. A scalar does reproduce EITHER edge on
+// its own (#3895c7 is #3daee9 at alphaF 0.828 over #1d1f22, #3794c5 the same
+// blue at 0.818); what no single scalar does is cover BOTH edges at once, so
+// the key takes the top-edge sample. Fill dark enough to sit quietly on
 // the canvas, ring bright enough to draw the shape — the dark-fill/bright-ring
 // system every marker-family pair follows.
 inline GuiColor kMarker           = hex(0x264A5E);
@@ -269,8 +295,9 @@ inline GuiColor kAccentOutline    = hex(0xDA4453);
 // ground: it had one until this ruling, and dropping it leaves the aid reading
 // as the two EDGES of a span rather than as a tinted region, which is what a
 // narrow authoring marker wants. So this is a line color, not the outline
-// sibling of any fill — and its default is accordingly the live-1px-mark grey
-// kPlayheadCursor and kSelectedStem also default to, not a ring value like
+// sibling of any fill — and its default is accordingly the live-1px-mark
+// breeze-icons grey kPlayheadCursor and kSelectedStem also default to (its
+// provenance recorded at kPlayheadCursor), not a ring value like
 // kMarkerOutline.
 inline GuiColor kRegionCanvas     = hex(0x42474D);
 inline GuiColor kOverlayOutline   = hex(0x7F8C8D);
@@ -337,8 +364,9 @@ double flag_font_size_px();
 // glyph_advance + 2*(flag_pad_x_px() + text_box_pad_px()) + 2*kChipOutlinePx
 // (the outline ring sits outside the padding).
 //
-// flag_pad_y_px sets the UNPADDED row height — monospace_row_h(), which no lane
-// takes: it is the internal ingredient a text BOX is built from. It is font
+// flag_pad_y_px sets the UNPADDED glyph-slot height, which no lane takes and no
+// accessor exposes: it is the internal ingredient a text BOX is built from,
+// held as file-scope state in render.cpp. It is font
 // (ascent+descent) + 2*flag_pad_y_px() + 2*kChipOutlinePx, with a baseline
 // offset of flag_pad_y_px() + kChipOutlinePx + ascent. The authored pad_y is
 // NEGATIVE (-1) by deliberate design: the measured cairo font band
@@ -1332,24 +1360,18 @@ std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
 // editor (input_handler.cpp -> flag_editor.cpp).
 double monospace_advance();
 
-// UNPADDED fixed-pixel height of the bare glyph slot, measured from
-// cairo_font_extents (ascent + descent) at flag_font_size_px() plus
-// 2*flag_pad_y_px() plus 2*kChipOutlinePx (the outline ring is baked in here).
-// Returns kRowHFallbackPx until init_monospace_grid_metrics has measured the
-// real font. The vertical twin of monospace_advance(). NO LANE takes this: it
-// is purely the ingredient monospace_text_box_h() adds the text-box padding to
-// (every textless lane sizes from its own authored constant — kZoomRowHeightPx,
-// kFlagWidthPx / kFlagHeightPx). Anything carrying text takes the box/lane pair
-// below.
-int monospace_row_h();
+// THE UNPADDED GLYPH SLOT HAS NO ACCESSOR. Its height — cairo_font_extents
+// (ascent + descent) at flag_font_size_px() plus 2*flag_pad_y_px() plus
+// 2*kChipOutlinePx, the outline ring baked in, kRowHFallbackPx until
+// init_monospace_grid_metrics has measured the real font — and its baseline
+// offset (flag_pad_y_px() + kChipOutlinePx + ascent) live as file-scope state in
+// render.cpp, read directly by the box/lane accessors below and by nothing else.
+// NO LANE takes the bare slot and no painter paints against it: every textless
+// lane sizes from its own authored constant (kZoomRowHeightPx, kFlagWidthPx /
+// kFlagHeightPx) and anything carrying text takes the box/lane pair below, so
+// the slot stays purely the ingredient the box is built from.
 
-// Baseline offset from an unpadded slot's top edge: flag_pad_y_px() +
-// kChipOutlinePx + font ascent. Paired with monospace_row_h(); no painter reads
-// it (nothing paints against the unpadded slot), and a text row uses
-// monospace_text_row_baseline_offset() instead.
-double monospace_row_baseline_offset();
-
-// The text BOX height: the unpadded slot above plus kTextBoxPadPx per side, so
+// The text BOX height: the unpadded slot plus kTextBoxPadPx per side, so
 // the outline ring clears the glyph band on all four sides (the horizontal half
 // of that gap rides flag_glyph_inset_px / flag_chip_width_px). This is the
 // PAINTED box — the rect flag_chip_rect returns and render_editor_text_box
