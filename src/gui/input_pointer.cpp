@@ -174,10 +174,11 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // half-offscreen flag, and the ruling is NO viewport write of any kind (the
 // playhead may rest at a slightly offscreen column when the clicked flag hung
 // half off the edge — accepted). Read-only allowed (selection + playhead are
-// navigation). The click and restore callers stop playback first (the standing
-// top-strip press stop, Tab-family symmetry); the Esc rung may land DURING
-// playback, safe because the land is a direct RESTING-cursor write and a live
-// scanner is untouched by cursor writes (the move_playhead_to scanner-inactive
+// navigation). The click and restore callers stop playback first (each marker
+// click owns that stop at its own site, Tab-family symmetry); the Esc rung may
+// land DURING playback, safe because the land is a direct RESTING-cursor write
+// and a live scanner is untouched by cursor writes (move_playhead_to's
+// scanner-inactive
 // convention). External linkage (declared in input_handler.h) so undo.cpp can
 // reach it.
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
@@ -399,8 +400,8 @@ void GuiInputHandler::scrub_act_at(int64_t frame) {
 // surface is inert (the scrub drag is removed; each click pays scrub_act_at's
 // stop quiescence fence AT MOST once — a stopped session's launch pays none —
 // and the per-column fence cadence class is structurally gone). The caller
-// keeps playback alive across the press (the waveform lower half is not a
-// top-strip press, so the blanket top-strip stop never runs over it), so the
+// keeps playback alive across the press (no waveform press stops playback, and
+// the top-strip stops belong to the top-strip claims), so the
 // scrub act sees the LIVE session — load-bearing for the stop-then-start
 // ruling: a caller that let the session die before the act would turn the
 // interrupting click into a launch, which is precisely the behaviour the
@@ -792,67 +793,42 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the inter-chip bridge on a PLAIN chip-row press (route_trim_chip_press
         // below); a click over a bound's waveform stem is an ordinary waveform
         // click (the stem grab retired), so no trim hit test runs on the
-        // waveform at all. Resolved BEFORE the top-strip stop below because
-        // both of that stop's exemptions key on mh.index < 0 (an EMPTY lane
-        // spot — a marker run under the point is a marker click and stops).
+        // waveform at all. Resolved ONCE here, ahead of every branch that
+        // consumes it: the ctrl-exact membership toggle, the plain / Shift
+        // marker click, and the empty-top-strip fallthrough (mh.index < 0 is
+        // what makes a spot EMPTY) all read this one hit.
         MarkerHit mh;
         if (inside_top) mh = marker_hit_at(app, audio, x, y);
 
-        // Top-strip clicks stop playback first: they select markers and can
-        // close an open flag editor, and continuing audio during authoring /
-        // text editing is the wrong default. Waveform clicks keep playback
-        // alive — the per-press reseek to the click sample happens at the
-        // playhead-drag press site below, gated on was_playing && sample !=
-        // playhead_at_entry. Capture the entry state up front so the downstream
+        // A top-strip press stops playback WHEN IT CLAIMS SOMETHING, never
+        // merely because it landed in the strip (architect 2026-07-27). The
+        // stop is the price of an authoring or a navigation act — a marker
+        // select, a trim bound set, a chip-row consume — and continuing audio
+        // during authoring / text editing is the wrong default, so each of
+        // those acts calls stop_playback_if_playing ITSELF at its own site
+        // below. THE STOP IS INTENTIONAL, NOT POSITIONAL: a press that claims
+        // NOTHING changes no state at all, so there is nothing for a stop to
+        // protect and a live audition survives it. That covers every modified
+        // combination the branches below reject (alt on a marker, ctrl or alt
+        // on an empty flag/triangle spot, ctrl+alt, shift+alt, ...), a
+        // SHIFT-exact chip-row press (trim is transparent to shift), every
+        // empty marker-text-lane spot, and the inter-lane gaps — all of which
+        // end at the inert top-strip return far below.
+        // The EMPTY FLAG/TRIANGLE lane is the one ACTING press that still does
+        // not stop: it is the waveform-upper-half's twin (R6 parity, architect
+        // 2026-07-23), and a live session RESEEKS there rather than dying —
+        // its plain press reseeks through place_playhead_and_arm_region and its
+        // shift press is a pure double-click seed. That exemption is stated at
+        // the branch itself, and it needs no ctrl/alt exclusion: those
+        // modifiers claim no gesture on that lane, so they stop nothing there
+        // either.
+        // Waveform clicks keep playback alive as ever — the per-press reseek to
+        // the click sample happens at the playhead-drag press site below, gated
+        // on was_playing && sample != playhead_at_entry. Capture the entry
+        // state up front, AHEAD OF EVERY STOP below, so all the downstream
         // branches see the same snapshot.
-        // TWO exemptions, held for OPPOSITE reasons. THE FIRST: an EMPTY
-        // marker-text-lane spot is PLAYBACK-INERT BY RULING (architect
-        // 2026-07-27) — that lane has no relationship with playback in either
-        // direction, exactly as the bottom strip has none. It cannot START
-        // audio (no gesture on the lane launches anything — the scrub that
-        // once did was deleted with this ruling) and it must not STOP audio
-        // either: the blanket stop above is the price of an authoring or a
-        // navigation act, and an empty spot here is neither — the press does
-        // literally nothing (see the empty-top-strip branch below, where it
-        // falls straight to the inert return). SO THIS IS NOT A SCRUB
-        // AFFORDANCE, and not residue of the deleted one: nothing on this lane
-        // reaches a live session any more, and the guard exists only so an
-        // audition survives a press that changes no state at all.
-        // MODIFIER-BLIND, unlike the flag/triangle pair below: NO modifier
-        // combination claims a gesture on an empty text-lane spot (alt-exact
-        // arms the pan on the waveform only, ctrl-exact claims the chip row
-        // only, ctrl+shift likewise, and every other combination falls to the
-        // strict-modifier return), so there is no modified press here whose act
-        // could earn the stop.
         const bool was_playing = playback.is_playing();
         const int64_t playhead_at_entry = app.playhead_cursor_sample;
-        bool text_lane_press = false;
-        if (inside_top && mh.index < 0) {
-            const GuiRect text_lane = top_marker_text_row_area(app);
-            text_lane_press =
-                (y >= text_lane.y && y < text_lane.y + text_lane.h);
-        }
-        // THE SECOND, and the opposite case: the EMPTY flag/triangle lane is
-        // the waveform-upper-half's twin (R6 parity, architect 2026-07-23), so
-        // its plain/shift press is exempt because it DOES act on playback — a
-        // live session reseeks (plain) rather than stopping, and the shift
-        // no-op seed leaves playback untouched, so a shift+double-click
-        // augmented drop lands over a live session like the plain
-        // double-click. That is a gesture-shaped exemption, so it is
-        // gesture-shaped in extent: it spans plain AND shift because both are
-        // the parity lane's gestures, while ctrl/alt presses there stop as
-        // usual (they claim other gestures elsewhere). A MARKER hit
-        // (mh.index >= 0) still stops as today — it is not an empty-lane press.
-        bool empty_lane_press = false;
-        if (inside_top && mh.index < 0 && !ctrl && !alt) {
-            const GuiRect flag_lane = top_flag_row_area(app);
-            const GuiRect tri_lane  = top_triangle_row_area(app);
-            empty_lane_press =
-                (y >= flag_lane.y && y < flag_lane.y + flag_lane.h) ||
-                (y >= tri_lane.y  && y < tri_lane.y  + tri_lane.h);
-        }
-        if (inside_top && !text_lane_press && !empty_lane_press)
-            playback_lifecycle.stop_playback_if_playing();
 
         // Clicks in iter/BPM mode route through the unified marker
         // hit-test below.
@@ -863,11 +839,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Alt-exact left press: on the waveform it arms the captured grab-pan;
         // alt-exact anywhere else (a top-strip marker included) does nothing
         // further HERE — the land now lives on the PLAIN marker click below.
-        // On a markerless (or top-strip) spot that "nothing" is not a strict
-        // no-op in the playback sense: the standing top-strip playback stop
-        // above (every top-strip press stops playback) has already run, so
-        // playback is halted even though no pan fires; alt+drag from a marker
-        // is inert by ruling.
+        // On a markerless (or top-strip) spot that "nothing" is a STRICT no-op,
+        // playback included: alt claims no top-strip gesture, so no stop runs
+        // over it and a live audition keeps playing; alt+drag from a marker is
+        // inert by ruling.
         //
         // The waveform grab-pan: continuous 1:1 pan of the viewport by the
         // per-event pixel delta (see on_motion). It CAPTURES the pointer
@@ -931,9 +906,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // press keeps the zoom-strip drag below (different surface, no
             // collision); a markerless top-strip ctrl press claims only the
             // chip row (BEGIN bound set, next block) and is a strict no-op on
-            // every other lane. The standing
-            // top-strip press stop already halted playback above.
+            // every other lane — no-op in the playback sense too, since only a
+            // CLAIM stops playback.
             if (inside_top && mh.index >= 0) {
+                // The toggle is an act, so it owns its stop: selecting while a
+                // session plays is the authoring case the top-strip stop
+                // exists for. It runs AHEAD of the toggle and the land, like
+                // every other claim's stop.
+                playback_lifecycle.stop_playback_if_playing();
                 selection.toggle_selection_membership(mh.index);
                 // The selected-marker stem is always-on for a singleton;
                 // toggle_selection_membership owns its appear/move/disappear
@@ -964,6 +944,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             if (inside_top) {
                 const GuiRect chip_row = top_upper_row_area(app);
                 if (y >= chip_row.y && y < chip_row.y + chip_row.h) {
+                    // A bound set is an act, so it owns its stop (the trim
+                    // window is about to change under a live audition).
+                    playback_lifecycle.stop_playback_if_playing();
                     // R3: set the BEGIN bound AND arm the single-bound drag on it,
                     // so motion drags it live (a motionless release rests the set).
                     set_trim_bound_at_click_then_arm_drag(/*is_begin=*/true, x, y);
@@ -993,10 +976,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // set_trim_bound_at_click refuses read-only AND a missing pair
         // silently — adjust-only — and runs the
         // coupling sync). Everywhere else Ctrl+Shift stays a strict no-op,
-        // falling to the return below.
+        // playback included, falling to the return below.
         if (ctrl && shift && !alt && inside_top) {
             const GuiRect chip_row = top_upper_row_area(app);
             if (y >= chip_row.y && y < chip_row.y + chip_row.h) {
+                // The END bound set owns its stop, like the BEGIN set above.
+                playback_lifecycle.stop_playback_if_playing();
                 // R3: set the END bound AND arm the single-bound drag on it.
                 set_trim_bound_at_click_then_arm_drag(/*is_begin=*/false, x, y);
                 return;
@@ -1010,7 +995,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // above), Shift+Alt, Ctrl+Alt+Shift, ... — no-ops here. Only a plain
         // or Shift-on-the-top-strip base press proceeds (Shift adjusts the
         // marker selection). The Alt+wheel pan and the Alt keyboard chords are untouched
-        // (separate handlers).
+        // (separate handlers). Discarding a press here is TOTAL: it claimed
+        // nothing, so it stopped no playback on the way down either — the stops
+        // live at the claims above and below, never on the route to this gate.
         if (ctrl || alt) return;
 
         // Plain or Shift press. In the waveform area a plain press splits by
@@ -1048,7 +1035,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // claims above (R5). A SHIFT-exact chip-row press claims nothing —
             // trim is transparent to it, and the shift fall-through below is
             // inert here (marker_hit_at's y-bands exclude the chip row), so it
-            // ends at the top-strip return.
+            // ends at the inert top-strip return, having touched nothing at
+            // all: it is the only press that reaches the chip row without
+            // claiming it (ctrl and alt were discarded at the gate above), and
+            // it stops no playback — that stop belongs to the plain claim.
             const GuiRect chip_row = top_upper_row_area(app);
             const bool in_chip_row =
                 (y >= chip_row.y && y < chip_row.y + chip_row.h);
@@ -1062,6 +1052,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // R4.5 region-highlight sync now. With BOTH bounds set the window
                 // is taken; lone/no trim is a silent no-op. Either way the chip
                 // row consumes the press — it never falls to the marker handling.
+                // The consume IS the claim, so this press owns the stop for all
+                // three of its arms (read-only sync, armed drag, unclaimed-spot
+                // sync), running ahead of all three.
+                playback_lifecycle.stop_playback_if_playing();
                 if (active_view_state(app).read_only) {
                     if (app.trim.has_begin && app.trim.has_end)
                         sync_highlight_to_trim_window();
@@ -1073,6 +1067,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 return;
             }
             if (mh.index >= 0) {
+                // A marker click — plain or Shift, flag shape or lane run — is
+                // an act (select, land, arm, open), so it owns the stop for the
+                // whole branch: selecting or editing under a live audition is
+                // the case the top-strip stop was written for. One site ahead
+                // of every arm below (the range select, the two group
+                // deferrals, the plain single-select + land + editor open).
+                playback_lifecycle.stop_playback_if_playing();
                 const int hit = mh.index;
                 if (shift) {
                     // Shift+click is a file-manager INCLUSIVE RANGE select
@@ -1325,6 +1326,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // the shift+drag inert — the waveform shift region former does
                     // not extend to the lane). The consume reads the SECOND
                     // press's shift state to pick plain vs augmented.
+                    // NO STOP HERE, deliberately, and this is the one ACTING
+                    // top-strip press that omits one: parity means a live
+                    // session RESEEKS to the placed playhead
+                    // (place_playhead_and_arm_region's was_playing arm) exactly
+                    // as it does on the waveform upper half, and the shift
+                    // seed leaves playback untouched so a shift+double-click
+                    // augmented drop lands over a live session like the plain
+                    // one. Do not add a stop to make this branch look like its
+                    // siblings — the omission IS the ruling.
                     const int click_rel_x = x - area.x;
                     const DoubleClickCandidate& dc = dc_at_press;
                     if (dc.surface == DoubleClickSurface::EmptyLane &&
@@ -1352,14 +1362,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     return;
                 }
                 // Every other empty top-strip spot: NOTHING AT ALL — no
-                // playhead, no marker, no selection or region change, and (via
-                // the marker-text-lane exemption at the stop above) no playback
-                // effect either. That covers the whole marker-text lane, plain
-                // or modified: its empty spots are inert by ruling (architect
-                // 2026-07-27, the scrub that lived there deleted), leaving it
-                // a pure display surface for the rendered runs — a run under
-                // the point is a marker hit and never reaches this branch.
-                // Lane gaps land here too.
+                // playhead, no marker, no selection or region change, and no
+                // playback effect either, because this press claimed nothing
+                // and the stops all live at the claims. That covers the whole
+                // marker-text lane, plain or modified: its empty spots are
+                // inert by ruling (architect 2026-07-27, the scrub that lived
+                // there deleted), leaving it a pure display surface for the
+                // rendered runs — a run under the point is a marker hit and
+                // never reaches this branch. The inter-lane gaps and the
+                // SHIFT-exact chip-row press land here too, equally inert.
                 return;
             }
             return;
@@ -2310,8 +2321,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             return;   // begin refused (bad index / no audio): drop the gesture
         }
         // No follow override needed: the marker drag always begins from a
-        // top-strip flag press, which already stopped playback (see the
-        // top-strip stop above), so there is no live playhead to chase.
+        // top-strip flag press, which already stopped playback (the marker
+        // click owns that stop), so there is no live playhead to chase.
     }
     if (!app.drag.active) {
         // No active gesture: hover recomputation is owned by

@@ -885,8 +885,8 @@ private:
     // none). A gutter/invalid column
     // (outside [0, area.w)) is a silent no-op (no launch position). Touches
     // NOTHING else — no selection, region, cursor, follow, or double-click seed.
-    // The caller keeps playback alive across the press (the lower half is not
-    // a top-strip press, so the blanket top-strip stop never runs over it), so
+    // The caller keeps playback alive across the press (no waveform press stops
+    // playback, and the top-strip stops belong to the top-strip claims), so
     // the act sees the LIVE session — load-bearing for the
     // stop-then-start ruling: a press that let the session die first would turn
     // the interrupting click into a launch.
