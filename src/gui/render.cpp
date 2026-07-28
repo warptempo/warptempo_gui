@@ -1324,11 +1324,11 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     // which carries a margin the box does not: the lane-top baseline offset is
     // text_box_margin_px() + text_box_pad_px() + flag_pad_y_px() +
     // kChipOutlinePx + ascent, and the box height is 2*text_box_pad_px() +
-    // round(font_height + 2*flag_pad_y_px()) + 2*kChipOutlinePx — so every pad
-    // and margin the metrics added comes back off here. Taking bg_h from the
+    // nearbyint(font_height + 2*flag_pad_y_px()) + 2*kChipOutlinePx — so every
+    // pad and margin the metrics added comes back off here. Taking bg_h from the
     // LANE instead would inflate the derived font_height by both margins and
     // mis-span the band. These three lines MUST move with the box/lane formulas.
-    // The round() on the box height can leak a sub-pixel into the derived
+    // The nearbyint on the box height can leak a sub-pixel into the derived
     // descent; that is cosmetically irrelevant here and saves adding a new
     // metric accessor.
     const double bg_h        = static_cast<double>(monospace_text_box_h());
@@ -1364,8 +1364,8 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
     // margin-inset box, never into the lane's margin either. text_box_pad_px()
     // cancels flag_pad_y_px() exactly, so the band lands ON the interior edges
     // and the clamp is a no-op whenever the box height rounds cleanly; it stays
-    // as the guard for the sub-pixel the box's round() can leak at other font
-    // sizes. The antialiased glyph text and the selection substring repaint are
+    // as the guard for the sub-pixel the box's own nearbyint can leak at other
+    // font sizes. The antialiased glyph text and the selection substring repaint are
     // NOT clamped — their extreme leading rows are blank, the ring paints
     // first, and only these filled rects could otherwise show through it.
     // std::nearbyint, the project's one fractional->integer pixel conversion.
@@ -1585,9 +1585,25 @@ void iterate_visible_flags_impl(
 // tip sits on the triangle lane's bottom edge, which the lane stack places flush
 // on the waveform top. Nothing here is derived by stacking upward from the strip
 // bottom any more, so the shapes and their hit rects follow the lanes wherever
-// the stack puts them — an inter-lane gap (kRowGapPx) or a waveform-side gap
-// (kFlagBottomLiftPx) moves the lanes and these shapes together, and the empty
-// flag/triangle-lane press gate keeps testing the bands the shapes occupy.
+// the stack puts them — a waveform-side gap (kFlagBottomLiftPx) or an inter-lane
+// gap (kRowGapPx) at any OTHER seam moves the lanes and these shapes together,
+// and the empty flag/triangle-lane press gate keeps testing the bands the shapes
+// occupy.
+//
+// THE FLAG/TRIANGLE SEAM IS EXEMPT FROM THE INTER-LANE GAP. A marker flag is ONE
+// FUSED GLYPH — rectangle plus tip-down triangle, one fill, one continuous
+// outside-only outline — that happens to span two lanes; the two lanes are
+// CONTIGUOUS BY INVARIANT, and `rect bottom == triangle lane top` (g.tri_top,
+// read once and used as both) is that invariant, not a coincidence this function
+// could paper over. A gap opened at THIS seam would slice a single asset through
+// its middle, so it is not a supported state: kRowGapPx un-zeroed is honored at
+// the zoom/chip/text seams and is a design error at this one. That is why the
+// junction is taken straight from the triangle lane's top rather than as
+// flag_lane.y + flag_lane.h — one edge, so the fill's hard boundary, the
+// outline's path, and the hit rect's bottom cannot disagree even by a pixel.
+// (The consequence if the exemption were ever violated is recorded so it is not
+// rediscovered as a bug: the span would be absorbed as extra flag HEIGHT —
+// painted and clickable — rather than left blank.)
 struct FlagLaneY {
     double flag_top;   // flag-lane top (rectangle top)
     double tri_top;    // triangle-lane top (= flag-lane bottom / rect bottom)
@@ -1715,7 +1731,11 @@ std::vector<FlagHitRect> compute_flag_hit_rects_impl(
     // rows [flag_top, tri_top), and flag_lane_geometry reports those two edges
     // as the flag lane's top and the triangle lane's top. Both are already whole
     // pixels (lane rects are integers), so the nearbyint here is an identity
-    // that keeps the conversion convention rather than a live rounding.
+    // that keeps the conversion convention rather than a live rounding. Taking
+    // the bottom from tri_top (not flag_lane.h) is deliberate and is the SAME
+    // fused-glyph junction the painter uses — the two lanes are contiguous by
+    // the invariant recorded at flag_lane_geometry, so this reads one shared
+    // edge instead of a second derivation that could disagree with the paint.
     const FlagLaneY g = flag_lane_geometry(lanes);
     const int flag_w = flag_lane_w_px();
     const int ry     = static_cast<int>(std::nearbyint(g.flag_top));

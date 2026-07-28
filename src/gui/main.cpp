@@ -149,8 +149,8 @@ namespace {
 // outer/waveform-side gaps
 // kFlagBottomLiftPx are all 0 — and the derivation below keeps them explicit so
 // the stack reappears correct if either constant is ever un-zeroed. That
-// property is PRODUCT-WIDE, with no exception list to maintain: every
-// lane-anchored pixel reaches its band through a lane rect computed here. The
+// property has NO EXCEPTION LIST among the consumers: every lane-anchored pixel
+// reaches its band through a lane rect computed here. The
 // three render.cpp sites that used to stack BOTTOM-ANCHORED off the waveform
 // top edge — flag_lane_geometry (the shared owner of the painted marker shapes
 // AND their hit rects) and the triangle blits in render_playhead /
@@ -160,7 +160,19 @@ namespace {
 // painted flags, the flag hit rects, and the playhead triangle all move with
 // the lanes by construction, and marker paint and marker hit-testing stay
 // coherent with each other as they always did, both riding
-// flag_lane_geometry. ONE shared helper —
+// flag_lane_geometry.
+//
+// ONE SEAM IS EXEMPT from a hypothetical nonzero kRowGapPx: the FLAG/TRIANGLE
+// junction (top lanes 3|4). A marker flag is ONE FUSED GLYPH — rectangle plus
+// tip-down triangle under a single continuous outline — that spans those two
+// lanes, so they are CONTIGUOUS BY INVARIANT and flag_lane_geometry (the reader
+// of that junction, render.cpp) takes the rectangle's bottom edge straight from
+// the triangle lane's TOP. A gap there would cut one asset through its middle:
+// unsupported, a design error rather than a layout choice, and the full record
+// of the consequence lives at flag_lane_geometry. Gaps at every OTHER seam —
+// zoom|chip, chip|text, text|flag, and both outer kFlagBottomLiftPx gaps —
+// are honored structurally by the loop below and by every consumer. ONE shared
+// helper —
 // strip_row_rect — is the single geometry owner; every named accessor delegates
 // to it, so a lane is a pure index from its strip's window edge, and a bottom
 // lane's y is its inset flipped about the window midline.

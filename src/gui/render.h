@@ -371,7 +371,7 @@ double flag_font_size_px();
 // offset of flag_pad_y_px() + kChipOutlinePx + ascent. The authored pad_y is
 // NEGATIVE (-1) by deliberate design: the measured cairo font band
 // (ascent+descent) carries internal leading, so at pad_y = -1 that height is
-// round(font_height - 2) + 2*kChipOutlinePx = font_height at scale 1, the ring
+// nearbyint(font_height - 2) + 2*kChipOutlinePx = font_height at scale 1, the ring
 // landing ON the band's outermost row (top and bottom) — empty leading, not
 // glyph ink. Every text BOX adds text_box_pad_px() per side on top of it
 // (monospace_text_box_h), which lifts the ring clear of the band, and the LANE
@@ -579,7 +579,7 @@ inline int playhead_half_px() { return playhead_triangle_h_px() - 1; }
 // kChipOutlinePx, and the 13.0 is the font ascent — the ascent measured for the
 // font `fc-match monospace` resolves to on this host (Liberation Mono at
 // 14.6667 px), the same 13 that puts the row height at 18 (ascent 13 + descent
-// 5 = 18, then round(18 - 2) + 2*1 = 18; baseline -1.0 + 1.0 + 13.0 = 13.0).
+// 5 = 18, then nearbyint(18 - 2) + 2*1 = 18; baseline -1.0 + 1.0 + 13.0 = 13.0).
 // The TEXT-row accessors derive from these seeds like they do from a real
 // measure, adding kTextBoxPadPx per side for the box (20 tall at scale 1) and
 // kTextBoxMarginPx per side for the lane hosting it (24 tall, lane-relative
@@ -635,7 +635,8 @@ inline int flag_chip_width_px(size_t glyph_count) {
 // The returned rect is the TOTAL chip footprint INCLUDING the outline ring: it
 // grows by kChipOutlinePx on every side relative to the padded glyph box. The
 // fill insets by kChipOutlinePx inside it (render_editor_text_box). text_left is
-// the box's left edge as the caller already positioned it: r.x = round(text_left).
+// the box's left edge as the caller already positioned it:
+// r.x = nearbyint(text_left).
 // The fill starts one pixel right of the left edge, and the glyph run sits
 // kChipOutlinePx + flag_pad_x_px() + text_box_pad_px() (=
 // flag_glyph_inset_px()) inside the chip edge. The vertical geometry is the BOX
@@ -658,7 +659,7 @@ inline int flag_chip_width_px(size_t glyph_count) {
 // flag editor and the bottom-strip editors):
 //   text_left   - the box's left edge as the caller positioned it (back-derived
 //                 from the editable-text anchor via EditorTextBox::hl_pad).
-//                 Chip left edge = round(text_left); the glyph run sits
+//                 Chip left edge = nearbyint(text_left); the glyph run sits
 //                 flag_glyph_inset_px() (ring + left inner pads) to the right
 //                 of it, folded into where the caller places the glyph origin
 //                 vs. text_left (see consumers).
