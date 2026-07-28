@@ -161,26 +161,35 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // opens) exactly as with no drag in flight.
     }
 
-    // Bottom-strip modal-editor gate. Modal surfaces are bottom-strip
-    // surfaces — the two bottom-strip editors (the settings editor and the
-    // bpm bracket editor) and the prompts (gated above); the top-strip
-    // flag editor is deliberately non-modal. While a bottom-strip editor
-    // is open, only the keys the editor itself consumes plus Esc, Ctrl+S,
-    // and Ctrl+Q get through (modal_editor_key_blocked); everything
-    // else — playback, navigation, zoom, mode toggles, tab switches,
-    // undo/redo, marker / trim chords — drops here, so no authoring or
-    // view change can happen while the editor is up. Admitted keys route
-    // through the editor blocks below. Sits after the text-drag gate so an
-    // in-flight editor selection drag keeps owning the keyboard exactly as
-    // before.
-    if (modal_bottom_strip_editor_active() &&
+    // KEYBOARD-MODAL EDITOR GATE. While ANY editor is open — the two
+    // bottom-strip ones, the bpm bracket, and the top-strip flag editor
+    // (architect 2026-07-28, which brought the last of them in) — only the keys
+    // the editor itself consumes plus bare Esc, Ctrl+S, and Ctrl+Q get through
+    // (modal_editor_key_blocked); everything else — playback, navigation, zoom,
+    // mode toggles, tab switches, undo/redo, marker / trim chords, the
+    // Ctrl+Alt render chords — drops HERE, silently, so no authoring or view
+    // change can happen while an edit is up. Admitted keys route through the
+    // editor blocks below.
+    // This gate is what makes an unbound chord STRUCTURALLY inert rather than
+    // merely unlisted: nothing downstream can see it, so nothing downstream can
+    // tear an edit down on its way to a command that does not exist.
+    // Modality is about CHORDS only: the wheel still punches through a flag
+    // editor (navigation), and opening one still does not stop playback — both
+    // ride modal_bottom_strip_editor_active, not this predicate.
+    // Sits after the text-drag gate so an in-flight editor selection drag keeps
+    // owning the keyboard exactly as before.
+    if (keyboard_modal_editor_active() &&
         modal_editor_key_blocked(key, mods)) {
         return;
     }
 
-    // The top-flag editor owns the keyboard while active. Routes here
-    // BEFORE queue/drag/playhead Esc handlers so Esc cancels the edit
-    // first; Esc with no active edit falls through to the rest.
+    // The top-flag editor owns the keyboard while active. Only the three keys
+    // the gate above admits past an open editor arrive here — its own editor
+    // keys, Ctrl+S, and Ctrl+Q — so this block cannot see a command. Routes
+    // BEFORE the queue/drag/playhead Esc handlers so bare Esc cancels the edit
+    // first; Esc with no active edit falls through to the rest. Returning false
+    // (Ctrl+Q only) leaves the edit already torn down and lets on_key run the
+    // close routing.
     if (text_editor::is_active(app.top_flag_editor)) {
         if (handle_top_flag_editor_key(key, mods)) return;
     }
@@ -1008,11 +1017,14 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // them here means the platform never grows remainder in a context the
     // eventual emission could not fire in.
     //
-    // Only the bottom-strip modal surfaces swallow the wheel (the settings
-    // editor and the BpmBracket reuse of top_flag_editor, the same predicate
-    // the keyboard gate uses). The top-strip flag editor is deliberately
-    // NOT modal — commands punch through it on the keyboard, so wheel zoom and
-    // Alt+wheel pan punch through it too.
+    // Only the BOTTOM-STRIP modal surfaces swallow the wheel (the settings and
+    // render-commit editors and the BpmBracket reuse of top_flag_editor) —
+    // modal_bottom_strip_editor_active, deliberately NOT the keyboard gate's
+    // keyboard_modal_editor_active. The top-strip flag editor IS keyboard-modal
+    // (architect 2026-07-28) and the wheel still punches through it anyway,
+    // because the wheel is NAVIGATION, not a chord, and that ruling is about
+    // chords: zooming or panning while an edit is open changes no state the edit
+    // owns and discards nothing, so there is nothing for modality to protect.
     //
     // The wheel routes by area only — the waveform and the top strip. Under Alt
     // both pan and under no modifier the waveform zooms, so there is no row-wise

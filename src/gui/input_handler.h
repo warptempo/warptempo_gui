@@ -442,11 +442,12 @@ struct GuiInputHandler {
 
     // True when ANY text editor is consuming printable keys — the settings
     // editor, the commit editor, or the top-strip flag editor in EITHER kind
-    // (unlike modal_bottom_strip_editor_active, which is modal-only and omits
-    // the non-modal FlagPayload editor). The platform's press-time probe for
-    // kLeftClickKey: while an editor is open kLeftClickKey types its normal
-    // letter instead of the button. Public because main.cpp's probe lambda
-    // calls it.
+    // (unlike modal_bottom_strip_editor_active, which names only the three
+    // BOTTOM-STRIP surfaces and omits the FlagPayload editor). The platform's
+    // press-time probe for kLeftClickKey: while an editor is open kLeftClickKey
+    // types its normal letter instead of the button. Public because main.cpp's
+    // probe lambda calls it. keyboard_modal_editor_active delegates to this —
+    // see there for why the two concepts are necessarily the same set.
     bool any_text_editor_active() const;
 
     // Press-time key-repeat eligibility, the platform's repeat_eligible_probe_.
@@ -674,34 +675,33 @@ private:
     // an empty selection (playhead_in_marker_lane false).
     void handle_plain_bare_keys(GuiKey key);
 
-    // Shared key route for the modal bottom-strip editors (settings
-    // prompt, render-commit prompt, bpm bracket editor). The modal
-    // contract is stated once at the definition; returns true if the
-    // editor consumed the key (on_key then returns), false on Ctrl+Q so
-    // on_key runs the close routing. `autocomplete` is the optional
-    // bare-Tab hook — empty for the bpm editor, but bare Tab never
-    // arrives there at all: the on_key modal gate (modal_editor_key_blocked)
-    // swallows it before this route ever sees it; commit / cancel / Ctrl+Q
-    // teardown are the per-editor bodies.
+    // Shared key route for EVERY keyboard-modal editor — the settings prompt,
+    // the render-commit prompt, the bpm bracket editor, and (architect
+    // 2026-07-28) the top-strip flag editor. The modal contract is stated once
+    // at the definition; returns true if the editor consumed the key (on_key
+    // then returns), false on Ctrl+Q so on_key runs the close routing.
+    // `autocomplete` is the optional bare-Tab hook — empty for the bpm and flag
+    // editors, and bare Tab never arrives for them at all: the on_key gate
+    // (modal_editor_key_blocked) swallows it before this route ever sees it.
+    // commit / cancel / Ctrl+Q teardown are the per-editor bodies. `repaint` is
+    // the editor's own damage for a text change: the three bottom-strip
+    // surfaces pass the timestamp area, the flag editor the top strip — the one
+    // thing that used to keep it out of this route.
     bool route_modal_editor_key(text_editor::State& ed, GuiKey key,
                                 GuiInputState mods,
                                 const std::function<void()>& autocomplete,
                                 const std::function<void()>& commit,
                                 const std::function<void()>& cancel,
-                                const std::function<void()>& ctrl_q_teardown);
+                                const std::function<void()>& ctrl_q_teardown,
+                                const std::function<void()>& repaint);
 
     // Routes a key to the active top-flag editor. Returns true if the editor
-    // consumed it (on_key then returns); false if the key is a command that
-    // must run. The two kinds split up front: the bpm editor (a modal
-    // bottom-strip surface) takes route_modal_editor_key, while the
-    // top-strip flag editor (non-modal) keeps its own flow whose command
-    // tail cancels the edit and lets every command fall through. That tail
-    // reaches only real commands: an unbound press wearing a stray modifier on
-    // an owned key shape (Ctrl+Escape, Ctrl+Enter, Ctrl+Shift+V, Ctrl+Alt+A)
-    // comes back from text_editor::handle_key as an inert Consumed
-    // (KeyClass::StrayModifierKey) and stops at the Consumed branch, so the
-    // teardown never runs for a command that does not exist. This file
-    // enumerates none of those keys — the classifier owns them.
+    // consumed it (on_key then returns); false on Ctrl+Q so on_key runs the
+    // close routing. BOTH kinds now take route_modal_editor_key: the bpm
+    // bracket editor as ever, and the FlagPayload flag editor since it became
+    // keyboard-modal — the two differ only in their commit/cancel bodies and in
+    // which area they repaint. There is no longer a tail that cancels an edit to
+    // let an unmatched key through: the gate means no unmatched key arrives.
     bool handle_top_flag_editor_key(GuiKey key, GuiInputState mods);
 
     // Routes a key to the active settings-prompt editor through
@@ -964,14 +964,31 @@ private:
     // same press authors.
     bool read_only_key_blocked(GuiKey key, GuiInputState mods);
 
-    // Bottom-strip modal-editor predicate + key gate (bodies in
-    // input_key_dispatch.cpp). Modal surfaces are bottom-strip surfaces —
-    // the two bottom-strip editors (settings editor, bpm bracket editor)
-    // and the prompts; the top-strip flag editor is deliberately non-modal.
-    // The gate is the sibling of read_only_key_blocked's allowlist shape:
-    // true when key+mods should be dropped while a bottom-strip editor is
-    // open (admits only the keys the active editor consumes, Esc, Ctrl+S,
-    // and Ctrl+Q).
+    // KEYBOARD MODALITY (architect 2026-07-28): true when an open editor owns
+    // the keyboard, so every chord outside the admitted set is a silent no-op.
+    // EVERY editor does — the two bottom-strip ones, the bpm bracket, and the
+    // top-strip FlagPayload flag editor, which this ruling brought in, reversing
+    // the old "commands punch through" design and deleting the tail that
+    // discarded an edit on the way to a command.
+    // ONE READER: the on_key gate, paired with modal_editor_key_blocked.
+    // The two OTHER modality readers deliberately do NOT consult this and keep
+    // modal_bottom_strip_editor_active instead, because modality here is about
+    // CHORDS only:
+    //   - wheel_context's swallow. Wheel zoom and Alt+wheel pan are NAVIGATION,
+    //     not chords, so they still punch through an open flag editor.
+    //   - the playback stop each bottom-strip modal runs at its own open. A flag
+    //     editor opening must still leave a live audition playing.
+    bool keyboard_modal_editor_active() const;
+
+    // Modal-editor predicate + key gate (bodies in input_key_dispatch.cpp).
+    // modal_bottom_strip_editor_active names the BOTTOM-STRIP modal surfaces
+    // only — the settings editor, the render-commit editor, and the bpm bracket
+    // editor (plus the prompts, gated separately) — and is now exactly the
+    // wheel/playback-stop predicate described above, NOT the keyboard one.
+    // The gate is the sibling of read_only_key_blocked's allowlist shape: true
+    // when key+mods should be dropped while a keyboard-modal editor is open
+    // (admits only the keys the active editor consumes, bare Esc, Ctrl+S, and
+    // Ctrl+Q). It serves all four editors, top strip included.
     bool modal_bottom_strip_editor_active() const;
     bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);
 };

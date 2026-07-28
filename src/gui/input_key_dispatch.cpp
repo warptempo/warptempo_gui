@@ -178,14 +178,15 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_esc || is_ctrl_q);
 }
 
-// Modal bottom-strip editor predicate. Modal surfaces are bottom-strip
-// surfaces: the two bottom-strip editors — the settings editor and the bpm
-// editor (top_flag_editor reused with Kind::BpmBracket, painted in the
-// bottom strip) — and the prompts (which own input through their own gates
-// in on_key and the pointer handlers). The top-strip flag editor
-// (Kind::FlagPayload, the iter grammar included) is deliberately NOT modal:
-// it stays red-flash-or-exit-without-commit, and every command punches
-// through it unchanged.
+// The BOTTOM-STRIP modal surfaces: the settings editor, the render-commit
+// editor, and the bpm editor (top_flag_editor reused with Kind::BpmBracket,
+// painted in the bottom strip) — plus the prompts, which own input through
+// their own gates in on_key and the pointer handlers. Since the flag editor
+// became keyboard-modal this is NO LONGER the keyboard gate's predicate (that
+// is keyboard_modal_editor_active); what it still names is the pair of
+// behaviors the top-strip FlagPayload editor is deliberately transparent to —
+// the wheel swallow in wheel_context, and the playback stop each of these
+// surfaces runs at its own open.
 bool GuiInputHandler::modal_bottom_strip_editor_active() const {
     return text_editor::is_active(app.settings_editor) ||
            text_editor::is_active(app.commit_editor) ||
@@ -203,6 +204,17 @@ bool GuiInputHandler::any_text_editor_active() const {
            text_editor::is_active(app.top_flag_editor);
 }
 
+// Keyboard modality — see the declaration for the readers and for why the
+// wheel and playback-stop readers deliberately keep the bottom-strip predicate.
+// It is EXACTLY any_text_editor_active, and that identity is structural rather
+// than coincidental: an editor that swallows printable letters MUST own the
+// keyboard, or typing `f` into a flag would toggle follow mode. So this
+// delegates instead of restating the membership — one expression, two names,
+// and the two concepts can only ever be the same set.
+bool GuiInputHandler::keyboard_modal_editor_active() const {
+    return any_text_editor_active();
+}
+
 // Press-time key-repeat eligibility (see the declaration). Repeat serves
 // held-step gestures and editor typing; edge-triggered commands never repeat.
 // Eligibility is judged under the PRESS-TIME context, so a press that opens an
@@ -218,12 +230,12 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     if (any_text_editor_active()) {
         // Only the editor's motion/edit and printable-insert keys auto-repeat
         // while held; its session (bare Escape/Return) and chord (ctrl-exact
-        // A/C/X/V) keys are one-shot, a StrayModifierKey has nothing to repeat
-        // (it is inert), and NotEditorKey is not the editor's to repeat. This
-        // consumes the one editor-key owner (audit C6): Tab/IsoLeftTab classify
-        // as NotEditorKey (handle_key never consumes Tab — the autocompletes are
-        // intercepted at the gate before handle_key) and so do not repeat here,
-        // matching the prior explicit one-shot exclusion.
+        // A/C/X/V) keys are one-shot, and NotEditorKey is not the editor's to
+        // repeat — the keyboard-modal gate drops it before anything could act on
+        // it anyway. This consumes the one editor-key owner (audit C6):
+        // Tab/IsoLeftTab classify as NotEditorKey (handle_key never consumes Tab
+        // — the autocompletes are intercepted at the gate before handle_key) and
+        // so do not repeat here, matching the prior explicit one-shot exclusion.
         const auto kc = text_editor::classify_key(key, mods);
         return kc == text_editor::KeyClass::MotionEditKey ||
                kc == text_editor::KeyClass::PrintableKey;
@@ -268,31 +280,31 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     return false;
 }
 
-// Bottom-strip modal-editor key gate, the sibling of
-// read_only_key_blocked's allowlist shape. True when key+mods is not on
-// the allowlist and should be dropped. While a bottom-strip editor is open
-// the user can reach the editor itself, bare Esc (exit), Ctrl+S (save; the
-// editor stays open), and Ctrl+Q (close routing) —
-// nothing else: Space-as-playback, zoom, mode toggles, tab switches,
-// undo/redo, and the marker / trim chords all drop here. "The editor
+// The KEYBOARD-MODAL editor key gate, the sibling of read_only_key_blocked's
+// allowlist shape. True when key+mods is not on the allowlist and should be
+// dropped. It serves ALL FOUR editors — the settings and render-commit prompts,
+// the bpm bracket, and (architect 2026-07-28) the top-strip flag editor, which
+// this ruling brought under the same contract. While one is open the user can
+// reach the editor itself, bare Esc (exit), Ctrl+S (save; the editor stays
+// open), and Ctrl+Q (close routing) — nothing else: Space-as-playback, zoom,
+// mode toggles, tab switches, undo/redo, the marker / trim chords, and the
+// Ctrl+Alt render chords all drop here. "The editor
 // itself" CONSUMES the one editor-key owner (audit C6):
-// text_editor::classify_key — the modal gate admits exactly the non-NotEditorKey
+// text_editor::classify_key — the gate admits exactly the non-NotEditorKey
 // set (BARE Escape/Enter, CTRL-EXACT A/C/X/V, the cursor/editing keys Left /
 // Right / Home / End / BackSpace / Delete under any modifiers, and printable
 // insertion; Space lands in the buffer as a typed character, not as playback).
-// The strict-modifier rule holds inside a modal editor by TWO routes, both
-// ending in nothing happening: a stray-modifier press on an owned key shape
-// (Ctrl+Escape, Ctrl+Enter, Ctrl+Shift+V, Ctrl+Alt+A) classifies
-// StrayModifierKey — admitted here, then claimed inert by handle_key, so it
-// cannot cancel, commit, or paste; every other unbound chord classifies
-// NotEditorKey and drops right here. The gate-level
+// The strict-modifier rule therefore holds by ONE route: a press wearing a
+// stray modifier on an owned key shape (Ctrl+Escape, Ctrl+Enter, Ctrl+Shift+V,
+// Ctrl+Alt+A) is NotEditorKey like any other unbound chord and drops right
+// here, so it cannot cancel, commit, or paste. The gate-level
 // carve-outs below are NOT editor consumption — they are gate policy layered on
 // top: the settings/commit editors' own bare-Tab value autocomplete (their
-// handle_*_editor_key intercepts it before handle_key; the bpm editor has no Tab
-// route, so bare Tab drops while it is open), Ctrl+S (save), and Ctrl+Q (close
-// routing). Admitted keys flow into the existing editor routing unchanged, so
-// the only NotConsumed keys that can reach the editors' command tails are the
-// three allowlisted chords.
+// handle_*_editor_key intercepts it before handle_key; the bpm and flag editors
+// have no Tab route, so bare Tab drops while either is open), Ctrl+S (save), and
+// Ctrl+Q (close routing). Admitted keys flow into the editor routing unchanged,
+// so the only NotConsumed keys that can reach route_modal_editor_key's command
+// tail are those last two chords.
 bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
                                                GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
@@ -1272,27 +1284,28 @@ void GuiInputHandler::commit_editor_commit() {
     }
 }
 
-// Shared key route for the modal bottom-strip editors — the settings
-// prompt, the render-commit prompt, and the bpm bracket editor. All three
-// spell one modal contract: the on_key gate (modal_editor_key_blocked)
-// admits only the editor's own keys plus Esc, Ctrl+S, and Ctrl+Q, so a
-// NotConsumed key here is one of those three chords. Ctrl+S saves with
+// Shared key route for EVERY keyboard-modal editor — the settings prompt, the
+// render-commit prompt, the bpm bracket editor, and the top-strip flag editor.
+// All four spell ONE modal contract: the on_key gate (modal_editor_key_blocked)
+// admits only the editor's own keys plus bare Esc, Ctrl+S, and Ctrl+Q, so a
+// NotConsumed key here is one of the latter two chords. Ctrl+S saves with
 // the editor left open (save is not an exit); Ctrl+Q runs the caller's
 // teardown and returns false so on_key runs the close routing; anything
 // else is swallowed as a backstop. `autocomplete` is the optional
 // bare-Tab hook — only an unmodified Tab is intercepted (Shift / Ctrl /
-// Alt + Tab fall through to handle_key unchanged); the bpm editor passes
-// an empty hook, but bare Tab never reaches this route for it at all —
-// the on_key modal gate (modal_editor_key_blocked) swallows it first.
-// All three surfaces draw in the bottom strip, so the clipboard /
-// Consumed repaint is uniformly invalidate_timestamp_area; commit and
-// cancel own their own invalidations.
+// Alt + Tab fall through to handle_key unchanged); the bpm and flag editors
+// pass an empty hook, but bare Tab never reaches this route for them at all —
+// the on_key gate swallows it first.
+// `repaint` is the caller's text-change damage: the three bottom-strip surfaces
+// pass invalidate_timestamp_area, the top-strip flag editor
+// invalidate_top_strip. Commit and cancel own their own invalidations.
 bool GuiInputHandler::route_modal_editor_key(
         text_editor::State& ed, GuiKey key, GuiInputState mods,
         const std::function<void()>& autocomplete,
         const std::function<void()>& commit,
         const std::function<void()>& cancel,
-        const std::function<void()>& ctrl_q_teardown) {
+        const std::function<void()>& ctrl_q_teardown,
+        const std::function<void()>& repaint) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
@@ -1312,11 +1325,11 @@ bool GuiInputHandler::route_modal_editor_key(
     if (apply_editor_clipboard(action, ed)) {
         // Same repaint as the Consumed branch — text may have changed
         // (cut / paste); copy repaints harmlessly.
-        viewport.invalidate_timestamp_area();
+        repaint();
         return true;
     }
     if (action == text_editor::KeyAction::Consumed) {
-        viewport.invalidate_timestamp_area();
+        repaint();
         return true;
     }
     if (ctrl && !shift && !alt && key == GuiKeys::S) {
@@ -1339,7 +1352,8 @@ bool GuiInputHandler::handle_commit_editor_key(GuiKey key,
         [this] { commit_editor_autocomplete(); },
         [this] { commit_editor_commit(); },
         [this] { commit_editor_exit_no_commit(); },
-        [this] { commit_editor_exit_no_commit(); });
+        [this] { commit_editor_exit_no_commit(); },
+        [this] { viewport.invalidate_timestamp_area(); });
 }
 
 // P / I / M letter-key handlers. See the declaration for the chord list.
@@ -1698,13 +1712,14 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
 }
 
 // Top-flag editor key routing. See the declaration for the consumed/command
-// contract. The two kinds split up front: the bpm bracket editor draws in
-// the bottom strip (like the settings editor) and is modal, so it takes
-// the shared modal route — with no bare-Tab hook, and bare Tab never
-// reaching this route at all (the on_key modal gate swallows it first);
-// Ctrl+S saves with the editor (and the bpm session) left open, and Esc
-// and Enter are the mode's only exits. The FlagPayload editor keeps its
-// own non-modal flow below.
+// contract. BOTH kinds take the shared modal route (architect 2026-07-28) and
+// differ only in their commit / cancel bodies and their repaint area: the bpm
+// bracket editor draws in the BOTTOM strip (like the settings editor) and
+// commits into a render sweep, the FlagPayload editor draws in the TOP strip
+// and commits the flag's own payload. Neither passes a bare-Tab hook, and bare
+// Tab never reaches this route for either — the on_key gate swallows it first.
+// For both, Ctrl+S saves with the editor left open and Esc / Enter are the
+// session's only exits.
 bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                                                  GuiInputState mods) {
     if (app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
@@ -1753,52 +1768,25 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                 // (mode-without-editor stays unreachable).
                 flag_editor.exit_top_flag_edit_no_commit();
                 flag_editor.exit_bpm_mode();
-            });
+            },
+            [this] { viewport.invalidate_timestamp_area(); });
     }
-    const auto action = text_editor::handle_key(
-        app.top_flag_editor, key, mods);
-    if (action == text_editor::KeyAction::CommitRequested) {
-        // Iteration editing is a widened-grammar FlagPayload
-        // commit (commit_top_flag_edit), not a separate bracket editor.
-        flag_editor.commit_top_flag_edit();
-        return true;
-    }
-    if (action == text_editor::KeyAction::CancelRequested) {
-        flag_editor.exit_top_flag_edit_no_commit();
-        return true;
-    }
-    if (apply_editor_clipboard(action, app.top_flag_editor)) {
-        // Same repaint as the Consumed branch — text may have changed
-        // (cut / paste); copy repaints harmlessly.
-        viewport.invalidate_top_strip();
-        return true;
-    }
-    if (action == text_editor::KeyAction::Consumed) {
-        // FlagPayload draws in the top strip. This branch also absorbs the
-        // STRAY-MODIFIER presses (a modified Escape/Return/KpEnter, a
-        // Ctrl+Shift / Ctrl+Alt A/C/X/V): text_editor::handle_key claims them
-        // Consumed without touching the buffer or the session, so they stop
-        // here, inert, instead of reaching the cancel-then-fall-through tail
-        // below. That routing is the classifier's (KeyClass::StrayModifierKey),
-        // not this file's — nothing here enumerates those keys. The repaint is a
-        // harmless no-change blit, exactly like the copy case above.
-        viewport.invalidate_top_strip();
-        return true;
-    }
-    // Top-strip flag editor (deliberately non-modal): the key is a command.
-    // Cancel the edit (Esc-discard: no commit, no validation), using the
-    // same teardown Esc uses, then fall through (no return) so the key
-    // reaches the global command dispatch below and runs. This is how every
-    // command (Ctrl+Q/S, Ctrl+Z, Ctrl+Tab, Ctrl+P, ...) works
-    // mid-edit: exit first, then the command. No command list — the editor
-    // owns only its editing keymap and everything else punches through.
-    // Reached ONLY by keys the classifier calls NotEditorKey — genuine commands.
-    // An UNBOUND press that merely wears a stray modifier on an owned key shape
-    // never gets here (the Consumed branch above took it), so the teardown keeps
-    // its real job and loses only the case where it was destroying an edit for
-    // a command that does not exist.
-    flag_editor.exit_top_flag_edit_no_commit();
-    return false;  // not the editor's key — let on_key run the command
+    // FlagPayload: the same modal route, top-strip repaint.
+    return route_modal_editor_key(
+        app.top_flag_editor, key, mods,
+        /*autocomplete=*/nullptr,
+        [this] {
+            // Iteration editing is a widened-grammar FlagPayload
+            // commit (commit_top_flag_edit), not a separate bracket editor.
+            flag_editor.commit_top_flag_edit();
+        },
+        [this] { flag_editor.exit_top_flag_edit_no_commit(); },
+        [this] {
+            // Ctrl+Q discards the edit, then on_key runs the close routing —
+            // the same abandon Esc performs, since the edit is uncommitted.
+            flag_editor.exit_top_flag_edit_no_commit();
+        },
+        [this] { viewport.invalidate_top_strip(); });
 }
 
 // Settings-prompt editor key routing, through the shared modal route.
@@ -1813,5 +1801,6 @@ bool GuiInputHandler::handle_settings_editor_key(GuiKey key,
         [this] { settings_editor.autocomplete_value(); },
         [this] { settings_editor.commit(); },
         [this] { settings_editor.exit_no_commit(); },
-        [this] { settings_editor.exit_no_commit(); });
+        [this] { settings_editor.exit_no_commit(); },
+        [this] { viewport.invalidate_timestamp_area(); });
 }

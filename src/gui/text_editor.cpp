@@ -195,14 +195,12 @@ KeyClass classify_key(GuiKey key, GuiInputState mods) {
     // printable. Each test returns before the next, so a key satisfying two
     // predicates classifies as the branch handle_key would act on.
     //
-    // The first two arms are MODIFIER-DEFINED — session is bare-exact, the
-    // chords are ctrl-exact — so each owns a KEY SHAPE that a stray modifier
-    // makes unbound. Those land as StrayModifierKey, never NotEditorKey: the
-    // shape is still the editor's, the press just has no binding, and the
-    // difference decides whether the non-modal flag editor's NotConsumed tail
-    // tears the edit down on the way to a command that does not exist. See the
-    // class's own note in the header for why the printable arm is deliberately
-    // NOT in that family.
+    // The first two arms are MODIFIER-EXACT — session bare, chords ctrl-only —
+    // so a press wearing a stray modifier on one of their key shapes falls all
+    // the way to NotEditorKey and is dropped by the keyboard-modal gate before
+    // it can reach an editor at all. That is the whole enforcement: unbound is
+    // unbound, and nothing downstream distinguishes it from any other key the
+    // editor does not own.
     //
     // Session keys are BARE-EXACT (the strict-modifier rule): a modified
     // Escape / Return / KpEnter has no binding, so it must not cancel or commit
@@ -210,22 +208,21 @@ KeyClass classify_key(GuiKey key, GuiInputState mods) {
     // flag, or bpm editor, and the bpm commit dispatches a render batch. Escape
     // and Return produce sub-0x20 codepoints, so neither can reappear as a
     // printable below.
-    if (key == GuiKeys::Escape ||
-        key == GuiKeys::Return || key == GuiKeys::KpEnter)
-        return (!mods.ctrl && !mods.shift && !mods.alt)
-                   ? KeyClass::SessionKey
-                   : KeyClass::StrayModifierKey;
+    if ((key == GuiKeys::Escape ||
+         key == GuiKeys::Return || key == GuiKeys::KpEnter) &&
+        !mods.ctrl && !mods.shift && !mods.alt)
+        return KeyClass::SessionKey;
     // The chords are CTRL-EXACT (architect 2026-07-28, the same strict-modifier
     // rule): Ctrl+Shift+V must not paste and Ctrl+Alt+A must not select all.
-    // The `mods.ctrl` guard on the shape test is load-bearing and stays: without
-    // it a BARE a/c/x/v would stop being a typed character, and bare `c` / `x`
-    // are global bindings the editor deliberately shadows by typing them.
+    // The `mods.ctrl` term is load-bearing beyond strictness: without it a BARE
+    // a/c/x/v would stop being a typed character, and bare `c` / `x` are global
+    // bindings the editor deliberately shadows by typing them.
     // Ctrl+Left is not a chord here — the shape list is A/C/X/V only, so it is
     // motion below.
-    if (mods.ctrl && (key == GuiKeys::A || key == GuiKeys::C ||
-                      key == GuiKeys::X || key == GuiKeys::V))
-        return (!mods.shift && !mods.alt) ? KeyClass::ChordKey
-                                          : KeyClass::StrayModifierKey;
+    if (mods.ctrl && !mods.shift && !mods.alt &&
+        (key == GuiKeys::A || key == GuiKeys::C ||
+         key == GuiKeys::X || key == GuiKeys::V))
+        return KeyClass::ChordKey;
     // Motion / editing ignores modifiers entirely (word-jump/word-erase
     // variants included).
     if (key == GuiKeys::Left || key == GuiKeys::Right ||
@@ -244,32 +241,22 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
 
     // Membership gate (audit C6): the classifier is the single truth of which
     // keys the editor owns. NotEditorKey falls through here; every other class
-    // is covered by a branch below (or by the StrayModifierKey arm) that returns
-    // a consumed action, so no classified key can reach the function-end
-    // NotConsumed fallback — a key added to a branch but not the classifier is
-    // dead (benign), and a key classified as owned but missing from the branches
-    // would be an error the coverage walk forbids.
-    const KeyClass kc = classify_key(key, mods);
-    if (kc == KeyClass::NotEditorKey)
+    // is covered by a branch below that returns a consumed action, so no
+    // classified key can reach the function-end NotConsumed fallback — a key
+    // added to a branch but not the classifier is dead (benign), and a key
+    // classified as owned but missing from the branches would be an error the
+    // coverage walk forbids.
+    if (classify_key(key, mods) == KeyClass::NotEditorKey)
         return KeyAction::NotConsumed;
-    // An owned key SHAPE made unbound by a stray modifier. The editor CLAIMS the
-    // press — so no caller routes it onward — and does NOTHING with it: no
-    // commit, no cancel, no buffer change. This one return is what keeps the
-    // strict-modifier rule non-destructive in the non-modal flag editor, whose
-    // NotConsumed tail would otherwise cancel the edit on the way to a global
-    // command that does not exist. It is the classifier's job, not the caller's,
-    // so no caller re-enumerates these keys.
-    if (kc == KeyClass::StrayModifierKey)
-        return KeyAction::Consumed;
 
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
 
     // The session and chord branches below need no modifier tests of their own:
-    // the membership gate above already routed every modified Escape / Return /
-    // KpEnter and every Ctrl+Shift / Ctrl+Alt A/C/X/V away as StrayModifierKey,
-    // so only the exactly-bound presses reach here. The classifier is the single
-    // owner of those predicates.
+    // the membership gate above already rejected every modified Escape / Return /
+    // KpEnter and every Ctrl+Shift / Ctrl+Alt A/C/X/V as NotEditorKey, so only
+    // the exactly-bound presses reach here. The classifier is the single owner
+    // of those predicates.
     if (key == GuiKeys::Escape) {
         return KeyAction::CancelRequested;
     }
