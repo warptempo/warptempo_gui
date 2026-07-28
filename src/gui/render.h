@@ -162,16 +162,24 @@ inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
 // halves of every pair are tuning knobs. The classes resolve in priority order
 // at the flag renderers — disabled, then red, then default.
 //
-// SELECTION HAS NO COLOR (architect ruling 2026-07-27). There is no fourth
-// class and no selected pair: a selected marker paints EXACTLY the pair it would
-// paint unselected, whichever of the three it belongs to. That was the intent
-// while a selected pair still existed too, but it was carried by two keys merely
-// HOLDING the default pair's values rather than by the structure — and the
-// outline arm preferred the selected ring over the disabled one, so a disabled
-// marker that was ALSO selected took the live bright ring and read as switched
-// on. With the class deleted the property cannot regress under retuning, and a
-// selected marker whose render normalizes to 1.00 keeps its red cue instead of
-// having it masked. Selection reads from the focus STEM (kSelectedStem below),
+// SELECTION IS NOT A CLASS (architect ruling 2026-07-27). There is no fourth
+// class and no selected pair: a selected marker's FILL/OUTLINE PAIR is EXACTLY
+// the one it would paint unselected, whichever of the three it belongs to. That
+// was the intent while a selected pair still existed too, but it was carried by
+// two keys merely HOLDING the default pair's values rather than by the
+// structure — and the outline arm preferred the selected ring over the disabled
+// one, so a disabled marker that was ALSO selected took the live bright ring and
+// read as switched on. With the class deleted the property cannot regress under
+// retuning, and a selected marker whose render normalizes to 1.00 keeps its red
+// cue instead of having it masked.
+//
+// Selection's ONE paint is the INK TRIANGLE (architect 2026-07-27): a selected
+// flag fills the triangle half of its shape with kWaveform while the rectangle
+// keeps the class fill and the outline rings the whole shape untouched. It
+// introduces NO KEY of its own — it re-uses the ink the waveform already paints
+// in — and it is applied AFTER the ladder resolves, layered on one part of the
+// shape, so it can never displace a class pair the way the deleted selected
+// pair did. Selection also reads from the focus STEM (kSelectedStem below),
 // from the z-order lift (selected shapes paint above unselected), and from the
 // playhead landing on the marker.
 //
@@ -180,8 +188,8 @@ inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
 // 2026-07-27), separate from every flag ring: the same value that is right for a
 // 1px border around a small shape reads far louder run the whole height of the
 // waveform, so a bright ring wants a calmer stem and the two must tune
-// independently. With the flag carrying no selection color at all, this stem is
-// the singleton's whole colour cue, and it takes the calm breeze-icons grey
+// independently. It is the singleton's cue in the WAVEFORM, below the strip
+// where the ink triangle reads, and it takes the calm breeze-icons grey
 // (the kPlayheadCursor value) rather than a ring value like kMarkerOutline — a
 // full-height line at ring brightness would shout.
 inline GuiColor kSelectedStem     = hex(0x7F8C8D);

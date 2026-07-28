@@ -1,0 +1,116 @@
+# Warptempo GUI
+
+Custom C++23 in-process PGHI phase-vocoder GUI (Arch / labwc / Wayland / JACK) for time-warping audio toward historically-informed tempos. Single developer/user (the architect); one target laptop. PROJECT STATUS: FEATURE COMPLETE (architect, 2026-07-25). The detailed architecture rulings formerly held in this file now live in `docs/engineering/architecture/` — see the docs map below. This file carries the build/process rules, the per-topic digests, and the pointers; the topic files are the authoritative detail. When a ruling lands, update the topic file (committed) and this file's digest only if the headline changes.
+
+## Build Commands
+
+```bash
+# Configure (from project root, first time or after CMakeLists changes)
+cmake -B build -S . -DWARPTEMPO_BUILD_CLI=ON
+
+# Build (Release is the project default; -O3 -march=native is always on)
+cmake --build build -j$(nproc)
+
+# Debug build into a separate dir; never reconfigure `build/` itself with -O0
+cmake -B build-debug -S . -DCMAKE_BUILD_TYPE=Debug
+cmake --build build-debug -j$(nproc)
+```
+
+`build/warptempo_gui` is the GUI binary and the default build's only product. No library archives: CMake carries four per-directory source-list variables (`WARPTEMPO_AUDIO_IO_SOURCES`, `WARPTEMPO_PARSER_SOURCES`, `WARPTEMPO_ENGINE_SOURCES`, `WARPTEMPO_PREPOST_SOURCES`) each binary compiles directly — object-code duplication accepted deliberately. One opt-in binary, default OFF: `warptempo_cli` (`-DWARPTEMPO_BUILD_CLI=ON`, the headless insurance render path — exactly the terminal Ctrl+Alt+R, byte-identical to the GUI by shared stages). A headless host builds the CLI with `-DWARPTEMPO_BUILD_GUI=OFF`. `tools/` holds standalone one-shot utilities (own CMakeLists, no link path from product targets): currently `migrate_sidecar_to_frames`, the sole conversion route from the legacy MM:SS.mmm sidecar format (grid details in `docs/engineering/architecture/data-model.md`). Binaries are not portable (`-march=native`); rebuild on the target host.
+
+## Dependencies
+
+Checked via pkg-config: `fftw3` (+ `fftw3_threads`), `wayland-client`, `wayland-cursor`, `wayland-protocols`, `xkbcommon`, `cairo`, `jack`. Plus `wayland-scanner` (build-time, generates protocol stubs into `${CMAKE_BINARY_DIR}/wayland-generated`). All audio container I/O is in-tree and WAV-only, so the non-GUI sources need only `fftw3`.
+
+C++23 (the parser uses `std::expected`). `-Wall -Wextra -O3 -march=native` on GCC/Clang. Do not introduce SDL, GTK, GLFW, or wlroots-specific protocols — the GUI is libwayland-client only (`wayland-cursor` is the canonical exception). Generated protocol stubs cover four standard wayland-protocols XMLs: xdg-shell, xdg-decoration, pointer-constraints-unstable-v1, and relative-pointer-unstable-v1 (the last two are the strip-drag pointer capture, OPTIONAL at runtime — absence degrades to clamped absolute motion with one stderr line).
+
+## Running
+
+```bash
+./build/warptempo_gui <source.wav>
+```
+
+Target environment: labwc on Arch Linux, single 1920x1080 monitor at 60 Hz. No portability shims, no X11 fallback.
+
+## Testing / Verification
+
+There is no automated test suite, and that is a CONSTRAINT rather than a preference: exercising this product means driving a GUI, which needs synthetic input into a live compositor — and Wayland exposes no such facility (there is no portable equivalent of X11's XTEST, and labwc offers no injection path), so a GUI harness is not buildable here at all. What CAN be verified is verified: the CLI shares the parser/engine/prepost/audio-io stages with the GUI byte-identically, and the architect runs cmp-null and audio verification against it. Verification is otherwise brief-driven: the coder (implementation subagent) is the ONLY writer of source code — it edits files only, and source-only checks requested by a brief are okay. The external reviewer (codex) is REPORT-ONLY: it finds and describes defects and residue, changes no source and no docs, runs read-only git freely (status/diff/log/show — never anything mutating; architect 2026-07-22, state it in every codex brief), and reports no per-change "byte effect" (it changes no bytes); the planner turns its findings into coder briefs. THE CODEX ROUTINE (architect-codified 2026-07-22; every `tmp/` path named below is a LOCAL-ONLY working file — `tmp/` is gitignored, so none of them appears in a clone and the protocol is reconstructed from this description, not from checked-in artifacts): every round is a FRESH codex session, and the architect's "initiate a codex review" / "update the codex brief" means the whole sequence — rewrite tmp/codex_brief.md fully SELF-CONTAINED (project line, discipline block, arc + commit hashes, and a prior-round RECAP: "the previous round found X, Y, Z — fixed in <commits>"; the brief instructs codex to write tmp/codex_review.md then touch tmp/codex_done), delete any stale codex_review.md, touch tmp/codex_start, arm a Monitor on tmp/codex_done (zero-cost wait), and on the event delete both trigger files, read the review, and implement findings JUDICIOUSLY — stopping to present anything that needs an architect ruling (freeze touches, design forks, contested accepted costs) rather than deciding solo. Build/compile checks are not part of a brief unless the architect explicitly asks. Do not propose automated tests, regression harnesses, or commercial-tool comparisons.
+
+The coder (subagent) runs no MUTATING git commands (no add/mv/rm/commit/push/restore — read-only git like status/diff/log/show is fine and encouraged for self-checks), does not stage or commit, and does not launch labwc or drive the GUI. The `examples/` folder is ARCHITECT-ONLY: neither planner nor coder modifies it; architect edits there ride along with the next commit (the warptempo_git wrapper stages everything — expected content, not planner residue). The planner commits via `warptempo_git` (a local wrapper; its invocation lives in the gitignored tmp/dispatch.md, not in the repo), and does NOT hold or bundle commits waiting for the architect — commit as work completes and verifies. The architect owns labwc verification and cmp-null/audio verification.
+
+Coder briefs should point at the relevant `docs/engineering/architecture/` topic files instead of restating their content.
+
+## Docs Map (read per task, not wholesale)
+
+All in `docs/engineering/architecture/` unless noted. Each file holds the full hardened ruling text — read the one(s) your task touches before editing.
+
+| Task touches | Read |
+|---|---|
+| Authored positions/frames, tempo cents, value brackets, playback_speed, sidecar grammar, the section rule | `data-model.md` |
+| Settings keys/schema/editor, render-entry sidecars, adopt (`'`), audio_player, font_size | `settings.md` |
+| Zoom, viewport, strip lanes, strip/alt/ctrl drags, pointer capture, zoom-row double-click, playback scanner | `zoom-viewport-strip.md` |
+| Resolver normalization, red flags, marker walls/stores, trim commit rules + loop audition, undo coalescing, adversarial load taxonomy, tripwires | `normalization-and-boundaries.md` |
+| Pointer reach/modifiers, trim chip router, hit geometry, displayed paint basis, damage ownership | `pointer-hit-testing.md` |
+| Selection model, marker click land, group drag, undo/redo restore visuals, shift/ctrl clicks | `selection-model.md` |
+| Flag shapes, lane text occlusion, stems, focus model, flag/BPM/settings editors, double-click, key repeat, Space | `marker-ui.md` |
+| Region highlight, scrub area, provenance, Esc ladder, `x`/`Shift+X` | `region-scrub-esc.md` |
+| Home-view binding, tempo step/drag/tempo-image step, group tempo, propagate paste | `tempo-and-home-view.md` |
+| Parser phase-reset compilation, engine geometry, trim prepost stage, render dispatch/cancel/reuse | `render-pipeline.md` |
+| Bottom-strip modality, bare-`e` mouse key, type names, warp/phase-reset naming symmetry | `conventions.md` |
+| Any color, ground recolors, disabled/trim/line color classes | `src/gui/render.h` palette block + `src/gui/color_config.cpp` (code comments are authoritative) |
+| The colors.conf grammar + the canonical key block | `docs/engineering/color-configuration.md` |
+| Any guard/validator (add/move/remove) | `docs/engineering/validation_topology.md` |
+| Engine performance (closed campaign; retired candidates need new data) | `docs/engineering/perf_campaign_2026_07.md` |
+| User-facing behavior reference | `docs/HELP.md` |
+
+Trim spans several files by nature: store/commit rules in `normalization-and-boundaries.md`, chips/router/geometry in `pointer-hit-testing.md` and `marker-ui.md`, the prepost render window in `render-pipeline.md`, the highlight sync in `region-scrub-esc.md`.
+
+## Architecture Rules (MUST follow — digests; the topic files are authoritative)
+
+### Freeze Status (architect-declared 2026-07-12)
+`src/engine/`, `src/parser/`, `src/audio_io/`, and `src/prepost/` are under PERMANENT HARD FREEZE, declared after the combined maximum-effort external audit came back near-clean: surgical changes only, each requiring explicit architect approval to reopen. `src/cli/cli_main.cpp` is freeze-adjacent (pure plumbing over the frozen stages; same discipline). Only GUI work remains: quality-of-life improvements, ad hoc bugfixes, and refactors as needed. Engine performance history and the retired-candidates list live in docs/engineering/perf_campaign_2026_07.md — a retired candidate needs new measured data to re-propose. The planner is allowed to update this file; it is COMMITTED (un-ignored 2026-07-27), so an edit here lands in history like any other and a revert restores it.
+
+### Authored Domain (→ data-model.md)
+Authored positions (marker times, trim bounds) are whole source frames in `int64_t` everywhere at rest; `snap_authored_frame` (app_state.h) is the ONLY double→authored conversion route. Authored tempo is 100-based integer CENTS in [25, 400]; every other value is a bracketed double via `value_format.h`. One serialization domain (`frame_format.h`): canonical integer spelling only — anything else is adversarial load-fatal. Walls are exact integer compares on the shared inclusive [0, total−1] domain. Sources: WAV-only, 16/24-bit PCM, ≥44100 Hz, stereo-only.
+
+### Pixel Anchoring, Viewport, Zoom (→ zoom-viewport-strip.md)
+Position gestures anchor to the painted column grid and commit through `authored_frame_at_column` → `snap_authored_frame`; walls win over the grid everywhere. Waveform effective width is floored to a multiple of 16 px; the viewport snaps to grid points at `clamp_viewport_start` (the one chokepoint, which also owns the zoom-level clamp). Zoom is a continuous double in [1.0, 17.0] with `kWorkingZoomLevel` = 2.0 ("working zoom"); strip drags are dual-axis, song-anchored, pointer-captured, synchronous per pointer frame. THE TOP STRIP IS FIVE LANES (zoom strip / trim chip / marker text / flag / triangle) and the zoom-row double-click frames region-else-trim-else-whole-song; a removal arc that deleted the lane, rehomed the framer onto the chip row trim-only, and dropped the marker-text-lane scrub was built and then ROLLED BACK WHOLESALE at 80a265e (architect 2026-07-27 — the surface is used and missed; do not re-propose). ROW HEIGHTS were retuned 2026-07-27 at the default font: zoom row 15 on its own kZoomRowHeightPx, trim chip row = flag_lane_w_px so chips are SQUARE by construction, marker-text and both bottom lanes 24 (text BOX 20 + kTextBoxMarginPx 2 per side, the css split from kTextBoxPadPx 1 inside the ring); monospace_row_h has NO lane consumer left. Flag rect 15x17, triangle 8 (the assets took their font-10 size). THE 2026-07-26 DRAW ARC (topic files marker-ui + zoom-viewport-strip hold the detail): the plate is a direct ARGB32 coverage renderer — per-column raw min/max interiors + Wu tip polylines (raw-tip bands for subpixel material; never-fade >=1px floor), column edges on the authoring lattice `g(k0+c)` in BOTH views (bit-exact pan invariance), symmetric left/right halos, a 13-rung peaks pyramid (.peaks v7, <=5-pair reads unconditional), and ONE synchronous full-render route for every user-driven pan/zoom frame (the incremental pan path is retired; the async worker serves only undriven load/resize/follow/drift). The ink-notch rule is retired PERMANENTLY (architect). The scanner renders at a sub-frame position; its value fields are meaningful only while active.
+
+### Render Pipeline (→ render-pipeline.md)
+The parser is the sole authored→engine compiler (phase resets emit `S − N/2`, no render-time offset anywhere); geometry `kN`/`kRs` lives in `engine_geometry.h`. Trim is a prepost stage: full maps → `plan_trim` (refusal = render untrimmed, never a failed render) → trim-ignorant engine → `post_trim` → unconditional limiter → encode. No subprocesses in the render path. A render dispatch kills the running render unconditionally; killed sessions can never publish Success; target-view previews may reuse identical completed renders through the two reuse rungs (load-bearing for undo/redo A→B→A).
+
+### Colors (→ render.h palette block + color_config.cpp, 2026-07-26)
+Every GUI color is a runtime-tunable global loaded ONCE at startup from `~/.config/warptempo_gui/colors.conf` — strict whole-file grammar (23 keys, canonical order, `key=#rrggbb` lowercase, no spaces), any deviation = one stderr line + compiled defaults wholesale, missing file = silent defaults, restart-only, GUI binary only. The palette is FULLY OPAQUE (no compositing alphas): the region highlight recolors the CANVAS GROUND under the ink (painted before the plate blit — the Ableton model); the phase-reset overlay is a 1px RING ONLY over the plate (its ground recolor removed, architect 2026-07-27); the out-of-trim dim is RETIRED (the bright kTrimBar/kTrimBarOutline bridge bar is the sole inside-the-trim signal; chips/stems are the calm pair); disabled markers are an opaque color class (disabled > red > default — THREE classes, and SELECTION IS NOT ONE: the kSelected/kSelectedOutline keys were deleted 2026-07-27 because the outline arm outranked disabled, lighting up a disabled+selected flag; a selected marker paints exactly what it would unselected, reading through kSelectedStem, the z-order lift and the playhead land); one structural kLine color paints the strip-row ring and the waveform area's 1px top/bottom border (taken from the area); the selected stem has its OWN key (kSelectedStem, 2026-07-27 — a full-height line tunes differently than the 1px ring). The key→global table in color_config.cpp is the single palette enumeration (23 keys). Codex is SKIPPED for simple updates like key additions/tuning (architect 2026-07-27); the routine stays for substantive arcs.
+
+### Settings (→ settings.md)
+`app.engine_settings` is typed truth; all three boundaries are strict (whole-file schema load shared verbatim by GUI and CLI — a sidecar set loads in both products or neither; editor red-flash; typed dispatch). `kSettingsOrder` owns write order, `kEngineKeys` membership; adding an engine key = six edits, four files. GUI-kind keys commit through each key's own gesture chokepoint, history-less. Numeric values are pinned to one canonical spelling each. Render entries carry the same sidecar set a source does, written once at dispatch; `'` adopts an entry 1:1 in memory.
+
+### Load-Lenient, Render-Normalizing Boundaries (→ normalization-and-boundaries.md)
+Gestures move freely and NOTHING POPS: ambiguous authored states normalize at the render boundary (`resolve_warp_markers_for_render` — every ambiguous tempo → 1.00, one stderr line per timestamp per resolve; normalization-red flags as the display cue), never refused or force-resolved. The two-category rule: a state the GUI can commit always loads and renders; a state the GUI can never produce is adversarial and hard-fails the load, first error only, identically in both binaries. Marker walls are 0 and total−1 both columns; crossed trim pairs auto-clear at commit and at load; a lone trim bound completes to its extreme at the render boundary; a set trim loops the audition. Rapid same-kind keyboard gestures coalesce into one undo entry gated by command adjacency alone.
+
+### Interaction Model (→ selection-model.md, marker-ui.md, region-scrub-esc.md, pointer-hit-testing.md)
+Selection and playhead are RE-COUPLED: every plain marker click lands the playhead; shift = inclusive range from the anchor/focus, ctrl = membership toggle, both landing at the earliest selected; group drags/nudges move the selection rigidly with intersection-clamped walls and rigid grabbed-anchored commits. Coupling is DOWNWARD-ONLY: selection → region → trim, nothing upward; region provenance is {Free, SelectionExtent, TrimWindow} with demote-on-replace. Hit geometry and painted-pixel deciders ride the DISPLAYED basis (map + viewport staged/promoted in lockstep); gesture commits, navigation, and damage stay live by ruling; damage follows the basis of the pixels it erases. Focus is ONE family, no hue asserted (every palette key is colors.conf-tunable): singleton = the always-on stem (kSelectedStem), group = the extent region's ground recolor (kRegionCanvas); an active region dissolves the cursor playhead into split half-triangles. The Esc ladder walks one rung per press, down-only. Undo/redo restores adopt the group visual language (singleton lands; group lands at earliest + extent region). The authoritative kick_waveform_sync caller inventory lives at viewport.h's declaration.
+
+### The Home-View Binding (→ tempo-and-home-view.md)
+Each marker column authors in its HOME view only (warp = source, phase reset = target) via `active_column_authoring_allowed`; off home, columns are display/navigation-only with silent refusals. Two ruled exceptions: the tempo family in W+target (step, drag, tempo-image step — group-capable, monotone-bisection group solve, walled all-or-nothing) and the phase-reset propagate (starts in source, lands in target).
+
+### Modality and Input (→ conventions.md)
+Modal surfaces live on the bottom strip; the top-strip flag editor is deliberately NOT modal. BPM mode is exactly its editor session. The GUI never writes a load-invalid state. All program-authored text is all-lowercase; never a double space. Bare `e` is the left mouse button, translated at the platform boundary (never bind it in dispatch); bare `2` is unbound.
+
+### Validation Topology (architect-blessed 2026-07-17)
+Every guard classifies under docs/engineering/validation_topology.md — five classes, one owner each; a duplicate predicate needs an (a)/(b)/(c) justification; an error arm exists iff a producer exists. A new guard that fits no class is a design smell to resolve, not a row to force.
+
+### Type Names
+Marker and related GUI types carry the `Gui` prefix (`GuiWarpMarker`, `GuiPhaseResetMarker`, `GuiAudio`, `GuiPlayback`, etc.). New marker-side types follow the same convention.
+
+### Warp / Phase Reset Naming Symmetry (→ conventions.md)
+Warp and phase reset are co-equal axes; new pipeline surfaces ship both columns or record the asymmetry in a comment at the site. "Phase reset" is one concept token, never shortened to "reset" in names; warp is never the unmarked default. The recorded-asymmetry inventory lives in conventions.md.
+
+### Rounding
+Use `std::nearbyint` for banker's rounding wherever fractional values convert to integer-domain values (playhead placement, pixel mapping). No epsilon nudge. For authored positions specifically, `snap_authored_frame` (`app_state.h`) is the single conversion chokepoint; no other site may round or cast an authored position.
+
+### Comments
+Comments describe current behavior and rationale only. No dead-process citations (Brief/chunk/Stage/spec tags or "per the brief" prose).
+
+### Grep Before Asserting an Invariant
+Before claiming "every site that does X" or "no other caller does Y" inside a brief or a code change, grep it. The repo is small enough that this is cheap. AND AT RETELLS, NOT ONLY AT CREATION (architect + codex, 2026-07-24): an inventory retell RE-GREPS membership, never edits the inherited list in place — five consecutive retell rounds preserved a pre-existing omission in the kick_waveform_sync inventories because each round edited the copied membership instead of re-deriving it. Structural fix preferred over discipline: an exhaustive enumeration lives at exactly ONE authoritative site per concept (e.g. viewport.h's kick_waveform_sync declaration), and every other site states only its own class plus a pointer.

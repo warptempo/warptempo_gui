@@ -42,15 +42,15 @@ struct GuiPlaybackLifecycle {
     // is re-validated against the target buffer's domain, so an offset landing
     // at or past the buffer end is a silent no-op.
     void toggle_playback(int64_t launch_offset = 0);
-    // Scrub launch (the revive half of the scrub act's kill-and-revive): launch
+    // Scrub launch (the START half of the scrub act's stop-then-start): launch
     // the scanner from `frame`, an ABSOLUTE position in the active paint
     // domain, leaving the resting cursor untouched — the pure audition entry.
     // Delegates to the same launch body as toggle_playback's play edge, so
     // the standing gates apply identically: a frame outside the trim window /
     // target buffer domain, or one leaving fewer than two playable frames of
     // remainder, is a silent no-op — exactly Space's conventions. A live
-    // session never launches (defensive; the scrub act KILLS a live session
-    // via stop_playback_if_playing before delegating here).
+    // session never launches (defensive; a scrub act over a live session STOPS
+    // it and returns without delegating here).
     void scrub_launch_at(int64_t frame);
     void set_playback_speed(float s);
 
@@ -62,7 +62,7 @@ struct GuiPlaybackLifecycle {
     // actually moving (the upper-half placement press, the ONE caller,
     // compares the sample against the entry playhead); this function
     // unconditionally reseeks when called. The scrub paths no longer come
-    // here — every scrub act is kill-and-revive (scrub_act_at). For target
+    // here — a scrub act only stops or launches (scrub_act_at). For target
     // view, samples
     // outside the target buffer's range fall back to playback.stop() —
     // keep-alive intent is well-defined for in-range positions only.

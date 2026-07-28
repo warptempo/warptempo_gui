@@ -449,9 +449,9 @@ void GuiInputHandler::cancel_active_drags() {
         app.scroll_drag = ScrollDragState{};
         end_strip_pointer_capture();
     }
-    // (No scrub entry: the scrub is a one-shot play-from-here at the press —
-    // it arms nothing, so there is no scrub gesture for Esc to end; the
-    // launched audition keeps playing, Space remains the sole stop.)
+    // (No scrub entry: the scrub is a one-shot act at the press — it arms
+    // nothing, so there is no scrub gesture for Esc to end; the launched
+    // audition keeps playing, stopped by Space or by the next scrub click.)
     // The region drag IS a cancel: unlike the strip drag it restores the region
     // to how it rested at arm (the pre-press snapshot), then ends the gesture.
     // Under SELECTION-FLOWS-DOWNWARD-ONLY (architect 2026-07-23) the drag never

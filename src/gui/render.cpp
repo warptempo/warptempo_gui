@@ -109,8 +109,11 @@ static inline double frame_to_paint_sample(
 // flows continuously from the vertical sides straight into the diagonals (no
 // horizontal seam, no 90-degree jog). The rectangle fills crisp (AA off); the
 // triangle fills as an ANTIALIASED PATH whose base coincides with the rect's
-// hard bottom edge, so the two share the full-width boundary row with no gap and
-// the triangle's slope fill blends with the outline's slope stroke. The 1px
+// hard bottom edge, so the two meet across the full width with no gap and no
+// shared row (which is what lets a SELECTED flag paint the triangle in a
+// DIFFERENT color from the rectangle over a hard boundary — see `tri_fill` at
+// the definition), and the triangle's slope fill blends with the outline's
+// slope stroke. The 1px
 // `outline` runs the TRUE OUTSIDE only. ALIASING: axis-aligned edges (rect
 // sides, top, base) use the +0.5 half-pixel convention for crisp 1px lines; the
 // two diagonal slopes antialias (the relaxed rule — only verticals/horizontals
@@ -129,11 +132,24 @@ static inline double frame_to_paint_sample(
 // and end chips are painted LeftEdge at their resolved rect.x.
 enum class FlagHAnchor { Center, LeftEdge };
 
+// `tri_fill`, when non-null, fills the TRIANGLE in its own color while the
+// rectangle keeps `fill` — the SELECTED marker's ink triangle (2026-07-27; the
+// callers explain why that is not a color class). Null means "same as fill",
+// so every caller that omits it paints exactly as it did before the two-tone
+// shape existed. The two-tone BOUNDARY is the rect's bottom edge `rb`, and it
+// is HARD by construction, no seam and no blend row: `rb` is an integer pixel
+// boundary, the AA-off rectangle fills rows [ry, rb) and the triangle path's
+// topmost y is exactly rb, so row rb-1 is pure `fill` and row rb is pure
+// `tri_fill` across the base. Nothing here may nudge that base by a half pixel
+// — the +0.5 convention is for 1px STROKES centered on a pixel; applied to
+// this fill edge it would leave a half-covered row of bare strip between the
+// two colors. The triangle's two SLOPES antialias as always.
 void paint_flag_shape(cairo_t* cr, double center_x,
                       double flag_top_d, double tri_top_d, double tip_y_d,
                       GuiColor fill, GuiColor outline,
                       bool with_triangle,
-                      FlagHAnchor anchor = FlagHAnchor::Center) {
+                      FlagHAnchor anchor = FlagHAnchor::Center,
+                      const GuiColor* tri_fill = nullptr) {
     const int flag_w = flag_lane_w_px();
 
     const int cx     = static_cast<int>(std::round(center_x));
@@ -171,7 +187,8 @@ void paint_flag_shape(cairo_t* cr, double center_x,
     cairo_fill(cr);
     cairo_restore(cr);
     if (with_triangle) {
-        cairo_set_source_rgb(cr, fill.r, fill.g, fill.b);
+        const GuiColor tf = tri_fill ? *tri_fill : fill;
+        cairo_set_source_rgb(cr, tf.r, tf.g, tf.b);
         cairo_move_to(cr, tri_cx - tri_bhalf, static_cast<double>(rb));
         cairo_line_to(cr, tri_cx + tri_bhalf, static_cast<double>(rb));
         cairo_line_to(cr, tri_cx,             static_cast<double>(tbot));
@@ -1604,29 +1621,41 @@ void render_flags(cairo_t* cr,
             emits.push_back({i, center_x});
         });
 
-    auto paint_emit = [&](const FlagEmit& e) {
+    auto paint_emit = [&](const FlagEmit& e, bool sel) {
         // THREE color classes, resolved in priority order: DISABLED wins over
         // red and default, red over default. Each is one opaque fill/outline
         // pair and nothing composes with anything — a disabled marker no longer
-        // combines with a color class, it IS one. SELECTION CONTRIBUTES NO
-        // COLOR: it only orders the two paint passes below (selected shapes
-        // above unselected), so a selected flag paints exactly the pair it would
-        // paint unselected. That is why `red` tests only `!dis` — a selected
-        // marker whose render normalizes to 1.00 keeps its red cue rather than
-        // having it masked by a selection color.
+        // combines with a color class, it IS one. SELECTION IS STILL NOT A
+        // CLASS: the ladder below resolves fill/outline WITHOUT reading `sel`,
+        // so a selected flag's rectangle and its whole outline are exactly what
+        // it would paint unselected. That is why `red` tests only `!dis` — a
+        // selected marker whose render normalizes to 1.00 keeps its red cue
+        // rather than having it masked.
         const bool dis = effective_disabled(markers, e.i);
         const bool red = !dis && red_set.count(e.i) > 0;
         const GuiColor fill    = dis ? kMarkerDisabled
                                : red ? kAccent : kMarker;
         const GuiColor outline = dis ? kMarkerDisabledOutline
                                : red ? kAccentOutline : kMarkerOutline;
+        // Selection's ONE paint (architect 2026-07-27): a SELECTED flag fills
+        // its TRIANGLE with the waveform ink and nothing else changes — the
+        // rectangle keeps the class fill, the outline rings the whole shape
+        // unchanged, the hit geometry is untouched. It is a fill LAYERED on one
+        // part of the shape, keyed on selection ALONE and resolved after the
+        // ladder, not a fourth class competing inside it: it never displaces a
+        // class pair, so it cannot repeat the 2026-07-27 defect where a
+        // selection color outranked the disabled one. Selection reads through
+        // this triangle, the kSelectedStem cue, the z-order lift, and the
+        // playhead land.
+        const GuiColor tri = kWaveform;
         paint_flag_shape(cr, e.center_x, g.flag_top, g.tri_top, g.tip_y,
-                         fill, outline, /*with_triangle=*/true);
+                         fill, outline, /*with_triangle=*/true,
+                         FlagHAnchor::Center, sel ? &tri : nullptr);
     };
     for (auto it = emits.rbegin(); it != emits.rend(); ++it)
-        if (!selected_set.count(it->i)) paint_emit(*it);
+        if (!selected_set.count(it->i)) paint_emit(*it, /*sel=*/false);
     for (auto it = emits.rbegin(); it != emits.rend(); ++it)
-        if (selected_set.count(it->i)) paint_emit(*it);
+        if (selected_set.count(it->i)) paint_emit(*it, /*sel=*/true);
 
     cairo_restore(cr);
 }
@@ -1733,26 +1762,31 @@ void render_phase_reset_flags(cairo_t* cr,
             emits.push_back({i, center_x});
         });
 
-    auto paint_emit = [&](const PhaseResetEmit& e) {
+    auto paint_emit = [&](const PhaseResetEmit& e, bool sel) {
         // The identical three-class ladder render_flags resolves: disabled wins
-        // over red, red over default, and selection contributes no color at all
-        // (it only orders the two paint passes below), so `red` tests only
-        // `!dis` and a selected reset keeps its normalization cue. A phase reset
-        // carries no label_ref cascade, so its disabled verdict is the bool
-        // itself.
+        // over red, red over default, and selection is not a class — the ladder
+        // never reads `sel` — so `red` tests only `!dis` and a selected reset
+        // keeps its normalization cue. A phase reset carries no label_ref
+        // cascade, so its disabled verdict is the bool itself.
         const bool dis = phase_resets[e.i].disabled;
         const bool red = !dis && red_set.count(e.i) > 0;
         const GuiColor fill    = dis ? kMarkerDisabled
                                : red ? kAccent : kMarker;
         const GuiColor outline = dis ? kMarkerDisabledOutline
                                : red ? kAccentOutline : kMarkerOutline;
+        // Selection's ONE paint, identical to render_flags' (the full rationale
+        // lives there — a triangle fill layered on after the ladder, never a
+        // fourth class): a SELECTED reset's triangle takes the waveform ink,
+        // its rectangle keeps the class fill, and its outline is unchanged.
+        const GuiColor tri = kWaveform;
         paint_flag_shape(cr, e.center_x, g.flag_top, g.tri_top, g.tip_y,
-                         fill, outline, /*with_triangle=*/true);
+                         fill, outline, /*with_triangle=*/true,
+                         FlagHAnchor::Center, sel ? &tri : nullptr);
     };
     for (auto it = emits.rbegin(); it != emits.rend(); ++it)
-        if (!selected_set.count(it->i)) paint_emit(*it);
+        if (!selected_set.count(it->i)) paint_emit(*it, /*sel=*/false);
     for (auto it = emits.rbegin(); it != emits.rend(); ++it)
-        if (selected_set.count(it->i)) paint_emit(*it);
+        if (selected_set.count(it->i)) paint_emit(*it, /*sel=*/true);
 
     cairo_restore(cr);
 }

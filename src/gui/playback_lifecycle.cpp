@@ -141,7 +141,7 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     launch_playback_from(launch_pos);
 }
 
-// Scrub launch — the REVIVE half of the scrub act's kill-and-revive: start the
+// Scrub launch — the START half of the scrub act's stop-then-start: begin the
 // scanner from `frame` — an absolute active-paint-
 // domain position (the scrub act hands it in already clamped to the live
 // domain) — with the resting cursor, selection, region, and follow all
@@ -151,11 +151,12 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
 // anticipated. Riding the shared launch body makes a scrub launch
 // indistinguishable from a Space launch except for the start position, so
 // every standing gate applies (contract at the header declaration) — and each
-// revive re-captures the loop verdict and end bound freshly, the point of the
+// launch re-captures the loop verdict and end bound freshly, the point of the
 // fresh-session semantic.
 void GuiPlaybackLifecycle::scrub_launch_at(int64_t frame) {
-    // Defensive: a live session never launches — the scrub act KILLS a live
-    // session (stop_playback_if_playing) before delegating here, so this
+    // Defensive: a live session never launches — the scrub act STOPS a live
+    // session and returns without reaching here (and the natural-end hold is
+    // torn down through the same owner first), so this
     // guard only keeps a
     // future caller from stacking play() over a live run.
     if (playback.is_playing()) return;
@@ -310,9 +311,9 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // publishes), where a narrow item-basis column would miss the plate-basis
     // scanner and the line would stay invisible until the publish. Full-area
     // damage is ownership-window-proof by construction, at one full repaint per
-    // launch keystroke — bounded for a rare command. The
-    // kill-and-revive scrub over a live session already damaged via the stop
-    // half; this revive-half damage is a harmless union with it.
+    // launch keystroke — bounded for a rare command. A scrub launch over a
+    // torn-down natural-end hold already damaged the held endpoint column
+    // through the stop; this launch damage is a harmless union with it.
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     const bool force_one_x = (app.active_audio_view == 'T');

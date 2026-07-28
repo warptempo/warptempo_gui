@@ -1088,14 +1088,37 @@ int main(int argc, char** argv) {
             // — the pre-paint hook owns that work, keeping predictor
             // sampling on the paint clock; reading it on the tick too
             // would reintroduce the tick/paint sampling-rate mismatch
-            // that stutters playhead motion at high zoom. The timestamp area is
+            // that stutters playhead motion at high zoom. While the
+            // scanner column is onscreen the timestamp area is
             // invalidated only by the pre-paint hook (when the
             // predictor advances past app.playhead_scanner_sample),
             // never by the tick — the tick fires ~2x per frame, so
-            // duplicating the timestamp rect here is wasted on_redraw
+            // duplicating the timestamp rect there is wasted on_redraw
             // work.
             const double px = scanner_pixel_x(app, audio);
             invalidate_playhead_columns(px, px);
+            // OFFSCREEN FALLBACK — the paint clock has to keep running
+            // even when the scanner column contributes nothing.
+            // playhead_invalidate_rect yields a zero-width rect for a
+            // column outside the waveform area and
+            // invalidate_playhead_columns emits no damage for one, so a
+            // scanner that has left the viewport (a looping audition
+            // wrapping back to an offscreen trim begin, follow off)
+            // leaves this tick producing NO damage at all — and with the
+            // pre-paint hook the sole advancer of the scanner position
+            // while playing, no damage means no paint means the position
+            // can never come back. So ask the rect builder rather than
+            // re-derive its bounds test here (the tick damages one
+            // column, so that single rect decides it), and when it yields
+            // nothing, damage the bottom strip instead: it is always
+            // onscreen, so a paint is always produced, and it is the
+            // honest rect — the status line tracks the SCANNER's time
+            // while playing, so it is frozen alongside the line for
+            // exactly the same stretch. Follow mode is untouched: no
+            // viewport work is added here, and a chasing viewport keeps
+            // the column onscreen so the fallback simply never fires.
+            if (playhead_invalidate_rect(waveform_area(app), px).w <= 0)
+                invalidate_timestamp_area();
             return;
         }
 

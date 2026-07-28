@@ -340,64 +340,69 @@ bool GuiInputHandler::handle_escape_selection_region() {
     return false;
 }
 
-// One scrub ACT: kill-and-revive (architect 2026-07-23 — scrub is technically
-// not keep-alive but revive-if-needed-or-kill-and-revive). Every scrub act is
-// a FRESH session, never a positional seek inside the old one: a live session
-// STOPS first (the standing stop machinery — side-effect-clean here, the scrub
-// never moved the cursor), then the stopped launch path runs (the is_updating
-// outer gate + scrub_launch_at, the revive), re-capturing the loop verdict and
-// end bound freshly per scrub — a scrub after a mid-session trim edit
-// auditions the NEW window instead of riding the stale launch capture. ONE
-// degenerate skip, kept by explicit choice (re-launch-always EXCEPT the
-// exact-same-frame case): a live session scrubbed to its scanner's exact
-// current frame has nothing to re-launch, so the audition plays on
-// uninterrupted (the scanner-sample read is gated on is_playing — playing
-// implies scanner-active, so the field is meaningful). The natural-end
-// ENDPOINT HOLD (playing false, scanner active) also takes the kill — see the
-// branch comment. A refused revive
-// (out-of-window frame; target update in flight) leaves playback stopped,
-// silently — the "nothing to audition" family; a later act at a launchable
-// frame revives (the revive-if-needed half).
+// One scrub ACT: STOP, THEN START ON THE NEXT CLICK (architect 2026-07-27,
+// superseding the kill-and-revive of 2026-07-23). A click on a scrub surface
+// WHILE AUDIO PLAYS is a pure STOP — it does not relaunch, so the audition
+// ends where the user interrupted it. The NEXT click then lands on a stopped
+// session and launches a fresh one from wherever it fell, re-capturing the
+// loop verdict and end bound at that launch — so a scrub after a mid-session
+// trim edit auditions the NEW window instead of riding a stale capture.
+// The old exact-same-frame skip is GONE with the relaunch it existed to
+// avoid: it kept an in-place audition uninterrupted, and the playing case now
+// always stops, so there is no in-place audition left to preserve — and it
+// cannot migrate to the stopped case, whose scanner fields are stale by
+// contract (the one non-playing window where they are not, the endpoint hold
+// below, is a DEAD session that must launch even at its own endpoint frame).
+// The natural-end ENDPOINT HOLD (playing false, scanner active) is NOT the
+// playing case — nothing is audible — so it tears the dead scanner down and
+// launches, exactly as before. A refused launch (out-of-window frame; target
+// update in flight) leaves playback stopped, silently — the "nothing to
+// audition" family; a later click at a launchable frame launches.
 void GuiInputHandler::scrub_act_at(int64_t frame) {
     if (playback.is_playing()) {
-        if (frame == app.playhead_scanner_sample) return;  // same position ->
-                                                           // nothing to re-launch
-        playback_lifecycle.stop_playback_if_playing();     // the kill
-    } else if (app.playhead_scanner_active) {
+        // The pure stop, through the standing stop machinery — side-effect-
+        // clean here (the scrub never moved the cursor) and the owner of the
+        // scanner's visible-identity teardown. `frame` is deliberately unused
+        // on this arm: a click over a live session says only "stop", never
+        // where to play from.
+        playback_lifecycle.stop_playback_if_playing();
+        return;
+    }
+    if (app.playhead_scanner_active) {
         // Natural-end ENDPOINT HOLD (playing false, scanner active — the one
         // sanctioned non-playing scanner-validity window): kill through the
         // SAME owner. stop_playback_if_playing's own guard admits this state,
         // and it is the single owner of the scanner's visible-identity
         // teardown — it invalidates the held endpoint column (the
-        // scanner-to-cursor span) before deactivating, which the revive's
+        // scanner-to-cursor span) before deactivating, which the launch's
         // defensive flag clears alone would not, leaving the endpoint line
-        // ghosted (worse on a refused revive, where no heartbeat repaints).
-        // The same-frame skip does NOT apply here: the held session is DEAD,
-        // so a scrub at the endpoint frame still launches a fresh one.
+        // ghosted (worse on a refused launch, where no heartbeat repaints).
+        // The held session is DEAD, so this arm falls through to the launch
+        // below — a scrub at the endpoint frame starts a fresh audition.
         playback_lifecycle.stop_playback_if_playing();
     }
     // Outer is_updating gate, mirroring the two Space handlers: a NEW launch
     // while a target update is in flight would audition the stale target
-    // buffer, which Space refuses — so the scrub revive refuses it too,
+    // buffer, which Space refuses — so the scrub launch refuses it too,
     // silently.
     if (!(app.active_audio_view == 'T' && target_render.is_updating()))
-        playback_lifecycle.scrub_launch_at(frame);         // the revive
+        playback_lifecycle.scrub_launch_at(frame);
 }
 
 // The scanner scrub press body, shared by the waveform lower-half plain press
 // and the marker-text-lane plain press (R3.3, architect 2026-07-23). See the
-// declaration for the full contract. ONE-SHOT play-from-here per click
-// (architect 2026-07-23, the Ableton model): derive the clicked column's frame
-// and run one scrub act — the press arms NOTHING, a held press does nothing
-// further, and motion over the scrub surfaces is inert (the scrub drag is
-// removed; each click pays scrub_act_at's kill quiescence fence AT MOST once —
-// a dead session's revive pays none, the live same-frame skip returns before
-// stopping — and the
-// per-column fence cadence class is structurally gone). Both callers keep
-// playback alive across the press (the waveform lower half is not a top-strip
-// press; the text-lane scrub is exempted from the top-strip stop), so the
-// scrub act sees the live session — load-bearing for its same-frame skip,
-// which keeps an in-place audition uninterrupted instead of restarting it.
+// declaration for the full contract. ONE-SHOT per click (architect 2026-07-23,
+// the Ableton model): derive the clicked column's frame and run one scrub act
+// — the press arms NOTHING, a held press does nothing further, and motion over
+// the scrub surfaces is inert (the scrub drag is removed; each click pays
+// scrub_act_at's stop quiescence fence AT MOST once — a stopped session's
+// launch pays none — and the per-column fence cadence class is structurally
+// gone). Both callers keep playback alive across the press (the waveform lower
+// half is not a top-strip press; the text-lane scrub is exempted from the
+// top-strip stop), so the scrub act sees the LIVE session — load-bearing for
+// the stop-then-start ruling: a caller that let the session die before the act
+// would turn the interrupting click into a launch, which is precisely the
+// behaviour the ruling removed.
 void GuiInputHandler::scrub_press_at(int click_rel_x) {
     const GuiRect area = waveform_area(app);
     // Gutter / invalid column: no launch position exists, silent no-op.
@@ -799,11 +804,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // branches see the same snapshot.
         // ONE exemption: a plain press in the marker-text lane with no run under
         // it is the text-lane scrub (R3.3) — a playback navigation, not
-        // authoring, so it reaches the shared scrub act (kill-and-revive) with
-        // the session still live, exactly like the waveform lower-half scrub —
-        // load-bearing for the act's same-frame skip, which keeps an in-place
-        // audition uninterrupted. Every other
-        // top-strip press stops as before.
+        // authoring, so it reaches the shared scrub act with the session still
+        // live, exactly like the waveform lower-half scrub. Still load-bearing
+        // under the stop-then-start ruling (architect 2026-07-27), for the
+        // opposite reason it once was: the act's playing arm is now a pure STOP,
+        // so letting the blanket stop below fire first would leave the act a
+        // STOPPED session and turn the interrupting click into a launch — the
+        // stop-and-immediately-restart the ruling removed. Every other top-strip
+        // press stops as before.
         const bool was_playing = playback.is_playing();
         const int64_t playhead_at_entry = app.playhead_cursor_sample;
         bool text_lane_scrub_press = false;
@@ -1301,9 +1309,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // resolved above as mh.index >= 0, so this is reached only on
                     // an EMPTY text-lane spot. Shares the waveform lower-half
                     // scrub body; playback stayed alive via the text-lane-scrub
-                    // stop exemption above, so the scrub act (kill-and-revive)
-                    // sees the live session and its same-frame skip can keep an
-                    // in-place audition uninterrupted. Touches no selection (the
+                    // stop exemption above, so the scrub act sees the live
+                    // session and this click STOPS it (the next click starts a
+                    // fresh audition where it lands). Touches no selection (the
                     // scrub convention).
                     scrub_press_at(x - area.x);
                     return;
@@ -1367,7 +1375,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // extent for an Esc-mid-drag restore), so the highlight vanishes on press
         // whether the gesture becomes a click or a fresh drag. The LOWER half
         // is the SCRUB surface (the branch below): the press runs one
-        // kill-and-revive scrub act — a fresh SCANNER session from the clicked
+        // scrub act — stopping a live session, else starting a fresh SCANNER
+        // session from the clicked
         // frame — arming nothing (the one-shot Ableton model) and
         // touching nothing else. ONLY the plain press splits — a Shift press
         // instead FORMS a region waveform-wide (the demote path below), never
@@ -1518,15 +1527,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // are meaningful only while active (the standing contract), and
             // this gesture is exactly the launches-the-scanner-independently-
             // of-the-cursor consumer that contract anticipated. Every scrub
-            // act is KILL-AND-REVIVE (scrub_act_at): a live session stops and
-            // a fresh one launches from the clicked frame — never a positional
-            // seek inside the old session — with one degenerate skip (same
-            // frame as the live scanner -> nothing to re-launch). A refused
-            // revive is a silent no-op, exactly Space's conventions. The scrub
+            // act is STOP-THEN-START-ON-THE-NEXT-CLICK (scrub_act_at, architect
+            // 2026-07-27): a click over a LIVE session just stops it, and the
+            // following click launches a fresh audition from the frame it lands
+            // on — never a positional seek inside an old session. A refused
+            // launch is a silent no-op, exactly Space's conventions. The scrub
             // is ONE-SHOT per click (architect 2026-07-23, the Ableton model):
             // the press arms NOTHING, a held press does nothing further, and
             // motion over the surface is inert — each click pays at most one
-            // kill quiescence fence. It touches
+            // stop quiescence fence. It touches
             // NOTHING else: no selection change, no region change, no cursor
             // write, no follow override, no double-click seed, no drag
             // arm. Read-only allowed (playback is navigation). The gutter
@@ -1535,8 +1544,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // deselect-then-return.
             if (y >= area.y + area.h / 2) {
                 // Shared scrub press body (scrub_press_at): gutter no-op,
-                // clamped frame from the column, one kill-and-revive scrub
-                // act, nothing armed. The same body serves
+                // clamped frame from the column, one scrub act (stop a live
+                // session, else launch), nothing armed. The same body serves
                 // the marker-text-lane scrub (R3.3).
                 scrub_press_at(click_rel_x);
                 return;
@@ -1994,10 +2003,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         viewport.clear_hover_popup();
         return;
     }
-    // (No scrub motion branch: the scrub is a ONE-SHOT play-from-here at the
-    // press — the held-drag per-column re-scrub is REMOVED (architect
+    // (No scrub motion branch: the scrub is a ONE-SHOT act at the press — the
+    // held-drag per-column re-scrub is REMOVED (architect
     // 2026-07-23, the Ableton model), so motion over the scrub surfaces is
-    // inert and the per-column kill-fence cadence is structurally gone.)
+    // inert and the per-column stop-fence cadence is structurally gone.)
     // Trim-boundary drag motion. Handled before the marker-drag branch;
     // active in BOTH views (begin_trim_drag has no view gate, and
     // update_trim_drag / commit_trim_drag carry the target-view cached-map

@@ -839,14 +839,14 @@ struct ScrollDragState {
 };
 
 // (The SCRUB has no drag state: the plain lower-half waveform press and the
-// empty marker-text-lane press are ONE-SHOT play-from-here scrub acts
-// (scrub_act_at, kill-and-revive), issued once per click — the press arms
+// empty marker-text-lane press are ONE-SHOT scrub acts (scrub_act_at — stop a
+// live session, else play from here), issued once per click — the press arms
 // nothing, a held press does nothing further, and motion over the scrub
 // surfaces is inert (architect 2026-07-23, the Ableton model; the former
 // per-column re-scrub drag and its drag-state struct are removed — each
-// click pays AT MOST one stop-quiescence fence (a dead session's revive pays
-// none; the live same-frame skip returns before stopping), so the per-column
-// fence cadence is structurally gone). The gesture drives the SCANNER only, never
+// click pays AT MOST one stop-quiescence fence (a stopped session's launch
+// pays none), so the per-column fence cadence is structurally gone). The
+// gesture drives the SCANNER only, never
 // the cursor: selection, region, cursor, follow, and double-click seeding are
 // all untouched, the pure audition gesture. NOT the retired plain-drag scrub
 // (61126db) — that one MOVED the cursor playhead per column.)
