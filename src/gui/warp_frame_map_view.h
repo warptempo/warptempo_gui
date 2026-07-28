@@ -80,7 +80,8 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
 
 // Memoized RED-FLAG SET for the warp column: the marker-store indices whose
 // render resolves to the 1.00 normalization fallback, so their flags paint
-// kAccent (unless selected — selection wins). Two contributors, both computed
+// kAccent regardless of selection (selection only fills the flag's triangle
+// interior, never the class pair). Two contributors, both computed
 // SILENTLY from the display path (no resolver run, no stderr, no
 // frozen-parser dependency): (1) the exact-frame COLLAPSE — a marker sharing
 // its frame with 2+ effectively-enabled markers (marker_effectively_disabled

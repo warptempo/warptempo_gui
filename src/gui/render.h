@@ -229,9 +229,11 @@ inline GuiColor kMarkerOutline    = hex(0x3895C7);
 // lane text (kTextDisabled) is that set's Text, so shape and glyph grey out
 // together by provenance. It WINS over red and over the default class, and
 // there is nothing left for it to compose with: a disabled marker paints BOTH
-// halves of this pair whatever its red-flag status and whatever its selection,
-// since selection carries no color. A selected disabled marker is marked by the
-// paint order and by the stem.
+// halves of this pair whatever its red-flag status. Selection does not alter
+// the pair either (architect 2026-07-27) — its one paint is the triangle
+// interior described in SELECTION IS NOT A CLASS above, never the ring — so a
+// selected disabled marker keeps both muted halves and reads instead through
+// that triangle ink, the paint order, and the stem.
 inline GuiColor kMarkerDisabled        = hex(0x164160);
 inline GuiColor kMarkerDisabledOutline = hex(0x42464A);
 
@@ -1218,9 +1220,12 @@ void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width);
 //
 // Color class (`red_set` = the store indices whose render normalizes to the
 // 1.00 fallback, from warp_red_flag_set_cached), in priority order — ONE opaque
-// pair per shape, no alpha anywhere, and THREE classes only: selection
-// contributes no color, so a selected flag paints exactly the pair it would
-// paint unselected.
+// pair per shape, no alpha anywhere, and THREE classes only: selection is not
+// a fourth one, so a selected flag's rectangle fill and its whole outline are
+// exactly the pair it would paint unselected. Selection's one paint is the
+// triangle interior (kWaveform), layered on after the ladder below resolves —
+// the full rationale lives at the SELECTION IS NOT A CLASS ruling earlier in
+// this file.
 //   Disabled:          fill kMarkerDisabled, outline kMarkerDisabledOutline
 //                      (WINS over red and default; selection does not alter it).
 //   Red (in red_set):  fill kAccent,         outline kAccentOutline.

@@ -217,13 +217,14 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
         box.text            = ed.pending;
         box.hl_pad          = flag_glyph_inset_px();
         // The open editor paints like an ordinary MARKER chip: kMarker fill +
-        // kMarkerOutline ring — the one live marker pair, which is what a
-        // selected chip paints too, selection having no color of its own. So the
-        // box reads as "this marker, open for editing" instead of an invisible
-        // bg-on-bg box. On an invalid commit both flash to kAccent — a color
-        // CHANGE on an already-visible box, not a box appearing from nowhere.
-        // Text stays kText and readable on kMarker (the same pairing a chip's
-        // context uses).
+        // kMarkerOutline ring — the one live marker pair, the same
+        // rectangle/outline a selected chip paints too (selection only fills
+        // a flag's triangle interior, which this box — a plain rectangle —
+        // has none of). So the box reads as "this marker, open for editing"
+        // instead of an invisible bg-on-bg box. On an invalid commit both
+        // flash to kAccent — a color CHANGE on an already-visible box, not a
+        // box appearing from nowhere. Text stays kText and readable on
+        // kMarker (the same pairing a chip's context uses).
         box.fill            = ed.red ? kAccent        : kMarker;
         box.outline         = ed.red ? kAccentOutline : kMarkerOutline;
         box.text_color      = kText;

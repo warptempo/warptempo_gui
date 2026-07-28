@@ -751,11 +751,13 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // after them — so the cache carries marker/phase-reset flag shapes only.)
 
     // Red-flag sets: the marker indices whose render normalizes to the 1.00
-    // fallback, painted kAccent unless selected. Read from the memoized caches
-    // (keyed on the respective store generation), so the silent classification
-    // runs only on a marker change, not on this per-tick rebuild; the committed
-    // store means a red flag freezes through a marker drag and re-evaluates at
-    // commit. The active view supplies only its own column's set.
+    // fallback, painted kAccent/kAccentOutline whether or not selected —
+    // selection only fills the flag's triangle interior, never the class
+    // pair. Read from the memoized caches (keyed on the respective store
+    // generation), so the silent classification runs only on a marker change,
+    // not on this per-tick rebuild; the committed store means a red flag
+    // freezes through a marker drag and re-evaluates at commit. The active
+    // view supplies only its own column's set.
     if (mv == 'P') {
         const std::set<int>& pr_red =
             phase_reset_red_flag_set_cached(app).red;
