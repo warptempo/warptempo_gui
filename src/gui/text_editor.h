@@ -177,20 +177,26 @@ enum class KeyClass {
     NotEditorKey,   // not the editor's — the keyboard-modal gate drops it
     SessionKey,     // BARE Escape, Return/KpEnter — end the session, never repeat
     ChordKey,       // CTRL-EXACT A/C/X/V — one-shot
-    MotionEditKey,  // Left/Right/Home/End/BackSpace/Delete, ANY modifiers — repeats
+    // Left/Right/Home/End/BackSpace/Delete under ctrl/shift in ANY combination
+    // but NEVER alt — repeats. Ctrl and Shift bind here (word jump/erase,
+    // selection extend, and the plain gesture where a combination adds nothing,
+    // as in any one-line text field); alt binds nothing, so an alt-carrying
+    // motion press is NotEditorKey.
+    MotionEditKey,
     PrintableKey,   // no ctrl/alt, codepoint 0x20..0x7e — repeats
 };
 
 // Classify key+mods against the editor's owned keymap, reproducing handle_key's
 // exact predicates and precedence: the session keys before the Ctrl chords, the
-// chords (specific A/C/X/V) before motion, motion (any modifiers) before
+// chords (specific A/C/X/V) before motion, motion (ctrl/shift, never alt) before
 // printable. A key that could satisfy two predicates classifies as the one
 // handle_key acts on (Ctrl+A is a chord, not printable — printable already
 // excludes ctrl; Ctrl+Left is MotionEditKey — the chord shape list is A/C/X/V
-// only). The first two arms are MODIFIER-EXACT — session bare, chords ctrl-only
-// — so a press wearing a stray modifier on one of their shapes (Ctrl+Escape,
-// Ctrl+Enter, Ctrl+Shift+V, Ctrl+Alt+A) is simply NotEditorKey: unbound and not
-// ours need no longer be told apart, because every keyboard-modal editor drops
+// only). NO ARM ADMITS ALT: session is bare-exact, the chords ctrl-exact, motion
+// ctrl/shift-only, printable already excludes ctrl and alt. So a press wearing a
+// modifier its arm does not bind (Ctrl+Escape, Ctrl+Enter, Ctrl+Shift+V,
+// Ctrl+Alt+A, Alt+Left, Ctrl+Alt+BackSpace) is simply NotEditorKey: unbound and
+// not-ours need not be told apart, because every keyboard-modal editor drops
 // both at the gate and nothing downstream can act on either.
 KeyClass classify_key(GuiKey key, GuiInputState mods);
 

@@ -191,16 +191,17 @@ void enter(State& s, int target,
 
 KeyClass classify_key(GuiKey key, GuiInputState mods) {
     // Precedence mirrors handle_key's branch order exactly (see the header):
-    // session first, then the Ctrl chords, then motion (any mods), then
-    // printable. Each test returns before the next, so a key satisfying two
+    // session first, then the Ctrl chords, then motion (ctrl/shift, never alt),
+    // then printable. Each test returns before the next, so a key satisfying two
     // predicates classifies as the branch handle_key would act on.
     //
-    // The first two arms are MODIFIER-EXACT — session bare, chords ctrl-only —
-    // so a press wearing a stray modifier on one of their key shapes falls all
-    // the way to NotEditorKey and is dropped by the keyboard-modal gate before
-    // it can reach an editor at all. That is the whole enforcement: unbound is
-    // unbound, and nothing downstream distinguishes it from any other key the
-    // editor does not own.
+    // NO ARM ADMITS ALT. Session is bare-exact, the chords are ctrl-exact,
+    // motion takes ctrl/shift only, printable already excludes ctrl and alt — so
+    // a press wearing a modifier the arm does not bind falls all the way to
+    // NotEditorKey and is dropped by the keyboard-modal gate before it can reach
+    // an editor at all. That is the whole enforcement: unbound is unbound, and
+    // nothing downstream distinguishes it from any other key the editor does not
+    // own.
     //
     // Session keys are BARE-EXACT (the strict-modifier rule): a modified
     // Escape / Return / KpEnter has no binding, so it must not cancel or commit
@@ -223,11 +224,23 @@ KeyClass classify_key(GuiKey key, GuiInputState mods) {
         (key == GuiKeys::A || key == GuiKeys::C ||
          key == GuiKeys::X || key == GuiKeys::V))
         return KeyClass::ChordKey;
-    // Motion / editing ignores modifiers entirely (word-jump/word-erase
-    // variants included).
-    if (key == GuiKeys::Left || key == GuiKeys::Right ||
-        key == GuiKeys::Home || key == GuiKeys::End ||
-        key == GuiKeys::BackSpace || key == GuiKeys::Delete)
+    // Motion / editing takes CTRL AND SHIFT IN EVERY COMBINATION but NEVER ALT
+    // (architect 2026-07-28). The asymmetry is the point, so do not "finish the
+    // job" by making these exact too:
+    //   - Ctrl and Shift carry real meaning on all six keys — Shift extends the
+    //     selection, Ctrl jumps / erases by WORD, Ctrl+Shift extends by word —
+    //     and where a combination has no distinct behavior it degrades to the
+    //     plain gesture exactly as an ordinary one-line text field does
+    //     (Ctrl+Home still goes to the start, Shift+BackSpace still backspaces).
+    //     Making them exact would break those.
+    //   - ALT binds nothing anywhere in this family; no standard one-line field
+    //     uses it. So an alt-carrying motion press is genuinely UNBOUND, and the
+    //     strict-modifier rule makes it a no-op: it falls to NotEditorKey and the
+    //     keyboard-modal gate drops it before any editor sees it.
+    if (!mods.alt &&
+        (key == GuiKeys::Left || key == GuiKeys::Right ||
+         key == GuiKeys::Home || key == GuiKeys::End ||
+         key == GuiKeys::BackSpace || key == GuiKeys::Delete))
         return KeyClass::MotionEditKey;
     // Printable insertion: no Ctrl/Alt, printable ASCII codepoint.
     if (!mods.ctrl && !mods.alt &&
@@ -249,6 +262,9 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     if (classify_key(key, mods) == KeyClass::NotEditorKey)
         return KeyAction::NotConsumed;
 
+    // Only ctrl and shift are ever read below, and `mods.alt` is FALSE on every
+    // press that reaches this line: no classifier arm admits alt. That is why no
+    // branch tests it.
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
 
@@ -295,6 +311,11 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
 
     // Cursor motion. Shift extends a selection from an anchor; bare
     // motion collapses any existing selection to the corresponding edge.
+    // These branches read ctrl and shift and NEVER alt, and that is a CONTRACT,
+    // not an oversight: the membership gate above classifies an alt-carrying
+    // motion press as NotEditorKey, so `mods.alt` is false on every press that
+    // reaches here. Do not add an alt arm — alt binds nothing in this family,
+    // and an alt press is dropped at the keyboard-modal gate long before this.
     if (key == GuiKeys::Left) {
         if (ctrl) {
             // Word-left: optionally extend the selection (Shift), else

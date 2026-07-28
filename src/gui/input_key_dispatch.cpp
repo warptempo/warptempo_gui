@@ -232,7 +232,9 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         // while held; its session (bare Escape/Return) and chord (ctrl-exact
         // A/C/X/V) keys are one-shot, and NotEditorKey is not the editor's to
         // repeat — the keyboard-modal gate drops it before anything could act on
-        // it anyway. This consumes the one editor-key owner (audit C6):
+        // it anyway. An ALT-carrying motion press is in that last bucket and so
+        // does not repeat, which falls out of the classifier rather than being
+        // spelled here. This consumes the one editor-key owner (audit C6):
         // Tab/IsoLeftTab classify as NotEditorKey (handle_key never consumes Tab
         // — the autocompletes are intercepted at the gate before handle_key) and
         // so do not repeat here, matching the prior explicit one-shot exclusion.
@@ -292,12 +294,14 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // itself" CONSUMES the one editor-key owner (audit C6):
 // text_editor::classify_key — the gate admits exactly the non-NotEditorKey
 // set (BARE Escape/Enter, CTRL-EXACT A/C/X/V, the cursor/editing keys Left /
-// Right / Home / End / BackSpace / Delete under any modifiers, and printable
-// insertion; Space lands in the buffer as a typed character, not as playback).
+// Right / Home / End / BackSpace / Delete under ctrl/shift but never alt, and
+// printable insertion; Space lands in the buffer as a typed character, not as
+// playback). NO admitted key carries alt, on any arm.
 // The strict-modifier rule therefore holds by ONE route: a press wearing a
-// stray modifier on an owned key shape (Ctrl+Escape, Ctrl+Enter, Ctrl+Shift+V,
-// Ctrl+Alt+A) is NotEditorKey like any other unbound chord and drops right
-// here, so it cannot cancel, commit, or paste. The gate-level
+// modifier its arm does not bind (Ctrl+Escape, Ctrl+Enter, Ctrl+Shift+V,
+// Ctrl+Alt+A, Alt+Left, Ctrl+Alt+BackSpace) is NotEditorKey like any other
+// unbound chord and drops right here, so it cannot cancel, commit, paste, move
+// the caret, or erase. The gate-level
 // carve-outs below are NOT editor consumption — they are gate policy layered on
 // top: the settings/commit editors' own bare-Tab value autocomplete (their
 // handle_*_editor_key intercepts it before handle_key; the bpm and flag editors
