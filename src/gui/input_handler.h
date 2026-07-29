@@ -241,18 +241,12 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // viewport moves (PageUp/PageDown, zoom
 // steps, pans) — and the lower-half scrub press, which touches no region at
 // all. The plain upper-half waveform press (arm_region_drag_at) shares this
-// helper — same dissolve shape. The other pre-existing clear sites (Esc, file
-// load, Ctrl+Tab, and the S/T switch) keep their own in-place clears — Esc's is
-// now the down-only ladder's region rung, which walks ONE rung per Esc
-// (handle_escape_selection_region: with 2+ selected the first Esc DESELECTS and
-// the span's pixels REST — an extent span re-formed Free, a TrimWindow / Free
-// one untouched — and with no region at all that same rung drops the selection
-// TO its extent as a Free span, the ladder's explicit demote; a live region +
-// 0/1 selected
-// COLLAPSES TO ITS START — clear the region AND selection AND move the playhead to
-// its lo bound — so a multimarker selection always takes a second Esc), and
-// load / Ctrl+Tab / S/T pair the reset with a domain flip or a full-window repaint
-// rather than this exact damage shape.
+// helper — same dissolve shape. ESC IS NOT A CLEAR SITE AT ALL (architect
+// 2026-07-29): the selection/region ladder is deleted, so bare Esc touches neither
+// the region nor the selection anywhere — the whole Esc story is stated at its
+// dispatch point in on_key. The remaining pre-existing clear sites (file load,
+// Ctrl+Tab, and the S/T switch) keep their own in-place clears, pairing the reset
+// with a domain flip or a full-window repaint rather than this exact damage shape.
 void clear_region_highlight(AppState& app, Viewport& viewport);
 
 // The DOWNWARD coupling (the selection defines the extent region,
@@ -504,7 +498,7 @@ struct GuiInputHandler {
     // state as arm_region_drag_at, anchored at the FAR endpoint, but it does NOT
     // dissolve app.region — the former has already left it exactly as it should
     // rest for a motionless release, so preserving it keeps that one-shot
-    // behavior bit-for-bit. An Esc mid-drag clears the region for either arm.
+    // behavior bit-for-bit. Esc mid-drag does nothing for either arm (no cancel).
     void arm_region_drag_preserving(int64_t anchor_frame, int x, int y);
 
     // The waveform-upper-half placement press BODY, shared by the plain waveform
@@ -759,8 +753,11 @@ private:
     // cancels it. Returns true if it consumed the key (on_key then returns).
     // Routed after the editor modal (which cancels an active edit on Esc
     // first) and before the rest of the key handlers. Takes the modifiers
-    // because it runs BEFORE the ladder: without them a modified Escape would
-    // still cancel a running render, which no modified chord may do.
+    // because a modified Escape must not cancel a running render, as no modified
+    // chord may do anything anywhere.
+    // This SURVIVES the 2026-07-29 Esc unbinding as its own binding class
+    // (render-work cancel, not a ladder rung) — planner interpretation, architect
+    // confirmation pending.
     bool handle_escape_cancels(GuiKey key, GuiInputState mods);
 
     // Render-trigger chords: Ctrl+Alt+R (single render), Ctrl+Alt+I
@@ -996,36 +993,6 @@ private:
     void set_trim_bound_at_click_then_arm_drag(bool is_begin, int mouse_x,
                                                int mouse_y);
 
-    // Esc ladder (architect 2026-07-23, DOWN-ONLY as of round 4): the
-    // selection/region collapse rung of the Escape chain — placed AFTER the drag /
-    // editor / render cancels and in place of the old plain region clear. Tested
-    // REGION-FIRST so a region never shrinks into a subregion, and it walks ONE
-    // rung per Esc. Returns true iff it consumed the Esc:
-    //   region ACTIVE + 2+ selected  -> DESELECT and the span's pixels REST: an
-    //                                   extent span is captured, dropped by
-    //                                   clear_selection's membership clear, and
-    //                                   RE-FORMED at the same bounds with Free
-    //                                   provenance; a TrimWindow / Free span is
-    //                                   untouched. Playhead untouched — a SECOND
-    //                                   Esc then takes the collapse below
-    //   region ACTIVE + 0/1 selected -> collapse to its start: clear the region AND
-    //                                   the selection, playhead to the lo bound
-    //   no region + MULTIPLE selected -> DROP TO THE SPAN (a PROGRAMMATIC
-    //                                    multi-select — a click-made one rests with
-    //                                    its extent region, caught above): derive
-    //                                    the extent, flip it Free, then deselect,
-    //                                    so the group's cue survives as a resting
-    //                                    span and a second Esc collapses it. This
-    //                                    is Esc's EXPLICIT demote, legal because
-    //                                    the selection ends EMPTY — the abolished
-    //                                    lie was a span resting beside a SURVIVING
-    //                                    selection
-    //   no region + SINGLETON         -> deselect + land the playhead on the marker
-    // Defined in input_pointer.cpp beside land_playhead_on_marker /
-    // set_region_to_selection_extent (both external-linkage, declared here).
-    // Navigation-class, read-only allowed.
-    bool handle_escape_selection_region();
-
     // One scrub ACT at an active-domain frame: STOP, THEN START ON THE NEXT
     // CLICK (architect 2026-07-27, superseding the 2026-07-23 kill-and-revive).
     // A click while audio PLAYS is a pure stop — the frame is ignored and
@@ -1080,9 +1047,11 @@ private:
     // focus model), so the step moves that, carrying the marker under it (the
     // position nudges / the tempo-image step, each re-landing the playhead on
     // its committed focus). With no selection the playhead is in the WAVEFORM
-    // lane and the step moves the cursor alone. Esc collapses the marker lane
-    // back to the waveform lane explicitly; there is no fallback, so a
-    // marker-lane step that refuses stays a consumed no-op.
+    // lane and the step moves the cursor alone. LANE EXIT IS ANY DESELECTING
+    // ROUTE (architect 2026-07-29, replacing the explicit Esc collapse — Esc is
+    // unbound here now): Home/End, a waveform click, a trim setter's publish, an
+    // undo restore that empties the selection, and so on. There is still no
+    // gesture fallback, so a marker-lane step that refuses stays a consumed no-op.
     // Distinct from the AUDITION SCRUB, which is untouched by all of this: that
     // is the waveform lower-half one-shot press (scrub_act_at / scrub_press_at),
     // a pointer gesture on its own surface that starts or stops a scanner and

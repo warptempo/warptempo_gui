@@ -207,7 +207,9 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // MEMBERSHIP REPLACE, which clears a SelectionExtent span outright
 // (clear_region_on_membership_replace, app_state.h) — that is what covers the
 // ops which change WHO is selected without moving anything: sanitize/prune and
-// the Esc clear. (The Ctrl+N collapse is NOT one of them — it LANDS the playhead
+// the deselecting routes (Home/End, clear_selection's callers — Esc is no longer
+// one of them, being unbound since 2026-07-29). (The Ctrl+N collapse is NOT one
+// of them — it LANDS the playhead
 // on the surviving focus, warpmarkers_ops.cpp, which makes it a point command
 // like the clicks; it simply owes no span clear of its own, the membership
 // replace already taking a SelectionExtent one.) THREE ops go further and clear ANY
@@ -232,9 +234,11 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //     own path just set: the clicked marker, the clicked range end, the
 //     toggled-in marker, or the focus repaired after a toggle-out (an empty
 //     post-toggle selection lands nothing);
-//   * THE KEYBOARD POINT COMMANDS — the no-region + singleton Esc rung of
-//     handle_escape_selection_region (deselect + land on the marker) and the
-//     Ctrl+N inherit toggle's collapse (warpmarkers_ops.cpp);
+//   * THE KEYBOARD POINT COMMANDS — the Ctrl+N inherit toggle's collapse
+//     (warpmarkers_ops.cpp). Esc's singleton rung was the other one until
+//     2026-07-29, when the whole Esc ladder was deleted: bare Esc lands nothing
+//     now, because it does nothing at all outside the editors, the prompts, the
+//     drag swallow and the render cancel;
 //   * EVERY TEXT-EDITOR OPEN — flag_editor.cpp's enter_text_edit, the one
 //     chokepoint of the three open routes;
 //   * THE RESTORES, which hand the lane a focus it did not have: BOTH undo/redo
@@ -265,7 +269,7 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // half off the edge — accepted). Read-only allowed (selection + playhead are
 // navigation). Some callers stop playback first (each marker click owns that
 // stop at its own site, Tab-family symmetry; the restores and the bpm-editor
-// open stop too); the others — the Esc rung, the bare-Return flag-editor open,
+// open stop too); the others — the bare-Return flag-editor open,
 // the `p` swap, the Ctrl+N collapse — may land DURING playback, safe because the
 // land is a direct RESTING-cursor write and a live scanner is untouched by
 // cursor writes (move_playhead_to's scanner-inactive
@@ -338,11 +342,9 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 //       earlier no-region rule; a mass creation should read like the other mass
 //       event). Both share one shape: wholesale region clear, select the set,
 //       land on its FIRST/earliest member, then derive the extent here.
-//   (4) the ESC DEMOTE (handle_escape_selection_region's no-region + 2+ rung) —
-//       the one caller that immediately FLIPS the fresh span to Free and drops
-//       the selection, deriving the bounds through this owner rather than by
-//       hand. The span it leaves has no selection at all, so it is a former, not
-//       an extent.
+// (There is no fourth class: the ESC DEMOTE — the one caller that derived a span
+// here only to flip it Free and drop the selection — died with the Esc ladder on
+// 2026-07-29, and nothing converts a fresh extent to Free any more.)
 // Touches ONLY the region, never shift_range_anchor, so the shift-range path's
 // anchor survives a downward selection->extent set. The REMAINING programmatic
 // selections (the drops, Tab/`c`) do NOT call this. Declared in input_handler.h
@@ -380,108 +382,6 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
     // membership replace).
     app.region.provenance = RegionProvenance::SelectionExtent;
     viewport.invalidate_waveform_area();
-}
-
-// R3 Esc ladder (architect 2026-07-23): the selection/region collapse rung of
-// the Escape chain, placed after the drag / editor / render cancels and in place
-// of the old plain region clear. Defined here beside land_playhead_on_marker /
-// set_region_to_selection_extent (external linkage, declared in input_handler.h
-// — undo.cpp reaches them there). Returns true
-// iff it consumed the Esc. Navigation-class, read-only allowed.
-bool GuiInputHandler::handle_escape_selection_region() {
-    // DOWN-ONLY ladder (round 4, architect 2026-07-23): markers -> region ->
-    // playhead, and a region is already the LOWER rung, so an active region
-    // collapses toward the playhead — never into a subregion. This is why
-    // region.active is tested FIRST, regardless of selection: the old rung (b)
-    // re-derived the region from the selection extent, which SHRANK an active
-    // region to the selection's subregion. The ladder walks ONE rung per Esc:
-    // for a MULTIMARKER selection resting under an active region, the first Esc
-    // clears the SELECTION ONLY (the region stays), and a SECOND Esc then takes
-    // the region collapse below.
-    if (app.region.active) {
-        // First rung under an active region: 2+ selected markers -> clear the
-        // SELECTION ONLY; the span's PIXELS REST (architect 2026-07-29, the
-        // two-step Ableton walk, reversing the one-Esc-takes-both of that
-        // morning). The ladder walks ONE rung per press, so the next Esc reaches
-        // the collapse below. The playhead is untouched.
-        //
-        // ESC IS THE EXPLICIT DEMOTE — the ONE sanctioned route to a resting
-        // demoted span, and it is legal under the two-forms model because the
-        // SELECTION IS EMPTY afterward: what the model abolished is a span
-        // resting beside a SURVIVING selection (the demoted-but-visible extent
-        // that asserted a playhead nobody was at), and Esc never produces that.
-        // The resting state here is exactly the drag-former's — a Free span with
-        // nothing selected. The MEMBERSHIP-CLEAR machinery stays untouched: no
-        // demotion route re-enters clear_region_on_membership_replace, which
-        // still clears a SelectionExtent slot outright at every membership site.
-        // MECHANISM: clear_selection's membership clear kills a SelectionExtent
-        // slot, so capture the span first and RE-FORM it at the same bounds with
-        // Free provenance afterward. A TrimWindow or Free span is untouched by
-        // that clear, so it needs no branch — and must not get one, since
-        // overwriting a TrimWindow provenance would unhook the highlight from the
-        // chips it tracks.
-        if (app.selected_markers.size() >= 2) {
-            const RegionState before = app.region;
-            selection.clear_selection();
-            if (before.provenance == RegionProvenance::SelectionExtent) {
-                app.region.active     = true;
-                app.region.a_frame    = before.a_frame;
-                app.region.b_frame    = before.b_frame;
-                app.region.provenance = RegionProvenance::Free;
-            }
-            viewport.invalidate_waveform_area();
-            return true;
-        }
-        // Region active (0 or 1 selected): collapse to its start (PROVENANCE-BLIND
-        // — any active region collapses, SelectionExtent / TrimWindow / Free
-        // alike). The region is the stretched-out playhead, so clear it AND the
-        // selection (a singleton's coupled extent region dies with the selection
-        // here) and land the playhead at lo.
-        const int64_t lo = std::min(app.region.a_frame, app.region.b_frame);
-        app.region = RegionState{};
-        selection.clear_selection();
-        viewport.invalidate_waveform_area();
-        viewport.move_playhead_to(lo);
-        return true;
-    }
-    const size_t nsel = app.selected_markers.size();
-    if (nsel >= 2) {
-        // No region + MULTIPLE selected (a PROGRAMMATIC multi-select — a
-        // click-made one always rests with its extent region, handled above):
-        // DROP THE SELECTION TO ITS SPAN (architect 2026-07-29, restoring the
-        // drop-to-region rung). The group's cue survives the deselect as a
-        // resting Free span, and a second Esc collapses it to its start — the
-        // same two-step walk the rung above performs. This is Esc's explicit
-        // demote (the principle is stated at that rung), legal because the
-        // selection ends EMPTY.
-        // MECHANISM: derive through the ONE extent owner
-        // (set_region_to_selection_extent — it clamps the endpoints playable,
-        // handles the degenerate all-stale set by resting nothing, and owns its
-        // damage), then flip the fresh span to Free BEFORE clear_selection, so
-        // the membership clear skips it (it takes SelectionExtent only) and the
-        // span survives the deselect. Deriving here by hand instead would
-        // duplicate that owner's per-column store walk and clamps for no gain.
-        set_region_to_selection_extent(app, audio, viewport);
-        app.region.provenance = RegionProvenance::Free;
-        selection.clear_selection();
-        return true;
-    }
-    if (nsel == 1) {
-        // No region + SINGLETON: deselect + land the playhead ON the marker (the
-        // playhead is usually already coincident from the re-coupling land, so the
-        // land is a safety re-affirm; deselecting then flips the playhead form back
-        // to the waveform's own cursor focus). Land BEFORE the clear so the
-        // marker index is still resolvable. Full waveform damage: the deselect
-        // un-shows a wider WAVEFORM overlay than the playhead-column / top-strip
-        // damage covers — the phase-reset lead-in overlay (P+target) and the
-        // selected-marker stem.
-        const int idx = *app.selected_markers.begin();
-        land_playhead_on_marker(app, audio, viewport, idx);
-        selection.clear_selection();
-        viewport.invalidate_waveform_area();
-        return true;
-    }
-    return false;
 }
 
 // One scrub ACT: STOP, THEN START ON THE NEXT CLICK (architect 2026-07-27,

@@ -125,8 +125,11 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // an internal read-only check, and marker_drag.cpp records that dependency
     // on this gate explicitly. So a locked tab holding a selection REFUSES the
     // arrows outright (a consumed no-op); it does not fall back to the
-    // waveform-lane step — this project has no gesture fallbacks, and Esc is the
-    // explicit collapse out of the marker lane.
+    // waveform-lane step — this project has no gesture fallbacks. Leaving the
+    // marker lane is any DESELECTING route (the lane model at
+    // playhead_in_marker_lane); Esc is not one of them, being unbound outside the
+    // editors, the prompts, the drag swallow and the render cancel since
+    // 2026-07-29.
     // NOT the audition scrub: that is the waveform LOWER-HALF one-shot press
     // (scrub_act_at), a different gesture on a different surface, untouched here
     // and the sole owner of the "scrub" name.
@@ -170,7 +173,13 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_ctrl_shift_tab =
         (ctrl && shift && !alt && key == GuiKeys::Tab);
     // Bare Escape only: a modified Escape carries no binding anywhere, so it has
-    // nothing to be admitted FOR.
+    // nothing to be admitted FOR. WHAT BARE Esc IS ADMITTED FOR, since the
+    // selection/region ladder was deleted 2026-07-29 (it was the navigation-class
+    // rung this entry originally served): the RENDER / BATCH CANCEL, which mutates
+    // nothing persistent and must work in a locked tab, plus the editor and prompt
+    // closes and the mid-gesture consumed no-op — all four of Esc's surviving
+    // bindings are read-only-safe, and dropping Esc at this gate would break the
+    // render cancel. The whole Esc story is at its dispatch point in on_key.
     const bool is_esc =
         (key == GuiKeys::Escape && !ctrl && !shift && !alt);
     const bool is_ctrl_q =
@@ -399,7 +408,12 @@ bool GuiInputHandler::cancel_archival_session() {
 }
 
 // Esc-cancel handlers for in-flight operations. See the declaration in
-// input_handler.h for routing order.
+// input_handler.h for routing order. This is ONE of the four surviving bare-Esc
+// bindings (the editors, the prompts, the drag-modal swallow, and this) — it
+// SURVIVES the 2026-07-29 Esc unbinding as its own binding class, render-work
+// cancel rather than a ladder rung: planner interpretation, architect confirmation
+// pending. The whole Esc story is stated at the on_key site where the deleted
+// selection/region ladder used to be dispatched.
 bool GuiInputHandler::handle_escape_cancels(GuiKey key, GuiInputState mods) {
     if (key != GuiKeys::Escape) return false;
     if (mods.ctrl || mods.shift || mods.alt) return false;
@@ -1511,7 +1525,8 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // marker-lane branch in on_key claims the press first and returns. The
         // membership half of the clear below is therefore already satisfied; the
         // FOCUS half is not — last_selected_marker survives an empty selection
-        // (Esc's singleton rung lands the playhead and leaves the focus), and
+        // (a ctrl-toggle that empties the set repairs the focus rather than
+        // dropping it, and sanitize/prune can leave one behind), and
         // clearing it is what stops a stale focus from re-entering the marker
         // lane on the next selection gesture.
         // The stop lives HERE, in this lane only: the marker-lane routes carry

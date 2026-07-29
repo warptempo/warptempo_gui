@@ -183,7 +183,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // The top-flag editor owns the keyboard while active. Only the three keys
     // the gate above admits past an open editor arrive here — its own editor
     // keys, Ctrl+S, and Ctrl+Q — so this block cannot see a command. Routes
-    // BEFORE the queue/drag/playhead Esc handlers so bare Esc cancels the edit
+    // BEFORE the render/batch Esc cancel so bare Esc closes the edit
     // first; Esc with no active edit falls through to the rest. Returning false
     // (Ctrl+Q only) leaves the edit already torn down and lets on_key run the
     // close routing.
@@ -195,8 +195,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // block above. The two editors are mutually exclusive in practice
     // because the flag editor's block returns early while it owns the
     // keyboard, so a stray `;` can't open settings over a live flag
-    // edit. Routed before queue/drag/playhead Esc handlers so Esc
-    // cancels the edit first.
+    // edit. Routed before the render/batch Esc cancel so Esc
+    // closes the edit first.
     if (text_editor::is_active(app.settings_editor)) {
         if (handle_settings_editor_key(key, mods)) return;
     }
@@ -204,7 +204,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Render-commit prompt editor (bare `'` opener). Same modal shape as the
     // settings editor block above; the two are mutually exclusive in practice
     // (each opener no-ops while the other owns the keyboard). Routed before the
-    // queue/drag/playhead Esc handlers so Esc cancels the edit first.
+    // render/batch Esc cancel so Esc closes the edit first.
     if (text_editor::is_active(app.commit_editor)) {
         if (handle_commit_editor_key(key, mods)) return;
     }
@@ -312,7 +312,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Tab/Shift+Tab/IsoLeftTab → cycle marker focus
     //   - Ctrl+Tab               → switch A/B tab (the other escape)
     //   - Ctrl+Shift+Tab         → march paired tabs in lockstep
-    //   - Esc                    → top-level no-op
+    //   - Esc                    → the render/batch cancel (and the editor /
+    //                              prompt closes); nothing else — the
+    //                              selection/region ladder it used to serve here
+    //                              is deleted, so a bare Esc with no render
+    //                              running is a plain no-op
     //   - Ctrl+Q                 → close-prompt routing
     // Ctrl+S is NOT admitted: read-only means no save, so it drops at this
     // gate like the authoring chords. Gesture-owned state changed in a locked
@@ -378,23 +382,29 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Bare Esc cancels an in-flight render / queued batch.
     if (handle_escape_cancels(key, mods)) return;
 
-    // Esc ladder (architect 2026-07-23, DOWN-ONLY as of round 4): the
-    // selection/region collapse rung, placed AFTER the higher-priority consumers —
-    // a live pointer drag (cancelled at the drag-modal gate above), an open editor
-    // (closed in the editor blocks above), and an in-flight render/batch (cancelled
-    // just above) each win — and in place of the old plain region clear. It walks
-    // ONE rung per Esc: an active region + 2+ selected clears the SELECTION and
-    // LEAVES THE SPAN RESTING (an extent span re-formed Free, a TrimWindow / Free
-    // one untouched); an active region + 0/1 selected collapses to
-    // the playhead (clear region + selection, playhead to its lo bound) — a region
-    // never shrinks into a subregion; else a 2+ selection with no region DROPS TO
-    // ITS SPAN (deselect, a Free region at the extent — the explicit demote);
-    // else a singleton deselects + lands the playhead on
-    // the marker. All navigation-class, so this runs in read-only too (the
-    // allowlist admits Esc). Bare only — a modified Escape has no binding here or
-    // at any other Escape reader. See handle_escape_selection_region for the rungs.
-    if (!ctrl && !shift && !alt && key == GuiKeys::Escape &&
-        handle_escape_selection_region()) return;
+    // THE WHOLE ESC STORY, stated here because this is where the selection/region
+    // ESC LADDER used to be dispatched and the ladder is DELETED — rungs,
+    // down-only doctrine and all (architect 2026-07-29). BARE ESC IS BOUND IN FOUR
+    // PLACES AND NOWHERE ELSE, each of them earlier in this function than this
+    // point, so reaching here means the press has nothing left to do:
+    //   (a) THE DRAG-MODAL GATE — mid-gesture Esc is a CONSUMED NO-OP (pointer
+    //       gestures have no cancel; the rule is stated at that gate above);
+    //   (b) THE EDITORS — all four, through route_modal_editor_key: Esc closes /
+    //       cancels the edit (the editor blocks above, bit-for-bit unchanged);
+    //   (c) THE PROMPTS — Esc activates the rightmost response (the prompt gate at
+    //       the top of on_key, unchanged);
+    //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
+    // Everything else Esc used to do is gone: NO deselect, NO region collapse, NO
+    // demote of a span to Free, NO playhead land, NO drop-to-span. A 2+ selection
+    // with its extent span, a singleton, a resting Free span from a drag — Esc
+    // leaves every one of them exactly as it found them. Leaving the MARKER LANE is
+    // no longer an Esc act either: it is any DESELECTING route (Home/End, a
+    // waveform click, the trim setters, an undo restore that clears — see
+    // playhead_in_marker_lane). A resting span still clears at the next
+    // playhead-moving point command, by the two-forms model.
+    // A bare Esc that gets past here falls to the bare-key tail, whose Escape case
+    // is an explicit no-op (handle_plain_bare_keys) — the one place the press ends.
+    // Modified Escape remains unbound everywhere, at every Escape reader.
 
     // Ctrl+Q: quit (via unsaved-work dialog when dirty).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) {
@@ -729,10 +739,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // position nudges, the post-re-warp re-land in step_tempo_image), so the lane
     // model holds on every successful route. With no selection the playhead is in
     // the waveform lane and this branch does not match: the press falls through
-    // to the bare-key tail, which steps the cursor alone. Esc is the explicit
-    // collapse back to the waveform lane; there is no fallback, so an off-home or
-    // ineligible marker-lane press is a consumed no-op, never a waveform-lane
-    // step. (The AUDITION SCRUB is a different gesture entirely — the waveform
+    // to the bare-key tail, which steps the cursor alone. The lane is left by any
+    // DESELECTING route (the lane model at playhead_in_marker_lane; Esc is unbound
+    // and collapses nothing since 2026-07-29), and there is no fallback, so an
+    // off-home or ineligible marker-lane press is a consumed no-op, never a
+    // waveform-lane step. (The AUDITION SCRUB is a different gesture entirely — the waveform
     // lower-half one-shot press — and no arrow key reaches it.)
     // ROUTE BEFORE THE STOP: this branch must decide the route ahead of the
     // waveform-lane body's stop / selection-clear / region-clear, because the two
@@ -809,8 +820,9 @@ void GuiInputHandler::cycle_marker_focus(bool forward) {
 }
 
 void clear_region_highlight(AppState& app, Viewport& viewport) {
-    // The clear+damage shape the existing region-clear sites use (Esc,
-    // end_region_drag_min_size_check): reset to a blank RegionState and damage
+    // The clear+damage shape the existing region-clear sites use (the navigation
+    // jumps, end_region_drag_min_size_check): reset to a blank RegionState and
+    // damage
     // the waveform area once. The recolored ground and the split playhead repaint
     // away and
     // the cursor playhead returns under that same damage. Guarded so a call on
@@ -1470,7 +1482,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // rounding again need not return the focused marker's image: at a legal
     // 1/4 slope a marker at source 1001 paints at target 250, whose inverse is
     // source 1000, so the collapse would leave the focus at 1001 with the
-    // cursor written to 1000 and every later Space / Esc / arrow reading the
+    // cursor written to 1000 and every later Space / arrow reading the
     // stale point. THE MARKER LANE OWNS THE PLAYHEAD
     // (land_playhead_on_marker's doctrine, input_pointer.cpp): pre-switch the
     // cursor rests ON the focus by that same premise, so landing on the focus in

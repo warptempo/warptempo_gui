@@ -770,8 +770,9 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
 // Paints the strip-drag anchor stem (the Ableton pivot affordance) at the
 // drag's current anchor column, full waveform height. Live only mid-gesture:
 // gated on the drag being active AND past the moved threshold, so a bare press
-// shows nothing and it vanishes the moment the drag ends (release/Esc/button
-// loss clear strip_drag before the next paint). The anchor column is recomputed
+// shows nothing and it vanishes the moment the drag ends (release / button loss /
+// the force-end finalizer clear strip_drag before the next paint; Esc no longer
+// ends a gesture at all). The anchor column is recomputed
 // each frame from the persisted anchor_sample against the DISPLAYED viewport
 // (wf_cache.fp_*), the same basis paint_region_ground and paint_playheads use,
 // so the stem stays locked to the blitted plate while the worker rebuilds. The
@@ -876,7 +877,8 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // app.region write is paired with waveform-area damage at its site (the
     // formers, the clears, clear_region_highlight, the membership clear
     // clear_region_on_membership_replace reports through its return, the region
-    // drag's Esc clear, the tick repair, and the undo/redo restore's clear and
+    // drag's own release-time sliver dissolve, the tick repair, and the undo/redo
+    // restore's clear and
     // group-extent set), so the frame that first paints one has already erased
     // the other — no stale co-display window exists. The same pairing is what
     // makes the stem's suppression frame-exact.

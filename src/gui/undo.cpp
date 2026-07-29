@@ -542,8 +542,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // — undo/redo joins the extent-region writers, then, when any member is
     // offscreen, PREFERS a plain scroll and only ZOOMS OUT if the group cannot fit
     // at the current level (the group arm below). The extent's split half-triangles
-    // ARE the dissolved cursor playhead (its left half on the earliest member, the
-    // spot the double-Esc collapse parks at), so the readout follows the land; the
+    // ARE the dissolved cursor playhead (its left half on the earliest member), so
+    // the readout follows the land; the
     // multi-select clicks' land-then-extent order is the precedent
     // (the extent set below re-suppresses the cursor line before the frame
     // paints, so the land itself moves only the timestamp readout). Runs AFTER
@@ -649,10 +649,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             // sanitize that pruned the focus still lands somewhere live. The
             // extent's split
             // half-triangles ARE the dissolved cursor playhead — its left half sits
-            // ON the earliest member, the same spot the double-Esc collapse parks at
-            // (min(a,b)) — so the playhead is "technically" there already and the
-            // bottom-strip readout should say so; landing here makes the timestamp,
-            // the Esc-collapse park, and Space's left-bound launch agree by
+            // ON the earliest member (min(a,b)) — so the playhead is "technically"
+            // there already and the bottom-strip readout should say so; landing here
+            // makes the timestamp and Space's left-bound launch agree by
             // construction. LAND-THEN-EXTENT mirrors the multi-select clicks' order:
             // the tail's own clear above took whatever rested (any provenance),
             // and set_region_to_selection_extent then writes the fresh one — the

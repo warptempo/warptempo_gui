@@ -179,12 +179,10 @@ void Selection::focus_without_collapse(int idx) {
 void Selection::clear_selection() {
     // Membership replace (to empty) -> CLEAR a SelectionExtent region: the span's
     // owner just died, so this takes the span, pixels and all. That is the whole
-    // contract from here — no caller gets a surviving extent span out of a
-    // deselect. The Esc ladder's first rung is the ONE place the pixels come
-    // back, and it does that itself: it captures the span's bounds BEFORE calling
-    // this and RE-FORMS them afterward with Free provenance
-    // (handle_escape_selection_region), which is why an Esc on a group reads as
-    // "deselected, highlight rests" without this clear knowing anything about it.
+    // contract from here, WITH NO EXCEPTIONS AT ALL since 2026-07-29 (the Esc
+    // ladder's first rung was the one caller that patched the pixels back
+    // afterward, and the whole ladder is deleted): no caller gets a surviving
+    // extent span out of a deselect, and no route re-forms one.
     if (clear_region_on_membership_replace(app.region))
         viewport.invalidate_waveform_area();
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor

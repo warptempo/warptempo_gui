@@ -128,9 +128,10 @@ struct UndoEntry {
 // the region is set to their extent — never the other way.
 //
 // THE FORMERS — THE AUTHORITATIVE INVENTORY (re-derived 2026-07-29 by grepping
-// every writer of region.active = true; the earlier "FIVE routes" list predated
-// four of them). Other sites state only their own class and point here.
-// SEVEN CODE SITES ACTIVATE A REGION, three of them by writing the fields
+// every writer of region.active = true, and re-grepped the same day when the Esc
+// ladder's two writers were deleted). Other sites state only their own class and
+// point here.
+// FIVE CODE SITES ACTIVATE A REGION, three of them by writing the fields
 // directly for a FREE span, one for TrimWindow, and one — the extent owner —
 // serving many gestures:
 //   * the plain waveform DRAG (paints it live, leaving the selection EMPTY
@@ -140,17 +141,13 @@ struct UndoEntry {
 //     the selection) — Free;
 //   * a multi-marker DELETE, either column (demotes to the span of the deleted
 //     positions, also a DROP) — Free;
-//   * the ESC ladder's first rung over a 2+ selection with a live
-//     SelectionExtent span: it re-forms the same bounds as Free after the
-//     deselect (handle_escape_selection_region) — the one sanctioned demotion
-//     route;
 //   * the TRIM SYNC's set arm (sync_region_to_trim_window) — TrimWindow, the
 //     trim's own highlight, and since 2026-07-29 always published beside an EMPTY
 //     selection (its SETTER callers deselect first);
 //   * set_region_to_selection_extent — SelectionExtent, the ONE owner of that
 //     provenance. Its callers split into CREATORS (which may activate from
 //     nothing: the shift-range and ctrl-toggle multi-select clicks, the `m` bpm
-//     open's re-extent, the Esc ladder's no-region drop-to-span rung, the GROUP
+//     open's re-extent, the GROUP
 //     undo/redo restore, and the propagate paste's created-set arm) and
 //     MAINTAINERS (which gate on an ALREADY-ACTIVE SelectionExtent region and
 //     only re-derive it: the group marker drag's commit, both group position
@@ -199,8 +196,8 @@ struct UndoEntry {
 // view, target frames in target view), stored in drag order and normalized
 // lo/hi at READ time, so the span survives pan/zoom mid-drag and at rest.
 // Cleared on file load, the A/B tab switch, the S/T audio-view switch (the
-// domain changes under it), Esc (only when nothing higher-priority consumes the
-// Esc), and a plain UPPER-HALF waveform PRESS (the placement press dissolves any
+// domain changes under it), and a plain UPPER-HALF waveform PRESS (the placement
+// press dissolves any
 // resting highlight at mouse-down, before it knows whether the gesture is a
 // click or a fresh region drag; at on_button_press via arm_region_drag_at — a
 // lower-half scrub press leaves the region alone). The W/P marker-column switch
@@ -223,14 +220,16 @@ struct UndoEntry {
 // atomic step) — so an active SelectionExtent region follows the nudged group.
 // Region PROVENANCE (architect 2026-07-23, three-state ownership): tracks WHO the
 // region is derived from, which decides how the image-follow tempo gestures treat
-// it across a map change. Free — a drag-formed / demoted region, display scratch
-// that no gesture re-derives (the shift-click former, the plain drag, both
-// DELETE demotions, and the ESC DEMOTE — each leaving the selection EMPTY, and
-// every gesture that then selects a marker collapses the span, the drops
-// included). A Free region
-// can therefore rest ONLY beside an EMPTY selection (architect 2026-07-29, the
-// maximally greedy collapse): all five Free formers leave the selection empty —
-// the Esc demote by construction, it being a DESELECT that keeps the pixels —
+// it across a map change. Free — a drag-formed region, display scratch
+// that no gesture re-derives. FOUR PRODUCERS, re-grepped 2026-07-29 when the Esc
+// ladder's two were deleted: the plain drag, the shift-click former, and both
+// DELETE demotions — each leaving the selection EMPTY. THE DEMOTE-OF-AN-EXTENT IS
+// GONE AS A CONCEPT with that ladder: no route captures an extent span's pixels
+// and re-forms them as Free after a deselect, so a Free span is always FORMED
+// fresh by the gesture that draws it (the two DELETE demotions are formers too —
+// they span the DELETED positions, not a surviving extent). A Free region
+// rests ONLY beside an EMPTY selection (architect 2026-07-29, the
+// maximally greedy collapse): all four producers leave the selection empty,
 // and EVERY route that then puts a selection in place clears the span — the
 // marker clicks and their deferred completions, Tab/`c`, the editor opens, the
 // drops, and the three that used to carry a selection in wholesale while
@@ -290,15 +289,13 @@ struct RegionState {
     // untouched scratch. SET in three places — set_region_to_selection_extent ->
     // SelectionExtent, sync_region_to_trim_window's set arm -> TrimWindow, and
     // every OTHER former (region drag, shift-click former/demote, delete
-    // demotions) -> Free. ONE ROUTE CONVERTS, and it is the Esc DEMOTE alone
-    // (architect 2026-07-29, both its rungs in handle_escape_selection_region):
-    // it writes Free over a span whose selection it is dropping in the same
-    // breath, which is why the result is a former's resting state and not a
-    // downgrade-in-place. Nothing else converts — in particular
-    // clear_region_on_membership_replace clears a SelectionExtent region whole
-    // rather than downgrading it, and no demotion route re-enters it. Every wholesale
-    // RegionState{} reset (load, navigation clears, the Esc collapse) defaults
-    // Free. The Esc ladder, Space launch, x, and navigation clears are
+    // demotions) -> Free. NOTHING CONVERTS: provenance is written once, by the
+    // route that forms the span, and never downgraded in place (architect
+    // 2026-07-29 — the Esc demote was the one converting route and it died with the
+    // Esc ladder). clear_region_on_membership_replace clears a SelectionExtent
+    // region whole rather than downgrading it, and no route re-forms one either.
+    // Every wholesale RegionState{} reset (load, navigation clears) defaults
+    // Free. The Space launch, x, and the navigation clears are
     // provenance-BLIND — they act on any active region.
     RegionProvenance provenance = RegionProvenance::Free;
 };
@@ -572,7 +569,7 @@ struct UndoHistory {
 // region at mouse-down, anchors at the CLICK column) and the SHIFT-exact former
 // (labwc 2026-07-24, arm_region_drag_preserving — PRESERVES the just-formed
 // region, anchors at the FAR endpoint = playhead / demote's furthest marker),
-// which share every motion/release/Esc path unchanged (the anchor semantic is
+// which share every motion and release path unchanged (the anchor semantic is
 // identical: a_frame = anchor_frame fixed, b_frame tracks the pointer). Alt/Ctrl
 // no-op earlier. A completed drag rests the
 // region on release UNLESS its final on-screen span is
@@ -1593,7 +1590,8 @@ struct AppState {
     PendingTrimDrag pending_trim_drag;
 
     // The resting region-select span (session-only). Cleared on file load, the
-    // A/B tab switch, the S/T audio-view switch, and Esc.
+    // A/B tab switch, and the S/T audio-view switch (Esc no longer clears it —
+    // the ladder is deleted).
     RegionState region;
 
     // Live trim boundary drag (chip / inter-chip bridge). Cleared on button
