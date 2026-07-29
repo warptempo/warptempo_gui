@@ -416,6 +416,15 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
 
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phaseresetmarkers.markers_mut() = std::move(entry.phase_reset_snapshot);
+    // WHOLESALE REPLACE -> bump both columns' STRUCTURAL generation. The store
+    // cannot see this from inside markers_mut (which the ordinary same-size
+    // field edits use too), so the three wholesale sites bump at their own
+    // sites — the inventory is at the counter's declaration in marker_store.h.
+    // A restored snapshot can hold any number of rows in any arrangement, so
+    // every parked index in either tab is now unverifiable and the next restore
+    // path drops it (drop_parked_selection_if_stale).
+    app.warpmarkers.bump_structural_generation();
+    app.phaseresetmarkers.bump_structural_generation();
 
     // Switch active mode to match the op being restored before applying
     // post-restore rules — selection state is mode-bound, so the rules
@@ -445,11 +454,15 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
         if (app.active_markers_view == 'P') {
             curtab.phase_reset_selected      = app.selected_markers;
             curtab.phase_reset_last_selected = app.last_selected_marker;
+            park_selection_stamp(app, curtab, 'P');
+            drop_parked_selection_if_stale(app, curtab, 'W');
             app.selected_markers           = curtab.warp_selected;
             app.last_selected_marker       = curtab.warp_last_selected;
         } else {
             curtab.warp_selected           = app.selected_markers;
             curtab.warp_last_selected      = app.last_selected_marker;
+            park_selection_stamp(app, curtab, 'W');
+            drop_parked_selection_if_stale(app, curtab, 'P');
             app.selected_markers           = curtab.phase_reset_selected;
             app.last_selected_marker       = curtab.phase_reset_last_selected;
         }
@@ -488,10 +501,12 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // membership clear (the clear-then-derive order the multi-select clicks use),
     // and BEFORE the recompute/invalidate/kick block below so restore's one sync
     // render covers the final geometry. The LAND/EXTENT block is gated off 'S' (a
-    // settings-only restore never LANDS, never EXPANDS a selection, and never
-    // WRITES a region; what it does do for every entry is CLEAR the region, and
-    // it MAY collapse a 2+ selection to its focus as that clear's consequence —
-    // see below), and
+    // settings-only restore never EXPANDS a selection and never WRITES a region;
+    // what it does do for every entry is CLEAR the region, it MAY collapse a 2+
+    // selection to its focus as that clear's consequence, and — the one
+    // narrowing, 2026-07-29 — it DOES land in target view when a selection
+    // survives, because the restored map moved that focus's image; that land
+    // lives at the tail's kick, not in this block), and
     // branches on the POST-sanitize live size, so a defensive edge takes the
     // matching arm (a group entry sanitized down to one member lands as a
     // singleton; a removal cleared to empty is the size == 0 no-op).

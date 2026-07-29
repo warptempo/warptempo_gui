@@ -174,8 +174,10 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     target-view tail. None of them builds the span it would be resting beside,
 //     so all three collapse it, any provenance. The undo tail's clear runs for
 //     EVERY entry, settings-only ones included — it is the ONE part of the tail
-//     that sits above the 'S' gate (which still forbids landing, selecting, and
-//     writing a region), because a settings restore rebuilds the map under the
+//     that sits above the 'S' gate (which still forbids SELECTING and WRITING a
+//     region; its no-LAND half was narrowed 2026-07-29 to one target-view
+//     exception, a map-change re-land onto a SURVIVING selection's focus),
+//     because a settings restore rebuilds the map under the
 //     span exactly as a marker restore does; for a group entry the extent derive
 //     then runs AFTER this clear;
 //   * the SETTINGS ENGINE-COMMIT chokepoint (same ruling): the one committed

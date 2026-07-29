@@ -1094,15 +1094,27 @@ bool GuiInputHandler::adopt_render_entry(
 
     app.warpmarkers.markers_mut()       = std::move(src_warp);
     app.phaseresetmarkers.markers_mut() = std::move(src_phase_resets);
+    // WHOLESALE REPLACE -> bump both columns' STRUCTURAL generation (one of the
+    // three sites the store cannot detect for itself; inventory at the counter
+    // in marker_store.h). Belt here, since the block just below clears every
+    // parked slot outright — but the bump is what keeps the rule uniform, and a
+    // future edit that drops the wholesale clear would still be covered.
+    app.warpmarkers.bump_structural_generation();
+    app.phaseresetmarkers.bump_structural_generation();
     selection.clear_selection();
     // Wholesale authoring reset: every per-tab per-mode selection slot
     // referencing the replaced marker stores is stale.
     {
-        auto clear_marker_slots = [](ViewState& t) {
+        auto clear_marker_slots = [&](ViewState& t) {
             t.warp_selected.clear();
             t.warp_last_selected        = -1;
             t.phase_reset_selected.clear();
             t.phase_reset_last_selected = -1;
+            // Re-stamp the emptied slots to the post-replace generations so
+            // they rest agreeing rather than permanently "stale" — the drop is
+            // already done, by hand, here.
+            park_selection_stamp(app, t, 'W');
+            park_selection_stamp(app, t, 'P');
         };
         clear_marker_slots(app.tab_a);
         clear_marker_slots(app.tab_b);

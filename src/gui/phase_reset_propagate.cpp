@@ -289,6 +289,14 @@ void PhaseResetPropagate::paste_apply() {
         app.phaseresetmarkers.markers();
 
     auto& out = app.phaseresetmarkers.markers_mut();
+    // The erase below removes rows, shifting every later index — one of the
+    // three wholesale routes the store cannot detect from inside markers_mut
+    // (inventory at the structural counter in marker_store.h). The INSERTS
+    // further down go through insert_marker and bump on their own; this covers
+    // the erase, and it is unconditional because the block loop's own guards
+    // decide whether anything is actually removed — a spurious bump costs one
+    // parked selection, which is the cheap side by ruling.
+    app.phaseresetmarkers.bump_structural_generation();
 
     // Per-block clear of destination phase resets inside the shifted
     // membership window [start - guard, end - guard). Adjacent matched

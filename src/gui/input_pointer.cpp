@@ -223,20 +223,37 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // LANDS the playhead exactly onto marker `hit` (active column's store), with
 // NO viewport move — the sole difference from Tab (which recenters) and `c`
 // (which re-zooms and recenters), so the view holds perfectly still while the
-// playhead seats. Shared by the plain marker click (lands on ITS marker, incl.
-// its deferred-click completions), the shift range click, and the ctrl toggle
-// click (each landing on the FOCUS its own path just set — the clicked range
-// end, the toggled-in marker, or the focus repaired after a toggle-out; an empty
-// post-toggle selection lands nothing), the
-// no-region + singleton Esc rung of handle_escape_selection_region (deselect +
-// land on the marker), BOTH undo/redo restore arms (undo.cpp's visual tail:
-// the singleton lands on its touched marker, the group on its focus, which IS
-// the earliest touched member), every text-editor open (flag_editor.cpp's
-// enter_text_edit, the one
-// chokepoint of the three open routes), the propagate paste's target-view tail
-// (phase_reset_propagate.cpp, landing on the FIRST created reset), the `p` W/P
-// swap (active_views.cpp's toggle_active_markers_view, landing on the restored
-// focus), and the Ctrl+N inherit toggle's collapse (warpmarkers_ops.cpp).
+// playhead seats. THE CALLER INVENTORY, THE ONE AUTHORITATIVE ENUMERATION,
+// re-derived by grep 2026-07-29 (other sites state their own class and point
+// here; do not copy this list, re-derive it):
+//   * THE POINTER CLICKS — the plain marker click (input_pointer.cpp) and its
+//     FOUR deferred-click completions on the release / lost-button paths, the
+//     shift RANGE click, and the ctrl TOGGLE click. Each lands on the FOCUS its
+//     own path just set: the clicked marker, the clicked range end, the
+//     toggled-in marker, or the focus repaired after a toggle-out (an empty
+//     post-toggle selection lands nothing);
+//   * THE KEYBOARD POINT COMMANDS — the no-region + singleton Esc rung of
+//     handle_escape_selection_region (deselect + land on the marker) and the
+//     Ctrl+N inherit toggle's collapse (warpmarkers_ops.cpp);
+//   * EVERY TEXT-EDITOR OPEN — flag_editor.cpp's enter_text_edit, the one
+//     chokepoint of the three open routes;
+//   * THE RESTORES, which hand the lane a focus it did not have: BOTH undo/redo
+//     marker arms (undo.cpp's visual tail — the singleton lands on its touched
+//     marker, the group on its focus, which IS the earliest touched member),
+//     BOTH propagate-paste arms (phase_reset_propagate.cpp — the created arm on
+//     the FIRST created reset, the no-created arm on whatever focus the restored
+//     P slot leaves), and the `p` W/P swap (active_views.cpp);
+//   * THE VIEW / TAB SWITCHES, which re-express a focus into a new domain: the
+//     `t` S<->T flip (input_handler.cpp) and Ctrl+Tab's tab restore
+//     (active_views.cpp). Both land only on a NON-EMPTY selection — with no lane
+//     the cursor is the playhead in its own right and keeps its own value;
+//   * THE MAP CHANGERS, target view only, which move the focused marker's image
+//     out from under a resting cursor: the settings engine-commit
+//     (settings_editor.cpp) and the settings-only 'S' undo/redo arm (undo.cpp),
+//     each landing AFTER its kick_waveform_sync so the conversion reads the new
+//     map — the ordering the singleton tempo step's label-coupling re-land
+//     established (that step re-lands through move_playhead_to rather than here,
+//     the one map-change re-land that wants the keep-visible scroll).
 // The two-step placement
 // basis the Tab family lands with (source_frame_to_active_domain then
 // clamp_playhead_to_live_domain), against the active column's store, so the

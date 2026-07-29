@@ -1487,8 +1487,14 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // collapse has run, so source_frame_to_active_domain reads the NEW view's map
     // (the live target-view map cache, which rebuilds on demand and does not wait
     // for the kick below). A pure cursor write with no viewport move, so the
-    // viewport anchoring computed just above stands — the two values differ by at
-    // most a frame, far inside one column.
+    // viewport anchoring computed just above stands: the landed frame and the
+    // generic translation can differ by SEVERAL frames — the double round trip
+    // has no one-frame bound, and a more compressed legal product widens it (at
+    // the 1/4 slope, source 1002 maps to target 250.5, rounds to 250, and
+    // inverses to source 1000) — but the gap stays well under one PAINTED COLUMN,
+    // which is what the anchoring cares about: a column is at least ~27 frames at
+    // the deepest zoom the product allows. The frame count is not the premise;
+    // the column is.
     if (!app.selected_markers.empty() && app.last_selected_marker >= 0)
         land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
     viewport.clear_hover_popup();

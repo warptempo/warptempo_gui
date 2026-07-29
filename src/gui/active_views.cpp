@@ -31,12 +31,19 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
     t.viewport_start_sample = app.viewport_start_sample;
     t.zoom_level            = app.zoom_level;
     t.playhead_cursor_sample       = app.playhead_cursor_sample;
+    // Stash the live selection into the ACTIVE column's slot, stamped with that
+    // column's structural generation: from here on these are raw indices held
+    // across commands, and the stamp is what lets the restore tell a still-valid
+    // parked selection from one the other tab has shifted out from under (the
+    // liveness rule at drop_parked_selection_if_stale, app_state.h).
     if (app.active_markers_view == 'P') {
         t.phase_reset_selected      = app.selected_markers;
         t.phase_reset_last_selected = app.last_selected_marker;
+        park_selection_stamp(app, t, 'P');
     } else {
         t.warp_selected           = app.selected_markers;
         t.warp_last_selected      = app.last_selected_marker;
+        park_selection_stamp(app, t, 'W');
     }
     // Lockstep with switch_active_tab_view_to's pull block: adding a per-tab
     // live-mirror field means updating this push, that pull, and ViewState.
@@ -66,14 +73,24 @@ void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     if (target_mode == app.active_markers_view) return;
     ViewState* vs = this->active_view_state();
     if (!vs) return;
+    // Each arm STASHES the leaving column (stamped) and RESTORES the entering
+    // one (stale-checked first): the entering slot has sat parked across
+    // arbitrary commands, so a marker inserted or deleted in that column since
+    // the stash makes its indices meaningless and the check empties it — this
+    // swap then hands the lane nothing and the cursor stays the playhead. The
+    // rule lives at drop_parked_selection_if_stale (app_state.h).
     if (app.active_markers_view == 'P') {
         vs->phase_reset_selected      = app.selected_markers;
         vs->phase_reset_last_selected = app.last_selected_marker;
+        park_selection_stamp(app, *vs, 'P');
+        drop_parked_selection_if_stale(app, *vs, 'W');
         app.selected_markers        = vs->warp_selected;
         app.last_selected_marker    = vs->warp_last_selected;
     } else {
         vs->warp_selected           = app.selected_markers;
         vs->warp_last_selected      = app.last_selected_marker;
+        park_selection_stamp(app, *vs, 'W');
+        drop_parked_selection_if_stale(app, *vs, 'P');
         app.selected_markers        = vs->phase_reset_selected;
         app.last_selected_marker    = vs->phase_reset_last_selected;
     }
@@ -124,6 +141,17 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // current-mode slot. Mode itself is per-AppState (not per-tab),
     // so the destination tab's other-mode slot stays warm for any
     // future `p` flip back inside that tab.
+    // STALE-CHECK BEFORE READING: this slot was stashed when the tab was last
+    // left, and the marker stores are GLOBAL — an insert, a delete, or a
+    // wholesale replace performed in the tab we are leaving has shifted or
+    // destroyed the rows these indices name. On a mismatch the slot is emptied
+    // and this restores nothing, which is exactly what the stored-cursor restore
+    // above wants: no lane, so the cursor is the playhead. On a match this is
+    // byte-identical to before. The rule and the why-drop-rather-than-repair
+    // argument live at drop_parked_selection_if_stale (app_state.h).
+    ViewState& target_mut = (app.active_tab_view == 'A') ? app.tab_a : app.tab_b;
+    drop_parked_selection_if_stale(app, target_mut,
+                                   app.active_markers_view == 'P' ? 'P' : 'W');
     if (app.active_markers_view == 'P') {
         app.selected_markers     = target.phase_reset_selected;
         app.last_selected_marker = target.phase_reset_last_selected;

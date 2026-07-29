@@ -262,8 +262,10 @@ struct SelectionSnapshot {
 // the maximally greedy collapse): every OTHER target-map changer CLEARS the
 // region outright instead of leaving it as scratch — undo/redo at its visual
 // tail for EVERY entry, settings-only ones included (that clear alone sits above
-// the tail's 'S' gate, which still forbids landing, selecting, and writing a
-// region), the settings ENGINE-SCALE commit at its own chokepoint, and adopt
+// the tail's 'S' gate, which still forbids selecting and writing a region — and
+// forbids landing except for the one target-view map-change re-land added
+// 2026-07-29, onto a surviving selection's focus), the settings ENGINE-SCALE
+// commit at its own chokepoint, and adopt
 // through apply_settings_engine_and_prefs's unconditional reset. So NO route
 // rebuilds the map under a resting highlight any more, and NO producer of a
 // numerically stale TrimWindow span survives. A group restore still DEFINES its
@@ -1200,10 +1202,24 @@ struct ViewState {
     double  zoom_level                 = kWorkingZoomLevel;
     int64_t playhead_cursor_sample     = 0;
 
+    // PARKED SELECTIONS, each with the STRUCTURAL GENERATION of its column's
+    // store at stash time. These are raw store indices held across arbitrary
+    // commands — the one place in the product that happens — and the marker
+    // stores are GLOBAL while these are per-tab, so an insert, a delete, or a
+    // wholesale replace performed in the OTHER tab silently re-points them at
+    // different rows. The stamp makes that DETECTED instead of silently wrong:
+    // every restore path compares it and drops the selection on a mismatch
+    // (drop_parked_selection_if_stale below; the stamping is
+    // park_selection_stamp, called at the stash chokepoints). A same-size
+    // REORDER is not staleness — remap_marker_indices_after_reorder follows the
+    // permutation into these slots and the structural generation deliberately
+    // does not move, so a nudge across a neighbour keeps the parked group.
     std::set<int> warp_selected;
     int           warp_last_selected      = -1;
+    unsigned long long warp_selection_generation = 0;
     std::set<int> phase_reset_selected;
     int           phase_reset_last_selected = -1;
+    unsigned long long phase_reset_selection_generation = 0;
 
     // Per-tab read-only lock. Toggled by bare `o`. While true, the active
     // tab admits a subset of keys (navigation, playback, view-switch) and
@@ -2028,6 +2044,64 @@ std::vector<int> reorder_markers_by_time(std::vector<Marker>& markers) {
         old_to_new[order[new_idx]] = new_idx;
     }
     return old_to_new;
+}
+
+// THE PARKED-SELECTION LIVENESS RULE (planner-designed 2026-07-29 under the
+// held-index lesson and the architect's standing squash preference — "collapse
+// is cheap and retaining is expensive relative to worth" — pending architect
+// review). A raw store index held across commands needs a liveness rule; the
+// per-tab parked selections are the only such indices, and this is the rule:
+// GENERATION-STAMP AT STASH, DIE ON MISMATCH AT RESTORE.
+//
+// park_selection_stamp records the column's structural generation into the slot
+// being stashed. drop_parked_selection_if_stale is called by EVERY restore path
+// before it reads a parked slot: on a match it does nothing and the restore
+// proceeds exactly as before; on a mismatch it empties the selection and sets
+// the focus to -1, so the restore hands the lane nothing and the tab comes back
+// with no selection and its stored cursor — which composes correctly, since with
+// no lane the cursor IS the playhead in its own right.
+//
+// WHY DROP RATHER THAN REPAIR: an insert or a delete could in principle be
+// index-shifted precisely (the shift is derivable from the insertion point), but
+// a WHOLESALE REPLACE — undo/redo's store restore, the adopt, the propagate
+// placement paste's erase window — cannot be resolved at all, and building
+// shift machinery for half the cases while the other half still needs the drop
+// buys nothing. The failure this replaces was silent and destructive: park a
+// selection on marker C in tab B, insert or delete a marker before C in tab A,
+// Ctrl+Tab back, and B restored C's old index — now a DIFFERENT row — with the
+// tab-switch land jumping to it and the next nudge or Delete authoring the wrong
+// marker. Dropping makes it honest.
+// `column` is 'P' for phase resets, anything else ('W' at the callers) for warp.
+inline void park_selection_stamp(AppState& app, ViewState& vs, char column) {
+    if (column == 'P') {
+        vs.phase_reset_selection_generation =
+            app.phaseresetmarkers.structural_generation();
+    } else {
+        vs.warp_selection_generation =
+            app.warpmarkers.structural_generation();
+    }
+}
+
+inline void drop_parked_selection_if_stale(AppState& app, ViewState& vs,
+                                           char column) {
+    if (column == 'P') {
+        if (vs.phase_reset_selection_generation ==
+            app.phaseresetmarkers.structural_generation()) return;
+        vs.phase_reset_selected.clear();
+        vs.phase_reset_last_selected = -1;
+        // Re-stamp so a slot that has already been judged stale once is not
+        // re-judged on every later restore (it is empty now; the stamp simply
+        // keeps the two in step).
+        vs.phase_reset_selection_generation =
+            app.phaseresetmarkers.structural_generation();
+    } else {
+        if (vs.warp_selection_generation ==
+            app.warpmarkers.structural_generation()) return;
+        vs.warp_selected.clear();
+        vs.warp_last_selected = -1;
+        vs.warp_selection_generation =
+            app.warpmarkers.structural_generation();
+    }
 }
 
 // Apply a reorder_markers_by_time permutation to the index-shaped state that
