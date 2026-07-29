@@ -1364,8 +1364,13 @@ struct AppState {
     // paste, save, undo/redo, tab/column switch, or an
     // unhandled key) advances the counter an extra step and breaks the burst.
     // A rapid same-gesture burst is, by definition, consecutive presses with no
-    // other command between them, so adjacency alone captures it. Session-only,
-    // never serialized.
+    // other command between them, so adjacency is what SUBSUMES "same target /
+    // same tab / same history" — none of those can change without an intervening
+    // command. It is NOT the whole gate: the coalescer also requires the presses
+    // to fall inside kGestureCoalesceMs, a co-equal condition (a held key's first
+    // repeat is command-adjacent yet arrives a compositor repeat-delay later —
+    // which is why that window's length is derived from the delay, see undo.h).
+    // Session-only, never serialized.
     uint64_t      command_seq = 0;
 
     // Selected-marker stem visibility model (architect 2026-07-25, superseding

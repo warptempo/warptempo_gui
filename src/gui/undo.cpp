@@ -138,7 +138,11 @@ bool Undo::coalesce_gesture(GestureKind kind) const {
     // between. `kind` still separates nudge from tempo-step even when adjacent;
     // the window still splits a rapid burst from two adjacent-but-slow commands;
     // the non-empty-stack guard covers a stack cleared by a load/reset (which
-    // does not advance command_seq).
+    // does not advance command_seq). Adjacency being the CORRECTNESS story does
+    // not make the window a free parameter: a HELD key is command-adjacent
+    // throughout, so the window's length alone decides whether its first repeat
+    // joins the burst or splits an entry off it — which is why kGestureCoalesceMs
+    // is pinned to the compositor's key-repeat delay at its declaration.
     return c.kind == kind
         && (gesture_steady_ms() - c.last_ms) <= kGestureCoalesceMs
         && app.command_seq == c.command_seq + 1

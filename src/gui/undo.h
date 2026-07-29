@@ -34,8 +34,23 @@ enum class GestureKind {
 };
 
 // Coalesce window. Presses farther apart than this start a fresh undo entry.
-// Named so it is easy to tune.
-inline constexpr uint64_t kGestureCoalesceMs = 500;
+// THE VALUE IS DERIVED, NOT PICKED (architect-confirmed 2026-07-29 — read this
+// before tuning it): the window MUST EXCEED THE COMPOSITOR'S KEY-REPEAT DELAY,
+// or a HELD key's FIRST synthesized repeat falls outside it and splits a
+// one-step entry off the front of the burst. That was the observed bug at 500:
+// the physical press pushed E1, the 600ms-delayed first repeat missed the window
+// and pushed E2, and the 40ms-spaced repeats after it all coalesced into E2 — so
+// one held arrow took TWO Ctrl+Z presses to undo, the first reverting a single
+// step. The Wayland desktops this product targets sit at a 500-600ms delay
+// (labwc/wlroots default 600 at 25 repeats/s; GNOME 500). X11's 660 is out of
+// scope — there is no X11 support. The gap this gate measures is that delay PLUS
+// the event loop's lateness at the deadline (poll wakeup jitter, up to a frame
+// when it lands mid-repaint, rare tens of ms under a worker publish), so the
+// value is 600 + 50ms of headroom. 650 is humanly indistinguishable from 600 as
+// a "these were one gesture" threshold, so the headroom costs nothing: the
+// window still splits two adjacent-but-slow deliberate presses, which is its
+// other job.
+inline constexpr uint64_t kGestureCoalesceMs = 650;
 
 // The previous eligible commit's coalesce key: its gesture-kind, its steady
 // timestamp, and the command_seq it committed at. A later press merges only

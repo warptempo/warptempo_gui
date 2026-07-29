@@ -176,14 +176,18 @@ int64_t stepped_anchor_frame(
 // offscreen-focused case). The phase pre-image moved the playhead THEN recorded
 // (clock stamped AFTER that rebuild); the unified tail records THEN moves the
 // playhead (clock stamped BEFORE it). So when the focused reset is offscreen the
-// rebuild no longer sits inside the measured 500 ms coalesce window, and a next
+// rebuild no longer sits inside the measured coalesce window (kGestureCoalesceMs,
+// whose value is derived at its declaration in undo.h — do not restate it here),
+// and a next
 // burst press landing near that boundary can open a fresh undo entry where the
 // pre-image would have merged. Worst case: one extra undo entry — a second Ctrl+Z.
 // Accepted and architect-ratified (2026-07-24): the unified tail adopts the warp
 // shape verbatim to minimize warp/phase divergence — the twins now behave MORE
-// alike than before — and the coalesce window's anchor point is a heuristic, not a
-// recorded contract (deliberate sub-500 ms presses are how bursts are actually
-// played).
+// alike than before — and the coalesce window's ANCHOR POINT is a heuristic, not a
+// recorded contract (its LENGTH is not a heuristic — it is pinned to the
+// compositor's key-repeat delay, see undo.h; what is loose is only which end of
+// this tail the clock is stamped at, and the presses that actually make up a
+// burst sit far inside the window either way).
 void finish_group_position_nudge(
     AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
     GestureKind kind, int64_t committed_focused_frame,
