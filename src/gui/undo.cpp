@@ -174,6 +174,29 @@ void Undo::refresh_coalesced_touched_live(std::vector<int> touched_live) {
 
 namespace {
 
+// ROW IDENTITY between a live store and the snapshot about to replace it — the
+// structural-generation decision at the restore. IDENTITY IS THE
+// POSITION-TO-MARKER MAPPING ("does index k still name the same marker"), and
+// the stores are TIME-ORDERED at rest, so an identical length plus an identical
+// positional time_frame sequence pins every row to the same marker: nothing was
+// inserted, removed, or moved past a neighbour. Nothing else is compared ON
+// PURPOSE — two rows may differ in tempo, label, disabled or any other field at
+// the same position and still be the SAME ROW, and a field-only restore is
+// exactly the case a parked selection must survive (the CONTENT generation is
+// what reports that). Equal times are legal and change nothing: a tie's members
+// keep their slots under the stable ordering, so an identical time sequence
+// still pins each one. One template serves both columns — the marker type is
+// read only through time_frame.
+template <typename M>
+bool marker_rows_identical(const std::vector<M>& live,
+                           const std::vector<M>& snapshot) {
+    if (live.size() != snapshot.size()) return false;
+    for (size_t i = 0; i < live.size(); ++i) {
+        if (live[i].time_frame != snapshot[i].time_frame) return false;
+    }
+    return true;
+}
+
 // Shared post-restore SELECTION rule for both marker lists. After a marker
 // swap, classify before -> after as add / remove / same-count and set the
 // selection to the touched markers. `fields_differ` is the ROW EQUALITY basis:
@@ -414,17 +437,28 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // actual pre-edit settings restored here.
     app.engine_settings    = std::move(entry.settings.engine_settings);
 
+    // WHOLESALE REPLACE -> bump the STRUCTURAL generation of each column whose
+    // ROW IDENTITY actually moved. The store cannot see this from inside
+    // markers_mut (the ordinary same-size field edits use it too), so the three
+    // wholesale sites bump at their own sites — inventory at the counter's
+    // declaration in marker_store.h. But BOTH columns are assigned on EVERY
+    // entry (an undo entry carries a full pair, so a 'W' entry restores a
+    // byte-identical phase-reset vector and an 'S' entry restores both
+    // unchanged), and bumping unconditionally declared a staleness that provably
+    // had not happened — a warp undo in one tab dropped the other tab's parked
+    // PHASE-RESET selection. The comparison runs BEFORE the moves, against the
+    // live stores.
+    const bool warp_rows_moved = !marker_rows_identical(
+        app.warpmarkers.markers(), entry.snapshot);
+    const bool phase_reset_rows_moved = !marker_rows_identical(
+        app.phaseresetmarkers.markers(), entry.phase_reset_snapshot);
+    // The ASSIGNS stay unconditional: a field-only restore (a disabled toggle, a
+    // tempo, a label) moves no row but must still land its values, and that is
+    // the CONTENT generation's business — markers_mut bumps it either way.
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phaseresetmarkers.markers_mut() = std::move(entry.phase_reset_snapshot);
-    // WHOLESALE REPLACE -> bump both columns' STRUCTURAL generation. The store
-    // cannot see this from inside markers_mut (which the ordinary same-size
-    // field edits use too), so the three wholesale sites bump at their own
-    // sites — the inventory is at the counter's declaration in marker_store.h.
-    // A restored snapshot can hold any number of rows in any arrangement, so
-    // every parked index in either tab is now unverifiable and the next restore
-    // path drops it (drop_parked_selection_if_stale).
-    app.warpmarkers.bump_structural_generation();
-    app.phaseresetmarkers.bump_structural_generation();
+    if (warp_rows_moved)        app.warpmarkers.bump_structural_generation();
+    if (phase_reset_rows_moved) app.phaseresetmarkers.bump_structural_generation();
 
     // Switch active mode to match the op being restored before applying
     // post-restore rules — selection state is mode-bound, so the rules

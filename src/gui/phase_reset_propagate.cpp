@@ -289,14 +289,15 @@ void PhaseResetPropagate::paste_apply() {
         app.phaseresetmarkers.markers();
 
     auto& out = app.phaseresetmarkers.markers_mut();
-    // The erase below removes rows, shifting every later index — one of the
-    // three wholesale routes the store cannot detect from inside markers_mut
-    // (inventory at the structural counter in marker_store.h). The INSERTS
-    // further down go through insert_marker and bump on their own; this covers
-    // the erase, and it is unconditional because the block loop's own guards
-    // decide whether anything is actually removed — a spurious bump costs one
-    // parked selection, which is the cheap side by ruling.
-    app.phaseresetmarkers.bump_structural_generation();
+    // Row count before the erase loop: the erase is one of the three wholesale
+    // routes the store cannot detect from inside markers_mut (inventory at the
+    // structural counter in marker_store.h), and it bumps AFTER the loop, only
+    // if it actually removed something. A block-bearing clipboard whose ranges
+    // contain no resets at all erases nothing and inserts nothing, and bumping
+    // there dropped a valid parked selection for a paste that left the store
+    // byte-identical. The INSERTS further down go through insert_marker and bump
+    // on their own, so this count covers the erase alone.
+    const size_t rows_before_erase = out.size();
 
     // Per-block clear of destination phase resets inside the shifted
     // membership window [start - guard, end - guard). Adjacent matched
@@ -321,6 +322,10 @@ void PhaseResetPropagate::paste_apply() {
                 return m.time_frame >= lo && m.time_frame < hi;
             }), out.end());
     }
+    // One bump for any nonzero total erased — the generation is a change TOKEN,
+    // not a count of changes.
+    if (out.size() != rows_before_erase)
+        app.phaseresetmarkers.bump_structural_generation();
 
     // Per-block materialization. The fractional anchor and duration stay
     // at the true dst_start / dst_end, so a negative fractional_position

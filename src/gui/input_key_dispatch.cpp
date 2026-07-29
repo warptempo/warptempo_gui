@@ -1105,17 +1105,16 @@ bool GuiInputHandler::adopt_render_entry(
     // Wholesale authoring reset: every per-tab per-mode selection slot
     // referencing the replaced marker stores is stale.
     {
-        auto clear_marker_slots = [&](ViewState& t) {
+        auto clear_marker_slots = [](ViewState& t) {
             t.warp_selected.clear();
             t.warp_last_selected        = -1;
             t.phase_reset_selected.clear();
             t.phase_reset_last_selected = -1;
-            // Re-stamp the emptied slots to the post-replace generations so
-            // they rest agreeing rather than permanently "stale" — the drop is
-            // already done, by hand, here.
-            park_selection_stamp(app, t, 'W');
-            park_selection_stamp(app, t, 'P');
         };
+        // No generation stamping here on purpose: both ViewStates are REPLACED
+        // WHOLESALE further down (view_state_from_settings_tab), which would
+        // throw any stamp away. The stamping that makes these emptied slots rest
+        // AGREEING with the new stores happens after that replace.
         clear_marker_slots(app.tab_a);
         clear_marker_slots(app.tab_b);
     }
@@ -1154,6 +1153,16 @@ bool GuiInputHandler::adopt_render_entry(
     // trim plus read_only for an all-keys render-entry sidecar.
     app.tab_a = view_state_from_settings_tab(settings->tab_a);
     app.tab_b = view_state_from_settings_tab(settings->tab_b);
+    // A parsed band carries no selection AND no generation stamps (zero
+    // defaults), so stamp both tabs to the post-replace stores now. The slots
+    // are empty either way — nothing can be revived — but without this the very
+    // next parked read reports a mismatch and "clears" an already-empty slot,
+    // making the emptied-and-agreeing postcondition above false the moment it
+    // was written. The drop is done, by hand, above; this is what records it.
+    for (ViewState* t : {&app.tab_a, &app.tab_b}) {
+        park_selection_stamp(app, *t, 'W');
+        park_selection_stamp(app, *t, 'P');
+    }
 
     // Engine block plus the scalar session prefs, VALUES ONLY, through the one
     // routine a source load also calls — so adopt applies engine_settings,

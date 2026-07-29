@@ -101,13 +101,18 @@ public:
     //   * clear() and load_impl(), here — wholesale, every index dies;
     //   * the WHOLESALE REPLACES that go through markers_mut() and so cannot be
     //     detected from inside this class. They call bump_structural_generation
-    //     at their own sites, and there are exactly three: undo/redo's store
-    //     restore (both columns, undo.cpp), the render-entry ADOPT's replace
-    //     (both columns, input_key_dispatch.cpp — which also clears every parked
-    //     slot outright, so its bump is belt), and the PROPAGATE PLACEMENT
-    //     paste's erase-window (phase_reset_propagate.cpp; its inserts run
-    //     through insert_marker and bump here anyway, the erase is what needs
-    //     the explicit call).
+    //     at their own sites, and there are exactly three. Two of them bump
+    //     CONDITIONALLY, because they run on inputs that often move no row and a
+    //     false bump costs a parked selection for nothing: undo/redo's store
+    //     restore bumps per column only when the restored snapshot's row
+    //     identity differs from the live store's (undo.cpp — every entry assigns
+    //     BOTH columns, so a warp entry carries an untouched phase-reset vector),
+    //     and the PROPAGATE PLACEMENT paste bumps only when its erase-window
+    //     actually removed rows (phase_reset_propagate.cpp; its inserts run
+    //     through insert_marker and bump here anyway, the erase is what needs the
+    //     explicit call). The third is unconditional: the render-entry ADOPT's
+    //     replace (both columns, input_key_dispatch.cpp), which also clears every
+    //     parked slot outright, so its bump is belt.
     // NOT BUMPED BY, deliberately:
     //   * marker_mut / markers_mut themselves — an in-place FIELD edit (tempo,
     //     flag, label, disabled) moves no row, and every `markers_mut() =
