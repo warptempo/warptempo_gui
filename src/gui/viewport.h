@@ -75,9 +75,12 @@ struct Viewport {
     //    and scroll_viewport — every pan/scroll class, which joined this route
     //    2026-07-26 when the incremental shift-and-strip path was retired),
     //    the S/T view toggle and the Ctrl+Tab A/B tab switch (domain flips), the
-    //    settings tab_X_viewport_start commit, the strip-drag Esc/stop finalize,
-    //    and main.cpp's tick backstop for an ASYNC total change (a preview
-    //    completion) live here.
+    //    settings tab_X_viewport_start commit, the strip drag's TERMINATING-EVENT
+    //    finalize — re-derived 2026-07-29, the true terminating events being
+    //    release, button loss, and the force-end finalizer's three callers
+    //    (Ctrl+Q, resize, WM close); Esc is NOT one of them any more, pointer
+    //    gestures having no cancel — and main.cpp's tick backstop for an ASYNC
+    //    total change (a preview completion) live here.
     //  - TARGET-WARP-MAP mutations: a build_warp_frame_map INPUT changed, so the
     //    target-view plate itself re-warps. The bare Up/Down tempo step
     //    (adjust_tempo_cents, singleton AND group), the bare Left/Right TEMPO-IMAGE

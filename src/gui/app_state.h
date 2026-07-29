@@ -392,7 +392,7 @@ struct DragState {
     // marker-store generation + scale (+ sample rate + total frames), and
     // nothing that changes either is reachable while a drag is in flight: the
     // frozen-coordinate regime keeps motion in the overlay (no generation
-    // bump), the drag-modal gate swallows every key but the cancels, pointer
+    // bump), the drag-modal gate swallows every key but the Ctrl+Q hatch, pointer
     // gestures are mutually exclusive, the wheel is blocked mid-gesture, editors
     // cannot open, and resize / WM-close END the drag first (a commit, through its
     // release body — pointer gestures have no cancel); a preview
@@ -613,9 +613,10 @@ struct EditorTextDragState {
 // travels past kDragMovedThresholdPx (Chebyshev from the press; the one generic
 // 8px gate shared by every press-becomes-drag surface) does begin_drag run and
 // the marker-drag machinery take over. Deferring
-// begin_drag to the crossing keeps its pre-drag snapshot / selection capture
-// / wall math exact — nothing mutates the store between press and crossing —
-// and lets a sub-threshold press-release stay a pure click. Session-only,
+// begin_drag to the crossing keeps its pre-drag snapshot (the undo payload) and
+// its wall math exact — nothing mutates the store between press and crossing; the
+// selection capture that used to be on that list was deleted with the cancels
+// (2026-07-29) — and lets a sub-threshold press-release stay a pure click. Session-only,
 // never serialized. Cleared on the crossing (begin_drag takes over), on
 // release / lost button before the crossing, by the force-end finalizer, and on
 // file load.
@@ -753,8 +754,13 @@ struct TempoDragState {
 // trim sibling of PendingMarkerDrag: the press CLAIMS the chip/bridge geometry
 // but arms only this pending state; begin_trim_drag runs (and the trim-drag
 // machinery takes over) only once the pointer crosses kDragMovedThresholdPx
-// (Chebyshev from the press). A sub-threshold press-release commits nothing
-// (trim has no click action). Deferring begin_trim_drag to the crossing keeps
+// (Chebyshev from the press). A SUB-THRESHOLD PRESS-RELEASE IS THE RULED
+// PLAIN-CHIP CLICK, not a no-op — the "trim has no click action" contract died with
+// the lane-click model: the motionless release publishes the TrimWindow highlight
+// through the SETTER's route, which CLEARS THE SELECTION first (2026-07-29,
+// ruling 2), and the lost-button path performs the same act so one physical click
+// cannot rest two ways. What it commits is DISPLAY state only — no bound moves and
+// the trim store is untouched. Deferring begin_trim_drag to the crossing keeps
 // its anchor capture exact — nothing mutates the trim store between press and
 // crossing. Requires the FULL bound pair (a lone bound is gesture-inert — the
 // router never arms one); a read-only tab claims the press but never arms.
@@ -848,7 +854,8 @@ struct StripDragState {
     // motionless release seeds a ZoomRow double-click candidate only when this
     // is set, so the zoom-bar double-click stays a zoom-row-only affordance — a
     // ctrl+waveform press-release commits and seeds nothing. Every other
-    // release / motion-lost / cancel path is origin-agnostic (keys on `active`).
+    // release / motion-lost / force-end path is origin-agnostic (keys on
+    // `active`); there is no cancel path.
     bool   double_click_seed = true;
     // Pointer position at the press (window px) — the drag-threshold reference
     // ONLY (the Chebyshev gate deciding press-becomes-drag). Not a zoom or pan
@@ -877,8 +884,8 @@ struct StripDragState {
 // though — no zoom axis and no anchor stem (the stem is the zoom pivot
 // affordance, gated on strip_drag.active). Navigation-class: allowed in
 // read-only, deliberately does NOT override follow, never touches the playhead
-// or selection. Every exit path (release, motion button-lost, cancel) calls
-// end_strip_pointer_capture (idempotent). Cleared on button release / lost
+// or selection. Every exit path (release, motion button-lost, the force-end
+// finalizer) calls end_strip_pointer_capture (idempotent); no cancel path exists. Cleared on button release / lost
 // button, by the force-end finalizer (Ctrl+Q / resize / WM close), and on file
 // load. Nothing to restore anywhere: it applies its pan continuously, and pointer
 // gestures have no cancel.

@@ -111,8 +111,8 @@ public:
     // compositor advertises neither pointer-constraints nor relative-pointer
     // (the gesture then runs with clamped absolute motion, exactly as before).
     // begin is a guarded no-op when a capture is already active; end is
-    // idempotent, so every gesture exit path (release, lost button, cancel)
-    // may call it unconditionally.
+    // idempotent, so every gesture exit path (release, lost button, the force-end
+    // finalizer — no cancel path exists) may call it unconditionally.
     void begin_pointer_capture();
     void end_pointer_capture();
 

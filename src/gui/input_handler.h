@@ -375,7 +375,8 @@ struct GuiInputHandler {
     // to GuiPlatform::begin_pointer_capture / end_pointer_capture (the same
     // reverse-the-platform-boundary pattern as Viewport::kick_waveform_*).
     // ONLY the two strip-row drags fire them: begin after the press claim arms,
-    // end on every strip-drag exit path (release, lost button, cancel). Both
+    // end on every strip-drag exit path (release, lost button, and the force-end
+    // finalizer — there is no cancel path, 2026-07-29). Both
     // platform methods are self-guarding — begin no-ops when a capture is live
     // or the compositor lacks the managers, end is idempotent — so a strip drag
     // that never captured (degraded compositor) still calls end harmlessly.

@@ -518,8 +518,8 @@ void GuiInputHandler::commit_trim_drag() {
         // THE SETTER'S LAST PUBLISH, so it deselects like the motion events did
         // (already empty by then in the moved case that reaches here — the deselect
         // is stated at every publish rather than inferred from gesture order). A
-        // RELEASE is a commit, so nothing is restored here; the snapshot the drag
-        // carried dies with the struct reset below.
+        // RELEASE is a commit, and there is nothing to restore from in any case —
+        // the drag carries no snapshot at all since 2026-07-29.
         deselect_and_sync_trim_window_highlight();
     }
     app.trim_drag = TrimDragState{};
