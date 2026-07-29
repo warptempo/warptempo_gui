@@ -654,7 +654,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // x SETS the trim; Shift+X UNSETS it (architect 2026-07-25, splitting the
     // old x-branch). Bare x is set-only: a live region trims to it (overwriting
     // any existing bounds; the highlight is KEPT, re-coupled to the new window
-    // through sync_highlight_to_trim_window — architect 2026-07-23), and with no
+    // through the setter publish, which also DESELECTS — architect 2026-07-23,
+    // the deselect 2026-07-29; a DEGENERATE inverse-mapped span refuses instead of
+    // writing a pair the crossed-commit auto-clear would destroy), and with no
     // region it is a silent no-op. Shift+X clears both bounds
     // (handle_trim_shift_x). The playhead plays no part. Trim's pointer routes
     // are the PLAIN chip-row press (single via a chip-rect hit, pair via a bridge

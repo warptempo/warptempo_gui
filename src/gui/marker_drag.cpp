@@ -1053,19 +1053,13 @@ bool MarkerDragOps::begin_tempo_drag(int hit) {
     // here — only its image moves. The pre-ride capture feeds the Esc-cancel
     // restore (always applied).
     d.pre_ride_playhead_sample = app.playhead_cursor_sample;
-    // Grab-time trim-highlight INTENT (see the field): the PER-EVENT trim re-sync
-    // reads this, not the live provenance the coincident arm erases mid-gesture.
-    // Routing signal only, and the reason is MID-GESTURE, not pre-press: the
-    // coincident arm erases live TrimWindow provenance inside the gesture, so a
-    // live per-event read would latch off at the first coincident event and never
-    // re-sync when the images re-separate. NO PRE-PRESS STALENESS PRODUCER
-    // REMAINS (architect 2026-07-29): undo/redo (marker AND settings-only), the
-    // settings engine-scale commit, and adopt all CLEAR a resting region now, so
-    // nothing rebuilds the map under a highlight any more and this capture equals
-    // the live read at grab time.
-    d.grab_trim_highlight =
-        app.region.active &&
-        app.region.provenance == RegionProvenance::TrimWindow;
+    // NO grab-time trim-highlight intent bit (TempoDragState::grab_trim_highlight,
+    // deleted 2026-07-29): its only job was surviving the coincident arm's
+    // mid-gesture provenance erasure, and that arm is gone — a coincident window
+    // now rests ACTIVE. Nothing else needs it either: a tempo drag runs with a
+    // selection, every TrimWindow setter deselects, so no TrimWindow region can be
+    // resting when this arms (the rule at sync_region_to_trim_window's declaration,
+    // input_handler.h).
     // Whole-struct pre-drag region capture for the Esc-cancel restore (the
     // position drag's exact pattern; provenance rides along). Cancel restores THIS
     // verbatim — stale or fresh, any provenance — so Esc reproduces the pre-drag
@@ -1326,23 +1320,16 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     }
     // The focus transfer already ran at the threshold crossing (begin_tempo_drag,
     // the reposition drag's rule), so there is no first-commit re-assert here.
-    // Region follow decisions (architect 2026-07-23):
-    //  - SelectionExtent: captured LIVE, BEFORE the kick — the kick's live-domain
-    //    reclamp wholesale-CLEARS a region whose old endpoint fell outside the
-    //    now-shorter target domain, so this must not gate on post-kick
-    //    region.active; but a SelectionExtent region can never REST cleared
-    //    mid-drag (the post-kick re-derive always re-activates with in-domain
-    //    clamped endpoints, and no membership clear runs with keys swallowed), so
-    //    the live read stays valid across events.
-    //  - TrimWindow: decided from the GRAB-TIME intent (grab_trim_highlight), NOT
-    //    the live provenance — the coincident-image clear arm is DESIGNED to erase
-    //    live TrimWindow provenance mid-gesture, so a live read would latch off
-    //    after the first coincident event and never re-sync when the images
-    //    re-separate. The grab bit makes the re-sync re-publish the window on every
-    //    event where its images are separated again.
-    const bool follow_extent = app.region.active &&
-        app.region.provenance == RegionProvenance::SelectionExtent;
-    const bool trim_resync = app.tempo_drag.grab_trim_highlight;
+    // NO REGION-PROVENANCE BRANCH and no pre-kick capture pair (both deleted
+    // 2026-07-29): a tempo gesture needs a selection, every TrimWindow SETTER
+    // clears it, and a Free region rests only beside an empty selection — so a
+    // region resting through this drag is the selection's EXTENT by construction
+    // (the rule at sync_region_to_trim_window's declaration, input_handler.h). The
+    // extent re-derive below therefore runs UNCONDITIONALLY, which is what the
+    // captured boolean amounted to: a 2+ selection always re-derived (the kick's
+    // live-domain reclamp can wholesale-clear the region, and
+    // set_region_to_selection_extent re-activates it), and a singleton drag's
+    // re-derive is a no-op the owner itself returns on.
     // Synchronous re-warp, exactly adjust_tempo_cents' target-view tail:
     // kick_waveform_sync reclamps zoom/viewport first (a tempo change moves
     // the target total) and rebuilds plate + flag cache inline, with
@@ -1360,32 +1347,16 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     viewport.move_playhead_to(
         source_frame_to_active_domain(app, audio, mv[mi].time_frame));
     // Region follows the images (architect 2026-07-23): a group tempo edit moves
-    // the selected markers' target IMAGES (tempos change, source frames don't).
-    //  - SelectionExtent: re-derive to the selection's NEW extent (re-activates a
-    //    region the kick may have cleared — set_region_to_selection_extent writes
-    //    active = true), so it follows even across a domain shrink.
-    //  - TrimWindow: re-run the trim SET path, which re-maps app.trim's SOURCE-
-    //    frame bounds through the NEW live map (FIX C), so the highlight tracks the
-    //    chips/stems; a bare x can never inverse-map a stale span. The trim pair
-    //    cannot DISSOLVE mid-tempo-gesture (no bound is authored here), so the
-    //    no-window arm is not reached FROM tempo gestures — but the coincident
-    //    lo==hi arm can fire (images compressing onto one target frame), clearing
-    //    the highlight while the trim stands AND — the uniform
-    //    never-rest-2+-without-a-span invariant, architect 2026-07-29 —
-    //    COLLAPSING THE SELECTION to its focus mid-drag. That is safe for this
-    //    gesture BY CONSTRUCTION: every mechanic below runs off the GRAB-TIME
-    //    capture (marker, predecessor, participant_predecessors,
-    //    participant_grab_cents, walled, grab_trim_highlight), never off the live
-    //    selection, so which markers the drag moves cannot change under it; and
-    //    Esc restores pre_drag_selection wholesale, so a cancel brings the whole
-    //    group back. If the images re-separate the grab bit re-syncs the highlight
-    //    back — now beside a singleton selection. (The no-window arm's other
-    //    callers are enumerable: the trim gestures' lone/dissolve and the
-    //    settings-editor trim commit, which now syncs a TrimWindow region at
-    //    commit.)
-    //  - Free: untouched scratch (drag-formed) — no re-derive.
-    if (follow_extent)      set_region_to_selection_extent(app, audio, viewport);
-    else if (trim_resync)   sync_region_to_trim_window(app, audio, selection, viewport);
+    // the selected markers' target IMAGES (tempos change, source frames don't), so
+    // re-derive the extent to the selection's NEW extent — the one surviving arm
+    // (see the derivation above the kick). It re-activates a region the kick may
+    // have cleared (set_region_to_selection_extent writes active = true), so the
+    // span follows even across a domain shrink, and it is a no-op for a singleton
+    // drag. Nothing here runs off the live selection either way: every mechanic
+    // below reads the GRAB-TIME capture (marker, predecessor,
+    // participant_predecessors, participant_grab_cents, walled), so which markers
+    // the drag moves cannot change under it.
+    set_region_to_selection_extent(app, audio, viewport);
     // The sync render's damage stops at the waveform's bottom edge; the
     // bottom strip is the one surface it does not cover (the dragged
     // marker's pass/ref readout resolves through the predecessor, and a
@@ -1457,12 +1428,10 @@ void MarkerDragOps::end_tempo_drag() {
     // the singleton selection (its arming press single-selected it), so the
     // always-on focus stem painted throughout the drag and stays painted after
     // it; a GROUP grab normally keeps 2+ selected through the whole gesture, so
-    // no stem paints at any point and none appears at release — and when a
-    // mid-drag COINCIDENT compression collapses the group to its focus (the
-    // uniform never-rest-2+-without-a-span invariant), the stem's appear damage
-    // is owned by that collapse at the moment it happens
-    // (Selection::collapse_to_focused's subject-change owner), not by this
-    // release. Either way the release
+    // no stem paints at any point and none appears at release — and nothing can
+    // collapse that group mid-drag any more (the coincident clear arm that once
+    // could is deleted; the per-event region work is a pure extent re-derive).
+    // Either way the release
     // moves nothing (tempo_drag.active going
     // false changes no stem input). A net-changed drag already repainted the stem's
     // moving image via each per-cent-step kick_waveform_sync; a walled / zero-commit
@@ -1503,8 +1472,8 @@ void MarkerDragOps::cancel_tempo_drag() {
     // mid-gesture (keys swallowed, editors unreachable), so the live map is now
     // the grab-time map, and pre_drag_region — stale or fresh, any provenance — is
     // exactly what was displayed against it. Restoring it verbatim reproduces the
-    // pre-drag display unconditionally: no geometry assumptions, no coincident-arm
-    // involvement, and no re-derive that would MOVE a numerically-stale
+    // pre-drag display unconditionally: no geometry assumptions and no re-derive
+    // that would MOVE a numerically-stale
     // SelectionExtent to the current mapped extent. Restore LAST — after the kick
     // (whose domain repair could otherwise clear it) and after
     // restore_selection_snapshot (whose membership clear must not take the
@@ -1712,26 +1681,22 @@ void MarkerDragOps::step_tempo_image(int direction, bool synthesized_repeat) {
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
-    // Target tail, the group tempo step's exact shape: capture the region
-    // follow/re-sync decision BEFORE kick_waveform_sync (its live-domain
-    // reclamp wholesale-clears a region whose old endpoint fell outside a
-    // shrunken target total), one synchronous re-warp, then act on the captured
-    // decision unconditionally. Like the STEP (a discrete press, no gesture
-    // state), both decisions read the LIVE provenance — a press whose images
-    // compress coincident clears a TrimWindow highlight (the coincident arm)
-    // and the chip-row re-click is the recorded recovery.
-    const bool follow_extent = app.region.active &&
-        app.region.provenance == RegionProvenance::SelectionExtent;
-    const bool trim_resync = app.region.active &&
-        app.region.provenance == RegionProvenance::TrimWindow;
+    // Target tail, the group tempo step's exact shape: one synchronous re-warp
+    // (its live-domain reclamp can wholesale-clear a region whose old endpoint fell
+    // outside a shrunken target total), then re-derive the extent UNCONDITIONALLY.
+    // NO PROVENANCE BRANCH and no pre-kick capture pair (both deleted 2026-07-29):
+    // a tempo gesture needs a selection, every TrimWindow SETTER clears it, and a
+    // Free region rests only beside an empty selection — so a region resting here is
+    // the selection's EXTENT by construction (the rule at
+    // sync_region_to_trim_window's declaration, input_handler.h), which leaves
+    // nothing to decide before the kick.
     viewport.kick_waveform_sync();
     // Playhead re-land on the FOCUSED marker's post-kick image (the live cache
     // just rebuilt against the committed store — the Tab placement basis,
     // post-commit truth). Its source frame never moved; only the image did.
     viewport.move_playhead_to(
         source_frame_to_active_domain(app, audio, mv[f].time_frame));
-    if (follow_extent)      set_region_to_selection_extent(app, audio, viewport);
-    else if (trim_resync)   sync_region_to_trim_window(app, audio, selection, viewport);
+    set_region_to_selection_extent(app, audio, viewport);
     // The focused marker's always-on focus stem rides the FOCUSED image's slide
     // on the kick_waveform_sync full-waveform re-warp above — its source frame
     // never moved (tempo only), but the re-warp repaints its moved image column.

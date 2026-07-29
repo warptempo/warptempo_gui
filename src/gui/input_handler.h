@@ -211,27 +211,26 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     engine-commit tail and the SETTINGS-ONLY ('S') undo/redo restore;
 //   * the NAVIGATION jumps that keep their selection: bare `0` and `c` (the Tab
 //     family instead single-selects, and Home/End deselect outright);
-//   * EVERY TRIM-SYNC CLEAR, at the one chokepoint they share
+//   * THE TRIM-SYNC CLEAR, at the one chokepoint every trim route shares
 //     (sync_region_to_trim_window, which takes the Selection for exactly this):
-//     its no-window arm — Shift+X, the crossed-pair auto-clear, a chip/bridge
-//     drag that dissolves the pair, the settings-editor trim commit — AND its
-//     COINCIDENT arm, mid-gesture tempo callers included;
+//     its no-window arm, reached with a live 2+ selection only from the routes
+//     that are NOT TrimWindow setters — Shift+X and the settings-editor trim
+//     commit. The SETTERS (the chip-row click, both bound-set clicks, `x`, the
+//     drags' live sync) empty the selection before they publish, so the crossed-pair
+//     auto-clear and a chip/bridge drag that dissolves its pair arrive here with
+//     nothing to collapse (architect 2026-07-29 — the rule is at that function's
+//     declaration);
 //   * the propagate tail's NO-CREATED-SET arm — general, not state-paste-only:
 //     the state paste always lands with an empty created set, and a PLACEMENT
 //     paste whose run created nothing reaches it too (the created-set arm
 //     derives its own extent instead).
-// NO EXCLUSIONS (architect 2026-07-29, superseding the one carve-out this rule
-// briefly carried): coincident images are an ERROR state, not a special case —
-// the markers are red and the write render-inert — so a group tempo step or drag
-// that compresses its window onto one target frame collapses like every other
-// route, and the next press is a singleton op by ruling (recorded at the
-// coincident arm and at both tempo sites). Routes
+// Routes
 // that RE-DERIVE a span instead of collapsing are not sites at all: the group
 // undo restore, the paste's created set, the multi-select clicks at 2+, `m`, and
 // the whole tempo/group-drag follow family. The kick validator's domain-shrink
 // clear needs no site of its own — every caller that can shrink the domain under
-// a group either re-derives (the tempo family, capture-before-kick) or is
-// already a site above (the settings commit, undo, `t`, Ctrl+Tab).
+// a group either re-derives (the tempo family, unconditionally after its kick) or
+// is already a site above (the settings commit, undo, `t`, Ctrl+Tab).
 // The land itself clears NOTHING — it is a pure playhead write, and the
 // motion condition that briefly rode its clear died with that clear
 // (land_playhead_on_marker). DELIBERATELY NOT
@@ -296,19 +295,56 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
                           Viewport& viewport, int64_t lo, int64_t hi,
                           bool margin);
 
-// Set the region to the CURRENT trim window's active-domain extent (TrimWindow
-// provenance) when both bounds are set AND their images are SEPARATED; clear the
-// HIGHLIGHT only when both bounds are set but their images round COINCIDENT
-// (bracket-legal compression — the authored window rests untouched, else x would
-// destroy the pair); clear the region when there is no full pair. So a full pair
-// does NOT imply an active TrimWindow region. Definition lives in input_trim.cpp;
-// declared here so the group tempo gestures can RE-SYNC a TrimWindow region from
-// app.trim's source-frame bounds through the new live map after a tempo edit.
-// GuiInputHandler::sync_highlight_to_trim_window wraps this.
-// It takes the SELECTION because both clear arms are region-collapse routes and
-// therefore carry the never-rest-2+-without-a-span collapse (see the invariant
-// below): this is the one chokepoint every trim teardown and the coincident arm
-// share, so the rule is enforced once, uniformly, for every caller.
+// TWO ARMS (architect 2026-07-29, the coincident middle arm deleted): both bounds
+// set -> the region takes the trim window's active-domain extent with TrimWindow
+// provenance, COINCIDENT IMAGES INCLUDED (a window whose two source bounds round
+// onto one target frame under bracket-legal compression rests ACTIVE at that one
+// column — paint_region_ground draws no ground at zero width and
+// render_split_playhead has its own one-column form, the shape the undo group
+// restore's all-coincident extent already rests at); no full pair -> clear the
+// region. So a full pair DOES imply an active TrimWindow region.
+// Definition lives in input_trim.cpp. It was made a FREE function so the group
+// tempo gestures could re-sync a TrimWindow region across their own map change;
+// those re-syncs are DELETED (2026-07-29, see below), so its only callers today are
+// the two GuiInputHandler wrappers — sync_highlight_to_trim_window (the bare form,
+// for the clearers and maintainers) and deselect_and_sync_trim_window_highlight
+// (the SETTERS' form, which deselects ahead of the same call).
+//
+// A TrimWindow REGION RESTS ONLY BESIDE AN EMPTY SELECTION (architect 2026-07-29).
+// Stated here once, at the sync that owns the provenance; every other site states
+// its own class plus a pointer. EVERY TrimWindow SETTER CLEARS THE SELECTION — the
+// trim-bar click is the span-form sibling of the plain waveform click's
+// deselect-all: clicking trim means ready to move on. THE SETTERS (grep-derived
+// over the callers of deselect_and_sync_trim_window_highlight, which pairs the
+// deselect with the publish and is the only route that does):
+//   * the PLAIN chip-row click, all three arms — the read-only press's direct sync,
+//     the writable unclaimed-spot sync, and the deferred motionless completions
+//     (clean release / lost button);
+//   * the ctrl (BEGIN) and ctrl+shift (END) BOUND-SET clicks, one function
+//     (set_trim_bound_at_click) and so one deselect;
+//   * bare `x` (region -> trim), which deselects after its span is read;
+//   * the trim chip/bridge DRAG's live sync — both motion arms and the release.
+// Each deselects PAST ITS OWN REFUSALS (the refusal-gating rule these routes
+// already hold their playback stop under): a read-only bound set, a chip-row claim
+// with no resting pair, degenerate geometry, and a drag event that moved no bound
+// publish no highlight and so deselect nothing.
+// THE NON-SETTERS KEEP THE BARE SYNC and do not deselect: Shift+X (a trim
+// CLEARER), the two Esc-cancel re-syncs, and the settings editor's two trim
+// maintainers. That is the whole list — the tempo family's TrimWindow re-syncs
+// were DELETED by this same ruling (see the unreachability below).
+// The invariant's OTHER HALF is that nothing puts a selection back beside a
+// resting TrimWindow region: every route that selects a marker either CLEARS the
+// region (the plain/multi-select clicks and their deferred completions, the Tab
+// family and `c` through jump_playhead_to_focused_marker, the editor opens, the
+// drops, and the three membership-wholesale routes) or REPLACES it with the
+// selection's own extent (the multi-select clicks at 2+). So
+// TrimWindow-under-a-selection is UNREACHABLE — which is what retired the tempo
+// family's region-provenance branches, the singleton tempo step's trim re-sync,
+// and TempoDragState::grab_trim_highlight.
+// It still takes the SELECTION for the never-rest-2+-without-a-span collapse its
+// clear arm carries (that invariant is stated at clear_region_highlight's
+// declaration above); the callers that can still reach that collapse are the
+// NON-SETTERS above (Shift+X, the settings trim commit).
 void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
                                 Selection& selection, Viewport& viewport);
 
@@ -818,11 +854,16 @@ private:
     // (no context-awareness beyond that) — a live region trims to it, begin at
     // the span's lo, end at its hi, overwriting any existing bounds, then KEEPS
     // and re-syncs the highlight — the coupling tail
-    // (sync_highlight_to_trim_window) re-derives the REGION (provenance
-    // TrimWindow) from the just-set window, so region and trim rest coupled (a
-    // crossed-collapse dissolve clears the region with the window; the selection
-    // is never touched); NO region is a silent no-op (the unset moved to
-    // Shift+X). No read-only check: the keyboard gate — the ONE read-only guard
+    // (deselect_and_sync_trim_window_highlight) re-derives the REGION (provenance
+    // TrimWindow) from the just-set window, so region and trim rest coupled (x is a
+    // TrimWindow SETTER, so it DESELECTS as it publishes — the rule at
+    // sync_region_to_trim_window's declaration). TWO SILENT REFUSALS, both writing
+    // nothing at all: NO region, and a DEGENERATE result — the inverse-mapped,
+    // wall-clamped pair coming out end <= begin, which auto_clear_crossed_trim would
+    // read as crossed and destroy (planner-decided 2026-07-29 pending architect
+    // confirmation; the derivation is at the definition). x never UNSETS either way
+    // (that arm moved to Shift+X).
+    // No read-only check: the keyboard gate — the ONE read-only guard
     // on that path — leaves x off its allowlist, and this pair is keyboard-only,
     // so a locked tab never reaches it. The sole dispatch entry for the bare-x key.
     void handle_trim_x();
@@ -832,6 +873,7 @@ private:
     // delegates to handle_trim_clear_both and, when the region it just tore down
     // was the trim's own TrimWindow highlight, re-syncs so that highlight cannot
     // outlive its window (a Free/SelectionExtent region is NOT trim's to clear).
+    // A trim CLEARER, not a setter: it keeps the BARE sync and does NOT deselect.
     void handle_trim_shift_x();
 
     // Clear both trim bounds unconditionally. Silent no-op when neither bound
@@ -862,9 +904,10 @@ private:
     // chip geometry (a chip-rect single hit, or the chip-row inter-chip bridge
     // span) — armed or read-only-refused — so the caller claims with no
     // fallback; false lets the caller fall through to the marker flag handling.
-    // Read-only claims without arming. Trim drags sync the selection and the
-    // region highlight to the moving window (sync_highlight_to_trim_window);
-    // the PLAYHEAD is what they never touch.
+    // Read-only claims without arming. Trim drags publish the region highlight to
+    // the moving window through the SETTER's route
+    // (deselect_and_sync_trim_window_highlight), so they DESELECT at their first
+    // moved bound; the PLAYHEAD is what they never touch.
     // Dual-axis strip drag, INCREMENTAL: applies one motion event at (x, y).
     // Reads the LIVE zoom level and viewport (never a stored press baseline),
     // pans by the dx since the last event at the old level, zooms by the dy off
@@ -900,24 +943,29 @@ private:
     // The lane-click model's trim<->REGION coupling (architect 2026-07-23,
     // region-only under SELECTION FLOWS DOWNWARD ONLY): sync the region highlight
     // to the CURRENT trim window. Trim is region-related, so it never SELECTS
-    // markers, only the region — but an arm that leaves no span does collapse a
-    // 2+ selection to its focus (see below); the PLAYHEAD is the one it never
-    // touches at all. Both
-    // bounds set with SEPARATED images -> region = the window's active-domain
-    // extent (source bounds through source_frame_to_active_domain, clamped
-    // playable); both bounds set but COINCIDENT images -> clear the HIGHLIGHT only
-    // (authored window untouched); lone / no trim -> clear the region. So a full
-    // pair does NOT imply an active TrimWindow region. One implementation shared by
-    // the trim-lane click (R4.5), the ctrl / ctrl+shift bound-set (R4.6/R5), and the trim
-    // drags' motion / release / cancel live-sync (R7), so window and highlight can
-    // never drift. Navigation-class (the region is navigation), so read-only-safe.
-    // Owns its own waveform-highlight damage, raised only when the region's
-    // visible identity actually changed or the collapse fires (a per-motion-event
-    // path pays narrow damage, not full). Never touches the PLAYHEAD; the
-    // SELECTION it can collapse to its focus whenever an arm leaves no span —
-    // the rule, and which gestures restore it on cancel, at the free function's
-    // header in input_trim.cpp.
+    // markers, only the region — but the clear arm does collapse a 2+ selection to
+    // its focus (the never-span-less rule at clear_region_highlight's
+    // declaration); the PLAYHEAD is the one it never touches at all. Both
+    // bounds set -> region = the window's active-domain extent (source bounds
+    // through source_frame_to_active_domain, clamped playable), coincident images
+    // included; lone / no trim -> clear the region. Navigation-class (the region is
+    // navigation), so read-only-safe. Owns its own waveform-highlight damage,
+    // raised only when the region's visible identity actually changed or the
+    // collapse fires (a per-motion-event path pays narrow damage, not full).
+    // THIS BARE FORM IS THE NON-SETTERS' (Shift+X, the two Esc-cancel re-syncs, the
+    // settings editor's trim maintainers): it leaves the selection alone and so can
+    // still reach the never-span-less collapse. Every route that SETS the window
+    // calls the setter form below instead.
     void sync_highlight_to_trim_window();
+
+    // The SETTER's publish: deselect, then sync. EVERY TrimWindow setter goes
+    // through here — the plain chip-row click and its deferred completions, both
+    // bound-set clicks, bare `x`, and the trim drags' live sync — because a
+    // TrimWindow region rests only beside an EMPTY selection (architect
+    // 2026-07-29). The rule, the full setter list, the refusal-gating requirement
+    // on each caller's placement, and the non-setter routes are stated once at
+    // sync_region_to_trim_window's declaration above.
+    void deselect_and_sync_trim_window_highlight();
 
     // R4.6: set ONE trim bound (begin or end) at the clicked column — the
     // trim-drag release-snap basis (authored_frame_at_column over the displayed

@@ -462,9 +462,9 @@ void GuiInputHandler::cancel_active_drags() {
         // the gesture. The PLAYHEAD is what a trim cancel has nothing to restore:
         // a trim drag never touches it (no playhead-follow analog — trim bounds
         // are outside the selection system). The SELECTION it does restore, from
-        // the pre-gesture snapshot below, because the coupling sync's clear arms
-        // can collapse a 2+ selection mid-gesture (the one owner's header,
-        // sync_region_to_trim_window in input_trim.cpp).
+        // the pre-gesture snapshot below, because the drag's own publishes
+        // DESELECTED: every TrimWindow setter clears the selection (the rule at
+        // sync_region_to_trim_window's declaration, input_handler.h).
         // R3: a bound-set-armed drag (set_click) also
         // has the PRESS click-set to undo, so its restore runs UNCONDITIONALLY —
         // orig_begin/orig_end are the pre-press pair, and even an unmoved drag
@@ -609,8 +609,8 @@ void GuiInputHandler::cancel_active_drags() {
     // so an Esc undoes the whole gesture — restore the pre-press pair, re-sync
     // the coupled REGION highlight to the rolled-back window, and then put the
     // pre-press SELECTION and REGION back (architect 2026-07-29): the press's own
-    // sync may have cleared a span and collapsed a 2+ selection to its focus, and
-    // the re-sync cannot undo that. Same order as the drag's cancel and the tempo
+    // publish DESELECTED (the trim setter rule) and may have taken a span with the
+    // membership, neither of which a re-sync can undo. Same order as the drag's cancel and the tempo
     // drag's — selection, then the whole-struct region, last, that verbatim write
     // superseding the re-sync's own region result (see the drag's cancel). The PLAIN pending
     // (else) mutated nothing and ran no sync, so it has nothing to restore and

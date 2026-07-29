@@ -273,8 +273,8 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
                 // MAINTAIN (never create) a TrimWindow highlight: an active-tab
                 // bound unset is a trim author, so if a TrimWindow region is up,
                 // re-sync it — the no-window arm clears it now that a bound is
-                // gone, so x can't resurrect the pair from a stale highlight and
-                // no later tempo re-sync hits the no-window arm. A text commit is
+                // gone, so x can't resurrect the pair from a stale highlight. A
+                // text commit is
                 // NOT a pointing gesture — it only maintains an existing trim
                 // highlight, so a Free / SelectionExtent / no region is left
                 // untouched (no creation).

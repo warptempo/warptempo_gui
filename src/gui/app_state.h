@@ -157,7 +157,8 @@ struct SelectionSnapshot {
 //     deselect (handle_escape_selection_region) — the one sanctioned demotion
 //     route;
 //   * the TRIM SYNC's set arm (sync_region_to_trim_window) — TrimWindow, the
-//     trim's own highlight, selection-independent;
+//     trim's own highlight, and since 2026-07-29 always published beside an EMPTY
+//     selection (its SETTER callers deselect first);
 //   * set_region_to_selection_extent — SelectionExtent, the ONE owner of that
 //     provenance. Its callers split into CREATORS (which may activate from
 //     nothing: the shift-range and ctrl-toggle multi-select clicks, the `m` bpm
@@ -180,24 +181,32 @@ struct SelectionSnapshot {
 // span whose owner died does not linger); a TrimWindow region
 // tracks the trim bounds' images (re-synced across map changes); a Free region is
 // untouched display scratch. So a drag-formed region always rests with an EMPTY
-// selection (Free), and a trim-derived region (TrimWindow) may rest NEXT TO any
-// selection without being its extent — provenance is what lets the trim/highlight
-// coupling and the image-follow tempo gestures both hold: the follows re-derive
-// only SelectionExtent regions, re-sync only TrimWindow ones.
+// selection (Free) — and so does a trim-derived one (TrimWindow) since 2026-07-29,
+// every setter deselecting as it publishes (the rule at
+// sync_region_to_trim_window's declaration, input_handler.h). Provenance therefore
+// no longer routes the image-follow tempo gestures at all — they re-derive their
+// extent unconditionally — and what it still routes is the trim's own coupling:
+// Shift+X and the settings-editor maintainers act on a TrimWindow region and leave
+// a Free one alone.
 // Bare x is SET-ONLY and branches on
 // THIS highlight (architect 2026-07-25): a live region trims to it and the
 // highlight is KEPT (architect 2026-07-23, reversing the earlier consume —
 // under the coupling the trim window and the highlight agree after x, re-derived
-// through sync_highlight_to_trim_window); no region means x is a silent no-op.
+// through the setter publish, which also DESELECTS); no region means x is a silent
+// no-op, and so does a DEGENERATE result — an inverse-mapped span coming out
+// end <= begin refuses rather than writing a pair the crossed-commit auto-clear
+// would destroy (2026-07-29, at handle_trim_x).
 // Shift+X UNSETS the trim, tearing down a TrimWindow highlight with the window.
 // NEVER serialized, and stored independently of the selection and undo systems
 // (a transient visual — no undo entry, its own field, not derived from the
 // selection set). The GESTURE couplings are DOWNWARD-ONLY: the multi-select
 // clicks set this highlight to the selection's extent, and the trim-lane clicks +
-// trim drags set this highlight to the trim window
-// (sync_highlight_to_trim_window) — both WITHOUT touching the selection (trim is
-// region-related, so it too obeys the downward-only rule: it never selects
-// markers, only the region — the selection is the master state). Endpoints are
+// trim drags set this highlight to the trim window — the latter CLEARING the
+// selection as it publishes (architect 2026-07-29: every TrimWindow setter
+// deselects, the trim-bar click being the span-form sibling of the waveform click's
+// deselect-all). Downward-only still holds in the sense that matters: trim never
+// SELECTS a marker — the selection is the master state, and trim only ever empties
+// it. Endpoints are
 // ACTIVE-DOMAIN frames (source frames in source
 // view, target frames in target view), stored in drag order and normalized
 // lo/hi at READ time, so the span survives pan/zoom mid-drag and at rest.
@@ -245,15 +254,18 @@ struct SelectionSnapshot {
 // position-drag commit, the tempo follows), valid ONLY while that selection
 // persists (any membership
 // REPLACE CLEARS it via clear_region_on_membership_replace). TrimWindow — set to
-// the trim window's images (sync_highlight_to_trim_window), selection-independent,
-// re-synced from app.trim's source-frame bounds through the new map at every
-// tempo mutation so the highlight tracks the chips/stems.
+// the trim window's images by the trim setters' publish, and RESTING ONLY BESIDE AN
+// EMPTY SELECTION since 2026-07-29 (every setter deselects — the rule and the
+// setter list are at sync_region_to_trim_window's declaration, input_handler.h),
+// re-synced from app.trim's source-frame bounds through the new map by the
+// settings-editor trim maintainers so the highlight tracks the chips/stems.
 //
-// RECORDED BOUNDARY of the follow/re-sync behavior (architect 2026-07-23): the
-// re-derive/re-sync sites are the GROUP STEP and the group tempo DRAG's PER-EVENT
-// path (re-derive a SelectionExtent region or re-sync a TrimWindow region across
-// their map change), plus the settings-editor trim commit (re-syncs a TrimWindow
-// region to the edited bounds). The drag CANCEL does NOT re-derive/re-sync — it
+// RECORDED BOUNDARY of the follow/re-sync behavior (architect 2026-07-23, narrowed
+// 2026-07-29): the re-derive sites are the GROUP STEP and the group tempo DRAG's
+// PER-EVENT path, which re-derive their SelectionExtent region across their own map
+// change — UNCONDITIONALLY, the provenance branch having died with
+// TrimWindow-under-a-selection — plus the settings-editor trim commit (re-syncs a
+// TrimWindow region to the edited bounds). The drag CANCEL does NOT re-derive/re-sync — it
 // restores the whole-struct captured TempoDragState::pre_drag_region VERBATIM
 // (the round-7 rule: pre-drag staleness falsified the re-derive premise, so Esc
 // reproduces the pre-drag display exactly, any provenance — a rule that stands
@@ -271,8 +283,10 @@ struct SelectionSnapshot {
 // numerically stale TrimWindow span survives. A group restore still DEFINES its
 // own SelectionExtent region after its clear; a singleton or emptied restore
 // rests with none. What remains re-derived/re-synced rather than cleared is the
-// list at the top of this paragraph: the tempo family and the settings-editor
-// TRIM commit, the maintainers by ruling.
+// list at the top of this paragraph: the tempo family's extent re-derive and the
+// settings-editor TRIM commit, the maintainers by ruling. The SINGLETON tempo
+// step's TrimWindow re-sync was deleted 2026-07-29 (a chip click deselects, so no
+// TrimWindow highlight can rest while a marker is selected).
 // This is scoped to the provenance follow/re-sync: the
 // GENERIC region clears still apply to ANY provenance — the kick validator drops
 // a region stranded outside a shrunken live domain, and load/adopt clear the
@@ -283,10 +297,11 @@ struct RegionState {
     bool    active  = false;
     int64_t a_frame = 0;   // the press-anchor endpoint
     int64_t b_frame = 0;   // the far (pointer) endpoint
-    // Provenance (see enum above). The follow-gates test provenance ==
-    // SelectionExtent; the trim re-sync tests provenance == TrimWindow; Free is
+    // Provenance (see enum above). The trim's own teardown/maintainer routes test
+    // provenance == TrimWindow (the tempo follows no longer test anything — their
+    // branch died 2026-07-29 with TrimWindow-under-a-selection); Free is
     // untouched scratch. SET in three places — set_region_to_selection_extent ->
-    // SelectionExtent, sync_highlight_to_trim_window's set arm -> TrimWindow, and
+    // SelectionExtent, sync_region_to_trim_window's set arm -> TrimWindow, and
     // every OTHER former (region drag, shift-click former/demote, delete
     // demotions) -> Free. ONE ROUTE CONVERTS, and it is the Esc DEMOTE alone
     // (architect 2026-07-29, both its rungs in handle_escape_selection_region):
@@ -741,29 +756,13 @@ struct TempoDragState {
     // post-commit image unconditionally; the grab position feeds the Esc-cancel
     // restore, always applied.
     int64_t pre_ride_playhead_sample = 0;
-    // Grab-time trim-highlight INTENT (architect 2026-07-23): captured at
-    // begin_tempo_drag as (region.active && provenance == TrimWindow). A WITHIN-
-    // GESTURE ROUTING signal ONLY — read by the PER-EVENT trim re-sync in
-    // apply_tempo_drag_motion, never by cancel. It is NOT a geometry invariant:
-    // the coincident-image clear arm is DESIGNED to erase live TrimWindow
-    // provenance mid-gesture (images compressing onto one target frame), so a live
-    // per-event read would latch off after the first coincident event and never
-    // re-sync when the images re-separate. With the grab intent the per-event
-    // re-sync republishes the window on every event whose images are separated,
-    // which is the follow's whole purpose. Cancel does NOT use this — it restores
-    // pre_drag_region verbatim (below), a whole-struct restore that needs no bit
-    // at all. NO PRE-PRESS STALENESS PRODUCER REMAINS
-    // (architect 2026-07-29): every map changer that used to leave a region
-    // resting stale — marker and settings undo/redo, the settings engine-scale
-    // commit, adopt — now clears it outright, so a grab-time TrimWindow region is
-    // as fresh as the map it is read against. The capture earns its keep on the
-    // MID-GESTURE reason alone (the round-6 one, above): the coincident arm
-    // erases live provenance inside the gesture, and a live per-event read would
-    // latch off at the first coincident event. The
-    // SelectionExtent per-event follow stays LIVE (see apply): it can never rest
-    // cleared mid-drag (the post-kick re-derive always re-activates with in-domain
-    // clamped endpoints, and no membership clear runs with keys swallowed).
-    bool    grab_trim_highlight = false;
+    // (No grab-time trim-highlight intent bit: grab_trim_highlight was DELETED
+    // 2026-07-29. Its sole justification was surviving the coincident-image clear
+    // arm's mid-gesture provenance erasure, and that arm is gone — a coincident
+    // window rests ACTIVE now. The gesture's region work is one unconditional
+    // extent re-derive per event, because a TrimWindow region cannot rest beside
+    // the selection this drag requires: every TrimWindow setter deselects, the rule
+    // stated at sync_region_to_trim_window's declaration in input_handler.h.)
     // Whole-struct pre-drag region (provenance included), captured at
     // begin_tempo_drag and RESTORED VERBATIM by cancel_tempo_drag — the position
     // drag's exact pattern. Cancel restores every participant to its grab cents
@@ -771,7 +770,7 @@ struct TempoDragState {
     // unreachable), so the restored map IS the grab-time map, and this region —
     // stale or fresh, any provenance — is exactly what was displayed against it.
     // So Esc reproduces the pre-drag display unconditionally, with no geometry
-    // assumptions and no coincident-arm involvement.
+    // assumptions.
     RegionState pre_drag_region;
 };
 
@@ -807,15 +806,16 @@ struct PendingTrimDrag {
     int64_t preset_begin_frame = 0;
     int64_t preset_end_frame   = 0;
     // PRE-GESTURE selection + region, captured at the arming press — BEFORE any
-    // bound write, so a bound-set press whose own trim sync collapsed a group is
-    // captured intact — and restored by the Esc/Ctrl+Q cancel (architect
+    // bound write, so a bound-set press whose own publish deselected is captured
+    // intact — and restored by the Esc/Ctrl+Q cancel (architect
     // 2026-07-29), the tempo drag's pattern exactly (TempoDragState's pair
-    // below). WHY BOTH: the trim sync's clear arms collapse a 2+ selection to
-    // its focus at their shared chokepoint, and re-syncing the restored window
-    // cannot resurrect what the collapse took — a pre-gesture SelectionExtent
-    // span the gesture's TrimWindow overwrite destroyed comes back only from a
-    // verbatim capture. The CROSSING copies both into TrimDragState, so the
-    // whole press->drag->cancel gesture restores from one capture.
+    // below). WHY BOTH: every trim SETTER's publish CLEARS THE SELECTION (the rule
+    // at sync_region_to_trim_window's declaration, input_handler.h), and
+    // re-syncing the restored window cannot resurrect what that deselect took — a
+    // pre-gesture SelectionExtent span the gesture's TrimWindow overwrite destroyed
+    // comes back only from a verbatim capture. The CROSSING copies both into
+    // TrimDragState, so the whole press->drag->cancel gesture restores from one
+    // capture.
     SelectionSnapshot pre_gesture_selection;
     RegionState       pre_gesture_region;
 };

@@ -1180,7 +1180,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // text lane, and the flag/triangle lanes are disjoint y-bands, so
             // this contends with nothing: a marker-part press falls to the marker
             // handling below. The PLAIN click either arms a chip/bridge drag or,
-            // on an unclaimed spot, selects + highlights the trim window (R4.5);
+            // on an unclaimed spot, DESELECTS and highlights the trim window (R4.5);
             // the bound-set clicks are the ctrl (BEGIN) / ctrl+shift (END)
             // claims above (R5). A SHIFT-exact chip-row press claims nothing —
             // trim is transparent to it, and the shift fall-through below is
@@ -1202,6 +1202,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // R4.5 region-highlight sync now. With BOTH bounds set the window
                 // is taken; lone/no trim is a silent no-op. Either way the chip
                 // row consumes the press — it never falls to the marker handling.
+                // THE CLICK IS A TrimWindow SETTER, so where it takes the window it
+                // also DESELECTS (architect 2026-07-29 — the rule and the setter
+                // list at sync_region_to_trim_window's declaration,
+                // input_handler.h): the trim-bar click is the span-form sibling of
+                // this same press's deselect-all in the waveform's upper half.
+                // Both acting sync arms below therefore publish through the setter
+                // route, the READ-ONLY one included — read-only blocks persistent
+                // MUTATION, and the selection is session state the same tab's marker
+                // clicks rewrite freely. The refusal side is unchanged: with no
+                // resting pair (have_window false) neither arm runs, so a press
+                // with nothing to highlight leaves the selection exactly as it was.
                 // The consume claims the press, but a RESTING FULL PAIR is what
                 // makes it ACT: with the pair set every arm commits something
                 // (read-only syncs the highlight, a chip/bridge hit arms the
@@ -1218,11 +1229,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     (app.trim.has_begin && app.trim.has_end);
                 if (have_window) playback_lifecycle.stop_playback_if_playing();
                 if (active_view_state(app).read_only) {
-                    if (have_window) sync_highlight_to_trim_window();
+                    if (have_window) deselect_and_sync_trim_window_highlight();
                     return;
                 }
                 if (route_trim_chip_press(x, y)) return;
-                if (have_window) sync_highlight_to_trim_window();
+                if (have_window) deselect_and_sync_trim_window_highlight();
                 return;
             }
             if (mh.index >= 0) {
@@ -2029,16 +2040,16 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     if (app.pending_trim_drag.active) {
         // The pending trim drag never crossed the threshold: a motionless
         // chip/bridge press. Under the lane-click model that is the trim-lane
-        // CLICK (R4.5) — highlight the trim window with the REGION (which can
-        // collapse a 2+ selection when the sync's arm leaves no span; a resting
-        // click is a commit, so nothing restores it — see
-        // sync_region_to_trim_window). The pending only arms on the full pair
-        // (route_trim_chip_press gates it), so the window exists; the sync takes
-        // it. (A crossed pending became app.trim_drag and
+        // CLICK (R4.5) — highlight the trim window with the REGION, through the
+        // SETTER's publish, which DESELECTS first (architect 2026-07-29; the rule
+        // at sync_region_to_trim_window's declaration). A resting click is a
+        // commit, so nothing restores the deselect. The pending only arms on the
+        // full pair (route_trim_chip_press gates it), so the window exists and the
+        // publish always acts. (A crossed pending became app.trim_drag and
         // commits through the branch above; read-only never armed a pending, so
         // this branch is writable-only — the read-only R4.5 click ran at press.)
         app.pending_trim_drag = PendingTrimDrag{};
-        sync_highlight_to_trim_window();
+        deselect_and_sync_trim_window_highlight();
         return;
     }
     if (app.pending_marker_drag.active) {
@@ -2236,12 +2247,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         viewport.clear_hover_popup();
         if (!mods.primary_button_held) {   // button lost -> just the click
             // The motionless chip/bridge press is the trim-lane CLICK (R4.5):
-            // run the same region-highlight sync the clean release does, so the
-            // same physical click cannot rest differently depending on which
-            // path ended it. The pending only arms on the full pair (writable),
-            // so the window exists.
+            // run the same SETTER publish the clean release does — deselect then
+            // sync — so the same physical click cannot rest differently depending
+            // on which path ended it. The pending only arms on the full pair
+            // (writable), so the window exists.
             app.pending_trim_drag = PendingTrimDrag{};
-            sync_highlight_to_trim_window();
+            deselect_and_sync_trim_window_highlight();
             return;
         }
         if (std::max(std::abs(mouse_x - app.pending_trim_drag.press_x),
@@ -2266,7 +2277,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         const int64_t preset_end   = app.pending_trim_drag.preset_end_frame;
         // The PRE-GESTURE selection + region travel with them, UNCONDITIONALLY
         // (a plain chip drag needs them as much as a bound-set one: its motion
-        // syncs can collapse a 2+ selection just the same). Captured at the
+        // publishes DESELECT just the same — the trim setter rule). Captured at the
         // arming press, applied by the drag's Esc-cancel.
         SelectionSnapshot pre_selection =
             std::move(app.pending_trim_drag.pre_gesture_selection);
@@ -2380,11 +2391,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // leaves the selection EMPTY throughout. The reverse direction stands:
         // when markers ARE selected the region is set to their extent (the
         // multi-select clicks via set_region_to_selection_extent — provenance
-        // SelectionExtent; the trim window via sync_highlight_to_trim_window —
+        // SelectionExtent; the trim window via the trim setters' publish —
         // provenance TrimWindow). So a drag-formed region always rests with an
         // empty selection (Free) — and whenever 2+ markers rest selected WITH an
         // active SelectionExtent region, that region IS their extent by
-        // construction (a TrimWindow region may rest beside any selection).
+        // construction (a TrimWindow region rests only beside an EMPTY selection
+        // since 2026-07-29: every setter deselects — the rule is at
+        // sync_region_to_trim_window's declaration).
         viewport.invalidate_waveform_area();
         return;
     }

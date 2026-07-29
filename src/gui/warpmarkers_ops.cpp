@@ -291,8 +291,11 @@ void GuiWarpMarkersOps::toggle_inherits() {
     // membership clear: collapsing a 2+ selection replaces the membership, which
     // takes that selection's SelectionExtent span with it
     // (clear_region_on_membership_replace, app_state.h). A TrimWindow highlight
-    // SURVIVES, deliberately — the inherit toggle is a VALUE gesture with no
-    // business tearing down the chip row's own cue.
+    // SURVIVES a membership replace by that owner's own rule — moot here since
+    // 2026-07-29, one such highlight never resting beside a 2+ selection any more
+    // (every trim setter deselects; the rule is at sync_region_to_trim_window's
+    // declaration), but the value gesture tears down no cue of the chip row's
+    // either way.
     // The land sits at THIS caller and not inside collapse_to_focused, whose other
     // caller is the singleton tempo step: the tempo step has no focus change to
     // land for (its selection is already a singleton — adjust_tempo_cents returns
@@ -549,37 +552,15 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // repaint there; in target view the synchronous re-warp below repaints the
     // waveform area and carries the stem to its new column with the image.
     if (app.active_audio_view == 'T') {
-        // TrimWindow highlight follow, decision CAPTURED BEFORE the kick (the
-        // group arm's ordering hazard, identical here): kick_waveform_sync's
-        // live-domain reclamp wholesale-clears any region whose old endpoint fell
-        // outside the now-shorter target domain, so the follow must not gate on
-        // post-kick region.active. The WINDOW itself is correct throughout — its
-        // bounds are authored SOURCE frames, whose images simply re-derive through
-        // the new map — so only the HIGHLIGHT goes stale, and re-deriving the
-        // highlight from the window is the whole fix. Reachable with a singleton:
-        // a marker click lands and collapses any resting span, then a trim
-        // chip-row press syncs a TrimWindow highlight without ever touching the
-        // selection, and the next Up/Down steps under both — the tempo family
-        // being span-PRESERVING, which is why the step re-syncs the highlight
-        // instead of collapsing it like a position command would.
-        // NO SelectionExtent arm, and that asymmetry with the group is derived, not
-        // forgotten: collapse_to_focused above CLEARS any SelectionExtent region
-        // outright before the step runs, and set_region_to_selection_extent never
-        // derives one for a <=1 selection, so such an arm could not fire. NO FREE
-        // ARM EITHER, and that one is unreachable rather than declined
-        // (architect 2026-07-29, re-derived at this retell): all five Free formers
-        // (the plain region drag, the shift-click former, both DELETE demotions,
-        // and the Esc demote — which is itself a deselect)
-        // leave the selection EMPTY, and EVERY route that then puts a selection in
-        // place collapses the span — the marker clicks and their deferred
-        // completions, Tab/`c`, the editor opens, the drops, and the three that
-        // used to carry a selection in wholesale while leaving the span alone
-        // (the undo/redo restore, the `p` swap, the propagate paste), which now
-        // clear it too. So a Free region rests only beside an EMPTY selection,
-        // and this step's selection is a singleton by construction — leaving the
-        // TrimWindow arm above as the only region this step can meet.
-        const bool trim_resync = app.region.active &&
-            app.region.provenance == RegionProvenance::TrimWindow;
+        // NO REGION WORK AT ALL HERE. The #16 TrimWindow highlight re-sync was
+        // DELETED 2026-07-29: its reach chain was click a marker -> click the chip
+        // row -> Up/Down, and the middle link is foreclosed now that every
+        // TrimWindow SETTER deselects (the rule at sync_region_to_trim_window's
+        // declaration, input_handler.h) — the chip click empties the selection, and
+        // a tempo step needs one, so no TrimWindow highlight can be resting when
+        // this runs. The other two provenances were already unreachable here: a
+        // SelectionExtent region is cleared by collapse_to_focused above, and a Free
+        // region rests only beside an EMPTY selection.
         viewport.kick_waveform_sync();
         const auto& mv_post = app.warpmarkers.markers();
         const int f = app.last_selected_marker;
@@ -587,7 +568,6 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
             viewport.move_playhead_to(source_frame_to_active_domain(
                 app, audio, mv_post[f].time_frame));
         }
-        if (trim_resync) sync_region_to_trim_window(app, audio, selection, viewport);
     }
     target_render.trigger();
 }
@@ -681,20 +661,16 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
     // repricing that can move even its own image. Source view needs nothing
     // (identity domain — the frame never moved).
     if (app.active_audio_view == 'T') {
-        // Region follow decision CAPTURED BEFORE the kick (the ordering hazard):
-        // kick_waveform_sync's live-domain reclamp wholesale-clears any region
-        // whose old endpoint fell outside the now-shorter target domain (a faster
-        // map shrinks the total), so the follow must not gate on post-kick
-        // region.active. Act on the captured decision unconditionally after. Unlike
-        // the tempo DRAG, the step reads the LIVE provenance for BOTH decisions:
-        // a discrete press has no gesture state to capture a grab intent across, so
-        // a step whose images compress coincident clears the TrimWindow highlight
-        // (the coincident arm) and the user re-clicks the chip row to re-highlight
-        // once the images re-separate — the recorded recovery for a one-shot edit.
-        const bool follow_extent = app.region.active &&
-            app.region.provenance == RegionProvenance::SelectionExtent;
-        const bool trim_resync = app.region.active &&
-            app.region.provenance == RegionProvenance::TrimWindow;
+        // NO PROVENANCE BRANCH and NO CAPTURE-BEFORE-KICK PAIR (both deleted
+        // 2026-07-29): a tempo gesture needs a selection, every TrimWindow SETTER
+        // just cleared it, and a Free region rests only beside an empty selection —
+        // so a region resting here is this group's EXTENT by construction (the rule
+        // at sync_region_to_trim_window's declaration, input_handler.h). With one
+        // provenance left there is nothing to decide before the kick either: the
+        // re-derive below runs UNCONDITIONALLY, which is exactly what the captured
+        // boolean made it do for a 2+ selection (kick_waveform_sync's live-domain
+        // reclamp may wholesale-clear the region, and set_region_to_selection_extent
+        // re-activates it), and a <=1 selection cannot reach this group handler.
         viewport.kick_waveform_sync();
         const int f = app.last_selected_marker;
         if (f >= 0 && f < n) {
@@ -706,26 +682,11 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
         // above already repainted the moved images.
         // Region follows the images (architect 2026-07-23): the group step moved
         // the selected markers' target IMAGES (tempos changed, source frames did
-        // not).
-        //  - SelectionExtent: re-derive to the selection's NEW extent (re-activates
-        //    a region the kick may have cleared).
-        //  - TrimWindow: re-sync from app.trim's source-frame bounds through the
-        //    new map (FIX C), so the highlight tracks the chips/stems. When this
-        //    press compresses the window's two images onto ONE target frame the
-        //    sync takes its COINCIDENT arm, which clears the highlight and — the
-        //    uniform never-rest-2+-without-a-span invariant, architect 2026-07-29
-        //    — COLLAPSES THIS GROUP to its focus. Ruled, not accidental:
-        //    coincidence at 16x compression is an ERROR state (the markers are
-        //    red, the write render-inert), so THE NEXT PRESS IS A SINGLETON STEP
-        //    by design — this handler re-seeds its participants from the LIVE
-        //    selection every press, so it simply takes the singleton path. A
-        //    chip-row re-click recovers the HIGHLIGHT, never the group.
-        //  - Free: untouched scratch.
-        // Source view needs nothing (identity domain — no image moved), which is
-        // why this whole block gates on target view.
-        if (follow_extent)      set_region_to_selection_extent(app, audio, viewport);
-        else if (trim_resync)   sync_region_to_trim_window(app, audio, selection,
-                                                           viewport);
+        // not), so re-derive the extent to the selection's NEW extent — the one
+        // surviving arm (see the derivation above the kick). Source view needs
+        // nothing (identity domain — no image moved), which is why this whole block
+        // gates on target view.
+        set_region_to_selection_extent(app, audio, viewport);
     }
     target_render.trigger();
 }
