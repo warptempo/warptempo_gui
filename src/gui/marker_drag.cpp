@@ -1567,7 +1567,7 @@ void MarkerDragOps::cancel_tempo_drag() {
 // moves here (unlike the Up/Down tempo step, whose stepped marker's own
 // image is fixed by construction), so its always-on focus stem rides the
 // re-warp's full-waveform damage to its new column.
-void MarkerDragOps::step_tempo_image(int direction) {
+void MarkerDragOps::step_tempo_image(int direction, bool synthesized_repeat) {
     // Guards (silent refusals, navigation-class). The dispatch site already
     // routes only W+target here; the view test is kept defensive, the shape of
     // adjust_tempo_cents' own view gate. Read-only tabs refuse upstream, and
@@ -1680,10 +1680,11 @@ void MarkerDragOps::step_tempo_image(int direction) {
         d = d_fallback;
     }
 
-    // Coalescing decision before mutation (command adjacency; this route is the
-    // only producer of TempoImageStep, so a burst over the same group collapses
-    // to one entry — any intervening command breaks it).
-    const bool merge = undo.coalesce_gesture(GestureKind::TempoImageStep);
+    // Coalescing decision before mutation (repeat identity; this route is the only
+    // producer of TempoImageStep, so a held key over the same group collapses to one
+    // entry — any command ends the hold, so nothing foreign can get between).
+    const bool merge =
+        undo.coalesce_gesture(GestureKind::TempoImageStep, synthesized_repeat);
     std::vector<GuiWarpMarker> pre_state = mv;
     // Identity hints: the PARTICIPANT rows (the mutated markers — the diff
     // matcher would see them fine, but the hints are the group convention).

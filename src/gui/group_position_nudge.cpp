@@ -20,7 +20,7 @@
 GroupNudgePrologue group_position_nudge_prologue(
     AppState& app, const GuiAudio& audio,
     GuiPlaybackLifecycle& playback_lifecycle, Undo& undo,
-    GestureKind kind, int store_size) {
+    GestureKind kind, bool synthesized_repeat, int store_size) {
     GroupNudgePrologue r;
     if (app.loading || audio.total_frames() <= 0) return r;
     // Fine-tuning authoring gesture: stop playback first (an empty-selection
@@ -29,8 +29,10 @@ GroupNudgePrologue group_position_nudge_prologue(
     if (app.selected_markers.empty()) return r;
     if (app.last_selected_marker < 0) return r;
     // Undo-coalescing decision (a const query); computed before the geometry
-    // refusals below, which is today's order in both twins.
-    const bool merge = undo.coalesce_gesture(kind);
+    // refusals below, which is today's order in both twins. A held key's
+    // continuation presses carry synthesized_repeat and merge into the entry the
+    // physical press pushed.
+    const bool merge = undo.coalesce_gesture(kind, synthesized_repeat);
     if (audio.sample_rate() <= 0) return r;
     if (current_samples_per_pixel(app, audio) <= 0.0) return r;
     // Stale-index belt: every selected index must be in [0, store_size).
@@ -58,7 +60,7 @@ void finish_group_position_nudge(
     AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
     GestureKind kind, int64_t committed_focused_frame,
     GuiTargetRender& target_render) {
-    // (a) re-record with the post-mutation selection for the next coalesce test.
+    // (a) re-stamp this press's kind for the next coalesce test.
     undo.record_gesture(kind);
     // (b) dirty flags.
     undo.recompute_dirty();

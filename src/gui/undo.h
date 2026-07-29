@@ -6,25 +6,33 @@
 #include "selection.h"
 #include "viewport.h"
 
-#include <chrono>
-#include <cstdint>
 #include <vector>
 
 struct GuiTargetRender;
 
-// Rapid-gesture undo coalescing. A burst of eligible keyboard gestures — the
-// warp / phase-reset position nudges (bare Left/Right in the marker lane), the
-// tempo cent step (bare Up/Down; no wheel route), and the W+target tempo-IMAGE
-// step (bare Left/Right there) — that land within kGestureCoalesceMs of
-// each other on the
-// SAME gesture-kind AS CONSECUTIVE COMMANDS collapses into ONE undo entry: the
-// burst's first press pushes the pre-burst snapshot and every continuation
-// press SKIPS its own push, so a single Ctrl+Z reverts the whole burst. The
-// visible move, reorder/remap, dirty tracking, and the
-// target-view preview stay per-press and unchanged — only the redundant
-// history push is suppressed. Any intervening command breaks the burst (see
-// command-adjacency below), so "same target / same tab / same history" all
-// follow for free: changing any of those requires a command in between.
+// HELD-KEY undo coalescing, BY REPEAT IDENTITY. A burst of eligible keyboard
+// gestures — the warp / phase-reset position nudges (bare Left/Right in the
+// marker lane), the tempo cent step (bare Up/Down; no wheel route), and the
+// W+target tempo-IMAGE step (bare Left/Right there) — collapses into ONE undo
+// entry when it is ONE HELD KEY: the PHYSICAL press pushes the pre-burst
+// snapshot, and every SYNTHESIZED REPEAT of that press (GuiInputState::
+// synthesized_repeat, set only in GuiPlatform::maybe_fire_repeat) SKIPS its own
+// push, so a single Ctrl+Z reverts the whole hold. The visible move,
+// reorder/remap, dirty tracking, and the target-view preview stay per-press and
+// unchanged — only the redundant history push is suppressed.
+//
+// A hold therefore coalesces BY CONSTRUCTION, for any compositor at any
+// key-repeat delay: there is no wall-clock window and no command counter, so
+// nothing here can drift out of sync with the desktop's repeat configuration.
+// Rapid MANUAL taps are separately undoable — the literal gesture boundary is
+// "did you let go of the key".
+//
+// "Same target / same tab / same history" all still follow for free, and so does
+// "the top of the undo stack is this burst's entry": a synthesized repeat can
+// only arrive while the hold is still armed, and the platform's repeat contract
+// disarms the hold at every intervening pointer press, key press, and completed
+// wheel emission (layer (1), stated at maybe_fire_repeat), so no command can run
+// between a burst's physical press and its repeats.
 enum class GestureKind {
     None, WarpNudge, PhaseResetNudge, TempoStep,
     // W+target bare Left/Right — the tempo drag's keyboard twin
@@ -32,35 +40,6 @@ enum class GestureKind {
     // steps coalesces with itself and nothing else (never with the position
     // nudges or the Up/Down tempo step).
     TempoImageStep
-};
-
-// Coalesce window. Presses farther apart than this start a fresh undo entry.
-// THE VALUE IS DERIVED, NOT PICKED (architect-confirmed 2026-07-29 — read this
-// before tuning it): the window MUST EXCEED THE COMPOSITOR'S KEY-REPEAT DELAY,
-// or a HELD key's FIRST synthesized repeat falls outside it and splits a
-// one-step entry off the front of the burst. That was the observed bug at 500:
-// the physical press pushed E1, the 600ms-delayed first repeat missed the window
-// and pushed E2, and the 40ms-spaced repeats after it all coalesced into E2 — so
-// one held arrow took TWO Ctrl+Z presses to undo, the first reverting a single
-// step. The Wayland desktops this product targets sit at a 500-600ms delay
-// (labwc/wlroots default 600 at 25 repeats/s; GNOME 500). X11's 660 is out of
-// scope — there is no X11 support. The gap this gate measures is that delay PLUS
-// the event loop's lateness at the deadline (poll wakeup jitter, up to a frame
-// when it lands mid-repaint, rare tens of ms under a worker publish), so the
-// value is 600 + 50ms of headroom. 650 is humanly indistinguishable from 600 as
-// a "these were one gesture" threshold, so the headroom costs nothing: the
-// window still splits two adjacent-but-slow deliberate presses, which is its
-// other job.
-inline constexpr uint64_t kGestureCoalesceMs = 650;
-
-// The previous eligible commit's coalesce key: its gesture-kind, its steady
-// timestamp, and the command_seq it committed at. A later press merges only
-// when it is the same kind, inside the window, and the immediately-next command
-// (command_seq == this + 1). Session-only, never serialized.
-struct GestureCoalesce {
-    GestureKind kind        = GestureKind::None;
-    uint64_t    last_ms     = 0;  // steady_clock ms of the previous commit
-    uint64_t    command_seq = 0;  // app.command_seq at the previous commit
 };
 
 // Undo-cluster operations, extracted from main.cpp's inline lambdas.
@@ -120,18 +99,17 @@ struct Undo {
     void do_undo();
     void do_redo();
 
-    // Rapid-gesture undo-coalescing state (see GestureCoalesce above).
-    GestureCoalesce gesture_coalesce;
-
     // Whether the current eligible gesture press of `kind` coalesces into the
-    // burst's existing undo entry. When it returns true the caller SKIPS its
+    // burst's existing undo entry. `synthesized_repeat` is the press's own
+    // platform bit (GuiInputState::synthesized_repeat), threaded from the key
+    // event that reached the handler. When it returns true the caller SKIPS its
     // undo push (and calls note_coalesced_commit for the per-press side
-    // effects); either way the caller then calls record_gesture. Call at handler
-    // entry — after the on_key/on_wheel command_seq bump the eligible press
-    // itself carries, so its own command is the one adjacency compares.
-    bool coalesce_gesture(GestureKind kind) const;
-    // Record this eligible press as the burst's latest: its kind, now, and the
-    // current app.command_seq. Call after the push / skip.
+    // effects); either way the caller then calls record_gesture. A const query —
+    // callable anywhere before record_gesture, in any order with the handler's
+    // own refusals.
+    bool coalesce_gesture(GestureKind kind, bool synthesized_repeat) const;
+    // Record this eligible press as the burst's latest by KIND. Call after the
+    // push / skip.
     void record_gesture(GestureKind kind);
     // Per-press side effects for a coalesced (push-skipped) press: the same
     // hover-popup clear the push_undo_* helpers do, minus the history push.
@@ -142,11 +120,22 @@ struct Undo {
     // touched_snapshot (the pre-burst snapshot coordinates a restore produces),
     // but its touched_live — the coordinates a redo of the whole coalesced op must
     // re-select — must track the final after-state as later presses reorder
-    // further. Command adjacency (the coalesce precondition) guarantees the top of
-    // the undo stack IS this burst's entry; a no-op on an empty stack (defensive).
+    // further. Repeat identity (the coalesce precondition) guarantees the top of
+    // the undo stack IS this burst's entry — no command can run between the
+    // physical press that pushed it and the repeats that merge into it; a no-op on
+    // an empty stack (defensive).
     void refresh_coalesced_touched_live(std::vector<int> touched_live);
 
   private:
+    // The previous eligible commit's gesture kind — the whole coalescing state,
+    // session-only and never serialized. A repeat merges only into a burst of its
+    // OWN kind, which is what keeps a nudge burst and a tempo-step burst separate.
+    // TWO writers: record_gesture stamps it at each eligible commit, and every
+    // route that changes the undo-stack top CLEARS it — the four push helpers plus
+    // the do_undo/do_redo restore core (the reason is at coalesce_gesture: it stops
+    // a stale stamp from outliving the entry it named).
+    GestureKind last_gesture_kind_ = GestureKind::None;
+
     // Shared authoritative guard for do_undo / do_redo: true when the step
     // would actually act (non-empty source stack, top entry's target tab
     // writable). See the rationale block at the definition.

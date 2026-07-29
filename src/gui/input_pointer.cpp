@@ -669,11 +669,6 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
 
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                       GuiInputState mods) {
-    // Command-adjacency bump (see on_key): a pointer button press is a discrete
-    // command, so it breaks a same-gesture nudge/tempo-step burst. NOT bumped
-    // on release or motion — those are not discrete commands, and a drag is
-    // already fenced by the press that began it here.
-    ++app.command_seq;
     // Prompt-modal input handling: while the bottom-strip prompt is
     // active, all mouse events are swallowed. Responses go through
     // the keyboard.

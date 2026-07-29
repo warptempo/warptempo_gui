@@ -209,13 +209,15 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // refuse-vs-clamp split left.) Crossing a neighbor is legal and goes through the
 // reorder-and-remap path below; the render boundary collapses an exact-equal
 // group to one event.
-void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
+void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
+        int direction, bool synthesized_repeat) {
     // Shared guard prologue: loading / empty-audio refusal, playback stop first,
     // empty/no-focus refusals, the coalesce verdict, the geometry refusals, and
     // the stale-index belt (the playhead-follows-focused / lead-in rationale lives
     // at the declaration). Refuses silently, navigation-class.
     const GroupNudgePrologue pro = group_position_nudge_prologue(
         app, audio, playback_lifecycle, undo, GestureKind::PhaseResetNudge,
+        synthesized_repeat,
         static_cast<int>(app.phaseresetmarkers.markers().size()));
     if (!pro.ok) return;
     const bool merge = pro.merge;
@@ -299,10 +301,10 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         app, 'P', reorder_markers_by_time(app.phaseresetmarkers.markers_mut()));
     std::vector<int> touched_live(app.selected_markers.begin(),
                                   app.selected_markers.end());
-    // Coalesce a rapid burst: the first press pushed the pre-burst snapshot with
-    // the group hints; a continuation press skips the redundant push and REFRESHES
-    // the surviving entry's touched_live to this press's post-reorder indices
-    // (touched_snapshot stays the first press's pre-burst coordinates). The
+    // Coalesce a held key: the PHYSICAL press pushed the pre-burst snapshot with
+    // the group hints; each synthesized repeat skips the redundant push and
+    // REFRESHES the surviving entry's touched_live to this press's post-reorder
+    // indices (touched_snapshot stays the first press's pre-burst coordinates). The
     // post-mutation re-record happens in the shared tail.
     if (merge) {
         undo.note_coalesced_commit();

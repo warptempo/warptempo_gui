@@ -1547,6 +1547,10 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
     // (2) each fire additionally re-checks the level conditions (eligibility
     // under the live modifiers, and the editor-active flag still matching its
     // arm-time value). The arm-time editor flag is captured here for layer (2).
+    // LAYER (1) IS LOAD-BEARING FOR UNDO CORRECTNESS as well as hand-feel — it is
+    // what makes "no synthesized repeat can follow an intervening command" true,
+    // which is the property undo coalescing rides. The full statement is at
+    // maybe_fire_repeat, beside the bit it sets.
     const bool repeat_ok =
         repeat_eligible_probe_ && repeat_eligible_probe_(key, mods);
     const bool editor_ctx =
@@ -1656,6 +1660,20 @@ void GuiPlatform::maybe_fire_repeat() {
         repeat_key_ = 0;
         return;
     }
+    // THE REPEAT BIT, and the ONLY site that sets it — stamped after the
+    // eligibility re-probe so the probes stay a function of key+modifiers alone.
+    // It lets the application tell a held key's continuation presses from fresh
+    // physical ones, and UNDO COALESCING IS BUILT ON IT (Undo::coalesce_gesture):
+    // a burst collapses into one undo entry exactly when its continuation presses
+    // carry this bit.
+    // THAT MAKES LAYER (1) OF THE REPEAT CONTRACT LOAD-BEARING FOR UNDO
+    // CORRECTNESS, not just for hand-feel: because the event-edge disarms kill the
+    // hold at any intervening pointer-button press, completed wheel emission, or
+    // key press, no synthesized repeat can ever arrive AFTER another command ran —
+    // which is the whole reason the coalescer needs no adjacency counter of its
+    // own. Weakening a disarm would let a repeat merge a gesture into a foreign
+    // command's undo entry.
+    mods.synthesized_repeat = true;
     deliver_key(repeat_key_, mods);
     repeat_due_us_ = now + repeat_period_us_;
 }

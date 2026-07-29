@@ -41,5 +41,7 @@ struct GuiPhaseResetMarkersOps {
     void drop_phase_reset_lead_in_at_playhead();
     void delete_selected_phase_reset();
     void toggle_phase_reset_disabled();
-    void nudge_selected_phase_resets(int direction);
+    // `synthesized_repeat` is the dispatching key event's platform repeat bit,
+    // read only by the undo-coalesce verdict (undo.h).
+    void nudge_selected_phase_resets(int direction, bool synthesized_repeat);
 };

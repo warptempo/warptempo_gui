@@ -116,6 +116,7 @@ struct MarkerDragOps {
     // predecessors' tempo_cents through the same seeding and solve helpers
     // above. Dispatched from the bare Left/Right marker-lane route in
     // input_handler.cpp; a keyboard command like adjust_tempo_cents, living
-    // here because the machinery is the drag's.
-    void step_tempo_image(int direction);
+    // here because the machinery is the drag's. `synthesized_repeat` is that key
+    // event's platform repeat bit, read only by the undo-coalesce verdict (undo.h).
+    void step_tempo_image(int direction, bool synthesized_repeat);
 };

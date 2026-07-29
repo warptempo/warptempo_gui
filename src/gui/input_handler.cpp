@@ -33,16 +33,6 @@
 // this TU can reach them; render_bpm_sweep() is the sole caller.
 
 void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
-    // Command-adjacency counter: one bump per discrete user command, here and
-    // at the other two dispatch entry points (on_button_press, on_wheel). The
-    // undo-coalesce guard merges an eligible press only when it is the
-    // immediately-next command, so any intervening keypress — even a swallowed
-    // or unhandled one — breaks a same-gesture burst. The platform delivers
-    // here only on key PRESS (releases return early) and drops bare modifiers
-    // and F-keys before delivery, so this never fires for a held modifier;
-    // key-repeat re-enters through the same path as consecutive commands, which
-    // correctly coalesce.
-    ++app.command_seq;
     // Double-click lifecycle, KEYBOARD half: any keyboard command between two
     // clicks breaks EVERY pending double-click candidate (ZoomRow, Marker,
     // EmptyLane alike) at this one chokepoint — no legitimate double-click types
@@ -54,7 +44,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // per-branch clears (the on_button_press top-of-frame clear, the moved-drag
     // clears, the Esc drag-cancel clears) stay: they own the pointer half of the
     // lifetime; this owns the keyboard half, and on_wheel owns the wheel half
-    // (same clear beside its own command_seq bump).
+    // (the same clear at its own entry).
     app.double_click = DoubleClickCandidate{};
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
@@ -663,10 +653,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // are unbound. Read-only tabs refuse upstream: the allowlist does not admit
     // the vertical arrows in any form.
     if (!alt && !shift && !ctrl && key == GuiKeys::Up) {
-        warpops.adjust_tempo_cents(+1); return;
+        warpops.adjust_tempo_cents(+1, mods.synthesized_repeat); return;
     }
     if (!alt && !shift && !ctrl && key == GuiKeys::Down) {
-        warpops.adjust_tempo_cents(-1); return;
+        warpops.adjust_tempo_cents(-1, mods.synthesized_repeat); return;
     }
     if (key == GuiKeys::Equal && !shift && !ctrl && !alt) {
         viewport.zoom_in(); return;
@@ -762,13 +752,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         (key == GuiKeys::Left || key == GuiKeys::Right) &&
         playhead_in_marker_lane()) {
         const int direction = (key == GuiKeys::Left) ? -1 : +1;
+        // All three routes take the press's platform repeat bit: it is what makes a
+        // HELD arrow one undo entry (Undo::coalesce_gesture).
+        const bool rpt = mods.synthesized_repeat;
         if (app.active_markers_view == 'P') {
             if (app.active_audio_view != 'T') return;   // phase home = target
-            phase_resets.nudge_selected_phase_resets(direction);
+            phase_resets.nudge_selected_phase_resets(direction, rpt);
         } else if (app.active_audio_view == 'T') {
-            marker_drag.step_tempo_image(direction);  // W+target: tempo-image step
+            // W+target: tempo-image step
+            marker_drag.step_tempo_image(direction, rpt);
         } else {
-            warpops.nudge_selected_markers(direction);  // warp home: position
+            warpops.nudge_selected_markers(direction, rpt);  // warp home: position
         }
         return;
     }
@@ -1130,21 +1124,13 @@ int GuiInputHandler::wheel_context(int x, int y) const {
 // situations the platform refuses to accumulate remainder in.
 void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
                                GuiInputState mods) {
-    // Command-adjacency bump (see on_key). The platform delivers one on_wheel
-    // per pointer frame carrying the net detent count, and each wheel route
-    // applies that net count in a single call (zoom / pan both
-    // take the summed count), so one wheel frame is one command and one bump —
-    // a burst of same-frame detents is a single command, distinct wheel frames
-    // are consecutive commands that coalesce.
-    ++app.command_seq;
     // Double-click lifecycle, WHEEL half: a wheel command between two clicks
     // moves content under the pointer (a zoom rescales, a pan slides), so the
     // second click must not consume as a double-click of the first. Clear every
-    // pending candidate here, beside the command_seq bump, exactly as on_key's
-    // keyboard half does — the platform delivers one on_wheel per pointer frame
-    // (net detent count >= 1) after accumulating sub-detent remainder itself, so
-    // every call here is a completed detent frame that bumps, matching on_key's
-    // unconditional placement.
+    // pending candidate here, exactly as on_key's keyboard half does — the
+    // platform delivers one on_wheel per pointer frame (net detent count >= 1)
+    // after accumulating sub-detent remainder itself, so every call here is a
+    // completed detent frame, matching on_key's unconditional placement.
     app.double_click = DoubleClickCandidate{};
     const int ctx = wheel_context(x, y);
     if (ctx < 0) return;

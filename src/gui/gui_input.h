@@ -86,6 +86,15 @@ struct GuiInputState {
     // editor-typing repeat gate; every other consumer reads the GuiKey and
     // ignores this.
     uint32_t codepoint           = 0;
+    // True iff this key event is a SYNTHESIZED KEY REPEAT — one the process
+    // generated itself from a held key (GuiPlatform::maybe_fire_repeat, the only
+    // writer), not a fresh physical press. A platform-boundary fact in the same
+    // spirit as `codepoint`. Its one consumer is undo coalescing: a burst of
+    // eligible gesture presses collapses into ONE undo entry exactly when the
+    // continuation presses are repeats of the press that opened it, so a held key
+    // coalesces by construction at any compositor's repeat delay and rapid
+    // MANUAL taps stay separately undoable.
+    bool     synthesized_repeat  = false;
 };
 
 // True for the chord that toggles playback: BARE Space only. Modifier-strict —

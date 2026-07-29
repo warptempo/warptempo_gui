@@ -406,7 +406,8 @@ void GuiWarpMarkersOps::toggle_disabled() {
 // The grid is structural now: authored tempo is integer cents by type, so
 // every stored value is on-grid and the step is plain integer addition —
 // the old off-grid outward snap has no input left to act on.
-void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
+void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
+                                           bool synthesized_repeat) {
     if (app.active_markers_view != 'W') return;
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
@@ -415,7 +416,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     // (per-view behavior bit-for-bit — the source-view pass/ref->owner freeze,
     // the target-only collapsed refusal, the constructive per-marker clamp).
     if (app.selected_markers.size() >= 2) {
-        adjust_tempo_cents_group(delta_cents);
+        adjust_tempo_cents_group(delta_cents, synthesized_repeat);
         return;
     }
     // architect ruling 2026-07-22: the Up/Down tempo step stays reachable off
@@ -453,13 +454,13 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
             static_cast<long>(audio.total_frames())).red;
         if (red.count(f)) return;
     }
-    // Undo-coalescing decision. coalesce_gesture keys off command adjacency
-    // (app.command_seq, bumped once at the on_key / on_wheel dispatch entry
-    // that reached this handler), so it is order-independent of the
-    // focus-collapse below; it just has to run before record_gesture stamps
-    // this command. The Up/Down step is the only route reaching here with kind
-    // TempoStep, so a burst of tempo steps coalesces as intended.
-    const bool merge = undo.coalesce_gesture(GestureKind::TempoStep);
+    // Undo-coalescing decision. coalesce_gesture keys off the press's own repeat
+    // bit (threaded down from the on_key event that reached this handler), so it is
+    // order-independent of the focus-collapse below; it just has to run before
+    // record_gesture stamps the kind. The Up/Down step is the only route reaching
+    // here with kind TempoStep, so a held Up/Down coalesces as intended.
+    const bool merge =
+        undo.coalesce_gesture(GestureKind::TempoStep, synthesized_repeat);
     selection.collapse_to_focused();
     const auto& mv_const = app.warpmarkers.markers();
     std::vector<GuiWarpMarker> proposed = mv_const;
@@ -517,8 +518,8 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     if (!changed) return;
     std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);
-    // Coalesce a rapid tempo-step burst: continuation presses skip the
-    // redundant push so one Ctrl+Z reverts the whole burst.
+    // Coalesce a held tempo step: the repeats skip the redundant push so one
+    // Ctrl+Z reverts the whole hold.
     if (merge) undo.note_coalesced_commit();
     else       undo.push_undo_warp(std::move(pre_state));
     undo.record_gesture(GestureKind::TempoStep);
@@ -608,7 +609,8 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
 // FREEZE CONVERSION stays a singleton-only act (a bulk payload conversion from
 // one keystroke is refused by design). No freeze conversion here: every stepped
 // member is already an owner, so a plain integer add is the whole mutation.
-void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
+void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
+                                                 bool synthesized_repeat) {
     const auto& mv = app.warpmarkers.markers();
     const int n = static_cast<int>(mv.size());
     // The coincident-collapse red set, computed VIEW-INDEPENDENTLY here (the
@@ -629,13 +631,14 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
             return;   // walled -> silent all-or-nothing refuse
         }
     }
-    // Coalesce decision before mutation (command adjacency, order-independent of
-    // the mutation; same as the singleton). The Up/Down step is the only route
-    // reaching here with kind TempoStep, and coalesce_gesture keys on the kind +
-    // command adjacency, NOT on any marker index, so a burst over the SAME group
-    // collapses to one entry (a selection change requires an intervening command,
-    // which breaks the burst) — the group is coalesce-eligible unchanged.
-    const bool merge = undo.coalesce_gesture(GestureKind::TempoStep);
+    // Coalesce decision before mutation (a const query, order-independent of the
+    // mutation; same as the singleton). The Up/Down step is the only route reaching
+    // here with kind TempoStep, and coalesce_gesture keys on the kind + the repeat
+    // bit, NOT on any marker index, so a held key over the SAME group collapses to
+    // one entry (a selection change requires a command, and a command ends the
+    // hold) — the group is coalesce-eligible unchanged.
+    const bool merge =
+        undo.coalesce_gesture(GestureKind::TempoStep, synthesized_repeat);
     std::vector<GuiWarpMarker> pre_state = mv;
     // Apply +/-1 cent to each selected member (plain integer arithmetic — the
     // structural producer discipline). None is walled (checked above), so every
@@ -653,8 +656,8 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
     if (touched.empty()) return;   // defensive (a fully-stale selection)
     // ONE undo entry per press, with identity hints: no reorder happens
     // (positions untouched), so touched_snapshot == touched_live == the stepped
-    // indices. A coalesced continuation press skips the push (the burst's first
-    // entry owns the pre-burst snapshot and its hints). A 2+ selection paints no
+    // indices. A coalesced repeat skips the push (the hold's physical press owns
+    // the pre-burst snapshot and its hints). A 2+ selection paints no
     // stem (its cue is the extent region's ground), so the group step has no stem to
     // move.
     if (merge) undo.note_coalesced_commit();
@@ -753,13 +756,15 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
 // boundary collapses exact-frame ties to one 1.00 owner — reachable now not only
 // by crossing but by two members sharing a painted column, which the per-member
 // rule merges.
-void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
+void GuiWarpMarkersOps::nudge_selected_markers(
+        int direction, bool synthesized_repeat) {
     // Shared guard prologue: loading / empty-audio refusal, playback stop first,
     // empty/no-focus refusals, the coalesce verdict, the geometry refusals, and
     // the stale-index belt (the playhead-follows-focused / lead-in rationale
     // lives at the declaration). Refuses silently, navigation-class.
     const GroupNudgePrologue pro = group_position_nudge_prologue(
         app, audio, playback_lifecycle, undo, GestureKind::WarpNudge,
+        synthesized_repeat,
         static_cast<int>(app.warpmarkers.markers().size()));
     if (!pro.ok) return;
     const bool merge = pro.merge;
@@ -879,12 +884,13 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     // selection in place).
     std::vector<int> touched_live(app.selected_markers.begin(),
                                   app.selected_markers.end());
-    // Coalesce a rapid burst: the first press pushed the pre-burst snapshot with
-    // the group hints; a continuation press skips the redundant push and instead
+    // Coalesce a held key: the PHYSICAL press pushed the pre-burst snapshot with
+    // the group hints; each synthesized repeat skips the redundant push and instead
     // REFRESHES the surviving entry's touched_live to this press's post-reorder
     // indices (touched_snapshot stays the first press's pre-burst coordinates — a
-    // restore produces that snapshot, and the burst moves the same selection by
-    // command adjacency). The post-mutation re-record happens in the shared tail.
+    // restore produces that snapshot, and the whole hold moves the same selection,
+    // since a selection change needs a command and a command ends the hold). The
+    // post-mutation re-record happens in the shared tail.
     if (merge) {
         undo.note_coalesced_commit();
         undo.refresh_coalesced_touched_live(std::move(touched_live));

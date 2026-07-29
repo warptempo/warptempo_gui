@@ -9,7 +9,6 @@
                                   // singleton offscreen recenter
 
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <set>
@@ -74,6 +73,7 @@ void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state,
     e.touched_snapshot   = std::move(touched_snapshot);
     e.touched_live       = std::move(touched_live);
     app.history.push(std::move(e));
+    last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
     viewport.clear_hover_popup();
 }
 
@@ -89,6 +89,7 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     e.touched_snapshot   = std::move(touched_snapshot);
     e.touched_live       = std::move(touched_live);
     app.history.push(std::move(e));
+    last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
     viewport.clear_hover_popup();
 }
 
@@ -102,6 +103,7 @@ void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
     e.op_mode            = op_mode;
     e.tab                = tab_override ? tab_override : app.active_tab_view;
     app.history.push(std::move(e));
+    last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
     viewport.clear_hover_popup();
 }
 
@@ -113,48 +115,56 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
     e.op_mode            = 'S';
     e.tab                = app.active_tab_view;
     app.history.push(std::move(e));
+    last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
     viewport.clear_hover_popup();
     recompute_dirty();
 }
 
-namespace {
-uint64_t gesture_steady_ms() {
-    return static_cast<uint64_t>(
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now().time_since_epoch()).count());
-}
-}  // namespace
-
-bool Undo::coalesce_gesture(GestureKind kind) const {
-    const GestureCoalesce& c = gesture_coalesce;
-    // Command adjacency is the whole correctness story. app.command_seq is
-    // bumped once per discrete user command at the three dispatch entry points,
-    // so this eligible press's own command is exactly c.command_seq + 1 iff NO
-    // other command ran since the previous eligible commit. Any intervening
-    // command — a click, Tab, paste, save, undo/redo, tab/column switch, or an
-    // unhandled key — advances the counter an
-    // extra step and breaks the burst, which subsumes "same selection / same
-    // tab / same history": none of those can change without a command in
-    // between. `kind` still separates nudge from tempo-step even when adjacent;
-    // the window still splits a rapid burst from two adjacent-but-slow commands;
-    // the non-empty-stack guard covers a stack cleared by a load/reset (which
-    // does not advance command_seq). Adjacency being the CORRECTNESS story does
-    // not make the window a free parameter: a HELD key is command-adjacent
-    // throughout, so the window's length alone decides whether its first repeat
-    // joins the burst or splits an entry off it — which is why kGestureCoalesceMs
-    // is pinned to the compositor's key-repeat delay at its declaration.
-    return c.kind == kind
-        && (gesture_steady_ms() - c.last_ms) <= kGestureCoalesceMs
-        && app.command_seq == c.command_seq + 1
+bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) const {
+    // REPEAT IDENTITY IS THE WHOLE GATE. Only a press the process synthesized
+    // itself from a still-held key merges; a physical press always opens a fresh
+    // entry. There is no wall clock and no command counter, because the platform's
+    // key-repeat contract already supplies the adjacency property those enforced
+    // numerically: layer (1) of that contract (stated at
+    // GuiPlatform::maybe_fire_repeat) disarms the hold at every intervening
+    // pointer-button press, key press, and completed wheel emission, so a
+    // synthesized repeat STRUCTURALLY CANNOT arrive after another command ran.
+    // Hence "same selection / same tab / same history" and "the stack top is this
+    // burst's entry" all still hold — none of them can change without a command,
+    // and a command ends the hold.
+    //
+    // `kind` separates a nudge burst from a tempo-step burst. A repeat re-enters
+    // the full dispatcher, so a hold's kind cannot change mid-burst and this test
+    // is expected always-true in practice; it stays as the cheap structural guard
+    // it always was. The non-empty-stack guard covers a stack cleared by a
+    // load/reset.
+    //
+    // EVERY CHANGE OF THE UNDO-STACK TOP CLEARS THE STAMP — the four push helpers
+    // (push_undo_warp / push_undo_phase_reset / push_undo_both / push_settings_undo)
+    // and restore_history_entry, the shared do_undo/do_redo core, one line each.
+    // That closes the one gap the platform's disarm
+    // cannot see: a burst's PHYSICAL press can refuse without committing,
+    // leaving a stale same-kind stamp, and a later repeat OF THAT SAME HOLD can
+    // then commit if some non-command state flipped the refusal — the async
+    // waveform worker publishing a new displayed map mid-hold, which changes the
+    // painted columns the phase-reset nudge's wall test reads. Without the clear
+    // that repeat would merge into whatever foreign entry sat on top; with it, a
+    // stale kind can never coexist with a foreign stack top, so the adjacency the
+    // repeat contract owns is airtight in both directions. record_gesture runs
+    // AFTER the push at all four eligible routes, so intended merges are untouched.
+    //
+    // ONE ACCEPTED DELTA remains, benign: two same-kind bursts with NO command
+    // between them merge across the release gap when the second burst's physical
+    // press refuses (the stamp survives, no push cleared it). Over-merge only —
+    // the surviving entry's snapshot predates both bursts, so one Ctrl+Z reverts
+    // both, and nothing foreign is in reach.
+    return synthesized_repeat
+        && last_gesture_kind_ == kind
         && !app.history.undo_stack.empty();
 }
 
 void Undo::record_gesture(GestureKind kind) {
-    gesture_coalesce = GestureCoalesce{
-        kind,
-        gesture_steady_ms(),
-        app.command_seq,          // this eligible press's command
-    };
+    last_gesture_kind_ = kind;
 }
 
 void Undo::note_coalesced_commit() {
@@ -165,9 +175,10 @@ void Undo::note_coalesced_commit() {
 }
 
 void Undo::refresh_coalesced_touched_live(std::vector<int> touched_live) {
-    // Single-writer: the burst's entry is the top of the undo stack (command
-    // adjacency admits no intervening push). Overwrite only touched_live; the
-    // first-press touched_snapshot stays the restore-produces coordinates.
+    // Single-writer: the burst's entry is the top of the undo stack (repeat
+    // identity admits no intervening push — a command would have ended the hold).
+    // Overwrite only touched_live; the first-press touched_snapshot stays the
+    // restore-produces coordinates.
     if (app.history.undo_stack.empty()) return;
     app.history.undo_stack.back().touched_live = std::move(touched_live);
 }
@@ -395,6 +406,11 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     viewport.clear_hover_popup();
     UndoEntry entry = std::move(from.back());
     from.pop_back();
+    // A restore rewrites BOTH stack tops, so it invalidates the coalesce stamp for
+    // the same reason a push does (see coalesce_gesture): the entry the stamp named
+    // is no longer the one a later repeat would merge into. Neither do_undo nor
+    // do_redo is a coalescing route, so this only ever removes a stale merge.
+    last_gesture_kind_ = GestureKind::None;
 
     // Counter-entry captured from live state so the opposite direction can
     // reverse this restore. Same carry-everywhere field list the push_undo_*

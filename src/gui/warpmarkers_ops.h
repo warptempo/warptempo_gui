@@ -57,15 +57,17 @@ struct GuiWarpMarkersOps {
     void toggle_inherits();
     void toggle_disabled();
     // Steps the focused marker's tempo by `delta_cents` integer cents (one
-    // cent per keypress / wheel detent, signed by direction of travel). With
-    // a 2+ selection it dispatches to the all-or-nothing group step below.
-    void adjust_tempo_cents(int64_t delta_cents);
-    void nudge_selected_markers(int direction);
+    // cent per keypress, signed by direction of travel). With a 2+ selection it
+    // dispatches to the all-or-nothing group step below. `synthesized_repeat` is
+    // the dispatching key event's platform repeat bit, read only by the
+    // undo-coalesce verdict (undo.h).
+    void adjust_tempo_cents(int64_t delta_cents, bool synthesized_repeat);
+    void nudge_selected_markers(int direction, bool synthesized_repeat);
 
    private:
     // Group tempo step (architect 2026-07-23, 2+ selection): all-or-nothing.
     // Every selected marker must be a steppable OWNER not at the bracket edge in
     // the step direction, or the whole press refuses silently; then each steps
     // its own tempo_cents by delta_cents. See the definition for the wall set.
-    void adjust_tempo_cents_group(int64_t delta_cents);
+    void adjust_tempo_cents_group(int64_t delta_cents, bool synthesized_repeat);
 };

@@ -45,9 +45,10 @@ struct GroupNudgePrologue {
 // empty selection to the waveform-lane playhead step instead and never reaches
 // here, so this is the belt; (4) no-focus
 // refusal; (5) the undo-coalesce verdict, computed before the geometry refusals
-// (a const query — coalesce_gesture keys off command adjacency, app.command_seq
-// bumped once at the on_key dispatch entry that reached the handler, and it just
-// has to run before record_gesture stamps this command in the tail); (6) bad
+// (a const query — coalesce_gesture keys off the press's own repeat bit, which
+// `synthesized_repeat` carries down from the on_key event that reached the
+// handler, and it just has to run before record_gesture stamps the kind in the
+// tail); (6) bad
 // sample-rate refusal; (7) non-positive samples-per-pixel refusal; (8) the
 // stale-index belt over every selected index; (9) focused-index stale refusal.
 // Every marker is nudgeable, including the one at time 0 — the parser resolver
@@ -76,10 +77,12 @@ struct GroupNudgePrologue {
 // The lead-in workflow (parking the playhead upstream
 // to audition the approach) is supplied by the scrub surface instead. The twins
 // keep their own GestureKind (WarpNudge / PhaseResetNudge).
+// `synthesized_repeat` is the dispatching key event's platform repeat bit,
+// consumed by the coalesce verdict alone.
 GroupNudgePrologue group_position_nudge_prologue(
     AppState& app, const GuiAudio& audio,
     GuiPlaybackLifecycle& playback_lifecycle, Undo& undo,
-    GestureKind kind, int store_size);
+    GestureKind kind, bool synthesized_repeat, int store_size);
 
 // THE PER-ITEM pixel-column step, and the ONLY position derivation either nudge
 // uses: read the item's currently painted column (painted_column_of_source_frame
@@ -158,7 +161,7 @@ int64_t stepped_anchor_frame(
 // remap_marker_indices_after_reorder, collected touched_live, and done its own
 // typed undo merge/push block (push_undo_warp with affects_persistence=true /
 // push_undo_phase_reset — those stay in the twins). The tail then, in order:
-// (a) record_gesture (re-stamps this command for the next coalesce test);
+// (a) record_gesture (re-stamps this press's kind for the next coalesce test);
 // (b) recompute_dirty;
 // (c) invalidate_waveform_area — this full-waveform damage also OWNS the
 //     selected-marker stem's move: a nudge shifts the focused SINGLETON's frame,
@@ -198,10 +201,11 @@ int64_t stepped_anchor_frame(
 // input: the undo push/record read neither the playhead nor the selection (their
 // snapshots capture the marker stores, engine settings, tab, and the hint indices
 // only — not the cursor), move_playhead_to does not read undo
-// state, and the region follow reads only the post-mutation store/selection. TWO
-// knowingly-accepted deltas ride the unification, both phase-only (the warp twin
-// already had this shape) and both harmless, recorded here so the next reader need
-// not re-derive them.
+// state, and the region follow reads only the post-mutation store/selection. ONE
+// knowingly-accepted delta rides the unification, phase-only (the warp twin
+// already had this shape) and harmless, recorded here so the next reader need
+// not re-derive it; a second one dissolved with the coalesce clock and is kept
+// below as (2) so it is not re-discovered as an open cost.
 //
 // (1) HOVER-POPUP ordering. move_playhead_to can conditionally recompute the hover
 // after a viewport shift, and the undo push clears it; the phase twin historically
@@ -211,24 +215,19 @@ int64_t stepped_anchor_frame(
 // rather than cleared. Transient display state only (no committed bytes, no undo
 // content, damage idempotent); accepted as improved twin symmetry.
 //
-// (2) THE COALESCE CLOCK (touches the undo ENTRY). Undo::record_gesture stamps
-// gesture_steady_ms() into the coalescer, and the same move_playhead_to can run a
-// SYNCHRONOUS kick_waveform_sync when the follow shifts the viewport (the
-// offscreen-focused case). The phase pre-image moved the playhead THEN recorded
-// (clock stamped AFTER that rebuild); the unified tail records THEN moves the
-// playhead (clock stamped BEFORE it). So when the focused reset is offscreen the
-// rebuild no longer sits inside the measured coalesce window (kGestureCoalesceMs,
-// whose value is derived at its declaration in undo.h — do not restate it here),
-// and a next
-// burst press landing near that boundary can open a fresh undo entry where the
-// pre-image would have merged. Worst case: one extra undo entry — a second Ctrl+Z.
-// Accepted and architect-ratified (2026-07-24): the unified tail adopts the warp
-// shape verbatim to minimize warp/phase divergence — the twins now behave MORE
-// alike than before — and the coalesce window's ANCHOR POINT is a heuristic, not a
-// recorded contract (its LENGTH is not a heuristic — it is pinned to the
-// compositor's key-repeat delay, see undo.h; what is loose is only which end of
-// this tail the clock is stamped at, and the presses that actually make up a
-// burst sit far inside the window either way).
+// (2) WHERE record_gesture SITS IN THE TAIL — no longer a delta at all, recorded
+// because it WAS one. The phase pre-image moved the playhead THEN recorded, the
+// unified tail records THEN moves the playhead; while coalescing was timed, that
+// reordering moved a possible SYNCHRONOUS kick_waveform_sync (move_playhead_to
+// runs one when the follow shifts the viewport — the offscreen-focused case)
+// outside the measured window, so a next burst press landing near the boundary
+// could open a fresh undo entry where the pre-image would have merged. Coalescing
+// is decided by REPEAT IDENTITY now (undo.h): a held key's continuation presses
+// merge because they are synthesized repeats, with no clock to be inside or
+// outside of, so the timing question this delta was about cannot arise and the
+// accepted cost is simply gone. The ordering itself stands unchanged — the
+// unified tail adopts the warp shape verbatim to minimize warp/phase divergence,
+// and record_gesture reads nothing the playhead move writes.
 void finish_group_position_nudge(
     AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
     GestureKind kind, int64_t committed_focused_frame,

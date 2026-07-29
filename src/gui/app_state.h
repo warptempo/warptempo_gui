@@ -990,8 +990,8 @@ enum class DoubleClickSurface { None, ZoomRow, Marker, EditorText, EmptyLane };
 //                 which also runs the waveform-parity placement. Cleared like
 //                 every candidate when the armed region drag moves.
 // Cleared on file load, the moment an action fires, and — the KEYBOARD and
-// WHEEL halves of the lifetime — at the TOP of every on_key AND on_wheel command
-// (beside the command_seq bump): any keyboard command OR wheel frame between two
+// WHEEL halves of the lifetime — at the TOP of every on_key AND on_wheel
+// command: any keyboard command OR wheel frame between two
 // clicks breaks EVERY candidate at those chokepoints, so a seed formed in one
 // context can never consume in another after an intervening keypress (Esc
 // included) or a wheel zoom/pan that moved content under the pointer. The
@@ -1416,24 +1416,6 @@ struct AppState {
     // keeps it. Ctrl+Shift+Z redo arrives WITH shift still held (no falling
     // edge) but its restore runs sanitize_selection_after_restore, which clears.
     int           shift_range_anchor = -1;
-
-    // Monotonic command-adjacency counter, bumped once per discrete user
-    // command at the three command-dispatch entry points (GuiInputHandler's
-    // on_key, on_button_press, on_wheel). The rapid-gesture undo-coalesce guard
-    // (Undo::coalesce_gesture) records it at each eligible commit and merges a
-    // later eligible press only when its command is the immediately-next one
-    // (command_seq == recorded + 1) — so ANY intervening command (a click, Tab,
-    // paste, save, undo/redo, tab/column switch, or an
-    // unhandled key) advances the counter an extra step and breaks the burst.
-    // A rapid same-gesture burst is, by definition, consecutive presses with no
-    // other command between them, so adjacency is what SUBSUMES "same target /
-    // same tab / same history" — none of those can change without an intervening
-    // command. It is NOT the whole gate: the coalescer also requires the presses
-    // to fall inside kGestureCoalesceMs, a co-equal condition (a held key's first
-    // repeat is command-adjacent yet arrives a compositor repeat-delay later —
-    // which is why that window's length is derived from the delay, see undo.h).
-    // Session-only, never serialized.
-    uint64_t      command_seq = 0;
 
     // Selected-marker stem visibility model (architect 2026-07-25, superseding
     // the conditional-stem apparatus). The focus stem
