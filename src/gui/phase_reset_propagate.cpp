@@ -576,8 +576,14 @@ void PhaseResetPropagate::paste_state_apply() {
 //   * switch_active_markers_view_to('P') swaps the W/P selection slots, prunes,
 //     and clears the hover popup — so the selection must be set AFTER it or the
 //     restored P-slot selection would clobber the new one.
-//   * handle_active_audio_view_toggle never touches the selection, so its
-//     placement is free; running it first keeps the heavier re-express (and its
+//   * handle_active_audio_view_toggle DOES touch the selection since 2026-07-29
+//     (it collapses a 2+ selection to its focus, the point-form view-switch
+//     rule), but its placement here is still free — SELECTION-NEUTRAL for every
+//     reachable paste, and that is GATE-DERIVED rather than incidental: both
+//     paste entries refuse unless EXACTLY ONE warp marker is selected, and the
+//     confirmation prompt swallows every mutation while it is up, so the
+//     selection this call sees is always that singleton and the collapse is a
+//     no-op. Running it first keeps the heavier re-express (and its
 //     full-window invalidate) ahead of the lightweight mode swap and leaves
 //     every side effect (region clear, hover clear, selection slots) coherent.
 //
@@ -632,11 +638,14 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
         // a single-reset paste simply rests in point form.
         set_region_to_selection_extent(app, viewport.audio, viewport);
     } else if (app.selected_markers.size() >= 2) {
-        // STATE PASTE (no resets created): the tail's clear took whatever span
-        // rested, and this arm derives none — but the P-slot selection the swap
-        // restored can be 2+, which would leave a group in point form with no
-        // point. Collapse it to its FOCUS (the never-rest-2+-without-a-span
-        // invariant, stated at clear_region_highlight's declaration). No land
+        // NO CREATED SET — every paste that materialized nothing, not just the
+        // state paste: paste_state_apply always lands with {} (it only flips
+        // disabled flags), and the PLACEMENT paste reaches here too whenever its
+        // run produced no reset. The tail's clear took whatever span rested and
+        // this arm derives none, while the P-slot selection the swap restored can
+        // be 2+ — which would leave a group in point form with no point. Collapse
+        // it to its FOCUS (the never-rest-2+-without-a-span invariant, stated at
+        // clear_region_highlight's declaration). No land
         // here: this arm sets no new focus, and the playhead already rests where
         // the S->T re-express put it.
         selection.collapse_to_focused();

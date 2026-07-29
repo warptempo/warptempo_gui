@@ -50,8 +50,10 @@ ViewState* GuiActiveViews::active_view_state() {
 }
 
 // Toggle active editing mode between 'W' (warp) and 'P' (phase reset).
-// Saves the active selection into the leaving mode's per-tab slot,
-// then restores the destination mode's slot. Visible state (viewport /
+// Saves the active selection into the leaving mode's per-tab slot VERBATIM — a
+// leaving group is stashed as a group; the point-form collapse belongs to the
+// RESTORE side, at each caller (see toggle_active_markers_view) — then restores
+// the destination mode's slot. Visible state (viewport /
 // zoom / playhead) is unaffected — the PLAYHEAD LAND belongs to the callers,
 // which disagree about it: toggle_active_markers_view (`p`) lands on the
 // restored focus, while the propagate paste's tail overwrites this selection
@@ -198,7 +200,20 @@ void GuiActiveViews::toggle_active_markers_view() {
     // with the `t` S/T switch): a restored selection of 2+ COLLAPSES to its
     // focused marker, so `p` leaves a singleton (or an empty selection), never a
     // group. Most work here is done one marker at a time, and one consistent rule
-    // beats an imagined convenience. It runs BEFORE the clear and the land so
+    // beats an imagined convenience.
+    // THE SHAPE IS COLLAPSE-AT-RESTORE, NOT COLLAPSE-AT-STASH: the helper above
+    // STASHED the leaving column's live selection FIRST, so a group that was
+    // selected in the column being left rests in its inactive slot AS A GROUP.
+    // The collapse then fires on the RESTORED selection, here, synchronously
+    // before any paint or reader sees it. "Group selections do not cross view
+    // switches" therefore holds at the OBSERVABLE level: the stored group is
+    // unreadable until some restore path brings it back, and every such path
+    // either collapses it or overwrites it outright — `p` here, Ctrl+Tab at its
+    // own collapse in switch_active_tab_view_to, the propagate paste's
+    // no-created-set arm at its else-collapse, and undo's inline W/P swap, which
+    // owns its own visual language (sanitize, then the restore tail's wholesale
+    // region clear and, for a group entry, the touched-set re-select plus extent
+    // re-derive). It runs BEFORE the clear and the land so
     // both act on the collapsed singleton — the collapse keeps
     // last_selected_marker, so the land below targets the same focus either way,
     // and its own membership clear is a no-op ahead of the wholesale clear. The

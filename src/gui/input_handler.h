@@ -934,19 +934,25 @@ private:
     // editor / render cancels and in place of the old plain region clear. Tested
     // REGION-FIRST so a region never shrinks into a subregion, and it walks ONE
     // rung per Esc. Returns true iff it consumed the Esc:
-    //   region ACTIVE + 2+ selected  -> clear the SELECTION, and its OWN extent
-    //                                   span with it (clear_selection's membership
-    //                                   clear); a TrimWindow / Free region rests
-    //                                   and the playhead is untouched — a SECOND
+    //   region ACTIVE + 2+ selected  -> DESELECT and the span's pixels REST: an
+    //                                   extent span is captured, dropped by
+    //                                   clear_selection's membership clear, and
+    //                                   RE-FORMED at the same bounds with Free
+    //                                   provenance; a TrimWindow / Free span is
+    //                                   untouched. Playhead untouched — a SECOND
     //                                   Esc then takes the collapse below
     //   region ACTIVE + 0/1 selected -> collapse to its start: clear the region AND
     //                                   the selection, playhead to the lo bound
-    //   no region + MULTIPLE selected -> plain deselect (a PROGRAMMATIC
-    //                                    multi-select only — a click-made one rests
-    //                                    with its extent region, caught above; the
-    //                                    old drop-to-region rung is retired, its
-    //                                    ownerless resting span being exactly what
-    //                                    the two playhead forms rule out)
+    //   no region + MULTIPLE selected -> DROP TO THE SPAN (a PROGRAMMATIC
+    //                                    multi-select — a click-made one rests with
+    //                                    its extent region, caught above): derive
+    //                                    the extent, flip it Free, then deselect,
+    //                                    so the group's cue survives as a resting
+    //                                    span and a second Esc collapses it. This
+    //                                    is Esc's EXPLICIT demote, legal because
+    //                                    the selection ends EMPTY — the abolished
+    //                                    lie was a span resting beside a SURVIVING
+    //                                    selection
     //   no region + SINGLETON         -> deselect + land the playhead on the marker
     // Defined in input_pointer.cpp beside land_playhead_on_marker /
     // set_region_to_selection_extent (both external-linkage, declared here).
