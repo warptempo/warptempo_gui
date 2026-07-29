@@ -419,8 +419,10 @@ bool GuiInputHandler::handle_escape_cancels(GuiKey key, GuiInputState mods) {
 // back at its grab-time position alongside the SelectionSnapshot; every trim
 // cancel touches no playhead at all (bounds-only). A strip drag applies its
 // motion continuously, so stopping just ends it where it is; a region drag is
-// cancelled and the region restored to how it rested at arm (the pre-drag
-// snapshot). A live editor-text drag is FINALIZED, not cancelled — selection-
+// cancelled by CLEARING its region outright (with the drag state and the
+// arming press's double-click candidate) — it restores nothing, a dissolved
+// highlight never coming back. A live editor-text drag is FINALIZED, not
+// cancelled — selection-
 // only with nothing to revert, it collapses to a caret as its release would.
 // One verb across the pointer drags: Esc means stop.
 void GuiInputHandler::cancel_active_drags() {

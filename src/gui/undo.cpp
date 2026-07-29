@@ -483,25 +483,34 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // sanitize_selection_after_restore so the region write follows sanitize's
     // membership clear (the clear-then-derive order the multi-select clicks use),
     // and BEFORE the recompute/invalidate/kick block below so restore's one sync
-    // render covers the final geometry. Gated off 'S' (a settings-only restore
-    // leaves whatever selection rests — it must not land, clear a region, or
-    // write one), and
+    // render covers the final geometry. The LAND/EXTENT block is gated off 'S' (a
+    // settings-only restore leaves whatever selection rests — it must not land,
+    // select, or write a region; the region CLEAR is the one part that runs for
+    // every entry, see below), and
     // branches on the POST-sanitize live size, so a defensive edge takes the
     // matching arm (a group entry sanitized down to one member lands as a
     // singleton; a removal cleared to empty is the size == 0 no-op).
     //
     // THE TAIL OPENS WITH A WHOLESALE REGION CLEAR (architect 2026-07-29,
     // REVERSING the recorded boundary that made undo/redo a route where "a
-    // resting region is display scratch"): a restore replaces the marker store
-    // wholesale, so any span still standing describes a world that no longer
-    // exists — a TrimWindow highlight resting stale across a map-changing undo is
-    // precisely the pattern break the two-forms model collapses on sight. Every
-    // arm follows from that one clear: a singleton or emptied restore rests with
-    // NO region, and the group arm's set_region_to_selection_extent runs AFTER it
-    // (clear-then-derive), so the group outcome is unchanged — that write
-    // overwrote whatever rested anyway.
+    // resting region is display scratch"): a restore rewrites the world the span
+    // was measured against, so any span still standing describes a world that no
+    // longer exists — a TrimWindow highlight resting stale across a map-changing
+    // restore is precisely the pattern break the two-forms model collapses on
+    // sight. Every arm follows from that one clear: a singleton or emptied
+    // restore rests with NO region, and the group arm's
+    // set_region_to_selection_extent runs AFTER it (clear-then-derive), so the
+    // group outcome is unchanged — that write overwrote whatever rested anyway.
+    // THE CLEAR IS NOT GATED OFF 'S' (architect 2026-07-29, closing the settings
+    // side of the same hole): a SETTINGS-ONLY restore rewrites engine_settings
+    // and rebuilds the target map underneath a resting highlight — scale A ->
+    // commit scale B -> chip-row re-sync under B -> Ctrl+Z would otherwise rest a
+    // B-domain span under A — so it clears too. The REST of the 'S' gate stands
+    // exactly: a settings restore still must not land, must not select, and must
+    // not WRITE a region, which is why only this one call sits above the gate and
+    // the whole land/extent/framing block stays inside it.
+    clear_region_highlight(app, viewport);
     if (entry.op_mode != 'S') {
-        clear_region_highlight(app, viewport);
         const size_t sel_size = app.selected_markers.size();
         if (sel_size == 1) {
             const int t = *app.selected_markers.begin();

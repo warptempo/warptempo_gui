@@ -228,14 +228,21 @@ struct SelectionSnapshot {
 // region to the edited bounds). The drag CANCEL does NOT re-derive/re-sync — it
 // restores the whole-struct captured TempoDragState::pre_drag_region VERBATIM
 // (the round-7 rule: pre-drag staleness falsified the re-derive premise, so Esc
-// reproduces the pre-drag display exactly, any provenance). The OTHER target-map
-// changers — the settings engine-scale commit and adopt — do NOT re-derive or
-// re-sync provenance; a resting region is display scratch there. UNDO/REDO LEFT
-// that list (architect 2026-07-29, reversing its display-scratch membership): a
-// restore CLEARS any resting region in its visual tail instead, because a
-// highlight left standing across a map-changing restore is exactly the stale
-// span the two-forms model refuses — a group restore then defines its own
-// SelectionExtent region, and a singleton or emptied restore rests with none.
+// reproduces the pre-drag display exactly, any provenance — a rule that stands
+// on its own no-geometry-assumptions terms, not on any live producer).
+// THE DISPLAY-SCRATCH SIDE OF THIS BOUNDARY IS NOW EMPTY (architect 2026-07-29,
+// the maximally greedy collapse): every OTHER target-map changer CLEARS the
+// region outright instead of leaving it as scratch — undo/redo at its visual
+// tail for EVERY entry, settings-only ones included (that clear alone sits above
+// the tail's 'S' gate, which still forbids landing, selecting, and writing a
+// region), the settings ENGINE-SCALE commit at its own chokepoint, and adopt
+// through apply_settings_engine_and_prefs's unconditional reset. So NO route
+// rebuilds the map under a resting highlight any more, and NO producer of a
+// numerically stale TrimWindow span survives. A group restore still DEFINES its
+// own SelectionExtent region after its clear; a singleton or emptied restore
+// rests with none. What remains re-derived/re-synced rather than cleared is the
+// list at the top of this paragraph: the tempo family and the settings-editor
+// TRIM commit, the maintainers by ruling.
 // This is scoped to the provenance follow/re-sync: the
 // GENERIC region clears still apply to ANY provenance — the kick validator drops
 // a region stranded outside a shrunken live domain, and load/adopt clear the
@@ -708,13 +715,17 @@ struct TempoDragState {
     // provenance mid-gesture (images compressing onto one target frame), so a live
     // per-event read would latch off after the first coincident event and never
     // re-sync when the images re-separate. With the grab intent the per-event
-    // re-sync republishes the window on every event whose images are separated
-    // (and a pre-stale/coincident TrimWindow region's first committed event
-    // re-syncs it to the fresh images — the follow's purpose). Cancel does NOT use
-    // this — it restores pre_drag_region verbatim (below), because the grab bit
-    // proves nothing about grab-time geometry (a settings-scale commit before the
-    // press can leave the region stale, even coincident; undo/redo left that
-    // producer list in 2026-07-29, a restore now clearing any resting region). The
+    // re-sync republishes the window on every event whose images are separated,
+    // which is the follow's whole purpose. Cancel does NOT use this — it restores
+    // pre_drag_region verbatim (below), a whole-struct restore that needs no bit
+    // at all. NO PRE-PRESS STALENESS PRODUCER REMAINS
+    // (architect 2026-07-29): every map changer that used to leave a region
+    // resting stale — marker and settings undo/redo, the settings engine-scale
+    // commit, adopt — now clears it outright, so a grab-time TrimWindow region is
+    // as fresh as the map it is read against. The capture earns its keep on the
+    // MID-GESTURE reason alone (the round-6 one, above): the coincident arm
+    // erases live provenance inside the gesture, and a live per-event read would
+    // latch off at the first coincident event. The
     // SelectionExtent per-event follow stays LIVE (see apply): it can never rest
     // cleared mid-drag (the post-kick re-derive always re-activates with in-domain
     // clamped endpoints, and no membership clear runs with keys swallowed).

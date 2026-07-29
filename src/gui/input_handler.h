@@ -169,11 +169,22 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     (phase reset), which both entry routes (bare `s`, the empty-lane
 //     double-click) converge on, placed past every refusal;
 //   * the THREE MEMBERSHIP-WHOLESALE routes (architect 2026-07-29, the
-//     maximally greedy collapse): the UNDO/REDO restore's visual tail (any
-//     non-'S' entry — the group arm then derives its own extent region AFTER
-//     this clear), the `p` W/P swap (toggle_active_markers_view), and the
-//     propagate paste's target-view tail. None of them builds the span it would
-//     be resting beside, so all three collapse it, any provenance.
+//     maximally greedy collapse): the UNDO/REDO restore's visual tail, the `p`
+//     W/P swap (toggle_active_markers_view), and the propagate paste's
+//     target-view tail. None of them builds the span it would be resting beside,
+//     so all three collapse it, any provenance. The undo tail's clear runs for
+//     EVERY entry, settings-only ones included — it is the ONE part of the tail
+//     that sits above the 'S' gate (which still forbids landing, selecting, and
+//     writing a region), because a settings restore rebuilds the map under the
+//     span exactly as a marker restore does; for a group entry the extent derive
+//     then runs AFTER this clear;
+//   * the SETTINGS ENGINE-COMMIT chokepoint (same ruling): the one committed
+//     tail every canonical engine key shares (GuiSettingsEditor::commit, past
+//     the unknown-key / invalid-value / collision / unchanged returns), because
+//     the scale among those keys is a warp-map input and the commit rebuilds the
+//     map under any resting highlight. The settings editor's TRIM keys never
+//     reach it — they return through commit_gui_setting, which re-syncs a
+//     TrimWindow highlight to the edited bounds, a maintainer by ruling.
 // The land itself clears NOTHING — it is a pure playhead write, and the
 // motion condition that briefly rode its clear died with that clear
 // (land_playhead_on_marker). DELIBERATELY NOT

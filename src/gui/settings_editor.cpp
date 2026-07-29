@@ -445,6 +445,25 @@ void GuiSettingsEditor::commit() {
 
     viewport.invalidate_timestamp_area();
     text_editor::deactivate(app.settings_editor);
+    // WHOLESALE REGION CLEAR at the engine-commit chokepoint (architect
+    // 2026-07-29, the maximally greedy collapse): the scale is a warp-map input,
+    // so this commit rebuilds the target map underneath any resting highlight,
+    // and a span measured against the old map is exactly the stale assertion the
+    // two-forms model collapses on sight. This tail is the ONE committed path for
+    // every canonical engine key — the GUI-kind keys returned through
+    // commit_gui_setting far above (the TRIM keys among them, which re-sync a
+    // TrimWindow highlight to the edited bounds and are maintainers by ruling,
+    // untouched here), and the unknown-key / invalid-value / source-collision /
+    // unchanged arms all returned before this point — so one clear here covers
+    // the map change with no arm left uncovered. It is UNCONDITIONAL for the same
+    // reason the kick below is unconditional in target view: a provenance key
+    // (title/bpm/notes/url/cover) moves no image and a SOURCE-view commit changes
+    // no display domain at all, so the clear is greed rather than repair there,
+    // and one rule beats a second view gate to maintain. The trim WINDOW itself
+    // is untouched — a chip-row re-click brings its highlight back. The helper
+    // owns its own waveform damage, which the source-view path would otherwise
+    // not raise.
+    clear_region_highlight(app, viewport);
     // The engine scale is a warp-map input (build_warp_frame_map's slope
     // product), so an engine commit that moved it re-warps the target-view
     // plate. This is one of the target-view re-warp sites (the full inventory

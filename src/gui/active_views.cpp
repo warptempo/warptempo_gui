@@ -158,8 +158,9 @@ void GuiActiveViews::toggle_active_markers_view() {
     // visible state alone, so `p` can re-enter the lane with the focus at one
     // position and the playhead at another — the restored flag would claim to be
     // the playhead while Space played from wherever the W-side click left it.
-    // Land on the restored focus — a PURE playhead write, `p` adding no region
-    // clear of its own. An EMPTY destination slot LEAVES the lane, so the
+    // Land on the restored focus — a PURE playhead write, the LAND itself
+    // touching no region (the swap's own wholesale clear is stated right below
+    // and runs before it). An EMPTY destination slot LEAVES the lane, so the
     // playhead stays put and the cursor simply paints again (the rule's second
     // clause) — no move. THE SWAP CLEARS ANY RESTING REGION, whatever its
     // provenance (architect 2026-07-29, REVERSING "the STORED highlight survives
