@@ -1568,8 +1568,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // NEW (architect 2026-07-24 second pass): the former now also
                 // ARMS a region drag anchored at the FAR endpoint (the playhead,
                 // or the demote's furthest-marker image). So the press is
-                // one-shot ONLY on a motionless release (the formed region, or on
-                // the sliver rule the pre-press region, rests exactly as today);
+                // one-shot ONLY on a motionless release: the formed region rests
+                // exactly as today, and on the sliver rule the PRE-PRESS region
+                // does — QUALIFIED BY PROVENANCE, since the demote's deselect
+                // below is a membership replace: an ex-SelectionExtent pre-press
+                // region was cleared outright by that deselect (its owning
+                // selection died with it) and does not rest or restore, while a
+                // Free or TrimWindow one is untouched by the clear and rests
+                // bit-for-bit;
                 // motion past the shared gate drags the CLICK-side endpoint live
                 // through the region-drag motion path, the far endpoint fixed,
                 // and Esc mid-drag restores the PRE-PRESS region. GUTTER presses
@@ -1649,8 +1655,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 if (spp <= 0.0) return;
                 if (std::abs(static_cast<double>(endpoint - click_frame)) / spp
                         < kDragMovedThresholdPx) {
-                    // Sliver: form NO region (app.region untouched — a motionless
-                    // release keeps the pre-press region, bit-for-bit today), but
+                    // Sliver: form NO region — app.region is untouched HERE, so
+                    // a motionless release keeps whatever the deselect above left
+                    // standing: a Free or TrimWindow pre-press region rests
+                    // bit-for-bit, while an ex-SelectionExtent one is already
+                    // gone (the deselect's membership clear took it, and the
+                    // armed drag's Esc restore runs that same clear over the
+                    // snapshot, so it does not come back either). ALSO
                     // ARM the drag anchored at the far endpoint so dragging out
                     // past the gate still grows a fresh region live from it (e.g.
                     // shift-click AT the playhead, then drag out).
@@ -1818,7 +1829,8 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
     // double-click's first press already moved it there, so this is a harmless
     // same-value repeat that also covers any first press whose placement was
     // undone in between. The standing _at_playhead drops then author at that
-    // playhead, taking the full create path (walls, undo, selection) — the
+    // playhead, taking the full create path (walls, undo, selection, and the
+    // point command's own region collapse at the drop chokepoint) — the
     // phase-reset lead-in additionally offset N/2 before the playhead and landing
     // the playhead per that drop's rule.
     const GuiRect area = waveform_area(app);

@@ -161,14 +161,19 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //   * enter_text_edit, the one chokepoint of every flag/bpm editor open and
 //     retarget;
 //   * a SINGLETON position nudge (finish_group_position_nudge's point arm; a
-//     GROUP nudge is span-preserving and re-derives instead).
+//     GROUP nudge is span-preserving and re-derives instead);
+//   * the MARKER DROPS (architect 2026-07-29, overruling their earlier keep):
+//     a drop seats the playhead on the marker it creates and single-selects it,
+//     so it is a point command like the rest — one clear per column, at the
+//     drop chokepoints drop_marker (warp) and drop_phase_reset_at_position
+//     (phase reset), which both entry routes (bare `s`, the empty-lane
+//     double-click) converge on, placed past every refusal.
 // The land itself clears NOTHING — it is a pure playhead write, and the
 // motion condition that briefly rode its clear died with that clear
 // (land_playhead_on_marker). DELIBERATELY NOT
 // cleared: the region Space launch (the
-// region IS the launch point there), the nudge/drag playhead follow, marker
-// drops (bare `s` / the empty-lane double-click), and pure viewport moves
-// (PageUp/PageDown, zoom
+// region IS the launch point there), the nudge/drag playhead follow, and pure
+// viewport moves (PageUp/PageDown, zoom
 // steps, pans) — and the lower-half scrub press, which touches no region at
 // all. UNDO/REDO is not on the list either: a restore's membership write clears
 // any SelectionExtent span, a GROUP restore then RE-DEFINES the region to the

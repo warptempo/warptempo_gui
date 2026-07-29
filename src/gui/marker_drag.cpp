@@ -1438,9 +1438,12 @@ void MarkerDragOps::end_tempo_drag() {
         viewport.move_playhead_to(
             source_frame_to_active_domain(app, audio, mv[mi].time_frame));
     }
-    // No stem damage at release: the dragged marker IS the singleton selection, so
-    // its always-on focus stem painted throughout the drag and stays painted
-    // after it — release moves nothing (tempo_drag.active going
+    // No stem damage at release, on either grab shape. A SINGLE-marker grab IS
+    // the singleton selection (its arming press single-selected it), so the
+    // always-on focus stem painted throughout the drag and stays painted after
+    // it; a GROUP grab keeps 2+ selected through the whole gesture, so no stem
+    // painted at any point and none appears at release. Either way the release
+    // moves nothing (tempo_drag.active going
     // false changes no stem input). A net-changed drag already repainted the stem's
     // moving image via each per-cent-step kick_waveform_sync; a walled / zero-commit
     // drag changed nothing at all. (The former lateral-gesture pin stamp + its

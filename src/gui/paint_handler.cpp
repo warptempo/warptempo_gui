@@ -668,10 +668,15 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // every prior expiry semantic: the stem is hover-INDEPENDENT (a keyboard-only
 // selection shows it too) and playback-INDEPENDENT (it persists through scrubs
 // and auditions), because it is the selection's focus cue, not a working
-// affordance. A grabbed marker (a live position drag, or a W+target tempo
-// drag) is itself the singleton selection,
-// so the stem paints anyway — no gesture arm is needed. The ONE non-selection
-// input is the DragOverlay proposal override below: under a live POSITION drag the
+// affordance. A SINGLE-marker grab (a live position drag, or a W+target tempo
+// drag, whose arming press single-selected the grabbed marker) IS the singleton
+// selection, so the stem paints anyway — no gesture arm is needed. A GROUP grab
+// keeps its 2+ selection through the drag (the press defers its collapse) and so
+// paints NO stem at all: the size check below rejects it, and the group's cue is
+// the extent region's ground, which the drag live-tracks instead.
+// The ONE non-selection
+// input is the DragOverlay proposal override below — a SINGLETON-grab arm by
+// that same reasoning: under a live POSITION drag the
 // stem tracks the flag 1:1 at the mid-gesture proposed frame; a tempo drag never
 // moves the marker's store frame (it rewrites a predecessor's tempo, sliding the
 // image under the per-step re-warped displayed map), so the store frame is

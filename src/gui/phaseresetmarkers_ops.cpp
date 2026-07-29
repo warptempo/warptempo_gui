@@ -3,6 +3,7 @@
 #include "audio.h"
 #include "engine/engine_geometry.h"  // kN
 #include "group_position_nudge.h"  // the shared group position-nudge flesh
+#include "input_handler.h"         // clear_region_highlight (the drop's collapse)
 #include "target_render.h"
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
@@ -58,6 +59,17 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     // reset is created for the playhead), not a selection sync.
     const int64_t sample = source_frame_to_active_domain(app, audio, drop_frame);
     viewport.move_playhead_to(sample);
+    // A DROP IS A POINT COMMAND (architect 2026-07-29, drop_marker's twin —
+    // see the fuller statement there): it seats the playhead on the reset it
+    // creates and single-selects it, so any resting span ends here,
+    // unconditionally and of any provenance. THE PHASE CHOKEPOINT: both entry
+    // routes reach this column only through drop_phase_reset_lead_in_at_playhead,
+    // whose only act is to call this, so one clear covers both. PAST EVERY
+    // REFUSAL: the callers' read-only / home-view gates and the wrapper's own
+    // sample-rate test return before this runs, and this function's two refusals
+    // — no sample rate, a drop_frame past the EOF wall — return above, before the
+    // insert. clear_region_highlight owns its damage.
+    clear_region_highlight(app, viewport);
     target_render.trigger();
 }
 
@@ -70,7 +82,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // frame. kN/2 is an exact integer and the playhead is an integer frame, so the
 // offset is plain integer arithmetic (no snap needed); clamped to 0. Reuses
 // drop_phase_reset_at_position so the created reset takes the full create path
-// — walls, undo, selection — unchanged; only the
+// — walls, undo, selection, the region collapse — unchanged; only the
 // seed frame is offset. This is the phase column's ONLY drop (bare `s` and the
 // empty-lane double-click), and both routes gate it on the home-view predicate,
 // whose P arm IS target view — where the overlay/lead-in exist.

@@ -2,7 +2,8 @@
 
 #include "audio.h"
 #include "group_position_nudge.h"  // the shared group position-nudge flesh
-#include "input_handler.h"      // set_region_to_selection_extent (group step)
+#include "input_handler.h"      // set_region_to_selection_extent (group step),
+                                // clear_region_highlight (the drop's collapse)
 #include "warp_frame_map_build.h"
 #include "warp_frame_map_view.h"
 #include "target_render.h"
@@ -91,6 +92,20 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // in the helper don't double-paint with the ones above.
     const int64_t sample = source_frame_to_active_domain(app, audio, drop_frame);
     viewport.move_playhead_to(sample);
+    // A DROP IS A POINT COMMAND (architect 2026-07-29, overruling the drops'
+    // earlier keep-the-highlight behavior): it seats the playhead on the marker
+    // it creates and single-selects it, so any resting span ends here —
+    // unconditionally, any provenance, exactly as the plain marker click's
+    // collapse. THE WARP CHOKEPOINT: both entry routes (bare `s` and the
+    // empty-lane double-click) reach the warp column only through
+    // drop_copy_previous_at_playhead, whose only act is this call, so one clear
+    // here covers both. PAST EVERY REFUSAL by construction: the callers' gates
+    // (read-only, active_column_authoring_allowed, the double-click's own
+    // in-area test) return before calling at all, and this function's own two
+    // refusals — no sample rate, and a drop_frame past the EOF wall — return
+    // above, before the insert. So a refused drop cannot reach this line and no
+    // refusal clears a highlight. clear_region_highlight owns its damage.
+    clear_region_highlight(app, viewport);
 
     // No synchronous re-warp: warp markers author in their source home view
     // only (the home-view binding, architect 2026-07-22), where the source
@@ -550,11 +565,17 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
         // forgotten: collapse_to_focused above CLEARS any SelectionExtent region
         // outright before the step runs, and set_region_to_selection_extent never
         // derives one for a <=1 selection, so such an arm could not fire. A FREE
-        // region CAN still rest here — the marker DROPS (bare `s`, the empty-lane
-        // double-click) keep any resting highlight by ruling and single-select the
-        // marker they create, so drag a region then drop and a Free span rests
-        // beside this singleton — and it stays untouched scratch across the step,
-        // which is the standing Free rule and not an oversight.
+        // region CAN still rest here, derived rather than assumed: all four Free
+        // formers (the plain region drag, the shift-click former, both DELETE
+        // demotions) leave the selection EMPTY, and every gesture that then
+        // SELECTS one marker collapses the span — the clicks, Tab/`c`, the editor
+        // opens, and since 2026-07-29 the drops — EXCEPT the three that carry a
+        // selection in wholesale without owning the region: a SINGLETON undo/redo
+        // restore (its membership write and sanitize take SelectionExtent only,
+        // and its land is pure), the `p` W/P swap, and the propagate paste. So
+        // drag a region, then Ctrl+Z a tempo edit, and a Free span rests beside
+        // this singleton — untouched scratch across the step, the standing Free
+        // rule and not an oversight.
         const bool trim_resync = app.region.active &&
             app.region.provenance == RegionProvenance::TrimWindow;
         viewport.kick_waveform_sync();

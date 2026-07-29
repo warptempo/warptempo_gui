@@ -194,10 +194,13 @@ struct SelectionSnapshot {
 // Region PROVENANCE (architect 2026-07-23, three-state ownership): tracks WHO the
 // region is derived from, which decides how the image-follow tempo gestures treat
 // it across a map change. Free — a drag-formed / demoted region, display scratch
-// that no gesture re-derives (the shift-click former, the plain drag, the DELETE
-// demotion — each leaving the selection EMPTY; a marker DROP made afterward
-// single-selects its new marker while deliberately keeping the highlight, so
-// Free-beside-a-singleton is reachable and stays untouched scratch).
+// that no gesture re-derives (the shift-click former, the plain drag, both
+// DELETE demotions — each leaving the selection EMPTY, and every gesture that
+// then selects a marker collapses the span, the drops included since
+// 2026-07-29). Free-beside-a-non-empty-selection survives in exactly the three
+// routes that carry a selection in wholesale without owning the region: a
+// SINGLETON undo/redo restore, the `p` W/P swap, and the propagate paste — where
+// the span rests as untouched scratch by the Free rule.
 // SelectionExtent — set to the marker selection's
 // [earliest, latest] extent (the downward selection->extent clicks, the
 // position-drag commit, the tempo follows), valid ONLY while that selection
