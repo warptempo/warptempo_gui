@@ -45,6 +45,14 @@ void remap_marker_indices_after_reorder(AppState& app, char column,
     };
     remap_set(app.selected_markers);
     app.last_selected_marker = mapped(app.last_selected_marker);
+    // The SHIFT-RANGE ANCHOR is index-shaped live state over the same active
+    // column's store, so it FOLLOWS its marker exactly like the focus above
+    // rather than dissolving: a reorder does not end a range interaction — the
+    // group position nudge reorders whenever it carries a selected marker across
+    // an unselected neighbour, mid-interaction — and the anchor survives shift
+    // releases, so a stale pre-reorder index would name the wrong row at the
+    // next shift-click. -1 (no anchor) passes through mapped() unchanged.
+    app.shift_range_anchor = mapped(app.shift_range_anchor);
     // THE PARKED COPIES follow too, in BOTH tabs and for the REORDERED COLUMN
     // ONLY. The marker stores and the map are GLOBAL while the selections are
     // per-tab and per-column, so a reorder in the live tab silently re-points

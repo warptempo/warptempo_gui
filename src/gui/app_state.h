@@ -1394,23 +1394,41 @@ struct AppState {
 
     // Shift-range-select anchor (file-manager style): the index the current
     // shift-range interaction ranges from, over the active column's store;
-    // -1 = none. OWNED BY THE SELECTION MUTATORS ALONE (architect 2026-07-29,
-    // which deleted the platform shift falling-edge hook that used to own a
-    // "release half" of the lifecycle): the anchor SURVIVES shift releases and
+    // -1 = none. OWNED BY THE SELECTION LAYER ALONE — the mutators plus the
+    // wholesale replaces listed below (architect 2026-07-29, which deleted the
+    // platform shift falling-edge hook that used to own a "release half" of the
+    // lifecycle): the anchor SURVIVES shift releases and
     // dies at the next membership replace or focus move — exactly the file
     // manager's anchor, which survives until the next plain click. It is
     // therefore no longer tied to the physical shift hold, and the platform
     // knows nothing about it.
-    // Set ONLY inside Selection::select_range_from_anchor, which is also the one
-    // mutator that KEEPS it; every OTHER Selection mutator clears it —
+    // THE AUTHORITATIVE CLEAR LIST (re-derived 2026-07-29 by grepping every
+    // write, not inherited). Set ONLY inside
+    // Selection::select_range_from_anchor, which is also the one mutator that
+    // KEEPS it; every OTHER Selection mutator clears it —
     // set_single_selection, focus_without_collapse, clear_selection,
     // collapse_to_focused, toggle_selection_membership,
     // sanitize_selection_after_restore, prune_live_selection (cycle_selection
     // clears through set_single_selection; load_source_file's explicit clear is
-    // belt over the clear_selection it already runs). That is also the
-    // orthogonal index-invalidation concern — a store/selection mutation under a
-    // still-held shift — and it is what closes Ctrl+Shift+Z, which arrives WITH
-    // shift held and whose restore runs sanitize_selection_after_restore.
+    // belt over the clear_selection it already runs).
+    // THE WHOLESALE REPLACES — the five sites that assign app.selected_markers
+    // outside those mutators — are covered too, and the inventory was grepped,
+    // not assumed: the `p` W/P swap and the propagate paste's tail both run
+    // prune_live_selection inside switch_active_markers_view_to (the paste is
+    // W-mode-gated, so that helper's same-mode early return is unreachable from
+    // it), undo's touched-set restore and its inline W/P swap both run
+    // sanitize_selection_after_restore (both are non-'S'-gated, exactly as those
+    // replaces are), and Ctrl+Tab's parked-slot restore in
+    // switch_active_tab_view_to CLEARS IT AT ITS OWN SITE — it was the one
+    // replace with no mutator behind it, and a tab-A anchor index means nothing
+    // in tab B. That clearing is also the orthogonal index-invalidation concern —
+    // a store/selection mutation under a still-held shift — and it is what
+    // closes Ctrl+Shift+Z, which arrives WITH shift held and whose restore runs
+    // sanitize_selection_after_restore. A marker REORDER is the one index event
+    // that does NOT clear: remap_marker_indices_after_reorder carries the anchor
+    // through the permutation with the selection and the focus (its declaration
+    // owns that inventory), because a reorder moves rows without ending the
+    // range interaction.
     // A cleared anchor does NOT silence the next shift-click:
     // select_range_from_anchor SEEDS the anchor by ADOPTING THE FOCUS when none
     // is live (architect labwc round 2, 2026-07-23 — plain-click A then
@@ -2106,13 +2124,19 @@ inline void drop_parked_selection_if_stale(AppState& app, ViewState& vs,
 //
 // THE COMPLETENESS CLAIM, re-derived 2026-07-29 by reading every field of
 // ViewState and of the live drag state rather than by inheriting a list. Exactly
-// three kinds of state hold a marker INDEX, and all three are covered:
+// four kinds of state hold a marker INDEX, and all four are covered:
 //   * the LIVE selection — app.selected_markers + app.last_selected_marker.
 //     Unconditional, and correct without a column test because every caller
 //     reorders the ACTIVE column's store (the home-view binding puts warp
 //     gestures in source view and phase-reset gestures in target view, and the
 //     four call sites are the two position nudges and the two marker-drag
 //     commits);
+//   * the SHIFT-RANGE ANCHOR — app.shift_range_anchor, over that same active
+//     column's store and therefore unconditional for the same reason. It is
+//     REMAPPED, not cleared: a reorder does not end a range interaction, and
+//     since the anchor survives shift releases (see its field) a stale
+//     pre-reorder index would silently name the wrong row at the next
+//     shift-click;
 //   * the PARKED selections — warp_selected / warp_last_selected and
 //     phase_reset_selected / phase_reset_last_selected in BOTH app.tab_a and
 //     app.tab_b, of the reordered column only. Marker stores are global while

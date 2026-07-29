@@ -107,15 +107,25 @@ void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
 // This is the AUTHORING tab switch: it swaps the live view fields WITH the
 // per-tab slots (app.tab_a / app.tab_b).
 void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
-    // Mirror toggle_playback's stop branch (playback.stop() then
-    // restore_playhead_to_lsp()). Neither this nor stop_playback_if_playing
-    // touches the cursor — it is the Space-launch position and was never
-    // moved during playback — so the leaving tab's snapshot below captures
-    // it exactly regardless of which stop path runs.
-    if (playback_lifecycle.playback.is_playing()) {
-        playback_lifecycle.playback.stop();
-        playback_lifecycle.restore_playhead_to_lsp();
-    }
+    // THE GESTURE STOP, through its one owner. This is a
+    // cursor-committing handler, exactly the caller class named at
+    // stop_playback_if_playing, and its guard is the RIGHT one: a
+    // narrower `playback.is_playing()` test misses the sub-tick window in which
+    // audio has reached its natural end but the scanner is still ACTIVE (the
+    // tick deactivates it, and a Ctrl+Tab dispatched before that tick would
+    // carry the stopped scanner into the entering tab — the synchronous kick at
+    // the tail can paint it there for one frame). The helper handles
+    // !is_playing() && scanner_active and early-returns when there is nothing to
+    // do, so the call stays refusal-shaped.
+    // It does not touch the cursor — that is the Space-launch position and was
+    // never moved during playback — so the leaving tab's snapshot below captures
+    // it exactly, as it did under the hand-spelled stop this replaces
+    // (playback.stop() + restore_playhead_to_lsp()). The one damage that form
+    // added and this one does not, restore_playhead_to_lsp's top-strip
+    // invalidation, is redundant here: the kick_waveform_sync at the tail
+    // invalidates the window from y=0 through the waveform's bottom, top strip
+    // included.
+    playback_lifecycle.stop_playback_if_playing();
     viewport.clear_hover_popup();
     // The region-select span is view-domain scratch; the entering tab restores
     // a different viewport (and, under a differing map, a different active
@@ -159,6 +169,16 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
         app.selected_markers     = target.warp_selected;
         app.last_selected_marker = target.warp_last_selected;
     }
+    // THE WHOLESALE REPLACE JOINS THE ANCHOR LIFECYCLE. This is a membership
+    // replace like any Selection mutator's, so it dissolves the shift-range
+    // anchor — the field's contract (app_state.h, which holds the authoritative
+    // clear list this site is on as the wholesale-replace class) is that the
+    // anchor dies at the next membership replace, and it no longer dies at the
+    // shift release. Without the clear a tab-A anchor index survives into tab B
+    // and a shift-click there ranges from an unrelated row whenever that index
+    // happens to be in bounds; the collapse below covers only the 2+ case, and
+    // only incidentally, through collapse_to_focused's own clear.
+    app.shift_range_anchor = -1;
     // A 2+ selection restored from the entering tab's slot COLLAPSES to its
     // focus (the never-rest-2+-without-a-span invariant, stated at
     // clear_region_highlight's declaration): this switch cleared the region

@@ -1244,12 +1244,18 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 if (shift) {
                     // Shift+click is a file-manager INCLUSIVE RANGE select
                     // (architect 2026-07-23): the click ranges from the
-                    // interaction's anchor — a live shift-held anchor, else the
-                    // ADOPTED FOCUS (architect labwc round 2, 2026-07-23:
-                    // plain-click A then shift+click B selects A..B, and a
-                    // re-started shift interaction ranges from the previous
-                    // click's focus; with nothing focused the click anchors on
-                    // its own marker, selection {hit}) — each
+                    // interaction's anchor — a LIVE anchor, else the ADOPTED
+                    // FOCUS (architect labwc round 2, 2026-07-23: plain-click A
+                    // then shift+click B selects A..B; with nothing focused the
+                    // click anchors on its own marker, selection {hit}). THE
+                    // ANCHOR IS NOT KEYED TO THE PHYSICAL SHIFT HOLD (architect
+                    // 2026-07-29): it SURVIVES a shift release and dies at the
+                    // next membership replace, so a shift interaction re-started
+                    // after a release ranges from the SURVIVING anchor, not from
+                    // the focus — A..B, release, re-press, shift-click C gives
+                    // A..C, the accepted delta of the falling-edge hook's
+                    // deletion. The full contract and clear list live at
+                    // app.shift_range_anchor's declaration (app_state.h). Each
                     // successive shift-click replaces the selection with the
                     // inclusive index range between that anchor and
                     // hit. The clicked marker becomes the range end = FOCUS
