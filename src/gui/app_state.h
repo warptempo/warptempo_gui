@@ -131,9 +131,12 @@ struct UndoEntry {
 // every writer of region.active = true, and re-grepped the same day when the Esc
 // ladder's two writers were deleted). Other sites state only their own class and
 // point here.
-// FIVE CODE SITES ACTIVATE A REGION, three of them by writing the fields
-// directly for a FREE span, one for TrimWindow, and one — the extent owner —
-// serving many gestures:
+// SIX CODE SITES ACTIVATE A REGION (a grep of `region.active = true` returns
+// exactly six, and the arithmetic is spelled out here because this count has
+// drifted before): FOUR write the fields directly for a FREE span — the plain
+// drag, the shift-click former, and the multi-delete demotion in EACH column,
+// which is two sites under one rule and is where the earlier counts went wrong —
+// ONE writes TrimWindow, and ONE is the extent owner serving many gestures:
 //   * the plain waveform DRAG (paints it live, leaving the selection EMPTY
 //     throughout) — Free;
 //   * the waveform SHIFT+click region former / marker DEMOTE (playhead-to-click
