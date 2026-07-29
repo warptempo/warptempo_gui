@@ -72,7 +72,12 @@ void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
 
 // Space-bar: start/stop playback. Playback runs from the cursor to
 // trim_end (or total_frames if no e= marker). Pressing space with the
-// cursor at or past trim-end is a silent no-op. Space-to-stop just
+// cursor at or past trim-end is a silent no-op. THE CURSOR IS THE START ONLY
+// WHERE THE CURSOR IS THE PLAYHEAD: with an active region the span is the
+// playhead's form, so Space's play edge goes to scrub_launch_at with the span's
+// left bound instead and never reaches here (architect 2026-07-29 — an audition
+// does not move the cursor; the site is the Space handler in input_handler.cpp).
+// The STOP edge below is every Space's, region or not. Space-to-stop just
 // DEACTIVATES the scanner (its value fields go stale by contract — no
 // snap-back, no separate stash; the cursor is the launch point by
 // definition under the split-playhead model).
@@ -150,25 +155,39 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     launch_playback_from(launch_pos);
 }
 
-// Scrub launch — the START half of the scrub act's stop-then-start: begin the
-// scanner from `frame` — an absolute active-paint-
-// domain position (the scrub act hands it in already clamped to the live
-// domain) — with the resting cursor, selection, region, and follow all
-// untouched. The SCANNER, not the cursor, is what the gesture drives: the
+// The audition launch entry, shared by the scrub act's stop-then-start START
+// half and by Space's region launch: begin the scanner from `frame` — an
+// absolute active-paint-domain position (both callers hand it in already
+// clamped to the live domain) — with the resting cursor, selection, region, and
+// follow all untouched. The SCANNER, not the cursor, is what the gesture
+// drives: the
 // scanner fields are meaningful only while active, and this is exactly the
 // launches-the-scanner-independently-of-the-cursor consumer that contract
-// anticipated. Riding the shared launch body makes a scrub launch
-// indistinguishable from a Space launch except for the start position, so
-// every standing gate applies (contract at the header declaration) — and each
-// launch re-captures the loop verdict and end bound freshly, the point of the
-// fresh-session semantic.
+// anticipated. Riding the shared launch body, plus the endpoint-hold teardown
+// below, makes an audition launch indistinguishable from a cursor Space launch
+// except for the start position, so every standing gate applies (contract at
+// the header declaration) — and each launch re-captures the loop verdict and
+// end bound freshly, the point of the fresh-session semantic.
 void GuiPlaybackLifecycle::scrub_launch_at(int64_t frame) {
-    // Defensive: a live session never launches — the scrub act STOPS a live
-    // session and returns without reaching here (and the natural-end hold is
-    // torn down through the same owner first), so this
-    // guard only keeps a
-    // future caller from stacking play() over a live run.
+    // Defensive: a live session never launches — a scrub act over a live
+    // session STOPS it and returns without reaching here, and Space's stop edge
+    // is toggle_playback's, so both callers arrive stopped. This guard only
+    // keeps a future caller from stacking play() over a live run.
     if (playback.is_playing()) return;
+    // Natural-end ENDPOINT HOLD (playing false, scanner active): tear down
+    // through stop_playback_if_playing, the scanner's visible-identity owner,
+    // exactly as toggle_playback's play edge does — this is what makes the two
+    // launch entries interchangeable but for the start position. It damages the
+    // held endpoint column before the new session seeds, and on a REFUSED launch
+    // it leaves the scanner deactivated instead of scanner-active with the hold
+    // flags cleared, which the tick would re-arm into another endpoint hold.
+    // Must run while the scanner fields are still valid, i.e. before the flag
+    // writes below. The scrub act tears the hold down at its own site before
+    // delegating (it must: its target-view gate can refuse the launch entirely),
+    // so this re-runs as a no-op there and covers the Space region launch, which
+    // arrives with no teardown of its own.
+    if (app.playhead_scanner_active)
+        stop_playback_if_playing();
     // The same defensive clears toggle_playback's play edge runs (the launch
     // body assumes its caller ran them): a stale override or endpoint-hold
     // flag must not survive into the new session, and a refused launch
@@ -184,7 +203,8 @@ void GuiPlaybackLifecycle::scrub_launch_at(int64_t frame) {
 // verdict, seed the scanner, and start the audio. Returns whether it
 // launched; every refusal is a silent no-op (the "nothing to audition"
 // family). Two callers: toggle_playback's play edge (cursor + launch_offset)
-// and scrub_launch_at (the clicked frame). This body never writes the
+// and scrub_launch_at (the scrub's clicked frame, or Space's region left
+// bound). This body never writes the
 // resting cursor — the scanner is the only playhead it touches, so a launch
 // is a pure scanner event and the cursor is untouched by construction.
 // Callers run the defensive scanner/override flag clears before delegating

@@ -71,15 +71,20 @@ struct GuiPlaybackLifecycle {
     // is re-validated against the target buffer's domain, so an offset landing
     // at or past the buffer end is a silent no-op.
     void toggle_playback(int64_t launch_offset = 0);
-    // Scrub launch (the START half of the scrub act's stop-then-start): launch
-    // the scanner from `frame`, an ABSOLUTE position in the active paint
-    // domain, leaving the resting cursor untouched — the pure audition entry.
-    // Delegates to the same launch body as toggle_playback's play edge, so
-    // the standing gates apply identically: a frame outside the trim window /
-    // target buffer domain, or one leaving fewer than two playable frames of
-    // remainder, is a silent no-op — exactly Space's conventions. A live
-    // session never launches (defensive; a scrub act over a live session STOPS
-    // it and returns without delegating here).
+    // THE AUDITION LAUNCH ENTRY: launch the scanner from `frame`, an ABSOLUTE
+    // position in the active paint domain, leaving the resting cursor untouched.
+    // TWO GESTURES, one mechanism — the waveform lower half's scrub act (the
+    // START half of its stop-then-start) and, since 2026-07-29 (architect),
+    // Space's REGION launch, which plays from the span's left bound without
+    // writing the cursor precisely because auditions do not move it. Delegates
+    // to the same launch body as toggle_playback's play edge, so the standing
+    // gates apply identically: a frame outside the trim window / target buffer
+    // domain, or one leaving fewer than two playable frames of remainder, is a
+    // silent no-op — exactly Space's conventions. Tears down a natural-end
+    // endpoint hold first, like that play edge, so neither caller has to. A live
+    // session never launches (defensive; both callers reach here only with
+    // playback stopped — a scrub act over a live session STOPS it and returns,
+    // and Space's stop edge goes through toggle_playback).
     void scrub_launch_at(int64_t frame);
     void set_playback_speed(float s);
 

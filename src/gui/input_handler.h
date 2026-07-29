@@ -192,7 +192,9 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // flag would claim to be a playhead the group does not own — so WHEN A CLEAR
 // TAKES AN ACTIVE SPAN FROM UNDER 2+ SELECTED MARKERS AND NOTHING RE-DERIVES
 // ONE, THE SELECTION COLLAPSES TO ITS FOCUS (Selection::collapse_to_focused —
-// the focus is where the playhead already rests, by land-on-focus). Sites, by
+// the focus is where the playhead already rests, by land-on-focus — nothing
+// separates the two under a standing span since the region Space launch, the
+// last route that did, stopped writing the cursor on 2026-07-29). Sites, by
 // class — each is a clear listed above that re-derives nothing:
 //   * the VIEW SWITCHES, which land you in point form by their own ruling: `p`
 //     (toggle_active_markers_view), `t` (handle_active_audio_view_toggle), and
@@ -224,7 +226,9 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // motion condition that briefly rode its clear died with that clear
 // (land_playhead_on_marker). DELIBERATELY NOT
 // cleared: the region Space launch (the
-// region IS the launch point there), the nudge/drag playhead follow, and pure
+// region IS the launch point there — and since 2026-07-29 it moves no cursor
+// either, launching through the scrub's own entry), the nudge/drag playhead
+// follow, and pure
 // viewport moves (PageUp/PageDown, zoom
 // steps, pans) — and the lower-half scrub press, which touches no region at
 // all. The plain upper-half waveform press (arm_region_drag_at) shares this

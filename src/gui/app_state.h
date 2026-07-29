@@ -1209,8 +1209,9 @@ struct AppState {
     // (restore_pending + endpoint_painted) before deactivating; manual stop
     // paths deactivate immediately. There is no resting coincidence with the
     // cursor — a coincide-at-rest relationship would be wrong, not just unused
-    // (the scanner launches from the cursor via Space, and the lower-half
-    // scrub gesture launches it independently of the cursor). The cursor is
+    // (a plain Space launches the scanner from the cursor, while the lower-half
+    // scrub gesture AND Space's region launch both launch it independently of
+    // the cursor, from a clicked frame and from the span's left bound). The cursor is
     // per-tab; the scanner is session-only and not persisted.
     // `playback_speed` is authoritative on the main thread and pushed
     // to the playback engine on every change.

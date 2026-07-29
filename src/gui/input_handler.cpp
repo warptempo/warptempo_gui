@@ -431,31 +431,54 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // approximation for jitter reasons and must never enter this number.
         // COMPOSITION with the region rule below: the subject predicate
         // suppresses at 2+ selected and with an active region, so a group
-        // selection takes the ordinary Space and starts at the region's left
+        // selection takes the REGION arm below and starts at the span's left
         // bound. Deliberate — the two starts are mutually exclusive by
         // construction, which is why the offset can be computed before the
-        // region's playhead move without either reading the other.
+        // region arm without either reading the other.
         const int64_t launch_offset =
             (!playback.is_playing() &&
              selection.phase_overlay_subject().has_value()) ? kN / 2 : 0;
-        // With an active region, Space auditions from its LEFT bound — the
-        // smaller of the two active-domain endpoints, regardless of drag
-        // direction — because the point of the highlight is to hear its start.
-        // Only on the START edge (a Space that STOPS is untouched; a Space with
-        // no active region is untouched). move_playhead_to owns the
-        // active-domain clamp and the region frames are already active-domain,
-        // so the just-moved cursor is what toggle_playback reads as its start.
-        // The region sets ONLY the start: the trim loop verdict is still
-        // captured from app.trim inside toggle_playback, so region + trim loops
-        // the trim window as before and region + no trim plays through to the
-        // end with no loop.
-        // DELIBERATE (architect 2026-07-21): a region left bound outside a
-        // set trim's window trips toggle_playback's existing "playhead
-        // outside trim" no-op — a contradiction resolved by playing nothing,
-        // not by widening the window.
+        // THE REGION LAUNCH IS AN AUDITION, AND AUDITIONS DO NOT MOVE THE
+        // CURSOR (architect 2026-07-29): with an active region Space plays from
+        // the span's LEFT bound — the smaller of the two active-domain
+        // endpoints, regardless of drag direction, because the point of the
+        // highlight is to hear its start — through THE SAME MECHANISM as the
+        // waveform lower half's click-to-play, scrub_launch_at over the shared
+        // launch body. The resting cursor is NOT written: the cursor is not a
+        // launch scratchpad. Only on the START edge — a Space that STOPS falls
+        // through to toggle_playback below (the stop edge, its teardown, and
+        // every Space with no active region are untouched).
+        //
+        // CURSOR-NEUTRALITY HERE IS LOAD-BEARING, not a style choice. The
+        // collapse-to-focus sites listed at clear_region_highlight's declaration
+        // (input_handler.h) rest on "the focus is where the playhead already
+        // rests, by land-on-focus" — sound only while NO route separates the
+        // cursor from the focus under a standing span. The old cursor write was
+        // the last such route: it parked the cursor on the span's left bound
+        // while the focused flag went on claiming to BE the playhead, so a later
+        // collapse landed the visible cue on the focus while the true cursor and
+        // the next Space read the stale bound.
+        //
+        // The region sets ONLY the start. Everything else stays where it was:
+        // the trim loop verdict is captured from app.trim inside the shared
+        // launch body (region + trim loops the trim window, region + no trim
+        // plays through to the end with no loop), and DELIBERATE (architect
+        // 2026-07-21) a region left bound outside a set trim's window trips that
+        // body's "launch position outside the trim window" no-op — the same
+        // contradiction resolved the same way, by playing nothing rather than
+        // widening the window, now tested against the LAUNCH position directly
+        // instead of against a cursor moved there first. The frame is clamped
+        // through the live-domain clamp the cursor write used to apply, which is
+        // also scrub_launch_at's stated input contract.
+        //
+        // launch_offset is 0 whenever this arm fires — the lead-in's subject
+        // predicate suppresses with an active region (see above), which is why
+        // the two starts can be computed independently and why this arm needs no
+        // offset of its own.
         if (!playback.is_playing() && app.region.active) {
-            viewport.move_playhead_to(
-                std::min(app.region.a_frame, app.region.b_frame));
+            playback_lifecycle.scrub_launch_at(clamp_playhead_to_live_domain(
+                std::min(app.region.a_frame, app.region.b_frame), app, audio));
+            return;
         }
         playback_lifecycle.toggle_playback(launch_offset);
         return;
