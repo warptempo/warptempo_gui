@@ -91,8 +91,10 @@ void GuiInputHandler::handle_trim_clear_both() {
 // compression rounding both bounds to one target frame) leave the AUTHORED window
 // untouched and clear only the HIGHLIGHT — so `has_begin && has_end` does NOT
 // imply an active TrimWindow region. NO region → x is a SILENT NO-OP (the clear
-// arm moved to Shift+X; x never unsets). Read-only refuses silently BEFORE
-// anything, leaving the region untouched (trim authoring).
+// arm moved to Shift+X; x never unsets). NO read-only check here: this pair is
+// keyboard-only (the sole callers are the bare-x / Shift+X dispatch arms), and
+// the keyboard gate — the ONE read-only guard on that path — leaves x off its
+// allowlist, so a locked tab never reaches either function.
 //
 // Set-from-region: normalize the span at read time (endpoints rest in drag
 // order), inverse-map each active-domain endpoint to a source frame through
@@ -108,10 +110,6 @@ void GuiInputHandler::handle_trim_clear_both() {
 // untouched (trim gestures never move it).
 void GuiInputHandler::handle_trim_x() {
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
-    // x is trim authoring: read-only refuses silently, and a resting region is
-    // left as it is.
-    if (active_view_state(app).read_only) return;
-
     // No live region → silent no-op: x is set-only, and the unset is Shift+X's
     // (handle_trim_shift_x). A resting trim is left exactly as it is.
     if (!app.region.active) return;
@@ -144,8 +142,8 @@ void GuiInputHandler::handle_trim_x() {
 
 // Shift+X UNSETS the trim (architect 2026-07-25 — the unset arm x used to own
 // when no region was live; x is now set-only). One-shot, history-less like every
-// trim mutation. Read-only refuses silently FIRST (trim authoring, the same
-// convention x's read-only refusal follows), then delegates to
+// trim mutation. No read-only check of its own (see handle_trim_x above: the
+// keyboard gate owns that decision for both). Delegates to
 // handle_trim_clear_both — whose has_begin||has_end guard makes an already-empty
 // trim a natural no-op and whose tail owns the repaint (waveform + timestamp) and
 // the target_render trigger. The REGION is touched only through
@@ -161,7 +159,6 @@ void GuiInputHandler::handle_trim_x() {
 // sync on TrimWindow provenance: only a highlight the trim itself owns is torn
 // down with the window; a selection-extent or free region rests untouched.
 void GuiInputHandler::handle_trim_shift_x() {
-    if (active_view_state(app).read_only) return;   // trim authoring
     const bool had_trim_window =
         app.region.active &&
         app.region.provenance == RegionProvenance::TrimWindow;

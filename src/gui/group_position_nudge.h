@@ -55,13 +55,24 @@ struct GroupNudgePrologue {
 // PLAYHEAD RULE (architect 2026-07-23, reversing the 2026-07-20 decoupling): the
 // playhead FOLLOWS the focused marker through the nudge (the actual follow lands
 // in finish_group_position_nudge) — it steps with the marker so a later Space
-// auditions FROM the marker. Some focus routes land the playhead on the FOCUSED
-// marker already (a plain single-select marker click, Tab, `c`); a focus set
-// whose land went ELSEWHERE or nowhere — a shift-range / ctrl marker click (which
-// lands at the earliest SELECTED marker, diverging from the clicked focus unless
-// it is the earliest), a Ctrl+click toggle-REMOVE (focus repaired to another
-// selected marker), undo/redo's touched-set selection — is towed onto the focused
-// marker by the first nudge. The lead-in workflow (parking the playhead upstream
+// auditions FROM the marker. Under the marker-lane-owns-the-playhead rule
+// (stated in full at land_playhead_on_marker, input_pointer.cpp) almost every
+// focus route now lands the playhead on the FOCUSED marker itself: the plain
+// single-select marker click and its deferred-click completions, Tab and `c`,
+// the marker drops (which seat the playhead on what they create), the marker and
+// tempo drag commits, every text-editor open, the propagate paste, the `p` W/P
+// swap, the Ctrl+N collapse, and BOTH undo/redo restore arms (whose focus IS the
+// earliest touched marker, exactly where each arm lands). What remains towed —
+// a focus set whose land went ELSEWHERE or nowhere — is the THREE multi-select
+// clicks, which all land at the EARLIEST selected marker by ruling: the
+// shift-range click (focus = the clicked range END), the Ctrl+click toggle-ADD
+// (focus = the clicked marker), and the Ctrl+click toggle-REMOVE (focus repaired
+// to another selected marker; an emptied selection lands nothing). Each diverges
+// from its focus unless the focus happens to be the earliest, and the first
+// nudge tows the playhead onto the focused marker. (Ctrl+Tab is not in either
+// list: it restores a stored focus/playhead PAIR from the destination tab's
+// slot, reproducing whatever those two were when they were stashed.)
+// The lead-in workflow (parking the playhead upstream
 // to audition the approach) is supplied by the scrub surface instead. The twins
 // keep their own GestureKind (WarpNudge / PhaseResetNudge).
 GroupNudgePrologue group_position_nudge_prologue(

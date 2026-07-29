@@ -170,11 +170,24 @@ void GuiFlagEditor::enter_text_edit(int idx,
     }
 
     // Target-switching path. Single-select the new editor target so the
-    // marker-column outline follows it. The playhead is DELIBERATELY not
-    // moved: opening or retargeting a flag editor is a selection act, not a
-    // playhead move; the land routes are the Tab family, `c`, and the plain
-    // marker click.
+    // marker-column outline follows it, and LAND the playhead on it: the marker
+    // lane owns the playhead (the rule is stated in full at
+    // land_playhead_on_marker, input_pointer.cpp), and an editor open is exactly
+    // a route that hands the lane a new focus. This brings the one
+    // set_single_selection caller that had opted out back onto the pointer
+    // clicks' adjacency convention (selection then land, on the next line).
+    // Reached only in W + source view — all three open routes gate the marker
+    // view to the WARP column and take active_column_authoring_allowed — so `idx`
+    // resolves against the warp store the helper reads, in the identity domain.
+    // The pointer double-click open is a harmless RE-land (its click landed on
+    // this same marker one step earlier); the bite is the KEYBOARD opens with a
+    // 2+ selection, where the land was at the earliest selected and the editor
+    // opens on the focus — Return now follows the playhead to the focus, and `m`
+    // lands on its own owner (the earliest, so a re-land in practice). The
+    // same_target early return above correctly skips the land: the playhead is
+    // already there from the first open.
     selection.set_single_selection(idx);
+    land_playhead_on_marker(app, audio, viewport, idx);
 
     // Discard any prior edit silently before switching targets.
     if (text_editor::is_active(app.top_flag_editor) &&

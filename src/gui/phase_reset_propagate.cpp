@@ -566,7 +566,7 @@ void PhaseResetPropagate::paste_state_apply() {
 // shared by all three paste actions.
 //
 // Order — audio-view switch FIRST, then marker-view switch to P, then the
-// selection set:
+// selection set (the playhead land rides with it, after the swap):
 //   * handle_active_audio_view_toggle is the SAME chokepoint the `t` key runs
 //     (validate_target_view_entry, the S<->T re-express of playhead/viewport,
 //     the region clear, kick_waveform_sync, and target_render.ensure_ready all
@@ -598,7 +598,22 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
         // is a no-op when already in P view, so its prune-demote may not have run).
         demote_region_provenance(app.region);
         app.selected_markers     = created;
-        app.last_selected_marker = *created.rbegin();
+        // FIRST created reset as the focus. This is a PROGRAMMATIC group
+        // selection, and the product's other one — undo/redo's touched-set
+        // restore — focuses the earliest for the same reason: all members are
+        // equal, so there is no clicked marker to prefer and the earliest is the
+        // one the group's playhead sits on anyway (the multi-select CLICKS focus
+        // what the user clicked, but they too LAND at the earliest selected).
+        app.last_selected_marker = *created.begin();
+        // The marker lane owns the playhead (the rule is stated in full at
+        // land_playhead_on_marker, input_pointer.cpp): this tail hands the lane a
+        // brand-new focus, so it lands on it — otherwise the non-empty selection
+        // would suppress the cursor while playhead_cursor_sample still held the
+        // pre-paste value re-expressed through the S->T switch, leaving NO
+        // playhead painted anywhere. Land only: the paste deliberately sets no
+        // extent region (the demote above is its whole region handling), and the
+        // land's own dissolve is the region's end here.
+        land_playhead_on_marker(app, viewport.audio, viewport, *created.begin());
     }
     viewport.invalidate_top_strip();
     viewport.invalidate_waveform_area();

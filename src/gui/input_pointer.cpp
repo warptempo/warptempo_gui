@@ -155,6 +155,23 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 
 } // namespace
 
+// THE MARKER LANE OWNS THE PLAYHEAD (architect 2026-07-28) — the rule this
+// helper serves, stated ONCE here; the other landing sites carry only their own
+// class plus a pointer back to this comment. With a non-empty selection the
+// cursor playhead stops painting and the FOCUSED flag's ink triangle IS the
+// playhead (the lane model, GuiInputHandler::playhead_in_marker_lane), so:
+//   * any route that changes WHICH marker is focused while the lane is active
+//     LANDS the playhead on the new focus — otherwise a flag asserts it is the
+//     playhead while playhead_cursor_sample rests somewhere else entirely, and
+//     Space plays from that stale spot;
+//   * any route that LEAVES the lane (empties the selection) leaves the playhead
+//     exactly where it is, for the cursor to paint again — Home/End clear rather
+//     than land for precisely that reason.
+// The landing sites are enumerated below (they are this function's callers, plus
+// the group-image gestures that re-land through move_playhead_to at their own
+// commits: the two group position nudges, the tempo-image step, and both tempo
+// steps' target-view re-warp tails).
+//
 // LANDS the playhead exactly onto marker `hit` (active column's store), with
 // NO viewport move — the sole difference from Tab (which recenters) and `c`
 // (which re-zooms and recenters), so the view holds perfectly still while the
@@ -163,9 +180,14 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // click (both land at the EARLIEST selected marker, `hit` =
 // *selected_markers.begin(); an empty post-toggle selection lands nothing), the
 // no-region + singleton Esc rung of handle_escape_selection_region (deselect +
-// land on the marker), and BOTH undo/redo restore arms (undo.cpp's visual tail:
+// land on the marker), BOTH undo/redo restore arms (undo.cpp's visual tail:
 // the singleton lands on its touched marker, the group on the earliest touched
-// member). The two-step placement
+// member), every text-editor open (flag_editor.cpp's enter_text_edit, the one
+// chokepoint of the three open routes), the propagate paste's target-view tail
+// (phase_reset_propagate.cpp, landing on the FIRST created reset), the `p` W/P
+// swap (active_views.cpp's toggle_active_markers_view, landing on the restored
+// focus), and the Ctrl+N inherit toggle's collapse (warpmarkers_ops.cpp).
+// The two-step placement
 // basis the Tab family lands with (source_frame_to_active_domain then
 // clamp_playhead_to_live_domain), against the active column's store, so the
 // placement is exactly coincident for a subsequent nudge/drag ride. Direct
@@ -174,13 +196,14 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // half-offscreen flag, and the ruling is NO viewport write of any kind (the
 // playhead may rest at a slightly offscreen column when the clicked flag hung
 // half off the edge — accepted). Read-only allowed (selection + playhead are
-// navigation). The click and restore callers stop playback first (each marker
-// click owns that stop at its own site, Tab-family symmetry); the Esc rung may
-// land DURING playback, safe because the land is a direct RESTING-cursor write
-// and a live scanner is untouched by cursor writes (move_playhead_to's
-// scanner-inactive
-// convention). External linkage (declared in input_handler.h) so undo.cpp can
-// reach it.
+// navigation). Some callers stop playback first (each marker click owns that
+// stop at its own site, Tab-family symmetry; the restores and the bpm-editor
+// open stop too); the others — the Esc rung, the bare-Return flag-editor open,
+// the `p` swap, the Ctrl+N collapse — may land DURING playback, safe because the
+// land is a direct RESTING-cursor write and a live scanner is untouched by
+// cursor writes (move_playhead_to's scanner-inactive
+// convention). External linkage (declared in input_handler.h) so undo.cpp and
+// the ops/views TUs can reach it.
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit) {
     int64_t src_frame = 0;

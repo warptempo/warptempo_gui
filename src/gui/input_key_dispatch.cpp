@@ -1546,6 +1546,12 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // cannot restart until the editor closes.
         playback_lifecycle.stop_playback_if_playing();
         flag_editor.enter_bpm_edit(owner);
+        // The playhead land rides enter_text_edit (the shared open chokepoint):
+        // it lands on `owner`, the EARLIEST selected, which is where the
+        // multi-select click that built this span already put it. The span
+        // re-insert below then changes MEMBERSHIP only — std::set::insert leaves
+        // last_selected_marker alone — so the focus stays `owner` and the span
+        // cue survives with the playhead on its first marker. No second land.
         bool restored = false;
         for (int s : span_selection) {
             if (app.selected_markers.insert(s).second) restored = true;
@@ -1701,16 +1707,38 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         viewport.apply_zoom_change(kWorkingZoomLevel);
         viewport.center_viewport_on_playhead();
         break;
-    case GuiKeys::Home:   playback_lifecycle.stop_playback_if_playing();
-                    // Navigation jump to the trim-begin bound: dissolve a
-                    // resting region (its span is stale now the playhead jumps).
-                    clear_region_highlight(app, viewport);
-                    viewport.move_playhead_to(viewport.trim_begin_sample());
-                    break;
-    case GuiKeys::End:    playback_lifecycle.stop_playback_if_playing();
-                    clear_region_highlight(app, viewport);
-                    viewport.move_playhead_to(viewport.trim_end_sample() - 1);
-                    break;
+    case GuiKeys::Home:
+        // Trim-bound jump, and a route OUT of the marker lane: the playhead is
+        // leaving the focused flag for a spot nothing marks, so the selection
+        // must go with it — the lane rule's second clause (a route that empties
+        // the selection leaves the playhead where it lands, for the cursor to
+        // paint again; the rule itself is stated at land_playhead_on_marker in
+        // input_pointer.cpp). UNLIKE the bare Left/Right arms above, this clear
+        // does real MEMBERSHIP work: those reach this body only with an empty
+        // selection (the marker-lane branch in on_key claims them first), so
+        // theirs is a focus-only repair, while Home/End reach it with ANY
+        // selection. Without it the flag would keep claiming to be the playhead
+        // at its own position and the next bare arrow would tow the playhead
+        // back onto the marker, silently discarding the jump.
+        playback_lifecycle.stop_playback_if_playing();
+        if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
+            selection.clear_selection();
+            viewport.invalidate_waveform_area();
+        }
+        // Navigation jump to the trim-begin bound: dissolve a
+        // resting region (its span is stale now the playhead jumps).
+        clear_region_highlight(app, viewport);
+        viewport.move_playhead_to(viewport.trim_begin_sample());
+        break;
+    case GuiKeys::End:
+        playback_lifecycle.stop_playback_if_playing();
+        if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
+            selection.clear_selection();
+            viewport.invalidate_waveform_area();
+        }
+        clear_region_highlight(app, viewport);
+        viewport.move_playhead_to(viewport.trim_end_sample() - 1);
+        break;
     default: break;
     }
 }

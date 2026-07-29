@@ -263,6 +263,21 @@ void GuiWarpMarkersOps::toggle_inherits() {
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
     selection.collapse_to_focused();
+    // The marker lane owns the playhead (the rule is stated in full at
+    // land_playhead_on_marker, input_pointer.cpp): the collapse leaves the FOCUS
+    // as the whole selection, so with 3,4,5 selected and the playhead at 3 (the
+    // earliest, where the multi-select click landed it) the lane would rest with
+    // the flag at 5 claiming to be the playhead while Space played from 3. Land on
+    // the focus. Nothing MOVES here — only the focus SET changes.
+    // The land sits at THIS caller and not inside collapse_to_focused, whose other
+    // caller is the singleton tempo step: a land there would be a near-no-op re-land
+    // (the step's selection is already a singleton — adjust_tempo_cents returns to
+    // the group path at size >= 2 — so the focus never changes), but it would also
+    // drag land_playhead_on_marker's region dissolve onto every tempo step, killing
+    // a resting TrimWindow highlight on a gesture that has no business touching it.
+    // No index guard: the focus was checked >= 0 two lines above, collapse_to_focused
+    // cannot move it, and the helper is internally bounds-guarded regardless.
+    land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
     const auto& mv_const = app.warpmarkers.markers();
     std::vector<GuiWarpMarker> proposed = mv_const;
     // Single-marker resolve via marker_effective (slice once) — the
@@ -486,11 +501,6 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
-    // The singleton selection's always-on focus stem does not MOVE for its own
-    // tempo step: the stepped marker's OWN image is fixed by construction (its
-    // tempo shapes only the segment AFTER it, sliding only DOWNSTREAM images), so
-    // the subject frame is unchanged and no stem repaint is needed here — the
-    // target-view re-warp below still repaints the downstream plate.
     // Discrete warp_frame_map change that CAN run in target view: the Up/Down
     // step is a
     // warp authoring gesture reachable off its source home (the ruled exception
@@ -498,8 +508,33 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     // inventory lives at Viewport::kick_waveform_sync). When it runs in target
     // view the plate must re-warp, so render synchronously so displayed == live at
     // this command boundary, leaving no divergence window for the displayed-basis
-    // gestures (phase drags, trim drags) to ride out.
-    if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
+    // gestures (phase drags, trim drags) to ride out. THEN re-land the playhead on
+    // the stepped marker's post-step image — the marker lane owns the playhead
+    // (the rule is stated in full at land_playhead_on_marker, input_pointer.cpp),
+    // and this is the value-gesture form of it: the focus does not change, but its
+    // IMAGE can move out from under the playhead. Usually it cannot — a marker's
+    // own tempo shapes only the segment AFTER it — but a LABEL DEFINITION reprices
+    // every reference to it, including references EARLIER in the timeline, whose
+    // spans then change duration and shift everything downstream, the stepped
+    // marker's own image included. Re-landing costs nothing when the image did not
+    // move (the playhead is written the value it already holds). Source view needs
+    // nothing: identity domain, the frame never moved — the same reason the GROUP
+    // arm gates its re-land on target view.
+    // In SOURCE view nothing moves at all, so the always-on focus stem needs no
+    // repaint there; in target view the synchronous re-warp below repaints the
+    // waveform area and carries the stem to its new column with the image. The
+    // group arm's SelectionExtent region-follow has no singleton counterpart:
+    // collapse_to_focused above demoted any SelectionExtent region to Free, and
+    // set_region_to_selection_extent never derives one for a <=1 selection.
+    if (app.active_audio_view == 'T') {
+        viewport.kick_waveform_sync();
+        const auto& mv_post = app.warpmarkers.markers();
+        const int f = app.last_selected_marker;
+        if (f >= 0 && f < static_cast<int>(mv_post.size())) {
+            viewport.move_playhead_to(source_frame_to_active_domain(
+                app, audio, mv_post[f].time_frame));
+        }
+    }
     target_render.trigger();
 }
 
@@ -579,17 +614,16 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
     viewport.invalidate_timestamp_area();
     // Target-view synchronous re-warp tail (the plate must re-warp when authoring
     // off source home), THEN re-land the playhead on the FOCUSED marker's
-    // post-step image. Unlike the singleton — whose own tempo shapes only the
-    // segment AFTER it, so its focused image is fixed by construction and needs
-    // no re-land — a GROUP step changes EARLIER selected members' tempos too, and
-    // an upstream member's change moves every downstream image INCLUDING the
-    // focused member's; without this the coincident playhead (the land put it on
-    // the focused marker) would strand off it after the re-warp. The
-    // playhead-follows-the-focused-marker invariant applied to a value gesture
-    // that moves images. Source view needs nothing (identity domain — the frame
-    // never moved). (The singleton deliberately keeps NO re-land: the
-    // label-coupling edge where even a singleton's own image can move is a
-    // recorded accepted gap there.)
+    // post-step image: the marker lane owns the playhead (the rule is stated in
+    // full at land_playhead_on_marker, input_pointer.cpp) applied to a value
+    // gesture that moves images. A GROUP step changes EARLIER selected members'
+    // tempos too, and an upstream member's change moves every downstream image
+    // INCLUDING the focused member's; without this the coincident playhead (the
+    // land put it on the focused marker) would strand off it after the re-warp.
+    // The group's REACH is what differs from the singleton's, not the rule — the
+    // singleton runs the same target-view re-land, for the rarer label-definition
+    // repricing that can move even its own image. Source view needs nothing
+    // (identity domain — the frame never moved).
     if (app.active_audio_view == 'T') {
         // Region follow decision CAPTURED BEFORE the kick (the ordering hazard):
         // kick_waveform_sync's live-domain reclamp wholesale-clears any region

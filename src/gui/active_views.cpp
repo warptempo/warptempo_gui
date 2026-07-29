@@ -1,5 +1,7 @@
 #include "active_views.h"
 
+#include "input_handler.h"   // land_playhead_on_marker
+
 #include <cstdio>
 #include <string>
 
@@ -50,7 +52,10 @@ ViewState* GuiActiveViews::active_view_state() {
 // Toggle active editing mode between 'W' (warp) and 'P' (phase reset).
 // Saves the active selection into the leaving mode's per-tab slot,
 // then restores the destination mode's slot. Visible state (viewport /
-// zoom / playhead) is unaffected. Caller decides what invalidations to
+// zoom / playhead) is unaffected — the PLAYHEAD LAND belongs to the callers,
+// which disagree about it: toggle_active_markers_view (`p`) lands on the
+// restored focus, while the propagate paste's tail overwrites this selection
+// with its own and lands on that. Caller decides what invalidations to
 // run; this helper just shuffles the AppState fields.
 void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     if (target_mode == app.active_markers_view) return;
@@ -143,6 +148,28 @@ void GuiActiveViews::toggle_active_markers_view() {
         this->switch_active_markers_view_to('W');
     } else {
         this->switch_active_markers_view_to('P');
+    }
+    // The marker lane owns the playhead (the rule is stated in full at
+    // land_playhead_on_marker, input_pointer.cpp). The swap above restores the
+    // destination column's stored selection and focus and deliberately leaves the
+    // visible state alone, so `p` can re-enter the lane with the focus at one
+    // position and the playhead at another — the restored flag would claim to be
+    // the playhead while Space played from wherever the W-side click left it.
+    // Land on the restored focus. An EMPTY destination slot LEAVES the lane, so
+    // the playhead stays put and the cursor simply paints again (the rule's
+    // second clause) — no move.
+    //
+    // The land lives HERE and not in switch_active_markers_view_to because that
+    // helper has a second caller: the propagate paste's target-view tail
+    // (PhaseResetPropagate::land_paste_in_target_view), which sets its OWN
+    // selection and its own land immediately afterward. A land inside the helper
+    // would fire against the restored P-slot selection and be overwritten one
+    // line later.
+    // The emptiness test IS the lane test; no separate focus-index guard is
+    // needed (prune_live_selection above leaves the focus a live member whenever
+    // the selection is non-empty, and the helper is bounds-guarded regardless).
+    if (!app.selected_markers.empty()) {
+        land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
     }
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();

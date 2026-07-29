@@ -191,16 +191,10 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
 // LAND the playhead exactly onto marker `hit` of the ACTIVE column with NO
 // viewport move (the two-step placement basis source_frame_to_active_domain then
 // clamp_playhead_to_live_domain, a direct cursor write, dissolving any resting
-// region via clear_region_highlight). Definition in input_pointer.cpp. Callers:
-// the plain / shift-range / ctrl-toggle marker clicks (which land at ITS marker /
-// the earliest selected; the plain click incl. its deferred-click completions),
-// handle_escape_selection_region's no-region + singleton Esc rung (deselect +
-// land), and BOTH undo/redo restore arms (undo.cpp's visual tail: the singleton
-// lands on its touched marker, the group on the earliest touched member).
-// Read-only allowed. The click and restore callers stop playback first; the Esc
-// rung may land during playback — safe, as the land is a direct RESTING-cursor
-// write and a live scanner is untouched by cursor writes (the move_playhead_to
-// scanner-inactive convention).
+// region via clear_region_highlight). Read-only allowed. Definition in
+// input_pointer.cpp, whose comment is the AUTHORITATIVE statement of the
+// marker-lane-owns-the-playhead rule and the one enumeration of the landing
+// sites — do not restate either here.
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit);
 
@@ -744,12 +738,13 @@ private:
     // TrimWindow) from the just-set window, so region and trim rest coupled (a
     // crossed-collapse dissolve clears the region with the window; the selection
     // is never touched); NO region is a silent no-op (the unset moved to
-    // Shift+X). Read-only refuses silently before anything, leaving the region
-    // untouched. The sole dispatch entry for the bare-x key.
+    // Shift+X). No read-only check: the keyboard gate — the ONE read-only guard
+    // on that path — leaves x off its allowlist, and this pair is keyboard-only,
+    // so a locked tab never reaches it. The sole dispatch entry for the bare-x key.
     void handle_trim_x();
 
     // Shift+X UNSETS the trim (architect 2026-07-25 — split off x, which is now
-    // set-only). Read-only refuses silently first (trim authoring), then
+    // set-only). Read-only is the keyboard gate's (see handle_trim_x above), then
     // delegates to handle_trim_clear_both and, when the region it just tore down
     // was the trim's own TrimWindow highlight, re-syncs so that highlight cannot
     // outlive its window (a Free/SelectionExtent region is NOT trim's to clear).
