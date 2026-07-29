@@ -31,6 +31,34 @@ struct GuiPlaybackLifecycle {
           viewport(viewport_) {}
 
     void stop_playback_if_playing();
+
+    // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
+    // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
+    // opens, by every site that opens one: the `;` settings editor
+    // (input_handler.cpp), the `'` render-commit editor and the `m` bpm editor
+    // (input_key_dispatch.cpp), and the three prompt opens (prompt.cpp).
+    // Authoring or answering a dialog over a live audition is the wrong default,
+    // and Space is inside each of those surfaces' blocked sets, so playback
+    // cannot restart until the surface closes.
+    // THE DECISION TABLE lives here, so a new modal surface inherits an ANSWER
+    // instead of an absence:
+    //   * BOTTOM-STRIP modal surfaces — the three editors and the prompts — STOP.
+    //   * The TOP-STRIP FLAG EDITOR IS EXEMPT, and that is a DECISION, not an
+    //     omission: modality there is CHORDS ONLY (the editor stays pointer- and
+    //     wheel-transparent), and editing flag text while listening to the
+    //     passage is a workflow the architect uses. Its open site
+    //     (GuiFlagEditor::enter_top_flag_edit) carries a pointer back here.
+    // REFUSAL-GATED (the standing rule): the stop is the price of an OPEN, so
+    // each site calls this only once its own guards have passed — a refused open
+    // must leave a listening session untouched. Do NOT hoist a call above a
+    // guard ladder.
+    // Mechanically this IS stop_playback_if_playing (a modal open needs no
+    // teardown the gesture stop does not already do); the separate name is what
+    // gives the rule and its one exemption a greppable home. The NON-modal stops
+    // (gesture stops, the S/T toggle, the adopt mutator's self-guard) keep
+    // calling stop_playback_if_playing directly.
+    void stop_playback_for_modal_open();
+
     void hold_natural_end_scanner(int64_t endpoint_sample);
     void restore_playhead_to_lsp();
     // launch_offset shifts the SCANNER's launch position (and the play() launch

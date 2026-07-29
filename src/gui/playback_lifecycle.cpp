@@ -27,6 +27,15 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     app.follow_overridden_for_session = false;
 }
 
+// The one owner of the modal-open stop. See the declaration for the decision
+// table (which surfaces stop, and why the top-strip flag editor does not) and
+// for the refusal-gating rule every caller observes. Pure delegation by design:
+// a modal open needs exactly the gesture stop's teardown and nothing more, so
+// this stays a name for a rule rather than a second mechanism.
+void GuiPlaybackLifecycle::stop_playback_for_modal_open() {
+    stop_playback_if_playing();
+}
+
 void GuiPlaybackLifecycle::hold_natural_end_scanner(int64_t endpoint_sample) {
     const double old_px = scanner_pixel_x(app, audio);
     app.playhead_scanner_sample = endpoint_sample;

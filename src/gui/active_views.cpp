@@ -157,7 +157,9 @@ void GuiActiveViews::toggle_active_markers_view() {
     // the playhead while Space played from wherever the W-side click left it.
     // Land on the restored focus. An EMPTY destination slot LEAVES the lane, so
     // the playhead stays put and the cursor simply paints again (the rule's
-    // second clause) — no move.
+    // second clause) — no move. A swap into a slot whose focus already sits
+    // under the playhead moves nothing either, and the movement gate makes that
+    // land a full no-op: no dissolve, so a resting region survives the swap.
     //
     // The land lives HERE and not in switch_active_markers_view_to because that
     // helper has a second caller: the propagate paste's target-view tail

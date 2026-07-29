@@ -602,8 +602,8 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
         // selection, and the product's other one — undo/redo's touched-set
         // restore — focuses the earliest for the same reason: all members are
         // equal, so there is no clicked marker to prefer and the earliest is the
-        // one the group's playhead sits on anyway (the multi-select CLICKS focus
-        // what the user clicked, but they too LAND at the earliest selected).
+        // extent region's left bound, where Space launches (the multi-select
+        // CLICKS instead focus what the user clicked, and land there).
         app.last_selected_marker = *created.begin();
         // The marker lane owns the playhead (the rule is stated in full at
         // land_playhead_on_marker, input_pointer.cpp): this tail hands the lane a
@@ -612,7 +612,8 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
         // pre-paste value re-expressed through the S->T switch, leaving NO
         // playhead painted anywhere. Land only: the paste deliberately sets no
         // extent region (the demote above is its whole region handling), and the
-        // land's own dissolve is the region's end here.
+        // land's own dissolve — which fires when the land moves the playhead, the
+        // movement gate at land_playhead_on_marker — is the region's end here.
         land_playhead_on_marker(app, viewport.audio, viewport, *created.begin());
     }
     viewport.invalidate_top_strip();

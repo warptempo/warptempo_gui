@@ -55,23 +55,19 @@ struct GroupNudgePrologue {
 // PLAYHEAD RULE (architect 2026-07-23, reversing the 2026-07-20 decoupling): the
 // playhead FOLLOWS the focused marker through the nudge (the actual follow lands
 // in finish_group_position_nudge) — it steps with the marker so a later Space
-// auditions FROM the marker. Under the marker-lane-owns-the-playhead rule
-// (stated in full at land_playhead_on_marker, input_pointer.cpp) almost every
-// focus route now lands the playhead on the FOCUSED marker itself: the plain
-// single-select marker click and its deferred-click completions, Tab and `c`,
-// the marker drops (which seat the playhead on what they create), the marker and
-// tempo drag commits, every text-editor open, the propagate paste, the `p` W/P
-// swap, the Ctrl+N collapse, and BOTH undo/redo restore arms (whose focus IS the
-// earliest touched marker, exactly where each arm lands). What remains towed —
-// a focus set whose land went ELSEWHERE or nowhere — is the THREE multi-select
-// clicks, which all land at the EARLIEST selected marker by ruling: the
-// shift-range click (focus = the clicked range END), the Ctrl+click toggle-ADD
-// (focus = the clicked marker), and the Ctrl+click toggle-REMOVE (focus repaired
-// to another selected marker; an emptied selection lands nothing). Each diverges
-// from its focus unless the focus happens to be the earliest, and the first
-// nudge tows the playhead onto the focused marker. (Ctrl+Tab is not in either
-// list: it restores a stored focus/playhead PAIR from the destination tab's
-// slot, reproducing whatever those two were when they were stashed.)
+// auditions FROM the marker. THE TOWED SET IS EMPTY (architect 2026-07-28): under
+// the marker-lane-owns-the-playhead rule — stated in full, with its landing-site
+// enumeration, at land_playhead_on_marker in input_pointer.cpp — a land is ALWAYS
+// on the focus, so every focus-setting route leaves the playhead already
+// coincident with the focused marker and this follow never has a divergence to
+// close. The last three exceptions were the multi-select clicks (shift-range,
+// Ctrl+click toggle-ADD, Ctrl+click toggle-REMOVE), which landed at the earliest
+// selected while focusing elsewhere; that ruling was reversed and they now land
+// on their own focus like everything else. The follow stays, because the nudge
+// MOVES the focused marker and the playhead must move with it — it is a
+// re-land, not a repair. (Ctrl+Tab is in no list at all: it restores a stored
+// focus/playhead PAIR from the destination tab's slot, reproducing whatever those
+// two were when they were stashed.)
 // The lead-in workflow (parking the playhead upstream
 // to audition the approach) is supplied by the scrub surface instead. The twins
 // keep their own GestureKind (WarpNudge / PhaseResetNudge).

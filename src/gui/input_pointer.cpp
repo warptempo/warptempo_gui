@@ -167,22 +167,44 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   * any route that LEAVES the lane (empties the selection) leaves the playhead
 //     exactly where it is, for the cursor to paint again — Home/End clear rather
 //     than land for precisely that reason.
+// A LAND IS ALWAYS ON THE FOCUS (architect 2026-07-28, closing the rule): the
+// three MULTI-SELECT clicks used to land at the earliest selected while focusing
+// elsewhere, and no longer do — the shift-range click lands on the clicked range
+// END, and both ctrl-toggle arms land on whichever marker the toggle leaves
+// focused. So there is no such thing as a focus set whose land went somewhere
+// else: the "towed" category is empty, and the nudge/drag follow tows nothing.
+// Auditioning a range FROM ITS START is unaffected and never depended on this:
+// Space launches from an active region's LEFT BOUND, and those same clicks set
+// the extent region (set_region_to_selection_extent, below).
 // The landing sites are enumerated below (they are this function's callers, plus
 // the group-image gestures that re-land through move_playhead_to at their own
 // commits: the two group position nudges, the tempo-image step, and both tempo
 // steps' target-view re-warp tails).
+//
+// THE DISSOLVE IS MOVEMENT-GATED (architect 2026-07-28): the rationale has always
+// been that the playhead LEAVING a span is what ends the span, so a land that
+// resolves to the sample the playhead ALREADY rests on is a FULL NO-OP — no
+// dissolve, no damage, nothing to erase because nothing changed. A resting region
+// of ANY provenance therefore survives such a land; that is the concept, not an
+// exception carved for one provenance. The routes this makes side-effect-free are
+// the RE-lands: the pointer double-click's second land, an editor open on the
+// marker whose click just landed, Esc's singleton rung, and the `p` W/P swap or
+// the Ctrl+N collapse whenever the focus is already under the playhead. When a
+// land DOES move the playhead the dissolve runs exactly as it always did.
 //
 // LANDS the playhead exactly onto marker `hit` (active column's store), with
 // NO viewport move — the sole difference from Tab (which recenters) and `c`
 // (which re-zooms and recenters), so the view holds perfectly still while the
 // playhead seats. Shared by the plain marker click (lands on ITS marker, incl.
 // its deferred-click completions), the shift range click, and the ctrl toggle
-// click (both land at the EARLIEST selected marker, `hit` =
-// *selected_markers.begin(); an empty post-toggle selection lands nothing), the
+// click (each landing on the FOCUS its own path just set — the clicked range
+// end, the toggled-in marker, or the focus repaired after a toggle-out; an empty
+// post-toggle selection lands nothing), the
 // no-region + singleton Esc rung of handle_escape_selection_region (deselect +
 // land on the marker), BOTH undo/redo restore arms (undo.cpp's visual tail:
-// the singleton lands on its touched marker, the group on the earliest touched
-// member), every text-editor open (flag_editor.cpp's enter_text_edit, the one
+// the singleton lands on its touched marker, the group on its focus, which IS
+// the earliest touched member), every text-editor open (flag_editor.cpp's
+// enter_text_edit, the one
 // chokepoint of the three open routes), the propagate paste's target-view tail
 // (phase_reset_propagate.cpp, landing on the FIRST created reset), the `p` W/P
 // swap (active_views.cpp's toggle_active_markers_view, landing on the restored
@@ -220,6 +242,12 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
     if (valid) {
         int64_t sample = source_frame_to_active_domain(app, audio, src_frame);
         sample = clamp_playhead_to_live_domain(sample, app, audio);
+        // THE MOVEMENT GATE (see the block above): a land onto the sample the
+        // playhead already rests on changed nothing, so it does nothing — no
+        // dissolve (the playhead never left the span) and no damage (no pixel
+        // moved). Compared AFTER the clamp, because the clamp is what decides
+        // where the land actually seats.
+        if (sample == app.playhead_cursor_sample) return;
         const double old_px = playhead_pixel_x(app, audio);
         app.playhead_cursor_sample = sample;
         // Navigation land: dissolve a resting region — the playhead just
@@ -234,14 +262,20 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 // The DOWNWARD coupling — the selection defines the extent region,
 // SELECTION-FLOWS-DOWNWARD-ONLY (architect 2026-07-23): a
 // multi-select CLICK that leaves 2+ markers selected sets the region to the
-// selection's active-domain position extent [earliest, latest], so the
-// highlight, the earliest-marker land, and Space's play-from-region-left-bound
-// all agree by construction. A selection of <=1 sets NOTHING — the click's
+// selection's active-domain position extent [earliest, latest], so the highlight
+// and Space's play-from-region-left-bound agree by construction — auditioning a
+// range from its START is the REGION's doing, not the land's (the clicks land on
+// the FOCUS since 2026-07-28; see land_playhead_on_marker). A selection of <=1
+// sets NOTHING — the click's
 // standing region clear (land_playhead_on_marker's dissolve, or the ctrl
 // empty-branch's explicit clear_region_highlight) is the dissolve. Endpoints
 // are clamped through clamp_playhead_to_live_domain (the region domain's
 // playable-frame invariant, as every other former clamps). Three caller CLASSES:
-//   (1) CREATORS — the shift-range and ctrl-toggle click paths, each MUST run
+//   (1) CREATORS — the shift-range and ctrl-toggle click paths, plus the `m`
+//       bpm-mode open (input_key_dispatch.cpp), which is the same pattern one
+//       gesture over: the open collapses the selection to the span owner and
+//       lands there, then the handler restores the span membership and re-derives
+//       the extent, so the span cue survives the open. Each MUST run
 //       this AFTER the land (which CLEARS any old region) — a reorder would let
 //       the clear kill this fresh highlight;
 //   (2) MAINTAINERS — the group image-moving commits that re-derive an
@@ -798,9 +832,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the marker + double-click seed / consume + arm the pending marker
         // drag on the flag part, Shift = file-manager inclusive RANGE select
         // from the interaction's anchor (shift-held, else the adopted focus)
-        // to the clicked marker + land at the
-        // earliest selected, Ctrl = the individual membership toggle + land at
-        // the earliest selected), so it is resolved once here.
+        // to the clicked marker + land on that range END, Ctrl = the individual
+        // membership toggle + land on the resulting focus), so it is resolved
+        // once here — every one of the three lands on its own focus.
         // The editor lifecycle block above already closed any open flag editor,
         // so the lane run this resolves is the committed (non-editor) run. The
         // WAVEFORM never SELECTS a marker by HIT — a plain press splits by half
@@ -897,7 +931,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         }
 
         // Ctrl-exact left press splits by surface. On a top-strip MARKER it is
-        // the individual membership toggle + land at the earliest selected (the
+        // the individual membership toggle + land on the resulting focus (the
         // marker claim below). On the WAVEFORM it arms the dual-axis strip drag — the SAME
         // gesture the zoom row arms (StripDragState / apply_strip_drag_at),
         // triggered here for reach: it gets the cursor capture ("swallow"), the
@@ -919,11 +953,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // only the letter chords" rule for the one marker surface (architect
             // 2026-07-23). It arms no drag, seeds/consumes no double-click, opens
             // no editor. Whether the toggle ADDED or REMOVED, the playhead lands
-            // at the EARLIEST selected marker afterward (*selected_markers.begin()
-            // — the set is index-ordered and markers rest time-sorted, so the
-            // smallest index is the earliest in time; architect 2026-07-23), so a
-            // Space auditions from the selection's start regardless of which
-            // marker was clicked. An emptied selection (the last member toggled
+            // on the FOCUS the toggle leaves behind (architect 2026-07-28,
+            // replacing the earliest-selected land): an ADD focuses the clicked
+            // marker, a REMOVE of the focused member repairs the focus to the
+            // largest remaining index, and a REMOVE of any other member leaves
+            // the focus alone — so app.last_selected_marker is the one expression
+            // for all three, and it is always a live member here (a non-empty
+            // selection always carries a focus after either arm). Auditioning
+            // from the selection's START survives regardless: that is Space
+            // launching from the extent region's LEFT BOUND, set below. An
+            // emptied selection (the last member toggled
             // off) lands nothing and drops the region (the empty branch's
             // explicit clear_region_highlight). A land dissolves the old region,
             // then — under the DOWNWARD selection->extent coupling
@@ -931,7 +970,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // selection of 2+ markers sets
             // the region to the selection's [earliest, latest] extent
             // (set_region_to_selection_extent, AFTER the land's clear); a single
-            // survivor leaves the land's dissolve standing. Read-only allowed
+            // survivor leaves whatever the land did standing — its dissolve when
+            // the land moved the playhead, the old region when it did not (the
+            // movement gate). Read-only allowed
             // (selection + playhead are navigation). The ctrl-exact WAVEFORM
             // press keeps the zoom-strip drag below (different surface, no
             // collision); a markerless top-strip ctrl press claims only the
@@ -955,7 +996,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // damage is needed here.
                 if (!app.selected_markers.empty())
                     land_playhead_on_marker(app, audio, viewport,
-                                            *app.selected_markers.begin());
+                                            app.last_selected_marker);
                 else
                     clear_region_highlight(app, viewport);
                 set_region_to_selection_extent(app, audio, viewport);
@@ -1058,15 +1099,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // pointer crosses the threshold, else a pure click). Shift+click: a
         // file-manager INCLUSIVE RANGE select from the interaction's anchor
         // (shift-held, else the adopted focus) to the
-        // clicked marker (the range end = FOCUS), which LANDS the playhead at the
-        // range's EARLIEST member (not the clicked end — focus and land diverge).
+        // clicked marker (the range end = FOCUS), which LANDS the playhead THERE.
         // The individual membership TOGGLE moved to Ctrl+click (the ctrl-exact
         // marker claim in the earlier branch; whether it adds or removes it lands
-        // at the earliest selected, an empty selection landing nothing). The
+        // on the focus it leaves, an empty selection landing nothing). The
         // plain / shift / ctrl land makes every such marker click a land route
         // alongside the Tab family and `c` (which additionally recenter /
-        // re-zoom); the subsequent drag or nudge then tows the coincident
-        // playhead onto the FOCUSED marker by construction.
+        // re-zoom), and all three land ON THEIR FOCUS (architect 2026-07-28), so
+        // the playhead and the focused flag are coincident before any subsequent
+        // drag or nudge — nothing is towed.
         if (inside_top) {
             // The chip row (top_upper_row_area, lane 1) is trim's lane and is
             // claimed BEFORE the marker single-select. The chip row, the marker
@@ -1146,33 +1187,35 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // successive shift-click replaces the selection with the
                     // inclusive index range between that anchor and
                     // hit. The clicked marker becomes the range end = FOCUS
-                    // (last_selected), but the playhead LANDS at the range's
-                    // EARLIEST member (*selected_markers.begin() — smallest
-                    // index = earliest in time; architect 2026-07-23), so a
-                    // Space after a range select auditions from the range's
-                    // start. FOCUS and the land target thus DIVERGE here: the
-                    // unconditional nudge/drag follow then tows the playhead onto
-                    // the FOCUSED (clicked) range end as ever. On an anchoring
-                    // focus-less first click the selection is {hit}, so
-                    // *begin() == hit and
-                    // the land is unchanged. Ctrl+click is the individual
-                    // membership toggle (above, landing at the earliest selected
-                    // too). It arms no drag, seeds/consumes no double-click, opens
-                    // no editor. Allowed in read-only (selection + playhead are
+                    // (last_selected), and the playhead LANDS THERE (architect
+                    // 2026-07-28, replacing the earliest-member land): focus and
+                    // land no longer diverge on any click, so nothing is towed
+                    // onto the focus by a later nudge. A Space after a range
+                    // select still auditions from the range's START — that is the
+                    // extent region's LEFT-BOUND launch (set below), which is
+                    // what owned that behavior all along. On an anchoring
+                    // focus-less first click the selection is {hit} and hit is
+                    // the focus, so the land is unchanged. Ctrl+click is the
+                    // individual membership toggle (above, landing on its own
+                    // resulting focus). It arms no drag, seeds/consumes no
+                    // double-click, opens no editor. Allowed in read-only (selection + playhead are
                     // navigation). The downward selection->extent coupling
                     // (SELECTION-FLOWS-DOWNWARD-ONLY): a range leaving
                     // 2+ selected sets the region to the [earliest, latest]
                     // extent (set_region_to_selection_extent, AFTER the land's
-                    // region clear), so highlight, land, and Space's left-bound
+                    // region clear), so the highlight and Space's left-bound
                     // launch agree; the anchoring first click ({hit}) leaves <=1
                     // selected and sets no region.
                     selection.select_range_from_anchor(hit);
                     // A range leaving exactly one selected shows its always-on stem;
                     // select_range_from_anchor owns the subject-change damage (a 2+
                     // range shows the extent region's ground, no stem).
+                    // The land target is the FOCUS the mutator just set, which is
+                    // `hit` on both its arms — spelled as last_selected_marker so
+                    // the three multi-select clicks read as one rule.
                     if (!app.selected_markers.empty())
                         land_playhead_on_marker(app, audio, viewport,
-                                                *app.selected_markers.begin());
+                                                app.last_selected_marker);
                     set_region_to_selection_extent(app, audio, viewport);
                 } else {
                     // GROUP-drag deferral (architect 2026-07-23, file-manager
@@ -1269,8 +1312,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // ...and LANDS the playhead exactly onto the marker (shared
                     // helper; see land_playhead_on_marker). Runs on EVERY plain
                     // marker click — the double-click-consume path below (the
-                    // first click already landed, so the second's land is a
-                    // same-value repeat, harmless) and the plain-select path;
+                    // first click already landed, so the second's land resolves
+                    // to the playhead's current sample and the movement gate
+                    // makes it a structural no-op) and the plain-select path;
                     // both parts of the unified item land (flag shape or lane
                     // run — hit is the one index).
                     land_playhead_on_marker(app, audio, viewport, hit);
@@ -1860,7 +1904,10 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         //    intact). A motionless release IS that click now — collapse to {m}
         //    and land the playhead on it, exactly the reposition pending's
         //    deferred completion; the land's standing region clear gives the
-        //    plain-click highlight dissolve for free. Bounds-check m against the
+        //    plain-click highlight dissolve for free WHENEVER the land moves the
+        //    playhead — releasing on the marker the playhead already sits on
+        //    leaves the (now demoted-to-Free) extent region resting, which is the
+        //    movement gate's ruled behavior, not a gap. Bounds-check m against the
         //    warp store (the tempo surface is W view — nothing mutates it between
         //    press and release, the pending gate swallows keys).
         const bool deferred = app.pending_tempo_drag.deferred_click;
@@ -1915,7 +1962,9 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         //    multi-selection intact). A motionless release IS that click now —
         //    collapse to {m} and land the playhead on it, exactly the immediate
         //    path's press-time act, its standing region clear giving the plain
-        //    click's highlight dissolve for free. Bounds-check m against the
+        //    click's highlight dissolve for free whenever the land moves the
+        //    playhead (see the tempo twin above for the no-motion case, which
+        //    leaves the demoted region resting by ruling). Bounds-check m against the
         //    active column's store defensively (nothing mutates it between press
         //    and release — the pending gate swallows keys).
         // (A crossed pending became app.drag — dropping the candidate at the

@@ -144,8 +144,10 @@ struct SelectionSnapshot {
 // DELETE (demotes to the span of the deleted positions, also a DROP), and the
 // MULTI-SELECT EXTENT: a shift-range or ctrl-toggle click that leaves 2+ markers
 // selected sets the region to the selection's position extent [earliest, latest]
-// (provenance SelectionExtent — see RegionProvenance), so highlight, land, and
-// Space's left-bound launch agree. THE INVARIANT (three-state, architect
+// (provenance SelectionExtent — see RegionProvenance), so the highlight and
+// Space's left-bound launch agree — the auditioning-from-the-start behavior is
+// the REGION's, not the land's (those clicks land on their focus; see
+// land_playhead_on_marker). THE INVARIANT (three-state, architect
 // 2026-07-23): 2+ selected with an active SelectionExtent region ⇒ region == the
 // current selection's extent (maintained by demote_region_provenance, which
 // downgrades to Free the instant the membership is replaced); a TrimWindow region
@@ -359,10 +361,10 @@ struct DragState {
     int                    grabbed_k            = 0;
     // Region as it rested at begin_drag, restored on an Esc / Ctrl+Q cancel
     // alongside the selection snapshot and grab playhead. Only a GROUP drag can
-    // capture an active region here (a single-marker press landed the playhead
-    // at press, whose standing region clear dissolved any highlight before
-    // begin_drag ran — so for a single-marker drag this restore is a no-op by
-    // construction).
+    // MOVE the region, so for a single-marker drag this restore is a no-op even
+    // when it captures something (see the capture site in marker_drag.cpp: the
+    // live-track is gated on SelectionExtent provenance, which the press's
+    // single-select demoted away).
     RegionState            pre_drag_region;
     // Which list this drag operates on. The motion / commit
     // handlers dispatch on this so a drag started in phase reset view

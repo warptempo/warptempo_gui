@@ -654,11 +654,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Bare `;` opens the settings prompt in the bottom strip. Keyboard-only
     // (no click analogue). The active-editor block at the top of on_key
     // routes subsequent keystrokes; opening here just primes the State.
-    // The settings editor is a modal bottom-strip surface: stop playback
-    // at its open. Space is inside the modal blocked set, so playback
-    // cannot restart until the editor closes.
+    // The settings editor is a modal bottom-strip surface, so its open takes the
+    // shared modal stop (stop_playback_for_modal_open — the decision table and
+    // the flag editor's exemption live at its declaration). This open has no
+    // guards to clear: `;` always opens the editor, so the stop and the open are
+    // adjacent unconditionally.
     if (key == GuiKeys::Semicolon && !shift && !ctrl && !alt) {
-        playback_lifecycle.stop_playback_if_playing();
+        playback_lifecycle.stop_playback_for_modal_open();
         settings_editor.open();
         return;
     }

@@ -184,8 +184,10 @@ namespace {
 // picks the EARLIEST touched marker as focus (equal members; the group nudge's
 // pixel anchor, the tempo step's re-land, Tab's start, and the lane/readout
 // fallbacks all tolerate it, and a singleton's earliest IS the touched marker).
-// The VISUAL tail — the playhead land (singleton on its marker, group on the
-// earliest touched member), the group SelectionExtent
+// The VISUAL tail — the playhead land (on the FOCUS in both arms, which is the
+// touched marker for a singleton and the earliest touched member for a group;
+// the universal land-on-the-focus rule at land_playhead_on_marker), the group
+// SelectionExtent
 // region, and the offscreen framing/recenter — lives in restore_history_entry
 // AFTER sanitize (the region write must follow sanitize's provenance demote).
 template <class M, class FieldsDiffer>
@@ -283,8 +285,8 @@ void apply_post_restore_rules_impl(AppState& app,
     // EARLIEST touched marker as focus — one rule for singleton (trivially the
     // touched marker) and group (all members are equal; there is no stored focus
     // hint). sanitize keeps it (it is in the set and in range); the visual tail
-    // in restore_history_entry then lands the singleton on it, or lands the group
-    // on its earliest and sets/frames the extent region.
+    // in restore_history_entry then lands the playhead on that focus in either
+    // arm, and for a group additionally sets/frames the extent region.
     app.last_selected_marker = *target_set.begin();
 }
 
@@ -455,17 +457,19 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
 
     // VISUAL TAIL (architect 2026-07-25 — undo/redo adopts the group visual
     // language, superseding "undo/redo shows its target WITHOUT the playhead"):
-    // a SINGLETON restore LANDS the playhead on its touched marker (the region
-    // dissolves via the land, exactly the plain marker-click land) and its
+    // a SINGLETON restore LANDS the playhead on its touched marker (which is its
+    // focus; a resting region dissolves via the land whenever the land MOVES the
+    // playhead — the movement gate at land_playhead_on_marker) and its
     // always-on focus stem follows from the selection (no stamp); a GROUP
-    // restore re-selects the touched set (done above), LANDS the playhead on the
-    // EARLIEST touched member, AND sets the SelectionExtent REGION
+    // restore re-selects the touched set (done above), LANDS the playhead on its
+    // FOCUS — the EARLIEST touched member, by the focus rule above — AND sets the
+    // SelectionExtent REGION
     // — undo/redo joins the extent-region writers, then, when any member is
     // offscreen, PREFERS a plain scroll and only ZOOMS OUT if the group cannot fit
     // at the current level (the group arm below). The extent's split half-triangles
     // ARE the dissolved cursor playhead (its left half on the earliest member, the
     // spot the double-Esc collapse parks at), so the readout follows the land; the
-    // multi-select clicks' earliest-land + land-then-extent order is the precedent
+    // multi-select clicks' land-then-extent order is the precedent
     // (region.active still suppresses the cursor line, so no waveform pixel changes
     // — only the timestamp readout). Runs AFTER
     // sanitize_selection_after_restore so the region write follows sanitize's
@@ -499,7 +503,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             }
             if (in_range) {
                 // LAND: two-step placement basis, direct cursor write, NO viewport
-                // move; dissolves any resting region. Playback is already stopped
+                // move; dissolves any resting region when it MOVES the playhead
+                // (a restore that leaves the playhead exactly where it already
+                // rests is a full no-op there). Playback is already stopped
                 // above, so land's scanner-inactive premise holds.
                 land_playhead_on_marker(app, viewport.audio, viewport, t);
                 // OFFSCREEN -> plain recenter at the CURRENT zoom (no framer, no
@@ -521,16 +527,25 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 // conditional-stem apparatus was harvested).
             }
         } else if (sel_size >= 2) {
-            // GROUP: LAND the playhead on the EARLIEST touched member, THEN set the
-            // SelectionExtent region (architect 2026-07-25). The extent's split
+            // GROUP: LAND the playhead on the restore's FOCUS, THEN set the
+            // SelectionExtent region (architect 2026-07-25). This obeys the
+            // universal land-on-the-focus rule with no special case, because a
+            // restore's focus IS the earliest touched member by construction
+            // (apply_post_restore_rules_impl) — spelled as
+            // *selected_markers.begin() rather than last_selected_marker so a
+            // sanitize that pruned the focus still lands somewhere live. The
+            // extent's split
             // half-triangles ARE the dissolved cursor playhead — its left half sits
             // ON the earliest member, the same spot the double-Esc collapse parks at
             // (min(a,b)) — so the playhead is "technically" there already and the
             // bottom-strip readout should say so; landing here makes the timestamp,
             // the Esc-collapse park, and Space's left-bound launch agree by
             // construction. LAND-THEN-EXTENT mirrors the multi-select clicks' order:
-            // the land dissolves any resting region, then set_region_to_selection_extent
-            // overwrites it (the demote-then-derive order). Earliest =
+            // the land dissolves any resting region (when it moves the playhead),
+            // then set_region_to_selection_extent
+            // writes the fresh one (the demote-then-derive order) — and the
+            // extent write is unconditional, so a no-motion land costs nothing
+            // here. Earliest =
             // *selected_markers.begin() (sorted set, smallest index = earliest in
             // time). land_playhead_on_marker is internally bounds-guarded (an
             // impossible out-of-range index no-ops the land and leaves the region
@@ -656,8 +671,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     viewport.invalidate_waveform_area();
     // One-shot discrete jump: undo/redo restored markers / phase resets /
     // settings, changing the displayed plate (the target-view warp_frame_map).
-    // The visual tail above may have LANDED the playhead (singleton on its marker,
-    // group on the earliest touched member), recentered
+    // The visual tail above may have LANDED the playhead (on the restored focus
+    // in either arm), recentered
     // or framed the viewport, and written a region; these invalidations and the
     // sync kick cover all of that as well as the marker change. Render it
     // synchronously so the restored markers and the waveform land together. A

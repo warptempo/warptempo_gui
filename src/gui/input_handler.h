@@ -152,8 +152,11 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // land (plain / shift-range / ctrl toggle, all landing through
 // land_playhead_on_marker), and the ctrl toggle that EMPTIES the selection
 // (which lands nothing, so it calls this directly). The old mutual-exclusivity
-// framing ("every marker interaction drops the region") is DEAD: this clear
-// still runs on every marker-click land, but the two MULTI-SELECT clicks
+// framing ("every marker interaction drops the region") is DEAD twice over.
+// First, the land's clear is MOVEMENT-GATED (architect 2026-07-28): a land onto
+// the playhead's current sample runs nothing at all, so a re-land leaves a
+// resting region of any provenance alone (the gate and its rationale live at
+// land_playhead_on_marker). Second, the two MULTI-SELECT clicks
 // (shift-range, ctrl-toggle) immediately RE-DEFINE the region afterward to the
 // selection's [earliest, latest] extent when 2+ remain selected (the DOWNWARD
 // coupling — the selection defines the extent region, SELECTION-FLOWS-DOWNWARD-
@@ -191,7 +194,8 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
 // LAND the playhead exactly onto marker `hit` of the ACTIVE column with NO
 // viewport move (the two-step placement basis source_frame_to_active_domain then
 // clamp_playhead_to_live_domain, a direct cursor write, dissolving any resting
-// region via clear_region_highlight). Read-only allowed. Definition in
+// region via clear_region_highlight — but only when the land actually MOVES the
+// playhead; a no-motion land is a full no-op). Read-only allowed. Definition in
 // input_pointer.cpp, whose comment is the AUTHORITATIVE statement of the
 // marker-lane-owns-the-playhead rule and the one enumeration of the landing
 // sites — do not restate either here.
@@ -619,8 +623,8 @@ private:
     // Tab family) and the `c` gesture, both of which recenter the viewport; a
     // plain marker click is the other land-onto-marker route (its own direct
     // write in on_button_press — same two-step placement basis, but NO viewport
-    // move). The nudge/drag then tows the playhead along with the focused
-    // marker.
+    // move). Both leave the playhead coincident with the focus, and a later
+    // nudge/drag re-lands it on the focused marker as that marker moves.
     bool jump_playhead_to_focused_marker();
 
     // The bare `0` key zoom TOGGLE: at the working zoom → full zoom-out (the
@@ -954,6 +958,9 @@ private:
     // Source-view read-only allowlist. Returns true if key+mods is NOT on the
     // allowlist of navigation / playback / zoom / view-switch / close-prompt
     // keys honored in a read-only source tab — i.e. should be dropped.
+    // READ-ONLY BLOCKS PERSISTENT MUTATION — what can reach DISK or a RENDER —
+    // not every store write; the definition carries that standard and the one
+    // admitted key whose route writes a store under it (bare `t`).
     // Authoring-mutation chords (trim gestures, Delete, undo/redo, the
     // propagate commands) are blocked here at the gate, and Ctrl+S is not
     // admitted either — read-only means no save from a locked tab. One entry is
@@ -983,13 +990,14 @@ private:
     // separately) — and it has exactly ONE CALLER: wheel_context's swallow
     // (input_handler.cpp), because wheel zoom and Alt+wheel pan are NAVIGATION,
     // not chords, so they still punch through an open top-strip flag editor.
-    // IT IS NOT A PLAYBACK-STOP PREDICATE and never was one in code: the stop is
-    // NOT centralized here but SPELLED at each bottom-strip open site — `;`
-    // (input_handler.cpp), the render-commit editor and `m` (both
-    // input_key_dispatch.cpp) — three independent stops, so a new modal surface
-    // inherits the wheel swallow and nothing else and must grow its own stop.
-    // (A flag editor opening still leaves a live audition playing, which is the
-    // behavior those three sites' absence of a shared owner preserves.)
+    // IT IS NOT A PLAYBACK-STOP PREDICATE and never was one in code. The stop is
+    // not decided here — but it is no longer scattered either: since 2026-07-28
+    // it has ONE owner, GuiPlaybackLifecycle::stop_playback_for_modal_open, which
+    // every open site calls and which records the whole decision table (the three
+    // bottom-strip editors and the prompts stop; the top-strip flag editor is
+    // explicitly EXEMPT and keeps a live audition playing). So a new modal
+    // surface inherits the wheel swallow from this predicate and its playback
+    // answer from that owner — it grows neither by hand.
     // The gate is the sibling of read_only_key_blocked's allowlist shape: true
     // when key+mods should be dropped while a keyboard-modal editor is open
     // (admits only the keys the active editor consumes, bare Esc, Ctrl+S, and

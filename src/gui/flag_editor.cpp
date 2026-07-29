@@ -179,11 +179,16 @@ void GuiFlagEditor::enter_text_edit(int idx,
     // Reached only in W + source view — all three open routes gate the marker
     // view to the WARP column and take active_column_authoring_allowed — so `idx`
     // resolves against the warp store the helper reads, in the identity domain.
-    // The pointer double-click open is a harmless RE-land (its click landed on
-    // this same marker one step earlier); the bite is the KEYBOARD opens with a
-    // 2+ selection, where the land was at the earliest selected and the editor
-    // opens on the focus — Return now follows the playhead to the focus, and `m`
-    // lands on its own owner (the earliest, so a re-land in practice). The
+    // Which opens actually MOVE anything is decided by the movement gate inside
+    // the helper (a land onto the playhead's current sample does nothing at all):
+    // the pointer double-click open is a structural no-op (its click landed on
+    // this same marker one step earlier), and so is bare Return, because every
+    // route that set the focus already landed on it. The one open that moves is
+    // `m`, which opens on the span's OWNER — the earliest selected — while the
+    // focus (and so the playhead) sits wherever the click that built the span
+    // left it. That land is real, so it dissolves the span's extent highlight,
+    // and the `m` handler re-derives it right after restoring the span
+    // membership (input_key_dispatch.cpp). The
     // same_target early return above correctly skips the land: the playhead is
     // already there from the first open.
     selection.set_single_selection(idx);
@@ -219,6 +224,12 @@ void GuiFlagEditor::enter_text_edit(int idx,
     viewport.invalidate_top_strip();
 }
 
+// The two flag-editor open routes (bare Return and the marker double-click) end
+// here. NO PLAYBACK STOP, and that is an explicit exemption rather than an
+// omission: the top-strip flag editor is the one modal surface that keeps
+// playing, so a live audition survives the open. The decision and its rationale
+// are recorded at GuiPlaybackLifecycle::stop_playback_for_modal_open, the one
+// owner of the modal-open stop the bottom-strip surfaces call.
 void GuiFlagEditor::enter_top_flag_edit(int idx) {
     if (idx < 0) return;
     const auto& mv = app.warpmarkers.markers();

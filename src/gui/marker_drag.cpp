@@ -205,11 +205,14 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // outset). Either way the pre-ride capture feeds the Esc-cancel restore
     // (always applied).
     d.pre_ride_playhead_sample = app.playhead_cursor_sample;
-    // Region as it rests at grab, for the Esc-cancel restore. Only a group drag
-    // can capture an ACTIVE region here — a single-marker press landed the
-    // playhead at press, whose standing region clear dissolved any highlight
-    // before begin_drag ran — so for a single-marker drag this is a no-op by
-    // construction. apply_drag_motion live-tracks an active region to the moving
+    // Region as it rests at grab, for the Esc-cancel restore. A single-marker
+    // drag may capture an active Free / TrimWindow region (its press's land
+    // dissolves nothing when the playhead is already on the clicked marker — the
+    // movement gate), but the capture is inert there: nothing in a single-marker
+    // drag WRITES the region (apply_drag_motion's live-track is gated on
+    // SelectionExtent provenance, which set_single_selection just demoted away),
+    // so the restore puts back exactly what is still
+    // resting. apply_drag_motion live-tracks an active region to the moving
     // group's extent; commit_drag re-derives it from the post-commit store.
     d.pre_drag_region = app.region;
     app.drag = std::move(d);
@@ -399,9 +402,14 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
             }
             viewport.move_playhead_to(sample);
         }
-        // Region live-tracking (group drag only — a single-marker press landed
-        // at press, whose standing region clear dissolved any highlight before
-        // begin_drag ran, so app.region.active is false here for those). Retrack
+        // Region live-tracking (group drag only — a single-marker press ran
+        // set_single_selection, whose membership replace DEMOTES any
+        // SelectionExtent region to Free, so the provenance gate below excludes
+        // those. That gate, not the land's dissolve, is what makes this
+        // group-only: a land onto the sample the playhead already holds dissolves
+        // nothing (the movement gate), so a Free / TrimWindow region CAN still be
+        // resting during a single-marker drag — untouched, exactly as the gate
+        // intends). Retrack
         // the active region to the moving group's live extent: min/max over all
         // moveable_times (SCAN — cheap and assumption-free; the two-hop is
         // monotone so order actually survives, but the per-member wall clamps can

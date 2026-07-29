@@ -265,16 +265,21 @@ void GuiWarpMarkersOps::toggle_inherits() {
     selection.collapse_to_focused();
     // The marker lane owns the playhead (the rule is stated in full at
     // land_playhead_on_marker, input_pointer.cpp): the collapse leaves the FOCUS
-    // as the whole selection, so with 3,4,5 selected and the playhead at 3 (the
-    // earliest, where the multi-select click landed it) the lane would rest with
-    // the flag at 5 claiming to be the playhead while Space played from 3. Land on
-    // the focus. Nothing MOVES here — only the focus SET changes.
+    // as the whole selection, so with 3,4,5 selected, the focus at 5 and the
+    // playhead resting anywhere else, the lane would rest with the flag at 5
+    // claiming to be the playhead while Space played from that other spot. Land on
+    // the focus. Nothing MOVES here — only the focus SET changes, and when the
+    // playhead is already on the focus the movement gate makes this land a
+    // structural no-op (no region dissolve either).
     // The land sits at THIS caller and not inside collapse_to_focused, whose other
-    // caller is the singleton tempo step: a land there would be a near-no-op re-land
-    // (the step's selection is already a singleton — adjust_tempo_cents returns to
-    // the group path at size >= 2 — so the focus never changes), but it would also
-    // drag land_playhead_on_marker's region dissolve onto every tempo step, killing
-    // a resting TrimWindow highlight on a gesture that has no business touching it.
+    // caller is the singleton tempo step. The decisive argument used to be the
+    // region dissolve a land inside the shared helper would drag onto every tempo
+    // step; the movement gate has narrowed that to the cases where such a land
+    // would actually MOVE the playhead. What still holds unconditionally is that
+    // the tempo step has no focus change to land for (its selection is already a
+    // singleton — adjust_tempo_cents returns to the group path at size >= 2 — so
+    // collapse_to_focused cannot move the focus there), and the site that hands
+    // the lane a new focus is the site that owes it a land.
     // No index guard: the focus was checked >= 0 two lines above, collapse_to_focused
     // cannot move it, and the helper is internally bounds-guarded regardless.
     land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
@@ -532,7 +537,8 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
         // bounds are authored SOURCE frames, whose images simply re-derive through
         // the new map — so only the HIGHLIGHT goes stale, and re-deriving the
         // highlight from the window is the whole fix. Reachable with a singleton:
-        // a marker click lands and dissolves the region, then a trim chip-row press
+        // a marker click lands, dissolving any resting region as it moves the
+        // playhead, then a trim chip-row press
         // syncs a TrimWindow highlight without ever touching the selection, and the
         // next Up/Down steps under both.
         // NO SelectionExtent arm, and that asymmetry with the group is derived, not

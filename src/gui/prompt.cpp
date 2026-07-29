@@ -19,9 +19,11 @@ void GuiPrompt::proceed(DialogTrigger t) {
 }
 
 void GuiPrompt::open_unsaved(DialogTrigger t) {
-    // A modal surface is opening: stop playback. Space is swallowed while
-    // the prompt is up, so playback cannot restart until it closes.
-    playback_lifecycle.stop_playback_if_playing();
+    // A modal surface is opening: the shared modal stop
+    // (stop_playback_for_modal_open — its declaration owns the decision table).
+    // Space is swallowed while the prompt is up, so playback cannot restart
+    // until it closes.
+    playback_lifecycle.stop_playback_for_modal_open();
     app.prompt.active          = true;
     app.prompt.text            = "save unsaved changes?";
     // Sentinel chars for non-letter keys: 0x7F = Delete, 0x1B = Escape.
@@ -48,9 +50,9 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
 // Modal like every other prompt while active: the pointer handlers
 // swallow mouse events and on_key routes only the response key.
 void GuiPrompt::open_error_notice(std::string text) {
-    // A modal surface is opening: stop playback (same rule as every other
-    // prompt open).
-    playback_lifecycle.stop_playback_if_playing();
+    // A modal surface is opening: the shared modal stop, same rule as every
+    // other prompt open.
+    playback_lifecycle.stop_playback_for_modal_open();
     app.prompt.active          = true;
     app.prompt.text            = std::move(text);
     app.prompt.response_keys   = {'\x1b'};
@@ -67,10 +69,10 @@ void GuiPrompt::open_error_notice(std::string text) {
 // key, so the prompt's key filter swallows it like every other non-response
 // key, and acknowledging is the only way past the prompt.
 void GuiPrompt::open_env_hash_mismatch(const std::string& changed_list) {
-    // A modal surface is opening: stop playback (same rule as every other
-    // prompt open; at the load-time call site playback is not running, but
+    // A modal surface is opening: the shared modal stop, same rule as every
+    // other prompt open (at the load-time call site playback is not running, but
     // the chokepoint keeps the invariant unconditional).
-    playback_lifecycle.stop_playback_if_playing();
+    playback_lifecycle.stop_playback_for_modal_open();
     app.prompt.active          = true;
     app.prompt.text            = "render libraries changed since last save (" +
                                  changed_list +

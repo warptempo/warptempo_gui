@@ -88,6 +88,11 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 
 // Source-view read-only allowlist. True when key+mods is not on the allowlist
 // and should be dropped.
+// WHAT READ-ONLY MEANS, in one sentence: the gate blocks PERSISTENT MUTATION —
+// anything that can reach DISK or a RENDER — not every write to a store. That is
+// why navigation, playback, zoom, view switches and the close prompt are all
+// admitted even though several of them write app state, and it is the standard
+// an allowlist entry is judged against.
 // Authoring-mutation chords are blocked here at the gate, not admitted for a
 // deeper owner refusal: undo/redo (Ctrl+Z / Ctrl+Shift+Z), the trim gesture
 // (x), Delete, and every propagate command all drop at this gate.
@@ -143,6 +148,16 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (key == GuiKeys::F && !ctrl && !shift && !alt);
     const bool is_center =
         (key == GuiKeys::C && !ctrl && !shift && !alt);
+    // Bare `t` (the S/T audio-view switch) WRITES THE WARP STORE on one edge and
+    // is still navigation-class under the persistent-mutation standard above.
+    // Entering target view exits iteration mode through wipe_iter_state, which
+    // clears every marker's iter bracket and pushes an undo entry — a real store
+    // write in a locked tab. It conforms because iter brackets are SESSION-ONLY
+    // in every direction that matters: they are never serialized (no sidecar
+    // field), the push carries affects_persistence=false so it cannot dirty the
+    // document, and the engine's render recipe excludes them, so the wipe can
+    // reach neither disk nor a render. The gate is this route's only defense, so
+    // the fact is recorded here rather than left to be re-derived.
     const bool is_sub_t =
         (key == GuiKeys::T && !ctrl && !shift && !alt);
     const bool is_sub_p =
@@ -186,8 +201,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // is keyboard_modal_editor_active); what it still names is ONE behavior the
 // top-strip FlagPayload editor is deliberately transparent to — the wheel
 // swallow in wheel_context, this predicate's ONLY caller. The playback stop is
-// NOT here: each bottom-strip surface spells its own at its open site.
-// Authoritative statement at the declaration in input_handler.h.
+// NOT here: it has its own owner (stop_playback_for_modal_open) that the open
+// sites call. Authoritative statement at the declaration in input_handler.h.
 bool GuiInputHandler::modal_bottom_strip_editor_active() const {
     return text_editor::is_active(app.settings_editor) ||
            text_editor::is_active(app.commit_editor) ||
@@ -999,8 +1014,11 @@ bool GuiInputHandler::adopt_render_entry(
     // reaches here; this backstop protects any other caller.
     if (app.queue_running || app.pending_archival.armed) return false;
 
-    // The bottom-strip modal already froze playback at the editor's open;
-    // stop explicitly so this is correct from any caller.
+    // NOT a modal open, so NOT the modal-open owner's business
+    // (stop_playback_for_modal_open belongs to the sites that open a surface):
+    // this is the standalone mutator's own self-guard. The `'` editor's open
+    // already froze playback through that owner on the keyboard route; stopping
+    // again here keeps the mutator correct from any caller.
     playback_lifecycle.stop_playback_if_playing();
 
     // -- Read + validate every input BEFORE touching a store. --
@@ -1193,12 +1211,14 @@ void GuiInputHandler::open_commit_editor() {
         viewport.invalidate_timestamp_area();
         return;
     }
-    // Stop playback only now that the modal is definitely opening. Each guard
-    // above (no source, running/parked render, empty renders/) returns without
-    // touching playback, so a refused open never interrupts a listening
-    // session. Space is inside the modal blocked set, so once open, playback
-    // cannot restart until the editor closes.
-    playback_lifecycle.stop_playback_if_playing();
+    // Stop playback only now that the modal is definitely opening — the shared
+    // modal stop (stop_playback_for_modal_open), whose refusal-gating rule this
+    // site is the sharpest instance of: each guard above (no source,
+    // running/parked render, empty renders/) returns without touching playback,
+    // so a refused open never interrupts a listening session. Space is inside the
+    // modal blocked set, so once open, playback cannot restart until the editor
+    // closes.
+    playback_lifecycle.stop_playback_for_modal_open();
     text_editor::enter(app.commit_editor,
                        /*target=*/0,
                        /*locked_prefix=*/"",
@@ -1543,22 +1563,34 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             mvw[owner].bpm_endpoint = boundary;
         }
         const std::set<int> span_selection = app.selected_markers;
-        // The bpm editor is a modal bottom-strip surface: stop playback at
-        // its open. Space is inside the modal blocked set, so playback
-        // cannot restart until the editor closes.
-        playback_lifecycle.stop_playback_if_playing();
+        // The bpm editor is a modal bottom-strip surface, so its open takes the
+        // shared modal stop (stop_playback_for_modal_open). Position is
+        // load-bearing: every refusal in the guard ladder above — the authoring
+        // gate, the span's contiguity / label_ref / eligibility tests, and
+        // enter_bpm_mode's own bail — returns before reaching here, so a refused
+        // `m` leaves a listening session running. Space is inside the modal
+        // blocked set, so playback cannot restart until the editor closes.
+        playback_lifecycle.stop_playback_for_modal_open();
         flag_editor.enter_bpm_edit(owner);
         // The playhead land rides enter_text_edit (the shared open chokepoint):
-        // it lands on `owner`, the EARLIEST selected, which is where the
-        // multi-select click that built this span already put it. The span
-        // re-insert below then changes MEMBERSHIP only — std::set::insert leaves
-        // last_selected_marker alone — so the focus stays `owner` and the span
-        // cue survives with the playhead on its first marker. No second land.
+        // it lands on `owner`, the EARLIEST selected, while the focus that built
+        // this span sits wherever the multi-select click left it (those clicks
+        // land on their focus — land_playhead_on_marker, input_pointer.cpp). So
+        // this land usually MOVES the playhead, which dissolves the span's extent
+        // highlight, and the open collapsed the selection to {owner} on the way
+        // through. The span re-insert below restores the MEMBERSHIP only —
+        // std::set::insert leaves last_selected_marker alone — so the focus stays
+        // `owner`, and the extent re-derive after it restores the span cue: the
+        // land-then-extent sequence the multi-select clicks run, in the one order
+        // that works (the extent must follow the land, or the land's dissolve
+        // would kill it). Self-gated below 2 members, so a single-marker span
+        // sets no region, exactly as a single-marker click does. No second land.
         bool restored = false;
         for (int s : span_selection) {
             if (app.selected_markers.insert(s).second) restored = true;
         }
         if (restored) viewport.invalidate_top_strip();
+        set_region_to_selection_extent(app, audio, viewport);
         return true;
     }
 
