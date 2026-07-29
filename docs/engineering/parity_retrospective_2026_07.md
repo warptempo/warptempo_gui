@@ -30,8 +30,9 @@ A from-scratch build buys cheap reversals, not clairvoyance.
    each transition. The selection→region→trim downward-only rule and
    RegionProvenance arrived LAST, after the two-way coupling shipped,
    failed in use, and died over three demote-site-patching rounds.
-   The stable shape (a provenance enum with demote-on-replace, one
-   reconciliation owner) was derivable up front. (R2, MEDIUM-HIGH.)
+   The stable shape (a provenance enum with one reconciliation owner;
+   demote-on-replace then, clear-on-replace since 2026-07-29) was
+   derivable up front. (R2, MEDIUM-HIGH.)
 3. AUTHORED GRID — which stored value a gesture changes and whether
    its grid is finer than the requested display step. The dd36ed8
    misread and the min-step churn both came from a guarantee imported
