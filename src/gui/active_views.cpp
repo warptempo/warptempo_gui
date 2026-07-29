@@ -1,6 +1,6 @@
 #include "active_views.h"
 
-#include "input_handler.h"   // land_playhead_on_marker
+#include "input_handler.h"   // land_playhead_on_marker, clear_region_highlight
 
 #include <cstdio>
 #include <string>
@@ -55,7 +55,10 @@ ViewState* GuiActiveViews::active_view_state() {
 // zoom / playhead) is unaffected — the PLAYHEAD LAND belongs to the callers,
 // which disagree about it: toggle_active_markers_view (`p`) lands on the
 // restored focus, while the propagate paste's tail overwrites this selection
-// with its own and lands on that. Caller decides what invalidations to
+// with its own and lands on that. The wholesale REGION CLEAR is likewise the
+// callers' (both of them do it, each at its own site); all this helper does to
+// the region is prune_live_selection's membership clear of a SelectionExtent
+// span. Caller decides what invalidations to
 // run; this helper just shuffles the AppState fields.
 void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     if (target_mode == app.active_markers_view) return;
@@ -158,11 +161,19 @@ void GuiActiveViews::toggle_active_markers_view() {
     // Land on the restored focus — a PURE playhead write, `p` adding no region
     // clear of its own. An EMPTY destination slot LEAVES the lane, so the
     // playhead stays put and the cursor simply paints again (the rule's second
-    // clause) — no move. THE REGION STORY IS THE SWAP'S OWN membership replace:
-    // prune_live_selection inside the helper above clears a SelectionExtent span
-    // whose owning selection just left with the column, while a TrimWindow or
-    // Free region deliberately SURVIVES the column flip (the stored highlight is
-    // column-independent).
+    // clause) — no move. THE SWAP CLEARS ANY RESTING REGION, whatever its
+    // provenance (architect 2026-07-29, REVERSING "the STORED highlight survives
+    // the column flip"): a span rests beside a selection only as that selection's
+    // own extent or as the trim's highlight, and the swap hands the lane a
+    // DIFFERENT column's selection and focus — an extent of the column just left
+    // has no owner here (prune_live_selection inside the helper above already
+    // took that one through the membership clear), and a trim highlight left
+    // standing across the flip is the same ownerless span one storage level up.
+    // So the clear is wholesale, and it is unconditional because the swap always
+    // commits: this function flips W<->P outright, so the helper's
+    // same-mode early return cannot fire from here, and its two callers (bare `p`
+    // and the settings editor's active_markers_view key, which refuses an
+    // unchanged value before dispatching) reach it only for a real flip.
     //
     // The land lives HERE and not in switch_active_markers_view_to because that
     // helper has a second caller: the propagate paste's target-view tail
@@ -173,6 +184,7 @@ void GuiActiveViews::toggle_active_markers_view() {
     // The emptiness test IS the lane test; no separate focus-index guard is
     // needed (prune_live_selection above leaves the focus a live member whenever
     // the selection is non-empty, and the helper is bounds-guarded regardless).
+    clear_region_highlight(app, viewport);
     if (!app.selected_markers.empty()) {
         land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
     }

@@ -564,18 +564,18 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
         // NO SelectionExtent arm, and that asymmetry with the group is derived, not
         // forgotten: collapse_to_focused above CLEARS any SelectionExtent region
         // outright before the step runs, and set_region_to_selection_extent never
-        // derives one for a <=1 selection, so such an arm could not fire. A FREE
-        // region CAN still rest here, derived rather than assumed: all four Free
-        // formers (the plain region drag, the shift-click former, both DELETE
-        // demotions) leave the selection EMPTY, and every gesture that then
-        // SELECTS one marker collapses the span — the clicks, Tab/`c`, the editor
-        // opens, and since 2026-07-29 the drops — EXCEPT the three that carry a
-        // selection in wholesale without owning the region: a SINGLETON undo/redo
-        // restore (its membership write and sanitize take SelectionExtent only,
-        // and its land is pure), the `p` W/P swap, and the propagate paste. So
-        // drag a region, then Ctrl+Z a tempo edit, and a Free span rests beside
-        // this singleton — untouched scratch across the step, the standing Free
-        // rule and not an oversight.
+        // derives one for a <=1 selection, so such an arm could not fire. NO FREE
+        // ARM EITHER, and that one is unreachable rather than declined
+        // (architect 2026-07-29, re-derived at this retell): all four Free formers
+        // (the plain region drag, the shift-click former, both DELETE demotions)
+        // leave the selection EMPTY, and EVERY route that then puts a selection in
+        // place collapses the span — the marker clicks and their deferred
+        // completions, Tab/`c`, the editor opens, the drops, and the three that
+        // used to carry a selection in wholesale while leaving the span alone
+        // (the undo/redo restore, the `p` swap, the propagate paste), which now
+        // clear it too. So a Free region rests only beside an EMPTY selection,
+        // and this step's selection is a singleton by construction — leaving the
+        // TrimWindow arm above as the only region this step can meet.
         const bool trim_resync = app.region.active &&
             app.region.provenance == RegionProvenance::TrimWindow;
         viewport.kick_waveform_sync();

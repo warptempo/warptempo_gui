@@ -566,7 +566,8 @@ void PhaseResetPropagate::paste_state_apply() {
 // shared by all three paste actions.
 //
 // Order — audio-view switch FIRST, then marker-view switch to P, then the
-// selection set (the playhead land rides with it, after the swap):
+// wholesale region clear, then the selection set (the playhead land rides with
+// it, after the swap):
 //   * handle_active_audio_view_toggle is the SAME chokepoint the `t` key runs
 //     (validate_target_view_entry, the S<->T re-express of playhead/viewport,
 //     the region clear, kick_waveform_sync, and target_render.ensure_ready all
@@ -592,12 +593,19 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
         input->handle_active_audio_view_toggle();
     }
     active_views.switch_active_markers_view_to('P');
+    // CLEAR ANY RESTING REGION, whatever its provenance (architect 2026-07-29):
+    // this tail hands the marker lane a wholesale new selection in a column the
+    // user was not authoring in, and a span rests beside a selection only as that
+    // selection's own extent or as the trim's highlight — neither describes
+    // anything after the paste. It replaces the narrower membership clear that
+    // stood here (which reached SelectionExtent only), covers the state-paste
+    // arm's restored P-slot selection as well as the created-set arm, and it is
+    // unconditional because both arms leave the lane holding a selection this
+    // tail did not build the span from. No damage call of its own is needed —
+    // this tail invalidates the whole waveform area below — but the helper owns
+    // one anyway.
+    clear_region_highlight(app, viewport);
     if (!created.empty()) {
-        // The paste replaces the membership with the created resets -> CLEAR a
-        // SelectionExtent region (explicit: switch_active_markers_view_to is a
-        // no-op when already in P view, so its prune-clear may not have run).
-        // No damage call: this tail invalidates the whole waveform area below.
-        (void)clear_region_on_membership_replace(app.region);
         app.selected_markers     = created;
         // FIRST created reset as the focus. This is a PROGRAMMATIC group
         // selection, and the product's other one — undo/redo's touched-set
@@ -612,10 +620,10 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
         // would suppress the cursor while playhead_cursor_sample still held the
         // pre-paste value re-expressed through the S->T switch, leaving NO
         // playhead painted anywhere. Land only: the paste deliberately sets no
-        // extent region, and the membership clear above is its WHOLE region
+        // extent region, and the wholesale clear above is its WHOLE region
         // handling (the land is a pure playhead write with no side effect) — so
-        // a TrimWindow or Free region rests through a paste, as it does through
-        // the W/P swap this tail rides.
+        // a paste rests with NO span at all, exactly as the W/P swap this tail
+        // rides now does.
         land_playhead_on_marker(app, viewport.audio, viewport, *created.begin());
     }
     viewport.invalidate_top_strip();

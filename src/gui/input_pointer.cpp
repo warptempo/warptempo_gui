@@ -207,7 +207,11 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // MEMBERSHIP REPLACE, which clears a SelectionExtent span outright
 // (clear_region_on_membership_replace, app_state.h) — that is what covers the
 // ops which change WHO is selected without moving anything: the Ctrl+N collapse,
-// the `p` swap, the propagate paste, sanitize/prune, and the Esc clear.
+// sanitize/prune, and the Esc clear. THREE of those ops go further and clear ANY
+// resting span, provenance and all (architect 2026-07-29): the undo/redo
+// restore, the `p` W/P swap, and the propagate paste — each hands the lane a
+// selection it took in wholesale, so a span it did not build has nothing left to
+// describe (the list lives at clear_region_highlight, input_handler.h).
 //
 // LANDS the playhead exactly onto marker `hit` (active column's store), with
 // NO viewport move — the sole difference from Tab (which recenters) and `c`
@@ -1526,8 +1530,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // already died with the retired plain-drag scrub), reseeks a live
         // scanner to it, overrides follow, and arms the region drag — which
         // also DISSOLVES any resting highlight at this mouse-down
-        // (arm_region_drag_at clears it after snapshotting the pre-press
-        // extent for an Esc-mid-drag restore), so the highlight vanishes on press
+        // (arm_region_drag_at clears it), so the highlight vanishes on press
         // whether the gesture becomes a click or a fresh drag. The LOWER half
         // is the SCRUB surface (the branch below): the press runs one
         // scrub act — stopping a live session, else starting a fresh SCANNER
@@ -1569,27 +1572,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // ARMS a region drag anchored at the FAR endpoint (the playhead,
                 // or the demote's furthest-marker image). So the press is
                 // one-shot ONLY on a motionless release: the formed region rests
-                // exactly as today, and on the sliver rule the PRE-PRESS region
-                // does — QUALIFIED BY PROVENANCE, since the demote's deselect
-                // below is a membership replace: an ex-SelectionExtent pre-press
-                // region was cleared outright by that deselect (its owning
-                // selection died with it) and does not rest or restore, while a
-                // Free or TrimWindow one is untouched by the clear and rests
-                // bit-for-bit;
-                // motion past the shared gate drags the CLICK-side endpoint live
-                // through the region-drag motion path, the far endpoint fixed,
-                // and Esc mid-drag restores the PRE-PRESS region. GUTTER presses
-                // arm NOTHING (there is no column to anchor a drag against).
+                // exactly as today, and on the sliver rule whatever the deselect
+                // below left standing does; motion past the shared gate drags the
+                // CLICK-side endpoint live through the region-drag motion path,
+                // the far endpoint fixed, and Esc mid-drag CLEARS the region
+                // outright — the cancel restores nothing, so the press's
+                // pre-press state is not preserved anywhere. GUTTER presses arm
+                // NOTHING (there is no column to anchor a drag against).
                 if (click_rel_x < 0 || click_rel_x >= area.w) {
                     selection.clear_selection();
                     return;
                 }
-                // Capture the PRE-PRESS highlight BEFORE the former overwrites
-                // app.region, so the armed drag's Esc restore brings back what
-                // stood before this shift press (the plain drag's pre_region
-                // contract). Placed after the gutter return so the no-arm gutter
-                // path is untouched.
-                const RegionState pre_press_region = app.region;
                 // Region endpoints hold PLAYABLE live-domain frames only: the
                 // display-state validator (clamp_display_state_to_live_domain)
                 // defines an endpoint >= total as invalid and clears the whole
@@ -1659,13 +1652,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // a motionless release keeps whatever the deselect above left
                     // standing: a Free or TrimWindow pre-press region rests
                     // bit-for-bit, while an ex-SelectionExtent one is already
-                    // gone (the deselect's membership clear took it, and the
-                    // armed drag's Esc restore runs that same clear over the
-                    // snapshot, so it does not come back either). ALSO
+                    // gone (the deselect's membership clear took it). An Esc
+                    // mid-drag from here clears the region like any other, this
+                    // gesture keeping no snapshot to restore. ALSO
                     // ARM the drag anchored at the far endpoint so dragging out
                     // past the gate still grows a fresh region live from it (e.g.
                     // shift-click AT the playhead, then drag out).
-                    arm_region_drag_preserving(endpoint, x, y, pre_press_region);
+                    arm_region_drag_preserving(endpoint, x, y);
                     return;
                 }
                 // RegionState endpoints are unordered — the painter and Space
@@ -1686,7 +1679,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // one-shot region, bit-for-bit), motion past the gate drags the
                 // click-side endpoint live (the motion handler fixes a_frame =
                 // anchor = endpoint and tracks b_frame to the pointer).
-                arm_region_drag_preserving(endpoint, x, y, pre_press_region);
+                arm_region_drag_preserving(endpoint, x, y);
                 return;
             }
             // THE HALF TEST, first thing on the plain path — before the
@@ -1752,23 +1745,20 @@ void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
     app.region_drag.anchor_frame = anchor_frame;
     app.region_drag.press_x      = x;
     app.region_drag.press_y      = y;
-    // Snapshot the resting region BEFORE clearing it, so an Esc cancel of a
-    // live drag still restores the pre-press highlight.
-    app.region_drag.pre_region   = app.region;
     // Clear any resting region immediately at press: a plain upper-half
     // waveform press dissolves an existing highlight on mouse-down (the plain
     // canvas ground repaints back now, not at release; a lower-half scrub press never
     // reaches here — it arms no region drag and leaves the region alone). A
     // moved drag rebuilds a fresh region live; a
-    // motionless press-release simply leaves it cleared. pre_region above keeps
-    // the pre-press extent for the Esc-mid-drag restore. Same dissolve shape as
+    // motionless press-release simply leaves it cleared, and an Esc mid-drag
+    // clears whatever the drag had grown — nothing here is snapshotted, the
+    // dissolve being final. Same dissolve shape as
     // the navigation clears, so it shares clear_region_highlight.
     clear_region_highlight(app, viewport);
 }
 
 void GuiInputHandler::arm_region_drag_preserving(int64_t anchor_frame, int x,
-                                                 int y,
-                                                 const RegionState& pre_press) {
+                                                 int y) {
     // The SHIFT-exact former's arm (labwc 2026-07-24 second pass). Same drag
     // state as arm_region_drag_at — active, anchored at the FAR endpoint (the
     // playhead, or the demote's furthest-marker image), press coordinates for
@@ -1776,10 +1766,10 @@ void GuiInputHandler::arm_region_drag_preserving(int64_t anchor_frame, int x,
     // former has already left it exactly as it should REST for a motionless
     // release (the freshly formed region, or on the sliver rule the pre-press
     // region untouched), so preserving it keeps today's one-shot behaviour
-    // bit-for-bit. pre_region is the PRE-PRESS highlight (captured by the caller
-    // before the former overwrote app.region), so an Esc mid-drag restores what
-    // stood before the shift press — the same pre_region contract the plain drag
-    // carries. Past the gate the SHARED region-drag motion handler re-establishes
+    // bit-for-bit. That no-dissolve-at-press property is this function's whole
+    // reason to exist; an Esc mid-drag clears the region either way, both arms
+    // sharing the one cancel. Past the gate the SHARED region-drag motion
+    // handler re-establishes
     // app.region from this anchor (it fixes a_frame = anchor_frame and tracks
     // b_frame to the pointer column on each column change), so the click-side
     // endpoint drags live while this far endpoint stays put — no motion/release/
@@ -1790,7 +1780,6 @@ void GuiInputHandler::arm_region_drag_preserving(int64_t anchor_frame, int x,
     app.region_drag.anchor_frame = anchor_frame;
     app.region_drag.press_x      = x;
     app.region_drag.press_y      = y;
-    app.region_drag.pre_region   = pre_press;
 }
 
 void GuiInputHandler::place_playhead_and_arm_region(int click_rel_x, int x,
@@ -1928,8 +1917,11 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // that check (codex second-pass round-1 MEDIUM): the SHIFT-exact former's
         // preserving arm (arm_region_drag_preserving) does NOT dissolve
         // app.region, so a motionless shift-sliver press-release rests a legal
-        // narrow region (a SelectionExtent/TrimWindow highlight, NOT subject to
-        // the drag-rest minimum), and an unconditional min-size check would delete
+        // narrow region (a TrimWindow or Free highlight, NOT subject to the
+        // drag-rest minimum — a SelectionExtent one cannot reach this rest: the
+        // press's own deselect is a membership replace that clears it, and an
+        // extent span cannot rest beside an empty selection either), and an
+        // unconditional min-size check would delete
         // it. Capture `moved` BEFORE the state reset (the reset zeroes it). Plain
         // path unaffected: a plain MOVED drag still checks; a plain motionless
         // release left the region cleared at arm (arm_region_drag_at), so the

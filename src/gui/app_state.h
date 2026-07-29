@@ -181,9 +181,15 @@ struct SelectionSnapshot {
 // resting highlight at mouse-down, before it knows whether the gesture is a
 // click or a fresh region drag; at on_button_press via arm_region_drag_at — a
 // lower-half scrub press leaves the region alone). The W/P marker-column switch
-// does NOT clear it — the STORED highlight survives the column flip (a
-// storage-level independence; the coupling that keeps it agreeing with the
-// selection/trim window is a gesture-time sync, not a stored derivation). A
+// CLEARS it wholesale, any provenance (architect 2026-07-29, reversing the
+// storage-level-independence rule that let a stored highlight survive the
+// column flip): `p` hands the marker lane a different column's selection and
+// focus, so a span built against the leaving column has no owner left on the
+// entering one — a region rests beside a selection only as that selection's own
+// extent or as the trim's highlight, and neither survives the swap. The two
+// other wholesale-selection routes (the undo/redo restore, the propagate paste)
+// clear it for the same reason; the full clear-site enumeration lives at
+// clear_region_highlight's declaration (input_handler.h). A
 // GROUP marker drag captures the resting region into DragState::pre_drag_region
 // (Esc restore) and live-tracks it to the moving group's extent (apply_drag_
 // motion), re-deriving from the post-commit store at commit. The GROUP POSITION
@@ -196,11 +202,16 @@ struct SelectionSnapshot {
 // it across a map change. Free — a drag-formed / demoted region, display scratch
 // that no gesture re-derives (the shift-click former, the plain drag, both
 // DELETE demotions — each leaving the selection EMPTY, and every gesture that
-// then selects a marker collapses the span, the drops included since
-// 2026-07-29). Free-beside-a-non-empty-selection survives in exactly the three
-// routes that carry a selection in wholesale without owning the region: a
-// SINGLETON undo/redo restore, the `p` W/P swap, and the propagate paste — where
-// the span rests as untouched scratch by the Free rule.
+// then selects a marker collapses the span, the drops included). A Free region
+// can therefore rest ONLY beside an EMPTY selection (architect 2026-07-29, the
+// maximally greedy collapse): all four Free formers leave the selection empty,
+// and EVERY route that then puts a selection in place clears the span — the
+// marker clicks and their deferred completions, Tab/`c`, the editor opens, the
+// drops, and now the three that used to carry a selection in wholesale while
+// leaving the span alone (undo/redo restore, the `p` swap, the propagate paste).
+// The drag cancels' verbatim pre-gesture restores (DragState::pre_drag_region,
+// TempoDragState::pre_drag_region) reproduce a state that was already reachable
+// before their press, so they open no route either.
 // SelectionExtent — set to the marker selection's
 // [earliest, latest] extent (the downward selection->extent clicks, the
 // position-drag commit, the tempo follows), valid ONLY while that selection
@@ -218,9 +229,14 @@ struct SelectionSnapshot {
 // restores the whole-struct captured TempoDragState::pre_drag_region VERBATIM
 // (the round-7 rule: pre-drag staleness falsified the re-derive premise, so Esc
 // reproduces the pre-drag display exactly, any provenance). The OTHER target-map
-// changers — undo/redo, the settings engine-scale commit, adopt — do NOT
-// re-derive or re-sync provenance; a resting region is display scratch there
-// (today's behavior). This is scoped to the provenance follow/re-sync: the
+// changers — the settings engine-scale commit and adopt — do NOT re-derive or
+// re-sync provenance; a resting region is display scratch there. UNDO/REDO LEFT
+// that list (architect 2026-07-29, reversing its display-scratch membership): a
+// restore CLEARS any resting region in its visual tail instead, because a
+// highlight left standing across a map-changing restore is exactly the stale
+// span the two-forms model refuses — a group restore then defines its own
+// SelectionExtent region, and a singleton or emptied restore rests with none.
+// This is scoped to the provenance follow/re-sync: the
 // GENERIC region clears still apply to ANY provenance — the kick validator drops
 // a region stranded outside a shrunken live domain, and load/adopt clear the
 // region unconditionally.
@@ -508,8 +524,7 @@ struct UndoHistory {
 // one-shot scrub act arming nothing — only the plain press splits by half). The PRESS
 // does its press-time work (deselect-all, playhead
 // placement, live-playback reseek — it never SELECTS a marker), DISSOLVES any
-// resting highlight at mouse-down (snapshotting the pre-press extent into
-// pre_region first), and arms this drag; motion past the shared
+// resting highlight at mouse-down, and arms this drag; motion past the shared
 // press-becomes-drag threshold (kDragMovedThresholdPx) extends app.region from
 // the press frame to the pointer column. Under SELECTION FLOWS DOWNWARD ONLY
 // (architect 2026-07-23) the drag does NOT select the span's markers — the
@@ -530,26 +545,18 @@ struct UndoHistory {
 // which dissolves like a click instead (end_region_drag_min_size_check, at both
 // end points). The drag never touches the selection anywhere — the press's
 // deselect/demote was the committed act, and downward-only is structural (there
-// is no selection write in the drag, its ends, or its Esc cancel). Esc cancels a
-// live drag, restoring the pre-press region captured here at arm (the marker
-// drag's snapshot pattern — cheap, two ints), then running the MEMBERSHIP CLEAR
-// over the restored snapshot: the shift-former's snapshot is captured before its
-// own clear_selection, so it can carry SelectionExtent, but the cancel restores
-// no selection, and an extent span with no live owner does not rest anywhere in
-// this product — so an ex-SelectionExtent snapshot vanishes instead of coming
-// back (the committed deselect re-applies at the restore). A Free / TrimWindow
-// snapshot restores exactly. Session-only, never undoable.
+// is no selection write in the drag, its ends, or its Esc cancel). Esc CLEARS
+// the live region outright and ends the gesture — it restores NOTHING (architect
+// 2026-07-29): a dissolved highlight is never resurrected in this product, so
+// the pre-press snapshot this state used to carry is gone with its restore. A
+// cancelled region drag therefore rests with no span at all, whatever stood
+// before the press. Session-only, never undoable.
 struct RegionDragState {
     bool    active       = false;
     bool    moved        = false;  // crossed the threshold into a real drag
     int     press_x      = 0;      // press position (window px), for the gate
     int     press_y      = 0;
     int64_t anchor_frame = 0;      // active-domain frame the press placed
-    // The region as it rested BEFORE the press dissolved it, provenance and all;
-    // restored on an Esc cancel of the gesture, bringing the pre-press highlight
-    // back (the cancel then runs the membership clear over it, so an
-    // ex-SelectionExtent snapshot does not return — see the class doc).
-    RegionState pre_region;
 };
 
 // F2.1: mouse drag-to-select inside the active text editor. Only one
@@ -705,8 +712,9 @@ struct TempoDragState {
     // (and a pre-stale/coincident TrimWindow region's first committed event
     // re-syncs it to the fresh images — the follow's purpose). Cancel does NOT use
     // this — it restores pre_drag_region verbatim (below), because the grab bit
-    // proves nothing about grab-time geometry (a settings-scale commit / undo/redo
-    // before the press can leave the region stale, even coincident). The
+    // proves nothing about grab-time geometry (a settings-scale commit before the
+    // press can leave the region stale, even coincident; undo/redo left that
+    // producer list in 2026-07-29, a restore now clearing any resting region). The
     // SelectionExtent per-event follow stays LIVE (see apply): it can never rest
     // cleared mid-drag (the post-kick re-derive always re-activates with in-domain
     // clamped endpoints, and no membership clear runs with keys swallowed).

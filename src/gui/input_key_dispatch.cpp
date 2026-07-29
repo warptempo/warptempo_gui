@@ -518,24 +518,18 @@ void GuiInputHandler::cancel_active_drags() {
     // (No scrub entry: the scrub is a one-shot act at the press — it arms
     // nothing, so there is no scrub gesture for Esc to end; the launched
     // audition keeps playing, stopped by Space or by the next scrub click.)
-    // The region drag IS a cancel: unlike the strip drag it restores the region
-    // to how it rested at arm (the pre-press snapshot), then ends the gesture.
-    // Under SELECTION-FLOWS-DOWNWARD-ONLY (architect 2026-07-23) the drag never
+    // The region drag's Esc CLEARS the live region and ends the gesture
+    // (architect 2026-07-29, superseding the pre-press snapshot restore, which
+    // is deleted with the snapshot itself): nothing in this product resurrects a
+    // dissolved highlight, so a cancelled region drag rests with NO span at all
+    // — the plain press's mouse-down dissolve stands, and the shift former's
+    // freshly built span goes the way the drag's own live span does. Under
+    // SELECTION-FLOWS-DOWNWARD-ONLY (architect 2026-07-23) the drag never
     // touches the selection — the press's deselect/clear was the committed act,
-    // and there is no pre-press selection snapshot to restore. So restore the
-    // region alone, then run the membership clear ON THE RESTORED SNAPSHOT: the
-    // SHIFT-former captures pre_region BEFORE its own clear_selection runs, so
-    // the snapshot can still carry SelectionExtent, yet the committed deselect
-    // left NO owning selection — and an ownerless extent span does not rest
-    // anywhere in this product, so restoring one verbatim would resurrect
-    // exactly the lie the clear abolishes. It therefore vanishes instead of
-    // coming back. Free/TrimWindow snapshots are untouched (those the restore
-    // reproduces exactly), and the plain drag's snapshot is already post-clear
-    // (captured after its press's clear_selection). The unconditional waveform
-    // damage below covers either outcome.
+    // so there is nothing else to revert here. The unconditional waveform damage
+    // below repaints the plain ground and brings back the cursor playhead.
     if (app.region_drag.active) {
-        app.region = app.region_drag.pre_region;
-        (void)clear_region_on_membership_replace(app.region);
+        app.region = RegionState{};
         app.region_drag = RegionDragState{};
         viewport.invalidate_waveform_area();
         // An Esc mid-gesture is not a clean release: drop any double-click

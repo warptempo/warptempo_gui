@@ -1055,9 +1055,11 @@ bool MarkerDragOps::begin_tempo_drag(int hit) {
     d.pre_ride_playhead_sample = app.playhead_cursor_sample;
     // Grab-time trim-highlight INTENT (see the field): the PER-EVENT trim re-sync
     // reads this, not the live provenance the coincident arm erases mid-gesture.
-    // Routing signal only — NOT a geometry invariant (a settings-scale commit /
-    // undo/redo before the press can leave a TrimWindow region numerically stale,
-    // even coincident, without re-syncing it).
+    // Routing signal only — NOT a geometry invariant (a settings-scale commit
+    // before the press can leave a TrimWindow region numerically stale, even
+    // coincident, without re-syncing it; undo/redo stopped being a second such
+    // producer in 2026-07-29 — a restore now clears any resting region outright
+    // — but one producer is enough for the capture to earn its keep).
     d.grab_trim_highlight =
         app.region.active &&
         app.region.provenance == RegionProvenance::TrimWindow;

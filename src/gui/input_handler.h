@@ -167,7 +167,13 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     so it is a point command like the rest — one clear per column, at the
 //     drop chokepoints drop_marker (warp) and drop_phase_reset_at_position
 //     (phase reset), which both entry routes (bare `s`, the empty-lane
-//     double-click) converge on, placed past every refusal.
+//     double-click) converge on, placed past every refusal;
+//   * the THREE MEMBERSHIP-WHOLESALE routes (architect 2026-07-29, the
+//     maximally greedy collapse): the UNDO/REDO restore's visual tail (any
+//     non-'S' entry — the group arm then derives its own extent region AFTER
+//     this clear), the `p` W/P swap (toggle_active_markers_view), and the
+//     propagate paste's target-view tail. None of them builds the span it would
+//     be resting beside, so all three collapse it, any provenance.
 // The land itself clears NOTHING — it is a pure playhead write, and the
 // motion condition that briefly rode its clear died with that clear
 // (land_playhead_on_marker). DELIBERATELY NOT
@@ -175,11 +181,7 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // region IS the launch point there), the nudge/drag playhead follow, and pure
 // viewport moves (PageUp/PageDown, zoom
 // steps, pans) — and the lower-half scrub press, which touches no region at
-// all. UNDO/REDO is not on the list either: a restore's membership write clears
-// any SelectionExtent span, a GROUP restore then RE-DEFINES the region to the
-// touched set's extent (undo.cpp's visual tail), and a SINGLETON restore adds no
-// clear of its own — a TrimWindow / Free region rests through it as display
-// scratch. The plain upper-half waveform press (arm_region_drag_at) shares this
+// all. The plain upper-half waveform press (arm_region_drag_at) shares this
 // helper — same dissolve shape. The other pre-existing clear sites (Esc, file
 // load, Ctrl+Tab, and the S/T switch) keep their own in-place clears — Esc's is
 // now the down-only ladder's region rung, which walks ONE rung per Esc
@@ -377,9 +379,9 @@ struct GuiInputHandler {
     // where it is (the scrub arms no gesture, so it has no entry — a launched
     // audition keeps playing, stopped by Space or by the next scrub click); a
     // region drag is
-    // cancelled and
-    // the region restored to its
-    // pre-drag snapshot. No-op when no drag is active. Callers: the drag-modal
+    // cancelled and its region
+    // CLEARED outright, restoring nothing (a dissolved highlight never comes
+    // back). No-op when no drag is active. Callers: the drag-modal
     // escape hatches in on_key, and the WM-close and resize callbacks in
     // main.cpp (close cancels before raising the prompt; resize cancels before
     // the geometry rebuild).
@@ -387,9 +389,9 @@ struct GuiInputHandler {
 
     // Arm the plain left-drag region-select gesture at a press. `anchor_frame`
     // is the active-domain frame the press just placed the playhead at; (x, y)
-    // is the press position for the press-becomes-drag threshold. Captures the
-    // pre-drag region for an Esc cancel and dissolves the resting region at
-    // mouse-down. Only the plain UPPER-HALF waveform press calls this (the
+    // is the press position for the press-becomes-drag threshold. Dissolves the
+    // resting region at mouse-down. Only the plain UPPER-HALF waveform press
+    // calls this (the
     // lower half is the scrub surface, whose press is a one-shot scrub act
     // arming nothing and leaving the
     // region alone); the Shift-exact former arms through
@@ -400,11 +402,8 @@ struct GuiInputHandler {
     // state as arm_region_drag_at, anchored at the FAR endpoint, but it does NOT
     // dissolve app.region — the former has already left it exactly as it should
     // rest for a motionless release, so preserving it keeps that one-shot
-    // behavior bit-for-bit. `pre_press` is the pre-press highlight (captured by
-    // the caller BEFORE the former overwrote app.region) for the Esc-mid-drag
-    // restore.
-    void arm_region_drag_preserving(int64_t anchor_frame, int x, int y,
-                                    const RegionState& pre_press);
+    // behavior bit-for-bit. An Esc mid-drag clears the region for either arm.
+    void arm_region_drag_preserving(int64_t anchor_frame, int x, int y);
 
     // The waveform-upper-half placement press BODY, shared by the plain waveform
     // press and the empty flag/triangle-lane parity press (R6, architect

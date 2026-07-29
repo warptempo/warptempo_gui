@@ -875,8 +875,8 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // Across frames it holds because every
     // app.region write is paired with waveform-area damage at its site (the
     // formers, the clears, clear_region_highlight, the membership clear
-    // clear_region_on_membership_replace reports through its return, the Esc
-    // pre_region restore, the tick repair, and the undo/redo restore's
+    // clear_region_on_membership_replace reports through its return, the region
+    // drag's Esc clear, the tick repair, and the undo/redo restore's clear and
     // group-extent set), so the frame that first paints one has already erased
     // the other — no stale co-display window exists. The same pairing is what
     // makes the stem's suppression frame-exact.

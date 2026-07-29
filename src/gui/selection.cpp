@@ -505,11 +505,11 @@ void Selection::select_prev_marker() { cycle_selection(false); }
 void Selection::prune_live_selection() {
     // Pruning out-of-range members replaces the membership -> CLEAR a
     // SelectionExtent region. Its one caller is switch_active_markers_view_to,
-    // which serves TWO routes: for the `p` W/P swap this clear IS the whole
-    // region story — the extent of the column being left goes, while a TrimWindow
-    // or Free region deliberately survives the column flip — and the propagate
-    // paste's target-view tail supplements it with an explicit clear at its own
-    // site, the helper being a no-op when the session is already in P view. The
+    // which serves TWO routes — the `p` W/P swap and the propagate paste's
+    // target-view tail — and BOTH follow it with a wholesale region clear at
+    // their own site (architect 2026-07-29: nothing survives the column flip
+    // now), so this clear is the structural membership owner rather than either
+    // route's whole region story. The
     // callers full-repaint the waveform, so the damage here is normally
     // redundant and stays as the structural owner.
     if (clear_region_on_membership_replace(app.region))
