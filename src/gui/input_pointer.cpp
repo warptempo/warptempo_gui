@@ -495,11 +495,8 @@ bool GuiInputHandler::handle_escape_selection_region() {
 // avoid: it kept an in-place audition uninterrupted, and the playing case now
 // always stops, so there is no in-place audition left to preserve — and it
 // cannot migrate to the stopped case, whose scanner fields are stale by
-// contract (the one non-playing window where they are not, the endpoint hold
-// below, is a DEAD session that must launch even at its own endpoint frame).
-// The natural-end ENDPOINT HOLD (playing false, scanner active) is NOT the
-// playing case — nothing is audible — so it tears the dead scanner down and
-// launches, exactly as before. A refused launch (out-of-window frame; target
+// contract (a stopped scanner is deactivated immediately; no non-playing
+// validity window exists). A refused launch (out-of-window frame; target
 // update in flight) leaves playback stopped, silently — the "nothing to
 // audition" family; a later click at a launchable frame launches.
 void GuiInputHandler::scrub_act_at(int64_t frame) {
@@ -511,19 +508,6 @@ void GuiInputHandler::scrub_act_at(int64_t frame) {
         // where to play from.
         playback_lifecycle.stop_playback_if_playing();
         return;
-    }
-    if (app.playhead_scanner_active) {
-        // Natural-end ENDPOINT HOLD (playing false, scanner active — the one
-        // sanctioned non-playing scanner-validity window): kill through the
-        // SAME owner. stop_playback_if_playing's own guard admits this state,
-        // and it is the single owner of the scanner's visible-identity
-        // teardown — it invalidates the held endpoint column (the
-        // scanner-to-cursor span) before deactivating, which the launch's
-        // defensive flag clears alone would not, leaving the endpoint line
-        // ghosted (worse on a refused launch, where no heartbeat repaints).
-        // The held session is DEAD, so this arm falls through to the launch
-        // below — a scrub at the endpoint frame starts a fresh audition.
-        playback_lifecycle.stop_playback_if_playing();
     }
     // Outer is_updating gate, mirroring the two Space handlers: a NEW launch
     // while a target update is in flight would audition the stale target

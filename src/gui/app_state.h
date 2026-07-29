@@ -1260,15 +1260,19 @@ struct AppState {
     // Split-playhead state. The cursor (above, mirrored from the active
     // ViewState) is the user's stationary reference frame. The scanner is the
     // engine's playback position and is MEANINGFUL ONLY while
-    // playhead_scanner_active is true (plus the natural-end endpoint hold's one
-    // paint — see below); every consumer gates on that flag, so at REST the
-    // scanner sample / precise are stale by contract and no path reads them.
+    // playhead_scanner_active is true; every consumer gates on that flag, so at
+    // REST the scanner sample / precise are stale by contract and no path reads
+    // them. A STOPPED SCANNER IS DEACTIVATED IMMEDIATELY: there is NO
+    // non-playing window in which these value fields are valid, and the rule
+    // has no exceptions. Natural end-of-playback takes the same deactivation
+    // every manual stop takes — the tick sees the atomic playing flag drop and
+    // calls restore_playhead_to_lsp, which damages the scanner's last-painted
+    // column and clears the flag, so the line simply vanishes from wherever the
+    // predictor last drew it (a few pixels short of the exclusive end bound —
+    // the accepted delta of not holding the endpoint).
     // The launch seed (launch_playback_from, the shared body under Space's
-    // toggle and the scrub launch), the per-paint predictor advance, and
-    // the endpoint-hold write are the only writers of the value fields. Natural
-    // end holds the scanner on the exclusive end bound for one paint
-    // (restore_pending + endpoint_painted) before deactivating; manual stop
-    // paths deactivate immediately. There is no resting coincidence with the
+    // toggle and the scrub launch) and the per-paint predictor advance are the
+    // only writers of the value fields. There is no resting coincidence with the
     // cursor — a coincide-at-rest relationship would be wrong, not just unused
     // (a plain Space launches the scanner from the cursor, while the lower-half
     // scrub gesture AND Space's region launch both launch it independently of
@@ -1283,14 +1287,12 @@ struct AppState {
     // instead of stepping on integer frames (smoothness over accuracy —
     // precision is judged at standstill). Written only on the active path: the
     // playback pre-paint hook writes the predictor's continuous position here,
-    // and the launch seed / endpoint hold write the integer value as a double.
+    // and the launch seed writes the integer value as a double.
     // The integer sample stays the domain / change-detection anchor (loop-wrap,
     // the cur == sample short-circuit, the viewport-centering targets, the
     // timestamp readout). Meaningful only while active, like the integer sample.
     double  playhead_scanner_precise = 0.0;
     bool    playhead_scanner_active = false;
-    bool    playhead_scanner_restore_pending = false;
-    bool    playhead_scanner_endpoint_painted = false;
     float   playback_speed          = 0.7f;
 
     // Looping audition (trim set, launch-captured at launch_playback_from —

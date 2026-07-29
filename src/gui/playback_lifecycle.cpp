@@ -6,9 +6,9 @@
 
 // Gesture-stop: called at the top of any handler that will move the
 // cursor (keys, button press, undo/redo, tab switch).
-// Stops the audio thread and DEACTIVATES the scanner (clearing the
-// endpoint-hold flags too). Once inactive the scanner's value fields are
-// stale by contract — no consumer reads them — so nothing is snapped back.
+// Stops the audio thread and DEACTIVATES the scanner. Once inactive the
+// scanner's value fields are stale by contract — no consumer reads them — so
+// nothing is snapped back.
 // The cursor is not touched here — the caller is about to commit a new
 // cursor position. The scanner's last-painted column must be invalidated
 // here regardless of what the caller does next: the caller cares about
@@ -19,8 +19,6 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     const double scanner_px = scanner_pixel_x(app, audio);
     const double cursor_px  = playhead_pixel_x(app, audio);
     playback.stop();
-    app.playhead_scanner_restore_pending = false;
-    app.playhead_scanner_endpoint_painted = false;
     app.playhead_scanner_active = false;
     viewport.invalidate_playhead_columns(scanner_px, cursor_px);
     viewport.invalidate_timestamp_area();
@@ -36,27 +34,16 @@ void GuiPlaybackLifecycle::stop_playback_for_modal_open() {
     stop_playback_if_playing();
 }
 
-void GuiPlaybackLifecycle::hold_natural_end_scanner(int64_t endpoint_sample) {
-    const double old_px = scanner_pixel_x(app, audio);
-    app.playhead_scanner_sample = endpoint_sample;
-    app.playhead_scanner_precise = static_cast<double>(endpoint_sample);
-    app.playhead_scanner_active = true;
-    app.playhead_scanner_restore_pending = true;
-    app.playhead_scanner_endpoint_painted = false;
-    const double new_px = scanner_pixel_x(app, audio);
-    viewport.invalidate_playhead_columns(old_px, new_px);
-    viewport.invalidate_timestamp_area();
-    const GuiRect ts = top_strip_area(app);
-    gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
-}
-
-// End scanner motion. Used by Space/Enter to stop and by natural
-// end-of-playback. The cursor never moved during playback (the predictor
-// only writes the scanner), so the only work here is to deactivate the
-// scanner (and clear the endpoint-hold flags); once inactive its value
-// fields are stale by contract, so nothing is snapped back. Invalidate the
-// span between the scanner's last-painted column and the cursor's column so
-// both repaint cleanly.
+// End scanner motion. Used by Space to stop and by natural end-of-playback
+// (the tick's end-of-audio branch), which is why the two paths are the SAME
+// path: a stopped scanner deactivates immediately, and there is no non-playing
+// window in which its value fields stay valid. The cursor never moved
+// during playback (the predictor only writes the scanner), so the only work
+// here is to deactivate the scanner; once inactive its value fields are stale
+// by contract, so nothing is snapped back. Invalidate the span between the
+// scanner's last-painted column and the cursor's column so both repaint
+// cleanly — on natural end that erases the line from wherever the predictor
+// last drew it, a few pixels short of the exclusive end bound.
 void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
     const double scanner_px = scanner_pixel_x(app, audio);
     const double cursor_px  = playhead_pixel_x(app, audio);
@@ -64,8 +51,6 @@ void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
     viewport.invalidate_timestamp_area();
     const GuiRect ts = top_strip_area(app);
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
-    app.playhead_scanner_restore_pending = false;
-    app.playhead_scanner_endpoint_painted = false;
     app.playhead_scanner_active = false;
     app.follow_overridden_for_session = false;
 }
@@ -95,30 +80,12 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         restore_playhead_to_lsp();
         return;
     }
-    // Natural-end ENDPOINT HOLD (playing false, scanner active — the one
-    // sanctioned non-playing scanner-validity window): tear down through
-    // stop_playback_if_playing, the scanner's visible-identity owner, exactly
-    // as the scrub act does. It damages the held endpoint column before the
-    // new session seeds — a bare flag clear would leave the old line ghosted —
-    // and on a REFUSED launch it leaves the scanner cleanly deactivated
-    // instead of scanner-active with the hold flags cleared, which the tick
-    // would re-arm into another endpoint hold. Must run while the scanner
-    // fields are still valid (before any flag write below). The lead-in
-    // audition rides this same play edge (the offset only shifts the launch
-    // position), so it inherits the teardown.
-    if (app.playhead_scanner_active)
-        stop_playback_if_playing();
     // Defensive: clear any stale override from an unhandled stop path so
     // it can't survive into the new playback session. Runs before any
     // launch validation (the pre-sum gate below included), so a refused
-    // launch still leaves these cleared; the shared launch body assumes
-    // its caller ran them (scrub_launch_at, the other caller, does too).
-    // For the endpoint-hold case the teardown above already owns these
-    // clears (plus the scanner deactivation and its damage); these then
-    // re-run as no-ops, covering only the non-hold stale-flag case.
+    // launch still leaves it cleared; the shared launch body assumes
+    // its caller ran it (scrub_launch_at, the other caller, does too).
     app.follow_overridden_for_session = false;
-    app.playhead_scanner_restore_pending = false;
-    app.playhead_scanner_endpoint_painted = false;
     int64_t launch_pos = app.playhead_cursor_sample;
     if (app.active_audio_view == 'T') {
         // Launch = cursor + launch_offset. The offset is 0 for plain Space and
@@ -163,9 +130,9 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
 // drives: the
 // scanner fields are meaningful only while active, and this is exactly the
 // launches-the-scanner-independently-of-the-cursor consumer that contract
-// anticipated. Riding the shared launch body, plus the endpoint-hold teardown
-// below, makes an audition launch indistinguishable from a cursor Space launch
-// except for the start position, so every standing gate applies (contract at
+// anticipated. Riding the shared launch body makes an audition launch
+// indistinguishable from a cursor Space launch except for the start
+// position, so every standing gate applies (contract at
 // the header declaration) — and each launch re-captures the loop verdict and
 // end bound freshly, the point of the fresh-session semantic.
 void GuiPlaybackLifecycle::scrub_launch_at(int64_t frame) {
@@ -174,27 +141,11 @@ void GuiPlaybackLifecycle::scrub_launch_at(int64_t frame) {
     // is toggle_playback's, so both callers arrive stopped. This guard only
     // keeps a future caller from stacking play() over a live run.
     if (playback.is_playing()) return;
-    // Natural-end ENDPOINT HOLD (playing false, scanner active): tear down
-    // through stop_playback_if_playing, the scanner's visible-identity owner,
-    // exactly as toggle_playback's play edge does — this is what makes the two
-    // launch entries interchangeable but for the start position. It damages the
-    // held endpoint column before the new session seeds, and on a REFUSED launch
-    // it leaves the scanner deactivated instead of scanner-active with the hold
-    // flags cleared, which the tick would re-arm into another endpoint hold.
-    // Must run while the scanner fields are still valid, i.e. before the flag
-    // writes below. The scrub act tears the hold down at its own site before
-    // delegating (it must: its target-view gate can refuse the launch entirely),
-    // so this re-runs as a no-op there and covers the Space region launch, which
-    // arrives with no teardown of its own.
-    if (app.playhead_scanner_active)
-        stop_playback_if_playing();
-    // The same defensive clears toggle_playback's play edge runs (the launch
-    // body assumes its caller ran them): a stale override or endpoint-hold
-    // flag must not survive into the new session, and a refused launch
-    // leaves them cleared exactly as a refused Space does.
+    // The same defensive clear toggle_playback's play edge runs (the launch
+    // body assumes its caller ran it): a stale override must not survive into
+    // the new session, and a refused launch leaves it cleared exactly as a
+    // refused Space does.
     app.follow_overridden_for_session = false;
-    app.playhead_scanner_restore_pending = false;
-    app.playhead_scanner_endpoint_painted = false;
     launch_playback_from(frame);
 }
 
@@ -207,8 +158,8 @@ void GuiPlaybackLifecycle::scrub_launch_at(int64_t frame) {
 // bound). This body never writes the
 // resting cursor — the scanner is the only playhead it touches, so a launch
 // is a pure scanner event and the cursor is untouched by construction.
-// Callers run the defensive scanner/override flag clears before delegating
-// (both do, so they precede validation exactly once either way).
+// Callers run the defensive follow-override clear before delegating
+// (both do, so it precedes validation exactly once either way).
 //
 // Target-view branch: the audio device is bound to app.target_buffer
 // (rebound by GuiTargetRender's completion path on Success, with the
@@ -340,9 +291,10 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // publishes), where a narrow item-basis column would miss the plate-basis
     // scanner and the line would stay invisible until the publish. Full-area
     // damage is ownership-window-proof by construction, at one full repaint per
-    // launch keystroke — bounded for a rare command. A scrub launch over a
-    // torn-down natural-end hold already damaged the held endpoint column
-    // through the stop; this launch damage is a harmless union with it.
+    // launch keystroke — bounded for a rare command. It also subsumes any column
+    // a just-ended session's scanner still had painted (a launch inside the
+    // sub-tick window between the audio thread's natural end and the tick that
+    // deactivates the scanner), so no stale line can survive a relaunch.
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     const bool force_one_x = (app.active_audio_view == 'T');
@@ -378,9 +330,8 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
 // playable frames is out of range, so a live-playback click at the last frame
 // stops cleanly instead of playing a one-frame impulse — symmetric with Space.
 // An out-of-range position in any arm falls back to a MANUAL stop with
-// immediate scanner teardown (stop_playback_if_playing), never the natural-end
-// scanner flash. No follow-scroll at the reseek site: the reseek repositions
-// without recentering the viewport.
+// immediate scanner teardown (stop_playback_if_playing). No follow-scroll at
+// the reseek site: the reseek repositions without recentering the viewport.
 //
 // stop_playback_if_playing clears follow_overridden_for_session. The
 // placement-press caller sets it back to true immediately AFTER this returns

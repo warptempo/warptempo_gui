@@ -59,7 +59,11 @@ struct GuiPlaybackLifecycle {
     // calling stop_playback_if_playing directly.
     void stop_playback_for_modal_open();
 
-    void hold_natural_end_scanner(int64_t endpoint_sample);
+    // End scanner motion: deactivate the scanner and damage its last-painted
+    // column. Two callers, one path by rule — Space's stop edge and the tick's
+    // natural-end branch — because a stopped scanner is deactivated IMMEDIATELY
+    // and no non-playing scanner-validity window exists (contract at the scanner
+    // block in app_state.h).
     void restore_playhead_to_lsp();
     // launch_offset shifts the SCANNER's launch position (and the play() launch
     // bound) forward in the active paint domain WITHOUT moving the resting
@@ -80,9 +84,8 @@ struct GuiPlaybackLifecycle {
     // to the same launch body as toggle_playback's play edge, so the standing
     // gates apply identically: a frame outside the trim window / target buffer
     // domain, or one leaving fewer than two playable frames of remainder, is a
-    // silent no-op — exactly Space's conventions. Tears down a natural-end
-    // endpoint hold first, like that play edge, so neither caller has to. A live
-    // session never launches (defensive; both callers reach here only with
+    // silent no-op — exactly Space's conventions. A live session never
+    // launches (defensive; both callers reach here only with
     // playback stopped — a scrub act over a live session STOPS it and returns,
     // and Space's stop edge goes through toggle_playback).
     void scrub_launch_at(int64_t frame);
@@ -116,6 +119,6 @@ private:
     // absolute paint-domain launch position, capture the loop verdict, seed
     // the scanner, and start the audio. Returns whether it launched. Callers
     // (toggle_playback's play edge, scrub_launch_at) run the defensive
-    // scanner/override flag clears before delegating.
+    // follow-override clear before delegating.
     bool launch_playback_from(int64_t launch_pos);
 };

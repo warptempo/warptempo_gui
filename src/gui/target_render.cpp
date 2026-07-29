@@ -85,8 +85,6 @@ void GuiTargetRender::trigger() {
     if (playback.is_playing()) {
         playback.stop();
         app.playhead_scanner_active = false;
-        app.playhead_scanner_restore_pending = false;
-        app.playhead_scanner_endpoint_painted = false;
     }
 
     // A render dispatch kills the running render. Any running archival
@@ -472,8 +470,6 @@ void GuiTargetRender::ensure_ready() {
         if (playback.is_playing()) {
             playback.stop();
             app.playhead_scanner_active = false;
-            app.playhead_scanner_restore_pending = false;
-            app.playhead_scanner_endpoint_painted = false;
         }
         // Restore the domain offset the cached buffer was rendered with.
         // rebind_to_source() (the T→S leg) rebinds the source at offset 0,
@@ -522,8 +518,6 @@ void GuiTargetRender::rebind_to_source() {
     if (playback.is_playing()) {
         playback.stop();
         app.playhead_scanner_active = false;
-        app.playhead_scanner_restore_pending = false;
-        app.playhead_scanner_endpoint_painted = false;
     }
     if (audio.total_frames() > 0) {
         // Domain offset 0: the source is its own domain origin. The target

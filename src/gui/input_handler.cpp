@@ -400,24 +400,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // render yet in this session) is also refused so the
         // user can't play stale source-domain samples through a
         // target-view binding. Source view falls through unchanged.
-        // COMPOSITION WITH A NATURAL-END ENDPOINT HOLD, derived rather than
-        // assumed (2026-07-29): these two refusals can fire while a hold is up —
-        // a hold has is_playing() false, so GuiTargetRender::trigger's freeze
-        // block (gated on is_playing) leaves it standing, and a tempo-image step
-        // can therefore dispatch a render with the held scanner still painted.
-        // Refusing here is nonetheless CORRECT AND INERT: this return writes
-        // NOTHING, so the hold is left exactly as the press found it, which is
-        // the resting pre-press state and not a wedge. Nor does it persist — the
-        // hold is self-terminating and nothing here or in the render path can
-        // stall it: the tick's restore_pending handshake (main.cpp) has no
-        // is_updating gate, so it re-arms the hold's damage until a paint sets
-        // endpoint_painted and then calls restore_playhead_to_lsp, ending the
-        // hold within one paint cycle. The genuine wedge — the one the
-        // 2026-07-29 teardown move closed — was a state CHANGE further in:
-        // scrub_launch_at stripping restore_pending/endpoint_painted while
-        // leaving playhead_scanner_active set, and THEN refusing, which left a
-        // painted scanner the tick's restore branch could no longer reach. A
-        // refusal that mutates nothing cannot produce that.
+        // Both refusals write NOTHING, so a press inside the sub-tick window
+        // between a natural end and the tick that deactivates the scanner
+        // leaves that scanner exactly as it found it — the tick's end-of-audio
+        // branch has no is_updating gate and deactivates it on its own.
         if (app.active_audio_view == 'T' &&
             !playback.is_playing()) {
             if (target_render.is_updating()) return;

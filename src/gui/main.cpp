@@ -815,9 +815,6 @@ int main(int argc, char** argv) {
 
     gui.set_on_redraw([&](cairo_t* cr, int x, int y, int w, int h) {
         paint_handler.on_redraw(cr, x, y, w, h);
-        if (app.playhead_scanner_restore_pending) {
-            app.playhead_scanner_endpoint_painted = true;
-        }
     });
 
     gui.set_on_resize([&](int w, int h) {
@@ -1147,45 +1144,16 @@ int main(int argc, char** argv) {
             return;
         }
 
-        if (app.playhead_scanner_restore_pending) {
-            if (!app.playhead_scanner_endpoint_painted) {
-                // Self-arm: the endpoint paint has not been acknowledged yet.
-                // Re-schedule the hold's damage (scanner column, timestamp,
-                // top strip) so a paint is guaranteed to run on_redraw, which
-                // sets endpoint_painted; the following tick then restores. The
-                // timer tick is free-running but this branch otherwise schedules
-                // nothing, so without re-arming, any future path that dropped
-                // the hold's damage or reset endpoint_painted mid-handshake would
-                // wedge the scanner on the endpoint permanently. Same damage set
-                // as hold_natural_end_scanner; the top-strip rect is always
-                // onscreen, so a paint is always produced.
-                const double px = scanner_pixel_x(app, audio);
-                invalidate_playhead_columns(px, px);
-                invalidate_timestamp_area();
-                const GuiRect ts = top_strip_area(app);
-                gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
-                return;
-            }
-            playback_lifecycle.restore_playhead_to_lsp();
-            if (app.follow_mode && !app.follow_overridden_for_session)
-                follow_scroll_if_needed();
-            return;
-        }
-
-        // Playing was true last tick, now false — natural end. Hold the
-        // scanner on the exclusive end bound for one paint, then deactivate
-        // it on the following tick (no snap-back; once inactive its value
-        // fields are stale by contract). In target view the end
-        // bound is the bound target buffer's exclusive domain end — playback's
-        // domain offset travels with the bind, so domain_end() is exactly the
-        // full-target-frame coordinate the session played to.
+        // Playing was true last tick, now false — natural end. Deactivate the
+        // scanner THIS tick, through the same call Space's stop edge makes:
+        // a stopped scanner is deactivated immediately and there is no
+        // non-playing window in which its value fields are valid (contract at
+        // app_state.h's scanner block). The scanner's last-painted column is
+        // damaged by the call, so the line vanishes from wherever the predictor
+        // last drew it — a few pixels short of the exclusive end bound, the
+        // accepted delta.
         if (app.playhead_scanner_active) {
-            const int64_t endpoint =
-                (app.active_audio_view == 'T' &&
-                 app.target_buffer_frames > 0)
-                    ? playback.domain_end()
-                    : viewport.trim_end_sample();
-            playback_lifecycle.hold_natural_end_scanner(endpoint);
+            playback_lifecycle.restore_playhead_to_lsp();
             if (app.follow_mode && !app.follow_overridden_for_session)
                 follow_scroll_if_needed();
         }
