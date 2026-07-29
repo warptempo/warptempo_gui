@@ -372,12 +372,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // a live pointer drag (cancelled at the drag-modal gate above), an open editor
     // (closed in the editor blocks above), and an in-flight render/batch (cancelled
     // just above) each win — and in place of the old plain region clear. It walks
-    // ONE rung per Esc: an active region + 2+ selected clears the SELECTION, and
-    // its own extent span goes with it (a TrimWindow / Free region rests for the
-    // next press); an active region + 0/1 selected collapses to
+    // ONE rung per Esc: an active region + 2+ selected clears the SELECTION and
+    // LEAVES THE SPAN RESTING (an extent span re-formed Free, a TrimWindow / Free
+    // one untouched); an active region + 0/1 selected collapses to
     // the playhead (clear region + selection, playhead to its lo bound) — a region
-    // never shrinks into a subregion; else a programmatic multi-select simply
-    // deselects; else a singleton deselects + lands the playhead on
+    // never shrinks into a subregion; else a 2+ selection with no region DROPS TO
+    // ITS SPAN (deselect, a Free region at the extent — the explicit demote);
+    // else a singleton deselects + lands the playhead on
     // the marker. All navigation-class, so this runs in read-only too (the
     // allowlist admits Esc). Bare only — a modified Escape has no binding here or
     // at any other Escape reader. See handle_escape_selection_region for the rungs.
@@ -859,8 +860,12 @@ void GuiInputHandler::run_zoom_toggle_command() {
     // Bare `0` recenters the view on the playhead (apply_zoom_change), so the
     // region highlight is stale context — clear it (architect-listed
     // explicitly). The zoom-strip double-click does NOT come through here, so
-    // its span-framing keeps any live region.
+    // its span-framing keeps any live region. A 2+ selection collapses to its
+    // focus with the span (the never-rest-2+-without-a-span invariant, stated at
+    // clear_region_highlight's declaration): `0` re-derives nothing, and the
+    // recenter below then centers on the playhead already resting at that focus.
     clear_region_highlight(app, viewport);
+    if (app.selected_markers.size() >= 2) selection.collapse_to_focused();
     if (app.zoom_level == kWorkingZoomLevel) {
         viewport.apply_zoom_change(effective_max_zoom_level(
             waveform_area(app).w, live_total_frames(app, audio),
@@ -1297,6 +1302,24 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // new domain, so clear it; the full-window invalidate at the tail repaints
     // the waveform on its plain canvas ground.
     app.region = RegionState{};
+
+    // A VIEW SWITCH ALWAYS LANDS YOU IN POINT FORM (architect 2026-07-29, the
+    // rule shared with the `p` W/P switch): the selection SURVIVES this toggle
+    // (nothing else here writes it), so a group of 2+ collapses to its focused
+    // marker and `t` leaves a singleton or an empty selection, never a group.
+    // Most work here is done one marker at a time, and one consistent rule beats
+    // an imagined convenience. Placed past both refusals (the no-audio guard and
+    // the S->T entry-validation return) and past the region clear above, so its
+    // membership clear finds nothing to do; the playhead re-express below is
+    // untouched by it (the collapse keeps last_selected_marker and writes no
+    // playhead), and the tail's full-window invalidate covers the flag repaint.
+    // The size >= 2 guard is LOAD-BEARING, not an optimization:
+    // collapse_to_focused early-returns only on an already-focused SINGLETON, so
+    // against an EMPTY selection carrying a live focus index it would INSERT that
+    // focus and resurrect a selection the user dropped. This switch prunes
+    // nothing, so the guard — not a neighbouring repair — is what makes the
+    // precondition local.
+    if (app.selected_markers.size() >= 2) selection.collapse_to_focused();
 
     // The S/T toggle translates the active tab's live playhead across the
     // domain flip; the inactive tab's stored playhead must translate too, or

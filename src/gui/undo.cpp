@@ -484,9 +484,10 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // membership clear (the clear-then-derive order the multi-select clicks use),
     // and BEFORE the recompute/invalidate/kick block below so restore's one sync
     // render covers the final geometry. The LAND/EXTENT block is gated off 'S' (a
-    // settings-only restore leaves whatever selection rests — it must not land,
-    // select, or write a region; the region CLEAR is the one part that runs for
-    // every entry, see below), and
+    // settings-only restore never LANDS, never EXPANDS a selection, and never
+    // WRITES a region; what it does do for every entry is CLEAR the region, and
+    // it MAY collapse a 2+ selection to its focus as that clear's consequence —
+    // see below), and
     // branches on the POST-sanitize live size, so a defensive edge takes the
     // matching arm (a group entry sanitized down to one member lands as a
     // singleton; a removal cleared to empty is the size == 0 no-op).
@@ -510,6 +511,14 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // not WRITE a region, which is why only this one call sits above the gate and
     // the whole land/extent/framing block stays inside it.
     clear_region_highlight(app, viewport);
+    // The 'S' arm's ONE selection consequence (the never-rest-2+-without-a-span
+    // invariant, stated at clear_region_highlight's declaration): the clear above
+    // can strand a group in point form with no point, and a settings restore
+    // derives no span, so a 2+ selection collapses to its FOCUS. The non-'S'
+    // entries need nothing here — a group restore re-selects and re-derives its
+    // own extent below, and the other arms rest at <=1 selected.
+    if (entry.op_mode == 'S' && app.selected_markers.size() >= 2)
+        selection.collapse_to_focused();
     if (entry.op_mode != 'S') {
         const size_t sel_size = app.selected_markers.size();
         if (sel_size == 1) {

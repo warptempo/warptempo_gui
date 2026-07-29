@@ -717,13 +717,14 @@ int main(int argc, char** argv) {
     GuiFlagEditor flag_editor(app, audio, viewport, selection, undo,
                               target_render);
     GuiRendersDir renders_dir(app);
-    PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
+    PhaseResetPropagate phase_reset_propagate(app, viewport, selection, undo,
                                               target_render, active_views,
                                               playback_lifecycle);
     GuiSaveOps save_ops(app, undo, active_views, viewport);
     GuiPrompt prompt(app, gui, viewport,
                      phase_reset_propagate, save_ops, playback_lifecycle);
-    GuiSettingsEditor settings_editor(app, audio, viewport, active_views, undo,
+    GuiSettingsEditor settings_editor(app, audio, viewport, selection,
+                                      active_views, undo,
                                       target_render, playback_lifecycle);
     gui.set_worker_completion_fd(async_renderer.completion_fd(),
         [&async_renderer]() { async_renderer.on_completion_event(); });

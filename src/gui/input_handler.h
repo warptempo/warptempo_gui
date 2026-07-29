@@ -185,6 +185,41 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     map under any resting highlight. The settings editor's TRIM keys never
 //     reach it — they return through commit_gui_setting, which re-syncs a
 //     TrimWindow highlight to the edited bounds, a maintainer by ruling.
+// A 2+ SELECTION NEVER RESTS WITHOUT A SPAN (architect 2026-07-29; the
+// two-forms rule it follows from is stated at land_playhead_on_marker,
+// input_pointer.cpp, which points here for this corollary and its sites). A
+// group's ONLY point cue is its extent span — with the span gone the focused
+// flag would claim to be a playhead the group does not own — so WHEN A CLEAR
+// TAKES AN ACTIVE SPAN FROM UNDER 2+ SELECTED MARKERS AND NOTHING RE-DERIVES
+// ONE, THE SELECTION COLLAPSES TO ITS FOCUS (Selection::collapse_to_focused —
+// the focus is where the playhead already rests, by land-on-focus). Sites, by
+// class — each is a clear listed above that re-derives nothing:
+//   * the VIEW SWITCHES, which land you in point form by their own ruling: `p`
+//     (toggle_active_markers_view), `t` (handle_active_audio_view_toggle), and
+//     Ctrl+Tab (switch_active_tab_view_to, whose restored slot may hold a group);
+//   * the MAP-REBUILD commits with no span of their own: the settings
+//     engine-commit tail and the SETTINGS-ONLY ('S') undo/redo restore;
+//   * the NAVIGATION jumps that keep their selection: bare `0` and `c` (the Tab
+//     family instead single-selects, and Home/End deselect outright);
+//   * EVERY TRIM-SYNC CLEAR, at the one chokepoint they share
+//     (sync_region_to_trim_window, which takes the Selection for exactly this):
+//     its no-window arm — Shift+X, the crossed-pair auto-clear, a chip/bridge
+//     drag that dissolves the pair, the settings-editor trim commit — AND its
+//     COINCIDENT arm, mid-gesture tempo callers included;
+//   * the STATE-paste arm of the propagate tail (the created-set arm derives its
+//     own extent instead).
+// NO EXCLUSIONS (architect 2026-07-29, superseding the one carve-out this rule
+// briefly carried): coincident images are an ERROR state, not a special case —
+// the markers are red and the write render-inert — so a group tempo step or drag
+// that compresses its window onto one target frame collapses like every other
+// route, and the next press is a singleton op by ruling (recorded at the
+// coincident arm and at both tempo sites). Routes
+// that RE-DERIVE a span instead of collapsing are not sites at all: the group
+// undo restore, the paste's created set, the multi-select clicks at 2+, `m`, and
+// the whole tempo/group-drag follow family. The kick validator's domain-shrink
+// clear needs no site of its own — every caller that can shrink the domain under
+// a group either re-derives (the tempo family, capture-before-kick) or is
+// already a site above (the settings commit, undo, `t`, Ctrl+Tab).
 // The land itself clears NOTHING — it is a pure playhead write, and the
 // motion condition that briefly rode its clear died with that clear
 // (land_playhead_on_marker). DELIBERATELY NOT
@@ -196,11 +231,13 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // helper — same dissolve shape. The other pre-existing clear sites (Esc, file
 // load, Ctrl+Tab, and the S/T switch) keep their own in-place clears — Esc's is
 // now the down-only ladder's region rung, which walks ONE rung per Esc
-// (handle_escape_selection_region: a live region + 2+ selected first clears the
-// SELECTION and its own extent span with it, a TrimWindow / Free region resting
-// for the next press; a live region + 0/1 selected
+// (handle_escape_selection_region: with 2+ selected the first Esc DESELECTS and
+// the span's pixels REST — an extent span re-formed Free, a TrimWindow / Free
+// one untouched — and with no region at all that same rung drops the selection
+// TO its extent as a Free span, the ladder's explicit demote; a live region +
+// 0/1 selected
 // COLLAPSES TO ITS START — clear the region AND selection AND move the playhead to
-// its lo bound — so a multimarker selection takes a second Esc to collapse), and
+// its lo bound — so a multimarker selection always takes a second Esc), and
 // load / Ctrl+Tab / S/T pair the reset with a domain flip or a full-window repaint
 // rather than this exact damage shape.
 void clear_region_highlight(AppState& app, Viewport& viewport);
@@ -254,8 +291,12 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // declared here so the group tempo gestures can RE-SYNC a TrimWindow region from
 // app.trim's source-frame bounds through the new live map after a tempo edit.
 // GuiInputHandler::sync_highlight_to_trim_window wraps this.
+// It takes the SELECTION because both clear arms are region-collapse routes and
+// therefore carry the never-rest-2+-without-a-span collapse (see the invariant
+// below): this is the one chokepoint every trim teardown and the coincident arm
+// share, so the rule is enforced once, uniformly, for every caller.
 void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
-                                Viewport& viewport);
+                                Selection& selection, Viewport& viewport);
 
 // -- GuiInputHandler ----------------------------------------------------
 //

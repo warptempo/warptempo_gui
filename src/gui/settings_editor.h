@@ -39,6 +39,11 @@ struct GuiSettingsEditor {
     AppState&             app;
     GuiAudio&             audio;
     Viewport&             viewport;
+    // The engine-key commit rebuilds the warp map, so it clears any resting
+    // region — and collapses a 2+ selection to its focus with it (the
+    // never-rest-2+-without-a-span invariant, stated at
+    // clear_region_highlight's declaration).
+    Selection&            selection;
     GuiActiveViews&       active_views;
     Undo&                 undo;
     GuiTargetRender&   target_render;
@@ -54,6 +59,7 @@ struct GuiSettingsEditor {
     GuiSettingsEditor(AppState&             app_,
                       GuiAudio&             audio_,
                       Viewport&             viewport_,
+                      Selection&            selection_,
                       GuiActiveViews&       active_views_,
                       Undo&                 undo_,
                       GuiTargetRender&   target_render_,
@@ -61,6 +67,7 @@ struct GuiSettingsEditor {
         : app(app_),
           audio(audio_),
           viewport(viewport_),
+          selection(selection_),
           active_views(active_views_),
           undo(undo_),
           target_render(target_render_),

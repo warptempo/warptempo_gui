@@ -619,12 +619,27 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
         // brand-new focus, so it lands on it — otherwise the non-empty selection
         // would suppress the cursor while playhead_cursor_sample still held the
         // pre-paste value re-expressed through the S->T switch, leaving NO
-        // playhead painted anywhere. Land only: the paste deliberately sets no
-        // extent region, and the wholesale clear above is its WHOLE region
-        // handling (the land is a pure playhead write with no side effect) — so
-        // a paste rests with NO span at all, exactly as the W/P swap this tail
-        // rides now does.
+        // playhead painted anywhere.
         land_playhead_on_marker(app, viewport.audio, viewport, *created.begin());
+        // THEN SET THE EXTENT REGION (architect 2026-07-29, reversing "the paste
+        // deliberately sets no extent region"): a propagate paste is a
+        // MASS-MARKER event, so it reads like the other one — undo/redo's GROUP
+        // restore — and this tail now has that shape exactly: wholesale clear ->
+        // select the created set -> land on the FIRST -> derive the extent. The
+        // span's left half-triangle sits on the marker just landed on, so the
+        // highlight, the timestamp readout and Space's left-bound launch agree by
+        // construction. The owner self-gates below 2 created resets, which is why
+        // a single-reset paste simply rests in point form.
+        set_region_to_selection_extent(app, viewport.audio, viewport);
+    } else if (app.selected_markers.size() >= 2) {
+        // STATE PASTE (no resets created): the tail's clear took whatever span
+        // rested, and this arm derives none — but the P-slot selection the swap
+        // restored can be 2+, which would leave a group in point form with no
+        // point. Collapse it to its FOCUS (the never-rest-2+-without-a-span
+        // invariant, stated at clear_region_highlight's declaration). No land
+        // here: this arm sets no new focus, and the playhead already rests where
+        // the S->T re-express put it.
+        selection.collapse_to_focused();
     }
     viewport.invalidate_top_strip();
     viewport.invalidate_waveform_area();

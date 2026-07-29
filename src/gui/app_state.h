@@ -137,11 +137,14 @@ struct SelectionSnapshot {
 // FLOWS DOWNWARD ONLY (architect 2026-07-23): highlighting a region does NOT
 // select the markers it contains (the reverse coupling — a region selecting its
 // contents — was tried and retired; do not re-propose); if markers ARE selected
-// the region is set to their extent — never the other way. Formed by FOUR routes: the plain waveform drag (paints it live, leaving
+// the region is set to their extent — never the other way. Formed by FIVE routes: the plain waveform drag (paints it live, leaving
 // the selection EMPTY throughout), the waveform SHIFT+click (the region former /
 // marker DEMOTE — playhead-to-click with nothing selected, else
 // furthest-selected-marker-to-click, DROPPING the selection), a multi-marker
-// DELETE (demotes to the span of the deleted positions, also a DROP), and the
+// DELETE (demotes to the span of the deleted positions, also a DROP), the ESC
+// DEMOTE (the ladder's first rung over a 2+ selection: the selection drops and
+// its span rests Free — the one sanctioned demotion route, see
+// handle_escape_selection_region), and the
 // MULTI-SELECT EXTENT: a shift-range or ctrl-toggle click that leaves 2+ markers
 // selected sets the region to the selection's position extent [earliest, latest]
 // (provenance SelectionExtent — see RegionProvenance), so the highlight and
@@ -201,13 +204,15 @@ struct SelectionSnapshot {
 // region is derived from, which decides how the image-follow tempo gestures treat
 // it across a map change. Free — a drag-formed / demoted region, display scratch
 // that no gesture re-derives (the shift-click former, the plain drag, both
-// DELETE demotions — each leaving the selection EMPTY, and every gesture that
-// then selects a marker collapses the span, the drops included). A Free region
+// DELETE demotions, and the ESC DEMOTE — each leaving the selection EMPTY, and
+// every gesture that then selects a marker collapses the span, the drops
+// included). A Free region
 // can therefore rest ONLY beside an EMPTY selection (architect 2026-07-29, the
-// maximally greedy collapse): all four Free formers leave the selection empty,
+// maximally greedy collapse): all five Free formers leave the selection empty —
+// the Esc demote by construction, it being a DESELECT that keeps the pixels —
 // and EVERY route that then puts a selection in place clears the span — the
 // marker clicks and their deferred completions, Tab/`c`, the editor opens, the
-// drops, and now the three that used to carry a selection in wholesale while
+// drops, and the three that used to carry a selection in wholesale while
 // leaving the span alone (undo/redo restore, the `p` swap, the propagate paste).
 // The drag cancels' verbatim pre-gesture restores (DragState::pre_drag_region,
 // TempoDragState::pre_drag_region) reproduce a state that was already reachable
@@ -258,9 +263,13 @@ struct RegionState {
     // untouched scratch. SET in three places — set_region_to_selection_extent ->
     // SelectionExtent, sync_highlight_to_trim_window's set arm -> TrimWindow, and
     // every OTHER former (region drag, shift-click former/demote, delete
-    // demotions) -> Free. Nothing CONVERTS one provenance into another:
+    // demotions) -> Free. ONE ROUTE CONVERTS, and it is the Esc DEMOTE alone
+    // (architect 2026-07-29, both its rungs in handle_escape_selection_region):
+    // it writes Free over a span whose selection it is dropping in the same
+    // breath, which is why the result is a former's resting state and not a
+    // downgrade-in-place. Nothing else converts — in particular
     // clear_region_on_membership_replace clears a SelectionExtent region whole
-    // rather than downgrading it. Every wholesale
+    // rather than downgrading it, and no demotion route re-enters it. Every wholesale
     // RegionState{} reset (load, navigation clears, the Esc collapse) defaults
     // Free. The Esc ladder, Space launch, x, and navigation clears are
     // provenance-BLIND — they act on any active region.

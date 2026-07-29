@@ -1733,7 +1733,12 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // path. HELP lists `c` in the clear set unconditionally. The focused arm
         // then double-clears via the jump tail — a no-op, since the helper's
         // !active guard returns immediately on the already-cleared region.
+        // A 2+ selection collapses to its focus with the span (the
+        // never-rest-2+-without-a-span invariant, stated at
+        // clear_region_highlight's declaration): `c` re-derives nothing, and its
+        // whole point is to jump to the FOCUS, which is exactly what survives.
         clear_region_highlight(app, viewport);
+        if (app.selected_markers.size() >= 2) selection.collapse_to_focused();
         selection.repair_last_selected();
         jump_playhead_to_focused_marker();
         viewport.apply_zoom_change(kWorkingZoomLevel);

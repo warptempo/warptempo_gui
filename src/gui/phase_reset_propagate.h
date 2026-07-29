@@ -20,6 +20,11 @@ struct GuiInputHandler;
 struct PhaseResetPropagate {
     AppState&           app;
     Viewport&           viewport;
+    // The paste tail clears any resting region, so a 2+ selection it did not
+    // build a span for collapses to its focus (the never-rest-2+-without-a-span
+    // invariant, stated at clear_region_highlight's declaration). Only the
+    // STATE-paste arm needs it — the created-set arm derives its own extent.
+    Selection&          selection;
     Undo&               undo;
     GuiTargetRender& target_render;
     // Owned end-of-paste view switch goes through switch_active_markers_view_to
@@ -42,11 +47,12 @@ struct PhaseResetPropagate {
     // `t` key uses.
     GuiInputHandler*      input = nullptr;
 
-    PhaseResetPropagate(AppState& app_, Viewport& viewport_, Undo& undo_,
+    PhaseResetPropagate(AppState& app_, Viewport& viewport_,
+                        Selection& selection_, Undo& undo_,
                         GuiTargetRender& target_render_,
                         GuiActiveViews& active_views_,
                         GuiPlaybackLifecycle& playback_lifecycle_)
-        : app(app_), viewport(viewport_), undo(undo_),
+        : app(app_), viewport(viewport_), selection(selection_), undo(undo_),
           target_render(target_render_), active_views(active_views_),
           playback_lifecycle(playback_lifecycle_) {}
 

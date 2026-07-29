@@ -462,8 +462,12 @@ void GuiSettingsEditor::commit() {
     // and one rule beats a second view gate to maintain. The trim WINDOW itself
     // is untouched — a chip-row re-click brings its highlight back. The helper
     // owns its own waveform damage, which the source-view path would otherwise
-    // not raise.
+    // not raise. A 2+ selection standing beside the cleared span collapses to its
+    // FOCUS with it (the never-rest-2+-without-a-span invariant, stated at
+    // clear_region_highlight's declaration): the commit re-derives no span, and
+    // the focus flag is where the playhead already rests.
     clear_region_highlight(app, viewport);
+    if (app.selected_markers.size() >= 2) selection.collapse_to_focused();
     // The engine scale is a warp-map input (build_warp_frame_map's slope
     // product), so an engine commit that moved it re-warps the target-view
     // plate. This is one of the target-view re-warp sites (the full inventory

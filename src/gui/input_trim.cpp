@@ -500,7 +500,7 @@ void GuiInputHandler::commit_trim_drag() {
 // sync_highlight_to_trim_window is a thin wrapper over it (all its callers keep
 // working).
 void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
-                                Viewport& viewport) {
+                                Selection& selection, Viewport& viewport) {
     if (app.trim.has_begin && app.trim.has_end) {
         const int64_t a = clamp_playhead_to_live_domain(
             source_frame_to_active_domain(app, audio, app.trim.begin_frame),
@@ -524,13 +524,22 @@ void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
             // never destroy the pair — and the unset lives on Shift+X. The sliver
             // rule is the surviving reason to clear.) Clear the HIGHLIGHT only —
             // the TRIM ITSELF is untouched (its authored source-frame bounds
-            // stand), and clearing drops the LIVE provenance. Recovery depends on
-            // the caller: within a tempo DRAG the grab-time trim intent
-            // (TempoDragState::grab_trim_highlight) re-syncs the window BACK on the
-            // next event whose images re-separate, and Esc restores the captured
-            // pre-drag region verbatim; for a RESTING clear (a drag RELEASED while
-            // coincident, or a one-shot group STEP that reads live provenance) the
-            // user re-clicks the chip row once the images re-separate. Either way,
+            // stand), and clearing drops the LIVE provenance.
+            // COINCIDENCE IS AN ERROR STATE (architect 2026-07-29), which is why
+            // it takes the collapse tail below like every other route that ends
+            // with no span: the images have compressed past one target frame, the
+            // markers involved are RED and the write is render-inert, so a 2+
+            // selection standing beside this clear collapses to its FOCUS — the
+            // invariant is UNIFORM, mid-gesture included, no carve-out. The
+            // consequences are ruled, not accidental: within a tempo DRAG the
+            // grab-time trim intent (TempoDragState::grab_trim_highlight) still
+            // re-syncs the window BACK on the next event whose images re-separate
+            // — now beside a singleton selection — and Esc still restores the
+            // captured pre-drag region AND the pre-drag selection snapshot
+            // wholesale, so a cancel returns the whole group; for a RESTING clear
+            // (a drag RELEASED while coincident, or a one-shot group STEP) the
+            // group is gone and THE NEXT PRESS IS A SINGLETON OP BY RULING, the
+            // chip-row re-click recovering only the highlight. Either way,
             // x with no highlight is a silent no-op (WYSIWYG — no hairline highlight).
             app.region = RegionState{};
         } else {
@@ -557,10 +566,24 @@ void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
         app.region = RegionState{};
     }
     viewport.invalidate_waveform_area();
+    // A 2+ SELECTION NEVER RESTS WITHOUT A SPAN (architect 2026-07-29; the rule
+    // and its site list live at clear_region_highlight's declaration,
+    // input_handler.h). BOTH clear arms above land here — the no-window arm after
+    // a trim TEARDOWN (Shift+X, the crossed-pair auto-clear, a chip/bridge drag
+    // that dissolves the pair, the settings-editor trim commit) and the
+    // COINCIDENT arm, mid-gesture callers included: coincidence is an error
+    // state, not a special case, so the invariant is UNIFORM with no carve-out. A
+    // group left beside no span would be point form with no point, so it
+    // collapses to its FOCUS, where the playhead already rests. The SET arm
+    // leaves an active region, so the test below skips it and a group rests
+    // beside its TrimWindow highlight exactly as before — which is why this sits
+    // at the ONE chokepoint every arm shares rather than at the callers.
+    if (!app.region.active && app.selected_markers.size() >= 2)
+        selection.collapse_to_focused();
 }
 
 void GuiInputHandler::sync_highlight_to_trim_window() {
-    sync_region_to_trim_window(app, audio, viewport);
+    sync_region_to_trim_window(app, audio, selection, viewport);
 }
 
 // R4.6: set ONE trim bound at the clicked column — ADJUST-ONLY (architect

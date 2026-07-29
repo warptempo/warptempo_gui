@@ -211,7 +211,11 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // resting span, provenance and all (architect 2026-07-29): the undo/redo
 // restore, the `p` W/P swap, and the propagate paste — each hands the lane a
 // selection it took in wholesale, so a span it did not build has nothing left to
-// describe (the list lives at clear_region_highlight, input_handler.h).
+// describe (the list lives at clear_region_highlight, input_handler.h). THE
+// COROLLARY, recorded there too with its own site list: a 2+ SELECTION NEVER
+// RESTS WITHOUT A SPAN — a group whose span is cleared with nothing re-deriving
+// one collapses to its focus, because the extent span is a group's only point
+// cue and a focused flag must never claim a playhead the group does not own.
 //
 // LANDS the playhead exactly onto marker `hit` (active column's store), with
 // NO viewport move — the sole difference from Tab (which recenters) and `c`
@@ -305,16 +309,22 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 //       commit and BOTH group position NUDGES (warp + phase reset). Their callers
 //       gate on region.active && provenance == SelectionExtent, so a Free /
 //       TrimWindow / inactive region is untouched;
-//   (3) the GROUP undo/redo RESTORE (undo.cpp's visual tail) — unlike the
-//       maintainers it MAY CREATE a region: when a restore re-selects 2+ touched
-//       markers it defines the SelectionExtent region for the group (undo/redo
-//       adopts the group visual language, architect 2026-07-25). This is the one
-//       programmatic selection that calls this — the others below still do not.
+//   (3) the two MASS-MARKER PROGRAMMATIC selections, which unlike the
+//       maintainers MAY CREATE a region: the GROUP undo/redo RESTORE (undo.cpp's
+//       visual tail, architect 2026-07-25) and the PROPAGATE PASTE's target-view
+//       tail (phase_reset_propagate.cpp, architect 2026-07-29 — reversing its
+//       earlier no-region rule; a mass creation should read like the other mass
+//       event). Both share one shape: wholesale region clear, select the set,
+//       land on its FIRST/earliest member, then derive the extent here.
+//   (4) the ESC DEMOTE (handle_escape_selection_region's no-region + 2+ rung) —
+//       the one caller that immediately FLIPS the fresh span to Free and drops
+//       the selection, deriving the bounds through this owner rather than by
+//       hand. The span it leaves has no selection at all, so it is a former, not
+//       an extent.
 // Touches ONLY the region, never shift_range_anchor, so the shift-range path's
-// anchor survives a downward selection->extent set. The OTHER programmatic
-// selections (paste, drops, Tab/`c`) do NOT call this — undo/redo LEFT that list
-// with the group-restore ruling above. Declared in input_handler.h so the ops
-// TUs and undo.cpp can reach it.
+// anchor survives a downward selection->extent set. The REMAINING programmatic
+// selections (the drops, Tab/`c`) do NOT call this. Declared in input_handler.h
+// so the ops TUs, undo.cpp and the propagate tail can reach it.
 void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
                                     Viewport& viewport) {
     if (app.selected_markers.size() < 2) return;
@@ -368,16 +378,35 @@ bool GuiInputHandler::handle_escape_selection_region() {
     // the region collapse below.
     if (app.region.active) {
         // First rung under an active region: 2+ selected markers -> clear the
-        // SELECTION, and with it the selection's OWN span. clear_selection runs
-        // the membership clear, so a SelectionExtent region goes WITH the
-        // selection here — one Esc takes both, the group's two focus cues being
-        // one thing (architect 2026-07-29). A TrimWindow or Free region instead
-        // RESTS: it never belonged to this selection, so the ladder still walks
-        // one rung per press and the next Esc reaches the collapse below. The
-        // playhead is untouched either way. A singleton + region and a
-        // no-selection + region fall through to the immediate collapse below.
+        // SELECTION ONLY; the span's PIXELS REST (architect 2026-07-29, the
+        // two-step Ableton walk, reversing the one-Esc-takes-both of that
+        // morning). The ladder walks ONE rung per press, so the next Esc reaches
+        // the collapse below. The playhead is untouched.
+        //
+        // ESC IS THE EXPLICIT DEMOTE — the ONE sanctioned route to a resting
+        // demoted span, and it is legal under the two-forms model because the
+        // SELECTION IS EMPTY afterward: what the model abolished is a span
+        // resting beside a SURVIVING selection (the demoted-but-visible extent
+        // that asserted a playhead nobody was at), and Esc never produces that.
+        // The resting state here is exactly the drag-former's — a Free span with
+        // nothing selected. The MEMBERSHIP-CLEAR machinery stays untouched: no
+        // demotion route re-enters clear_region_on_membership_replace, which
+        // still clears a SelectionExtent slot outright at every membership site.
+        // MECHANISM: clear_selection's membership clear kills a SelectionExtent
+        // slot, so capture the span first and RE-FORM it at the same bounds with
+        // Free provenance afterward. A TrimWindow or Free span is untouched by
+        // that clear, so it needs no branch — and must not get one, since
+        // overwriting a TrimWindow provenance would unhook the highlight from the
+        // chips it tracks.
         if (app.selected_markers.size() >= 2) {
+            const RegionState before = app.region;
             selection.clear_selection();
+            if (before.provenance == RegionProvenance::SelectionExtent) {
+                app.region.active     = true;
+                app.region.a_frame    = before.a_frame;
+                app.region.b_frame    = before.b_frame;
+                app.region.provenance = RegionProvenance::Free;
+            }
             viewport.invalidate_waveform_area();
             return true;
         }
@@ -395,15 +424,23 @@ bool GuiInputHandler::handle_escape_selection_region() {
     }
     const size_t nsel = app.selected_markers.size();
     if (nsel >= 2) {
-        // No region + MULTIPLE selected (a PROGRAMMATIC multi-select now — a
+        // No region + MULTIPLE selected (a PROGRAMMATIC multi-select — a
         // click-made one always rests with its extent region, handled above):
-        // a plain selection clear. The old "drop to region" rung set the extent
-        // first and is GONE: clear_selection's membership clear would take that
-        // just-set region away on the very next line, and what the rung produced
-        // when it worked was precisely the ownerless resting span this model
-        // abolishes. clear_selection owns the damage — top strip, timestamp, and
-        // the playhead column as the cursor comes back — and with no region and
-        // no singleton stem there is no other waveform pixel to erase.
+        // DROP THE SELECTION TO ITS SPAN (architect 2026-07-29, restoring the
+        // drop-to-region rung). The group's cue survives the deselect as a
+        // resting Free span, and a second Esc collapses it to its start — the
+        // same two-step walk the rung above performs. This is Esc's explicit
+        // demote (the principle is stated at that rung), legal because the
+        // selection ends EMPTY.
+        // MECHANISM: derive through the ONE extent owner
+        // (set_region_to_selection_extent — it clamps the endpoints playable,
+        // handles the degenerate all-stale set by resting nothing, and owns its
+        // damage), then flip the fresh span to Free BEFORE clear_selection, so
+        // the membership clear skips it (it takes SelectionExtent only) and the
+        // span survives the deselect. Deriving here by hand instead would
+        // duplicate that owner's per-column store walk and clamps for no gain.
+        set_region_to_selection_extent(app, audio, viewport);
+        app.region.provenance = RegionProvenance::Free;
         selection.clear_selection();
         return true;
     }

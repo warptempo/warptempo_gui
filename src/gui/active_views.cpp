@@ -129,6 +129,14 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
         app.selected_markers     = target.warp_selected;
         app.last_selected_marker = target.warp_last_selected;
     }
+    // A 2+ selection restored from the entering tab's slot COLLAPSES to its
+    // focus (the never-rest-2+-without-a-span invariant, stated at
+    // clear_region_highlight's declaration): this switch cleared the region
+    // above and derives none for the restored group, and the A/B flip is a view
+    // switch like `t` and `p`, which land in point form by the same 2026-07-29
+    // ruling. The stored slot keeps whatever it held — only the live selection
+    // collapses.
+    if (app.selected_markers.size() >= 2) selection.collapse_to_focused();
     // Lockstep with refresh_active_tab_view_from_app's push block: adding a
     // per-tab live-mirror field means updating that push, this pull, and
     // ViewState.
@@ -185,6 +193,26 @@ void GuiActiveViews::toggle_active_markers_view() {
     // The emptiness test IS the lane test; no separate focus-index guard is
     // needed (prune_live_selection above leaves the focus a live member whenever
     // the selection is non-empty, and the helper is bounds-guarded regardless).
+    //
+    // A VIEW SWITCH ALWAYS LANDS YOU IN POINT FORM (architect 2026-07-29, shared
+    // with the `t` S/T switch): a restored selection of 2+ COLLAPSES to its
+    // focused marker, so `p` leaves a singleton (or an empty selection), never a
+    // group. Most work here is done one marker at a time, and one consistent rule
+    // beats an imagined convenience. It runs BEFORE the clear and the land so
+    // both act on the collapsed singleton — the collapse keeps
+    // last_selected_marker, so the land below targets the same focus either way,
+    // and its own membership clear is a no-op ahead of the wholesale clear. The
+    // collapse lives HERE and not in switch_active_markers_view_to for the reason
+    // the land does: the propagate paste rides that helper and overwrites the
+    // selection with its created set one line later.
+    // The size >= 2 guard is LOAD-BEARING, not an optimization:
+    // collapse_to_focused early-returns only on an already-focused SINGLETON, so
+    // against an EMPTY selection carrying a live focus index it would INSERT that
+    // focus and resurrect a selection the user dropped. AppState declares the
+    // pairing (focus is -1 or a member), and prune_live_selection repairs it
+    // inside the helper above — but the guard keeps this site's precondition
+    // local instead of leaning on either.
+    if (app.selected_markers.size() >= 2) selection.collapse_to_focused();
     clear_region_highlight(app, viewport);
     if (!app.selected_markers.empty()) {
         land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);

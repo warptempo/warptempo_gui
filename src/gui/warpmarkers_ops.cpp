@@ -566,8 +566,9 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
         // outright before the step runs, and set_region_to_selection_extent never
         // derives one for a <=1 selection, so such an arm could not fire. NO FREE
         // ARM EITHER, and that one is unreachable rather than declined
-        // (architect 2026-07-29, re-derived at this retell): all four Free formers
-        // (the plain region drag, the shift-click former, both DELETE demotions)
+        // (architect 2026-07-29, re-derived at this retell): all five Free formers
+        // (the plain region drag, the shift-click former, both DELETE demotions,
+        // and the Esc demote — which is itself a deselect)
         // leave the selection EMPTY, and EVERY route that then puts a selection in
         // place collapses the span — the marker clicks and their deferred
         // completions, Tab/`c`, the editor opens, the drops, and the three that
@@ -585,7 +586,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
             viewport.move_playhead_to(source_frame_to_active_domain(
                 app, audio, mv_post[f].time_frame));
         }
-        if (trim_resync) sync_region_to_trim_window(app, audio, viewport);
+        if (trim_resync) sync_region_to_trim_window(app, audio, selection, viewport);
     }
     target_render.trigger();
 }
@@ -706,12 +707,22 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
         //  - SelectionExtent: re-derive to the selection's NEW extent (re-activates
         //    a region the kick may have cleared).
         //  - TrimWindow: re-sync from app.trim's source-frame bounds through the
-        //    new map (FIX C), so the highlight tracks the chips/stems.
+        //    new map (FIX C), so the highlight tracks the chips/stems. When this
+        //    press compresses the window's two images onto ONE target frame the
+        //    sync takes its COINCIDENT arm, which clears the highlight and — the
+        //    uniform never-rest-2+-without-a-span invariant, architect 2026-07-29
+        //    — COLLAPSES THIS GROUP to its focus. Ruled, not accidental:
+        //    coincidence at 16x compression is an ERROR state (the markers are
+        //    red, the write render-inert), so THE NEXT PRESS IS A SINGLETON STEP
+        //    by design — this handler re-seeds its participants from the LIVE
+        //    selection every press, so it simply takes the singleton path. A
+        //    chip-row re-click recovers the HIGHLIGHT, never the group.
         //  - Free: untouched scratch.
         // Source view needs nothing (identity domain — no image moved), which is
         // why this whole block gates on target view.
         if (follow_extent)      set_region_to_selection_extent(app, audio, viewport);
-        else if (trim_resync)   sync_region_to_trim_window(app, audio, viewport);
+        else if (trim_resync)   sync_region_to_trim_window(app, audio, selection,
+                                                           viewport);
     }
     target_render.trigger();
 }

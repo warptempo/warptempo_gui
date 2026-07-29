@@ -1370,12 +1370,22 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     //    cannot DISSOLVE mid-tempo-gesture (no bound is authored here), so the
     //    no-window arm is not reached FROM tempo gestures — but the coincident
     //    lo==hi arm can fire (images compressing onto one target frame), clearing
-    //    the highlight while the trim stands. (The no-window arm's other callers
-    //    are enumerable: the trim gestures' lone/dissolve and the settings-editor
-    //    trim commit, which now syncs a TrimWindow region at commit.)
+    //    the highlight while the trim stands AND — the uniform
+    //    never-rest-2+-without-a-span invariant, architect 2026-07-29 —
+    //    COLLAPSING THE SELECTION to its focus mid-drag. That is safe for this
+    //    gesture BY CONSTRUCTION: every mechanic below runs off the GRAB-TIME
+    //    capture (marker, predecessor, participant_predecessors,
+    //    participant_grab_cents, walled, grab_trim_highlight), never off the live
+    //    selection, so which markers the drag moves cannot change under it; and
+    //    Esc restores pre_drag_selection wholesale, so a cancel brings the whole
+    //    group back. If the images re-separate the grab bit re-syncs the highlight
+    //    back — now beside a singleton selection. (The no-window arm's other
+    //    callers are enumerable: the trim gestures' lone/dissolve and the
+    //    settings-editor trim commit, which now syncs a TrimWindow region at
+    //    commit.)
     //  - Free: untouched scratch (drag-formed) — no re-derive.
     if (follow_extent)      set_region_to_selection_extent(app, audio, viewport);
-    else if (trim_resync)   sync_region_to_trim_window(app, audio, viewport);
+    else if (trim_resync)   sync_region_to_trim_window(app, audio, selection, viewport);
     // The sync render's damage stops at the waveform's bottom edge; the
     // bottom strip is the one surface it does not cover (the dragged
     // marker's pass/ref readout resolves through the predecessor, and a
@@ -1446,8 +1456,13 @@ void MarkerDragOps::end_tempo_drag() {
     // No stem damage at release, on either grab shape. A SINGLE-marker grab IS
     // the singleton selection (its arming press single-selected it), so the
     // always-on focus stem painted throughout the drag and stays painted after
-    // it; a GROUP grab keeps 2+ selected through the whole gesture, so no stem
-    // painted at any point and none appears at release. Either way the release
+    // it; a GROUP grab normally keeps 2+ selected through the whole gesture, so
+    // no stem paints at any point and none appears at release — and when a
+    // mid-drag COINCIDENT compression collapses the group to its focus (the
+    // uniform never-rest-2+-without-a-span invariant), the stem's appear damage
+    // is owned by that collapse at the moment it happens
+    // (Selection::collapse_to_focused's subject-change owner), not by this
+    // release. Either way the release
     // moves nothing (tempo_drag.active going
     // false changes no stem input). A net-changed drag already repainted the stem's
     // moving image via each per-cent-step kick_waveform_sync; a walled / zero-commit
@@ -1715,7 +1730,7 @@ void MarkerDragOps::step_tempo_image(int direction) {
     viewport.move_playhead_to(
         source_frame_to_active_domain(app, audio, mv[f].time_frame));
     if (follow_extent)      set_region_to_selection_extent(app, audio, viewport);
-    else if (trim_resync)   sync_region_to_trim_window(app, audio, viewport);
+    else if (trim_resync)   sync_region_to_trim_window(app, audio, selection, viewport);
     // The focused marker's always-on focus stem rides the FOCUSED image's slide
     // on the kick_waveform_sync full-waveform re-warp above — its source frame
     // never moved (tempo only), but the re-warp repaints its moved image column.
