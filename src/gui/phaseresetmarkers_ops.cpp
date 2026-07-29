@@ -184,27 +184,27 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 }
 
 // Nudge the selected phase resets by exactly one on-screen pixel column per
-// press (GROUP, architect 2026-07-23 — a 2+ selection nudges rigidly, the
-// keyboard sibling of the group position drag; a singleton is the degenerate
-// case). Direction: -1 for earlier, +1 for later. Symmetric with
-// nudge_selected_markers — the FOCUSED reset is the pixel-column ANCHOR
-// (stepped_anchor_frame — the one-column-per-press derivation and its numeric
-// rationale live in the comment there), and every OTHER selected member rides the
-// anchor's uniform target-domain
-// delta D as a COMPUTED position (snap(inv(fwd(orig_k) + D)) through the mapped
-// domain, never re-column-snapped per member). Both columns share
-// painted_column_of_source_frame / authored_frame_at_column, so the anchored
-// column is the painted one and every committed value is a whole source frame.
+// press — EACH of them, on its own column (GROUP, architect 2026-07-23; the 2+
+// selection became per-member rather than rigid on 2026-07-29, so this gesture
+// is no longer the keyboard sibling of the group position DRAG, which stays
+// rigid). Direction: -1 for earlier, +1 for later. Symmetric with
+// nudge_selected_markers — every moved reset, lone or member, is its own
+// pixel-column anchor (stepped_anchor_frame — the one-column-per-press
+// derivation, its numeric rationale, and the spacing consequences the
+// per-member rule accepts live in the comment there). Both columns share
+// painted_column_of_source_frame, so the anchored column is the painted one and
+// every committed value is a whole source frame.
 //
 // Wall semantics are one regime, GROUP-strict, against this column's absolute
 // range (zero / total_frames - 1 — the single marker EOF wall both columns share;
 // see drop_phase_reset_at_position for the ruling): this gesture runs in phase
 // reset's TARGET home view only (the home-view binding, architect 2026-07-22), so
 // the all-or-nothing silent refusal applies to the WHOLE group — if ANY member's
-// proposal (the anchor's column snap or any rider's rigid position) leaves the
-// range the whole press refuses (no per-member skip; the wall is hit before
-// anything moves — the group step's max-strict precedent). A singleton is
-// bit-for-bit the pre-group refusal. The integer walls win over the pixel grid.
+// proposal leaves the range the whole press refuses (no per-member skip and no
+// per-member clamp; the wall is hit before anything moves — the group step's
+// max-strict precedent), the FOCUSED member included, since 2026-07-29 evaluated
+// on each member's own column snap. A singleton is bit-for-bit the pre-group
+// refusal. The integer walls win over the pixel grid.
 // (The old source-view clamp arm died with the binding — there is no per-view
 // refuse-vs-clamp split left.) Crossing a neighbor is legal and goes through the
 // reorder-and-remap path below; the render boundary collapses an exact-equal
@@ -219,73 +219,60 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
         static_cast<int>(app.phaseresetmarkers.markers().size()));
     if (!pro.ok) return;
     const bool merge = pro.merge;
-    // GROUP nudge (architect 2026-07-23): a 2+ selection nudges RIGIDLY, the
-    // keyboard sibling of the group position drag — NO collapse_to_focused. Phase
-    // resets carry no tempo, so there is no inherit/tempo analog; the FOCUSED
-    // reset (app.last_selected_marker) is the pixel-anchored ANCHOR and every
-    // other selected member rides its uniform delta D (the rigid-group
-    // convention — computed positions, never re-column-snapped per member). A
-    // singleton degenerates to the anchor alone.
+    // GROUP nudge (architect 2026-07-23): a 2+ selection moves whole — NO
+    // collapse_to_focused. Phase resets carry no tempo, so there is no
+    // inherit/tempo analog. Since 2026-07-29 it moves PER MEMBER (architect):
+    // each selected reset re-snaps to its OWN adjacent painted column, so the
+    // painted step is exactly one column for every one of them; the rigid single
+    // delta and the "never re-column-snapped per member" convention apply to the
+    // pointer group DRAG only now. app.last_selected_marker stays the FOCUS (the
+    // playhead follows it), not an anchor the others ride.
     const auto& tv = app.phaseresetmarkers.markers();
     const int   f  = pro.focused;   // validated in [0, tv.size()) by the prologue
 
     // The anchoring map is the DISPLAYED paint basis —
     // displayed_or_live_target_map, the SAME map the flag/trim painters read —
-    // so the ANCHOR moves by exactly the commanded pixel column against WHAT IS
-    // PAINTED, even inside a worker publish window where the displayed map lags
-    // the live one. Phase resets author in their TARGET home view only (the
-    // home-view binding, architect 2026-07-22), a mapped (non-identity) domain,
-    // so the wall policy is one regime — GROUP all-or-nothing silent refusal:
-    // if ANY member's proposal leaves the absolute range the WHOLE press refuses
-    // (the wall is hit before anything moves — the group's max-strict precedent).
-    // The former source-view clamp arm was unreachable under the binding and is
-    // gone.
+    // so each moved reset travels exactly the commanded pixel column against
+    // WHAT IS PAINTED, even inside a worker publish window where the displayed
+    // map lags the live one. Phase resets author in their TARGET home view only
+    // (the home-view binding, architect 2026-07-22), a mapped (non-identity)
+    // domain, so the wall policy is one regime — GROUP all-or-nothing silent
+    // refusal: if ANY member's proposal leaves the absolute range the WHOLE press
+    // refuses (the wall is hit before anything moves — the group's max-strict
+    // precedent). The former source-view clamp arm was unreachable under the
+    // binding and is gone.
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
     const int64_t reset_wall = audio.total_frames() - 1;
 
-    // (1) The ANCHOR steps one painted column (stepped_anchor_frame; its committed
-    // frame is the pixel anchor). A refusal here refuses the whole press.
+    // (1) EVERY moved reset — the lone one, or each member of a 2+ selection —
+    // takes the SAME step: its own currently painted column, plus direction,
+    // committed through authored_frame_at_column's target arm (stepped_anchor_frame;
+    // the doctrine, the numbers, and the spacing consequences the per-member rule
+    // accepts live at its declaration). One painted column per press each, no
+    // shared delta: the rigid single-delta form, with its forward map and its
+    // unclamped inverse, left this gesture on 2026-07-29 (architect).
+    //
+    // (2) THE ONE refusal is the EXACT INTEGER wall belt on the SNAPPED result
+    // (t_new outside [0, reset_wall]) — walls are exact integer compares, never a
+    // float compare (the exact-wall-reach doctrine forbids an epsilon-fragile
+    // pre-filter), and a proposal that rounds ONTO a wall passes (equality is
+    // legal). ANY out-of-range member refuses the WHOLE press, the focused one
+    // included: the max-strict regime this column has always had, now evaluated
+    // on each member's own column snap. It also has to stay a refusal rather than
+    // becoming a per-member clamp — clamping would pool the clamped members onto
+    // the wall frame and merge them permanently; the warp twin adopts the same
+    // shape, flagged there as a planner translation of the per-member rule.
+    // A SINGLETON is bit-for-bit its long-standing behavior: one snap, one belt.
     const int64_t orig_f = tv[f].time_frame;
-    const int64_t committed_f =
-        stepped_anchor_frame(app, audio, map, orig_f, direction);
-    if (committed_f < 0 || committed_f > reset_wall) return;
-    // (2) The uniform ACTIVE-domain (target) delta from the anchor's step, in the
-    // mapped domain: D = fwd(committed_f) - fwd(orig_f).
-    const double D = map_source_to_target(static_cast<double>(committed_f), map)
-                   - map_source_to_target(static_cast<double>(orig_f),      map);
-
-    // (3) Every member's proposal: the anchor commits its column snap; every
-    // OTHER member is the rigid computed position snap(inv(fwd(orig_k) + D)) — the
-    // ONE double-to-authored route, never re-column-snapped. THE ONE refusal is
-    // the EXACT INTEGER wall belt on the SNAPPED result (t_new outside
-    // [0, reset_wall]) — walls are exact integer compares, never a float compare
-    // (the exact-wall-reach doctrine forbids an epsilon-fragile pre-filter). To
-    // make that belt honest the inverse must NOT clamp: map_target_to_source pins
-    // any query at/below the map's first target breakpoint to source frame 0,
-    // which would HIDE a below-start rigid proposal at 0 and pass the belt (the
-    // round-1 trap). unclamped_target_to_source instead extends segment 0's slope
-    // backward, so a truly-outside proposal reaches a negative (or past-wall)
-    // source double, snaps to an out-of-range integer, and refuses; a proposal
-    // whose exact rigid result rounds ONTO a wall snaps to 0/reset_wall and passes
-    // (equality is legal). ANY out-of-range member refuses the whole press. The
-    // ANCHOR keeps its own post-snap check (committed_f from authored_frame_at_column
-    // DEFINES D, so a low-clamped anchor still yields a rigid D matching its actual
-    // displayed move — the singleton behavior, unchanged by ruling).
+    int64_t committed_f = orig_f;   // the focused reset's commit, for the follow
     std::vector<std::pair<int, int64_t>> proposals;
     proposals.reserve(app.selected_markers.size());
     for (int idx : app.selected_markers) {
-        int64_t t_new;
-        if (idx == f) {
-            t_new = committed_f;
-        } else {
-            const double tgt_prop =
-                map_source_to_target(static_cast<double>(tv[idx].time_frame),
-                                     map) + D;
-            t_new = snap_authored_frame(
-                unclamped_target_to_source(tgt_prop, map));
-            if (t_new < 0 || t_new > reset_wall) return;
-        }
+        const int64_t t_new = stepped_anchor_frame(
+            app, audio, map, tv[idx].time_frame, direction);
+        if (t_new < 0 || t_new > reset_wall) return;
+        if (idx == f) committed_f = t_new;
         proposals.emplace_back(idx, t_new);
     }
     bool any_changed = false;

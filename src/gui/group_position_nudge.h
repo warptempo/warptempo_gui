@@ -17,14 +17,16 @@ struct GuiTargetRender;
 // reset nudge (GuiPhaseResetMarkersOps::nudge_selected_phase_resets, target home
 // view). Both are the bare Left/Right press with a non-empty selection (the
 // marker lane), each authoring its own column in its home
-// view; a 2+ selection nudges rigidly, a singleton is the degenerate case. The
-// twins share an identical guard prologue, an identical pixel-column anchor
-// step, and an identical commit tail; only the WALL-REGIME MIDDLE differs by
-// ruled doctrine ("one regime per column at its home") — warp CLAMPS the rigid
-// integer delta into the member wall-headroom intersection (identity domain),
-// phase REFUSES all-or-nothing over the mapped domain (unclamped inverse + exact
-// integer wall belt) — and that middle stays in each twin VERBATIM. These three
-// free functions collapse only the type-free parts: no templates, no callbacks,
+// view; a 2+ selection moves every member by its own painted column (architect
+// 2026-07-29 — the doctrine is at stepped_anchor_frame below), a singleton is
+// the degenerate case. The twins share an identical guard prologue, an identical
+// pixel-column step, and an identical commit tail; only the WALL-REGIME MIDDLE
+// differs by ruled doctrine ("one regime per column at its home") — warp CLAMPS
+// a singleton's step into its wall headroom (identity domain), phase REFUSES
+// over the mapped domain (exact integer wall belt), and a GROUP refuses the
+// whole press in BOTH twins (per-member clamping would pool members onto a wall
+// frame) — and that middle stays in each twin VERBATIM. These three free
+// functions collapse only the type-free parts: no templates, no callbacks,
 // no policy structs (the naming-symmetry doctrine resists genericity — this is
 // plain extraction of the shared flesh).
 
@@ -76,17 +78,20 @@ GroupNudgePrologue group_position_nudge_prologue(
     GuiPlaybackLifecycle& playback_lifecycle, Undo& undo,
     GestureKind kind, int store_size);
 
-// The shared pixel-column ANCHOR step: read the focused item's currently painted
-// column (painted_column_of_source_frame — the stem painters' own math against
-// the displayed paint basis) and commit the frame at cf + direction
-// (authored_frame_at_column, which funnels through snap_authored_frame, the one
-// fractional-to-authored route). Returns the committed frame RAW — walls are NOT
-// this helper's business: the warp twin clamps its rigid delta afterward, the
-// phase twin applies its own all-or-nothing refusal.
+// THE PER-ITEM pixel-column step, and the ONLY position derivation either nudge
+// uses: read the item's currently painted column (painted_column_of_source_frame
+// — the stem painters' own math against the displayed paint basis) and commit
+// the frame at cf + direction (authored_frame_at_column, which funnels through
+// snap_authored_frame, the one fractional-to-authored route). Returns the
+// committed frame RAW — walls are NOT this helper's business: each twin applies
+// its own regime to the result. A singleton calls it once; a 2+ selection calls
+// it once PER MEMBER, each member on its own painted column — under that rule
+// every moved item is its own anchor, and the name is read that way.
 //
-// THE ONE-COLUMN-PER-PRESS GUARANTEE and its numeric rationale live here. It is a
-// GRID-FINENESS property, not a gesture-family property: the anchor's painted move
-// is exactly the commanded column per press because the authored FRAME grid is
+// THE ONE-COLUMN-PER-PRESS GUARANTEE and its numeric rationale live here, and
+// they hold for EVERY moved item, singleton or group member. It is a
+// GRID-FINENESS property, not a gesture-family property: the painted move is
+// exactly the commanded column per press because the authored FRAME grid is
 // finer than the pixel grid, so every adjacent-column target is representable in
 // the authored domain (and re-anchoring to the column grid every press re-derives
 // the pixel phase, so whole-frame rounding residue never accumulates — rounding
@@ -95,10 +100,43 @@ GroupNudgePrologue group_position_nudge_prologue(
 // source frames per target pixel under the value brackets (tempo times both scales
 // at least 0.25 * 0.5 * 0.5 = 1/16) at the 44100 sample-rate floor, so the
 // whole-frame rounding error is just under 0.291 px (0.5 / 1.72265625 =
-// 0.29025); in the WARP nudge's identity
-// source home the bound is trivially stronger (a column is at least 27.5625 whole
-// frames, error at most 0.5 frame, about 0.018 px). Either way each press still
-// advances at least one whole frame.
+// 0.29025); in the WARP nudge's identity source home the bound is trivially
+// stronger (a column is at least 27.5625 whole frames, error at most 0.5 frame,
+// about 0.018 px). Either way each press still advances at least one whole frame.
+//
+// THE GROUP IS PER-MEMBER, NOT RIGID (architect 2026-07-29, reversing the
+// rigid-group convention FOR THE KEYBOARD NUDGE ONLY): every selected member
+// takes this same step on its own column, so every member moves EXACTLY one
+// painted column per press, always, with zero residue. Visual determinism was
+// chosen over store rigidity on a gesture the architect uses rarely, after the
+// rigid form's own defect: a single delta derived by re-snapping the FOCUSED
+// member absorbed that member's post-zoom sub-column phase, so the first press
+// after any zoom moved the group by up to a column and a half and the group
+// visibly SPLIT — some members crossed a column boundary on that delta and the
+// rest did not. Deriving the delta from the grid's own column step would have
+// fixed the split but left ~1/spp of members painting a 0- or 2-column step on
+// any given press, which is inherent to one integer delta over a fractional
+// pixel grid. Per-member snapping removes it entirely.
+//
+// THE POINTER GROUP DRAG IS UNAFFECTED and stays RIGID: the two group-move
+// gestures now have different spacing semantics, deliberately. What the codex
+// round-3 review called the per-member "spacing defect" was a defect against a
+// rigidity claim this gesture no longer makes; it is the RULED behavior here and
+// remains the defect in the drag, which still claims rigidity.
+//
+// THE ACCEPTED CONSEQUENCES, both of them spacing:
+// (a) SPACING QUANTIZES TO THE PIXEL GRID. Each member's sub-column phase is
+//     flattened on its FIRST press (a bounded move, under one column) and never
+//     again — from press one every member is grid-aligned and steps exactly one
+//     column. Non-cumulative.
+// (b) MEMBERS SHARING A PAINTED COLUMN COLLAPSE ONTO ONE GRID FRAME and move
+//     identically thereafter (undo restores the spacing; a later press does
+//     not). At fine zoom the column is about 30 frames, sub-millisecond and
+//     inaudible; at coarse zoom it can be thousands of frames, and an exact
+//     frame tie goes LOUD at the render boundary (the normalization red flags,
+//     the 1.00 collapse). This is a PLANNER acceptance of the architect's
+//     per-member rule, pending the architect's live test — not an architect
+//     ruling on the collapse itself.
 //
 // The contrast is the point, documenting a trap that already bit once: the
 // W+target bare Left/Right TEMPO-IMAGE STEP (MarkerDragOps::step_tempo_image) is

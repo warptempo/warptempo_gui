@@ -205,7 +205,11 @@ inline double source_grid_position_at_column(int64_t viewport_start,
 // the pixel phase on every gesture, so whole-frame rounding residue can
 // never accumulate on top of an off-grid sub-pixel phase; the painted
 // move is exactly the commanded number of columns, and the stored value
-// is the whole frame the painting already shows.
+// is the whole frame the painting already shows. A group nudge applies this
+// same commit to EVERY selected member on its own painted column, so the
+// statement is per-item and holds unchanged for a 2+ selection (the group's
+// spacing consequences are stated at stepped_anchor_frame in
+// group_position_nudge.h and not repeated here).
 //
 // painted_column_of_source_frame: the pixel column (offset from
 // waveform_area(app).x) the stem painters draw `source_frame` at,
@@ -258,13 +262,15 @@ int64_t authored_frame_at_column(
     const AppState& app, const GuiAudio& audio, int col,
     const std::vector<WarpFrameMapSegment>& warp_frame_map);
 
-// UNCLAMPED inverse of map_source_to_target, the honest-inverse for the group
-// PHASE-RESET nudge's rider proposals in its target home view — that nudge is
-// its ONE consumer, a recorded phase-reset-only asymmetry (the warp position
-// nudge authors in source view, an identity domain with no inverse to take; the
-// short-lived 2026-07-24 warp-in-target position branch that briefly shared
-// this helper was re-ruled away the same day). Kept here beside the other map
-// helpers. map_target_to_
+// UNCLAMPED inverse of map_source_to_target, the honest-inverse for a rigid
+// rider proposal in a mapped (target) domain. NO CALLER TODAY: its one consumer
+// was the group phase-reset nudge, whose rigid single-delta form was replaced by
+// a per-member column snap on 2026-07-29 (see group_position_nudge.h), and it is
+// kept as the ready answer for the next mapped-domain rigid commit rather than
+// re-derived then. The warp position nudge authors in source view, an identity
+// domain with no inverse to take; the short-lived 2026-07-24 warp-in-target
+// position branch that briefly shared this helper was re-ruled away the same
+// day. Kept here beside the other map helpers. map_target_to_
 // source CLAMPS any query at or before the map's first target breakpoint to the
 // first source frame, which would HIDE an out-of-range rigid proposal at 0 and
 // pass the post-snap wall belt. This instead EXTENDS segment 0's slope backward

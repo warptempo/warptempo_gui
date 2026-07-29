@@ -187,7 +187,7 @@ namespace {
 // exactly coincident markers is touched, the tie's moved member is still
 // identified. This resolves the touched set, writes it as the selection, and
 // picks the EARLIEST touched marker as focus (equal members; the group nudge's
-// pixel anchor, the tempo step's re-land, Tab's start, and the lane/readout
+// playhead follow, the tempo step's re-land, Tab's start, and the lane/readout
 // fallbacks all tolerate it, and a singleton's earliest IS the touched marker).
 // The VISUAL tail — the playhead land (on the FOCUS in both arms, which is the
 // touched marker for a singleton and the earliest touched member for a group;

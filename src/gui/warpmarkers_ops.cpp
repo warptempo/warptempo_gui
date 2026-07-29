@@ -728,9 +728,11 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
 }
 
 // Nudge the selected warp markers by exactly one on-screen pixel column per
-// press (GROUP, architect 2026-07-23 — a 2+ selection nudges rigidly, the
-// keyboard sibling of the group position drag; a singleton is the degenerate
-// case). direction: -1 for earlier (up/left), +1 for later (down/right).
+// press — EACH of them, on its own column (GROUP, architect 2026-07-23; the 2+
+// selection became per-member rather than rigid on 2026-07-29, so this gesture is
+// no longer the keyboard sibling of the group position DRAG, which stays rigid —
+// the doctrine and the spacing consequences are at stepped_anchor_frame).
+// direction: -1 for earlier (up/left), +1 for later (down/right).
 //
 // SOURCE HOME VIEW ONLY (the home-view binding, architect 2026-07-22 — restored
 // 2026-07-24 second pass: the same-day "third exception", a both-views warp
@@ -739,17 +741,18 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents) {
 // there is no warp position authoring in target view at all, and the dispatch
 // site in input_handler.cpp owns the routing).
 //
-// The CLAMP regime over the identity map: the FOCUSED marker (the ANCHOR) steps
-// one PAINTED column (stepped_anchor_frame — the one-column-per-press guarantee
-// and its numeric rationale live in the comment there), every OTHER member rides
-// the anchor's uniform INTEGER delta D (orig_k + D, NEVER re-column-snapped per
-// member — the rigid-group convention; the codex round-3 spacing defect was
-// per-member snapping), and D is clamped ONCE into the intersection of every
-// member's wall headroom [0 - orig_k, warp_wall - orig_k] so the group stops AS A
-// UNIT at the first member's wall (walls exactly reachable; a singleton's
-// intersection is its own headroom, bit-for-bit the pre-group clamp). Crossing a
-// neighbor is legal and goes through the reorder-and-remap below; the render
-// boundary collapses exact-frame ties to one 1.00 owner.
+// The wall regime over the identity map, one shape per selection size. A
+// SINGLETON steps its marker one PAINTED column (stepped_anchor_frame — the
+// guarantee and its numeric rationale live in the comment there) and its delta
+// is CLAMPED into its own wall headroom, walls exactly reachable, bit-for-bit
+// the pre-group behavior. A GROUP gives every member that same step on its own
+// column and REFUSES THE WHOLE PRESS if any proposal leaves [0, warp_wall] —
+// the group stops as a UNIT, and clamping per member instead would pool them
+// onto the wall frame permanently (the rationale sits at the refusal). Crossing
+// a neighbor is legal and goes through the reorder-and-remap below; the render
+// boundary collapses exact-frame ties to one 1.00 owner — reachable now not only
+// by crossing but by two members sharing a painted column, which the per-member
+// rule merges.
 void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
     // Shared guard prologue: loading / empty-audio refusal, playback stop first,
     // empty/no-focus refusals, the coalesce verdict, the geometry refusals, and
@@ -760,77 +763,104 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
         static_cast<int>(app.warpmarkers.markers().size()));
     if (!pro.ok) return;
     const bool merge = pro.merge;
-    // GROUP nudge (architect 2026-07-23): a 2+ selection nudges RIGIDLY, the
-    // keyboard sibling of the group position drag — NO collapse_to_focused. The
-    // FOCUSED marker (app.last_selected_marker) is the pixel-anchored ANCHOR;
-    // every other selected member is a COMPUTED position riding the anchor's
-    // uniform delta D (never re-snapped per member — the rigid-group convention,
-    // the codex round-3 spacing defect was per-member snapping). A singleton
-    // degenerates to the anchor alone.
+    // GROUP nudge (architect 2026-07-23): a 2+ selection moves whole — NO
+    // collapse_to_focused. Since 2026-07-29 it moves PER MEMBER (architect):
+    // each selected marker re-snaps to its OWN adjacent painted column, so the
+    // painted step is exactly one column for every one of them; the rigid single
+    // delta, and with it the "never re-snapped per member" convention, applies to
+    // the pointer group DRAG only now. app.last_selected_marker stays the FOCUS
+    // (the playhead follows it), not an anchor the others ride.
     const auto& mv = app.warpmarkers.markers();
     const int   f  = pro.focused;   // validated in [0, mv.size()) by the prologue
 
     // The anchoring map is the DISPLAYED paint basis —
     // displayed_or_live_target_map, the SAME map the flag/trim painters read — so
-    // the ANCHOR moves by exactly the commanded pixel column against WHAT IS
-    // PAINTED. This gesture runs in warp's SOURCE home view only, so the
+    // each moved marker travels exactly the commanded pixel column against WHAT
+    // IS PAINTED. This gesture runs in warp's SOURCE home view only, so the
     // displayed map is the empty identity map here — the shared painted_column /
-    // authored_frame helpers take it naturally, D is a plain integer frame
-    // difference, and the working-zoom authoring-grid bit-exactness claims (all
+    // authored_frame helpers take it naturally, every commit is a plain integer
+    // frame, and the working-zoom authoring-grid bit-exactness claims (all
     // source-view) hold.
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
     const int64_t warp_wall = audio.total_frames() - 1;
 
-    // (1) The ANCHOR steps one painted column (stepped_anchor_frame funnels
-    // through the source-grid single-rounding, so the anchor's painted move is
-    // exactly one column per press); D is the plain integer frame difference.
     const int64_t orig_f = mv[f].time_frame;
-    const int64_t committed_f_raw =
-        stepped_anchor_frame(app, audio, map, orig_f, direction);
-    int64_t D = committed_f_raw - orig_f;
-
-    // (2) WALLS WIN, group-intersected. Intersect each member's wall headroom
-    // [0 - orig_k, warp_wall - orig_k] (integer arithmetic): delta_min =
-    // -min(orig_k), delta_max = warp_wall - max(orig_k), non-empty because
-    // every stored marker rests in [0, warp_wall]. Clamp D ONCE; the group
-    // stops AS A UNIT at the FIRST member's wall. When the clamp engages EVERY
-    // member (the anchor included) is the plain orig_k + D — no anchor column
-    // re-snap, D NEVER recomputed from any committed frame (the re-quantization
-    // trap). A singleton's intersection is [-orig_f, warp_wall - orig_f], so
-    // the anchor commit orig_f + D is clamp(committed_f_raw, 0, warp_wall)
-    // exactly — the pre-group per-marker clamp bit-for-bit.
-    int64_t min_orig = orig_f, max_orig = orig_f;
-    for (int idx : app.selected_markers) {
-        const int64_t o = mv[idx].time_frame;
-        if (o < min_orig) min_orig = o;
-        if (o > max_orig) max_orig = o;
-    }
-    const int64_t delta_min = -min_orig;
-    const int64_t delta_max = warp_wall - max_orig;
-    if (D < delta_min) D = delta_min;
-    if (D > delta_max) D = delta_max;
-
-    // (3) Every member rides the single rigid delta orig_k + D. The
-    // [0, warp_wall] clamp is a deliberate walls-win belt — provably dead today
-    // (this path is all-integer int64 sums, and the intersection proof above
-    // keeps every sum in range), kept as cheap insurance so a future edit to the
-    // intersection code cannot commit a wall-illegal frame (an out-of-wall
-    // authored position would save a load-fatal file).
     std::vector<GuiWarpMarker> proposed = mv;
     bool any_changed = false;
-    for (int idx : app.selected_markers) {
-        int64_t t_new = mv[idx].time_frame + D;
-        if (t_new < 0)         t_new = 0;
-        if (t_new > warp_wall) t_new = warp_wall;
-        if (t_new != mv[idx].time_frame) {
-            proposed[idx].time_frame = t_new;
-            any_changed = true;
+    // The focused marker's committed frame (reorder-independent), for the
+    // playhead follow. Unmoved unless this press moves it.
+    int64_t committed_f = orig_f;
+
+    if (app.selected_markers.size() >= 2) {
+        // (1) GROUP: every member takes the SINGLETON's own op on its OWN
+        // painted column — one painted column per press for each of them, no
+        // shared delta (the doctrine, and the spacing consequences it accepts,
+        // live at stepped_anchor_frame's declaration).
+        //
+        // (2) WALLS WIN AS A UNIT, expressed as a WHOLE-PRESS REFUSAL: if ANY
+        // member's proposal leaves [0, warp_wall] nothing moves at all. Per-member
+        // CLAMPING is what must not happen here — it would pool the clamped
+        // members onto the wall frame, and pooled members then move IDENTICALLY
+        // forever after (pressing back off the wall carries them together), a
+        // permanent merge no undo-free gesture can separate. The rigid delta this
+        // replaced could never do that, and refusing is the honest translation of
+        // "the group stops as a unit" into the per-member world. PLANNER's
+        // translation of the per-member rule, pending the architect's live test.
+        for (int idx : app.selected_markers) {
+            const int64_t t_new = stepped_anchor_frame(
+                app, audio, map, mv[idx].time_frame, direction);
+            if (t_new < 0 || t_new > warp_wall) return;
+            if (idx == f) committed_f = t_new;
+            if (t_new != mv[idx].time_frame) {
+                proposed[idx].time_frame = t_new;
+                any_changed = true;
+            }
         }
+    } else {
+        // (1) SINGLETON: the same step, and D is the plain integer frame
+        // difference. Bit-for-bit the long-standing behavior, clamp included.
+        int64_t D =
+            stepped_anchor_frame(app, audio, map, orig_f, direction) - orig_f;
+
+        // (2) WALLS WIN, headroom-intersected. Intersect each member's wall
+        // headroom [0 - orig_k, warp_wall - orig_k] (integer arithmetic):
+        // delta_min = -min(orig_k), delta_max = warp_wall - max(orig_k),
+        // non-empty because every stored marker rests in [0, warp_wall]. Clamp D
+        // ONCE. A singleton's intersection is [-orig_f, warp_wall - orig_f], so
+        // its commit orig_f + D is clamp(the stepped frame, 0, warp_wall)
+        // exactly — the pre-group per-marker clamp bit-for-bit. (The intersection
+        // shape is what the whole 2+ selection used to ride; it now serves the
+        // singleton alone.)
+        int64_t min_orig = orig_f, max_orig = orig_f;
+        for (int idx : app.selected_markers) {
+            const int64_t o = mv[idx].time_frame;
+            if (o < min_orig) min_orig = o;
+            if (o > max_orig) max_orig = o;
+        }
+        const int64_t delta_min = -min_orig;
+        const int64_t delta_max = warp_wall - max_orig;
+        if (D < delta_min) D = delta_min;
+        if (D > delta_max) D = delta_max;
+
+        // (3) The member commits orig_k + D. The [0, warp_wall] clamp is a
+        // deliberate walls-win belt — provably dead today (this path is
+        // all-integer int64 sums, and the intersection proof above keeps every
+        // sum in range), kept as cheap insurance so a future edit to the
+        // intersection code cannot commit a wall-illegal frame (an out-of-wall
+        // authored position would save a load-fatal file).
+        for (int idx : app.selected_markers) {
+            int64_t t_new = mv[idx].time_frame + D;
+            if (t_new < 0)         t_new = 0;
+            if (t_new > warp_wall) t_new = warp_wall;
+            if (t_new != mv[idx].time_frame) {
+                proposed[idx].time_frame = t_new;
+                any_changed = true;
+            }
+        }
+        committed_f = orig_f + D;
     }
-    if (!any_changed) return;   // fully saturated / D == 0 press: nothing moves
-    // The anchor's committed frame (reorder-independent), for the playhead follow.
-    const int64_t committed_f = orig_f + D;
+    if (!any_changed) return;   // saturated / zero-step press: nothing moves
 
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     // Identity hints (the diff matcher is identity-blind for a translated group —

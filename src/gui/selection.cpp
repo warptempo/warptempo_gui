@@ -211,7 +211,9 @@ void Selection::collapse_to_focused() {
     // collapse the selection to the focused marker so the operation and the
     // resulting selection target last_selected only. The position NUDGES and the
     // GROUP tempo gestures do NOT collapse — they went group (architect
-    // 2026-07-23), operating over the whole selection rigidly. last_selected_marker
+    // 2026-07-23), operating over the whole selection (the tempo gestures move it
+    // rigidly; the nudges step every member on its own painted column since
+    // 2026-07-29). last_selected_marker
     // is untouched — it stays the focus. Callers that full-invalidate afterward
     // make the top-strip / timestamp damage here redundant (a benign damage-union,
     // accepted).
