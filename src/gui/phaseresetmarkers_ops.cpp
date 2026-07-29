@@ -124,7 +124,10 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     // OUTSIDE undo (undoing the delete restores the markers while the region
     // stays). A single deleted reset is a point, not a span, so it forms no
     // region (the sliver rule's spirit; 2-marker + positive-span is the gate).
-    // The waveform damage below covers the region paint.
+    // The waveform damage below covers the region paint. ORDER: the deselect
+    // above runs FIRST, so its membership clear cannot reach the span formed
+    // here — and a FREE span is outside that clear's reach regardless (it takes
+    // SelectionExtent only).
     if (del_positions.size() >= 2) {
         const auto [lo, hi] = std::minmax_element(del_positions.begin(),
                                                   del_positions.end());

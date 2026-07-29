@@ -149,8 +149,9 @@ struct SelectionSnapshot {
 // the REGION's, not the land's (those clicks land on their focus; see
 // land_playhead_on_marker). THE INVARIANT (three-state, architect
 // 2026-07-23): 2+ selected with an active SelectionExtent region ⇒ region == the
-// current selection's extent (maintained by demote_region_provenance, which
-// downgrades to Free the instant the membership is replaced); a TrimWindow region
+// current selection's extent (maintained by clear_region_on_membership_replace,
+// which CLEARS the region outright the instant the membership is replaced — a
+// span whose owner died does not linger); a TrimWindow region
 // tracks the trim bounds' images (re-synced across map changes); a Free region is
 // untouched display scratch. So a drag-formed region always rests with an EMPTY
 // selection (Free), and a trim-derived region (TrimWindow) may rest NEXT TO any
@@ -193,11 +194,15 @@ struct SelectionSnapshot {
 // Region PROVENANCE (architect 2026-07-23, three-state ownership): tracks WHO the
 // region is derived from, which decides how the image-follow tempo gestures treat
 // it across a map change. Free — a drag-formed / demoted region, display scratch
-// that no gesture re-derives. SelectionExtent — set to the marker selection's
+// that no gesture re-derives (the shift-click former, the plain drag, the DELETE
+// demotion — each leaving the selection EMPTY; a marker DROP made afterward
+// single-selects its new marker while deliberately keeping the highlight, so
+// Free-beside-a-singleton is reachable and stays untouched scratch).
+// SelectionExtent — set to the marker selection's
 // [earliest, latest] extent (the downward selection->extent clicks, the
 // position-drag commit, the tempo follows), valid ONLY while that selection
 // persists (any membership
-// REPLACE demotes it to Free via demote_region_provenance). TrimWindow — set to
+// REPLACE CLEARS it via clear_region_on_membership_replace). TrimWindow — set to
 // the trim window's images (sync_highlight_to_trim_window), selection-independent,
 // re-synced from app.trim's source-frame bounds through the new map at every
 // tempo mutation so the highlight tracks the chips/stems.
@@ -227,25 +232,38 @@ struct RegionState {
     // untouched scratch. SET in three places — set_region_to_selection_extent ->
     // SelectionExtent, sync_highlight_to_trim_window's set arm -> TrimWindow, and
     // every OTHER former (region drag, shift-click former/demote, delete
-    // demotions) -> Free — plus demote_region_provenance downgrading
-    // SelectionExtent -> Free on a selection-membership replace. Every wholesale
+    // demotions) -> Free. Nothing CONVERTS one provenance into another:
+    // clear_region_on_membership_replace clears a SelectionExtent region whole
+    // rather than downgrading it. Every wholesale
     // RegionState{} reset (load, navigation clears, the Esc collapse) defaults
     // Free. The Esc ladder, Space launch, x, and navigation clears are
     // provenance-BLIND — they act on any active region.
     RegionProvenance provenance = RegionProvenance::Free;
 };
 
-// Demote a SELECTION-EXTENT region to Free (architect 2026-07-23): SelectionExtent
-// provenance is valid only while the selection it was derived from persists, so
-// EVERY site that REPLACES the selection membership calls this. The region stays
-// visible but stops being a follow target (a region with no live owner is Free).
-// TrimWindow is selection-independent — untouched; Free stays Free. NOT called on
-// an index REMAP (reorder_markers_by_time keeps the same markers at new indices,
-// so the extent is unchanged) or on focus_without_collapse (membership unchanged
-// — the extent is a function of membership only).
-inline void demote_region_provenance(RegionState& r) {
-    if (r.provenance == RegionProvenance::SelectionExtent)
-        r.provenance = RegionProvenance::Free;
+// A MEMBERSHIP REPLACE CLEARS THE EXTENT REGION (architect 2026-07-29,
+// superseding the 2026-07-23 demote-to-Free): SelectionExtent provenance is
+// valid only while the selection it was derived from persists, so EVERY site
+// that REPLACES the selection membership calls this — and what it does is CLEAR
+// the region outright, pixels and all. A span whose owner died does not linger:
+// the region is the playhead's SPAN form, so a highlight resting with no live
+// owner asserts a playhead that is not there, which is exactly the state the
+// point commands then have to fight (a demoted-but-visible extent left the
+// playhead frozen under a stale span in live use). TrimWindow is
+// selection-independent — untouched; Free stays Free. NOT called on an index
+// REMAP (reorder_markers_by_time keeps the same markers at new indices, so the
+// extent is unchanged) or on focus_without_collapse (membership unchanged — the
+// extent is a function of membership only).
+// RETURNS true iff it cleared an ACTIVE region. That return is load-bearing:
+// clearing active pixels changes the waveform (the recolored ground and the
+// split half-triangles go, and the singleton stem the region was suppressing
+// comes back), so a caller that has no full-waveform damage of its own owes
+// viewport.invalidate_waveform_area() on a true return.
+inline bool clear_region_on_membership_replace(RegionState& r) {
+    if (r.provenance != RegionProvenance::SelectionExtent) return false;
+    const bool was_active = r.active;
+    r = RegionState{};
+    return was_active;
 }
 
 // Marker reposition drag state (begun by a plain flag drag past the shared
@@ -361,10 +379,9 @@ struct DragState {
     int                    grabbed_k            = 0;
     // Region as it rested at begin_drag, restored on an Esc / Ctrl+Q cancel
     // alongside the selection snapshot and grab playhead. Only a GROUP drag can
-    // MOVE the region, so for a single-marker drag this restore is a no-op even
-    // when it captures something (see the capture site in marker_drag.cpp: the
-    // live-track is gated on SelectionExtent provenance, which the press's
-    // single-select demoted away).
+    // MOVE the region, and a single-marker drag captures NOTHING to move: its
+    // arming press is a plain marker click, which collapses any resting span
+    // (see the capture site in marker_drag.cpp).
     RegionState            pre_drag_region;
     // Which list this drag operates on. The motion / commit
     // handlers dispatch on this so a drag started in phase reset view
@@ -512,11 +529,13 @@ struct UndoHistory {
 // deselect/demote was the committed act, and downward-only is structural (there
 // is no selection write in the drag, its ends, or its Esc cancel). Esc cancels a
 // live drag, restoring the pre-press region captured here at arm (the marker
-// drag's snapshot pattern — cheap, two ints), then DEMOTING the restored
-// provenance: the shift-former's snapshot is captured before its own
-// clear_selection demote, so it can carry SelectionExtent, but the cancel
-// restores no selection, so an ex-SelectionExtent restore must rest Free (the
-// committed deselect re-applies at the restore). Session-only, never undoable.
+// drag's snapshot pattern — cheap, two ints), then running the MEMBERSHIP CLEAR
+// over the restored snapshot: the shift-former's snapshot is captured before its
+// own clear_selection, so it can carry SelectionExtent, but the cancel restores
+// no selection, and an extent span with no live owner does not rest anywhere in
+// this product — so an ex-SelectionExtent snapshot vanishes instead of coming
+// back (the committed deselect re-applies at the restore). A Free / TrimWindow
+// snapshot restores exactly. Session-only, never undoable.
 struct RegionDragState {
     bool    active       = false;
     bool    moved        = false;  // crossed the threshold into a real drag
@@ -525,7 +544,8 @@ struct RegionDragState {
     int64_t anchor_frame = 0;      // active-domain frame the press placed
     // The region as it rested BEFORE the press dissolved it, provenance and all;
     // restored on an Esc cancel of the gesture, bringing the pre-press highlight
-    // back (the cancel then demotes the restored provenance — see the class doc).
+    // back (the cancel then runs the membership clear over it, so an
+    // ex-SelectionExtent snapshot does not return — see the class doc).
     RegionState pre_region;
 };
 
@@ -686,7 +706,7 @@ struct TempoDragState {
     // before the press can leave the region stale, even coincident). The
     // SelectionExtent per-event follow stays LIVE (see apply): it can never rest
     // cleared mid-drag (the post-kick re-derive always re-activates with in-domain
-    // clamped endpoints, and no demote runs with keys swallowed).
+    // clamped endpoints, and no membership clear runs with keys swallowed).
     bool    grab_trim_highlight = false;
     // Whole-struct pre-drag region (provenance included), captured at
     // begin_tempo_drag and RESTORED VERBATIM by cancel_tempo_drag — the position
@@ -1873,13 +1893,16 @@ inline SelectionSnapshot capture_selection_snapshot(const AppState& app) {
 
 inline void restore_selection_snapshot(AppState& app,
                                        const SelectionSnapshot& s) {
-    // Restoring the snapshot replaces the live membership -> demote a
-    // SelectionExtent region to Free. Harmless at both drags' cancels: each
-    // restores its whole-struct captured pre_drag_region VERBATIM (the position
-    // drag's app.drag.pre_drag_region, the tempo drag's
-    // TempoDragState::pre_drag_region) AFTER this restore, so the verbatim write
-    // lands last and reinstates the captured provenance regardless of this demote.
-    demote_region_provenance(app.region);
+    // Restoring the snapshot replaces the live membership -> clear a
+    // SelectionExtent region. INVISIBLE at both drags' cancels, which are this
+    // helper's only callers: each restores its whole-struct captured
+    // pre_drag_region VERBATIM (the position drag's app.drag.pre_drag_region,
+    // the tempo drag's TempoDragState::pre_drag_region) AFTER this restore, so
+    // the verbatim write lands last and reinstates the captured region — span,
+    // provenance and all — regardless of this clear. That is why no damage rides
+    // the return here; a future caller that does NOT restore a region afterward
+    // would owe waveform damage on a true return (see the helper).
+    (void)clear_region_on_membership_replace(app.region);
     app.selected_markers     = s.selected_markers;
     app.last_selected_marker = s.last_selected_marker;
 }

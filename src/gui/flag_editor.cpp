@@ -179,20 +179,24 @@ void GuiFlagEditor::enter_text_edit(int idx,
     // Reached only in W + source view — all three open routes gate the marker
     // view to the WARP column and take active_column_authoring_allowed — so `idx`
     // resolves against the warp store the helper reads, in the identity domain.
-    // Which opens actually MOVE anything is decided by the movement gate inside
-    // the helper (a land onto the playhead's current sample does nothing at all):
-    // the pointer double-click open is a structural no-op (its click landed on
-    // this same marker one step earlier), and so is bare Return, because every
-    // route that set the focus already landed on it. The one open that moves is
-    // `m`, which opens on the span's OWNER — the earliest selected — while the
-    // focus (and so the playhead) sits wherever the click that built the span
-    // left it. That land is real, so it dissolves the span's extent highlight,
-    // and the `m` handler re-derives it right after restoring the span
-    // membership (input_key_dispatch.cpp). The
-    // same_target early return above correctly skips the land: the playhead is
-    // already there from the first open.
+    // AND COLLAPSE ANY RESTING SPAN: an open asserts the playhead's POINT form
+    // (one marker focused, its flag standing in for the cursor), so the region —
+    // the SPAN form — ends here, unconditionally and of any provenance. This one
+    // chokepoint covers every open and retarget (bare Return, the pointer
+    // double-click, `m`, a pointer retarget of the live editor), which is why no
+    // opener carries a clear of its own. Most opens land on the marker the
+    // playhead already sits on (their route set the focus by landing on it), and
+    // the clear runs there too: the collapse is NOT gated on the land having
+    // moved anything — a span left resting under a point command is exactly the
+    // state this model abolishes. The one open that also RE-DERIVES a span is
+    // `m`: it opens on the span's OWNER, and its handler restores the span
+    // membership and re-derives the extent right after this returns
+    // (input_key_dispatch.cpp) — the clear-then-extent order, in the only
+    // direction that works. The same_target early return above skips both: the
+    // playhead is already there from the first open and no form changed.
     selection.set_single_selection(idx);
     land_playhead_on_marker(app, audio, viewport, idx);
+    clear_region_highlight(app, viewport);
 
     // Discard any prior edit silently before switching targets.
     if (text_editor::is_active(app.top_flag_editor) &&

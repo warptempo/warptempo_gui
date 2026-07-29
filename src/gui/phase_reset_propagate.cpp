@@ -593,10 +593,11 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
     }
     active_views.switch_active_markers_view_to('P');
     if (!created.empty()) {
-        // The paste replaces the membership with the created resets -> demote a
-        // SelectionExtent region to Free (explicit: switch_active_markers_view_to
-        // is a no-op when already in P view, so its prune-demote may not have run).
-        demote_region_provenance(app.region);
+        // The paste replaces the membership with the created resets -> CLEAR a
+        // SelectionExtent region (explicit: switch_active_markers_view_to is a
+        // no-op when already in P view, so its prune-clear may not have run).
+        // No damage call: this tail invalidates the whole waveform area below.
+        (void)clear_region_on_membership_replace(app.region);
         app.selected_markers     = created;
         // FIRST created reset as the focus. This is a PROGRAMMATIC group
         // selection, and the product's other one — undo/redo's touched-set
@@ -611,9 +612,10 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
         // would suppress the cursor while playhead_cursor_sample still held the
         // pre-paste value re-expressed through the S->T switch, leaving NO
         // playhead painted anywhere. Land only: the paste deliberately sets no
-        // extent region (the demote above is its whole region handling), and the
-        // land's own dissolve — which fires when the land moves the playhead, the
-        // movement gate at land_playhead_on_marker — is the region's end here.
+        // extent region, and the membership clear above is its WHOLE region
+        // handling (the land is a pure playhead write with no side effect) — so
+        // a TrimWindow or Free region rests through a paste, as it does through
+        // the W/P swap this tail rides.
         land_playhead_on_marker(app, viewport.audio, viewport, *created.begin());
     }
     viewport.invalidate_top_strip();

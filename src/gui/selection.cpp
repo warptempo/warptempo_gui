@@ -122,10 +122,15 @@ void Selection::repair_last_selected() {
 }
 
 void Selection::set_single_selection(int idx) {
-    // Membership replace -> demote a SelectionExtent region to Free (it is no
-    // longer this selection's extent). Harmless when a downward selection->extent
-    // click re-owns right after (demote-then-re-own).
-    demote_region_provenance(app.region);
+    // Membership replace -> CLEAR a SelectionExtent region (it is no longer this
+    // selection's extent, and a span whose owner died does not linger).
+    // Harmless when a downward selection->extent click re-owns right after
+    // (clear-then-re-own). Clearing ACTIVE pixels needs waveform damage of its
+    // own — the recolored ground and split halves go, and the singleton stem the
+    // region was suppressing comes back — and it cannot be left to a nearby
+    // clear_region_highlight, which early-returns on the now-inactive region.
+    if (clear_region_on_membership_replace(app.region))
+        viewport.invalidate_waveform_area();
     const bool was_empty = app.selected_markers.empty();
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     const std::optional<int64_t> old_stem    = stem_subject();
@@ -171,10 +176,12 @@ void Selection::focus_without_collapse(int idx) {
 }
 
 void Selection::clear_selection() {
-    // Membership replace (to empty) -> demote a SelectionExtent region to Free.
-    // A region with no live owner is Free (the Esc lower rung relies on this: it
-    // sets the extent then clears the selection, leaving a Free region).
-    demote_region_provenance(app.region);
+    // Membership replace (to empty) -> CLEAR a SelectionExtent region. The Esc
+    // ladder's first rung under an active region relies on exactly this: one Esc
+    // on a group takes the selection AND its highlight together, because the
+    // span's owner is what just died.
+    if (clear_region_on_membership_replace(app.region))
+        viewport.invalidate_waveform_area();
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     if (app.selected_markers.empty() && app.last_selected_marker == -1)
         return;   // nothing selected (already empty -> no focus flip)
@@ -204,9 +211,13 @@ void Selection::collapse_to_focused() {
     // is untouched — it stays the focus. Callers that full-invalidate afterward
     // make the top-strip / timestamp damage here redundant (a benign damage-union,
     // accepted).
-    // Membership replace (collapse to the focused singleton) -> demote a
-    // SelectionExtent region to Free (a 1-marker extent is degenerate).
-    demote_region_provenance(app.region);
+    // Membership replace (collapse to the focused singleton) -> CLEAR a
+    // SelectionExtent region (a 1-marker extent is degenerate, and the collapse
+    // is what killed the span's owner). A TrimWindow region SURVIVES: the
+    // callers here are value gestures (the inherit toggle, the singleton tempo
+    // step) with no business tearing down a chip-row highlight.
+    if (clear_region_on_membership_replace(app.region))
+        viewport.invalidate_waveform_area();
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     if (app.last_selected_marker < 0) return;   // nothing focused
     const std::optional<int64_t> old_subject = phase_overlay_subject();
@@ -231,10 +242,11 @@ void Selection::collapse_to_focused() {
 }
 
 bool Selection::toggle_selection_membership(int idx) {
-    // Membership replace -> demote a SelectionExtent region to Free. Harmless
-    // when a downward selection->extent ctrl-toggle re-owns right after
-    // (demote-then-re-own).
-    demote_region_provenance(app.region);
+    // Membership replace -> CLEAR a SelectionExtent region. Harmless when a
+    // downward selection->extent ctrl-toggle re-owns right after
+    // (clear-then-re-own).
+    if (clear_region_on_membership_replace(app.region))
+        viewport.invalidate_waveform_area();
     const bool was_empty = app.selected_markers.empty();
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     const std::optional<int64_t> old_stem    = stem_subject();
@@ -271,10 +283,11 @@ void Selection::select_range_from_anchor(int idx) {
     // idx < 0 (never reached from the
     // shift-click path, which resolves a real hit) is a plain no-op guard.
     if (idx < 0) return;
-    // Membership replace -> demote a SelectionExtent region to Free (the
-    // downward selection->extent shift-range re-owns right after via
-    // set_region_to_selection_extent, so this is demote-then-re-own).
-    demote_region_provenance(app.region);
+    // Membership replace -> CLEAR a SelectionExtent region (the downward
+    // selection->extent shift-range re-owns right after via
+    // set_region_to_selection_extent, so this is clear-then-re-own).
+    if (clear_region_on_membership_replace(app.region))
+        viewport.invalidate_waveform_area();
     const bool was_empty = app.selected_markers.empty();
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     const std::optional<int64_t> old_stem    = stem_subject();
@@ -338,14 +351,18 @@ void Selection::select_range_from_anchor(int idx) {
 }
 
 void Selection::sanitize_selection_after_restore(int n) {
-    // A restore replaces the selection membership from the entry -> demote a
-    // SelectionExtent region to Free. This is the DEMOTE half of the group
-    // restore's demote-then-derive (architect 2026-07-25): restore_history_entry's
+    // A restore replaces the selection membership from the entry -> CLEAR a
+    // SelectionExtent region. This is the CLEAR half of the group restore's
+    // clear-then-derive (architect 2026-07-25): restore_history_entry's
     // visual tail runs AFTER this, so a GROUP restore then RE-DERIVES the
     // SelectionExtent region from the fresh touched set (the multi-select clicks'
-    // order). For a singleton / settings restore the demote is terminal (no
-    // re-derive) — a stale SelectionExtent region must not retarget silently.
-    demote_region_provenance(app.region);
+    // order). For a singleton / settings restore the clear is terminal (no
+    // re-derive) — a stale SelectionExtent region must not retarget silently, and
+    // now does not rest at all. The sole caller (restore_history_entry) repaints
+    // the whole waveform anyway, so this damage is normally redundant; it stays
+    // as the structural owner, like the subject-change owners below.
+    if (clear_region_on_membership_replace(app.region))
+        viewport.invalidate_waveform_area();
     // A restore (undo/redo) dissolves the shift-range anchor — this is the
     // route that closes the shift-held hole for Ctrl+Shift+Z: redo holds
     // shift, so no shift falling edge fires (the platform falling-edge hook
@@ -486,9 +503,17 @@ void Selection::select_next_marker() { cycle_selection(true);  }
 void Selection::select_prev_marker() { cycle_selection(false); }
 
 void Selection::prune_live_selection() {
-    // Pruning out-of-range members replaces the membership -> demote a
-    // SelectionExtent region to Free.
-    demote_region_provenance(app.region);
+    // Pruning out-of-range members replaces the membership -> CLEAR a
+    // SelectionExtent region. Its one caller is switch_active_markers_view_to,
+    // which serves TWO routes: for the `p` W/P swap this clear IS the whole
+    // region story — the extent of the column being left goes, while a TrimWindow
+    // or Free region deliberately survives the column flip — and the propagate
+    // paste's target-view tail supplements it with an explicit clear at its own
+    // site, the helper being a no-op when the session is already in P view. The
+    // callers full-repaint the waveform, so the damage here is normally
+    // redundant and stays as the structural owner.
+    if (clear_region_on_membership_replace(app.region))
+        viewport.invalidate_waveform_area();
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     const std::optional<int64_t> old_stem    = stem_subject();

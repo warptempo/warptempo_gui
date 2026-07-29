@@ -372,11 +372,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // a live pointer drag (cancelled at the drag-modal gate above), an open editor
     // (closed in the editor blocks above), and an in-flight render/batch (cancelled
     // just above) each win — and in place of the old plain region clear. It walks
-    // ONE rung per Esc: an active region + 2+ selected clears the SELECTION ONLY
-    // (region rests, demoted to Free); an active region + 0/1 selected collapses to
+    // ONE rung per Esc: an active region + 2+ selected clears the SELECTION, and
+    // its own extent span goes with it (a TrimWindow / Free region rests for the
+    // next press); an active region + 0/1 selected collapses to
     // the playhead (clear region + selection, playhead to its lo bound) — a region
-    // never shrinks into a subregion; else a programmatic multi-select drops to its
-    // extent region + deselects; else a singleton deselects + lands the playhead on
+    // never shrinks into a subregion; else a programmatic multi-select simply
+    // deselects; else a singleton deselects + lands the playhead on
     // the marker. All navigation-class, so this runs in read-only too (the
     // allowlist admits Esc). Bare only — a modified Escape has no binding here or
     // at any other Escape reader. See handle_escape_selection_region for the rungs.

@@ -656,8 +656,12 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // Selected-marker stem (architect 2026-07-25, superseding the
 // conditional-stem round-4 model): the stem is the SINGLETON selection's focus
 // visual — it marks where the playhead sits/would land on the one selected
-// marker, and it ALWAYS paints for that marker. The visibility predicate is
-// simply "exactly ONE marker selected" (+ the bounds checks below): the hover,
+// marker, and it ALWAYS paints for that marker, with ONE exception: an ACTIVE
+// REGION suppresses it (architect 2026-07-29 — the playhead has two forms, POINT
+// and SPAN, and exactly one is ever visible; the region IS the span form and
+// outranks every point cue, the cursor having yielded to it since 2026-07-23).
+// The visibility predicate is "exactly ONE marker selected AND no active
+// region" (+ the bounds checks below): the hover,
 // lateral-gesture PIN, and tempo-drag arms are GONE as gates (the whole
 // conditional-stem apparatus — stem_pin_*, the hover arm, the click-site stem
 // damages — was harvested when the stem became unconditional). "Always" replaces
@@ -689,6 +693,14 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // extent region's recolored ground (kRegionCanvas), the stem's "spread" form.
 void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
+    // The SPAN form outranks the POINT form: while a region is active the stem
+    // yields exactly as the cursor playhead does, so the split half-triangles and
+    // the recolored ground are the only playhead on screen. The SELECTION is
+    // untouched underneath — the focused flag keeps its kWaveform ink triangle,
+    // the top-strip cue — and the stem returns the moment the region clears
+    // (every region write damages the waveform area at its site, so the frame
+    // that drops the span repaints the stem back in).
+    if (app.region.active) return;
     // A single selected marker, else no stem (a group's cue is its ground).
     if (app.selected_markers.size() != 1) return;
     const int idx = *app.selected_markers.begin();
@@ -830,7 +842,12 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // THIS BRANCH IS THE HIGHLIGHT<->CURSOR EXCLUSIVITY OWNER (the highlight IS
     // the playhead stretched out — the split halves are its two ends, so a
     // highlighted region and a cursor must never co-display; architect
-    // 2026-07-23). The split halves paint FULL-OPACITY kPlayheadCursor — the
+    // 2026-07-23). The playhead's SPAN form outranks its POINT form outright, so
+    // it suppresses BOTH point cues: the cursor line + triangle here, and the
+    // SINGLETON STEM (paint_selected_stem's own early return, architect
+    // 2026-07-29) — the selection persisting underneath either way, its focused
+    // flag keeping the ink triangle.
+    // The split halves paint FULL-OPACITY kPlayheadCursor — the
     // CURSOR's own key, because that is literally what they are: the cursor
     // dissolved into its two ends, marking the region bounds where its split form
     // sits. They ride the cursor's key rather than any selection key so that
@@ -852,10 +869,12 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // region ground and the cursor are mutually exclusive by state.
     // Across frames it holds because every
     // app.region write is paired with waveform-area damage at its site (the
-    // formers, the clears, clear_region_highlight, the Esc pre_region restore,
-    // the tick repair, and the undo/redo restore's land-clear / group-extent
-    // set), so the frame that first paints one has already erased
-    // the other — no stale co-display window exists.
+    // formers, the clears, clear_region_highlight, the membership clear
+    // clear_region_on_membership_replace reports through its return, the Esc
+    // pre_region restore, the tick repair, and the undo/redo restore's
+    // group-extent set), so the frame that first paints one has already erased
+    // the other — no stale co-display window exists. The same pairing is what
+    // makes the stem's suppression frame-exact.
     if (app.region.active) {
         if (disp_spp > 0.0) {
             // Same displayed basis and region_columns owner as

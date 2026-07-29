@@ -206,13 +206,13 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // (always applied).
     d.pre_ride_playhead_sample = app.playhead_cursor_sample;
     // Region as it rests at grab, for the Esc-cancel restore. A single-marker
-    // drag may capture an active Free / TrimWindow region (its press's land
-    // dissolves nothing when the playhead is already on the clicked marker — the
-    // movement gate), but the capture is inert there: nothing in a single-marker
-    // drag WRITES the region (apply_drag_motion's live-track is gated on
-    // SelectionExtent provenance, which set_single_selection just demoted away),
-    // so the restore puts back exactly what is still
-    // resting. apply_drag_motion live-tracks an active region to the moving
+    // drag captures an INACTIVE region: its arming press is a plain marker click,
+    // which collapses any resting span unconditionally (the point command owns its
+    // clear — land_playhead_on_marker), so there is nothing left to capture. The
+    // capture would be inert there regardless, nothing in a single-marker drag
+    // WRITING the region (apply_drag_motion's live-track is gated on
+    // SelectionExtent provenance, which set_single_selection's membership clear
+    // just took away). apply_drag_motion live-tracks an active region to the moving
     // group's extent; commit_drag re-derives it from the post-commit store.
     d.pre_drag_region = app.region;
     app.drag = std::move(d);
@@ -403,13 +403,12 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
             viewport.move_playhead_to(sample);
         }
         // Region live-tracking (group drag only — a single-marker press ran
-        // set_single_selection, whose membership replace DEMOTES any
-        // SelectionExtent region to Free, so the provenance gate below excludes
-        // those. That gate, not the land's dissolve, is what makes this
-        // group-only: a land onto the sample the playhead already holds dissolves
-        // nothing (the movement gate), so a Free / TrimWindow region CAN still be
-        // resting during a single-marker drag — untouched, exactly as the gate
-        // intends). Retrack
+        // set_single_selection, whose membership replace CLEARS any
+        // SelectionExtent region, and then the click's own
+        // clear_region_highlight took whatever else was resting, so a
+        // single-marker drag runs with no region at all. The provenance gate
+        // below is the structural guarantee regardless of that: it follows a
+        // SelectionExtent region only). Retrack
         // the active region to the moving group's live extent: min/max over all
         // moveable_times (SCAN — cheap and assumption-free; the two-hop is
         // monotone so order actually survives, but the per-member wall clamps can
@@ -1328,8 +1327,8 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
     //    now-shorter target domain, so this must not gate on post-kick
     //    region.active; but a SelectionExtent region can never REST cleared
     //    mid-drag (the post-kick re-derive always re-activates with in-domain
-    //    clamped endpoints, and no demote runs with keys swallowed), so the live
-    //    read stays valid across events.
+    //    clamped endpoints, and no membership clear runs with keys swallowed), so
+    //    the live read stays valid across events.
     //  - TrimWindow: decided from the GRAB-TIME intent (grab_trim_highlight), NOT
     //    the live provenance — the coincident-image clear arm is DESIGNED to erase
     //    live TrimWindow provenance mid-gesture, so a live read would latch off
@@ -1485,8 +1484,8 @@ void MarkerDragOps::cancel_tempo_drag() {
     // involvement, and no re-derive that would MOVE a numerically-stale
     // SelectionExtent to the current mapped extent. Restore LAST — after the kick
     // (whose domain repair could otherwise clear it) and after
-    // restore_selection_snapshot (whose demote must not downgrade the captured
-    // provenance) — so the captured provenance survives intact.
+    // restore_selection_snapshot (whose membership clear must not take the
+    // captured span away) — so the captured region survives intact.
     app.region = app.tempo_drag.pre_drag_region;
     app.tempo_drag = TempoDragState{};
     viewport.invalidate_waveform_area();

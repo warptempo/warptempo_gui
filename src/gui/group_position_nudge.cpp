@@ -1,7 +1,8 @@
 #include "group_position_nudge.h"
 
 #include "audio.h"
-#include "input_handler.h"      // set_region_to_selection_extent (region follow)
+#include "input_handler.h"      // set_region_to_selection_extent (region follow),
+                                // clear_region_highlight (singleton collapse)
 #include "target_render.h"
 #include "warp_frame_map_view.h"  // painted_column_of_source_frame,
                                   // authored_frame_at_column,
@@ -69,10 +70,20 @@ void finish_group_position_nudge(
     // (e) playhead follows the FOCUSED item's committed frame.
     viewport.move_playhead_to(
         source_frame_to_active_domain(app, audio, committed_focused_frame));
-    // (f) region follow (SelectionExtent only; MAINTAIN, never CREATE).
+    // (f) the region, by the playhead's two forms. A GROUP nudge is a SPAN
+    // gesture: an active SelectionExtent highlight FOLLOWS the moved group
+    // (MAINTAIN, never CREATE), and a resting TrimWindow highlight is left
+    // exactly alone — it still shows the trim correctly, the bounds being source
+    // frames that a W+source nudge does not touch and a P+target nudge cannot
+    // reach (the warp map is what places them, and phase resets do not warp).
+    // A SINGLETON nudge is a POINT command — one flag standing in for the cursor
+    // — so it collapses any resting span instead, unconditionally, exactly like
+    // the marker click that would have selected that singleton.
     if (app.region.active &&
         app.region.provenance == RegionProvenance::SelectionExtent) {
         set_region_to_selection_extent(app, audio, viewport);
+    } else if (app.selected_markers.size() < 2) {
+        clear_region_highlight(app, viewport);
     }
     // (g) view-independent target preview.
     target_render.trigger();

@@ -155,11 +155,14 @@ void GuiActiveViews::toggle_active_markers_view() {
     // visible state alone, so `p` can re-enter the lane with the focus at one
     // position and the playhead at another — the restored flag would claim to be
     // the playhead while Space played from wherever the W-side click left it.
-    // Land on the restored focus. An EMPTY destination slot LEAVES the lane, so
-    // the playhead stays put and the cursor simply paints again (the rule's
-    // second clause) — no move. A swap into a slot whose focus already sits
-    // under the playhead moves nothing either, and the movement gate makes that
-    // land a full no-op: no dissolve, so a resting region survives the swap.
+    // Land on the restored focus — a PURE playhead write, `p` adding no region
+    // clear of its own. An EMPTY destination slot LEAVES the lane, so the
+    // playhead stays put and the cursor simply paints again (the rule's second
+    // clause) — no move. THE REGION STORY IS THE SWAP'S OWN membership replace:
+    // prune_live_selection inside the helper above clears a SelectionExtent span
+    // whose owning selection just left with the column, while a TrimWindow or
+    // Free region deliberately SURVIVES the column flip (the stored highlight is
+    // column-independent).
     //
     // The land lives HERE and not in switch_active_markers_view_to because that
     // helper has a second caller: the propagate paste's target-view tail

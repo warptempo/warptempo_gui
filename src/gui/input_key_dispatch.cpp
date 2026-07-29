@@ -521,20 +521,21 @@ void GuiInputHandler::cancel_active_drags() {
     // The region drag IS a cancel: unlike the strip drag it restores the region
     // to how it rested at arm (the pre-press snapshot), then ends the gesture.
     // Under SELECTION-FLOWS-DOWNWARD-ONLY (architect 2026-07-23) the drag never
-    // touches the selection — the press's deselect/demote was the committed act,
+    // touches the selection — the press's deselect/clear was the committed act,
     // and there is no pre-press selection snapshot to restore. So restore the
-    // region alone, then DEMOTE its provenance: the SHIFT-former captures
-    // pre_region BEFORE its own clear_selection demote runs, so the snapshot can
-    // still carry SelectionExtent, yet the committed deselect left NO owning
-    // selection — an ex-SelectionExtent restore must rest Free (SelectionExtent
-    // is valid only while its selection persists, app_state.h). Free/TrimWindow
-    // snapshots are untouched by the demote, and the plain drag's snapshot is
-    // already post-demote (captured after its press's clear_selection). This
-    // demote is the genuine side effect the deleted C-E clear_selection call used
-    // to provide (its demote ran before the empty-selection early return).
+    // region alone, then run the membership clear ON THE RESTORED SNAPSHOT: the
+    // SHIFT-former captures pre_region BEFORE its own clear_selection runs, so
+    // the snapshot can still carry SelectionExtent, yet the committed deselect
+    // left NO owning selection — and an ownerless extent span does not rest
+    // anywhere in this product, so restoring one verbatim would resurrect
+    // exactly the lie the clear abolishes. It therefore vanishes instead of
+    // coming back. Free/TrimWindow snapshots are untouched (those the restore
+    // reproduces exactly), and the plain drag's snapshot is already post-clear
+    // (captured after its press's clear_selection). The unconditional waveform
+    // damage below covers either outcome.
     if (app.region_drag.active) {
         app.region = app.region_drag.pre_region;
-        demote_region_provenance(app.region);
+        (void)clear_region_on_membership_replace(app.region);
         app.region_drag = RegionDragState{};
         viewport.invalidate_waveform_area();
         // An Esc mid-gesture is not a clean release: drop any double-click
@@ -1572,19 +1573,20 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // blocked set, so playback cannot restart until the editor closes.
         playback_lifecycle.stop_playback_for_modal_open();
         flag_editor.enter_bpm_edit(owner);
-        // The playhead land rides enter_text_edit (the shared open chokepoint):
-        // it lands on `owner`, the EARLIEST selected, while the focus that built
-        // this span sits wherever the multi-select click left it (those clicks
-        // land on their focus — land_playhead_on_marker, input_pointer.cpp). So
-        // this land usually MOVES the playhead, which dissolves the span's extent
-        // highlight, and the open collapsed the selection to {owner} on the way
-        // through. The span re-insert below restores the MEMBERSHIP only —
-        // std::set::insert leaves last_selected_marker alone — so the focus stays
-        // `owner`, and the extent re-derive after it restores the span cue: the
-        // land-then-extent sequence the multi-select clicks run, in the one order
-        // that works (the extent must follow the land, or the land's dissolve
-        // would kill it). Self-gated below 2 members, so a single-marker span
-        // sets no region, exactly as a single-marker click does. No second land.
+        // The playhead land and the span collapse both ride enter_text_edit (the
+        // shared open chokepoint): it lands on `owner`, the EARLIEST selected,
+        // while the focus that built this span sits wherever the multi-select
+        // click left it (those clicks land on their focus —
+        // land_playhead_on_marker, input_pointer.cpp), and it clears the region
+        // because an open asserts the playhead's POINT form. The open also
+        // collapsed the selection to {owner} on the way through. The span
+        // re-insert below restores the MEMBERSHIP only — std::set::insert leaves
+        // last_selected_marker alone — so the focus stays `owner`, and the extent
+        // re-derive after it puts the SPAN form back: the clear-then-extent
+        // sequence the multi-select clicks run, in the one order that works (the
+        // extent must follow the chokepoint's clear, or that clear would kill
+        // it). Self-gated below 2 members, so a single-marker span sets no
+        // region, exactly as a single-marker click does. No second land.
         bool restored = false;
         for (int s : span_selection) {
             if (app.selected_markers.insert(s).second) restored = true;

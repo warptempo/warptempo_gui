@@ -218,7 +218,10 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     // stays (the standing region-outside-undo rule). A single deleted marker is
     // a point, not a span, so it forms no region (the sliver rule's spirit; the
     // 2-marker + positive-span gate needs no sub-pixel column compare). The
-    // waveform damage below covers the region paint.
+    // waveform damage below covers the region paint. ORDER: the deselect above
+    // runs FIRST, so its membership clear cannot reach the span formed here —
+    // and could not touch it anyway, the demotion being FREE and the membership
+    // clear SelectionExtent-only.
     if (del_positions.size() >= 2) {
         const auto [lo, hi] = std::minmax_element(del_positions.begin(),
                                                   del_positions.end());
@@ -268,18 +271,19 @@ void GuiWarpMarkersOps::toggle_inherits() {
     // as the whole selection, so with 3,4,5 selected, the focus at 5 and the
     // playhead resting anywhere else, the lane would rest with the flag at 5
     // claiming to be the playhead while Space played from that other spot. Land on
-    // the focus. Nothing MOVES here — only the focus SET changes, and when the
-    // playhead is already on the focus the movement gate makes this land a
-    // structural no-op (no region dissolve either).
+    // the focus — a PURE playhead write (land_playhead_on_marker), this gesture
+    // adding no region clear of its own. THE REGION STORY IS THE COLLAPSE'S OWN
+    // membership clear: collapsing a 2+ selection replaces the membership, which
+    // takes that selection's SelectionExtent span with it
+    // (clear_region_on_membership_replace, app_state.h). A TrimWindow highlight
+    // SURVIVES, deliberately — the inherit toggle is a VALUE gesture with no
+    // business tearing down the chip row's own cue.
     // The land sits at THIS caller and not inside collapse_to_focused, whose other
-    // caller is the singleton tempo step. The decisive argument used to be the
-    // region dissolve a land inside the shared helper would drag onto every tempo
-    // step; the movement gate has narrowed that to the cases where such a land
-    // would actually MOVE the playhead. What still holds unconditionally is that
-    // the tempo step has no focus change to land for (its selection is already a
-    // singleton — adjust_tempo_cents returns to the group path at size >= 2 — so
-    // collapse_to_focused cannot move the focus there), and the site that hands
-    // the lane a new focus is the site that owes it a land.
+    // caller is the singleton tempo step: the tempo step has no focus change to
+    // land for (its selection is already a singleton — adjust_tempo_cents returns
+    // to the group path at size >= 2 — so collapse_to_focused cannot move the
+    // focus there), and the site that hands the lane a new focus is the site that
+    // owes it a land.
     // No index guard: the focus was checked >= 0 two lines above, collapse_to_focused
     // cannot move it, and the helper is internally bounds-guarded regardless.
     land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
@@ -537,14 +541,20 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
         // bounds are authored SOURCE frames, whose images simply re-derive through
         // the new map — so only the HIGHLIGHT goes stale, and re-deriving the
         // highlight from the window is the whole fix. Reachable with a singleton:
-        // a marker click lands, dissolving any resting region as it moves the
-        // playhead, then a trim chip-row press
-        // syncs a TrimWindow highlight without ever touching the selection, and the
-        // next Up/Down steps under both.
+        // a marker click lands and collapses any resting span, then a trim
+        // chip-row press syncs a TrimWindow highlight without ever touching the
+        // selection, and the next Up/Down steps under both — the tempo family
+        // being span-PRESERVING, which is why the step re-syncs the highlight
+        // instead of collapsing it like a position command would.
         // NO SelectionExtent arm, and that asymmetry with the group is derived, not
-        // forgotten: collapse_to_focused above demotes any SelectionExtent region to
-        // Free before the step runs, and set_region_to_selection_extent never
-        // derives one for a <=1 selection, so such an arm could not fire.
+        // forgotten: collapse_to_focused above CLEARS any SelectionExtent region
+        // outright before the step runs, and set_region_to_selection_extent never
+        // derives one for a <=1 selection, so such an arm could not fire. A FREE
+        // region CAN still rest here — the marker DROPS (bare `s`, the empty-lane
+        // double-click) keep any resting highlight by ruling and single-select the
+        // marker they create, so drag a region then drop and a Free span rests
+        // beside this singleton — and it stays untouched scratch across the step,
+        // which is the standing Free rule and not an oversight.
         const bool trim_resync = app.region.active &&
             app.region.provenance == RegionProvenance::TrimWindow;
         viewport.kick_waveform_sync();

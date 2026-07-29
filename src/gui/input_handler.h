@@ -142,39 +142,45 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // Dissolve a resting region-select highlight, damaging the waveform so the
 // recolored ground and split playhead repaint away and the cursor playhead
 // returns under
-// the same damage. A no-op when no region is active. Shared by the
-// playhead-jump NAVIGATION commands (architect ruling): any command that jumps
-// the playhead invalidates the auditioning span, and the region suppresses the
-// cursor playhead, so a parked highlight would hide the cursor at its new
-// position. Call sites: jump_playhead_to_focused_marker (the whole Tab family
-// plus `c` through the one tail), run_zoom_toggle_command (bare `0`), the bare
-// Left/Right playhead step, Home/End (the trim-bound jumps), the marker-click
-// land (plain / shift-range / ctrl toggle, all landing through
-// land_playhead_on_marker), and the ctrl toggle that EMPTIES the selection
-// (which lands nothing, so it calls this directly). The old mutual-exclusivity
-// framing ("every marker interaction drops the region") is DEAD twice over.
-// First, the land's clear is MOVEMENT-GATED (architect 2026-07-28): a land onto
-// the playhead's current sample runs nothing at all, so a re-land leaves a
-// resting region of any provenance alone (the gate and its rationale live at
-// land_playhead_on_marker). Second, the two MULTI-SELECT clicks
-// (shift-range, ctrl-toggle) immediately RE-DEFINE the region afterward to the
-// selection's [earliest, latest] extent when 2+ remain selected (the DOWNWARD
-// coupling — the selection defines the extent region, SELECTION-FLOWS-DOWNWARD-
-// ONLY; set_region_to_selection_extent — a separate call that must run AFTER
-// this clear). DELIBERATELY NOT cleared: the region Space launch (the
+// the same damage. A no-op when no region is active. Shared by every POINT
+// COMMAND — the playhead has two forms, POINT and SPAN, and exactly one is ever
+// visible (the rule and its rationale live at land_playhead_on_marker), so a
+// command that asserts the point form ends the span here, UNCONDITIONALLY: never
+// gated on whether the playhead moved, and blind to provenance. Call sites, by
+// class:
+//   * NAVIGATION jumps: jump_playhead_to_focused_marker (the whole Tab family
+//     plus `c` through the one tail), run_zoom_toggle_command (bare `0`), the
+//     bare Left/Right playhead step, Home/End (the trim-bound jumps);
+//   * MARKER CLICKS: the plain single-select click and its four deferred
+//     completions (release / lost button, reposition and tempo surfaces), plus
+//     the two MULTI-SELECT clicks whenever their RESULT is under two selected
+//     (at 2+ they instead re-own the region through
+//     set_region_to_selection_extent — the DOWNWARD coupling, the selection
+//     defines the extent region, SELECTION-FLOWS-DOWNWARD-ONLY, a separate call
+//     that must run AFTER any clear);
+//   * enter_text_edit, the one chokepoint of every flag/bpm editor open and
+//     retarget;
+//   * a SINGLETON position nudge (finish_group_position_nudge's point arm; a
+//     GROUP nudge is span-preserving and re-derives instead).
+// The land itself clears NOTHING — it is a pure playhead write, and the
+// motion condition that briefly rode its clear died with that clear
+// (land_playhead_on_marker). DELIBERATELY NOT
+// cleared: the region Space launch (the
 // region IS the launch point there), the nudge/drag playhead follow, marker
 // drops (bare `s` / the empty-lane double-click), and pure viewport moves
 // (PageUp/PageDown, zoom
 // steps, pans) — and the lower-half scrub press, which touches no region at
-// all. UNDO/REDO left this list (architect 2026-07-25): a SINGLETON restore now
-// clears the region via its land (like a marker click), and a GROUP restore
-// RE-DEFINES the region to the touched set's extent (undo.cpp's visual tail) —
-// neither keeps a stale region. The plain upper-half waveform press (arm_region_drag_at) shares this
+// all. UNDO/REDO is not on the list either: a restore's membership write clears
+// any SelectionExtent span, a GROUP restore then RE-DEFINES the region to the
+// touched set's extent (undo.cpp's visual tail), and a SINGLETON restore adds no
+// clear of its own — a TrimWindow / Free region rests through it as display
+// scratch. The plain upper-half waveform press (arm_region_drag_at) shares this
 // helper — same dissolve shape. The other pre-existing clear sites (Esc, file
 // load, Ctrl+Tab, and the S/T switch) keep their own in-place clears — Esc's is
 // now the down-only ladder's region rung, which walks ONE rung per Esc
 // (handle_escape_selection_region: a live region + 2+ selected first clears the
-// SELECTION ONLY, the region resting demoted to Free; a live region + 0/1 selected
+// SELECTION and its own extent span with it, a TrimWindow / Free region resting
+// for the next press; a live region + 0/1 selected
 // COLLAPSES TO ITS START — clear the region AND selection AND move the playhead to
 // its lo bound — so a multimarker selection takes a second Esc to collapse), and
 // load / Ctrl+Tab / S/T pair the reset with a domain flip or a full-window repaint
@@ -184,8 +190,9 @@ void clear_region_highlight(AppState& app, Viewport& viewport);
 // The DOWNWARD coupling (the selection defines the extent region,
 // SELECTION-FLOWS-DOWNWARD-ONLY): set the region to the
 // current selection's active-domain [earliest, latest] position extent when 2+
-// markers are selected (a <=1 selection sets nothing). MUST run AFTER any land
-// that clears the region. Definition lives in input_pointer.cpp; declared here
+// markers are selected (a <=1 selection sets nothing). MUST run AFTER its
+// caller's own point-form clear_region_highlight.
+// Definition lives in input_pointer.cpp; declared here
 // so the group-drag commit (MarkerDragOps::commit_drag) can re-derive the
 // live-tracked region from the post-commit store through the same owner.
 void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
@@ -193,12 +200,12 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
 
 // LAND the playhead exactly onto marker `hit` of the ACTIVE column with NO
 // viewport move (the two-step placement basis source_frame_to_active_domain then
-// clamp_playhead_to_live_domain, a direct cursor write, dissolving any resting
-// region via clear_region_highlight — but only when the land actually MOVES the
-// playhead; a no-motion land is a full no-op). Read-only allowed. Definition in
-// input_pointer.cpp, whose comment is the AUTHORITATIVE statement of the
-// marker-lane-owns-the-playhead rule and the one enumeration of the landing
-// sites — do not restate either here.
+// clamp_playhead_to_live_domain, a direct cursor write). A PURE PLAYHEAD WRITE:
+// it touches no region and no selection — a caller that wants the span to
+// collapse calls clear_region_highlight itself. Read-only allowed. Definition in
+// input_pointer.cpp, whose comment is the AUTHORITATIVE statement of the two
+// playhead forms, the marker-lane-owns-the-playhead rule, and the one
+// enumeration of the landing sites — do not restate any of them here.
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit);
 
@@ -871,16 +878,19 @@ private:
     // editor / render cancels and in place of the old plain region clear. Tested
     // REGION-FIRST so a region never shrinks into a subregion, and it walks ONE
     // rung per Esc. Returns true iff it consumed the Esc:
-    //   region ACTIVE + 2+ selected  -> clear the SELECTION ONLY, region rests
-    //                                   (clear_selection demotes a SelectionExtent
-    //                                   region to Free); playhead untouched — a
-    //                                   SECOND Esc then takes the collapse below
+    //   region ACTIVE + 2+ selected  -> clear the SELECTION, and its OWN extent
+    //                                   span with it (clear_selection's membership
+    //                                   clear); a TrimWindow / Free region rests
+    //                                   and the playhead is untouched — a SECOND
+    //                                   Esc then takes the collapse below
     //   region ACTIVE + 0/1 selected -> collapse to its start: clear the region AND
     //                                   the selection, playhead to the lo bound
-    //   no region + MULTIPLE selected -> drop to region: rest the region at the
-    //                                    selection extent, deselect (a PROGRAMMATIC
+    //   no region + MULTIPLE selected -> plain deselect (a PROGRAMMATIC
     //                                    multi-select only — a click-made one rests
-    //                                    with its extent region, caught above)
+    //                                    with its extent region, caught above; the
+    //                                    old drop-to-region rung is retired, its
+    //                                    ownerless resting span being exactly what
+    //                                    the two playhead forms rule out)
     //   no region + SINGLETON         -> deselect + land the playhead on the marker
     // Defined in input_pointer.cpp beside land_playhead_on_marker /
     // set_region_to_selection_extent (both external-linkage, declared here).

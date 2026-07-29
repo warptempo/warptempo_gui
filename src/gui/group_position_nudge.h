@@ -131,12 +131,15 @@ int64_t stepped_anchor_frame(
 //     committed_focused_frame is reorder-independent). move_playhead_to owns the
 //     clamp, invalidation, and keep-visible edge-align, writing the cursor field
 //     only (playback was stopped in the prologue).
-// (f) REGION FOLLOW (SelectionExtent only): an active SelectionExtent region
-//     re-derives to the moved group's extent — MAINTAIN only, never CREATE; an
-//     inactive / Free / TrimWindow region is untouched (position gestures do not
-//     re-sync TrimWindow). The SelectionExtent provenance survives the nudge (no
-//     membership replace, and the reorder remap does not demote), so the gate is
-//     reliable.
+// (f) THE REGION, BY THE PLAYHEAD'S TWO FORMS. A GROUP nudge is a SPAN gesture:
+//     an active SelectionExtent region re-derives to the moved group's extent —
+//     MAINTAIN only, never CREATE; an inactive / Free / TrimWindow region is
+//     untouched (position gestures do not re-sync TrimWindow, and the trim's
+//     source-frame bounds are unmoved by either nudge anyway). The
+//     SelectionExtent provenance survives the nudge (no membership replace, and
+//     the reorder remap does not clear), so the gate is reliable. A SINGLETON
+//     nudge is instead a POINT command and CLEARS any resting region, exactly
+//     like the marker click that selects that singleton.
 // (g) target_render.trigger.
 //
 // NO SYNCHRONOUS RE-WARP is needed at either home: the warp nudge authors in
