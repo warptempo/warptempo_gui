@@ -42,7 +42,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the keyboard path reads the candidate), and key-repeat re-entering here is
     // equally fine — no candidate can survive a held key. The pointer-side
     // per-branch clears (the on_button_press top-of-frame clear, the moved-drag
-    // clears, the Esc drag-cancel clears) stay: they own the pointer half of the
+    // clears, the force-end finalizer's clear) stay: they own the pointer half of the
     // lifetime; this owns the keyboard half, and on_wheel owns the wheel half
     // (the same clear at its own entry).
     app.double_click = DoubleClickCandidate{};
@@ -140,6 +140,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // gesture, so it gets no bare-`s` carve-out. BOTH hatches are
     // modifier-exact: a modified Escape has no binding anywhere, so it is
     // swallowed here like any other key rather than ending the drag.
+    // THIS DRAG KEEPS ITS Esc HATCH while the POINTER gestures below lost theirs
+    // (they have no cancel at all — the rule is at the drag-modal gate): the hatch
+    // FINALIZES the text selection, restoring nothing, and the Esc it falls
+    // through to belongs to the EDITOR's own modality (discard the buffer), which
+    // is a different thing from cancelling a gesture.
     if (app.editor_text_drag.active) {
         const bool escape_hatch =
             (!ctrl && !shift && !alt && key == GuiKeys::Escape) ||
@@ -225,12 +230,32 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Drag-modal input: a pointer drag owns the keyboard exactly as the
     // prompt and the text editors above do. While any drag gesture is in
-    // flight, swallow every hotkey except the escape hatches — Esc stops
-    // the gesture (cancel_active_drags), and Ctrl+Q cancels the in-flight
-    // drag first (the same abandon Esc performs, since the gesture is
-    // uncommitted) and then runs the close flow.
-    // Cancelling before the prompt goes up is what keeps a dismissed
-    // prompt from leaving a stale drag that commits on the next motion.
+    // flight, EVERY hotkey is swallowed — Esc included.
+    //
+    // POINTER GESTURES HAVE NO CANCEL (architect 2026-07-29). The rule, stated
+    // once here because this gate is the one chokepoint every gesture's keyboard
+    // story passes through; every gesture struct and release body carries only its
+    // own class plus a pointer back:
+    //   * ESC MID-GESTURE IS A CONSUMED NO-OP — it does not stop, abandon or
+    //     revert anything, and the gesture continues under the pointer exactly as
+    //     if no key had been pressed;
+    //   * RELEASE ENDS THE GESTURE AND WHAT STANDS STANDS — the release body
+    //     commits: proposed marker positions, the live trim bounds, the tempo
+    //     cents already written, the region as extended;
+    //   * BUTTON-LOST ENDS IT THE SAME WAY (the !primary_button_held arms in
+    //     on_motion all route to the release bodies);
+    //   * UNDO IS THE MITIGATION — a drag implies "I am ready to commit", and the
+    //     entry each release path pushes is what takes it back. Trim is the one
+    //     gesture with no undo entry to offer, which is trim's standing
+    //     history-less ruling, not a cancel gap.
+    // So no gesture captures pre-gesture bystander state anywhere: the selection
+    // snapshots, the grab-playhead captures and the pre-drag region copies are all
+    // deleted, along with cancel_active_drags itself.
+    // CTRL+Q IS NOT A CANCEL EITHER — it ENDS the gestures through their release
+    // bodies (finalize_active_drags, input_pointer.cpp) and then opens the close
+    // flow, so nothing is left live under the prompt to commit on a later motion
+    // if the prompt is dismissed. main.cpp's resize and WM-close callbacks call
+    // the same finalizer for the same reason.
     // This single gate is why no downstream hotkey needs its own
     // drag guard: Tab, undo, `t`, and the rest never see a key mid-drag.
     // The editor text-selection drag has its own modal gate above
@@ -239,23 +264,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // and the
     // pending marker / tempo / trim drags (a press held before its drag begins) —
     // are mutually exclusive with it. scroll_drag belongs on the list too: a live
-    // pan must swallow authoring keys, and Esc must route to cancel_active_drags
-    // (which ends it) rather than falling past to run a hotkey over a latched pan.
-    // (The scrub is a one-shot press action, not a gesture — it arms nothing,
+    // pan must swallow authoring keys rather than letting one run over a latched
+    // pan. (The scrub is a one-shot press action, not a gesture — it arms nothing,
     // so it has no entry here.)
     if (app.drag.active || app.tempo_drag.active || app.trim_drag.active ||
         app.strip_drag.active || app.region_drag.active ||
         app.scroll_drag.active ||
         app.pending_marker_drag.active || app.pending_tempo_drag.active ||
         app.pending_trim_drag.active) {
-        // Both hatches are modifier-exact: an Escape carrying a modifier has no
-        // binding, so it drops into the swallow below instead of cancelling.
-        if (!ctrl && !shift && !alt && key == GuiKeys::Escape) {
-            cancel_active_drags();
-            return;
-        }
+        // The ONE hatch left, modifier-exact (a modified Ctrl+Q has no binding
+        // anywhere): end the gestures as their release would, then run the close
+        // flow. Bare Esc takes the swallow below with every other key.
         if (ctrl && !shift && !alt && key == GuiKeys::Q) {
-            cancel_active_drags();
+            finalize_active_drags();
             prompt.request_close();
             return;
         }

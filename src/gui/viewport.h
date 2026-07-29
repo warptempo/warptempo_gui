@@ -92,11 +92,12 @@ struct Viewport {
     //    map-dependent plate, so they never call this.
     //
     // AXIS 2 — the CADENCE. Every site above is a discrete ONE-SHOT per command
-    // EXCEPT the TEMPO DRAG, whose two kicks are the ones a hand-copied list keeps
+    // EXCEPT the TEMPO DRAG, whose kick is the one a hand-copied list keeps
     // dropping: apply_tempo_drag_motion re-warps LIVE per cent step mid-gesture
     // (the keyboard zoom's cost paid per pointer frame — and deliberately NO
-    // target_render.trigger there, the preview fires once at gesture end), and
-    // cancel_tempo_drag re-warps once on the Esc-restore when it rewound cents.
+    // target_render.trigger there, the preview fires once at gesture end). Its
+    // second kick died with cancel_tempo_drag (2026-07-29: pointer gestures have
+    // no cancel, so no route rewinds cents any more).
     // (The OTHER live-per-event kicks are apply_strip_drag_zoom and
     // scroll_viewport — generic viewport rebuilds, not map edits. Both are
     // sustained pointer gestures paying one full rebuild per pointer frame.)

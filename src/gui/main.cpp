@@ -822,13 +822,18 @@ int main(int argc, char** argv) {
         // viewport beneath an in-flight positional drag whose grab anchor is a
         // frame coordinate computed from the old geometry, so the next motion
         // event would derive its delta across two different coordinate systems
-        // and commit a spurious jump. Cancel any in-flight pointer drag before
-        // on_resize applies, so the resize always lands on a gesture-free
-        // state: cancel_active_drags is a no-op when no drag is active, so the
+        // and commit a spurious jump. END any in-flight pointer gesture before
+        // on_resize applies, so the resize always lands on a gesture-free state.
+        // ENDING IS COMMITTING (architect 2026-07-29 — pointer gestures have no
+        // cancel; the rule is at the drag-modal gate in input_handler.cpp): each
+        // gesture runs its own release body, so a resize mid-drag keeps what the
+        // last motion event proposed — computed against the OLD geometry, which was
+        // valid when it was proposed; it is the NEXT motion that could not be
+        // trusted. finalize_active_drags is a no-op when nothing is live, so the
         // plain no-gesture resize path is unaffected. A live editor text-
-        // selection drag is finalized up front by cancel_active_drags (collapsed
-        // to a caret, selection-only, nothing to revert).
-        input_handler.cancel_active_drags();
+        // selection drag is finalized there too (collapsed to a caret,
+        // selection-only, nothing to revert).
+        input_handler.finalize_active_drags();
         paint_handler.on_resize(w, h);
     });
 
@@ -856,17 +861,19 @@ int main(int argc, char** argv) {
 
     gui.set_on_close([&]() {
         // Window-manager close (title-bar X) routes through the unsaved-
-        // work dialog when dirty, same as Ctrl+Q. Cancel any in-flight
-        // pointer drag before the prompt goes up, matching the Ctrl+Q
+        // work dialog when dirty, same as Ctrl+Q. END any in-flight pointer
+        // gesture before the prompt goes up, matching the Ctrl+Q
         // hatch: while the prompt is up the pointer handlers swallow motion
-        // and release, so a drag left alive would commit on the next motion
-        // if the user dismisses the prompt. cancel_active_drags is a no-op
-        // when no drag is active, so the clean and non-drag close paths are
-        // unaffected. A live editor text-selection drag is finalized up front
-        // by cancel_active_drags (collapsed to a caret, selection-only, nothing
-        // to revert), so there is no motion-free interval where it would swallow
-        // keys until a later pointer motion noticed the lost button.
-        input_handler.cancel_active_drags();
+        // and release, so a gesture left alive would commit on the next motion
+        // if the user dismisses the prompt. ENDING IS COMMITTING (pointer
+        // gestures have no cancel — the rule is at the drag-modal gate in
+        // input_handler.cpp): each gesture runs its own release body here.
+        // finalize_active_drags is a no-op when nothing is live, so the clean and
+        // non-gesture close paths are unaffected. A live editor text-selection
+        // drag is finalized there too (collapsed to a caret, selection-only,
+        // nothing to revert), so there is no motion-free interval where it would
+        // swallow keys until a later pointer motion noticed the lost button.
+        input_handler.finalize_active_drags();
         prompt.request_close();
     });
 

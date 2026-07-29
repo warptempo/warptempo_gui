@@ -254,12 +254,12 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
     app.trim_drag.is_begin     = is_begin;
     app.trim_drag.both         = both;
     app.trim_drag.moved        = false;
-    // Default: a plain chip drag. The bound-set crossing (input_pointer.cpp)
-    // sets this true AND overrides orig_begin/orig_end to the pre-press pair
-    // AFTER this call, so an Esc undoes the click-set too (R3). Reset here so a
-    // prior gesture's value can never leak (the struct is also fully reset at
-    // every drag end, so this is belt-and-braces).
-    app.trim_drag.set_click    = false;
+    // The drag's own origins, read from the store as it rests HERE — for a
+    // bound-set-armed drag that includes the click-set the press already
+    // committed, which is exactly the basis the mechanics want (the rigid pair
+    // delta and commit's untouched-bound test). No set_click distinction survives:
+    // it existed to override these into an Esc-restore origin, and pointer
+    // gestures have no cancel (the rule at the drag-modal gate, input_handler.cpp).
     app.trim_drag.orig_frame = is_begin ? app.trim.begin_frame
                                           : app.trim.end_frame;
     app.trim_drag.orig_begin_frame = app.trim.begin_frame;
@@ -284,9 +284,9 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
     }
     // The BEGIN only captures drag state — no region write and no deselect here;
     // the region highlight syncs to the window at motion/commit (the lane-click
-    // coupling), and THOSE publishes are the setter's, so they carry the deselect
-    // — which is what the pre-gesture snapshot copied in at the crossing exists to
-    // restore on an Esc-cancel. A press that never moves commits no bound change
+    // coupling), and THOSE publishes are the setter's, so they carry the deselect,
+    // which then rests (nothing restores it — pointer gestures have no cancel).
+    // A press that never moves commits no bound change
     // (its motionless release runs the R4.5 click sync instead).
 }
 
@@ -554,10 +554,10 @@ void GuiInputHandler::commit_trim_drag() {
 // it — every setter empties the selection before publishing, so a trim teardown
 // meets an empty selection. The tail's live callers are the ones that are NOT
 // setters: Shift+X and the settings-editor trim commit, which re-sync a window
-// they did not claim. The cancellable trim gestures still capture a pre-gesture
-// SelectionSnapshot + RegionState and restore both on Esc/Ctrl+Q (see
-// PendingTrimDrag) — what they now restore is the SETTER's deselect rather than a
-// collapse.
+// they did not claim. NOTHING RESTORES A TRIM SETTER'S DESELECT: the trim
+// gestures' pre-gesture snapshots are deleted with every other cancel capture
+// (2026-07-29 — pointer gestures have no cancel, the rule at the drag-modal gate
+// in input_handler.cpp), so a chip drag's deselect rests like `x`'s does.
 //
 // Defined as a FREE function so the group tempo gestures (MarkerDragOps /
 // GuiWarpMarkersOps) can RE-SYNC a TrimWindow region from app.trim's SOURCE-frame
@@ -694,10 +694,11 @@ void GuiInputHandler::deselect_and_sync_trim_window_highlight() {
 // 2026-07-29; the rule and the setter list at sync_region_to_trim_window's
 // declaration). Both bound-set clicks are this one function, so both deselect, and
 // both deselect only PAST THE REFUSALS above: a read-only tab and a missing
-// resting pair set nothing and leave the selection exactly as it was. When this
-// same click ARMS a drag (set_trim_bound_at_click_then_arm_drag) the gesture
-// becomes cancellable, and that caller captures the PRE-PRESS selection/region
-// ahead of this call, so an Esc puts back what the deselect took.
+// resting pair set nothing and leave the selection exactly as it was. The
+// deselect RESTS in every case, including when this click ARMS a drag
+// (set_trim_bound_at_click_then_arm_drag): that gesture has no cancel either, so
+// its caller captures nothing (2026-07-29 — the no-cancel rule at the drag-modal
+// gate, input_handler.cpp).
 void GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     if (active_view_state(app).read_only) return;   // trim authoring
     // Adjust-only pair gate (see the header comment): no resting window, no
@@ -744,25 +745,18 @@ void GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
 // Round 3 (architect 2026-07-23): the ctrl / ctrl+shift chip-row bound-set press
 // sets the bound at the click AND arms the single-bound trim drag on it, so
 // motion past the threshold drags it live (a motionless release rests the
-// click-set). Snapshot the PRE-PRESS pair first so an Esc undoes the whole
-// gesture — the click-set included — via the pending's preset_* -> the drag's
-// orig_* Esc-restore origin (see PendingTrimDrag / TrimDragState set_click). The
+// click-set). NOTHING IS SNAPSHOTTED (2026-07-29): the pre-press pair, the
+// selection and the region were all captured here for an Esc-cancel, and pointer
+// gestures have no cancel — the rule is at the drag-modal gate in
+// input_handler.cpp. The click-set is a COMMITTED act the moment it is made (trim
+// is history-less, so nothing takes it back), and the drag it arms commits its own
+// bounds at its release. The
 // set itself owns the read-only / missing-pair refusal; the drag arms only when
 // the set kept a full writable pair.
 void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
                                                             int mouse_x,
                                                             int mouse_y) {
-    const bool had_pair    = app.trim.has_begin && app.trim.has_end;
-    const int64_t pre_begin = app.trim.begin_frame;
-    const int64_t pre_end   = app.trim.end_frame;
-    // PRE-PRESS selection + region, captured BEFORE the set: the set's own
-    // coupling publish DESELECTS (the setter rule) and takes any resting span with
-    // the membership, so a capture taken afterward would record the emptied state
-    // instead of the one to restore. Handed to the pending below, and from there to
-    // the drag at the crossing, so one capture serves the whole set+drag gesture's
-    // cancel.
-    const SelectionSnapshot pre_selection = capture_selection_snapshot(app);
-    const RegionState       pre_region    = app.region;
+    const bool had_pair = app.trim.has_begin && app.trim.has_end;
     set_trim_bound_at_click(is_begin, mouse_x);
     // Arm only when a full writable pair survived the set: read-only / a missing
     // pair set nothing (had_pair false OR the set refused), and a crossed
@@ -777,14 +771,6 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
     app.pending_trim_drag.both              = false;
     app.pending_trim_drag.press_x           = mouse_x;
     app.pending_trim_drag.press_y           = mouse_y;
-    app.pending_trim_drag.set_click         = true;
-    app.pending_trim_drag.preset_begin_frame = pre_begin;
-    app.pending_trim_drag.preset_end_frame   = pre_end;
-    // The PRE-PRESS pair above, not arm_pending_trim_drag's post-set capture:
-    // the set already ran its sync, so only these hold the state the cancel owes
-    // the user.
-    app.pending_trim_drag.pre_gesture_selection = pre_selection;
-    app.pending_trim_drag.pre_gesture_region    = pre_region;
 }
 
 // Plain chip-row press trim routing — the sole pointer route into a trim drag.
@@ -825,8 +811,7 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // moving window (the lane-click coupling) through the SETTER's publish, which
 // DESELECTS at its first moved bound (architect 2026-07-29 — the rule at
 // sync_region_to_trim_window's declaration); the PLAYHEAD is what they never
-// touch, and the deselected selection is restored from the pending's capture on an
-// Esc-cancel.
+// touch, and the deselect RESTS — the gesture has no cancel to restore it from.
 //
 // The bridge-region bound columns come from the displayed MAP
 // (displayed_or_live_target_map) AND the displayed VIEWPORT
@@ -942,11 +927,9 @@ void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
     app.pending_trim_drag.both     = both;
     app.pending_trim_drag.press_x  = press_x;
     app.pending_trim_drag.press_y  = press_y;
-    // PRE-GESTURE selection + region for the Esc-cancel restore (the tempo
-    // drag's pattern; see PendingTrimDrag). This arm mutates nothing, so the
-    // capture is trivially pre-deselect here — but the drag it may become publishes
-    // the window on every moved motion event, and a SETTER's publish deselects, so
-    // the capture has to exist before the first of them.
-    app.pending_trim_drag.pre_gesture_selection = capture_selection_snapshot(app);
-    app.pending_trim_drag.pre_gesture_region    = app.region;
+    // Five fields, no captures: the pre-gesture selection + region this used to
+    // copy existed for an Esc-cancel, and pointer gestures have no cancel
+    // (2026-07-29 — the rule at the drag-modal gate, input_handler.cpp). The drag
+    // this may become deselects at its first published bound and keeps that
+    // deselect.
 }

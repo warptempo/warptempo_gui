@@ -1337,8 +1337,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         // (routing the next press through the immediate path) or
                         // never happened. If the pointer never crosses
                         // kDragMovedThresholdPx the deferred single-select
-                        // + land runs at release / lost button; Esc ABANDONS it,
-                        // leaving the multi-selection intact.
+                        // + land runs at release / lost button. Esc does NOTHING
+                        // to the pending (pointer gestures have no cancel — the
+                        // rule at the drag-modal gate, input_handler.cpp): the arm
+                        // survives and still resolves by the crossing or a real
+                        // release.
                         app.double_click = DoubleClickCandidate{
                             .surface = DoubleClickSurface::Marker,
                             .time_ms = monotonic_ms(),
@@ -1372,7 +1375,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         // Keep the selection; seed the Marker double-click
                         // candidate (press-time, target = hit) and arm the tempo
                         // drag flagged deferred. A motionless release / lost
-                        // button runs the held single-select + land; Esc abandons.
+                        // button runs the held single-select + land; Esc does
+                        // nothing to it (the pending survives — no cancel).
                         app.double_click = DoubleClickCandidate{
                             .surface = DoubleClickSurface::Marker,
                             .time_ms = monotonic_ms(),
@@ -1630,9 +1634,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // exactly as today, and on the sliver rule whatever the deselect
                 // below left standing does; motion past the shared gate drags the
                 // CLICK-side endpoint live through the region-drag motion path,
-                // the far endpoint fixed, and Esc mid-drag CLEARS the region
-                // outright — the cancel restores nothing, so the press's
-                // pre-press state is not preserved anywhere. GUTTER presses arm
+                // the far endpoint fixed, and Esc mid-drag does NOTHING AT ALL
+                // (pointer gestures have no cancel, 2026-07-29 — the rule at the
+                // drag-modal gate): the drag keeps extending and its release rests
+                // the span it grew. GUTTER presses arm
                 // NOTHING (there is no column to anchor a drag against).
                 if (click_rel_x < 0 || click_rel_x >= area.w) {
                     selection.clear_selection();
@@ -1708,8 +1713,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // standing: a Free or TrimWindow pre-press region rests
                     // bit-for-bit, while an ex-SelectionExtent one is already
                     // gone (the deselect's membership clear took it). An Esc
-                    // mid-drag from here clears the region like any other, this
-                    // gesture keeping no snapshot to restore. ALSO
+                    // mid-drag from here is a consumed no-op like everywhere else
+                    // (no cancel), so the drag simply continues. ALSO
                     // ARM the drag anchored at the far endpoint so dragging out
                     // past the gate still grows a fresh region live from it (e.g.
                     // shift-click AT the playhead, then drag out).
@@ -1806,8 +1811,8 @@ void GuiInputHandler::arm_region_drag_at(int64_t anchor_frame, int x, int y) {
     // reaches here — it arms no region drag and leaves the region alone). A
     // moved drag rebuilds a fresh region live; a
     // motionless press-release simply leaves it cleared, and an Esc mid-drag
-    // clears whatever the drag had grown — nothing here is snapshotted, the
-    // dissolve being final. Same dissolve shape as
+    // changes nothing at all (no cancel) — the dissolve at mouse-down is final
+    // either way. Same dissolve shape as
     // the navigation clears, so it shares clear_region_highlight.
     clear_region_highlight(app, viewport);
 }
@@ -1822,13 +1827,13 @@ void GuiInputHandler::arm_region_drag_preserving(int64_t anchor_frame, int x,
     // release (the freshly formed region, or on the sliver rule the pre-press
     // region untouched), so preserving it keeps today's one-shot behaviour
     // bit-for-bit. That no-dissolve-at-press property is this function's whole
-    // reason to exist; an Esc mid-drag clears the region either way, both arms
-    // sharing the one cancel. Past the gate the SHARED region-drag motion
+    // reason to exist; neither arm has a cancel to differ in — Esc mid-drag is a
+    // consumed no-op for both. Past the gate the SHARED region-drag motion
     // handler re-establishes
     // app.region from this anchor (it fixes a_frame = anchor_frame and tracks
     // b_frame to the pointer column on each column change), so the click-side
-    // endpoint drags live while this far endpoint stays put — no motion/release/
-    // Esc handler change needed, the anchor semantic is identical to the plain
+    // endpoint drags live while this far endpoint stays put — no motion or
+    // release handler change needed, the anchor semantic is identical to the plain
     // drag's.
     app.region_drag = RegionDragState{};
     app.region_drag.active       = true;
@@ -2096,6 +2101,76 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     marker_drag.commit_drag();
 }
 
+// END every in-flight pointer gesture THROUGH ITS OWN RELEASE BODY. The one
+// force-end route in the product: the Ctrl+Q hatch in the drag-modal gate
+// (input_handler.cpp, where the no-cancel rule is stated in full) and main.cpp's
+// resize / WM-close callbacks. It replaced cancel_active_drags — POINTER GESTURES
+// HAVE NO CANCEL (architect 2026-07-29), so there is nothing to restore anywhere
+// here: every live gesture COMMITS what stands, and undo is the mitigation.
+// Homed beside on_button_release deliberately — these are the same bodies in the
+// same order, and the region arm needs this TU's file-local min-size helper.
+// The gestures are mutually exclusive in practice, so this reads as a chain of
+// no-ops around the one that is live.
+void GuiInputHandler::finalize_active_drags() {
+    // Editor text-selection drag: FINALIZE (collapse a no-motion anchor to a
+    // caret), the same act its release performs — selection-only, nothing to
+    // revert. It seeds NO double-click candidate here: a force-end is not a click
+    // (the clean release owns that seeding). The keyboard's own escape hatch for
+    // this drag lives in on_key and is editor modality, not a gesture cancel.
+    if (app.editor_text_drag.active) finalize_editor_text_drag();
+    // The marker reposition drag commits its PROPOSED positions (the overlay
+    // becomes the store) and pushes the one undo entry iff the drag netted a
+    // change — the release path exactly, so Ctrl+Z reverts it.
+    if (app.drag.active) marker_drag.commit_drag();
+    // The tempo drag already wrote its cents into the live store per event; its
+    // gesture-end settles history (one undo entry iff net change) and fires the
+    // deferred preview.
+    if (app.tempo_drag.active) marker_drag.end_tempo_drag();
+    // The trim drag keeps its live bounds and runs the full commit tail (the
+    // release column-snap, auto_clear_crossed_trim, the repaint/trigger, the
+    // setter's publish). TRIM IS HISTORY-LESS BY RULING, so these bounds are not
+    // undoable — that is the standing trim gap (every trim gesture commits
+    // outside undo), not something this force-end introduces.
+    if (app.trim_drag.active) commit_trim_drag();
+    if (app.region_drag.active) {
+        // The region was extended live; the release rests it where it is, with the
+        // sliver dissolve applying to a MOVED drag only (see the release arm).
+        const bool moved = app.region_drag.moved;
+        app.region_drag = RegionDragState{};
+        if (moved) end_region_drag_min_size_check(app, audio, viewport);
+    }
+    if (app.strip_drag.active) {
+        // Navigation gestures applied their motion continuously, so ending is just
+        // ending: the one synchronous rebuild + predictor resync a moved drag's
+        // release performs, then the capture release (idempotent).
+        if (app.strip_drag.moved) {
+            if (playback.is_playing()) playback.resync_predictor();
+            viewport.kick_waveform_sync();
+        }
+        app.strip_drag = StripDragState{};
+        end_strip_pointer_capture();
+    }
+    if (app.scroll_drag.active) {
+        // Alt+drag grab-pan: incremental too, so re-anchor the predictor once and
+        // end the capture, its release's whole body.
+        if (playback.is_playing()) playback.resync_predictor();
+        app.scroll_drag = ScrollDragState{};
+        end_strip_pointer_capture();
+    }
+    // THE PENDINGS DISARM, and that is not a cancel: a pending has committed
+    // NOTHING of its own — a deferred arm is holding its click BACK, and the
+    // bound-set trim pending's bound was written at the press and stands. There is
+    // no release here (the button is still held), so the click never happens; a
+    // pending otherwise resolves only by the threshold crossing or a real
+    // release / button loss.
+    app.pending_marker_drag = PendingMarkerDrag{};
+    app.pending_tempo_drag  = PendingTempoDrag{};
+    app.pending_trim_drag   = PendingTrimDrag{};
+    // A force-end is not a clean click sequence, so no candidate may survive to
+    // pair with a later click (the standing rule at every non-release gesture end).
+    app.double_click = DoubleClickCandidate{};
+}
+
 // Motion handler. Drives the active pointer gesture: editor-text drag,
 // strip-row zoom/pan drag, trim drag (or
 // a pending trim drag arming past the threshold), region-select drag, or
@@ -2266,38 +2341,21 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // begin_trim_drag captures the anchor at press_x now — exact, since
         // nothing mutated the trim store between press and crossing — and sets
         // app.trim_drag.active.
+        // THREE FIELDS CROSS, and that is the whole transfer (2026-07-29): the
+        // pending's set_click / pre-press pair / selection+region snapshots were an
+        // Esc-restore origin, and pointer gestures have no cancel (the rule at the
+        // drag-modal gate in input_handler.cpp), so the cross-struct data path they
+        // needed is gone. A bound-set-armed drag is now indistinguishable from a
+        // plain one here — correctly: its click-set already committed, and
+        // begin_trim_drag's orig_* capture (the click-set values) is exactly the
+        // basis the drag mechanics want, both for the rigid pair delta and for
+        // commit's moved-bound test.
         const bool is_begin = app.pending_trim_drag.is_begin;
         const bool both     = app.pending_trim_drag.both;
         const int  press_x  = app.pending_trim_drag.press_x;
-        // R3: a bound-set-armed pending carries the PRE-PRESS pair — capture it
-        // before clearing the pending, so the drag's Esc-restore origin can undo
-        // the whole set+drag gesture.
-        const bool    set_click = app.pending_trim_drag.set_click;
-        const int64_t preset_begin = app.pending_trim_drag.preset_begin_frame;
-        const int64_t preset_end   = app.pending_trim_drag.preset_end_frame;
-        // The PRE-GESTURE selection + region travel with them, UNCONDITIONALLY
-        // (a plain chip drag needs them as much as a bound-set one: its motion
-        // publishes DESELECT just the same — the trim setter rule). Captured at the
-        // arming press, applied by the drag's Esc-cancel.
-        SelectionSnapshot pre_selection =
-            std::move(app.pending_trim_drag.pre_gesture_selection);
-        const RegionState pre_region = app.pending_trim_drag.pre_gesture_region;
         app.pending_trim_drag = PendingTrimDrag{};
         begin_trim_drag(is_begin ? TrimHit::Begin : TrimHit::End, press_x, both);
         if (!app.trim_drag.active) return;  // begin refused (no pair / no audio)
-        app.trim_drag.pre_gesture_selection = std::move(pre_selection);
-        app.trim_drag.pre_gesture_region    = pre_region;
-        if (set_click) {
-            // The drag BASE (orig_frame) stays the click-set value begin_trim_drag
-            // captured, so the bound tracks smoothly from the clicked column; only
-            // the Esc-restore origin (orig_begin/orig_end) moves back to the
-            // pre-press pair, so an Esc undoes the click-set too. set_click makes
-            // that restore unconditional (an unmoved drag still has the click-set
-            // to undo).
-            app.trim_drag.set_click        = true;
-            app.trim_drag.orig_begin_frame = preset_begin;
-            app.trim_drag.orig_end_frame   = preset_end;
-        }
         update_trim_drag(mouse_x);
         return;
     }

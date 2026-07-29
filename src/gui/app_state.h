@@ -121,18 +121,6 @@ struct UndoEntry {
     std::vector<int>          touched_live;
 };
 
-// The marker selection state a marker drag's threshold-crossing focus transfer
-// rewrites, captured wholesale at drag begin (before that transfer) and restored
-// wholesale at cancellation —
-// one struct so a future selection field cannot be forgotten in one of the
-// copies (the per-field enumeration was the recurring leak). Moved only by
-// capture_selection_snapshot / restore_selection_snapshot (declared below
-// AppState, where its members are complete).
-struct SelectionSnapshot {
-    std::set<int> selected_markers;
-    int           last_selected_marker = -1;
-};
-
 // Session-only region selection — an Ableton-style arrangement span. SELECTION
 // FLOWS DOWNWARD ONLY (architect 2026-07-23): highlighting a region does NOT
 // select the markers it contains (the reverse coupling — a region selecting its
@@ -225,12 +213,13 @@ struct SelectionSnapshot {
 // other wholesale-selection routes (the undo/redo restore, the propagate paste)
 // clear it for the same reason; the full clear-site enumeration lives at
 // clear_region_highlight's declaration (input_handler.h). A
-// GROUP marker drag captures the resting region into DragState::pre_drag_region
-// (Esc restore) and live-tracks it to the moving group's extent (apply_drag_
-// motion), re-deriving from the post-commit store at commit. The GROUP POSITION
+// GROUP marker drag live-tracks the region to the moving group's extent
+// (apply_drag_motion) and re-derives it from the post-commit store at commit — it
+// captures nothing (pointer gestures have no cancel, 2026-07-29; the rule at the
+// drag-modal gate in input_handler.cpp). The GROUP POSITION
 // NUDGES (bare Left/Right in the marker lane, both columns) re-derive the same
 // way at their commit —
-// MAINTAIN only, per-press, no live track and no Esc restore (a nudge is one
+// MAINTAIN only, per-press, no live track (a nudge is one
 // atomic step) — so an active SelectionExtent region follows the nudged group.
 // Region PROVENANCE (architect 2026-07-23, three-state ownership): tracks WHO the
 // region is derived from, which decides how the image-follow tempo gestures treat
@@ -246,9 +235,8 @@ struct SelectionSnapshot {
 // marker clicks and their deferred completions, Tab/`c`, the editor opens, the
 // drops, and the three that used to carry a selection in wholesale while
 // leaving the span alone (undo/redo restore, the `p` swap, the propagate paste).
-// The drag cancels' verbatim pre-gesture restores (DragState::pre_drag_region,
-// TempoDragState::pre_drag_region) reproduce a state that was already reachable
-// before their press, so they open no route either.
+// No gesture cancel can re-open a route either: there are no cancels left to
+// restore a region from (2026-07-29).
 // SelectionExtent — set to the marker selection's
 // [earliest, latest] extent (the downward selection->extent clicks, the
 // position-drag commit, the tempo follows), valid ONLY while that selection
@@ -265,11 +253,10 @@ struct SelectionSnapshot {
 // PER-EVENT path, which re-derive their SelectionExtent region across their own map
 // change — UNCONDITIONALLY, the provenance branch having died with
 // TrimWindow-under-a-selection — plus the settings-editor trim commit (re-syncs a
-// TrimWindow region to the edited bounds). The drag CANCEL does NOT re-derive/re-sync — it
-// restores the whole-struct captured TempoDragState::pre_drag_region VERBATIM
-// (the round-7 rule: pre-drag staleness falsified the re-derive premise, so Esc
-// reproduces the pre-drag display exactly, any provenance — a rule that stands
-// on its own no-geometry-assumptions terms, not on any live producer).
+// TrimWindow region to the edited bounds). There is no drag CANCEL arm any more —
+// the whole-struct verbatim region restore, and the round-7 rule that shaped it,
+// died with the cancels themselves (2026-07-29: pointer gestures have no cancel,
+// so a gesture's last committed event owns the resting region).
 // THE DISPLAY-SCRATCH SIDE OF THIS BOUNDARY IS NOW EMPTY (architect 2026-07-29,
 // the maximally greedy collapse): every OTHER target-map changer CLEARS the
 // region outright instead of leaving it as scratch — undo/redo at its visual
@@ -342,9 +329,12 @@ inline bool clear_region_on_membership_replace(RegionState& r) {
 }
 
 // Marker reposition drag state (begun by a plain flag drag past the shared
-// threshold). `active` gates motion handling; the rest captures the
-// pre-drag snapshot so Escape can restore positions and clamps can be
-// evaluated without re-scanning the marker list on every motion event.
+// threshold). `active` gates motion handling; the rest holds the drag's own
+// working set — the pre-drag positions the proposals are derived from and the
+// pre-drag store the COMMIT pushes as its undo entry. Nothing here is a cancel
+// origin: pointer gestures have no cancel (2026-07-29, the rule at the drag-modal
+// gate in input_handler.cpp), so Esc mid-drag changes nothing and the release
+// commits.
 //
 // `delta_min` / `delta_max` is a single scalar ACTIVE-domain offset range
 // (architect 2026-07-23): the intersection of each dragged marker's wall
@@ -404,7 +394,8 @@ struct DragState {
     // frozen-coordinate regime keeps motion in the overlay (no generation
     // bump), the drag-modal gate swallows every key but the cancels, pointer
     // gestures are mutually exclusive, the wheel is blocked mid-gesture, editors
-    // cannot open, and resize / WM-close cancel the drag first; a preview
+    // cannot open, and resize / WM-close END the drag first (a commit, through its
+    // release body — pointer gestures have no cancel); a preview
     // completing mid-drag touches only the audio buffer, playback rebind, dirty
     // bit, and status text, never the store or scale. So the cache is stable
     // for the drag's lifetime and equals what a begin_drag copy would hold.
@@ -413,14 +404,12 @@ struct DragState {
     // commit when no motion occurred (DragState is reset wholesale there).
     std::vector<GuiWarpMarker>      pre_drag_snapshot;
     std::vector<GuiPhaseResetMarker> pre_drag_phase_reset_snapshot;
-    // Pre-drag marker selection snapshot, captured at begin_drag for the
-    // Esc / Ctrl+Q cancellation restore. For a single-marker drag the arming
-    // flag press single-selected the grabbed marker, so this captures {hit}; for
-    // a GROUP drag the arming press DEFERRED its single-select, so this captures
-    // the whole intact multi-selection — and a cancel restores exactly that. The
-    // playhead's cancel restore is pre_ride_playhead_sample below, which the
-    // cancel now always applies.
-    SelectionSnapshot      pre_drag_selection;
+    // NO CANCEL CAPTURES (the selection snapshot, the grab playhead and the
+    // pre-drag region all deleted 2026-07-29): POINTER GESTURES HAVE NO CANCEL —
+    // Esc mid-drag is a consumed no-op, release commits, and undo is the mitigation
+    // (the rule is stated at the drag-modal gate in input_handler.cpp's on_key).
+    // What survives above is the pre-drag STORE, which is the undo payload, not a
+    // restore origin.
     // Playhead-follows-marker ruling (architect 2026-07-23, reversing the
     // 2026-07-20 decoupling): a single-marker arming click LANDS the playhead on
     // the grabbed marker (source_frame_to_active_domain then
@@ -434,9 +423,6 @@ struct DragState {
     // served is supplied by the scrub surface instead. Only the RESTING
     // cursor playhead moves — move_playhead_to writes the cursor field only, so
     // a live scanner is left untouched; it stays the audio thread's to own.
-    // Cursor position at grab, for the Esc-cancel restore: the marker returns
-    // to its origin on cancel, so the towed playhead returns with it.
-    int64_t                pre_ride_playhead_sample = 0;
     // Index of the marker whose flag press started the drag — the GRAB
     // reference for the whole gesture: the delta anchor, the playhead-follow /
     // land target, and (single-marker drag) the marker re-asserted as the
@@ -452,12 +438,6 @@ struct DragState {
     // mid-drag reorder (values remap in place, slots do not), so it never needs
     // remapping. For a single-marker drag grabbed_k is trivially 0.
     int                    grabbed_k            = 0;
-    // Region as it rested at begin_drag, restored on an Esc / Ctrl+Q cancel
-    // alongside the selection snapshot and grab playhead. Only a GROUP drag can
-    // MOVE the region, and a single-marker drag captures NOTHING to move: its
-    // arming press is a plain marker click, which collapses any resting span
-    // (see the capture site in marker_drag.cpp).
-    RegionState            pre_drag_region;
     // Which list this drag operates on. The motion / commit
     // handlers dispatch on this so a drag started in phase reset view
     // mutates the phase reset list.
@@ -601,12 +581,13 @@ struct UndoHistory {
 // which dissolves like a click instead (end_region_drag_min_size_check, at both
 // end points). The drag never touches the selection anywhere — the press's
 // deselect/demote was the committed act, and downward-only is structural (there
-// is no selection write in the drag, its ends, or its Esc cancel). Esc CLEARS
-// the live region outright and ends the gesture — it restores NOTHING (architect
-// 2026-07-29): a dissolved highlight is never resurrected in this product, so
-// the pre-press snapshot this state used to carry is gone with its restore. A
-// cancelled region drag therefore rests with no span at all, whatever stood
-// before the press. Session-only, never undoable.
+// is no selection write in the drag or at its ends). ESC DOES NOTHING AT ALL now
+// (architect 2026-07-29, superseding the same-day Esc-clears-the-region arm):
+// pointer gestures have no cancel, so Esc mid-drag is a consumed no-op and the
+// drag keeps extending under the pointer; the release rests the region where it
+// stands (Free, the drag's normal product, under the sliver gate). This state was
+// the first to lose its pre-press snapshot — the whole family followed. The rule
+// is at the drag-modal gate (input_handler.cpp). Session-only, never undoable.
 struct RegionDragState {
     bool    active       = false;
     bool    moved        = false;  // crossed the threshold into a real drag
@@ -636,7 +617,8 @@ struct EditorTextDragState {
 // / wall math exact — nothing mutates the store between press and crossing —
 // and lets a sub-threshold press-release stay a pure click. Session-only,
 // never serialized. Cleared on the crossing (begin_drag takes over), on
-// release / lost button before the crossing, on cancel, and on file load.
+// release / lost button before the crossing, by the force-end finalizer, and on
+// file load.
 // Shift never arms it, and a read-only tab never arms it (marker mutation is
 // refused there — the select still lands).
 //
@@ -646,9 +628,12 @@ struct EditorTextDragState {
 // before begin_drag could seed the whole group. Instead the arming press holds
 // the click's committed act back and sets this flag; a group drag then seeds
 // from the intact selection, while a motionless release / lost button runs the
-// held single-select + land (the file-manager convention). Esc ABANDONS the
-// deferred click (the multi-selection stands). Every immediate arm leaves this
-// false, and its release path just disarms.
+// held single-select + land (the file-manager convention). Esc does NOTHING to a
+// pending (pointer gestures have no cancel, 2026-07-29 — the rule at the
+// drag-modal gate in input_handler.cpp): the arm survives the press and still
+// resolves by the threshold crossing or a real release / button loss. The
+// force-end finalizer just disarms it, the deferred click never happening. Every
+// immediate arm leaves this false, and its release path just disarms.
 struct PendingMarkerDrag {
     bool active         = false;
     int  marker         = -1; // marker index to reposition (active view's list)
@@ -672,7 +657,8 @@ struct PendingMarkerDrag {
 // and the tempo-drag machinery take over. An ineligible press single-selects
 // and arms nothing (the silent read-only convention). Session-only, never
 // serialized. Cleared on the crossing (begin_tempo_drag takes over), on
-// release / lost button before the crossing, on cancel, and on file load.
+// release / lost button before the crossing, by the force-end finalizer, and on
+// file load.
 //
 // deferred_click (the GROUP tempo-drag deferral, architect 2026-07-23): the
 // PendingMarkerDrag deferral extended to the tempo surface. When the grabbed
@@ -681,7 +667,8 @@ struct PendingMarkerDrag {
 // begin_tempo_drag could seed the participant predecessor set. Instead the press
 // holds the click's committed act back and sets this flag; a group tempo drag
 // then seeds from the intact selection, while a motionless release / lost button
-// runs the held single-select + land, and Esc abandons it. An INELIGIBLE grab
+// runs the held single-select + land; Esc does nothing to it (see
+// PendingMarkerDrag's twin). An INELIGIBLE grab
 // arms no drag, so there is nothing to defer — it keeps the immediate collapse.
 struct PendingTempoDrag {
     bool active         = false;
@@ -713,12 +700,16 @@ struct PendingTempoDrag {
 // renders (the sync path is unaffected). One undo entry per drag: the
 // pre-drag store snapshot pushes at gesture end iff ANY participant's final
 // cents differ from its grab cents (mouse drags are coalesce-ineligible by
-// standing rule). Esc-cancel restores every participant's grab cents (one sync),
-// the SelectionSnapshot, and the grab playhead (always). The playhead follows
+// standing rule). THERE IS NO CANCEL (architect 2026-07-29, reversing the
+// Esc-restores-the-grab-cents rule this struct was built around): Esc mid-drag is
+// a consumed no-op, any end — release, lost button, the Ctrl+Q / resize / WM-close
+// finalizer — runs end_tempo_drag, so the cents already written STAND and Ctrl+Z
+// is the way back (the rule is at the drag-modal gate, input_handler.cpp). The playhead follows
 // the grabbed marker (the standing ruling): the arming click landed it on the
 // marker, so each event re-lands it on the marker's post-commit image (the
 // marker's source frame never moves; only its image does). Session-only;
-// cleared on release / lost button (end), Esc/close (cancel), and file load.
+// cleared at every gesture end (release, lost button, the force-end finalizer) and
+// on file load.
 struct TempoDragState {
     bool active      = false;
     // No motion-latch flag: end_tempo_drag's net-change test is the
@@ -736,42 +727,25 @@ struct TempoDragState {
     // Group participant predecessors (architect 2026-07-23): the DEDUPED set of
     // tempo_drag_predecessor(m) over the whole selection (grabbed included; a
     // singleton degenerates to {predecessor}), sorted ascending, and their GRAB
-    // cents in parallel — the Esc-cancel restore values and the end-of-gesture
-    // net-change baseline for every participant. apply_tempo_drag_motion adds the
+    // cents in parallel — LIVE MECHANICS, not a cancel origin: the grab cents are
+    // the delta lockstep's baseline and the end-of-gesture net-change test's
+    // comparand for every participant. apply_tempo_drag_motion adds the
     // SAME group-stop-clamped delta to every participant so they move in cent
     // lockstep. `walled` is set when ANY selected marker is tempo-drag-INELIGIBLE
     // (tempo_drag_predecessor < 0): the group still ARMS (the grabbed marker is
     // eligible) but the delta intersection pins to [0, 0] — the gesture engages
-    // yet cannot move, "the wall hit before it starts", so release commits
-    // nothing and Esc restores the untouched state.
+    // yet cannot move, "the wall hit before it starts", so it commits nothing at
+    // its end.
     std::vector<int>     participant_predecessors;
     std::vector<int64_t> participant_grab_cents;
     bool                 walled = false;
-    // Full pre-drag warp store for the ONE undo entry per drag (the marker
-    // drag's capture shape), plus the selection snapshot for the Esc restore.
+    // Full pre-drag warp store for the ONE undo entry per drag (the marker drag's
+    // capture shape). The undo payload, and the only capture this struct carries:
+    // the selection snapshot, the grab playhead and the pre-drag region were the
+    // cancel's, and there is no cancel (see the header). The grab-time
+    // trim-highlight intent bit went a commit earlier, with the coincident arm it
+    // served.
     std::vector<GuiWarpMarker> pre_drag_snapshot;
-    SelectionSnapshot  pre_drag_selection;
-    // Playhead-follows-marker (see DragState): the arming click landed the
-    // playhead on the dragged marker, so each step re-lands it on the marker's
-    // post-commit image unconditionally; the grab position feeds the Esc-cancel
-    // restore, always applied.
-    int64_t pre_ride_playhead_sample = 0;
-    // (No grab-time trim-highlight intent bit: grab_trim_highlight was DELETED
-    // 2026-07-29. Its sole justification was surviving the coincident-image clear
-    // arm's mid-gesture provenance erasure, and that arm is gone — a coincident
-    // window rests ACTIVE now. The gesture's region work is one unconditional
-    // extent re-derive per event, because a TrimWindow region cannot rest beside
-    // the selection this drag requires: every TrimWindow setter deselects, the rule
-    // stated at sync_region_to_trim_window's declaration in input_handler.h.)
-    // Whole-struct pre-drag region (provenance included), captured at
-    // begin_tempo_drag and RESTORED VERBATIM by cancel_tempo_drag — the position
-    // drag's exact pattern. Cancel restores every participant to its grab cents
-    // and nothing else can change mid-gesture (keys swallowed, editors
-    // unreachable), so the restored map IS the grab-time map, and this region —
-    // stale or fresh, any provenance — is exactly what was displayed against it.
-    // So Esc reproduces the pre-drag display unconditionally, with no geometry
-    // assumptions.
-    RegionState pre_drag_region;
 };
 
 // Pending trim chip/bridge drag, armed by a PLAIN (unmodified) left press in the
@@ -785,39 +759,22 @@ struct TempoDragState {
 // crossing. Requires the FULL bound pair (a lone bound is gesture-inert — the
 // router never arms one); a read-only tab claims the press but never arms.
 // Session-only, never serialized. Cleared on the crossing (begin_trim_drag
-// takes over), on release / lost button before the crossing, on cancel, and on
-// file load. `is_begin` names the single bound; `both` marks the pair (bridge)
-// drag, for which is_begin is Begin by construction.
+// takes over), on release / lost button before the crossing, by the force-end
+// finalizer, and on file load. `is_begin` names the single bound; `both` marks the
+// pair (bridge) drag, for which is_begin is Begin by construction.
+// FIVE FIELDS AND NO CAPTURES (2026-07-29): the set_click flag, the pre-press pair
+// (preset_*_frame) and the pre-gesture selection + region were all an Esc-restore
+// origin for the ctrl / ctrl+shift bound-set press, and POINTER GESTURES HAVE NO
+// CANCEL (the rule at the drag-modal gate, input_handler.cpp). A bound-set press's
+// click-set is committed the moment it is made — trim is history-less, so nothing
+// takes it back — which is why the pending no longer needs to distinguish itself
+// from a plain chip-drag pending at all.
 struct PendingTrimDrag {
     bool active   = false;
     bool is_begin = false;  // which bound the single drag targets (Begin if both)
     bool both     = false;  // the inter-chip bridge (pair) drag
     int  press_x  = 0;      // press position (window px): the gate + begin anchor
     int  press_y  = 0;
-    // A bound-set-armed pending (a ctrl / ctrl+shift chip-row press): the press
-    // ALREADY set one bound at the clicked column (set_trim_bound_at_click, with
-    // its sync), then armed this pending so motion past the threshold drags the
-    // just-set bound live. preset_*_frame hold the PRE-PRESS pair so an Esc undoes
-    // the WHOLE gesture — the click-set included — not just the drag delta: the
-    // crossing copies them into TrimDragState::orig_*_frame (the Esc-restore
-    // origin), and a still-pending Esc restores them directly. False for a plain
-    // chip-drag pending, which mutated nothing at press.
-    bool    set_click          = false;
-    int64_t preset_begin_frame = 0;
-    int64_t preset_end_frame   = 0;
-    // PRE-GESTURE selection + region, captured at the arming press — BEFORE any
-    // bound write, so a bound-set press whose own publish deselected is captured
-    // intact — and restored by the Esc/Ctrl+Q cancel (architect
-    // 2026-07-29), the tempo drag's pattern exactly (TempoDragState's pair
-    // below). WHY BOTH: every trim SETTER's publish CLEARS THE SELECTION (the rule
-    // at sync_region_to_trim_window's declaration, input_handler.h), and
-    // re-syncing the restored window cannot resurrect what that deselect took — a
-    // pre-gesture SelectionExtent span the gesture's TrimWindow overwrite destroyed
-    // comes back only from a verbatim capture. The CROSSING copies both into
-    // TrimDragState, so the whole press->drag->cancel gesture restores from one
-    // capture.
-    SelectionSnapshot pre_gesture_selection;
-    RegionState       pre_gesture_region;
 };
 
 // Trim boundary drag (the live trim pointer gesture). Armed from a PendingTrim-
@@ -846,33 +803,23 @@ struct TrimDragState {
     // bounds are the subject, it has no viewport clamp, and it never moves the
     // playhead; `is_begin` is Begin by construction (the router arms it so) and
     // is read only by the single-bound path, which uses it to name the one
-    // bound that moves. No pre-drag PLAYHEAD capture: trim drags never touch
-    // the playhead, so an Esc/Ctrl+Q cancel has nothing to restore there — the
-    // one recorded difference from the marker DragState left, since the
-    // selection and region captures below joined 2026-07-29 (the trim sync's
-    // clear arms CAN take a group's span and collapse it, so a cancel has
-    // something to restore after all).
+    // bound that moves.
+    // orig_begin/orig_end are LIVE MECHANICS, the one thing to know about them now
+    // that no cancel reads anything here (2026-07-29 — pointer gestures have no
+    // cancel; the rule is at the drag-modal gate in input_handler.cpp): the rigid
+    // PAIR path rides its delta off them, and commit_trim_drag's release snap uses
+    // them as its untouched-bound test (a bound equal to its origin keeps its
+    // stored value bit-exact instead of column-snapping). They hold the values at
+    // BEGIN — for a bound-set-armed drag, the click-set values, since that click
+    // already committed. The set_click flag and the pre-gesture
+    // selection + region that used to sit here were the Esc-restore origin and are
+    // deleted with it; a force-ended trim drag keeps its bounds, and trim's
+    // exclusion from undo/redo means nothing takes them back — the standing trim
+    // ruling, not a gap this opened.
     bool    both                 = false;
     int64_t orig_begin_frame   = 0;
     int64_t orig_end_frame     = 0;
     int64_t anchor_active_frame  = 0;
-    // This drag began from a bound-set chip-row press (ctrl / ctrl+shift): the
-    // press mutated a bound BEFORE the drag, so orig_begin/orig_end were
-    // overridden to the PRE-PRESS pair and an Esc-cancel restores them
-    // UNCONDITIONALLY (even an unmoved drag has the click-set to undo), unlike a
-    // plain chip drag whose restore is meaningful only when it moved. orig_frame
-    // (the single-bound drag base) stays the click-set value so the drag tracks
-    // smoothly from the clicked column.
-    bool    set_click            = false;
-    // PRE-GESTURE selection + region, copied verbatim from the PendingTrimDrag
-    // at the threshold crossing (the pending captured them at the arming press,
-    // ahead of any bound write) and restored by the Esc/Ctrl+Q cancel — see the
-    // pending's declaration for the rationale. Restored LAST, after the bound
-    // restore and its re-sync: selection first, then the region whole-struct, so
-    // neither the re-sync's own clear nor the snapshot restore's membership
-    // clear can take the captured span away. The tempo drag's ordering.
-    SelectionSnapshot pre_gesture_selection;
-    RegionState       pre_gesture_region;
 };
 
 // Dual-axis zoom/pan drag (Ableton-style navigation), armed by TWO surfaces: a
@@ -888,8 +835,9 @@ struct TrimDragState {
 // the nearest visible pixel when a pan pushes its column offscreen (the focus
 // pins to the edge it hits and becomes that edge's content). Navigation-class:
 // never touches the playhead or selection, allowed in read-only, does not toggle
-// or override follow. Cleared on button release / button-lost and on file load;
-// no Esc-restore (nothing to revert).
+// or override follow. Cleared on button release / button-lost, by the force-end
+// finalizer, and on file load; nothing to revert anywhere (it applies its zoom and
+// pan continuously, and pointer gestures have no cancel).
 struct StripDragState {
     bool   active    = false;
     // True once any motion event has applied a change. A motionless
@@ -931,8 +879,9 @@ struct StripDragState {
 // read-only, deliberately does NOT override follow, never touches the playhead
 // or selection. Every exit path (release, motion button-lost, cancel) calls
 // end_strip_pointer_capture (idempotent). Cleared on button release / lost
-// button, on Escape/close (cancel_active_drags), and on file load; no
-// Esc-restore.
+// button, by the force-end finalizer (Ctrl+Q / resize / WM close), and on file
+// load. Nothing to restore anywhere: it applies its pan continuously, and pointer
+// gestures have no cancel.
 struct ScrollDragState {
     bool   active   = false;
     // Pointer x (px) at the previous motion event, seeded at the Alt press.
@@ -996,7 +945,8 @@ enum class DoubleClickSurface { None, ZoomRow, Marker, EditorText, EmptyLane };
 // context can never consume in another after an intervening keypress (Esc
 // included) or a wheel zoom/pan that moved content under the pointer. The
 // pointer half is the on_button_press top-of-frame clear, the moved-drag clears,
-// and the Esc drag-cancel clears. Session-only.
+// and the force-end finalizer's clear (a force-end is not a clean click
+// sequence). Session-only.
 struct DoubleClickCandidate {
     DoubleClickSurface surface = DoubleClickSurface::None;
     int64_t time_ms   = 0;      // CLOCK_MONOTONIC ms at the seeding press/release
@@ -1607,39 +1557,39 @@ struct AppState {
     int     staged_displayed_area_w   = 0;
 
     // Marker reposition drag state. Not reset across file loads — explicitly
-    // cleared there and on button release / Escape.
+    // cleared there and at every gesture end (release / lost button / the
+    // force-end finalizer, all of which COMMIT).
     DragState     drag;
 
-    // Region-select drag state (plain left-drag). Cleared on button release,
-    // Escape, and file load.
+    // Region-select drag state (plain left-drag). Cleared on button release / lost
+    // button, by the force-end finalizer, and on file load.
     RegionDragState region_drag;
 
     // Pending marker-reposition drag, armed by a plain flag press. Usually the
     // press single-selects the marker immediately; but a press on a member of a
     // 2+ selection DEFERS its single-select + land (deferred_click) so a group
     // drag can seed the whole selection — the deferred click then runs at a
-    // motionless release / lost button, or is abandoned by Esc. The drag begins
+    // motionless release / lost button. The drag begins
     // only past the threshold. Cleared on the threshold crossing, on button
-    // release / lost button, on Escape/close (cancel_active_drags), and on file
-    // load.
+    // release / lost button, by the force-end finalizer (which performs no
+    // deferred click — a pending committed nothing), and on file load.
     PendingMarkerDrag pending_marker_drag;
 
     // Pending target-view tempo drag, armed by a plain warp-flag press in W +
     // target view on an eligible marker (the tempo-drag machinery begins only
     // past the marker threshold). Cleared on the threshold crossing, on button
-    // release / lost button, on Escape/close (cancel_active_drags), and on
-    // file load.
+    // release / lost button, by the force-end finalizer, and on file load.
     PendingTempoDrag pending_tempo_drag;
 
     // Live target-view tempo drag (per-cent live commits + synchronous
-    // re-warps). Ended on button release / lost button, cancelled on
-    // Escape/close (grab-tempo restore), and cleared on file load.
+    // re-warps). ENDED — never cancelled — on button release / lost button and by
+    // the force-end finalizer; cleared on file load.
     TempoDragState tempo_drag;
 
     // Pending trim chip/bridge drag, armed by a plain chip-row press (the
     // trim-drag machinery begins only past the threshold). Cleared on the
-    // threshold crossing, on button release / lost button, on Escape/close
-    // (cancel_active_drags), and on file load.
+    // threshold crossing, on button release / lost button, by the force-end
+    // finalizer, and on file load.
     PendingTrimDrag pending_trim_drag;
 
     // The resting region-select span (session-only). Cleared on file load, the
@@ -1647,7 +1597,8 @@ struct AppState {
     RegionState region;
 
     // Live trim boundary drag (chip / inter-chip bridge). Cleared on button
-    // release, Escape, and file load.
+    // release / lost button, by the force-end finalizer (both COMMIT its live
+    // bounds), and on file load.
     TrimDragState trim_drag;
 
     // Plain left-drag on a live strip row (zoom/pan navigation). Cleared on
@@ -1661,7 +1612,7 @@ struct AppState {
     DoubleClickCandidate double_click;
 
     // Alt+drag on the waveform (continuous 1:1 grab-pan). Cleared on button
-    // release / lost button, Escape (cancel_active_drags), and file load.
+    // release / lost button, by the force-end finalizer, and file load.
     ScrollDragState scroll_drag;
 
     // Mouse drag-to-select inside the active text editor. Cleared on
@@ -1989,33 +1940,6 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 inline bool active_column_authoring_allowed(const AppState& app) {
     return (app.active_markers_view == 'P') ? (app.active_audio_view == 'T')
                                             : (app.active_audio_view == 'S');
-}
-
-// SelectionSnapshot movers: capture the live marker selection at drag begin,
-// restore it wholesale at cancellation. One place enumerates the fields, so a
-// future selection field cannot be forgotten.
-inline SelectionSnapshot capture_selection_snapshot(const AppState& app) {
-    SelectionSnapshot s;
-    s.selected_markers     = app.selected_markers;
-    s.last_selected_marker = app.last_selected_marker;
-    return s;
-}
-
-inline void restore_selection_snapshot(AppState& app,
-                                       const SelectionSnapshot& s) {
-    // Restoring the snapshot replaces the live membership -> clear a
-    // SelectionExtent region. INVISIBLE at every caller, all of them gesture
-    // CANCELS that restore a whole-struct captured region VERBATIM AFTER this
-    // restore — the position drag (app.drag.pre_drag_region), the tempo drag
-    // (TempoDragState::pre_drag_region), and the two trim cancels
-    // (TrimDragState / PendingTrimDrag pre_gesture_region, 2026-07-29) — so the
-    // verbatim write lands last and reinstates the captured region, span and
-    // provenance and all, regardless of this clear. That is why no damage rides
-    // the return here; a future caller that does NOT restore a region afterward
-    // would owe waveform damage on a true return (see the helper).
-    (void)clear_region_on_membership_replace(app.region);
-    app.selected_markers     = s.selected_markers;
-    app.last_selected_marker = s.last_selected_marker;
 }
 
 // Restore ascending time_frame order after a mutation that may have

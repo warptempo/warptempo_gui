@@ -329,9 +329,10 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // with no resting pair, degenerate geometry, and a drag event that moved no bound
 // publish no highlight and so deselect nothing.
 // THE NON-SETTERS KEEP THE BARE SYNC and do not deselect: Shift+X (a trim
-// CLEARER), the two Esc-cancel re-syncs, and the settings editor's two trim
-// maintainers. That is the whole list — the tempo family's TrimWindow re-syncs
-// were DELETED by this same ruling (see the unreachability below).
+// CLEARER) and the settings editor's two trim maintainers. That is the whole list
+// — the tempo family's TrimWindow re-syncs were DELETED by the same ruling (see
+// the unreachability below), and the two trim Esc-cancel re-syncs died with the
+// cancels themselves (pointer gestures have no cancel, 2026-07-29).
 // The invariant's OTHER HALF is that nothing puts a selection back beside a
 // resting TrimWindow region: every route that selects a marker either CLEARS the
 // region (the plain/multi-select clicks and their deferred completions, the Tab
@@ -472,22 +473,21 @@ struct GuiInputHandler {
     int wheel_context(int x, int y) const;
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
-    // Stop every pointer drag gesture. A marker or trim drag is stopped
-    // before its deferred commit, so live state returns to pre-drag (including
-    // the restored SelectionSnapshot for a marker drag); a target-view tempo
-    // drag is REVERTED (its cent steps committed live — the grab tempo is
-    // written back with one synchronous re-warp, selection and a ridden
-    // playhead restored); a strip drag just ends
-    // where it is (the scrub arms no gesture, so it has no entry — a launched
-    // audition keeps playing, stopped by Space or by the next scrub click); a
-    // region drag is
-    // cancelled and its region
-    // CLEARED outright, restoring nothing (a dissolved highlight never comes
-    // back). No-op when no drag is active. Callers: the drag-modal
-    // escape hatches in on_key, and the WM-close and resize callbacks in
-    // main.cpp (close cancels before raising the prompt; resize cancels before
-    // the geometry rebuild).
-    void cancel_active_drags();
+    // END every in-flight pointer gesture through its own RELEASE body — a
+    // commit, never a cancel: pointer gestures have no cancel (the rule is stated
+    // at the drag-modal gate in on_key). The marker drag commits its proposed
+    // positions with its undo entry, the tempo drag settles the history for the
+    // cents it already wrote, the trim drag keeps its live bounds and runs its
+    // commit tail, the region drag rests its region, the strip / grab-pan drags
+    // just end (they applied continuously), and the three PENDINGS disarm having
+    // committed nothing. No-op when nothing is live. Definition beside
+    // on_button_release in input_pointer.cpp (same bodies, same order). Callers:
+    // the Ctrl+Q hatch in on_key, and main.cpp's WM-close and resize callbacks
+    // (close ends the gestures before raising the prompt, so none is left live
+    // under it; resize ends them before the geometry rebuild, whose new
+    // samples-per-pixel would otherwise make the next motion derive its delta
+    // across two coordinate systems).
+    void finalize_active_drags();
 
     // Arm the plain left-drag region-select gesture at a press. `anchor_frame`
     // is the active-domain frame the press just placed the playhead at; (x, y)
@@ -952,10 +952,10 @@ private:
     // navigation), so read-only-safe. Owns its own waveform-highlight damage,
     // raised only when the region's visible identity actually changed or the
     // collapse fires (a per-motion-event path pays narrow damage, not full).
-    // THIS BARE FORM IS THE NON-SETTERS' (Shift+X, the two Esc-cancel re-syncs, the
-    // settings editor's trim maintainers): it leaves the selection alone and so can
-    // still reach the never-span-less collapse. Every route that SETS the window
-    // calls the setter form below instead.
+    // THIS BARE FORM IS THE NON-SETTERS' (Shift+X and the settings editor's two
+    // trim maintainers): it leaves the selection alone and so can still reach the
+    // never-span-less collapse. Every route that SETS the window calls the setter
+    // form below instead.
     void sync_highlight_to_trim_window();
 
     // The SETTER's publish: deselect, then sync. EVERY TrimWindow setter goes
@@ -988,9 +988,9 @@ private:
     // adjust-only + sync, above) AND, when the click-set kept a full writable
     // pair, arms the single-bound trim drag on the just-set bound — so motion
     // past the threshold drags it live exactly like a plain chip drag, while a
-    // motionless release rests the click-set as before. The PRE-PRESS pair is
-    // stashed in the pending so an Esc undoes the whole gesture (see
-    // PendingTrimDrag::set_click). Read-only / a missing pair / a crossed
+    // motionless release rests the click-set as before. NOTHING is stashed: the
+    // click-set is committed when made (trim is history-less) and pointer gestures
+    // have no cancel. Read-only / a missing pair / a crossed
     // dissolve all leave nothing armed (the set itself already refused or
     // dissolved). is_begin picks the bound (ctrl=begin, ctrl+shift=end).
     void set_trim_bound_at_click_then_arm_drag(bool is_begin, int mouse_x,

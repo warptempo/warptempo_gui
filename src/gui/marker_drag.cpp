@@ -189,40 +189,20 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
         d.pre_drag_snapshot = app.warpmarkers.markers();
     }
     d.hit_marker             = hit;
-    // Pre-drag marker selection snapshot for the Esc/Ctrl+Q cancellation
-    // restore. For a single-marker drag the arming press single-selected the
-    // grabbed marker, so this captures {hit}; for a GROUP drag the arming press
-    // DEFERRED its single-select, so this captures the whole intact
-    // multi-selection — and a cancel restores exactly that (Esc reverts the
-    // drag's position change, not any click's selection: a deferred click never
-    // committed one).
-    d.pre_drag_selection = capture_selection_snapshot(app);
-    // Playhead follows the GRABBED marker (see the ruling at DragState): a
-    // single-marker press already landed the playhead on it; a group member's
-    // deferred press did not, so the mid-motion follow (apply_drag_motion) and
-    // commit_drag's unconditional land put the playhead on the grabbed marker
-    // (the crossing's focus transfer just below makes focus == grabbed from the
-    // outset). Either way the pre-ride capture feeds the Esc-cancel restore
-    // (always applied).
-    d.pre_ride_playhead_sample = app.playhead_cursor_sample;
-    // Region as it rests at grab, for the Esc-cancel restore. A single-marker
-    // drag captures an INACTIVE region: its arming press is a plain marker click,
-    // which collapses any resting span unconditionally (the point command owns its
-    // clear — land_playhead_on_marker), so there is nothing left to capture. The
-    // capture would be inert there regardless, nothing in a single-marker drag
-    // WRITING the region (apply_drag_motion's live-track is gated on
-    // SelectionExtent provenance, which set_single_selection's membership clear
-    // just took away). apply_drag_motion live-tracks an active region to the moving
-    // group's extent; commit_drag re-derives it from the post-commit store.
-    d.pre_drag_region = app.region;
+    // NO PRE-GESTURE CAPTURES HERE (all three deleted 2026-07-29): the selection
+    // snapshot, the grab-playhead sample and the pre-drag region existed only for
+    // an Esc/Ctrl+Q cancel, and POINTER GESTURES HAVE NO CANCEL — the rule and its
+    // reasoning are at the drag-modal gate (input_handler.cpp's on_key). The drag
+    // still captures the pre-drag STORE above, but that is the undo payload
+    // commit_drag pushes, not cancel machinery: undo is what takes a committed drag
+    // back. Playhead-follows-marker is unchanged as a live mechanic
+    // (apply_drag_motion's follow and commit_drag's land, the ruling at DragState).
     app.drag = std::move(d);
     // Focus transfer at the THRESHOLD CROSSING, unconditionally (was: the first
-    // MOVED motion in apply_drag_motion). It MUST run after every pre-drag
-    // capture above — pre_drag_selection, pre_ride_playhead_sample, and
-    // pre_drag_region record the PRE-transfer state so Esc restores the
-    // selection/playhead/region the gesture started from — and after
+    // MOVED motion in apply_drag_motion). It must run after
     // app.drag = std::move(d) so it mutates the
-    // live selection, not the moved-from local. A threshold-crossed drag is a
+    // live selection, not the moved-from local — the pre-capture ordering rule it
+    // also used to carry died with the captures. A threshold-crossed drag is a
     // REAL drag whether or not the walls let any proposal move, and commit_drag
     // lands the playhead on the grabbed member regardless of net change; so "a
     // real drag focuses the grabbed marker" belongs here, not behind
@@ -776,8 +756,8 @@ void MarkerDragOps::commit_drag() {
     // displayed target plate. Warp marker drags author in warp's SOURCE home
     // view only (the home-view binding, architect 2026-07-22 — the arming flag
     // press gates on active_column_authoring_allowed, and the view cannot toggle
-    // mid-gesture since every key but Esc/Ctrl+Q is swallowed while a drag is
-    // active), where the source waveform has no map-dependent plate; and a phase
+    // mid-gesture since every key but the Ctrl+Q hatch is swallowed while a drag
+    // is active), where the source waveform has no map-dependent plate; and a phase
     // reset drag never touches the warp map. So the only surviving effect is the
     // view-independent target preview trigger below.
     if (net_changed) target_render.trigger();
@@ -1016,8 +996,9 @@ MarkerDragOps::seed_tempo_group_participants(int hit, int pred) const {
 // Begin the tempo drag at the threshold crossing. Captures the grab tempo, the
 // deduped participant predecessor set + their grab cents (the shared seeding
 // helper above — begin consumes its verdict byte-identically, `walled` staying
-// a drag concept), the pre-drag store snapshot (the one undo entry's payload),
-// the selection snapshot, and the grab playhead (the Esc-cancel restore).
+// a drag concept), and the pre-drag store snapshot (the one undo entry's payload).
+// That is the whole capture set: the selection snapshot and grab playhead went
+// with the cancel (2026-07-29 — pointer gestures have no cancel).
 // Returns false (gesture dropped) only on a defensive eligibility re-check
 // failure of the GRABBED marker.
 bool MarkerDragOps::begin_tempo_drag(int hit) {
@@ -1040,31 +1021,16 @@ bool MarkerDragOps::begin_tempo_drag(int hit) {
     for (int p : d.participant_predecessors)
         d.participant_grab_cents.push_back(mv[p].tempo_cents);
 
+    // The pre-drag STORE, and nothing else: it is the undo payload end_tempo_drag
+    // pushes on a net change, not cancel machinery. NO PRE-GESTURE CAPTURES (the
+    // selection snapshot, the grab playhead and the pre-drag region all deleted
+    // 2026-07-29 with the cancel itself — pointer gestures have no cancel; the rule
+    // is at the drag-modal gate in input_handler.cpp). The participants' GRAB CENTS
+    // above are NOT part of that deletion: they are live mechanics — the delta
+    // lockstep reads them and end_tempo_drag's net-change test compares against
+    // them — so an interrupted tempo drag keeps the cents it already wrote and
+    // Ctrl+Z is what takes them back.
     d.pre_drag_snapshot      = mv;
-    // Pre-drag selection for the Esc / Ctrl+Q cancellation restore. A singleton
-    // press single-selected the dragged marker ({hit}); a group member's press
-    // DEFERRED its single-select, so this captures the whole intact
-    // multi-selection (the marker-drag cancel shape).
-    d.pre_drag_selection = capture_selection_snapshot(app);
-    // Playhead follows the dragged marker (see the ruling at DragState): the
-    // arming plain marker click landed the playhead on this marker (a singleton
-    // press; a group's deferred press did not, so the crossing focus + each
-    // event's re-land tow it there). The marker's source frame never changes
-    // here — only its image moves. The pre-ride capture feeds the Esc-cancel
-    // restore (always applied).
-    d.pre_ride_playhead_sample = app.playhead_cursor_sample;
-    // NO grab-time trim-highlight intent bit (TempoDragState::grab_trim_highlight,
-    // deleted 2026-07-29): its only job was surviving the coincident arm's
-    // mid-gesture provenance erasure, and that arm is gone — a coincident window
-    // now rests ACTIVE. Nothing else needs it either: a tempo drag runs with a
-    // selection, every TrimWindow setter deselects, so no TrimWindow region can be
-    // resting when this arms (the rule at sync_region_to_trim_window's declaration,
-    // input_handler.h).
-    // Whole-struct pre-drag region capture for the Esc-cancel restore (the
-    // position drag's exact pattern; provenance rides along). Cancel restores THIS
-    // verbatim — stale or fresh, any provenance — so Esc reproduces the pre-drag
-    // display unconditionally, with no geometry assumptions.
-    d.pre_drag_region = app.region;
     app.tempo_drag = std::move(d);
     // Focus transfer at the THRESHOLD CROSSING, the reposition drag's rule (a
     // real drag focuses the grabbed marker at the crossing, so a walled group
@@ -1380,7 +1346,9 @@ void MarkerDragOps::apply_tempo_drag_motion(int mouse_x) {
 // SPLIT — focus on the grabbed marker, the playhead stranded on whichever
 // selection member the land put it on at press — and a later Space would audition
 // from the wrong marker. For a moved drag this is a same-value repeat of the last
-// event's follow (harmless). Esc-cancel still restores the pre-ride playhead.
+// event's follow (harmless). This land is now the ONLY playhead write any tempo
+// drag end performs — the grab-playhead restore it used to share the story with
+// died with the cancel.
 // No region re-derive here: the region follows the images per changed event in
 // apply_tempo_drag_motion, so the last committed event already landed it on the
 // final extent (a walled / zero-commit drag never moved the images, so its
@@ -1438,51 +1406,6 @@ void MarkerDragOps::end_tempo_drag() {
     // drag changed nothing at all. (The former lateral-gesture pin stamp + its
     // appear-damage lived only to survive tempo_drag.active going false without a
     // hover — subsumed by always-on.)
-}
-
-// Esc / Ctrl+Q cancel: restore the GRAB tempo (one store write + one
-// synchronous re-warp), the pre-drag SelectionSnapshot, and the grab playhead,
-// exactly the marker-drag cancel shape. No undo entry and no preview trigger:
-// the restored store equals the pre-drag state the last trigger already
-// previewed.
-void MarkerDragOps::cancel_tempo_drag() {
-    if (!app.tempo_drag.active) return;
-    restore_selection_snapshot(app, app.tempo_drag.pre_drag_selection);
-    // Restore EVERY participant's grab cents (the parallel vectors). A walled
-    // group and an unmoved drag restore nothing (the store already holds the
-    // grab values — motion only wrote on a nonzero clamped delta).
-    const auto& mv = app.warpmarkers.markers();
-    bool restored = false;
-    for (size_t k = 0; k < app.tempo_drag.participant_predecessors.size(); ++k) {
-        const int pp = app.tempo_drag.participant_predecessors[k];
-        if (pp < 0 || pp >= static_cast<int>(mv.size())) continue;
-        if (mv[pp].tempo_cents == app.tempo_drag.participant_grab_cents[k])
-            continue;
-        GuiWarpMarker* p = app.warpmarkers.marker_mut(pp);
-        if (p) {
-            p->tempo_cents = app.tempo_drag.participant_grab_cents[k];
-            restored = true;
-        }
-    }
-    if (restored) viewport.kick_waveform_sync();
-    viewport.move_playhead_to(app.tempo_drag.pre_ride_playhead_sample);
-    // Region restored VERBATIM (architect 2026-07-23) — the position drag's
-    // pattern, replacing the earlier decision-based re-derive/re-sync. Cancel put
-    // every participant back to its grab cents and nothing else can change
-    // mid-gesture (keys swallowed, editors unreachable), so the live map is now
-    // the grab-time map, and pre_drag_region — stale or fresh, any provenance — is
-    // exactly what was displayed against it. Restoring it verbatim reproduces the
-    // pre-drag display unconditionally: no geometry assumptions and no re-derive
-    // that would MOVE a numerically-stale
-    // SelectionExtent to the current mapped extent. Restore LAST — after the kick
-    // (whose domain repair could otherwise clear it) and after
-    // restore_selection_snapshot (whose membership clear must not take the
-    // captured span away) — so the captured region survives intact.
-    app.region = app.tempo_drag.pre_drag_region;
-    app.tempo_drag = TempoDragState{};
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_top_strip();
-    viewport.invalidate_timestamp_area();
 }
 
 // -- W+target bare Left/Right: the tempo drag's keyboard twin -------------

@@ -70,8 +70,12 @@ struct MarkerDragOps {
     int tempo_drag_predecessor(int hit) const;
     bool begin_tempo_drag(int hit);
     void apply_tempo_drag_motion(int mouse_x);
-    void end_tempo_drag();     // release / lost button: finalize
-    void cancel_tempo_drag();  // Esc / Ctrl+Q: restore the grab tempo
+    // Release / lost button / any force-end (finalize_active_drags): FINALIZE.
+    // There is no cancel_tempo_drag any more — pointer gestures have no cancel
+    // (architect 2026-07-29, the rule at the drag-modal gate in
+    // input_handler.cpp), so an interrupted drag keeps the cents it already wrote
+    // and undo is the mitigation.
+    void end_tempo_drag();
 
     // Deduped participant-predecessor seeding over the WHOLE selection — the
     // ONE owner of the group eligibility verdict, shared by begin_tempo_drag
