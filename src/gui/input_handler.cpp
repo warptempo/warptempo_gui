@@ -1342,6 +1342,14 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // focus and resurrect a selection the user dropped. This switch prunes
     // nothing, so the guard — not a neighbouring repair — is what makes the
     // precondition local.
+    // ITS NARROW DAMAGE IS SUPERSEDED HERE, DELIBERATELY: collapse_to_focused
+    // raises stem/overlay damage computed on the basis live at the call, and at
+    // this point the basis is TORN — the displayed map and viewport mirrors were
+    // just reset to cold above while the domain flips underneath. The tail's
+    // FULL-WINDOW invalidate is what actually repaints the collapse, and that
+    // dependency is load-bearing: narrowing the tail damage would strand this
+    // collapse's pixels. No reordering fixes it either — the collapse must run
+    // after the region clear it follows from.
     if (app.selected_markers.size() >= 2) selection.collapse_to_focused();
 
     // The S/T toggle translates the active tab's live playhead across the

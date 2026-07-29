@@ -206,8 +206,11 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // pure viewport moves leave it alone. The other half of the model is the
 // MEMBERSHIP REPLACE, which clears a SelectionExtent span outright
 // (clear_region_on_membership_replace, app_state.h) — that is what covers the
-// ops which change WHO is selected without moving anything: the Ctrl+N collapse,
-// sanitize/prune, and the Esc clear. THREE of those ops go further and clear ANY
+// ops which change WHO is selected without moving anything: sanitize/prune and
+// the Esc clear. (The Ctrl+N collapse is NOT one of them — it LANDS the playhead
+// on the surviving focus, warpmarkers_ops.cpp, which makes it a point command
+// like the clicks; it simply owes no span clear of its own, the membership
+// replace already taking a SelectionExtent one.) THREE ops go further and clear ANY
 // resting span, provenance and all (architect 2026-07-29): the undo/redo
 // restore, the `p` W/P swap, and the propagate paste — each hands the lane a
 // selection it took in wholesale, so a span it did not build has nothing left to
@@ -293,7 +296,7 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 // clear_region_highlight (its else-arm, run whatever the land did) is what
 // collapses the span there. Endpoints
 // are clamped through clamp_playhead_to_live_domain (the region domain's
-// playable-frame invariant, as every other former clamps). Three caller CLASSES:
+// playable-frame invariant, as every other former clamps). FOUR caller CLASSES:
 //   (1) CREATORS — the shift-range and ctrl-toggle click paths, plus the `m`
 //       bpm-mode open (input_key_dispatch.cpp), which is the same pattern one
 //       gesture over: the open collapses the selection to the span owner and
@@ -305,10 +308,12 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 //       highlight;
 //   (2) MAINTAINERS — the group image-moving commits that re-derive an
 //       ALREADY-ACTIVE SelectionExtent highlight from the post-commit,
-//       reordered/remapped store (never creating one): the group marker DRAG's
-//       commit and BOTH group position NUDGES (warp + phase reset). Their callers
-//       gate on region.active && provenance == SelectionExtent, so a Free /
-//       TrimWindow / inactive region is untouched;
+//       reordered/remapped store (never creating one). Every one of them gates on
+//       region.active && provenance == SelectionExtent, so a Free / TrimWindow /
+//       inactive region is untouched. The class is the group image-movers —
+//       position and tempo alike — and its MEMBERSHIP is not enumerated here: the
+//       authoritative inventory of the image-follow sites lives at RegionState in
+//       app_state.h, and an inline copy here is exactly the list that goes stale;
 //   (3) the two MASS-MARKER PROGRAMMATIC selections, which unlike the
 //       maintainers MAY CREATE a region: the GROUP undo/redo RESTORE (undo.cpp's
 //       visual tail, architect 2026-07-25) and the PROPAGATE PASTE's target-view
@@ -2255,9 +2260,18 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         const bool    set_click = app.pending_trim_drag.set_click;
         const int64_t preset_begin = app.pending_trim_drag.preset_begin_frame;
         const int64_t preset_end   = app.pending_trim_drag.preset_end_frame;
+        // The PRE-GESTURE selection + region travel with them, UNCONDITIONALLY
+        // (a plain chip drag needs them as much as a bound-set one: its motion
+        // syncs can collapse a 2+ selection just the same). Captured at the
+        // arming press, applied by the drag's Esc-cancel.
+        SelectionSnapshot pre_selection =
+            std::move(app.pending_trim_drag.pre_gesture_selection);
+        const RegionState pre_region = app.pending_trim_drag.pre_gesture_region;
         app.pending_trim_drag = PendingTrimDrag{};
         begin_trim_drag(is_begin ? TrimHit::Begin : TrimHit::End, press_x, both);
         if (!app.trim_drag.active) return;  // begin refused (no pair / no audio)
+        app.trim_drag.pre_gesture_selection = std::move(pre_selection);
+        app.trim_drag.pre_gesture_region    = pre_region;
         if (set_click) {
             // The drag BASE (orig_frame) stays the click-set value begin_trim_drag
             // captured, so the bound tracks smoothly from the clicked column; only

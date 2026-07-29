@@ -207,24 +207,38 @@ void Selection::clear_selection() {
 }
 
 void Selection::collapse_to_focused() {
-    // The SINGLETON fine-tuning ops (inherit toggle, the singleton tempo step)
-    // collapse the selection to the focused marker so the operation and the
-    // resulting selection target last_selected only. The position NUDGES and the
-    // GROUP tempo gestures do NOT collapse — they went group (architect
-    // 2026-07-23), operating over the whole selection (the tempo gestures move it
-    // rigidly; the nudges step every member on its own painted column since
-    // 2026-07-29). last_selected_marker
+    // TWO CALLER CLASSES, and they want this for opposite reasons:
+    //   * the FINE-TUNING VALUE gestures (the inherit toggle, the singleton
+    //     tempo step), which narrow the selection so the operation and the
+    //     resulting selection both target last_selected only;
+    //   * the NEVER-REST-2+-WITHOUT-A-SPAN sites, which call it because a clear
+    //     took the group's only point cue away. Their inventory is NOT repeated
+    //     here — it lives, by class, at clear_region_highlight's declaration
+    //     (input_handler.h), which is also where the invariant itself is stated.
+    // The position NUDGES and the GROUP tempo gestures do NOT collapse — they
+    // went group (architect 2026-07-23), operating over the whole selection (the
+    // tempo gestures move it rigidly; the nudges step every member on its own
+    // painted column since 2026-07-29). last_selected_marker
     // is untouched — it stays the focus. Callers that full-invalidate afterward
     // make the top-strip / timestamp damage here redundant (a benign damage-union,
     // accepted).
     // Membership replace (collapse to the focused singleton) -> CLEAR a
     // SelectionExtent region (a 1-marker extent is degenerate, and the collapse
-    // is what killed the span's owner). A TrimWindow region SURVIVES: the
-    // callers here are value gestures (the inherit toggle, the singleton tempo
-    // step) with no business tearing down a chip-row highlight.
+    // is what killed the span's owner). A TrimWindow region SURVIVES this
+    // membership clear, which is right for BOTH classes: a value gesture has no
+    // business tearing down a chip-row highlight, and an invariant site that
+    // arrived with a TrimWindow region resting never fired at all (the invariant
+    // tests for NO region, so a live trim highlight means no collapse).
     if (clear_region_on_membership_replace(app.region))
         viewport.invalidate_waveform_area();
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
+    // No focus -> nothing to collapse TO. The invariant sites depend on the
+    // focus being a live member of the very group they are collapsing, and it
+    // is: a 2+ membership carrying focus -1 has exactly one producer in the
+    // tree — sanitize_selection_after_restore's empty-touched-set shape — and no
+    // real mutation yields an empty touched set, so the state is unreachable
+    // today. A derivation, not a guard: this early return exists for the
+    // ordinary no-selection call, and the invariant sites simply never meet it.
     if (app.last_selected_marker < 0) return;   // nothing focused
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     const std::optional<int64_t> old_stem    = stem_subject();

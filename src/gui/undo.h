@@ -12,9 +12,10 @@
 
 struct GuiTargetRender;
 
-// Rapid-gesture undo coalescing. A burst of eligible keyboard gestures — warp
-// / phase-reset nudges (bare Left/Right in the marker lane) and tempo cent
-// steps (bare Up/Down; no wheel route) — that land within kGestureCoalesceMs of
+// Rapid-gesture undo coalescing. A burst of eligible keyboard gestures — the
+// warp / phase-reset position nudges (bare Left/Right in the marker lane), the
+// tempo cent step (bare Up/Down; no wheel route), and the W+target tempo-IMAGE
+// step (bare Left/Right there) — that land within kGestureCoalesceMs of
 // each other on the
 // SAME gesture-kind AS CONSECUTIVE COMMANDS collapses into ONE undo entry: the
 // burst's first press pushes the pre-burst snapshot and every continuation

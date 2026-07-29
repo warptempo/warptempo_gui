@@ -208,8 +208,10 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     its no-window arm — Shift+X, the crossed-pair auto-clear, a chip/bridge
 //     drag that dissolves the pair, the settings-editor trim commit — AND its
 //     COINCIDENT arm, mid-gesture tempo callers included;
-//   * the STATE-paste arm of the propagate tail (the created-set arm derives its
-//     own extent instead).
+//   * the propagate tail's NO-CREATED-SET arm — general, not state-paste-only:
+//     the state paste always lands with an empty created set, and a PLACEMENT
+//     paste whose run created nothing reaches it too (the created-set arm
+//     derives its own extent instead).
 // NO EXCLUSIONS (architect 2026-07-29, superseding the one carve-out this rule
 // briefly carried): coincident images are an ERROR state, not a special case —
 // the markers are red and the write render-inert — so a group tempo step or drag

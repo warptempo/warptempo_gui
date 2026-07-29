@@ -138,6 +138,14 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // switch like `t` and `p`, which land in point form by the same 2026-07-29
     // ruling. The stored slot keeps whatever it held — only the live selection
     // collapses.
+    // ITS NARROW DAMAGE IS SUPERSEDED HERE, DELIBERATELY: collapse_to_focused
+    // raises stem/overlay damage against the basis live at the call, and this
+    // restore is MID-FLIGHT — the selection has been swapped in but the entering
+    // tab's trim, viewport and zoom land only below, so that basis is not the
+    // one the collapse will be painted on. The kick_waveform_sync at the tail
+    // (plus its invalidate_timestamp_area) is what actually repaints it, and the
+    // dependency is load-bearing: narrowing that tail would strand these pixels.
+    // No reordering — the collapse belongs with the membership write it judges.
     if (app.selected_markers.size() >= 2) selection.collapse_to_focused();
     // Lockstep with refresh_active_tab_view_from_app's push block: adding a
     // per-tab live-mirror field means updating that push, this pull, and
@@ -213,7 +221,16 @@ void GuiActiveViews::toggle_active_markers_view() {
     // no-created-set arm at its else-collapse, and undo's inline W/P swap, which
     // owns its own visual language (sanitize, then the restore tail's wholesale
     // region clear and, for a group entry, the touched-set re-select plus extent
-    // re-derive). It runs BEFORE the clear and the land so
+    // re-derive).
+    // ONE HONEST CAVEAT on "collapses or overwrites": undo's inline swap has an
+    // EMPTY-TOUCHED-SET branch that does neither — it restores the stashed group
+    // and the tail's >= 2 arm then LANDS on it and derives an extent, so the
+    // group is visible again, with a span. The observable never-span-less ruling
+    // still holds there (a group resting WITH its span is exactly what the rule
+    // requires); what does not hold is the stricter "no group survives a view
+    // switch" reading. The branch is producible only by a pure no-change
+    // permutation of the store, which no real mutation pushes, so nothing
+    // reaches it today. It runs BEFORE the clear and the land so
     // both act on the collapsed singleton — the collapse keeps
     // last_selected_marker, so the land below targets the same focus either way,
     // and its own membership clear is a no-op ahead of the wholesale clear. The

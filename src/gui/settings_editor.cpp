@@ -216,6 +216,23 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         const int64_t v = gv.i64;
         if (active) {
             if (v == app.playhead_cursor_sample) { unchanged(); return true; }
+            // THE NAVIGATION-JUMP CLASS (architect 2026-07-29, no exemptions):
+            // this is a playhead jump to an arbitrary typed position — a
+            // non-marker spot — so it LEAVES the marker lane exactly as Home/End
+            // do, and it clears the SELECTION and the REGION the way they do
+            // (the precedent and its rationale live at the Home/End arms in
+            // input_key_dispatch.cpp: a flag left selected would go on claiming
+            // to be the playhead at its own position, and the next bare arrow
+            // would tow the playhead back onto the marker, silently discarding
+            // the jump). Collapse is cheap; carrying a span across an arbitrary
+            // jump is worth less than the confusion it buys. The INACTIVE arm
+            // below writes the other tab's stored cursor, moves nothing live,
+            // and stays out of this entirely.
+            if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
+                selection.clear_selection();
+                viewport.invalidate_waveform_area();
+            }
+            clear_region_highlight(app, viewport);
             // The live chokepoint; its clamp owns out-of-range constructively.
             viewport.move_playhead_to(v);
         } else {
@@ -468,6 +485,13 @@ void GuiSettingsEditor::commit() {
     // the focus flag is where the playhead already rests.
     clear_region_highlight(app, viewport);
     if (app.selected_markers.size() >= 2) selection.collapse_to_focused();
+    // Full-area damage for the collapse. collapse_to_focused raises its own
+    // NARROW stem/overlay damage, computed against the basis live at the call —
+    // and this commit is about to rebuild the map under it (the kick below), so
+    // that basis is the wrong one to trust here. A settings commit is a rare,
+    // discrete command, so it takes the standing "rare command, full damage"
+    // answer rather than a clever narrow recompute.
+    viewport.invalidate_waveform_area();
     // The engine scale is a warp-map input (build_warp_frame_map's slope
     // product), so an engine commit that moved it re-warps the target-view
     // plate. This is one of the target-view re-warp sites (the full inventory

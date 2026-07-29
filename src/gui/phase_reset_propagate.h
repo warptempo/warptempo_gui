@@ -22,8 +22,11 @@ struct PhaseResetPropagate {
     Viewport&           viewport;
     // The paste tail clears any resting region, so a 2+ selection it did not
     // build a span for collapses to its focus (the never-rest-2+-without-a-span
-    // invariant, stated at clear_region_highlight's declaration). Only the
-    // STATE-paste arm needs it — the created-set arm derives its own extent.
+    // invariant, stated at clear_region_highlight's declaration). Needed by the
+    // NO-CREATED-SET arm, which is general rather than state-paste-only: the
+    // state paste always lands with an empty created set, and a placement paste
+    // whose run created nothing lands there as well. The created-set arm derives
+    // its own extent instead.
     Selection&          selection;
     Undo&               undo;
     GuiTargetRender& target_render;

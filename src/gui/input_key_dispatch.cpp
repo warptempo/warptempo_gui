@@ -471,15 +471,34 @@ void GuiInputHandler::cancel_active_drags() {
             app.trim.end_frame   = app.trim_drag.orig_end_frame;
         }
         const bool was_set_click = app.trim_drag.set_click;
+        SelectionSnapshot pre_selection =
+            std::move(app.trim_drag.pre_gesture_selection);
+        const RegionState pre_region = app.trim_drag.pre_gesture_region;
         app.trim_drag = TrimDragState{};
         viewport.invalidate_waveform_area();
         viewport.invalidate_top_strip();
         viewport.invalidate_timestamp_area();
         // R7 cancel-sync: the drag live-synced the REGION highlight to the moving
-        // window; the bounds are back, so re-sync against the RESTORED window (the
-        // region follows the window back to its origin; the selection is never
-        // touched).
+        // window; the bounds are back, so re-sync against the RESTORED window so
+        // the region follows the window back to its origin.
         sync_highlight_to_trim_window();
+        // THEN the pre-gesture SELECTION and REGION, in that order and LAST
+        // (architect 2026-07-29) — the tempo drag's exact cancel shape, and for
+        // its reason: a re-sync cannot resurrect what the gesture's clear arms
+        // took. A trim sync that cleared the span collapsed any 2+ selection to
+        // its focus at its chokepoint, and a pre-gesture SelectionExtent span the
+        // gesture's TrimWindow overwrite destroyed is not derivable from the
+        // window at all. So the snapshot puts the group back, and the
+        // whole-struct region lands AFTER it — past the snapshot restore's own
+        // membership clear, which would otherwise take the captured span again.
+        // The verbatim write also SUPERSEDES the re-sync's region write above;
+        // that sync is kept as the bound restore's structural pair (and is what
+        // the cancel would fall back on if this capture ever went away), not
+        // because its region result survives. The three invalidates above are
+        // this handler's damage for all of it — the paint reads the state this
+        // pass ends with.
+        restore_selection_snapshot(app, pre_selection);
+        app.region = pre_region;
         // A bound-set-armed drag (set_click) dispatched a target PREVIEW at the
         // press for the click-set bounds (set_trim_bound_at_click's trigger), so
         // supersede it with the restored pair's — exactly as the still-pending
@@ -584,18 +603,34 @@ void GuiInputHandler::cancel_active_drags() {
     // release / lost-button paths, so an Esc here ABANDONS that deferred click
     // rather than performing it, and there is nothing to revert. R3: a
     // BOUND-SET-armed pending (set_click) already mutated a bound at the press,
-    // so an Esc undoes the whole gesture — restore the pre-press pair and re-sync
-    // the coupled REGION highlight to the rolled-back window (the selection is
-    // never touched).
+    // so an Esc undoes the whole gesture — restore the pre-press pair, re-sync
+    // the coupled REGION highlight to the rolled-back window, and then put the
+    // pre-press SELECTION and REGION back (architect 2026-07-29): the press's own
+    // sync may have cleared a span and collapsed a 2+ selection to its focus, and
+    // the re-sync cannot undo that. Same order as the drag's cancel and the tempo
+    // drag's — selection, then the whole-struct region, last, that verbatim write
+    // superseding the re-sync's own region result (see the drag's cancel). The PLAIN pending
+    // (else) mutated nothing and ran no sync, so it has nothing to restore and
+    // must not stomp a selection the user changed between press and Esc; it is
+    // just disarmed.
     if (app.pending_trim_drag.active) {
         if (app.pending_trim_drag.set_click) {
             app.trim.begin_frame = app.pending_trim_drag.preset_begin_frame;
             app.trim.end_frame   = app.pending_trim_drag.preset_end_frame;
+            SelectionSnapshot pre_selection =
+                std::move(app.pending_trim_drag.pre_gesture_selection);
+            const RegionState pre_region =
+                app.pending_trim_drag.pre_gesture_region;
             app.pending_trim_drag = PendingTrimDrag{};
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
+            // The selection restore below can change which flag carries the
+            // focus triangle, so the flag row is damaged here too.
+            viewport.invalidate_top_strip();
             target_render.trigger();
             sync_highlight_to_trim_window();
+            restore_selection_snapshot(app, pre_selection);
+            app.region = pre_region;
         } else {
             app.pending_trim_drag = PendingTrimDrag{};
         }

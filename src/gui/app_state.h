@@ -137,17 +137,40 @@ struct SelectionSnapshot {
 // FLOWS DOWNWARD ONLY (architect 2026-07-23): highlighting a region does NOT
 // select the markers it contains (the reverse coupling — a region selecting its
 // contents — was tried and retired; do not re-propose); if markers ARE selected
-// the region is set to their extent — never the other way. Formed by FIVE routes: the plain waveform drag (paints it live, leaving
-// the selection EMPTY throughout), the waveform SHIFT+click (the region former /
-// marker DEMOTE — playhead-to-click with nothing selected, else
-// furthest-selected-marker-to-click, DROPPING the selection), a multi-marker
-// DELETE (demotes to the span of the deleted positions, also a DROP), the ESC
-// DEMOTE (the ladder's first rung over a 2+ selection: the selection drops and
-// its span rests Free — the one sanctioned demotion route, see
-// handle_escape_selection_region), and the
-// MULTI-SELECT EXTENT: a shift-range or ctrl-toggle click that leaves 2+ markers
-// selected sets the region to the selection's position extent [earliest, latest]
-// (provenance SelectionExtent — see RegionProvenance), so the highlight and
+// the region is set to their extent — never the other way.
+//
+// THE FORMERS — THE AUTHORITATIVE INVENTORY (re-derived 2026-07-29 by grepping
+// every writer of region.active = true; the earlier "FIVE routes" list predated
+// four of them). Other sites state only their own class and point here.
+// SEVEN CODE SITES ACTIVATE A REGION, three of them by writing the fields
+// directly for a FREE span, one for TrimWindow, and one — the extent owner —
+// serving many gestures:
+//   * the plain waveform DRAG (paints it live, leaving the selection EMPTY
+//     throughout) — Free;
+//   * the waveform SHIFT+click region former / marker DEMOTE (playhead-to-click
+//     with nothing selected, else furthest-selected-marker-to-click, DROPPING
+//     the selection) — Free;
+//   * a multi-marker DELETE, either column (demotes to the span of the deleted
+//     positions, also a DROP) — Free;
+//   * the ESC ladder's first rung over a 2+ selection with a live
+//     SelectionExtent span: it re-forms the same bounds as Free after the
+//     deselect (handle_escape_selection_region) — the one sanctioned demotion
+//     route;
+//   * the TRIM SYNC's set arm (sync_region_to_trim_window) — TrimWindow, the
+//     trim's own highlight, selection-independent;
+//   * set_region_to_selection_extent — SelectionExtent, the ONE owner of that
+//     provenance. Its callers split into CREATORS (which may activate from
+//     nothing: the shift-range and ctrl-toggle multi-select clicks, the `m` bpm
+//     open's re-extent, the Esc ladder's no-region drop-to-span rung, the GROUP
+//     undo/redo restore, and the propagate paste's created-set arm) and
+//     MAINTAINERS (which gate on an ALREADY-ACTIVE SelectionExtent region and
+//     only re-derive it: the group marker drag's commit, both group position
+//     nudges, the tempo drag's per-event follow, the tempo-image step, and the
+//     group tempo step). The class-level contract for those callers, and the
+//     ordering rule each obeys, live at that function in input_pointer.cpp.
+// The MULTI-SELECT EXTENT case is the one worth restating for its consequence: a
+// shift-range or ctrl-toggle click leaving 2+ markers selected sets the region to
+// the selection's position extent [earliest, latest], so the highlight and
 // Space's left-bound launch agree — the auditioning-from-the-start behavior is
 // the REGION's, not the land's (those clicks land on their focus; see
 // land_playhead_on_marker). THE INVARIANT (three-state, architect
@@ -781,6 +804,18 @@ struct PendingTrimDrag {
     bool    set_click          = false;
     int64_t preset_begin_frame = 0;
     int64_t preset_end_frame   = 0;
+    // PRE-GESTURE selection + region, captured at the arming press — BEFORE any
+    // bound write, so a bound-set press whose own trim sync collapsed a group is
+    // captured intact — and restored by the Esc/Ctrl+Q cancel (architect
+    // 2026-07-29), the tempo drag's pattern exactly (TempoDragState's pair
+    // below). WHY BOTH: the trim sync's clear arms collapse a 2+ selection to
+    // its focus at their shared chokepoint, and re-syncing the restored window
+    // cannot resurrect what the collapse took — a pre-gesture SelectionExtent
+    // span the gesture's TrimWindow overwrite destroyed comes back only from a
+    // verbatim capture. The CROSSING copies both into TrimDragState, so the
+    // whole press->drag->cancel gesture restores from one capture.
+    SelectionSnapshot pre_gesture_selection;
+    RegionState       pre_gesture_region;
 };
 
 // Trim boundary drag (the live trim pointer gesture). Armed from a PendingTrim-
@@ -809,11 +844,12 @@ struct TrimDragState {
     // bounds are the subject, it has no viewport clamp, and it never moves the
     // playhead; `is_begin` is Begin by construction (the router arms it so) and
     // is read only by the single-bound path, which uses it to name the one
-    // bound that moves. No pre-drag playhead capture: trim drags never touch
-    // the playhead, so an Esc/Ctrl+Q cancel has nothing to restore there (the
-    // recorded difference from the marker DragState, which restores its
-    // grabbed marker's selection and the grab playhead that followed the
-    // marker).
+    // bound that moves. No pre-drag PLAYHEAD capture: trim drags never touch
+    // the playhead, so an Esc/Ctrl+Q cancel has nothing to restore there — the
+    // one recorded difference from the marker DragState left, since the
+    // selection and region captures below joined 2026-07-29 (the trim sync's
+    // clear arms CAN take a group's span and collapse it, so a cancel has
+    // something to restore after all).
     bool    both                 = false;
     int64_t orig_begin_frame   = 0;
     int64_t orig_end_frame     = 0;
@@ -826,6 +862,15 @@ struct TrimDragState {
     // (the single-bound drag base) stays the click-set value so the drag tracks
     // smoothly from the clicked column.
     bool    set_click            = false;
+    // PRE-GESTURE selection + region, copied verbatim from the PendingTrimDrag
+    // at the threshold crossing (the pending captured them at the arming press,
+    // ahead of any bound write) and restored by the Esc/Ctrl+Q cancel — see the
+    // pending's declaration for the rationale. Restored LAST, after the bound
+    // restore and its re-sync: selection first, then the region whole-struct, so
+    // neither the re-sync's own clear nor the snapshot restore's membership
+    // clear can take the captured span away. The tempo drag's ordering.
+    SelectionSnapshot pre_gesture_selection;
+    RegionState       pre_gesture_region;
 };
 
 // Dual-axis zoom/pan drag (Ableton-style navigation), armed by TWO surfaces: a
@@ -1931,12 +1976,13 @@ inline SelectionSnapshot capture_selection_snapshot(const AppState& app) {
 inline void restore_selection_snapshot(AppState& app,
                                        const SelectionSnapshot& s) {
     // Restoring the snapshot replaces the live membership -> clear a
-    // SelectionExtent region. INVISIBLE at both drags' cancels, which are this
-    // helper's only callers: each restores its whole-struct captured
-    // pre_drag_region VERBATIM (the position drag's app.drag.pre_drag_region,
-    // the tempo drag's TempoDragState::pre_drag_region) AFTER this restore, so
-    // the verbatim write lands last and reinstates the captured region — span,
-    // provenance and all — regardless of this clear. That is why no damage rides
+    // SelectionExtent region. INVISIBLE at every caller, all of them gesture
+    // CANCELS that restore a whole-struct captured region VERBATIM AFTER this
+    // restore — the position drag (app.drag.pre_drag_region), the tempo drag
+    // (TempoDragState::pre_drag_region), and the two trim cancels
+    // (TrimDragState / PendingTrimDrag pre_gesture_region, 2026-07-29) — so the
+    // verbatim write lands last and reinstates the captured region, span and
+    // provenance and all, regardless of this clear. That is why no damage rides
     // the return here; a future caller that does NOT restore a region afterward
     // would owe waveform damage on a true return (see the helper).
     (void)clear_region_on_membership_replace(app.region);
