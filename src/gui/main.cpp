@@ -910,11 +910,6 @@ int main(int argc, char** argv) {
         return input_handler.repeat_eligible(key, mods);
     });
 
-    // The shift-range anchor lives only across a continuous physical shift
-    // hold; the platform's shift falling edge (incl. keyboard leave and
-    // capability loss) is its release owner and dissolves it here.
-    gui.set_shift_released_hook([&] { app.shift_range_anchor = -1; });
-
     // Pointer-leave / capability-loss hover drop: no motion event follows those
     // edges, so clear_hover_popup here erases the hover POPUP / marker-text run /
     // readout when the pointer slides out the window edge. It is NOT a

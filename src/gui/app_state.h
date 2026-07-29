@@ -1393,30 +1393,40 @@ struct AppState {
     int           last_selected_marker = -1;
 
     // Shift-range-select anchor (file-manager style): the index the current
-    // shift-held interaction ranges from, over the
-    // active column's store; -1 = none. SESSION SCRATCH tied to the physical
-    // shift hold — it lives ONLY across a continuous shift-held interaction and
-    // is otherwise dissolved (architect 2026-07-23). A cleared anchor does NOT
-    // silence the next shift-click: select_range_from_anchor SEEDS the anchor
-    // by ADOPTING THE FOCUS when none is live (architect labwc round 2,
-    // 2026-07-23 — plain-click A then shift+click B ranges A..B, and a
-    // re-started shift interaction ranges from the previous click's focus;
-    // only with nothing focused does the click anchor on itself). Owners that
-    // clear it: the
-    // platform's shift FALLING EDGE (held->up in the modifiers callback, plus
-    // keyboard leave and keyboard-capability loss where the modifier bits reset)
-    // via the installed shift-released hook — the one owner of the release half,
-    // which sees a release + re-press between commands that dispatch-entry
-    // polling could not — and every OTHER selection mutator (set_single_selection,
-    // clear_selection, collapse_to_focused, toggle_selection_membership,
-    // sanitize_selection_after_restore,
-    // prune_live_selection; cycle_selection clears via set_single_selection),
-    // which own the orthogonal
-    // index-invalidation concern (a store/selection mutation under a still-held
-    // shift). Set ONLY inside
-    // Selection::select_range_from_anchor, which is also the one mutator that
-    // keeps it. Ctrl+Shift+Z redo arrives WITH shift still held (no falling
-    // edge) but its restore runs sanitize_selection_after_restore, which clears.
+    // shift-range interaction ranges from, over the active column's store;
+    // -1 = none. OWNED BY THE SELECTION MUTATORS ALONE (architect 2026-07-29,
+    // which deleted the platform shift falling-edge hook that used to own a
+    // "release half" of the lifecycle): the anchor SURVIVES shift releases and
+    // dies at the next membership replace or focus move — exactly the file
+    // manager's anchor, which survives until the next plain click. It is
+    // therefore no longer tied to the physical shift hold, and the platform
+    // knows nothing about it.
+    // Set ONLY inside Selection::select_range_from_anchor, which is also the one
+    // mutator that KEEPS it; every OTHER Selection mutator clears it —
+    // set_single_selection, focus_without_collapse, clear_selection,
+    // collapse_to_focused, toggle_selection_membership,
+    // sanitize_selection_after_restore, prune_live_selection (cycle_selection
+    // clears through set_single_selection; load_source_file's explicit clear is
+    // belt over the clear_selection it already runs). That is also the
+    // orthogonal index-invalidation concern — a store/selection mutation under a
+    // still-held shift — and it is what closes Ctrl+Shift+Z, which arrives WITH
+    // shift held and whose restore runs sanitize_selection_after_restore.
+    // A cleared anchor does NOT silence the next shift-click:
+    // select_range_from_anchor SEEDS the anchor by ADOPTING THE FOCUS when none
+    // is live (architect labwc round 2, 2026-07-23 — plain-click A then
+    // shift+click B ranges A..B; only with nothing focused does the click anchor
+    // on itself), and since every non-range mutator clears, that seed arm is the
+    // ORDINARY first-shift-click path rather than a recovery one.
+    // ACCEPTED DELTA of the hook's deletion: a shift-click after a release
+    // ranges from the SURVIVING anchor instead of from the focus — shift-click A,
+    // shift-click B (anchor A, focus B), release shift, re-press, shift-click C
+    // now selects A..C where the hook made it B..C. That rare shape (release
+    // shift mid-range-adjust, then extend again) moves TOWARD the file-manager
+    // convention the rest of the model cites. The hook's own motivating sequence
+    // is unchanged either way: shift-click 2, release, re-press, shift-click 7
+    // gave 2..7 WITH the hook too (the hook cleared the anchor and the
+    // adopt-the-focus seed re-derived 2 from the focus), and gives 2..7 now from
+    // the surviving anchor 2.
     int           shift_range_anchor = -1;
 
     // Selected-marker stem visibility model (architect 2026-07-25, superseding

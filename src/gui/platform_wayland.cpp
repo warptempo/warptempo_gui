@@ -1306,12 +1306,9 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // delivered while no keyboard exists cannot inherit a phantom chord
         // from the last keyboard event (for example the Alt+wheel pan).
         repeat_key_ = 0;
-        // Capability loss resets the modifier bits; a held shift transitions
-        // held->up here, so fire the shift-release hook (the anchor's release
-        // owner), matching the keyboard.leave tail.
-        const bool was_shift = mod_shift_;
+        // Capability loss resets the modifier bits, matching the keyboard.leave
+        // tail.
         mod_ctrl_ = mod_shift_ = mod_alt_ = false;
-        if (was_shift && shift_released_hook_) shift_released_hook_();
         // The modifier state changed (all chords released) without a scroll
         // frame, so drop the wheel sub-detent remainder — it was bound to the
         // old chord.
@@ -1421,11 +1418,8 @@ void GuiPlatform::on_keyboard_enter(uint32_t /*serial*/,
 
 void GuiPlatform::on_keyboard_leave(uint32_t /*serial*/,
                                     struct wl_surface* /*surface*/) {
-    // Focus loss resets the modifier bits; a held shift transitions held->up
-    // here, so fire the shift-release hook (the anchor's release owner).
-    const bool was_shift = mod_shift_;
+    // Focus loss resets the modifier bits.
     mod_ctrl_ = mod_shift_ = mod_alt_ = false;
-    if (was_shift && shift_released_hook_) shift_released_hook_();
     repeat_key_ = 0;
     // The modifier state changed (all chords released) without a scroll frame,
     // so drop the wheel sub-detent remainder — it was bound to the old chord.
@@ -1588,10 +1582,6 @@ void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
     mod_alt_   = xkb_state_mod_name_is_active(
         xkb_state_, XKB_MOD_NAME_ALT,
         XKB_STATE_MODS_EFFECTIVE);
-
-    // Shift falling edge (held->up): the one owner of the shift-range anchor's
-    // release half. Fired after the cached state is updated.
-    if (prev_shift && !mod_shift_ && shift_released_hook_) shift_released_hook_();
 
     // A modifier-state change ends any continuous wheel chord session, so the
     // sub-detent remainder — bound to the old chord — is dropped outright,
@@ -2199,7 +2189,6 @@ void GuiPlatform::set_on_close(CloseCallback cb)                { on_close_ = st
 void GuiPlatform::set_wheel_context_probe(WheelContextProbe cb)    { wheel_context_probe_ = std::move(cb); }
 void GuiPlatform::set_text_editor_active_probe(TextEditorProbe cb) { text_editor_active_probe_ = std::move(cb); }
 void GuiPlatform::set_repeat_eligible_probe(RepeatEligibleProbe cb) { repeat_eligible_probe_ = std::move(cb); }
-void GuiPlatform::set_shift_released_hook(std::function<void()> cb) { shift_released_hook_ = std::move(cb); }
 void GuiPlatform::set_pointer_left_hook(std::function<void()> cb) { pointer_left_hook_ = std::move(cb); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }

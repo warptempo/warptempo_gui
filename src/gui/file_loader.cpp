@@ -245,8 +245,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.scroll_drag = ScrollDragState{};
     app.double_click = DoubleClickCandidate{};
     // Belt-and-braces: dissolve the shift-range-select anchor on load (the
-    // selection.clear_selection() above already clears it; the platform
-    // falling-edge hook owns the shift-release half elsewhere).
+    // selection.clear_selection() above already clears it — the Selection
+    // mutators are the anchor's only owners).
     app.shift_range_anchor = -1;
     // (The displayed hit map AND the resting selection region are cleared in
     // apply_settings_engine_and_prefs, the shared load+adopt view-establishment

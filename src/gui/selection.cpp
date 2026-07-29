@@ -135,8 +135,9 @@ void Selection::set_single_selection(int idx) {
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     const std::optional<int64_t> old_stem    = stem_subject();
     // Any non-range selection change dissolves the shift-range anchor (its
-    // lifecycle: alive only across a continuous shift-held interaction). This
-    // is also cycle_selection's clear route (it delegates here).
+    // lifecycle: owned by these mutators alone — it survives a shift release and
+    // dies here, at the next membership replace). This is also cycle_selection's
+    // clear route (it delegates here).
     app.shift_range_anchor = -1;
     app.selected_markers.clear();
     if (idx >= 0) app.selected_markers.insert(idx);
@@ -320,15 +321,18 @@ void Selection::select_range_from_anchor(int idx) {
 
     int anchor = app.shift_range_anchor;
     if (anchor < 0 || anchor >= n) {
-        // No live shift-held anchor: ADOPT THE FOCUS (architect labwc round 2,
+        // No live anchor: ADOPT THE FOCUS (architect labwc round 2,
         // 2026-07-23). The file-manager convention ranges a shift-click from
-        // the CURRENT focus — plain-click A then shift+click B selects A..B,
-        // and a shift interaction re-started after a shift release ranges from
-        // the previous click's focus — so the anchor seed is the focused
-        // marker whenever one exists, not only a prior shift-click. This also
-        // self-heals any platform-side anchor loss: the focus was set by the
-        // first click regardless, so the range re-derives from it. (The bounds
-        // check stays belt-and-braces for a store shrink.)
+        // the CURRENT focus — plain-click A then shift+click B selects A..B —
+        // so the anchor seed is the focused marker whenever one exists, not
+        // only a prior shift-click. This is the ORDINARY path, not a recovery
+        // one: every non-range mutator clears the anchor, so the first
+        // shift-click after any plain click, focus move, restore or load lands
+        // here. A shift RELEASE is NOT one of those routes — the anchor
+        // survives releases (see the field's lifecycle and its accepted delta),
+        // so a shift interaction re-started after a release ranges from the
+        // surviving anchor and never reaches this arm. (The bounds check stays
+        // belt-and-braces for a store shrink.)
         anchor = app.last_selected_marker;
     }
     if (anchor < 0 || anchor >= n) {
@@ -383,11 +387,11 @@ void Selection::sanitize_selection_after_restore(int n) {
     // as the structural owner, like the subject-change owners below.
     if (clear_region_on_membership_replace(app.region))
         viewport.invalidate_waveform_area();
-    // A restore (undo/redo) dissolves the shift-range anchor — this is the
-    // route that closes the shift-held hole for Ctrl+Shift+Z: redo holds
-    // shift, so no shift falling edge fires (the platform falling-edge hook
-    // owns the release half of the anchor's lifetime), and this restore-path
-    // clear is what dissolves the anchor instead.
+    // A restore (undo/redo) dissolves the shift-range anchor, like every other
+    // non-range selection mutator (the mutators are its only owners — see the
+    // field's lifecycle comment). This is also the route that closes
+    // Ctrl+Shift+Z, which arrives with shift still held: the restore's clear is
+    // what dissolves the anchor under it.
     app.shift_range_anchor = -1;
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     const std::optional<int64_t> old_stem    = stem_subject();
