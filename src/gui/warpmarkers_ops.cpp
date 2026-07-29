@@ -522,11 +522,25 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
     // arm gates its re-land on target view.
     // In SOURCE view nothing moves at all, so the always-on focus stem needs no
     // repaint there; in target view the synchronous re-warp below repaints the
-    // waveform area and carries the stem to its new column with the image. The
-    // group arm's SelectionExtent region-follow has no singleton counterpart:
-    // collapse_to_focused above demoted any SelectionExtent region to Free, and
-    // set_region_to_selection_extent never derives one for a <=1 selection.
+    // waveform area and carries the stem to its new column with the image.
     if (app.active_audio_view == 'T') {
+        // TrimWindow highlight follow, decision CAPTURED BEFORE the kick (the
+        // group arm's ordering hazard, identical here): kick_waveform_sync's
+        // live-domain reclamp wholesale-clears any region whose old endpoint fell
+        // outside the now-shorter target domain, so the follow must not gate on
+        // post-kick region.active. The WINDOW itself is correct throughout — its
+        // bounds are authored SOURCE frames, whose images simply re-derive through
+        // the new map — so only the HIGHLIGHT goes stale, and re-deriving the
+        // highlight from the window is the whole fix. Reachable with a singleton:
+        // a marker click lands and dissolves the region, then a trim chip-row press
+        // syncs a TrimWindow highlight without ever touching the selection, and the
+        // next Up/Down steps under both.
+        // NO SelectionExtent arm, and that asymmetry with the group is derived, not
+        // forgotten: collapse_to_focused above demotes any SelectionExtent region to
+        // Free before the step runs, and set_region_to_selection_extent never
+        // derives one for a <=1 selection, so such an arm could not fire.
+        const bool trim_resync = app.region.active &&
+            app.region.provenance == RegionProvenance::TrimWindow;
         viewport.kick_waveform_sync();
         const auto& mv_post = app.warpmarkers.markers();
         const int f = app.last_selected_marker;
@@ -534,6 +548,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents) {
             viewport.move_playhead_to(source_frame_to_active_domain(
                 app, audio, mv_post[f].time_frame));
         }
+        if (trim_resync) sync_region_to_trim_window(app, audio, viewport);
     }
     target_render.trigger();
 }

@@ -183,10 +183,11 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // painted in the bottom strip) — plus the prompts, which own input through
 // their own gates in on_key and the pointer handlers. Since the flag editor
 // became keyboard-modal this is NO LONGER the keyboard gate's predicate (that
-// is keyboard_modal_editor_active); what it still names is the pair of
-// behaviors the top-strip FlagPayload editor is deliberately transparent to —
-// the wheel swallow in wheel_context, and the playback stop each of these
-// surfaces runs at its own open.
+// is keyboard_modal_editor_active); what it still names is ONE behavior the
+// top-strip FlagPayload editor is deliberately transparent to — the wheel
+// swallow in wheel_context, this predicate's ONLY caller. The playback stop is
+// NOT here: each bottom-strip surface spells its own at its open site.
+// Authoritative statement at the declaration in input_handler.h.
 bool GuiInputHandler::modal_bottom_strip_editor_active() const {
     return text_editor::is_active(app.settings_editor) ||
            text_editor::is_active(app.commit_editor) ||
@@ -1300,8 +1301,9 @@ void GuiInputHandler::commit_editor_commit() {
 // Alt + Tab fall through to handle_key unchanged); the bpm and flag editors
 // pass an empty hook, but bare Tab never reaches this route for them at all —
 // the on_key gate swallows it first.
-// `repaint` is the caller's text-change damage: the three bottom-strip surfaces
-// pass invalidate_timestamp_area, the top-strip flag editor
+// `repaint` is the caller's text-change damage and is REQUIRED — unlike
+// `autocomplete` it is called unconditionally, with no emptiness test: the three
+// bottom-strip surfaces pass invalidate_timestamp_area, the top-strip flag editor
 // invalidate_top_strip. Commit and cancel own their own invalidations.
 bool GuiInputHandler::route_modal_editor_key(
         text_editor::State& ed, GuiKey key, GuiInputState mods,

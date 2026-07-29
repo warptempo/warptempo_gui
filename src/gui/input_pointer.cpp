@@ -1034,8 +1034,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // or Shift-on-the-top-strip base press proceeds (Shift adjusts the
         // marker selection). Alt is POINTER-ONLY vocabulary: the Alt+wheel
         // stepped pan and the Alt+drag captured grab-pan are untouched (separate
-        // handlers). On the keyboard alt survives only in the four Ctrl+Alt
-        // render / propagate chords — every other alt keybinding was retired
+        // handlers). On the keyboard alt survives only in the FIVE Ctrl+Alt
+        // render / propagate chords (Ctrl+Alt+R, Ctrl+Alt+Shift+R, Ctrl+Alt+I,
+        // Ctrl+Alt+P, Ctrl+Alt+Shift+P) — every other alt keybinding was retired
         // 2026-07-28, so nothing here defers to one.
         // Discarding a press here is TOTAL: it claimed
         // nothing, so it stopped no playback on the way down either — the stops

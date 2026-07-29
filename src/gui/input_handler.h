@@ -674,13 +674,16 @@ private:
     // 2026-07-28) the top-strip flag editor. The modal contract is stated once
     // at the definition; returns true if the editor consumed the key (on_key
     // then returns), false on Ctrl+Q so on_key runs the close routing.
-    // `autocomplete` is the optional bare-Tab hook — empty for the bpm and flag
-    // editors, and bare Tab never arrives for them at all: the on_key gate
-    // (modal_editor_key_blocked) swallows it before this route ever sees it.
-    // commit / cancel / Ctrl+Q teardown are the per-editor bodies. `repaint` is
-    // the editor's own damage for a text change: the three bottom-strip
-    // surfaces pass the timestamp area, the flag editor the top strip — the one
-    // thing that used to keep it out of this route.
+    // `autocomplete` is the ONLY OPTIONAL hook — the bare-Tab one, empty for the
+    // bpm and flag editors, and bare Tab never arrives for them at all: the
+    // on_key gate (modal_editor_key_blocked) swallows it before this route ever
+    // sees it. Every OTHER hook is REQUIRED and called unmodified: commit /
+    // cancel / Ctrl+Q teardown are the per-editor bodies, and `repaint` is the
+    // editor's own damage for a text change — the three bottom-strip surfaces
+    // pass the timestamp area, the flag editor the top strip. `repaint` is
+    // invoked UNCONDITIONALLY on every consumed key, so an empty std::function
+    // there would throw; the route carries no null check for it deliberately (a
+    // caller that forgets it is a program bug, not a runtime condition to guard).
     bool route_modal_editor_key(text_editor::State& ed, GuiKey key,
                                 GuiInputState mods,
                                 const std::function<void()>& autocomplete,
@@ -965,21 +968,28 @@ private:
     // top-strip FlagPayload flag editor, which this ruling brought in, reversing
     // the old "commands punch through" design and deleting the tail that
     // discarded an edit on the way to a command.
-    // ONE READER: the on_key gate, paired with modal_editor_key_blocked.
-    // The two OTHER modality readers deliberately do NOT consult this and keep
-    // modal_bottom_strip_editor_active instead, because modality here is about
-    // CHORDS only:
-    //   - wheel_context's swallow. Wheel zoom and Alt+wheel pan are NAVIGATION,
-    //     not chords, so they still punch through an open flag editor.
-    //   - the playback stop each bottom-strip modal runs at its own open. A flag
-    //     editor opening must still leave a live audition playing.
+    // ONE READER: the on_key gate (input_handler.cpp), paired with
+    // modal_editor_key_blocked.
+    // Modality here is CHORDS only, which is why the flag editor's OTHER
+    // transparencies do not consult this predicate — see
+    // modal_bottom_strip_editor_active below for what does and does not.
     bool keyboard_modal_editor_active() const;
 
     // Modal-editor predicate + key gate (bodies in input_key_dispatch.cpp).
-    // modal_bottom_strip_editor_active names the BOTTOM-STRIP modal surfaces
-    // only — the settings editor, the render-commit editor, and the bpm bracket
-    // editor (plus the prompts, gated separately) — and is now exactly the
-    // wheel/playback-stop predicate described above, NOT the keyboard one.
+    // THIS DECLARATION IS THE AUTHORITATIVE STATEMENT of what
+    // modal_bottom_strip_editor_active is for; other sites carry a pointer here.
+    // It names the BOTTOM-STRIP modal surfaces only — the settings editor, the
+    // render-commit editor, and the bpm bracket editor (plus the prompts, gated
+    // separately) — and it has exactly ONE CALLER: wheel_context's swallow
+    // (input_handler.cpp), because wheel zoom and Alt+wheel pan are NAVIGATION,
+    // not chords, so they still punch through an open top-strip flag editor.
+    // IT IS NOT A PLAYBACK-STOP PREDICATE and never was one in code: the stop is
+    // NOT centralized here but SPELLED at each bottom-strip open site — `;`
+    // (input_handler.cpp), the render-commit editor and `m` (both
+    // input_key_dispatch.cpp) — three independent stops, so a new modal surface
+    // inherits the wheel swallow and nothing else and must grow its own stop.
+    // (A flag editor opening still leaves a live audition playing, which is the
+    // behavior those three sites' absence of a shared owner preserves.)
     // The gate is the sibling of read_only_key_blocked's allowlist shape: true
     // when key+mods should be dropped while a keyboard-modal editor is open
     // (admits only the keys the active editor consumes, bare Esc, Ctrl+S, and

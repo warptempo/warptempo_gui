@@ -174,8 +174,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // merely unlisted: nothing downstream can see it, so nothing downstream can
     // tear an edit down on its way to a command that does not exist.
     // Modality is about CHORDS only: the wheel still punches through a flag
-    // editor (navigation), and opening one still does not stop playback — both
-    // ride modal_bottom_strip_editor_active, not this predicate.
+    // editor (navigation), which rides modal_bottom_strip_editor_active rather
+    // than this predicate, and opening a flag editor still does not stop
+    // playback — that one rides no predicate at all, each bottom-strip surface
+    // spelling its own stop at its open site.
     // Sits after the text-drag gate so an in-flight editor selection drag keeps
     // owning the keyboard exactly as before.
     if (keyboard_modal_editor_active() &&
@@ -512,8 +514,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // GuiKeys::* with mods.shift set — disambiguate via the `shift` bool.
     if (key == GuiKeys::S) {
         // bare `s` is the ONE drop in both columns, and it is the AUGMENTED one
-        // (architect 2026-07-28). In W view it drops an owner carrying the
-        // immediate-prior marker's effective tempo: the ORDINARY drop splits a
+        // (architect 2026-07-28). AUGMENTED is the one word for it across the
+        // tree — the four other sites are the empty-lane double-click's
+        // declaration (input_handler.h), its EmptyLane candidate row
+        // (app_state.h), and its press-side and create-side bodies
+        // (input_pointer.cpp) — and it describes
+        // the PAYLOAD — the dropped marker carries the previous marker's
+        // effective tempo instead of a plain 1.00. It no longer describes a
+        // GESTURE: the plain-versus-augmented modifier convention died with
+        // Alt+S the same day, leaving bare `s` and the bare empty-lane
+        // double-click as the only drops there are.
+        // In W view it drops an owner carrying the
+        // immediate-prior marker's effective tempo: the AUGMENTED drop splits a
         // section WITHOUT changing the map — render-neutral, which is why it
         // beat the plain 1.00 drop, whose mid-warp landing audibly changes the
         // section it falls in. Neutrality is the RULE, not a guarantee: two
