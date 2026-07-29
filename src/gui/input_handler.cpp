@@ -410,6 +410,24 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // render yet in this session) is also refused so the
         // user can't play stale source-domain samples through a
         // target-view binding. Source view falls through unchanged.
+        // COMPOSITION WITH A NATURAL-END ENDPOINT HOLD, derived rather than
+        // assumed (2026-07-29): these two refusals can fire while a hold is up —
+        // a hold has is_playing() false, so GuiTargetRender::trigger's freeze
+        // block (gated on is_playing) leaves it standing, and a tempo-image step
+        // can therefore dispatch a render with the held scanner still painted.
+        // Refusing here is nonetheless CORRECT AND INERT: this return writes
+        // NOTHING, so the hold is left exactly as the press found it, which is
+        // the resting pre-press state and not a wedge. Nor does it persist — the
+        // hold is self-terminating and nothing here or in the render path can
+        // stall it: the tick's restore_pending handshake (main.cpp) has no
+        // is_updating gate, so it re-arms the hold's damage until a paint sets
+        // endpoint_painted and then calls restore_playhead_to_lsp, ending the
+        // hold within one paint cycle. The genuine wedge — the one the
+        // 2026-07-29 teardown move closed — was a state CHANGE further in:
+        // scrub_launch_at stripping restore_pending/endpoint_painted while
+        // leaving playhead_scanner_active set, and THEN refusing, which left a
+        // painted scanner the tick's restore branch could no longer reach. A
+        // refusal that mutates nothing cannot produce that.
         if (app.active_audio_view == 'T' &&
             !playback.is_playing()) {
             if (target_render.is_updating()) return;
@@ -1451,6 +1469,28 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // invalidate so the bottom-strip S/T indicator, the waveform
     // surface, and the playhead column all repaint in one frame.
     clamp_viewport_start(app, audio);
+    // A SURVIVING SELECTION RE-EXPRESSES THROUGH ITS FOCUS, NOT THROUGH THE
+    // CURSOR. The generic translation above is a double round trip — the cursor
+    // is already an integer frame in the OLD domain, and mapping it plus
+    // rounding again need not return the focused marker's image: at a legal
+    // 1/4 slope a marker at source 1001 paints at target 250, whose inverse is
+    // source 1000, so the collapse would leave the focus at 1001 with the
+    // cursor written to 1000 and every later Space / Esc / arrow reading the
+    // stale point. THE MARKER LANE OWNS THE PLAYHEAD
+    // (land_playhead_on_marker's doctrine, input_pointer.cpp): pre-switch the
+    // cursor rests ON the focus by that same premise, so landing on the focus in
+    // the new domain IS the correct re-expression of it — the map-change re-land
+    // form the singleton tempo step's label-coupling fix established. Covers a
+    // surviving SINGLETON as much as the collapsed group; an EMPTY selection has
+    // no focus to re-express and keeps the generic translation untouched.
+    // PLACED HERE by domain validity: active_audio_view flipped far above and the
+    // collapse has run, so source_frame_to_active_domain reads the NEW view's map
+    // (the live target-view map cache, which rebuilds on demand and does not wait
+    // for the kick below). A pure cursor write with no viewport move, so the
+    // viewport anchoring computed just above stands — the two values differ by at
+    // most a frame, far inside one column.
+    if (!app.selected_markers.empty() && app.last_selected_marker >= 0)
+        land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
     viewport.clear_hover_popup();
     // One-shot discrete jump with a domain change: is_target, the viewport, and
     // the warp_frame_map hash all flip, so the displayed plate must change. Render it

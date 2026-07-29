@@ -295,7 +295,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     // A nudge may cross a neighbor; restore time order and remap the index-shaped
     // state (the whole group's selection follows to the new slots).
     remap_marker_indices_after_reorder(
-        app, reorder_markers_by_time(app.phaseresetmarkers.markers_mut()));
+        app, 'P', reorder_markers_by_time(app.phaseresetmarkers.markers_mut()));
     std::vector<int> touched_live(app.selected_markers.begin(),
                                   app.selected_markers.end());
     // Coalesce a rapid burst: the first press pushed the pre-burst snapshot with

@@ -192,9 +192,15 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // flag would claim to be a playhead the group does not own — so WHEN A CLEAR
 // TAKES AN ACTIVE SPAN FROM UNDER 2+ SELECTED MARKERS AND NOTHING RE-DERIVES
 // ONE, THE SELECTION COLLAPSES TO ITS FOCUS (Selection::collapse_to_focused —
-// the focus is where the playhead already rests, by land-on-focus — nothing
-// separates the two under a standing span since the region Space launch, the
-// last route that did, stopped writing the cursor on 2026-07-29). Sites, by
+// the focus is where the playhead already rests, by land-on-focus. TWO HALVES
+// hold that up, both closed 2026-07-29: nothing SEPARATES the cursor from the
+// focus under a standing span — the region Space launch, the last route that
+// did, stopped writing the cursor — and every route that could hand the lane a
+// focus the cursor has never been on, or move the focused marker's image out
+// from under a resting cursor, now LANDS on that focus: the propagate paste's
+// no-created arm, the `t` domain flip, the Ctrl+Tab tab restore, the settings
+// engine-commit, and the settings-only undo/redo arm, each citing the
+// marker-lane doctrine at land_playhead_on_marker). Sites, by
 // class — each is a clear listed above that re-derives nothing:
 //   * the VIEW SWITCHES, which land you in point form by their own ruling: `p`
 //     (toggle_active_markers_view), `t` (handle_active_audio_view_toggle), and
@@ -891,9 +897,10 @@ private:
 
     // The lane-click model's trim<->REGION coupling (architect 2026-07-23,
     // region-only under SELECTION FLOWS DOWNWARD ONLY): sync the region highlight
-    // to the CURRENT trim window, WITHOUT touching the marker selection — trim is
-    // region-related, so it never selects markers, only the region (the selection
-    // is the master state, exactly as trim never touches the PLAYHEAD). Both
+    // to the CURRENT trim window. Trim is region-related, so it never SELECTS
+    // markers, only the region — but an arm that leaves no span does collapse a
+    // 2+ selection to its focus (see below); the PLAYHEAD is the one it never
+    // touches at all. Both
     // bounds set with SEPARATED images -> region = the window's active-domain
     // extent (source bounds through source_frame_to_active_domain, clamped
     // playable); both bounds set but COINCIDENT images -> clear the HIGHLIGHT only
@@ -902,8 +909,12 @@ private:
     // the trim-lane click (R4.5), the ctrl / ctrl+shift bound-set (R4.6/R5), and the trim
     // drags' motion / release / cancel live-sync (R7), so window and highlight can
     // never drift. Navigation-class (the region is navigation), so read-only-safe.
-    // Owns its own waveform-highlight damage. Never touches the playhead or
-    // selection.
+    // Owns its own waveform-highlight damage, raised only when the region's
+    // visible identity actually changed or the collapse fires (a per-motion-event
+    // path pays narrow damage, not full). Never touches the PLAYHEAD; the
+    // SELECTION it can collapse to its focus whenever an arm leaves no span —
+    // the rule, and which gestures restore it on cancel, at the free function's
+    // header in input_trim.cpp.
     void sync_highlight_to_trim_window();
 
     // R4.6: set ONE trim bound (begin or end) at the clicked column — the

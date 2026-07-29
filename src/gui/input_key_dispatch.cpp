@@ -459,10 +459,13 @@ void GuiInputHandler::cancel_active_drags() {
     if (app.trim_drag.active) {
         // Trim motion mutates app.trim live but keeps the pre-drag
         // bounds in orig_begin/orig_end, so restore them before clearing
-        // the gesture. Trim cancel restores the BOUNDS ONLY: a trim drag
-        // never touches the playhead (no playhead-follow analog — trim
-        // bounds are outside the selection system), so there is nothing to
-        // restore or resync there. R3: a bound-set-armed drag (set_click) also
+        // the gesture. The PLAYHEAD is what a trim cancel has nothing to restore:
+        // a trim drag never touches it (no playhead-follow analog — trim bounds
+        // are outside the selection system). The SELECTION it does restore, from
+        // the pre-gesture snapshot below, because the coupling sync's clear arms
+        // can collapse a 2+ selection mid-gesture (the one owner's header,
+        // sync_region_to_trim_window in input_trim.cpp).
+        // R3: a bound-set-armed drag (set_click) also
         // has the PRESS click-set to undo, so its restore runs UNCONDITIONALLY —
         // orig_begin/orig_end are the pre-press pair, and even an unmoved drag
         // must roll the click-set back to undo the whole gesture.

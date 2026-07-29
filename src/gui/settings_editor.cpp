@@ -501,6 +501,21 @@ void GuiSettingsEditor::commit() {
     // unchanged, so the sync is a redundant bounded rebuild there — acceptable,
     // matching the unconditional trigger beside it.
     if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
+    // RE-LAND ON THE FOCUS AFTER THE MAP CHANGE, TARGET VIEW ONLY. An engine
+    // commit that moves the scale re-warps every marker's target IMAGE; a
+    // selection that survives this tail is the marker lane, and the lane owns
+    // the playhead (land_playhead_on_marker's doctrine, input_pointer.cpp), so
+    // the focused flag would otherwise claim to be a playhead the cursor no
+    // longer sits on. This is exactly the label-coupling re-land the singleton
+    // tempo step pays after its own kick (warpmarkers_ops.cpp) — same map-change
+    // shape, same ordering: AFTER the kick, so the conversion reads the NEW map.
+    // SOURCE VIEW NEEDS NOTHING and that is derived, not skipped: in source view
+    // the active domain IS the authored domain (source_frame_to_active_domain is
+    // the identity there), so a map change moves no image and the cursor already
+    // rests on the focus. An EMPTY selection has no lane and no focus to land on.
+    if (app.active_audio_view == 'T' &&
+        !app.selected_markers.empty() && app.last_selected_marker >= 0)
+        land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
     // The trigger is unconditional by ruling — rationale recorded at
     // GuiTargetRender::trigger. Under the full-recipe key every engine-settings
     // commit moves the fingerprint, provenance (title/bpm/notes/url/cover)

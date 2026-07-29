@@ -152,6 +152,30 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // ViewState.
     app.trim                = target.trim;
     clamp_viewport_start(app, audio);
+    // A NON-EMPTY RESTORED SELECTION LANDS ON ITS FOCUS, OVERRIDING THE STORED
+    // CURSOR. The stash is a PAIR, but the two halves can drift apart while the
+    // tab is parked: marker stores and the warp map are GLOBAL, so an edit made
+    // in the other tab (a tempo or scale change upstream of the parked focus)
+    // moves that focus's target image while the saved cursor keeps the old one.
+    // Restoring both verbatim then rests a flag claiming to be the playhead
+    // beside a cursor somewhere else — THE MARKER LANE OWNS THE PLAYHEAD
+    // (land_playhead_on_marker's doctrine, input_pointer.cpp), and this switch
+    // hands the lane a focus, so it owes the land; the map-change re-land form is
+    // the singleton tempo step's label-coupling precedent.
+    // THIS OVERRIDES ONE CLAUSE OF THE STORED-PAIR CONTRACT ("Ctrl+Tab restores
+    // whatever focus and playhead were stashed") for the NON-EMPTY case only. In
+    // the coherent case — no cross-tab edit moved anything — the stored cursor
+    // and the focus's image are the same frame and this changes nothing; it
+    // matters exactly where they diverged, and there the stored cursor is the lie.
+    // An EMPTY restored selection keeps the stored cursor verbatim, contract
+    // intact: with no lane the cursor is the playhead in its own right.
+    // Planner-converted from a codex finding, pending architect review.
+    // PLACED HERE by domain validity: after the collapse (so it lands on the
+    // focus that survives) and after the trim/viewport restore, so the land's
+    // conversion reads the ENTERING tab's state; it is a pure cursor write with
+    // no viewport move, and the kick below repaints it.
+    if (!app.selected_markers.empty() && app.last_selected_marker >= 0)
+        land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
     // One-shot discrete jump (Ctrl+Tab A/B switch): the entering tab restores a
     // different viewport / zoom / playhead, so render the plate synchronously
     // and publish the displayed fingerprint now instead of leaving it to the

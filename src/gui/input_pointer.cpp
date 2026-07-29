@@ -2027,8 +2027,10 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     if (app.pending_trim_drag.active) {
         // The pending trim drag never crossed the threshold: a motionless
         // chip/bridge press. Under the lane-click model that is the trim-lane
-        // CLICK (R4.5) — highlight the trim window with the REGION (the selection
-        // is never touched). The pending only arms on the full pair
+        // CLICK (R4.5) — highlight the trim window with the REGION (which can
+        // collapse a 2+ selection when the sync's arm leaves no span; a resting
+        // click is a commit, so nothing restores it — see
+        // sync_region_to_trim_window). The pending only arms on the full pair
         // (route_trim_chip_press gates it), so the window exists; the sync takes
         // it. (A crossed pending became app.trim_drag and
         // commits through the branch above; read-only never armed a pending, so

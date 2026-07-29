@@ -490,7 +490,9 @@ void GuiInputHandler::commit_trim_drag() {
 // to region-only, SELECTION FLOWS DOWNWARD ONLY). Trim is region-related — the
 // region sets the trim — so this follows the same downward-only rule: TRIM
 // DOESN'T SELECT MARKERS, ONLY THE REGION. The marker SELECTION is the master
-// state; trim gestures never touch it, exactly as they never touch the PLAYHEAD.
+// state; no arm here ever adds or removes a member. It is NOT untouched, though
+// — see the paragraph below the arms: taking the span collapses a 2+ selection
+// in the shared tail. The PLAYHEAD is the one this never touches at all.
 // Both bounds set with SEPARATED images -> the region takes the trim window's
 // active-domain extent (each source bound through source_frame_to_active_domain,
 // clamped to a playable frame; bounds may be crossed mid-drag, so normalize lo/hi,

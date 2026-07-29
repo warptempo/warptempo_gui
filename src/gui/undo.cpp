@@ -511,9 +511,13 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // and rebuilds the target map underneath a resting highlight — scale A ->
     // commit scale B -> chip-row re-sync under B -> Ctrl+Z would otherwise rest a
     // B-domain span under A — so it clears too. The REST of the 'S' gate stands
-    // exactly: a settings restore still must not land, must not select, and must
-    // not WRITE a region, which is why only this one call sits above the gate and
-    // the whole land/extent/framing block stays inside it.
+    // exactly: a settings restore still must not select and must not WRITE a
+    // region, which is why only this one call sits above the gate and the whole
+    // extent/framing block stays inside it. The no-LAND half was narrowed at the
+    // tail (2026-07-29): a settings restore that changes the map under a
+    // SURVIVING marker-lane selection re-lands on its focus in TARGET view,
+    // because the image moved — see the re-land beside kick_waveform_sync. With
+    // no selection the 'S' restore still lands nothing at all.
     clear_region_highlight(app, viewport);
     // The 'S' arm's ONE selection consequence (the never-rest-2+-without-a-span
     // invariant, stated at clear_region_highlight's declaration): the clear above
@@ -724,6 +728,25 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // duplicates invalidate_waveform_area above (harmless); the (now plain)
     // trigger below owns target-buffer freshness when target view is available.
     viewport.kick_waveform_sync();
+    // THE SETTINGS-ONLY ARM'S MAP-CHANGE RE-LAND, TARGET VIEW ONLY. An 'S'
+    // restore rewrites engine_settings, which re-warps every marker's target
+    // IMAGE, and the arm above deliberately does not land — correct for the
+    // CURSOR-only case, wrong the moment a selection survives it: the lane owns
+    // the playhead (land_playhead_on_marker's doctrine, input_pointer.cpp), so
+    // the focused flag would claim a playhead the cursor no longer sits under.
+    // The label-coupling re-land the singleton tempo step pays after its own
+    // kick is the precedent, and the ordering is its ordering — AFTER
+    // kick_waveform_sync, so the conversion reads the RESTORED map. Scoped to
+    // 'S': every other op_mode ran the visual tail above, which already lands on
+    // its restored focus in both arms. SOURCE VIEW NEEDS NOTHING, derived rather
+    // than skipped — there the active domain IS the authored domain
+    // (source_frame_to_active_domain is the identity), so no image moved. This
+    // stays inside the 'S' gate's no-select / no-region-write half of the rule:
+    // it is a pure cursor write, selecting nothing and writing no region.
+    if (entry.op_mode == 'S' && app.active_audio_view == 'T' &&
+        !app.selected_markers.empty() && app.last_selected_marker >= 0)
+        land_playhead_on_marker(app, viewport.audio, viewport,
+                                app.last_selected_marker);
     viewport.invalidate_timestamp_area();
     // Unconditional by ruling — rationale at GuiTargetRender::trigger; an
     // undo/redo restoring only normalization-inert state (e.g. a disabled-

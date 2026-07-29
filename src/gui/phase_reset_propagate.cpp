@@ -583,7 +583,13 @@ void PhaseResetPropagate::paste_state_apply() {
 //     paste entries refuse unless EXACTLY ONE warp marker is selected, and the
 //     confirmation prompt swallows every mutation while it is up, so the
 //     selection this call sees is always that singleton and the collapse is a
-//     no-op. Running it first keeps the heavier re-express (and its
+//     no-op. That same toggle now also LANDS the playhead on a surviving focus
+//     (the lane owns the playhead across the domain flip), which here means the
+//     paste ANCHOR's target image. Harmless either way: whenever this tail ends
+//     with a P focus it lands again over the top, and in the one case it does
+//     not — a no-created paste whose restored P slot is empty — the anchor's own
+//     image is a better resting cursor than a generic re-express of wherever the
+//     cursor happened to be. Running it first keeps the heavier re-express (and its
 //     full-window invalidate) ahead of the lightweight mode swap and leaves
 //     every side effect (region clear, hover clear, selection slots) coherent.
 //
@@ -637,7 +643,7 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
         // construction. The owner self-gates below 2 created resets, which is why
         // a single-reset paste simply rests in point form.
         set_region_to_selection_extent(app, viewport.audio, viewport);
-    } else if (app.selected_markers.size() >= 2) {
+    } else {
         // NO CREATED SET — every paste that materialized nothing, not just the
         // state paste: paste_state_apply always lands with {} (it only flips
         // disabled flags), and the PLACEMENT paste reaches here too whenever its
@@ -645,10 +651,26 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
         // this arm derives none, while the P-slot selection the swap restored can
         // be 2+ — which would leave a group in point form with no point. Collapse
         // it to its FOCUS (the never-rest-2+-without-a-span invariant, stated at
-        // clear_region_highlight's declaration). No land
-        // here: this arm sets no new focus, and the playhead already rests where
-        // the S->T re-express put it.
-        selection.collapse_to_focused();
+        // clear_region_highlight's declaration).
+        if (app.selected_markers.size() >= 2) selection.collapse_to_focused();
+        // THEN LAND ON THE FOCUS THIS ARM LEAVES THE LANE HOLDING. The old "no
+        // land here: the playhead already rests where the S->T re-express put
+        // it" was FALSE — that re-express ran before
+        // switch_active_markers_view_to('P') restored the P slot, so it
+        // converted the WARP anchor's cursor and knows nothing about the reset
+        // this arm ends up focused on. Without this, a state paste (which never
+        // creates) or a placement paste that created nothing rests a P focus
+        // claiming to be the playhead while the cursor sits at the warp marker's
+        // target image. THE MARKER LANE OWNS THE PLAYHEAD
+        // (land_playhead_on_marker's doctrine, input_pointer.cpp): a route that
+        // hands the lane a focus owes it a land — the created arm above already
+        // pays it, and the two arms now agree. Not gated on the collapse: a
+        // restored SINGLETON is just as stale as a collapsed group. An EMPTY
+        // restored selection lands nothing, correctly — with no lane the cursor
+        // IS the playhead again and belongs where it is.
+        if (!app.selected_markers.empty() && app.last_selected_marker >= 0)
+            land_playhead_on_marker(app, viewport.audio, viewport,
+                                    app.last_selected_marker);
     }
     viewport.invalidate_top_strip();
     viewport.invalidate_waveform_area();

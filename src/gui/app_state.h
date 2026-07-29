@@ -2030,13 +2030,37 @@ std::vector<int> reorder_markers_by_time(std::vector<Marker>& markers) {
     return old_to_new;
 }
 
-// Apply a reorder_markers_by_time permutation to the index-shaped state
-// that must follow moved markers: app.selected_markers,
-// app.last_selected_marker, and — when a drag is live on the reordered
-// store — the drag state's held marker indices. Undo snapshots copy
-// whole lists and need no remap. No-op on an empty permutation (the
-// store was already in order). Body in app_state.cpp.
-void remap_marker_indices_after_reorder(AppState& app,
+// Apply a reorder_markers_by_time permutation to the index-shaped state that
+// must follow moved markers. `column` names the store that reordered — 'P' for
+// phase resets, anything else (the callers pass 'W') for warp markers — because
+// the parked state below is per-column and only the reordered column's copies
+// may move.
+//
+// THE COMPLETENESS CLAIM, re-derived 2026-07-29 by reading every field of
+// ViewState and of the live drag state rather than by inheriting a list. Exactly
+// three kinds of state hold a marker INDEX, and all three are covered:
+//   * the LIVE selection — app.selected_markers + app.last_selected_marker.
+//     Unconditional, and correct without a column test because every caller
+//     reorders the ACTIVE column's store (the home-view binding puts warp
+//     gestures in source view and phase-reset gestures in target view, and the
+//     four call sites are the two position nudges and the two marker-drag
+//     commits);
+//   * the PARKED selections — warp_selected / warp_last_selected and
+//     phase_reset_selected / phase_reset_last_selected in BOTH app.tab_a and
+//     app.tab_b, of the reordered column only. Marker stores are global while
+//     these are per-tab, so a reorder in one tab moves rows under the other
+//     tab's parked indices;
+//   * the live DRAG state's held indices, when a drag is live on the reordered
+//     store (dragging_markers, hit_marker; grabbed_k is a position into the
+//     parallel drag vectors, not a store index, and is deliberately left alone).
+// Everything else ViewState parks is frame- or value-shaped and cannot go stale
+// this way: viewport_start_sample, zoom_level, playhead_cursor_sample and the
+// TrimState bounds are all FRAMES, and read_only is a flag. Undo snapshots copy
+// whole marker lists rather than indices, and their touched-index hints are
+// rewritten by their own callers post-reorder.
+// No-op on an empty permutation (the store was already in order). Body in
+// app_state.cpp.
+void remap_marker_indices_after_reorder(AppState& app, char column,
                                         const std::vector<int>& old_to_new);
 
 // CLOCK_MONOTONIC milliseconds (steady_clock is CLOCK_MONOTONIC on this

@@ -30,17 +30,43 @@ SettingsSnapshot capture_current_settings(const AppState& app) {
     return s;
 }
 
-void remap_marker_indices_after_reorder(AppState& app,
+void remap_marker_indices_after_reorder(AppState& app, char column,
                                         const std::vector<int>& old_to_new) {
     if (old_to_new.empty()) return;
     const int n = static_cast<int>(old_to_new.size());
     auto mapped = [&](int idx) {
         return (idx >= 0 && idx < n) ? old_to_new[idx] : idx;
     };
-    std::set<int> remapped;
-    for (int idx : app.selected_markers) remapped.insert(mapped(idx));
-    app.selected_markers = std::move(remapped);
+    auto remap_set = [&](std::set<int>& s) {
+        if (s.empty()) return;
+        std::set<int> out;
+        for (int idx : s) out.insert(mapped(idx));
+        s = std::move(out);
+    };
+    remap_set(app.selected_markers);
     app.last_selected_marker = mapped(app.last_selected_marker);
+    // THE PARKED COPIES follow too, in BOTH tabs and for the REORDERED COLUMN
+    // ONLY. The marker stores and the map are GLOBAL while the selections are
+    // per-tab and per-column, so a reorder in the live tab silently re-points
+    // every parked selection at different rows unless it is remapped here —
+    // that was a real defect, not a theoretical one: nudge a selected marker
+    // across its neighbour in tab A and tab B's parked selection came back
+    // pointing at whatever now occupies those slots. `column` names the store
+    // that reordered ('W' warp / 'P' phase reset); the other column's slots are
+    // untouched because its store did not move. The ACTIVE tab's own slot for
+    // the active column is a stale mirror that the next stash boundary
+    // overwrites, so remapping it changes nothing — it is done anyway to keep
+    // the rule "every parked copy of the reordered column follows" free of
+    // exceptions.
+    for (ViewState* vs : {&app.tab_a, &app.tab_b}) {
+        if (column == 'P') {
+            remap_set(vs->phase_reset_selected);
+            vs->phase_reset_last_selected = mapped(vs->phase_reset_last_selected);
+        } else {
+            remap_set(vs->warp_selected);
+            vs->warp_last_selected = mapped(vs->warp_last_selected);
+        }
+    }
     if (app.drag.active) {
         // Pairing between dragging_markers and its parallel time vectors
         // (original_times / moveable_times) is positional by k, so an
