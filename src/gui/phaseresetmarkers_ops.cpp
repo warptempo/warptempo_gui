@@ -262,7 +262,8 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(int direction) {
     // on each member's own column snap. It also has to stay a refusal rather than
     // becoming a per-member clamp — clamping would pool the clamped members onto
     // the wall frame and merge them permanently; the warp twin adopts the same
-    // shape, flagged there as a planner translation of the per-member rule.
+    // shape, recorded there as a planner translation of the per-member rule,
+    // architect-confirmed 2026-07-29 (live-tested).
     // A SINGLETON is bit-for-bit its long-standing behavior: one snap, one belt.
     const int64_t orig_f = tv[f].time_frame;
     int64_t committed_f = orig_f;   // the focused reset's commit, for the follow

@@ -805,8 +805,9 @@ void GuiWarpMarkersOps::nudge_selected_markers(int direction) {
         // forever after (pressing back off the wall carries them together), a
         // permanent merge no undo-free gesture can separate. The rigid delta this
         // replaced could never do that, and refusing is the honest translation of
-        // "the group stops as a unit" into the per-member world. PLANNER's
-        // translation of the per-member rule, pending the architect's live test.
+        // "the group stops as a unit" into the per-member world. A planner
+        // translation of the architect's per-member rule, ARCHITECT-CONFIRMED
+        // 2026-07-29 (live-tested).
         for (int idx : app.selected_markers) {
             const int64_t t_new = stepped_anchor_frame(
                 app, audio, map, mv[idx].time_frame, direction);

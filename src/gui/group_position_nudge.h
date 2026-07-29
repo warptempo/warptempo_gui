@@ -137,9 +137,9 @@ GroupNudgePrologue group_position_nudge_prologue(
 //     not). At fine zoom the column is about 30 frames, sub-millisecond and
 //     inaudible; at coarse zoom it can be thousands of frames, and an exact
 //     frame tie goes LOUD at the render boundary (the normalization red flags,
-//     the 1.00 collapse). This is a PLANNER acceptance of the architect's
-//     per-member rule, pending the architect's live test — not an architect
-//     ruling on the collapse itself.
+//     the 1.00 collapse). This began as a planner acceptance of the architect's
+//     per-member rule rather than a ruling on the collapse itself;
+//     ARCHITECT-CONFIRMED 2026-07-29 (live-tested), the merge included.
 //
 // The contrast is the point, documenting a trap that already bit once: the
 // W+target bare Left/Right TEMPO-IMAGE STEP (MarkerDragOps::step_tempo_image) is
