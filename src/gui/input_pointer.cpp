@@ -220,10 +220,14 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // membership at once (the swap by emptying it, the other two by writing a set
 // they took in wholesale), so a span none of them built has nothing left to
 // describe (the list lives at clear_region_highlight, input_handler.h). THE
-// COROLLARY, recorded there too with its own site list: a 2+ SELECTION NEVER
-// RESTS WITHOUT A SPAN — a group whose span is cleared with nothing re-deriving
-// one collapses to its focus, because the extent span is a group's only point
-// cue and a focused flag must never claim a playhead the group does not own.
+// COROLLARY THIS MODEL BRIEFLY CARRIED IS RETIRED (architect 2026-07-29, ruling
+// 6): a 2+ selection MAY rest without a span, and the distributed collapse
+// protocol that enforced otherwise is deleted. The two forms themselves are
+// untouched — an ACTIVE span still outranks and suppresses both point cues — but
+// "a group always has a drawn playhead form" was one guarantee too many for the
+// machinery it cost. The retirement, its three verified producers (`t`, `0`, `c`)
+// and the no-form-drawn state they leave are stated at clear_region_highlight's
+// declaration and at paint_playheads.
 //
 // LANDS the playhead exactly onto marker `hit` (active column's store), with
 // NO viewport move — the sole difference from Tab (which recenters) and `c`
@@ -256,9 +260,12 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //     `p` swap lands nothing either: both used to be cleaning up a restored
 //     P-column selection, and the parked slots died 2026-07-29);
 //   * THE VIEW / TAB SWITCHES, which re-express a focus into a new domain: the
-//     `t` S<->T flip (input_handler.cpp) is now the only one, landing only on a
+//     S<->T flip (input_handler.cpp) is now the only one, landing only on a
 //     NON-EMPTY selection — with no lane the cursor is the playhead in its own
-//     right and keeps its own value. Ctrl+Tab left this class when the parked
+//     right and keeps its own value. Since ruling 6 that selection may be a GROUP
+//     (the flip no longer collapses it), and the land seats the cursor on the
+//     surviving focus exactly as it did on a singleton. Ctrl+Tab left this class
+//     when the parked
 //     selections died: it restores its tab's stored cursor VERBATIM, hands the
 //     lane nothing, and its only land is the auto-select's below;
 //   * THE COINCIDENCE AUTO-SELECT (auto_select_marker_at_playhead, this file) at
@@ -266,13 +273,14 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //     construction (its selection predicate IS this function's equality test), and
 //     it is in the list because the adjacency is the rule, not because it moves
 //     anything;
-//   * THE MAP CHANGERS, target view only, which move the focused marker's image
-//     out from under a resting cursor: the settings engine-commit
-//     (settings_editor.cpp) and the settings-only 'S' undo/redo arm (undo.cpp),
-//     each landing AFTER its kick_waveform_sync so the conversion reads the new
-//     map — the ordering the singleton tempo step's label-coupling re-land
-//     established (that step re-lands through move_playhead_to rather than here,
-//     the one map-change re-land that wants the keep-visible scroll).
+//   * (THE MAP CHANGERS ARE GONE FROM THIS LIST, architect 2026-07-29, ruling 6:
+//     the settings engine-commit and the settings-only 'S' undo/redo arm each
+//     landed here, target view only, because the rebuilt map moved the focused
+//     marker's image out from under a resting cursor — and both now CLEAR THE
+//     SELECTION at their own tails instead, so there is no lane and no focus left
+//     to re-land. The map-change re-land SHAPE survives in exactly one place, the
+//     Up/Down cent step's target-view tail, which re-lands through move_playhead_to
+//     rather than here because it wants the keep-visible scroll.)
 // The two-step placement
 // basis the Tab family lands with (source_frame_to_active_domain then
 // clamp_playhead_to_live_domain), against the active column's store, so the

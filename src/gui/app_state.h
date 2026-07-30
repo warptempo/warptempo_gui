@@ -275,10 +275,11 @@ struct UndoEntry {
 // the maximally greedy collapse): every OTHER target-map changer CLEARS the
 // region outright instead of leaving it as scratch — undo/redo at its visual
 // tail for EVERY entry, settings-only ones included (that clear alone sits above
-// the tail's 'S' gate, which still forbids selecting and writing a region — and
-// forbids landing except for the one target-view map-change re-land added
-// 2026-07-29, onto a surviving selection's focus), the settings ENGINE-SCALE
-// commit at its own chokepoint, and adopt
+// the tail's 'S' gate, which forbids selecting, writing a region, and landing,
+// with no exception left: the target-view map-change re-land it briefly allowed
+// died with ruling 6's selection clear on the same arm), the settings ENGINE-SCALE
+// commit at its own chokepoint — which since ruling 6 clears the SELECTION beside
+// the region, as the 'S' restore does — and adopt
 // through apply_settings_engine_and_prefs's unconditional reset. So NO route
 // rebuilds the map under a resting highlight any more, and NO producer of a
 // numerically stale TrimWindow span survives. A group restore still DEFINES its

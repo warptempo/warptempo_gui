@@ -501,13 +501,12 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // sanitize_selection_after_restore so the region write follows sanitize's
     // membership clear (the clear-then-derive order the multi-select clicks use),
     // and BEFORE the recompute/invalidate/kick block below so restore's one sync
-    // render covers the final geometry. The LAND/EXTENT block is gated off 'S' (a
-    // settings-only restore never EXPANDS a selection and never WRITES a region;
-    // what it does do for every entry is CLEAR the region, it MAY collapse a 2+
-    // selection to its focus as that clear's consequence, and — the one
-    // narrowing, 2026-07-29 — it DOES land in target view when a selection
-    // survives, because the restored map moved that focus's image; that land
-    // lives at the tail's kick, not in this block), and
+    // render covers the final geometry. The LAND/EXTENT block is gated off 'S', and
+    // the 'S' gate is now SIMPLE: a settings-only restore selects nothing, writes no
+    // region, and lands nothing — it CLEARS both the region and the selection
+    // (ruling 6, below), which is why the narrowing it briefly carried (a
+    // target-view re-land onto a surviving focus) is gone with the surviving focus
+    // itself. It is
     // branches on the POST-sanitize live size, so a defensive edge takes the
     // matching arm (a group entry sanitized down to one member lands as a
     // singleton; a removal cleared to empty is the size == 0 no-op).
@@ -529,20 +528,26 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // B-domain span under A — so it clears too. The REST of the 'S' gate stands
     // exactly: a settings restore still must not select and must not WRITE a
     // region, which is why only this one call sits above the gate and the whole
-    // extent/framing block stays inside it. The no-LAND half was narrowed at the
-    // tail (2026-07-29): a settings restore that changes the map under a
-    // SURVIVING marker-lane selection re-lands on its focus in TARGET view,
-    // because the image moved — see the re-land beside kick_waveform_sync. With
-    // no selection the 'S' restore still lands nothing at all.
+    // extent/framing block stays inside it. The no-LAND half is EXCEPTIONLESS again
+    // (ruling 6): the target-view re-land it briefly allowed — onto a selection
+    // surviving the restore — died with the selection clear directly below, which
+    // leaves no focus to land on.
     clear_region_highlight(app, viewport);
-    // The 'S' arm's ONE selection consequence (the never-rest-2+-without-a-span
-    // invariant, stated at clear_region_highlight's declaration): the clear above
-    // can strand a group in point form with no point, and a settings restore
-    // derives no span, so a 2+ selection collapses to its FOCUS. The non-'S'
-    // entries need nothing here — a group restore re-selects and re-derives its
-    // own extent below, and the other arms rest at <=1 selected.
-    if (entry.op_mode == 'S' && app.selected_markers.size() >= 2)
-        selection.collapse_to_focused();
+    // THE 'S' ARM CLEARS THE SELECTION TOO (architect 2026-07-29, ruling 6): a
+    // settings-only restore rewrites engine_settings and rebuilds the map under
+    // every marker INDEX and IMAGE, so it tears down BOTH playhead forms and leaves
+    // the resting cursor as the only one. It is the SYMMETRIC twin of the engine-key
+    // settings COMMIT, which clears both at its own chokepoint
+    // (settings_editor.cpp); GUI-kind keys are history-less, so 'S' is the only
+    // settings entry kind there is and the pair covers the whole surface. Together
+    // they are what let the never-span-less ENFORCEMENT be deleted — these were its
+    // last two producers, and closing them symmetrically means no collapse protocol
+    // is owed. The clear runs after the region clear above, so its own
+    // membership-replace clear finds the region already inactive. It does not
+    // violate the 'S' gate's no-SELECT half: emptying a selection is not selecting.
+    // The non-'S' entries need nothing here — a group restore re-selects and
+    // re-derives its own extent below, and the other arms rest at <=1 selected.
+    if (entry.op_mode == 'S') selection.clear_selection();
     if (entry.op_mode != 'S') {
         const size_t sel_size = app.selected_markers.size();
         if (sel_size == 1) {
@@ -743,25 +748,14 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // duplicates invalidate_waveform_area above (harmless); the (now plain)
     // trigger below owns target-buffer freshness when target view is available.
     viewport.kick_waveform_sync();
-    // THE SETTINGS-ONLY ARM'S MAP-CHANGE RE-LAND, TARGET VIEW ONLY. An 'S'
-    // restore rewrites engine_settings, which re-warps every marker's target
-    // IMAGE, and the arm above deliberately does not land — correct for the
-    // CURSOR-only case, wrong the moment a selection survives it: the lane owns
-    // the playhead (land_playhead_on_marker's doctrine, input_pointer.cpp), so
-    // the focused flag would claim a playhead the cursor no longer sits under.
-    // The label-coupling re-land the singleton tempo step pays after its own
-    // kick is the precedent, and the ordering is its ordering — AFTER
-    // kick_waveform_sync, so the conversion reads the RESTORED map. Scoped to
-    // 'S': every other op_mode ran the visual tail above, which already lands on
-    // its restored focus in both arms. SOURCE VIEW NEEDS NOTHING, derived rather
-    // than skipped — there the active domain IS the authored domain
-    // (source_frame_to_active_domain is the identity), so no image moved. This
-    // stays inside the 'S' gate's no-select / no-region-write half of the rule:
-    // it is a pure cursor write, selecting nothing and writing no region.
-    if (entry.op_mode == 'S' && app.active_audio_view == 'T' &&
-        !app.selected_markers.empty() && app.last_selected_marker >= 0)
-        land_playhead_on_marker(app, viewport.audio, viewport,
-                                app.last_selected_marker);
+    // NO 'S' RE-LAND, and none is possible: the map-change re-land that sat here
+    // (target view only, onto a surviving selection's focus, because the restored
+    // map moved that focus's image out from under the cursor) died with the 'S'
+    // selection clear above — architect 2026-07-29, ruling 6. An 'S' restore leaves
+    // no lane and no focus, so the resting cursor is the whole playhead and keeps
+    // its own value. The engine-key settings COMMIT's twin re-land died the same way
+    // (settings_editor.cpp). Every other op_mode still lands through the visual tail
+    // above, on its restored focus in both arms.
     viewport.invalidate_timestamp_area();
     // Unconditional by ruling — rationale at GuiTargetRender::trigger; an
     // undo/redo restoring only normalization-inert state (e.g. a disabled-

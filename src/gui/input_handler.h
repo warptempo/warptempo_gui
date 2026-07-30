@@ -178,9 +178,9 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     target-view tail. None of them builds the span it would be resting beside,
 //     so all three collapse it, any provenance. The undo tail's clear runs for
 //     EVERY entry, settings-only ones included — it is the ONE part of the tail
-//     that sits above the 'S' gate (which still forbids SELECTING and WRITING a
-//     region; its no-LAND half was narrowed 2026-07-29 to one target-view
-//     exception, a map-change re-land onto a SURVIVING selection's focus),
+//     that sits above the 'S' gate (which forbids SELECTING, WRITING a region, and
+//     LANDING, exceptionlessly again since ruling 6 — that arm now also CLEARS the
+//     selection, which is what killed the one land exception it briefly had),
 //     because a settings restore rebuilds the map under the
 //     span exactly as a marker restore does; for a group entry the extent derive
 //     then runs AFTER this clear;
@@ -188,58 +188,48 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     tail every canonical engine key shares (GuiSettingsEditor::commit, past
 //     the unknown-key / invalid-value / collision / unchanged returns), because
 //     the scale among those keys is a warp-map input and the commit rebuilds the
-//     map under any resting highlight. The settings editor's TRIM keys never
+//     map under any resting highlight. That tail CLEARS THE SELECTION beside the
+//     region (ruling 6, below). The settings editor's TRIM keys never
 //     reach it — they return through commit_gui_setting, which re-syncs a
 //     TrimWindow highlight to the edited bounds, a maintainer by ruling.
-// A 2+ SELECTION NEVER RESTS WITHOUT A SPAN (architect 2026-07-29; the
-// two-forms rule it follows from is stated at land_playhead_on_marker,
-// input_pointer.cpp, which points here for this corollary and its sites). A
-// group's ONLY point cue is its extent span — with the span gone the focused
-// flag would claim to be a playhead the group does not own — so WHEN A CLEAR
-// TAKES AN ACTIVE SPAN FROM UNDER 2+ SELECTED MARKERS AND NOTHING RE-DERIVES
-// ONE, THE SELECTION COLLAPSES TO ITS FOCUS (Selection::collapse_to_focused —
-// the focus is where the playhead already rests, by land-on-focus. TWO HALVES
-// hold that up, both closed 2026-07-29: nothing SEPARATES the cursor from the
-// focus under a standing span — the region Space launch, the last route that
-// did, stopped writing the cursor — and every route that could hand the lane a
-// focus the cursor has never been on, or move the focused marker's image out
-// from under a resting cursor, now LANDS on that focus: the `t` domain flip, the
-// settings engine-commit, and the settings-only undo/redo arm, each citing the
-// marker-lane doctrine at land_playhead_on_marker (the two entry switches are
-// no longer in that argument at all — `p` and Ctrl+Tab hand the lane NOTHING,
-// clearing the selection outright, and what they re-acquire by coincidence is
-// selected precisely because the cursor is already on it).
-// SITES, by class — each is a clear listed above that re-derives nothing.
-// RE-DERIVED 2026-07-29 after the parked-selection deletion took THREE of the
-// nine this list used to carry (`p`'s and Ctrl+Tab's collapses, which existed to
-// judge a RESTORED group, and the propagate paste's no-created arm, which existed
-// to judge the P slot that swap restored): SIX remain, and only one view switch —
-//   * the VIEW SWITCH, singular: `t` (handle_active_audio_view_toggle), which
-//     CARRIES the live selection across the domain flip and so can still arrive
-//     here with a group. `p` and Ctrl+Tab clear instead of restoring, so they can
-//     rest at most the coincidence auto-select's singleton and have nothing to
-//     collapse;
-//   * the MAP-REBUILD commits with no span of their own: the settings
-//     engine-commit tail and the SETTINGS-ONLY ('S') undo/redo restore;
-//   * the NAVIGATION jumps that keep their selection: bare `0` and `c` (the Tab
-//     family instead single-selects, and Home/End deselect outright);
-//   * THE TRIM-SYNC CLEAR, at the one chokepoint every trim route shares
-//     (sync_region_to_trim_window, which takes the Selection for exactly this):
-//     its no-window arm, reached with a live 2+ selection only from the routes
-//     that are NOT TrimWindow setters — Shift+X and the settings-editor trim
-//     commit. The SETTERS (the chip-row click, both bound-set clicks, `x`, the
-//     drags' live sync) empty the selection before they publish, so the crossed-pair
-//     auto-clear and a chip/bridge drag that dissolves its pair arrive here with
-//     nothing to collapse (architect 2026-07-29 — the rule is at that function's
-//     declaration).
-// Routes
-// that RE-DERIVE a span instead of collapsing are not sites at all: the group
-// undo restore, the paste's created set, the multi-select clicks at 2+, `m`, and
-// the whole group TEMPO follow family (the position movers left it 2026-07-29 —
-// groups are never moved). The kick validator's domain-shrink
-// clear needs no site of its own — every caller that can shrink the domain under
-// a group either re-derives (the tempo family, unconditionally after its kick) or
-// is already a site above (the settings commit, undo, `t`).
+// A 2+ SELECTION MAY REST WITHOUT A SPAN — THE NEVER-SPAN-LESS ENFORCEMENT IS
+// RETIRED (architect 2026-07-29, ruling 6, superseding the corollary this
+// declaration used to carry and the distributed collapse protocol that served it:
+// nine sites at its peak, six after the parked selections died, all deleted, along
+// with sync_region_to_trim_window's injected Selection& parameter). Nothing is
+// added in its place. The two-forms model itself STANDS unchanged
+// (land_playhead_on_marker, input_pointer.cpp): while a span is ACTIVE it outranks
+// every point cue and suppresses both the cursor and the singleton stem; with no
+// span the SELECTION's own cues — the selected flags' ink triangles — are the
+// visible state, and the resting cursor is the playhead of record for Space. What
+// the enforcement bought was one extra guarantee on top of that, "a group always
+// has a drawn playhead form", and the architect withdrew it as not worth a protocol
+// spread across the tree.
+// THE LAST TWO PRODUCERS CLOSED SYMMETRICALLY instead, at the two sites where a
+// map rebuild invalidates every index and image at once: the engine-key settings
+// COMMIT and the settings-only ('S') undo/redo RESTORE each clear the selection
+// beside the region (GUI-kind keys are history-less, so 'S' is the only settings
+// entry kind and the pair is complete). Both #19 map-changer RE-LANDS died with
+// them — nothing selected means no focus to re-land — so the 'S' gate is simple
+// again: no select, no region write, no land.
+// THREE COMMANDS DO produce a resting spanless 2+ selection, verified against the
+// tree rather than assumed, and each records the state at its own site: the S/T
+// domain flip (the span's endpoints are active-domain frames and cannot survive
+// it, while the selection is carried across — reachable through the bare `t` key
+// AND the settings editor's `active_audio_view=` GUI key, which is not covered by
+// the engine-commit clear), bare `0`, and `c` (both pure viewport/playhead commands
+// that clear the span and touch no membership). In that
+// state no playhead form is DRAWN — the cursor yields to a non-empty selection and
+// the stem is singleton-only — while Space still launches from the resting cursor;
+// that is the accepted cost of the retirement, and paint_playheads states it.
+// TWO CANDIDATES ARE NOT PRODUCERS, by derivation: the TRIM-SYNC no-window arm
+// (all three of its non-setter callers gate on provenance == TrimWindow, and a
+// TrimWindow region rests only beside an EMPTY selection — the derivation lives at
+// that function), and the kick validator's DOMAIN-SHRINK clear (the only
+// total-changers that keep a 2+ selection are the group cent step, which re-derives
+// its extent unconditionally AFTER its kick, and the group undo restore, which
+// derives its extent from the already-restored domain and clamps into it, so the
+// validator's out-of-domain test cannot fire on it).
 // The land itself clears NOTHING — it is a pure playhead write, and the
 // motion condition that briefly rode its clear died with that clear
 // (land_playhead_on_marker). DELIBERATELY NOT
@@ -361,12 +351,16 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // gestures' region-provenance branches, the singleton tempo step's trim re-sync,
 // and the tempo drag's own grab-time trim-highlight bit (that drag is itself
 // deleted since 2026-07-29 — see marker_drag.h).
-// It still takes the SELECTION for the never-rest-2+-without-a-span collapse its
-// clear arm carries (that invariant is stated at clear_region_highlight's
-// declaration above); the callers that can still reach that collapse are the
-// NON-SETTERS above (Shift+X, the settings trim commit).
+// IT TAKES NO Selection AT ALL any more (architect 2026-07-29, ruling 6): the
+// parameter existed for the never-span-less collapse its clear arm carried, that
+// enforcement is retired (the retirement paragraph is at clear_region_highlight's
+// declaration above), and the collapse was UNREACHABLE from here in the first
+// place — all three non-setter callers gate on provenance == TrimWindow and the
+// invariant above says such a region rests beside an EMPTY selection. So this
+// function touches the REGION only, and the two wrappers differ exactly by whether
+// the caller deselects first.
 void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
-                                Selection& selection, Viewport& viewport);
+                                Viewport& viewport);
 
 // -- GuiInputHandler ----------------------------------------------------
 //
@@ -966,20 +960,20 @@ private:
 
     // The lane-click model's trim<->REGION coupling (architect 2026-07-23,
     // region-only under SELECTION FLOWS DOWNWARD ONLY): sync the region highlight
-    // to the CURRENT trim window. Trim is region-related, so it never SELECTS
-    // markers, only the region — but the clear arm does collapse a 2+ selection to
-    // its focus (the never-span-less rule at clear_region_highlight's
-    // declaration); the PLAYHEAD is the one it never touches at all. Both
+    // to the CURRENT trim window. Trim is region-related, so it touches the REGION
+    // and nothing else — not the selection (the never-span-less collapse its clear
+    // arm once carried is deleted, ruling 6) and not the PLAYHEAD, ever. Both
     // bounds set -> region = the window's active-domain extent (source bounds
     // through source_frame_to_active_domain, clamped playable), coincident images
     // included; lone / no trim -> clear the region. Navigation-class (the region is
     // navigation), so read-only-safe. Owns its own waveform-highlight damage,
-    // raised only when the region's visible identity actually changed or the
-    // collapse fires (a per-motion-event path pays narrow damage, not full).
+    // raised only when the region's visible identity actually changed (a
+    // per-motion-event path pays narrow damage, not full).
     // THIS BARE FORM IS THE NON-SETTERS' (Shift+X and the settings editor's two
-    // trim maintainers): it leaves the selection alone and so can still reach the
-    // never-span-less collapse. Every route that SETS the window calls the setter
-    // form below instead.
+    // trim maintainers): it leaves the selection alone, and all three gate their
+    // call on a resting TrimWindow region, which by that provenance's own rule
+    // means the selection is already empty. Every route that SETS the window calls
+    // the setter form below instead.
     void sync_highlight_to_trim_window();
 
     // The SETTER's publish: deselect, then sync. EVERY TrimWindow setter goes

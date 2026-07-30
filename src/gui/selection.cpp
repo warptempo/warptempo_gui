@@ -206,7 +206,8 @@ void Selection::clear_selection() {
 }
 
 void Selection::collapse_to_focused() {
-    // THREE CALLER CLASSES, wanting this for different reasons:
+    // TWO CALLER CLASSES, both DELIBERATE ACTS OF THE GESTURE — re-derived
+    // 2026-07-29 when ruling 6 deleted the third:
     //   * the FINE-TUNING VALUE gestures (the inherit toggle, the singleton
     //     tempo step), which narrow the selection so the operation and the
     //     resulting selection both target last_selected only;
@@ -214,11 +215,12 @@ void Selection::collapse_to_focused() {
     //     groups are never moved): both position nudges collapse here through
     //     their shared prologue and then step the focus alone. The doctrine, and
     //     the group-verb rule it instances, live at the head of
-    //     group_position_nudge.h;
-    //   * the NEVER-REST-2+-WITHOUT-A-SPAN sites, which call it because a clear
-    //     took the group's only point cue away. Their inventory is NOT repeated
-    //     here — it lives, by class, at clear_region_highlight's declaration
-    //     (input_handler.h), which is also where the invariant itself is stated.
+    //     group_position_nudge.h.
+    // THE DELETED THIRD CLASS was the never-span-less ENFORCEMENT — six sites that
+    // collapsed a group because a clear had taken its span. That invariant is
+    // RETIRED (ruling 6; the retirement paragraph is at clear_region_highlight's
+    // declaration, input_handler.h), so no caller collapses as REPAIR any more:
+    // every call here is a gesture doing what it means to do.
     // The GROUP TEMPO gestures do NOT collapse — they went group (architect
     // 2026-07-23) and move the whole selection's images rigidly.
     // last_selected_marker
@@ -228,20 +230,20 @@ void Selection::collapse_to_focused() {
     // Membership replace (collapse to the focused singleton) -> CLEAR a
     // SelectionExtent region (a 1-marker extent is degenerate, and the collapse
     // is what killed the span's owner). A TrimWindow region SURVIVES this
-    // membership clear, which is right for BOTH classes: a value gesture has no
-    // business tearing down a chip-row highlight, and an invariant site that
-    // arrived with a TrimWindow region resting never fired at all (the invariant
-    // tests for NO region, so a live trim highlight means no collapse).
+    // membership clear, which is right for both classes: a value gesture and a
+    // nudge have no business tearing down a chip-row highlight — moot in practice,
+    // since a TrimWindow region rests only beside an EMPTY selection and these
+    // callers need a focus.
     if (clear_region_on_membership_replace(app.region))
         viewport.invalidate_waveform_area();
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
-    // No focus -> nothing to collapse TO. The invariant sites depend on the
-    // focus being a live member of the very group they are collapsing, and it
+    // No focus -> nothing to collapse TO. Both surviving classes depend on the
+    // focus being a live member of the very selection they are collapsing, and it
     // is: a 2+ membership carrying focus -1 has exactly one producer in the
     // tree — sanitize_selection_after_restore's empty-touched-set shape — and no
     // real mutation yields an empty touched set, so the state is unreachable
     // today. A derivation, not a guard: this early return exists for the
-    // ordinary no-selection call, and the invariant sites simply never meet it.
+    // ordinary no-selection call, and the gesture callers never meet it.
     if (app.last_selected_marker < 0) return;   // nothing focused
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     const std::optional<int64_t> old_stem    = stem_subject();

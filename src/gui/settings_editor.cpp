@@ -479,13 +479,22 @@ void GuiSettingsEditor::commit() {
     // and one rule beats a second view gate to maintain. The trim WINDOW itself
     // is untouched — a chip-row re-click brings its highlight back. The helper
     // owns its own waveform damage, which the source-view path would otherwise
-    // not raise. A 2+ selection standing beside the cleared span collapses to its
-    // FOCUS with it (the never-rest-2+-without-a-span invariant, stated at
-    // clear_region_highlight's declaration): the commit re-derives no span, and
-    // the focus flag is where the playhead already rests.
+    // not raise.
     clear_region_highlight(app, viewport);
-    if (app.selected_markers.size() >= 2) selection.collapse_to_focused();
-    // Full-area damage for the collapse. collapse_to_focused raises its own
+    // AND THE SELECTION GOES WITH IT (architect 2026-07-29, ruling 6): an engine
+    // commit rebuilds the map under every marker INDEX and IMAGE at once, so it
+    // clears BOTH playhead forms and leaves the cursor as the only one — the same
+    // "ready to move on" act the trim setters make when a chip click deselects.
+    // This is the SYMMETRIC half of a pair: the settings-only ('S') undo/redo
+    // restore clears both at its own restore (undo.cpp), and GUI-kind keys are
+    // history-less, so no other settings entry kind exists to cover. Together they
+    // are what let the never-span-less ENFORCEMENT be deleted: this site was one of
+    // its two remaining producers, and closing it here means no collapse protocol
+    // is needed rather than a collapse being owed. The clear runs AFTER the region
+    // clear above, so its own membership-replace clear finds the region already
+    // inactive and raises no second damage.
+    selection.clear_selection();
+    // Full-area damage for the teardown. clear_selection raises its own
     // NARROW stem/overlay damage, computed against the basis live at the call —
     // and this commit is about to rebuild the map under it (the kick below), so
     // that basis is the wrong one to trust here. A settings commit is a rare,
@@ -501,21 +510,13 @@ void GuiSettingsEditor::commit() {
     // unchanged, so the sync is a redundant bounded rebuild there — acceptable,
     // matching the unconditional trigger beside it.
     if (app.active_audio_view == 'T') viewport.kick_waveform_sync();
-    // RE-LAND ON THE FOCUS AFTER THE MAP CHANGE, TARGET VIEW ONLY. An engine
-    // commit that moves the scale re-warps every marker's target IMAGE; a
-    // selection that survives this tail is the marker lane, and the lane owns
-    // the playhead (land_playhead_on_marker's doctrine, input_pointer.cpp), so
-    // the focused flag would otherwise claim to be a playhead the cursor no
-    // longer sits on. This is exactly the label-coupling re-land the singleton
-    // tempo step pays after its own kick (warpmarkers_ops.cpp) — same map-change
-    // shape, same ordering: AFTER the kick, so the conversion reads the NEW map.
-    // SOURCE VIEW NEEDS NOTHING and that is derived, not skipped: in source view
-    // the active domain IS the authored domain (source_frame_to_active_domain is
-    // the identity there), so a map change moves no image and the cursor already
-    // rests on the focus. An EMPTY selection has no lane and no focus to land on.
-    if (app.active_audio_view == 'T' &&
-        !app.selected_markers.empty() && app.last_selected_marker >= 0)
-        land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
+    // NO RE-LAND, and none is possible: the map-change re-land that used to sit
+    // here (target view only, onto a surviving selection's focus, because the
+    // re-warp moved that focus's image out from under the cursor) died with the
+    // selection clear above — architect 2026-07-29, ruling 6. There is no lane and
+    // no focus after this commit, so the resting cursor is the whole playhead and
+    // it stays exactly where the user left it. The 'S' undo/redo restore's twin
+    // re-land died the same way (undo.cpp).
     // The trigger is unconditional by ruling — rationale recorded at
     // GuiTargetRender::trigger. Under the full-recipe key every engine-settings
     // commit moves the fingerprint, provenance (title/bpm/notes/url/cover)
