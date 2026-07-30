@@ -1027,8 +1027,12 @@ struct AppState {
     //   * ANY VIEWPORT PAN (joined 2026-07-30, architect — "every pan
     //     suppresses"): Viewport::scroll_viewport's changed branch, which is the
     //     funnel for PageUp/PageDown, alt+wheel, touchpad scroll and the alt+drag
-    //     grab-pan; plus Viewport::apply_strip_drag_zoom, the strip drag's own
-    //     viewport write, which bypasses that funnel. Before this the flag's
+    //     grab-pan; plus Viewport::apply_strip_drag_zoom, which bypasses that
+    //     funnel and suppresses on EITHER of the strip drag's two axes — its own
+    //     viewport write AND its level write, the drag's zoom being SONG-ANCHORED
+    //     and so carrying the view off the scanner the same way a pan does (a
+    //     level change can leave the viewport start bit-identical, which is why
+    //     the site tests both). Before this the flag's
     //     "manual-pan suppression" named a producer class that did not exist and
     //     panning away during playback was impossible with follow on (the
     //     default). A pure keyboard ZOOM is deliberately NOT a producer: it
@@ -1136,13 +1140,6 @@ struct AppState {
     std::string libmvec_hash;
     std::string fftw3_hash;
     std::string fftw3_threads_hash;
-
-    // One-shot stash of the scanner's last painted pixel-x under the
-    // OLD viewport, set by viewport-mutating operations during
-    // playback. The next pre-paint reads this in place of computing
-    // scanner_pixel_x against the new viewport, then clears it.
-    // Negative sentinel = no stash.
-    double playhead_scanner_old_px_stash = -1.0;
 
     // Companion files discovered alongside the loaded audio.
     std::string warpmarkers_path;
@@ -1862,21 +1859,20 @@ int64_t monotonic_ms();
 
 void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
 // Returns the pixel column (offset from waveform_area.x) for the cursor.
-// The (app, audio) form reads a.viewport_start_sample — the LIVE/logical
-// viewport. It answers "where is the playhead RIGHT NOW": hit-testing and any
-// gesture that anchors to the live on-screen grid.
-//
-// The (app, audio, vp_start, spp) form takes the viewport AND its
-// samples-per-pixel explicitly. Use it from on_redraw to align the live
-// cursor/scanner paint with the cached layers (waveform, marker stems,
-// flags) — those layers render against wf_cache.fp_vp_start at the
-// displayed spp (derivable as (fp_vp_end - fp_vp_start) / fp_area_w) for
-// the 1-2 paint frames while the worker rebuilds against a viewport
-// change. Threading BOTH parameters through here keeps cursor/scanner
-// and surrounding markers in lockstep during that window; passing
-// fp_vp_start alone but reading the live spp would mix frames of
-// reference and visibly displace the cursor for one frame after each
-// zoom gesture.
+// ONE FORM ONLY, and it takes the viewport AND its samples-per-pixel
+// EXPLICITLY: there is no live-viewport convenience overload any more (both
+// playhead_pixel_x's and scanner_pixel_x's were deleted 2026-07-30 caller-less,
+// the last users having moved to the plate basis under the damage rule below —
+// do not reintroduce one, since the only basis these pixels have is the plate's).
+// Use it from on_redraw to align the cursor/scanner paint with the cached layers
+// (waveform, marker stems, flags) — those layers render against
+// wf_cache.fp_vp_start at the displayed spp (derivable as
+// (fp_vp_end - fp_vp_start) / fp_area_w), including the 1-2 paint frames while
+// the worker rebuilds against a viewport change. Threading BOTH parameters
+// through keeps cursor/scanner and surrounding markers in lockstep during that
+// window; passing fp_vp_start alone but reading the live spp would mix frames of
+// reference and visibly displace the cursor for one frame after each zoom
+// gesture.
 //
 // THE PLAYHEADS' DAMAGE RULE (architect 2026-07-30 — the one authoritative
 // statement; every damage site carries only its own class plus a pointer here).
@@ -1907,16 +1903,13 @@ void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
 //    human-paced command, so the repaint is affordable at the rate it fires
 //    (the project already pays a full synchronous plate RENDER per pan event at
 //    the same key-repeat and pointer-frame cadence).
-double  playhead_pixel_x(const AppState& a, const GuiAudio& audio);
 double  playhead_pixel_x(const AppState& a, int64_t vp_start, double spp);
 // Returns the pixel column (offset from waveform_area.x) for the scanner,
 // computed from the CONTINUOUS playhead_scanner_precise (not the integer
 // sample) so a viewport rescale slides it smoothly. Meaningful only while
 // playhead_scanner_active — at rest playhead_scanner_precise is stale by
-// contract, so every caller reads this behind that gate. The
-// (app, vp_start, spp) overload follows the same live-vs-displayed split
-// documented on playhead_pixel_x above.
-double  scanner_pixel_x(const AppState& a, const GuiAudio& audio);
+// contract, so every caller reads this behind that gate. Explicit-basis only,
+// for the reason given on playhead_pixel_x above.
 double  scanner_pixel_x(const AppState& a, int64_t vp_start, double spp);
 // Active-domain total frame count. Source view returns audio.total_frames();
 // target view returns the deformed total derived from the warp_frame_map cache

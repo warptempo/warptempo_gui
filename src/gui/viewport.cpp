@@ -244,14 +244,6 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     new_zoom_level = clamp_zoom_level(app, audio, new_zoom_level);
     if (new_zoom_level == app.zoom_level) return;
 
-    // Capture the scanner's pre-reflow pixel-x under the OLD viewport so
-    // the next pre-paint can damage the actually-painted column. The
-    // recomputed scanner_pixel_x against the post-reflow viewport points
-    // at a column the scanner was never painted at, leaving a ghost.
-    if (app.playhead_scanner_active) {
-        app.playhead_scanner_old_px_stash = scanner_pixel_x(app, audio);
-    }
-
     app.zoom_level = new_zoom_level;
 
     // Split-playhead: during playback zoom tracks the audio under review
@@ -300,13 +292,6 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     const bool   level_changed = (new_zoom_level != app.zoom_level);
     const int64_t old_vp       = app.viewport_start_sample;
 
-    // Capture the scanner's pre-reflow pixel-x under the OLD viewport (as
-    // apply_zoom_change does) so the next pre-paint damages the actually-painted
-    // column instead of leaving a ghost when the view changes under playback.
-    if (app.playhead_scanner_active) {
-        app.playhead_scanner_old_px_stash = scanner_pixel_x(app, audio);
-    }
-
     app.zoom_level = new_zoom_level;
 
     // Place the song anchor at anchor_x: pick the viewport start that paints
@@ -333,13 +318,25 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // above), so it carries the same follow suppression here: every user pan
     // suppresses follow for the session (architect 2026-07-30; the funnel copy
     // is in scroll_viewport, the producer inventory at the flag's declaration in
-    // app_state.h). Gated on an actual viewport move and on playback being live,
-    // exactly as the funnel is. It fires for the drag's ZOOM axis too, and that
-    // is right rather than incidental: this zoom is SONG-ANCHORED (the grabbed
-    // sample stays pinned at its column), so it carries the view off the scanner
-    // just as the pan axis does — unlike the keyboard zoom, which centers ON the
-    // scanner during playback and therefore suppresses nothing.
-    if (vp_changed && playback.is_playing())
+    // app_state.h). Gated on playback being live exactly as the funnel is, and
+    // on EITHER STRIP AXIS having moved — not on the viewport alone. The ZOOM
+    // axis is a first-class producer here: this zoom is SONG-ANCHORED (the
+    // grabbed sample stays pinned at its column), so it carries the view off the
+    // scanner just as the pan axis does — unlike the keyboard zoom, which
+    // centers ON the scanner during playback and therefore suppresses nothing.
+    // The level test is not redundant with the viewport test: a level change can
+    // leave viewport_start_sample bit-identical (the anchor pinned at column 0,
+    // or the recompute rounding/clamping back onto the same grid point), and
+    // while that frame's zoom stands, the next pre-paint's follow_scroll_if_needed
+    // pages away from the level the user just dialled in.
+    // `level_changed` reports a real move, not a request: the sole caller
+    // (apply_strip_drag_at) pre-clamps new_level into the same
+    // [kMinZoom, effective_max_zoom_level] window clamp_viewport_start re-applies
+    // below, so the pre-assignment compare cannot read a wall-saturated no-op as
+    // movement. A both-unchanged frame suppresses nothing either way — mid-gesture
+    // the true-no-op early return above takes it, and the terminating event falls
+    // through this gate false.
+    if ((level_changed || vp_changed) && playback.is_playing())
         app.follow_overridden_for_session = true;
 
     invalidate_waveform_area();
@@ -372,14 +369,6 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     // no-op detection below.
     new_zoom_level = clamp_zoom_level(app, audio, new_zoom_level);
 
-    // Capture the scanner's pre-reflow pixel-x under the OLD viewport BEFORE any
-    // assignment (as apply_zoom_change does), but publish it to the stash only
-    // when the view actually moves — a no-op must leave no dangling ghost-repair
-    // state for the next pre-paint to consume.
-    const double scanner_old_px = app.playhead_scanner_active
-        ? scanner_pixel_x(app, audio)
-        : -1.0;
-
     const double  old_level = app.zoom_level;
     const int64_t old_start = app.viewport_start_sample;
 
@@ -397,11 +386,6 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
         std::fabs(app.zoom_level - old_level) < 1e-9) {
         return;
     }
-
-    // Actually moving: publish the OLD-viewport scanner px so the next pre-paint
-    // repairs the ghost, exactly as apply_zoom_change does.
-    if (app.playhead_scanner_active)
-        app.playhead_scanner_old_px_stash = scanner_old_px;
 
     invalidate_waveform_area();
     invalidate_timestamp_area();
@@ -526,11 +510,6 @@ void Viewport::center_viewport_on_playhead() {
         : app.playhead_cursor_sample;
     const int64_t visible = samples_visible(app, audio);
     const int64_t old_vp = app.viewport_start_sample;
-    // Stash the scanner's last painted pixel-x under the OLD viewport
-    // for the next pre-paint; see apply_zoom_change for rationale.
-    if (app.playhead_scanner_active) {
-        app.playhead_scanner_old_px_stash = scanner_pixel_x(app, audio);
-    }
     app.viewport_start_sample = target - visible / 2;
     clamp_viewport_start(app, audio);
     if (app.viewport_start_sample != old_vp) {

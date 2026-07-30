@@ -592,13 +592,34 @@ void PhaseResetPropagate::paste_state_apply() {
 //     the lightweight mode swap and leaves every side effect (region clear, hover
 //     clear, the selection clear) coherent.
 //
-// Invalidation: when the audio-view switch fires (session was in source view),
-// handle_active_audio_view_toggle already full-window-invalidates, so the tail
-// damage here is a harmless subset. When the session is already in target view
-// the audio switch is skipped and switch_active_markers_view_to invalidates
-// nothing itself, so the tail damage (top strip flags + waveform stems +
-// timestamp readout) is the only repaint covering the mode swap and the new
-// selection.
+// Invalidation, and why the tail ends in a SYNCHRONOUS rebuild rather than plain
+// damage: on_redraw is blit-only, and the run loop services the frame callback
+// BEFORE the timerfd tick that runs the fingerprint-guarded flag-cache rebuild.
+// switch_active_markers_view_to('P') moves two flag-cache FINGERPRINT fields —
+// the active column always, and the selection hash whenever the created-set arm
+// below installs one — so ordinary invalidation alone blits the leaving column's
+// W flag pixels (and the pre-paste selection's) under P-live text / stem / overlay
+// passes for one frame. kick_waveform_sync commits plate, fingerprint and flag
+// cache before that paint, which is exactly what the bare `p` toggle takes for
+// the same reason (active_views.cpp).
+// IT COVERS BOTH ENTRY CONTEXTS, and it is needed in both:
+//   * W+SOURCE entry — handle_active_audio_view_toggle runs and kicks, but it
+//     kicks BEFORE the column swap below, so its rebuild reads the OLD
+//     active_markers_view and the stale-flag frame stands. The tail kick is then
+//     the SECOND on this path, and a second kick is harmless: kick_waveform_sync's
+//     two clamps (clamp_viewport_start, clamp_display_state_to_live_domain) are
+//     idempotent, and force_synchronous_waveform_rebuild re-renders the plate into
+//     the same surface, republishes the identical fingerprint (pending_fp_* in
+//     lockstep, so no worker re-dispatch), and re-runs the fingerprint-guarded flag
+//     rebuild — which is precisely the work that must happen again, the column
+//     having changed in between. Cost: one extra full plate render per paste, a
+//     discrete rare command.
+//   * W+TARGET entry — the audio switch is skipped entirely, so the tail kick is
+//     the paste's ONLY synchronous rebuild.
+// The ordinary damage stays beside it: the rebuild damages y=0 through the
+// waveform's bottom (top strip included), so invalidate_top_strip and
+// invalidate_waveform_area are coalesced duplicates, while
+// invalidate_timestamp_area covers the bottom strip the rebuild does not reach.
 void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created) {
     if (input && app.active_audio_view != 'T') {
         input->handle_active_audio_view_toggle();
@@ -656,4 +677,10 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
     viewport.invalidate_top_strip();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
+    // LAST, after the created selection and its extent region are installed, so
+    // the flag cache rebuilds against the final column AND the final selection
+    // hash in one pass (the reasoning, and the two entry contexts it covers, are
+    // in the head comment above; the authoritative caller inventory for this kick
+    // lives at Viewport::kick_waveform_sync's declaration, viewport.h).
+    viewport.kick_waveform_sync();
 }

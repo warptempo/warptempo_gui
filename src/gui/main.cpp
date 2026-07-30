@@ -543,11 +543,6 @@ double playhead_pixel_x(const AppState& a, int64_t vp_start, double spp) {
     return static_cast<double>(a.playhead_cursor_sample - vp_start) / spp;
 }
 
-double playhead_pixel_x(const AppState& a, const GuiAudio& audio) {
-    return playhead_pixel_x(a, a.viewport_start_sample,
-                            current_samples_per_pixel(a, audio));
-}
-
 double scanner_pixel_x(const AppState& a, int64_t vp_start, double spp) {
     if (spp <= 0.0) return -1.0;
     // Drive the scanner's pixel from the CONTINUOUS predictor position
@@ -555,13 +550,8 @@ double scanner_pixel_x(const AppState& a, int64_t vp_start, double spp) {
     // per-frame viewport rescale during a strip-drag zoom slides the scanner
     // smoothly instead of jittering on integer-frame steps. The line still
     // paints as a hard 1px column at the rounded pixel; only its basis is
-    // continuous. The 2-arg overload below delegates here.
+    // continuous.
     return (a.playhead_scanner_precise - static_cast<double>(vp_start)) / spp;
-}
-
-double scanner_pixel_x(const AppState& a, const GuiAudio& audio) {
-    return scanner_pixel_x(a, a.viewport_start_sample,
-                           current_samples_per_pixel(a, audio));
 }
 
 // Shrink-and-pad: produce a union rectangle covering both inputs. Used to
@@ -1260,22 +1250,23 @@ int main(int argc, char** argv) {
         const GuiPaintHandler::PlateViewportBasis pb =
             paint_handler.plate_viewport_basis();
         const int64_t pb_vp = static_cast<int64_t>(pb.vp_start);
-        // One-shot read of the viewport-mutation stash. When set, it
-        // holds the scanner's last painted pixel-x under the OLD
-        // viewport; the recomputed scanner_pixel_x against the new
-        // viewport would point at a column the scanner was never
-        // painted at, leaving a ghost. old_px reads the still-current
-        // playhead_scanner_precise (the last painted continuous position).
-        // The stash's producers capture at their pre-mutation rest, where the
-        // plate they are about to replace IS the live viewport, so a stashed
-        // value is already a plate-basis column and needs no translation.
-        double old_px;
-        if (app.playhead_scanner_old_px_stash >= 0.0) {
-            old_px = app.playhead_scanner_old_px_stash;
-            app.playhead_scanner_old_px_stash = -1.0;
-        } else {
-            old_px = scanner_pixel_x(app, pb_vp, pb.spp);
-        }
+        // OLD COLUMN, DERIVED — never stashed (the viewport-mutation stash
+        // playhead_scanner_old_px_stash was retired 2026-07-30; do not reintroduce
+        // one). The plate basis IS the answer by construction: paint_playheads
+        // draws the scanner through this same basis, so scanner_pixel_x against it,
+        // read with the still-current playhead_scanner_precise (the last painted
+        // continuous position), names exactly the column the last paint put the
+        // line at. A stash could only be WORSE — its producers captured on the LIVE
+        // viewport, which parts company with the plate during every async publish
+        // window (follow scroll, resize, load, preview-driven total drift), and two
+        // of them published on paths that then discovered they had moved nothing.
+        // Nor is a stash needed: every viewport mutator that could reflow the
+        // scanner's column pairs its write with full waveform-area damage AND a
+        // synchronous plate rebuild (kick_waveform_sync, which damages y=0 through
+        // the waveform's bottom itself), so the old line is erased wholesale in the
+        // mutating frame and this narrow pair only ever has to cover the ordinary
+        // per-frame advance.
+        const double old_px = scanner_pixel_x(app, pb_vp, pb.spp);
         // Advance both fields: the integer sample (domain / change-detection)
         // and the continuous position the scanner pixel is drawn from. new_px
         // and the invalidated span are therefore computed from the continuous

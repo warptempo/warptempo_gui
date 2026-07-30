@@ -82,7 +82,14 @@ struct Viewport {
     //    the damaged frame; it joins the class rather than growing a second
     //    flag-only kick (the reason is stated at its site, active_views.cpp), and
     //    the settings active_markers_view= key rides it through the same
-    //    function. Also here: the
+    //    function. The PROPAGATE PASTE'S TARGET-VIEW TAIL
+    //    (land_paste_in_target_view, phase_reset_propagate.cpp) is the `p` case
+    //    reached by a different door and joined 2026-07-30: it calls
+    //    switch_active_markers_view_to('P') directly rather than through the
+    //    toggle, so it kicks at its own tail — after the created selection, so the
+    //    column and the selection hash rebuild together — and on its W+source
+    //    entry that is a harmless SECOND kick, the audio-view toggle's own having
+    //    run before the column swap. Also here: the
     //    settings tab_X_viewport_start commit, the strip drag's TERMINATING-EVENT
     //    finalize — re-derived 2026-07-29, the true terminating events being
     //    release, button loss, and the force-end finalizer's three callers
@@ -173,8 +180,8 @@ struct Viewport {
     // chokepoints (the grid snap + range clamp every zoom/viewport write uses)
     // and repaint exactly as apply_zoom_change does. IDEMPOTENT: if the resting
     // (level, start) after clamping equals the current viewport, it is a true
-    // no-op — no repaint, and the scanner ghost-repair stash is left untouched —
-    // so a second identical framing does nothing, while any pan/zoom in between
+    // no-op — no repaint and no state left behind — so a second identical framing
+    // does nothing, while any pan/zoom in between
     // makes the target differ and this re-frames. The sole caller is the
     // zoom-strip double-click (run_zoom_double_click_command).
     void apply_zoom_to_start(double new_zoom_level, int64_t new_start);
