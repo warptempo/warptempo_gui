@@ -30,7 +30,7 @@ SettingsSnapshot capture_current_settings(const AppState& app) {
     return s;
 }
 
-void remap_marker_indices_after_reorder(AppState& app, char column,
+void remap_marker_indices_after_reorder(AppState& app,
                                         const std::vector<int>& old_to_new) {
     if (old_to_new.empty()) return;
     const int n = static_cast<int>(old_to_new.size());
@@ -53,28 +53,10 @@ void remap_marker_indices_after_reorder(AppState& app, char column,
     // releases, so a stale pre-reorder index would name the wrong row at the
     // next shift-click. -1 (no anchor) passes through mapped() unchanged.
     app.shift_range_anchor = mapped(app.shift_range_anchor);
-    // THE PARKED COPIES follow too, in BOTH tabs and for the REORDERED COLUMN
-    // ONLY. The marker stores and the map are GLOBAL while the selections are
-    // per-tab and per-column, so a reorder in the live tab silently re-points
-    // every parked selection at different rows unless it is remapped here —
-    // that was a real defect, not a theoretical one: nudge a selected marker
-    // across its neighbour in tab A and tab B's parked selection came back
-    // pointing at whatever now occupies those slots. `column` names the store
-    // that reordered ('W' warp / 'P' phase reset); the other column's slots are
-    // untouched because its store did not move. The ACTIVE tab's own slot for
-    // the active column is a stale mirror that the next stash boundary
-    // overwrites, so remapping it changes nothing — it is done anyway to keep
-    // the rule "every parked copy of the reordered column follows" free of
-    // exceptions.
-    for (ViewState* vs : {&app.tab_a, &app.tab_b}) {
-        if (column == 'P') {
-            remap_set(vs->phase_reset_selected);
-            vs->phase_reset_last_selected = mapped(vs->phase_reset_last_selected);
-        } else {
-            remap_set(vs->warp_selected);
-            vs->warp_last_selected = mapped(vs->warp_last_selected);
-        }
-    }
+    // No parked copies to follow: neither ViewState holds an index (the rule is
+    // at ViewState, app_state.h), which is also why this function needs no
+    // `column` argument — everything above belongs to the active column, and
+    // every caller reorders the active column's store.
     if (app.drag.active) {
         // Pairing between dragging_markers and its parallel time vectors
         // (original_times / moveable_times) is positional by k, so an

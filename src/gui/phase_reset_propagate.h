@@ -20,19 +20,11 @@ struct GuiInputHandler;
 struct PhaseResetPropagate {
     AppState&           app;
     Viewport&           viewport;
-    // The paste tail clears any resting region, so a 2+ selection it did not
-    // build a span for collapses to its focus (the never-rest-2+-without-a-span
-    // invariant, stated at clear_region_highlight's declaration). Needed by the
-    // NO-CREATED-SET arm, which is general rather than state-paste-only: the
-    // state paste always lands with an empty created set, and a placement paste
-    // whose run created nothing lands there as well. The created-set arm derives
-    // its own extent instead.
-    Selection&          selection;
     Undo&               undo;
     GuiTargetRender& target_render;
     // Owned end-of-paste view switch goes through switch_active_markers_view_to
-    // so the W↔P selection swap + hover-popup clear + live-selection prune
-    // stay consistent with the keyboard `p`-toggle path. The two call sites
+    // so the column switch's selection clear + hover-popup clear stay consistent
+    // with the keyboard `p`-toggle path. The two call sites
     // for paste_apply / paste_state_apply live in different files
     // (prompt.cpp / input_handler.cpp), only one of which holds
     // GuiActiveViews — keeping the dependency here covers both with one
@@ -50,12 +42,11 @@ struct PhaseResetPropagate {
     // `t` key uses.
     GuiInputHandler*      input = nullptr;
 
-    PhaseResetPropagate(AppState& app_, Viewport& viewport_,
-                        Selection& selection_, Undo& undo_,
+    PhaseResetPropagate(AppState& app_, Viewport& viewport_, Undo& undo_,
                         GuiTargetRender& target_render_,
                         GuiActiveViews& active_views_,
                         GuiPlaybackLifecycle& playback_lifecycle_)
-        : app(app_), viewport(viewport_), selection(selection_), undo(undo_),
+        : app(app_), viewport(viewport_), undo(undo_),
           target_render(target_render_), active_views(active_views_),
           playback_lifecycle(playback_lifecycle_) {}
 

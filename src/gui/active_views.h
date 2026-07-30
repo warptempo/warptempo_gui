@@ -10,8 +10,7 @@
 // lambdas and the inline Ctrl+Tab block in the keyboard handler. Owns the
 // two view-axis swap operations (W/P markers and A/B tab) plus their
 // shared snapshot machinery: active-tab snapshot push
-// (refresh_active_tab_view_from_app), the per-view selection-slot resolver
-// (active_view_state), the W/P markers-view swap
+// (refresh_active_tab_view_from_app), the W/P markers-view swap
 // (switch_active_markers_view_to), the `p`-keypress entry path with
 // engine gating (toggle_active_markers_view), and the Ctrl+Tab tab-view
 // flip (switch_active_tab_view_to). The S/T audio-view axis is handled
@@ -38,7 +37,6 @@ struct GuiActiveViews {
           playback_lifecycle(playback_lifecycle_) {}
 
     void       refresh_active_tab_view_from_app();
-    ViewState* active_view_state();
     void       switch_active_markers_view_to(char target_mode);
     void       switch_active_tab_view_to(char target_tab);
     void       toggle_active_markers_view();

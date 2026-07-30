@@ -214,8 +214,9 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // like the clicks; it simply owes no span clear of its own, the membership
 // replace already taking a SelectionExtent one.) THREE ops go further and clear ANY
 // resting span, provenance and all (architect 2026-07-29): the undo/redo
-// restore, the `p` W/P swap, and the propagate paste — each hands the lane a
-// selection it took in wholesale, so a span it did not build has nothing left to
+// restore, the `p` W/P swap, and the propagate paste — each replaces the whole
+// membership at once (the swap by emptying it, the other two by writing a set
+// they took in wholesale), so a span none of them built has nothing left to
 // describe (the list lives at clear_region_highlight, input_handler.h). THE
 // COROLLARY, recorded there too with its own site list: a 2+ SELECTION NEVER
 // RESTS WITHOUT A SPAN — a group whose span is cleared with nothing re-deriving
@@ -243,14 +244,22 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //     chokepoint of the three open routes;
 //   * THE RESTORES, which hand the lane a focus it did not have: BOTH undo/redo
 //     marker arms (undo.cpp's visual tail — the singleton lands on its touched
-//     marker, the group on its focus, which IS the earliest touched member),
-//     BOTH propagate-paste arms (phase_reset_propagate.cpp — the created arm on
-//     the FIRST created reset, the no-created arm on whatever focus the restored
-//     P slot leaves), and the `p` W/P swap (active_views.cpp);
+//     marker, the group on its focus, which IS the earliest touched member) and
+//     the propagate paste's CREATED-SET arm, on the FIRST created reset
+//     (phase_reset_propagate.cpp — its no-created arm lands nothing now, and the
+//     `p` swap lands nothing either: both used to be cleaning up a restored
+//     P-column selection, and the parked slots died 2026-07-29);
 //   * THE VIEW / TAB SWITCHES, which re-express a focus into a new domain: the
-//     `t` S<->T flip (input_handler.cpp) and Ctrl+Tab's tab restore
-//     (active_views.cpp). Both land only on a NON-EMPTY selection — with no lane
-//     the cursor is the playhead in its own right and keeps its own value;
+//     `t` S<->T flip (input_handler.cpp) is now the only one, landing only on a
+//     NON-EMPTY selection — with no lane the cursor is the playhead in its own
+//     right and keeps its own value. Ctrl+Tab left this class when the parked
+//     selections died: it restores its tab's stored cursor VERBATIM, hands the
+//     lane nothing, and its only land is the auto-select's below;
+//   * THE COINCIDENCE AUTO-SELECT (auto_select_marker_at_playhead, this file) at
+//     its three entry chokepoints — the load, `p`, Ctrl+Tab. A provable NO-OP by
+//     construction (its selection predicate IS this function's equality test), and
+//     it is in the list because the adjacency is the rule, not because it moves
+//     anything;
 //   * THE MAP CHANGERS, target view only, which move the focused marker's image
 //     out from under a resting cursor: the settings engine-commit
 //     (settings_editor.cpp) and the settings-only 'S' undo/redo arm (undo.cpp),
@@ -304,6 +313,60 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
             old_px, playhead_pixel_x(app, audio));
         viewport.invalidate_timestamp_area();
     }
+}
+
+// COINCIDENCE AUTO-SELECT (architect 2026-07-29, the entry half of THE SELECTION
+// IS NEVER PARKED). Nothing stashes a selection any more, so a route that ENTERS
+// a column or a tab re-acquires one from the PLAYHEAD: scan the active column's
+// store and single-select the marker the playhead is already sitting exactly on.
+// The payoff is the lane model — with that marker selected the flag's ink triangle
+// IS the playhead, which is precisely the state the entry's stored cursor
+// describes — and the price is nothing, because a selection recovered this way is
+// derived from live data instead of remembered from a store that has since moved.
+//
+// THE TEST IS THE LAND'S OWN FORMULA, EXACTLY: clamp_playhead_to_live_domain(
+// source_frame_to_active_domain(time_frame)) == app.playhead_cursor_sample,
+// reusing land_playhead_on_marker's two helpers rather than re-deriving the
+// mapping (a second spelling of the same conversion would drift). It is an EXACT
+// int64 compare with no tolerance: the auto-select must fire only where a land
+// would leave the playhead unmoved, and the whole point of the two-step basis is
+// that a landed playhead is bit-exactly a marker's image. So this reads "is the
+// playhead standing on a marker", not "is it near one" — a cursor one frame away
+// selects nothing, which is right, since selecting it would move nothing while
+// silently arming the marker lane.
+// FIRST-IN-STORE WINS on a tie: markers may coincide exactly (legal in both
+// stores) and in target view distinct source frames can share one target image
+// under a compressing segment, so the scan is ordered and stops at the first
+// match — an arbitrary but total rule, and the stores are time-ordered, so
+// "first" is the earliest-authored of the coincident group.
+// THE LAND AFTERWARD IS THE ORDINARY ADJACENCY, and it is a provable no-op here:
+// the predicate that selected the marker is the land's own equality test, so the
+// land early-returns on `sample == app.playhead_cursor_sample` and writes nothing.
+// It stays because the marker lane owns the playhead — a route that hands the lane
+// a focus pays the land, and this route paying it in the degenerate case is what
+// keeps the rule exceptionless.
+// NO REGION WORK: set_single_selection takes a SelectionExtent span through the
+// ordinary membership-replace contract, and every caller has already cleared any
+// resting span of any provenance before reaching here.
+// Read-only allowed (selection and playhead are navigation). Bounds-safe by
+// construction — the index comes from the scan itself.
+void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
+                                    Selection& selection, Viewport& viewport) {
+    const auto scan = [&](const auto& markers) {
+        for (size_t i = 0; i < markers.size(); ++i) {
+            const int64_t sample = clamp_playhead_to_live_domain(
+                source_frame_to_active_domain(app, audio, markers[i].time_frame),
+                app, audio);
+            if (sample == app.playhead_cursor_sample) return static_cast<int>(i);
+        }
+        return -1;
+    };
+    const int hit = (app.active_markers_view == 'P')
+        ? scan(app.phaseresetmarkers.markers())
+        : scan(app.warpmarkers.markers());
+    if (hit < 0) return;
+    selection.set_single_selection(hit);
+    land_playhead_on_marker(app, audio, viewport, hit);
 }
 
 // The DOWNWARD coupling — the selection defines the extent region,

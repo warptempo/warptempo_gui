@@ -874,30 +874,11 @@ bool GuiInputHandler::adopt_render_entry(
 
     app.warpmarkers.markers_mut()       = std::move(src_warp);
     app.phaseresetmarkers.markers_mut() = std::move(src_phase_resets);
-    // WHOLESALE REPLACE -> bump both columns' STRUCTURAL generation (one of the
-    // three sites the store cannot detect for itself; inventory at the counter
-    // in marker_store.h). Belt here, since the block just below clears every
-    // parked slot outright — but the bump is what keeps the rule uniform, and a
-    // future edit that drops the wholesale clear would still be covered.
-    app.warpmarkers.bump_structural_generation();
-    app.phaseresetmarkers.bump_structural_generation();
+    // Wholesale authoring reset: the ONE selection goes, and there is nothing
+    // else to reset — no per-tab per-mode slot holds a copy (the parked
+    // selections died 2026-07-29, so a wholesale store replace no longer has to
+    // hunt down stale index sets in either ViewState).
     selection.clear_selection();
-    // Wholesale authoring reset: every per-tab per-mode selection slot
-    // referencing the replaced marker stores is stale.
-    {
-        auto clear_marker_slots = [](ViewState& t) {
-            t.warp_selected.clear();
-            t.warp_last_selected        = -1;
-            t.phase_reset_selected.clear();
-            t.phase_reset_last_selected = -1;
-        };
-        // No generation stamping here on purpose: both ViewStates are REPLACED
-        // WHOLESALE further down (view_state_from_settings_tab), which would
-        // throw any stamp away. The stamping that makes these emptied slots rest
-        // AGREEING with the new stores happens after that replace.
-        clear_marker_slots(app.tab_a);
-        clear_marker_slots(app.tab_b);
-    }
 
     // One cross-file undo entry: the marker pair plus the pre-commit engine
     // settings (captured inside push_undo_both). The inherited prefs and view
@@ -927,31 +908,20 @@ bool GuiInputHandler::adopt_render_entry(
     app.bpm_mode_enabled       = false;
 
     // Both tab bands from the file (view_state_from_settings_tab: viewport /
-    // zoom / playhead, read_only, and the trim pair; a parsed band carries no
-    // selection, matching the marker-selection reset above). This clean
+    // zoom / playhead, read_only, and the trim pair — the whole of a band, since
+    // a ViewState parks nothing index-shaped). This clean
     // whole-band replace is equivalent to a source load's per-key apply plus
     // trim plus read_only for an all-keys render-entry sidecar.
     app.tab_a = view_state_from_settings_tab(settings->tab_a);
     app.tab_b = view_state_from_settings_tab(settings->tab_b);
-    // A parsed band carries no selection AND no generation stamps (zero
-    // defaults), so stamp both tabs to the post-replace stores now. The slots
-    // are empty either way — nothing can be revived — but without this the very
-    // next parked read reports a mismatch and "clears" an already-empty slot,
-    // making the emptied-and-agreeing postcondition above false the moment it
-    // was written. The drop is done, by hand, above; this is what records it.
-    for (ViewState* t : {&app.tab_a, &app.tab_b}) {
-        park_selection_stamp(app, *t, 'W');
-        park_selection_stamp(app, *t, 'P');
-    }
-
     // Engine block plus the scalar session prefs, VALUES ONLY, through the one
     // routine a source load also calls — so adopt applies engine_settings,
     // follow, active_audio_view, active_markers_view, active_tab_view,
     // playback_speed, font_size, and audio_player 1:1 with load. There is NO
     // W/P carve-out: active_markers_view is now applied from the file like
-    // every other key. The live selection and both tabs' per-mode selection
-    // slots were cleared above, so landing on the file's marker mode carries
-    // an empty selection, exactly as a fresh load's empty-selection state.
+    // every other key. The one selection was cleared above, so landing on the
+    // file's marker mode carries an empty selection, exactly as a fresh load's
+    // empty-selection state.
     //
     // This replaces the four LIVE env hashes with the entry's. The hashes are
     // history-less, no-dirty GUI-kind state (like the other adopted view

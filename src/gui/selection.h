@@ -43,7 +43,6 @@ struct Selection {
     void cycle_selection(bool forward);
     void select_next_marker();
     void select_prev_marker();
-    void prune_live_selection();
 
     // The phase-reset lead-in overlay (phase_reset_overlay_band, architect
     // 2026-07-23) annotates the ONE focused enabled reset. Its SUBJECT — the

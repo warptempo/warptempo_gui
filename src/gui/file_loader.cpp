@@ -437,18 +437,6 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.tab_b.playhead_cursor_sample = clamp_playhead_to_live_domain(
         app.tab_b.playhead_cursor_sample, app, audio);
 
-    // Both tabs were whole-replaced above from a default ViewState, so their
-    // parked-selection generation stamps are zero defaults while the stores have
-    // been cleared and reloaded. The slots are empty (a load parks no selection),
-    // so nothing can be revived — but stamping them now leaves them AGREEING with
-    // the fresh stores instead of reporting a mismatch on the first parked read
-    // and re-clearing what is already empty. Same rule and same reason as the
-    // adopt's post-replace stamp (input_key_dispatch.cpp).
-    for (ViewState* t : {&app.tab_a, &app.tab_b}) {
-        park_selection_stamp(app, *t, 'W');
-        park_selection_stamp(app, *t, 'P');
-    }
-
     // Activate the parsed-tab: copy its snapshot into the live AppState
     // fields. active_tab_view was set from the parsed-settings block above.
     {
@@ -607,6 +595,18 @@ bool GuiFileLoader::load_file(const std::string& path) {
                 app.playhead_cursor_sample, app, audio);
         }
     }
+
+    // COINCIDENCE AUTO-SELECT, the load chokepoint (one of three; the rule and
+    // the formula live at auto_select_marker_at_playhead, input_pointer.cpp). A
+    // parsed `.settings` band carries a playhead but never a selection, so the
+    // session opens with a marker selected exactly when the restored cursor lands
+    // on one — the entry reads like a marker click, and the flag's ink triangle is
+    // the playhead from the first frame. PLACED HERE, past the target-view
+    // validity gate and its forced-S re-clamps: the scan's conversion is
+    // domain-dependent (source view identity, target view through the warp map),
+    // so it must read the view the session actually opens in and the playhead's
+    // final value. The full-window invalidate at the tail paints the result.
+    auto_select_marker_at_playhead(app, audio, selection, viewport);
 
     // If the load landed us in target view — the parsed settings said 'T'
     // AND the loaded state passed the same validity walk that gates a

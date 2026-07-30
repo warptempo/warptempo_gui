@@ -1147,36 +1147,31 @@ struct TrimState {
     bool    has_end     = false;
 };
 
-// Navigational bookmark. Holds a snapshot of the three fields that define
+// Navigational bookmark. Holds a snapshot of the fields that define
 // what the user sees and where playback would start. Not in the undo domain.
+// ONE PLAYHEAD PER TAB: playhead_cursor_sample is the whole of it — no
+// per-column sibling exists, and the columns share this one cursor.
 //
-// Each tab also carries per-mode selection slots so switching
-// tabs (Ctrl+Tab) and switching modes (`p`) both restore the right
-// selection set for the destination cell. The active selection lives in
-// AppState; these slots are the persistent snapshots.
+// VALUE-SHAPED SESSION STATE PARKS SAFELY; INDEX-SHAPED SESSION STATE DOES NOT
+// — the rule behind the deletion of the per-tab parked SELECTIONS (architect
+// 2026-07-29). Every field below is frame-, value- or flag-shaped, so nothing a
+// tab parks can be invalidated by work done in the other tab: the marker stores
+// are GLOBAL, but a FRAME still names the same position after an insert, a
+// delete or a wholesale replace, while a raw store INDEX does not. The parked
+// selections were the product's one held-across-commands index, silently
+// re-pointed at other rows by the other tab's ordinary editing, and they are
+// gone: the selection lives in AppState alone, follows the `t` audio-view
+// switch, and is CLEARED by the `p` column switch and by Ctrl+Tab — each of
+// which then auto-selects a marker whose land value is exactly the RESTING
+// playhead, as the source load does (the three chokepoints of
+// auto_select_marker_at_playhead, input_pointer.cpp). The one domain
+// hazard this value-shaped band does carry — a target total changed between
+// switches — is handled by the single clamp_playhead_to_live_domain call at the
+// restore.
 struct ViewState {
     int64_t viewport_start_sample      = 0;
     double  zoom_level                 = kWorkingZoomLevel;
     int64_t playhead_cursor_sample     = 0;
-
-    // PARKED SELECTIONS, each with the STRUCTURAL GENERATION of its column's
-    // store at stash time. These are raw store indices held across arbitrary
-    // commands — the one place in the product that happens — and the marker
-    // stores are GLOBAL while these are per-tab, so an insert, a delete, or a
-    // wholesale replace performed in the OTHER tab silently re-points them at
-    // different rows. The stamp makes that DETECTED instead of silently wrong:
-    // every restore path compares it and drops the selection on a mismatch
-    // (drop_parked_selection_if_stale below; the stamping is
-    // park_selection_stamp, called at the stash chokepoints). A same-size
-    // REORDER is not staleness — remap_marker_indices_after_reorder follows the
-    // permutation into these slots and the structural generation deliberately
-    // does not move, so a nudge across a neighbour keeps the parked group.
-    std::set<int> warp_selected;
-    int           warp_last_selected      = -1;
-    unsigned long long warp_selection_generation = 0;
-    std::set<int> phase_reset_selected;
-    int           phase_reset_last_selected = -1;
-    unsigned long long phase_reset_selection_generation = 0;
 
     // Per-tab read-only lock. Toggled by bare `o`. While true, the active
     // tab admits a subset of keys (navigation, playback, view-switch) and
@@ -1194,8 +1189,10 @@ struct AppState {
     int     height                = 800;
     bool    loading               = false;
 
-    // Live working copy of the active view's state (viewport / zoom /
-    // playhead here, plus selected_markers / last_selected_marker below).
+    // Live working copy of the active view's state — exactly the three view
+    // fields immediately below, playhead / zoom / viewport (follow_mode after
+    // them is session-global, not a per-tab mirror). The SELECTION is NOT one of
+    // them: it lives here alone and is parked nowhere, see selected_markers.
     // This is an INTENTIONAL cache of the active view's per-view slot, not
     // accidental duplication: the paint path and the input handlers touch
     // these constantly, and the active backing store varies (source tab A/B),
@@ -1343,9 +1340,13 @@ struct AppState {
     // a member of `selected_markers`; keyed operations (Tab cycling, `j`)
     // anchor on it.
     //
-    // This pair holds the *active* selection — i.e. for the
-    // current tab + current `active_markers_view`. The persistent per-tab per-mode
-    // slots live on ViewState and are saved/restored on mode/tab transitions.
+    // THE SELECTION IS NEVER PARKED (architect 2026-07-29): this pair is the
+    // ONE selection in the product — for the current tab and the current
+    // `active_markers_view` — and no snapshot of it lives anywhere. It follows
+    // the `t` audio-view switch (which translates domains, not columns) and is
+    // CLEARED OUTRIGHT by the `p` column switch and by Ctrl+Tab, both of which
+    // then re-acquire by coincidence (auto_select_marker_at_playhead,
+    // input_pointer.cpp). The rule and its rationale are stated at ViewState.
     std::set<int> selected_markers;
     int           last_selected_marker = -1;
 
@@ -1364,24 +1365,24 @@ struct AppState {
     // Selection::select_range_from_anchor, which is also the one mutator that
     // KEEPS it; every OTHER Selection mutator clears it —
     // set_single_selection, focus_without_collapse, clear_selection,
-    // collapse_to_focused, toggle_selection_membership,
-    // sanitize_selection_after_restore, prune_live_selection (cycle_selection
-    // clears through set_single_selection; load_source_file's explicit clear is
-    // belt over the clear_selection it already runs).
-    // THE WHOLESALE REPLACES — the five sites that assign app.selected_markers
-    // outside those mutators — are covered too, and the inventory was grepped,
-    // not assumed: the `p` W/P swap and the propagate paste's tail both run
-    // prune_live_selection inside switch_active_markers_view_to (the paste is
-    // W-mode-gated, so that helper's same-mode early return is unreachable from
-    // it), undo's touched-set restore and its inline W/P swap both run
-    // sanitize_selection_after_restore (both are non-'S'-gated, exactly as those
-    // replaces are), and Ctrl+Tab's parked-slot restore in
-    // switch_active_tab_view_to CLEARS IT AT ITS OWN SITE — it was the one
-    // replace with no mutator behind it, and a tab-A anchor index means nothing
-    // in tab B. That clearing is also the orthogonal index-invalidation concern —
-    // a store/selection mutation under a still-held shift — and it is what
-    // closes Ctrl+Shift+Z, which arrives WITH shift held and whose restore runs
-    // sanitize_selection_after_restore. A marker REORDER is the one index event
+    // collapse_to_focused, toggle_selection_membership and
+    // sanitize_selection_after_restore (cycle_selection clears through
+    // set_single_selection; load_source_file's explicit clear is belt over the
+    // clear_selection it already runs).
+    // THE WHOLESALE REPLACES — re-derived 2026-07-29 by grepping every
+    // assignment of app.selected_markers outside those mutators, after the
+    // parked-selection deletion took three of the five the list used to carry
+    // (the `p` swap's slot restore, undo's inline W/P swap restore, and
+    // Ctrl+Tab's slot restore) — are TWO, and both are covered: the propagate
+    // paste's tail (phase_reset_propagate.cpp) assigns its created set one line
+    // after switch_active_markers_view_to's clear_selection, whose same-mode
+    // early return is unreachable from there (the paste is W-mode-gated), and
+    // undo's touched-set restore (undo.cpp) is followed by
+    // sanitize_selection_after_restore on exactly the same non-'S' gate. That
+    // sanitize is also the orthogonal index-invalidation concern — a
+    // store/selection mutation under a still-held shift — and it is what closes
+    // Ctrl+Shift+Z, which arrives WITH shift held.
+    // A marker REORDER is the one index event
     // that does NOT clear: remap_marker_indices_after_reorder carries the anchor
     // through the permutation with the selection and the focus (its declaration
     // owns that inventory), because a reorder moves rows without ending the
@@ -1990,101 +1991,38 @@ std::vector<int> reorder_markers_by_time(std::vector<Marker>& markers) {
     return old_to_new;
 }
 
-// THE PARKED-SELECTION LIVENESS RULE (planner-designed 2026-07-29 under the
-// held-index lesson and the architect's standing squash preference — "collapse
-// is cheap and retaining is expensive relative to worth" — pending architect
-// review). A raw store index held across commands needs a liveness rule; the
-// per-tab parked selections are the only such indices, and this is the rule:
-// GENERATION-STAMP AT STASH, DIE ON MISMATCH AT RESTORE.
-//
-// park_selection_stamp records the column's structural generation into the slot
-// being stashed. drop_parked_selection_if_stale is called by EVERY restore path
-// before it reads a parked slot: on a match it does nothing and the restore
-// proceeds exactly as before; on a mismatch it empties the selection and sets
-// the focus to -1, so the restore hands the lane nothing and the tab comes back
-// with no selection and its stored cursor — which composes correctly, since with
-// no lane the cursor IS the playhead in its own right.
-//
-// WHY DROP RATHER THAN REPAIR: an insert or a delete could in principle be
-// index-shifted precisely (the shift is derivable from the insertion point), but
-// a WHOLESALE REPLACE — undo/redo's store restore, the adopt, the propagate
-// placement paste's erase window — cannot be resolved at all, and building
-// shift machinery for half the cases while the other half still needs the drop
-// buys nothing. The failure this replaces was silent and destructive: park a
-// selection on marker C in tab B, insert or delete a marker before C in tab A,
-// Ctrl+Tab back, and B restored C's old index — now a DIFFERENT row — with the
-// tab-switch land jumping to it and the next nudge or Delete authoring the wrong
-// marker. Dropping makes it honest.
-// `column` is 'P' for phase resets, anything else ('W' at the callers) for warp.
-inline void park_selection_stamp(AppState& app, ViewState& vs, char column) {
-    if (column == 'P') {
-        vs.phase_reset_selection_generation =
-            app.phaseresetmarkers.structural_generation();
-    } else {
-        vs.warp_selection_generation =
-            app.warpmarkers.structural_generation();
-    }
-}
-
-inline void drop_parked_selection_if_stale(AppState& app, ViewState& vs,
-                                           char column) {
-    if (column == 'P') {
-        if (vs.phase_reset_selection_generation ==
-            app.phaseresetmarkers.structural_generation()) return;
-        vs.phase_reset_selected.clear();
-        vs.phase_reset_last_selected = -1;
-        // Re-stamp so a slot that has already been judged stale once is not
-        // re-judged on every later restore (it is empty now; the stamp simply
-        // keeps the two in step).
-        vs.phase_reset_selection_generation =
-            app.phaseresetmarkers.structural_generation();
-    } else {
-        if (vs.warp_selection_generation ==
-            app.warpmarkers.structural_generation()) return;
-        vs.warp_selected.clear();
-        vs.warp_last_selected = -1;
-        vs.warp_selection_generation =
-            app.warpmarkers.structural_generation();
-    }
-}
-
 // Apply a reorder_markers_by_time permutation to the index-shaped state that
-// must follow moved markers. `column` names the store that reordered — 'P' for
-// phase resets, anything else (the callers pass 'W') for warp markers — because
-// the parked state below is per-column and only the reordered column's copies
-// may move.
+// must follow moved markers. NO `column` PARAMETER: every piece of state below
+// belongs to the ACTIVE column, and every caller reorders the ACTIVE column's
+// store, so there is nothing for a column test to select between (the parameter
+// existed only for the per-tab parked selections, deleted 2026-07-29).
 //
 // THE COMPLETENESS CLAIM, re-derived 2026-07-29 by reading every field of
-// ViewState and of the live drag state rather than by inheriting a list. Exactly
-// four kinds of state hold a marker INDEX, and all four are covered:
-//   * the LIVE selection — app.selected_markers + app.last_selected_marker.
-//     Unconditional, and correct without a column test because every caller
-//     reorders the ACTIVE column's store (the home-view binding puts warp
-//     gestures in source view and phase-reset gestures in target view, and the
-//     four call sites are the two position nudges and the two marker-drag
-//     commits);
+// AppState and of the live drag state rather than by inheriting a list. Exactly
+// three kinds of state hold a marker INDEX, and all three are covered:
+//   * the LIVE selection — app.selected_markers + app.last_selected_marker, the
+//     product's ONLY selection (nothing parks a copy). Correct without a column
+//     test because every caller reorders the ACTIVE column's store (the
+//     home-view binding puts warp gestures in source view and phase-reset
+//     gestures in target view, and the four call sites are the two position
+//     nudges and the two marker-drag commits);
 //   * the SHIFT-RANGE ANCHOR — app.shift_range_anchor, over that same active
-//     column's store and therefore unconditional for the same reason. It is
-//     REMAPPED, not cleared: a reorder does not end a range interaction, and
-//     since the anchor survives shift releases (see its field) a stale
-//     pre-reorder index would silently name the wrong row at the next
-//     shift-click;
-//   * the PARKED selections — warp_selected / warp_last_selected and
-//     phase_reset_selected / phase_reset_last_selected in BOTH app.tab_a and
-//     app.tab_b, of the reordered column only. Marker stores are global while
-//     these are per-tab, so a reorder in one tab moves rows under the other
-//     tab's parked indices;
+//     column's store. It is REMAPPED, not cleared: a reorder does not end a
+//     range interaction, and since the anchor survives shift releases (see its
+//     field) a stale pre-reorder index would silently name the wrong row at the
+//     next shift-click;
 //   * the live DRAG state's held indices, when a drag is live on the reordered
 //     store (dragging_markers, hit_marker; grabbed_k is a position into the
 //     parallel drag vectors, not a store index, and is deliberately left alone).
-// Everything else ViewState parks is frame- or value-shaped and cannot go stale
-// this way: viewport_start_sample, zoom_level, playhead_cursor_sample and the
-// TrimState bounds are all FRAMES, and read_only is a flag. Undo snapshots copy
-// whole marker lists rather than indices, and their touched-index hints are
-// rewritten by their own callers post-reorder.
+// NOTHING ELSE HOLDS AN INDEX ACROSS COMMANDS AT ALL, which is why the list is
+// this short: every field ViewState parks is frame- or value-shaped
+// (viewport_start_sample, zoom_level, playhead_cursor_sample and the TrimState
+// bounds are FRAMES; read_only is a flag) — the rule stated at ViewState. Undo
+// snapshots copy whole marker lists rather than indices, and their touched-index
+// hints are rewritten by their own callers post-reorder.
 // No-op on an empty permutation (the store was already in order). Body in
 // app_state.cpp.
-void remap_marker_indices_after_reorder(AppState& app, char column,
+void remap_marker_indices_after_reorder(AppState& app,
                                         const std::vector<int>& old_to_new);
 
 // CLOCK_MONOTONIC milliseconds (steady_clock is CLOCK_MONOTONIC on this

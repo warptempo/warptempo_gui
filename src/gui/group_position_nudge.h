@@ -68,12 +68,10 @@ struct GroupNudgePrologue {
 // selected while focusing elsewhere; that ruling was reversed and they now land
 // on their own focus like everything else. The follow stays, because the nudge
 // MOVES the focused marker and the playhead must move with it — it is a
-// re-land, not a repair. (Ctrl+Tab is in no list at all: it restores a stored
-// focus/playhead PAIR from the destination tab's slot. It reproduces the stashed
-// pair only when the restored selection is EMPTY; with a selection it LANDS on
-// the restored focus instead, since a cross-tab edit can move that focus's image
-// while its saved cursor stands still — the rule and the override are recorded at
-// switch_active_tab_view_to.)
+// re-land, not a repair. (Ctrl+Tab is in no list at all, and since 2026-07-29 the
+// reason is trivial: it restores its tab's stored PLAYHEAD verbatim and hands the
+// lane no focus at all — the selection is never parked, so there is no restored
+// focus that could diverge from the stored cursor and nothing to tow.)
 // The lead-in workflow (parking the playhead upstream
 // to audition the approach) is supplied by the scrub surface instead. The twins
 // keep their own GestureKind (WarpNudge / PhaseResetNudge).

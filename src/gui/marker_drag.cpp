@@ -661,11 +661,11 @@ void MarkerDragOps::commit_drag() {
         // remap — see app_state.cpp).
         if (phase_reset) {
             remap_marker_indices_after_reorder(
-                app, 'P',
+                app,
                 reorder_markers_by_time(app.phaseresetmarkers.markers_mut()));
         } else {
             remap_marker_indices_after_reorder(
-                app, 'W', reorder_markers_by_time(app.warpmarkers.markers_mut()));
+                app, reorder_markers_by_time(app.warpmarkers.markers_mut()));
         }
         // Post-remap: remap_marker_indices_after_reorder rewrote dragging_markers
         // in place to the reordered (after) store's indices.

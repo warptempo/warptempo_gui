@@ -185,29 +185,6 @@ void Undo::refresh_coalesced_touched_live(std::vector<int> touched_live) {
 
 namespace {
 
-// ROW IDENTITY between a live store and the snapshot about to replace it — the
-// structural-generation decision at the restore. IDENTITY IS THE
-// POSITION-TO-MARKER MAPPING ("does index k still name the same marker"), and
-// the stores are TIME-ORDERED at rest, so an identical length plus an identical
-// positional time_frame sequence pins every row to the same marker: nothing was
-// inserted, removed, or moved past a neighbour. Nothing else is compared ON
-// PURPOSE — two rows may differ in tempo, label, disabled or any other field at
-// the same position and still be the SAME ROW, and a field-only restore is
-// exactly the case a parked selection must survive (the CONTENT generation is
-// what reports that). Equal times are legal and change nothing: a tie's members
-// keep their slots under the stable ordering, so an identical time sequence
-// still pins each one. One template serves both columns — the marker type is
-// read only through time_frame.
-template <typename M>
-bool marker_rows_identical(const std::vector<M>& live,
-                           const std::vector<M>& snapshot) {
-    if (live.size() != snapshot.size()) return false;
-    for (size_t i = 0; i < live.size(); ++i) {
-        if (live[i].time_frame != snapshot[i].time_frame) return false;
-    }
-    return true;
-}
-
 // Shared post-restore SELECTION rule for both marker lists. After a marker
 // swap, classify before -> after as add / remove / same-count and set the
 // selection to the touched markers. `fields_differ` is the ROW EQUALITY basis:
@@ -453,28 +430,16 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // actual pre-edit settings restored here.
     app.engine_settings    = std::move(entry.settings.engine_settings);
 
-    // WHOLESALE REPLACE -> bump the STRUCTURAL generation of each column whose
-    // ROW IDENTITY actually moved. The store cannot see this from inside
-    // markers_mut (the ordinary same-size field edits use it too), so the three
-    // wholesale sites bump at their own sites — inventory at the counter's
-    // declaration in marker_store.h. But BOTH columns are assigned on EVERY
-    // entry (an undo entry carries a full pair, so a 'W' entry restores a
-    // byte-identical phase-reset vector and an 'S' entry restores both
-    // unchanged), and bumping unconditionally declared a staleness that provably
-    // had not happened — a warp undo in one tab dropped the other tab's parked
-    // PHASE-RESET selection. The comparison runs BEFORE the moves, against the
-    // live stores.
-    const bool warp_rows_moved = !marker_rows_identical(
-        app.warpmarkers.markers(), entry.snapshot);
-    const bool phase_reset_rows_moved = !marker_rows_identical(
-        app.phaseresetmarkers.markers(), entry.phase_reset_snapshot);
-    // The ASSIGNS stay unconditional: a field-only restore (a disabled toggle, a
-    // tempo, a label) moves no row but must still land its values, and that is
-    // the CONTENT generation's business — markers_mut bumps it either way.
+    // BOTH columns are assigned on EVERY entry — an undo entry carries a full
+    // pair, so a 'W' entry restores a byte-identical phase-reset vector and an
+    // 'S' entry restores both unchanged — and the assigns are unconditional: a
+    // field-only restore (a disabled toggle, a tempo, a label) moves no row but
+    // must still land its values, and markers_mut's generation bump reports it
+    // either way. No row-identity comparison rides these replaces any more: the
+    // per-column structural bumps that stood here existed for the parked
+    // selections' liveness rule, and both died 2026-07-29.
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phaseresetmarkers.markers_mut() = std::move(entry.phase_reset_snapshot);
-    if (warp_rows_moved)        app.warpmarkers.bump_structural_generation();
-    if (phase_reset_rows_moved) app.phaseresetmarkers.bump_structural_generation();
 
     // Switch active mode to match the op being restored before applying
     // post-restore rules — selection state is mode-bound, so the rules
@@ -482,40 +447,22 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // entirely for settings-only entries: they don't carry an authoring
     // mode, and active_markers_view is a view-state key that's not undoable.
     //
+    // A COLUMN SWITCH CLEARS THE SELECTION (the scope rule), so the swap is the
+    // clear plus the mode assignment and nothing else — no slot is stashed and
+    // none is restored (the parked selections died 2026-07-29, and their restore
+    // half here was already dead: the post-restore rules below write the touched
+    // set wholesale). clear_selection also takes a SelectionExtent region and the
+    // shift-range anchor through the ordinary mutator contract; the visual tail
+    // then clears any region outright on the same non-'S' gate. Damage rides this
+    // function's own unconditional full-waveform invalidate in the tail.
+    //
     // Kept inline rather than delegated to
-    // GuiActiveViews::switch_active_markers_view_to: that helper additionally
-    // runs selection.prune_live_selection(), whose last_selected repair
-    // (re-anchor to the max surviving index) differs from
-    // sanitize_selection_after_restore's (set to -1) when the restored slot's
-    // last_selected falls outside the clamped set while the set stays
-    // non-empty. In the same-count / no-field-change branch the post-restore
-    // rules leave the selection untouched, so that repair difference would be
-    // observable — the swap must stay pre-sanitize-only here.
+    // GuiActiveViews::switch_active_markers_view_to only because Undo does not
+    // hold that cluster; the two now agree on the whole selection story (clear,
+    // then flip), and the helper's one extra act — the hover-popup clear — this
+    // function already performed at its own top.
     if (entry.op_mode != 'S' && entry.op_mode != app.active_markers_view) {
-        // Stash the current selection into the leaving mode's slot,
-        // then restore the destination mode's slot. Replacing the live membership
-        // CLEARS a SelectionExtent region (the W/P inline swap; sanitize below
-        // also clears, belt-and-braces, and the visual tail then clears any
-        // provenance outright — this entry runs only for non-'S' entries, exactly
-        // the tail's own gate). Damage rides this function's own
-        // unconditional full-waveform invalidate in the tail.
-        (void)clear_region_on_membership_replace(app.region);
-        ViewState& curtab = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
-        if (app.active_markers_view == 'P') {
-            curtab.phase_reset_selected      = app.selected_markers;
-            curtab.phase_reset_last_selected = app.last_selected_marker;
-            park_selection_stamp(app, curtab, 'P');
-            drop_parked_selection_if_stale(app, curtab, 'W');
-            app.selected_markers           = curtab.warp_selected;
-            app.last_selected_marker       = curtab.warp_last_selected;
-        } else {
-            curtab.warp_selected           = app.selected_markers;
-            curtab.warp_last_selected      = app.last_selected_marker;
-            park_selection_stamp(app, curtab, 'W');
-            drop_parked_selection_if_stale(app, curtab, 'P');
-            app.selected_markers           = curtab.phase_reset_selected;
-            app.last_selected_marker       = curtab.phase_reset_last_selected;
-        }
+        selection.clear_selection();
         app.active_markers_view = entry.op_mode;
     }
 

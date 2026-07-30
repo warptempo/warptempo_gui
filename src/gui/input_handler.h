@@ -170,7 +170,8 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     double-click) converge on, placed past every refusal;
 //   * the THREE MEMBERSHIP-WHOLESALE routes (architect 2026-07-29, the
 //     maximally greedy collapse): the UNDO/REDO restore's visual tail, the `p`
-//     W/P swap (toggle_active_markers_view), and the propagate paste's
+//     W/P swap (toggle_active_markers_view — which since the parked selections
+//     died replaces the membership by EMPTYING it), and the propagate paste's
 //     target-view tail. None of them builds the span it would be resting beside,
 //     so all three collapse it, any provenance. The undo tail's clear runs for
 //     EVERY entry, settings-only ones included — it is the ONE part of the tail
@@ -199,14 +200,22 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // focus under a standing span — the region Space launch, the last route that
 // did, stopped writing the cursor — and every route that could hand the lane a
 // focus the cursor has never been on, or move the focused marker's image out
-// from under a resting cursor, now LANDS on that focus: the propagate paste's
-// no-created arm, the `t` domain flip, the Ctrl+Tab tab restore, the settings
-// engine-commit, and the settings-only undo/redo arm, each citing the
-// marker-lane doctrine at land_playhead_on_marker). Sites, by
-// class — each is a clear listed above that re-derives nothing:
-//   * the VIEW SWITCHES, which land you in point form by their own ruling: `p`
-//     (toggle_active_markers_view), `t` (handle_active_audio_view_toggle), and
-//     Ctrl+Tab (switch_active_tab_view_to, whose restored slot may hold a group);
+// from under a resting cursor, now LANDS on that focus: the `t` domain flip, the
+// settings engine-commit, and the settings-only undo/redo arm, each citing the
+// marker-lane doctrine at land_playhead_on_marker (the two entry switches are
+// no longer in that argument at all — `p` and Ctrl+Tab hand the lane NOTHING,
+// clearing the selection outright, and what they re-acquire by coincidence is
+// selected precisely because the cursor is already on it).
+// SITES, by class — each is a clear listed above that re-derives nothing.
+// RE-DERIVED 2026-07-29 after the parked-selection deletion took THREE of the
+// nine this list used to carry (`p`'s and Ctrl+Tab's collapses, which existed to
+// judge a RESTORED group, and the propagate paste's no-created arm, which existed
+// to judge the P slot that swap restored): SIX remain, and only one view switch —
+//   * the VIEW SWITCH, singular: `t` (handle_active_audio_view_toggle), which
+//     CARRIES the live selection across the domain flip and so can still arrive
+//     here with a group. `p` and Ctrl+Tab clear instead of restoring, so they can
+//     rest at most the coincidence auto-select's singleton and have nothing to
+//     collapse;
 //   * the MAP-REBUILD commits with no span of their own: the settings
 //     engine-commit tail and the SETTINGS-ONLY ('S') undo/redo restore;
 //   * the NAVIGATION jumps that keep their selection: bare `0` and `c` (the Tab
@@ -219,18 +228,14 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     drags' live sync) empty the selection before they publish, so the crossed-pair
 //     auto-clear and a chip/bridge drag that dissolves its pair arrive here with
 //     nothing to collapse (architect 2026-07-29 — the rule is at that function's
-//     declaration);
-//   * the propagate tail's NO-CREATED-SET arm — general, not state-paste-only:
-//     the state paste always lands with an empty created set, and a PLACEMENT
-//     paste whose run created nothing reaches it too (the created-set arm
-//     derives its own extent instead).
+//     declaration).
 // Routes
 // that RE-DERIVE a span instead of collapsing are not sites at all: the group
 // undo restore, the paste's created set, the multi-select clicks at 2+, `m`, and
 // the whole tempo/group-drag follow family. The kick validator's domain-shrink
 // clear needs no site of its own — every caller that can shrink the domain under
 // a group either re-derives (the tempo family, unconditionally after its kick) or
-// is already a site above (the settings commit, undo, `t`, Ctrl+Tab).
+// is already a site above (the settings commit, undo, `t`).
 // The land itself clears NOTHING — it is a pure playhead write, and the
 // motion condition that briefly rode its clear died with that clear
 // (land_playhead_on_marker). DELIBERATELY NOT
@@ -270,6 +275,21 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
 // enumeration of the landing sites — do not restate any of them here.
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit);
+
+// COINCIDENCE AUTO-SELECT — the entry counterpart of the never-park rule
+// (architect 2026-07-29): the selection is never stashed, so an ENTRY re-acquires
+// it from the playhead instead of from memory. Scans the ACTIVE column's store in
+// order and SINGLE-SELECTS the first marker whose land value is EXACTLY the
+// resting playhead. Definition in input_pointer.cpp, beside the land whose
+// formula it reuses; that comment states the rule, the exactness, and the
+// first-in-store tie-break. THREE CALL SITES, each stating only its own class and
+// pointing there: the source load's tail (file_loader.cpp), the `p` column entry
+// (toggle_active_markers_view) and the Ctrl+Tab tab entry
+// (switch_active_tab_view_to), both in active_views.cpp. No match leaves the
+// selection exactly as the caller left it — every caller clears first, so that
+// means empty.
+void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
+                                    Selection& selection, Viewport& viewport);
 
 // Frame an ACTIVE-domain span [lo, hi] into the viewport: compute the margined
 // fit level (effective_max_zoom_level's formula over the span, clamped

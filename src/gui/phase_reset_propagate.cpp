@@ -289,16 +289,6 @@ void PhaseResetPropagate::paste_apply() {
         app.phaseresetmarkers.markers();
 
     auto& out = app.phaseresetmarkers.markers_mut();
-    // Row count before the erase loop: the erase is one of the three wholesale
-    // routes the store cannot detect from inside markers_mut (inventory at the
-    // structural counter in marker_store.h), and it bumps AFTER the loop, only
-    // if it actually removed something. A block-bearing clipboard whose ranges
-    // contain no resets at all erases nothing and inserts nothing, and bumping
-    // there dropped a valid parked selection for a paste that left the store
-    // byte-identical. The INSERTS further down go through insert_marker and bump
-    // on their own, so this count covers the erase alone.
-    const size_t rows_before_erase = out.size();
-
     // Per-block clear of destination phase resets inside the shifted
     // membership window [start - guard, end - guard). Adjacent matched
     // blocks still tile without gap or overlap because every block's
@@ -322,11 +312,6 @@ void PhaseResetPropagate::paste_apply() {
                 return m.time_frame >= lo && m.time_frame < hi;
             }), out.end());
     }
-    // One bump for any nonzero total erased — the generation is a change TOKEN,
-    // not a count of changes.
-    if (out.size() != rows_before_erase)
-        app.phaseresetmarkers.bump_structural_generation();
-
     // Per-block materialization. The fractional anchor and duration stay
     // at the true dst_start / dst_end, so a negative fractional_position
     // (captured from a lead-in placement) lands the marker in the lead-in
@@ -568,8 +553,8 @@ void PhaseResetPropagate::paste_state_apply() {
     // Land in target view (phase reset's home) at the end of a completed
     // paste-state run, including diverged/mismatched/no-change cases. State
     // paste creates no resets (it only flips disabled flags on existing ones),
-    // so there is no new selection to set — the empty set leaves the restored
-    // P-mode selection in place.
+    // so there is no selection to set and the tail leaves none: the column swap
+    // it runs clears the selection, and nothing restores one.
     land_paste_in_target_view({});
 }
 
@@ -586,9 +571,9 @@ void PhaseResetPropagate::paste_state_apply() {
 //     the region clear, kick_waveform_sync, and target_render.ensure_ready all
 //     fire exactly once). It is a TOGGLE, so it is called only when the session
 //     is not already in target view.
-//   * switch_active_markers_view_to('P') swaps the W/P selection slots, prunes,
-//     and clears the hover popup — so the selection must be set AFTER it or the
-//     restored P-slot selection would clobber the new one.
+//   * switch_active_markers_view_to('P') CLEARS the selection (a column switch
+//     clears) and clears the hover popup — so the selection must be set AFTER it
+//     or that clear would wipe the new one.
 //   * handle_active_audio_view_toggle DOES touch the selection since 2026-07-29
 //     (it collapses a 2+ selection to its focus, the point-form view-switch
 //     rule), but its placement here is still free — SELECTION-NEUTRAL for every
@@ -598,13 +583,14 @@ void PhaseResetPropagate::paste_state_apply() {
 //     selection this call sees is always that singleton and the collapse is a
 //     no-op. That same toggle now also LANDS the playhead on a surviving focus
 //     (the lane owns the playhead across the domain flip), which here means the
-//     paste ANCHOR's target image. Harmless either way: whenever this tail ends
-//     with a P focus it lands again over the top, and in the one case it does
-//     not — a no-created paste whose restored P slot is empty — the anchor's own
-//     image is a better resting cursor than a generic re-express of wherever the
-//     cursor happened to be. Running it first keeps the heavier re-express (and its
-//     full-window invalidate) ahead of the lightweight mode swap and leaves
-//     every side effect (region clear, hover clear, selection slots) coherent.
+//     paste ANCHOR's target image. Harmless either way: a created-set paste lands
+//     again over the top, and a paste that created nothing rests with the anchor's
+//     own target image as its cursor — a better resting spot than a generic
+//     re-express of wherever the cursor happened to be, and the only playhead cue
+//     left, since the swap's clear means no flag claims the position. Running it
+//     first keeps the heavier re-express (and its full-window invalidate) ahead of
+//     the lightweight mode swap and leaves every side effect (region clear, hover
+//     clear, the selection clear) coherent.
 //
 // Invalidation: when the audio-view switch fires (session was in source view),
 // handle_active_audio_view_toggle already full-window-invalidates, so the tail
@@ -623,10 +609,11 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
     // user was not authoring in, and a span rests beside a selection only as that
     // selection's own extent or as the trim's highlight — neither describes
     // anything after the paste. It replaces the narrower membership clear that
-    // stood here (which reached SelectionExtent only), covers the state-paste
-    // arm's restored P-slot selection as well as the created-set arm, and it is
-    // unconditional because both arms leave the lane holding a selection this
-    // tail did not build the span from. No damage call of its own is needed —
+    // stood here (which reached SelectionExtent only), and it is unconditional
+    // because a TrimWindow highlight from the source-view session is just as
+    // ownerless here as an extent: the created-set arm derives its own span right
+    // after, and the no-created arm must rest span-less like the empty selection
+    // it rests beside. No damage call of its own is needed —
     // this tail invalidates the whole waveform area below — but the helper owns
     // one anyway.
     clear_region_highlight(app, viewport);
@@ -656,35 +643,16 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
         // construction. The owner self-gates below 2 created resets, which is why
         // a single-reset paste simply rests in point form.
         set_region_to_selection_extent(app, viewport.audio, viewport);
-    } else {
-        // NO CREATED SET — every paste that materialized nothing, not just the
-        // state paste: paste_state_apply always lands with {} (it only flips
-        // disabled flags), and the PLACEMENT paste reaches here too whenever its
-        // run produced no reset. The tail's clear took whatever span rested and
-        // this arm derives none, while the P-slot selection the swap restored can
-        // be 2+ — which would leave a group in point form with no point. Collapse
-        // it to its FOCUS (the never-rest-2+-without-a-span invariant, stated at
-        // clear_region_highlight's declaration).
-        if (app.selected_markers.size() >= 2) selection.collapse_to_focused();
-        // THEN LAND ON THE FOCUS THIS ARM LEAVES THE LANE HOLDING. The old "no
-        // land here: the playhead already rests where the S->T re-express put
-        // it" was FALSE — that re-express ran before
-        // switch_active_markers_view_to('P') restored the P slot, so it
-        // converted the WARP anchor's cursor and knows nothing about the reset
-        // this arm ends up focused on. Without this, a state paste (which never
-        // creates) or a placement paste that created nothing rests a P focus
-        // claiming to be the playhead while the cursor sits at the warp marker's
-        // target image. THE MARKER LANE OWNS THE PLAYHEAD
-        // (land_playhead_on_marker's doctrine, input_pointer.cpp): a route that
-        // hands the lane a focus owes it a land — the created arm above already
-        // pays it, and the two arms now agree. Not gated on the collapse: a
-        // restored SINGLETON is just as stale as a collapsed group. An EMPTY
-        // restored selection lands nothing, correctly — with no lane the cursor
-        // IS the playhead again and belongs where it is.
-        if (!app.selected_markers.empty() && app.last_selected_marker >= 0)
-            land_playhead_on_marker(app, viewport.audio, viewport,
-                                    app.last_selected_marker);
     }
+    // NO CREATED SET — every paste that materialized nothing, not just the state
+    // paste (paste_state_apply always lands with {}; a PLACEMENT paste whose run
+    // produced no reset reaches here too) — NEEDS NOTHING AT ALL, and that is the
+    // whole arm: the column swap above cleared the selection and nothing restored
+    // one, so there is no group to collapse, no focus to land on, and no lane. The
+    // cursor is the playhead, resting where the S->T re-express put the paste
+    // anchor's image, and a paste that did nothing changes nothing. (The collapse
+    // and the land that stood here existed only to clean up the P-column selection
+    // the swap used to restore, deleted 2026-07-29 with the parked slots.)
     viewport.invalidate_top_strip();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();

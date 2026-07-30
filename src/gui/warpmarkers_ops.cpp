@@ -840,7 +840,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(
     // A nudge may cross a neighbor; restore time order and remap the index-shaped
     // state (the whole group's selection follows to the new slots).
     remap_marker_indices_after_reorder(
-        app, 'W', reorder_markers_by_time(app.warpmarkers.markers_mut()));
+        app, reorder_markers_by_time(app.warpmarkers.markers_mut()));
     // touched_live: the group's POST-reorder live indices (the remap rewrote the
     // selection in place).
     std::vector<int> touched_live(app.selected_markers.begin(),

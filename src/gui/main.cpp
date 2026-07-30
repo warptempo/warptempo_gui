@@ -717,7 +717,7 @@ int main(int argc, char** argv) {
     GuiFlagEditor flag_editor(app, audio, viewport, selection, undo,
                               target_render);
     GuiRendersDir renders_dir(app);
-    PhaseResetPropagate phase_reset_propagate(app, viewport, selection, undo,
+    PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
                                               target_render, active_views,
                                               playback_lifecycle);
     GuiSaveOps save_ops(app, undo, active_views, viewport);
