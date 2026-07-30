@@ -192,18 +192,18 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     region (ruling 6, below). The settings editor's TRIM keys never
 //     reach it — they return through commit_gui_setting, which re-syncs a
 //     TrimWindow highlight to the edited bounds, a maintainer by ruling.
-// A 2+ SELECTION MAY REST WITHOUT A SPAN — THE NEVER-SPAN-LESS ENFORCEMENT IS
-// RETIRED (architect 2026-07-29, ruling 6, superseding the corollary this
-// declaration used to carry and the distributed collapse protocol that served it:
-// nine sites at its peak, six after the parked selections died, all deleted, along
-// with sync_region_to_trim_window's injected Selection& parameter). Nothing is
-// added in its place. The two-forms model itself STANDS unchanged
+// A 2+ SELECTION ALWAYS HAS A SPAN, AND NOTHING ENFORCES THAT FROM THE CLEAR SIDE
+// — THE NEVER-SPAN-LESS PROTOCOL IS DELETED, THE PROPERTY MOVED INTO THE VERBS
+// (architect 2026-07-29, ruling 6 plus the same-day rejection that finished it,
+// superseding the corollary this declaration used to carry: nine collapse sites at
+// its peak, six after the parked selections died, all deleted, along with
+// sync_region_to_trim_window's injected Selection& parameter). The two-forms model
+// itself STANDS unchanged
 // (land_playhead_on_marker, input_pointer.cpp): while a span is ACTIVE it outranks
-// every point cue and suppresses both the cursor and the singleton stem; with no
-// span the SELECTION's own cues — the selected flags' ink triangles — are the
-// visible state, and the resting cursor is the playhead of record for Space. What
-// the enforcement bought was one extra guarantee on top of that, "a group always
-// has a drawn playhead form", and the architect withdrew it as not worth a protocol
+// every point cue and suppresses both the cursor and the singleton stem. WHAT
+// CHANGED IS ONLY WHERE THE GUARANTEE LIVES: "a group always has a drawn playhead
+// form" is still true, but it is now a property of the VERBS — no protocol watches
+// the clears to make it so, which is what the architect withdrew as not worth its
 // spread across the tree.
 // THE LAST TWO PRODUCERS CLOSED SYMMETRICALLY instead, at the two sites where a
 // map rebuild invalidates every index and image at once: the engine-key settings

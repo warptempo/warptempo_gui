@@ -1155,16 +1155,37 @@ int main(int argc, char** argv) {
         // last drew it — a few pixels short of the exclusive end bound, the
         // accepted delta.
         // A NATURAL END IS EXACTLY A SPACE STOP (architect 2026-07-29, "the
-        // simplest symmetry"): this ONE call is the whole of it, so both edges
-        // leave the viewport precisely where playback left it. The follow-scroll
-        // tail that used to run here — `if (follow_mode &&
+        // simplest symmetry"), and these TWO CALLS IN THIS ORDER are what make that
+        // literally true — they are `toggle_playback`'s stop edge verbatim. The
+        // follow-scroll tail that used to run here — `if (follow_mode &&
         // !follow_overridden_for_session) follow_scroll_if_needed();` — is DELETED,
         // and the two asymmetries flagged against it (its override guard was dead,
         // restore_playhead_to_lsp having just cleared that flag; and it could scroll
         // the viewport BACK to the restored playhead, which the Space stop never
-        // does) die WITH the arm rather than being fixed inside it. Nothing else
-        // distinguishes the two stop edges now.
+        // does) die WITH the arm rather than being fixed inside it.
+        //
+        // THE stop() IS NOT REDUNDANT, AND IT IS NOT ABOUT THE FLAG (codex round,
+        // MEDIUM 1, converted 2026-07-29): `playing` is already false here — the
+        // JACK process callback published it (release store) at the natural end —
+        // but `GuiPlayback::stop()` is the QUIESCENCE FENCE, not a flag write. The
+        // callback that published false has NOT necessarily retired: the fence waits
+        // for `process_cycles` to advance by two, which is what proves a full
+        // callback ran start-to-finish afterward and orders all of its buffer reads
+        // before anything the main thread mutates next. `rebind_buffer` REQUIRES
+        // that fence by contract (playback.cpp). Without this call the tick cleared
+        // `playhead_scanner_active` while the fence was still untaken, and that left
+        // exactly one reachable bypass: a post-natural-end S/T switch, whose
+        // `stop_playback_if_playing` early-returns once BOTH flags are false, after
+        // which `ensure_ready` / `rebind_to_source` skip their own
+        // `is_playing()`-gated stop and rebind UNFENCED. Taking the fence here, at
+        // the stop edge, closes it at the source — the Space-symmetric design, and
+        // the reason the rebind sites keep their conditional stops rather than
+        // becoming unconditional. Cost: the fence blocks the tick for up to ~2 JACK
+        // periods, once per playback session, which is precisely what Space's stop
+        // edge has always paid. stop() is idempotent on an already-flag-stopped
+        // session — it re-stores the same false and then just waits.
         if (app.playhead_scanner_active) {
+            playback.stop();
             playback_lifecycle.restore_playhead_to_lsp();
         }
     });

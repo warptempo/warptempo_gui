@@ -414,9 +414,9 @@ bool GuiInputHandler::render_bpm_sweep() {
     // tripwire surface, and its per-cell scale/tempo mutations stay on the
     // async stderr backstop. Trim never refuses (crossed/equal bounds cannot
     // rest; an ambiguous trim renders untrimmed).
-    // This scans for the session bpm-mode owner FLAG (bpm_owner), unrelated
-    // to MarkerEffective::owner_idx (the parser's ref-opaque inheritance
-    // walk's terminal tempo owner) — a different concept despite the name.
+    // This scans for the session bpm-mode owner FLAG (bpm_owner): the index of the
+    // marker the sweep rewrites, in the base store's own coordinates. Purely local
+    // to this function.
     int bpm_owner_idx = -1;
     for (int i = 0; i < static_cast<int>(base_warp_markers.size()); ++i) {
         if (base_warp_markers[i].bpm_owner) {

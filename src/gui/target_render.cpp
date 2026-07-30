@@ -467,6 +467,14 @@ void GuiTargetRender::ensure_ready() {
         // Call sites are expected to have stopped playback already (the
         // S→T toggle handler does), but a future caller that forgets
         // shouldn't get a silent refused-rebind.
+        // THE QUIESCENCE FENCE IS THE STOP EDGES' JOB, not this gate's — which is
+        // why this stays CONDITIONAL on is_playing(). Every route that ends playback
+        // takes `GuiPlayback::stop()` there: Space's stop edge, the gesture stop
+        // (stop_playback_if_playing, which fires on the SCANNER flag too), and — since
+        // 2026-07-29 — the tick's natural-end branch, which is what closed the one
+        // bypass this conditional could not see (a post-natural-end rebind with both
+        // flags false and the fence untaken). Do not make this unconditional: it would
+        // pay the fence on every clean re-entry for a race the stop edges already own.
         if (playback.is_playing()) {
             playback.stop();
             app.playhead_scanner_active = false;
@@ -515,6 +523,10 @@ void GuiTargetRender::rebind_to_source() {
     // source.wav, not target_buffer.
     cancel_in_flight_update();
 
+    // Conditional by design, for the reason stated at ensure_ready's twin above:
+    // the rebind_buffer QUIESCENCE FENCE is taken at the stop EDGES (Space, the
+    // gesture stop, and the tick's natural-end branch since 2026-07-29), so by the
+    // time a toggle reaches here a stopped session has already been fenced.
     if (playback.is_playing()) {
         playback.stop();
         app.playhead_scanner_active = false;

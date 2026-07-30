@@ -1514,12 +1514,11 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // (land_playhead_on_marker's doctrine, input_pointer.cpp): pre-switch the
     // cursor rests ON the focus by that same premise, so landing on the focus in
     // the new domain IS the correct re-expression of it — the map-change re-land
-    // form the singleton tempo step's label-coupling fix established. Covers a
-    // surviving SINGLETON and a surviving GROUP identically (since ruling 6 this
-    // switch collapses nothing, so a group arrives here intact and its FOCUS is
-    // what re-expresses — which is also what keeps a later Space playing from the
-    // right marker while no playhead form is drawn); an EMPTY selection has
-    // no focus to re-express and keeps the generic translation untouched.
+    // form the singleton tempo step's label-coupling fix established. By the time
+    // this runs the selection is a SINGLETON or EMPTY — the collapse above narrowed
+    // any group to its focus — so this lands on exactly one marker either way; an
+    // EMPTY selection has no focus to re-express and keeps the generic translation
+    // untouched.
     // PLACED HERE by domain validity: active_audio_view flipped far above and the
     // collapse has run, so source_frame_to_active_domain reads the NEW view's map
     // (the live target-view map cache, which rebuilds on demand and does not wait

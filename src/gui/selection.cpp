@@ -182,16 +182,21 @@ void Selection::clear_selection() {
 }
 
 void Selection::collapse_to_focused() {
-    // TWO CALLER CLASSES, both DELIBERATE ACTS OF THE GESTURE — re-derived
-    // 2026-07-29 when ruling 6 deleted the third:
+    // THREE CALLER CLASSES, all DELIBERATE ACTS OF THE GESTURE — re-derived by grep
+    // 2026-07-29 (ruling 6 deleted the never-span-less REPAIR class, and the
+    // architect's group-or-collapse ruling then added the third below):
     //   * the FINE-TUNING VALUE gestures (the inherit toggle, the singleton
     //     tempo step), which narrow the selection so the operation and the
     //     resulting selection both target last_selected only;
     //   * HORIZONTAL MOVEMENT, which is a FOCUS ACT (architect 2026-07-29 —
     //     groups are never moved): both position nudges collapse here through
-    //     their shared prologue and then step the focus alone. The doctrine, and
-    //     the group-verb rule it instances, live at the head of
-    //     position_nudge.h.
+    //     their shared prologue and then step the focus alone;
+    //   * THE SPAN-DROPPING VERBS: the S/T view switch `t` (whose span cannot
+    //     survive the domain flip), bare `0` and `c`. Each would otherwise leave a
+    //     group resting with no span — the state the architect rejected — so each
+    //     collapses to the focus and lands the playhead there instead.
+    // The doctrine, the group-verb rule all three instance, and the architect's
+    // general statement of it live at the head of position_nudge.h.
     // THE DELETED THIRD CLASS was the never-span-less ENFORCEMENT — six sites that
     // collapsed a group because a clear had taken its span. That invariant is
     // RETIRED (ruling 6; the retirement paragraph is at clear_region_highlight's

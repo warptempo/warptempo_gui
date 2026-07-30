@@ -225,6 +225,11 @@ std::vector<char> warp_coincident_collapse_members(
 // tempo drag's monotone bisection, which resolved ~12 never-live candidate stores
 // per motion event, and that whole gesture is gone (contortion ruling 8). No
 // hypothetical resolve exists in the product any more, so no caller wants silence.
+// FIVE CALL SITES, re-derived by grep 2026-07-29 (the deletion round's own prose had
+// said four): the CLI's render path, the GUI render pipeline, the target-render
+// fingerprint, the target-view entry VALIDATION, and the target-view map shim. All
+// five had always passed the loud default, so loud-always is equivalence, not a
+// behavior change.
 std::vector<MarkerForRender>
 resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
                                 long sample_rate, long total_frames);

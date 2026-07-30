@@ -179,10 +179,14 @@ struct UndoEntry {
 //     ONLY while that selection persists: any membership REPLACE clears it through
 //     clear_region_on_membership_replace, outright, pixels and all. THE INVARIANT:
 //     2+ selected with an active SelectionExtent region => the region IS that
-//     selection's current extent. A 2+ selection MAY also rest with NO span at all
-//     (the never-span-less enforcement is retired — the retirement, its three
-//     producers and the no-drawn-form state it leaves are stated at
-//     clear_region_highlight's declaration, input_handler.h).
+//     selection's current extent — and a 2+ selection resting with NO span is
+//     UNPRODUCIBLE (architect 2026-07-29, rejecting that state): every route that
+//     rests a group rests it WITH its extent, and every route that would take the
+//     extent away collapses the group to its focus instead. It holds by the verbs'
+//     own form, not by anything policing the clears — the derivation and the
+//     architect's group-or-collapse rule are at clear_region_highlight's
+//     declaration (input_handler.h) and at the group-verb doctrine
+//     (position_nudge.h).
 //   * TrimWindow — the trim window's images, published by the trim setters, and
 //     RESTING ONLY BESIDE AN EMPTY SELECTION (the rule and the setter list are at
 //     sync_region_to_trim_window's declaration, input_handler.h). Re-synced from

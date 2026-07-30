@@ -28,7 +28,8 @@
 // approval from the architect. Its sole caller had been the group tempo drag's
 // monotone bisection, which evaluated hypothetical never-live candidate maps, and
 // that whole gesture is gone (contortion ruling 8), so no hypothetical build exists
-// to want silence.
+// to want silence. The parser-side inventory (FIVE resolve call sites, all of which
+// had always passed the loud default) is recorded at that function's declaration.
 std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     const std::vector<GuiWarpMarker>& markers,
     double scale,
