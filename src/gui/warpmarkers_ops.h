@@ -22,7 +22,10 @@ int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
                           double time_frame);
 
 // Warp-authoring cluster. Covers the basic authoring operations (drop /
-// delete / toggle / adjust) and the pixel-column-anchored nudge.
+// delete / toggle / adjust) and the pixel-column-anchored nudge — and, in
+// adjust_tempo_cents + adjust_tempo_cents_group, THE WHOLE TEMPO SURFACE since
+// 2026-07-29 (the pointer tempo drag and the bare Left/Right tempo-image step were
+// deleted; the list is at the head of marker_drag.h).
 // stop_playback_if_playing is reached through playback_lifecycle. The
 // reposition drag is no longer here: it is the one cross-kind gesture and
 // lives in MarkerDragOps in marker_drag.{h,cpp}.

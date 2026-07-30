@@ -668,19 +668,16 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // every prior expiry semantic: the stem is hover-INDEPENDENT (a keyboard-only
 // selection shows it too) and playback-INDEPENDENT (it persists through scrubs
 // and auditions), because it is the selection's focus cue, not a working
-// affordance. A SINGLE-marker grab (a live position drag, or a W+target tempo
-// drag, whose arming press single-selected the grabbed marker) IS the singleton
-// selection, so the stem paints anyway — no gesture arm is needed. A GROUP grab
-// keeps its 2+ selection through the drag (the press defers its collapse) and so
-// paints NO stem at all: the size check below rejects it, and the group's cue is
-// the extent region's ground, which the drag live-tracks instead.
+// affordance. A marker GRAB is always a SINGLETON selection now (the arming press
+// single-selects, and groups are never moved — architect 2026-07-29, the doctrine
+// at the head of group_position_nudge.h), so a live position drag paints its stem
+// with no gesture arm needed, and there is no group-grab case to reject beyond the
+// size check below.
 // The ONE non-selection
-// input is the DragOverlay proposal override below — a SINGLETON-grab arm by
-// that same reasoning: under a live POSITION drag the
-// stem tracks the flag 1:1 at the mid-gesture proposed frame; a tempo drag never
-// moves the marker's store frame (it rewrites a predecessor's tempo, sliding the
-// image under the per-step re-warped displayed map), so the store frame is
-// correct there with no override.
+// input is the DragOverlay proposal override below: under a live POSITION drag —
+// the only marker pointer gesture left, the W+target tempo drag having been deleted
+// with the tempo-image family (marker_drag.h) — the
+// stem tracks the flag 1:1 at the mid-gesture proposed frame.
 // Painted in kSelectedStem — its OWN palette key (architect 2026-07-27), tuned
 // independently of every flag fill and ring: a line run the full height of the
 // waveform reads far louder than the same value does as a 1px border around a
@@ -713,7 +710,8 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
 
     // The one non-selection input: a live POSITION drag grabbing the active column
     // overrides the store frame with the mid-gesture proposed position so the stem
-    // tracks the flag 1:1. (A tempo drag needs no override — see the header.)
+    // tracks the flag 1:1 (the only marker pointer gesture there is — see the
+    // header).
     const bool drag_arm =
         app.drag.active && app.drag.drag_mode == app.active_markers_view;
 

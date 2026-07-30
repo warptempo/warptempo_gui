@@ -82,11 +82,13 @@ struct Viewport {
     //    gestures having no cancel — and main.cpp's tick backstop for an ASYNC
     //    total change (a preview completion) live here.
     //  - TARGET-WARP-MAP mutations: a build_warp_frame_map INPUT changed, so the
-    //    target-view plate itself re-warps. The bare Up/Down tempo step
-    //    (adjust_tempo_cents, singleton AND group), the bare Left/Right TEMPO-IMAGE
-    //    STEP (the tempo drag's keyboard twin, MarkerDragOps::step_tempo_image),
-    //    the settings engine-scale commit, undo/redo, adopt, and the TEMPO DRAG
-    //    itself each kick so displayed == live at the command boundary, leaving no
+    //    target-view plate itself re-warps. RE-DERIVED 2026-07-29 when the whole
+    //    tempo-image family was deleted (marker_drag.h), which took TWO entries
+    //    off this list — the bare Left/Right tempo-image step and the pointer tempo
+    //    DRAG. What remains: the bare Up/Down tempo step
+    //    (adjust_tempo_cents, singleton AND group — the whole tempo surface now),
+    //    the settings engine-scale commit, undo/redo, and adopt. Each kicks so
+    //    displayed == live at the command boundary, leaving no
     //    divergence window for the displayed-basis gestures (phase / trim drags)
     //    to ride out. Warp PLACEMENT edits (drop / delete / marker drag / the
     //    position nudge / Ctrl+N / Ctrl+D / the flag-editor commit) author in
@@ -94,14 +96,12 @@ struct Viewport {
     //    W+target authors tempo, never position), where the source waveform has no
     //    map-dependent plate, so they never call this.
     //
-    // AXIS 2 — the CADENCE. Every site above is a discrete ONE-SHOT per command
-    // EXCEPT the TEMPO DRAG, whose kick is the one a hand-copied list keeps
-    // dropping: apply_tempo_drag_motion re-warps LIVE per cent step mid-gesture
-    // (the keyboard zoom's cost paid per pointer frame — and deliberately NO
-    // target_render.trigger there, the preview fires once at gesture end). Its
-    // second kick died with cancel_tempo_drag (2026-07-29: pointer gestures have
-    // no cancel, so no route rewinds cents any more).
-    // (The OTHER live-per-event kicks are apply_strip_drag_zoom and
+    // AXIS 2 — the CADENCE. EVERY MAP-EDIT SITE ABOVE IS NOW A DISCRETE ONE-SHOT
+    // per command: the one exception was the TEMPO DRAG, which re-warped LIVE per
+    // cent step mid-gesture (the kick a hand-copied list kept dropping), and it
+    // died with the gesture on 2026-07-29 — so no map edit runs per pointer frame
+    // any more.
+    // (The live-per-event kicks that remain are apply_strip_drag_zoom and
     // scroll_viewport — generic viewport rebuilds, not map edits. Both are
     // sustained pointer gestures paying one full rebuild per pointer frame.)
     //
@@ -188,16 +188,16 @@ struct Viewport {
     void follow_scroll_if_needed();
 
     // Repair the LIVE display-state fields after a map edit that changed the
-    // active-domain total (a target-view tempo step / drag / bare Left/Right
-    // tempo-image step, the settings engine-scale commit, undo/redo, adopt — every
+    // active-domain total (a target-view tempo cent step, the settings
+    // engine-scale commit, undo/redo, adopt — every
     // total-changing warp-map edit; the full grep-derived caller inventory lives
     // at kick_waveform_sync above).
     // Clamps the resting cursor playhead back into [0, live_total - 1] through
     // the shared clamp_playhead_to_live_domain chokepoint, and CLEARS a live
     // region whose either bound left that domain. Called from kick_waveform_sync
     // (the one chokepoint every total-changing sync tail funnels through) and
-    // mirrored in main.cpp's tick backstop; idempotent and cheap so a per-cent-
-    // step tempo drag pays nothing when nothing is out of domain. A structural
+    // mirrored in main.cpp's tick backstop; idempotent and cheap, which is why a
+    // held cent step pays nothing when nothing is out of domain. A structural
     // no-op in source view (the source total never changes).
     void clamp_display_state_to_live_domain();
 

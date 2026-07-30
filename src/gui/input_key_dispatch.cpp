@@ -119,11 +119,12 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // they are admitted ONLY in the waveform lane, where that step is pure
     // navigation. In the MARKER lane (a non-empty selection) the very same press
     // steps the playhead AND the marker under it — a position nudge in either
-    // column, or the W+target tempo-image step — which is authoring, and this
-    // gate is the sole read-only defense on all three routes: neither
-    // group_position_nudge_prologue nor MarkerDragOps::step_tempo_image carries
-    // an internal read-only check, and marker_drag.cpp records that dependency
-    // on this gate explicitly. So a locked tab holding a selection REFUSES the
+    // column — which is authoring, and this
+    // gate is the sole read-only defense on BOTH routes (TWO since 2026-07-29, the
+    // W+target tempo-image step having been deleted with the tempo-image family —
+    // see marker_drag.h; that combination is a consumed refusal now):
+    // group_position_nudge_prologue carries
+    // no internal read-only check of its own. So a locked tab holding a selection REFUSES the
     // arrows outright (a consumed no-op); it does not fall back to the
     // waveform-lane step — this project has no gesture fallbacks. Leaving the
     // marker lane is any DESELECTING route (the lane model at
@@ -269,7 +270,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     }
     // Global dispatch: only the continuous step gestures repeat — the bare
     // ARROWS all four (Left/Right being the playhead step in the waveform lane
-    // and the position nudge / tempo-image step in the marker lane, Up/Down the
+    // and the position nudge in the marker lane, Up/Down the
     // tempo cent step; the lane split is decided per fire at dispatch, so the
     // arrows repeat as one family), bare PageUp/PageDown, bare Equal/Minus zoom,
     // the marker-focus cycle (bare Tab / Shift+Tab / IsoLeftTab), and the THREE
@@ -1501,7 +1502,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // lane on the next selection gesture.
         // The stop lives HERE, in this lane only: the marker-lane routes carry
         // their own playback regimes (the position nudges stop in their prologue,
-        // the tempo-image step deliberately does not stop on a refusal), which is
+        // while the W+target refusal stops nothing at all), which is
         // exactly why on_key routes before reaching this body.
         playback_lifecycle.stop_playback_if_playing();
         if (!app.selected_markers.empty() || app.last_selected_marker != -1) {

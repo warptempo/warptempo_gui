@@ -11,9 +11,11 @@
 struct GuiTargetRender;
 
 // HELD-KEY undo coalescing, BY REPEAT IDENTITY. A burst of eligible keyboard
-// gestures — the warp / phase-reset position nudges (bare Left/Right in the
-// marker lane), the tempo cent step (bare Up/Down; no wheel route), and the
-// W+target tempo-IMAGE step (bare Left/Right there) — collapses into ONE undo
+// gestures — THREE of them, re-derived 2026-07-29 when the W+target tempo-IMAGE
+// step was deleted with the whole tempo-image family (marker_drag.h): the warp and
+// phase-reset position nudges (bare Left/Right in the
+// marker lane) and the tempo cent step (bare Up/Down; no wheel route). A burst
+// collapses into ONE undo
 // entry when it is ONE HELD KEY: the PHYSICAL press pushes the pre-burst
 // snapshot, and every SYNTHESIZED REPEAT of that press (GuiInputState::
 // synthesized_repeat, set only in GuiPlatform::maybe_fire_repeat) SKIPS its own
@@ -33,13 +35,13 @@ struct GuiTargetRender;
 // disarms the hold at every intervening pointer press, key press, and completed
 // wheel emission (layer (1), stated at maybe_fire_repeat), so no command can run
 // between a burst's physical press and its repeats.
+// THE ELIGIBLE KINDS, one per coalescing gesture plus None: the two position
+// nudges and the Up/Down cent step (TempoStep, singleton and group — its own kind
+// keeps a nudge burst and a tempo burst separate). TempoImageStep was a fourth
+// until 2026-07-29 and went caller-less with the tempo-image family's deletion
+// (marker_drag.h).
 enum class GestureKind {
-    None, WarpNudge, PhaseResetNudge, TempoStep,
-    // W+target bare Left/Right — the tempo drag's keyboard twin
-    // (MarkerDragOps::step_tempo_image). Its own kind so a burst of image
-    // steps coalesces with itself and nothing else (never with the position
-    // nudges or the Up/Down tempo step).
-    TempoImageStep
+    None, WarpNudge, PhaseResetNudge, TempoStep
 };
 
 // Undo-cluster operations, extracted from main.cpp's inline lambdas.

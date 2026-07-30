@@ -153,18 +153,15 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
 }
 
 void GuiPaintHandler::maybe_enqueue_waveform_render() {
-    // Full dispatch freeze during three gestures: the two displayed-basis
-    // drags (marker drag, trim drag) and the target-view tempo drag. The
-    // first two freeze the displayed paint basis for the whole gesture (the
+    // Full dispatch freeze during TWO gestures — the two displayed-basis
+    // drags, marker drag and trim drag (a THIRD, the target-view tempo drag, was
+    // on this gate for its own opposite reason until its 2026-07-29 deletion; see
+    // marker_drag.h). Both
+    // freeze the displayed paint basis for the whole gesture (the
     // DragState "no per-drag map copy" contract), so no waveform job may be
     // DISPATCHED or PUBLISHED mid-gesture: on_waveform_render_done's
     // completion-drop gate is the publication half, and this is the dispatch
-    // half. The TEMPO drag is the opposite of frozen — it re-warps the plate
-    // synchronously per cent step (kick_waveform_sync) — and sits in this
-    // gate for exactly that reason: its per-step sync renders own the plate
-    // mid-gesture, and an async job racing them could publish a stale basis
-    // between steps (the sync path never routes through this enqueue and is
-    // unaffected). Freezing the whole enqueue (not just the warp_frame_map
+    // half. Freezing the whole enqueue (not just the warp_frame_map
     // hash the former drag_freeze excluded) closes the
     // drop-rewind-redispatch loop: a
     // job for a viewport-follow / resize fingerprint dispatched just before the
@@ -179,8 +176,9 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // first two drive their own SYNCHRONOUS per-frame renders (kick_waveform_sync,
     // which drains this worker rather than queuing behind it) and must keep
     // rendering; the region drag moves no viewport, so it never reaches the
-    // plate at all.
-    if (app.drag.active || app.tempo_drag.active || app.trim_drag.active)
+    // plate at all. (The tempo drag was a third frozen gesture until 2026-07-29,
+    // when it was deleted — see marker_drag.h.)
+    if (app.drag.active || app.trim_drag.active)
         return;
 
     WaveformRenderInputs in = compute_waveform_render_inputs();
@@ -303,15 +301,14 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // genuinely up-to-date plate stays put. Because the dispatch freeze enqueues
     // NOTHING mid-gesture, this drop fires AT MOST ONCE — for the single job in
     // flight at the grab; there is no drop-rewind-redispatch loop to sustain.
-    // The TEMPO drag joins the drop for its own reason: it re-warps
-    // synchronously per cent step, so a pre-grab async job publishing here
-    // would paint a stale plate over the step-fresh one (its rewind then
-    // points pending_fp_* at whatever the last sync step published — fp_* —
-    // which is exactly what is on screen). Gated on the marker/tempo/trim
+    // Gated on the marker/trim
     // drags ALONE — the strip drag and alt-pan render synchronously per frame
     // (draining this worker) and must keep rendering, and the region drag never
-    // touches the plate.
-    if (app.drag.active || app.tempo_drag.active || app.trim_drag.active) {
+    // touches the plate. (The TEMPO drag was on this gate too, joining the drop
+    // for its own reason — it re-warped synchronously per cent step, so a pre-grab
+    // async job publishing here would have painted a stale plate over the
+    // step-fresh one — until its 2026-07-29 deletion; see marker_drag.h.)
+    if (app.drag.active || app.trim_drag.active) {
         wf_cache.supersede = false;
         wf_cache.supersede_warp_frame_map.clear();
         wf_cache.pending_fp_vp_start            = wf_cache.fp_vp_start;
@@ -507,19 +504,19 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 //   2. The async worker (maybe_enqueue_waveform_render) is the backstop for
 //      changes the user is not actively driving: resize, the launch file
 //      load, follow_scroll_if_needed during playback, and the on_tick safety
-//      net that catches residual fingerprint drift. The marker, trim, and
-//      tempo drags all freeze this worker's dispatch for the gesture's whole
+//      net that catches residual fingerprint drift. The marker and trim
+//      drags freeze this worker's dispatch for the gesture's whole
 //      duration (the full-enqueue gate at maybe_enqueue_waveform_render, with
 //      on_waveform_render_done dropping the at-most-one job already in flight
 //      at the grab — see those two functions' own comments for the mechanics).
 //      The trim drag runs in either view and never touches the map, so
 //      freezing it costs no re-warp. The marker (reposition) drag runs only
 //      in its column's home view (W+source / P+target), likewise
-//      map-independent there. Off marker's home, in W+target, a plain flag
-//      drag is instead the TEMPO drag, which DOES re-warp — synchronously,
-//      PER CENT STEP, through kick_waveform_sync (case 1 above), not just
-//      once at release — so the worker stays frozen through every step for
-//      that reason, not because a drag is idle.
+//      map-independent there — and off that home there is no marker pointer
+//      gesture at all any more: W+target's plain flag drag was the TEMPO drag,
+//      which DID re-warp synchronously PER CENT STEP and so kept the worker
+//      frozen for the opposite reason, and it is deleted (2026-07-29, see
+//      marker_drag.h). No pointer gesture re-warps the plate now.
 //
 // This is still NOT "make everything synchronous." Async earns its keep for
 // UNDRIVEN and playback-adjacent changes — resize, the launch load, follow

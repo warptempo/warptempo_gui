@@ -178,8 +178,8 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // the extent region (set_region_to_selection_extent, below).
 // The landing sites are enumerated below (they are this function's callers, plus
 // the image-moving gestures that re-land through move_playhead_to at their own
-// commits: the two position nudges, the tempo-image step, and both tempo steps'
-// target-view re-warp tails).
+// commits: the two position nudges, and both arms of the Up/Down cent step in
+// their target-view re-warp tails).
 //
 // THE PLAYHEAD HAS TWO FORMS, POINT AND SPAN, AND EXACTLY ONE IS EVER VISIBLE
 // (architect 2026-07-29) — the frame this land now sits inside. The POINT form
@@ -446,9 +446,9 @@ void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
     app.region.a_frame    = lo;
     app.region.b_frame    = hi;
     // The ONE site that sets SelectionExtent provenance: this region IS the
-    // selection's extent, so the image-follow gestures may track it. Every
-    // legitimate extent re-derive (the multi-select clicks, the position-drag
-    // commit, the tempo follows) routes through here, so provenance self-maintains
+    // selection's extent, so the image-follow gesture may track it. Every
+    // legitimate extent re-derive (the multi-select clicks, `m`, the mass-marker
+    // restores, the group cent step) routes through here, so provenance self-maintains
     // (clear_region_on_membership_replace takes the whole region away on any
     // membership replace).
     app.region.provenance = RegionProvenance::SelectionExtent;
@@ -743,17 +743,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // Defensive: a second press during a drag is ignored (left button
     // should still be held down for a drag to exist).
     if (app.drag.active) return;
-    if (app.tempo_drag.active) return;
     if (app.trim_drag.active) return;
 
-    // Mouse authoring is home-view gated like the keyboard: a plain flag
-    // press in W+target arms the TEMPO drag on an eligible marker instead
-    // of the reposition drag (marker_drag.tempo_drag_predecessor; an
-    // ineligible press still selects and LANDS the playhead, only the drag
-    // arm is refused) — the pointer half of the home-view binding's one tempo
-    // exception — while placement arming everywhere else is gated by
-    // active_column_authoring_allowed, off-home selecting and landing but
-    // arming nothing. The click-playhead / region-drag family below is
+    // Mouse authoring is home-view gated like the keyboard: placement arming is
+    // gated by active_column_authoring_allowed, off-home selecting and landing but
+    // arming NOTHING — with no exception anywhere, since 2026-07-29. W+target used
+    // to arm the TEMPO drag on an eligible marker instead of the reposition drag
+    // (the pointer half of the home-view binding's tempo exception); that whole
+    // gesture is deleted (see marker_drag.h), so a W+target flag press now selects
+    // and lands like any other off-home press and arms nothing at all. The
+    // click-playhead / region-drag family below is
     // navigation, not authoring, and stays view-independent.
 
     if (button == GuiMouseButton::Left) {
@@ -1283,11 +1282,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // lands IMMEDIATELY like a press on any other marker, and the
                     // drag it arms is an ordinary singleton drag. The two
                     // file-manager DEFERRALS that used to sit here — one per drag
-                    // surface, each holding the click's committed act back so
-                    // begin_drag / begin_tempo_drag could seed the intact group —
+                    // surface, each holding the click's committed act back so the
+                    // drag could seed the intact group —
                     // died with the group drag itself; groups are never moved by
                     // any route, so nothing needs the selection to survive the
-                    // press.
+                    // press. (The second of those surfaces, the tempo drag, is
+                    // gone outright — see marker_drag.h.)
                     // Plain marker click single-selects (both views; W's
                     // click-to-edit is retired — the editor now opens on Enter or
                     // this double-click). Selection is navigation, allowed in
@@ -1361,50 +1361,26 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                             .time_ms = monotonic_ms(),
                             .press_x = x, .press_y = y,
                             .target  = hit};
-                        // A writable tab arms a pending drag on a plain FLAG
-                        // press only (the flag is the sole drag handle; the
-                        // lane run selects but never arms); read-only selects
-                        // but never arms (marker mutation refused). WHICH drag
-                        // arms is the home-view split: in the column's home
-                        // view the press arms the marker REPOSITION drag; in W
-                        // view + TARGET view exactly, it instead arms the
-                        // TEMPO drag on an eligible marker — the pointer half
-                        // of the home-view binding's tempo exception
-                        // (architect 2026-07-22; the keyboard half is the
-                        // owner-only bare Up/Down step), an Ableton-style
-                        // stretch that rewrites the GROUP PREDECESSOR's tempo.
-                        // Coincident groups drag as ONE — dragging any member
-                        // stretches against the marker before the stack (the
-                        // walk in tempo_drag_predecessor). An ineligible W+T
-                        // press (marker at the store's earliest frame, non-owner
-                        // predecessor, or a coincident-collapsed predecessor
-                        // whose tempo is render-inert — tempo_drag_predecessor
-                        // returns -1), and the P column off ITS home (P view in
-                        // source view), select and LAND the playhead but arm
-                        // nothing — the silent read-only convention, marker
-                        // motion / tempo authoring being authoring.
-                        if (mh.on_flag && !active_view_state(app).read_only) {
-                            if (active_column_authoring_allowed(app)) {
-                                app.pending_marker_drag = PendingMarkerDrag{};
-                                app.pending_marker_drag.active  = true;
-                                app.pending_marker_drag.marker  = hit;
-                                app.pending_marker_drag.press_x = x;
-                                app.pending_marker_drag.press_y = y;
-                            } else if (app.active_markers_view == 'W' &&
-                                       app.active_audio_view == 'T') {
-                                // The walk is purely the eligibility test here
-                                // (>= 0 means armable); the crossing re-walks in
-                                // begin_tempo_drag, equivalent because nothing
-                                // mutates the store between press and crossing.
-                                if (marker_drag.tempo_drag_predecessor(hit)
-                                        >= 0) {
-                                    app.pending_tempo_drag = PendingTempoDrag{};
-                                    app.pending_tempo_drag.active      = true;
-                                    app.pending_tempo_drag.marker      = hit;
-                                    app.pending_tempo_drag.press_x     = x;
-                                    app.pending_tempo_drag.press_y     = y;
-                                }
-                            }
+                        // A writable tab arms the pending REPOSITION drag on a
+                        // plain FLAG press IN THE COLUMN'S HOME VIEW only (the
+                        // flag is the sole drag handle; the lane run selects but
+                        // never arms); read-only selects but never arms (marker
+                        // mutation refused). ONE DRAG, ONE GATE since 2026-07-29:
+                        // the home-view split that used to arm the TEMPO drag
+                        // instead in W view + TARGET view exactly — the pointer
+                        // half of the home-view binding's tempo exception, with its
+                        // predecessor-eligibility walk — is DELETED with that whole
+                        // gesture (see marker_drag.h). So EVERY off-home flag press
+                        // (W+target and P+source alike) selects and LANDS the
+                        // playhead but arms nothing at all — the silent
+                        // navigation-class refusal, marker motion being authoring.
+                        if (mh.on_flag && !active_view_state(app).read_only &&
+                            active_column_authoring_allowed(app)) {
+                            app.pending_marker_drag = PendingMarkerDrag{};
+                            app.pending_marker_drag.active  = true;
+                            app.pending_marker_drag.marker  = hit;
+                            app.pending_marker_drag.press_x = x;
+                            app.pending_marker_drag.press_y = y;
                         }
                     }
                 }
@@ -1503,8 +1479,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // Waveform shift+click: the region former / the DEMOTE (this is
                 // one of the DROP formers — it clears the selection; the downward
                 // selection->extent derivation lives on the multi-select clicks
-                // and the SelectionExtent maintainers (the group tempo
-                // follows), never on a drag-formed region — the plain waveform
+                // and the SelectionExtent maintainer (the group cent
+                // step's follow), never on a drag-formed region — the plain waveform
                 // drag makes a FREE region and selects nothing, and this shift
                 // former likewise clears; architect 2026-07-23, replacing
                 // the reserved strict no-op). With NO markers
@@ -1626,7 +1602,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 app.region.a_frame    = endpoint;
                 app.region.b_frame    = click_frame;
                 // The shift-click former / demote DROPS the selection, so this
-                // region is FREE — tempo gestures skip it. ORDER: the deselect
+                // region is FREE — the cent step's follow skips it. ORDER: the deselect
                 // above ran FIRST, so its membership clear cannot reach this
                 // span — and a Free span is outside that clear's reach in any
                 // case (it takes SelectionExtent only).
@@ -1889,34 +1865,9 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         if (moved) end_region_drag_min_size_check(app, audio, viewport);
         return;
     }
-    if (app.tempo_drag.active) {
-        // Tempo-drag release: the final synchronous re-warp already ran on the
-        // last committed cent step, so the finalize only settles history (the
-        // one undo entry + dirty + the deferred preview trigger, net-change
-        // gated inside end_tempo_drag).
-        marker_drag.end_tempo_drag();
-        return;
-    }
-    if (app.pending_tempo_drag.active) {
-        // The pending tempo drag never crossed the threshold: a pure flag click,
-        // and the press already committed all of it (single-select + land + span
-        // collapse) — so there is nothing to complete here, just disarm. The
-        // DEFERRED arm that used to complete a held-back click on this path died
-        // with the group drag (architect 2026-07-29: horizontal movement is a focus
-        // act, so every marker press single-selects at press time — the doctrine is
-        // at the head of group_position_nudge.h).
-        app.pending_tempo_drag = PendingTempoDrag{};
-        // Settle hover to the pointer's ACTUAL position. Sub-threshold motion
-        // during the pending drag never recomputed hover, so hover_popup still
-        // holds the press-time hit — stale if the pointer slid off the flag rect
-        // (the hover POPUP / lane text would then show a marker no longer under the
-        // pointer). Recompute when the pointer is still here (a clean release always
-        // is). (If it had left, the pointer-leave hook
-        // already cleared — but a clean release means it is here, so this is the
-        // resolve.)
-        if (gui.pointer_focused()) viewport.recompute_hover_at_cursor();
-        return;
-    }
+    // (No tempo-drag arms here: the target-view tempo drag and its pending are
+    // DELETED, architect 2026-07-29 — the tempo surface is the bare Up/Down cent
+    // step alone. See marker_drag.h.)
     if (app.trim_drag.active) {
         commit_trim_drag();
         return;
@@ -1948,8 +1899,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // (A crossed pending became app.drag — dropping the candidate at the
         // threshold crossing — and commits through the branch below.)
         app.pending_marker_drag = PendingMarkerDrag{};
-        // Settle hover to the pointer's ACTUAL position (see the tempo pending's
-        // twin above): a sub-threshold slide off the flag left hover_popup stale,
+        // Settle hover to the pointer's ACTUAL position: a sub-threshold slide off
+        // the flag left hover_popup stale,
         // so re-resolve while the pointer is still here (a clean release always
         // is) — the hover popup / lane text then reflect the true pointer
         // position.
@@ -1981,10 +1932,8 @@ void GuiInputHandler::finalize_active_drags() {
     // becomes the store) and pushes the one undo entry iff the drag netted a
     // change — the release path exactly, so Ctrl+Z reverts it.
     if (app.drag.active) marker_drag.commit_drag();
-    // The tempo drag already wrote its cents into the live store per event; its
-    // gesture-end settles history (one undo entry iff net change) and fires the
-    // deferred preview.
-    if (app.tempo_drag.active) marker_drag.end_tempo_drag();
+    // (The tempo drag's finalize arm went with the gesture, 2026-07-29 — see
+    // marker_drag.h.)
     // The trim drag keeps its live bounds and runs the full commit tail (the
     // release column-snap, auto_clear_crossed_trim, the repaint/trigger, the
     // setter's publish). TRIM IS HISTORY-LESS BY RULING, so these bounds are not
@@ -2017,13 +1966,13 @@ void GuiInputHandler::finalize_active_drags() {
         end_strip_pointer_capture();
     }
     // THE PENDINGS DISARM, and that is not a cancel: a pending has committed
-    // NOTHING of its own — the marker/tempo pendings' clicks committed at the
+    // NOTHING of its own — the marker pending's click committed at the
     // PRESS, and the bound-set trim pending's bound was written at the press and
     // stands. There is no release here (the button is still held), so nothing is
     // owed; a pending otherwise resolves only by the threshold crossing or a real
-    // release / button loss.
+    // release / button loss. (TWO pendings, not three, since the tempo drag's
+    // deletion — 2026-07-29, see marker_drag.h.)
     app.pending_marker_drag = PendingMarkerDrag{};
-    app.pending_tempo_drag  = PendingTempoDrag{};
     app.pending_trim_drag   = PendingTrimDrag{};
     // A force-end is not a clean click sequence, so no candidate may survive to
     // pair with a later click (the standing rule at every non-release gesture end).
@@ -2219,8 +2168,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     // Motion just continues whatever the press already armed — the
-    // home-view gate (active_column_authoring_allowed, plus the tempo
-    // drag's own eligibility check) ran once at arm time in
+    // home-view gate (active_column_authoring_allowed, the whole gate now that the
+    // tempo drag and its eligibility check are gone) ran once at arm time in
     // on_button_press, so nothing here re-checks view or column; the
     // region drag below is navigation, not authoring, and was never
     // gated. Per-site translation (drag anchor capture, motion delta
@@ -2298,8 +2247,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         app.region.active     = true;
         app.region.a_frame    = app.region_drag.anchor_frame;
         app.region.b_frame    = far_frame;
-        // Drag-formed, so FREE provenance: no tempo gesture re-derives it (it has
-        // an empty selection anyway).
+        // Drag-formed, so FREE provenance: the cent step's follow does not
+        // re-derive it (it has an empty selection anyway).
         app.region.provenance = RegionProvenance::Free;
         // SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23): highlighting a
         // region does NOT select the markers it contains (the reverse coupling —
@@ -2318,65 +2267,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         viewport.invalidate_waveform_area();
         return;
     }
-    // Target-view tempo drag motion: each event re-solves the pointer's
-    // target position to a predecessor-tempo candidate and commits changed
-    // candidates live with a synchronous re-warp (apply_tempo_drag_motion —
-    // vertical motion is ignored there). A lost button finalizes like
-    // release, mirroring the marker-drag motion handler.
-    if (app.tempo_drag.active) {
-        viewport.clear_hover_popup();
-        if (!mods.primary_button_held) {
-            marker_drag.end_tempo_drag();
-            return;
-        }
-        marker_drag.apply_tempo_drag_motion(mouse_x);
-        return;
-    }
-    // Pending tempo drag (armed by a plain flag press in W + target view on
-    // an eligible marker): the tempo drag begins only once the pointer
-    // travels past the shared Chebyshev threshold — the SAME
-    // kDragMovedThresholdPx grab slop the reposition drag uses. A lost
-    // button before the crossing ends it as a plain click. Placed after the
-    // tempo_drag branch above: on the crossing this begins the drag AND
-    // applies its first solve inline (the solve is absolute — pointer x ->
-    // tempo — so applying at the CURRENT x needs no press-anchor catch-up
-    // fold), and does not fall back into that branch this event.
-    if (app.pending_tempo_drag.active) {
-        if (!mods.primary_button_held) {   // button lost -> just the click
-            // A lost button before the crossing IS the click, matching the release
-            // path: the press already committed the whole click, so this just
-            // disarms (the deferred completion died with the group drag — see the
-            // release branch).
-            app.pending_tempo_drag = PendingTempoDrag{};
-            // Settle hover to the pointer's ACTUAL state instead of the old
-            // unconditional clear (which erased a legitimately-hovering popup):
-            // if the pointer is still here, re-resolve — a slid-off pointer drops
-            // the popup/lane text, a still-hovering one keeps it; if focus is gone
-            // (the usual lost-button cause), the pointer-leave hook already cleared,
-            // so this is a no-op. Same observable end state as the clean release
-            // above.
-            if (gui.pointer_focused()) viewport.recompute_hover_at_cursor();
-            return;
-        }
-        if (std::max(std::abs(mouse_x - app.pending_tempo_drag.press_x),
-                     std::abs(mouse_y - app.pending_tempo_drag.press_y)) <
-                kDragMovedThresholdPx) {
-            return;   // still a click; leave the pending armed, do nothing
-        }
-        const int marker = app.pending_tempo_drag.marker;
-        app.pending_tempo_drag = PendingTempoDrag{};
-        // A moved tempo drag drops any double-click candidate: this press is
-        // a drag, not a click of a marker double-click — the same
-        // load-bearing clear the pending marker drag's crossing does (the
-        // arming press seeded a Marker candidate at press time).
-        app.double_click = DoubleClickCandidate{};
-        if (!marker_drag.begin_tempo_drag(marker)) {
-            viewport.clear_hover_popup();
-            return;   // begin refused (eligibility re-check): drop the gesture
-        }
-        marker_drag.apply_tempo_drag_motion(mouse_x);
-        return;
-    }
+    // (No tempo-drag motion arms: the target-view tempo drag and its pending are
+    // DELETED, architect 2026-07-29 — see marker_drag.h. W+target has no pointer
+    // authoring gesture at all now.)
     // Pending marker drag (armed by a plain flag press): usually the marker was
     // single-selected at press; the reposition begins only once the pointer
     // travels past the shared Chebyshev threshold (kDragMovedThresholdPx, now
@@ -2392,8 +2285,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // land, span collapse), so this just disarms (the deferred completion
             // died with the group drag — see the release branch).
             app.pending_marker_drag = PendingMarkerDrag{};
-            // Settle hover to the pointer's ACTUAL state (see the tempo twin
-            // above): re-resolve while the pointer is here, else the pointer-leave
+            // Settle hover to the pointer's ACTUAL state: re-resolve while the
+            // pointer is here, else the pointer-leave
             // hook owns the clear. Replaces the old unconditional clear that broke
             // its own "matches the clean release" promise by erasing a hovering
             // popup. Same observable end state as the clean release.

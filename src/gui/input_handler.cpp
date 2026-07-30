@@ -260,17 +260,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // drag guard: Tab, undo, `t`, and the rest never see a key mid-drag.
     // The editor text-selection drag has its own modal gate above
     // the text-editor handlers; the pointer gestures here — the marker /
-    // tempo / trim / strip / region drags, the Alt+drag grab-pan (scroll_drag),
+    // trim / strip / region drags, the Alt+drag grab-pan (scroll_drag),
     // and the
-    // pending marker / tempo / trim drags (a press held before its drag begins) —
+    // pending marker / trim drags (a press held before its drag begins) —
     // are mutually exclusive with it. scroll_drag belongs on the list too: a live
     // pan must swallow authoring keys rather than letting one run over a latched
     // pan. (The scrub is a one-shot press action, not a gesture — it arms nothing,
-    // so it has no entry here.)
-    if (app.drag.active || app.tempo_drag.active || app.trim_drag.active ||
+    // so it has no entry here. The tempo drag and its pending were entries until
+    // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
+    if (app.drag.active || app.trim_drag.active ||
         app.strip_drag.active || app.region_drag.active ||
         app.scroll_drag.active ||
-        app.pending_marker_drag.active || app.pending_tempo_drag.active ||
+        app.pending_marker_drag.active ||
         app.pending_trim_drag.active) {
         // The ONE hatch left, modifier-exact (a modified Ctrl+Q has no binding
         // anywhere): end the gestures as their release would, then run the close
@@ -293,7 +294,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Left/Right (no mods)   → playhead-by-pixel step, and ONLY with an
     //                              EMPTY selection (the waveform lane): with one
     //                              the same press also carries the marker — the
-    //                              marker-lane nudge / tempo-image step — which
+    //                              marker-lane position nudge — which
     //                              is authoring and drops here
     //                              (playhead_in_marker_lane)
     //   - Home/End (no mods)     → playhead to trim region bounds
@@ -346,11 +347,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // individual handler below (marker drop, status toggle, flag editor open,
     // etc.) beside the read-only check above — off home a handler still
     // dispatches here but refuses silently, navigation-class. The TWO ruled
-    // exceptions: (1) the TEMPO family in W+target — one motion
-    // (stretch/squish), three flavors: the bare Up/Down step (owner-only there),
-    // the tempo drag, and the bare Left/Right tempo-image step (the drag's
-    // keyboard twin, dispatched below where the warp column's nudge route
-    // splits by view); (2) the phase-reset propagate paste starts in source
+    // exceptions: (1) the bare UP/DOWN TEMPO CENT STEP in W+target (owner-only
+    // there, singleton and group) — the whole tempo surface since 2026-07-29, when
+    // the family's other two flavors, the pointer tempo drag and the bare
+    // Left/Right tempo-image step, were deleted (marker_drag.h), leaving bare
+    // Left/Right in W+target a consumed refusal at the split below;
+    // (2) the phase-reset propagate paste starts in source
     // view and lands in target through the `t` toggle chokepoint. (The
     // 2026-07-24 "third exception" — a both-views warp POSITION nudge — was
     // re-ruled away the same day: no warp position authoring in target view.)
@@ -734,58 +736,56 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // decides which LANE the playhead is in, and playhead_in_marker_lane is that
     // decision. With a selection the cursor playhead stops painting and the
     // focused flag's ink triangle IS the playhead, so the step moves THAT and
-    // carries the marker under it — the routes below, each of which re-lands the
-    // playhead on its committed focus (finish_group_position_nudge for both
-    // position nudges, the post-re-warp re-land in step_tempo_image), so the lane
+    // carries the marker under it — the two routes below both re-land the
+    // playhead on their committed focus (finish_group_position_nudge), so the lane
     // model holds on every successful route. HORIZONTAL MOVEMENT IS A FOCUS ACT
     // (architect 2026-07-29): a 2+ selection COLLAPSES to its focus in the position
     // nudges' shared prologue and the focus alone steps — groups are never moved
-    // (the doctrine at the head of group_position_nudge.h; the tempo-image step in
-    // W+target keeps its group form, tempo being a value the members hold
-    // independently). With no selection the playhead is in
+    // (the doctrine at the head of group_position_nudge.h). With no selection the
+    // playhead is in
     // the waveform lane and this branch does not match: the press falls through
     // to the bare-key tail, which steps the cursor alone. The lane is left by any
     // DESELECTING route (the lane model at playhead_in_marker_lane; Esc is unbound
     // and collapses nothing since 2026-07-29), and there is no fallback, so an
-    // off-home or ineligible marker-lane press is a consumed no-op, never a
+    // off-home marker-lane press is a consumed no-op, never a
     // waveform-lane step. (The AUDITION SCRUB is a different gesture entirely — the waveform
     // lower-half one-shot press — and no arrow key reaches it.)
     // ROUTE BEFORE THE STOP: this branch must decide the route ahead of the
     // waveform-lane body's stop / selection-clear / region-clear, because the two
     // lanes carry DIFFERENT playback regimes — the position nudges stop in
-    // group_position_nudge_prologue even when they later refuse, while
-    // step_tempo_image deliberately does not stop early (a refused W+target press
-    // leaves a listening session running; a successful one stops through
-    // target_render.trigger()). Merging the regimes would give a refused press a
+    // group_position_nudge_prologue even when they later refuse, while the
+    // W+target refusal below stops nothing at all (a refused press leaves a
+    // listening session running). Merging the regimes would give a refused press a
     // stop it does not have.
     // Trim is not part of the selection system, so the nudge never acts on a
     // bound (trim's pointer route is the plain chip-row press-drag on its chip /
     // the inter-chip bridge).
-    // ROUTING (architect 2026-07-24 second pass, re-ruling the same-day "third
-    // exception" away): each column's POSITION nudge runs in its HOME view only
-    // — warp in source, phase reset in target (the home-view binding). In
-    // W+TARGET the arrows are NOT a position gesture: they dispatch the
-    // TEMPO-IMAGE STEP (MarkerDragOps::step_tempo_image), the tempo drag's
-    // keyboard twin — steps the FOCUSED marker's IMAGE by one painted column
-    // per press where the cent grid allows, else the minimum directional cent
-    // (travel can span several columns), via the (deduped participant)
-    // predecessor tempo solve, the drag's eligibility legs included. Read-only
-    // tabs refuse all three routes upstream: the allowlist admits the bare
+    // ROUTING — TWO ROUTES AND ONE REFUSAL (architect 2026-07-29, down from three
+    // routes): each column's POSITION nudge runs in its HOME view only — warp in
+    // source, phase reset in target (the home-view binding) — and every other
+    // combination is a CONSUMED REFUSAL. W+TARGET is now one of those refusals: it
+    // used to dispatch the TEMPO-IMAGE STEP there (the tempo drag's keyboard twin,
+    // stepping the focused marker's IMAGE through a predecessor tempo solve), and
+    // that whole family is DELETED — the tempo surface is the bare UP/DOWN cent
+    // step alone, which is unaffected in W+target and is where tempo authoring
+    // lives (the delete list is at the head of marker_drag.h). No fallback to the
+    // waveform-lane step, by the standing rule that a refused marker-lane press is
+    // a consumed no-op. Read-only
+    // tabs refuse both routes upstream: the allowlist admits the bare
     // horizontal arrows only when playhead_in_marker_lane is false, so a locked
     // tab with a selection drops them at the gate.
     if (!alt && !shift && !ctrl &&
         (key == GuiKeys::Left || key == GuiKeys::Right) &&
         playhead_in_marker_lane()) {
         const int direction = (key == GuiKeys::Left) ? -1 : +1;
-        // All three routes take the press's platform repeat bit: it is what makes a
+        // Both routes take the press's platform repeat bit: it is what makes a
         // HELD arrow one undo entry (Undo::coalesce_gesture).
         const bool rpt = mods.synthesized_repeat;
         if (app.active_markers_view == 'P') {
             if (app.active_audio_view != 'T') return;   // phase home = target
             phase_resets.nudge_selected_phase_resets(direction, rpt);
         } else if (app.active_audio_view == 'T') {
-            // W+target: tempo-image step
-            marker_drag.step_tempo_image(direction, rpt);
+            return;   // W+target: no position authoring, no tempo-image step
         } else {
             warpops.nudge_selected_markers(direction, rpt);  // warp home: position
         }

@@ -151,7 +151,10 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) const {
     // that repeat would merge into whatever foreign entry sat on top; with it, a
     // stale kind can never coexist with a foreign stack top, so the adjacency the
     // repeat contract owns is airtight in both directions. record_gesture runs
-    // AFTER the push at all four eligible routes, so intended merges are untouched.
+    // AFTER the push at every eligible route — re-derived by grep 2026-07-29 after
+    // the tempo-image step's deletion: FOUR routes over THREE call sites (the two
+    // position nudges through their shared commit tail, plus the singleton and
+    // group arms of the Up/Down cent step) — so intended merges are untouched.
     //
     // ONE ACCEPTED DELTA remains, benign: two same-kind bursts with NO command
     // between them merge across the release gap when the second burst's physical

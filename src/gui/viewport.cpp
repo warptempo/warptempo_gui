@@ -184,8 +184,8 @@ void Viewport::move_playhead_to(int64_t new_sample) {
 // zoom/viewport through clamp_viewport_start, so this reads the final geometry.
 // In SOURCE view the live total is the source total and never changes, so both
 // clamps below are structural no-ops there — no view branch needed. The helper
-// is idempotent and cheap (two compares when nothing is out of domain), which it
-// must be: kick_waveform_sync runs per cent step during a tempo drag.
+// is idempotent and cheap (two compares when nothing is out of domain), which is
+// what lets a held Up/Down cent step pay nothing per press.
 void Viewport::clamp_display_state_to_live_domain() {
     if (audio.total_frames() <= 0) return;
 

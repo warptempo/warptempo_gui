@@ -559,10 +559,12 @@ void GuiInputHandler::commit_trim_drag() {
 // (2026-07-29 — pointer gestures have no cancel, the rule at the drag-modal gate
 // in input_handler.cpp), so a chip drag's deselect rests like `x`'s does.
 //
-// Defined as a FREE function so the group tempo gestures (MarkerDragOps /
-// GuiWarpMarkersOps) can RE-SYNC a TrimWindow region from app.trim's SOURCE-frame
-// bounds through the NEW live map after a tempo edit (FIX C) — reachable through
-// input_handler.h beside set_region_to_selection_extent. GuiInputHandler wraps it
+// It is a FREE function (declared in input_handler.h beside
+// set_region_to_selection_extent) because the tempo gestures once RE-SYNCED a
+// TrimWindow region from app.trim's SOURCE-frame bounds through the NEW live map
+// after a tempo edit; those re-syncs are deleted (2026-07-29 — a TrimWindow region
+// cannot rest beside a selection, see above), so the free form is now just where it
+// lives. GuiInputHandler wraps it
 // twice: sync_highlight_to_trim_window is the bare pass-through the CLEARERS and
 // MAINTAINERS use, and deselect_and_sync_trim_window_highlight is the SETTERS'
 // form, which deselects ahead of the same call.

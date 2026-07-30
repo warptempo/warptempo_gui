@@ -358,8 +358,9 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // drops, and the three membership-wholesale routes) or REPLACES it with the
 // selection's own extent (the multi-select clicks at 2+). So
 // TrimWindow-under-a-selection is UNREACHABLE — which is what retired the tempo
-// family's region-provenance branches, the singleton tempo step's trim re-sync,
-// and TempoDragState::grab_trim_highlight.
+// gestures' region-provenance branches, the singleton tempo step's trim re-sync,
+// and the tempo drag's own grab-time trim-highlight bit (that drag is itself
+// deleted since 2026-07-29 — see marker_drag.h).
 // It still takes the SELECTION for the never-rest-2+-without-a-span collapse its
 // clear arm carries (that invariant is stated at clear_region_highlight's
 // declaration above); the callers that can still reach that collapse are the
@@ -495,11 +496,12 @@ struct GuiInputHandler {
     // END every in-flight pointer gesture through its own RELEASE body — a
     // commit, never a cancel: pointer gestures have no cancel (the rule is stated
     // at the drag-modal gate in on_key). The marker drag commits its proposed
-    // positions with its undo entry, the tempo drag settles the history for the
-    // cents it already wrote, the trim drag keeps its live bounds and runs its
+    // position with its undo entry, the trim drag keeps its live bounds and runs its
     // commit tail, the region drag rests its region, the strip / grab-pan drags
-    // just end (they applied continuously), and the three PENDINGS disarm having
-    // committed nothing. No-op when nothing is live. Definition beside
+    // just end (they applied continuously), and the TWO PENDINGS disarm having
+    // committed nothing. (The tempo drag was a fifth body here until 2026-07-29 —
+    // the whole gesture is deleted, see marker_drag.h.)
+    // No-op when nothing is live. Definition beside
     // on_button_release in input_pointer.cpp (same bodies, same order). Callers:
     // the Ctrl+Q hatch in on_key, and main.cpp's WM-close and resize callbacks
     // (close ends the gestures before raising the prompt, so none is left live
@@ -1070,8 +1072,10 @@ private:
     // along. A selection IS the marker lane: the cursor playhead stops painting
     // and the focused flag's kWaveform-filled triangle IS the playhead (the
     // focus model), so the step moves that, carrying the marker under it (the
-    // position nudges / the tempo-image step, each re-landing the playhead on
-    // its committed focus). With no selection the playhead is in the WAVEFORM
+    // two position nudges, each re-landing the playhead on
+    // its committed focus; the tempo-image step was a third marker-lane route
+    // until 2026-07-29 and W+target is now a consumed refusal — see
+    // marker_drag.h). With no selection the playhead is in the WAVEFORM
     // lane and the step moves the cursor alone. LANE EXIT IS ANY DESELECTING
     // ROUTE (architect 2026-07-29, replacing the explicit Esc collapse — Esc is
     // unbound here now): Home/End, a waveform click, a trim setter's publish, an

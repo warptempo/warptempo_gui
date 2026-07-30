@@ -23,8 +23,15 @@
 // in target view route this through compute_flag_hit_rects / render_flags /
 // popup-hit helpers so hit-test math and paint stay in sync.
 // quiet forwards to resolve_warp_markers_for_render: true suppresses every
-// normalization stderr line, ONLY for hypothetical (never-live) builds — the
-// group tempo drag's bisection candidates. Live builds stay loud (default).
+// normalization stderr line, ONLY for hypothetical (never-live) builds.
+// CALLER-LESS SINCE 2026-07-29: its sole caller was the group tempo drag's
+// monotone bisection, which evaluated hypothetical candidate maps, and the whole
+// tempo-image family is deleted (marker_drag.h). Every remaining caller takes the
+// default, so every build in the product is LOUD. The parameter RESTS INERT rather
+// than being deleted: it forwards into src/parser (build_warp_frame_map.h's own
+// `quiet`, which carries the same story on its side), and src/parser is under
+// PERMANENT HARD FREEZE — removing the pair needs explicit architect freeze
+// approval. Nothing reads it today; do not add a caller to justify it.
 std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     const std::vector<GuiWarpMarker>& markers,
     double scale,

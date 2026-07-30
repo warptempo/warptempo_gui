@@ -158,12 +158,14 @@ struct UndoEntry {
 //     open's re-extent, the GROUP
 //     undo/redo restore, and the propagate paste's created-set arm) and
 //     MAINTAINERS (which gate on an ALREADY-ACTIVE SelectionExtent region and
-//     only re-derive it: the tempo drag's per-event follow, the tempo-image step,
-//     and the group tempo step — the POSITION movers left this list 2026-07-29
-//     when the group nudge and the group marker drag were deleted, groups being
-//     never moved; the doctrine is at the head of group_position_nudge.h). The
-//     class-level contract for those callers, and the
-//     ordering rule each obeys, live at that function in input_pointer.cpp.
+//     only re-derive it: the GROUP TEMPO CENT STEP, and nothing else. The class
+//     emptied out twice on 2026-07-29 — first the POSITION movers (the group nudge
+//     and the group marker drag, deleted because groups are never moved; the
+//     doctrine is at the head of group_position_nudge.h), then the tempo DRAG's
+//     per-event follow and the TEMPO-IMAGE STEP with the whole tempo-image family
+//     (the delete list is at the head of marker_drag.h)). The
+//     class-level contract for that caller, and the
+//     ordering rule it obeys, live at that function in input_pointer.cpp.
 // The MULTI-SELECT EXTENT case is the one worth restating for its consequence: a
 // shift-range or ctrl-toggle click leaving 2+ markers selected sets the region to
 // the selection's position extent [earliest, latest], so the highlight and
@@ -179,8 +181,9 @@ struct UndoEntry {
 // selection (Free) — and so does a trim-derived one (TrimWindow) since 2026-07-29,
 // every setter deselecting as it publishes (the rule at
 // sync_region_to_trim_window's declaration, input_handler.h). Provenance therefore
-// no longer routes the image-follow tempo gestures at all — they re-derive their
-// extent unconditionally — and what it still routes is the trim's own coupling:
+// no longer routes the image-follow tempo gesture at all — the group cent step
+// re-derives its extent unconditionally — and what it still routes is the trim's
+// own coupling:
 // Shift+X and the settings-editor maintainers act on a TrimWindow region and leave
 // a Free one alone.
 // Bare x is SET-ONLY and branches on
@@ -225,9 +228,11 @@ struct UndoEntry {
 // re-derive, all died with the group forms of those gestures — horizontal movement
 // is a focus act, so both are POINT commands that clear instead (the doctrine is at
 // the head of group_position_nudge.h). What still follows an extent span across its
-// own map change is the TEMPO family alone (below).
+// own map change is the GROUP TEMPO CENT STEP alone (below) — the tempo drag and
+// the tempo-image step, the other two followers, were deleted the same day with
+// the whole tempo-image family (see marker_drag.h).
 // Region PROVENANCE (architect 2026-07-23, three-state ownership): tracks WHO the
-// region is derived from, which decides how the image-follow tempo gestures treat
+// region is derived from, which decides how the image-follow tempo gesture treats
 // it across a map change. Free — a drag-formed region, display scratch
 // that no gesture re-derives. FOUR PRODUCERS, re-grepped 2026-07-29 when the Esc
 // ladder's two were deleted: the plain drag, the shift-click former, and both
@@ -635,108 +640,11 @@ struct PendingMarkerDrag {
     int  press_y        = 0;
 };
 
-// Pending target-view TEMPO drag, armed by a PLAIN (unmodified) warp-flag
-// press in W view + TARGET audio view — the pointer half of the home-view
-// binding's tempo exception (the keyboard half is the bare Up/Down step). The
-// press single-selects its marker (the click), verifies eligibility — the
-// marker has a GROUP predecessor (the nearest marker at a strictly earlier
-// frame, walking past same-frame siblings — coincident groups drag as ONE, so
-// any member arms) that is an enabled tempo OWNER by its own authored payload
-// and NOT a member of a surviving coincident group (whose collapse to one 1.00
-// owner makes its authored tempo render-inert — the same normalization-red set
-// the flag painter uses is the test) — and arms this pending state; only past
-// kDragMovedThresholdPx (the SAME generic gate the reposition drag and every
-// other press-becomes-drag surface use) does begin_tempo_drag run
-// and the tempo-drag machinery take over. An ineligible press single-selects
-// and arms nothing (the silent read-only convention). Session-only, never
-// serialized. Cleared on the crossing (begin_tempo_drag takes over), on
-// release / lost button before the crossing, by the force-end finalizer, and on
-// file load.
-//
-// NOTHING IS HELD BACK HERE either: the GROUP tempo-drag deferral (deferred_click,
-// architect 2026-07-23 — the PendingMarkerDrag deferral extended to this surface so
-// begin_tempo_drag could seed the participant predecessor set from an intact 2+
-// selection) died 2026-07-29 with the deferral machinery as a whole (the doctrine
-// is at the head of group_position_nudge.h). Every eligible press single-selects
-// and lands at press time, so this pending has nothing to complete and its
-// release / lost-button / force-end paths simply DISARM — which also means a
-// pointer tempo drag now always arms with a singleton selection.
-struct PendingTempoDrag {
-    bool active         = false;
-    int  marker         = -1; // dragged warp marker (its target image chases
-                              // the pointer); the GROUP's predecessor is NOT
-                              // held here — begin_tempo_drag re-walks it at the
-                              // crossing (the walk is O(stack length), trivially
-                              // cheap; nothing mutates the store between press
-                              // and crossing, so the re-walk is equivalent)
-    int  press_x        = 0;  // press position (window px): the gate only (the
-    int  press_y        = 0;  //   solve is absolute — pointer x -> tempo)
-};
-
-// Target-view tempo drag (Ableton-style stretch; architect 2026-07-22, group
-// 2026-07-23). Horizontal flag motion on an eligible warp marker in W + target
-// view inverts the pointer's target-domain position to the GRABBED marker's
-// predecessor's integer tempo cents — the value that places the grabbed marker's
-// target image nearest the pointer — producing a cents DELTA that every
-// participant predecessor rides in lockstep (a singleton drag has one
-// participant, the grabbed predecessor). Each changed event writes cents into
-// the live store (tempo only — no time change, no reorder) and re-warps
-// synchronously (kick_waveform_sync, the tempo-step precedent), so the waveform
-// squishes and stretches under the pointer and displayed == live holds at every
-// step boundary. Deliberately NOT the DragState overlay model: there is no
-// proposed-position overlay and no frozen paint basis — the store IS the
-// live proposal — so the marker/trim dispatch-freeze gate includes this
-// gesture only to keep ASYNC waveform jobs from racing the per-step sync
-// renders (the sync path is unaffected). One undo entry per drag: the
-// pre-drag store snapshot pushes at gesture end iff ANY participant's final
-// cents differ from its grab cents (mouse drags are coalesce-ineligible by
-// standing rule). THERE IS NO CANCEL (architect 2026-07-29, reversing the
-// Esc-restores-the-grab-cents rule this struct was built around): Esc mid-drag is
-// a consumed no-op, any end — release, lost button, the Ctrl+Q / resize / WM-close
-// finalizer — runs end_tempo_drag, so the cents already written STAND and Ctrl+Z
-// is the way back (the rule is at the drag-modal gate, input_handler.cpp). The playhead follows
-// the grabbed marker (the standing ruling): the arming click landed it on the
-// marker, so each event re-lands it on the marker's post-commit image (the
-// marker's source frame never moves; only its image does). Session-only;
-// cleared at every gesture end (release, lost button, the force-end finalizer) and
-// on file load.
-struct TempoDragState {
-    bool active      = false;
-    // No motion-latch flag: end_tempo_drag's net-change test is the
-    // per-participant compare against grab cents, and the focus transfer runs
-    // once at the threshold crossing in begin_tempo_drag (the reposition drag's
-    // rule — a real drag focuses the grabbed marker at the crossing, so a walled
-    // group that never moves still focuses correctly).
-    int  marker      = -1;   // dragged warp marker (the absolute solve anchor)
-    int  predecessor = -1;   // the grabbed marker's predecessor (the GROUP's
-                             // predecessor — nearest strictly-earlier frame,
-                             // not necessarily marker - 1) — the absolute solve
-                             // target; also one of the participants below (its
-                             // own grab cents / restore live in the parallel
-                             // vectors, so no separate grab_cents field is kept)
-    // Group participant predecessors (architect 2026-07-23): the DEDUPED set of
-    // tempo_drag_predecessor(m) over the whole selection (grabbed included; a
-    // singleton degenerates to {predecessor}), sorted ascending, and their GRAB
-    // cents in parallel — LIVE MECHANICS, not a cancel origin: the grab cents are
-    // the delta lockstep's baseline and the end-of-gesture net-change test's
-    // comparand for every participant. apply_tempo_drag_motion adds the
-    // SAME group-stop-clamped delta to every participant so they move in cent
-    // lockstep. `walled` is set when ANY selected marker is tempo-drag-INELIGIBLE
-    // (tempo_drag_predecessor < 0): the group still ARMS (the grabbed marker is
-    // eligible) but the delta intersection pins to [0, 0] — the gesture engages
-    // yet cannot move, "the wall hit before it starts", so it commits nothing at
-    // its end.
-    std::vector<int>     participant_predecessors;
-    std::vector<int64_t> participant_grab_cents;
-    bool                 walled = false;
-    // Full pre-drag warp store for the ONE undo entry per drag (the marker drag's
-    // capture shape). The undo payload, and the only capture this struct carries:
-    // the selection snapshot, the grab playhead and the pre-drag region were the
-    // cancel's, and there is no cancel (see the header). The grab-time
-    // trim-highlight intent bit went a commit earlier, with the coincident arm it
-    // served.
-    std::vector<GuiWarpMarker> pre_drag_snapshot;
-};
+// (No pending TEMPO drag, and no TempoDragState: the whole target-view tempo drag
+// is DELETED, architect 2026-07-29 — the tempo surface is the bare Up/Down cent
+// step alone. The delete list and the do-not-re-propose note live at the head of
+// marker_drag.h. So the reposition drag above is the ONLY pointer marker gesture,
+// and W+target has no pointer authoring gesture at all.)
 
 // Pending trim chip/bridge drag, armed by a PLAIN (unmodified) left press in the
 // top-strip CHIP ROW (a b/e chip rect, or the inter-chip bridge span). The
@@ -919,8 +827,8 @@ enum class DoubleClickSurface { None, ZoomRow, Marker, EditorText, EmptyLane };
 //                 is its flag SHAPE or its rendered marker-text LANE RUN, and a
 //                 candidate seeded on one part consumes on the other. One seed
 //                 timing for the whole surface — the PRESS; a press that then
-//                 becomes a real marker drag (the reposition drag, or the
-//                 target-view tempo drag) drops the candidate at the
+//                 becomes a real marker drag (the reposition drag, the only one
+//                 left since the tempo drag's deletion) drops the candidate at the
 //                 threshold crossing, so a moved drag never carries one.
 //   EditorText -> selects the clicked character class's RUN (word / punctuation
 //                 / whitespace) in the active text editor (target unused; both
@@ -959,7 +867,8 @@ constexpr int     kDoubleClickSlackPx = 8;
 
 // ONE generic Chebyshev pixel distance a press must travel before it becomes a
 // DRAG (architect-tunable), shared by EVERY press-becomes-drag surface — strip,
-// region, trim, marker flag, and tempo flag. UNIFIED to 8px (architect
+// region, trim, and the marker flag (the tempo flag was a fifth until the tempo
+// drag's deletion, 2026-07-29). UNIFIED to 8px (architect
 // 2026-07-24: region felt too hair-trigger at the old 3, and the separate
 // kMarkerDragMovedThresholdPx = 8 was folded into this one constant). Two
 // rationales, now one story:
@@ -969,7 +878,7 @@ constexpr int     kDoubleClickSlackPx = 8;
 //    count or two; without this gate that jitter would mark every click as moved
 //    and starve double-click detection, and on the waveform a click would become
 //    a micro-region instead of plain playhead placement.
-//  - MARKER GRAB SLOP (marker / tempo flag): a flag must be easy to click
+//  - MARKER GRAB SLOP (the marker flag): a flag must be easy to click
 //    (select, or double-click to edit) without nudging it, and pixel-exact
 //    fine-tuning lives on the bare Left/Right nudge rather than the drag — the
 //    Ableton convention. 8px gives that slop; the strip/trim/region surfaces
@@ -1570,17 +1479,6 @@ struct AppState {
     // release / lost button, by the force-end finalizer, and on file load.
     PendingMarkerDrag pending_marker_drag;
 
-    // Pending target-view tempo drag, armed by a plain warp-flag press in W +
-    // target view on an eligible marker (the tempo-drag machinery begins only
-    // past the marker threshold). Cleared on the threshold crossing, on button
-    // release / lost button, by the force-end finalizer, and on file load.
-    PendingTempoDrag pending_tempo_drag;
-
-    // Live target-view tempo drag (per-cent live commits + synchronous
-    // re-warps). ENDED — never cancelled — on button release / lost button and by
-    // the force-end finalizer; cleared on file load.
-    TempoDragState tempo_drag;
-
     // Pending trim chip/bridge drag, armed by a plain chip-row press (the
     // trim-drag machinery begins only past the threshold). Cleared on the
     // threshold crossing, on button release / lost button, by the force-end
@@ -1897,23 +1795,25 @@ inline int64_t snap_authored_frame(double frame) {
 }
 
 // The single query for "some pointer gesture is in flight" — a marker
-// reposition drag, a target-view tempo drag, a trim drag, a strip-row
+// reposition drag, a trim drag, a strip-row
 // zoom/pan drag, a region-select drag, an editor
-// text drag, or a pending marker / tempo / trim drag
+// text drag, or a pending marker / trim drag
 // armed by a press (button held, watching for the threshold). (The scrub is a
 // one-shot press action, not a gesture — it arms nothing and so never appears
-// here.) Consumed by the wheel_context
+// here. The target-view TEMPO drag and its pending were on this list until
+// 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
+// Consumed by the wheel_context
 // predicate (on_wheel's completed-detent gate and the platform's per-frame
 // sub-detent accumulator probe both route through it), the gate that must
 // never fire mid-gesture: the "nothing pops mid-gesture" boundary. The pending
 // drags are included so a wheel cannot shift the viewport out from under the
 // press before the drag begins.
 inline bool any_pointer_gesture_active(const AppState& app) {
-    return app.drag.active || app.tempo_drag.active ||
+    return app.drag.active ||
            app.trim_drag.active ||
            app.strip_drag.active || app.scroll_drag.active ||
            app.region_drag.active || app.editor_text_drag.active ||
-           app.pending_marker_drag.active || app.pending_tempo_drag.active ||
+           app.pending_marker_drag.active ||
            app.pending_trim_drag.active;
 }
 
@@ -1922,16 +1822,19 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // non-home view a column is display/navigation-only (selection, hover, Tab,
 // readouts all live; every placement/store mutation refuses silently,
 // navigation-class, exactly the read-only-tab convention). The TWO ruled
-// exceptions live at their sites: (1) the TEMPO family in W+target — ONE motion
-// (stretch/squish the waveform), THREE flavors: the bare Up/Down step
-// (owner-only there, adjust_tempo_cents), the tempo drag, and the
-// bare Left/Right tempo-image step (the drag's keyboard twin,
-// MarkerDragOps::step_tempo_image — the marker-lane arrow routes by view at its
-// dispatch site in input_handler.cpp, NOT through this predicate); (2) the
+// exceptions live at their sites: (1) the bare UP/DOWN TEMPO CENT STEP in
+// W+target (owner-only there, adjust_tempo_cents — singleton and group), which is
+// the WHOLE tempo surface now and is dispatched without consulting this
+// predicate; (2) the
 // phase-reset propagate (a warp-view gesture that authors phase resets; its
-// paste lands in target view). The 2026-07-24 "third exception" — a both-views
+// paste lands in target view). The list SHRANK to these two on 2026-07-29: the
+// tempo family's other two flavors — the pointer tempo DRAG and the bare
+// Left/Right TEMPO-IMAGE STEP — were DELETED wholesale (the delete list is at the
+// head of marker_drag.h), so bare Left/Right in W+target with a selection is now
+// a consumed refusal and W+target has no pointer authoring gesture at all.
+// (The 2026-07-24 "third exception" — a both-views
 // warp POSITION nudge — was re-ruled away the same day: there is no warp
-// position authoring in target view at all. The flag DRAG and every other warp
+// position authoring in target view at all.) The flag DRAG and every other warp
 // mutation stay home-view-only through this predicate.
 inline bool active_column_authoring_allowed(const AppState& app) {
     return (app.active_markers_view == 'P') ? (app.active_audio_view == 'T')

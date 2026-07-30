@@ -432,10 +432,12 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     }
     // architect ruling 2026-07-22: the Up/Down tempo step stays reachable off
     // its source home (target view is exactly where you want to hear/see a tempo
-    // change). It is one flavor of the warp column's TEMPO exception there (the
-    // others are the tempo drag and its keyboard twin, the bare Left/Right
-    // tempo-image step — architect 2026-07-24 second pass; W+target authors
-    // tempo only, never position). But the tempo step there is OWNER-ONLY: the
+    // change). Since 2026-07-29 it is the WHOLE of the warp column's TEMPO
+    // exception there, and the whole tempo surface anywhere: the other two flavors
+    // — the pointer tempo drag and its keyboard twin, the bare Left/Right
+    // tempo-image step — were deleted (the list is at the head of marker_drag.h).
+    // W+target authors tempo only, never position. The tempo step there is
+    // OWNER-ONLY: the
     // focus-collapse target must already own an adjustable tempo, so a pass
     // (tempo_inherits) or a label ref refuses silently — no freeze conversion, no
     // undo entry, no dirty. Source view is UNCHANGED (the pass/ref-to-owner freeze below
@@ -457,9 +459,11 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         // from a ref, and (c) coincident-collapse members — the two payload
         // checks just above have already rejected ref and pass, so for the
         // payload-OWNER that remains, red-set membership is EXACTLY the
-        // coincident-collapse condition (the tempo-drag predecessor test's
-        // argument, second consumer). Silent, before any mutation — no freeze,
-        // no undo, no dirty, the shape of the ref/pass refusals above.
+        // coincident-collapse condition (the same argument the GROUP step's wall
+        // scan makes — the two cent-step arms are the red set's two consumers here
+        // since the tempo-drag predecessor walk was deleted). Silent, before any
+        // mutation — no freeze, no undo, no dirty, the shape of the ref/pass
+        // refusals above.
         const std::set<int>& red = warp_red_flag_set_cached(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames())).red;
@@ -603,7 +607,8 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
     const int n = static_cast<int>(mv.size());
     // The coincident-collapse red set, computed VIEW-INDEPENDENTLY here (the
     // group wall is max strict) — the same generation-keyed memoized helper the
-    // singleton step and the tempo-drag predecessor use.
+    // singleton step's target-view refusal uses (its other consumer, the
+    // tempo-drag predecessor walk, was deleted with that gesture).
     const std::set<int>& red = warp_red_flag_set_cached(
         app, audio.sample_rate(),
         static_cast<long>(audio.total_frames())).red;
@@ -711,10 +716,11 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
 //
 // SOURCE HOME VIEW ONLY (the home-view binding, architect 2026-07-22 — restored
 // 2026-07-24 second pass: the same-day "third exception", a both-views warp
-// position branch, was a misreading and is DELETED; in W+target bare Left/Right
-// dispatches the TEMPO-IMAGE STEP instead, MarkerDragOps::step_tempo_image —
-// there is no warp position authoring in target view at all, and the dispatch
-// site in input_handler.cpp owns the routing).
+// position branch, was a misreading and is DELETED; there is no warp position
+// authoring in target view at all). In W+TARGET bare Left/Right is a CONSUMED
+// REFUSAL as of 2026-07-29 — it dispatched the tempo-image step there until that
+// whole family was deleted (marker_drag.h), and there is no fallback — with the
+// dispatch site in input_handler.cpp owning the routing.
 //
 // The wall regime over the identity map, one shape: the marker steps one PAINTED
 // column (stepped_anchor_frame — the guarantee and its numeric rationale live in

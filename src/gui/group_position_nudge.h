@@ -137,13 +137,15 @@ GroupNudgePrologue group_position_nudge_prologue(
 // stronger (a column is at least 27.5625 whole frames, error at most 0.5 frame,
 // about 0.018 px). Either way each press still advances at least one whole frame.
 //
-// The contrast is the point, documenting a trap that already bit once: the
-// W+target bare Left/Right TEMPO-IMAGE STEP (MarkerDragOps::step_tempo_image) is
-// NOT a consumer of this guarantee and cannot be — it authors CENTS, a grid
-// COARSER than the pixel grid on ordinary spans (one cent moves the image about
-// 2+ px there), so the guarantee INVERTS and the minimum-step rule at
-// step_tempo_image owns that gesture's step size. One painted column per press
-// applies to the POSITION nudges only.
+// ONE PAINTED COLUMN PER PRESS IS A POSITION-NUDGE PROPERTY AND NOTHING ELSE, and
+// the trap it documents already bit once: the only other gesture that ever claimed
+// it was the W+target bare Left/Right TEMPO-IMAGE STEP, which authored CENTS — a
+// grid COARSER than the pixel grid on ordinary spans (one cent moves the image
+// about 2+ px there) — so the guarantee INVERTED there and that gesture needed a
+// minimum-directional-cent rule of its own. It is deleted (2026-07-29, with the
+// whole tempo-image family — see marker_drag.h), and the surviving tempo surface,
+// the bare Up/Down cent step, makes no pixel claim at all: it steps ONE CENT per
+// press by definition. So do not carry this guarantee to any value gesture.
 int64_t stepped_anchor_frame(
     const AppState& app, const GuiAudio& audio,
     const std::vector<WarpFrameMapSegment>& map,
