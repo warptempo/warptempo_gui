@@ -299,8 +299,15 @@ RenderOutcome do_render(const RenderRequest& req,
         }
     };
 
+    // Publish the commit-critical batch sidecars. A write failure here is
+    // UNCONDITIONALLY a hard failure: both call sites treat a false `result.ok`
+    // by unwinding (removing what this created, and the wav where one was just
+    // published) and returning RenderOutcome::Failed, so the diagnostic says
+    // "render error" and never "render warning". The bool parameter that used to
+    // select between those two WORDS is deleted (architect 2026-07-30) — both
+    // callers passed true, so it selected a word and never a behavior.
     auto publish_commit_critical_batch_sidecars =
-        [&](bool hard_fail) -> CommitCriticalSidecars {
+        [&]() -> CommitCriticalSidecars {
             CommitCriticalSidecars result;
             if (!batch_render || req.output_buffer) return result;
 
@@ -312,9 +319,7 @@ RenderOutcome do_render(const RenderRequest& req,
             };
             auto note_failure = [&](const std::filesystem::path& path) {
                 std::fprintf(stderr,
-                    hard_fail
-                        ? "warptempo_gui: render error: write failed for '%s'\n"
-                        : "warptempo_gui: render warning: write failed for '%s'\n",
+                    "warptempo_gui: render error: write failed for '%s'\n",
                     path.string().c_str());
                 result.ok = false;
             };
@@ -521,7 +526,7 @@ RenderOutcome do_render(const RenderRequest& req,
             "warptempo_gui: render up to date (fingerprint match): %s\n",
             final_output_path.c_str());
         CommitCriticalSidecars sidecars =
-            publish_commit_critical_batch_sidecars(/*hard_fail=*/true);
+            publish_commit_critical_batch_sidecars();
         if (!sidecars.ok) {
             remove_created_commit_sidecars(sidecars.created_paths);
             cleanup_all();
@@ -548,7 +553,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // cleanly. That residual crash window is the accepted design.
     auto finalize_published_wav = [&](const char* outcome) -> RenderOutcome {
         CommitCriticalSidecars sidecars =
-            publish_commit_critical_batch_sidecars(/*hard_fail=*/true);
+            publish_commit_critical_batch_sidecars();
         if (!sidecars.ok) {
             remove_created_commit_sidecars(sidecars.created_paths);
             remove_newly_published_wav();

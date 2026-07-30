@@ -12,7 +12,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
-#include <cstdio>
 #include <utility>
 #include <vector>
 
@@ -102,13 +101,19 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead() {
 void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     if (app.selected_markers.empty()) return;
     const auto& tv = app.phaseresetmarkers.markers();
+    // THE STALE-INDEX BELT, one policy for every verb that iterates the selection
+    // (architect 2026-07-30): a stale member is SILENTLY SKIPPED and the rest of
+    // the batch proceeds — the warp delete's twin (fuller statement there). A belt
+    // against a sanitization invariant reports nothing and refuses nothing; this
+    // arm used to print one stderr line and refuse the WHOLE batch.
+    std::vector<int> live_idx;
+    live_idx.reserve(app.selected_markers.size());
     for (int idx : app.selected_markers) {
-        if (idx < 0 || idx >= static_cast<int>(tv.size())) {
-            std::fprintf(stderr,
-                "warptempo_gui: phase reset delete rejected: stale selection index\n");
-            return;
-        }
+        if (idx < 0 || idx >= static_cast<int>(tv.size())) continue;
+        live_idx.push_back(idx);
     }
+    // Nothing live to delete: no snapshot, no undo entry, no damage.
+    if (live_idx.empty()) return;
     std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
     // Capture the selected resets' active-domain positions BEFORE the store
     // mutation, so a multi-marker delete DROPS the selection down to the region
@@ -117,8 +122,8 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     // target home view, whose map phase resets do not affect, so the pre/post
     // active-domain mapping is identical either way.
     std::vector<int64_t> del_positions;
-    del_positions.reserve(app.selected_markers.size());
-    for (int idx : app.selected_markers) {
+    del_positions.reserve(live_idx.size());
+    for (int idx : live_idx) {
         // Clamp the forward-map image into the live domain: region endpoints
         // hold PLAYABLE frames only (the display-state validator rejects an
         // endpoint >= total and clears the highlight), and an EOF reset's
@@ -128,8 +133,9 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
             source_frame_to_active_domain(app, audio, tv[idx].time_frame),
             app, audio));
     }
-    for (auto it = app.selected_markers.rbegin();
-         it != app.selected_markers.rend(); ++it) {
+    // Descending order so earlier indices stay valid (live_idx is ascending —
+    // app.selected_markers is an ordered set and the skip above preserves it).
+    for (auto it = live_idx.rbegin(); it != live_idx.rend(); ++it) {
         app.phaseresetmarkers.remove_marker(*it);
     }
     selection.clear_selection();
@@ -200,23 +206,24 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // doctrine and the dead per-member machinery are recorded once at the head of
 // position_nudge.h.
 //
-// Wall semantics are one regime, STRICT, against this column's absolute range
-// (zero / total_frames - 1 — the single marker EOF wall both columns share; see
-// drop_phase_reset_at_position for the ruling): this gesture runs in phase reset's
-// TARGET home view only (the home-view binding, architect 2026-07-22), and a
-// proposal outside the range REFUSES the press silently rather than clamping (the
-// warp twin clamps into its headroom instead — one regime per column at its home).
-// The integer walls win over the pixel grid.
-// (The old source-view clamp arm died with the binding — there is no per-view
-// refuse-vs-clamp split left.) Crossing a neighbor is legal and goes through the
-// reorder-and-remap path below.
+// Wall semantics against this column's absolute range (zero / total_frames - 1 —
+// the single marker EOF wall both columns share; see drop_phase_reset_at_position
+// for the ruling): the step's delta is CLAMPED into the reset's own wall headroom,
+// so the wall is exactly reachable by a press that would overshoot it. This is the
+// UNIFIED WALL POLICY (architect 2026-07-30 — singleton steps clamp, group presses
+// refuse whole); the policy and its rationale are stated once at the head of
+// position_nudge.h. The phase twin refused the whole press until that ruling; the
+// warp twin already clamped. The integer walls win over the pixel grid, and a
+// clamped target equal to the current frame writes NOTHING (the silent no-op
+// below). Crossing a neighbor is legal and goes through the reorder-and-remap
+// path below.
 void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
         int direction, bool synthesized_repeat) {
-    // Shared guard prologue: loading / empty-audio refusal, playback stop first,
-    // empty/no-focus refusals, the coalesce verdict, the geometry refusals, the
-    // focused-index belt, and THE COLLAPSE + LAND that makes this a focus act (the
-    // playhead-follows / lead-in rationale lives at the declaration). Refuses
-    // silently, navigation-class.
+    // Shared guard prologue: loading / empty-audio refusal, empty/no-focus
+    // refusals, the coalesce verdict, the geometry refusals, the focused-index
+    // belt, and THE COLLAPSE + LAND that makes this a focus act — which carries
+    // the collapse's own playback stop (the playhead-follows / lead-in rationale
+    // lives at the declaration). Refuses silently, navigation-class.
     const PositionNudgePrologue pro = position_nudge_prologue(
         app, audio, playback_lifecycle, selection, viewport, undo,
         GestureKind::PhaseResetNudge, synthesized_repeat,
@@ -244,16 +251,39 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // (stepped_anchor_frame; the doctrine and the numbers live at its
     // declaration).
     //
-    // (2) THE ONE refusal is the EXACT INTEGER wall belt on the SNAPPED result
-    // (t_new outside [0, reset_wall]) — walls are exact integer compares, never a
-    // float compare (the exact-wall-reach doctrine forbids an epsilon-fragile
-    // pre-filter), and a proposal that rounds ONTO a wall passes (equality is
-    // legal).
+    // (2) WALLS WIN BY CLAMPING, in the reset's own wall headroom
+    // [0 - orig_f, reset_wall - orig_f] (integer arithmetic, non-empty because
+    // every stored reset rests in [0, reset_wall]). Exact integer compares, never
+    // a float compare — the exact-wall-reach doctrine forbids an epsilon-fragile
+    // pre-filter — and the wall is exactly reachable: a press that would overshoot
+    // lands ON it. The warp twin's shape verbatim (the unified wall policy at the
+    // head of position_nudge.h).
     const int64_t orig_f = tv[f].time_frame;
-    const int64_t committed_f = stepped_anchor_frame(
-        app, audio, map, orig_f, direction);
-    if (committed_f < 0 || committed_f > reset_wall) return;
-    if (committed_f == orig_f) return;   // zero-step press
+    int64_t D = stepped_anchor_frame(app, audio, map, orig_f, direction) - orig_f;
+    if (D < -orig_f)              D = -orig_f;
+    if (D > reset_wall - orig_f)  D = reset_wall - orig_f;
+
+    // (3) The reset commits orig_f + D. The [0, reset_wall] clamp is a deliberate
+    // walls-win belt — provably dead today (this path is all-integer int64 sums,
+    // and the headroom clamp above keeps the sum in range), kept as cheap
+    // insurance so a future edit to the clamp cannot commit a wall-illegal frame
+    // (an out-of-wall authored position would save a load-fatal file). The warp
+    // twin carries the same belt for the same reason.
+    int64_t committed_f = orig_f + D;
+    if (committed_f < 0)          committed_f = 0;
+    if (committed_f > reset_wall) committed_f = reset_wall;
+    // POST-CLAMP IDENTITY IS A SILENT NO-OP: a press already resting on its wall
+    // (or one whose column step resolved to the same frame) writes NOTHING — no
+    // undo push, no damage, no playback stop. This is what makes the keyboard stop
+    // rule's refusal gating exact for the nudges.
+    if (committed_f == orig_f) return;   // saturated / zero-step press
+    // THE SINGLETON PRESS'S STOP, past every refusal and immediately ahead of the
+    // first write (the keyboard stop rule's refusal gating, at
+    // stop_playback_if_playing's declaration in playback_lifecycle.h): a position
+    // nudge collapses the selection to point form and takes the playhead with it.
+    // On a 2+ press the prologue's collapse arm already stopped; this second call
+    // early-returns on the stopped session, so the double call is free.
+    playback_lifecycle.stop_playback_if_playing();
     std::vector<GuiPhaseResetMarker> pre_state =
         app.phaseresetmarkers.markers();
     // Identity hint: the nudged reset in PRE-reorder snapshot coordinates (the

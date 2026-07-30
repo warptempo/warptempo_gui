@@ -594,8 +594,9 @@ bool GuiFileLoader::load_file(const std::string& path) {
         }
     }
 
-    // COINCIDENCE AUTO-SELECT, the load chokepoint (one of three; the rule and
-    // the formula live at auto_select_marker_at_playhead, input_pointer.cpp). A
+    // COINCIDENCE AUTO-SELECT, the load chokepoint (the rule, the formula and the
+    // authoritative call-site inventory live at auto_select_marker_at_playhead,
+    // input_pointer.cpp / input_handler.h). A
     // parsed `.settings` band carries a playhead but never a selection, so the
     // session opens with a marker selected exactly when the restored cursor lands
     // on one — the entry reads like a marker click, and the flag's ink triangle is

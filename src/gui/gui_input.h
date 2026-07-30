@@ -81,10 +81,13 @@ struct GuiInputState {
     // The Unicode codepoint this key event resolves to under the live
     // keyboard state (shift / layout applied), as computed by
     // xkb_state_key_get_utf32 at the platform boundary; 0 when the key
-    // produces no character (function keys, bare modifiers). Consulted by
-    // the text editors' printable-insertion path and by repeat_eligible's
-    // editor-typing repeat gate; every other consumer reads the GuiKey and
-    // ignores this.
+    // produces no character (function keys, bare modifiers). THREE CONSUMERS
+    // (re-derived 2026-07-30): the text editors' printable-insertion path,
+    // repeat_eligible's editor-typing repeat gate, and the bottom-strip prompt's
+    // LETTER responses — the last joined 2026-07-30, because the prompt is the
+    // product's one CASE-SENSITIVE letter surface and the case-folded GuiKey
+    // cannot express that (CapsLock defeated the old !shift spelling). Every
+    // other consumer reads the GuiKey and ignores this.
     uint32_t codepoint           = 0;
     // True iff this key event is a SYNTHESIZED KEY REPEAT — one the process
     // generated itself from a held key (GuiPlatform::maybe_fire_repeat, the only

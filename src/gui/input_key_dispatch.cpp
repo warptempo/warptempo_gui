@@ -971,6 +971,20 @@ bool GuiInputHandler::adopt_render_entry(
 
     clamp_viewport_start(app, audio);
     viewport.clear_hover_popup();
+    // COINCIDENCE AUTO-SELECT, the adopt chokepoint (the rule, the formula and the
+    // authoritative call-site inventory live at auto_select_marker_at_playhead,
+    // input_pointer.cpp / input_handler.h). The adopt
+    // is specified 1:1 with a source load and a load runs this, so it runs here too
+    // (architect 2026-07-30, closing the one entry route that honored a stored
+    // playhead and withheld the recovery). PLACED HERE, at the tail: the wholesale
+    // store replacement, the engine/prefs apply that sets active_audio_view and
+    // active_markers_view, both band clamps and the live-band pull have all run, so
+    // the scan reads the column the session actually lands in and the playhead's
+    // final value — the load chokepoint's placement mirrored. Nothing downstream
+    // writes the selection (the wholesale clear is far above), so the single-select
+    // it may make is what rests. Its narrow damage is superseded by the kick below
+    // and by the tail's full-window invalidate.
+    auto_select_marker_at_playhead(app, audio, selection, viewport);
     viewport.kick_waveform_sync();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();

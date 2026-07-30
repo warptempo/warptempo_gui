@@ -2,7 +2,6 @@
 
 #include <cmath>
 #include <cstdio>
-#include <regex>
 #include <string>
 
 // MM:SS.mmm is a DISPLAY-ONLY rendering. Authored positions are whole
@@ -10,23 +9,18 @@
 // integer text via frame_format.h); no file format carries timestamps.
 // Display surfaces derive their text as
 // format_timestamp(frame / sample_rate).
-
-// Validate "MM:SS.mmm" (minutes and seconds 00-59, three-digit milliseconds).
-// Retained solely for the standalone sidecar migration tool; there are zero
-// call sites in the GUI, parser, and CLI.
-inline bool is_valid_timestamp_format(const std::string& s) {
-    static const std::regex re("^([0-5][0-9]):([0-5][0-9])\\.[0-9]{3}$");
-    return std::regex_match(s, re);
-}
-
-// Parse "MM:SS.mmm" to seconds. Caller validates format first. Retained solely
-// for the standalone sidecar migration tool; there are zero call sites in the
-// GUI, parser, and CLI.
-inline double parse_timestamp(const std::string& s) {
-    const int min    = std::stoi(s.substr(0, 2));
-    const double sec = std::stod(s.substr(3));
-    return min * 60.0 + sec;
-}
+//
+// WRITE-ONLY BY DESIGN, and that is why this header is <regex>-free (architect
+// 2026-07-30). Nothing in the product ever READS a timestamp — the two legacy
+// PARSE helpers that used to live here, is_valid_timestamp_format and
+// parse_timestamp, had zero call sites in the GUI, parser, CLI and prepost, and
+// their std::regex dragged that library's headers into fifteen product
+// translation units including all four frozen directories. They now live
+// tool-locally in tools/migrate_sidecar_to_frames.cpp, their only consumer and
+// the sole legacy-sidecar conversion route, beside the tool's other local
+// mirrors. Do not reintroduce a parse direction here: an old-format sidecar is
+// load-fatal in both products by ruling, so a product-side timestamp reader
+// would have no honest caller.
 
 inline std::string format_timestamp(double seconds) {
     if (seconds < 0) seconds = 0;

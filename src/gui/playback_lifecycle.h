@@ -3,30 +3,29 @@
 #include "app_state.h"
 #include "audio.h"
 #include "playback.h"
-#include "platform_wayland.h"
 #include "viewport.h"
 
 // Playback-orchestration operations, extracted from main.cpp's inline lambdas.
-// Owns the four GUI-level wrappers around GuiPlayback's mechanism: stop on
-// gesture, restore the visible playhead at end-of-play, toggle play/stop, and
-// apply a new speed. AppState, Viewport, GuiPlatform, and GuiAudio are
-// captured directly. GuiPlayback stays a pure mechanism class — these
-// operations live one layer up.
+// Owns the GUI-level wrappers around GuiPlayback's mechanism: the one stop body
+// (both stop edges and every gesture stop), the modal-open stop that names it,
+// toggle play/stop, the audition launch, the keep-alive reseek, follow mode, and
+// the speed set. AppState, Viewport and GuiAudio are captured directly.
+// GuiPlayback stays a pure mechanism class — these operations live one layer up.
+// (No GuiPlatform& member. The only direct platform reach this cluster ever had
+// was restore_playhead_to_lsp's top-strip invalidate, deleted with that function
+// 2026-07-30; every damage this cluster emits now goes through Viewport.)
 struct GuiPlaybackLifecycle {
     AppState&         app;
     const GuiAudio&   audio;
-    GuiPlatform&      gui;
     GuiPlayback&      playback;
     Viewport&         viewport;
 
     GuiPlaybackLifecycle(AppState&         app_,
                          const GuiAudio&   audio_,
-                         GuiPlatform&      gui_,
                          GuiPlayback&      playback_,
                          Viewport&         viewport_)
         : app(app_),
           audio(audio_),
-          gui(gui_),
           playback(playback_),
           viewport(viewport_) {}
 
@@ -36,7 +35,10 @@ struct GuiPlaybackLifecycle {
     // class plus a pointer here; no site re-enumerates the commands.
     //   * COLLAPSE-TO-POINT COMMANDS STOP: a command whose act collapses the
     //     selection to its point form takes the playhead with it, so it stops —
-    //     both position nudges (their prologue's collapse IS the reason they stop)
+    //     both position nudges (the collapse to point form IS the reason they
+    //     stop; each pays it at its own first write — the shared prologue's
+    //     collapse arm for a 2+ press, each twin past its wall clamp for a
+    //     singleton)
     //     and `c`. The S/T switch `t` stops on its own standing ruling, the audio
     //     domain flipping under the running session.
     //   * GROUP-PRESERVING VALUE STEPS DO NOT STOP: the bare Up/Down tempo cent
@@ -89,14 +91,15 @@ struct GuiPlaybackLifecycle {
     // calling stop_playback_if_playing directly.
     void stop_playback_for_modal_open();
 
-    // End scanner motion: deactivate the scanner and damage its last-painted
-    // column. Two callers, one path by rule — Space's stop edge and the tick's
-    // natural-end branch — because a stopped scanner is deactivated IMMEDIATELY
-    // and no non-playing scanner-validity window exists (contract at the scanner
-    // block in app_state.h). Since 2026-07-29 the two edges are not merely one path
-    // but one ACT: the natural-end branch's own follow-scroll tail is deleted, so
-    // neither stop touches the viewport and both leave it where playback left it.
-    void restore_playhead_to_lsp();
+    // (restore_playhead_to_lsp is GONE, architect 2026-07-30 — do not
+    // reintroduce it. It named a snap-back that had stopped existing: a stopped
+    // scanner is deactivated IMMEDIATELY, its value fields stale by contract, so
+    // nothing was ever restored, and the 2026-07-29 deletion of the natural-end
+    // follow-scroll tail left it a strict subset of stop_playback_if_playing plus
+    // one dead top-strip invalidate — dead because the scanner paints no
+    // top-strip pixel and a stop moves no cursor. Its two callers, Space's stop
+    // edge and the tick's natural-end branch, now call the gesture stop, so the
+    // product has ONE stop body.)
     // launch_offset shifts the SCANNER's launch position (and the play() launch
     // bound) forward in the active paint domain WITHOUT moving the resting
     // cursor, so stop just deactivates the scanner and the cursor is unmoved. Non-zero

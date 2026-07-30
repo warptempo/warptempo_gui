@@ -39,14 +39,18 @@
 // cleanly rather than double-converting — the tool is not idempotent by
 // re-parsing but is safe against re-running.
 //
-// The two conversion helpers are shared with the rest of the tree, never
-// duplicated: parse_timestamp / is_valid_timestamp_format live in
-// src/time_format.h, format_authored_frame in src/parser/frame_format.h.
+// THE TIMESTAMP PARSE HELPERS ARE TOOL-LOCAL (architect 2026-07-30), joining
+// this file's other local mirrors (the zoom-2 pixel scale below): they had no
+// caller anywhere in src/, and holding them in the shared src/time_format.h
+// pulled <regex> into fifteen product translation units, all four frozen
+// directories among them, for a legacy read path only this tool has. The shared
+// header keeps what the product actually uses — format_timestamp, the
+// display-only WRITE direction. format_authored_frame is still shared, from
+// src/parser/frame_format.h; it is the live serialization the product writes too.
 //
 // Ad hoc compile (from tools/):
 //     g++ -std=c++23 -O2 -o migrate_sidecar_to_frames migrate_sidecar_to_frames.cpp
 
-#include "../src/time_format.h"
 #include "../src/parser/frame_format.h"
 
 #include <cerrno>
@@ -54,6 +58,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <regex>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -84,6 +89,22 @@ constexpr size_t kTimestampLen = 9;
 // truth); at 44.1 kHz this is a 55.125-frame grid (sample_rate * 1.25 / 1000
 // frames per pixel).
 constexpr double kMarkerSnapMsPerPx = 1.25;   // GUI zoom level 2
+
+// Validate "MM:SS.mmm" (minutes and seconds 00-59, three-digit milliseconds).
+// TOOL-LOCAL: the legacy sidecar grammar is this tool's business alone (see the
+// head comment) — the product has no timestamp read path at all.
+bool is_valid_timestamp_format(const std::string& s) {
+    static const std::regex re("^([0-5][0-9]):([0-5][0-9])\\.[0-9]{3}$");
+    return std::regex_match(s, re);
+}
+
+// Parse "MM:SS.mmm" to seconds. Caller validates format first (the one caller,
+// convert_time_field below, does). Tool-local for the same reason.
+double parse_timestamp(const std::string& s) {
+    const int min    = std::stoi(s.substr(0, 2));
+    const double sec = std::stod(s.substr(3));
+    return min * 60.0 + sec;
+}
 
 // A time-field offset is a single token — sign, one or more digits, a dot, and
 // exactly three digits — matching [+-][0-9]+[.][0-9]{3} in full. It follows the

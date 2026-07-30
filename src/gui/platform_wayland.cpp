@@ -119,21 +119,15 @@ bool append_coalesced_rect(std::vector<Rect>& rects, const Rect& nr) {
     return true;
 }
 
-// Open an anonymous, sealable, in-memory file for the wl_shm pool. memfd
-// is preferred (Linux ≥ 3.17). Falls back to shm_open + immediate unlink
-// for portability hygiene.
+// Open an anonymous, in-memory file for the wl_shm pool. memfd IS the path
+// (Linux >= 3.17; the target is current Arch). The pre-3.17 shm_open + unlink
+// fallback is DELETED (architect 2026-07-30): it was unreachable on any kernel
+// this program runs on, and on a genuine memfd_create failure it bought nothing
+// — the failure is rare and LOUD (recreate_shm_pool prints the errno and leaves
+// the pool unmapped, so nothing is silently wrong and the user relaunches),
+// which is exactly the class of fault that gets no recovery code.
 int open_shm_fd(size_t size) {
-    int fd = -1;
-#ifdef MFD_CLOEXEC
-    fd = memfd_create("warptempo_gui-shm", MFD_CLOEXEC);
-#endif
-    if (fd < 0) {
-        char name[64];
-        std::snprintf(name, sizeof(name), "/warptempo_gui-shm-%d-%ld",
-                      getpid(), (long)time(nullptr));
-        fd = shm_open(name, O_RDWR | O_CREAT | O_EXCL, 0600);
-        if (fd >= 0) shm_unlink(name);
-    }
+    int fd = memfd_create("warptempo_gui-shm", MFD_CLOEXEC);
     if (fd < 0) return -1;
     if (ftruncate(fd, static_cast<off_t>(size)) < 0) {
         close(fd);
@@ -475,17 +469,23 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     wl_display_roundtrip(wl_display_);
     wl_display_roundtrip(wl_display_);
 
-    if (!wl_compositor_ || !wl_shm_ || !xdg_wm_base_) {
+    // THE REQUIRED GLOBALS. zxdg_decoration_manager_v1 JOINED THEM 2026-07-30
+    // (architect): it was the one protocol treated as a third optional, though
+    // the ruled OPTIONAL list names exactly two (pointer-constraints and
+    // relative-pointer, whose absence has a defined degraded behavior — see the
+    // pointer-capture warning below). labwc always advertises the decoration
+    // manager, so its absence is a broken environment, not a degraded one, and
+    // the program's answer to a broken environment is to fail at startup rather
+    // than run undecorated.
+    if (!wl_compositor_ || !wl_shm_ || !xdg_wm_base_ ||
+        !xdg_decoration_manager_) {
         std::fprintf(stderr,
                      "warptempo_gui: required wayland globals missing "
-                     "(wl_compositor=%p wl_shm=%p xdg_wm_base=%p)\n",
-                     (void*)wl_compositor_, (void*)wl_shm_, (void*)xdg_wm_base_);
+                     "(wl_compositor=%p wl_shm=%p xdg_wm_base=%p "
+                     "zxdg_decoration_manager_v1=%p)\n",
+                     (void*)wl_compositor_, (void*)wl_shm_, (void*)xdg_wm_base_,
+                     (void*)xdg_decoration_manager_);
         return false;
-    }
-    if (!xdg_decoration_manager_) {
-        std::fprintf(stderr,
-                     "warptempo_gui: zxdg_decoration_manager_v1 not advertised; "
-                     "window will appear without server-side decorations\n");
     }
     if (!wl_output_) {
         std::fprintf(stderr,
@@ -527,13 +527,13 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     xdg_toplevel_set_min_size(xdg_toplevel_,
                               kMinWindowWidthPx, kMinWindowHeightPx);
 
-    if (xdg_decoration_manager_) {
-        xdg_toplevel_decoration_ = zxdg_decoration_manager_v1_get_toplevel_decoration(
-            xdg_decoration_manager_, xdg_toplevel_);
-        zxdg_toplevel_decoration_v1_set_mode(
-            xdg_toplevel_decoration_,
-            ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
-    }
+    // Unconditional: the decoration manager is a REQUIRED global (the gate
+    // above returns false without it), so there is no undecorated arm.
+    xdg_toplevel_decoration_ = zxdg_decoration_manager_v1_get_toplevel_decoration(
+        xdg_decoration_manager_, xdg_toplevel_);
+    zxdg_toplevel_decoration_v1_set_mode(
+        xdg_toplevel_decoration_,
+        ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
 
     recreate_shm_pool(width_, height_);
 

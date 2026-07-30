@@ -400,9 +400,8 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
 // literal, grammar-exact owner fields so that freezing a pass (tempo
 // nudge, Ctrl+N) is lossless.
 int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index,
-                                bool* inherited_from_ref, int* owner_index) {
+                                bool* inherited_from_ref) {
     if (inherited_from_ref) *inherited_from_ref = false;
-    if (owner_index) *owner_index = -1;
     for (int i = index - 1; i >= 0; --i) {
         const WarpMarker& m = markers[i];
         if (!m.label_ref.empty()) {
@@ -412,10 +411,7 @@ int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int inde
             }
             continue;
         }
-        if (!m.tempo_inherits && !m.disabled) {
-            if (owner_index) *owner_index = i;
-            return m.tempo_cents;
-        }
+        if (!m.tempo_inherits && !m.disabled) return m.tempo_cents;
     }
     // Reachable: a leading pass with no owner before it resolves to this
     // fallback on every surface — the hover popup, and the render (where

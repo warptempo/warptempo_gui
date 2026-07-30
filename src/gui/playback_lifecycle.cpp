@@ -1,8 +1,6 @@
 #include "playback_lifecycle.h"
 
-#include <algorithm>
 #include <cstdint>
-#include <cstdio>
 
 // Gesture-stop: called by any handler that will move the
 // cursor (keys, button press, undo/redo, tab switch) — and, since 2026-07-30, by
@@ -44,37 +42,6 @@ void GuiPlaybackLifecycle::stop_playback_for_modal_open() {
     stop_playback_if_playing();
 }
 
-// End scanner motion. Used by Space to stop and by natural end-of-playback
-// (the tick's end-of-audio branch), which is why the two paths are the SAME
-// path: a stopped scanner deactivates immediately, and there is no non-playing
-// window in which its value fields stay valid. SINCE 2026-07-29 THAT IS THE WHOLE
-// OF BOTH EDGES (architect, "the simplest symmetry"): the natural-end branch used
-// to add a follow-scroll tail of its own, and it is deleted, so this call is
-// literally all either stop does and the viewport is left exactly where playback
-// left it in both. Nothing here touches the viewport — deliberately. The cursor
-// never moved during playback (the predictor only writes the scanner), so the only
-// work here is to deactivate the scanner; once inactive its value fields are stale
-// by contract, so nothing is snapped back. It also clears
-// follow_overridden_for_session, which is why the deleted tail's guard on that flag
-// was dead: this call had already reset it one line earlier. Damage the whole
-// waveform area so the scanner and cursor both repaint cleanly — on natural end
-// that erases the line from wherever the predictor last drew it, a few pixels
-// short of the exclusive end bound.
-void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
-    // FULL WAVEFORM-AREA DAMAGE, the same widening its sibling stop edge took
-    // (architect 2026-07-30): the playheads' pixels are PLATE-registered and
-    // this class sees no GuiPaintHandler, so the narrow live-basis column pair
-    // this replaces could leave the last scanner line standing through an async
-    // publish window. Rule and per-site shape table at playhead_pixel_x
-    // (app_state.h).
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
-    const GuiRect ts = top_strip_area(app);
-    gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
-    app.playhead_scanner_active = false;
-    app.follow_overridden_for_session = false;
-}
-
 // Space-bar: start/stop playback. Playback runs from the cursor to
 // trim_end (or total_frames if no e= marker). Pressing space with the
 // cursor at or past trim-end is a silent no-op. THE CURSOR IS THE START ONLY
@@ -96,8 +63,17 @@ void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
 // check that must run before the sum exists — see below).
 void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     if (playback.is_playing()) {
-        playback.stop();
-        restore_playhead_to_lsp();
+        // ONE STOP BODY (architect 2026-07-30): this edge used to hand-spell
+        // playback.stop() + restore_playhead_to_lsp() while fifteen other sites
+        // called the gesture stop. That second body's only surplus work was a
+        // full-width TOP-STRIP invalidate, and it was dead here — the scanner
+        // paints a waveform-area line and no top-strip pixel at all
+        // (render_playhead's triangle is the CURSOR's, draw_triangle=false for
+        // the scanner), and a stop moves no cursor. So the two collapsed onto
+        // this one call, which takes the same QUIESCENCE FENCE through its own
+        // playback.stop() and then deactivates the scanner and damages the
+        // waveform + timestamp areas.
+        stop_playback_if_playing();
         return;
     }
     // Defensive: clear any stale override from an unhandled stop path so

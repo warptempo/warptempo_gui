@@ -6,8 +6,11 @@
 #     cmake -B build-tools -S tools
 #     cmake --build build-tools
 #
-# It has no dependencies beyond the two in-tree headers it reuses
-# (src/time_format.h, src/parser/frame_format.h).
+# It has no dependencies beyond the one in-tree header it reuses
+# (src/parser/frame_format.h — the live authored-frame serialization). The
+# legacy MM:SS.mmm PARSE helpers are tool-local as of 2026-07-30 (rationale at
+# the head of migrate_sidecar_to_frames.cpp), which is what keeps <regex> out of
+# every product translation unit.
 cmake_minimum_required(VERSION 3.10)
 project(warptempo_tools CXX)
 

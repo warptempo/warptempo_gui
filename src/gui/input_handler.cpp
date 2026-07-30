@@ -68,12 +68,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // '\x1b' so they participate in the same vector<char> match as letter
     // responses.
     // EVERY response — letters, Delete, Escape alike — matches BARE ONLY
-    // (architect 2026-07-28): no ctrl, no alt, and no shift. Requiring !shift is
-    // what makes the prompt CASE-SENSITIVE, because the platform boundary
-    // case-folds letters and delivers the unshifted GuiKey with mods.shift set,
-    // so `Y` is not an answer to a `[y]es`. This is also what stops Ctrl+S from
-    // picking `[s]ave` in the close prompt, Alt+Y from applying a confirmed
-    // paste, and Ctrl+O from acknowledging the render-environment prompt.
+    // (architect 2026-07-28): no ctrl, no alt, and no shift. That is what stops
+    // Ctrl+S from picking `[s]ave` in the close prompt, Alt+Y from applying a
+    // confirmed paste, and Ctrl+O from acknowledging the render-environment
+    // prompt.
+    // CASE-SENSITIVITY IS THE CODEPOINT'S JOB, NOT !shift's (architect 2026-07-30):
+    // the platform case-folds letter keysyms, so the GuiKey says `y` for every way
+    // of typing a Y, and the old `!shift` spelling let CAPSLOCK deliver a
+    // visually-uppercase Y that still answered `[y]es` — the exact outcome the
+    // case-sensitivity was there to forbid. `mods.codepoint` is the true character
+    // under the live keyboard state (xkb_state_key_get_utf32 at the platform
+    // boundary, shift AND lock applied), so the letter arm reads THAT: a capital Y
+    // never matches a lowercase response key, however it was produced. The bare-only
+    // gate stays as the modifier rule it always was, and the Delete / Escape
+    // responses keep matching on the GuiKey (they carry no case and no codepoint
+    // worth reading).
     if (app.prompt.active) {
         // PASTE_CONFIRM only: Ctrl+Q abandons the pending paste (the real
         // cancel, not a synthesized Esc) and then runs the normal close
@@ -87,8 +96,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
         char k = 0;
         if (!ctrl && !shift && !alt) {
-            if (key >= GuiKeys::A && key <= GuiKeys::Z) {
-                k = static_cast<char>('a' + (key - GuiKeys::A));
+            if (mods.codepoint >= 'a' && mods.codepoint <= 'z') {
+                k = static_cast<char>(mods.codepoint);
             } else if (key == GuiKeys::Delete) {
                 k = '\x7f';
             } else if (key == GuiKeys::Escape) {

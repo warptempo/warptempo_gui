@@ -145,6 +145,14 @@ private:
     friend struct WaylandListeners;
 
     // -- Wayland globals (bound during init()) --
+    // THE PROTOCOL CLASSES, stated here once (init() enforces them): the four
+    // below through xdg_decoration_manager_ are REQUIRED — a missing one is a
+    // startup failure. zxdg_decoration_manager_v1 joined that class 2026-07-30
+    // (architect): labwc always advertises it, so its absence is a broken
+    // environment rather than a degraded one, and running undecorated was not a
+    // behavior anybody wanted. wl_output_ is best-effort (absence falls back to a
+    // 60 Hz tick). The ruled OPTIONAL list is exactly TWO, and both live in the
+    // pointer-capture block below.
     struct wl_display*    wl_display_     = nullptr;
     struct wl_registry*   wl_registry_    = nullptr;
     struct wl_compositor* wl_compositor_  = nullptr;
@@ -263,8 +271,11 @@ private:
     bool mod_super_ = false;
 
     // -- Pointer capture (pointer-constraints + relative-pointer) --
-    // Both managers are OPTIONAL: null when the compositor does not advertise
-    // them, and every capture entry point then degrades to a silent no-op.
+    // THE WHOLE OF THE RULED OPTIONAL LIST, both members, nothing else: null when
+    // the compositor does not advertise them, and every capture entry point then
+    // degrades to a silent no-op (strip drags run on clamped absolute motion,
+    // announced by one stderr line at init). Any other protocol is required or
+    // best-effort — see the globals block above.
     // relative_pointer_ is created once alongside wl_pointer_ and destroyed
     // with it; its motion events are consumed only while a capture is active.
     // locked_pointer_ is non-null only for the duration of a captured gesture.

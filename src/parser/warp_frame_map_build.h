@@ -73,9 +73,10 @@ struct MarkerEffective {
     // left the field written by three sites here and read by
     // nobody, so it is DELETED — architect 2026-07-29, an explicit surgical freeze
     // approval. `from_ref` beside it STAYS: the GUI's normalization-red set reads it
-    // (warp_frame_map_view.cpp). resolve_inherited_tempo keeps its defaulted
-    // `owner_index` out-parameter, which no caller passes today — a capability, not
-    // a residue, and removing it was outside the approval's surgical scope.)
+    // (warp_frame_map_view.cpp). resolve_inherited_tempo's matching `owner_index`
+    // out-parameter, which outlived the field as an unused capability, is deleted
+    // too — architect 2026-07-30, a second explicit surgical approval covering
+    // exactly that surface.)
 };
 
 // Returns the built warp frame map on success, or std::unexpected carrying
@@ -252,16 +253,16 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
 // (marker_effective / compute_hover_popup_text) both call it, so the popup
 // display always matches the tempo the engine resolves.
 //
-// When `owner_index` is non-null it receives the index (in `markers`) of the
-// owner the walk terminated on, or -1 if the walk hit a surviving enabled ref
-// or ran off the front with no owner. NO CALLER PASSES IT TODAY: its one consumer
-// was MarkerEffective::owner_idx, deleted 2026-07-29 with the tempo drag's coupling
-// guard, so the parameter rests as an unused capability. from_ref and owner_index
-// are independent: a ref-terminated walk sets from_ref true and leaves owner_index
-// -1.
+// (No `owner_index` out-parameter. It reported the index of the owner the walk
+// terminated on, for MarkerEffective::owner_idx — deleted 2026-07-29 with the
+// tempo drag's forward-label coupling guard — after which no caller passed it and
+// no reader existed anywhere in the tree. It is DELETED: architect 2026-07-30, an
+// explicit surgical freeze approval finishing the one the field's own deletion was
+// scoped short of. `inherited_from_ref` beside it STAYS: the resolver prints its
+// normalization line from that signal, and the GUI's normalization-red set reads
+// it; display callers pass nothing.)
 int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index,
-                                bool* inherited_from_ref = nullptr,
-                                int* owner_index = nullptr);
+                                bool* inherited_from_ref = nullptr);
 std::optional<double> resolve_inherited_tempo_scale(
     const std::vector<WarpMarker>& markers, int index,
     bool* inherited_from_ref = nullptr);

@@ -77,8 +77,9 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // do, so the call stays refusal-shaped.
     // It does not touch the cursor — that is the Space-launch position and was
     // never moved during playback — so the leaving tab's snapshot below captures
-    // it exactly, as it did under the hand-spelled stop this replaces
-    // (playback.stop() + restore_playhead_to_lsp()). Its damage is fully
+    // it exactly, as it did under the hand-spelled pair this replaced (and which
+    // the two stop edges themselves collapsed onto this same call in 2026-07-30's
+    // one-stop-body ruling). Its damage is fully
     // redundant here either way: the kick_waveform_sync at the tail invalidates
     // the window from y=0 through the waveform's bottom, top strip included,
     // which is a superset of the stop's own full waveform-area invalidate.
@@ -128,8 +129,9 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // ViewState.
     app.trim                = target.trim;
     clamp_viewport_start(app, audio);
-    // COINCIDENCE AUTO-SELECT, the tab-entry chokepoint (one of three; the rule
-    // and the formula live at auto_select_marker_at_playhead, input_pointer.cpp).
+    // COINCIDENCE AUTO-SELECT, the tab-entry chokepoint (the rule, the formula and
+    // the authoritative call-site inventory live at auto_select_marker_at_playhead,
+    // input_pointer.cpp / input_handler.h).
     // PLACED HERE by domain validity: after the playhead, trim, viewport and zoom
     // of the entering tab are all live, so the scan's land-formula conversion
     // reads the ENTERING tab's state. Its single-select damage is mid-flight
@@ -171,8 +173,9 @@ void GuiActiveViews::toggle_active_markers_view() {
     // and the settings editor's active_markers_view key, which refuses an
     // unchanged value before dispatching) reach it only for a real flip.
     //
-    // COINCIDENCE AUTO-SELECT, the column-entry chokepoint (one of three; the rule
-    // and the formula live at auto_select_marker_at_playhead, input_pointer.cpp):
+    // COINCIDENCE AUTO-SELECT, the column-entry chokepoint (the rule, the formula
+    // and the authoritative call-site inventory live at
+    // auto_select_marker_at_playhead, input_pointer.cpp / input_handler.h):
     // the newly-active column is scanned against THIS tab's playhead, so flipping
     // onto a column that has a marker exactly under the cursor arrives with that
     // marker selected — the lane re-entered by coincidence rather than by memory.

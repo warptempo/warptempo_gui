@@ -297,12 +297,14 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 // order and SINGLE-SELECTS the first marker whose land value is EXACTLY the
 // resting playhead. Definition in input_pointer.cpp, beside the land whose
 // formula it reuses; that comment states the rule, the exactness, and the
-// first-in-store tie-break. THREE CALL SITES, each stating only its own class and
-// pointing there: the source load's tail (file_loader.cpp), the `p` column entry
-// (toggle_active_markers_view) and the Ctrl+Tab tab entry
-// (switch_active_tab_view_to), both in active_views.cpp. No match leaves the
-// selection exactly as the caller left it — every caller clears first, so that
-// means empty.
+// first-in-store tie-break. FOUR CALL SITES (re-derived 2026-07-30 by grep), each
+// stating only its own class and pointing there: the source load's tail
+// (file_loader.cpp), the `p` column entry (toggle_active_markers_view) and the
+// Ctrl+Tab tab entry (switch_active_tab_view_to), both in active_views.cpp, and
+// the `'` render-entry ADOPT's tail (adopt_render_entry, input_key_dispatch.cpp —
+// joined 2026-07-30 because the adopt is specified 1:1 with a source load, and the
+// load has always run this). No match leaves the selection exactly as the caller
+// left it — every caller clears first, so that means empty.
 void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
                                     Selection& selection, Viewport& viewport);
 

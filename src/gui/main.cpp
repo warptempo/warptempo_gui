@@ -649,7 +649,7 @@ int main(int argc, char** argv) {
     // active_views — reached by their callsites as direct method calls.
 
     Viewport viewport(app, audio, gui, playback);
-    GuiPlaybackLifecycle playback_lifecycle(app, audio, gui, playback, viewport);
+    GuiPlaybackLifecycle playback_lifecycle(app, audio, playback, viewport);
     Selection selection(app, audio, viewport);
     GuiAsyncRenderer async_renderer;
     if (!async_renderer.init()) {
@@ -1154,24 +1154,27 @@ int main(int argc, char** argv) {
         // last drew it — a few pixels short of the exclusive end bound, the
         // accepted delta.
         // A NATURAL END IS EXACTLY A SPACE STOP (architect 2026-07-29, "the
-        // simplest symmetry"), and these TWO CALLS IN THIS ORDER are what make that
-        // literally true — they are `toggle_playback`'s stop edge verbatim. The
+        // simplest symmetry"), and since 2026-07-30 that is literally ONE CALL: the
+        // hand-spelled pair this branch and Space's stop edge both carried
+        // collapsed onto stop_playback_if_playing, the product's one stop body. The
         // follow-scroll tail that used to run here — `if (follow_mode &&
         // !follow_overridden_for_session) follow_scroll_if_needed();` — is DELETED,
         // and the two asymmetries flagged against it (its override guard was dead,
-        // restore_playhead_to_lsp having just cleared that flag; and it could scroll
-        // the viewport BACK to the restored playhead, which the Space stop never
-        // does) die WITH the arm rather than being fixed inside it.
+        // the stop having just cleared that flag; and it could scroll the viewport
+        // BACK to the restored playhead, which the Space stop never does) die WITH
+        // the arm rather than being fixed inside it.
         //
-        // THE stop() IS NOT REDUNDANT, AND IT IS NOT ABOUT THE FLAG (converted
-        // 2026-07-29): `playing` is already false here — the
-        // JACK process callback published it (release store) at the natural end —
-        // but `GuiPlayback::stop()` is the QUIESCENCE FENCE, not a flag write. The
-        // callback that published false has NOT necessarily retired: the fence waits
-        // for `process_cycles` to advance by two, which is what proves a full
-        // callback ran start-to-finish afterward and orders all of its buffer reads
-        // before anything the main thread mutates next. `rebind_buffer` REQUIRES
-        // that fence by contract (playback.cpp). Without this call the tick cleared
+        // THE FENCE-BEFORE-FLAG-CLEAR ORDERING SURVIVES THE COLLAPSE, and it is the
+        // whole reason this branch calls anything at all: `playing` is already false
+        // here — the JACK process callback published it (release store) at the
+        // natural end — but `GuiPlayback::stop()` is the QUIESCENCE FENCE, not a flag
+        // write, and the helper takes it FIRST and only then clears
+        // `playhead_scanner_active`, exactly as the pair did. The callback that
+        // published false has NOT necessarily retired: the fence waits for
+        // `process_cycles` to advance by two, which is what proves a full callback
+        // ran start-to-finish afterward and orders all of its buffer reads before
+        // anything the main thread mutates next. `rebind_buffer` REQUIRES that fence
+        // by contract (playback.cpp). Without it the tick cleared
         // `playhead_scanner_active` while the fence was still untaken, and that left
         // exactly one reachable bypass: a post-natural-end S/T switch, whose
         // `stop_playback_if_playing` early-returns once BOTH flags are false, after
@@ -1183,10 +1186,12 @@ int main(int argc, char** argv) {
         // periods, once per playback session, which is precisely what Space's stop
         // edge has always paid. stop() is idempotent on an already-flag-stopped
         // session — it re-stores the same false and then just waits.
-        if (app.playhead_scanner_active) {
-            playback.stop();
-            playback_lifecycle.restore_playhead_to_lsp();
-        }
+        //
+        // NO OUTER `if (app.playhead_scanner_active)` IS NEEDED: reaching this line
+        // means the early return above did not fire and `ma_playing` is false, so the
+        // scanner flag is true — and that is bit-for-bit the helper's own entry guard
+        // (`!is_playing() && !scanner_active`), which now carries it.
+        playback_lifecycle.stop_playback_if_playing();
     });
 
     gui.set_on_pre_paint([&]() {

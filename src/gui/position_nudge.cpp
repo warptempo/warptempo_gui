@@ -26,18 +26,6 @@ PositionNudgePrologue position_nudge_prologue(
     GestureKind kind, bool synthesized_repeat, int store_size) {
     PositionNudgePrologue r;
     if (app.loading || audio.total_frames() <= 0) return r;
-    // THE NUDGE STOPS BECAUSE ITS PROLOGUE COLLAPSES TO POINT FORM — the
-    // collapse-to-point class of the keyboard stop rule (architect 2026-07-30,
-    // stated at stop_playback_if_playing's declaration, playback_lifecycle.h). The
-    // press seats the playhead on the focus and then steps it, which is exactly the
-    // act that cannot rest under a running audition.
-    // RECORDED DEVIATION FROM THE RULE'S REFUSAL-GATING: the stop sits at the head
-    // of this prologue rather than past the geometry and wall refusals, so a press
-    // refused at its wall still stops. It stays here because the commit tail's
-    // playhead follow requires a stopped session either way and one hoisted call is
-    // simpler than threading a stop past BOTH twins' wall regimes; the cost of the
-    // refused case is one re-press of Space.
-    playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.empty()) return r;
     if (app.last_selected_marker < 0) return r;
     // Undo-coalescing decision, and its PLACEMENT IS LOAD-BEARING rather than
@@ -70,6 +58,16 @@ PositionNudgePrologue position_nudge_prologue(
     // (clear_region_on_membership_replace), and the tail's unconditional clear
     // takes anything else resting.
     if (app.selected_markers.size() >= 2) {
+        // THE COLLAPSE ARM'S STOP — the collapse-to-point class of the keyboard
+        // stop rule (architect 2026-07-30, stated at stop_playback_if_playing's
+        // declaration, playback_lifecycle.h), placed by that rule's refusal
+        // gating: a REAL COLLAPSE is about to happen (the membership replace is a
+        // write and the land moves the cursor), so the stop is owed HERE, past
+        // every refusal above and immediately ahead of the first write. A
+        // singleton press collapses nothing and stops nothing here — its own stop
+        // sits in each twin, past the post-clamp identity check. The stop must
+        // precede the land, which commits a new cursor position.
+        playback_lifecycle.stop_playback_if_playing();
         selection.collapse_to_focused();
         land_playhead_on_marker(app, audio, viewport, focused);
     }

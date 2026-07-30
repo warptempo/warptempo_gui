@@ -78,16 +78,39 @@ struct GuiTargetRender;
 // holds by the PRODUCERS' OWN FORM, not by a distributed enforcement protocol —
 // that protocol was deleted (architect 2026-07-29) and is not coming back.
 //
+// THE WALL POLICY, ONE RULE FOR THE WHOLE PRODUCT (architect 2026-07-30) — stated
+// ONCE here, every arm carrying only its own class plus a pointer back:
+//   * A SINGLETON STEP CLAMPS ONTO ITS WALL. A position nudge moves one painted
+//     column = samples-per-pixel FRAMES, so a press starting near an edge can
+//     overshoot mid-step; clamping is what makes the song edges EXACTLY REACHABLE
+//     by keyboard, in both columns. Both position twins clamp (the warp twin
+//     always did; the phase twin joined with this ruling, replacing a whole-press
+//     refusal). The SINGLETON TEMPO STEP's constructive clamp
+//     (adjust_tempo_cents, warpmarkers_ops.cpp) already conformed and is
+//     untouched — it steps whole CENTS on the cent grid, so clamping and refusing
+//     coincide there and the value simply stops at the bracket edge.
+//   * A GROUP PRESS REFUSES WHOLE. This is NOT a wall policy — it is GROUP
+//     RIGIDITY: clamping per member would pool members at the wall and deform
+//     their relative values, which is the same reason the deleted per-member
+//     group nudge refused the whole press. The one surviving group arm, the group
+//     tempo step (adjust_tempo_cents_group), keeps that whole-press refusal and
+//     its own group-rigidity justification at its site.
+// POST-CLAMP IDENTITY IS A SILENT NO-OP in both position twins: the clamped
+// target is compared against the current frame and an equal result writes
+// NOTHING — no undo push, no damage, no playback stop. That check is what makes
+// the keyboard stop rule's refusal gating (playback_lifecycle.h) EXACT for the
+// nudges, with no recorded deviation left.
+//
 // This file is the type-free flesh SHARED BY THE TWO POSITION NUDGE TWINS, all of
 // it singleton-scoped now: an identical guard prologue (which owns the collapse),
-// an identical pixel-column step, and an identical commit tail. Only the
-// WALL-REGIME MIDDLE differs by ruled doctrine ("one regime per column at its
-// home") — warp CLAMPS the step into the marker's wall headroom (identity
-// domain), phase REFUSES over the mapped domain (exact integer wall belt) — and
-// that middle stays in each twin VERBATIM. These three free functions collapse
-// only the type-free parts: no templates, no callbacks, no policy structs (the
-// naming-symmetry doctrine resists genericity — this is plain extraction of the
-// shared flesh).
+// an identical pixel-column step, and an identical commit tail. The WALL-REGIME
+// MIDDLE is now the SAME SHAPE in both twins under the policy above — a delta
+// clamped into the marker's own wall headroom, over warp's identity domain and
+// over phase's mapped domain alike — but it stays spelled out in each twin
+// VERBATIM, since each reads its own store and its own EOF wall. These three free
+// functions collapse only the type-free parts: no templates, no callbacks, no
+// policy structs (the naming-symmetry doctrine resists genericity — this is plain
+// extraction of the shared flesh).
 
 // Result of the shared guard prologue.
 struct PositionNudgePrologue {
@@ -98,30 +121,36 @@ struct PositionNudgePrologue {
 
 // The shared guard prologue of the two position nudges, and the site that makes
 // the gesture a FOCUS ACT. Order is IDENTICAL in both twins and preserved
-// exactly: (1) loading / empty-audio refusal;
-// (2) stop_playback_if_playing FIRST — the collapse-to-point class of the keyboard
-// stop rule (playback_lifecycle.h), the reason and the one deviation being recorded
-// at the call itself; (3)
+// exactly: (1) loading / empty-audio refusal; (2)
 // empty-selection refusal — unreachable from the dispatcher, which routes an
 // empty selection to the waveform-lane playhead step instead and never reaches
-// here, so this is the belt; (4) no-focus
-// refusal; (5) the undo-coalesce verdict, computed before the geometry refusals
+// here, so this is the belt; (3) no-focus
+// refusal; (4) the undo-coalesce verdict, computed before the geometry refusals
 // (coalesce_gesture keys off the press's own repeat bit, which
 // `synthesized_repeat` carries down from the on_key event that reached the
 // handler, and it just has to run before record_gesture stamps the kind in the
-// tail); (6) bad
-// sample-rate refusal; (7) non-positive samples-per-pixel refusal; (8) the
+// tail); (5) bad
+// sample-rate refusal; (6) non-positive samples-per-pixel refusal; (7) the
 // focused-index stale refusal — the ONLY index this gesture reads, so the old
 // belt over every selected index went with the group (nothing else is touched,
 // and the collapse below drops the rest of the membership anyway).
-// Then (9) THE COLLAPSE: a 2+ selection collapses to its focus and the playhead
+// Then (8) THE COLLAPSE: a 2+ selection collapses to its focus and the playhead
 // LANDS on that focus, the Ctrl+N shape (collapse + land at the CALLER of
 // Selection::collapse_to_focused, the convention that keeps the land at the site
 // which hands the marker lane a focus). The step below is therefore always the
 // SINGLETON op on `focused`, bit-for-bit what a singleton selection always got.
+// THE COLLAPSE ARM OWNS ITS OWN PLAYBACK STOP, immediately ahead of the collapse:
+// a real collapse is a write and the land moves the cursor, so the keyboard stop
+// rule (playback_lifecycle.h) demands the stop there — while a SINGLETON press
+// carries no collapse and stops in its TWIN instead, past the post-clamp identity
+// check and immediately ahead of the twin's first write. That placement is the
+// rule's refusal gating made exact: a press that writes nothing stops nothing, and
+// the only recorded deviation (an unconditional stop at this prologue's head) is
+// gone.
 // A press that then refuses at its wall keeps the collapse — the collapse is the
 // press's own committed act, not a prelude to the step (its damage is
-// collapse_to_focused's own, so a refused press repaints correctly).
+// collapse_to_focused's own, so a refused press repaints correctly), and the
+// stop it paid stands with it.
 // Every marker is nudgeable, including the one at time 0 — the parser resolver
 // normalizes the resulting arrangement at render/preview time, there is no
 // gesture pin.
@@ -198,7 +227,9 @@ int64_t stepped_anchor_frame(
 //     identity in warp's source home, a real map in phase's target home;
 //     committed_focused_frame is reorder-independent). move_playhead_to owns the
 //     clamp, invalidation, and keep-visible edge-align, writing the cursor field
-//     only (playback was stopped in the prologue).
+//     only (playback was stopped by the twin, past its wall clamp and ahead of
+//     its first write — and by the prologue's collapse arm before that on a 2+
+//     press; either way this tail always runs stopped).
 // (f) THE REGION: a position nudge is a POINT command (one flag standing in for
 //     the cursor) and CLEARS any resting span, unconditionally and blind to
 //     provenance — exactly like the marker click that selects that singleton (the

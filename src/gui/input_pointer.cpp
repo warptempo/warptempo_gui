@@ -274,7 +274,8 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //     selections died: it restores its tab's stored cursor VERBATIM, hands the
 //     lane nothing, and its only land is the auto-select's below;
 //   * THE COINCIDENCE AUTO-SELECT (auto_select_marker_at_playhead, this file) at
-//     its three entry chokepoints — the load, `p`, Ctrl+Tab. A provable NO-OP by
+//     its entry chokepoints (the inventory is at its declaration,
+//     input_handler.h). A provable NO-OP by
 //     construction (its selection predicate IS this function's equality test), and
 //     it is in the list because the adjacency is the rule, not because it moves
 //     anything;

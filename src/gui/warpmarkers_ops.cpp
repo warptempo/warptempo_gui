@@ -13,7 +13,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
-#include <cstdio>
 #include <limits>
 #include <string>
 #include <utility>
@@ -188,21 +187,30 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     if (app.selected_markers.empty()) return;
     const auto& mv = app.warpmarkers.markers();
 
-    // Validate the batch for stale indices only. Any marker is deletable:
-    // the parser resolver normalizes whatever arrangement remains at
-    // render/preview time (a missing frame-0 owner gets the silent 1.00
-    // seed; a dangling ref becomes a plain 1.00 owner with one stderr line
-    // per timestamp), so the GUI allows every state.
+    // THE STALE-INDEX BELT, ONE POLICY FOR EVERY VERB THAT ITERATES THE SELECTION
+    // (architect 2026-07-30): a stale member is SILENTLY SKIPPED and the rest of
+    // the batch proceeds — the shape the sibling verbs (both toggle_disabled arms,
+    // toggle_inherits, both tempo-step arms) already had. This is a belt against a
+    // sanitization invariant — the selection
+    // layer keeps its indices live, so nothing here is reachable today — and a
+    // belt reports nothing and refuses nothing; the delete arms used to print one
+    // stderr line and refuse the WHOLE batch, alone among the six. Any LIVE marker
+    // is deletable: the parser resolver normalizes whatever arrangement remains at
+    // render/preview time (a missing frame-0 owner gets the silent 1.00 seed; a
+    // dangling ref becomes a plain 1.00 owner with one stderr line per timestamp),
+    // so the GUI allows every state.
+    std::vector<int> live_idx;
+    live_idx.reserve(app.selected_markers.size());
     for (int idx : app.selected_markers) {
-        if (idx < 0 || idx >= static_cast<int>(mv.size())) {
-            std::fprintf(stderr,
-                "warptempo_gui: delete rejected: stale selection index\n");
-            return;
-        }
+        if (idx < 0 || idx >= static_cast<int>(mv.size())) continue;
+        live_idx.push_back(idx);
     }
+    // Nothing live to delete: no snapshot, no undo entry, no damage — the
+    // "only on real change" shape the sibling group verbs already have.
+    if (live_idx.empty()) return;
 
-    // All validations passed — capture the snapshot before mutating so the undo
-    // can restore the pre-delete state.
+    // Capture the snapshot before mutating so the undo can restore the pre-delete
+    // state.
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     // Capture the selected markers' active-domain positions BEFORE the store
     // mutation, so a multi-marker delete DROPS the selection down to the region
@@ -211,8 +219,8 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     // source home view (home-view binding), where source_frame_to_active_domain
     // is identity, so pre/post mapping agree regardless.
     std::vector<int64_t> del_positions;
-    del_positions.reserve(app.selected_markers.size());
-    for (int idx : app.selected_markers) {
+    del_positions.reserve(live_idx.size());
+    for (int idx : live_idx) {
         // Clamp the forward-map image into the live domain: source-view
         // identity means a legal marker clamps to itself here, so this is a
         // no-op — the spelling matches the target-domain drop captures
@@ -223,9 +231,10 @@ void GuiWarpMarkersOps::delete_selected_marker() {
             source_frame_to_active_domain(app, audio, mv[idx].time_frame),
             app, audio));
     }
-    // Delete in descending order so earlier indices stay valid.
-    for (auto it = app.selected_markers.rbegin();
-         it != app.selected_markers.rend(); ++it) {
+    // Delete in descending order so earlier indices stay valid (live_idx is
+    // ascending — app.selected_markers is an ordered set and the skip above
+    // preserves its order).
+    for (auto it = live_idx.rbegin(); it != live_idx.rend(); ++it) {
         app.warpmarkers.remove_marker(*it);
     }
     selection.clear_selection();
@@ -525,10 +534,15 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
             start_scale = m.tempo_scale;
         }
         // Constructive clamp into the authored-value bracket, the same
-        // convention font_size uses: the wheel walks to the bracket edge
-        // and stops there, rather than refusing. Exact integer compares at
-        // both edges; nothing here can overflow (stored cents are
-        // in-bracket, deltas are a handful of detents).
+        // convention font_size uses: the value walks to the bracket edge
+        // and stops there, rather than refusing. This SINGLETON arm already
+        // conformed to the unified wall policy (singleton steps clamp; the
+        // policy is stated once at the head of position_nudge.h) and is
+        // untouched by it — a cent step moves exactly one grid unit, so
+        // clamping and refusing coincide here and only the resting-at-the-edge
+        // press differs from a position nudge's near-wall overshoot. Exact
+        // integer compares at both edges; nothing here can overflow (stored
+        // cents are in-bracket, deltas are a handful of detents).
         const int64_t cents = std::clamp(start_cents + delta_cents,
                                          kTempoMinCents, kTempoMaxCents);
         if (!m.tempo_inherits && cents == m.tempo_cents) continue;
@@ -600,9 +614,16 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
 // Group tempo step (architect 2026-07-23): 2+ selected markers each step their
 // OWN tempo by one cent, ALL-OR-NOTHING. An ineligible member is "the wall being
 // hit before it starts to move" — if ANY selected marker is in the WALL SET the
-// whole press refuses silently (no partial stepping, no per-member pinning), the
-// phase-reset nudge's all-or-nothing wall convention carried into the cents
-// domain. The wall set (VIEW-INDEPENDENT, max strict): a pass (tempo_inherits),
+// whole press refuses silently (no partial stepping, no per-member pinning). THIS
+// IS GROUP RIGIDITY, NOT A WALL POLICY (the unified wall policy, architect
+// 2026-07-30, is stated once at the head of position_nudge.h and rules that
+// SINGLETON steps clamp): per-member clamping would pool the walled members at the
+// bracket edge while the rest kept stepping, deforming the group's relative
+// values, which is precisely what a group edit must not do — the same reason the
+// deleted per-member group nudge refused the whole press. (The comment here used
+// to cite the phase-reset nudge's whole-press refusal as its precedent; that
+// gesture CLAMPS as of the unified policy, so the justification stands on group
+// rigidity alone.) The wall set (VIEW-INDEPENDENT, max strict): a pass (tempo_inherits),
 // a ref (non-empty label_ref) — the singleton step's payload predicates — a
 // DISABLED marker (its tempo is render-filtered, so a write would be inaudible),
 // a coincident-collapsed marker (warp_red_flag_set_cached — the resolver
@@ -743,16 +764,17 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
 // The wall regime over the identity map, one shape: the marker steps one PAINTED
 // column (stepped_anchor_frame — the guarantee and its numeric rationale live in
 // the comment there) and its delta is CLAMPED into its own wall headroom, walls
-// exactly reachable. Crossing a neighbor is legal and goes through the
+// exactly reachable — the unified wall policy, stated once at the head of
+// position_nudge.h. Crossing a neighbor is legal and goes through the
 // reorder-and-remap below; the render boundary collapses an exact-frame tie to one
 // 1.00 owner.
 void GuiWarpMarkersOps::nudge_selected_markers(
         int direction, bool synthesized_repeat) {
-    // Shared guard prologue: loading / empty-audio refusal, playback stop first,
-    // empty/no-focus refusals, the coalesce verdict, the geometry refusals, the
-    // focused-index belt, and THE COLLAPSE + LAND that makes this a focus act (the
-    // playhead-follows / lead-in rationale lives at the declaration). Refuses
-    // silently, navigation-class.
+    // Shared guard prologue: loading / empty-audio refusal, empty/no-focus
+    // refusals, the coalesce verdict, the geometry refusals, the focused-index
+    // belt, and THE COLLAPSE + LAND that makes this a focus act — which carries
+    // the collapse's own playback stop (the playhead-follows / lead-in rationale
+    // lives at the declaration). Refuses silently, navigation-class.
     const PositionNudgePrologue pro = position_nudge_prologue(
         app, audio, playback_lifecycle, selection, viewport, undo,
         GestureKind::WarpNudge, synthesized_repeat,
@@ -780,12 +802,13 @@ void GuiWarpMarkersOps::nudge_selected_markers(
     // difference.
     int64_t D = stepped_anchor_frame(app, audio, map, orig_f, direction) - orig_f;
 
-    // (2) WALLS WIN, in the marker's own wall headroom [0 - orig_f,
+    // (2) WALLS WIN BY CLAMPING, in the marker's own wall headroom [0 - orig_f,
     // warp_wall - orig_f] (integer arithmetic, non-empty because every stored
-    // marker rests in [0, warp_wall]). Clamping rather than refusing is this
-    // column's ruled regime — the warp wall is exactly reachable by a press that
-    // would overshoot it (the phase twin refuses instead, one regime per column at
-    // its home).
+    // marker rests in [0, warp_wall]). The wall is exactly reachable by a press
+    // that would overshoot it. This is the UNIFIED WALL POLICY (architect
+    // 2026-07-30 — singleton steps clamp, group presses refuse whole), stated once
+    // at the head of position_nudge.h; the phase twin took this same shape with
+    // that ruling, so the two middles no longer differ.
     if (D < -orig_f)             D = -orig_f;
     if (D > warp_wall - orig_f)  D = warp_wall - orig_f;
 
@@ -797,7 +820,18 @@ void GuiWarpMarkersOps::nudge_selected_markers(
     int64_t committed_f = orig_f + D;
     if (committed_f < 0)         committed_f = 0;
     if (committed_f > warp_wall) committed_f = warp_wall;
+    // POST-CLAMP IDENTITY IS A SILENT NO-OP: a press already resting on its wall
+    // (or one whose column step resolved to the same frame) writes NOTHING — no
+    // undo push, no damage, no playback stop. This is what makes the keyboard stop
+    // rule's refusal gating exact for the nudges.
     if (committed_f == orig_f) return;   // saturated / zero-step press
+    // THE SINGLETON PRESS'S STOP, past every refusal and immediately ahead of the
+    // first write (the keyboard stop rule's refusal gating, at
+    // stop_playback_if_playing's declaration in playback_lifecycle.h): a position
+    // nudge collapses the selection to point form and takes the playhead with it.
+    // On a 2+ press the prologue's collapse arm already stopped; this second call
+    // early-returns on the stopped session, so the double call is free.
+    playback_lifecycle.stop_playback_if_playing();
 
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     // Identity hint (the diff matcher is identity-blind for a column-snapped move

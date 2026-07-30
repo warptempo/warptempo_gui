@@ -1039,8 +1039,10 @@ struct AppState {
     //     centers on the scanner during playback, so it never leaves the chase.
     //   * the upper-half PLACEMENT PRESS (input_pointer.cpp), which moves the
     //     cursor and reseeks.
-    // CLEARED at FIVE sites (grep-derived, all in playback_lifecycle.cpp): the two
-    // STOP edges, stop_playback_if_playing and restore_playhead_to_lsp; the two
+    // CLEARED at FOUR sites (re-derived 2026-07-30 by grepping every write, all in
+    // playback_lifecycle.cpp): the ONE stop body, stop_playback_if_playing (both
+    // stop edges — Space's and the tick's natural end — collapsed onto it, retiring
+    // the second clearer that used to sit in restore_playhead_to_lsp); the two
     // LAUNCH edges' defensive clears, toggle_playback's play arm and
     // scrub_launch_at, which run before their own validation so even a refused
     // launch leaves it clear; and an explicit `f` re-enable while playing
@@ -1056,11 +1058,12 @@ struct AppState {
     // them. A STOPPED SCANNER IS DEACTIVATED IMMEDIATELY: there is NO
     // non-playing window in which these value fields are valid, and the rule
     // has no exceptions. Natural end-of-playback takes the same deactivation
-    // every manual stop takes — the tick sees the atomic playing flag drop and
-    // calls restore_playhead_to_lsp, which damages the scanner's last-painted
-    // column and clears the flag, so the line simply vanishes from wherever the
-    // predictor last drew it (a few pixels short of the exclusive end bound —
-    // the accepted delta of not holding the endpoint).
+    // every manual stop takes — literally the same call since 2026-07-30: the tick
+    // sees the atomic playing flag drop and calls stop_playback_if_playing, which
+    // takes the quiescence fence, clears the flag and damages the waveform area, so
+    // the line simply vanishes from wherever the predictor last drew it (a few
+    // pixels short of the exclusive end bound — the accepted delta of not holding
+    // the endpoint).
     // The launch seed (launch_playback_from, the shared body under Space's
     // toggle and the scrub launch) and the per-paint predictor advance are the
     // only writers of the value fields. There is no resting coincidence with the
