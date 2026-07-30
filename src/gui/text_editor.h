@@ -162,7 +162,7 @@ enum class KeyAction {
     PasteRequested,
 };
 
-// The editor's key-classification owner (audit C6): the single truth of which
+// The editor's key-classification owner: the single truth of which
 // keys the editor consumes, and how. It is side-effect-free (no State), because
 // handle_key's MEMBERSHIP — which branch a key enters — depends only on key+mods;
 // State decides EFFECTS within a branch (e.g. Ctrl+C returns CopyRequested vs

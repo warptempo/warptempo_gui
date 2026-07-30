@@ -205,8 +205,8 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     // can restore the pre-delete state.
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     // Capture the selected markers' active-domain positions BEFORE the store
-    // mutation, so a multi-marker delete DEMOTES down to the region spanning
-    // them (a DROP former of the selection<->highlight coupling — the delete
+    // mutation, so a multi-marker delete DROPS the selection down to the region
+    // spanning them (a DROP former of the selection<->highlight coupling — the delete
     // drops the selection and forms the region; architect 2026-07-23). Warp deletes run in the
     // source home view (home-view binding), where source_frame_to_active_domain
     // is identity, so pre/post mapping agree regardless.
@@ -215,7 +215,7 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     for (int idx : app.selected_markers) {
         // Clamp the forward-map image into the live domain: source-view
         // identity means a legal marker clamps to itself here, so this is a
-        // no-op — the spelling matches the target-domain demote captures
+        // no-op — the spelling matches the target-domain drop captures
         // (input_pointer / phaseresetmarkers_ops, where an EOF item's image can
         // round one past the wall) so all three region-endpoint captures read
         // uniformly.
@@ -229,14 +229,16 @@ void GuiWarpMarkersOps::delete_selected_marker() {
         app.warpmarkers.remove_marker(*it);
     }
     selection.clear_selection();
-    // Demote a multi-marker delete to the spanning region — session scratch,
-    // OUTSIDE undo, so undoing the delete restores the markers while the region
-    // stays (the standing region-outside-undo rule). A single deleted marker is
+    // Drop the deleted selection down to the spanning region — session scratch,
+    // OUTSIDE undo: the delete creates this Free span outside the history entry, and
+    // any later undo/redo of it CLEARS any resting region wholesale before deriving
+    // the restored selection's own current visual form (the region does not
+    // survive undo — it is replaced, not preserved). A single deleted marker is
     // a point, not a span, so it forms no region (the sliver rule's spirit; the
     // 2-marker + positive-span gate needs no sub-pixel column compare). The
     // waveform damage below covers the region paint. ORDER: the deselect above
     // runs FIRST, so its membership clear cannot reach the span formed here —
-    // and could not touch it anyway, the demotion being FREE and the membership
+    // and could not touch it anyway, the drop being FREE and the membership
     // clear SelectionExtent-only.
     if (del_positions.size() >= 2) {
         const auto [lo, hi] = std::minmax_element(del_positions.begin(),
@@ -245,7 +247,7 @@ void GuiWarpMarkersOps::delete_selected_marker() {
             app.region.active     = true;
             app.region.a_frame    = *lo;
             app.region.b_frame    = *hi;
-            // The delete demotion drops the deleted markers, so this region is
+            // The delete drop-former drops the deleted markers, so this region is
             // FREE — tempo gestures skip it.
             app.region.provenance = RegionProvenance::Free;
         }
@@ -260,9 +262,11 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     target_render.trigger();
 }
 
-// Ctrl+N: convert each selected marker's tempo source. Cache-free —
-// the only stored state on a pass marker is `tempo_inherits = true`
-// plus inert defaults. Three input cases per marker:
+// Ctrl+N: convert the FOCUSED marker's tempo source — a 2+ selection
+// COLLAPSES to its focus first (the body below), the group-verb doctrine's own
+// example of COUPLED members, so this never acts on more than one marker.
+// Cache-free — the only stored state on a pass marker is `tempo_inherits =
+// true` plus inert defaults. THREE INPUT CASES for that one marker:
 //   - owning   → pass: inert defaults; label_def preserved; iter bracket
 //                cleared (the pass is iter-ineligible).
 //   - pass     → owning: freeze the resolved tempo/scale at this moment;
@@ -405,12 +409,15 @@ void GuiWarpMarkersOps::toggle_disabled() {
     target_render.trigger();
 }
 
-// Nudge every selected marker's tempo along the 0.01 grid. Label refs are
-// silently skipped (no tempo to nudge — convert via Ctrl+N first). Pass
-// markers resolve walk-backward to get their starting tempo/scale, then
-// freeze to owning at the nudged value. Owning markers nudge in place.
-// `delta_cents` is an integer cent count (one per keypress or wheel
-// detent); its sign is the direction of travel. The landed cents are
+// Nudge the selected marker(s)' tempo along the 0.01 grid. SINGLETON ARM
+// ONLY: a label ref is silently skipped (no tempo to nudge — convert via
+// Ctrl+N first); pass markers resolve walk-backward to get their starting
+// tempo/scale, then freeze to owning at the nudged value; owning markers
+// nudge in place. THE GROUP ARM (adjust_tempo_cents_group, below) is
+// all-or-nothing instead: a label ref anywhere in the selection WALLS the
+// whole press, refusing before any marker changes. `delta_cents` is an
+// integer cent count (one per keypress — bare Up/Down are the only two
+// callers); its sign is the direction of travel. The landed cents are
 // clamped into the tempo bracket [kTempoMinCents, kTempoMaxCents]
 // (value_format.h). Only dirties / invalidates on real change.
 //
@@ -431,7 +438,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         return;
     }
     // THE COALESCE VERDICT IS ASKED HERE, at this arm's entry and AHEAD OF EVERY
-    // REFUSAL BELOW (moved up 2026-07-29, codex final round MEDIUM 2): the call has a
+    // REFUSAL BELOW (moved up 2026-07-29): the call has a
     // side effect now — a PHYSICAL press INVALIDATES the coalescing stamp inside it
     // (the derivation is at Undo::coalesce_gesture) — and an invalidate that sits
     // behind a refusal is not an invalidate on arrival. `merge` is consumed far
@@ -610,7 +617,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
 void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
                                                  bool synthesized_repeat) {
     // THE COALESCE VERDICT IS ASKED FIRST, ahead of the wall scan below (moved up
-    // 2026-07-29, codex final round MEDIUM 2): the call INVALIDATES the coalescing
+    // 2026-07-29): the call INVALIDATES the coalescing
     // stamp when the arriving press is PHYSICAL (the derivation is at
     // Undo::coalesce_gesture), and an invalidate behind a refusal is not an
     // invalidate on arrival — a walled press must still end the previous burst.

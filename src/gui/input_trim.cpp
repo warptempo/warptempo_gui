@@ -310,7 +310,7 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
     // coupling), and THOSE publishes are the setter's, so they carry the deselect,
     // which then rests (nothing restores it — pointer gestures have no cancel).
     // A press that never moves commits no bound change
-    // (its motionless release runs the R4.5 click sync instead).
+    // (its motionless release runs the same click sync instead).
 }
 
 void GuiInputHandler::update_trim_drag(int mouse_x) {
@@ -352,6 +352,10 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         // the displayed map (monotone, so the active-domain clamp matches the
         // source-domain wall). This binds both bounds, so neither slides past
         // EOF under the rigid delta. Crossing stays free (no partner wall).
+        // begin_wall_active and end_wall_active compute the identical
+        // expression — shape-residue of a retired per-bound wall split, now
+        // that the ceiling is shared; a future pass may collapse them to one
+        // local (comments-only wave, so left as two here).
         const int64_t begin_wall_active = static_cast<int64_t>(std::nearbyint(
             map_source_to_target(
                 static_cast<double>(audio.total_frames() - 1), dmap)));
@@ -381,7 +385,7 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
             // repaints; the playhead stays where it is.
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
-            // R7 live-sync: the region highlight tracks the moving window (both
+            // Live-sync: the region highlight tracks the moving window (both
             // bounds stay set through the drag; the coupling helper normalizes
             // crossed bounds). THE DRAG IS A SETTER, so its live sync DESELECTS
             // (architect 2026-07-29 — rule at sync_region_to_trim_window's
@@ -458,7 +462,7 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         // repaints; the playhead stays where it is.
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
-        // R7 live-sync: the region highlight tracks the moving window (both
+        // Live-sync: the region highlight tracks the moving window (both
         // bounds stay set through the single-bound drag; crossing is normalized
         // in the coupling helper). THE DRAG IS A SETTER, so its live sync
         // DESELECTS (the pair arm's twin above; rule at
@@ -535,7 +539,7 @@ void GuiInputHandler::commit_trim_drag() {
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         target_render.trigger();
-        // R7 release-sync: a surviving pair re-syncs the REGION against the
+        // Release-sync: a surviving pair re-syncs the REGION against the
         // snapped bounds; a dissolved pair (crossed commit) clears the region (the
         // window is gone) — the coupling helper owns both outcomes. THE RELEASE IS
         // THE SETTER'S LAST PUBLISH, so it deselects like the motion events did
@@ -639,7 +643,7 @@ void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
         // playhead stays painted beside it. That is deliberate: the
         // highlight<->cursor exclusivity (paint_playheads) is scoped to the
         // REGION highlight, and a half-authored trim has no window to highlight
-        // (the R4 no-window rule).
+        // (the no-window rule: a lone or absent bound clears the region).
         app.region = RegionState{};
     }
     // DAMAGE, CALIBRATED FOR A HIGH-FREQUENCY PATH. This is the one full-band
@@ -652,8 +656,9 @@ void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
     // bound, an activation, a clear, a provenance flip — damages exactly as
     // before. The second condition this gate carried (a pending never-span-less
     // COLLAPSE, which changed which flag held the focus cue and so needed damage
-    // even under a bit-identical region) went with the collapse itself: ruling 6
-    // retired the enforcement, and in any case the collapse was UNREACHABLE from
+    // even under a bit-identical region) went with the collapse itself — the
+    // never-span-less enforcement retired (architect 2026-07-29), and in any
+    // case the collapse was UNREACHABLE from
     // here — see the derivation below.
     const bool region_unchanged =
         app.region.active     == was_active &&
@@ -670,8 +675,8 @@ void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
     // rests ONLY beside an EMPTY selection (every setter deselects as it publishes;
     // the rule and the setter list are at this function's declaration). So the one
     // route that can reach the clear arrives with nothing selected, and the SETTER
-    // callers deselect before they publish anyway. Ruling 6 deleted the collapse as
-    // enforcement; this derivation is why deleting it changed no behavior at all,
+    // callers deselect before they publish anyway. The never-span-less collapse's
+    // deletion (architect 2026-07-29) is why removing it changed no behavior at all,
     // and the exempted producer's departure only strengthens it.
 }
 
@@ -700,7 +705,7 @@ void GuiInputHandler::deselect_and_sync_trim_window_highlight() {
     sync_region_to_trim_window(app, audio, viewport);
 }
 
-// R4.6: set ONE trim bound at the clicked column — ADJUST-ONLY (architect
+// Set ONE trim bound at the clicked column — ADJUST-ONLY (architect
 // 2026-07-23): the click requires an EXISTING full pair and refuses silently
 // otherwise, matching the standing every-trim-pointer-gesture-requires-the-pair
 // convention. The clicks ADJUST a resting window, never create one from
@@ -771,7 +776,7 @@ void GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     deselect_and_sync_trim_window_highlight();
 }
 
-// Round 3 (architect 2026-07-23): the ctrl / ctrl+shift chip-row bound-set press
+// (architect 2026-07-23): the ctrl / ctrl+shift chip-row bound-set press
 // sets the bound at the click AND arms the single-bound trim drag on it, so
 // motion past the threshold drags it live (a motionless release rests the
 // click-set). NOTHING IS SNAPSHOTTED (2026-07-29): the pre-press pair, the

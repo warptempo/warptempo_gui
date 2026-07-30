@@ -99,7 +99,7 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
     const int n = static_cast<int>(mv.size());
 
     // Pass 1 — exact-frame collapse: warp_coincident_collapse_members
-    // (warp_frame_map_build.h, audit C11) OWNS the coincident-collapse rule —
+    // (warp_frame_map_build.h) OWNS the coincident-collapse rule —
     // the render resolver's stage 2 consults the same classifier, so the
     // render's collapse verdict and this red cue cannot drift. The GUI
     // consumes it here at press/paint time as a pure function of the

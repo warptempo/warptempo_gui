@@ -150,7 +150,7 @@ struct UndoEntry {
 // ONE writes TrimWindow, and ONE is the extent owner serving many gestures:
 //   * the plain waveform DRAG (paints it live, leaving the selection EMPTY
 //     throughout) — Free;
-//   * the waveform SHIFT+click region former / marker DEMOTE (playhead-to-click
+//   * the waveform SHIFT+click region former / marker DROP (playhead-to-click
 //     with nothing selected, else furthest-selected-marker-to-click, DROPPING
 //     the selection) — Free;
 //   * a multi-marker DELETE, either column (spans the DELETED positions, also a
@@ -226,7 +226,7 @@ struct RegionState {
     // route (Shift+X), which tests provenance == TrimWindow. SET in three
     // places — set_region_to_selection_extent -> SelectionExtent,
     // sync_region_to_trim_window's set arm -> TrimWindow, and every OTHER former
-    // (region drag, shift-click former/demote, delete demotions) -> Free.
+    // (region drag, shift-click drop-former, both delete drop-formers) -> Free.
     // NOTHING CONVERTS: provenance is written once, by the route that forms the
     // span, and is never downgraded in place — clear_region_on_membership_replace
     // clears a SelectionExtent region whole rather than downgrading it, and no
@@ -237,13 +237,13 @@ struct RegionState {
 };
 
 // A MEMBERSHIP REPLACE CLEARS THE EXTENT REGION (architect 2026-07-29,
-// superseding the 2026-07-23 demote-to-Free): SelectionExtent provenance is
+// superseding the 2026-07-23 drop-to-Free): SelectionExtent provenance is
 // valid only while the selection it was derived from persists, so EVERY site
 // that REPLACES the selection membership calls this — and what it does is CLEAR
 // the region outright, pixels and all. A span whose owner died does not linger:
 // the region is the playhead's SPAN form, so a highlight resting with no live
 // owner asserts a playhead that is not there, which is exactly the state the
-// point commands then have to fight (a demoted-but-visible extent left the
+// point commands then have to fight (a dropped-but-visible extent left the
 // playhead frozen under a stale span in live use). TrimWindow is
 // selection-independent — untouched; Free stays Free. NOT called on an index
 // REMAP (reorder_markers_by_time keeps the same markers at new indices, so the
@@ -350,7 +350,7 @@ struct DragState {
     // cursor playhead moves — move_playhead_to writes the cursor field only, so
     // a live scanner is left untouched; it stays the audio thread's to own.
     // (No `moved` latch and no `hit_marker`: both were group-era state with no
-    // reader left and were deleted 2026-07-29, codex final round LOW 1. The drag's
+    // reader left and were deleted 2026-07-29. The drag's
     // net-change test compares the COMMITTED frame against original_times[0], which
     // is the true "did anything move" question; the grabbed marker's identity is
     // dragging_markers[0], the only slot there is.)
@@ -487,7 +487,7 @@ struct UndoHistory {
 // plain upper-half waveform press (arm_region_drag_at — dissolves the resting
 // region at mouse-down, anchors at the CLICK column) and the SHIFT-exact former
 // (labwc 2026-07-24, arm_region_drag_preserving — PRESERVES the just-formed
-// region, anchors at the FAR endpoint = playhead / demote's furthest marker),
+// region, anchors at the FAR endpoint = playhead / the drop's furthest marker),
 // which share every motion and release path unchanged (the anchor semantic is
 // identical: a_frame = anchor_frame fixed, b_frame tracks the pointer). Alt/Ctrl
 // no-op earlier. A completed drag rests the
@@ -496,7 +496,7 @@ struct UndoHistory {
 // arm and never re-engages, so a jitter drag could otherwise rest a sliver,
 // which dissolves like a click instead (end_region_drag_min_size_check, at both
 // end points). The drag never touches the selection anywhere — the press's
-// deselect/demote was the committed act, and downward-only is structural (there
+// deselect/drop was the committed act, and downward-only is structural (there
 // is no selection write in the drag or at its ends). ESC DOES NOTHING AT ALL now
 // (architect 2026-07-29, superseding the same-day Esc-clears-the-region arm):
 // pointer gestures have no cancel, so Esc mid-drag is a consumed no-op and the
@@ -570,8 +570,8 @@ struct PendingMarkerDrag {
 // (Chebyshev from the press). A SUB-THRESHOLD PRESS-RELEASE IS THE RULED
 // PLAIN-CHIP CLICK, not a no-op — the "trim has no click action" contract died with
 // the lane-click model: the motionless release publishes the TrimWindow highlight
-// through the SETTER's route, which CLEARS THE SELECTION first (2026-07-29,
-// ruling 2), and the lost-button path performs the same act so one physical click
+// through the SETTER's route, which CLEARS THE SELECTION first (2026-07-29),
+// and the lost-button path performs the same act so one physical click
 // cannot rest two ways. What it commits is DISPLAY state only — no bound moves and
 // the trim store is untouched. Deferring begin_trim_drag to the crossing keeps
 // its anchor capture exact — nothing mutates the trim store between press and
@@ -750,7 +750,7 @@ enum class DoubleClickSurface { None, ZoomRow, Marker, EditorText, EmptyLane };
 //                 / whitespace) in the active text editor (target unused; both
 //                 axes' slack compared).
 //   EmptyLane  -> creates a marker at the clicked position on an EMPTY flag /
-//                 triangle lane spot (R6, architect 2026-07-23): the AUGMENTED
+//                 triangle lane spot (architect 2026-07-23): the AUGMENTED
 //                 drop, exactly what bare `s` performs (warp copy-previous /
 //                 phase reset N/2 lead-in), home-view and read-only gated
 //                 silently. PLAIN presses only — a modified press on the lane
@@ -1222,7 +1222,7 @@ struct AppState {
     // range interaction.
     // A cleared anchor does NOT silence the next shift-click:
     // select_range_from_anchor SEEDS the anchor by ADOPTING THE FOCUS when none
-    // is live (architect labwc round 2, 2026-07-23 — plain-click A then
+    // is live (architect 2026-07-23 — plain-click A then
     // shift+click B ranges A..B; only with nothing focused does the click anchor
     // on itself), and since every non-range mutator clears, that seed arm is the
     // ORDINARY first-shift-click path rather than a recovery one.
@@ -1512,7 +1512,7 @@ struct AppState {
     // Toggled by Ctrl+Tab; persisted to .settings. tab_a and tab_b
     // each hold an independent viewport/zoom/playhead/trim/read_only
     // tuple — VALUE-SHAPED ONLY, no selection and nothing else
-    // index-shaped (the selection is never parked, contortion ruling 1;
+    // index-shaped (the selection is never parked, architect 2026-07-29;
     // the rule is stated at ViewState) — but share the same
     // warpmarkers, phaseresetmarkers, and engine_settings.
     ViewState tab_a;

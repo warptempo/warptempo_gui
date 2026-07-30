@@ -457,7 +457,7 @@ constexpr double kRowGapPx = 0.0;
 constexpr int kMinWindowWidthPx  = 640;
 constexpr int kMinWindowHeightPx = 480;
 
-// Authored pixel geometry of a marker flag (architect spec), scaled by
+// Authored pixel geometry of a marker flag, scaled by
 // gui_font_scale(), rounded with std::nearbyint, floored to a sane minimum.
 // The flag is a RECTANGLE two pixels taller than wide (a slight upright
 // rectangle) that carries a tip-down TRIANGLE directly beneath it; the tip
@@ -1037,7 +1037,7 @@ void render_strip_anchor_stem(cairo_t* cr,
 // trim stems below are live too — GuiPaintHandler::paint_trim, below the
 // playheads; no stem is cached anywhere.)
 
-// The ONE trim bound-to-column geometry owner (audit C1). Every consumer of a
+// The ONE trim bound-to-column geometry owner. Every consumer of a
 // trim bound's pixel column funnels here: the two paint sites (render_trim_stems'
 // waveform stem, render_trim_flags' chips / strip stems / bridge gap) and the two
 // hit sites (hit_test_trim_chip's chip rects, route_trim_chip_press' bridge
@@ -1156,7 +1156,7 @@ TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
 double displayed_trim_ms(int64_t frame,
                          const std::vector<WarpFrameMapSegment>* map);
 
-// The ONE trim chip screen-rect owner (audit C1): the begin/end edge-anchoring
+// The ONE trim chip screen-rect owner: the begin/end edge-anchoring
 // rule lives here, consumed by both the painter (render_trim_flags) and the hit
 // test (hit_test_trim_chip). A trim bound is an EDGE, not a point: the begin
 // chip's LEFT edge sits ON the bound column (rect left = strip_x+col), the end

@@ -931,7 +931,7 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
     cairo_restore(cr);
 }
 
-// -- Trim bound geometry owners (audit C1) -------------------------------
+// -- Trim bound geometry owners -------------------------------------------
 // One column formula, one mapping helper, one chip rect, one bridge-gap owner.
 // See render.h for the full rationale (the UNIFIED displayed basis — both
 // painters and hit sites decide against the same committed viewport, the

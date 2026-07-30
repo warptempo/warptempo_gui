@@ -54,8 +54,8 @@ struct DestBlock {
 // 2026-07-23). Markers without a label name, and EFFECTIVELY-DISABLED labeled
 // markers, contribute no block: the copy filters effective-disabled selected
 // markers out of the clipboard, so this destination walk must filter them
-// identically or a disabled labeled marker opens a lockstep gap (codex
-// round-5 finding) — a destination section owned by a disabled marker then
+// identically or a disabled labeled marker opens a lockstep gap — a
+// destination section owned by a disabled marker then
 // receives no paste and keeps its resets, consistent with disabled markers
 // being excluded from eligibility. Only OWNERSHIP is filtered: a skipped
 // marker's TIME still bounds the previous block's extent (the extent stays
@@ -129,7 +129,7 @@ void PhaseResetPropagate::copy_from_selection() {
     // Section-based copy (architect 2026-07-23): each selected marker
     // contributes the block IT owns — from its time to the next store
     // marker's time, or to the song end for the store-final marker. The caller
-    // has verified the selected set is a CONTIGUOUS run (codex round-4): the
+    // has verified the selected set is a CONTIGUOUS run: the
     // paste walks every labeled destination block in strict lockstep, so a
     // disjoint clipboard would diverge at the first gap; contiguity is what
     // keeps the two label sequences aligned (the copy gate mirrors the `m`

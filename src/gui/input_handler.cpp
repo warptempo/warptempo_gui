@@ -241,8 +241,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //     if no key had been pressed;
     //   * RELEASE ENDS THE GESTURE AND WHAT STANDS STANDS — the release body
     //     commits: the proposed marker position, the live trim bounds, the region as
-    //     extended (the tempo drag's already-written cents left this list with the
-    //     gesture, contortion ruling 8);
+    //     extended (the tempo drag's already-written cents left this list when
+    //     the whole tempo drag was deleted);
     //   * BUTTON-LOST ENDS IT THE SAME WAY (the !primary_button_held arms in
     //     on_motion all route to the release bodies);
     //   * UNDO IS THE MITIGATION — a drag implies "I am ready to commit", and the
@@ -394,17 +394,23 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // THE WHOLE ESC STORY, stated here because this is where the selection/region
     // ESC LADDER used to be dispatched and the ladder is DELETED — rungs,
     // down-only doctrine and all (architect 2026-07-29). BARE ESC IS BOUND IN FOUR
-    // PLACES AND NOWHERE ELSE, each of them earlier in this function than this
-    // point, so reaching here means the press has nothing left to do:
-    //   (a) THE DRAG-MODAL GATE — mid-gesture Esc is a CONSUMED NO-OP (pointer
-    //       gestures have no cancel; the rule is stated at that gate above);
+    // PLACES AND NOWHERE ELSE (re-derived 2026-07-30 — the drag-modal gate above
+    // tests only Ctrl+Q, so Esc is UNBOUND there and falls through with every
+    // other key while a gesture is in flight; it is NOT one of the four), each of
+    // the four earlier in this function than this point, so reaching here means
+    // the press has nothing left to do:
+    //   (a) THE EDITOR TEXT-DRAG ESC HATCH — a bare-exact Escape ends an in-flight
+    //       text-selection drag (above); a SUB-PART of the editor class below,
+    //       since it can only fire while one of the four editors owns the
+    //       keyboard, and the same press then falls through to that editor's own
+    //       close/cancel;
     //   (b) THE EDITORS — all four, through route_modal_editor_key: Esc closes /
     //       cancels the edit (the editor blocks above, bit-for-bit unchanged);
     //   (c) THE PROMPTS — Esc activates the rightmost response (the prompt gate at
     //       the top of on_key, unchanged);
     //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
     // Everything else Esc used to do is gone: NO deselect, NO region collapse, NO
-    // demote of a span to Free, NO playhead land, NO drop-to-span. A 2+ selection
+    // drop of a span to Free, NO playhead land, NO drop-to-span. A 2+ selection
     // with its extent span, a singleton, a resting Free span from a drag — Esc
     // leaves every one of them exactly as it found them. Leaving the MARKER LANE is
     // no longer an Esc act either: it is any DESELECTING route (Home/End, a

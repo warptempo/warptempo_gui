@@ -76,7 +76,7 @@ struct GuiTargetRender;
 // its extent span (the clicks and `m` derive it, the paste and the restores define
 // it), which is why a SPANLESS 2+ selection has no producer at all: the property
 // holds by the PRODUCERS' OWN FORM, not by a distributed enforcement protocol —
-// that protocol was deleted (contortion ruling 6) and is not coming back.
+// that protocol was deleted (architect 2026-07-29) and is not coming back.
 //
 // This file is the type-free flesh SHARED BY THE TWO POSITION NUDGE TWINS, all of
 // it singleton-scoped now: an identical guard prologue (which owns the collapse),

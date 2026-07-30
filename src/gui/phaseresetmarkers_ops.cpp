@@ -111,8 +111,8 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     }
     std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
     // Capture the selected resets' active-domain positions BEFORE the store
-    // mutation, so a multi-marker delete DEMOTES down to the region spanning
-    // them (a DROP former of the selection<->highlight coupling — the delete
+    // mutation, so a multi-marker delete DROPS the selection down to the region
+    // spanning them (a DROP former of the selection<->highlight coupling — the delete
     // drops the selection and forms the region; architect 2026-07-23). Phase deletes run in the
     // target home view, whose map phase resets do not affect, so the pre/post
     // active-domain mapping is identical either way.
@@ -133,9 +133,12 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
         app.phaseresetmarkers.remove_marker(*it);
     }
     selection.clear_selection();
-    // Demote a multi-marker delete to the spanning region — session scratch,
-    // OUTSIDE undo (undoing the delete restores the markers while the region
-    // stays). A single deleted reset is a point, not a span, so it forms no
+    // Drop the deleted selection down to the spanning region — session scratch,
+    // OUTSIDE undo: the delete creates this Free span outside the history entry, and
+    // any later undo/redo of it CLEARS any resting region wholesale before deriving
+    // the restored selection's own current visual form (the region does not
+    // survive undo — it is replaced, not preserved). A single deleted reset is a
+    // point, not a span, so it forms no
     // region (the sliver rule's spirit; 2-marker + positive-span is the gate).
     // The waveform damage below covers the region paint. ORDER: the deselect
     // above runs FIRST, so its membership clear cannot reach the span formed
@@ -148,7 +151,7 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
             app.region.active     = true;
             app.region.a_frame    = *lo;
             app.region.b_frame    = *hi;
-            // The delete demotion drops the deleted markers, so this region is
+            // The delete drop-former drops the deleted markers, so this region is
             // FREE — tempo gestures skip it.
             app.region.provenance = RegionProvenance::Free;
         }

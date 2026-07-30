@@ -80,6 +80,11 @@ void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state,
 void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
                                std::vector<int> touched_snapshot,
                                std::vector<int> touched_live) {
+    // No affects_persistence parameter, unlike push_undo_warp above: a
+    // recorded asymmetry, not an omission — the field it would set
+    // (UndoEntry::affects_persistence, app_state.h) marks an entry inert for
+    // the ITERATION BRACKET, which is warp-only session state, so a
+    // phase-reset entry has nothing to mark.
     UndoEntry e;
     e.snapshot           = app.warpmarkers.markers();
     e.phase_reset_snapshot = std::move(pre_state);
@@ -121,8 +126,8 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
 }
 
 bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
-    // AN ELIGIBLE PHYSICAL PRESS INVALIDATES THE STAMP ON ARRIVAL (codex final
-    // round, MEDIUM 2, converted 2026-07-29) — this query's one side effect, and the
+    // AN ELIGIBLE PHYSICAL PRESS INVALIDATES THE STAMP ON ARRIVAL (converted
+    // 2026-07-29) — this query's one side effect, and the
     // reason it is no longer const. Every eligible route asks this question at its
     // ENTRY, before its own refusals run, so clearing the stamp here on a PHYSICAL
     // press makes "a synthesized repeat coalesces only with ITS OWN burst" airtight
@@ -278,6 +283,11 @@ void apply_post_restore_rules_impl(AppState& app,
         // The empty post-sanitize selection then takes the visual tail's
         // size == 0 arm in restore_history_entry: no land, no region, playhead
         // and viewport still (clear_selection's damage is paint-only).
+        // Same body as the NOTHING-TOUCHED empty-target_set arm below (this
+        // branch is reachable only when target_set is provably still empty
+        // here) — kept as its own arm rather than falling through so the
+        // removal case reads locally; a future edit to "touched set wins
+        // unconditionally" must update both arms.
         selection.clear_selection();
         return;
     } else {  // same count: identity-based row matching
@@ -320,10 +330,11 @@ void apply_post_restore_rules_impl(AppState& app,
         }
     }
 
-    // NOTHING TOUCHED => NOTHING SELECTED (codex final round, MEDIUM 1, converted
-    // 2026-07-29). This case must NOT fall through any more, and the reason is that
+    // NOTHING TOUCHED => NOTHING SELECTED (converted 2026-07-29). This case must
+    // NOT fall through any more, and the reason is that
     // the world changed under the old fall-through: it used to preserve "whatever
-    // the user had", which was a defensible thing to keep. Since contortion ruling 1
+    // the user had", which was a defensible thing to keep. Since the never-parked
+    // selection ruling (architect 2026-07-29)
     // the entry's TAB SWITCH (restore_history_entry runs it before the stores are
     // restored) ends in COINCIDENCE AUTO-SELECT, so what a fall-through preserves is
     // a MACHINE GUESS — the destination tab's stored cursor happening to stand on a
@@ -332,13 +343,16 @@ void apply_post_restore_rules_impl(AppState& app,
     // that changed no marker in this column. Emptying instead makes the standing
     // rule ("the restore's touched set wins over the tab-entry auto-select in every
     // reachable case") true with no exception, and it is not a SELECT — the same
-    // shape the 'S' arm uses. REACHABILITY, the codex sequence: `push_undo_both`
+    // shape the 'S' arm uses. REACHABILITY, the reachable sequence: `push_undo_both`
     // (notably the render-entry ADOPT, which records the current marker mode and the
     // dispatch tab while the entry may change only engine settings and/or the OTHER
     // column) leaves the active column's vector byte-identical, so undoing it from
     // the other tab auto-selects on arrival and the active-column diff then finds
     // nothing. The clear runs through the Selection mutator so the region, the shift
     // anchor and the subject-change damage are all handled by their owner.
+    // Same body as the removal arm above (it clears for the identical reason,
+    // reachably provable there rather than derived here) — cross-referenced,
+    // not merged, so each site reads without following the other.
     if (target_set.empty()) {
         selection.clear_selection();
         return;
@@ -552,7 +566,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // render covers the final geometry. The LAND/EXTENT block is gated off 'S', and
     // the 'S' gate is now SIMPLE: a settings-only restore selects nothing, writes no
     // region, and lands nothing — it CLEARS both the region and the selection
-    // (ruling 6, below), which is why the narrowing it briefly carried (a
+    // (below), which is why the narrowing it briefly carried (a
     // target-view re-land onto a surviving focus) is gone with the surviving focus
     // itself. It is
     // branches on the POST-sanitize live size, so a defensive edge takes the
@@ -576,12 +590,12 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // B-domain span under A — so it clears too. The REST of the 'S' gate stands
     // exactly: a settings restore still must not select and must not WRITE a
     // region, which is why only this one call sits above the gate and the whole
-    // extent/framing block stays inside it. The no-LAND half is EXCEPTIONLESS again
-    // (ruling 6): the target-view re-land it briefly allowed — onto a selection
+    // extent/framing block stays inside it. The no-LAND half is EXCEPTIONLESS again:
+    // the target-view re-land it briefly allowed — onto a selection
     // surviving the restore — died with the selection clear directly below, which
     // leaves no focus to land on.
     clear_region_highlight(app, viewport);
-    // THE 'S' ARM CLEARS THE SELECTION TOO (architect 2026-07-29, ruling 6): a
+    // THE 'S' ARM CLEARS THE SELECTION TOO (architect 2026-07-29): a
     // settings-only restore rewrites engine_settings and rebuilds the map under
     // every marker INDEX and IMAGE, so it tears down BOTH playhead forms and leaves
     // the resting cursor as the only one. It is the SYMMETRIC twin of the engine-key
@@ -678,8 +692,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             // the split-playhead's single-mask case), not a clear — matching the
             // multi-select clicks' land-then-extent bit-for-bit.
             set_region_to_selection_extent(app, viewport.audio, viewport);
-            // OFFSCREEN handling (architect 2026-07-25 post-labwc; codex round:
-            // column-decided): PREFER a plain scroll at the current zoom, ZOOM only
+            // OFFSCREEN handling (architect 2026-07-25 post-labwc, decided on
+            // PAINTED COLUMNS): PREFER a plain scroll at the current zoom, ZOOM only
             // when the group cannot fit. The fit contract is PAINTED COLUMNS, not a
             // sample span — an endpoint's flag paints at its CENTER column and the
             // painter does NOT edge-clamp that center, so the capacity is the
@@ -799,7 +813,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // NO 'S' RE-LAND, and none is possible: the map-change re-land that sat here
     // (target view only, onto a surviving selection's focus, because the restored
     // map moved that focus's image out from under the cursor) died with the 'S'
-    // selection clear above — architect 2026-07-29, ruling 6. An 'S' restore leaves
+    // selection clear above — architect 2026-07-29. An 'S' restore leaves
     // no lane and no focus, so the resting cursor is the whole playhead and keeps
     // its own value. The engine-key settings COMMIT's twin re-land died the same way
     // (settings_editor.cpp). Every other op_mode still lands through the visual tail

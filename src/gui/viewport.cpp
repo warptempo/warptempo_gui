@@ -198,7 +198,7 @@ void Viewport::clamp_display_state_to_live_domain() {
     // S/T clear). CLEAR, not clamp, by design — the domain shifted under the
     // highlight,
     // so a clamped span would misrepresent what the user selected; this is the
-    // S/T-switch precedent (codex P2 fix). A mid-drag shrink-then-grow that loses
+    // S/T-switch precedent. A mid-drag shrink-then-grow that loses
     // the region is accepted — the region is session scratch.
     if (app.region.active) {
         const int64_t total = live_total_frames(app, audio);

@@ -177,10 +177,10 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // nothing to be admitted FOR. WHAT BARE Esc IS ADMITTED FOR, since the
     // selection/region ladder was deleted 2026-07-29 (it was the navigation-class
     // rung this entry originally served): the RENDER / BATCH CANCEL, which mutates
-    // nothing persistent and must work in a locked tab, plus the editor and prompt
-    // closes and the mid-gesture consumed no-op — all four of Esc's surviving
-    // bindings are read-only-safe, and dropping Esc at this gate would break the
-    // render cancel. The whole Esc story is at its dispatch point in on_key.
+    // nothing persistent and must work in a locked tab — read-only-safe, like
+    // every one of Esc's surviving bindings (the authoritative enumeration is at
+    // its dispatch point in on_key, input_handler.cpp; no count belongs here), and
+    // dropping Esc at this gate would break the render cancel.
     const bool is_esc =
         (key == GuiKeys::Escape && !ctrl && !shift && !alt);
     const bool is_ctrl_q =
@@ -260,7 +260,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         // repeat — the keyboard-modal gate drops it before anything could act on
         // it anyway. An ALT-carrying motion press is in that last bucket and so
         // does not repeat, which falls out of the classifier rather than being
-        // spelled here. This consumes the one editor-key owner (audit C6):
+        // spelled here. This consumes the one editor-key owner:
         // Tab/IsoLeftTab classify as NotEditorKey (handle_key never consumes Tab
         // — the autocompletes are intercepted at the gate before handle_key) and
         // so do not repeat here, matching the prior explicit one-shot exclusion.
@@ -317,7 +317,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // open), and Ctrl+Q (close routing) — nothing else: Space-as-playback, zoom,
 // mode toggles, tab switches, undo/redo, the marker / trim chords, and the
 // Ctrl+Alt render chords all drop here. "The editor
-// itself" CONSUMES the one editor-key owner (audit C6):
+// itself" CONSUMES the one editor-key owner:
 // text_editor::classify_key — the gate admits exactly the non-NotEditorKey
 // set (BARE Escape/Enter, CTRL-EXACT A/C/X/V, the cursor/editing keys Left /
 // Right / Home / End / BackSpace / Delete under ctrl/shift but never alt, and
@@ -409,8 +409,9 @@ bool GuiInputHandler::cancel_archival_session() {
 }
 
 // Esc-cancel handlers for in-flight operations. See the declaration in
-// input_handler.h for routing order. This is ONE of the four surviving bare-Esc
-// bindings (the editors, the prompts, the drag-modal swallow, and this) — it
+// input_handler.h for routing order. This is one of the surviving bare-Esc
+// bindings (the full enumeration is at its dispatch point in on_key,
+// input_handler.cpp — no count belongs here) — it
 // SURVIVES the 2026-07-29 Esc unbinding as its own binding class, render-work
 // cancel rather than a ladder rung — ARCHITECT-CONFIRMED 2026-07-29 ("esc should
 // cancel render"), no longer a planner interpretation. The whole Esc story is stated at the on_key site where the deleted
@@ -1199,7 +1200,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // into the session clipboard. Section-based (architect 2026-07-23):
     // each selected marker contributes the block it owns (marker to next
     // store marker, the store-final marker's block to the song end). The set
-    // must be a CONTIGUOUS run (codex round-4): the paste walks every labeled
+    // must be a CONTIGUOUS run: the paste walks every labeled
     // destination block from the anchor and matches the clipboard in strict
     // lockstep, so a disjoint clipboard (labeled blocks A, C with a labeled B
     // unselected in the gap) would diverge at the first gap and never paste C.

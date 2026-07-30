@@ -43,7 +43,11 @@ struct Selection {
     // geometry gates (area size, samples-per-pixel, sub-pixel forward width,
     // offscreen refusal) are deliberately NOT here: they are not selection
     // state. Frame, not index: a reorder remap preserves frames, so a remap is
-    // subject-stable.
+    // subject-stable. ONE DELIBERATE DIVERGENCE from the band during a live
+    // phase-reset drag: the band reads the drag-proposed time
+    // (paint_handler.cpp), while this mirror reads the STORE time — the
+    // drag's damage is a full-area invalidate, so the mirror's readers never
+    // need the proposed value mid-drag.
     // THREE READERS. Two are the damage owners just below: the overlay lives in
     // the WAVEFORM but the selection mutators damage only the top strip /
     // timestamp (+ the playhead column), so a change of subject needs waveform

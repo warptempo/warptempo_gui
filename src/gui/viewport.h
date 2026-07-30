@@ -140,7 +140,7 @@ struct Viewport {
         // Repair the resting playhead and any live region against the (possibly
         // shrunk) live domain, AFTER the zoom/viewport reclamp so it reads the
         // final geometry and its damage is covered by the rebuild's full-width
-        // damage below (codex P2 fix). Idempotent — a no-op when nothing left
+        // damage below. Idempotent — a no-op when nothing left
         // the domain — so the callers that already clamp their own playhead pay
         // only two compares. The tick backstop mirrors this call.
         clamp_display_state_to_live_domain();

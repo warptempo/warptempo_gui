@@ -27,7 +27,7 @@
 // (2026-07-29), together with the frozen parser's own — an explicit surgical freeze
 // approval from the architect. Its sole caller had been the group tempo drag's
 // monotone bisection, which evaluated hypothetical never-live candidate maps, and
-// that whole gesture is gone (contortion ruling 8), so no hypothetical build exists
+// that whole gesture is gone (deleted with the tempo drag), so no hypothetical build exists
 // to want silence. The parser-side inventory (FIVE resolve call sites, all of which
 // had always passed the loud default) is recorded at that function's declaration.
 std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(

@@ -193,9 +193,9 @@ struct WaveformCache {
 // GuiPaintHandler::paint_trim, below the playheads. This flag cache is the one
 // remaining item cache.)
 //
-// Synchronous main-thread rebuild fingerprinted
-// against wf_cache.fp_* (displayed-viewport inputs) plus marker-store
-// generations, drag-overlay hash, selection hash, and marker-view. The cache
+// Synchronous main-thread rebuild; the fingerprint's full field list is the
+// ONE authoritative copy at maybe_rebuild_flag_cache's declaration below — do
+// not restate it here. The cache
 // holds the fixed-width marker/phase-reset flag shapes ONLY (trim's b/e chips
 // left it for the live trim pass); the paint pass is a pure blit. The flag
 // editor's text renders
@@ -310,10 +310,16 @@ struct GuiPaintHandler {
     // Dirty-detect for the flag-rect cache. Called from on_tick
     // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the
-    // waveform's completion swap. Reads displayed-viewport inputs from
-    // wf_cache.fp_*; reads marker-driven inputs (warpmarker / phase_reset
-    // generations, drag-overlay hash, selection hash, marker-view,
-    // editor targets) live from app state. Rebuilds are
+    // waveform's completion swap. THE ONE AUTHORITATIVE FINGERPRINT FIELD LIST
+    // (12 fields, re-derived 2026-07-30 — other sites state only a pointer
+    // here): fp_vp_start, fp_vp_end, fp_area_w, fp_area_h, fp_target,
+    // fp_warp_frame_map_hash (all five displayed-viewport inputs, read from
+    // wf_cache.fp_*), plus fp_warp_generation, fp_phase_reset_generation,
+    // fp_drag_overlay_hash, fp_selection_hash, fp_active_markers_view (the
+    // marker-driven inputs, read live from app state), and
+    // fp_measured_font_px (the measured font grid the flag shapes are laid
+    // out against — the flag editor's text is NOT one of these fields; it
+    // renders live in the marker-text lane, not in this cache). Rebuilds are
     // synchronous (sub-millisecond at observed flag counts). This rebuild
     // is the SOLE item-basis STAGE site (the retired trim-stem cache's
     // rebuild was the only other one) — see the staging comment at its

@@ -1016,7 +1016,7 @@ int main(int argc, char** argv) {
                 const double  old_zoom = app.zoom_level;
                 const int64_t old_vp   = app.viewport_start_sample;
                 clamp_viewport_start(app, audio);
-                // Mirror kick_waveform_sync's repair (codex P2 fix): a total
+                // Mirror kick_waveform_sync's repair: a total
                 // change can strand the resting playhead or a live region
                 // outside the new domain even when the geometry itself did not
                 // move, so repair unconditionally within the total-changed
@@ -1173,8 +1173,8 @@ int main(int argc, char** argv) {
         // the viewport BACK to the restored playhead, which the Space stop never
         // does) die WITH the arm rather than being fixed inside it.
         //
-        // THE stop() IS NOT REDUNDANT, AND IT IS NOT ABOUT THE FLAG (codex round,
-        // MEDIUM 1, converted 2026-07-29): `playing` is already false here — the
+        // THE stop() IS NOT REDUNDANT, AND IT IS NOT ABOUT THE FLAG (converted
+        // 2026-07-29): `playing` is already false here — the
         // JACK process callback published it (release store) at the natural end —
         // but `GuiPlayback::stop()` is the QUIESCENCE FENCE, not a flag write. The
         // callback that published false has NOT necessarily retired: the fence waits

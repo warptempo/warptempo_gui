@@ -252,7 +252,7 @@ KeyClass classify_key(GuiKey key, GuiInputState mods) {
 KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     if (!is_active(s)) return KeyAction::NotConsumed;
 
-    // Membership gate (audit C6): the classifier is the single truth of which
+    // Membership gate: the classifier is the single truth of which
     // keys the editor owns. NotEditorKey falls through here; every other class
     // is covered by a branch below that returns a consumed action, so no
     // classified key can reach the function-end NotConsumed fallback — a key

@@ -195,8 +195,8 @@ void Selection::clear_selection() {
 
 void Selection::collapse_to_focused() {
     // THREE CALLER CLASSES, all DELIBERATE ACTS OF THE GESTURE — re-derived by grep
-    // 2026-07-29 (ruling 6 deleted the never-span-less REPAIR class, and the
-    // architect's group-or-collapse ruling then added the third below):
+    // 2026-07-29 (the architect's 2026-07-29 ruling deleted the never-span-less
+    // REPAIR class, and the group-or-collapse ruling then added the third below):
     //   * the FINE-TUNING VALUE gestures (the inherit toggle, the singleton
     //     tempo step), which narrow the selection so the operation and the
     //     resulting selection both target last_selected only;
@@ -213,8 +213,9 @@ void Selection::collapse_to_focused() {
     // general statement of it live at the head of position_nudge.h.
     // THE DELETED THIRD CLASS was the never-span-less ENFORCEMENT — six sites that
     // collapsed a group because a clear had taken its span. That invariant is
-    // RETIRED (ruling 6; the retirement paragraph is at clear_region_highlight's
-    // declaration, input_handler.h), so no caller collapses as REPAIR any more:
+    // RETIRED (architect 2026-07-29; the retirement paragraph is at
+    // clear_region_highlight's declaration, input_handler.h), so no caller
+    // collapses as REPAIR any more:
     // every call here is a gesture doing what it means to do.
     // The GROUP TEMPO gestures do NOT collapse — they went group (architect
     // 2026-07-23) and move the whole selection's images rigidly.
@@ -320,7 +321,7 @@ void Selection::select_range_from_anchor(int idx) {
 
     int anchor = app.shift_range_anchor;
     if (anchor < 0 || anchor >= n) {
-        // No live anchor: ADOPT THE FOCUS (architect labwc round 2,
+        // No live anchor: ADOPT THE FOCUS (architect
         // 2026-07-23). The file-manager convention ranges a shift-click from
         // the CURRENT focus — plain-click A then shift+click B selects A..B —
         // so the anchor seed is the focused marker whenever one exists, not

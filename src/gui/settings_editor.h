@@ -40,7 +40,7 @@ struct GuiSettingsEditor {
     GuiAudio&             audio;
     Viewport&             viewport;
     // The engine-key commit rebuilds the warp map, so it clears any resting
-    // region AND the selection with it (architect 2026-07-29, ruling 6 — the
+    // region AND the selection with it (architect 2026-07-29 — the
     // teardown is at that commit's tail). Also the `tab_X_playhead=` commit's
     // deselect. This member exists for those clears; it acquired no other use when
     // the never-span-less collapse it once served was deleted.

@@ -392,7 +392,7 @@ const int64_t kPhaseResetOverlaySamples = static_cast<int64_t>(
 //
 // THE GEOMETRY AND VISIBILITY OWNER, kept SEPARATE from its one consumer
 // (paint_phase_reset_overlay_ring) rather than folded into it. It carries every
-// visibility gate — view, focus, the R3 span suppressions, the eligible-marker
+// visibility gate — view, focus, the span-state suppressions, the eligible-marker
 // resolve, the sub-pixel and offscreen refusals — plus the clipped span, and
 // Selection::phase_overlay_subject MIRRORS its selection-state gates — MINUS the
 // geometry ones, which are not selection state — to decide when a subject change
@@ -417,8 +417,8 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // downstream is domain-agnostic.
     if (app.active_markers_view != 'P') return out;
     if (area.w <= 0 || area.h <= 0) return out;
-    // R3 suppression (architect 2026-07-23): the overlay depicts ONE focused
-    // reset's lead-in, a single-focus authoring aid. Suppress it when the state
+    // The span-state suppression (architect 2026-07-23): the overlay depicts ONE
+    // focused reset's lead-in, a single-focus authoring aid. Suppress it when the state
     // is about a SPAN rather than a single focus — a MULTI-select (2+ members) or
     // an active region — where the overlay would clutter. (A singleton or empty
     // selection with no region shows it as before; the states that toggle these
@@ -651,8 +651,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 
 // -- GuiPaintHandler::paint_selected_stem --------------------------------
 
-// Selected-marker stem (architect 2026-07-25, superseding the
-// conditional-stem round-4 model): the stem is the SINGLETON selection's focus
+// Selected-marker stem (architect 2026-07-25): the stem is the SINGLETON selection's focus
 // visual — it marks where the playhead sits/would land on the one selected
 // marker, and it ALWAYS paints for that marker, with ONE exception: an ACTIVE
 // REGION suppresses it (architect 2026-07-29 — the playhead has two forms, POINT

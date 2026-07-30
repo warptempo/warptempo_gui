@@ -491,7 +491,7 @@ void GuiSettingsEditor::commit() {
     // owns its own waveform damage, which the source-view path would otherwise
     // not raise.
     clear_region_highlight(app, viewport);
-    // AND THE SELECTION GOES WITH IT (architect 2026-07-29, ruling 6): an engine
+    // AND THE SELECTION GOES WITH IT (architect 2026-07-29): an engine
     // commit rebuilds the map under every marker INDEX and IMAGE at once, so it
     // clears BOTH playhead forms and leaves the cursor as the only one — the same
     // "ready to move on" act the trim setters make when a chip click deselects.
@@ -523,7 +523,7 @@ void GuiSettingsEditor::commit() {
     // NO RE-LAND, and none is possible: the map-change re-land that used to sit
     // here (target view only, onto a surviving selection's focus, because the
     // re-warp moved that focus's image out from under the cursor) died with the
-    // selection clear above — architect 2026-07-29, ruling 6. There is no lane and
+    // selection clear above — architect 2026-07-29. There is no lane and
     // no focus after this commit, so the resting cursor is the whole playhead and
     // it stays exactly where the user left it. The 'S' undo/redo restore's twin
     // re-land died the same way (undo.cpp).

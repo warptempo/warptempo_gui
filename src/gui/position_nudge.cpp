@@ -41,7 +41,7 @@ PositionNudgePrologue position_nudge_prologue(
     if (app.selected_markers.empty()) return r;
     if (app.last_selected_marker < 0) return r;
     // Undo-coalescing decision, and its PLACEMENT IS LOAD-BEARING rather than
-    // incidental since 2026-07-29 (codex final round, MEDIUM 2): a PHYSICAL press
+    // incidental since 2026-07-29: a PHYSICAL press
     // INVALIDATES the coalescing stamp inside this call — the derivation is at
     // Undo::coalesce_gesture — so it must run on every press that could otherwise
     // refuse and leave an older burst's stamp standing for its own first repeat to

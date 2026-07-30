@@ -108,7 +108,7 @@ struct Undo {
     // event that reached the handler. When it returns true the caller SKIPS its
     // undo push (and calls note_coalesced_commit for the per-press side
     // effects); either way the caller then calls record_gesture.
-    // NOT A PURE QUERY since 2026-07-29 (codex final round, MEDIUM 2): a PHYSICAL
+    // NOT A PURE QUERY since 2026-07-29: a PHYSICAL
     // press (synthesized_repeat false) INVALIDATES the coalescing stamp here, on
     // arrival, so it cannot leave an older burst's stamp standing for a later repeat
     // to merge into — the full derivation is at the definition. It stays callable

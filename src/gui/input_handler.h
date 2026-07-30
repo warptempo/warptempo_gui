@@ -148,9 +148,19 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // command that asserts the point form ends the span here, UNCONDITIONALLY: never
 // gated on whether the playhead moved, and blind to provenance. Call sites, by
 // class:
-//   * NAVIGATION jumps: jump_playhead_to_focused_marker (the whole Tab family
-//     plus `c` through the one tail), the
-//     bare Left/Right playhead step, Home/End (the trim-bound jumps);
+//   * NAVIGATION jumps: jump_playhead_to_focused_marker (the whole Tab
+//     family, through its own clear tail), `c`'s OWN up-front clear before
+//     that same jump (input_key_dispatch.cpp — the no-focus arm never
+//     reaches the jump's tail, so `c` owns one of its own), the
+//     bare Left/Right playhead step, Home/End (the trim-bound jumps), and the
+//     settings editor's `playhead_cursor=` GUI key (settings_editor.cpp — the
+//     typed navigation-jump twin, no exemptions);
+//   * THE PLAIN UPPER-HALF WAVEFORM PRESS (arm_region_drag_at,
+//     input_pointer.cpp): dissolves any resting highlight at mouse-down,
+//     before the gesture is known to be a click or a fresh region drag —
+//     shares this exact dissolve shape (see the deliberately-not-cleared
+//     paragraph below for its sibling, the SHIFT-exact preserving arm, which
+//     does NOT call this);
 //   * MARKER CLICKS: the plain single-select click (its four deferred completions
 //     died 2026-07-29 with the group drag — every marker press commits its click at
 //     PRESS time now, the doctrine at the head of position_nudge.h), plus
@@ -179,23 +189,24 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     so all three collapse it, any provenance. The undo tail's clear runs for
 //     EVERY entry, settings-only ones included — it is the ONE part of the tail
 //     that sits above the 'S' gate (which forbids SELECTING, WRITING a region, and
-//     LANDING, exceptionlessly again since ruling 6 — that arm now also CLEARS the
+//     LANDING, exceptionlessly again since the architect's 2026-07-29 ruling — that
+//     arm now also CLEARS the
 //     selection, which is what killed the one land exception it briefly had),
 //     because a settings restore rebuilds the map under the
 //     span exactly as a marker restore does; for a group entry the extent derive
 //     then runs AFTER this clear;
-//   * the SETTINGS ENGINE-COMMIT chokepoint (same ruling): the one committed
+//   * the SETTINGS ENGINE-COMMIT chokepoint (same 2026-07-29 ruling): the one committed
 //     tail every canonical engine key shares (GuiSettingsEditor::commit, past
 //     the unknown-key / invalid-value / collision / unchanged returns), because
 //     the scale among those keys is a warp-map input and the commit rebuilds the
 //     map under any resting highlight. That tail CLEARS THE SELECTION beside the
-//     region (ruling 6, below). The settings editor's TRIM keys never
+//     region (below). The settings editor's TRIM keys never
 //     reach it — they return through commit_gui_setting, whose active-tab arms
 //     deselect and publish the TrimWindow highlight themselves (they are SETTERS
 //     since 2026-07-30; the class is at sync_region_to_trim_window).
 // A 2+ SELECTION ALWAYS HAS A SPAN, AND NOTHING ENFORCES THAT FROM THE CLEAR SIDE
 // — THE NEVER-SPAN-LESS PROTOCOL IS DELETED, THE PROPERTY MOVED INTO THE VERBS
-// (architect 2026-07-29, ruling 6 plus the same-day rejection that finished it,
+// (architect 2026-07-29, plus the same-day rejection that finished it,
 // superseding the corollary this declaration used to carry: nine collapse sites at
 // its peak, six after the parked selections died, all deleted, along with
 // sync_region_to_trim_window's injected Selection& parameter). The two-forms model
@@ -398,7 +409,7 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // gestures' region-provenance branches, the singleton tempo step's trim re-sync,
 // and the tempo drag's own grab-time trim-highlight bit (that drag is itself
 // deleted since 2026-07-29 — see marker_drag.h).
-// IT TAKES NO Selection AT ALL any more (architect 2026-07-29, ruling 6): the
+// IT TAKES NO Selection AT ALL any more (architect 2026-07-29): the
 // parameter existed for the never-span-less collapse its clear arm carried, that
 // enforcement is retired (the retirement paragraph is at clear_region_highlight's
 // declaration above), and the collapse was UNREACHABLE from here in the first
@@ -570,7 +581,7 @@ struct GuiInputHandler {
     void arm_region_drag_preserving(int64_t anchor_frame, int x, int y);
 
     // The waveform-upper-half placement press BODY, shared by the plain waveform
-    // press and the empty flag/triangle-lane parity press (R6, architect
+    // press and the empty flag/triangle-lane parity press (architect
     // 2026-07-23): clear the marker selection, drop the playhead at the clicked
     // column, reseek a live scanner to it (keeping the session alive, follow
     // overridden), and arm the region drag (which dissolves any resting highlight
@@ -590,7 +601,7 @@ struct GuiInputHandler {
                                        bool was_playing,
                                        int64_t playhead_at_entry);
 
-    // The empty flag/triangle-lane double-click marker CREATE (R6): the bare-`s`
+    // The empty flag/triangle-lane double-click marker CREATE: the bare-`s`
     // drop equivalent at the clicked column — the AUGMENTED drop in both columns,
     // exactly as bare `s` performs it — home-view and read-only gated silently.
     // Places the playhead on the clicked column first, then drops through the
@@ -1011,7 +1022,7 @@ private:
     // region-only under SELECTION FLOWS DOWNWARD ONLY): sync the region highlight
     // to the CURRENT trim window. Trim is region-related, so it touches the REGION
     // and nothing else — not the selection (the never-span-less collapse its clear
-    // arm once carried is deleted, ruling 6) and not the PLAYHEAD, ever. Both
+    // arm once carried is deleted, architect 2026-07-29) and not the PLAYHEAD, ever. Both
     // bounds set -> region = the window's active-domain extent (source bounds
     // through source_frame_to_active_domain, clamped playable), coincident images
     // included; lone / no trim -> clear the region. Navigation-class (the region is
@@ -1035,7 +1046,7 @@ private:
     // sync_region_to_trim_window's declaration above.
     void deselect_and_sync_trim_window_highlight();
 
-    // R4.6: set ONE trim bound (begin or end) at the clicked column — the
+    // Set ONE trim bound (begin or end) at the clicked column — the
     // trim-drag release-snap basis (authored_frame_at_column over the displayed
     // paint map), walls [0, total-1], then the auto_clear_crossed_trim commit
     // tail (a bound onto/across its partner dissolves both). History-less like
@@ -1048,10 +1059,10 @@ private:
     // refusals and just ahead of the bound write, so the ctrl / ctrl+shift
     // chip-row press carries none of its own and a refused click leaves a live
     // audition playing. is_begin picks the bound: the ctrl chip-row click sets
-    // begin, ctrl+shift sets end (R5).
+    // begin, ctrl+shift sets end.
     void set_trim_bound_at_click(bool is_begin, int mouse_x);
 
-    // The ctrl / ctrl+shift chip-row bound-set press (round 3, architect
+    // The ctrl / ctrl+shift chip-row bound-set press (architect
     // 2026-07-23): sets the bound at the clicked column (set_trim_bound_at_click,
     // adjust-only + sync, above) AND, when the click-set kept a full writable
     // pair, arms the single-bound trim drag on the just-set bound — so motion
