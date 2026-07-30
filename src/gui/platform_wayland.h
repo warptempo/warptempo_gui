@@ -256,6 +256,11 @@ private:
     bool mod_ctrl_  = false;
     bool mod_shift_ = false;
     bool mod_alt_   = false;
+    // SUPER (Logo) is tracked but NEVER projected into GuiInputState: it belongs
+    // to labwc, and this program's answer to it is to deliver no key event at all
+    // while it is held (the ruling is at deliver_key, platform_wayland.cpp). That
+    // is why there is no `super` bool on GuiInputState and no reader anywhere.
+    bool mod_super_ = false;
 
     // -- Pointer capture (pointer-constraints + relative-pointer) --
     // Both managers are OPTIONAL: null when the compositor does not advertise

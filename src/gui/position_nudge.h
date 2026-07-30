@@ -55,12 +55,19 @@ struct GuiTargetRender;
 // group-capable OR collapses to the focus with the playhead landed on it; there is
 // no third answer, and "collapse to last selected" means exactly
 // collapse_to_focused + land_playhead_on_marker, the shape below.
-// THE COLLAPSE+LAND SITES, one form and FIVE of them (re-derived 2026-07-29): this
+// THE COLLAPSE+LAND SITES, one form and FOUR of them (re-derived 2026-07-30): this
 // prologue serving both position nudges, Ctrl+N (warpmarkers_ops.cpp), the S/T view
 // switch `t` (input_handler.cpp — where the land is the tail's own domain re-express
-// through the focus), bare `0` (run_zoom_toggle_command, collapse+land ahead of the
-// zoom so the centering reads the landed playhead), and `c` (input_key_dispatch.cpp
-// — collapse only, its jump already being a jump to the focus).
+// through the focus), and `c` (input_key_dispatch.cpp — collapse only, its jump
+// already being a jump to the focus). The singleton tempo step's call
+// (warpmarkers_ops.cpp's Up/Down arm) is NOT one: its selection is already a
+// singleton, so the collapse moves no focus and owes no land.
+// BARE `0` LEFT THIS LIST (architect 2026-07-30): the overview toggle was
+// overscoped and is a PURE VIEWPORT MOVE again — it clears no region and collapses
+// nothing, so a group and its span ride through it, exactly as they ride the zoom
+// framing and every other viewport-only command. Its clear and its collapse died
+// TOGETHER, deliberately: a clear alone would rest the spanless group this doctrine
+// rejects.
 // REACHABILITY, with the pointer deferral dead: the ONLY producers of a resting
 // 2+ selection are the two multi-select clicks (shift-range, ctrl-toggle), the
 // `m` bpm-mode open, the propagate paste, and the undo/redo restores — and every
@@ -92,8 +99,9 @@ struct PositionNudgePrologue {
 // The shared guard prologue of the two position nudges, and the site that makes
 // the gesture a FOCUS ACT. Order is IDENTICAL in both twins and preserved
 // exactly: (1) loading / empty-audio refusal;
-// (2) stop_playback_if_playing FIRST — this is a fine-tuning authoring gesture
-// (the bare Left/Right marker-lane press is the only caller path); (3)
+// (2) stop_playback_if_playing FIRST — the collapse-to-point class of the keyboard
+// stop rule (playback_lifecycle.h), the reason and the one deviation being recorded
+// at the call itself; (3)
 // empty-selection refusal — unreachable from the dispatcher, which routes an
 // empty selection to the waveform-lane playhead step instead and never reaches
 // here, so this is the belt; (4) no-focus

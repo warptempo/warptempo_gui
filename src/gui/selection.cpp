@@ -191,10 +191,12 @@ void Selection::collapse_to_focused() {
     //   * HORIZONTAL MOVEMENT, which is a FOCUS ACT (architect 2026-07-29 —
     //     groups are never moved): both position nudges collapse here through
     //     their shared prologue and then step the focus alone;
-    //   * THE SPAN-DROPPING VERBS: the S/T view switch `t` (whose span cannot
-    //     survive the domain flip), bare `0` and `c`. Each would otherwise leave a
-    //     group resting with no span — the state the architect rejected — so each
-    //     collapses to the focus and lands the playhead there instead.
+    //   * THE SPAN-DROPPING VERBS (re-derived by grep 2026-07-30): the S/T view
+    //     switch `t` (whose span cannot survive the domain flip) and `c`. Each
+    //     would otherwise leave a group resting with no span — the state the
+    //     architect rejected — so each collapses to the focus and lands the
+    //     playhead there instead. Bare `0` left this class the same day: the
+    //     overview toggle drops no span at all now, being a pure viewport move.
     // The doctrine, the group-verb rule all three instance, and the architect's
     // general statement of it live at the head of position_nudge.h.
     // THE DELETED THIRD CLASS was the never-span-less ENFORCEMENT — six sites that

@@ -64,6 +64,10 @@ struct GuiWarpMarkersOps {
     // dispatches to the all-or-nothing group step below. `synthesized_repeat` is
     // the dispatching key event's platform repeat bit, read only by the
     // undo-coalesce verdict (undo.h).
+    // NEITHER ARM STOPS PLAYBACK, and that is the ruling rather than an omission:
+    // the cent step is a GROUP-PRESERVING VALUE STEP, the class that plays on under
+    // the edit (the keyboard stop rule, at stop_playback_if_playing's declaration in
+    // playback_lifecycle.h).
     void adjust_tempo_cents(int64_t delta_cents, bool synthesized_repeat);
     void nudge_selected_markers(int direction, bool synthesized_repeat);
 

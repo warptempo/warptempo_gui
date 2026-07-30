@@ -67,6 +67,15 @@ void GuiInputHandler::auto_clear_crossed_trim() {
 // excluded from undo/redo history.
 void GuiInputHandler::handle_trim_clear_both() {
     if (app.trim.has_begin || app.trim.has_end) {
+        // A TRIM MUTATION STOPS A LIVE AUDITION, IN BOTH VIEWS — the keyboard stop
+        // rule at stop_playback_if_playing's declaration (playback_lifecycle.h).
+        // Inside the has-a-bound guard, so a Shift+X over an already-empty trim
+        // stops nothing (refusal-gated, like every claim's stop). This is the
+        // WORSE case of the pair: destroying the window under a looping session
+        // left it wrapping bounds with no painted chips at all.
+        // (architect ruled `x`; `Shift+X` joins as the same trim-mutation class —
+        // planner extension 2026-07-30, pending the architect's glance.)
+        playback_lifecycle.stop_playback_if_playing();
         clear_trim_bounds();
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
@@ -152,6 +161,18 @@ void GuiInputHandler::handle_trim_x() {
     // Nothing is touched: trim, region and selection all rest (the deselect is
     // downstream, so the refusal is refusal-gated like every other trim claim).
     if (end <= begin) return;
+    // A TRIM MUTATION STOPS A LIVE AUDITION, IN BOTH VIEWS (architect 2026-07-30 —
+    // the keyboard stop rule, stated at stop_playback_if_playing's declaration,
+    // playback_lifecycle.h): the window this is about to rewrite is what a set trim
+    // LOOPS, so a session left running would keep wrapping bounds the paint has
+    // stopped showing. REFUSAL-GATED like every other claim's stop — past the
+    // no-region and degenerate-result returns above, immediately ahead of the first
+    // write. In TARGET view the stop was already incidental (target_render.trigger()
+    // below halts playback on every T-view mutation); doing it here makes it
+    // explicit, gives the scanner its proper column teardown, and costs nothing —
+    // the trigger's own stop then finds a stopped session, and this call is itself
+    // guarded, so any doubling is one early return.
+    playback_lifecycle.stop_playback_if_playing();
     app.trim.begin_frame = begin;
     app.trim.has_begin   = true;
     app.trim.end_frame   = end;

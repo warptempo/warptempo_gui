@@ -149,7 +149,7 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // gated on whether the playhead moved, and blind to provenance. Call sites, by
 // class:
 //   * NAVIGATION jumps: jump_playhead_to_focused_marker (the whole Tab family
-//     plus `c` through the one tail), run_zoom_toggle_command (bare `0`), the
+//     plus `c` through the one tail), the
 //     bare Left/Right playhead step, Home/End (the trim-bound jumps);
 //   * MARKER CLICKS: the plain single-select click (its four deferred completions
 //     died 2026-07-29 with the group drag — every marker press commits its click at
@@ -214,12 +214,17 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // again: no select, no region write, no land.
 // AND A SPANLESS 2+ SELECTION IS NEVERTHELESS UNPRODUCIBLE — the architect REJECTED
 // that state (2026-07-29, "a hybrid third option that i did not ask for or ratify")
-// and it now has no producer at all. The three routes that briefly made one — the
+// and it now has no producer at all. The routes that briefly made one — the
 // S/T domain flip (whose span cannot survive the flip: the endpoints are
-// active-domain frames), bare `0` and `c` — each COLLAPSE a surviving 2+ selection
+// active-domain frames) and `c` — each COLLAPSE a surviving 2+ selection
 // to its focus and land the playhead there, under the architect's general rule
 // (verbatim at the group-verb doctrine, position_nudge.h: if group is relatively
-// cheap to implement, implement it; otherwise collapse to last selected). THE
+// cheap to implement, implement it; otherwise collapse to last selected). BARE `0`
+// WAS A THIRD SUCH ROUTE AND IS NO LONGER ONE AT ALL (architect 2026-07-30): the
+// overview toggle clears no region and collapses nothing, so it cannot strip a
+// group's span in the first place — it is a pure viewport move, and its clear and
+// its collapse were removed TOGETHER precisely because the clear alone would rest
+// the rejected state. THE
 // PROPERTY THEREFORE HOLDS BY THE PRODUCERS' OWN FORM, WHICH IS THE WHOLE POINT OF
 // THE RETIREMENT: every route that rests a 2+ selection rests it WITH its extent
 // span, and every route that would take a span from a group collapses at its own
@@ -241,7 +246,8 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // either, launching through the scrub's own entry), the nudge/drag playhead
 // follow, and pure
 // viewport moves (PageUp/PageDown, zoom
-// steps, pans) — and the lower-half scrub press, which touches no region at
+// steps, pans, and since 2026-07-30 the bare `0` overview toggle, which used to
+// clear here) — and the lower-half scrub press, which touches no region at
 // all. The plain upper-half waveform press (arm_region_drag_at) shares this
 // helper — same dissolve shape. ESC IS NOT A CLEAR SITE AT ALL (architect
 // 2026-07-29): the selection/region ladder is deleted, so bare Esc touches neither
@@ -761,7 +767,9 @@ private:
     // The bare `0` key zoom TOGGLE: at the working zoom → full zoom-out (the
     // per-file effective ceiling, whole song visible); anywhere else → the
     // working zoom (kWorkingZoomLevel), centered on the playhead via
-    // apply_zoom_change.
+    // apply_zoom_change. A PURE VIEWPORT MOVE (architect 2026-07-30): it writes
+    // neither the selection nor the region nor the playhead — the rationale is at
+    // the definition.
     void run_zoom_toggle_command();
 
     // The zoom-strip DOUBLE-CLICK command: ZOOM TO A SPAN, never the working

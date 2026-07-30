@@ -924,8 +924,10 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // WITH its extent span (the two multi-select clicks and `m` derive it, the
     // propagate paste and the undo/redo restores define it), and every route that
     // takes a span away from a group instead COLLAPSES it to the focus with the
-    // playhead landed there — the `t` view switch, bare `0`, `c`, the position nudges'
-    // prologue and Ctrl+N, one shape at five sites (listed at the doctrine). The
+    // playhead landed there — one shape, enumerated at the doctrine. Bare `0` is
+    // NOT among them and produces nothing here (architect 2026-07-30): the overview
+    // toggle is a pure viewport move that clears no region, so a group crosses it
+    // with its span intact. The
     // distributed collapse protocol that once policed this from the clear side is
     // deleted and is NOT to be resurrected; if a new verb ever needs a span taken
     // from a group, it collapses at its own site by the general rule.

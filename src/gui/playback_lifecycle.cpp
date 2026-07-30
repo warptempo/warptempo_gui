@@ -4,8 +4,11 @@
 #include <cstdint>
 #include <cstdio>
 
-// Gesture-stop: called at the top of any handler that will move the
-// cursor (keys, button press, undo/redo, tab switch).
+// Gesture-stop: called by any handler that will move the
+// cursor (keys, button press, undo/redo, tab switch) — and, since 2026-07-30, by
+// the two keyboard TRIM MUTATIONS, which stop without touching the cursor at all.
+// WHICH KEYBOARD COMMANDS STOP is a ruling, stated once at the declaration (the
+// keyboard stop rule, playback_lifecycle.h); this comment owns only the teardown.
 // Stops the audio thread and DEACTIVATES the scanner. Once inactive the
 // scanner's value fields are stale by contract — no consumer reads them — so
 // nothing is snapped back.

@@ -925,27 +925,24 @@ void GuiInputHandler::run_zoom_toggle_command() {
     // toggle here returns any non-working level to the working zoom, whereas the
     // double-click zooms to the region / trim / whole-song span.
     //
-    // Bare `0` recenters the view on the playhead (apply_zoom_change), so the
-    // region highlight is stale context — clear it (architect-listed
-    // explicitly). The zoom-strip double-click does NOT come through here, so
-    // its span-framing keeps any live region.
-    clear_region_highlight(app, viewport);
-    // AND A SURVIVING 2+ SELECTION COLLAPSES TO ITS FOCUS, playhead landed on it —
-    // the position nudges' collapse+land shape, under THE ARCHITECT'S GENERAL RULE
-    // (2026-07-29, verbatim at the group-verb doctrine in position_nudge.h): if group
-    // is relatively cheap to implement, implement it; otherwise collapse to last
-    // selected. `0` re-derives no span (it is a zoom command, not a selection one),
-    // and a group left resting without one is the HYBRID THIRD FORM the architect
-    // rejected — no playhead cue is drawn for it at all. So it collapses.
-    // ORDER: collapse and land BEFORE the zoom toggle below, so
-    // apply_zoom_change's centering reads the LANDED playhead rather than wherever
-    // the cursor happened to rest. The size >= 2 guard is the same load-bearing one
-    // every collapse site carries (collapse_to_focused would otherwise insert a bare
-    // focus into an empty selection).
-    if (app.selected_markers.size() >= 2) {
-        selection.collapse_to_focused();
-        land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
-    }
+    // BARE `0` IS A PURE VIEWPORT MOVE (architect 2026-07-30, reversing the
+    // 2026-07-29 clear+collapse as OVERSCOPED): it touches neither the selection
+    // nor the region nor the playhead — only the zoom level and, through
+    // apply_zoom_change, the viewport start. A selection span's endpoints are
+    // ACTIVE-DOMAIN frames and a zoom changes no domain, so a group and its extent
+    // survive the overview toggle exactly as they survive `=` / `-` and the wheel.
+    // The family is the group-verb doctrine (position_nudge.h): `0` sits with the
+    // zoom framing on the span-READ side, not with the collapse+land verbs. It does
+    // not stop a live audition either — the pure-viewport-move class of the keyboard
+    // stop rule (stop_playback_if_playing's declaration, playback_lifecycle.h).
+    // THE REGION CLEAR DIED WITH THE COLLAPSE, NOT SEPARATELY — do not reintroduce
+    // it on its own: a clear that left a 2+ selection standing would rest it
+    // SPANLESS, the hybrid third form the architect rejected (that state draws no
+    // playhead cue at all), so the two are one decision.
+    // The centering below reads the RESTING cursor (apply_zoom_change takes the
+    // scanner while playing and the cursor otherwise). With a selection the cursor
+    // already rests on the focus — every focus-changing route lands it — so nothing
+    // here needed the land that used to precede it.
     if (app.zoom_level == kWorkingZoomLevel) {
         viewport.apply_zoom_change(effective_max_zoom_level(
             waveform_area(app).w, live_total_frames(app, audio),
@@ -1386,7 +1383,9 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // rejected (it draws no playhead cue at all: the cursor yields to a non-empty
     // selection and the stem is singleton-only). So the group is not cheap here and
     // the rule says collapse. This is the SAME SHAPE as the position nudges'
-    // collapse+land (position_nudge_prologue) and Ctrl+N's — one form, four sites.
+    // collapse+land (position_nudge_prologue) and Ctrl+N's — this site is one member
+    // of the COLLAPSE+LAND class, whose one authoritative enumeration lives at the
+    // group-verb doctrine (position_nudge.h); no count belongs here.
     // THE size >= 2 GUARD IS LOAD-BEARING, not an optimization: collapse_to_focused
     // early-returns only on an already-focused SINGLETON, so against an EMPTY
     // selection carrying a live focus index it would INSERT that focus and resurrect

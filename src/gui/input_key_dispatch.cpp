@@ -1551,7 +1551,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // resting without one is the HYBRID THIRD FORM the architect rejected. The
         // LAND comes free here — the jump below is a jump TO THE FOCUS, which is
         // exactly what the collapse leaves selected, so this site needs the collapse
-        // only (the position nudges and `0` pair it with an explicit land because
+        // only (the position nudges and Ctrl+N pair it with an explicit land because
         // nothing else in those routes moves the playhead onto the focus).
         // Placed before repair_last_selected and the jump: the collapse keeps
         // last_selected_marker, so the repair and the jump read the same focus they

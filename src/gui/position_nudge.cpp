@@ -26,8 +26,17 @@ PositionNudgePrologue position_nudge_prologue(
     GestureKind kind, bool synthesized_repeat, int store_size) {
     PositionNudgePrologue r;
     if (app.loading || audio.total_frames() <= 0) return r;
-    // Fine-tuning authoring gesture: stop playback first (an empty-selection
-    // press in home view still stops playback today — preserve).
+    // THE NUDGE STOPS BECAUSE ITS PROLOGUE COLLAPSES TO POINT FORM — the
+    // collapse-to-point class of the keyboard stop rule (architect 2026-07-30,
+    // stated at stop_playback_if_playing's declaration, playback_lifecycle.h). The
+    // press seats the playhead on the focus and then steps it, which is exactly the
+    // act that cannot rest under a running audition.
+    // RECORDED DEVIATION FROM THE RULE'S REFUSAL-GATING: the stop sits at the head
+    // of this prologue rather than past the geometry and wall refusals, so a press
+    // refused at its wall still stops. It stays here because the commit tail's
+    // playhead follow requires a stopped session either way and one hoisted call is
+    // simpler than threading a stop past BOTH twins' wall regimes; the cost of the
+    // refused case is one re-press of Space.
     playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.empty()) return r;
     if (app.last_selected_marker < 0) return r;

@@ -1307,8 +1307,9 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         // from the last keyboard event (for example the Alt+wheel pan).
         repeat_key_ = 0;
         // Capability loss resets the modifier bits, matching the keyboard.leave
-        // tail.
-        mod_ctrl_ = mod_shift_ = mod_alt_ = false;
+        // tail — Super included, for the same reason it is reset there (a latched
+        // one would gate every later key delivery off).
+        mod_ctrl_ = mod_shift_ = mod_alt_ = mod_super_ = false;
         // The modifier state changed (all chords released) without a scroll
         // frame, so drop the wheel sub-detent remainder — it was bound to the
         // old chord.
@@ -1418,8 +1419,11 @@ void GuiPlatform::on_keyboard_enter(uint32_t /*serial*/,
 
 void GuiPlatform::on_keyboard_leave(uint32_t /*serial*/,
                                     struct wl_surface* /*surface*/) {
-    // Focus loss resets the modifier bits.
-    mod_ctrl_ = mod_shift_ = mod_alt_ = false;
+    // Focus loss resets the modifier bits — SUPER INCLUDED, and load-bearing for
+    // that one: focus commonly leaves on a Super chord labwc grabbed, and a latched
+    // mod_super_ would deaden the keyboard for the rest of the session (deliver_key
+    // gates on it, and no modifiers event need follow).
+    mod_ctrl_ = mod_shift_ = mod_alt_ = mod_super_ = false;
     repeat_key_ = 0;
     // The modifier state changed (all chords released) without a scroll frame,
     // so drop the wheel sub-detent remainder — it was bound to the old chord.
@@ -1471,9 +1475,16 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
     //
     //   - Standalone modifier presses (Shift / Control / Alt / Super /
     //     Meta / Hyper, the Caps and Shift locks, the AltGr level-shifts):
-    //     modifier STATE arrives separately and completely via
+    //     the modifier STATE this program acts on arrives SEPARATELY via
     //     on_keyboard_modifiers, and no consumer matches a modifier keysym
-    //     as a GuiKey, so the key event is pure noise.
+    //     as a GuiKey, so the key event is pure noise. "SEPARATELY", NOT
+    //     "COMPLETELY": on_keyboard_modifiers tracks exactly FOUR — ctrl /
+    //     shift / alt, which reach the application through GuiInputState, and
+    //     SUPER, which reaches nothing because it gates key DELIVERY instead
+    //     (deliver_key). The others (Meta, Hyper, the locks, the level-shifts)
+    //     are modelled nowhere, so no predicate can see them; a future binding
+    //     that needed one would have to model it first — which is exactly the
+    //     gap Super had until 2026-07-30.
     //   - Function keys F1..F35: this GUI binds none of them.
     //
     // Ignoring both matters because a text editor treats any key it does
@@ -1545,7 +1556,15 @@ void GuiPlatform::on_keyboard_key(uint32_t /*serial*/, uint32_t /*time*/,
     // what makes "no synthesized repeat can follow an intervening command" true,
     // which is the property undo coalescing rides. The full statement is at
     // maybe_fire_repeat, beside the bit it sets.
+    // A press dropped for SUPER arms nothing (and, through the else branch below,
+    // disarms whatever was armed — the ordinary "a different key press re-arms or
+    // disarms" edge of layer (1)). Without this the press would be swallowed at
+    // deliver_key while still arming a burst that starts firing the moment Super is
+    // released, and those fires carry synthesized_repeat — an undo merge into an
+    // OLDER entry, from a press the application never saw. The probe itself is
+    // untouched: this is a platform-side arming gate, not a modifier predicate.
     const bool repeat_ok =
+        !mod_super_ &&
         repeat_eligible_probe_ && repeat_eligible_probe_(key, mods);
     const bool editor_ctx =
         text_editor_active_probe_ && text_editor_active_probe_();
@@ -1581,6 +1600,13 @@ void GuiPlatform::on_keyboard_modifiers(uint32_t /*serial*/,
         XKB_STATE_MODS_EFFECTIVE);
     mod_alt_   = xkb_state_mod_name_is_active(
         xkb_state_, XKB_MOD_NAME_ALT,
+        XKB_STATE_MODS_EFFECTIVE);
+    // SUPER, tracked for ONE purpose: gating key DELIVERY (deliver_key). It is
+    // deliberately absent from current_mods() and from the scroll-chord reset
+    // below — the wheel chords are plain / Alt only, so a Super press changes no
+    // chord and must not drop an accumulating sub-detent remainder.
+    mod_super_ = xkb_state_mod_name_is_active(
+        xkb_state_, XKB_MOD_NAME_LOGO,
         XKB_STATE_MODS_EFFECTIVE);
 
     // A modifier-state change ends any continuous wheel chord session, so the
@@ -1621,6 +1647,35 @@ GuiInputState GuiPlatform::current_mods() const {
 }
 
 void GuiPlatform::deliver_key(GuiKey key, GuiInputState mods) {
+    // SUPER IS DROPPED AT THE PLATFORM BOUNDARY (architect 2026-07-30: super
+    // belongs to labwc and is not part of this program's vocabulary). STRICT
+    // MODIFIER VALIDATION says an unbound modifier combination is a no-op
+    // everywhere (architect 2026-07-28) — and it was FALSE for Super, because the
+    // mask never modelled it: every bare-exact predicate reads three bools, so a
+    // held Logo left mods == {false,false,false} and Super+Escape reached the
+    // editors' cancel, Super+Return their commit. labwc grabs many Super chords,
+    // but Escape / Return / Space / Delete / the arrows / Home / End are not among
+    // them and arrive here. Rather than add a fourth bool to every reader, the
+    // event is dropped HERE, which makes the rule true BY CONSTRUCTION for the one
+    // modifier this program never binds.
+    // THIS IS THE SHARED DELIVERY PATH, which is what makes one gate enough: both
+    // the physical press (on_keyboard_key) and the SYNTHESIZED REPEAT
+    // (maybe_fire_repeat) come through here. A key held BEFORE Super went down
+    // keeps its armed repeat — a modifier keysym is dropped ahead of the repeat
+    // arming, so it disarms nothing, and the eligibility re-probe cannot see Super
+    // either — so its repeats keep firing and are simply swallowed here for as long
+    // as Super is held, resuming when it is released. That is exactly the intent,
+    // and it is safe for undo coalescing: no keyboard command can run in the gap
+    // (every key is dropped), and a pointer press in the gap disarms the repeat
+    // outright through layer (1) of the repeat contract.
+    // KEY RELEASES need nothing: they are platform-internal (on_keyboard_key
+    // returns on the release path), feeding only the repeat cancel and the
+    // synthesized-left hold end — neither of which may be skipped, or a hold would
+    // orphan. POINTER EVENTS ARE OUT OF SCOPE by the same ruling, and that includes
+    // the kLeftClickKey synthesized button: `e` IS the left mouse button at this
+    // boundary and returns above without reaching this function, so Super+`e`
+    // behaves exactly like Super+click, which binds nothing here either way.
+    if (mod_super_) return;
     if (on_key_) on_key_(key, mods);
 }
 

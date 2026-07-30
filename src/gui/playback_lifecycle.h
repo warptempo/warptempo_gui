@@ -30,6 +30,36 @@ struct GuiPlaybackLifecycle {
           playback(playback_),
           viewport(viewport_) {}
 
+    // THE GESTURE STOP (teardown contract at the definition).
+    // THE KEYBOARD STOP RULE (architect 2026-07-30) — the authoritative statement
+    // of WHICH keyboard commands stop a live audition. Other sites state their own
+    // class plus a pointer here; no site re-enumerates the commands.
+    //   * COLLAPSE-TO-POINT COMMANDS STOP: a command whose act collapses the
+    //     selection to its point form takes the playhead with it, so it stops —
+    //     both position nudges (their prologue's collapse IS the reason they stop)
+    //     and `c`. The S/T switch `t` stops on its own standing ruling, the audio
+    //     domain flipping under the running session.
+    //   * GROUP-PRESERVING VALUE STEPS DO NOT STOP: the bare Up/Down tempo cent
+    //     step edits values and leaves the selection and its span exactly as they
+    //     stood, so the audition plays on under the edit.
+    //   * PURE VIEWPORT MOVES DO NOT STOP: bare `0`, PageUp/PageDown, the zoom
+    //     steps — they move the window onto the audio, not the audio.
+    //   * TRIM MUTATIONS STOP, IN BOTH VIEWS: `x` and Shift+X, matching every
+    //     POINTER trim route (the chip/bridge drags and the bound-set clicks each
+    //     stop at their own commit point). BOTH views because a set trim LOOPS the
+    //     audition: a window mutated under a live session would leave the loop
+    //     wrapping bounds the paint has stopped showing — the source-view case that
+    //     no render trigger covers.
+    // Every stop in the rule is REFUSAL-GATED (the standing 2026-07-28 rule): it
+    // sits past its route's refusals and immediately ahead of that route's first
+    // write, so a press that writes nothing stops nothing.
+    // THE ARCHITECT'S CONTEXT, recorded because it is what makes the rule cheap:
+    // "not stopping audio is not a big priority; audio is constantly being
+    // relaunched to audition the impact of decisions."
+    // The rule classifies the commands it names and claims nothing about the ones
+    // it does not. The cursor-moving NAVIGATION stops (the bare arrows, Home/End,
+    // the Tab family) are older and broader than the rule — they hold under the
+    // definition's own contract, a handler about to commit a new cursor position.
     void stop_playback_if_playing();
 
     // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
