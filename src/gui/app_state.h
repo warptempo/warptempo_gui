@@ -240,8 +240,7 @@ struct RegionState {
 // playhead frozen under a stale span in live use). TrimWindow is
 // selection-independent — untouched; Free stays Free. NOT called on an index
 // REMAP (reorder_markers_by_time keeps the same markers at new indices, so the
-// extent is unchanged) or on focus_without_collapse (membership unchanged — the
-// extent is a function of membership only).
+// extent is unchanged — the extent is a function of membership only).
 // RETURNS true iff it cleared an ACTIVE region. That return is load-bearing:
 // clearing active pixels changes the waveform (the recolored ground and the
 // split half-triangles go, and the singleton stem the region was suppressing
@@ -300,7 +299,6 @@ struct DragState {
     double              anchor_mouse_time_frame = 0.0;
     double              delta_min = -std::numeric_limits<double>::infinity();
     double              delta_max =  std::numeric_limits<double>::infinity();
-    bool                moved = false;
     // No per-drag map copy: mid-drag target-view translation (paint, the
     // motion proposals, commit snapping) reads the DISPLAYED map —
     // displayed_or_live_target_map, falling back to the memoized live
@@ -344,14 +342,11 @@ struct DragState {
     // served is supplied by the scrub surface instead. Only the RESTING
     // cursor playhead moves — move_playhead_to writes the cursor field only, so
     // a live scanner is left untouched; it stays the audio thread's to own.
-    // Index of the marker whose flag press started the drag — the GRAB
-    // reference for the whole gesture: the delta anchor, the playhead-follow /
-    // land target, and the marker re-asserted as the
-    // single selection at the THRESHOLD CROSSING (begin_drag, where the re-assert
-    // is a no-op — the arming press already single-selected it). The re-assert runs
-    // at the crossing, not at first moved motion, so a wall-saturated drag (the
-    // proposal never moves) still names what it grabbed.
-    int                    hit_marker           = -1;
+    // (No `moved` latch and no `hit_marker`: both were group-era state with no
+    // reader left and were deleted 2026-07-29, codex final round LOW 1. The drag's
+    // net-change test compares the COMMITTED frame against original_times[0], which
+    // is the true "did anything move" question; the grabbed marker's identity is
+    // dragging_markers[0], the only slot there is.)
     // Which list this drag operates on. The motion / commit
     // handlers dispatch on this so a drag started in phase reset view
     // mutates the phase reset list.
@@ -1176,7 +1171,7 @@ struct AppState {
     // write, not inherited). Set ONLY inside
     // Selection::select_range_from_anchor, which is also the one mutator that
     // KEEPS it; every OTHER Selection mutator clears it —
-    // set_single_selection, focus_without_collapse, clear_selection,
+    // set_single_selection, clear_selection,
     // collapse_to_focused, toggle_selection_membership and
     // sanitize_selection_after_restore (cycle_selection clears through
     // set_single_selection; load_source_file's explicit clear is belt over the
@@ -1487,9 +1482,11 @@ struct AppState {
     // Active tab view: 'A' or 'B'. Selects which ViewState snapshot
     // (tab_a or tab_b) is mirrored into the live AppState fields.
     // Toggled by Ctrl+Tab; persisted to .settings. tab_a and tab_b
-    // each hold an independent viewport/zoom/playhead/trim/selection
-    // tuple, but share the same warpmarkers, phaseresetmarkers,
-    // and engine_settings.
+    // each hold an independent viewport/zoom/playhead/trim/read_only
+    // tuple — VALUE-SHAPED ONLY, no selection and nothing else
+    // index-shaped (the selection is never parked, contortion ruling 1;
+    // the rule is stated at ViewState) — but share the same
+    // warpmarkers, phaseresetmarkers, and engine_settings.
     ViewState tab_a;
     ViewState tab_b;
     char active_tab_view = 'A';
@@ -1815,8 +1812,9 @@ std::vector<int> reorder_markers_by_time(std::vector<Marker>& markers) {
 //     range interaction, and since the anchor survives shift releases (see its
 //     field) a stale pre-reorder index would silently name the wrong row at the
 //     next shift-click;
-//   * the live DRAG state's held indices, when a drag is live on the reordered
-//     store (dragging_markers — one slot, the dragged marker — and hit_marker).
+//   * the live DRAG state's ONE held index, when a drag is live on the reordered
+//     store: dragging_markers[0], the dragged marker (re-derived 2026-07-29 —
+//     hit_marker was a second entry here until it went, having no reader left).
 // NOTHING ELSE HOLDS AN INDEX ACROSS COMMANDS AT ALL, which is why the list is
 // this short: every field ViewState parks is frame- or value-shaped
 // (viewport_start_sample, zoom_level, playhead_cursor_sample and the TrimState

@@ -120,7 +120,34 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
     recompute_dirty();
 }
 
-bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) const {
+bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
+    // AN ELIGIBLE PHYSICAL PRESS INVALIDATES THE STAMP ON ARRIVAL (codex final
+    // round, MEDIUM 2, converted 2026-07-29) — this query's one side effect, and the
+    // reason it is no longer const. Every eligible route asks this question at its
+    // ENTRY, before its own refusals run, so clearing the stamp here on a PHYSICAL
+    // press makes "a synthesized repeat coalesces only with ITS OWN burst" airtight
+    // in BOTH directions. It changes no intended merge: the verdict below requires
+    // synthesized_repeat, so a physical press never merged anyway — it only stops a
+    // physical press from LEAVING an older burst's stamp standing for a later repeat
+    // to find.
+    // THE DEFECT THIS CLOSES: a physical press can REFUSE without committing (a
+    // phase-reset nudge at its wall, a zero-step press, an ineligible tempo step),
+    // which pushes nothing and so cleared nothing; if the refusal then FLIPS
+    // mid-hold — the async waveform worker publishes a new displayed map, changing
+    // the painted columns the wall test reads — the first synthesized repeat commits
+    // and finds the stale same-kind stamp from a DIFFERENT subject's burst, skipping
+    // its own push and refreshing that older entry's touched_live. One Ctrl+Z would
+    // then revert two separate holds, with snapshot and live identity hints naming
+    // different markers. Clearing on stack-top changes alone could not see this: the
+    // intervening acts (a pointer selection command, or the refusing press's OWN
+    // focus collapse under the focus-act prologue) change no stack top.
+    // ONE SITE, DELIBERATELY: the invalidate lives HERE rather than being spelled at
+    // each of the eligible routes, so a route cannot forget it and no enumeration
+    // has to be kept in sync — the standing "one authoritative site per concept"
+    // preference. The routes are the nudges' shared prologue plus both arms of the
+    // Up/Down cent step (grep this function's callers).
+    if (!synthesized_repeat) last_gesture_kind_ = GestureKind::None;
+
     // REPEAT IDENTITY IS THE WHOLE GATE. Only a press the process synthesized
     // itself from a still-held key merges; a physical press always opens a fresh
     // entry. There is no wall clock and no command counter, because the platform's
@@ -139,28 +166,24 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) const {
     // it always was. The non-empty-stack guard covers a stack cleared by a
     // load/reset.
     //
-    // EVERY CHANGE OF THE UNDO-STACK TOP CLEARS THE STAMP — the four push helpers
-    // (push_undo_warp / push_undo_phase_reset / push_undo_both / push_settings_undo)
-    // and restore_history_entry, the shared do_undo/do_redo core, one line each.
-    // That closes the one gap the platform's disarm
-    // cannot see: a burst's PHYSICAL press can refuse without committing,
-    // leaving a stale same-kind stamp, and a later repeat OF THAT SAME HOLD can
-    // then commit if some non-command state flipped the refusal — the async
-    // waveform worker publishing a new displayed map mid-hold, which changes the
-    // painted columns the phase-reset nudge's wall test reads. Without the clear
-    // that repeat would merge into whatever foreign entry sat on top; with it, a
-    // stale kind can never coexist with a foreign stack top, so the adjacency the
-    // repeat contract owns is airtight in both directions. record_gesture runs
-    // AFTER the push at every eligible route — re-derived by grep 2026-07-29 after
-    // the tempo-image step's deletion: FOUR routes over THREE call sites (the two
-    // position nudges through their shared commit tail, plus the singleton and
-    // group arms of the Up/Down cent step) — so intended merges are untouched.
+    // EVERY CHANGE OF THE UNDO-STACK TOP ALSO CLEARS THE STAMP — the four push
+    // helpers (push_undo_warp / push_undo_phase_reset / push_undo_both /
+    // push_settings_undo) and restore_history_entry, the shared do_undo/do_redo
+    // core, one line each — so a stale kind can never coexist with a foreign stack
+    // top either. The two rules meet at the same guarantee from opposite ends: this
+    // one bounds a burst at its START (a physical press begins a fresh burst,
+    // always), those bound it whenever the history it would merge into moves.
+    // record_gesture runs AFTER the push at every eligible route — FOUR routes over
+    // THREE call sites (the two position nudges through their shared commit tail,
+    // plus the singleton and group arms of the Up/Down cent step) — so intended
+    // merges are untouched.
     //
-    // ONE ACCEPTED DELTA remains, benign: two same-kind bursts with NO command
-    // between them merge across the release gap when the second burst's physical
-    // press refuses (the stamp survives, no push cleared it). Over-merge only —
-    // the surviving entry's snapshot predates both bursts, so one Ctrl+Z reverts
-    // both, and nothing foreign is in reach.
+    // NO ACCEPTED DELTA REMAINS. The one that stood here — two same-kind bursts with
+    // no command between them merging across the release gap when the second's
+    // PHYSICAL press refused, the stamp surviving because nothing pushed — dies with
+    // the invalidate above: that press now clears the stamp on arrival, so its
+    // repeats can only merge into an entry the burst itself pushed. SEPARATE PRESSES
+    // ARE SEPARATE ENTRIES is now exactly true, not true-except-for-a-benign-case.
     return synthesized_repeat
         && last_gesture_kind_ == kind
         && !app.history.undo_stack.empty();
@@ -203,6 +226,9 @@ namespace {
 // picks the EARLIEST touched marker as focus (equal members; the tempo step's
 // re-land, Tab's start, and the lane/readout
 // fallbacks all tolerate it, and a singleton's earliest IS the touched marker).
+// THE TOUCHED SET WINS UNCONDITIONALLY, the empty case included — an empty set
+// EMPTIES the selection rather than leaving the prior one standing (the derivation
+// is at that branch below; it is what closes the tab-entry auto-select hole).
 // The VISUAL tail — the playhead land (on the FOCUS in both arms, which is the
 // touched marker for a singleton and the earliest touched member for a group;
 // the universal land-on-the-focus rule at land_playhead_on_marker), the group
@@ -294,7 +320,29 @@ void apply_post_restore_rules_impl(AppState& app,
         }
     }
 
-    if (target_set.empty()) return;
+    // NOTHING TOUCHED => NOTHING SELECTED (codex final round, MEDIUM 1, converted
+    // 2026-07-29). This case must NOT fall through any more, and the reason is that
+    // the world changed under the old fall-through: it used to preserve "whatever
+    // the user had", which was a defensible thing to keep. Since contortion ruling 1
+    // the entry's TAB SWITCH (restore_history_entry runs it before the stores are
+    // restored) ends in COINCIDENCE AUTO-SELECT, so what a fall-through preserves is
+    // a MACHINE GUESS — the destination tab's stored cursor happening to stand on a
+    // marker — and the visual tail then treats that guess as though the undo had
+    // touched it: a spurious land, recenter, and an ARMED MARKER LANE after an undo
+    // that changed no marker in this column. Emptying instead makes the standing
+    // rule ("the restore's touched set wins over the tab-entry auto-select in every
+    // reachable case") true with no exception, and it is not a SELECT — the same
+    // shape the 'S' arm uses. REACHABILITY, the codex sequence: `push_undo_both`
+    // (notably the render-entry ADOPT, which records the current marker mode and the
+    // dispatch tab while the entry may change only engine settings and/or the OTHER
+    // column) leaves the active column's vector byte-identical, so undoing it from
+    // the other tab auto-selects on arrival and the active-column diff then finds
+    // nothing. The clear runs through the Selection mutator so the region, the shift
+    // anchor and the subject-change damage are all handled by their owner.
+    if (target_set.empty()) {
+        selection.clear_selection();
+        return;
+    }
 
     // Undo/redo replaces the membership with the touched set -> CLEAR a
     // SelectionExtent region (a restored span must not silently retarget to the

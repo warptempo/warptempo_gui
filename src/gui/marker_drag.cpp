@@ -119,7 +119,6 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
         if (vp_ub < d.delta_max) d.delta_max = vp_ub;
     }
 
-    d.moved = false;
     // Seed moveable_times from original_times (int64 frames widening into
     // the free fractional mid-gesture domain). apply_drag_motion writes the
     // displayed-map-anchored, wall-clamped proposal into moveable_times[0]
@@ -133,7 +132,6 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     } else {
         d.pre_drag_snapshot = app.warpmarkers.markers();
     }
-    d.hit_marker             = hit;
     // NO PRE-GESTURE CAPTURES HERE (all three deleted 2026-07-29): the selection
     // snapshot, the grab-playhead sample and the pre-drag region existed only for
     // an Esc/Ctrl+Q cancel, and POINTER GESTURES HAVE NO CANCEL — the rule and its
@@ -260,7 +258,6 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     if (new_t > eof_wall) new_t = eof_wall;
     if (app.drag.moveable_times[0] == new_t) return;
     app.drag.moveable_times[0] = new_t;
-    app.drag.moved = true;
     // The selection re-assert does not live here: it runs at the THRESHOLD
     // CROSSING in begin_drag, unconditionally. A wall-saturated drag (the clamped
     // delta pins the proposal — the marker at the EOF wall) never reaches this
@@ -369,14 +366,14 @@ void MarkerDragOps::commit_drag() {
             committed = t;
         }
     }
-    // Commit gates on NET change, not on whether motion occurred.
-    // app.drag.moved latches true on the first position change during
-    // motion and never clears, so a drag that wanders and returns exactly
-    // to its original position arrives here with moved == true but zero
-    // net change. Pushing an undo entry then records a snapshot byte-equal
-    // to the live store: a no-op history entry that both undo and redo
-    // restore invisibly. The compare runs on the SNAPPED value: a sub-column
-    // wander commits nothing, while the whole-frame store keeps
+    // Commit gates on NET CHANGE, not on whether motion occurred — the COMMITTED
+    // frame against the pre-drag one, which is the only form of the question worth
+    // asking (the `moved` latch that used to be tracked beside it was never read
+    // and is deleted, 2026-07-29). A drag that wanders and returns exactly to its
+    // original position therefore commits nothing: pushing an undo entry there would
+    // record a snapshot byte-equal to the live store, a no-op history entry that
+    // both undo and redo restore invisibly. The compare runs on the SNAPPED value:
+    // a sub-column wander commits nothing, while the whole-frame store keeps
     // committed == original exactly when the marker returns to its column.
     const bool net_changed = slot_valid && committed != original;
     // Identity hints for the post-restore selection, filled only on a real

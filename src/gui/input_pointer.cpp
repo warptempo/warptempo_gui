@@ -2361,12 +2361,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     const double mouse_frame = static_cast<double>(app.viewport_start_sample) +
         static_cast<double>(mouse_x - area.x) * spp;
     marker_drag.apply_drag_motion(mouse_frame - app.drag.anchor_mouse_time_frame);
-    // Playhead rule: the playhead follows the grabbed marker through the drag
+    // Playhead rule: the playhead follows the dragged marker through the drag
     // inside apply_drag_motion (the arming click landed it on the marker, so
-    // the drag tows it by construction — the DragState ruling). The focus
-    // transfer onto the grabbed marker already ran at the THRESHOLD CROSSING in
-    // begin_drag (a single-marker drag re-asserts the single selection, a group
-    // drag focuses without collapsing), so it holds even for a wall-saturated
-    // drag with no moved motion; apply_drag_motion here only latches
-    // app.drag.moved and slides the playhead. Nothing further tracks here.
+    // the drag tows it by construction — the DragState ruling). The selection
+    // re-assert already ran at the THRESHOLD CROSSING in begin_drag — a no-op,
+    // the arming press having single-selected the marker, and unconditional so a
+    // wall-saturated drag still names what it grabbed. apply_drag_motion here only
+    // writes the proposal and slides the playhead. Nothing further tracks here.
 }

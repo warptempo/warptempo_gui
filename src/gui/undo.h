@@ -107,10 +107,15 @@ struct Undo {
     // platform bit (GuiInputState::synthesized_repeat), threaded from the key
     // event that reached the handler. When it returns true the caller SKIPS its
     // undo push (and calls note_coalesced_commit for the per-press side
-    // effects); either way the caller then calls record_gesture. A const query —
-    // callable anywhere before record_gesture, in any order with the handler's
-    // own refusals.
-    bool coalesce_gesture(GestureKind kind, bool synthesized_repeat) const;
+    // effects); either way the caller then calls record_gesture.
+    // NOT A PURE QUERY since 2026-07-29 (codex final round, MEDIUM 2): a PHYSICAL
+    // press (synthesized_repeat false) INVALIDATES the coalescing stamp here, on
+    // arrival, so it cannot leave an older burst's stamp standing for a later repeat
+    // to merge into — the full derivation is at the definition. It stays callable
+    // anywhere before record_gesture and in any order with the handler's own
+    // refusals; the point of putting it at the ENTRY question is precisely that it
+    // runs BEFORE those refusals can return.
+    bool coalesce_gesture(GestureKind kind, bool synthesized_repeat);
     // Record this eligible press as the burst's latest by KIND. Call after the
     // push / skip.
     void record_gesture(GestureKind kind);
@@ -133,10 +138,12 @@ struct Undo {
     // The previous eligible commit's gesture kind — the whole coalescing state,
     // session-only and never serialized. A repeat merges only into a burst of its
     // OWN kind, which is what keeps a nudge burst and a tempo-step burst separate.
-    // TWO writers: record_gesture stamps it at each eligible commit, and every
-    // route that changes the undo-stack top CLEARS it — the four push helpers plus
-    // the do_undo/do_redo restore core (the reason is at coalesce_gesture: it stops
-    // a stale stamp from outliving the entry it named).
+    // THREE writers: record_gesture stamps it at each eligible commit; every route
+    // that changes the undo-stack top CLEARS it — the four push helpers plus the
+    // do_undo/do_redo restore core, so a stale stamp cannot outlive the entry it
+    // named; and coalesce_gesture itself clears it when the arriving press is
+    // PHYSICAL, so a burst cannot inherit an older burst's stamp (both reasons are
+    // stated at coalesce_gesture's definition).
     GestureKind last_gesture_kind_ = GestureKind::None;
 
     // Shared authoritative guard for do_undo / do_redo: true when the step

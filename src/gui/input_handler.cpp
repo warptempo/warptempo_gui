@@ -240,8 +240,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //     revert anything, and the gesture continues under the pointer exactly as
     //     if no key had been pressed;
     //   * RELEASE ENDS THE GESTURE AND WHAT STANDS STANDS — the release body
-    //     commits: proposed marker positions, the live trim bounds, the tempo
-    //     cents already written, the region as extended;
+    //     commits: the proposed marker position, the live trim bounds, the region as
+    //     extended (the tempo drag's already-written cents left this list with the
+    //     gesture, contortion ruling 8);
     //   * BUTTON-LOST ENDS IT THE SAME WAY (the !primary_button_held arms in
     //     on_motion all route to the release bodies);
     //   * UNDO IS THE MITIGATION — a drag implies "I am ready to commit", and the

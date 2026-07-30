@@ -430,6 +430,19 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         adjust_tempo_cents_group(delta_cents, synthesized_repeat);
         return;
     }
+    // THE COALESCE VERDICT IS ASKED HERE, at this arm's entry and AHEAD OF EVERY
+    // REFUSAL BELOW (moved up 2026-07-29, codex final round MEDIUM 2): the call has a
+    // side effect now — a PHYSICAL press INVALIDATES the coalescing stamp inside it
+    // (the derivation is at Undo::coalesce_gesture) — and an invalidate that sits
+    // behind a refusal is not an invalidate on arrival. `merge` is consumed far
+    // below, and nothing between here and there reads coalescing state, so the hoist
+    // moves no other behavior. coalesce_gesture keys off the press's own repeat bit
+    // (threaded down from the on_key event that reached this handler), so it is
+    // order-independent of the focus-collapse below; it just has to run before
+    // record_gesture stamps the kind. The Up/Down step is the only route reaching
+    // here with kind TempoStep, so a held Up/Down coalesces as intended.
+    const bool merge =
+        undo.coalesce_gesture(GestureKind::TempoStep, synthesized_repeat);
     // architect ruling 2026-07-22: the Up/Down tempo step stays reachable off
     // its source home (target view is exactly where you want to hear/see a tempo
     // change). Since 2026-07-29 it is the WHOLE of the warp column's TEMPO
@@ -469,13 +482,6 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
             static_cast<long>(audio.total_frames())).red;
         if (red.count(f)) return;
     }
-    // Undo-coalescing decision. coalesce_gesture keys off the press's own repeat
-    // bit (threaded down from the on_key event that reached this handler), so it is
-    // order-independent of the focus-collapse below; it just has to run before
-    // record_gesture stamps the kind. The Up/Down step is the only route reaching
-    // here with kind TempoStep, so a held Up/Down coalesces as intended.
-    const bool merge =
-        undo.coalesce_gesture(GestureKind::TempoStep, synthesized_repeat);
     selection.collapse_to_focused();
     const auto& mv_const = app.warpmarkers.markers();
     std::vector<GuiWarpMarker> proposed = mv_const;
@@ -603,6 +609,19 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
 // member is already an owner, so a plain integer add is the whole mutation.
 void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
                                                  bool synthesized_repeat) {
+    // THE COALESCE VERDICT IS ASKED FIRST, ahead of the wall scan below (moved up
+    // 2026-07-29, codex final round MEDIUM 2): the call INVALIDATES the coalescing
+    // stamp when the arriving press is PHYSICAL (the derivation is at
+    // Undo::coalesce_gesture), and an invalidate behind a refusal is not an
+    // invalidate on arrival — a walled press must still end the previous burst.
+    // Order-independent of the mutation otherwise, and `merge` is consumed below.
+    // coalesce_gesture keys on the kind + the repeat bit, NOT on any marker index,
+    // so a held key over the SAME group collapses to one entry (a selection change
+    // requires a command, and a command ends the hold) — the group is
+    // coalesce-eligible unchanged, and the Up/Down step is the only route reaching
+    // here with kind TempoStep.
+    const bool merge =
+        undo.coalesce_gesture(GestureKind::TempoStep, synthesized_repeat);
     const auto& mv = app.warpmarkers.markers();
     const int n = static_cast<int>(mv.size());
     // The coincident-collapse red set, computed VIEW-INDEPENDENTLY here (the
@@ -624,14 +643,6 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
             return;   // walled -> silent all-or-nothing refuse
         }
     }
-    // Coalesce decision before mutation (a const query, order-independent of the
-    // mutation; same as the singleton). The Up/Down step is the only route reaching
-    // here with kind TempoStep, and coalesce_gesture keys on the kind + the repeat
-    // bit, NOT on any marker index, so a held key over the SAME group collapses to
-    // one entry (a selection change requires a command, and a command ends the
-    // hold) — the group is coalesce-eligible unchanged.
-    const bool merge =
-        undo.coalesce_gesture(GestureKind::TempoStep, synthesized_repeat);
     std::vector<GuiWarpMarker> pre_state = mv;
     // Apply +/-1 cent to each selected member (plain integer arithmetic — the
     // structural producer discipline). None is walled (checked above), so every

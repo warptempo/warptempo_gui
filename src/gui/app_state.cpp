@@ -62,7 +62,6 @@ void remap_marker_indices_after_reorder(AppState& app,
         // (original_times / moveable_times) is positional (slot 0, the one dragged
         // marker), so an in-place value remap keeps the index bound to its times.
         for (int& idx : app.drag.dragging_markers) idx = mapped(idx);
-        app.drag.hit_marker = mapped(app.drag.hit_marker);
     }
 }
 

@@ -31,10 +31,22 @@ PositionNudgePrologue position_nudge_prologue(
     playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.empty()) return r;
     if (app.last_selected_marker < 0) return r;
-    // Undo-coalescing decision (a const query); computed before the geometry
-    // refusals below, which is today's order in both twins. A held key's
-    // continuation presses carry synthesized_repeat and merge into the entry the
-    // physical press pushed.
+    // Undo-coalescing decision, and its PLACEMENT IS LOAD-BEARING rather than
+    // incidental since 2026-07-29 (codex final round, MEDIUM 2): a PHYSICAL press
+    // INVALIDATES the coalescing stamp inside this call — the derivation is at
+    // Undo::coalesce_gesture — so it must run on every press that could otherwise
+    // refuse and leave an older burst's stamp standing for its own first repeat to
+    // merge into (the reachable flip is the async waveform publish moving the
+    // displayed map under the phase twin's wall test between the physical press and
+    // that repeat). Hence it sits AHEAD OF EVERYTHING THAT CAN REFUSE ON GEOMETRY OR
+    // WALLS: the sample-rate and samples-per-pixel guards below, the focused-index
+    // belt, and each twin's own wall regime. What remains AHEAD of it is exactly the
+    // trivial state guards (loading / empty audio / empty selection / no focus), and
+    // those cannot flip mid-hold — every one of them needs a COMMAND to change, and a
+    // command disarms the platform's repeat (layer (1) at maybe_fire_repeat), so no
+    // repeat of this hold can survive to find the stamp. Both tempo-step arms are
+    // ordered on the same rule. A held key's continuation presses carry
+    // synthesized_repeat and merge into the entry the physical press pushed.
     const bool merge = undo.coalesce_gesture(kind, synthesized_repeat);
     if (audio.sample_rate() <= 0) return r;
     if (current_samples_per_pixel(app, audio) <= 0.0) return r;

@@ -152,30 +152,6 @@ void Selection::set_single_selection(int idx) {
     damage_stem_on_subject_change(old_stem);
 }
 
-void Selection::focus_without_collapse(int idx) {
-    // Membership untouched — only the FOCUS moves. Dissolve the shift-range
-    // anchor (every non-range selection mutator does; a subsequent shift-click
-    // re-adopts the focus). No damage_playhead_if_focus_flipped: the selection
-    // SIZE does not change, so the focus-emptiness boundary cannot cross. The
-    // overlay SUBJECT can move with the focus, though (its owner keys on the
-    // focused frame, not on size), so capture-and-compare owns that repaint —
-    // today's only callers are the group-drag threshold crossing (2+ selected,
-    // where the overlay is suppressed so the subject is none either way, a
-    // no-op), but the owner is here structurally for any future size-<2 caller.
-    // The STEM subject is likewise none at 2+ (the always-on stem is
-    // singleton-only), so its owner is a no-op today too — kept for the same
-    // future-caller symmetry.
-    if (idx < 0) return;
-    const std::optional<int64_t> old_subject = phase_overlay_subject();
-    const std::optional<int64_t> old_stem    = stem_subject();
-    app.shift_range_anchor   = -1;
-    app.last_selected_marker = idx;
-    viewport.invalidate_top_strip();
-    viewport.invalidate_timestamp_area();
-    damage_overlay_on_subject_change(old_subject);
-    damage_stem_on_subject_change(old_stem);
-}
-
 void Selection::clear_selection() {
     // Membership replace (to empty) -> CLEAR a SelectionExtent region: the span's
     // owner just died, so this takes the span, pixels and all. That is the whole
