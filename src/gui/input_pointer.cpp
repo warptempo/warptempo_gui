@@ -206,7 +206,7 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // pure viewport moves leave it alone. The other half of the model is the
 // MEMBERSHIP REPLACE, which clears a SelectionExtent span outright
 // (clear_region_on_membership_replace, app_state.h) — that is what covers the
-// ops which change WHO is selected without moving anything: sanitize/prune and
+// ops which change WHO is selected without moving anything: sanitize and
 // the deselecting routes (Home/End, clear_selection's callers — Esc is no longer
 // one of them, being unbound since 2026-07-29). (The Ctrl+N collapse is NOT one
 // of them — it LANDS the playhead

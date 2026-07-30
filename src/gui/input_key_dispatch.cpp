@@ -1496,7 +1496,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // membership half of the clear below is therefore already satisfied; the
         // FOCUS half is not — last_selected_marker survives an empty selection
         // (a ctrl-toggle that empties the set repairs the focus rather than
-        // dropping it, and sanitize/prune can leave one behind), and
+        // dropping it, and sanitize can leave one behind), and
         // clearing it is what stops a stale focus from re-entering the marker
         // lane on the next selection gesture.
         // The stop lives HERE, in this lane only: the marker-lane routes carry
