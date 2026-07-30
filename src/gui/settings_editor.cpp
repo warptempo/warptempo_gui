@@ -252,6 +252,16 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     }
     if (suffix == "trim_begin" || suffix == "trim_end") {
         const bool is_begin = (suffix == "trim_begin");
+        // THE LIVE / PARKED SPLIT, which both value arms below branch on
+        // (`active`). A tab_A key edited while tab A is active writes the LIVE
+        // trim, and that commit is a TrimWindow SETTER: it deselects and
+        // publishes the highlight like every other route that commits the live
+        // window (the class and its membership are at
+        // sync_region_to_trim_window's declaration, input_handler.h). A tab_B
+        // key edited from tab A writes only the PARKED band — no live trim, no
+        // painted highlight, nothing visible changed — so it publishes nothing
+        // and deselects nothing; the entering tab rests its pair bare either way
+        // (the Ctrl+Tab pull is an entry route, not a setter).
         // Trim is an authoring mutation: its gestures refuse in a read-only
         // tab, so mirror that here (viewport / zoom / playhead / read_only
         // above are navigation-class and stay allowed).
@@ -270,17 +280,18 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             if (active) {
                 viewport.invalidate_waveform_area();
                 target_render.trigger();
-                // MAINTAIN (never create) a TrimWindow highlight: an active-tab
-                // bound unset is a trim author, so if a TrimWindow region is up,
-                // re-sync it — the no-window arm clears it now that a bound is
-                // gone, so x can't resurrect the pair from a stale highlight. A
-                // text commit is
-                // NOT a pointing gesture — it only maintains an existing trim
-                // highlight, so a Free / SelectionExtent / no region is left
-                // untouched (no creation).
-                if (app.region.active &&
-                    app.region.provenance == RegionProvenance::TrimWindow)
-                    input->sync_highlight_to_trim_window();
+                // THE SETTER'S PUBLISH (architect 2026-07-30, "a typed commit is
+                // a commit"): deselect, then sync — the shape the chip bound-set
+                // click uses, and the sibling precedent is eight lines up, where
+                // playhead_cursor= already clears selection and region under the
+                // architect's no-exemptions rule. It replaces a provenance-gated
+                // "MAINTAIN (never create)" sync that made these two keys the one
+                // trim-authoring route exempt from both halves of the setter
+                // rule. Placed past every refusal this arm carries (read-only
+                // tab, schema, the unchanged early return), so a refused commit
+                // deselects nothing. LIVE ARM ONLY — see the parked-band note in
+                // the sibling arm below.
+                input->deselect_and_sync_trim_window_highlight();
             }
             applied(); return true;
         }
@@ -305,14 +316,13 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             input->auto_clear_crossed_trim();
             viewport.invalidate_waveform_area();
             target_render.trigger();
-            // MAINTAIN (never create) a TrimWindow highlight after the bound
-            // commit + auto_clear: re-sync an already-active TrimWindow region to
-            // the NEW pair (or clear it if auto_clear dissolved the pair). A text
-            // commit is not a pointing gesture — a Free / SelectionExtent / no
-            // region is left untouched (no creation).
-            if (app.region.active &&
-                app.region.provenance == RegionProvenance::TrimWindow)
-                input->sync_highlight_to_trim_window();
+            // THE SETTER'S PUBLISH after the bound commit + auto_clear
+            // (architect 2026-07-30): deselect, then sync — a full pair
+            // publishes the TrimWindow highlight, and a pair auto_clear just
+            // dissolved clears it. Same shape and same reason as the unset arm
+            // above; past every refusal (read-only tab, the wall range check,
+            // the unchanged early return), so a refused commit deselects nothing.
+            input->deselect_and_sync_trim_window_highlight();
         } else if (t.has_begin && t.has_end && t.end_frame <= t.begin_frame) {
             // Inactive band: the load convention — a crossed/equal resulting
             // pair clears both bounds, one stderr line.
@@ -468,8 +478,8 @@ void GuiSettingsEditor::commit() {
     // and a span measured against the old map is exactly the stale assertion the
     // two-forms model collapses on sight. This tail is the ONE committed path for
     // every canonical engine key — the GUI-kind keys returned through
-    // commit_gui_setting far above (the TRIM keys among them, which re-sync a
-    // TrimWindow highlight to the edited bounds and are maintainers by ruling,
+    // commit_gui_setting far above (the TRIM keys among them, whose active-tab
+    // arms deselect and publish their own TrimWindow highlight as SETTERS,
     // untouched here), and the unknown-key / invalid-value / source-collision /
     // unchanged arms all returned before this point — so one clear here covers
     // the map change with no arm left uncovered. It is UNCONDITIONAL for the same

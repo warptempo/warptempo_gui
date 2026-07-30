@@ -324,10 +324,15 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
         // way, before or after this call. Compared AFTER the clamp, because the
         // clamp is what decides where the land actually seats.
         if (sample == app.playhead_cursor_sample) return;
-        const double old_px = playhead_pixel_x(app, audio);
         app.playhead_cursor_sample = sample;
-        viewport.invalidate_playhead_columns(
-            old_px, playhead_pixel_x(app, audio));
+        // FULL WAVEFORM-AREA DAMAGE (architect 2026-07-30, replacing the narrow
+        // old/new column pair computed on the LIVE viewport): the cursor's
+        // pixels are PLATE-registered, and this free helper takes no
+        // GuiPaintHandler, so it widens rather than adding one — a land is a
+        // discrete command and a full-area invalidate cannot ride the wrong
+        // epoch. Rule and per-site shape table at playhead_pixel_x
+        // (app_state.h).
+        viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
     }
 }
@@ -1750,6 +1755,10 @@ void GuiInputHandler::place_playhead_and_arm_region(int click_rel_x, int x,
     viewport.move_playhead_to(sample);
     if (was_playing && sample != playhead_at_entry)
         playback_lifecycle.reseek_keeping_alive(sample);
+    // SUPPRESS THE CHASE for this session: the user placed the cursor
+    // deliberately, so follow must not page the viewport away from it. One of
+    // two producer classes (the other being any viewport pan); the inventory and
+    // the clearing rule live at the flag's declaration, app_state.h.
     if (was_playing) app.follow_overridden_for_session = true;
     arm_region_drag_at(sample, x, y);
 }

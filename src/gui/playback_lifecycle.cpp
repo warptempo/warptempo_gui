@@ -13,17 +13,24 @@
 // scanner's value fields are stale by contract — no consumer reads them — so
 // nothing is snapped back.
 // The cursor is not touched here — the caller is about to commit a new
-// cursor position. The scanner's last-painted column must be invalidated
+// cursor position. The scanner's last-painted pixels must be invalidated
 // here regardless of what the caller does next: the caller cares about
 // the cursor, but the scanner has its own visible identity that this
 // function is responsible for tearing down.
 void GuiPlaybackLifecycle::stop_playback_if_playing() {
     if (!playback.is_playing() && !app.playhead_scanner_active) return;
-    const double scanner_px = scanner_pixel_x(app, audio);
-    const double cursor_px  = playhead_pixel_x(app, audio);
     playback.stop();
     app.playhead_scanner_active = false;
-    viewport.invalidate_playhead_columns(scanner_px, cursor_px);
+    // FULL WAVEFORM-AREA DAMAGE (architect 2026-07-30, replacing the narrow
+    // scanner/cursor column pair this used to compute on the LIVE viewport).
+    // The playheads' pixels are PLATE-registered, so live-basis columns could
+    // leave the scanner's last line un-erased through an async publish window;
+    // GuiPlaybackLifecycle sees no GuiPaintHandler, so the site takes the
+    // widening shape instead of the honest-basis one — a full-area invalidate
+    // cannot ride the wrong epoch, and a stop is a discrete once-per-audition
+    // event. The rule and the per-site shape table live at playhead_pixel_x
+    // (app_state.h).
+    viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     app.follow_overridden_for_session = false;
 }
@@ -49,14 +56,18 @@ void GuiPlaybackLifecycle::stop_playback_for_modal_open() {
 // work here is to deactivate the scanner; once inactive its value fields are stale
 // by contract, so nothing is snapped back. It also clears
 // follow_overridden_for_session, which is why the deleted tail's guard on that flag
-// was dead: this call had already reset it one line earlier. Invalidate the span between the
-// scanner's last-painted column and the cursor's column so both repaint
-// cleanly — on natural end that erases the line from wherever the predictor
-// last drew it, a few pixels short of the exclusive end bound.
+// was dead: this call had already reset it one line earlier. Damage the whole
+// waveform area so the scanner and cursor both repaint cleanly — on natural end
+// that erases the line from wherever the predictor last drew it, a few pixels
+// short of the exclusive end bound.
 void GuiPlaybackLifecycle::restore_playhead_to_lsp() {
-    const double scanner_px = scanner_pixel_x(app, audio);
-    const double cursor_px  = playhead_pixel_x(app, audio);
-    viewport.invalidate_playhead_columns(scanner_px, cursor_px);
+    // FULL WAVEFORM-AREA DAMAGE, the same widening its sibling stop edge took
+    // (architect 2026-07-30): the playheads' pixels are PLATE-registered and
+    // this class sees no GuiPaintHandler, so the narrow live-basis column pair
+    // this replaces could leave the last scanner line standing through an async
+    // publish window. Rule and per-site shape table at playhead_pixel_x
+    // (app_state.h).
+    viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     const GuiRect ts = top_strip_area(app);
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
@@ -389,10 +400,13 @@ void GuiPlaybackLifecycle::set_follow_mode(bool desired) {
     const bool was_off = !app.follow_mode;
     app.follow_mode = desired;
     if (was_off && app.follow_mode && playback.is_playing()) {
-        // Explicit enable overrides a prior manual-pan suppression so follow
-        // resumes paging, not just the one initial jump. Land the scanner at
-        // the page-turn position if it had drifted offscreen; no-op when it is
-        // already in view.
+        // Explicit enable clears a prior pan suppression so follow resumes
+        // paging, not just the one initial jump — which since 2026-07-30 is this
+        // arm's whole purpose, the "manual-pan suppression" it names finally
+        // having pan producers (every viewport pan during playback sets the
+        // flag; the producer inventory is at its declaration in app_state.h).
+        // Land the scanner at the page-turn position if it had drifted
+        // offscreen; no-op when it is already in view.
         app.follow_overridden_for_session = false;
         playback.resync_predictor();
         viewport.follow_scroll_if_needed();

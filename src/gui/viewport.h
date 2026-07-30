@@ -74,7 +74,15 @@ struct Viewport {
     //    apply_zoom_to_start, center_viewport_on_playhead, apply_strip_drag_zoom,
     //    and scroll_viewport — every pan/scroll class, which joined this route
     //    2026-07-26 when the incremental shift-and-strip path was retired),
-    //    the S/T view toggle and the Ctrl+Tab A/B tab switch (domain flips), the
+    //    ALL THREE VIEW SWITCHES, one class since 2026-07-30: the S/T audio-view
+    //    toggle and the Ctrl+Tab A/B tab switch (both domain flips) and the `p`
+    //    W/P marker-column toggle — `p` moves neither viewport nor domain, so its
+    //    plate render is redundant, but active_markers_view is a flag-cache
+    //    FINGERPRINT field and this is the route that lands the flag rebuild in
+    //    the damaged frame; it joins the class rather than growing a second
+    //    flag-only kick (the reason is stated at its site, active_views.cpp), and
+    //    the settings active_markers_view= key rides it through the same
+    //    function. Also here: the
     //    settings tab_X_viewport_start commit, the strip drag's TERMINATING-EVENT
     //    finalize — re-derived 2026-07-29, the true terminating events being
     //    release, button loss, and the force-end finalizer's three callers
@@ -204,18 +212,24 @@ struct Viewport {
     // Invalidation.
     void invalidate_waveform_area();
     void invalidate_timestamp_area();
+    // Narrow playhead/scanner damage: the union (or the pair) of the two given
+    // COLUMNS' rects. The columns must be resolved on the PLATE basis — the
+    // playheads' pixels are plate-registered, and damage follows the basis of
+    // the pixels it erases (the rule, and the table of which sites take this
+    // narrow shape versus a full-area widening, live at playhead_pixel_x in
+    // app_state.h). Since 2026-07-30 the callers are exactly the three that can
+    // see a GuiPaintHandler and so can compute plate columns: main.cpp's tick
+    // heartbeat and pre-paint scanner advance (per-frame, narrow by necessity)
+    // and the Tab/`c` jump's no-scroll branch.
     void invalidate_playhead_columns(double old_px, double new_px);
-    // Low-level SELECTED-marker stem column damage (architect
-    // 2026-07-25): damage the stem column at the given SOURCE FRAME on the DISPLAYED
-    // item basis (waveform height, +AA slack). The stem (paint_selected_stem) paints
-    // against the promoted item mirror (displayed_viewport_basis), not the live
-    // viewport, so this erases the COMMITTED DISPLAYED stem pixels — correct
-    // regardless of whether live and displayed currently coincide (damage follows
-    // the pixels). The SOLE caller is Selection::damage_stem_on_subject_change (the
-    // subject-change owner), which passes the old and new singleton-subject frames;
-    // the former hover-driven and click-site callers died with the conditional-stem
-    // apparatus. No-op when the column is offscreen.
-    void invalidate_stem_column(int64_t source_frame);
+    // (There is no stem-column invalidator any more. invalidate_stem_column
+    // computed the selected stem's narrow damage on the ITEM basis while
+    // paint_selected_stem paints on the PLATE basis; the stem's subject-change
+    // damage was WIDENED to invalidate_waveform_area 2026-07-30 — a selection
+    // change is rare enough to pay for a full repaint, and a full-area
+    // invalidate cannot ride the wrong basis. The reason lives at the one owner,
+    // Selection::damage_stem_on_subject_change; deleting the narrow route left
+    // it caller-less.)
     void invalidate_top_strip();
     void invalidate_all();
 

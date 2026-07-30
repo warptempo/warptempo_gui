@@ -331,6 +331,40 @@ struct GuiPaintHandler {
     // launch load, follow scrolling — stay on the worker.
     void force_synchronous_waveform_rebuild();
 
+    // THE PLATE PAINT BASIS: vp_start and samples-per-pixel LOCKED
+    // to the blitted plate (wf_cache.fp_*) while the worker rebuilds against a
+    // viewport change, so every live overlay (the region ground, the overlay
+    // ring, the selected stem, the strip-drag anchor, the playheads) stays
+    // registered with the cached pixels instead of the not-yet-painted live
+    // viewport. This is the ONE authoritative enumeration of the
+    // PLATE-REGISTERED overlays; other sites state only their own class plus a
+    // pointer here. spp falls back to the LIVE current_samples_per_pixel when no
+    // plate has published a span yet (fp_area_w <= 0, cold before the first
+    // completion). The ONE owner of that recipe; each caller keeps its own
+    // spp <= 0 guard where it has one today.
+    //
+    // NAMED FOR ITS EPOCH (architect 2026-07-30). This accessor and the free
+    // item_viewport_basis(app, audio) (app_state.h) were BOTH spelled
+    // `displayed_viewport_basis` and both returned a `DisplayedViewportBasis`,
+    // so C++ name lookup silently resolved the unqualified spelling to THIS one
+    // inside the class scope and the free owner needed a ::-qualification
+    // workaround to be reachable at all — two coordinate epochs indistinguishable
+    // by grep, which is how three authoritative comments came to disagree about
+    // which basis the selected stem's damage rode. The two epochs stay distinct
+    // (the resize item-only-promotion window is real; the do-not-collapse ruling
+    // is at item_viewport_basis); only the names changed.
+    //
+    // PUBLIC because the playheads' narrow DAMAGE sites need it: damage follows
+    // the basis of the pixels it erases, and the sites that can see a
+    // GuiPaintHandler resolve their columns here rather than on the live
+    // viewport (the rule and the per-site shape table live at playhead_pixel_x,
+    // app_state.h). Read-only geometry, no state touched.
+    struct PlateViewportBasis {
+        double vp_start = 0.0;
+        double spp      = 0.0;
+    };
+    PlateViewportBasis plate_viewport_basis() const;
+
 private:
     // Waveform fingerprint inputs derived from current app state. This is
     // the single source of truth for the desired waveform fingerprint —
@@ -381,21 +415,6 @@ private:
     // the blit, and the trim bridge bar is the whole inside-the-window signal.
     // Neither helper had any other consumer, so both went with the pass.)
 
-    // The displayed-viewport paint basis: vp_start and samples-per-pixel LOCKED
-    // to the blitted plate (wf_cache.fp_*) while the worker rebuilds against a
-    // viewport change, so every live overlay (the region ground, the overlay
-    // ring, the selected stem, the strip-drag anchor, the playheads) stays
-    // registered with the cached pixels instead of the not-yet-painted live
-    // viewport. spp falls back to the LIVE current_samples_per_pixel when no
-    // plate has published a span yet (fp_area_w <= 0, cold before the first
-    // completion). The ONE owner of that recipe; each caller keeps its own
-    // spp <= 0 guard where it has one today.
-    struct DisplayedViewportBasis {
-        double vp_start = 0.0;
-        double spp      = 0.0;
-    };
-    DisplayedViewportBasis displayed_viewport_basis() const;
-
     // The region-select span's on-screen column pair under a given displayed
     // basis. Endpoints are active-domain frames stored in drag order; normalize
     // to [lo, hi] then map to columns via the plain viewport transform (the
@@ -407,7 +426,7 @@ private:
         int lo_col = 0;
         int hi_col = 0;
     };
-    RegionColumns region_columns(const DisplayedViewportBasis& basis) const;
+    RegionColumns region_columns(const PlateViewportBasis& basis) const;
 
     // The phase-reset overlay band's clipped screen-x span for this frame, or
     // valid == false when no band shows (wrong view, no eligible focused reset,

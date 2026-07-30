@@ -190,8 +190,9 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     the scale among those keys is a warp-map input and the commit rebuilds the
 //     map under any resting highlight. That tail CLEARS THE SELECTION beside the
 //     region (ruling 6, below). The settings editor's TRIM keys never
-//     reach it — they return through commit_gui_setting, which re-syncs a
-//     TrimWindow highlight to the edited bounds, a maintainer by ruling.
+//     reach it — they return through commit_gui_setting, whose active-tab arms
+//     deselect and publish the TrimWindow highlight themselves (they are SETTERS
+//     since 2026-07-30; the class is at sync_region_to_trim_window).
 // A 2+ SELECTION ALWAYS HAS A SPAN, AND NOTHING ENFORCES THAT FROM THE CLEAR SIDE
 // — THE NEVER-SPAN-LESS PROTOCOL IS DELETED, THE PROPERTY MOVED INTO THE VERBS
 // (architect 2026-07-29, ruling 6 plus the same-day rejection that finished it,
@@ -319,37 +320,74 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // column — paint_region_ground draws no ground at zero width and
 // render_split_playhead has its own one-column form, the shape the undo group
 // restore's all-coincident extent already rests at); no full pair -> clear the
-// region. So a full pair DOES imply an active TrimWindow region.
+// region.
+//
+// WHAT THAT DOES AND DOES NOT IMPLY (narrowed 2026-07-30, architect — the old
+// sentence here read "a full pair DOES imply an active TrimWindow region" and was
+// false as written). THIS SYNC publishes a region for a full pair every time it
+// runs, so every SETTER leaves a full pair highlighted. A
+// RESTING full pair implies NOTHING: the highlight is a GESTURE-SCOPED cue, and
+// the ENTRY / RESTORE routes deliberately rest a pair BARE — file load, the
+// Ctrl+Tab band pull (which pulls the entering tab's set trim as a matter of
+// course), the `t` and `p` view switches (both clear any region wholesale), and
+// `'` adopt, none of which run this sync at all. The implication runs one way:
+// an active TrimWindow region implies a full pair, never the converse.
 // Definition lives in input_trim.cpp. It was made a FREE function so the group
 // tempo gestures could re-sync a TrimWindow region across their own map change;
 // those re-syncs are DELETED (2026-07-29, see below), so its only callers today are
 // the two GuiInputHandler wrappers — sync_highlight_to_trim_window (the bare form,
-// for the clearers and maintainers) and deselect_and_sync_trim_window_highlight
+// whose only caller is now Shift+X) and deselect_and_sync_trim_window_highlight
 // (the SETTERS' form, which deselects ahead of the same call).
 //
 // A TrimWindow REGION RESTS ONLY BESIDE AN EMPTY SELECTION (architect 2026-07-29).
 // Stated here once, at the sync that owns the provenance; every other site states
 // its own class plus a pointer. EVERY TrimWindow SETTER CLEARS THE SELECTION — the
 // trim-bar click is the span-form sibling of the plain waveform click's
-// deselect-all: clicking trim means ready to move on. THE SETTERS (grep-derived
-// over the callers of deselect_and_sync_trim_window_highlight, which pairs the
-// deselect with the publish and is the only route that does):
+// deselect-all: clicking trim means ready to move on.
+//
+// THE SETTER CLASS IS DEFINED BY WHAT A ROUTE DOES (restated 2026-07-30; the old
+// definition — "grep-derived over the callers of deselect_and_sync_trim_window_
+// highlight" — was CIRCULAR, since a list derived from the helper's callers
+// structurally cannot contain a route that should deselect and does not, which is
+// exactly how the settings trim keys sat outside it). A route is a SETTER iff a
+// USER COMMAND runs it and, past that route's own refusals, it COMMITS THE LIVE
+// TAB'S TRIM WINDOW — writing a bound, or claiming the resting pair as the
+// highlight. Membership re-derived by grepping the live-tab trim-bound writers
+// (app.trim.* / the settings arms' active branch) plus the one non-writing
+// claimer:
 //   * the PLAIN chip-row click, all three arms — the read-only press's direct sync,
 //     the writable unclaimed-spot sync, and the deferred motionless completions
-//     (clean release / lost button);
+//     (clean release / lost button). The one claimer: it writes no bound, it
+//     claims the resting pair;
 //   * the ctrl (BEGIN) and ctrl+shift (END) BOUND-SET clicks, one function
 //     (set_trim_bound_at_click) and so one deselect;
-//   * bare `x` (region -> trim), which deselects after its span is read;
-//   * the trim chip/bridge DRAG's live sync — both motion arms and the release.
+//   * bare `x` (region -> trim, handle_trim_x), which deselects after its span
+//     is read;
+//   * the trim chip/bridge DRAG's live sync — update_trim_drag's motion arms and
+//     commit_trim_drag;
+//   * the settings editor's tab_X_trim_begin= / tab_X_trim_end= keys committed on
+//     the ACTIVE tab, BOTH value forms (a frame and the -1 unset) — JOINED
+//     2026-07-30, architect: "a typed commit is a commit", the sibling
+//     playhead_cursor= key having already cleared selection and region under the
+//     no-exemptions rule. Their INACTIVE-tab arm is not a member and never was:
+//     it writes a parked band, publishes no highlight, and changes nothing
+//     visible.
 // Each deselects PAST ITS OWN REFUSALS (the refusal-gating rule these routes
 // already hold their playback stop under): a read-only bound set, a chip-row claim
-// with no resting pair, degenerate geometry, and a drag event that moved no bound
-// publish no highlight and so deselect nothing.
-// THE NON-SETTERS KEEP THE BARE SYNC and do not deselect: Shift+X (a trim
-// CLEARER) and the settings editor's two trim maintainers. That is the whole list
-// — the tempo family's TrimWindow re-syncs were DELETED by the same ruling (see
-// the unreachability below), and the two trim Esc-cancel re-syncs died with the
-// cancels themselves (pointer gestures have no cancel, 2026-07-29).
+// with no resting pair, degenerate geometry, a drag event that moved no bound, and
+// a settings commit rejected for a read-only tab / an out-of-wall value / an
+// unchanged value all publish no highlight and so deselect nothing.
+// THE NON-SETTER IS NOW EXACTLY ONE ROUTE and keeps the bare sync: Shift+X, the
+// dedicated trim CLEARER, which destroys both bounds outright so there is no
+// window left for a deselect to hand the user (the architect's own 2026-07-29
+// exemption, kept verbatim). Everything else that touches a trim bound is not a
+// command in this sense: auto_clear_crossed_trim is a shared commit tail every
+// setter already runs INSIDE its own publish, and the ENTRY / RESTORE routes
+// (file load, the Ctrl+Tab band pull, the settings-file tab-band pull, `'` adopt)
+// install a trim wholesale and rest the pair bare. The tempo family's TrimWindow
+// re-syncs were DELETED by the same ruling (see the unreachability below), and
+// the two trim Esc-cancel re-syncs died with the cancels themselves (pointer
+// gestures have no cancel, 2026-07-29).
 // The invariant's OTHER HALF is that nothing puts a selection back beside a
 // resting TrimWindow region: every route that selects a marker either CLEARS the
 // region (the plain/multi-select clicks, the Tab
@@ -980,11 +1018,12 @@ private:
     // navigation), so read-only-safe. Owns its own waveform-highlight damage,
     // raised only when the region's visible identity actually changed (a
     // per-motion-event path pays narrow damage, not full).
-    // THIS BARE FORM IS THE NON-SETTERS' (Shift+X and the settings editor's two
-    // trim maintainers): it leaves the selection alone, and all three gate their
-    // call on a resting TrimWindow region, which by that provenance's own rule
-    // means the selection is already empty. Every route that SETS the window calls
-    // the setter form below instead.
+    // THIS BARE FORM HAS EXACTLY ONE CALLER since 2026-07-30: Shift+X, the trim
+    // CLEARER and the whole non-setter list (the settings editor's two trim keys
+    // left it for the setter form that day). It leaves the selection alone, and it
+    // gates its call on a resting TrimWindow region, which by that provenance's own
+    // rule means the selection is already empty. Every route that SETS the window
+    // calls the setter form below instead.
     void sync_highlight_to_trim_window();
 
     // The SETTER's publish: deselect, then sync. EVERY TrimWindow setter goes

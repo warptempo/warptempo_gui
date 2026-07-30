@@ -1119,7 +1119,16 @@ int main(int argc, char** argv) {
             // never by the tick — the tick fires ~2x per frame, so
             // duplicating the timestamp rect there is wasted on_redraw
             // work.
-            const double px = scanner_pixel_x(app, audio);
+            // PLATE basis, not live: the scanner's pixels are plate-registered
+            // (paint_playheads), so its damage resolves there too — the rule and
+            // the per-site shape table live at playhead_pixel_x, app_state.h.
+            // NARROW is mandatory here (this fires ~2x per frame while playing),
+            // and this lambda's scope reaches paint_handler, so the site takes
+            // the narrow-on-plate shape rather than widening.
+            const GuiPaintHandler::PlateViewportBasis pb =
+                paint_handler.plate_viewport_basis();
+            const double px = scanner_pixel_x(
+                app, static_cast<int64_t>(pb.vp_start), pb.spp);
             invalidate_playhead_columns(px, px);
             // OFFSCREEN FALLBACK — the paint clock has to keep running
             // even when the scanner column contributes nothing.
@@ -1150,7 +1159,7 @@ int main(int argc, char** argv) {
         // scanner THIS tick, through the same call Space's stop edge makes:
         // a stopped scanner is deactivated immediately and there is no
         // non-playing window in which its value fields are valid (contract at
-        // app_state.h's scanner block). The scanner's last-painted column is
+        // app_state.h's scanner block). The scanner's last-painted pixels are
         // damaged by the call, so the line vanishes from wherever the predictor
         // last drew it — a few pixels short of the exclusive end bound, the
         // accepted delta.
@@ -1242,18 +1251,30 @@ int main(int argc, char** argv) {
         // paint even while this gate holds.
         if (cur == app.playhead_scanner_sample) return;
 
+        // PLATE basis for both columns, not live: the scanner's pixels are
+        // plate-registered (paint_playheads), so its damage resolves there —
+        // the rule and the per-site shape table live at playhead_pixel_x
+        // (app_state.h). NARROW is mandatory here (this is the per-frame
+        // scanner advance) and this lambda reaches paint_handler, so the site
+        // takes the narrow-on-plate shape rather than widening.
+        const GuiPaintHandler::PlateViewportBasis pb =
+            paint_handler.plate_viewport_basis();
+        const int64_t pb_vp = static_cast<int64_t>(pb.vp_start);
         // One-shot read of the viewport-mutation stash. When set, it
         // holds the scanner's last painted pixel-x under the OLD
         // viewport; the recomputed scanner_pixel_x against the new
         // viewport would point at a column the scanner was never
         // painted at, leaving a ghost. old_px reads the still-current
         // playhead_scanner_precise (the last painted continuous position).
+        // The stash's producers capture at their pre-mutation rest, where the
+        // plate they are about to replace IS the live viewport, so a stashed
+        // value is already a plate-basis column and needs no translation.
         double old_px;
         if (app.playhead_scanner_old_px_stash >= 0.0) {
             old_px = app.playhead_scanner_old_px_stash;
             app.playhead_scanner_old_px_stash = -1.0;
         } else {
-            old_px = scanner_pixel_x(app, audio);
+            old_px = scanner_pixel_x(app, pb_vp, pb.spp);
         }
         // Advance both fields: the integer sample (domain / change-detection)
         // and the continuous position the scanner pixel is drawn from. new_px
@@ -1261,7 +1282,7 @@ int main(int argc, char** argv) {
         // pixel, matching what paint draws.
         app.playhead_scanner_sample = cur;
         app.playhead_scanner_precise = playback.cursor_precise();
-        const double new_px  = scanner_pixel_x(app, audio);
+        const double new_px  = scanner_pixel_x(app, pb_vp, pb.spp);
 
         // invalidate_region during pre-paint appends to damage_ without
         // scheduling a redundant frame callback (platform layer handles

@@ -88,36 +88,6 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
     }
 }
 
-void Viewport::invalidate_stem_column(int64_t source_frame) {
-    if (audio.total_frames() <= 0) return;
-    const GuiRect area = waveform_area(app);
-    if (area.w <= 0) return;
-    // The stem's column on the DISPLAYED item basis — the honest source, since the
-    // selected-marker stem paints against the promoted item mirror
-    // (displayed_viewport_basis), not the live viewport. Both the displayed MAP
-    // and the displayed VIEWPORT/spp: the invariant is damage-follows-the-pixels —
-    // this erases the COMMITTED DISPLAYED stem pixels, correct regardless of
-    // whether live and displayed currently coincide. It matters during an async
-    // publish window, where the live viewport already holds the NEW span while the
-    // stem still paints at the OLD displayed column — a live-basis column would
-    // then miss the stem entirely; at a fully settled rest with no publish pending
-    // the two bases happen to coincide, but nothing here relies on that.
-    const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
-    const int col = painted_column_of_source_frame_on_basis(
-        app, audio, static_cast<double>(source_frame),
-        displayed_or_live_target_map(app, audio),
-        basis.vp_start, basis.spp);
-    if (col < 0 || col >= area.w) return;
-    // A narrow full-waveform-height band around the 1px stem (+AA slack).
-    constexpr int kStemPad = 2;
-    int x0 = area.x + col - kStemPad;
-    int x1 = area.x + col + kStemPad + 1;
-    if (x0 < area.x)              x0 = area.x;
-    if (x1 > area.x + area.w)     x1 = area.x + area.w;
-    if (x1 <= x0) return;
-    gui.invalidate_region(x0, area.y, x1 - x0, area.h);
-}
-
 // move_playhead_to: update playhead, keep viewport so playhead stays
 // visible. Invalidate only what changed. Clamps to the full audio
 // range; trim is purely cosmetic so the playhead is free to sit
@@ -131,7 +101,6 @@ void Viewport::move_playhead_to(int64_t new_sample) {
     if (audio.total_frames() <= 0) return;
     new_sample = clamp_playhead_to_live_domain(new_sample, app, audio);
 
-    const double old_px = playhead_pixel_x(app, audio);
     const int64_t old_vp = app.viewport_start_sample;
     const int64_t visible = samples_visible(app, audio);
 
@@ -167,8 +136,18 @@ void Viewport::move_playhead_to(int64_t new_sample) {
         invalidate_waveform_area();
         kick_waveform_sync();
     } else {
-        const double new_px = playhead_pixel_x(app, audio);
-        invalidate_playhead_columns(old_px, new_px);
+        // NO-SCROLL BRANCH: only the cursor moved. FULL WAVEFORM-AREA DAMAGE
+        // (architect 2026-07-30, replacing the narrow old/new column pair
+        // computed on the LIVE viewport) — the cursor's pixels are
+        // PLATE-registered, and Viewport sees no GuiPaintHandler, so the site
+        // takes the widening shape: an async publish still in flight from an
+        // earlier follow-scroll, resize or load leaves live and plate on
+        // different spans, and narrow live columns then erase pixels the cursor
+        // was never drawn at. The cost is bounded — the fastest caller is the
+        // compositor-throttled arrow step, and the moved branch above already
+        // pays a full synchronous plate RENDER at that same cadence. Rule and
+        // per-site shape table at playhead_pixel_x (app_state.h).
+        invalidate_waveform_area();
     }
     invalidate_timestamp_area();
     // Viewport may have shifted (Home/End or any playhead jump that pushed the
@@ -194,9 +173,12 @@ void Viewport::clamp_display_state_to_live_domain() {
     // every playhead write funnels through. A target-total shrink (e.g. an early
     // slow segment dragged toward 4.00) can strand a parked playhead past the new
     // EOF; this pulls it back to total - 1. On an actual move, damage the
-    // playhead columns and the timestamp readout the way move_playhead_to's
-    // playhead-only branch does (playhead_pixel_x reads app.playhead_cursor_sample,
-    // so old_px is captured before the write). No scanner write: the repair
+    // waveform area and the timestamp readout the way move_playhead_to's
+    // playhead-only branch does — full-area for the same reason stated there
+    // (the cursor's pixels are plate-registered and Viewport cannot reach the
+    // plate basis; rule at playhead_pixel_x, app_state.h), and rarer still: this
+    // fires only when a map edit actually stranded the cursor out of domain.
+    // No scanner write: the repair
     // concerns the RESTING cursor only — the scanner is meaningful only while
     // playhead_scanner_active, and every scanner read gates on it (the
     // `? scanner : cursor` ternaries take the cursor this just repaired when the
@@ -205,10 +187,8 @@ void Viewport::clamp_display_state_to_live_domain() {
     const int64_t clamped =
         clamp_playhead_to_live_domain(app.playhead_cursor_sample, app, audio);
     if (clamped != app.playhead_cursor_sample) {
-        const double old_px = playhead_pixel_x(app, audio);
         app.playhead_cursor_sample = clamped;
-        const double new_px = playhead_pixel_x(app, audio);
-        invalidate_playhead_columns(old_px, new_px);
+        invalidate_waveform_area();
         invalidate_timestamp_area();
     }
 
@@ -349,6 +329,19 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // the predictor and rebuilds the plate exactly.
     if (!final && !level_changed && !vp_changed) return;
 
+    // THE STRIP DRAG BYPASSES scroll_viewport (it writes the viewport itself,
+    // above), so it carries the same follow suppression here: every user pan
+    // suppresses follow for the session (architect 2026-07-30; the funnel copy
+    // is in scroll_viewport, the producer inventory at the flag's declaration in
+    // app_state.h). Gated on an actual viewport move and on playback being live,
+    // exactly as the funnel is. It fires for the drag's ZOOM axis too, and that
+    // is right rather than incidental: this zoom is SONG-ANCHORED (the grabbed
+    // sample stays pinned at its column), so it carries the view off the scanner
+    // just as the pan axis does — unlike the keyboard zoom, which centers ON the
+    // scanner during playback and therefore suppresses nothing.
+    if (vp_changed && playback.is_playing())
+        app.follow_overridden_for_session = true;
+
     invalidate_waveform_area();
     invalidate_timestamp_area();
     // Flags live in the top strip — rect positions change when the viewport
@@ -483,6 +476,17 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
     app.viewport_start_sample += delta_samples;
     clamp_viewport_start(app, audio);
     if (app.viewport_start_sample != old_vp) {
+        // EVERY PAN SUPPRESSES FOLLOW FOR THE SESSION (architect 2026-07-30).
+        // This is the pan funnel — PageUp/PageDown, alt+wheel, touchpad scroll
+        // and the alt+drag grab-pan all land here — so one line covers the whole
+        // class by construction. Inside the CHANGED guard, because a pan that
+        // moved nothing (wall-saturated) suppresses nothing, and gated on
+        // playback being live, matching the placement press's own `was_playing`
+        // gate: a pan while stopped must not pre-suppress the next session. The
+        // producer inventory lives at the flag's declaration (app_state.h); the
+        // flag is cleared at every stop edge and by an explicit `f` re-enable,
+        // which is what scopes the suppression to the session it was made in.
+        if (playback.is_playing()) app.follow_overridden_for_session = true;
         invalidate_waveform_area();
         // Flag positions move with the viewport, so the top strip must
         // repaint too. (The hovered marker's lane text renders in the top

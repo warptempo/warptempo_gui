@@ -1002,9 +1002,11 @@ void render_playhead(cairo_t* cr,
 // playhead triangle (the lane rect from top_triangle_row_area, passed in for the
 // reason stated at render_playhead), and each half is additionally clipped to the
 // waveform's horizontal span so a bound near an edge partial-renders instead of
-// leaking. left_col == right_col is handled as a special case that stamps the full
-// mask ONCE, yielding exactly the ordinary single cursor triangle (stamping the two
-// halves would double-composite the shared AA tip column under OVER).
+// leaking. left_col == right_col draws THE WHOLE CURSOR FORM at that column
+// (architect 2026-07-30): render_playhead's 1px line with the triangle
+// suppressed, plus ONE full mask stamp for the triangle — a one-column span IS
+// the cursor, its two ends having met, and the line is what keeps a zero-width
+// extent visible at all (the reasoning is at the arm itself, render.cpp).
 void render_split_playhead(cairo_t* cr,
                            GuiRect area,
                            GuiRect triangle_lane,
@@ -1047,7 +1049,7 @@ void render_strip_anchor_stem(cairo_t* cr,
 // event-synchronized hit-geometry doctrine): the live trim pass
 // (GuiPaintHandler::paint_trim) and the hit sites all call with the DISPLAYED
 // basis from
-// displayed_viewport_basis (vp_start_frame/vp_end_frame/area_w — the promoted
+// item_viewport_basis (vp_start_frame/vp_end_frame/area_w — the promoted
 // mirror of the committed fp_vp span + effective width) and `displayed_ms`
 // mapped through displayed_or_live_target_map by displayed_trim_ms — the
 // identical owner chain, so paint and hit are one geometry by construction.
@@ -1545,7 +1547,7 @@ struct LaneTextRun {
 //
 // all_visible == true: `runs` is the whole visible set (capped). all_visible ==
 // false: `runs` is the 0-or-1 fallback run (capped). All lane geometry is on the
-// DISPLAYED viewport basis (displayed_viewport_basis) and
+// DISPLAYED viewport basis (item_viewport_basis) and
 // displayed_or_live_target_map — the flag pixels' own basis. The open FlagPayload
 // editor is NOT resolved here (it is an OVERLAY: the ambient runs still resolve,
 // paint suppresses the editor marker's ambient run and draws the editor box on

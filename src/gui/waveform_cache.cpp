@@ -427,7 +427,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // the timerfd tick that runs the on_tick dirty-check, so deferring the
     // flag rebuild to the tick let a frame blit the NEW plate over an OLD
     // flag cache — and EVERY plate-registered overlay, which by definition reads
-    // the NEW fp_* through GuiPaintHandler::displayed_viewport_basis (its
+    // the NEW fp_* through GuiPaintHandler::plate_viewport_basis (its
     // declaration in paint_handler.h enumerates which overlays those are; the
     // hazard here is the whole class, not any member of it), visibly left its
     // flags for one frame during a
@@ -598,9 +598,15 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     // torrent the plate leads the overlays by the whole gesture. Doing the
     // rebuild here makes plate, fingerprint, flag cache, and the
     // staged displayed hit map all commit before the next paint — the
-    // same-frame consistency every kick_waveform_sync caller expects (zoom,
-    // Home/End, center-on-playhead, tab/view swaps, drops/deletes/commits,
-    // undo/redo). The rebuild is fingerprint-guarded, so it is a cheap
+    // same-frame consistency EVERY kick_waveform_sync caller expects. That
+    // caller set is not enumerated here: the ONE authoritative inventory lives
+    // at Viewport::kick_waveform_sync's declaration (viewport.h), and a second
+    // copy here is exactly the drift the one-site rule exists to prevent (the
+    // copy this replaces had gained a member with no code site). The rebuild
+    // also serves a caller whose plate does NOT move — the `p` W/P column
+    // toggle, whose fingerprint change is the flag cache's alone — which is
+    // why it runs unconditionally at this tail rather than under a
+    // plate-changed guard. The rebuild is fingerprint-guarded, so it is a cheap
     // no-op when the cache already matches. It also stages the
     // event-sync displayed hit map (promoted when on_redraw commits the
     // rebuild — the two-phase commit, ruling at the selector); running it

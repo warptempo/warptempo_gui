@@ -882,13 +882,28 @@ void render_split_playhead(cairo_t* cr,
         cairo_restore(cr);
     };
 
-    // Degenerate region (both bounds on one column): stamp the WHOLE mask once,
-    // centered on the bound. Stamping the two halves here would land both on the
-    // same dst_x and composite the shared center (tip) column twice under Cairo's
-    // OVER operator — its partially-covered AA pixels are not idempotent, so the
-    // tip would render more opaque than an ordinary cursor. One full stamp is
-    // byte-identical to the single cursor triangle.
+    // DEGENERATE REGION (both bounds on one column): draw THE WHOLE CURSOR FORM
+    // at that column — the 1px vertical line AND the whole triangle — because a
+    // one-column span IS the cursor, its two ends having met (architect
+    // 2026-07-30). The line is painted by render_playhead itself with the
+    // triangle suppressed, so the split form's degenerate arm and the single
+    // cursor are one line-paint by construction rather than two that could drift.
+    // WHY THE LINE WAS ADDED: with the triangle alone this arm could leave a
+    // zero-width extent with NO visible playhead form at all — the region ground
+    // paints nothing at zero width, an active region suppresses both the cursor
+    // and the singleton stem, and in the 2+ case (two markers on one frame, or two
+    // sharing one target image under compression) the z-order flip puts the very
+    // flags that define the span OVER the lone triangle. Net: nothing drawn. The
+    // line is full-height waveform ink and cannot be occluded that way.
+    // The TRIANGLE is one full mask stamp, not two halves: two halves would land
+    // on the same dst_x and composite the shared center (tip) column twice under
+    // Cairo's OVER operator, whose partially-covered AA pixels are not idempotent,
+    // so the tip would render more opaque than an ordinary cursor. One full stamp
+    // is byte-identical to the single cursor triangle.
     if (left_col == right_col) {
+        render_playhead(cr, area, triangle_lane,
+                        static_cast<double>(left_col), color,
+                        /*draw_triangle=*/false);
         stamp_half(left_col, 0, img_w - 1);
         return;
     }
@@ -1990,7 +2005,7 @@ double lane_text_left_x_at_frame(
     // that basis. (1) The displayed MAP (displayed_or_live_target_map): the
     // event-synchronized map the hit tests use — identity/empty in source view;
     // in target view the map the last committed frame's flag cache baked. (2) The
-    // displayed VIEWPORT (displayed_viewport_basis): the vp_start/spp the same
+    // displayed VIEWPORT (item_viewport_basis): the vp_start/spp the same
     // committed frame's flag cache baked, NOT the live viewport. Reading the live
     // map OR the live viewport would center the run on the NEW column during an
     // async republish while the flag still paints at the OLD one, so the run would
@@ -2000,7 +2015,7 @@ double lane_text_left_x_at_frame(
     // this same map.
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
-    const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
     const int col = painted_column_of_source_frame_on_basis(
         app, audio, source_frame, map, basis.vp_start, basis.spp);
     const GuiRect area = waveform_area(app);
@@ -2130,7 +2145,7 @@ LaneTextRun current_marker_lane_run_fallback(const AppState& app,
     // painters and hit tests use.
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
-    const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
     const int col = painted_column_of_source_frame_on_basis(
         app, audio, display_src_f, map, basis.vp_start, basis.spp);
     if (col < 0 || col >= waveform_area(app).w) return run;
@@ -2212,7 +2227,7 @@ static LaneRunSet resolve_base_lane_run_set(const AppState& app,
         displayed_or_live_target_map(app, audio);
     const std::vector<WarpFrameMapSegment>* map_arg =
         map.empty() ? nullptr : &map;
-    const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
     if (basis.spp <= 0.0) return lane_run_set_fallback(app, audio);
 
     // The flags' own half-offscreen cull (iterate_visible_flags_impl): a flag may

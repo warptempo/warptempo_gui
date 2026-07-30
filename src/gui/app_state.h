@@ -166,9 +166,11 @@ struct UndoEntry {
 //     obeys, live at that function in input_pointer.cpp.
 //
 // THE THREE PROVENANCES (architect 2026-07-23) track WHO the region is derived
-// from. What provenance still ROUTES today is the TRIM coupling alone: Shift+X and
-// the settings-editor trim maintainers act on a TrimWindow region and leave a Free
-// or extent one alone.
+// from. What provenance still ROUTES today is the TRIM coupling alone: Shift+X
+// acts on a TrimWindow region and leaves a Free or extent one alone. It is the
+// last provenance-gated route — the settings-editor trim keys were the other one
+// until 2026-07-30, when they joined the setters and took the unconditional
+// deselect-and-publish instead.
 //   * Free — a drag-formed span, display scratch that no gesture re-derives. FOUR
 //     producers, the four direct writers above, and all four leave the selection
 //     EMPTY. It rests ONLY beside an empty selection: every route that puts a
@@ -189,9 +191,10 @@ struct UndoEntry {
 //     (position_nudge.h).
 //   * TrimWindow — the trim window's images, published by the trim setters, and
 //     RESTING ONLY BESIDE AN EMPTY SELECTION (the rule and the setter list are at
-//     sync_region_to_trim_window's declaration, input_handler.h). Re-synced from
-//     app.trim's source-frame bounds through the new map by the settings-editor
-//     trim maintainers, so the highlight tracks the chips/stems.
+//     sync_region_to_trim_window's declaration, input_handler.h). A RESTING full
+//     pair implies nothing in return: the entry / restore routes (load, the
+//     Ctrl+Tab band pull, `t`, `p`, adopt) rest a pair bare, the highlight being a
+//     gesture-scoped cue.
 // Bare `x` is SET-ONLY and branches on THIS highlight: a live region trims to it
 // and the highlight is KEPT (re-derived through the setter publish, which also
 // DESELECTS); no region means `x` is a silent no-op, and so does a DEGENERATE
@@ -219,8 +222,8 @@ struct RegionState {
     bool    active  = false;
     int64_t a_frame = 0;   // the press-anchor endpoint
     int64_t b_frame = 0;   // the far (pointer) endpoint
-    // Provenance (see enum above). The ONLY readers are the trim's own
-    // teardown/maintainer routes, which test provenance == TrimWindow. SET in three
+    // Provenance (see enum above). The ONLY reader is the trim's own teardown
+    // route (Shift+X), which tests provenance == TrimWindow. SET in three
     // places — set_region_to_selection_extent -> SelectionExtent,
     // sync_region_to_trim_window's set arm -> TrimWindow, and every OTHER former
     // (region drag, shift-click former/demote, delete demotions) -> Free.
@@ -1016,10 +1019,29 @@ struct AppState {
     int64_t viewport_start_sample  = 0;
     bool    follow_mode            = true;
 
-    // True when a cursor-moving interaction has overridden follow mode
-    // for the current playback session. Cleared when playback ends
-    // (via restore_playhead_to_lsp or stop_playback_if_playing); never
-    // set or cleared except by these paths.
+    // True when the user has taken the viewport away from the chase for the
+    // current playback session, which stops follow_scroll_if_needed from
+    // snatching it back on the next tick. THE PRODUCER INVENTORY (grep-derived;
+    // this is the ONE authoritative copy — the sites carry a class statement plus
+    // a pointer here) is TWO CLASSES, both gated on playback being live:
+    //   * ANY VIEWPORT PAN (joined 2026-07-30, architect — "every pan
+    //     suppresses"): Viewport::scroll_viewport's changed branch, which is the
+    //     funnel for PageUp/PageDown, alt+wheel, touchpad scroll and the alt+drag
+    //     grab-pan; plus Viewport::apply_strip_drag_zoom, the strip drag's own
+    //     viewport write, which bypasses that funnel. Before this the flag's
+    //     "manual-pan suppression" named a producer class that did not exist and
+    //     panning away during playback was impossible with follow on (the
+    //     default). A pure keyboard ZOOM is deliberately NOT a producer: it
+    //     centers on the scanner during playback, so it never leaves the chase.
+    //   * the upper-half PLACEMENT PRESS (input_pointer.cpp), which moves the
+    //     cursor and reseeks.
+    // CLEARED at FIVE sites (grep-derived, all in playback_lifecycle.cpp): the two
+    // STOP edges, stop_playback_if_playing and restore_playhead_to_lsp; the two
+    // LAUNCH edges' defensive clears, toggle_playback's play arm and
+    // scrub_launch_at, which run before their own validation so even a refused
+    // launch leaves it clear; and an explicit `f` re-enable while playing
+    // (set_follow_mode's off->on arm). So the chase resumes at the next launch,
+    // or the moment the user re-engages it.
     bool    follow_overridden_for_session = false;
 
     // Split-playhead state. The cursor (above, mirrored from the active
@@ -1321,18 +1343,20 @@ struct AppState {
     // area_w the LAST COMMITTED frame's flag cache was built against, promoted
     // in LOCKSTEP with displayed_target_warp_frame_map at the frame that blits
     // that cache, so the marker-text lane geometry (run centering, the visible-
-    // set cull, the run hit rects — see displayed_viewport_basis in this header),
+    // set cull, the run hit rects — see item_viewport_basis in this header),
     // the LIVE TRIM pass (GuiPaintHandler::paint_trim — its chips/stems paint on
     // this basis so hit_test_trim_chip / route_trim_chip_press land on the drawn
-    // pixels), AND the selected-stem DAMAGE (invalidate_stem_column, which
-    // erases
-    // displayed-basis stem pixels — damage follows the pixels it erases) ride the
-    // same basis the flags do. area_w == 0 means cold (nothing promoted
+    // pixels) ride the
+    // same basis the flags do. (The selected-stem DAMAGE was listed here until
+    // 2026-07-30 and never belonged: the stem paints on the PLATE basis, so its
+    // item-basis narrow damage was the wrong epoch. It is a full waveform-area
+    // invalidate now — see Selection::damage_stem_on_subject_change.)
+    // area_w == 0 means cold (nothing promoted
     // yet); the accessor then falls back to the live viewport, matching
     // displayed_or_live_target_map's cold live-map fallback. Written by the
     // paint-pass promotion; cleared alongside displayed_target_warp_frame_map at
     // every clear site (source load / `'` adopt / view toggle). Deliberately
-    // SEPARATE from GuiPaintHandler::displayed_viewport_basis, which reads the
+    // SEPARATE from GuiPaintHandler::plate_viewport_basis, which reads the
     // LIVE wf_cache.fp_* so the PLATE-REGISTERED paint overlays stay locked to
     // the just-blitted plate; WHICH overlays those are is enumerated at that
     // accessor's own declaration (paint_handler.h), the one authoritative site —
@@ -1838,9 +1862,9 @@ int64_t monotonic_ms();
 
 void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
 // Returns the pixel column (offset from waveform_area.x) for the cursor.
-// The (app, audio) form reads a.viewport_start_sample — the live/logical
-// viewport. Use it from invalidation math, hit-testing, and pre-paint
-// updates: anywhere that wants "where is the playhead RIGHT NOW".
+// The (app, audio) form reads a.viewport_start_sample — the LIVE/logical
+// viewport. It answers "where is the playhead RIGHT NOW": hit-testing and any
+// gesture that anchors to the live on-screen grid.
 //
 // The (app, audio, vp_start, spp) form takes the viewport AND its
 // samples-per-pixel explicitly. Use it from on_redraw to align the live
@@ -1852,11 +1876,37 @@ void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
 // and surrounding markers in lockstep during that window; passing
 // fp_vp_start alone but reading the live spp would mix frames of
 // reference and visibly displace the cursor for one frame after each
-// zoom gesture. Do NOT reroute invalidation through the displayed-
-// viewport form: invalidation already widens to the full waveform-area
-// span at viewport-change gestures, and the narrow-damage path (arrow
-// step, drag, predictor advance at fixed viewport) needs the live
-// position because live == displayed in steady state.
+// zoom gesture.
+//
+// THE PLAYHEADS' DAMAGE RULE (architect 2026-07-30 — the one authoritative
+// statement; every damage site carries only its own class plus a pointer here).
+// DAMAGE FOLLOWS THE BASIS OF THE PIXELS IT ERASES, and the playheads' pixels
+// are PLATE-REGISTERED: paint_playheads draws both the cursor and the scanner
+// through the explicit-basis form at GuiPaintHandler::plate_viewport_basis.
+// So NARROW playhead/scanner damage must resolve its columns on the PLATE basis
+// too. The superseded rule here said the opposite ("the narrow-damage path needs
+// the live position because live == displayed in steady state") — true at a
+// settled rest, false in exactly the windows that matter: an ASYNC publish is in
+// flight (a follow-scroll page turn, a resize, the launch load, a preview-driven
+// total drift) whenever live holds the NEW span and the plate still shows the
+// OLD, and a live-basis column then damages pixels the playhead was never drawn
+// at — a frozen scanner line, or a stop that leaves its last column un-erased,
+// until the next publish heals it.
+//
+// TWO SHAPES SATISFY THE RULE, chosen per site by REACHABILITY:
+//  - NARROW ON PLATE, where the site can see a GuiPaintHandler: the 60 Hz
+//    scanner sites (main.cpp's tick heartbeat and pre-paint advance) and the
+//    Tab/`c` jump's unmoved branch, which pass plate_viewport_basis() through
+//    the explicit-basis overloads.
+//  - FULL WAVEFORM-AREA DAMAGE, where it cannot without new coupling
+//    (Viewport, Selection, GuiPlaybackLifecycle and the free land helper all
+//    see no paint handler): the stop teardowns, the focus flip, the marker
+//    land, move_playhead_to's no-scroll branch, and the live-domain cursor
+//    repair. A full-area invalidate is ownership-window-proof by construction —
+//    it cannot ride the wrong epoch — and every one of those is a discrete,
+//    human-paced command, so the repaint is affordable at the rate it fires
+//    (the project already pays a full synchronous plate RENDER per pan event at
+//    the same key-repeat and pointer-frame cadence).
 double  playhead_pixel_x(const AppState& a, const GuiAudio& audio);
 double  playhead_pixel_x(const AppState& a, int64_t vp_start, double spp);
 // Returns the pixel column (offset from waveform_area.x) for the scanner,
@@ -2016,7 +2066,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 const std::vector<WarpFrameMapSegment>&
 displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 
-// displayed_viewport_basis: the VIEWPORT twin of displayed_or_live_target_map —
+// item_viewport_basis: the VIEWPORT twin of displayed_or_live_target_map —
 // the viewport span the item hit tests (flag shape, trim chip, marker-text lane)
 // and the lane geometry decide against, so a run centers on and a hit lands on
 // the column the flag/chip pixels were painted at. In target OR source view with
@@ -2035,12 +2085,16 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // This is the free-function owner homed beside displayed_or_live_target_map so
 // the render.cpp free functions (lane_text_left_x_at_frame, the lane run
 // resolver, marker_hit_at), the app_state.cpp hit tests (hit_test_flag,
-// hit_test_trim_chip), the LIVE TRIM paint pass (GuiPaintHandler::paint_trim —
-// paint and hit share the one basis by construction), AND the selected-stem DAMAGE
-// (Viewport::invalidate_stem_column, which erases displayed-basis stem
-// pixels — damage follows the basis of the pixels it erases) share ONE basis. It
+// hit_test_trim_chip), and the LIVE TRIM paint pass (GuiPaintHandler::paint_trim —
+// paint and hit share the one basis by construction) share ONE basis. (The
+// selected-stem DAMAGE was listed here as a consumer until 2026-07-30 and was
+// never one: paint_selected_stem paints on the PLATE basis, so the narrow
+// item-basis stem invalidator erased columns the stem was never drawn at inside
+// the resize window named below. That damage is a full waveform-area invalidate
+// now, owned by Selection::damage_stem_on_subject_change, and the narrow route
+// is deleted.) It
 // is DELIBERATELY DISTINCT from
-// GuiPaintHandler::displayed_viewport_basis, which reads the LIVE wf_cache.fp_*
+// GuiPaintHandler::plate_viewport_basis, which reads the LIVE wf_cache.fp_*
 // (the plate's current fingerprint): the paint-handler method registers the
 // PLATE-REGISTERED paint overlays — enumerated at its own declaration
 // (paint_handler.h), the one authoritative site for that membership — with the
@@ -2073,14 +2127,14 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // frame_on_basis); the int64 vp_start_frame/vp_end_frame/area_w serve the hit
 // tests, which pass the integer span + width to compute_flag_hit_rects /
 // trim_bound_column verbatim, and the lane cull (exact vp_end, no reconstruction).
-struct DisplayedViewportBasis {
+struct ItemViewportBasis {
     double  vp_start       = 0.0;
     double  spp            = 0.0;
     int64_t vp_start_frame = 0;
     int64_t vp_end_frame   = 0;
     int     area_w         = 0;
 };
-DisplayedViewportBasis displayed_viewport_basis(const AppState& app,
+ItemViewportBasis item_viewport_basis(const AppState& app,
                                                 const GuiAudio& audio);
 
 // Promoted from a lambda in main(). True iff the warp marker

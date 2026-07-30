@@ -100,9 +100,9 @@ struct Selection {
     // Damage the stem's OLD and NEW subject columns when the subject changed across
     // a mutation (`old_subject` captured before via stem_subject()); a no-op when
     // unchanged (the common case: a Tab within a non-empty set, a range shrink to
-    // still-2+). Narrow displayed-basis column damage (Viewport::invalidate_stem_column,
-    // the low-level displayed-item invalidator) — the stem is a 1px column, so
-    // full-area would be wasteful. This is the ONE owner of the stem's
+    // still-2+). FULL waveform-area damage since 2026-07-30 (the narrow
+    // per-column invalidator it used rode the wrong coordinate epoch and is
+    // deleted; the reason is at the definition). This is the ONE owner of the stem's
     // appear/move/disappear under always-on (mirroring the phase-overlay owner):
     // the FRAME/IMAGE-moving gestures (nudges, drags, re-warps) already full-damage
     // the waveform. Wired at the SAME selection mutators the overlay owner is;

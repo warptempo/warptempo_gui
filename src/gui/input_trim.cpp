@@ -98,8 +98,8 @@ void GuiInputHandler::handle_trim_clear_both() {
 // CLEARED with it: x is a TrimWindow SETTER, and every setter deselects
 // (architect 2026-07-29 — the rule, the setter list, and the routes that do NOT
 // deselect live at sync_region_to_trim_window's declaration, input_handler.h).
-// The COINCIDENT-IMAGE arm of the sync is gone (2026-07-29), so a full pair now
-// DOES imply an active TrimWindow region — a window whose two images round onto one
+// The COINCIDENT-IMAGE arm of the sync is gone (2026-07-29), so the sync now
+// publishes for every full pair it sees — a window whose two images round onto one
 // target frame rests ACTIVE at that one column — and x GAINS A REFUSAL for exactly
 // that shape: a DEGENERATE RESULT (the inverse-mapped, wall-clamped pair coming out
 // end <= begin — the coincident window's two identical stored endpoints inverse-map
@@ -210,8 +210,10 @@ void GuiInputHandler::handle_trim_x() {
 // sync on TrimWindow provenance: only a highlight the trim itself owns is torn
 // down with the window; a selection-extent or free region rests untouched.
 // Shift+X is a trim CLEARER, not a SETTER, so it keeps the BARE sync and does NOT
-// deselect (architect 2026-07-29 — the setter list and the rule are at
-// sync_region_to_trim_window's declaration, input_handler.h). Nothing hinges on
+// deselect (architect 2026-07-29 — and since 2026-07-30 it is the ONLY route that
+// does, the settings trim keys having joined the setters; the setter class and its
+// membership are at sync_region_to_trim_window's declaration, input_handler.h).
+// Nothing hinges on
 // that: the TrimWindow highlight it tears down was resting beside an EMPTY
 // selection anyway, by the same ruling's invariant.
 void GuiInputHandler::handle_trim_shift_x() {
@@ -564,8 +566,10 @@ void GuiInputHandler::commit_trim_drag() {
 //     shape is already owned elsewhere — paint_region_ground draws nothing at zero
 //     width and render_split_playhead has an explicit one-column branch stamping
 //     the single whole cursor triangle — and the undo group restore already rests
-//     an active zero-width extent on that same shape (undo.cpp). So a full pair
-//     DOES imply an active TrimWindow region.
+//     an active zero-width extent on that same shape (undo.cpp). So THIS SYNC
+//     publishes a region for every full pair it sees — but a RESTING full pair
+//     implies nothing, the entry / restore routes never running the sync at all
+//     (the narrowed claim is at this function's declaration, input_handler.h).
 //   * LONE / NO TRIM -> no window -> clear the REGION.
 // Read-only-safe (the region is navigation).
 //
@@ -575,8 +579,8 @@ void GuiInputHandler::commit_trim_drag() {
 // 6), and it was unreachable from every caller anyway (the derivation is at the
 // clear arm). What still holds is the SETTER side: every setter empties the
 // selection before publishing, so a trim teardown meets an empty selection, and the
-// non-setters (Shift+X, the settings-editor trim maintainers) only ever re-sync a
-// window whose highlight was already resting beside no selection.
+// one non-setter (Shift+X) only ever re-syncs a window whose highlight was
+// already resting beside no selection.
 // NOTHING RESTORES A TRIM SETTER'S DESELECT: the trim
 // gestures' pre-gesture snapshots are deleted with every other cancel capture
 // (2026-07-29 — pointer gestures have no cancel, the rule at the drag-modal gate
@@ -588,9 +592,10 @@ void GuiInputHandler::commit_trim_drag() {
 // after a tempo edit; those re-syncs are deleted (2026-07-29 — a TrimWindow region
 // cannot rest beside a selection, see above), so the free form is now just where it
 // lives. GuiInputHandler wraps it
-// twice: sync_highlight_to_trim_window is the bare pass-through the CLEARERS and
-// MAINTAINERS use, and deselect_and_sync_trim_window_highlight is the SETTERS'
-// form, which deselects ahead of the same call.
+// twice: sync_highlight_to_trim_window is the bare pass-through, whose only
+// caller since 2026-07-30 is Shift+X — the one CLEARER, the whole non-setter
+// list — and deselect_and_sync_trim_window_highlight is the SETTERS' form, which
+// deselects ahead of the same call.
 void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
                                 Viewport& viewport) {
     // Pre-state for the damage calibration at the tail (see there). Four fields
@@ -624,9 +629,8 @@ void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
         // selection's extent — which since 2026-07-29 is the whole story, because
         // every trim SETTER deselects and so a TrimWindow region rests only beside
         // an EMPTY selection (the rule at this function's declaration). The
-        // provenance still routes the trim/highlight coupling itself: Shift+X and
-        // the settings-editor trim maintainers act on a TrimWindow region and leave
-        // a Free one alone.
+        // provenance still routes the trim/highlight coupling itself: Shift+X
+        // acts on a TrimWindow region and leaves a Free one alone.
         app.region.provenance = RegionProvenance::TrimWindow;
     } else {
         // No window (lone / no trim): clear the REGION (the ONE clear arm left).
@@ -659,15 +663,16 @@ void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
     if (!region_unchanged) viewport.invalidate_waveform_area();
     // THIS FUNCTION TOUCHES NO SELECTION, and its clear arm above provably cannot
     // strand a group (the derivation, recorded because it is what retires the
-    // never-span-less collapse that stood here): the clear arm is reachable with a
-    // 2+ selection only from the NON-SETTER callers — Shift+X and the two
-    // settings-editor trim maintainers — and ALL THREE gate their call on
+    // never-span-less collapse that stood here). RE-DERIVED 2026-07-30, when the
+    // settings trim keys joined the setters and left ONE non-setter: the clear arm
+    // is reachable with a 2+ selection only from Shift+X, which gates its call on
     // `app.region.active && provenance == TrimWindow`, while a TrimWindow region
     // rests ONLY beside an EMPTY selection (every setter deselects as it publishes;
-    // the rule and the setter list are at this function's declaration). So every
+    // the rule and the setter list are at this function's declaration). So the one
     // route that can reach the clear arrives with nothing selected, and the SETTER
     // callers deselect before they publish anyway. Ruling 6 deleted the collapse as
-    // enforcement; this derivation is why deleting it changed no behavior at all.
+    // enforcement; this derivation is why deleting it changed no behavior at all,
+    // and the exempted producer's departure only strengthens it.
 }
 
 void GuiInputHandler::sync_highlight_to_trim_window() {
@@ -839,7 +844,7 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 //
 // The bridge-region bound columns come from the displayed MAP
 // (displayed_or_live_target_map) AND the displayed VIEWPORT
-// (displayed_viewport_basis) — the EXACT basis and owner chain the live trim
+// (item_viewport_basis) — the EXACT basis and owner chain the live trim
 // pass (GuiPaintHandler::paint_trim) paints the chips/bar from every frame
 // (displayed_trim_ms -> trim_bound_column -> trim_bridge_gap), so a hit lands
 // on what is drawn BY SHARED OWNERS: paint and hit read the same functions on
@@ -862,7 +867,7 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
     // could fall through unclaimed (or a blank point falsely arm the pair drag).
     // Cold falls back to the live basis (see the accessor), matching the
     // painter's cold fallback.
-    const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
     if (basis.spp <= 0.0) return false;
     // Every trim drag needs the full pair set. With a lone bound, trim
     // contributes NO pointer geometry at all — the press is transparent and

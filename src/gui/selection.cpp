@@ -11,15 +11,19 @@
 void Selection::damage_playhead_if_focus_flipped(bool was_empty) {
     if (was_empty == app.selected_markers.empty()) return;   // no focus flip
     if (audio.total_frames() <= 0) return;
-    // Damage the playhead column (line span + triangle lane). The two-argument
-    // form with equal endpoints damages exactly that one column — the playhead
-    // itself has not moved, only its PRESENCE at the cursor changed with the
-    // selection emptiness: empty paints the cursor line+triangle there;
-    // non-empty conceptually moves the cursor COINCIDENT with the marker (hidden
-    // behind it — the always-on focus stem stands in for the cursor line, the
-    // flag occludes the triangle), so the cursor form stops painting there.
-    const double px = playhead_pixel_x(app, audio);
-    viewport.invalidate_playhead_columns(px, px);
+    // Damage the playhead's pixels. The playhead itself has not moved, only its
+    // PRESENCE at the cursor changed with the selection emptiness: empty paints
+    // the cursor line+triangle there; non-empty conceptually moves the cursor
+    // COINCIDENT with the marker (hidden behind it — the always-on focus stem
+    // stands in for the cursor line, the flag occludes the triangle), so the
+    // cursor form stops painting there.
+    // FULL WAVEFORM-AREA DAMAGE (architect 2026-07-30, replacing the narrow
+    // single-column invalidate computed on the LIVE viewport): the cursor's
+    // pixels are PLATE-registered, and Selection sees no GuiPaintHandler, so
+    // this site takes the widening shape — ownership-window-proof by
+    // construction, and a focus flip is a rare discrete selection event. Rule
+    // and per-site shape table at playhead_pixel_x (app_state.h).
+    viewport.invalidate_waveform_area();
 }
 
 std::optional<int64_t> Selection::phase_overlay_subject() const {
@@ -63,8 +67,7 @@ void Selection::damage_overlay_on_subject_change(
 std::optional<int64_t> Selection::stem_subject() const {
     // The always-on selected-marker stem paints for a SINGLETON selection, BOTH
     // columns and BOTH audio views, under no further condition. The subject is
-    // that one marker's ACTIVE-COLUMN SOURCE frame (invalidate_stem_column maps
-    // it to the displayed column, source view identity). Empty or 2+ selected ->
+    // that one marker's ACTIVE-COLUMN SOURCE frame. Empty or 2+ selected ->
     // no stem.
     // Frame, not index: a reorder remap preserves frames (subject-stable). Reads
     // *selected_markers.begin() to mirror paint_selected_stem's own idx pick.
@@ -86,13 +89,22 @@ void Selection::damage_stem_on_subject_change(
     const std::optional<int64_t> new_subject = stem_subject();
     if (new_subject == old_subject) return;   // subject unchanged
     if (audio.total_frames() <= 0) return;
-    // Narrow displayed-basis column damage: the OLD subject's column (loses the
-    // stem) and the NEW one's (gains it) — each a no-op when absent or offscreen.
-    // invalidate_stem_column erases the COMMITTED DISPLAYED stem pixels
-    // (damage-follows-the-pixels), so a same-frame old==new is filtered above and
-    // a genuine A->B damages both columns.
-    if (old_subject) viewport.invalidate_stem_column(*old_subject);
-    if (new_subject) viewport.invalidate_stem_column(*new_subject);
+    // FULL WAVEFORM-AREA DAMAGE (architect 2026-07-30, replacing the two narrow
+    // per-column invalidates this owner used to compute). The narrow apparatus
+    // (Viewport::invalidate_stem_column, deleted with this change — this was its
+    // sole caller) resolved the OLD and NEW columns on the ITEM basis while
+    // paint_selected_stem paints on the PLATE basis, so inside the accepted
+    // resize item-only-promotion window — where item spp and plate spp genuinely
+    // differ — both damages landed at columns the stem was never painted at: the
+    // old stem stayed drawn and the new one never appeared until the worker
+    // published. Widening is the launch site's own precedent
+    // (GuiPlaybackLifecycle's scanner arm: full-area damage is
+    // ownership-window-proof by construction, so no basis bookkeeping can go
+    // stale). It costs nothing here because a stem subject change IS a selection
+    // change — a discrete, rare, human-paced event, never a per-frame one; the
+    // no-op filter above still drops the common unchanged case (a Tab within a
+    // non-empty set, a range shrink to still-2+) before any repaint.
+    viewport.invalidate_waveform_area();
 }
 
 void Selection::repair_last_selected() {

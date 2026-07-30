@@ -874,8 +874,16 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
     playback_lifecycle.stop_playback_if_playing();
 
     // Capture the old playhead pixel-x before mutating, for the
-    // no-scroll invalidation branch below.
-    const double old_px = playhead_pixel_x(app, audio);
+    // no-scroll invalidation branch below. PLATE basis, not live: the cursor's
+    // pixels are plate-registered (paint_playheads), so its damage resolves
+    // there — the rule and the per-site shape table live at playhead_pixel_x
+    // (app_state.h). This site keeps the NARROW shape rather than widening
+    // because GuiInputHandler holds a GuiPaintHandler, so the honest basis costs
+    // nothing here.
+    const GuiPaintHandler::PlateViewportBasis pb =
+        paint_handler.plate_viewport_basis();
+    const int64_t pb_vp = static_cast<int64_t>(pb.vp_start);
+    const double old_px = playhead_pixel_x(app, pb_vp, pb.spp);
     const int64_t old_vp = app.viewport_start_sample;
 
     // Set the cursor directly — no move_playhead_to, which would scroll
@@ -910,7 +918,9 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
     // emitted, so only invalidate columns in the unmoved case to avoid a
     // redundant rect.
     if (app.viewport_start_sample == old_vp) {
-        const double new_px = playhead_pixel_x(app, audio);
+        // Same plate basis as old_px above — the viewport did not move, so the
+        // fingerprint the columns resolve against is unchanged too.
+        const double new_px = playhead_pixel_x(app, pb_vp, pb.spp);
         viewport.invalidate_playhead_columns(old_px, new_px);
     }
     viewport.invalidate_timestamp_area();
@@ -1376,13 +1386,23 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // COLLAPSES TO ITS FOCUS here, and the tail's land below seats the playhead on
     // that focus in the new domain. THE ARCHITECT'S GENERAL RULE (2026-07-29, stated
     // verbatim at the group-verb doctrine, position_nudge.h): if group is relatively
-    // cheap to implement, implement it; otherwise collapse to last selected. This
-    // switch cannot carry a group's SPAN — the endpoints are ACTIVE-DOMAIN frames and
-    // the domain just flipped, which is why the clear above is structural — and a
-    // group resting with no span is a HYBRID THIRD FORM the architect explicitly
-    // rejected (it draws no playhead cue at all: the cursor yields to a non-empty
-    // selection and the stem is singleton-only). So the group is not cheap here and
-    // the rule says collapse. This is the SAME SHAPE as the position nudges'
+    // cheap to implement, implement it; otherwise collapse to last selected. The
+    // OLD ENDPOINTS genuinely die here — they are ACTIVE-DOMAIN frames and the
+    // domain just flipped — which is why the region clear above is STRUCTURAL and
+    // stays. But the SPAN ITSELF IS CARRIABLE, and this comment used to claim
+    // otherwise: the extent is DERIVED state, and set_region_to_selection_extent
+    // recomputes it from each member's SOURCE frame through whatever map is live —
+    // exactly what `m`, the group undo/redo restore, and the propagate paste do —
+    // so carrying the group would be one guarded re-derive beside the land the tail
+    // already performs with the new map available. What is NOT an option is
+    // dropping the collapse alone: a group resting with no span is a HYBRID THIRD
+    // FORM the architect explicitly rejected (it draws no playhead cue at all —
+    // the cursor yields to a non-empty selection and the stem is singleton-only).
+    // THE COLLAPSE IS KEPT BY ARCHITECT DEFERRAL (2026-07-30), not by
+    // impossibility: warp authors across BOTH views while phase reset is
+    // target-only, so what a group should mean across this flip is a question the
+    // pending design pass may answer differently — until then the ruled
+    // collapse-to-focus stands. This is the SAME SHAPE as the position nudges'
     // collapse+land (position_nudge_prologue) and Ctrl+N's — this site is one member
     // of the COLLAPSE+LAND class, whose one authoritative enumeration lives at the
     // group-verb doctrine (position_nudge.h); no count belongs here.

@@ -297,14 +297,14 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     }
 }
 
-// -- GuiPaintHandler::displayed_viewport_basis / region_columns ----------
+// -- GuiPaintHandler::plate_viewport_basis / region_columns ----------
 
 // See the declaration comment in paint_handler.h: the fp-recipe basis locked to
 // the blitted plate while the worker rebuilds, with the live spp fallback when
 // no plate has published a span yet.
-GuiPaintHandler::DisplayedViewportBasis
-GuiPaintHandler::displayed_viewport_basis() const {
-    DisplayedViewportBasis b;
+GuiPaintHandler::PlateViewportBasis
+GuiPaintHandler::plate_viewport_basis() const {
+    PlateViewportBasis b;
     b.spp = wf_cache.fp_area_w > 0
         ? static_cast<double>(wf_cache.fp_vp_end - wf_cache.fp_vp_start) /
           static_cast<double>(wf_cache.fp_area_w)
@@ -314,7 +314,7 @@ GuiPaintHandler::displayed_viewport_basis() const {
 }
 
 GuiPaintHandler::RegionColumns
-GuiPaintHandler::region_columns(const DisplayedViewportBasis& basis) const {
+GuiPaintHandler::region_columns(const PlateViewportBasis& basis) const {
     const int64_t lo = std::min(app.region.a_frame, app.region.b_frame);
     const int64_t hi = std::max(app.region.a_frame, app.region.b_frame);
     RegionColumns c;
@@ -346,7 +346,7 @@ void GuiPaintHandler::paint_region_ground(cairo_t* cr, const GuiRect& area) {
     // Displayed-viewport recipe: the same fp_* fingerprint paint_playheads and
     // the overlay band use, so the ground stays locked to the blitted plate
     // while the worker rebuilds against a viewport change.
-    const DisplayedViewportBasis basis = displayed_viewport_basis();
+    const PlateViewportBasis basis = plate_viewport_basis();
     if (basis.spp <= 0.0) return;
 
     // Endpoints normalized to [lo, hi] and mapped to columns via the shared
@@ -478,7 +478,7 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // Displayed-viewport recipe: same as paint_playheads, so the overlay
     // stays locked to the blitted plate while the worker
     // rebuilds against a viewport change.
-    const DisplayedViewportBasis basis = displayed_viewport_basis();
+    const PlateViewportBasis basis = plate_viewport_basis();
     const double spp = basis.spp;
     if (spp <= 0.0) return out;
     const double vp_start = basis.vp_start;
@@ -568,13 +568,13 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 // from render_trim_flags, waveform segment from render_trim_stems) lives in
 // this ONE pass instead of joining bit-exactly across two caches.
 //
-// BASIS: the FREE item-geometry owners — displayed_viewport_basis(app, audio)
+// BASIS: the FREE item-geometry owners — item_viewport_basis(app, audio)
 // and displayed_or_live_target_map(app, audio) — feeding the shared geometry
 // owners displayed_trim_ms / trim_bound_column / trim_bridge_gap /
 // trim_chip_rect inside the two renderers, so paint stays column-coherent with
 // hit_test_trim_chip / route_trim_chip_press, which read exactly that basis
 // (paint == hit by shared owners). Deliberately NOT the member
-// GuiPaintHandler::displayed_viewport_basis(): that is the PLATE-fingerprint
+// GuiPaintHandler::plate_viewport_basis(): that is the PLATE-fingerprint
 // basis for plate-registered overlays, and the two differ inside the accepted
 // resize item-only-promotion window — trim must ride the ITEM basis the chips'
 // hit rects resolve on. The renderers' column math therefore divides the
@@ -597,11 +597,9 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     if (area.w <= 0 || area.h <= 0) return;
     if (top_strip.w <= 0 || top_strip.h <= 0) return;
 
-    // The ITEM basis (free owners; the member fn is the plate basis — see the
-    // header comment above). ::-qualified because the member name would
-    // otherwise shadow the free function inside this class scope.
-    const ::DisplayedViewportBasis basis =
-        ::displayed_viewport_basis(app, audio);
+    // The ITEM basis (free owner; the member plate_viewport_basis is the other
+    // epoch — see the header comment above).
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
     if (basis.area_w <= 0 || basis.spp <= 0.0) return;
 
     // The item pixels' map: empty (identity) in source view, the committed
@@ -740,7 +738,7 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
         eff_time = ov.effective_time(idx, eff_time);
     }
 
-    const DisplayedViewportBasis basis = displayed_viewport_basis();
+    const PlateViewportBasis basis = plate_viewport_basis();
     const double disp_spp = basis.spp;
     if (disp_spp <= 0.0) return;
     const double vp_start = basis.vp_start;
@@ -786,7 +784,7 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
     if (!app.strip_drag.active || !app.strip_drag.moved) return;
     if (area.w <= 0 || area.h <= 0) return;
 
-    const DisplayedViewportBasis basis = displayed_viewport_basis();
+    const PlateViewportBasis basis = plate_viewport_basis();
     const double spp = basis.spp;
     if (spp <= 0.0) return;
     const double vp_start = basis.vp_start;
@@ -803,7 +801,7 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // lockstep with the cached waveform / stem / flag layers during
     // the 1-2 paint frames while the worker rebuilds against a
     // viewport change. See declaration comment in app_state.h.
-    const DisplayedViewportBasis basis = displayed_viewport_basis();
+    const PlateViewportBasis basis = plate_viewport_basis();
     const double disp_spp = basis.spp;
     const double px_x = playhead_pixel_x(app, wf_cache.fp_vp_start, disp_spp);
     // The lane every playhead triangle — whole or split — is stamped in, from

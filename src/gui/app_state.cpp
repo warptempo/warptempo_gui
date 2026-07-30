@@ -93,9 +93,9 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio) {
 // width the item render used), exact on the committing frame. Cold (area_w == 0,
 // nothing promoted yet) falls back to the live viewport span at the effective
 // waveform width, bit-for-bit the pre-mirror hit-test live basis.
-DisplayedViewportBasis displayed_viewport_basis(const AppState& app,
+ItemViewportBasis item_viewport_basis(const AppState& app,
                                                 const GuiAudio& audio) {
-    DisplayedViewportBasis b;
+    ItemViewportBasis b;
     if (app.displayed_area_w > 0) {
         b.vp_start_frame = app.displayed_vp_start;
         b.vp_end_frame   = app.displayed_vp_end;
@@ -135,7 +135,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     // Event-synchronized hit geometry, the VIEWPORT half: the b/e chip pixels
     // are painted live by the trim pass (GuiPaintHandler::paint_trim ->
     // render_trim_flags) on the DISPLAYED basis, NOT the live viewport. So the
-    // chip columns must resolve on the SAME basis (displayed_viewport_basis)
+    // chip columns must resolve on the SAME basis (item_viewport_basis)
     // — the same reason hit_test_flag does — else during an async publish window a
     // chip painted at the OLD column would be grabbed at the NEW/live column.
     // The visibility
@@ -143,7 +143,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     // this same {span, width}), so a gutter column at a non-multiple-of-16 window
     // is culled the same in paint and hit-test. Cold falls back to the live
     // basis, matching the painter's cold fallback.
-    const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
     if (basis.spp <= 0.0) return TrimHit::None;
     const int     wave_w   = basis.area_w;
     const int64_t vp_start = basis.vp_start_frame;
@@ -221,14 +221,14 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // painted from the item cache's committed fp_vp span over the effective
     // waveform width the render used (the flag cache's own basis), NOT the live
     // viewport. So the hit rects must build on the DISPLAYED basis
-    // (displayed_viewport_basis, the twin of the displayed MAP below) — else
+    // (item_viewport_basis, the twin of the displayed MAP below) — else
     // during an async plate-publish window a click over the visible OLD flag
     // would be tested at the NEW/live column, splitting the one marker item from
     // its lane run (which already rides the displayed basis). With the basis
     // triple the rects here are exactly the painted flag rectangles across the
     // publish window, not just at rest. Cold falls back to the live basis
     // bit-for-bit (see the accessor).
-    const DisplayedViewportBasis basis = displayed_viewport_basis(app, audio);
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
     const int64_t vp_start = basis.vp_start_frame;
     const int64_t vp_end   = basis.vp_end_frame;
     const int     wave_w   = basis.area_w;

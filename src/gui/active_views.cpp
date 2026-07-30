@@ -78,11 +78,10 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // It does not touch the cursor — that is the Space-launch position and was
     // never moved during playback — so the leaving tab's snapshot below captures
     // it exactly, as it did under the hand-spelled stop this replaces
-    // (playback.stop() + restore_playhead_to_lsp()). The one damage that form
-    // added and this one does not, restore_playhead_to_lsp's top-strip
-    // invalidation, is redundant here: the kick_waveform_sync at the tail
-    // invalidates the window from y=0 through the waveform's bottom, top strip
-    // included.
+    // (playback.stop() + restore_playhead_to_lsp()). Its damage is fully
+    // redundant here either way: the kick_waveform_sync at the tail invalidates
+    // the window from y=0 through the waveform's bottom, top strip included,
+    // which is a superset of the stop's own full waveform-area invalidate.
     playback_lifecycle.stop_playback_if_playing();
     viewport.clear_hover_popup();
     // The region-select span is view-domain scratch; the entering tab restores
@@ -184,6 +183,22 @@ void GuiActiveViews::toggle_active_markers_view() {
     // and an auto-select there would be overwritten for nothing.
     clear_region_highlight(app, viewport);
     auto_select_marker_at_playhead(app, audio, selection, viewport);
-    viewport.invalidate_waveform_area();
+    // SYNCHRONOUS REBUILD, the third member of the view-switch class (architect
+    // 2026-07-30). `p` moves NO viewport and NO domain, so unlike its two
+    // siblings the plate CONTENT is unchanged — but app.active_markers_view is a
+    // flag-cache FINGERPRINT field, and on_redraw is blit-only: the run loop
+    // services the frame callback BEFORE the timerfd tick that runs the
+    // fingerprint-guarded rebuild, so a bare invalidate blitted the LEAVING
+    // column's flag pixels under the entering column's live passes (lane text,
+    // stem, overlay ring all read active_markers_view live) for one frame. This
+    // route is the siblings' shape rather than a flag-only reach because
+    // GuiActiveViews holds no GuiPaintHandler and the flag rebuild is reachable
+    // only through it; the redundant plate render is one discrete keypress's
+    // cost, exactly what `t` and Ctrl+Tab already pay. It subsumes the
+    // invalidate_waveform_area this replaces — the rebuild damages the identical
+    // rect (y=0 through the waveform's bottom, top strip included) — and it
+    // covers the settings active_markers_view= twin by construction, that key
+    // routing through this same function.
+    viewport.kick_waveform_sync();
     viewport.invalidate_timestamp_area();
 }
