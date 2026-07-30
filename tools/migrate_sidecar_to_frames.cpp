@@ -42,10 +42,11 @@
 // THE TIMESTAMP PARSE HELPERS ARE TOOL-LOCAL (architect 2026-07-30), joining
 // this file's other local mirrors (the zoom-2 pixel scale below): they had no
 // caller anywhere in src/, and holding them in the shared src/time_format.h
-// pulled <regex> into fifteen product translation units, all four frozen
-// directories among them, for a legacy read path only this tool has. The shared
-// header keeps what the product actually uses — format_timestamp, the
-// display-only WRITE direction. format_authored_frame is still shared, from
+// pulled <regex> into every product consumer of that header — the frozen
+// src/parser consumers included, compiled into both binaries — for a legacy read
+// path only this tool has. The shared header keeps what the product actually uses
+// — format_timestamp, the display-only WRITE direction — and records the derived
+// consumer inventory. format_authored_frame is still shared, from
 // src/parser/frame_format.h; it is the live serialization the product writes too.
 //
 // Ad hoc compile (from tools/):

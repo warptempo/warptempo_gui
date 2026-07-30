@@ -64,8 +64,8 @@ void GuiPlaybackLifecycle::stop_playback_for_modal_open() {
 void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     if (playback.is_playing()) {
         // ONE STOP BODY (architect 2026-07-30): this edge used to hand-spell
-        // playback.stop() + restore_playhead_to_lsp() while fifteen other sites
-        // called the gesture stop. That second body's only surplus work was a
+        // playback.stop() + restore_playhead_to_lsp() while every other stop in
+        // the product called the gesture stop. That second body's only surplus work was a
         // full-width TOP-STRIP invalidate, and it was dead here — the scanner
         // paints a waveform-area line and no top-strip pixel at all
         // (render_playhead's triangle is the CURSOR's, draw_triangle=false for

@@ -14,13 +14,19 @@
 // 2026-07-30). Nothing in the product ever READS a timestamp — the two legacy
 // PARSE helpers that used to live here, is_valid_timestamp_format and
 // parse_timestamp, had zero call sites in the GUI, parser, CLI and prepost, and
-// their std::regex dragged that library's headers into fifteen product
-// translation units including all four frozen directories. They now live
-// tool-locally in tools/migrate_sidecar_to_frames.cpp, their only consumer and
-// the sole legacy-sidecar conversion route, beside the tool's other local
-// mirrors. Do not reintroduce a parse direction here: an old-format sidecar is
-// load-fatal in both products by ruling, so a product-side timestamp reader
-// would have no honest caller.
+// their std::regex dragged that library's headers into EVERY consumer of this
+// header. The inventory, derived from the compiler's own depend files rather
+// than by eye: THIRTEEN translation units include this header, all of them
+// DIRECTLY (no header re-exports it) — nine under src/gui, src/cli/cli_main.cpp,
+// and THREE under src/parser (marker_store_validate, warp_frame_map_build,
+// phase_reset_frame_map_build), the only FROZEN-directory consumers; because the
+// parser sources are compiled into both products, that is sixteen object
+// compilations. The helpers now live tool-locally in
+// tools/migrate_sidecar_to_frames.cpp, their only consumer and the sole
+// legacy-sidecar conversion route, beside the tool's other local mirrors. Do not
+// reintroduce a parse direction here: an old-format sidecar is load-fatal in both
+// products by ruling, so a product-side timestamp reader would have no honest
+// caller.
 
 inline std::string format_timestamp(double seconds) {
     if (seconds < 0) seconds = 0;

@@ -13,7 +13,6 @@
 #include <linux/input-event-codes.h>
 #include <sys/mman.h>
 #include <sys/timerfd.h>
-#include <fcntl.h>
 #include <unistd.h>
 #include <poll.h>
 #include <time.h>
