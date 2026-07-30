@@ -71,8 +71,9 @@ struct Undo {
           target_render(target_render_) {}
 
     void recompute_dirty();
-    // touched_snapshot / touched_live are the reposition drag's identity hints
-    // (UndoEntry): defaulted empty for every other caller, which then uses the
+    // touched_snapshot / touched_live are the position movers' identity hints
+    // (UndoEntry — the reposition drag and the two nudges, one marker each):
+    // defaulted empty for every other caller, which then uses the
     // diff-based touched-set reconstruction in the post-restore rules.
     void push_undo_warp(std::vector<GuiWarpMarker> pre_state,
                         bool affects_persistence = true,
@@ -115,7 +116,7 @@ struct Undo {
     // hover-popup clear the push_undo_* helpers do, minus the history push.
     void note_coalesced_commit();
     // Refresh the coalesced burst entry's touched_live to a continuation press's
-    // LATEST post-reorder indices (the group position nudges, which reorder — the
+    // LATEST post-reorder indices (the position nudges, which reorder — the
     // tempo step never does). The surviving first-press undo entry keeps its
     // touched_snapshot (the pre-burst snapshot coordinates a restore produces),
     // but its touched_live — the coordinates a redo of the whole coalesced op must

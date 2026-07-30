@@ -205,11 +205,10 @@ inline double source_grid_position_at_column(int64_t viewport_start,
 // the pixel phase on every gesture, so whole-frame rounding residue can
 // never accumulate on top of an off-grid sub-pixel phase; the painted
 // move is exactly the commanded number of columns, and the stored value
-// is the whole frame the painting already shows. A group nudge applies this
-// same commit to EVERY selected member on its own painted column, so the
-// statement is per-item and holds unchanged for a 2+ selection (the group's
-// spacing consequences are stated at stepped_anchor_frame in
-// group_position_nudge.h and not repeated here).
+// is the whole frame the painting already shows. Exactly ONE item moves per
+// gesture: a nudge steps the FOCUS (a 2+ selection collapses to it first — groups
+// are never moved, the doctrine at the head of group_position_nudge.h) and a drag
+// moves the marker it grabbed.
 //
 // painted_column_of_source_frame: the pixel column (offset from
 // waveform_area(app).x) the stem painters draw `source_frame` at,

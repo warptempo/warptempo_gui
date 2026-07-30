@@ -2,7 +2,8 @@
 
 #include "audio.h"
 #include "engine/engine_geometry.h"  // kN
-#include "group_position_nudge.h"  // the shared group position-nudge flesh
+#include "group_position_nudge.h"  // the shared position-nudge flesh (prologue,
+                                  // step, commit tail) + the movement doctrine
 #include "input_handler.h"         // clear_region_highlight (the drop's collapse)
 #include "target_render.h"
 #include "warp_frame_map_view.h"
@@ -183,143 +184,110 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
     target_render.trigger();
 }
 
-// Nudge the selected phase resets by exactly one on-screen pixel column per
-// press — EACH of them, on its own column (GROUP, architect 2026-07-23; the 2+
-// selection became per-member rather than rigid on 2026-07-29, so this gesture
-// is no longer the keyboard sibling of the group position DRAG, which stays
-// rigid). Direction: -1 for earlier, +1 for later. Symmetric with
-// nudge_selected_markers — every moved reset, lone or member, is its own
-// pixel-column anchor (stepped_anchor_frame — the one-column-per-press
-// derivation, its numeric rationale, and the spacing consequences the
-// per-member rule accepts live in the comment there). Both columns share
-// painted_column_of_source_frame, so the anchored column is the painted one and
-// every committed value is a whole source frame.
+// Nudge the FOCUSED phase reset by exactly one on-screen pixel column per press.
+// Direction: -1 for earlier, +1 for later. Symmetric with nudge_selected_markers
+// — the moved reset is its own pixel-column anchor (stepped_anchor_frame — the
+// one-column-per-press derivation and its numeric rationale live in the comment
+// there). Both columns share painted_column_of_source_frame, so the anchored
+// column is the painted one and every committed value is a whole source frame.
 //
-// Wall semantics are one regime, GROUP-strict, against this column's absolute
-// range (zero / total_frames - 1 — the single marker EOF wall both columns share;
-// see drop_phase_reset_at_position for the ruling): this gesture runs in phase
-// reset's TARGET home view only (the home-view binding, architect 2026-07-22), so
-// the all-or-nothing silent refusal applies to the WHOLE group — if ANY member's
-// proposal leaves the range the whole press refuses (no per-member skip and no
-// per-member clamp; the wall is hit before anything moves — the group step's
-// max-strict precedent), the FOCUSED member included, since 2026-07-29 evaluated
-// on each member's own column snap. A singleton is bit-for-bit the pre-group
-// refusal. The integer walls win over the pixel grid.
+// HORIZONTAL MOVEMENT IS A FOCUS ACT — GROUPS ARE NEVER MOVED (architect
+// 2026-07-29): a 2+ selection COLLAPSES TO ITS FOCUS in the shared prologue (which
+// also lands the playhead there), so the body below moves exactly one reset. The
+// doctrine and the dead per-member machinery are recorded once at the head of
+// group_position_nudge.h.
+//
+// Wall semantics are one regime, STRICT, against this column's absolute range
+// (zero / total_frames - 1 — the single marker EOF wall both columns share; see
+// drop_phase_reset_at_position for the ruling): this gesture runs in phase reset's
+// TARGET home view only (the home-view binding, architect 2026-07-22), and a
+// proposal outside the range REFUSES the press silently rather than clamping (the
+// warp twin clamps into its headroom instead — one regime per column at its home).
+// The integer walls win over the pixel grid.
 // (The old source-view clamp arm died with the binding — there is no per-view
 // refuse-vs-clamp split left.) Crossing a neighbor is legal and goes through the
-// reorder-and-remap path below; the render boundary collapses an exact-equal
-// group to one event.
+// reorder-and-remap path below.
 void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
         int direction, bool synthesized_repeat) {
     // Shared guard prologue: loading / empty-audio refusal, playback stop first,
-    // empty/no-focus refusals, the coalesce verdict, the geometry refusals, and
-    // the stale-index belt (the playhead-follows-focused / lead-in rationale lives
-    // at the declaration). Refuses silently, navigation-class.
+    // empty/no-focus refusals, the coalesce verdict, the geometry refusals, the
+    // focused-index belt, and THE COLLAPSE + LAND that makes this a focus act (the
+    // playhead-follows / lead-in rationale lives at the declaration). Refuses
+    // silently, navigation-class.
     const GroupNudgePrologue pro = group_position_nudge_prologue(
-        app, audio, playback_lifecycle, undo, GestureKind::PhaseResetNudge,
-        synthesized_repeat,
+        app, audio, playback_lifecycle, selection, viewport, undo,
+        GestureKind::PhaseResetNudge, synthesized_repeat,
         static_cast<int>(app.phaseresetmarkers.markers().size()));
     if (!pro.ok) return;
     const bool merge = pro.merge;
-    // GROUP nudge (architect 2026-07-23): a 2+ selection moves whole — NO
-    // collapse_to_focused. Phase resets carry no tempo, so there is no
-    // inherit/tempo analog. Since 2026-07-29 it moves PER MEMBER (architect):
-    // each selected reset re-snaps to its OWN adjacent painted column, so the
-    // painted step is exactly one column for every one of them; the rigid single
-    // delta and the "never re-column-snapped per member" convention apply to the
-    // pointer group DRAG only now. app.last_selected_marker stays the FOCUS (the
-    // playhead follows it), not an anchor the others ride.
+    // Phase resets carry no tempo, so there is no inherit/tempo analog to the warp
+    // twin's value gestures — this column's only nudge is positional.
     const auto& tv = app.phaseresetmarkers.markers();
     const int   f  = pro.focused;   // validated in [0, tv.size()) by the prologue
 
     // The anchoring map is the DISPLAYED paint basis —
     // displayed_or_live_target_map, the SAME map the flag/trim painters read —
-    // so each moved reset travels exactly the commanded pixel column against
+    // so the moved reset travels exactly the commanded pixel column against
     // WHAT IS PAINTED, even inside a worker publish window where the displayed
     // map lags the live one. Phase resets author in their TARGET home view only
     // (the home-view binding, architect 2026-07-22), a mapped (non-identity)
-    // domain, so the wall policy is one regime — GROUP all-or-nothing silent
-    // refusal: if ANY member's proposal leaves the absolute range the WHOLE press
-    // refuses (the wall is hit before anything moves — the group's max-strict
-    // precedent). The former source-view clamp arm was unreachable under the
-    // binding and is gone.
+    // domain.
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
     const int64_t reset_wall = audio.total_frames() - 1;
 
-    // (1) EVERY moved reset — the lone one, or each member of a 2+ selection —
-    // takes the SAME step: its own currently painted column, plus direction,
-    // committed through authored_frame_at_column's target arm (stepped_anchor_frame;
-    // the doctrine, the numbers, and the spacing consequences the per-member rule
-    // accepts live at its declaration). One painted column per press each, no
-    // shared delta: the rigid single-delta form, with its forward map and its
-    // unclamped inverse, left this gesture on 2026-07-29 (architect).
+    // (1) THE STEP: the reset's own currently painted column, plus direction,
+    // committed through authored_frame_at_column's target arm
+    // (stepped_anchor_frame; the doctrine and the numbers live at its
+    // declaration).
     //
     // (2) THE ONE refusal is the EXACT INTEGER wall belt on the SNAPPED result
     // (t_new outside [0, reset_wall]) — walls are exact integer compares, never a
     // float compare (the exact-wall-reach doctrine forbids an epsilon-fragile
     // pre-filter), and a proposal that rounds ONTO a wall passes (equality is
-    // legal). ANY out-of-range member refuses the WHOLE press, the focused one
-    // included: the max-strict regime this column has always had, now evaluated
-    // on each member's own column snap. It also has to stay a refusal rather than
-    // becoming a per-member clamp — clamping would pool the clamped members onto
-    // the wall frame and merge them permanently; the warp twin adopts the same
-    // shape, recorded there as a planner translation of the per-member rule,
-    // architect-confirmed 2026-07-29 (live-tested).
-    // A SINGLETON is bit-for-bit its long-standing behavior: one snap, one belt.
+    // legal).
     const int64_t orig_f = tv[f].time_frame;
-    int64_t committed_f = orig_f;   // the focused reset's commit, for the follow
-    std::vector<std::pair<int, int64_t>> proposals;
-    proposals.reserve(app.selected_markers.size());
-    for (int idx : app.selected_markers) {
-        const int64_t t_new = stepped_anchor_frame(
-            app, audio, map, tv[idx].time_frame, direction);
-        if (t_new < 0 || t_new > reset_wall) return;
-        if (idx == f) committed_f = t_new;
-        proposals.emplace_back(idx, t_new);
-    }
-    bool any_changed = false;
-    for (const auto& [idx, t_new] : proposals) {
-        if (t_new != tv[idx].time_frame) { any_changed = true; break; }
-    }
-    if (!any_changed) return;
+    const int64_t committed_f = stepped_anchor_frame(
+        app, audio, map, orig_f, direction);
+    if (committed_f < 0 || committed_f > reset_wall) return;
+    if (committed_f == orig_f) return;   // zero-step press
     std::vector<GuiPhaseResetMarker> pre_state =
         app.phaseresetmarkers.markers();
-    // Identity hints: the WHOLE group in PRE-reorder snapshot coordinates (the
-    // diff matcher is identity-blind for a translated group).
-    std::vector<int> touched_snapshot(app.selected_markers.begin(),
-                                      app.selected_markers.end());
-    for (const auto& [idx, t_new] : proposals) {
-        GuiPhaseResetMarker* m =
-            app.phaseresetmarkers.marker_mut(idx);
-        if (!m) continue;
-        m->time_frame = t_new;
-    }
+    // Identity hint: the nudged reset in PRE-reorder snapshot coordinates (the
+    // diff matcher is identity-blind for a column-snapped move — the moved row can
+    // land field-identical on another row).
+    std::vector<int> touched_snapshot{f};
+    if (GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(f))
+        m->time_frame = committed_f;
     // A nudge may cross a neighbor; restore time order and remap the index-shaped
-    // state (the whole group's selection follows to the new slots).
+    // state (the selection follows its reset to the new slot).
     remap_marker_indices_after_reorder(
         app, reorder_markers_by_time(app.phaseresetmarkers.markers_mut()));
+    // touched_live: the nudged reset's POST-reorder live index — read off the
+    // selection, which the remap rewrote in place and which is exactly this one
+    // reset (the prologue collapsed to it).
     std::vector<int> touched_live(app.selected_markers.begin(),
                                   app.selected_markers.end());
     // Coalesce a held key: the PHYSICAL press pushed the pre-burst snapshot with
-    // the group hints; each synthesized repeat skips the redundant push and
+    // the identity hints; each synthesized repeat skips the redundant push and
     // REFRESHES the surviving entry's touched_live to this press's post-reorder
-    // indices (touched_snapshot stays the first press's pre-burst coordinates). The
+    // index (touched_snapshot stays the first press's pre-burst coordinates). The
     // post-mutation re-record happens in the shared tail.
     if (merge) {
         undo.note_coalesced_commit();
         undo.refresh_coalesced_touched_live(std::move(touched_live));
     } else {
-        // The phase-reset POSITION NUDGE. A singleton restore's always-on focus
-        // stem follows from the selection — no lateral bit.
+        // The phase-reset POSITION NUDGE. The restore's always-on focus stem
+        // follows from the selection — no lateral bit.
         undo.push_undo_phase_reset(std::move(pre_state),
                                    std::move(touched_snapshot),
                                    std::move(touched_live));
     }
     // Shared commit tail: record/dirty/invalidate (its full-waveform damage moves
-    // the focused singleton's always-on stem), playhead follow (committed_f is
-    // reorder-independent; the target home maps), SelectionExtent region follow, and
-    // the view-independent target trigger. Ordering rationale at the declaration.
+    // the nudged reset's always-on stem), playhead follow (committed_f is
+    // reorder-independent; the target home maps), the point command's region
+    // collapse, and the view-independent target trigger. Ordering rationale at the
+    // declaration.
     finish_group_position_nudge(app, audio, viewport, undo,
                                 GestureKind::PhaseResetNudge, committed_f,
                                 target_render);

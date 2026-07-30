@@ -2,6 +2,7 @@
 
 #include "app_state.h"
 #include "playback_lifecycle.h"
+#include "selection.h"
 #include "undo.h"
 #include "viewport.h"
 #include "warp_frame_map.h"   // WarpFrameMapSegment
@@ -12,23 +13,53 @@
 class GuiAudio;
 struct GuiTargetRender;
 
-// Shared type-free flesh of the two GROUP POSITION nudges — the warp nudge
-// (GuiWarpMarkersOps::nudge_selected_markers, source home view) and the phase
-// reset nudge (GuiPhaseResetMarkersOps::nudge_selected_phase_resets, target home
-// view). Both are the bare Left/Right press with a non-empty selection (the
-// marker lane), each authoring its own column in its home
-// view; a 2+ selection moves every member by its own painted column (architect
-// 2026-07-29 — the doctrine is at stepped_anchor_frame below), a singleton is
-// the degenerate case. The twins share an identical guard prologue, an identical
-// pixel-column step, and an identical commit tail; only the WALL-REGIME MIDDLE
-// differs by ruled doctrine ("one regime per column at its home") — warp CLAMPS
-// a singleton's step into its wall headroom (identity domain), phase REFUSES
-// over the mapped domain (exact integer wall belt), and a GROUP refuses the
-// whole press in BOTH twins (per-member clamping would pool members onto a wall
-// frame) — and that middle stays in each twin VERBATIM. These three free
-// functions collapse only the type-free parts: no templates, no callbacks,
-// no policy structs (the naming-symmetry doctrine resists genericity — this is
-// plain extraction of the shared flesh).
+// HORIZONTAL MOVEMENT IS A FOCUS ACT — GROUPS ARE NEVER MOVED (architect
+// 2026-07-29). Both position nudges (bare Left/Right in the marker lane: the warp
+// nudge GuiWarpMarkersOps::nudge_selected_markers in source home, the phase reset
+// nudge GuiPhaseResetMarkersOps::nudge_selected_phase_resets in target home) and
+// the pointer marker DRAG act on ONE marker, the FOCUS: a 2+ selection COLLAPSES
+// TO ITS FOCUS and the focus takes the step (here, in the shared prologue below),
+// and a press on a member of a 2+ selection single-selects it immediately like a
+// press on any other marker, the drag then being an ordinary singleton drag
+// (input_pointer.cpp's plain marker click; marker_drag.cpp carries no group
+// machinery at all). The per-member nudge and the rigid group drag both existed
+// and both died with this ruling — do not re-propose either: a proposal loop with
+// a whole-press wall refusal and a same-column merge on one side, an
+// intersection-clamped shared delta with a grabbed-anchored rigid commit on the
+// other, and the pointer deferral (a press that held its click back so the group
+// could seed) with them.
+//
+// THE GROUP-VERB DOCTRINE, the general rule this ruling instances — stated ONCE
+// here, every verb site stating only its own class plus a pointer:
+//   * GROUP-CAPABLE where the members are INDEPENDENT of one another or the
+//     selection's SPAN is merely READ: the value edits (Ctrl+D's disable toggle,
+//     the Up/Down cent step, Delete) and, reading the span, `m`, Ctrl+P, Space's
+//     left-bound launch, `x`, the zoom framing, and the undo/redo + paste
+//     restores (which DEFINE a group selection and its extent);
+//   * FOCUS-COLLAPSE where the members are COUPLED to one another or the act is
+//     POSITIONAL: Ctrl+N and all horizontal movement. Ctrl+N is coupled because
+//     the pass -> owner freeze reads the RESOLVED walk — a member's frozen tempo
+//     depends on what the members before it just became, so a group toggle's
+//     result would depend on iteration order; positional acts are coupled because
+//     one painted column per member and one rigid delta for all of them are
+//     different arrangements, and neither can be the honest reading of "move the
+//     selection".
+// REACHABILITY, with the pointer deferral dead: the ONLY producers of a resting
+// 2+ selection are the two multi-select clicks (shift-range, ctrl-toggle), the
+// `m` bpm-mode open, the propagate paste, and the undo/redo restores — and every
+// group verb that remains is span-read or member-independent, so nothing that can
+// rest a group can then move it.
+//
+// This file is the type-free flesh SHARED BY THE TWO POSITION NUDGE TWINS, all of
+// it singleton-scoped now: an identical guard prologue (which owns the collapse),
+// an identical pixel-column step, and an identical commit tail. Only the
+// WALL-REGIME MIDDLE differs by ruled doctrine ("one regime per column at its
+// home") — warp CLAMPS the step into the marker's wall headroom (identity
+// domain), phase REFUSES over the mapped domain (exact integer wall belt) — and
+// that middle stays in each twin VERBATIM. These three free functions collapse
+// only the type-free parts: no templates, no callbacks, no policy structs (the
+// naming-symmetry doctrine resists genericity — this is plain extraction of the
+// shared flesh).
 
 // Result of the shared guard prologue.
 struct GroupNudgePrologue {
@@ -37,8 +68,9 @@ struct GroupNudgePrologue {
     int  focused = -1;     // app.last_selected_marker, validated in [0, store_size)
 };
 
-// The shared guard prologue of the two group position nudges. Order is IDENTICAL
-// in both twins and preserved exactly: (1) loading / empty-audio refusal;
+// The shared guard prologue of the two position nudges, and the site that makes
+// the gesture a FOCUS ACT. Order is IDENTICAL in both twins and preserved
+// exactly: (1) loading / empty-audio refusal;
 // (2) stop_playback_if_playing FIRST — this is a fine-tuning authoring gesture
 // (the bare Left/Right marker-lane press is the only caller path); (3)
 // empty-selection refusal — unreachable from the dispatcher, which routes an
@@ -50,50 +82,47 @@ struct GroupNudgePrologue {
 // handler, and it just has to run before record_gesture stamps the kind in the
 // tail); (6) bad
 // sample-rate refusal; (7) non-positive samples-per-pixel refusal; (8) the
-// stale-index belt over every selected index; (9) focused-index stale refusal.
+// focused-index stale refusal — the ONLY index this gesture reads, so the old
+// belt over every selected index went with the group (nothing else is touched,
+// and the collapse below drops the rest of the membership anyway).
+// Then (9) THE COLLAPSE: a 2+ selection collapses to its focus and the playhead
+// LANDS on that focus, the Ctrl+N shape (collapse + land at the CALLER of
+// Selection::collapse_to_focused, the convention that keeps the land at the site
+// which hands the marker lane a focus). The step below is therefore always the
+// SINGLETON op on `focused`, bit-for-bit what a singleton selection always got.
+// A press that then refuses at its wall keeps the collapse — the collapse is the
+// press's own committed act, not a prelude to the step (its damage is
+// collapse_to_focused's own, so a refused press repaints correctly).
 // Every marker is nudgeable, including the one at time 0 — the parser resolver
 // normalizes the resulting arrangement at render/preview time, there is no
 // gesture pin.
 //
 // PLAYHEAD RULE (architect 2026-07-23, reversing the 2026-07-20 decoupling): the
-// playhead FOLLOWS the focused marker through the nudge (the actual follow lands
-// in finish_group_position_nudge) — it steps with the marker so a later Space
-// auditions FROM the marker. THE TOWED SET IS EMPTY (architect 2026-07-28): under
-// the marker-lane-owns-the-playhead rule — stated in full, with its landing-site
-// enumeration, at land_playhead_on_marker in input_pointer.cpp — a land is ALWAYS
-// on the focus, so every focus-setting route leaves the playhead already
-// coincident with the focused marker and this follow never has a divergence to
-// close. The last three exceptions were the multi-select clicks (shift-range,
-// Ctrl+click toggle-ADD, Ctrl+click toggle-REMOVE), which landed at the earliest
-// selected while focusing elsewhere; that ruling was reversed and they now land
-// on their own focus like everything else. The follow stays, because the nudge
-// MOVES the focused marker and the playhead must move with it — it is a
-// re-land, not a repair. (Ctrl+Tab is in no list at all, and since 2026-07-29 the
-// reason is trivial: it restores its tab's stored PLAYHEAD verbatim and hands the
-// lane no focus at all — the selection is never parked, so there is no restored
-// focus that could diverge from the stored cursor and nothing to tow.)
-// The lead-in workflow (parking the playhead upstream
-// to audition the approach) is supplied by the scrub surface instead. The twins
-// keep their own GestureKind (WarpNudge / PhaseResetNudge).
+// playhead FOLLOWS the nudged marker through the step (the actual follow lands in
+// finish_group_position_nudge) — it steps with the marker so a later Space
+// auditions FROM the marker. It is a re-land, not a repair: nothing DIVERGES from
+// the focus to be towed (the two playhead forms and the empty towed category are
+// stated once at land_playhead_on_marker, input_pointer.cpp — do not restate them
+// here). The lead-in workflow (parking the playhead upstream to audition the
+// approach) is supplied by the scrub surface instead. The twins keep their own
+// GestureKind (WarpNudge / PhaseResetNudge).
 // `synthesized_repeat` is the dispatching key event's platform repeat bit,
 // consumed by the coalesce verdict alone.
 GroupNudgePrologue group_position_nudge_prologue(
     AppState& app, const GuiAudio& audio,
-    GuiPlaybackLifecycle& playback_lifecycle, Undo& undo,
+    GuiPlaybackLifecycle& playback_lifecycle, Selection& selection,
+    Viewport& viewport, Undo& undo,
     GestureKind kind, bool synthesized_repeat, int store_size);
 
-// THE PER-ITEM pixel-column step, and the ONLY position derivation either nudge
-// uses: read the item's currently painted column (painted_column_of_source_frame
-// — the stem painters' own math against the displayed paint basis) and commit
-// the frame at cf + direction (authored_frame_at_column, which funnels through
+// THE pixel-column step, and the ONLY position derivation either nudge uses:
+// read the marker's currently painted column (painted_column_of_source_frame —
+// the stem painters' own math against the displayed paint basis) and commit the
+// frame at cf + direction (authored_frame_at_column, which funnels through
 // snap_authored_frame, the one fractional-to-authored route). Returns the
 // committed frame RAW — walls are NOT this helper's business: each twin applies
-// its own regime to the result. A singleton calls it once; a 2+ selection calls
-// it once PER MEMBER, each member on its own painted column — under that rule
-// every moved item is its own anchor, and the name is read that way.
+// its own regime to the result. Exactly one call per press, on the focus.
 //
-// THE ONE-COLUMN-PER-PRESS GUARANTEE and its numeric rationale live here, and
-// they hold for EVERY moved item, singleton or group member. It is a
+// THE ONE-COLUMN-PER-PRESS GUARANTEE and its numeric rationale live here. It is a
 // GRID-FINENESS property, not a gesture-family property: the painted move is
 // exactly the commanded column per press because the authored FRAME grid is
 // finer than the pixel grid, so every adjacent-column target is representable in
@@ -107,40 +136,6 @@ GroupNudgePrologue group_position_nudge_prologue(
 // 0.29025); in the WARP nudge's identity source home the bound is trivially
 // stronger (a column is at least 27.5625 whole frames, error at most 0.5 frame,
 // about 0.018 px). Either way each press still advances at least one whole frame.
-//
-// THE GROUP IS PER-MEMBER, NOT RIGID (architect 2026-07-29, reversing the
-// rigid-group convention FOR THE KEYBOARD NUDGE ONLY): every selected member
-// takes this same step on its own column, so every member moves EXACTLY one
-// painted column per press, always, with zero residue. Visual determinism was
-// chosen over store rigidity on a gesture the architect uses rarely, after the
-// rigid form's own defect: a single delta derived by re-snapping the FOCUSED
-// member absorbed that member's post-zoom sub-column phase, so the first press
-// after any zoom moved the group by up to a column and a half and the group
-// visibly SPLIT — some members crossed a column boundary on that delta and the
-// rest did not. Deriving the delta from the grid's own column step would have
-// fixed the split but left ~1/spp of members painting a 0- or 2-column step on
-// any given press, which is inherent to one integer delta over a fractional
-// pixel grid. Per-member snapping removes it entirely.
-//
-// THE POINTER GROUP DRAG IS UNAFFECTED and stays RIGID: the two group-move
-// gestures now have different spacing semantics, deliberately. What the codex
-// round-3 review called the per-member "spacing defect" was a defect against a
-// rigidity claim this gesture no longer makes; it is the RULED behavior here and
-// remains the defect in the drag, which still claims rigidity.
-//
-// THE ACCEPTED CONSEQUENCES, both of them spacing:
-// (a) SPACING QUANTIZES TO THE PIXEL GRID. Each member's sub-column phase is
-//     flattened on its FIRST press (a bounded move, under one column) and never
-//     again — from press one every member is grid-aligned and steps exactly one
-//     column. Non-cumulative.
-// (b) MEMBERS SHARING A PAINTED COLUMN COLLAPSE ONTO ONE GRID FRAME and move
-//     identically thereafter (undo restores the spacing; a later press does
-//     not). At fine zoom the column is about 30 frames, sub-millisecond and
-//     inaudible; at coarse zoom it can be thousands of frames, and an exact
-//     frame tie goes LOUD at the render boundary (the normalization red flags,
-//     the 1.00 collapse). This began as a planner acceptance of the architect's
-//     per-member rule rather than a ruling on the collapse itself;
-//     ARCHITECT-CONFIRMED 2026-07-29 (live-tested), the merge included.
 //
 // The contrast is the point, documenting a trap that already bit once: the
 // W+target bare Left/Right TEMPO-IMAGE STEP (MarkerDragOps::step_tempo_image) is
@@ -162,26 +157,24 @@ int64_t stepped_anchor_frame(
 // (a) record_gesture (re-stamps this press's kind for the next coalesce test);
 // (b) recompute_dirty;
 // (c) invalidate_waveform_area — this full-waveform damage also OWNS the
-//     selected-marker stem's move: a nudge shifts the focused SINGLETON's frame,
-//     and its always-on focus stem (architect 2026-07-25) repaints at the new
-//     column here. A 2+ selection paints no stem (its cue is the extent
-//     region's recolored ground), so nothing to move there;
+//     selected-marker stem's move: a nudge shifts the nudged marker's frame, and
+//     its always-on focus stem (architect 2026-07-25) repaints at the new column
+//     here. The selection is a singleton by the prologue's collapse, so there is
+//     always exactly that one stem;
 // (d) invalidate_timestamp_area;
-// (e) PLAYHEAD FOLLOW: move_playhead_to the focused item's committed frame
+// (e) PLAYHEAD FOLLOW: move_playhead_to the nudged marker's committed frame
 //     through the two-step placement basis (source_frame_to_active_domain —
 //     identity in warp's source home, a real map in phase's target home;
 //     committed_focused_frame is reorder-independent). move_playhead_to owns the
 //     clamp, invalidation, and keep-visible edge-align, writing the cursor field
 //     only (playback was stopped in the prologue).
-// (f) THE REGION, BY THE PLAYHEAD'S TWO FORMS. A GROUP nudge is a SPAN gesture:
-//     an active SelectionExtent region re-derives to the moved group's extent —
-//     MAINTAIN only, never CREATE; an inactive / Free / TrimWindow region is
-//     untouched (position gestures do not re-sync TrimWindow, and the trim's
-//     source-frame bounds are unmoved by either nudge anyway). The
-//     SelectionExtent provenance survives the nudge (no membership replace, and
-//     the reorder remap does not clear), so the gate is reliable. A SINGLETON
-//     nudge is instead a POINT command and CLEARS any resting region, exactly
-//     like the marker click that selects that singleton.
+// (f) THE REGION: a position nudge is a POINT command (one flag standing in for
+//     the cursor) and CLEARS any resting span, unconditionally and blind to
+//     provenance — exactly like the marker click that selects that singleton (the
+//     two playhead forms, at land_playhead_on_marker). There is no span-preserving
+//     arm any more: the extent re-derive died with the group nudge, and a
+//     SelectionExtent span cannot rest beside the singleton this tail always sees
+//     (a membership replace takes it — clear_region_on_membership_replace).
 // (g) target_render.trigger.
 //
 // NO SYNCHRONOUS RE-WARP is needed at either home: the warp nudge authors in
@@ -199,7 +192,7 @@ int64_t stepped_anchor_frame(
 // input: the undo push/record read neither the playhead nor the selection (their
 // snapshots capture the marker stores, engine settings, tab, and the hint indices
 // only — not the cursor), move_playhead_to does not read undo
-// state, and the region follow reads only the post-mutation store/selection. ONE
+// state, and the region clear reads only the region. ONE
 // knowingly-accepted delta rides the unification, phase-only (the warp twin
 // already had this shape) and harmless, recorded here so the next reader need
 // not re-derive it; a second one dissolved with the coalesce clock and is kept

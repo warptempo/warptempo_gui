@@ -619,8 +619,8 @@ namespace {
 // FNV-1a over the live drag-overlay state, folded into the FlagCache
 // fingerprint (its only consumer). Hashing the drag state directly removes the
 // requirement that every mutation site of app.drag remember to bump a generation
-// counter. Cost is dominated by the loop over moveable_times,
-// which at observed selection sizes (0–5) is a handful of nanoseconds.
+// counter. The loops run over ONE slot (a drag moves one marker — groups are never
+// moved), so the whole hash is a handful of nanoseconds.
 uint64_t hash_drag_overlay(const DragState& d) {
     uint64_t h = 0xcbf29ce484222325ULL;
     h ^= static_cast<uint64_t>(d.active ? 1 : 0);

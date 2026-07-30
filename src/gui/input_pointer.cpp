@@ -177,9 +177,9 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // Space launches from an active region's LEFT BOUND, and those same clicks set
 // the extent region (set_region_to_selection_extent, below).
 // The landing sites are enumerated below (they are this function's callers, plus
-// the group-image gestures that re-land through move_playhead_to at their own
-// commits: the two group position nudges, the tempo-image step, and both tempo
-// steps' target-view re-warp tails).
+// the image-moving gestures that re-land through move_playhead_to at their own
+// commits: the two position nudges, the tempo-image step, and both tempo steps'
+// target-view re-warp tails).
 //
 // THE PLAYHEAD HAS TWO FORMS, POINT AND SPAN, AND EXACTLY ONE IS EVER VISIBLE
 // (architect 2026-07-29) — the frame this land now sits inside. The POINT form
@@ -195,13 +195,15 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // the playhead retired with the land's clear it existed to decide: conditioning
 // the collapse on motion is exactly what left a frozen span resting under a
 // marker the arrows then moved, with Space still launching from that stale
-// span.) The collapse sites are the plain marker click and its four
-// deferred completions, the two multi-select clicks whenever the RESULT is <2
+// span.) The collapse sites are the plain marker click, the two
+// multi-select clicks whenever the RESULT is <2
 // selected, enter_text_edit (the one chokepoint of every editor open and
-// retarget), a SINGLETON position nudge, and the navigation jumps that always
+// retarget), the POSITION NUDGES on both columns (horizontal movement is a focus
+// act, so every one of them is a point command — the doctrine is at the head of
+// group_position_nudge.h), and the navigation jumps that always
 // owned theirs (the list at clear_region_highlight, input_handler.h). The
-// SPAN-PRESERVING routes each earn it: the group gestures and the whole TEMPO
-// family re-derive or re-sync the highlight they move, Space plays the span, `x`
+// SPAN-PRESERVING routes each earn it: the whole TEMPO
+// family re-derives or re-syncs the highlight it moves, Space plays the span, `x`
 // consumes it into the trim, `m` re-derives its extent right after the open, and
 // pure viewport moves leave it alone. The other half of the model is the
 // MEMBERSHIP REPLACE, which clears a SelectionExtent span outright
@@ -229,14 +231,18 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // playhead seats. THE CALLER INVENTORY, THE ONE AUTHORITATIVE ENUMERATION,
 // re-derived by grep 2026-07-29 (other sites state their own class and point
 // here; do not copy this list, re-derive it):
-//   * THE POINTER CLICKS — the plain marker click (input_pointer.cpp) and its
-//     FOUR deferred-click completions on the release / lost-button paths, the
+//   * THE POINTER CLICKS — the plain marker click (input_pointer.cpp), the
 //     shift RANGE click, and the ctrl TOGGLE click. Each lands on the FOCUS its
 //     own path just set: the clicked marker, the clicked range end, the
 //     toggled-in marker, or the focus repaired after a toggle-out (an empty
-//     post-toggle selection lands nothing);
-//   * THE KEYBOARD POINT COMMANDS — the Ctrl+N inherit toggle's collapse
-//     (warpmarkers_ops.cpp). Esc's singleton rung was the other one until
+//     post-toggle selection lands nothing). The plain click's FOUR deferred
+//     completions left this list 2026-07-29 with the group drag: every marker
+//     press single-selects and lands at PRESS time now (horizontal movement is a
+//     focus act — the doctrine at the head of group_position_nudge.h);
+//   * THE KEYBOARD FOCUS-COLLAPSE COMMANDS, which collapse a 2+ selection to its
+//     focus and land there — the Ctrl+N inherit toggle (warpmarkers_ops.cpp) and,
+//     since 2026-07-29, BOTH POSITION NUDGES through their shared prologue
+//     (group_position_nudge.cpp). Esc's singleton rung was in this class until
 //     2026-07-29, when the whole Esc ladder was deleted: bare Esc lands nothing
 //     now, because it does nothing at all outside the editors, the prompts, the
 //     drag swallow and the render cancel;
@@ -394,8 +400,10 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 //       ALREADY-ACTIVE SelectionExtent highlight from the post-commit,
 //       reordered/remapped store (never creating one). Every one of them gates on
 //       region.active && provenance == SelectionExtent, so a Free / TrimWindow /
-//       inactive region is untouched. The class is the group image-movers —
-//       position and tempo alike — and its MEMBERSHIP is not enumerated here: the
+//       inactive region is untouched. The class is the group TEMPO gestures — the
+//       position movers left it 2026-07-29, groups being never moved (the doctrine
+//       at the head of group_position_nudge.h) — and its MEMBERSHIP is not
+//       enumerated here: the
 //       authoritative inventory of the image-follow sites lives at RegionState in
 //       app_state.h, and an inline copy here is exactly the list that goes stale;
 //   (3) the two MASS-MARKER PROGRAMMATIC selections, which unlike the
@@ -1204,12 +1212,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // an act (select, land, arm, open), so it owns the stop for the
                 // whole branch: selecting or editing under a live audition is
                 // the case the top-strip stop was written for. One site ahead
-                // of every arm below (the range select, the two group
-                // deferrals, the plain single-select + land + editor open),
-                // and it belongs at the TOP because NO arm here refuses:
+                // of BOTH arms below (the range select, and the plain
+                // single-select + land + editor open),
+                // and it belongs at the TOP because NEITHER arm refuses:
                 // read-only still selects and lands, the hit is >= 0 by the
-                // gate (the mutators' idx < 0 guards are unreachable), the two
-                // deferrals arm a pending drag and seed a candidate, and the
+                // gate (the mutators' idx < 0 guards are unreachable), and the
                 // plain arm always single-selects and lands. Only the editor
                 // OPEN can decline (read-only / P view / off home), and that is
                 // a second act layered on a click that already committed.
@@ -1269,90 +1276,18 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     else
                         clear_region_highlight(app, viewport);
                 } else {
-                    // GROUP-drag deferral (architect 2026-07-23, file-manager
-                    // convention): when THIS press would arm a REPOSITION drag
-                    // (the home-view flag-press arm condition at the tail of this
-                    // branch — mh.on_flag, tab writable,
-                    // active_column_authoring_allowed) AND the clicked marker is
-                    // already a member of a 2+ selection, DEFER the click's
-                    // committed act (single-select + land) to a motionless
-                    // release. Committing it now would collapse the
-                    // multi-selection to {hit} before begin_drag could seed the
-                    // whole group, so the press holds its fire. The tempo-drag
-                    // surface (W + target view) has active_column_authoring_allowed
-                    // false, so it is excluded HERE — but it has its OWN group
-                    // deferral in the next branch (an eligible grab on a selected
-                    // member defers likewise, so the group tempo drag seeds intact).
-                    // Every other plain marker press keeps the immediate
-                    // single-select + land below.
-                    const bool would_arm_reposition =
-                        mh.on_flag && !active_view_state(app).read_only &&
-                        active_column_authoring_allowed(app);
-                    if (would_arm_reposition &&
-                        app.selected_markers.size() >= 2 &&
-                        app.selected_markers.count(hit) > 0) {
-                        // Keep the selection; seed the Marker double-click
-                        // candidate exactly as the immediate path (press-time,
-                        // target = hit) and arm the reposition drag flagged
-                        // deferred. The double-click-consume check is SKIPPED —
-                        // it can never fire on a still-multi selection: a prior
-                        // release either collapsed the selection to a singleton
-                        // (routing the next press through the immediate path) or
-                        // never happened. If the pointer never crosses
-                        // kDragMovedThresholdPx the deferred single-select
-                        // + land runs at release / lost button. Esc does NOTHING
-                        // to the pending (pointer gestures have no cancel — the
-                        // rule at the drag-modal gate, input_handler.cpp): the arm
-                        // survives and still resolves by the crossing or a real
-                        // release.
-                        app.double_click = DoubleClickCandidate{
-                            .surface = DoubleClickSurface::Marker,
-                            .time_ms = monotonic_ms(),
-                            .press_x = x, .press_y = y,
-                            .target  = hit};
-                        app.pending_marker_drag = PendingMarkerDrag{};
-                        app.pending_marker_drag.active         = true;
-                        app.pending_marker_drag.marker         = hit;
-                        app.pending_marker_drag.press_x        = x;
-                        app.pending_marker_drag.press_y        = y;
-                        app.pending_marker_drag.deferred_click = true;
-                        return;
-                    }
-                    // GROUP TEMPO-drag deferral: the same file-manager deferral
-                    // for the W + target view tempo surface. That surface has
-                    // active_column_authoring_allowed FALSE, so the reposition
-                    // check above excluded it; defer here when the grabbed marker
-                    // is tempo-drag-ELIGIBLE (its predecessor set is walkable) AND
-                    // a member of a 2+ selection, so begin_tempo_drag seeds the
-                    // whole participant set intact. An INELIGIBLE grab arms no
-                    // drag, so there is nothing to defer — it collapses at press
-                    // below, as before.
-                    const bool would_arm_tempo =
-                        mh.on_flag && !active_view_state(app).read_only &&
-                        app.active_markers_view == 'W' &&
-                        app.active_audio_view == 'T' &&
-                        marker_drag.tempo_drag_predecessor(hit) >= 0;
-                    if (would_arm_tempo &&
-                        app.selected_markers.size() >= 2 &&
-                        app.selected_markers.count(hit) > 0) {
-                        // Keep the selection; seed the Marker double-click
-                        // candidate (press-time, target = hit) and arm the tempo
-                        // drag flagged deferred. A motionless release / lost
-                        // button runs the held single-select + land; Esc does
-                        // nothing to it (the pending survives — no cancel).
-                        app.double_click = DoubleClickCandidate{
-                            .surface = DoubleClickSurface::Marker,
-                            .time_ms = monotonic_ms(),
-                            .press_x = x, .press_y = y,
-                            .target  = hit};
-                        app.pending_tempo_drag = PendingTempoDrag{};
-                        app.pending_tempo_drag.active         = true;
-                        app.pending_tempo_drag.marker         = hit;
-                        app.pending_tempo_drag.press_x        = x;
-                        app.pending_tempo_drag.press_y        = y;
-                        app.pending_tempo_drag.deferred_click = true;
-                        return;
-                    }
+                    // ONE PLAIN MARKER PRESS, NO SPECIAL CASE FOR A SELECTED
+                    // MEMBER (architect 2026-07-29, HORIZONTAL MOVEMENT IS A FOCUS
+                    // ACT — the doctrine is at the head of group_position_nudge.h):
+                    // a press on a member of a 2+ selection single-selects and
+                    // lands IMMEDIATELY like a press on any other marker, and the
+                    // drag it arms is an ordinary singleton drag. The two
+                    // file-manager DEFERRALS that used to sit here — one per drag
+                    // surface, each holding the click's committed act back so
+                    // begin_drag / begin_tempo_drag could seed the intact group —
+                    // died with the group drag itself; groups are never moved by
+                    // any route, so nothing needs the selection to survive the
+                    // press.
                     // Plain marker click single-selects (both views; W's
                     // click-to-edit is retired — the editor now opens on Enter or
                     // this double-click). Selection is navigation, allowed in
@@ -1568,7 +1503,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // Waveform shift+click: the region former / the DEMOTE (this is
                 // one of the DROP formers — it clears the selection; the downward
                 // selection->extent derivation lives on the multi-select clicks
-                // and the SelectionExtent maintainers (group drags / tempo
+                // and the SelectionExtent maintainers (the group tempo
                 // follows), never on a drag-formed region — the plain waveform
                 // drag makes a FREE region and selects nothing, and this shift
                 // former likewise clears; architect 2026-07-23, replacing
@@ -1963,39 +1898,20 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         return;
     }
     if (app.pending_tempo_drag.active) {
-        // The pending tempo drag never crossed the threshold: a pure flag click.
-        //  - IMMEDIATE arm (deferred_click false): the press already
-        //    single-selected its marker AND seeded the Marker candidate, so there
-        //    is nothing to commit — just disarm.
-        //  - DEFERRED arm (deferred_click true): the press held the click's
-        //    committed act back (a group member pressed with the multi-selection
-        //    intact). A motionless release IS that click now — collapse to {m}
-        //    and land the playhead on it, exactly the reposition pending's
-        //    deferred completion, its own clear_region_highlight collapsing any
-        //    resting span exactly as the immediate path's does (the point command
-        //    owns the collapse; see land_playhead_on_marker). Bounds-check m
-        //    against the warp store (the tempo surface is W view — nothing
-        //    mutates it between press and release, the pending gate swallows
-        //    keys).
-        const bool deferred = app.pending_tempo_drag.deferred_click;
-        const int  m        = app.pending_tempo_drag.marker;
+        // The pending tempo drag never crossed the threshold: a pure flag click,
+        // and the press already committed all of it (single-select + land + span
+        // collapse) — so there is nothing to complete here, just disarm. The
+        // DEFERRED arm that used to complete a held-back click on this path died
+        // with the group drag (architect 2026-07-29: horizontal movement is a focus
+        // act, so every marker press single-selects at press time — the doctrine is
+        // at the head of group_position_nudge.h).
         app.pending_tempo_drag = PendingTempoDrag{};
-        if (deferred) {
-            const int n = static_cast<int>(app.warpmarkers.markers().size());
-            if (m >= 0 && m < n) {
-                selection.set_single_selection(m);
-                // Deferred click completes on marker m: set_single_selection owns
-                // the always-on stem's subject-change damage.
-                land_playhead_on_marker(app, audio, viewport, m);
-                clear_region_highlight(app, viewport);
-            }
-        }
         // Settle hover to the pointer's ACTUAL position. Sub-threshold motion
         // during the pending drag never recomputed hover, so hover_popup still
         // holds the press-time hit — stale if the pointer slid off the flag rect
         // (the hover POPUP / lane text would then show a marker no longer under the
         // pointer). Recompute when the pointer is still here (a clean release always
-        // is); covers the immediate arm too. (If it had left, the pointer-leave hook
+        // is). (If it had left, the pointer-leave hook
         // already cleared — but a clean release means it is here, so this is the
         // resolve.)
         if (gui.pointer_focused()) viewport.recompute_hover_at_cursor();
@@ -2021,42 +1937,22 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         return;
     }
     if (app.pending_marker_drag.active) {
-        // The pending marker drag never crossed the threshold: a pure flag
-        // click, in one of two shapes.
-        //  - IMMEDIATE arm (deferred_click false): the press already
-        //    single-selected its marker AND seeded the Marker double-click
-        //    candidate (press-time seeding), so there is nothing to commit —
-        //    just disarm.
-        //  - DEFERRED arm (deferred_click true): the press held the click's
-        //    committed act back (a group member was pressed, the
-        //    multi-selection intact). A motionless release IS that click now —
-        //    collapse to {m}, land the playhead on it and collapse any resting
-        //    span, exactly the immediate path's press-time act (the point command
-        //    owns its clear — see land_playhead_on_marker). Bounds-check m against
-        //    the active column's store defensively (nothing mutates it between
-        //    press and release — the pending gate swallows keys).
+        // The pending marker drag never crossed the threshold: a pure flag click.
+        // The press already single-selected its marker, landed the playhead,
+        // collapsed any resting span AND seeded the Marker double-click candidate
+        // (press-time seeding), so there is nothing to commit — just disarm. The
+        // DEFERRED arm that used to complete a held-back click here died with the
+        // group drag (architect 2026-07-29: horizontal movement is a focus act, so
+        // a press on a selected member single-selects at press time like any other
+        // — the doctrine is at the head of group_position_nudge.h).
         // (A crossed pending became app.drag — dropping the candidate at the
         // threshold crossing — and commits through the branch below.)
-        const bool deferred = app.pending_marker_drag.deferred_click;
-        const int  m        = app.pending_marker_drag.marker;
         app.pending_marker_drag = PendingMarkerDrag{};
-        if (deferred) {
-            const int n = (app.active_markers_view == 'P')
-                ? static_cast<int>(app.phaseresetmarkers.markers().size())
-                : static_cast<int>(app.warpmarkers.markers().size());
-            if (m >= 0 && m < n) {
-                selection.set_single_selection(m);
-                // Deferred click completes on marker m: set_single_selection owns
-                // the always-on stem's subject-change damage.
-                land_playhead_on_marker(app, audio, viewport, m);
-                clear_region_highlight(app, viewport);
-            }
-        }
         // Settle hover to the pointer's ACTUAL position (see the tempo pending's
         // twin above): a sub-threshold slide off the flag left hover_popup stale,
         // so re-resolve while the pointer is still here (a clean release always
-        // is) — the hover popup / lane text then reflect the true pointer position,
-        // immediate arm too.
+        // is) — the hover popup / lane text then reflect the true pointer
+        // position.
         if (gui.pointer_focused()) viewport.recompute_hover_at_cursor();
         return;
     }
@@ -2121,10 +2017,10 @@ void GuiInputHandler::finalize_active_drags() {
         end_strip_pointer_capture();
     }
     // THE PENDINGS DISARM, and that is not a cancel: a pending has committed
-    // NOTHING of its own — a deferred arm is holding its click BACK, and the
-    // bound-set trim pending's bound was written at the press and stands. There is
-    // no release here (the button is still held), so the click never happens; a
-    // pending otherwise resolves only by the threshold crossing or a real
+    // NOTHING of its own — the marker/tempo pendings' clicks committed at the
+    // PRESS, and the bound-set trim pending's bound was written at the press and
+    // stands. There is no release here (the button is still held), so nothing is
+    // owed; a pending otherwise resolves only by the threshold crossing or a real
     // release / button loss.
     app.pending_marker_drag = PendingMarkerDrag{};
     app.pending_tempo_drag  = PendingTempoDrag{};
@@ -2447,23 +2343,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // fold), and does not fall back into that branch this event.
     if (app.pending_tempo_drag.active) {
         if (!mods.primary_button_held) {   // button lost -> just the click
-            // A lost button before the crossing IS the click, matching the
-            // release path: a DEFERRED arm completes the held single-select +
-            // land + span collapse now; an immediate arm just disarms.
-            // Bounds-check m (W store).
-            const bool deferred = app.pending_tempo_drag.deferred_click;
-            const int  m        = app.pending_tempo_drag.marker;
+            // A lost button before the crossing IS the click, matching the release
+            // path: the press already committed the whole click, so this just
+            // disarms (the deferred completion died with the group drag — see the
+            // release branch).
             app.pending_tempo_drag = PendingTempoDrag{};
-            if (deferred) {
-                const int n = static_cast<int>(app.warpmarkers.markers().size());
-                if (m >= 0 && m < n) {
-                    selection.set_single_selection(m);
-                    // Deferred click completes on marker m: set_single_selection
-                    // owns the always-on stem's subject-change damage.
-                    land_playhead_on_marker(app, audio, viewport, m);
-                    clear_region_highlight(app, viewport);
-                }
-            }
             // Settle hover to the pointer's ACTUAL state instead of the old
             // unconditional clear (which erased a legitimately-hovering popup):
             // if the pointer is still here, re-resolve — a slid-off pointer drops
@@ -2503,27 +2387,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // click.
     if (app.pending_marker_drag.active) {
         if (!mods.primary_button_held) {   // button lost -> just the click
-            // A lost button before the crossing IS the click, matching the
-            // release path: a DEFERRED arm (deferred_click — a group member
-            // pressed with the multi-selection held) completes the held
-            // single-select + land + span collapse now; an immediate arm already
-            // committed that at press and just disarms. Bounds-check m
-            // defensively.
-            const bool deferred = app.pending_marker_drag.deferred_click;
-            const int  m        = app.pending_marker_drag.marker;
+            // A lost button before the crossing IS the click, matching the release
+            // path: the press already committed the whole click (single-select,
+            // land, span collapse), so this just disarms (the deferred completion
+            // died with the group drag — see the release branch).
             app.pending_marker_drag = PendingMarkerDrag{};
-            if (deferred) {
-                const int n = (app.active_markers_view == 'P')
-                    ? static_cast<int>(app.phaseresetmarkers.markers().size())
-                    : static_cast<int>(app.warpmarkers.markers().size());
-                if (m >= 0 && m < n) {
-                    selection.set_single_selection(m);
-                    // Deferred click completes on marker m: set_single_selection
-                    // owns the always-on stem's subject-change damage.
-                    land_playhead_on_marker(app, audio, viewport, m);
-                    clear_region_highlight(app, viewport);
-                }
-            }
             // Settle hover to the pointer's ACTUAL state (see the tempo twin
             // above): re-resolve while the pointer is here, else the pointer-leave
             // hook owns the clear. Replaces the old unconditional clear that broke

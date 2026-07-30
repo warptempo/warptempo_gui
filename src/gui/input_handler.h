@@ -151,8 +151,9 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //   * NAVIGATION jumps: jump_playhead_to_focused_marker (the whole Tab family
 //     plus `c` through the one tail), run_zoom_toggle_command (bare `0`), the
 //     bare Left/Right playhead step, Home/End (the trim-bound jumps);
-//   * MARKER CLICKS: the plain single-select click and its four deferred
-//     completions (release / lost button, reposition and tempo surfaces), plus
+//   * MARKER CLICKS: the plain single-select click (its four deferred completions
+//     died 2026-07-29 with the group drag — every marker press commits its click at
+//     PRESS time now, the doctrine at the head of group_position_nudge.h), plus
 //     the two MULTI-SELECT clicks whenever their RESULT is under two selected
 //     (at 2+ they instead re-own the region through
 //     set_region_to_selection_extent — the DOWNWARD coupling, the selection
@@ -160,8 +161,10 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     that must run AFTER any clear);
 //   * enter_text_edit, the one chokepoint of every flag/bpm editor open and
 //     retarget;
-//   * a SINGLETON position nudge (finish_group_position_nudge's point arm; a
-//     GROUP nudge is span-preserving and re-derives instead);
+//   * the POSITION NUDGES, both columns (finish_group_position_nudge, which clears
+//     unconditionally: horizontal movement is a FOCUS ACT since 2026-07-29 — a 2+
+//     selection collapses to its focus in the shared prologue, so a nudge is always
+//     a point command and the span-preserving group arm is gone);
 //   * the MARKER DROPS (architect 2026-07-29, overruling their earlier keep):
 //     a drop seats the playhead on the marker it creates and single-selects it,
 //     so it is a point command like the rest — one clear per column, at the
@@ -232,7 +235,8 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // Routes
 // that RE-DERIVE a span instead of collapsing are not sites at all: the group
 // undo restore, the paste's created set, the multi-select clicks at 2+, `m`, and
-// the whole tempo/group-drag follow family. The kick validator's domain-shrink
+// the whole group TEMPO follow family (the position movers left it 2026-07-29 —
+// groups are never moved). The kick validator's domain-shrink
 // clear needs no site of its own — every caller that can shrink the domain under
 // a group either re-derives (the tempo family, unconditionally after its kick) or
 // is already a site above (the settings commit, undo, `t`).
@@ -260,8 +264,8 @@ void clear_region_highlight(AppState& app, Viewport& viewport);
 // markers are selected (a <=1 selection sets nothing). MUST run AFTER its
 // caller's own point-form clear_region_highlight.
 // Definition lives in input_pointer.cpp; declared here
-// so the group-drag commit (MarkerDragOps::commit_drag) can re-derive the
-// live-tracked region from the post-commit store through the same owner.
+// so the group TEMPO gestures, undo.cpp's restore and the propagate paste can
+// reach the same owner (the class-level contract is at the definition).
 void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
                                     Viewport& viewport);
 
@@ -349,7 +353,7 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // cancels themselves (pointer gestures have no cancel, 2026-07-29).
 // The invariant's OTHER HALF is that nothing puts a selection back beside a
 // resting TrimWindow region: every route that selects a marker either CLEARS the
-// region (the plain/multi-select clicks and their deferred completions, the Tab
+// region (the plain/multi-select clicks, the Tab
 // family and `c` through jump_playhead_to_focused_marker, the editor opens, the
 // drops, and the three membership-wholesale routes) or REPLACES it with the
 // selection's own extent (the multi-select clicks at 2+). So

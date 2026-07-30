@@ -737,7 +737,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // carries the marker under it — the routes below, each of which re-lands the
     // playhead on its committed focus (finish_group_position_nudge for both
     // position nudges, the post-re-warp re-land in step_tempo_image), so the lane
-    // model holds on every successful route. With no selection the playhead is in
+    // model holds on every successful route. HORIZONTAL MOVEMENT IS A FOCUS ACT
+    // (architect 2026-07-29): a 2+ selection COLLAPSES to its focus in the position
+    // nudges' shared prologue and the focus alone steps — groups are never moved
+    // (the doctrine at the head of group_position_nudge.h; the tempo-image step in
+    // W+target keeps its group form, tempo being a value the members hold
+    // independently). With no selection the playhead is in
     // the waveform lane and this branch does not match: the press falls through
     // to the bare-key tail, which steps the cursor alone. The lane is left by any
     // DESELECTING route (the lane model at playhead_in_marker_lane; Esc is unbound

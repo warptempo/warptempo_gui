@@ -1,7 +1,8 @@
 #include "warpmarkers_ops.h"
 
 #include "audio.h"
-#include "group_position_nudge.h"  // the shared group position-nudge flesh
+#include "group_position_nudge.h"  // the shared position-nudge flesh (prologue,
+                                  // step, commit tail) + the movement doctrine
 #include "input_handler.h"      // set_region_to_selection_extent (group step),
                                 // clear_region_highlight (the drop's collapse)
 #include "warp_frame_map_build.h"
@@ -280,6 +281,12 @@ void GuiWarpMarkersOps::delete_selected_marker() {
 void GuiWarpMarkersOps::toggle_inherits() {
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
+    // FOCUS-COLLAPSE, and this gesture is the group-verb doctrine's own example of
+    // COUPLED members (the doctrine is at the head of group_position_nudge.h): the
+    // pass -> owner freeze below reads the RESOLVED inheritance walk, so what a
+    // member freezes to depends on what the members before it just became — a group
+    // toggle's result would depend on iteration order. Collapsing to the focus is
+    // the honest act.
     selection.collapse_to_focused();
     // The marker lane owns the playhead (the rule is stated in full at
     // land_playhead_on_marker, input_pointer.cpp): the collapse leaves the FOCUS
@@ -296,12 +303,13 @@ void GuiWarpMarkersOps::toggle_inherits() {
     // (every trim setter deselects; the rule is at sync_region_to_trim_window's
     // declaration), but the value gesture tears down no cue of the chip row's
     // either way.
-    // The land sits at THIS caller and not inside collapse_to_focused, whose other
-    // caller is the singleton tempo step: the tempo step has no focus change to
-    // land for (its selection is already a singleton — adjust_tempo_cents returns
-    // to the group path at size >= 2 — so collapse_to_focused cannot move the
-    // focus there), and the site that hands the lane a new focus is the site that
-    // owes it a land.
+    // The land sits at THIS caller and not inside collapse_to_focused, because the
+    // site that hands the lane a new focus is the site that owes it a land — and
+    // not every caller does: the singleton tempo step has no focus change to land
+    // for (its selection is already a singleton — adjust_tempo_cents returns to the
+    // group path at size >= 2 — so collapse_to_focused cannot move the focus
+    // there). The position nudges pair the collapse with their own land the same
+    // way, at their shared prologue.
     // No index guard: the focus was checked >= 0 two lines above, collapse_to_focused
     // cannot move it, and the helper is internally bounds-guarded regardless.
     land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
@@ -691,12 +699,15 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
     target_render.trigger();
 }
 
-// Nudge the selected warp markers by exactly one on-screen pixel column per
-// press — EACH of them, on its own column (GROUP, architect 2026-07-23; the 2+
-// selection became per-member rather than rigid on 2026-07-29, so this gesture is
-// no longer the keyboard sibling of the group position DRAG, which stays rigid —
-// the doctrine and the spacing consequences are at stepped_anchor_frame).
+// Nudge the FOCUSED warp marker by exactly one on-screen pixel column per press.
 // direction: -1 for earlier (up/left), +1 for later (down/right).
+//
+// HORIZONTAL MOVEMENT IS A FOCUS ACT — GROUPS ARE NEVER MOVED (architect
+// 2026-07-29): a 2+ selection COLLAPSES TO ITS FOCUS in the shared prologue (which
+// also lands the playhead there) and the focus takes this one step, so the body
+// below is the singleton op unconditionally. The doctrine, the group-verb rule it
+// instances, and the dead per-member machinery are recorded once at the head of
+// group_position_nudge.h.
 //
 // SOURCE HOME VIEW ONLY (the home-view binding, architect 2026-07-22 — restored
 // 2026-07-24 second pass: the same-day "third exception", a both-views warp
@@ -705,43 +716,31 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
 // there is no warp position authoring in target view at all, and the dispatch
 // site in input_handler.cpp owns the routing).
 //
-// The wall regime over the identity map, one shape per selection size. A
-// SINGLETON steps its marker one PAINTED column (stepped_anchor_frame — the
-// guarantee and its numeric rationale live in the comment there) and its delta
-// is CLAMPED into its own wall headroom, walls exactly reachable, bit-for-bit
-// the pre-group behavior. A GROUP gives every member that same step on its own
-// column and REFUSES THE WHOLE PRESS if any proposal leaves [0, warp_wall] —
-// the group stops as a UNIT, and clamping per member instead would pool them
-// onto the wall frame permanently (the rationale sits at the refusal). Crossing
-// a neighbor is legal and goes through the reorder-and-remap below; the render
-// boundary collapses exact-frame ties to one 1.00 owner — reachable now not only
-// by crossing but by two members sharing a painted column, which the per-member
-// rule merges.
+// The wall regime over the identity map, one shape: the marker steps one PAINTED
+// column (stepped_anchor_frame — the guarantee and its numeric rationale live in
+// the comment there) and its delta is CLAMPED into its own wall headroom, walls
+// exactly reachable. Crossing a neighbor is legal and goes through the
+// reorder-and-remap below; the render boundary collapses an exact-frame tie to one
+// 1.00 owner.
 void GuiWarpMarkersOps::nudge_selected_markers(
         int direction, bool synthesized_repeat) {
     // Shared guard prologue: loading / empty-audio refusal, playback stop first,
-    // empty/no-focus refusals, the coalesce verdict, the geometry refusals, and
-    // the stale-index belt (the playhead-follows-focused / lead-in rationale
-    // lives at the declaration). Refuses silently, navigation-class.
+    // empty/no-focus refusals, the coalesce verdict, the geometry refusals, the
+    // focused-index belt, and THE COLLAPSE + LAND that makes this a focus act (the
+    // playhead-follows / lead-in rationale lives at the declaration). Refuses
+    // silently, navigation-class.
     const GroupNudgePrologue pro = group_position_nudge_prologue(
-        app, audio, playback_lifecycle, undo, GestureKind::WarpNudge,
-        synthesized_repeat,
+        app, audio, playback_lifecycle, selection, viewport, undo,
+        GestureKind::WarpNudge, synthesized_repeat,
         static_cast<int>(app.warpmarkers.markers().size()));
     if (!pro.ok) return;
     const bool merge = pro.merge;
-    // GROUP nudge (architect 2026-07-23): a 2+ selection moves whole — NO
-    // collapse_to_focused. Since 2026-07-29 it moves PER MEMBER (architect):
-    // each selected marker re-snaps to its OWN adjacent painted column, so the
-    // painted step is exactly one column for every one of them; the rigid single
-    // delta, and with it the "never re-snapped per member" convention, applies to
-    // the pointer group DRAG only now. app.last_selected_marker stays the FOCUS
-    // (the playhead follows it), not an anchor the others ride.
     const auto& mv = app.warpmarkers.markers();
     const int   f  = pro.focused;   // validated in [0, mv.size()) by the prologue
 
     // The anchoring map is the DISPLAYED paint basis —
     // displayed_or_live_target_map, the SAME map the flag/trim painters read — so
-    // each moved marker travels exactly the commanded pixel column against WHAT
+    // the moved marker travels exactly the commanded pixel column against WHAT
     // IS PAINTED. This gesture runs in warp's SOURCE home view only, so the
     // displayed map is the empty identity map here — the shared painted_column /
     // authored_frame helpers take it naturally, every commit is a plain integer
@@ -752,123 +751,71 @@ void GuiWarpMarkersOps::nudge_selected_markers(
     const int64_t warp_wall = audio.total_frames() - 1;
 
     const int64_t orig_f = mv[f].time_frame;
-    std::vector<GuiWarpMarker> proposed = mv;
-    bool any_changed = false;
-    // The focused marker's committed frame (reorder-independent), for the
-    // playhead follow. Unmoved unless this press moves it.
-    int64_t committed_f = orig_f;
 
-    if (app.selected_markers.size() >= 2) {
-        // (1) GROUP: every member takes the SINGLETON's own op on its OWN
-        // painted column — one painted column per press for each of them, no
-        // shared delta (the doctrine, and the spacing consequences it accepts,
-        // live at stepped_anchor_frame's declaration).
-        //
-        // (2) WALLS WIN AS A UNIT, expressed as a WHOLE-PRESS REFUSAL: if ANY
-        // member's proposal leaves [0, warp_wall] nothing moves at all. Per-member
-        // CLAMPING is what must not happen here — it would pool the clamped
-        // members onto the wall frame, and pooled members then move IDENTICALLY
-        // forever after (pressing back off the wall carries them together), a
-        // permanent merge no undo-free gesture can separate. The rigid delta this
-        // replaced could never do that, and refusing is the honest translation of
-        // "the group stops as a unit" into the per-member world. A planner
-        // translation of the architect's per-member rule, ARCHITECT-CONFIRMED
-        // 2026-07-29 (live-tested).
-        for (int idx : app.selected_markers) {
-            const int64_t t_new = stepped_anchor_frame(
-                app, audio, map, mv[idx].time_frame, direction);
-            if (t_new < 0 || t_new > warp_wall) return;
-            if (idx == f) committed_f = t_new;
-            if (t_new != mv[idx].time_frame) {
-                proposed[idx].time_frame = t_new;
-                any_changed = true;
-            }
-        }
-    } else {
-        // (1) SINGLETON: the same step, and D is the plain integer frame
-        // difference. Bit-for-bit the long-standing behavior, clamp included.
-        int64_t D =
-            stepped_anchor_frame(app, audio, map, orig_f, direction) - orig_f;
+    // (1) THE STEP: one painted column, and D is the plain integer frame
+    // difference.
+    int64_t D = stepped_anchor_frame(app, audio, map, orig_f, direction) - orig_f;
 
-        // (2) WALLS WIN, headroom-intersected. Intersect each member's wall
-        // headroom [0 - orig_k, warp_wall - orig_k] (integer arithmetic):
-        // delta_min = -min(orig_k), delta_max = warp_wall - max(orig_k),
-        // non-empty because every stored marker rests in [0, warp_wall]. Clamp D
-        // ONCE. A singleton's intersection is [-orig_f, warp_wall - orig_f], so
-        // its commit orig_f + D is clamp(the stepped frame, 0, warp_wall)
-        // exactly — the pre-group per-marker clamp bit-for-bit. (The intersection
-        // shape is what the whole 2+ selection used to ride; it now serves the
-        // singleton alone.)
-        int64_t min_orig = orig_f, max_orig = orig_f;
-        for (int idx : app.selected_markers) {
-            const int64_t o = mv[idx].time_frame;
-            if (o < min_orig) min_orig = o;
-            if (o > max_orig) max_orig = o;
-        }
-        const int64_t delta_min = -min_orig;
-        const int64_t delta_max = warp_wall - max_orig;
-        if (D < delta_min) D = delta_min;
-        if (D > delta_max) D = delta_max;
+    // (2) WALLS WIN, in the marker's own wall headroom [0 - orig_f,
+    // warp_wall - orig_f] (integer arithmetic, non-empty because every stored
+    // marker rests in [0, warp_wall]). Clamping rather than refusing is this
+    // column's ruled regime — the warp wall is exactly reachable by a press that
+    // would overshoot it (the phase twin refuses instead, one regime per column at
+    // its home).
+    if (D < -orig_f)             D = -orig_f;
+    if (D > warp_wall - orig_f)  D = warp_wall - orig_f;
 
-        // (3) The member commits orig_k + D. The [0, warp_wall] clamp is a
-        // deliberate walls-win belt — provably dead today (this path is
-        // all-integer int64 sums, and the intersection proof above keeps every
-        // sum in range), kept as cheap insurance so a future edit to the
-        // intersection code cannot commit a wall-illegal frame (an out-of-wall
-        // authored position would save a load-fatal file).
-        for (int idx : app.selected_markers) {
-            int64_t t_new = mv[idx].time_frame + D;
-            if (t_new < 0)         t_new = 0;
-            if (t_new > warp_wall) t_new = warp_wall;
-            if (t_new != mv[idx].time_frame) {
-                proposed[idx].time_frame = t_new;
-                any_changed = true;
-            }
-        }
-        committed_f = orig_f + D;
-    }
-    if (!any_changed) return;   // saturated / zero-step press: nothing moves
+    // (3) The marker commits orig_f + D. The [0, warp_wall] clamp is a
+    // deliberate walls-win belt — provably dead today (this path is all-integer
+    // int64 sums, and the headroom clamp above keeps the sum in range), kept as
+    // cheap insurance so a future edit to the clamp cannot commit a wall-illegal
+    // frame (an out-of-wall authored position would save a load-fatal file).
+    int64_t committed_f = orig_f + D;
+    if (committed_f < 0)         committed_f = 0;
+    if (committed_f > warp_wall) committed_f = warp_wall;
+    if (committed_f == orig_f) return;   // saturated / zero-step press
 
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
-    // Identity hints (the diff matcher is identity-blind for a translated group —
-    // a member can land field-identical on another row). touched_snapshot names
-    // the WHOLE group (a restore re-selects it) in PRE-reorder snapshot
-    // coordinates = the current selection indices.
-    std::vector<int> touched_snapshot(app.selected_markers.begin(),
-                                      app.selected_markers.end());
-    app.warpmarkers.markers_mut() = std::move(proposed);
+    // Identity hint (the diff matcher is identity-blind for a column-snapped move
+    // — the moved row can land field-identical on another row). touched_snapshot
+    // names the nudged marker in PRE-reorder snapshot coordinates = its current
+    // index.
+    std::vector<int> touched_snapshot{f};
+    if (GuiWarpMarker* m = app.warpmarkers.marker_mut(f))
+        m->time_frame = committed_f;
     // A nudge may cross a neighbor; restore time order and remap the index-shaped
-    // state (the whole group's selection follows to the new slots).
+    // state (the selection follows its marker to the new slot).
     remap_marker_indices_after_reorder(
         app, reorder_markers_by_time(app.warpmarkers.markers_mut()));
-    // touched_live: the group's POST-reorder live indices (the remap rewrote the
-    // selection in place).
+    // touched_live: the nudged marker's POST-reorder live index — read off the
+    // selection, which the remap rewrote in place and which is exactly this one
+    // marker (the prologue collapsed to it).
     std::vector<int> touched_live(app.selected_markers.begin(),
                                   app.selected_markers.end());
     // Coalesce a held key: the PHYSICAL press pushed the pre-burst snapshot with
-    // the group hints; each synthesized repeat skips the redundant push and instead
-    // REFRESHES the surviving entry's touched_live to this press's post-reorder
-    // indices (touched_snapshot stays the first press's pre-burst coordinates — a
-    // restore produces that snapshot, and the whole hold moves the same selection,
-    // since a selection change needs a command and a command ends the hold). The
-    // post-mutation re-record happens in the shared tail.
+    // the identity hints; each synthesized repeat skips the redundant push and
+    // instead REFRESHES the surviving entry's touched_live to this press's
+    // post-reorder index (touched_snapshot stays the first press's pre-burst
+    // coordinates — a restore produces that snapshot, and the whole hold moves the
+    // same marker, since a selection change needs a command and a command ends the
+    // hold). The post-mutation re-record happens in the shared tail.
     if (merge) {
         undo.note_coalesced_commit();
         undo.refresh_coalesced_touched_live(std::move(touched_live));
     } else {
-        // The warp POSITION NUDGE (the receiving marker's own image slides). A
-        // singleton restore's always-on focus stem follows from the selection —
-        // no lateral bit.
+        // The warp POSITION NUDGE (the receiving marker's own image slides). The
+        // restore's always-on focus stem follows from the selection — no lateral
+        // bit.
         undo.push_undo_warp(std::move(pre_state),
                             /*affects_persistence=*/true,
                             std::move(touched_snapshot),
                             std::move(touched_live));
     }
     // Shared commit tail: record/dirty/invalidate (its full-waveform damage moves
-    // the focused singleton's always-on stem), playhead follow (committed_f is
-    // reorder-independent), SelectionExtent region follow, and the view-independent
-    // target trigger (no synchronous re-warp — source-view warp pixels don't depend
-    // on the map). Ordering rationale at the declaration.
+    // the nudged marker's always-on stem), playhead follow (committed_f is
+    // reorder-independent), the point command's region collapse, and the
+    // view-independent target trigger (no synchronous re-warp — source-view warp
+    // pixels don't depend on the map). Ordering rationale at the declaration.
     finish_group_position_nudge(app, audio, viewport, undo,
                                 GestureKind::WarpNudge, committed_f,
                                 target_render);

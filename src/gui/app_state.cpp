@@ -47,9 +47,9 @@ void remap_marker_indices_after_reorder(AppState& app,
     app.last_selected_marker = mapped(app.last_selected_marker);
     // The SHIFT-RANGE ANCHOR is index-shaped live state over the same active
     // column's store, so it FOLLOWS its marker exactly like the focus above
-    // rather than dissolving: a reorder does not end a range interaction — the
-    // group position nudge reorders whenever it carries a selected marker across
-    // an unselected neighbour, mid-interaction — and the anchor survives shift
+    // rather than dissolving: a reorder does not end a range interaction — a
+    // position nudge reorders whenever it carries its marker across a
+    // neighbour, mid-interaction — and the anchor survives shift
     // releases, so a stale pre-reorder index would name the wrong row at the
     // next shift-click. -1 (no anchor) passes through mapped() unchanged.
     app.shift_range_anchor = mapped(app.shift_range_anchor);
@@ -59,15 +59,10 @@ void remap_marker_indices_after_reorder(AppState& app,
     // every caller reorders the active column's store.
     if (app.drag.active) {
         // Pairing between dragging_markers and its parallel time vectors
-        // (original_times / moveable_times) is positional by k, so an
-        // in-place value remap keeps each index bound to its own times.
-        // Nothing relies on ascending order of the remapped indices —
-        // DragOverlay::effective_time scans linearly.
+        // (original_times / moveable_times) is positional (slot 0, the one dragged
+        // marker), so an in-place value remap keeps the index bound to its times.
         for (int& idx : app.drag.dragging_markers) idx = mapped(idx);
         app.drag.hit_marker = mapped(app.drag.hit_marker);
-        // grabbed_k is deliberately NOT remapped: it is a POSITION into the
-        // parallel drag vectors (which stay positionally stable — values remap
-        // in place, slots do not), not a store index like hit_marker.
     }
 }
 

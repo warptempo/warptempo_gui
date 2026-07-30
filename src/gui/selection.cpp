@@ -206,18 +206,22 @@ void Selection::clear_selection() {
 }
 
 void Selection::collapse_to_focused() {
-    // TWO CALLER CLASSES, and they want this for opposite reasons:
+    // THREE CALLER CLASSES, wanting this for different reasons:
     //   * the FINE-TUNING VALUE gestures (the inherit toggle, the singleton
     //     tempo step), which narrow the selection so the operation and the
     //     resulting selection both target last_selected only;
+    //   * HORIZONTAL MOVEMENT, which is a FOCUS ACT (architect 2026-07-29 —
+    //     groups are never moved): both position nudges collapse here through
+    //     their shared prologue and then step the focus alone. The doctrine, and
+    //     the group-verb rule it instances, live at the head of
+    //     group_position_nudge.h;
     //   * the NEVER-REST-2+-WITHOUT-A-SPAN sites, which call it because a clear
     //     took the group's only point cue away. Their inventory is NOT repeated
     //     here — it lives, by class, at clear_region_highlight's declaration
     //     (input_handler.h), which is also where the invariant itself is stated.
-    // The position NUDGES and the GROUP tempo gestures do NOT collapse — they
-    // went group (architect 2026-07-23), operating over the whole selection (the
-    // tempo gestures move it rigidly; the nudges step every member on its own
-    // painted column since 2026-07-29). last_selected_marker
+    // The GROUP TEMPO gestures do NOT collapse — they went group (architect
+    // 2026-07-23) and move the whole selection's images rigidly.
+    // last_selected_marker
     // is untouched — it stays the focus. Callers that full-invalidate afterward
     // make the top-strip / timestamp damage here redundant (a benign damage-union,
     // accepted).

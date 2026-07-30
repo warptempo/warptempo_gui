@@ -197,8 +197,8 @@ namespace {
 // that reorders the store still flags only the changed row, and when one of two
 // exactly coincident markers is touched, the tie's moved member is still
 // identified. This resolves the touched set, writes it as the selection, and
-// picks the EARLIEST touched marker as focus (equal members; the group nudge's
-// playhead follow, the tempo step's re-land, Tab's start, and the lane/readout
+// picks the EARLIEST touched marker as focus (equal members; the tempo step's
+// re-land, Tab's start, and the lane/readout
 // fallbacks all tolerate it, and a singleton's earliest IS the touched marker).
 // The VISUAL tail — the playhead land (on the FOCUS in both arms, which is the
 // touched marker for a singleton and the earliest touched member for a group;
@@ -215,14 +215,15 @@ void apply_post_restore_rules_impl(AppState& app,
                                    FieldsDiffer  fields_differ) {
     std::set<int> target_set;
 
-    // Explicit identity hints first (reposition drags): entry.touched_snapshot
-    // names the touched markers directly in THIS entry's snapshot coordinates,
+    // Explicit identity hints first (the position movers — the reposition drag and
+    // the two nudges): entry.touched_snapshot
+    // names the touched marker directly in THIS entry's snapshot coordinates,
     // which are exactly `after` (the state a restore of this entry produced). Use
     // them verbatim, bounds-filtered against `after` defensively; only when they
     // are absent (every hint-less producer) or filter empty (defensive) does the
     // diff reconstruction below run. The hints exist because that diff matcher
-    // cannot tell a moved row from an untouched one when a translated group or a
-    // column-snapped drag lands field-identical rows at another's position.
+    // cannot tell a moved row from an untouched one when a column-snapped move
+    // lands field-identical at another row's position.
     if (!entry.touched_snapshot.empty()) {
         for (int idx : entry.touched_snapshot) {
             if (idx >= 0 && idx < static_cast<int>(after.size()))
@@ -270,9 +271,9 @@ void apply_post_restore_rules_impl(AppState& app,
         // selection change, correct; coincident equal rows are handled by the
         // one-match-per-row consumption exactly like the add/remove branches.
         // This matcher CANNOT distinguish a moved row that lands field-identical
-        // to an untouched row (a group translated by the inter-marker spacing, or
-        // a column-snapped drag onto a row-identical marker) from that untouched
-        // row — it would flag the wrong subset. The reposition drags therefore
+        // to an untouched row (a column-snapped move onto a row-identical marker)
+        // from that untouched
+        // row — it would flag the wrong subset. The position movers therefore
         // supply explicit touched_snapshot hints (consumed above), and this
         // diff matcher is only the fallback for hint-less producers, where such
         // collisions do not arise.

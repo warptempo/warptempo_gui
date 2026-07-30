@@ -106,11 +106,16 @@ struct UndoEntry {
     // make recompute_dirty report a warp-file difference.
     bool                      affects_persistence  = true;
     // Explicit touched-set IDENTITY HINTS for the post-restore selection, filled
-    // ONLY by producers whose touched rows the diff reconstruction cannot
-    // recover by marker identity — the reposition drags, where a moved row can
-    // land field-identical to an untouched row (a group translated by the
-    // inter-marker spacing, or any dragged marker column-snapped exactly onto a
-    // row-identical marker). Empty means "no hint — use the diff reconstruction"
+    // ONLY by producers whose touched row the diff reconstruction cannot
+    // recover by marker identity — the position movers (the drags and the two
+    // nudges), where a moved row can
+    // land field-identical to an untouched row (the moved marker column-snapped
+    // exactly onto a row-identical marker). ALWAYS SINGLETON-SCOPED since
+    // 2026-07-29: every one of those gestures moves exactly one marker (groups are
+    // never moved — the doctrine at the head of group_position_nudge.h), so a
+    // multi-member hint has no producer left. The vectors stay vectors because the
+    // RESTORE side is group-capable — an undo/redo restore may re-select a whole
+    // set it took in wholesale. Empty means "no hint — use the diff reconstruction"
     // (every other producer). COORDINATE SPACES (kept distinct because the
     // counter-entry SWAPS them, restore_history_entry): touched_snapshot indexes
     // THIS entry's `snapshot` — the state a restore of this entry PRODUCES, so
@@ -153,9 +158,11 @@ struct UndoEntry {
 //     open's re-extent, the GROUP
 //     undo/redo restore, and the propagate paste's created-set arm) and
 //     MAINTAINERS (which gate on an ALREADY-ACTIVE SelectionExtent region and
-//     only re-derive it: the group marker drag's commit, both group position
-//     nudges, the tempo drag's per-event follow, the tempo-image step, and the
-//     group tempo step). The class-level contract for those callers, and the
+//     only re-derive it: the tempo drag's per-event follow, the tempo-image step,
+//     and the group tempo step — the POSITION movers left this list 2026-07-29
+//     when the group nudge and the group marker drag were deleted, groups being
+//     never moved; the doctrine is at the head of group_position_nudge.h). The
+//     class-level contract for those callers, and the
 //     ordering rule each obeys, live at that function in input_pointer.cpp.
 // The MULTI-SELECT EXTENT case is the one worth restating for its consequence: a
 // shift-range or ctrl-toggle click leaving 2+ markers selected sets the region to
@@ -212,15 +219,13 @@ struct UndoEntry {
 // extent or as the trim's highlight, and neither survives the swap. The two
 // other wholesale-selection routes (the undo/redo restore, the propagate paste)
 // clear it for the same reason; the full clear-site enumeration lives at
-// clear_region_highlight's declaration (input_handler.h). A
-// GROUP marker drag live-tracks the region to the moving group's extent
-// (apply_drag_motion) and re-derives it from the post-commit store at commit — it
-// captures nothing (pointer gestures have no cancel, 2026-07-29; the rule at the
-// drag-modal gate in input_handler.cpp). The GROUP POSITION
-// NUDGES (bare Left/Right in the marker lane, both columns) re-derive the same
-// way at their commit —
-// MAINTAIN only, per-press, no live track (a nudge is one
-// atomic step) — so an active SelectionExtent region follows the nudged group.
+// clear_region_highlight's declaration (input_handler.h). NO POSITION GESTURE
+// FOLLOWS A SPAN AT ALL any more (architect 2026-07-29): the marker drag's group
+// live-track and its commit re-derive, and the position nudges' per-press
+// re-derive, all died with the group forms of those gestures — horizontal movement
+// is a focus act, so both are POINT commands that clear instead (the doctrine is at
+// the head of group_position_nudge.h). What still follows an extent span across its
+// own map change is the TEMPO family alone (below).
 // Region PROVENANCE (architect 2026-07-23, three-state ownership): tracks WHO the
 // region is derived from, which decides how the image-follow tempo gestures treat
 // it across a map change. Free — a drag-formed region, display scratch
@@ -234,14 +239,14 @@ struct UndoEntry {
 // rests ONLY beside an EMPTY selection (architect 2026-07-29, the
 // maximally greedy collapse): all four producers leave the selection empty,
 // and EVERY route that then puts a selection in place clears the span — the
-// marker clicks and their deferred completions, Tab/`c`, the editor opens, the
+// marker clicks, Tab/`c`, the editor opens, the
 // drops, and the three that used to carry a selection in wholesale while
 // leaving the span alone (undo/redo restore, the `p` swap, the propagate paste).
 // No gesture cancel can re-open a route either: there are no cancels left to
 // restore a region from (2026-07-29).
 // SelectionExtent — set to the marker selection's
 // [earliest, latest] extent (the downward selection->extent clicks, the
-// position-drag commit, the tempo follows), valid ONLY while that selection
+// tempo follows), valid ONLY while that selection
 // persists (any membership
 // REPLACE CLEARS it via clear_region_on_membership_replace). TrimWindow — set to
 // the trim window's images by the trim setters' publish, and RESTING ONLY BESIDE AN
@@ -251,7 +256,9 @@ struct UndoEntry {
 // settings-editor trim maintainers so the highlight tracks the chips/stems.
 //
 // RECORDED BOUNDARY of the follow/re-sync behavior (architect 2026-07-23, narrowed
-// 2026-07-29): the re-derive sites are the GROUP STEP and the group tempo DRAG's
+// 2026-07-29 twice — the second time when the position movers left the class
+// entirely): the re-derive sites are the group TEMPO STEP and the group tempo
+// DRAG's
 // PER-EVENT path, which re-derive their SelectionExtent region across their own map
 // change — UNCONDITIONALLY, the provenance branch having died with
 // TrimWindow-under-a-selection — plus the settings-editor trim commit (re-syncs a
@@ -329,46 +336,43 @@ inline bool clear_region_on_membership_replace(RegionState& r) {
 }
 
 // Marker reposition drag state (begun by a plain flag drag past the shared
-// threshold). `active` gates motion handling; the rest holds the drag's own
-// working set — the pre-drag positions the proposals are derived from and the
-// pre-drag store the COMMIT pushes as its undo entry. Nothing here is a cancel
+// threshold). ONE MARKER, ALWAYS — GROUPS ARE NEVER MOVED (architect 2026-07-29,
+// HORIZONTAL MOVEMENT IS A FOCUS ACT; the doctrine and the dead rigid-group
+// machinery are recorded at the head of group_position_nudge.h). `active` gates
+// motion handling; the rest holds the drag's own working set — the pre-drag
+// position the proposal is derived from and the pre-drag store the COMMIT pushes
+// as its undo entry. Nothing here is a cancel
 // origin: pointer gestures have no cancel (2026-07-29, the rule at the drag-modal
 // gate in input_handler.cpp), so Esc mid-drag changes nothing and the release
 // commits.
 //
-// `delta_min` / `delta_max` is a single scalar ACTIVE-domain offset range
-// (architect 2026-07-23): the intersection of each dragged marker's wall
-// headroom mapped through the displayed map — [fwd(0) − fwd(orig_k),
-// fwd(eof_wall) − fwd(orig_k)] — plus the grabbed marker's viewport clamp, all
+// `delta_min` / `delta_max` is a scalar ACTIVE-domain offset range
+// (architect 2026-07-23): the dragged marker's wall
+// headroom mapped through the displayed map — [fwd(0) − fwd(orig),
+// fwd(eof_wall) − fwd(orig)] — plus its viewport clamp, all
 // in the pointer-delta (active) domain. apply_drag_motion clamps the POINTER
-// delta ONCE into [delta_min, delta_max] before the per-member loop, so the
-// whole group rides the SAME clamped delta and stops as a UNIT the instant the
-// first member's image reaches its wall — no per-member squash, in either view
-// (source view is the fwd-identity special case, bit-for-bit the old behaviour).
-// A per-member absolute [0, eof_wall] source backstop stays in the loop for
-// fp-safety only, not as the rigidity mechanism. Neighbors do not bound a drag —
-// markers may cross freely, and commit reorders the store. Trim is purely
+// delta into it, so the marker's image stops at its wall in either view
+// (source view is the fwd-identity special case). An absolute [0, eof_wall]
+// source backstop follows for fp-safety. Neighbors do not bound a drag —
+// the marker may cross them freely, and commit reorders the store. Trim is purely
 // cosmetic and does not constrain edits.
 struct DragState {
     bool                active = false;
-    std::vector<int>    dragging_markers;   // sorted ascending
-    // Pre-drag positions, parallel to dragging_markers. At-rest copies of
-    // the stores' authored int64 frames.
+    // The dragged marker's store index, held as a one-element vector because
+    // DragOverlay pairs it positionally with moveable_times (slot 0 everywhere).
+    std::vector<int>    dragging_markers;
+    // Pre-drag position, parallel to dragging_markers. An at-rest copy of
+    // the store's authored int64 frame.
     std::vector<int64_t> original_times;
-    // Proposed new positions during motion (source-frame doubles — mid-
+    // Proposed new position during motion (a source-frame double — mid-
     // gesture positions are free and fractional), parallel
     // to dragging_markers. Written by apply_drag_motion as the DISPLAYED-map
     // proposal inv(fwd(orig) + active-domain delta) — the two-hop formula at
     // apply_drag_motion's header (identity orig + delta in source view);
     // consumed by paint via DragOverlay so the live marker store stays untouched
-    // until commit. Seeded from original_times at begin_drag. These are
-    // MOTION/PAINT values: at commit ONLY the grabbed slot (grabbed_k) converts
-    // back to an authored frame through the pixel-anchoring column snap; every
-    // OTHER slot's proposal is IGNORED and its member reconstructs rigidly from
-    // original_times[k] plus the grabbed member's uniform active-domain delta D
-    // (D == 0 -> verbatim original), so the group keeps its spacing instead of
-    // being re-quantized per member. Do not reintroduce per-member snapping of
-    // these values (see commit_drag).
+    // until commit. Seeded from original_times at begin_drag. This is a
+    // MOTION/PAINT value: at commit it converts back to an authored frame through
+    // the pixel-anchoring column snap (commit_drag).
     std::vector<double> moveable_times;
     // Press position in ACTIVE-domain frame doubles; the motion delta
     // (mouse_frame - anchor) therefore lives in active-domain frames, and
@@ -411,33 +415,24 @@ struct DragState {
     // What survives above is the pre-drag STORE, which is the undo payload, not a
     // restore origin.
     // Playhead-follows-marker ruling (architect 2026-07-23, reversing the
-    // 2026-07-20 decoupling): a single-marker arming click LANDS the playhead on
-    // the grabbed marker (source_frame_to_active_domain then
-    // clamp_playhead_to_live_domain), so it is coincident by construction; a
-    // group drag's deferred press does not land, so the mid-motion follow and
-    // commit_drag's unconditional land tow the playhead onto the grabbed member
-    // (the crossing focuses it from the outset). Either way the drag tows it
-    // UNCONDITIONALLY — it lands on the grabbed marker so a later Space auditions
-    // FROM it. The lead-in workflow (parking
+    // 2026-07-20 decoupling): the arming click LANDS the playhead on
+    // the pressed marker (source_frame_to_active_domain then
+    // clamp_playhead_to_live_domain), so it is coincident by construction, and the
+    // mid-motion follow plus commit_drag's unconditional land keep it there —
+    // the drag tows it UNCONDITIONALLY, so a later Space auditions FROM it. The
+    // lead-in workflow (parking
     // the playhead upstream to audition the approach) that the decoupling
     // served is supplied by the scrub surface instead. Only the RESTING
     // cursor playhead moves — move_playhead_to writes the cursor field only, so
     // a live scanner is left untouched; it stays the audio thread's to own.
     // Index of the marker whose flag press started the drag — the GRAB
     // reference for the whole gesture: the delta anchor, the playhead-follow /
-    // land target, and (single-marker drag) the marker re-asserted as the
-    // single selection at the THRESHOLD CROSSING (begin_drag). A group drag
-    // focuses it there without collapsing the membership. The transfer runs at
-    // the crossing, not at first moved motion, so a wall-saturated drag (no
-    // proposal moves) still focuses what it grabbed.
+    // land target, and the marker re-asserted as the
+    // single selection at the THRESHOLD CROSSING (begin_drag, where the re-assert
+    // is a no-op — the arming press already single-selected it). The re-assert runs
+    // at the crossing, not at first moved motion, so a wall-saturated drag (the
+    // proposal never moves) still names what it grabbed.
     int                    hit_marker           = -1;
-    // hit_marker's SLOT in the parallel drag vectors (dragging_markers /
-    // original_times / moveable_times), found by a linear scan at begin_drag.
-    // hit_marker is a STORE index the reorder remaps; grabbed_k is a POSITION
-    // into the drag's own vectors, which stay positionally stable across a
-    // mid-drag reorder (values remap in place, slots do not), so it never needs
-    // remapping. For a single-marker drag grabbed_k is trivially 0.
-    int                    grabbed_k            = 0;
     // Which list this drag operates on. The motion / commit
     // handlers dispatch on this so a drag started in phase reset view
     // mutates the phase reset list.
@@ -608,7 +603,9 @@ struct EditorTextDragState {
 };
 
 // Pending marker-reposition drag, armed by a PLAIN (unmodified) flag press.
-// Usually the press single-selects its marker immediately (the click), then
+// The press single-selects its marker immediately (the click — with no exception
+// for a member of a 2+ selection since 2026-07-29, groups being never moved; the
+// doctrine is at the head of group_position_nudge.h), then
 // arms this pending state instead of the drag itself: only once the pointer
 // travels past kDragMovedThresholdPx (Chebyshev from the press; the one generic
 // 8px gate shared by every press-becomes-drag surface) does begin_drag run and
@@ -623,24 +620,19 @@ struct EditorTextDragState {
 // Shift never arms it, and a read-only tab never arms it (marker mutation is
 // refused there — the select still lands).
 //
-// deferred_click (the GROUP-drag deferral, architect 2026-07-23): when the
-// pressed marker is already a member of a 2+ selection, the press does NOT
-// single-select + land — that would collapse the multi-selection to {hit}
-// before begin_drag could seed the whole group. Instead the arming press holds
-// the click's committed act back and sets this flag; a group drag then seeds
-// from the intact selection, while a motionless release / lost button runs the
-// held single-select + land (the file-manager convention). Esc does NOTHING to a
-// pending (pointer gestures have no cancel, 2026-07-29 — the rule at the
-// drag-modal gate in input_handler.cpp): the arm survives the press and still
-// resolves by the threshold crossing or a real release / button loss. The
-// force-end finalizer just disarms it, the deferred click never happening. Every
-// immediate arm leaves this false, and its release path just disarms.
+// NOTHING IS HELD BACK HERE. The GROUP-drag deferral (deferred_click, architect
+// 2026-07-23 — a press on a member of a 2+ selection withheld its single-select +
+// land so begin_drag could seed the whole group, the file-manager convention) died
+// 2026-07-29 with the group drag itself: every marker press commits its whole
+// click at press time, so a release / lost button / force-end has nothing to
+// complete and simply DISARMS. Esc does nothing either (pointer gestures have no
+// cancel — the rule at the drag-modal gate in input_handler.cpp): the arm survives
+// the press and resolves by the threshold crossing or a real release / button loss.
 struct PendingMarkerDrag {
     bool active         = false;
     int  marker         = -1; // marker index to reposition (active view's list)
     int  press_x        = 0;  // press position (window px): the gate + drag anchor
     int  press_y        = 0;
-    bool deferred_click = false;
 };
 
 // Pending target-view TEMPO drag, armed by a PLAIN (unmodified) warp-flag
@@ -661,16 +653,14 @@ struct PendingMarkerDrag {
 // release / lost button before the crossing, by the force-end finalizer, and on
 // file load.
 //
-// deferred_click (the GROUP tempo-drag deferral, architect 2026-07-23): the
-// PendingMarkerDrag deferral extended to the tempo surface. When the grabbed
-// marker is tempo-drag-eligible AND already a member of a 2+ selection, the
-// press does NOT single-select + land — that would collapse the group before
-// begin_tempo_drag could seed the participant predecessor set. Instead the press
-// holds the click's committed act back and sets this flag; a group tempo drag
-// then seeds from the intact selection, while a motionless release / lost button
-// runs the held single-select + land; Esc does nothing to it (see
-// PendingMarkerDrag's twin). An INELIGIBLE grab
-// arms no drag, so there is nothing to defer — it keeps the immediate collapse.
+// NOTHING IS HELD BACK HERE either: the GROUP tempo-drag deferral (deferred_click,
+// architect 2026-07-23 — the PendingMarkerDrag deferral extended to this surface so
+// begin_tempo_drag could seed the participant predecessor set from an intact 2+
+// selection) died 2026-07-29 with the deferral machinery as a whole (the doctrine
+// is at the head of group_position_nudge.h). Every eligible press single-selects
+// and lands at press time, so this pending has nothing to complete and its
+// release / lost-button / force-end paths simply DISARM — which also means a
+// pointer tempo drag now always arms with a singleton selection.
 struct PendingTempoDrag {
     bool active         = false;
     int  marker         = -1; // dragged warp marker (its target image chases
@@ -681,7 +671,6 @@ struct PendingTempoDrag {
                               // and crossing, so the re-walk is equivalent)
     int  press_x        = 0;  // press position (window px): the gate only (the
     int  press_y        = 0;  //   solve is absolute — pointer x -> tempo)
-    bool deferred_click = false;
 };
 
 // Target-view tempo drag (Ableton-style stretch; architect 2026-07-22, group
@@ -1573,14 +1562,12 @@ struct AppState {
     // button, by the force-end finalizer, and on file load.
     RegionDragState region_drag;
 
-    // Pending marker-reposition drag, armed by a plain flag press. Usually the
-    // press single-selects the marker immediately; but a press on a member of a
-    // 2+ selection DEFERS its single-select + land (deferred_click) so a group
-    // drag can seed the whole selection — the deferred click then runs at a
-    // motionless release / lost button. The drag begins
+    // Pending marker-reposition drag, armed by a plain flag press. The press
+    // single-selects the marker immediately, whatever was selected before — groups
+    // are never moved, so there is no deferral (the field's declaration carries the
+    // story). The drag begins
     // only past the threshold. Cleared on the threshold crossing, on button
-    // release / lost button, by the force-end finalizer (which performs no
-    // deferred click — a pending committed nothing), and on file load.
+    // release / lost button, by the force-end finalizer, and on file load.
     PendingMarkerDrag pending_marker_drag;
 
     // Pending target-view tempo drag, armed by a plain warp-flag press in W +
@@ -2012,8 +1999,7 @@ std::vector<int> reorder_markers_by_time(std::vector<Marker>& markers) {
 //     field) a stale pre-reorder index would silently name the wrong row at the
 //     next shift-click;
 //   * the live DRAG state's held indices, when a drag is live on the reordered
-//     store (dragging_markers, hit_marker; grabbed_k is a position into the
-//     parallel drag vectors, not a store index, and is deliberately left alone).
+//     store (dragging_markers — one slot, the dragged marker — and hit_marker).
 // NOTHING ELSE HOLDS AN INDEX ACROSS COMMANDS AT ALL, which is why the list is
 // this short: every field ViewState parks is frame- or value-shaped
 // (viewport_start_sample, zoom_level, playhead_cursor_sample and the TrimState
