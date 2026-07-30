@@ -212,24 +212,27 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // entry kind and the pair is complete). Both #19 map-changer RE-LANDS died with
 // them — nothing selected means no focus to re-land — so the 'S' gate is simple
 // again: no select, no region write, no land.
-// THREE COMMANDS DO produce a resting spanless 2+ selection, verified against the
-// tree rather than assumed, and each records the state at its own site: the S/T
-// domain flip (the span's endpoints are active-domain frames and cannot survive
-// it, while the selection is carried across — reachable through the bare `t` key
-// AND the settings editor's `active_audio_view=` GUI key, which is not covered by
-// the engine-commit clear), bare `0`, and `c` (both pure viewport/playhead commands
-// that clear the span and touch no membership). In that
-// state no playhead form is DRAWN — the cursor yields to a non-empty selection and
-// the stem is singleton-only — while Space still launches from the resting cursor;
-// that is the accepted cost of the retirement, and paint_playheads states it.
-// TWO CANDIDATES ARE NOT PRODUCERS, by derivation: the TRIM-SYNC no-window arm
-// (all three of its non-setter callers gate on provenance == TrimWindow, and a
-// TrimWindow region rests only beside an EMPTY selection — the derivation lives at
-// that function), and the kick validator's DOMAIN-SHRINK clear (the only
-// total-changers that keep a 2+ selection are the group cent step, which re-derives
-// its extent unconditionally AFTER its kick, and the group undo restore, which
-// derives its extent from the already-restored domain and clamps into it, so the
-// validator's out-of-domain test cannot fire on it).
+// AND A SPANLESS 2+ SELECTION IS NEVERTHELESS UNPRODUCIBLE — the architect REJECTED
+// that state (2026-07-29, "a hybrid third option that i did not ask for or ratify")
+// and it now has no producer at all. The three routes that briefly made one — the
+// S/T domain flip (whose span cannot survive the flip: the endpoints are
+// active-domain frames), bare `0` and `c` — each COLLAPSE a surviving 2+ selection
+// to its focus and land the playhead there, under the architect's general rule
+// (verbatim at the group-verb doctrine, position_nudge.h: if group is relatively
+// cheap to implement, implement it; otherwise collapse to last selected). THE
+// PROPERTY THEREFORE HOLDS BY THE PRODUCERS' OWN FORM, WHICH IS THE WHOLE POINT OF
+// THE RETIREMENT: every route that rests a 2+ selection rests it WITH its extent
+// span, and every route that would take a span from a group collapses at its own
+// site — no protocol watches the clears, and this declaration deliberately carries
+// NO site enumeration for it (that enumeration was the deleted machinery). Two
+// candidates never needed a collapse in the first place, by derivation: the
+// TRIM-SYNC no-window arm (all three of its non-setter callers gate on provenance ==
+// TrimWindow, and a TrimWindow region rests only beside an EMPTY selection — the
+// derivation lives at that function), and the kick validator's DOMAIN-SHRINK clear
+// (the only total-changers that keep a 2+ selection are the group cent step, which
+// re-derives its extent unconditionally AFTER its kick, and the group undo restore,
+// which derives its extent from the already-restored domain and clamps into it, so
+// the validator's out-of-domain test cannot fire on it).
 // The land itself clears NOTHING — it is a pure playhead write, and the
 // motion condition that briefly rode its clear died with that clear
 // (land_playhead_on_marker). DELIBERATELY NOT
@@ -777,8 +780,8 @@ private:
     // because a modified Escape must not cancel a running render, as no modified
     // chord may do anything anywhere.
     // This SURVIVES the 2026-07-29 Esc unbinding as its own binding class
-    // (render-work cancel, not a ladder rung) — planner interpretation, architect
-    // confirmation pending.
+    // (render-work cancel, not a ladder rung) — ARCHITECT-CONFIRMED 2026-07-29
+    // ("esc should cancel render"), the one flag the ruling-5 conversion carried.
     bool handle_escape_cancels(GuiKey key, GuiInputState mods);
 
     // Render-trigger chords: Ctrl+Alt+R (single render), Ctrl+Alt+I
@@ -878,8 +881,8 @@ private:
     // sync_region_to_trim_window's declaration). TWO SILENT REFUSALS, both writing
     // nothing at all: NO region, and a DEGENERATE result — the inverse-mapped,
     // wall-clamped pair coming out end <= begin, which auto_clear_crossed_trim would
-    // read as crossed and destroy (planner-decided 2026-07-29 pending architect
-    // confirmation; the derivation is at the definition). x never UNSETS either way
+    // read as crossed and destroy (ARCHITECT-CONFIRMED 2026-07-29; the derivation is
+    // at the definition). x never UNSETS either way
     // (that arm moved to Shift+X).
     // No read-only check: the keyboard gate — the ONE read-only guard
     // on that path — leaves x off its allowlist, and this pair is keyboard-only,

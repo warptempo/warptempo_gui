@@ -97,10 +97,10 @@ void GuiInputHandler::handle_trim_clear_both() {
 // to one source frame, reachable around 16x bracket-legal compression) makes x a
 // silent no-op that writes NOTHING, because the alternative is destruction:
 // auto_clear_crossed_trim reads a degenerate write as crossed and silently destroys
-// the authored pair, and trim has no undo (planner-decided 2026-07-29 pending
-// architect confirmation — the alternative was accepting silent pair destruction;
-// the deleted arm used to prevent this by clearing the highlight, which made x
-// no-op on the no-region test instead). A zero-length window is not authorable, so
+// the authored pair, and trim has no undo (ARCHITECT-CONFIRMED 2026-07-29
+// ("correct") — the alternative was accepting silent pair destruction; the deleted
+// arm used to prevent this by clearing the highlight, which made x no-op on the
+// no-region test instead). A zero-length window is not authorable, so
 // there is nothing for x to set. The refusal is the FIRST thing past the clamps,
 // ahead of every write, so a refused x touches neither trim, region, nor selection.
 // NO region → x is a SILENT NO-OP (the clear

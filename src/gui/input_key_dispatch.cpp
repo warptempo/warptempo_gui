@@ -412,8 +412,8 @@ bool GuiInputHandler::cancel_archival_session() {
 // input_handler.h for routing order. This is ONE of the four surviving bare-Esc
 // bindings (the editors, the prompts, the drag-modal swallow, and this) — it
 // SURVIVES the 2026-07-29 Esc unbinding as its own binding class, render-work
-// cancel rather than a ladder rung: planner interpretation, architect confirmation
-// pending. The whole Esc story is stated at the on_key site where the deleted
+// cancel rather than a ladder rung — ARCHITECT-CONFIRMED 2026-07-29 ("esc should
+// cancel render"), no longer a planner interpretation. The whole Esc story is stated at the on_key site where the deleted
 // selection/region ladder used to be dispatched.
 bool GuiInputHandler::handle_escape_cancels(GuiKey key, GuiInputState mods) {
     if (key != GuiKeys::Escape) return false;
@@ -1544,13 +1544,21 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // path. HELP lists `c` in the clear set unconditionally. The focused arm
         // then double-clears via the jump tail — a no-op, since the helper's
         // !active guard returns immediately on the already-cleared region.
-        // THE MEMBERSHIP IS UNTOUCHED (it repairs the focus, never the set): a 2+
-        // selection comes out of `c` still 2+ and now spanless, which is legal since
-        // the never-span-less enforcement was retired (ruling 6; the retirement
-        // paragraph is at clear_region_highlight's declaration). The jump seats the
-        // playhead on the FOCUS, so the surviving group's focused flag is where the
-        // playhead rests.
+        // AND A SURVIVING 2+ SELECTION COLLAPSES TO ITS FOCUS, under THE ARCHITECT'S
+        // GENERAL RULE (2026-07-29, verbatim at the group-verb doctrine in
+        // position_nudge.h): if group is relatively cheap to implement, implement it;
+        // otherwise collapse to last selected. `c` re-derives no span, and a group
+        // resting without one is the HYBRID THIRD FORM the architect rejected. The
+        // LAND comes free here — the jump below is a jump TO THE FOCUS, which is
+        // exactly what the collapse leaves selected, so this site needs the collapse
+        // only (the position nudges and `0` pair it with an explicit land because
+        // nothing else in those routes moves the playhead onto the focus).
+        // Placed before repair_last_selected and the jump: the collapse keeps
+        // last_selected_marker, so the repair and the jump read the same focus they
+        // would have read anyway. The size >= 2 guard is the standard load-bearing
+        // one (collapse_to_focused would insert a bare focus into an empty selection).
         clear_region_highlight(app, viewport);
+        if (app.selected_markers.size() >= 2) selection.collapse_to_focused();
         selection.repair_last_selected();
         jump_playhead_to_focused_marker();
         viewport.apply_zoom_change(kWorkingZoomLevel);

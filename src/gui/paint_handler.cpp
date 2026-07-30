@@ -693,11 +693,11 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // the drag override reads the frozen displayed map its proposal was computed
 // against. A focused GROUP (2+ selected) paints no stem — its focus cue is the
 // extent region's recolored ground (kRegionCanvas), the stem's "spread" form,
-// WHEN IT HAS ONE: a spanless 2+ selection is reachable since ruling 6 retired the
-// never-span-less enforcement, and it simply draws no playhead form at all (the
-// state is stated in full at paint_playheads' non-empty-selection else). The size
-// check below is the whole rule either way — the stem is a SINGLETON visual, never
-// a group's.
+// WHICH IT ALWAYS HAS: a 2+ selection resting with no span has no producer
+// (architect 2026-07-29 — the derivation and the general rule are at paint_playheads'
+// non-empty-selection else and at the group-verb doctrine, position_nudge.h). The
+// size check below is the whole rule either way — the stem is a SINGLETON visual,
+// never a group's.
 void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
     // The SPAN form outranks the POINT form: while a region is active the stem
@@ -912,17 +912,24 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // HIDDEN behind the marker. Not painting it here is the IMPLEMENTATION of that
     // hiding, not a semantic absence: the focus stem IS where the cursor line
     // would be (a singleton), and the flag occludes the triangle.
-    // A SPANLESS 2+ SELECTION IS THE ONE STATE WITH NO PLAYHEAD FORM DRAWN AT ALL,
-    // and it is REACHABLE (architect 2026-07-29, ruling 6, which retired the
-    // never-span-less enforcement that used to make it impossible — the retirement
-    // paragraph is at clear_region_highlight's declaration, input_handler.h): this
-    // branch paints no cursor because the selection is non-empty, paint_selected_stem
-    // paints no stem because 2+ selected is not a singleton, and there is no extent
-    // ground to stand in for either. The visible state is then the SELECTION's own
-    // cues — every selected flag's ink triangle — and the resting cursor remains the
-    // playhead OF RECORD even though nothing draws it (Space launches from it). The
-    // three producers are `t`, bare `0` and `c`, each recorded at its own site. Do
-    // not "fix" this by painting the cursor here: a selection means the cursor is
+    // A SPANLESS 2+ SELECTION WOULD BE THE ONE STATE WITH NO PLAYHEAD FORM DRAWN AT
+    // ALL, and IT HAS NO PRODUCER (architect 2026-07-29, rejecting it as "a hybrid
+    // third option that i did not ask for or ratify" — the general rule it produced
+    // is stated verbatim at the group-verb doctrine, position_nudge.h). If one could
+    // rest, this branch would paint no cursor (the selection is non-empty),
+    // paint_selected_stem would paint no stem (2+ is not a singleton), and there
+    // would be no extent ground to stand in for either — a selection with no playhead
+    // anywhere. THE PROPERTY HOLDS BY THE PRODUCERS' OWN FORM, not by an enforcement
+    // protocol watching the clears: every route that rests a 2+ selection rests it
+    // WITH its extent span (the two multi-select clicks and `m` derive it, the
+    // propagate paste and the undo/redo restores define it), and every route that
+    // takes a span away from a group instead COLLAPSES it to the focus with the
+    // playhead landed there — the `t` view switch, bare `0`, `c`, the position nudges'
+    // prologue and Ctrl+N, one shape at five sites (listed at the doctrine). The
+    // distributed collapse protocol that once policed this from the clear side is
+    // deleted and is NOT to be resurrected; if a new verb ever needs a span taken
+    // from a group, it collapses at its own site by the general rule.
+    // Do not "fix" the paint side either: a selection means the cursor is
     // conceptually on a marker, and drawing it loose would assert a second playhead.
     // The scanner above is unaffected — it launches from this resting cursor and
     // paints its own color.

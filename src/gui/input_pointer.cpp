@@ -220,14 +220,17 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // membership at once (the swap by emptying it, the other two by writing a set
 // they took in wholesale), so a span none of them built has nothing left to
 // describe (the list lives at clear_region_highlight, input_handler.h). THE
-// COROLLARY THIS MODEL BRIEFLY CARRIED IS RETIRED (architect 2026-07-29, ruling
-// 6): a 2+ selection MAY rest without a span, and the distributed collapse
-// protocol that enforced otherwise is deleted. The two forms themselves are
-// untouched — an ACTIVE span still outranks and suppresses both point cues — but
-// "a group always has a drawn playhead form" was one guarantee too many for the
-// machinery it cost. The retirement, its three verified producers (`t`, `0`, `c`)
-// and the no-form-drawn state they leave are stated at clear_region_highlight's
-// declaration and at paint_playheads.
+// COROLLARY SURVIVES AS A PROPERTY OF THE VERBS, NOT AS ENFORCEMENT (architect
+// 2026-07-29): a 2+ selection always has a drawn playhead form, because every route
+// that rests a group rests it WITH its extent span and every route that would take
+// the span away COLLAPSES the group to its focus and lands there. The distributed
+// collapse protocol that once policed this from the clear side is DELETED (ruling
+// 6); the guarantee it was defending is kept by the producers' own form instead, and
+// the architect's general rule for any future verb — if group is relatively cheap to
+// implement, implement it; otherwise collapse to last selected, with no hybrid third
+// form — is stated verbatim at the group-verb doctrine (position_nudge.h). The two
+// forms themselves are untouched: an ACTIVE span outranks and suppresses both point
+// cues.
 //
 // LANDS the playhead exactly onto marker `hit` (active column's store), with
 // NO viewport move — the sole difference from Tab (which recenters) and `c`
@@ -1980,6 +1983,12 @@ void GuiInputHandler::finalize_active_drags() {
     // owed; a pending otherwise resolves only by the threshold crossing or a real
     // release / button loss. (TWO pendings, not three, since the tempo drag's
     // deletion — 2026-07-29, see marker_drag.h.)
+    // THE ASYMMETRY WITH THE DRAGS ABOVE — live gestures COMMIT here while pendings
+    // merely DISARM — is ARCHITECT-ACCEPTED (2026-07-29: "not a real use case - do
+    // whatever is easiest to code and has least loopholes"). It is also the form
+    // with the fewest loopholes: a live gesture has produced state that must land
+    // somewhere, and a pending has produced none, so each does the only thing it
+    // can. Do not add a completion arm here to make the two look alike.
     app.pending_marker_drag = PendingMarkerDrag{};
     app.pending_trim_drag   = PendingTrimDrag{};
     // A force-end is not a clean click sequence, so no candidate may survive to

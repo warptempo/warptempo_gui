@@ -257,6 +257,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // flow, so nothing is left live under the prompt to commit on a later motion
     // if the prompt is dismissed. main.cpp's resize and WM-close callbacks call
     // the same finalizer for the same reason.
+    // THAT A WINDOW RESIZE OR A WM CLOSE MID-DRAG THEREFORE COMMITS the gesture is
+    // ARCHITECT-ACCEPTED (2026-07-29: "not a real use case - do whatever is easiest
+    // to code and has least loopholes"), and the ruling is the reason to keep this
+    // shape rather than grow a third behaviour for it: routing every force-end
+    // through the SAME release bodies is both the least code and the fewest
+    // loopholes, since no path can then leave a gesture half-ended.
     // This single gate is why no downstream hotkey needs its own
     // drag guard: Tab, undo, `t`, and the rest never see a key mid-drag.
     // The editor text-selection drag has its own modal gate above
@@ -922,11 +928,24 @@ void GuiInputHandler::run_zoom_toggle_command() {
     // Bare `0` recenters the view on the playhead (apply_zoom_change), so the
     // region highlight is stale context — clear it (architect-listed
     // explicitly). The zoom-strip double-click does NOT come through here, so
-    // its span-framing keeps any live region. THE SELECTION IS UNTOUCHED: `0` is a
-    // pure viewport command, so a 2+ selection comes out of it still 2+ and now
-    // spanless — legal since the never-span-less enforcement was retired (ruling 6;
-    // the retirement paragraph is at clear_region_highlight's declaration).
+    // its span-framing keeps any live region.
     clear_region_highlight(app, viewport);
+    // AND A SURVIVING 2+ SELECTION COLLAPSES TO ITS FOCUS, playhead landed on it —
+    // the position nudges' collapse+land shape, under THE ARCHITECT'S GENERAL RULE
+    // (2026-07-29, verbatim at the group-verb doctrine in position_nudge.h): if group
+    // is relatively cheap to implement, implement it; otherwise collapse to last
+    // selected. `0` re-derives no span (it is a zoom command, not a selection one),
+    // and a group left resting without one is the HYBRID THIRD FORM the architect
+    // rejected — no playhead cue is drawn for it at all. So it collapses.
+    // ORDER: collapse and land BEFORE the zoom toggle below, so
+    // apply_zoom_change's centering reads the LANDED playhead rather than wherever
+    // the cursor happened to rest. The size >= 2 guard is the same load-bearing one
+    // every collapse site carries (collapse_to_focused would otherwise insert a bare
+    // focus into an empty selection).
+    if (app.selected_markers.size() >= 2) {
+        selection.collapse_to_focused();
+        land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
+    }
     if (app.zoom_level == kWorkingZoomLevel) {
         viewport.apply_zoom_change(effective_max_zoom_level(
             waveform_area(app).w, live_total_frames(app, audio),
@@ -1354,23 +1373,36 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // flipped (source <-> target frames). Its endpoints are meaningless in the
     // new domain, so clear it; the full-window invalidate at the tail repaints
     // the waveform on its plain canvas ground.
-    // THIS SWITCH CARRIES THE SELECTION ACROSS AND DOES NOT COLLAPSE IT (architect
-    // 2026-07-29, ruling 6 — the never-span-less enforcement is retired; the
-    // retirement paragraph is at clear_region_highlight's declaration,
-    // input_handler.h). So it is the clearest PRODUCER of the state that retirement
-    // legalizes: a 2+ selection with an extent span comes out STILL 2+ and with NO
-    // span, because the span's endpoints could not survive the domain flip and
-    // nothing re-derives them here. The selected flags' ink triangles are that
-    // state's visible form; NO playhead form is drawn (the cursor yields to a
-    // non-empty selection, the stem is singleton-only — stated at paint_playheads),
-    // while the playhead re-express below keeps the cursor coherent through the flip
-    // and the tail's land seats it on the surviving focus, so Space still plays from
-    // the focused marker. TWO of this function's three callers reach that state —
-    // the bare `t` key and the settings editor's `active_audio_view=` GUI-key commit
-    // (a GUI key, so it never passes the engine-commit tail's selection clear); the
-    // third, the propagate paste's tail, immediately swaps the marker column, which
-    // clears the selection outright, and then writes its own.
     app.region = RegionState{};
+
+    // A VIEW SWITCH ALWAYS LANDS YOU IN POINT FORM: a surviving 2+ selection
+    // COLLAPSES TO ITS FOCUS here, and the tail's land below seats the playhead on
+    // that focus in the new domain. THE ARCHITECT'S GENERAL RULE (2026-07-29, stated
+    // verbatim at the group-verb doctrine, position_nudge.h): if group is relatively
+    // cheap to implement, implement it; otherwise collapse to last selected. This
+    // switch cannot carry a group's SPAN — the endpoints are ACTIVE-DOMAIN frames and
+    // the domain just flipped, which is why the clear above is structural — and a
+    // group resting with no span is a HYBRID THIRD FORM the architect explicitly
+    // rejected (it draws no playhead cue at all: the cursor yields to a non-empty
+    // selection and the stem is singleton-only). So the group is not cheap here and
+    // the rule says collapse. This is the SAME SHAPE as the position nudges'
+    // collapse+land (position_nudge_prologue) and Ctrl+N's — one form, four sites.
+    // THE size >= 2 GUARD IS LOAD-BEARING, not an optimization: collapse_to_focused
+    // early-returns only on an already-focused SINGLETON, so against an EMPTY
+    // selection carrying a live focus index it would INSERT that focus and resurrect
+    // a selection the user dropped. This switch prunes nothing, so the guard — not a
+    // neighbouring repair — is what makes the precondition local.
+    // ITS NARROW DAMAGE IS SUPERSEDED HERE, DELIBERATELY: collapse_to_focused raises
+    // stem/overlay damage computed on the basis live at the call, and at this point
+    // the basis is TORN — the displayed map and viewport mirrors were reset to cold
+    // above while the domain flips underneath. The tail's FULL-WINDOW invalidate is
+    // what actually repaints the collapse, and that dependency is load-bearing:
+    // narrowing the tail damage would strand this collapse's pixels. No reordering
+    // fixes it either — the collapse must follow the region clear it accompanies.
+    // ALL THREE CALLERS get this: the bare `t` key, the settings editor's
+    // `active_audio_view=` GUI-key twin, and the propagate paste's tail (moot there —
+    // its column swap clears the selection immediately after and writes its own).
+    if (app.selected_markers.size() >= 2) selection.collapse_to_focused();
 
     // The S/T toggle translates the active tab's live playhead across the
     // domain flip; the inactive tab's stored playhead must translate too, or

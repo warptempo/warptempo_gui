@@ -44,11 +44,32 @@ struct GuiTargetRender;
 //     one painted column per member and one rigid delta for all of them are
 //     different arrangements, and neither can be the honest reading of "move the
 //     selection".
+// THE ARCHITECT'S GENERAL RULE, verbatim (2026-07-29), which generalizes those two
+// classes and is the authoritative statement for any FUTURE verb: "the rule is - if
+// group is relatively cheap to implement, implement it. otherwise, collapse to last
+// sel." A HYBRID THIRD FORM IS EXPLICITLY REJECTED — the ruling that produced this
+// sentence was a rejection of one: a 2+ selection left resting with no span, which
+// three routes briefly produced and which draws no playhead cue at all (the cursor
+// yields to a non-empty selection, the stem is singleton-only), was ruled out as "a
+// hybrid third option that i did not ask for or ratify". So a verb is EITHER
+// group-capable OR collapses to the focus with the playhead landed on it; there is
+// no third answer, and "collapse to last selected" means exactly
+// collapse_to_focused + land_playhead_on_marker, the shape below.
+// THE COLLAPSE+LAND SITES, one form and FIVE of them (re-derived 2026-07-29): this
+// prologue serving both position nudges, Ctrl+N (warpmarkers_ops.cpp), the S/T view
+// switch `t` (input_handler.cpp — where the land is the tail's own domain re-express
+// through the focus), bare `0` (run_zoom_toggle_command, collapse+land ahead of the
+// zoom so the centering reads the landed playhead), and `c` (input_key_dispatch.cpp
+// — collapse only, its jump already being a jump to the focus).
 // REACHABILITY, with the pointer deferral dead: the ONLY producers of a resting
 // 2+ selection are the two multi-select clicks (shift-range, ctrl-toggle), the
 // `m` bpm-mode open, the propagate paste, and the undo/redo restores — and every
 // group verb that remains is span-read or member-independent, so nothing that can
-// rest a group can then move it.
+// rest a group can then move it. Each of those five producers rests its group WITH
+// its extent span (the clicks and `m` derive it, the paste and the restores define
+// it), which is why a SPANLESS 2+ selection has no producer at all: the property
+// holds by the PRODUCERS' OWN FORM, not by a distributed enforcement protocol —
+// that protocol was deleted (contortion ruling 6) and is not coming back.
 //
 // This file is the type-free flesh SHARED BY THE TWO POSITION NUDGE TWINS, all of
 // it singleton-scoped now: an identical guard prologue (which owns the collapse),
