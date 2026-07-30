@@ -649,7 +649,7 @@ uint64_t hash_drag_overlay(const DragState& d) {
 
 // FNV-1a over the live selection set + last-selected anchor. Folded
 // into the FlagCache fingerprint to avoid distributing a
-// generation-bump across the fifteen mutation sites of selected_markers.
+// generation-bump across every mutation site of selected_markers.
 uint64_t hash_selection(const std::set<int>& s,
                         int last_selected) {
     uint64_t h = 0xcbf29ce484222325ULL;

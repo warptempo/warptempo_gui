@@ -1243,17 +1243,16 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
 
     // Ctrl+Alt+P: paste clipboard phase resets onto the destination
     // anchored at the single selected warp marker. W-mode only; phase
-    // reset mode is a silent no-op. Empty clipboard is a silent no-op.
+    // reset mode is a silent no-op. Empty clipboard is a silent no-op, and so
+    // is a selection that is not exactly one marker (architect 2026-07-30):
+    // EVERY refusal in this family is silent, with no gesture-class stderr
+    // anywhere in the GUI. A wrong selection count is an ordinary "not ready
+    // yet" state the user can see on screen, not a fault worth a terminal line.
     // Opens a confirmation prompt before any mutation.
     if (key == GuiKeys::P && ctrl && !shift && alt) {
         if (app.active_markers_view != 'W') return true;
         if (app.phase_reset_clipboard.empty()) return true;
-        if (app.selected_markers.size() != 1) {
-            std::fprintf(stderr,
-                "warptempo_gui: phase_reset paste: select exactly one warp "
-                "marker\n");
-            return true;
-        }
+        if (app.selected_markers.size() != 1) return true;
         phase_reset_propagate.open_paste_confirmation();
         return true;
     }
@@ -1262,18 +1261,15 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // clipboard placements onto the matching destination region's
     // phase resets, in order. Positions are not modified. W-mode only;
     // phase reset mode is a silent no-op. Empty clipboard is a silent
-    // no-op. Unlike Ctrl+Alt+P, no confirmation prompt — applies
+    // no-op, and so is a selection that is not exactly one marker — the same
+    // all-refusals-are-silent rule as its Ctrl+Alt+P sibling above, where the
+    // rationale is stated. Unlike Ctrl+Alt+P, no confirmation prompt — applies
     // directly. Divergence/mismatch is reported via the bottom-strip
     // transient status message rather than a modal dialog.
     if (key == GuiKeys::P && ctrl && shift && alt) {
         if (app.active_markers_view != 'W') return true;
         if (app.phase_reset_clipboard.empty()) return true;
-        if (app.selected_markers.size() != 1) {
-            std::fprintf(stderr,
-                "warptempo_gui: phase_reset state-paste: select exactly one "
-                "warp marker\n");
-            return true;
-        }
+        if (app.selected_markers.size() != 1) return true;
         phase_reset_propagate.paste_state_apply();
         return true;
     }
