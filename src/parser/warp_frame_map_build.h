@@ -68,8 +68,9 @@ struct MarkerEffective {
     bool from_ref = false;
     // (No owner_idx. It named the RAW STORE INDEX of the terminal OWNER the
     // ref-opaque backward walk landed on, and its sole consumer was the tempo
-    // drag's forward-label coupling guard; that gesture is deleted (contortion
-    // ruling 8), which left the field written by three sites here and read by
+    // drag's forward-label coupling guard; that gesture — the pointer tempo
+    // drag and the Left/Right tempo-image step — was deleted 2026-07-29, which
+    // left the field written by three sites here and read by
     // nobody, so it is DELETED — architect 2026-07-29, an explicit surgical freeze
     // approval. `from_ref` beside it STAYS: the GUI's normalization-red set reads it
     // (warp_frame_map_view.cpp). resolve_inherited_tempo keeps its defaulted
@@ -223,8 +224,10 @@ std::vector<char> warp_coincident_collapse_members(
 // for HYPOTHETICAL evaluations, states never committed — is DELETED (architect
 // 2026-07-29, an explicit surgical freeze approval): its only caller was the group
 // tempo drag's monotone bisection, which resolved ~12 never-live candidate stores
-// per motion event, and that whole gesture is gone (contortion ruling 8). No
-// hypothetical resolve exists in the product any more, so no caller wants silence.
+// per motion event, and that whole gesture is gone (deleted 2026-07-29 with the
+// rest of the tempo-image family — the pointer tempo drag and the Left/Right
+// tempo-image step). No hypothetical resolve exists in the product any more, so
+// no caller wants silence.
 // FIVE CALL SITES, re-derived by grep 2026-07-29 (the deletion round's own prose had
 // said four): the CLI's render path, the GUI render pipeline, the target-render
 // fingerprint, the target-view entry VALIDATION, and the target-view map shim. All
