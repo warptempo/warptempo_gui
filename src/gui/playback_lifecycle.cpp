@@ -37,10 +37,16 @@ void GuiPlaybackLifecycle::stop_playback_for_modal_open() {
 // End scanner motion. Used by Space to stop and by natural end-of-playback
 // (the tick's end-of-audio branch), which is why the two paths are the SAME
 // path: a stopped scanner deactivates immediately, and there is no non-playing
-// window in which its value fields stay valid. The cursor never moved
-// during playback (the predictor only writes the scanner), so the only work
-// here is to deactivate the scanner; once inactive its value fields are stale
-// by contract, so nothing is snapped back. Invalidate the span between the
+// window in which its value fields stay valid. SINCE 2026-07-29 THAT IS THE WHOLE
+// OF BOTH EDGES (architect, "the simplest symmetry"): the natural-end branch used
+// to add a follow-scroll tail of its own, and it is deleted, so this call is
+// literally all either stop does and the viewport is left exactly where playback
+// left it in both. Nothing here touches the viewport — deliberately. The cursor
+// never moved during playback (the predictor only writes the scanner), so the only
+// work here is to deactivate the scanner; once inactive its value fields are stale
+// by contract, so nothing is snapped back. It also clears
+// follow_overridden_for_session, which is why the deleted tail's guard on that flag
+// was dead: this call had already reset it one line earlier. Invalidate the span between the
 // scanner's last-painted column and the cursor's column so both repaint
 // cleanly — on natural end that erases the line from wherever the predictor
 // last drew it, a few pixels short of the exclusive end bound.

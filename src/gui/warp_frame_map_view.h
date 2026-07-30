@@ -22,23 +22,19 @@
 // never-built and kick the user back to source view with the popup. Callers
 // in target view route this through compute_flag_hit_rects / render_flags /
 // popup-hit helpers so hit-test math and paint stay in sync.
-// quiet forwards to resolve_warp_markers_for_render: true suppresses every
-// normalization stderr line, ONLY for hypothetical (never-live) builds.
-// CALLER-LESS SINCE 2026-07-29: its sole caller was the group tempo drag's
-// monotone bisection, which evaluated hypothetical candidate maps, and the whole
-// tempo-image family is deleted (marker_drag.h). Every remaining caller takes the
-// default, so every build in the product is LOUD. The parameter RESTS INERT rather
-// than being deleted: it forwards into src/parser (build_warp_frame_map.h's own
-// `quiet`, which carries the same story on its side), and src/parser is under
-// PERMANENT HARD FREEZE — removing the pair needs explicit architect freeze
-// approval. Nothing reads it today; do not add a caller to justify it.
+// EVERY BUILD IS LOUD: the `quiet` parameter that forwarded into
+// resolve_warp_markers_for_render to suppress normalization stderr lines is DELETED
+// (2026-07-29), together with the frozen parser's own — an explicit surgical freeze
+// approval from the architect. Its sole caller had been the group tempo drag's
+// monotone bisection, which evaluated hypothetical never-live candidate maps, and
+// that whole gesture is gone (contortion ruling 8), so no hypothetical build exists
+// to want silence.
 std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     const std::vector<GuiWarpMarker>& markers,
     double scale,
     int sample_rate,
     long total_frames,
-    std::string* error_out = nullptr,
-    bool quiet = false);
+    std::string* error_out = nullptr);
 
 struct AppState;
 

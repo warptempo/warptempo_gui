@@ -1154,10 +1154,18 @@ int main(int argc, char** argv) {
         // damaged by the call, so the line vanishes from wherever the predictor
         // last drew it — a few pixels short of the exclusive end bound, the
         // accepted delta.
+        // A NATURAL END IS EXACTLY A SPACE STOP (architect 2026-07-29, "the
+        // simplest symmetry"): this ONE call is the whole of it, so both edges
+        // leave the viewport precisely where playback left it. The follow-scroll
+        // tail that used to run here — `if (follow_mode &&
+        // !follow_overridden_for_session) follow_scroll_if_needed();` — is DELETED,
+        // and the two asymmetries flagged against it (its override guard was dead,
+        // restore_playhead_to_lsp having just cleared that flag; and it could scroll
+        // the viewport BACK to the restored playhead, which the Space stop never
+        // does) die WITH the arm rather than being fixed inside it. Nothing else
+        // distinguishes the two stop edges now.
         if (app.playhead_scanner_active) {
             playback_lifecycle.restore_playhead_to_lsp();
-            if (app.follow_mode && !app.follow_overridden_for_session)
-                follow_scroll_if_needed();
         }
     });
 

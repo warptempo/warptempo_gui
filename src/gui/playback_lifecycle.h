@@ -63,7 +63,9 @@ struct GuiPlaybackLifecycle {
     // column. Two callers, one path by rule — Space's stop edge and the tick's
     // natural-end branch — because a stopped scanner is deactivated IMMEDIATELY
     // and no non-playing scanner-validity window exists (contract at the scanner
-    // block in app_state.h).
+    // block in app_state.h). Since 2026-07-29 the two edges are not merely one path
+    // but one ACT: the natural-end branch's own follow-scroll tail is deleted, so
+    // neither stop touches the viewport and both leave it where playback left it.
     void restore_playhead_to_lsp();
     // launch_offset shifts the SCANNER's launch position (and the play() launch
     // bound) forward in the active paint domain WITHOUT moving the resting

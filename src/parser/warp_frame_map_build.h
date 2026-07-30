@@ -66,27 +66,15 @@ struct MarkerEffective {
     // collapsed-group owner), which also carries source_idx -1 but is NOT a
     // normalization fallback.
     bool from_ref = false;
-    // The RAW STORE INDEX of the terminal OWNER the ref-opaque backward walk
-    // landed on — the marker whose authored tempo this value actually comes
-    // from — or -1 when no raw owning marker exists. Distinct from source_idx
-    // (the immediate-prior provenance the hover readout wants); this names the
-    // walk's TERMINUS, not its first hop. By resolution kind:
-    //   owner            -> idx (resolves to its own tempo);
-    //   pass -> raw owner -> that owner's raw index (the value
-    //                        resolve_inherited_tempo walks to);
-    //   ref fallback (from_ref / UndefinedLabel / ExtremeRatio) -> -1
-    //                        (the value is the 1.00 fallback, owned by nothing);
-    //   pass -> SYNTHETIC prior (frame-0 seed or a collapsed group's
-    //                        replacement owner) -> -1 (maps through raw_index,
-    //                        which no raw marker names);
-    //   pass with no owner reached (a leading pass) -> -1;
-    //   any label ref (successful or fallback) -> -1 (a ref carries a duration
-    //                        equation, not an owner's rate — no single raw
-    //                        owner sources it).
-    // The sole consumer (the tempo-drag coupling guard) only ever compares
-    // this against a raw index, so -1-on-anything-not-a-raw-owner is the
-    // contract. No existing consumer reads it.
-    int owner_idx = -1;
+    // (No owner_idx. It named the RAW STORE INDEX of the terminal OWNER the
+    // ref-opaque backward walk landed on, and its sole consumer was the tempo
+    // drag's forward-label coupling guard; that gesture is deleted (contortion
+    // ruling 8), which left the field written by three sites here and read by
+    // nobody, so it is DELETED — architect 2026-07-29, an explicit surgical freeze
+    // approval. `from_ref` beside it STAYS: the GUI's normalization-red set reads it
+    // (warp_frame_map_view.cpp). resolve_inherited_tempo keeps its defaulted
+    // `owner_index` out-parameter, which no caller passes today — a capability, not
+    // a residue, and removing it was outside the approval's surgical scope.)
 };
 
 // Returns the built warp frame map on success, or std::unexpected carrying
@@ -230,15 +218,16 @@ std::vector<char> warp_coincident_collapse_members(
 // label_ref_implied_effective_tempo helper the display's band verdict
 // uses, in one fixed operation order, because the envelope edges are
 // inclusive and IEEE-reassociated equivalents can disagree exactly there.
-// quiet exists ONLY for HYPOTHETICAL evaluations (states that are never
-// committed): when true, every normalization stderr line is suppressed. Live
-// resolves must stay LOUD (the default) — the standing one-line-per-timestamp-
-// per-resolve signal. The sole quiet caller is the group tempo drag's bisection,
-// which resolves ~12 never-live candidate stores per motion event.
+// EVERY RESOLVE IS LOUD: one normalization stderr line per affected timestamp, on
+// every resolve, unconditionally. The `quiet` parameter that could suppress them —
+// for HYPOTHETICAL evaluations, states never committed — is DELETED (architect
+// 2026-07-29, an explicit surgical freeze approval): its only caller was the group
+// tempo drag's monotone bisection, which resolved ~12 never-live candidate stores
+// per motion event, and that whole gesture is gone (contortion ruling 8). No
+// hypothetical resolve exists in the product any more, so no caller wants silence.
 std::vector<MarkerForRender>
 resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
-                                long sample_rate, long total_frames,
-                                bool quiet = false);
+                                long sample_rate, long total_frames);
 
 // Backward inheritance walk over parser-domain markers: from `index`, scan
 // earlier markers for the nearest that OWNS its tempo — tempo_inherits ==
@@ -257,10 +246,11 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
 //
 // When `owner_index` is non-null it receives the index (in `markers`) of the
 // owner the walk terminated on, or -1 if the walk hit a surviving enabled ref
-// or ran off the front with no owner — the terminus marker_effective maps to
-// its owner_idx field (through raw_index on the projection path). from_ref and
-// owner_index are independent: a ref-terminated walk sets from_ref true and
-// leaves owner_index -1.
+// or ran off the front with no owner. NO CALLER PASSES IT TODAY: its one consumer
+// was MarkerEffective::owner_idx, deleted 2026-07-29 with the tempo drag's coupling
+// guard, so the parameter rests as an unused capability. from_ref and owner_index
+// are independent: a ref-terminated walk sets from_ref true and leaves owner_index
+// -1.
 int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index,
                                 bool* inherited_from_ref = nullptr,
                                 int* owner_index = nullptr);

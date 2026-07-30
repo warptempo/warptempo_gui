@@ -23,14 +23,15 @@ std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     double scale,
     int sample_rate,
     long total_frames,
-    std::string* error_out,
-    bool quiet) {
+    std::string* error_out) {
     // Trim is render-time, not view-time — target view paints the WHOLE song,
     // and build_warp_frame_map builds the whole-song map, matching the
     // paint_handler construction so hit-test math and waveform paint walk the
     // same segment list. This overload always builds directly and is the entry
-    // point for hypothetical (non-live) marker lists; live-state consumers go
-    // through target_view_warp_frame_map_cached.
+    // point for a caller-supplied marker list; live-state consumers go
+    // through target_view_warp_frame_map_cached. (It served HYPOTHETICAL never-live
+    // lists too until 2026-07-29 — the tempo drag's bisection candidates — which is
+    // what the deleted `quiet` forwarding existed for; see the declaration.)
     // A build failure (tripwire-class only — the resolver above is a total
     // normalizer that resolves every ambiguous arrangement to tempo 1.00 and
     // cannot fail) returns the empty map and reports the message through
@@ -39,7 +40,7 @@ std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     // identity state.
     if (error_out) error_out->clear();
     auto resolved = resolve_warp_markers_for_render(
-        slice_to_warp_markers(markers), sample_rate, total_frames, quiet);
+        slice_to_warp_markers(markers), sample_rate, total_frames);
     auto r = build_warp_frame_map(
         resolved, scale, sample_rate, total_frames);
     if (!r) {

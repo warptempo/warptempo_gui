@@ -227,8 +227,7 @@ std::vector<WarpMarker> normalized_surviving_markers(
 
 std::vector<MarkerForRender>
 resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
-                                long sample_rate, long total_frames,
-                                bool quiet) {
+                                long sample_rate, long total_frames) {
     // Normalization pipeline: stages 1-5 build a normalized WarpMarker
     // intermediate, stage 6 emits MarkerForRender. Ambiguity resolves to
     // tempo 1.00 with one stderr line per affected timestamp, printed on
@@ -242,7 +241,7 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
     // Stages 1-3 — the shared projection above (survivor filter,
     // exact-coincidence collapse, frame-0 seed), with the stderr lines on.
     std::vector<WarpMarker> norm = normalized_surviving_markers(
-        src, sample_rate, /*emit_stderr=*/!quiet, nullptr);
+        src, sample_rate, /*emit_stderr=*/true, nullptr);
 
     // Stage 4 — pass materialization through the ref-opaque inheritance
     // walk (resolve_inherited_tempo / resolve_inherited_tempo_scale below,
@@ -280,7 +279,7 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
             p.tempo_scale    = pr.scale;
             // label_def survives materialization: a `pass:LABEL` def is
             // concrete from here on, so stage 5 measures it like any owner.
-            if (pr.from_ref && !quiet) {
+            if (pr.from_ref) {
                 std::fprintf(stderr,
                     "pass marker at %s inherits from a label ref; "
                     "renders as tempo 1.00\n",
@@ -349,14 +348,12 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
             WarpMarker plain;  // defaults: enabled 1.00 owner, no labels
             plain.time_frame = norm[i].time_frame;
             norm[i] = plain;
-            if (!quiet) {
-                std::fprintf(stderr,
-                    "label reference %s at %s %s; renders as tempo 1.00\n",
-                    name.c_str(),
-                    format_timestamp(
-                        static_cast<double>(plain.time_frame) / sr_d).c_str(),
-                    reason);
-            }
+            std::fprintf(stderr,
+                "label reference %s at %s %s; renders as tempo 1.00\n",
+                name.c_str(),
+                format_timestamp(
+                    static_cast<double>(plain.time_frame) / sr_d).c_str(),
+                reason);
         }
     }
 
@@ -551,7 +548,6 @@ MarkerEffective marker_effective(
         r.base_cents = m.tempo_cents;
         r.scale      = m.tempo_scale;
         r.source_idx = idx;
-        r.owner_idx  = idx;  // an owner sources its own tempo
         return r;
     }
 
@@ -601,9 +597,7 @@ MarkerEffective marker_effective(
             // stage 4 runs, over the same pre-materialization list, so the
             // value matches the render by construction.
             bool from_ref = false;
-            int  proj_owner = -1;
-            r.base_cents = resolve_inherited_tempo(proj, img, &from_ref,
-                                                   &proj_owner);
+            r.base_cents = resolve_inherited_tempo(proj, img, &from_ref);
             r.scale      = resolve_inherited_tempo_scale(proj, img);
             // A walk terminated by a surviving enabled label ref is the
             // render's 1.00 fallback, not a value inherited from the ref —
@@ -612,15 +606,8 @@ MarkerEffective marker_effective(
             if (from_ref) {
                 r.from_ref   = true;
                 r.source_idx = -1;
-                return r;  // owner_idx stays -1: nothing owns the fallback
+                return r;
             }
-            // Terminal owner in RAW coordinates: map the walk's projection
-            // terminus back through raw_index. A SYNTHETIC owner (the frame-0
-            // seed or a collapsed group's replacement) maps to -1 there, and a
-            // walk that reached no owner leaves proj_owner -1 — both yield
-            // owner_idx -1, which the coupling guard never matches against a
-            // real predecessor index.
-            if (proj_owner >= 0) r.owner_idx = raw_index[proj_owner];
             // Provenance: the immediate prior marker in the projection —
             // the visible source of the inherited value, not necessarily
             // the owning marker if there is a chain of passes; every
@@ -677,8 +664,7 @@ MarkerEffective marker_effective(
         // inheriting marker in front of an owning origin.
         const int walk = idx + 1;
         bool from_ref = false;
-        int  owner    = -1;
-        r.base_cents = resolve_inherited_tempo(mv, walk, &from_ref, &owner);
+        r.base_cents = resolve_inherited_tempo(mv, walk, &from_ref);
         r.scale      = resolve_inherited_tempo_scale(mv, walk);
         // A walk terminated by a surviving enabled label ref is the render's
         // 1.00 fallback, not a value inherited from the ref — attributing it
@@ -687,11 +673,8 @@ MarkerEffective marker_effective(
         if (from_ref) {
             r.from_ref   = true;
             r.source_idx = -1;
-            return r;  // owner_idx stays -1: nothing owns the fallback
+            return r;
         }
-        // Raw walk: the terminus IS a raw index (this branch resolves against
-        // mv), or -1 when no owner was reached.
-        r.owner_idx = owner;
         // source_idx is the immediate prior render-surviving marker — the
         // visible source of the inherited value, not necessarily the owning
         // marker if there is a chain of passes; cascade-disabled refs are
