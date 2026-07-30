@@ -2,7 +2,7 @@
 
 #include "audio.h"
 #include "engine/engine_geometry.h"  // kN
-#include "group_position_nudge.h"  // the shared position-nudge flesh (prologue,
+#include "position_nudge.h"  // the shared position-nudge flesh (prologue,
                                   // step, commit tail) + the movement doctrine
 #include "input_handler.h"         // clear_region_highlight (the drop's collapse)
 #include "target_render.h"
@@ -195,7 +195,7 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // 2026-07-29): a 2+ selection COLLAPSES TO ITS FOCUS in the shared prologue (which
 // also lands the playhead there), so the body below moves exactly one reset. The
 // doctrine and the dead per-member machinery are recorded once at the head of
-// group_position_nudge.h.
+// position_nudge.h.
 //
 // Wall semantics are one regime, STRICT, against this column's absolute range
 // (zero / total_frames - 1 — the single marker EOF wall both columns share; see
@@ -214,7 +214,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // focused-index belt, and THE COLLAPSE + LAND that makes this a focus act (the
     // playhead-follows / lead-in rationale lives at the declaration). Refuses
     // silently, navigation-class.
-    const GroupNudgePrologue pro = group_position_nudge_prologue(
+    const PositionNudgePrologue pro = position_nudge_prologue(
         app, audio, playback_lifecycle, selection, viewport, undo,
         GestureKind::PhaseResetNudge, synthesized_repeat,
         static_cast<int>(app.phaseresetmarkers.markers().size()));
@@ -288,7 +288,7 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // reorder-independent; the target home maps), the point command's region
     // collapse, and the view-independent target trigger. Ordering rationale at the
     // declaration.
-    finish_group_position_nudge(app, audio, viewport, undo,
+    finish_position_nudge(app, audio, viewport, undo,
                                 GestureKind::PhaseResetNudge, committed_f,
                                 target_render);
 }

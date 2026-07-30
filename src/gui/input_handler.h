@@ -153,7 +153,7 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     bare Left/Right playhead step, Home/End (the trim-bound jumps);
 //   * MARKER CLICKS: the plain single-select click (its four deferred completions
 //     died 2026-07-29 with the group drag — every marker press commits its click at
-//     PRESS time now, the doctrine at the head of group_position_nudge.h), plus
+//     PRESS time now, the doctrine at the head of position_nudge.h), plus
 //     the two MULTI-SELECT clicks whenever their RESULT is under two selected
 //     (at 2+ they instead re-own the region through
 //     set_region_to_selection_extent — the DOWNWARD coupling, the selection
@@ -161,7 +161,7 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     that must run AFTER any clear);
 //   * enter_text_edit, the one chokepoint of every flag/bpm editor open and
 //     retarget;
-//   * the POSITION NUDGES, both columns (finish_group_position_nudge, which clears
+//   * the POSITION NUDGES, both columns (finish_position_nudge, which clears
 //     unconditionally: horizontal movement is a FOCUS ACT since 2026-07-29 — a 2+
 //     selection collapses to its focus in the shared prologue, so a nudge is always
 //     a point command and the span-preserving group arm is gone);

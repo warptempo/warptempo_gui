@@ -1,7 +1,7 @@
 #include "warpmarkers_ops.h"
 
 #include "audio.h"
-#include "group_position_nudge.h"  // the shared position-nudge flesh (prologue,
+#include "position_nudge.h"  // the shared position-nudge flesh (prologue,
                                   // step, commit tail) + the movement doctrine
 #include "input_handler.h"      // set_region_to_selection_extent (group step),
                                 // clear_region_highlight (the drop's collapse)
@@ -282,7 +282,7 @@ void GuiWarpMarkersOps::toggle_inherits() {
     if (app.selected_markers.empty()) return;
     if (app.last_selected_marker < 0) return;
     // FOCUS-COLLAPSE, and this gesture is the group-verb doctrine's own example of
-    // COUPLED members (the doctrine is at the head of group_position_nudge.h): the
+    // COUPLED members (the doctrine is at the head of position_nudge.h): the
     // pass -> owner freeze below reads the RESOLVED inheritance walk, so what a
     // member freezes to depends on what the members before it just became — a group
     // toggle's result would depend on iteration order. Collapsing to the focus is
@@ -712,7 +712,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
 // also lands the playhead there) and the focus takes this one step, so the body
 // below is the singleton op unconditionally. The doctrine, the group-verb rule it
 // instances, and the dead per-member machinery are recorded once at the head of
-// group_position_nudge.h.
+// position_nudge.h.
 //
 // SOURCE HOME VIEW ONLY (the home-view binding, architect 2026-07-22 — restored
 // 2026-07-24 second pass: the same-day "third exception", a both-views warp
@@ -735,7 +735,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(
     // focused-index belt, and THE COLLAPSE + LAND that makes this a focus act (the
     // playhead-follows / lead-in rationale lives at the declaration). Refuses
     // silently, navigation-class.
-    const GroupNudgePrologue pro = group_position_nudge_prologue(
+    const PositionNudgePrologue pro = position_nudge_prologue(
         app, audio, playback_lifecycle, selection, viewport, undo,
         GestureKind::WarpNudge, synthesized_repeat,
         static_cast<int>(app.warpmarkers.markers().size()));
@@ -822,7 +822,7 @@ void GuiWarpMarkersOps::nudge_selected_markers(
     // reorder-independent), the point command's region collapse, and the
     // view-independent target trigger (no synchronous re-warp — source-view warp
     // pixels don't depend on the map). Ordering rationale at the declaration.
-    finish_group_position_nudge(app, audio, viewport, undo,
+    finish_position_nudge(app, audio, viewport, undo,
                                 GestureKind::WarpNudge, committed_f,
                                 target_render);
 }

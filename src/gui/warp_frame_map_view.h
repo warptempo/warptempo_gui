@@ -214,7 +214,7 @@ inline double source_grid_position_at_column(int64_t viewport_start,
 // move is exactly the commanded number of columns, and the stored value
 // is the whole frame the painting already shows. Exactly ONE item moves per
 // gesture: a nudge steps the FOCUS (a 2+ selection collapses to it first — groups
-// are never moved, the doctrine at the head of group_position_nudge.h) and a drag
+// are never moved, the doctrine at the head of position_nudge.h) and a drag
 // moves the marker it grabbed.
 //
 // painted_column_of_source_frame: the pixel column (offset from

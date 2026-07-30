@@ -32,7 +32,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
 
     // ONE MARKER, ALWAYS — GROUPS ARE NEVER MOVED (architect 2026-07-29,
     // HORIZONTAL MOVEMENT IS A FOCUS ACT; the doctrine and the whole dead rigid
-    // group-drag machinery are recorded at the head of group_position_nudge.h). The
+    // group-drag machinery are recorded at the head of position_nudge.h). The
     // arming press single-selected `hit` and landed the playhead on it — no press
     // defers its click any more — so the drag subject is exactly the grabbed
     // marker. The one-element vectors below are the DragOverlay's storage contract
@@ -292,7 +292,7 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // cleared any other resting span at its own site, so a marker drag runs with no
     // region at all. The group live-track that used to re-derive an extent span per
     // motion event died with the group drag (architect 2026-07-29 — groups are
-    // never moved; the doctrine is at the head of group_position_nudge.h).
+    // never moved; the doctrine is at the head of position_nudge.h).
     viewport.invalidate_waveform_area();
     viewport.invalidate_top_strip();
 }
@@ -325,7 +325,7 @@ void MarkerDragOps::commit_drag() {
     // the group's wall intersection and the grabbed member re-derived from it —
     // died with the group drag (architect 2026-07-29, HORIZONTAL MOVEMENT IS A
     // FOCUS ACT; the doctrine and the full delete list are at the head of
-    // group_position_nudge.h). Nothing here needs the walls-win D clamp any more:
+    // position_nudge.h). Nothing here needs the walls-win D clamp any more:
     // the snap's only overshoot risk was carrying OTHER members past the wall the
     // group stopped at, and a lone marker's snap is bounded by the integer walls
     // below (which is exactly what a single-marker drag committed before the group
@@ -473,7 +473,7 @@ void MarkerDragOps::commit_drag() {
     // marker and cleared any resting span, and nothing during the drag forms one.
     // The extent re-derive that used to snap a live-tracked group span back to its
     // resting extent here died with the group drag (architect 2026-07-29 — groups
-    // are never moved; the doctrine is at the head of group_position_nudge.h).
+    // are never moved; the doctrine is at the head of position_nudge.h).
     // No synchronous re-warp at commit: a marker drag can no longer change the
     // displayed target plate. Warp marker drags author in warp's SOURCE home
     // view only (the home-view binding, architect 2026-07-22 — the arming flag

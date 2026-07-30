@@ -670,7 +670,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // and auditions), because it is the selection's focus cue, not a working
 // affordance. A marker GRAB is always a SINGLETON selection now (the arming press
 // single-selects, and groups are never moved — architect 2026-07-29, the doctrine
-// at the head of group_position_nudge.h), so a live position drag paints its stem
+// at the head of position_nudge.h), so a live position drag paints its stem
 // with no gesture arm needed, and there is no group-grab case to reject beyond the
 // size check below.
 // The ONE non-selection

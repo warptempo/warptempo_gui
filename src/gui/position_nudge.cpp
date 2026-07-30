@@ -1,4 +1,4 @@
-#include "group_position_nudge.h"
+#include "position_nudge.h"
 
 #include "audio.h"
 #include "input_handler.h"      // clear_region_highlight (the point-command
@@ -17,14 +17,14 @@
 // GuiPhaseResetMarkersOps::nudge_selected_phase_resets). The full doctrine
 // (horizontal movement is a focus act; the group-verb doctrine it instances) and
 // the step-by-step ordering rationale live at the declarations in
-// group_position_nudge.h; the wall-regime middles stay in each twin verbatim.
+// position_nudge.h; the wall-regime middles stay in each twin verbatim.
 
-GroupNudgePrologue group_position_nudge_prologue(
+PositionNudgePrologue position_nudge_prologue(
     AppState& app, const GuiAudio& audio,
     GuiPlaybackLifecycle& playback_lifecycle, Selection& selection,
     Viewport& viewport, Undo& undo,
     GestureKind kind, bool synthesized_repeat, int store_size) {
-    GroupNudgePrologue r;
+    PositionNudgePrologue r;
     if (app.loading || audio.total_frames() <= 0) return r;
     // Fine-tuning authoring gesture: stop playback first (an empty-selection
     // press in home view still stops playback today — preserve).
@@ -67,7 +67,7 @@ int64_t stepped_anchor_frame(
     return authored_frame_at_column(app, audio, cf + direction, map);
 }
 
-void finish_group_position_nudge(
+void finish_position_nudge(
     AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
     GestureKind kind, int64_t committed_focused_frame,
     GuiTargetRender& target_render) {

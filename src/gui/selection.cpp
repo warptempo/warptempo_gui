@@ -215,7 +215,7 @@ void Selection::collapse_to_focused() {
     //     groups are never moved): both position nudges collapse here through
     //     their shared prologue and then step the focus alone. The doctrine, and
     //     the group-verb rule it instances, live at the head of
-    //     group_position_nudge.h.
+    //     position_nudge.h.
     // THE DELETED THIRD CLASS was the never-span-less ENFORCEMENT — six sites that
     // collapsed a group because a clear had taken its span. That invariant is
     // RETIRED (ruling 6; the retirement paragraph is at clear_region_highlight's

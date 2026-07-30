@@ -62,7 +62,7 @@ struct GuiTargetRender;
 // shared flesh).
 
 // Result of the shared guard prologue.
-struct GroupNudgePrologue {
+struct PositionNudgePrologue {
     bool ok      = false;  // false: the press refuses (silent, navigation-class)
     bool merge   = false;  // undo-coalesce verdict for this press
     int  focused = -1;     // app.last_selected_marker, validated in [0, store_size)
@@ -99,7 +99,7 @@ struct GroupNudgePrologue {
 //
 // PLAYHEAD RULE (architect 2026-07-23, reversing the 2026-07-20 decoupling): the
 // playhead FOLLOWS the nudged marker through the step (the actual follow lands in
-// finish_group_position_nudge) — it steps with the marker so a later Space
+// finish_position_nudge) — it steps with the marker so a later Space
 // auditions FROM the marker. It is a re-land, not a repair: nothing DIVERGES from
 // the focus to be towed (the two playhead forms and the empty towed category are
 // stated once at land_playhead_on_marker, input_pointer.cpp — do not restate them
@@ -108,7 +108,7 @@ struct GroupNudgePrologue {
 // GestureKind (WarpNudge / PhaseResetNudge).
 // `synthesized_repeat` is the dispatching key event's platform repeat bit,
 // consumed by the coalesce verdict alone.
-GroupNudgePrologue group_position_nudge_prologue(
+PositionNudgePrologue position_nudge_prologue(
     AppState& app, const GuiAudio& audio,
     GuiPlaybackLifecycle& playback_lifecycle, Selection& selection,
     Viewport& viewport, Undo& undo,
@@ -221,7 +221,7 @@ int64_t stepped_anchor_frame(
 // accepted cost is simply gone. The ordering itself stands unchanged — the
 // unified tail adopts the warp shape verbatim to minimize warp/phase divergence,
 // and record_gesture reads nothing the playhead move writes.
-void finish_group_position_nudge(
+void finish_position_nudge(
     AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
     GestureKind kind, int64_t committed_focused_frame,
     GuiTargetRender& target_render);

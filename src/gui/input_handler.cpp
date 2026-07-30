@@ -737,11 +737,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // decision. With a selection the cursor playhead stops painting and the
     // focused flag's ink triangle IS the playhead, so the step moves THAT and
     // carries the marker under it — the two routes below both re-land the
-    // playhead on their committed focus (finish_group_position_nudge), so the lane
+    // playhead on their committed focus (finish_position_nudge), so the lane
     // model holds on every successful route. HORIZONTAL MOVEMENT IS A FOCUS ACT
     // (architect 2026-07-29): a 2+ selection COLLAPSES to its focus in the position
     // nudges' shared prologue and the focus alone steps — groups are never moved
-    // (the doctrine at the head of group_position_nudge.h). With no selection the
+    // (the doctrine at the head of position_nudge.h). With no selection the
     // playhead is in
     // the waveform lane and this branch does not match: the press falls through
     // to the bare-key tail, which steps the cursor alone. The lane is left by any
@@ -753,7 +753,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // ROUTE BEFORE THE STOP: this branch must decide the route ahead of the
     // waveform-lane body's stop / selection-clear / region-clear, because the two
     // lanes carry DIFFERENT playback regimes — the position nudges stop in
-    // group_position_nudge_prologue even when they later refuse, while the
+    // position_nudge_prologue even when they later refuse, while the
     // W+target refusal below stops nothing at all (a refused press leaves a
     // listening session running). Merging the regimes would give a refused press a
     // stop it does not have.

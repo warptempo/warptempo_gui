@@ -14,7 +14,7 @@ struct GuiTargetRender;
 // threshold begins the move), shared by the warp and phase reset views and
 // dispatched on app.active_markers_view (begin) and app.drag.drag_mode
 // (commit). It moves ONE marker: groups are never moved (architect 2026-07-29 —
-// the doctrine is at the head of group_position_nudge.h). It
+// the doctrine is at the head of position_nudge.h). It
 // lives in its own translation unit because it is the one cross-kind
 // gesture: the per-kind authoring and selection-shift operations stay in
 // GuiWarpMarkersOps and GuiPhaseResetMarkersOps. Under the frozen-coord

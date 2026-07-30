@@ -200,7 +200,7 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 // selected, enter_text_edit (the one chokepoint of every editor open and
 // retarget), the POSITION NUDGES on both columns (horizontal movement is a focus
 // act, so every one of them is a point command — the doctrine is at the head of
-// group_position_nudge.h), and the navigation jumps that always
+// position_nudge.h), and the navigation jumps that always
 // owned theirs (the list at clear_region_highlight, input_handler.h). The
 // SPAN-PRESERVING routes each earn it: the whole TEMPO
 // family re-derives or re-syncs the highlight it moves, Space plays the span, `x`
@@ -242,11 +242,11 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //     post-toggle selection lands nothing). The plain click's FOUR deferred
 //     completions left this list 2026-07-29 with the group drag: every marker
 //     press single-selects and lands at PRESS time now (horizontal movement is a
-//     focus act — the doctrine at the head of group_position_nudge.h);
+//     focus act — the doctrine at the head of position_nudge.h);
 //   * THE KEYBOARD FOCUS-COLLAPSE COMMANDS, which collapse a 2+ selection to its
 //     focus and land there — the Ctrl+N inherit toggle (warpmarkers_ops.cpp) and,
 //     since 2026-07-29, BOTH POSITION NUDGES through their shared prologue
-//     (group_position_nudge.cpp). Esc's singleton rung was in this class until
+//     (position_nudge.cpp). Esc's singleton rung was in this class until
 //     2026-07-29, when the whole Esc ladder was deleted: bare Esc lands nothing
 //     now, because it does nothing at all outside the editors, the prompts, the
 //     drag swallow and the render cancel;
@@ -410,7 +410,7 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 //       region.active && provenance == SelectionExtent, so a Free / TrimWindow /
 //       inactive region is untouched. The class is the group TEMPO gestures — the
 //       position movers left it 2026-07-29, groups being never moved (the doctrine
-//       at the head of group_position_nudge.h) — and its MEMBERSHIP is not
+//       at the head of position_nudge.h) — and its MEMBERSHIP is not
 //       enumerated here: the
 //       authoritative inventory of the image-follow sites lives at RegionState in
 //       app_state.h, and an inline copy here is exactly the list that goes stale;
@@ -1285,7 +1285,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 } else {
                     // ONE PLAIN MARKER PRESS, NO SPECIAL CASE FOR A SELECTED
                     // MEMBER (architect 2026-07-29, HORIZONTAL MOVEMENT IS A FOCUS
-                    // ACT — the doctrine is at the head of group_position_nudge.h):
+                    // ACT — the doctrine is at the head of position_nudge.h):
                     // a press on a member of a 2+ selection single-selects and
                     // lands IMMEDIATELY like a press on any other marker, and the
                     // drag it arms is an ordinary singleton drag. The two
@@ -1903,7 +1903,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // DEFERRED arm that used to complete a held-back click here died with the
         // group drag (architect 2026-07-29: horizontal movement is a focus act, so
         // a press on a selected member single-selects at press time like any other
-        // — the doctrine is at the head of group_position_nudge.h).
+        // — the doctrine is at the head of position_nudge.h).
         // (A crossed pending became app.drag — dropping the candidate at the
         // threshold crossing — and commits through the branch below.)
         app.pending_marker_drag = PendingMarkerDrag{};

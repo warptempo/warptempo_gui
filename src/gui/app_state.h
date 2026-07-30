@@ -112,7 +112,7 @@ struct UndoEntry {
     // land field-identical to an untouched row (the moved marker column-snapped
     // exactly onto a row-identical marker). ALWAYS SINGLETON-SCOPED since
     // 2026-07-29: every one of those gestures moves exactly one marker (groups are
-    // never moved — the doctrine at the head of group_position_nudge.h), so a
+    // never moved — the doctrine at the head of position_nudge.h), so a
     // multi-member hint has no producer left. The vectors stay vectors because the
     // RESTORE side is group-capable — an undo/redo restore may re-select a whole
     // set it took in wholesale. Empty means "no hint — use the diff reconstruction"
@@ -126,192 +126,105 @@ struct UndoEntry {
     std::vector<int>          touched_live;
 };
 
-// Session-only region selection — an Ableton-style arrangement span. SELECTION
-// FLOWS DOWNWARD ONLY (architect 2026-07-23): highlighting a region does NOT
-// select the markers it contains (the reverse coupling — a region selecting its
-// contents — was tried and retired; do not re-propose); if markers ARE selected
-// the region is set to their extent — never the other way.
+// Session-only region selection — an Ableton-style arrangement span, and the
+// PLAYHEAD'S SPAN FORM: while one is active it outranks every point cue (the
+// two-forms rule is stated at land_playhead_on_marker, input_pointer.cpp).
+// Endpoints are ACTIVE-DOMAIN frames (source frames in source view, target frames
+// in target view), stored in drag order and normalized lo/hi at READ time, so the
+// span survives pan/zoom mid-drag and at rest. NEVER serialized, and stored
+// independently of the selection and undo systems (a transient visual — no undo
+// entry, its own field, not derived from the selection set).
 //
-// THE FORMERS — THE AUTHORITATIVE INVENTORY (re-derived 2026-07-29 by grepping
-// every writer of region.active = true, and re-grepped the same day when the Esc
-// ladder's two writers were deleted). Other sites state only their own class and
-// point here.
-// SIX CODE SITES ACTIVATE A REGION (a grep of `region.active = true` returns
-// exactly six, and the arithmetic is spelled out here because this count has
-// drifted before): FOUR write the fields directly for a FREE span — the plain
-// drag, the shift-click former, and the multi-delete demotion in EACH column,
-// which is two sites under one rule and is where the earlier counts went wrong —
+// SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23): highlighting a region does
+// NOT select the markers it contains — do not re-propose the reverse coupling. The
+// couplings that exist run selection -> region -> trim: the multi-select clicks set
+// this highlight to the selection's extent, and the trim-lane clicks + trim drags
+// set it to the trim window, CLEARING the selection as they publish (every
+// TrimWindow setter deselects — the trim-bar click is the span-form sibling of the
+// waveform click's deselect-all). Trim never SELECTS a marker; the selection is the
+// master state and trim only ever empties it.
+//
+// THE FORMERS — THE AUTHORITATIVE INVENTORY (re-derive by grepping every writer of
+// `region.active = true`; other sites state only their own class and point here).
+// SIX CODE SITES ACTIVATE A REGION: FOUR write the fields directly for a FREE span,
 // ONE writes TrimWindow, and ONE is the extent owner serving many gestures:
 //   * the plain waveform DRAG (paints it live, leaving the selection EMPTY
 //     throughout) — Free;
 //   * the waveform SHIFT+click region former / marker DEMOTE (playhead-to-click
 //     with nothing selected, else furthest-selected-marker-to-click, DROPPING
 //     the selection) — Free;
-//   * a multi-marker DELETE, either column (demotes to the span of the deleted
-//     positions, also a DROP) — Free;
-//   * the TRIM SYNC's set arm (sync_region_to_trim_window) — TrimWindow, the
-//     trim's own highlight, and since 2026-07-29 always published beside an EMPTY
-//     selection (its SETTER callers deselect first);
+//   * a multi-marker DELETE, either column (spans the DELETED positions, also a
+//     DROP) — Free, and two sites under one rule;
+//   * the TRIM SYNC's set arm (sync_region_to_trim_window) — TrimWindow;
 //   * set_region_to_selection_extent — SelectionExtent, the ONE owner of that
-//     provenance. Its callers split into CREATORS (which may activate from
+//     provenance. Its callers split into FIVE CREATORS (which may activate from
 //     nothing: the shift-range and ctrl-toggle multi-select clicks, the `m` bpm
-//     open's re-extent, the GROUP
-//     undo/redo restore, and the propagate paste's created-set arm) and
-//     MAINTAINERS (which gate on an ALREADY-ACTIVE SelectionExtent region and
-//     only re-derive it: the GROUP TEMPO CENT STEP, and nothing else. The class
-//     emptied out twice on 2026-07-29 — first the POSITION movers (the group nudge
-//     and the group marker drag, deleted because groups are never moved; the
-//     doctrine is at the head of group_position_nudge.h), then the tempo DRAG's
-//     per-event follow and the TEMPO-IMAGE STEP with the whole tempo-image family
-//     (the delete list is at the head of marker_drag.h)). The
-//     class-level contract for that caller, and the
-//     ordering rule it obeys, live at that function in input_pointer.cpp.
-// The MULTI-SELECT EXTENT case is the one worth restating for its consequence: a
-// shift-range or ctrl-toggle click leaving 2+ markers selected sets the region to
-// the selection's position extent [earliest, latest], so the highlight and
-// Space's left-bound launch agree — the auditioning-from-the-start behavior is
-// the REGION's, not the land's (those clicks land on their focus; see
-// land_playhead_on_marker). THE INVARIANT (three-state, architect
-// 2026-07-23): 2+ selected with an active SelectionExtent region ⇒ region == the
-// current selection's extent (maintained by clear_region_on_membership_replace,
-// which CLEARS the region outright the instant the membership is replaced — a
-// span whose owner died does not linger); a TrimWindow region
-// tracks the trim bounds' images (re-synced across map changes); a Free region is
-// untouched display scratch. So a drag-formed region always rests with an EMPTY
-// selection (Free) — and so does a trim-derived one (TrimWindow) since 2026-07-29,
-// every setter deselecting as it publishes (the rule at
-// sync_region_to_trim_window's declaration, input_handler.h). Provenance therefore
-// no longer routes the image-follow tempo gesture at all — the group cent step
-// re-derives its extent unconditionally — and what it still routes is the trim's
-// own coupling:
-// Shift+X and the settings-editor maintainers act on a TrimWindow region and leave
-// a Free one alone.
-// Bare x is SET-ONLY and branches on
-// THIS highlight (architect 2026-07-25): a live region trims to it and the
-// highlight is KEPT (architect 2026-07-23, reversing the earlier consume —
-// under the coupling the trim window and the highlight agree after x, re-derived
-// through the setter publish, which also DESELECTS); no region means x is a silent
-// no-op, and so does a DEGENERATE result — an inverse-mapped span coming out
-// end <= begin refuses rather than writing a pair the crossed-commit auto-clear
-// would destroy (2026-07-29, at handle_trim_x).
-// Shift+X UNSETS the trim, tearing down a TrimWindow highlight with the window.
-// NEVER serialized, and stored independently of the selection and undo systems
-// (a transient visual — no undo entry, its own field, not derived from the
-// selection set). The GESTURE couplings are DOWNWARD-ONLY: the multi-select
-// clicks set this highlight to the selection's extent, and the trim-lane clicks +
-// trim drags set this highlight to the trim window — the latter CLEARING the
-// selection as it publishes (architect 2026-07-29: every TrimWindow setter
-// deselects, the trim-bar click being the span-form sibling of the waveform click's
-// deselect-all). Downward-only still holds in the sense that matters: trim never
-// SELECTS a marker — the selection is the master state, and trim only ever empties
-// it. Endpoints are
-// ACTIVE-DOMAIN frames (source frames in source
-// view, target frames in target view), stored in drag order and normalized
-// lo/hi at READ time, so the span survives pan/zoom mid-drag and at rest.
-// Cleared on file load, the A/B tab switch, the S/T audio-view switch (the
-// domain changes under it), and a plain UPPER-HALF waveform PRESS (the placement
-// press dissolves any
-// resting highlight at mouse-down, before it knows whether the gesture is a
-// click or a fresh region drag; at on_button_press via arm_region_drag_at — a
-// lower-half scrub press leaves the region alone). The W/P marker-column switch
-// CLEARS it wholesale, any provenance (architect 2026-07-29, reversing the
-// storage-level-independence rule that let a stored highlight survive the
-// column flip): `p` hands the marker lane a different column's selection and
-// focus, so a span built against the leaving column has no owner left on the
-// entering one — a region rests beside a selection only as that selection's own
-// extent or as the trim's highlight, and neither survives the swap. The two
-// other wholesale-selection routes (the undo/redo restore, the propagate paste)
-// clear it for the same reason; the full clear-site enumeration lives at
-// clear_region_highlight's declaration (input_handler.h). NO POSITION GESTURE
-// FOLLOWS A SPAN AT ALL any more (architect 2026-07-29): the marker drag's group
-// live-track and its commit re-derive, and the position nudges' per-press
-// re-derive, all died with the group forms of those gestures — horizontal movement
-// is a focus act, so both are POINT commands that clear instead (the doctrine is at
-// the head of group_position_nudge.h). What still follows an extent span across its
-// own map change is the GROUP TEMPO CENT STEP alone (below) — the tempo drag and
-// the tempo-image step, the other two followers, were deleted the same day with
-// the whole tempo-image family (see marker_drag.h).
-// Region PROVENANCE (architect 2026-07-23, three-state ownership): tracks WHO the
-// region is derived from, which decides how the image-follow tempo gesture treats
-// it across a map change. Free — a drag-formed region, display scratch
-// that no gesture re-derives. FOUR PRODUCERS, re-grepped 2026-07-29 when the Esc
-// ladder's two were deleted: the plain drag, the shift-click former, and both
-// DELETE demotions — each leaving the selection EMPTY. THE DEMOTE-OF-AN-EXTENT IS
-// GONE AS A CONCEPT with that ladder: no route captures an extent span's pixels
-// and re-forms them as Free after a deselect, so a Free span is always FORMED
-// fresh by the gesture that draws it (the two DELETE demotions are formers too —
-// they span the DELETED positions, not a surviving extent). A Free region
-// rests ONLY beside an EMPTY selection (architect 2026-07-29, the
-// maximally greedy collapse): all four producers leave the selection empty,
-// and EVERY route that then puts a selection in place clears the span — the
-// marker clicks, Tab/`c`, the editor opens, the
-// drops, and the three that used to carry a selection in wholesale while
-// leaving the span alone (undo/redo restore, the `p` swap, the propagate paste).
-// No gesture cancel can re-open a route either: there are no cancels left to
-// restore a region from (2026-07-29).
-// SelectionExtent — set to the marker selection's
-// [earliest, latest] extent (the downward selection->extent clicks, the
-// tempo follows), valid ONLY while that selection
-// persists (any membership
-// REPLACE CLEARS it via clear_region_on_membership_replace). TrimWindow — set to
-// the trim window's images by the trim setters' publish, and RESTING ONLY BESIDE AN
-// EMPTY SELECTION since 2026-07-29 (every setter deselects — the rule and the
-// setter list are at sync_region_to_trim_window's declaration, input_handler.h),
-// re-synced from app.trim's source-frame bounds through the new map by the
-// settings-editor trim maintainers so the highlight tracks the chips/stems.
+//     open's re-extent, the GROUP undo/redo restore, and the propagate paste's
+//     created-set arm) and ONE MAINTAINER (which gates on an ALREADY-ACTIVE
+//     SelectionExtent region and only re-derives it: the GROUP TEMPO CENT STEP).
+//     The class-level contract for those callers, and the ordering rule each
+//     obeys, live at that function in input_pointer.cpp.
 //
-// RECORDED BOUNDARY of the follow/re-sync behavior (architect 2026-07-23, narrowed
-// 2026-07-29 twice — the second time when the position movers left the class
-// entirely): the re-derive sites are the group TEMPO STEP and the group tempo
-// DRAG's
-// PER-EVENT path, which re-derive their SelectionExtent region across their own map
-// change — UNCONDITIONALLY, the provenance branch having died with
-// TrimWindow-under-a-selection — plus the settings-editor trim commit (re-syncs a
-// TrimWindow region to the edited bounds). There is no drag CANCEL arm any more —
-// the whole-struct verbatim region restore, and the round-7 rule that shaped it,
-// died with the cancels themselves (2026-07-29: pointer gestures have no cancel,
-// so a gesture's last committed event owns the resting region).
-// THE DISPLAY-SCRATCH SIDE OF THIS BOUNDARY IS NOW EMPTY (architect 2026-07-29,
-// the maximally greedy collapse): every OTHER target-map changer CLEARS the
-// region outright instead of leaving it as scratch — undo/redo at its visual
-// tail for EVERY entry, settings-only ones included (that clear alone sits above
-// the tail's 'S' gate, which forbids selecting, writing a region, and landing,
-// with no exception left: the target-view map-change re-land it briefly allowed
-// died with ruling 6's selection clear on the same arm), the settings ENGINE-SCALE
-// commit at its own chokepoint — which since ruling 6 clears the SELECTION beside
-// the region, as the 'S' restore does — and adopt
-// through apply_settings_engine_and_prefs's unconditional reset. So NO route
-// rebuilds the map under a resting highlight any more, and NO producer of a
-// numerically stale TrimWindow span survives. A group restore still DEFINES its
-// own SelectionExtent region after its clear; a singleton or emptied restore
-// rests with none. What remains re-derived/re-synced rather than cleared is the
-// list at the top of this paragraph: the tempo family's extent re-derive and the
-// settings-editor TRIM commit, the maintainers by ruling. The SINGLETON tempo
-// step's TrimWindow re-sync was deleted 2026-07-29 (a chip click deselects, so no
-// TrimWindow highlight can rest while a marker is selected).
-// This is scoped to the provenance follow/re-sync: the
-// GENERIC region clears still apply to ANY provenance — the kick validator drops
-// a region stranded outside a shrunken live domain, and load/adopt clear the
-// region unconditionally.
+// THE THREE PROVENANCES (architect 2026-07-23) track WHO the region is derived
+// from. What provenance still ROUTES today is the TRIM coupling alone: Shift+X and
+// the settings-editor trim maintainers act on a TrimWindow region and leave a Free
+// or extent one alone.
+//   * Free — a drag-formed span, display scratch that no gesture re-derives. FOUR
+//     producers, the four direct writers above, and all four leave the selection
+//     EMPTY. It rests ONLY beside an empty selection: every route that puts a
+//     selection in place clears the span (the marker clicks, Tab/`c`, the editor
+//     opens, the drops, and the three membership-wholesale routes — the undo/redo
+//     restore, the `p` swap, the propagate paste).
+//   * SelectionExtent — the marker selection's [earliest, latest] extent, valid
+//     ONLY while that selection persists: any membership REPLACE clears it through
+//     clear_region_on_membership_replace, outright, pixels and all. THE INVARIANT:
+//     2+ selected with an active SelectionExtent region => the region IS that
+//     selection's current extent. A 2+ selection MAY also rest with NO span at all
+//     (the never-span-less enforcement is retired — the retirement, its three
+//     producers and the no-drawn-form state it leaves are stated at
+//     clear_region_highlight's declaration, input_handler.h).
+//   * TrimWindow — the trim window's images, published by the trim setters, and
+//     RESTING ONLY BESIDE AN EMPTY SELECTION (the rule and the setter list are at
+//     sync_region_to_trim_window's declaration, input_handler.h). Re-synced from
+//     app.trim's source-frame bounds through the new map by the settings-editor
+//     trim maintainers, so the highlight tracks the chips/stems.
+// Bare `x` is SET-ONLY and branches on THIS highlight: a live region trims to it
+// and the highlight is KEPT (re-derived through the setter publish, which also
+// DESELECTS); no region means `x` is a silent no-op, and so does a DEGENERATE
+// result — an inverse-mapped span coming out end <= begin refuses rather than
+// writing a pair the crossed-commit auto-clear would destroy (at handle_trim_x).
+// Shift+X UNSETS the trim, tearing down a TrimWindow highlight with the window.
+//
+// CLEARED wholesale, any provenance, on: file load, the A/B tab switch, the S/T
+// audio-view switch and the W/P marker-column switch (each flips the domain or the
+// owning column out from under the span), a plain UPPER-HALF waveform PRESS (the
+// placement press dissolves any resting highlight at mouse-down, before it knows
+// whether the gesture is a click or a fresh region drag — via arm_region_drag_at; a
+// lower-half scrub press leaves the region alone), and the kick validator's
+// live-domain reclamp when a bound falls outside a shrunken domain. The full
+// clear-site enumeration lives at clear_region_highlight's declaration
+// (input_handler.h). NO POSITION GESTURE FOLLOWS A SPAN: both nudges and the marker
+// drag are POINT commands that clear instead (horizontal movement is a focus act —
+// the doctrine is at the head of position_nudge.h). What survives as
+// re-derive/re-sync rather than clear is exactly two sites: the GROUP TEMPO CENT
+// STEP's unconditional extent re-derive across its own map change, and the
+// settings-editor TRIM commit's TrimWindow re-sync to the edited bounds.
 enum class RegionProvenance { Free, SelectionExtent, TrimWindow };
 
 struct RegionState {
     bool    active  = false;
     int64_t a_frame = 0;   // the press-anchor endpoint
     int64_t b_frame = 0;   // the far (pointer) endpoint
-    // Provenance (see enum above). The trim's own teardown/maintainer routes test
-    // provenance == TrimWindow (the tempo follows no longer test anything — their
-    // branch died 2026-07-29 with TrimWindow-under-a-selection); Free is
-    // untouched scratch. SET in three places — set_region_to_selection_extent ->
-    // SelectionExtent, sync_region_to_trim_window's set arm -> TrimWindow, and
-    // every OTHER former (region drag, shift-click former/demote, delete
-    // demotions) -> Free. NOTHING CONVERTS: provenance is written once, by the
-    // route that forms the span, and never downgraded in place (architect
-    // 2026-07-29 — the Esc demote was the one converting route and it died with the
-    // Esc ladder). clear_region_on_membership_replace clears a SelectionExtent
-    // region whole rather than downgrading it, and no route re-forms one either.
-    // Every wholesale RegionState{} reset (load, navigation clears) defaults
-    // Free. The Space launch, x, and the navigation clears are
+    // Provenance (see enum above). The ONLY readers are the trim's own
+    // teardown/maintainer routes, which test provenance == TrimWindow. SET in three
+    // places — set_region_to_selection_extent -> SelectionExtent,
+    // sync_region_to_trim_window's set arm -> TrimWindow, and every OTHER former
+    // (region drag, shift-click former/demote, delete demotions) -> Free.
+    // NOTHING CONVERTS: provenance is written once, by the route that forms the
+    // span, and is never downgraded in place — clear_region_on_membership_replace
+    // clears a SelectionExtent region whole rather than downgrading it, and no
+    // route re-forms one. Every wholesale RegionState{} reset (load, navigation
+    // clears) defaults Free. The Space launch, `x`, and the navigation clears are
     // provenance-BLIND — they act on any active region.
     RegionProvenance provenance = RegionProvenance::Free;
 };
@@ -344,7 +257,7 @@ inline bool clear_region_on_membership_replace(RegionState& r) {
 // Marker reposition drag state (begun by a plain flag drag past the shared
 // threshold). ONE MARKER, ALWAYS — GROUPS ARE NEVER MOVED (architect 2026-07-29,
 // HORIZONTAL MOVEMENT IS A FOCUS ACT; the doctrine and the dead rigid-group
-// machinery are recorded at the head of group_position_nudge.h). `active` gates
+// machinery are recorded at the head of position_nudge.h). `active` gates
 // motion handling; the rest holds the drag's own working set — the pre-drag
 // position the proposal is derived from and the pre-drag store the COMMIT pushes
 // as its undo entry. Nothing here is a cancel
@@ -611,7 +524,7 @@ struct EditorTextDragState {
 // Pending marker-reposition drag, armed by a PLAIN (unmodified) flag press.
 // The press single-selects its marker immediately (the click — with no exception
 // for a member of a 2+ selection since 2026-07-29, groups being never moved; the
-// doctrine is at the head of group_position_nudge.h), then
+// doctrine is at the head of position_nudge.h), then
 // arms this pending state instead of the drag itself: only once the pointer
 // travels past kDragMovedThresholdPx (Chebyshev from the press; the one generic
 // 8px gate shared by every press-becomes-drag surface) does begin_drag run and

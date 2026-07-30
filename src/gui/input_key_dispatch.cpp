@@ -123,7 +123,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // gate is the sole read-only defense on BOTH routes (TWO since 2026-07-29, the
     // W+target tempo-image step having been deleted with the tempo-image family —
     // see marker_drag.h; that combination is a consumed refusal now):
-    // group_position_nudge_prologue carries
+    // position_nudge_prologue carries
     // no internal read-only check of its own. So a locked tab holding a selection REFUSES the
     // arrows outright (a consumed no-op); it does not fall back to the
     // waveform-lane step — this project has no gesture fallbacks. Leaving the
