@@ -324,7 +324,8 @@ bool append_path(cairo_t* cr, const char* d) {
 
 } // namespace
 
-void draw(cairo_t* cr, Icon icon, double x, double y, double size_px) {
+void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
+          double keep_own, GuiColor mixed_with) {
     if (size_px <= 0.0) return;
     const IconDef& def = icon_def(icon);
     if (def.view_box <= 0.0) return;
@@ -343,7 +344,12 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px) {
             std::fprintf(stderr, "icons: malformed path data, icon not drawn\n");
             continue;
         }
-        cairo_set_source_rgb(cr, p.fill.r, p.fill.g, p.fill.b);
+        // The path's own color, retained by keep_own and made up with
+        // mixed_with — the disabled face. keep_own == 1 (the default every
+        // enabled caller takes) returns the table's color bit-identically, so
+        // the enabled path is unchanged by the existence of this one.
+        const GuiColor c = mix_color(p.fill, mixed_with, keep_own);
+        cairo_set_source_rgb(cr, c.r, c.g, c.b);
         cairo_fill(cr);
     }
     cairo_restore(cr);

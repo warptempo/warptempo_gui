@@ -453,24 +453,28 @@ private:
     // on_redraw paint passes. Each renders one strip/layer; on_redraw keeps
     // the rects_intersect gates and calls these in place.
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip);
-    // THE TWO REDESIGNED ROWS — the MENU ROW (top lane 0, row 1: the flat
-    // sampled ground plus the one "Quit" button) and the TOOLBAR ROW (top lane
-    // 1, row 2: the same ground, its border-bottom, its separators and the four
-    // Save/Undo/Redo/Render buttons). Both paint their buttons in a rest or
-    // hover face and both PUBLISH their buttons' hit rects into
-    // app.redesign_buttons — the painter is the only place a shaped label's
-    // width exists, so the pointer code reads the stash instead of re-shaping
-    // (the displayed-basis doctrine).
+    // THE THREE REDESIGNED ROWS — the MENU ROW (top lane 0, row 1: the flat
+    // sampled ground plus the one "Quit" button), the TOOLBAR ROW (top lane 1,
+    // row 2: the same ground, its border-bottom, its separators and the four
+    // Save/Undo/Redo/Render buttons) and the TAB ROW (top lane 2, row 3: the
+    // "Tab A"/"Tab B" Breeze tabs, their frame and its broken border-bottom).
+    // All three PUBLISH their buttons' hit rects into app.redesign_buttons —
+    // the painter is the only place a shaped label's width exists, so the
+    // pointer code reads the stash instead of re-shaping (the displayed-basis
+    // doctrine) — and all three stash the ENABLED VECTOR they painted beside it
+    // for main.cpp's staleness comparator.
     //
-    // Both are called from on_redraw OUTSIDE the loading / total>0 branches,
-    // each gated on its OWN exposure — they are the passes with no dependence on
-    // the loaded audio, so a button is visible exactly whenever it is clickable
-    // (their press claims sit above the pointer path's loading guard). The
-    // exposure gate matters: each shapes labels through HarfBuzz, which a narrow
-    // per-frame playhead damage must not pay for. Nothing painted after them
-    // touches the two lanes, the flag cache being transparent there.
+    // All three are called from on_redraw OUTSIDE the loading / total>0
+    // branches, each gated on its OWN exposure — they are the passes with no
+    // dependence on the loaded audio, so a button is visible exactly whenever it
+    // is clickable (their press claims sit above the pointer path's loading
+    // guard). The exposure gate matters: each shapes labels through HarfBuzz,
+    // which a narrow per-frame playhead damage must not pay for. Nothing painted
+    // after them touches the three lanes, the flag cache being transparent
+    // there.
     void paint_menu_row(cairo_t* cr);
     void paint_toolbar_row(cairo_t* cr);
+    void paint_tab_row(cairo_t* cr);
     void paint_marker_text_lane(cairo_t* cr);
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
     // THE GROUND RECOLOR, painted after render_canvas and BEFORE the plate blit

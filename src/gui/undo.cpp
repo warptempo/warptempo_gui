@@ -417,12 +417,14 @@ void Undo::apply_post_restore_rules_phase_reset(
 //     the target tab's state now, not when the action was recorded.
 // Each bail leaves the entry on the stack and the view unchanged, so unlocking
 // the tab makes the history reachable again with nothing lost.
+//
+// THE TEST ITSELF LIVES OUT AT history_step_actionable (app_state.h) and this
+// delegates to it, because the toolbar's Undo / Redo buttons must GREY on
+// exactly the fact these guards refuse on — one predicate, two readers, no way
+// for the face and the action to disagree. The rationale above stays here,
+// where the guard is run.
 bool Undo::history_entry_actionable(const std::vector<UndoEntry>& stack) const {
-    if (stack.empty()) return false;
-    const char tt = stack.back().tab;
-    const bool target_ro = (tt == 'B') ? app.tab_b.read_only
-                                        : app.tab_a.read_only;
-    return !target_ro;
+    return history_step_actionable(app, stack);
 }
 
 // Direction-parameterized restore core shared by do_undo / do_redo, making the

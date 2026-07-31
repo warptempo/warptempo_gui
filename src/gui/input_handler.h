@@ -439,16 +439,24 @@ struct GuiInputHandler {
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
-    // writer serving the WHOLE roster — row 1's Quit and row 2's four
-    // (definitions beside on_motion in input_pointer.cpp). recompute_ re-resolves
-    // the cursor's last position against the painter's stashed rects and is
-    // called from on_motion's no-gesture tail; clear_ is the pointer-LEAVE /
-    // capability-loss drop, wired in main.cpp beside clear_hover_popup because no
-    // motion event follows those edges. Both damage ONLY on a real transition,
-    // and at most one invalidate_top_strip per call however many faces moved. No
-    // button has a third face, so a press calls neither.
+    // writer serving the WHOLE roster — row 1's Quit, row 2's four and row 3's
+    // two tabs (definitions beside on_motion in input_pointer.cpp). recompute_
+    // re-resolves the cursor's last position against the painter's stashed rects
+    // and is called from on_motion's no-gesture tail; clear_ is the pointer-LEAVE
+    // / capability-loss drop, wired in main.cpp beside clear_hover_popup because
+    // no motion event follows those edges. Both damage ONLY on a real
+    // transition, and at most one invalidate_top_strip per call however many
+    // faces moved.
     void recompute_redesign_button_hover();
     void clear_redesign_button_hover();
+
+    // ROW 2'S CLICK FACE, dropped — the third face's only writer besides the
+    // press claim. Called from the top of on_button_release (the physical
+    // release) and from the pointer-leave hook beside clear_redesign_button_hover
+    // (the button-lost edge, which sends no release). Transition-gated, one
+    // invalidate_top_strip when it fires. Rows 1 and 3 never set the state it
+    // clears; the click face is row 2's alone.
+    void clear_redesign_button_press();
 
     // END every in-flight pointer gesture through its own RELEASE body — a
     // commit, never a cancel: pointer gestures have no cancel (the rule is stated

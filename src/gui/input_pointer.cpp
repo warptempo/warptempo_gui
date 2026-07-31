@@ -48,9 +48,11 @@ namespace {
 // THE PRESS CLAIM'S HALF OF THE BUTTON ROSTER (the roster itself is
 // RedesignButton, app_state.h): the KEYBOARD CHORD each row 2 button fires. The
 // painter's label/icon table (paint_handler.cpp) is the other half; both key off
-// the same ids. Row 1's Quit is absent on purpose — its route is a two-call
-// sequence (finalize + request_close), not a chord dispatch, and it is spelled
-// at its own claim.
+// the same ids. TWO roster entries are absent on purpose, each because its route
+// is not a table row: row 1's Quit is a two-call sequence (finalize +
+// request_close) rather than a chord, and row 3's tabs share ONE chord (Ctrl+Tab
+// toggles, so the inactive tab is the only target) — both are spelled at their
+// own claims.
 struct ToolbarChord {
     RedesignButton id;
     GuiKey         key;
@@ -651,7 +653,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // below.
         return;
     }
-    // THE TWO REDESIGNED ROWS (top lanes 0 and 1), claimed ABOVE the
+    // THE THREE REDESIGNED ROWS (top lanes 0, 1 and 2), claimed ABOVE the
     // loading/empty guard below so their buttons stay live while a file loads
     // and on a blank state — they are the surfaces that have nothing to do with
     // the loaded audio. They sit BELOW the modal gates on purpose: a press while
@@ -660,16 +662,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // are no exception, and every one of their chords reaches the same route
     // from the keyboard anyway).
     //
-    // ONE BAND-CLAIM SHAPE FOR BOTH ROWS: the exact half-open row band, a
+    // ONE BAND-CLAIM SHAPE FOR ALL THREE ROWS: the exact half-open row band, a
     // MODIFIED press is a strict consumed no-op, and any press in the band that
     // is not on a button is a consumed nothing. A BUTTON's rect is the painter's
     // stash (app.redesign_buttons, published by paint_menu_row /
-    // paint_toolbar_row) — never re-shaped here, so the clickable rect is the
-    // painted one. The action FIRES ON PRESS: nothing on these rows drags, so
-    // there is no arm, no threshold and no release body, and no double-click
-    // surface either. Nothing here reads keyboard state, so the bare-`e` mouse
-    // key reaches them as an ordinary left press through the platform
-    // translation.
+    // paint_toolbar_row / paint_tab_row) — never re-shaped here, so the
+    // clickable rect is the painted one. The action FIRES ON PRESS: nothing on
+    // these rows drags, so there is no arm, no threshold and no release body,
+    // and no double-click surface either. The one thing a RELEASE does carry is
+    // row 2's click face, cleared in clear_redesign_button_press. Nothing here
+    // reads keyboard state, so the bare-`e` mouse key reaches them as an
+    // ordinary left press through the platform translation.
     {
         const GuiRect menu_row = top_menu_row_area(app);
         if (y >= menu_row.y && y < menu_row.y + menu_row.h &&
@@ -694,6 +697,26 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             if (button == GuiMouseButton::Left) {
                 for (const ToolbarChord& tc : kToolbarChords) {
                     if (!redesign_button_hit(app, tc.id, x, y)) continue;
+                    // A DISABLED BUTTON'S PRESS IS A CONSUMED NOTHING: the chord
+                    // is not dispatched at all. The predicate is the painter's
+                    // (redesign_button_enabled, app_state.h), so the greyed face
+                    // and the inert press are the same fact read twice, and the
+                    // press cannot slip through on a frame the paint disagreed
+                    // with. Dispatching anyway would be harmless — every one of
+                    // these chords refuses on its own — but it would leave the
+                    // disabled face lying about what a click does.
+                    if (!redesign_button_enabled(app, audio.total_frames(),
+                                                 tc.id))
+                        break;
+                    // THE CLICK FACE ARMS BEFORE THE ACTION RUNS, so a chord
+                    // whose route repaints the strip (undo, save) paints the
+                    // pressed interior on the very frame it produces. It is
+                    // cleared by the release / the pointer-leave hook, never by
+                    // the action.
+                    if (app.redesign_pressed != redesign_button_index(tc.id)) {
+                        app.redesign_pressed = redesign_button_index(tc.id);
+                        viewport.invalidate_top_strip();
+                    }
                     // THE BUTTON IS ITS CHORD, dispatched through on_key: the
                     // action is not merely the same FUNCTION the key calls, it is
                     // the same ROUTE — every gate the chord passes on the
@@ -710,6 +733,40 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     chord.alt   = tc.alt;
                     on_key(tc.key, chord);
                     break;
+                }
+            }
+            return;
+        }
+    }
+    {
+        const GuiRect tab_row = top_tab_row_area(app);
+        if (y >= tab_row.y && y < tab_row.y + tab_row.h &&
+            x >= tab_row.x && x < tab_row.x + tab_row.w) {
+            if (mods.ctrl || mods.shift || mods.alt) return;  // strict no-op
+            if (button == GuiMouseButton::Left) {
+                // A CLICK ON THE INACTIVE TAB IS Ctrl+Tab, dispatched through
+                // on_key like every other redesigned button: with exactly two
+                // tabs the toggle IS the direct select, so nothing is
+                // approximated and every gate and side effect of the real chord
+                // (the read-only allowlist entry that admits it, the leaving
+                // tab's viewport/zoom/playhead save, the selection clear, the
+                // coincidence auto-select, the target-render trigger) applies by
+                // construction. It refuses during a load on its own, at on_key's
+                // loading guard, which is why this claim can sit above the
+                // pointer path's.
+                //
+                // A press on the SELECTED tab is a CONSUMED NOTHING — there is
+                // nothing to switch to, and dispatching Ctrl+Tab would switch
+                // AWAY from the tab the user just clicked. So the hit test runs
+                // against the inactive tab alone, which also makes "no tab is
+                // hit" and "the selected tab was hit" the same silent outcome.
+                const RedesignButton inactive =
+                    (app.active_tab_view == 'A') ? RedesignButton::TabB
+                                                 : RedesignButton::TabA;
+                if (redesign_button_hit(app, inactive, x, y)) {
+                    GuiInputState chord{};
+                    chord.ctrl = true;
+                    on_key(GuiKeys::Tab, chord);
                 }
             }
             return;
@@ -964,9 +1021,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // RETIRED, architect 2026-07-23: ctrl-click in Ableton is just
             // click, and ctrl stays the zoom modifier here; the PLAIN empty
             // flag/triangle-lane press below is the surviving lane gesture —
-            // the waveform's own parity press, not a bare clear). The two
-            // redesigned rows (lanes 0 and 1) were claimed far above and never
-            // reach here.
+            // the waveform's own parity press, not a bare clear). The three
+            // redesigned rows (lanes 0, 1 and 2) were claimed far above and
+            // never reach here.
             if (inside_top) {
                 const GuiRect chip_row = top_upper_row_area(app);
                 if (y >= chip_row.y && y < chip_row.y + chip_row.h) {
@@ -1058,7 +1115,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the playhead and the focused flag are coincident before any subsequent
         // drag or nudge — nothing is towed.
         if (inside_top) {
-            // The chip row (top_upper_row_area, lane 2) is trim's lane and is
+            // The chip row (top_upper_row_area, lane 3) is trim's lane and is
             // claimed BEFORE the marker single-select. The chip row, the marker
             // text lane, and the flag/triangle lanes are disjoint y-bands, so
             // this contends with nothing: a marker-part press falls to the marker
@@ -1689,6 +1746,11 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
 
 void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
                                         int y, GuiInputState /*mods*/) {
+    // ROW 2'S CLICK FACE ENDS WITH THE PHYSICAL HOLD, above every gate below: a
+    // prompt opened by the press (or any other early return) must not strand a
+    // lit interior on a button nobody is pressing any more. Nothing else about
+    // the redesigned rows happens at a release — they have no release body.
+    if (button == GuiMouseButton::Left) clear_redesign_button_press();
     if (app.prompt.active) return;
     // F2.1: a left release ending an editor-text drag finalizes the
     // selection (or collapses to a caret) before the modal swallow below.
@@ -1911,7 +1973,8 @@ void GuiInputHandler::finalize_active_drags() {
 }
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
-// (row 1's Quit and row 2's four — the stash is AppState::redesign_buttons).
+// (row 1's Quit, row 2's four and row 3's two tabs — the stash is
+// AppState::redesign_buttons).
 // A face changes only when its boolean does, and a motion that changes ANY of
 // them pays exactly ONE invalidate_top_strip — the strip idiom (no narrow rects;
 // the playhead columns' carve-out stays the sole exception), which also makes
@@ -1933,17 +1996,39 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     const int mx = app.last_mouse_x;
     const int my = app.last_mouse_y;
     bool changed = false;
-    for (AppState::RedesignButtonFace& f : app.redesign_buttons) {
+    for (int i = 0; i < kRedesignButtonCount; ++i) {
+        AppState::RedesignButtonFace& f = app.redesign_buttons[i];
         // A zero-width stash (before that row's first paint) contains no point,
         // and the pre-motion (-1, -1) cursor is outside every rect, so both cold
         // states resolve to "not hovered" without a special case.
+        //
+        // HOVERABILITY IS THE SECOND TERM (redesign_button_hoverable,
+        // app_state.h): a DISABLED row-2 button and the SELECTED tab both refuse
+        // the hover face, and both refusals live in that one predicate rather
+        // than as conditions here or in the painter.
         const bool inside = mx >= f.rect.x && mx < f.rect.x + f.rect.w &&
-                            my >= f.rect.y && my < f.rect.y + f.rect.h;
+                            my >= f.rect.y && my < f.rect.y + f.rect.h &&
+                            redesign_button_hoverable(
+                                app, audio.total_frames(),
+                                static_cast<RedesignButton>(i));
         if (f.hovered == inside) continue;
         f.hovered = inside;
         changed = true;
     }
     if (changed) viewport.invalidate_top_strip();
+}
+
+// ROW 2'S CLICK FACE, dropped. The face rides the PHYSICAL button hold, so the
+// two edges that end a hold both come here: the left release (on_button_release,
+// at its very top so a modal or an early return cannot strand a lit button) and
+// the pointer-leave / capability-loss hook, which is the button-lost edge — no
+// release event follows a leave, so without this a pointer that slides out of
+// the window mid-press would leave the interior filled forever. Transition-gated
+// like the hover clear beside it, and one invalidate_top_strip when it fires.
+void GuiInputHandler::clear_redesign_button_press() {
+    if (app.redesign_pressed < 0) return;
+    app.redesign_pressed = -1;
+    viewport.invalidate_top_strip();
 }
 
 // Motion handler. Drives the active pointer gesture: editor-text drag,

@@ -41,10 +41,22 @@ enum class Icon {
 // (viewBox 0 0 22 22). Cairo state is saved and restored; the caller's source,
 // path and matrix survive untouched.
 //
+// THE DISABLED FACE'S DIMMING rides the last two arguments, through the shared
+// mix_color owner (render.h): each path's own color is RETAINED by `keep_own`
+// and made up with `mixed_with`, so a greyed-out button's icon keeps its shape
+// and loses its life. It is a MIX, not an alpha — the redesign composites
+// nothing and every color that reaches cairo is opaque — and it is per-path,
+// which is what lets a multi-colored icon (media-record's red beside a white
+// glyph) dim as one object without either part being special-cased.
+// keep_own == 1 (the default, which every enabled caller takes) leaves the
+// table's colors bit-identical.
+//
 // A malformed `d` string is a PROGRAMMING ERROR, not a runtime state — the
 // strings are in-tree constants — so a parse failure emits one stderr line and
 // draws nothing. That is deliberately all the machinery there is: a silent
 // fallback would hide a transcription typo forever.
-void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
+void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
+          double keep_own = 1.0,
+          GuiColor mixed_with = GuiColor{0.0, 0.0, 0.0});
 
 } // namespace icons

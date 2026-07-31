@@ -721,17 +721,39 @@ struct ChipRowPressSeed {
 };
 
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
-// button the kdenlive rows carry, in painted order: row 1's lone Quit, then row
-// 2's toolbar four. It exists ONCE, here, because it indexes the painter's hit
-// stash (AppState::redesign_buttons) and both readers key off it; each domain
-// then attaches its own attribute to these ids and to nothing else — the
-// painter's label/icon/layout table (paint_handler.cpp) and the press claim's
-// chord table (input_pointer.cpp). Adding a button is one row here plus one row
-// in each of those two tables.
-enum class RedesignButton { Quit, Save, Undo, Redo, Render };
-inline constexpr int kRedesignButtonCount = 5;
+// button the kdenlive rows carry, in painted order: row 1's lone Quit, row 2's
+// toolbar four, then row 3's two TABS. It exists ONCE, here, because it indexes
+// the painter's hit stash (AppState::redesign_buttons) and both readers key off
+// it; each domain then attaches its own attribute to these ids and to nothing
+// else — the painter's label/icon/layout table (paint_handler.cpp) and the
+// press claim's chord table (input_pointer.cpp). Adding a button is one row
+// here plus one row in each of those two tables.
+//
+// THE TABS ARE BUTTONS IN THE ROSTER SENSE (2026-07-31) and joined it rather
+// than growing a parallel pair: their rect is painter-published from a shaped
+// label exactly as every other entry's is, their hover is the same one-transition
+// recompute, and their press is the same band claim dispatching a chord through
+// on_key. What they do NOT take is the two row-2-only faces — no click face and
+// no disabled face — which is stated at each face's site rather than modelled
+// here. The enum ORDER is painted order, and redesign_button_index depends on
+// the values staying 0..kRedesignButtonCount-1 contiguous (the tick comparator
+// in main.cpp walks the range by index).
+enum class RedesignButton { Quit, Save, Undo, Redo, Render, TabA, TabB };
+inline constexpr int kRedesignButtonCount = 7;
 inline constexpr int redesign_button_index(RedesignButton b) {
-    return static_cast<int>(b);
+    const int i = static_cast<int>(b);
+    // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
+    // enum's VALUE RANGE is the smallest bit-field holding its enumerators, so
+    // seven enumerators (0..6) make 7 a representable value the optimizer must
+    // assume possible — and that assumption alone makes every roster subscript
+    // look one past the end. This is not an error arm (the validation topology's
+    // "an error arm exists iff a producer exists" applies: there is no producer
+    // — every value comes from a named enumerator or from main.cpp's comparator
+    // loop, which is bounded by kRedesignButtonCount) but a statement that the
+    // out-of-set value cannot occur, which is exactly what std::unreachable is
+    // for.
+    if (i < 0 || i >= kRedesignButtonCount) std::unreachable();
+    return i;
 }
 
 // Double-click window and positional slack (architect-tunable). Two motionless
@@ -1470,13 +1492,36 @@ struct AppState {
     //
     // `hovered` is written only on a TRANSITION (the motion tail's recompute and
     // the pointer-leave hook), a transition paying one invalidate_top_strip. A
-    // press does not change it: there is no third face — a click keeps the hover
-    // face and pointer-out is what rests it.
+    // press does not change it — the hover face survives a click; what a press
+    // writes instead is `redesign_pressed` below, row 2's third face.
+    //
+    // `enabled` is the ENABLED VECTOR THE PAINTER LAST PAINTED, stashed beside
+    // the rect for one reason: the facts it derives from (the undo/redo stacks,
+    // the active tab's read-only flag, loading/blank) all change through routes
+    // that damage nothing in the top strip, so the strip would keep showing a
+    // stale face. main.cpp's per-tick comparator (beside the waveform
+    // fingerprint dirty-detect) compares the LIVE vector against this stash and
+    // pays one invalidate_top_strip on drift — one comparator site, no
+    // per-mutation invalidate anywhere. It starts TRUE, so a cold roster settles
+    // in one compare/paint pass.
     struct RedesignButtonFace {
         GuiRect rect{0, 0, 0, 0};
         bool    hovered = false;
+        bool    enabled = true;
     };
     std::array<RedesignButtonFace, kRedesignButtonCount> redesign_buttons{};
+
+    // THE PRESSED BUTTON — row 2's CLICK FACE, and the only piece of press-state
+    // machinery the redesigned rows have. A roster index while a left button is
+    // physically held down on an ENABLED row 2 button, -1 otherwise. Written by
+    // exactly two routes, each damaging the strip on the transition: the press
+    // claim sets it (input_pointer.cpp) and clear_redesign_button_press clears
+    // it (the left release and the pointer-leave / button-lost hook). The face
+    // rides the PHYSICAL hold, not the action — the chord already fired at the
+    // press — so it is visual only and survives the pointer wandering off the
+    // button mid-hold. Row 1's Quit and row 3's tabs never appear here: the
+    // click face is row 2's alone (architect 2026-07-31).
+    int redesign_pressed = -1;
 
     // Cursor screen position from the last on_motion event. Used by
     // recompute_hover_at_cursor() to re-evaluate hover after a viewport
@@ -1721,6 +1766,7 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
                        int lane_from_window_edge);
 GuiRect top_menu_row_area(const AppState& a);
 GuiRect top_toolbar_row_area(const AppState& a);
+GuiRect top_tab_row_area(const AppState& a);
 GuiRect top_upper_row_area(const AppState& a);
 GuiRect top_marker_text_row_area(const AppState& a);
 GuiRect top_flag_row_area(const AppState& a);
@@ -2018,6 +2064,104 @@ inline ViewState& active_view_state(AppState& a) {
 }
 inline const ViewState& active_view_state(const AppState& a) {
     return (a.active_tab_view == 'B') ? a.tab_b : a.tab_a;
+}
+
+// THE ONE HISTORY-STEP ACTIONABILITY PREDICATE: true when a restore FROM
+// `stack` would actually act. Two ways a step is a silent no-op — an empty
+// source stack, or a top entry whose TARGET tab is currently read-only (a
+// reversible per-tab toggle, so it is decided now rather than at record time).
+//
+// It lives out here, rather than inside Undo, because it has TWO readers that
+// must never drift: Undo::history_entry_actionable (the authoritative guard
+// do_undo / do_redo run before touching a stack — it delegates straight to
+// this) and the Undo/Redo BUTTONS' enabled predicate below. A button that greys
+// on a fact the key does not consult, or stays lit on one it does, is exactly
+// the drift the redesign's chord-dispatch rule exists to prevent, and the same
+// answer here is what makes "the button is its chord" true for the face as well
+// as for the action.
+inline bool history_step_actionable(const AppState& a,
+                                    const std::vector<UndoEntry>& stack) {
+    if (stack.empty()) return false;
+    const char tt = stack.back().tab;
+    return !((tt == 'B') ? a.tab_b.read_only : a.tab_a.read_only);
+}
+
+// THE REDESIGNED BUTTONS' ENABLED PREDICATE — one owner for the DISABLED FACE
+// (row 2's third face) and for hoverability, mirroring each chord's OWN
+// refusals rather than inventing a policy. Three readers: the painter (which
+// stashes what it painted), the press claim (a disabled press is a consumed
+// nothing — the chord is not dispatched), and main.cpp's staleness comparator.
+//
+// WHAT EACH ENTRY MIRRORS, read off the routes themselves:
+//   * ALL FOUR row-2 chords drop at on_key's `app.loading || total <= 0` guard
+//     (input_handler.cpp) and at the PER-TAB READ-ONLY GATE. The read-only
+//     gate's allowlist (read_only_key_blocked, input_key_dispatch.cpp) admits
+//     none of Ctrl+S, Ctrl+Z, Ctrl+Shift+Z or Ctrl+Alt+R — Ctrl+S explicitly
+//     ("read-only means no save"), undo/redo explicitly, and Ctrl+Alt+R
+//     structurally, its ctrl+alt combination matching no allowlist predicate.
+//     So a locked tab greys the WHOLE toolbar, which is the truth the keys
+//     already have.
+//   * Undo / Redo additionally take history_step_actionable on their own stack
+//     — the exact guard do_undo / do_redo run.
+//   * Save takes its route's stable-state refusal, an empty warpmarkers_path
+//     (GuiSaveOps::save). Its OTHER refusal — a numeric locale that is no
+//     longer "C" — is deliberately NOT here: that is a mid-session dynamic
+//     fault, not stable state, and greying a button on it would hide the one
+//     stderr line that reports it.
+//   * Render takes Ctrl+Alt+R's own first line, an empty source_audio_path.
+//   * Row 1's Quit and row 3's tabs are ALWAYS enabled: Quit keeps its two
+//     faces by ruling, and a tab has no disabled face at all. Their entries
+//     exist so the vector is total over the roster and the comparator needs no
+//     membership test.
+// MODAL gates are deliberately absent: a prompt or a bottom-strip editor
+// swallows the PRESS at the pointer path's own modal gate, and a modal that
+// greyed the chrome under it would be a fourth face nobody asked for.
+// The two switches below are EXHAUSTIVE over the roster with NO `default` arm,
+// deliberately: adding an eighth button then fails to compile here (-Wswitch)
+// instead of silently inheriting some other button's answer.
+inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
+                                    RedesignButton b) {
+    switch (b) {
+        case RedesignButton::Quit:
+        case RedesignButton::TabA:
+        case RedesignButton::TabB:
+            return true;
+        case RedesignButton::Save:
+        case RedesignButton::Undo:
+        case RedesignButton::Redo:
+        case RedesignButton::Render:
+            break;
+    }
+    if (a.loading || total_frames <= 0) return false;
+    if (active_view_state(a).read_only) return false;
+    switch (b) {
+        case RedesignButton::Save:
+            return !a.warpmarkers_path.empty();
+        case RedesignButton::Undo:
+            return history_step_actionable(a, a.history.undo_stack);
+        case RedesignButton::Redo:
+            return history_step_actionable(a, a.history.redo_stack);
+        case RedesignButton::Render:
+            return !a.source_audio_path.empty();
+        case RedesignButton::Quit:
+        case RedesignButton::TabA:
+        case RedesignButton::TabB:
+            break;
+    }
+    return true;
+}
+
+// Hoverability = enabled, plus the tabs' one extra fact: THE SELECTED TAB HAS
+// NO HOVER FACE (only the inactive one lights). Kept beside the predicate it
+// extends and consulted only by the hover recompute, so "a disabled button
+// never sets hovered" and "the selected tab never sets hovered" are one line
+// each at one site rather than a condition smeared over the painter.
+inline bool redesign_button_hoverable(const AppState& a, int64_t total_frames,
+                                      RedesignButton b) {
+    if (!redesign_button_enabled(a, total_frames, b)) return false;
+    if (b == RedesignButton::TabA) return a.active_tab_view != 'A';
+    if (b == RedesignButton::TabB) return a.active_tab_view != 'B';
+    return true;
 }
 
 // Snapshot the undo-tracked settings from `app` (engine_settings; trim is

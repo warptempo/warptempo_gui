@@ -41,6 +41,25 @@ inline constexpr GuiColor hex(uint32_t rgb) {
     };
 }
 
+// THE ONE COLOR-MIX OWNER: `own` retained by keep_own, the remainder made up
+// with `toward`. keep_own == 1 returns `own` bit-identically and keep_own == 0
+// returns `toward`, so a call site that means "unchanged" costs nothing and
+// says so. Used by the redesign's DISABLED FACE — the icon paths (icons.cpp)
+// and the label (paint_handler.cpp) resolve through this single expression, so
+// the two halves of a greyed button can never dim by different arithmetic.
+// A MIX, NOT AN ALPHA: the palette is fully opaque and nothing composites; this
+// resolves to a solid color before it reaches cairo. Clamped, so no caller can
+// push a channel outside cairo's [0,1] domain.
+inline constexpr GuiColor mix_color(GuiColor own, GuiColor toward,
+                                    double keep_own) {
+    const double t = keep_own < 0.0 ? 0.0 : (keep_own > 1.0 ? 1.0 : keep_own);
+    return GuiColor{
+        toward.r + (own.r - toward.r) * t,
+        toward.g + (own.g - toward.g) * t,
+        toward.b + (own.b - toward.b) * t,
+    };
+}
+
 // Trim boundaries in domain-frame samples (source-frame in source view,
 // target-frame in target view). Trim no longer dims any renderer — it is
 // consumed by render_trim_stems / render_trim_flags to place the boundary
@@ -339,14 +358,14 @@ inline GuiColor kTrimStem         = hex(0x686A6C);
 
 // -- The redesigned rows (HARD-CODED, kdenlive-sampled) ---------------------
 //
-// THE COLORS THAT ARE NOT PALETTE KEYS (architect 2026-07-31). These four are
-// constexpr, not globals: they are NOT in the 23-key config grammar, not loaded
-// by color_config.cpp, and deliberately not tunable — the carve-out the palette
-// header above records. Their provenance is the pixel truth of the kdenlive
-// crops (tmp/screenshots/kdenlive/redesign/row_1_button_{rest,hover}.png,
-// row_2_button_{rest,hover}.png, row_2_separator.png, row_2_border_bottom.png),
-// sampled directly, and the screenshots OVERRIDE the Breeze-derived scheme
-// wherever the two disagree.
+// THE COLORS THAT ARE NOT PALETTE KEYS (architect 2026-07-31). Every constant
+// in this block and the two below it is constexpr, not a global: they are NOT
+// in the 23-key config grammar, not loaded by color_config.cpp, and
+// deliberately not tunable — the carve-out the palette header above records.
+// Their provenance is the pixel truth of the kdenlive crops
+// (tmp/screenshots/kdenlive/redesign/), sampled directly, and the screenshots
+// OVERRIDE the Breeze-derived scheme wherever the two disagree. Each row's own
+// crops are named at the constants that row introduced.
 //
 // THE NAMES ARE ROW-INDEPENDENT because the values are: rows 1 and 2 share the
 // same ground, the same accent and the same label white, so a per-row name
@@ -368,6 +387,58 @@ inline constexpr GuiColor kRedesignRowGround = hex(0x292C30);
 inline constexpr GuiColor kRedesignAccent    = hex(0x3DAEE9);
 inline constexpr GuiColor kRedesignLabel     = hex(0xFCFCFC);
 inline constexpr GuiColor kRedesignLine      = hex(0x535659);
+
+// ROW 2'S CLICK FACE (row_2_button_click.png): the pressed button's interior,
+// sampled #2f5368 and EXACTLY 30% kRedesignAccent over kRedesignRowGround —
+//   r: 0.3*61  + 0.7*41 = 47   (0x2f)
+//   g: 0.3*174 + 0.7*44 = 83   (0x53)
+//   b: 0.3*233 + 0.7*48 = 103.5 -> 104 (0x68)
+// so it is a derived value that happens to have a hex spelling, not a fifth
+// independent sample. Spelled as the literal anyway (the hard-coded rule), with
+// the derivation above as the record of WHY this value and not another. The 1px
+// accent outline and the label over it are unchanged from the hover face.
+inline constexpr GuiColor kRedesignClick      = hex(0x2F5368);
+
+// ROW 2'S DISABLED FACE (row_2_disabled.png): every ink a disabled button
+// paints — the icon paths in their own colors AND the label — RETAINS this
+// fraction of itself over kRedesignRowGround, through the one mix_color owner
+// above. ONE shared factor for both halves. MEASURED off the crop's label, whose
+// full-coverage pixels read #6d6f72 = (109, 111, 114) over the (41, 44, 48)
+// ground with a (252, 252, 252) label, solving per channel to
+//   (109-41)/(252-41) = 0.3223,  (111-44)/(252-44) = 0.3221,
+//   (114-48)/(252-48) = 0.3235
+// — one factor within a quarter-percent on all three, so 0.322 reproduces
+// #6d6f72 bit-for-bit. It is the ARCHITECT-TUNABLE knob for how dead a disabled
+// button looks; the crop's dimmed record-red confirms the same factor carries
+// hue (a mix toward the ground desaturates without rotating). Named a MIX
+// rather than an alpha on purpose: the palette is fully opaque and nothing here
+// composites — the factor resolves to a solid color before it reaches cairo.
+inline constexpr double kRedesignDisabledMix = 0.322;
+
+// -- Row 3, the TAB ROW (HARD-CODED, kdenlive/Breeze-sampled) ---------------
+//
+// Sampled off tmp/screenshots/kdenlive/redesign/row_3_tab_{rest,hover,selected}
+// .png (30 px tall), row_3_tab_pcmanfmqt.png (the padding/geometry reference)
+// and row_3_bottom_border.png. Same carve-out as the four above: constexpr, not
+// config keys, the crop wins over any Breeze-derived scheme.
+//
+// kRedesignTabGround is BOTH the row's ground outside the tabs AND the selected
+// tab's interior — one value by the architect's ruling ("the background of the
+// row outside the tabs = the selected tab's background minus the blue trim"),
+// which is what makes the selected tab read as seamless with the row. NOTE that
+// it COINCIDES with kBackground #202326 (both sample Breeze's Window color);
+// it is its OWN constant by the hard-coded rule, never a reference to the
+// palette, and a retune of one must not follow the other.
+//
+// kRedesignTabLine is a SECOND structural line grey, distinct from row 2's
+// kRedesignLine #535659: the tab frame and the row's bottom border measure
+// #4c4e51 in every crop. Two constants, both sampled, neither derived from the
+// other.
+inline constexpr GuiColor kRedesignTabGround    = hex(0x202326);
+inline constexpr GuiColor kRedesignTabRest      = hex(0x1B1D20);
+inline constexpr GuiColor kRedesignTabHover     = hex(0x263F4D);
+inline constexpr GuiColor kRedesignTabHoverEdge = hex(0x496170);
+inline constexpr GuiColor kRedesignTabLine      = hex(0x4C4E51);
 
 // -- GUI font size ---------------------------------------------------------
 //
@@ -602,6 +673,33 @@ inline int toolbar_row_content_h_px() {
 }
 inline int toolbar_row_h_px() {
     return toolbar_row_content_h_px() + toolbar_border_h_px();
+}
+
+// Authored pixel geometry of the TAB ROW — the top strip's lane 2, under the
+// toolbar (row 3 of the redesign: the "Tab A" / "Tab B" Breeze tabs). Measured
+// at 100% gui_scale off row_3_tab_{rest,hover,selected}.png (30 tall) and
+// row_3_bottom_border.png.
+//
+// THE SAME CSS BOX MODEL AS THE TOOLBAR: the architect's stated 30 is CONTENT
+// and the 1px bottom border sits OUTSIDE it, so the LANE the strip stack
+// allocates is their sum (31 at 100%). tab_row_content_h_px() is the ground and
+// tab band — the height every tab box fills, flush, top to bottom;
+// tab_row_h_px() is the lane. Rides gui_scale_factor() like rows 1 and 2, not
+// the monospace font's axis.
+inline constexpr int kTabRowHeightPx = 30;
+inline constexpr int kTabRowBorderPx = 1;
+inline int tab_row_border_h_px() {
+    const int h = static_cast<int>(std::nearbyint(
+        static_cast<double>(kTabRowBorderPx) * gui_scale_factor()));
+    return h < 1 ? 1 : h;
+}
+inline int tab_row_content_h_px() {
+    const int h = static_cast<int>(std::nearbyint(
+        static_cast<double>(kTabRowHeightPx) * gui_scale_factor()));
+    return h < 5 ? 5 : h;
+}
+inline int tab_row_h_px() {
+    return tab_row_content_h_px() + tab_row_border_h_px();
 }
 
 // Height H (px) of the code-generated tip-down triangle, SHARED by the playhead
@@ -1271,7 +1369,7 @@ void render_trim_stems(cairo_t* cr,
 // Draws the begin/end trim-boundary chips in the TRIM CHIP LANE, plus the
 // strip-crossing portion of their stems and the inter-chip bridge band. The
 // lane band is the `chip_row` PARAMETER — the caller passes
-// top_upper_row_area(app) (top-strip lane 2), the same accessor
+// top_upper_row_area(app) (top-strip lane 3), the same accessor
 // hit_test_trim_chip's y-gate and route_trim_chip_press' bridge y-gate read, so
 // paint and hit take the band from ONE owner and cannot drift; nothing in here
 // re-derives the lane's y from the row heights above it. Only the band's y/h
