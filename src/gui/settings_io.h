@@ -65,6 +65,7 @@ struct NonEngineSettingsSnapshot {
     char               active_tab_view;
     float              playback_speed;
     double             font_size;
+    int                gui_scale;
     const std::string& audio_player;
     // The STORED render-environment hashes (AppState's four *_hash fields, or
     // the dispatch-moment copies in AuthoringSnapshot) — never the current

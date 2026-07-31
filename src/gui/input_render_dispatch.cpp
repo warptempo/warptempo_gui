@@ -59,6 +59,7 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     s.playback_speed      = app.playback_speed;
     s.follow              = app.follow_mode;
     s.font_size           = app.font_size;
+    s.gui_scale           = app.gui_scale;
     s.audio_player        = app.audio_player;
     // Stored render-environment hashes, dispatch-moment values (never the
     // current environment's — the entry's .settings mirrors the session's

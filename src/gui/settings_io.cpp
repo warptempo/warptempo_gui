@@ -29,6 +29,7 @@ enum class SettingKind {
     PlaybackSpeedFloat,
     FollowFlag,
     FontSizePt,
+    GuiScalePercent,
     AudioPlayerPath,
     TrimBegin_A,
     TrimEnd_A,
@@ -84,6 +85,12 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     // playback_speed, the file's value is applied once at launch when the
     // source loads.
     { "font_size",                   SettingKind::FontSizePt,           EngineField::Title,                   "11"       },
+    // GUI-kind key, NOT an engine key: the GUI's rendering scale as an integer
+    // percent. 100 is the design baseline (1920x1080, the supported
+    // resolution); 200 is the 4K case. Valid range 100..400. DORMANT — no
+    // renderer reads it yet: the value loads, rests, and writes back, and the
+    // row-by-row GUI redesign adds its consumers one row at a time.
+    { "gui_scale",                   SettingKind::GuiScalePercent,      EngineField::Title,                   "100"      },
     // GUI-kind launch preference, NOT an engine key: an external audio player
     // for the `l` render-listen command. Default "audacious" so the first-open
     // template writes `audio_player=audacious` (read back at load) and a fresh
@@ -148,6 +155,12 @@ std::optional<std::string> format_nonengine_value(
             // %g so the default round-trips as `11` (matching the template)
             // and a fractional value as e.g. `10.5`.
             std::snprintf(buf, sizeof(buf), "%g", gui.font_size);
+            return std::string(buf);
+        case SettingKind::GuiScalePercent:
+            // Plain digits, matching the canonical integer spelling
+            // validate_gui_setting accepts (parse_authored_frame): the default
+            // round-trips as `100`.
+            std::snprintf(buf, sizeof(buf), "%d", gui.gui_scale);
             return std::string(buf);
         case SettingKind::AudioPlayerPath:
             return gui.audio_player;
@@ -400,7 +413,7 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     const NonEngineSettingsSnapshot gui{
         eff_a, eff_b, app.follow_mode,
         app.active_audio_view, app.active_markers_view, app.active_tab_view,
-        app.playback_speed, app.font_size, app.audio_player,
+        app.playback_speed, app.font_size, app.gui_scale, app.audio_player,
         app.libm_hash, app.libmvec_hash,
         app.fftw3_hash, app.fftw3_threads_hash};
     return format_nonengine_value(desc->kind, gui);

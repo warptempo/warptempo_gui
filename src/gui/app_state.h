@@ -1055,6 +1055,17 @@ struct AppState {
     // each of those application points.
     double  font_size               = 11.0;
 
+    // GUI rendering scale in PERCENT (the gui_scale setting; 100..400, default
+    // 100). 100 is the design baseline — 1920x1080, the one supported
+    // resolution — and 200 is the 4K case. A display preference in the same
+    // class as font_size: not engine input, not authoring state, persisted on
+    // Ctrl+S, applied at file load, and set through the settings editor
+    // (`:gui_scale=`, no hotkey). DORMANT: nothing reads it yet, so unlike
+    // font_size there is no renderer push and no apply routine — the commit is
+    // the store write alone. The row-by-row GUI redesign adds consumers one row
+    // at a time.
+    int     gui_scale               = 100;
+
     // GUI-kind launch preference: the external audio player the `l`
     // ("Listen to renders") command spawns with the rendered wavs. The
     // "audacious" default lives in exactly two places: this member initializer
@@ -1423,7 +1434,8 @@ struct AppState {
     // in dirty via settings_dirty. View-state keys — the GUI-kind keys
     // (viewport/zoom/playhead per tab, follow, active_audio_view,
     // active_markers_view, active_tab_view, playback_speed, trim, read_only,
-    // font_size, audio_player, and the four *_hash env-attestation keys) — do
+    // font_size, gui_scale, audio_player, and the four *_hash env-attestation
+    // keys) — do
     // NOT participate: they are silently persisted on Ctrl+S and not tracked as
     // dirty, so quitting without saving simply drops them. Trim is
     // gesture-owned, excluded from undo/redo history, and render-affecting but

@@ -115,6 +115,19 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         input->apply_font_size(gv.d);
         applied(); return true;
     }
+    if (key == "gui_scale") {
+        // A history-less direct assign, like the *_hash quartet below: unlike
+        // font_size there is no gesture and no apply routine to call, because
+        // nothing consumes gui_scale yet — the store write IS the commit, and
+        // the value persists on the next ordinary Ctrl+S, marking nothing
+        // dirty. The [100, 400] integer grammar was already enforced by
+        // validate_gui_setting above; applied() prints the one stderr line and
+        // deactivates.
+        const int v = static_cast<int>(gv.i64);
+        if (v == app.gui_scale) { unchanged(); return true; }
+        app.gui_scale = v;
+        applied(); return true;
+    }
     if (key == "active_audio_view") {
         if (gv.c == app.active_audio_view) { unchanged(); return true; }
         // The bare-`t` route (no editor-state guard); it flips S<->T.
@@ -528,7 +541,8 @@ void GuiSettingsEditor::autocomplete_value() {
     const std::string key = trim_ws(pending.substr(0, eq));
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // playback_speed, follow, font_size, audio_player, per-tab trim / read_only)
+    // playback_speed, follow, font_size, gui_scale, audio_player, per-tab
+    // trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S would write, so recall and save never diverge.
     // A trim bound recalls as its actual frame (`tab_a_trim_begin=0`).

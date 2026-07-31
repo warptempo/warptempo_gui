@@ -128,6 +128,13 @@ struct SettingsFile {
     char   active_tab_view         = 'A';   // A | B
     float  playback_speed          = 0.7f;  // preset vocabulary only
     double font_size               = 11.0;  // points, [6, 72]
+    // GUI rendering scale as an integer PERCENT in [100, 400]; 100 is the
+    // design baseline (1920x1080), 200 the 4K case. DORMANT: no renderer reads
+    // this yet — the value is loaded, held, and written back, and the row-by-row
+    // GUI redesign adds its consumers one row at a time
+    // (architect approval 2026-07-30 — the settings/parser grant this dormant
+    // key landed under).
+    int    gui_scale               = 100;   // percent, [100, 400]
     // GUI-kind launcher for the `l` render-listen command: an external player
     // name or path. A BLANK value (`audio_player=`) is the deliberate
     // no-player opt-out — the only spelling of it. The key is required, so the
@@ -194,7 +201,7 @@ std::optional<std::expected<void, std::string>> try_engine_key(
 struct GuiSettingValue {
     bool        b    = false;   // follow, tab_X_read_only
     char        c    = 0;       // active_audio_view / _markers_view / _tab_view (S/T, W/P, A/B)
-    int64_t     i64  = 0;       // tab_X_viewport_start / _playhead_cursor / _trim_*
+    int64_t     i64  = 0;       // tab_X_viewport_start / _playhead_cursor / _trim_*, gui_scale
     float       f    = 0.0f;    // playback_speed
     double      d    = 0.0;     // font_size, tab_X_zoom
     std::string text;           // audio_player, the four *_hash keys

@@ -45,6 +45,7 @@ struct AuthoringSnapshot {
     float       playback_speed      = 1.0f;
     bool        follow              = true;
     double      font_size           = 11.0;
+    int         gui_scale           = 100;   // percent, [100, 400]
     std::string audio_player;                // empty = unset
     // Dispatch-moment STORED render-environment hashes (AppState's four
     // *_hash fields), carried into the entry's .settings like every

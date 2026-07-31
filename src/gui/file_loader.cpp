@@ -61,6 +61,11 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     // behavior class as playback_speed (see the font_size descriptor in
     // settings_io.cpp).
     app.font_size           = sf.font_size;
+    // GUI rendering scale percent, applied verbatim. Unlike font_size there is
+    // no side-effect push after this routine: nothing consumes gui_scale yet
+    // (the row-by-row GUI redesign adds its consumers one row at a time), so
+    // the store write is the whole of the apply.
+    app.gui_scale           = sf.gui_scale;
     // GUI launch preference for the `l` render-listen command, applied
     // verbatim: a blank value is the deliberate no-player opt-out. Adopt shares
     // this routine, so an adopted render entry's player is 1:1 with its file.
@@ -189,6 +194,11 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // first-open path. Applied to the renderer after the parse, beside
     // set_speed.
     app.font_size      = 11.0;
+    // Same mirror for gui_scale, and for the same reason: the schema requires
+    // the key, so the parse below always assigns it; this initializer only
+    // covers the no-.settings / first-open path. Nothing consumes it, so it is
+    // pushed nowhere afterwards.
+    app.gui_scale      = 100;
 
     // Companion files: discover paths, create <basename>.warpmarkers,
     // <basename>.phaseresetmarkers, and <basename>.settings if missing.
@@ -397,7 +407,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
         apply(sf.tab_b, app.tab_b);
         // Engine block plus the scalar session prefs (follow,
         // active_audio_view, active_markers_view, active_tab_view,
-        // playback_speed, font_size, audio_player, the four stored
+        // playback_speed, font_size, gui_scale, audio_player, the four stored
         // render-environment hashes), VALUES ONLY. The
         // side effects that consume these (set_speed, set_gui_font_size_pt,
         // on_resize) stay below where they always ran. The render-entry adopt

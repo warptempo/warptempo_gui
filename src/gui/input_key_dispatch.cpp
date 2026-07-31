@@ -915,7 +915,8 @@ bool GuiInputHandler::adopt_render_entry(
     // Engine block plus the scalar session prefs, VALUES ONLY, through the one
     // routine a source load also calls — so adopt applies engine_settings,
     // follow, active_audio_view, active_markers_view, active_tab_view,
-    // playback_speed, font_size, and audio_player 1:1 with load. There is NO
+    // playback_speed, font_size, gui_scale, and audio_player 1:1 with load.
+    // There is NO
     // W/P carve-out: active_markers_view is now applied from the file like
     // every other key. The one selection was cleared above, so landing on the
     // file's marker mode carries an empty selection, exactly as a fresh load's

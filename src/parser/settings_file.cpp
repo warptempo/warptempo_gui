@@ -28,7 +28,7 @@ using warptempo_parse::prefix_line_error;
 constexpr const char* kCanonicalSettingsKeys[] = {
     "title", "scale", "bpm", "notes", "url", "cover",
     "active_audio_view", "active_markers_view", "active_tab_view",
-    "playback_speed", "follow", "font_size", "audio_player",
+    "playback_speed", "follow", "font_size", "gui_scale", "audio_player",
     "tab_a_trim_begin", "tab_a_trim_end", "tab_a_read_only",
     "tab_a_viewport_start", "tab_a_zoom", "tab_a_playhead_cursor",
     "tab_b_trim_begin", "tab_b_trim_end", "tab_b_read_only",
@@ -232,6 +232,19 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         out.d = v;
         return R(out);
     }
+    if (key == "gui_scale") {
+        // GUI rendering scale, an integer PERCENT in [100, 400]. One canonical
+        // spelling: plain digits through parse_authored_frame (no sign, point,
+        // or leading zeros — exactly the writer's %d output), then the range
+        // check. 100 is the design baseline; 200 is the 4K case.
+        // (architect approval 2026-07-30 — the settings/parser grant this key
+        // landed under.)
+        int64_t v = 0;
+        if (!parse_authored_frame(value, v) || v < 100 || v > 400)
+            return err("must be an integer in [100, 400] in canonical spelling");
+        out.i64 = v;
+        return R(out);
+    }
     if (key == "libm_hash" || key == "libmvec_hash" ||
         key == "fftw3_hash" || key == "fftw3_threads_hash") {
         // Render-environment attestation values: exactly 16 lowercase hex
@@ -340,6 +353,10 @@ std::expected<SettingsFile, std::string> read_settings_file(
             out.playback_speed = gv.f;
         } else if (key == "font_size") {
             out.font_size = gv.d;
+        } else if (key == "gui_scale") {
+            // Range-checked into [100, 400] by validate_gui_setting above, so
+            // the narrowing to int is exact (architect approval 2026-07-30).
+            out.gui_scale = static_cast<int>(gv.i64);
         } else if (key == "audio_player") {
             out.audio_player = gv.text;
         } else if (key == "libm_hash") {

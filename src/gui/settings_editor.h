@@ -24,7 +24,8 @@ struct GuiInputHandler;
 // 1. audio_player (a launcher path with no gesture): set directly.
 // 2. GUI-kind keys (viewport / zoom / playhead / follow / active_audio_view /
 //    active_markers_view / active_tab_view / playback_speed / per-tab trim /
-//    per-tab read_only / font_size / the four *_hash keys): commit_gui_setting
+//    per-tab read_only / font_size / gui_scale / the four *_hash keys):
+//    commit_gui_setting
 //    parses strictly (red-flash on any malformed or out-of-vocabulary value,
 //    mirroring the load schema) then applies through the key's own gesture
 //    chokepoint. These are launch/view state: no undo entry, no dirty (the
