@@ -45,6 +45,35 @@ namespace {
 // detection) is now the shared reader declared in app_state.h — one owner, no
 // per-TU clock copy.
 
+// THE PRESS CLAIM'S HALF OF THE BUTTON ROSTER (the roster itself is
+// RedesignButton, app_state.h): the KEYBOARD CHORD each row 2 button fires. The
+// painter's label/icon table (paint_handler.cpp) is the other half; both key off
+// the same ids. Row 1's Quit is absent on purpose — its route is a two-call
+// sequence (finalize + request_close), not a chord dispatch, and it is spelled
+// at its own claim.
+struct ToolbarChord {
+    RedesignButton id;
+    GuiKey         key;
+    bool           ctrl;
+    bool           shift;
+    bool           alt;
+};
+constexpr ToolbarChord kToolbarChords[] = {
+    {RedesignButton::Save,   GuiKeys::S, true, false, false},  // Ctrl+S
+    {RedesignButton::Undo,   GuiKeys::Z, true, false, false},  // Ctrl+Z
+    {RedesignButton::Redo,   GuiKeys::Z, true, true,  false},  // Ctrl+Shift+Z
+    {RedesignButton::Render, GuiKeys::R, true, false, true},   // Ctrl+Alt+R
+};
+
+// Is (x, y) inside the PAINTED rect of a redesigned button? The rect is the
+// painter's stash and nothing here re-shapes or re-measures, so the clickable
+// region is exactly the drawn one. A zero rect (before that row's first paint)
+// contains no point, which is the correct cold answer.
+bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
+    const GuiRect& r = app.redesign_buttons[redesign_button_index(id)].rect;
+    return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+}
+
 // Active-domain playhead frame at click column `col`. SOURCE view: the exact
 // source grid (source_grid_position_at_column via painter q), matching marker
 // commits so a drop-at-playhead lands where a drag/nudge would. TARGET view:
@@ -535,8 +564,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // A double-click is two CONSECUTIVE clicks: snapshot the pending candidate
     // and clear the shared field here, so ANY intervening press invalidates it.
     // The consume checks below read this snapshot; each surface then re-seeds
-    // its own fresh candidate (ZoomRow / EditorText at a motionless release,
-    // Marker at the press). One closed instrumentation point — the clear covers
+    // its own fresh candidate (TrimBar / EditorText at a motionless release,
+    // Marker / EmptyLane at the press). One closed instrumentation point — the clear covers
     // every non-consuming press (a strip/region/chip arm, a modal swallow)
     // without a clear scattered on each path.
     const DoubleClickCandidate dc_at_press = app.double_click;
@@ -578,7 +607,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // editor's text selects the RUN of the clicked character class
                 // (word / punctuation / whitespace) under the click — select_
                 // word_at's own classifier, not just a word — arming no drag.
-                // The surface tag keeps it from consuming a marker / zoom-row
+                // The surface tag keeps it from consuming a marker / trim-bar
                 // candidate.
                 const DoubleClickCandidate& dc = dc_at_press;
                 if (dc.surface == DoubleClickSurface::EditorText &&
@@ -622,36 +651,66 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // below.
         return;
     }
-    // THE MENU ROW (top lane 0), claimed ABOVE the loading/empty guard below so
-    // the quit button stays live while a file loads and on a blank state — it is
-    // the one surface that has nothing to do with the loaded audio. It sits
-    // BELOW the modal gates on purpose: a press while a prompt or a bottom-strip
-    // editor is up is swallowed there, exactly as it is for every other pointer
-    // target (a modal owns the pointer; the quit button is no exception, and
-    // Ctrl+Q reaches the same route from the keyboard anyway).
+    // THE TWO REDESIGNED ROWS (top lanes 0 and 1), claimed ABOVE the
+    // loading/empty guard below so their buttons stay live while a file loads
+    // and on a blank state — they are the surfaces that have nothing to do with
+    // the loaded audio. They sit BELOW the modal gates on purpose: a press while
+    // a prompt or a bottom-strip editor is up is swallowed there, exactly as it
+    // is for every other pointer target (a modal owns the pointer; these buttons
+    // are no exception, and every one of their chords reaches the same route
+    // from the keyboard anyway).
     //
-    // The band claim is the ZOOM ROW's structural precedent verbatim: the exact
-    // half-open row band, a MODIFIED press is a strict consumed no-op, and any
-    // press in the band that is not on the button is a consumed nothing. The
-    // BUTTON's rect is the painter's stash (app.menu_quit_rect, published by
-    // paint_menu_row) — never re-shaped here, so the clickable rect is the
-    // painted one. The action FIRES ON PRESS: nothing on this row drags, so
-    // there is no arm, no threshold and no release body.
-    //
-    // The action is Ctrl+Q's exact route — end any live pointer gesture, then
-    // request the close (ENDING IS COMMITTING; the prompt handles the dirty
-    // case). Nothing here reads keyboard state, so the bare-`e` mouse key
-    // reaches it as an ordinary left press through the platform translation.
+    // ONE BAND-CLAIM SHAPE FOR BOTH ROWS: the exact half-open row band, a
+    // MODIFIED press is a strict consumed no-op, and any press in the band that
+    // is not on a button is a consumed nothing. A BUTTON's rect is the painter's
+    // stash (app.redesign_buttons, published by paint_menu_row /
+    // paint_toolbar_row) — never re-shaped here, so the clickable rect is the
+    // painted one. The action FIRES ON PRESS: nothing on these rows drags, so
+    // there is no arm, no threshold and no release body, and no double-click
+    // surface either. Nothing here reads keyboard state, so the bare-`e` mouse
+    // key reaches them as an ordinary left press through the platform
+    // translation.
     {
         const GuiRect menu_row = top_menu_row_area(app);
         if (y >= menu_row.y && y < menu_row.y + menu_row.h &&
             x >= menu_row.x && x < menu_row.x + menu_row.w) {
             if (mods.ctrl || mods.shift || mods.alt) return;  // strict no-op
-            const GuiRect& b = app.menu_quit_rect;
+            // Quit's action is Ctrl+Q's exact route — end any live pointer
+            // gesture, then request the close (ENDING IS COMMITTING; the prompt
+            // handles the dirty case).
             if (button == GuiMouseButton::Left &&
-                x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) {
+                redesign_button_hit(app, RedesignButton::Quit, x, y)) {
                 finalize_active_drags();
                 prompt.request_close();
+            }
+            return;
+        }
+    }
+    {
+        const GuiRect toolbar = top_toolbar_row_area(app);
+        if (y >= toolbar.y && y < toolbar.y + toolbar.h &&
+            x >= toolbar.x && x < toolbar.x + toolbar.w) {
+            if (mods.ctrl || mods.shift || mods.alt) return;  // strict no-op
+            if (button == GuiMouseButton::Left) {
+                for (const ToolbarChord& tc : kToolbarChords) {
+                    if (!redesign_button_hit(app, tc.id, x, y)) continue;
+                    // THE BUTTON IS ITS CHORD, dispatched through on_key: the
+                    // action is not merely the same FUNCTION the key calls, it is
+                    // the same ROUTE — every gate the chord passes on the
+                    // keyboard (the loading/blank return, the keyboard-modal
+                    // editor gate, the read-only allowlist, the arm's own
+                    // refusals) applies here, in the same order, with nothing
+                    // restated and nothing that can drift. It is the exact
+                    // inverse of the platform's bare-`e`-as-left-button
+                    // translation: one vocabulary expressed on the other's
+                    // surface, at a boundary.
+                    GuiInputState chord{};
+                    chord.ctrl  = tc.ctrl;
+                    chord.shift = tc.shift;
+                    chord.alt   = tc.alt;
+                    on_key(tc.key, chord);
+                    break;
+                }
             }
             return;
         }
@@ -701,7 +760,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // (pending dropped; Enter is the only commit route, so closing is cheap
         // and non-destructive) — and then FALLS THROUGH so the press acts
         // normally (arm a strip drag, select a marker, arm a marker drag, land,
-        // place the playhead, ...). Placed ahead of the zoom-row claim so the
+        // place the playhead, ...). Placed ahead of every claim below so the
         // close really is unconditional. Consequence: a double-click on the
         // open editor's own marker is close-then-reopen — the first click
         // closes + selects + seeds a Marker candidate (+ arms the pending drag
@@ -722,79 +781,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // (any_pointer_gesture_active) and clear it again; here no gesture is
             // active yet, so this is a genuine resolve.
             viewport.recompute_hover_at_cursor();
-        }
-
-        // Live top zoom-strip row (Ableton-style navigation), claimed ahead of
-        // the top-strip playback-stop and the click routing below. It claims
-        // ONLY the plain unmodified left press inside its exact half-open row
-        // band; a modified press there is a strict no-op (nothing else lives on
-        // the row). The claim is immediate — no motion threshold — and a
-        // motionless press-release commits nothing. Navigation-class like the
-        // wheel pan: allowed in read-only, never touches the playhead or
-        // selection, does not stop playback, and does not override follow. It is
-        // DUAL-AXIS (vertical motion zooms, horizontal motion pans, freely
-        // composed — see apply_strip_drag_at). All modal gates (prompt,
-        // bottom-strip editors, the loading/empty guard) sit above this point, so
-        // a modal surface blocks the claim exactly as it blocks every other
-        // pointer target.
-        {
-            const GuiRect zoom_row = top_zoom_row_area(app);
-            const bool in_zoom_row =
-                x >= zoom_row.x && x < zoom_row.x + zoom_row.w &&
-                y >= zoom_row.y && y < zoom_row.y + zoom_row.h;
-            if (in_zoom_row) {
-                if (ctrl || shift || alt) return;  // modified: strict no-op
-                // Double-click detection, BEFORE arming the drag: a candidate
-                // seeded by the previous motionless zoom-row release, within
-                // kDoubleClickMs and kDoubleClickSlackPx of the recorded x,
-                // consumes this press as a one-shot zoom command — no drag armed,
-                // no pointer capture, playhead and selection untouched, allowed
-                // in read-only (all modal gates sit above this claim). The
-                // surface tag (ZoomRow) means a marker / editor candidate can
-                // never consume here. The double-click DIVERGES from the bare
-                // `0` key:
-                // it runs run_zoom_double_click_command (zoom to the region /
-                // trim / whole-song span), not run_zoom_toggle_command. The
-                // candidate's first click briefly captured and hid the cursor at
-                // its press and restored it at the motionless release; this
-                // second press never captures.
-                const DoubleClickCandidate& dc = dc_at_press;
-                if (dc.surface == DoubleClickSurface::ZoomRow &&
-                    monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
-                    std::abs(x - dc.press_x) <= kDoubleClickSlackPx) {
-                    run_zoom_double_click_command();
-                    return;
-                }
-                const double spp = current_samples_per_pixel(app, audio);
-                app.strip_drag = StripDragState{};
-                app.strip_drag.active    = true;
-                // The press position: the drag-threshold reference, and the seed
-                // for the incremental per-event deltas (last_x/last_y). Not a
-                // baseline — every event reads the live level and viewport.
-                app.strip_drag.press_x   = x;
-                app.strip_drag.press_y   = y;
-                app.strip_drag.last_x    = x;
-                app.strip_drag.last_y    = y;
-                // The song position painted under the press at press time — the
-                // anchor the zoom pivots around. Rebindable: a pan that drives
-                // its column offscreen re-pins it to the nearest visible pixel.
-                app.strip_drag.anchor_sample =
-                    static_cast<double>(app.viewport_start_sample) +
-                    static_cast<double>(x) * spp;
-                // Zoom-row origin: a motionless release seeds the ZoomRow
-                // double-click candidate (the ctrl-exact waveform arm sets this
-                // false so its release seeds nothing).
-                app.strip_drag.double_click_seed = true;
-                // Ableton-style pointer capture: hide and lock the cursor at
-                // the press so motion feeds the gesture as unbounded virtual
-                // coordinates (infinite pan/zoom travel). Self-guarding no-op
-                // on a degraded compositor. The capture is shared by three
-                // gestures (this zoom strip, the ctrl-exact waveform strip drag,
-                // and the alt-exact pan); every exit path of each calls the
-                // matching end hook exactly once (it is idempotent).
-                begin_strip_pointer_capture();
-                return;
-            }
         }
 
         // Unified marker hit, computed ONLY on the path that consumes it. The
@@ -906,15 +892,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
         // Ctrl-exact left press splits by surface. On a top-strip MARKER it is
         // the individual membership toggle + land on the resulting focus (the
-        // marker claim below). On the WAVEFORM it arms the dual-axis strip drag — the SAME
-        // gesture the zoom row arms (StripDragState / apply_strip_drag_at),
-        // triggered here for reach: it gets the cursor capture ("swallow"), the
-        // anchor stem, the edge clamp, and dual-axis zoom+pan for free. That arm
-        // is byte-identical to the zoom-row arm (anchor_sample from the click
-        // song position, press/last seeds, begin_strip_pointer_capture),
-        // diverging at ONE point — double_click_seed=false, so a motionless
-        // ctrl+waveform press-release seeds no ZoomRow double-click candidate
-        // (that affordance stays zoom-row-only). The waveform strip-drag half is
+        // marker claim below). On the WAVEFORM it arms the dual-axis strip drag
+        // (StripDragState / apply_strip_drag_at) — THE GESTURE'S ONE ENTRY since
+        // the dedicated zoom lane was deleted (architect 2026-07-31), and the
+        // reason that deletion cost no capability: this press has the gesture's
+        // full reach — the cursor capture ("swallow"), the anchor stem, the edge
+        // clamp, and dual-axis zoom+pan. The waveform strip-drag is
         // navigation-class: allowed in read-only, never touches the playhead or
         // selection — and a MOTIONLESS ctrl+waveform press-release commits
         // nothing at all (the ctrl+waveform selection clear is RETIRED,
@@ -940,7 +923,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // write died with the SPAN FORM, architect
             // 2026-07-30). Read-only allowed
             // (selection + playhead are navigation). The ctrl-exact WAVEFORM
-            // press keeps the zoom-strip drag below (different surface, no
+            // press keeps the strip drag below (different surface, no
             // collision); a markerless top-strip ctrl press claims only the
             // chip row (BEGIN bound set, next block) and is a strict no-op on
             // every other lane — no-op in the playback sense too, since only a
@@ -981,9 +964,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // RETIRED, architect 2026-07-23: ctrl-click in Ableton is just
             // click, and ctrl stays the zoom modifier here; the PLAIN empty
             // flag/triangle-lane press below is the surviving lane gesture —
-            // the waveform's own parity press, not a bare clear). The zoom row
-            // (lane 1) was claimed above and never reaches
-            // here.
+            // the waveform's own parity press, not a bare clear). The two
+            // redesigned rows (lanes 0 and 1) were claimed far above and never
+            // reach here.
             if (inside_top) {
                 const GuiRect chip_row = top_upper_row_area(app);
                 if (y >= chip_row.y && y < chip_row.y + chip_row.h) {
@@ -1010,8 +993,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 app.strip_drag.anchor_sample =
                     static_cast<double>(app.viewport_start_sample) +
                     static_cast<double>(x) * spp;
-                // Waveform origin: never seeds a zoom-row double-click candidate.
-                app.strip_drag.double_click_seed = false;
                 begin_strip_pointer_capture();
             }
             return;
@@ -1081,8 +1062,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // claimed BEFORE the marker single-select. The chip row, the marker
             // text lane, and the flag/triangle lanes are disjoint y-bands, so
             // this contends with nothing: a marker-part press falls to the marker
-            // handling below. The PLAIN click either arms a chip/bridge drag or,
-            // on an unclaimed spot, is a CONSUMED NOTHING; the bound-set clicks
+            // handling below. The PLAIN click consumes the span-framing
+            // double-click, else arms a chip/bridge drag, else — on an unclaimed
+            // spot — is a CONSUMED NOTHING; the bound-set clicks
             // are the ctrl (BEGIN) / ctrl+shift (END)
             // claims above. A SHIFT-exact chip-row press claims nothing —
             // trim is transparent to it, and the shift fall-through below is
@@ -1113,6 +1095,37 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // nothing. The drag keeps both — it takes the setter's deselect
                 // and the trim-mutation stop at its FIRST ACCEPTED bound change
                 // (input_trim.cpp), which is where a trim commit actually happens.
+                //
+                // THE SPAN-FRAMING DOUBLE-CLICK, rehomed onto this band from the
+                // deleted zoom lane (architect 2026-07-31): the whole band —
+                // chips, bridge and empty space alike — carries it, since it
+                // frames rather than grabs. The CONSUME runs FIRST, ahead of
+                // every arm: a candidate from the previous motionless press-
+                // release on this band, inside kDoubleClickMs and the slack on
+                // both axes, spends this press on the framing command and returns
+                // — no drag armed, no bound touched, playhead and selection
+                // untouched, allowed in read-only because it is pure navigation
+                // (all modal gates sit far above). The surface tag is what keeps
+                // a marker or editor candidate from consuming here. It DIVERGES
+                // from the bare `0` key, which toggles the working zoom;
+                // this frames the region, else a proper trim sub-window, else the
+                // whole song.
+                {
+                    const DoubleClickCandidate& dc = dc_at_press;
+                    if (dc.surface == DoubleClickSurface::TrimBar &&
+                        monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
+                        std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
+                        std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
+                        run_span_framing_command();
+                        return;
+                    }
+                }
+                // SEEDING is a RELEASE act (only the release knows the press
+                // stayed still), so the press records its point and the release
+                // decides — see ChipRowPressSeed. Recorded ABOVE the read-only
+                // return: a locked tab arms no drag but still frames.
+                app.chip_row_press = ChipRowPressSeed{
+                    .active = true, .press_x = x, .press_y = y};
                 if (active_view_state(app).read_only) return;
                 route_trim_chip_press(x, y);
                 return;
@@ -1222,7 +1235,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // Double-click: a Marker candidate for the SAME index within
                     // the window opens the flag editor, exactly like Enter on the
                     // focused marker (the click above already single-selected it).
-                    // The surface + target tag prevents any zoom-row / editor
+                    // The surface + target tag prevents any trim-bar / editor
                     // candidate from consuming here, and a candidate seeded on
                     // one part consumes on the other — one surface. Read-only,
                     // P view (phase resets have no per-flag editor), and the
@@ -1697,27 +1710,40 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     if (text_editor::is_active(app.settings_editor)) return;
     if (text_editor::is_active(app.commit_editor)) return;
     if (button != GuiMouseButton::Left) return;
+
+    // THE TRIM-BAR FRAMING DOUBLE-CLICK'S SEED, resolved for every left release
+    // because only the release can tell a click from a drag. The press recorded
+    // the chip-row point (ChipRowPressSeed); this seeds the candidate when the
+    // pointer never left the slack AND no trim drag went live — the two spellings
+    // of "it stayed a click", equal by construction (kDoubleClickSlackPx ==
+    // kDragMovedThresholdPx). A moved chip/bridge drag therefore seeds nothing
+    // and, its own press having cleared any candidate at the top-of-frame, leaves
+    // none behind. The record is consumed either way.
+    {
+        const ChipRowPressSeed seed = app.chip_row_press;
+        app.chip_row_press = ChipRowPressSeed{};
+        if (seed.active && !app.trim_drag.active &&
+            std::abs(x - seed.press_x) <= kDoubleClickSlackPx &&
+            std::abs(y - seed.press_y) <= kDoubleClickSlackPx) {
+            app.double_click = DoubleClickCandidate{
+                .surface = DoubleClickSurface::TrimBar,
+                .time_ms = monotonic_ms(), .press_x = x, .press_y = y,
+                .target = -1};
+        }
+    }
+
     if (app.strip_drag.active) {
         // Terminating event: if the drag moved, run the final apply with
         // final=true and the one synchronous rebuild (resync + kick_waveform_sync,
         // inside apply_strip_drag_zoom's final path) so the rest state is exact. A
-        // motionless press-release finalizes nothing.
-        // Double-click seeding: a MOTIONLESS zoom-row release records a
-        // candidate (this release x equals the press x); a release that MOVED
-        // records nothing and clears any candidate, so a drag can never seed the
-        // second click of a double-click. Only the ZOOM-ROW arm seeds
-        // (double_click_seed): a motionless ctrl+waveform press-release commits
-        // NOTHING — no seed, no selection change (the ctrl-waveform selection
-        // clear is RETIRED, architect 2026-07-23: the ctrl-waveform press is
-        // purely the zoom-strip drag).
+        // motionless press-release finalizes nothing — and commits nothing
+        // either: the ctrl-waveform selection clear is RETIRED (architect
+        // 2026-07-23), the press being purely the strip drag. A drag that MOVED
+        // additionally clears any pending double-click candidate, so a drag can
+        // never supply the second click of one.
         if (app.strip_drag.moved) {
             apply_strip_drag_at(x, y, /*final_event=*/true);
             app.double_click = DoubleClickCandidate{};
-        } else if (app.strip_drag.double_click_seed) {
-            app.double_click = DoubleClickCandidate{
-                .surface = DoubleClickSurface::ZoomRow,
-                .time_ms = monotonic_ms(), .press_x = x, .press_y = y,
-                .target = -1};
         }
         app.strip_drag = StripDragState{};
         // reappear the cursor at the anchor-stem column (y frozen at the press
@@ -1877,33 +1903,47 @@ void GuiInputHandler::finalize_active_drags() {
     app.pending_marker_drag = PendingMarkerDrag{};
     app.pending_trim_drag   = PendingTrimDrag{};
     // A force-end is not a clean click sequence, so no candidate may survive to
-    // pair with a later click (the standing rule at every non-release gesture end).
-    app.double_click = DoubleClickCandidate{};
+    // pair with a later click (the standing rule at every non-release gesture
+    // end) — and neither may the chip row's press record, which would otherwise
+    // seed one at the next release.
+    app.double_click   = DoubleClickCandidate{};
+    app.chip_row_press = ChipRowPressSeed{};
 }
 
-// THE MENU BUTTON'S HOVER, in one transition writer. The face changes only when
-// the boolean does, and each change pays exactly one invalidate_top_strip — the
-// strip idiom (no narrow rects; the playhead columns' carve-out stays the sole
-// exception). The rect is the painter's stash, so the hovered region is the
-// painted button and nothing is measured here.
-void GuiInputHandler::clear_menu_row_hover() {
-    if (!app.menu_quit_hovered) return;
-    app.menu_quit_hovered = false;
-    viewport.invalidate_top_strip();
+// THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
+// (row 1's Quit and row 2's four — the stash is AppState::redesign_buttons).
+// A face changes only when its boolean does, and a motion that changes ANY of
+// them pays exactly ONE invalidate_top_strip — the strip idiom (no narrow rects;
+// the playhead columns' carve-out stays the sole exception), which also makes
+// the common transition (leaving one button for its neighbour, two booleans
+// flipping) cost the same single damage as any other. The rects are the
+// painter's stashes, so a hovered region is the painted button and nothing is
+// measured here.
+void GuiInputHandler::clear_redesign_button_hover() {
+    bool changed = false;
+    for (AppState::RedesignButtonFace& f : app.redesign_buttons) {
+        if (!f.hovered) continue;
+        f.hovered = false;
+        changed = true;
+    }
+    if (changed) viewport.invalidate_top_strip();
 }
 
-void GuiInputHandler::recompute_menu_row_hover() {
-    const GuiRect& b = app.menu_quit_rect;
+void GuiInputHandler::recompute_redesign_button_hover() {
     const int mx = app.last_mouse_x;
     const int my = app.last_mouse_y;
-    // A zero-width stash (before the row's first paint) contains no point, and
-    // the pre-motion (-1, -1) cursor is outside every rect, so both cold states
-    // resolve to "not hovered" without a special case.
-    const bool inside = mx >= b.x && mx < b.x + b.w &&
-                        my >= b.y && my < b.y + b.h;
-    if (app.menu_quit_hovered == inside) return;
-    app.menu_quit_hovered = inside;
-    viewport.invalidate_top_strip();
+    bool changed = false;
+    for (AppState::RedesignButtonFace& f : app.redesign_buttons) {
+        // A zero-width stash (before that row's first paint) contains no point,
+        // and the pre-motion (-1, -1) cursor is outside every rect, so both cold
+        // states resolve to "not hovered" without a special case.
+        const bool inside = mx >= f.rect.x && mx < f.rect.x + f.rect.w &&
+                            my >= f.rect.y && my < f.rect.y + f.rect.h;
+        if (f.hovered == inside) continue;
+        f.hovered = inside;
+        changed = true;
+    }
+    if (changed) viewport.invalidate_top_strip();
 }
 
 // Motion handler. Drives the active pointer gesture: editor-text drag,
@@ -1964,12 +2004,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             if (app.strip_drag.moved) {
                 apply_strip_drag_at(mouse_x, mouse_y, /*final_event=*/true);
             }
-            // A motionless press ends with NO click action from either origin
-            // (the ctrl-waveform selection clear is RETIRED — a motionless
-            // ctrl+waveform press-release commits nothing on the clean release
-            // too, so this abnormal end matches it for free), and a motionless
-            // zoom-row press seeds NOTHING on this abnormal end (unlike the
-            // clean release), matching the double_click clear below.
+            // A motionless press ends with NO click action (the ctrl-waveform
+            // selection clear is RETIRED — a motionless ctrl+waveform
+            // press-release commits nothing on the clean release either, so this
+            // abnormal end matches it for free).
             app.strip_drag = StripDragState{};
             // An abnormal termination (button lost, not a clean release) seeds
             // no double-click candidate and drops any pending one.
@@ -2269,13 +2307,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // click owns that stop), so there is no live playhead to chase.
     }
     if (!app.drag.active) {
-        // The menu row's own hover, resolved in the same no-gesture tail and
-        // through its own state (the button is not a marker, so it has no place
-        // in the hover-popup machinery below). An ACTIVE GESTURE FREEZES IT —
-        // the branches above all returned — which is consistent and harmless: a
-        // gesture that ends over the button re-resolves on the next motion, and
-        // a press cannot reach the button mid-gesture anyway.
-        recompute_menu_row_hover();
+        // The redesigned rows' own hover, resolved in the same no-gesture tail
+        // and through its own state (a button is not a marker, so it has no
+        // place in the hover-popup machinery below). An ACTIVE GESTURE FREEZES
+        // IT — the branches above all returned — which is consistent and
+        // harmless: a gesture that ends over a button re-resolves on the next
+        // motion, and a press cannot reach one mid-gesture anyway.
+        recompute_redesign_button_hover();
         // No active gesture: hover recomputation is owned by
         // recompute_hover_at_cursor (one implementation for motion and
         // viewport mutation), suppressions included. The branches above

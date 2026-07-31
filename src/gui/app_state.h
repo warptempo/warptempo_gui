@@ -12,6 +12,7 @@
 #include "warpmarkers.h"
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -64,7 +65,7 @@ constexpr int64_t kViewportLeadDivisor = 10;
 // the render boundary, not at authoring time.
 constexpr int kMarkerHitHalfPx    = 4;
 
-// Vertical drag distance (px) that moves the zoom-strip drag by one continuous
+// Vertical drag distance (px) that moves the strip drag by one continuous
 // level. The strip zoom drags DOWN to zoom in (deeper, lower level) and UP to
 // zoom out. Both this scale and that direction are architect-tunable on the
 // labwc pass.
@@ -566,9 +567,11 @@ struct TrimDragState {
     int64_t anchor_active_frame  = 0;
 };
 
-// Dual-axis zoom/pan drag (Ableton-style navigation), armed by TWO surfaces: a
-// plain left-drag on the live zoom-strip row, and a CTRL-exact left-drag inside
-// the waveform (the same gesture, triggered on the waveform for reach). The
+// Dual-axis zoom/pan drag (Ableton-style navigation), armed by ONE surface: a
+// CTRL-exact left-drag inside the waveform. It had a second entry — a plain
+// left-drag on the dedicated zoom lane — until that lane was deleted
+// (architect 2026-07-31); the GESTURE is untouched and keeps its full reach on
+// the surviving entry, which is why the deletion cost nothing. The
 // gesture is DUAL-AXIS, freely composed with no axis lock: vertical motion
 // drives the zoom level and horizontal motion pans the viewport, both applied
 // per motion event. It is INCREMENTAL — each event reads the LIVE zoom level and
@@ -588,13 +591,6 @@ struct StripDragState {
     // press-release must commit nothing, so the terminating event finalizes
     // (one final apply + synchronous rebuild) only when this is set.
     bool   moved     = false;
-    // True for the zoom-row arm, FALSE for the ctrl-exact waveform arm. A
-    // motionless release seeds a ZoomRow double-click candidate only when this
-    // is set, so the zoom-bar double-click stays a zoom-row-only affordance — a
-    // ctrl+waveform press-release commits and seeds nothing. Every other
-    // release / motion-lost / force-end path is origin-agnostic (keys on
-    // `active`); there is no cancel path.
-    bool   double_click_seed = true;
     // Pointer position at the press (window px) — the drag-threshold reference
     // ONLY (the Chebyshev gate deciding press-becomes-drag). Not a zoom or pan
     // baseline: the incremental model reads no press level and no fixed column.
@@ -648,21 +644,29 @@ struct ScrollDragState {
 // (61126db) — that one MOVED the cursor playhead per column.)
 
 // The surface a double-click candidate belongs to. The surface tag is what keeps
-// the three double-click surfaces from cross-firing: a candidate seeded on one
-// surface can only be consumed by a press on the SAME surface (a zoom-row click
+// the four double-click surfaces from cross-firing: a candidate seeded on one
+// surface can only be consumed by a press on the SAME surface (a trim-bar click
 // then a marker click within the window can never consume). None = no candidate.
-enum class DoubleClickSurface { None, ZoomRow, Marker, EditorText, EmptyLane };
+enum class DoubleClickSurface { None, TrimBar, Marker, EditorText, EmptyLane };
 
 // Double-click detection (Wayland delivers no double-click event, so it is
 // hand-rolled from two plain clicks). A click on a double-click-bearing surface
-// records this candidate (at a motionless release for ZoomRow / EditorText; at
+// records this candidate (at a motionless release for TrimBar / EditorText; at
 // the PRESS for Marker — see below); the NEXT plain press on the SAME surface,
 // if it lands within kDoubleClickMs and kDoubleClickSlackPx of the recorded
 // position AND (for Marker) targets the same marker, is consumed as that
 // surface's double-click action instead of the single-click action. A drag that
 // MOVED records nothing and clears any candidate. Surfaces:
-//   ZoomRow    -> the zoom-bar double-click zoom command (target unused; the
-//                 zoom row is thin, so only press_x slack is compared).
+//   TrimBar    -> the SPAN-FRAMING command on the trim chip row
+//                 (run_span_framing_command: a live region, else a proper trim
+//                 sub-window, else the whole song). Target unused; both axes'
+//                 slack compared. It REHOMED here from the deleted zoom lane
+//                 (architect 2026-07-31) and consumes AHEAD of the chip/bridge
+//                 drag arm, so the second click frames rather than grabs. The
+//                 seed is the chip row's own press record (ChipRowPressSeed),
+//                 not a strip-drag field: the chip row arms a pending trim drag
+//                 rather than a live one, so there is no drag state to hang it
+//                 on and the motionless test is the release's own slack compare.
 //   Marker     -> opens the marker's flag editor (target = marker index; both
 //                 axes' slack compared). The marker is ONE pointer item: the hit
 //                 is its flag SHAPE or its rendered marker-text LANE RUN, and a
@@ -695,10 +699,40 @@ enum class DoubleClickSurface { None, ZoomRow, Marker, EditorText, EmptyLane };
 struct DoubleClickCandidate {
     DoubleClickSurface surface = DoubleClickSurface::None;
     int64_t time_ms   = 0;      // CLOCK_MONOTONIC ms at the seeding press/release
-    int     press_x   = 0;      // seed x (Marker seeds at the press; ZoomRow /
+    int     press_x   = 0;      // seed x (Marker seeds at the press; TrimBar /
     int     press_y   = 0;      //   EditorText at a motionless release)
     int     target    = -1;     // marker index for Marker; unused otherwise
 };
+
+// THE TRIM-BAR FRAMING DOUBLE-CLICK'S FIRST HALF, recorded at the press because
+// only the RELEASE can tell a click from a drag. A plain chip-row press (any
+// spot in the band — chip, bridge, or empty; read-only included, the framing
+// being pure navigation) records this; the left release seeds the TrimBar
+// candidate when the pointer is still within kDoubleClickSlackPx of the recorded
+// point and no trim drag went live. That slack IS the motionless test: it equals
+// kDragMovedThresholdPx, so "never became a drag" and "never left the slack" are
+// the same condition by construction. Cleared at every left release (the release
+// consumes it) and by the force-end finalizer, beside the candidate's own clear.
+// Session-only.
+struct ChipRowPressSeed {
+    bool active  = false;
+    int  press_x = 0;
+    int  press_y = 0;
+};
+
+// THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
+// button the kdenlive rows carry, in painted order: row 1's lone Quit, then row
+// 2's toolbar four. It exists ONCE, here, because it indexes the painter's hit
+// stash (AppState::redesign_buttons) and both readers key off it; each domain
+// then attaches its own attribute to these ids and to nothing else — the
+// painter's label/icon/layout table (paint_handler.cpp) and the press claim's
+// chord table (input_pointer.cpp). Adding a button is one row here plus one row
+// in each of those two tables.
+enum class RedesignButton { Quit, Save, Undo, Redo, Render };
+inline constexpr int kRedesignButtonCount = 5;
+inline constexpr int redesign_button_index(RedesignButton b) {
+    return static_cast<int>(b);
+}
 
 // Double-click window and positional slack (architect-tunable). Two motionless
 // plain clicks in the same strip row inside this time and pixel distance are a
@@ -1393,15 +1427,19 @@ struct AppState {
     // bounds), and on file load.
     TrimDragState trim_drag;
 
-    // Plain left-drag on a live strip row (zoom/pan navigation). Cleared on
-    // button release and file load.
+    // Ctrl-exact left-drag on the waveform (dual-axis zoom/pan navigation).
+    // Cleared on button release and file load.
     StripDragState strip_drag;
 
-    // Double-click candidate, shared by the zoom-row, flag, and editor-text
-    // surfaces (the surface tag prevents cross-firing). Seeded by a motionless
-    // press-release on a double-click-bearing surface; cleared on file load and
-    // when the double-click action fires.
+    // Double-click candidate, shared by the trim-bar, flag, empty-lane and
+    // editor-text surfaces (the surface tag prevents cross-firing). Seeded by a
+    // motionless press-release (or, for Marker / EmptyLane, at the press);
+    // cleared on file load and when the double-click action fires.
     DoubleClickCandidate double_click;
+
+    // The trim-bar framing double-click's press record (see ChipRowPressSeed).
+    // Written by every plain chip-row press, consumed by the next left release.
+    ChipRowPressSeed chip_row_press;
 
     // Alt+drag on the waveform (continuous 1:1 grab-pan). Cleared on button
     // release / lost button, by the force-end finalizer, and file load.
@@ -1414,24 +1452,31 @@ struct AppState {
     // Hover-popup state. See HoverPopupState above.
     HoverPopupState   hover_popup;
 
-    // THE MENU ROW'S QUIT BUTTON — hit geometry PUBLISHED BY THE PAINTER, the
-    // displayed-basis doctrine applied to a proportional surface. The button's
-    // width is a HarfBuzz-shaped run's width (text_shape), which only the paint
-    // pass computes; the pointer code reads this stash and never re-shapes, so
-    // the clickable rect is exactly the painted one by construction and the two
-    // cannot drift the way a re-derived measurement would.
+    // THE REDESIGNED ROWS' BUTTONS — hit geometry PUBLISHED BY THE PAINTER, the
+    // displayed-basis doctrine applied to proportional surfaces. Each button's
+    // width is a HarfBuzz-shaped run's width (text_shape) plus its paddings,
+    // which only the paint pass computes; the pointer code reads these stashes
+    // and never re-shapes, so a clickable rect is exactly the painted one by
+    // construction and the two cannot drift the way a re-derived measurement
+    // would.
     //
-    // Zero until the first paint of the row, which is the correct pre-display
-    // state: an empty rect contains no point, so neither hover nor press can
-    // fire before the button has been shown.
-    GuiRect menu_quit_rect{0, 0, 0, 0};
-
-    // True while the pointer rests inside menu_quit_rect — the hover face
-    // (the filled pill) is on. Written only on a TRANSITION (the motion tail's
-    // recompute and the pointer-leave hook), each transition paying one
-    // invalidate_top_strip. A press does not change it: there is no third
-    // face — a click keeps the hover face and pointer-out is what rests it.
-    bool    menu_quit_hovered = false;
+    // ONE MECHANISM FOR EVERY REDESIGNED BUTTON (2026-07-31): row 1's single
+    // pair of fields folded into this array when row 2 brought four more, so
+    // there is one stash, one hover recompute and one hover clear rather than a
+    // per-row copy of each. Every entry is zero-rect / not-hovered until its
+    // row's first paint, which is the correct pre-display state: an empty rect
+    // contains no point, so neither hover nor press can fire before the button
+    // has been shown.
+    //
+    // `hovered` is written only on a TRANSITION (the motion tail's recompute and
+    // the pointer-leave hook), a transition paying one invalidate_top_strip. A
+    // press does not change it: there is no third face — a click keeps the hover
+    // face and pointer-out is what rests it.
+    struct RedesignButtonFace {
+        GuiRect rect{0, 0, 0, 0};
+        bool    hovered = false;
+    };
+    std::array<RedesignButtonFace, kRedesignButtonCount> redesign_buttons{};
 
     // Cursor screen position from the last on_motion event. Used by
     // recompute_hover_at_cursor() to re-evaluate hover after a viewport
@@ -1675,7 +1720,7 @@ GuiRect bottom_strip_area(const AppState& a);
 GuiRect strip_row_rect(const AppState& a, bool top_strip,
                        int lane_from_window_edge);
 GuiRect top_menu_row_area(const AppState& a);
-GuiRect top_zoom_row_area(const AppState& a);
+GuiRect top_toolbar_row_area(const AppState& a);
 GuiRect top_upper_row_area(const AppState& a);
 GuiRect top_marker_text_row_area(const AppState& a);
 GuiRect top_flag_row_area(const AppState& a);

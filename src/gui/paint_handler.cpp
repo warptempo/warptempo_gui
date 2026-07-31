@@ -1,5 +1,6 @@
 #include "paint_handler.h"
 
+#include "icons.h"
 #include "render.h"
 #include "text_display.h"
 #include "text_editor.h"
@@ -94,50 +95,104 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
     }
 }
 
-// -- GuiPaintHandler::paint_menu_row -------------------------------------
+// -- The redesigned rows: paint_menu_row / paint_toolbar_row ---------------
 
 namespace {
 
-// ROW 1 OF THE KDENLIVE REDESIGN, in 100%-scale pixels measured off the two
-// 46x30 crops (tmp/screenshots/kdenlive/redesign/row_1_button_{rest,hover}.png).
-// Every one of them scales on gui_scale_factor() — the redesign's own axis, NOT
-// the monospace font's (the ruling is at gui_scale_factor's declaration). The
-// row height itself lives in render.h as kMenuRowHeightPx, because main.cpp's
-// lane table needs it.
+// THE KDENLIVE REDESIGN'S SHARED TEXT FACE, in 100%-scale pixels. Every
+// redesigned row's label is 12pt through the existing points*4/3 convention =
+// 16px at 100%, scaled on gui_scale_factor() — the redesign's own axis, NOT the
+// monospace font's (the ruling is at gui_scale_factor's declaration). THE SANS
+// FACE IS THE REDESIGN'S DEFAULT FAMILY: cairo's toy "sans" selector, which
+// fontconfig resolves to Liberation Sans on the target — the family the crops
+// were rendered in. The monospace face survives untouched on every
+// un-redesigned surface, and each redesign row moves its own text over.
+constexpr double kRedesignFontSizePt = 12.0;   // -> 16.0 px at 100%
+
+double redesign_font_size_px() {
+    return kRedesignFontSizePt * 96.0 / 72.0 * gui_scale_factor();
+}
+
+// One authored 100%-scale length -> device pixels, the ONE conversion every
+// dimension below takes (std::nearbyint like every other integer-domain
+// conversion in this tree).
+int scaled_px(double authored) {
+    return static_cast<int>(std::nearbyint(authored * gui_scale_factor()));
+}
+
+// ROW 1, measured off the two 46x30 crops
+// (tmp/screenshots/kdenlive/redesign/row_1_button_{rest,hover}.png). The row
+// height itself lives in render.h as kMenuRowHeightPx, because main.cpp's lane
+// table needs it.
 //
-// The button's own face is 12pt through the existing points*4/3 convention =
-// 16px at 100%. THE SANS FACE IS THE REDESIGN'S DEFAULT FAMILY going forward:
-// cairo's toy "sans" selector, which fontconfig resolves to Liberation Sans on
-// the target — the family the crops were rendered in. The monospace face
-// survives untouched on every un-redesigned surface, and each redesign row
-// moves its own text over.
-constexpr double kMenuFontSizePt   = 12.0;   // -> 16.0 px at 100%
+// THE CSS FLOAT MODEL is the ruled layout vocabulary (architect 2026-07-31): a
+// flat button FILLS ITS WHOLE ROW and no margin or inset exists unless the
+// architect states one. The hover pill therefore spans the full 30px row — the
+// 1px vertical inset that stood here was a misread of the crop (those rows were
+// the title-bar seam, not design).
 constexpr double kMenuLabelPadPx   = 10.0;   // per side, sets the button width
-constexpr double kMenuPillInsetPx  = 1.0;    // top and bottom -> 28 tall at 100%
 constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 
 // The one button, and the sole action of the whole row.
-constexpr const char* kMenuQuitLabel = "quit";
+//
+// REDESIGNED ROWS GET CORRECT CAPITALIZATION, row by row (architect
+// 2026-07-31): the all-lowercase program-text rule now CARVES OUT the
+// redesigned rows' labels. It still governs stderr, the prompts, and every
+// un-redesigned surface until that surface's own row lands.
+constexpr const char* kMenuQuitLabel = "Quit";
 
-double menu_font_size_px() {
-    return kMenuFontSizePt * 96.0 / 72.0 * gui_scale_factor();
-}
-int menu_label_pad_px() {
-    return static_cast<int>(std::nearbyint(kMenuLabelPadPx * gui_scale_factor()));
-}
-int menu_pill_inset_px() {
-    return static_cast<int>(std::nearbyint(kMenuPillInsetPx * gui_scale_factor()));
-}
-double menu_pill_radius_px() {
-    return std::nearbyint(kMenuPillRadiusPx * gui_scale_factor());
-}
+// ROW 2 — THE TOOLBAR, measured at 100% off row_2_button_{rest,hover}.png
+// (81x32), row_2_separator.png (1x34) and row_2_border_bottom.png. The lane
+// metrics (44 content + 1 border) live in render.h with row 1's, for the same
+// reason.
+//
+// THE CSS BOX MODEL, spelled in the walk below: the row's own left PADDING, a
+// separator with 5px MARGIN on all four sides (5 + 34 + 5 = the 44 content
+// height exactly), and buttons with a 6px vertical margin and NO horizontal
+// margin — adjacency instead inserts a 2px INVISIBLE SEPARATOR, which is why
+// that step belongs to the walk (between two buttons) and not to a button's own
+// box. Inside a button the terms are paddings: 12 left, the 16px icon, a 7px
+// icon->label gap, the shaped label, 10 right.
+constexpr double kToolbarRowPadLeftPx  = 5.0;
+constexpr double kToolbarSepMarginPx   = 5.0;   // all four sides
+constexpr double kToolbarSepWidthPx    = 1.0;
+constexpr double kToolbarSepHeightPx   = 34.0;
+constexpr double kToolbarBtnMarginYPx  = 6.0;   // top and bottom -> 32 tall
+constexpr double kToolbarBtnGapPx      = 2.0;   // the invisible separator
+constexpr double kToolbarBtnPadLeftPx  = 12.0;
+constexpr double kToolbarIconPx        = 16.0;
+constexpr double kToolbarIconGapPx     = 7.0;
+constexpr double kToolbarBtnPadRightPx = 10.0;
+constexpr double kToolbarHoverRadiusPx = 5.0;
+constexpr double kToolbarHoverStrokePx = 1.0;
 
-// A filled rounded rectangle from four quarter-circle arcs. Fill only, no
-// stroke: the row carries no 1px rules at all, so every edge here lands on an
-// integer pixel bound by construction and only the four corners antialias —
-// which is exactly what the hover crop shows.
-void menu_rounded_rect_path(cairo_t* cr, double x, double y,
-                            double w, double h, double r) {
+// What precedes a toolbar button in the layout walk.
+enum class ToolbarLead {
+    Separator,   // 5px margin, the 1px line, 5px margin
+    Gap,         // the 2px invisible separator between adjacent buttons
+};
+
+// THE PAINTER'S HALF OF THE BUTTON ROSTER (the roster itself is
+// RedesignButton, app_state.h): each row 2 button's label, icon and what leads
+// it, in painted order. The press claim's chord table (input_pointer.cpp) is
+// the other half; both key off the same ids.
+struct ToolbarButtonDef {
+    RedesignButton id;
+    const char*    label;
+    icons::Icon    icon;
+    ToolbarLead    lead;
+};
+constexpr ToolbarButtonDef kToolbarButtons[] = {
+    {RedesignButton::Save,   "Save",   icons::Icon::DocumentSave, ToolbarLead::Separator},
+    {RedesignButton::Undo,   "Undo",   icons::Icon::EditUndo,     ToolbarLead::Separator},
+    {RedesignButton::Redo,   "Redo",   icons::Icon::EditRedo,     ToolbarLead::Gap},
+    {RedesignButton::Render, "Render", icons::Icon::MediaRecord,  ToolbarLead::Gap},
+};
+
+// A rounded rectangle from four quarter-circle arcs, used FILLED for row 1's
+// hover pill and STROKED for row 2's hover outline.
+void redesign_rounded_rect_path(cairo_t* cr, double x, double y,
+                                double w, double h, double r) {
     constexpr double kPi = 3.14159265358979323846;
     if (r > w * 0.5) r = w * 0.5;
     if (r > h * 0.5) r = h * 0.5;
@@ -150,41 +205,54 @@ void menu_rounded_rect_path(cairo_t* cr, double x, double y,
     cairo_close_path(cr);
 }
 
+// The baseline for a label vertically centered in `box`: SOLVED from the face's
+// own extents, never a measured literal — center the (ascent + descent) band in
+// the box and put the baseline at its foot, then round to the pixel grid so the
+// glyphs stay crisp at every scale. Row 1 centers in the ROW (a flush button),
+// row 2 in the 32-tall BUTTON box; one formula, two boxes.
+double redesign_baseline(cairo_scaled_font_t* font, double box_y,
+                         double box_h) {
+    cairo_font_extents_t fe;
+    cairo_scaled_font_extents(font, &fe);
+    return std::nearbyint(box_y + (box_h + fe.ascent - fe.descent) * 0.5);
+}
+
 } // namespace
 
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE MENU ROW (top lane 0, at the window edge): a flat kdenlive-sampled
-    // ground carrying ONE button, "quit", whose action is Ctrl+Q's exact route.
-    // No ring — unlike the zoom row below it, the kdenlive bar is flat.
+    // ground carrying ONE button, "Quit", whose action is Ctrl+Q's exact route.
+    // No ring; the kdenlive bar is flat.
     //
     // THE HOVER MODEL IS KDENLIVE'S, and it is TWO faces, not three: at rest the
     // label paints bare on the row ground; hovered, a filled blue pill sits
-    // under it. A PRESS PAINTS NOTHING NEW — a click keeps the hover face and
-    // only pointer-out rests it (architect 2026-07-31), so there is no pressed
+    // under it, FLUSH with the row (the css float model — a flat button fills
+    // its whole row, architect 2026-07-31). A PRESS PAINTS NOTHING NEW — a click
+    // keeps the hover face and only pointer-out rests it, so there is no pressed
     // state and no press-state machinery anywhere.
     const GuiRect row = top_menu_row_area(app);
     if (row.w <= 0 || row.h <= 0) return;
 
     cairo_save(cr);
 
-    cairo_set_source_rgb(cr, kMenuRowGround.r, kMenuRowGround.g,
-                         kMenuRowGround.b);
+    cairo_set_source_rgb(cr, kRedesignRowGround.r, kRedesignRowGround.g,
+                         kRedesignRowGround.b);
     cairo_rectangle(cr, row.x, row.y, row.w, row.h);
     cairo_fill(cr);
 
-    // THE FIRST CONSUMER OF THE SHAPING CHOKEPOINT (text_shape.h): the label is
-    // MEASURED and PAINTED from the one ShapedRun, so the button's width and its
-    // glyphs come from the same positions and cannot disagree. Shaping four
-    // glyphs per paint is deliberate — the chokepoint's own comment defers
-    // caching to a profile, and this run is the cheapest possible one.
+    // THE SHAPING CHOKEPOINT (text_shape.h): the label is MEASURED and PAINTED
+    // from the one ShapedRun, so the button's width and its glyphs come from the
+    // same positions and cannot disagree. Shaping four glyphs per paint is
+    // deliberate — the chokepoint's own comment defers caching to a profile, and
+    // this run is the cheapest possible one.
     cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
                            CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cr, menu_font_size_px());
+    cairo_set_font_size(cr, redesign_font_size_px());
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
     const text_shape::ShapedRun run =
         text_shape::shape_text_run(font, kMenuQuitLabel);
 
-    const int pad   = menu_label_pad_px();
+    const int pad   = scaled_px(kMenuLabelPadPx);
     const int btn_w =
         static_cast<int>(std::nearbyint(run.width_px)) + 2 * pad;
 
@@ -192,36 +260,153 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // width above exists only here, so the pointer code reads this stash rather
     // than re-shaping the string. Written every paint — a font, scale or window
     // change lands in it on the frame that displays it.
-    app.menu_quit_rect = GuiRect{row.x, row.y, btn_w, row.h};
+    AppState::RedesignButtonFace& face =
+        app.redesign_buttons[redesign_button_index(RedesignButton::Quit)];
+    face.rect = GuiRect{row.x, row.y, btn_w, row.h};
 
-    if (app.menu_quit_hovered) {
-        const int inset = menu_pill_inset_px();
-        const int pill_h = row.h - 2 * inset;
-        if (pill_h > 0) {
-            cairo_set_source_rgb(cr, kMenuHoverPill.r, kMenuHoverPill.g,
-                                 kMenuHoverPill.b);
-            menu_rounded_rect_path(cr, row.x, row.y + inset,
+    if (face.hovered) {
+        cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
+                             kRedesignAccent.b);
+        redesign_rounded_rect_path(cr, row.x, row.y,
                                    static_cast<double>(btn_w),
-                                   static_cast<double>(pill_h),
-                                   menu_pill_radius_px());
-            cairo_fill(cr);
-        }
+                                   static_cast<double>(row.h),
+                                   std::nearbyint(kMenuPillRadiusPx *
+                                                  gui_scale_factor()));
+        cairo_fill(cr);
     }
 
-    // The baseline is SOLVED from the face's own extents, never a measured
-    // literal: center the (ascent + descent) band in the row and put the
-    // baseline at its foot — row.y + (row.h + ascent - descent) / 2 — then round
-    // to the pixel grid with std::nearbyint like every other integer-domain
-    // conversion here, so the glyphs stay crisp at every scale. The label color
-    // is the SAME in both faces; the pill under it is the whole hover cue.
-    cairo_font_extents_t fe;
-    cairo_scaled_font_extents(font, &fe);
-    const double baseline = std::nearbyint(
-        row.y + (static_cast<double>(row.h) + fe.ascent - fe.descent) * 0.5);
+    // The label color is the SAME in both faces; the pill under it is the whole
+    // hover cue.
+    cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                         kRedesignLabel.b);
+    text_shape::show_shaped_run(
+        cr, run, static_cast<double>(row.x + pad),
+        redesign_baseline(font, static_cast<double>(row.y),
+                          static_cast<double>(row.h)));
 
-    cairo_set_source_rgb(cr, kMenuLabel.r, kMenuLabel.g, kMenuLabel.b);
-    text_shape::show_shaped_run(cr, run, static_cast<double>(row.x + pad),
-                                baseline);
+    cairo_restore(cr);
+}
+
+void GuiPaintHandler::paint_toolbar_row(cairo_t* cr) {
+    // THE TOOLBAR ROW (top lane 1, row 2 of the redesign): the same flat
+    // kdenlive-sampled ground as the menu row, a 1px border-bottom across the
+    // WHOLE window width, two vertical separators, and four icon+label buttons
+    // — Save, [separator], Undo, Redo, Render — each firing its chord's exact
+    // route on press (the claim and the chord table are in input_pointer.cpp).
+    //
+    // THE HOVER FACE IS ROW 1'S MODEL WITH A DIFFERENT SHAPE: two faces, not
+    // three (a press paints nothing new), but here the cue is a 1px accent
+    // OUTLINE around the button's exact box with its interior untouched — the
+    // ground shows through, as the crop shows.
+    const GuiRect lane = top_toolbar_row_area(app);
+    if (lane.w <= 0 || lane.h <= 0) return;
+
+    const int border_h  = toolbar_border_h_px();
+    const int content_h = lane.h - border_h;
+    if (content_h <= 0) return;
+
+    cairo_save(cr);
+
+    // Ground over the CONTENT band only (the border sits outside it, css-style).
+    cairo_set_source_rgb(cr, kRedesignRowGround.r, kRedesignRowGround.g,
+                         kRedesignRowGround.b);
+    cairo_rectangle(cr, lane.x, lane.y, lane.w, content_h);
+    cairo_fill(cr);
+
+    // THE BORDER-BOTTOM AND THE SEPARATORS ARE PIXEL-BOUND RECTANGLE FILLS, not
+    // strokes: every edge here is axis-aligned on integer bounds, so a fill is
+    // crisp by construction and needs no +0.5 alignment (the standing rule for
+    // axis-aligned 1px work — the alternative it offers, a stroked line at the
+    // half-pixel, is what the hover outline below takes, because that shape has
+    // round corners and must be stroked).
+    cairo_set_source_rgb(cr, kRedesignLine.r, kRedesignLine.g, kRedesignLine.b);
+    cairo_rectangle(cr, lane.x, lane.y + content_h, lane.w, border_h);
+    cairo_fill(cr);
+
+    cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_font_size(cr, redesign_font_size_px());
+    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+
+    const int sep_margin  = scaled_px(kToolbarSepMarginPx);
+    const int sep_w       = scaled_px(kToolbarSepWidthPx);
+    const int sep_h       = scaled_px(kToolbarSepHeightPx);
+    const int btn_margin_y = scaled_px(kToolbarBtnMarginYPx);
+    const int btn_gap     = scaled_px(kToolbarBtnGapPx);
+    const int pad_left    = scaled_px(kToolbarBtnPadLeftPx);
+    const int icon_px     = scaled_px(kToolbarIconPx);
+    const int icon_gap    = scaled_px(kToolbarIconGapPx);
+    const int pad_right   = scaled_px(kToolbarBtnPadRightPx);
+    const int btn_y       = lane.y + btn_margin_y;
+    const int btn_h       = content_h - 2 * btn_margin_y;
+
+    // THE LAYOUT WALK, left to right in css float order: the row's left padding
+    // opens it, then each button's LEAD (a full-margin separator, or the 2px
+    // invisible separator between adjacent buttons) and the button itself. Every
+    // future row inherits the rule by walking this way — a button never carries
+    // a horizontal margin of its own.
+    int x = lane.x + scaled_px(kToolbarRowPadLeftPx);
+    for (const ToolbarButtonDef& def : kToolbarButtons) {
+        if (def.lead == ToolbarLead::Separator) {
+            x += sep_margin;
+            cairo_set_source_rgb(cr, kRedesignLine.r, kRedesignLine.g,
+                                 kRedesignLine.b);
+            cairo_rectangle(cr, x, lane.y + sep_margin, sep_w, sep_h);
+            cairo_fill(cr);
+            x += sep_w + sep_margin;
+        } else {
+            x += btn_gap;
+        }
+
+        // The label is shaped ONCE per button and both measured and painted from
+        // that run — the button's width exists nowhere else, which is exactly why
+        // the painter publishes the hit rect.
+        const text_shape::ShapedRun run =
+            text_shape::shape_text_run(font, def.label);
+        const int label_w = static_cast<int>(std::nearbyint(run.width_px));
+        const int btn_w = pad_left + icon_px + icon_gap + label_w + pad_right;
+
+        AppState::RedesignButtonFace& face =
+            app.redesign_buttons[redesign_button_index(def.id)];
+        face.rect = GuiRect{x, btn_y, btn_w, btn_h};
+
+        if (face.hovered && btn_h > 0) {
+            // The crop's straight edges are pure accent with AA only at the
+            // corners, so the outline is INSET BY HALF ITS OWN WIDTH: the
+            // centerline runs at x + lw/2, which is the +0.5 half-pixel
+            // alignment at a 1px stroke and the integer bound at an even one
+            // (200%), and either way the painted band lands exactly on the
+            // button box's outermost pixel ring with no straight edge
+            // antialiased. One expression, both parities.
+            const int    lw   = std::max(1, scaled_px(kToolbarHoverStrokePx));
+            const double half = static_cast<double>(lw) * 0.5;
+            cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
+                                 kRedesignAccent.b);
+            cairo_set_line_width(cr, static_cast<double>(lw));
+            redesign_rounded_rect_path(
+                cr, x + half, btn_y + half,
+                static_cast<double>(btn_w - lw),
+                static_cast<double>(btn_h - lw),
+                std::nearbyint(kToolbarHoverRadiusPx * gui_scale_factor()));
+            cairo_stroke(cr);
+        }
+
+        // The icon fills its own square, vertically centered in the button box,
+        // in ITS OWN color (the icon table owns that — media-record is red where
+        // the other three are the label white).
+        icons::draw(cr, def.icon, static_cast<double>(x + pad_left),
+                    static_cast<double>(btn_y + (btn_h - icon_px) / 2),
+                    static_cast<double>(icon_px));
+
+        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                             kRedesignLabel.b);
+        text_shape::show_shaped_run(
+            cr, run, static_cast<double>(x + pad_left + icon_px + icon_gap),
+            redesign_baseline(font, static_cast<double>(btn_y),
+                              static_cast<double>(btn_h)));
+
+        x += btn_w;
+    }
 
     cairo_restore(cr);
 }
@@ -990,7 +1175,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // label_ref marker; a marker's OWN value shows in the marker-text lane —
     // paint_marker_text_lane.) Each row's baseline is derived from its row rect, not
     // from the window bottom. (The former pan-strip row retired — pan lives on
-    // the Alt+drag waveform grab and the zoom strip's horizontal drag axis.)
+    // the Alt+drag waveform grab and the strip drag's horizontal axis.)
     const GuiRect lower_row = bottom_lower_row_area(app);
     const GuiRect upper_row = bottom_upper_row_area(app);
 
@@ -1194,26 +1379,29 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         render_canvas(cr, canvas.x, canvas.y, canvas.w, canvas.h);
     }
 
-    // THE MENU ROW PAINTS ON EVERY FRAME CLASS, deliberately OUTSIDE the
-    // loading / total>0 branches below: it is the one surface with no dependence
-    // on the loaded audio, and its quit button is claimed ABOVE the pointer
-    // path's loading guard for exactly that reason. A button that is clickable
-    // must be visible — painting it only in the total>0 branch would leave the
-    // press claim live over a lane showing bare chrome during a load, and dead
-    // on a cold launch where the row has never painted (the hit rect is the
-    // painter's stash). Its own opaque ground erases the chrome
+    // THE TWO REDESIGNED ROWS PAINT ON EVERY FRAME CLASS, deliberately OUTSIDE
+    // the loading / total>0 branches below: they are the surfaces with no
+    // dependence on the loaded audio, and their buttons are claimed ABOVE the
+    // pointer path's loading guard for exactly that reason. A button that is
+    // clickable must be visible — painting it only in the total>0 branch would
+    // leave the press claim live over a lane showing bare chrome during a load,
+    // and dead on a cold launch where the row has never painted (the hit rects
+    // are the painter's stash). Their own opaque grounds erase the chrome
     // render_background laid down.
     //
-    // Gated on the row's OWN exposure rather than run unconditionally like the
-    // canvas ground above: the pass shapes its label through HarfBuzz, which the
+    // Each is gated on its OWN exposure rather than run unconditionally like the
+    // canvas ground above: these passes shape labels through HarfBuzz, which the
     // outer Cairo clip would not elide, so a narrow per-frame playhead damage
-    // must not pay for it. Nothing painted after this point touches the lane
-    // (the flag cache is transparent over it, every other pass owns a lane
-    // below it), so painting it first overdraws nothing.
+    // must not pay for them. Nothing painted after this point touches the two
+    // lanes (the flag cache is transparent over them, every other pass owns a
+    // lane below them), so painting them first overdraws nothing.
     {
         const GuiRect exposed{x, y, w, h};
         if (rects_intersect(exposed, top_menu_row_area(app))) {
             paint_menu_row(cr);
+        }
+        if (rects_intersect(exposed, top_toolbar_row_area(app))) {
+            paint_toolbar_row(cr);
         }
     }
 
@@ -1320,14 +1508,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // editor's live text, painted over the just-blitted flag cache —
             // the same layering role the bottom strip's hover/editor paints had.
             paint_marker_text_lane(cr);
-            // Zoom-strip row (top row 1, under the menu row): painted on
-            // top of the just-blitted flag cache, which is transparent over
-            // this row (it carries no chips there). The ring is the row's
-            // only paint; it is a live drag surface (see the strip-drag
-            // routing in input_pointer.cpp) that also owns the double-click
-            // zoom toggle.
-            render_strip_row_ring(cr, top_zoom_row_area(app),
-                                  waveform_area(app).w);
         }
 
         // Strip-drag anchor stem: over the plate/stems in the waveform area

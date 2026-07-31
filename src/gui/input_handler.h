@@ -256,7 +256,7 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 // (only the final start is rounded). A floor-saturated span rests CENTERED rather
 // than left-aligned, and the unclamped case degenerates to the span's left edge
 // (unrounded spp_t * W == the margined span by the solve). Shared by
-// run_zoom_double_click_command (all three arms) and the GROUP undo/redo
+// run_span_framing_command (all three arms) and the GROUP undo/redo
 // restore's offscreen framing. Definition in input_handler.cpp.
 void frame_span_into_view(AppState& app, const GuiAudio& audio,
                           Viewport& viewport, int64_t lo, int64_t hi,
@@ -438,16 +438,17 @@ struct GuiInputHandler {
     int wheel_context(int x, int y) const;
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
-    // THE MENU BUTTON'S HOVER FACE, in two entries over one transition writer
+    // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
+    // writer serving the WHOLE roster — row 1's Quit and row 2's four
     // (definitions beside on_motion in input_pointer.cpp). recompute_ re-resolves
-    // the cursor's last position against the painter's stashed button rect and is
+    // the cursor's last position against the painter's stashed rects and is
     // called from on_motion's no-gesture tail; clear_ is the pointer-LEAVE /
     // capability-loss drop, wired in main.cpp beside clear_hover_popup because no
     // motion event follows those edges. Both damage ONLY on a real transition,
-    // one invalidate_top_strip each. The button has no third face, so a press
-    // calls neither.
-    void recompute_menu_row_hover();
-    void clear_menu_row_hover();
+    // and at most one invalidate_top_strip per call however many faces moved. No
+    // button has a third face, so a press calls neither.
+    void recompute_redesign_button_hover();
+    void clear_redesign_button_hover();
 
     // END every in-flight pointer gesture through its own RELEASE body — a
     // commit, never a cancel: pointer gestures have no cancel (the rule is stated
@@ -725,14 +726,15 @@ private:
     // the definition.
     void run_zoom_toggle_command();
 
-    // The zoom-strip DOUBLE-CLICK command: ZOOM TO A SPAN, never the working
-    // zoom. Span priority — a live region (wins over trim) → a proper trim
+    // THE SPAN-FRAMING command, run by the TRIM-BAR (chip row) DOUBLE-CLICK:
+    // ZOOM TO A SPAN, never the working zoom. Span priority — a live region
+    // (wins over trim) → a proper trim
     // SUB-WINDOW (expressed in the active domain) → the whole
     // song (full zoom-out, which the FULL trim window also takes). The region/trim span is framed with a 2.5%-per-side
     // margin; the fit level and span-start are set through the clamp chokepoints
     // via Viewport::apply_zoom_to_start (NOT apply_zoom_change — no playhead
     // recenter). Idempotent: a second click with the viewport unchanged no-ops.
-    void run_zoom_double_click_command();
+    void run_span_framing_command();
 
     // Esc-cancel handlers: while a render or queued batch is in flight, BARE Esc
     // cancels it. Returns true if it consumed the key (on_key then returns).

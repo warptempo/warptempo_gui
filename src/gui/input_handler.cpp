@@ -34,7 +34,7 @@
 
 void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Double-click lifecycle, KEYBOARD half: any keyboard command between two
-    // clicks breaks EVERY pending double-click candidate (ZoomRow, Marker,
+    // clicks breaks EVERY pending double-click candidate (TrimBar, Marker,
     // EmptyLane alike) at this one chokepoint — no legitimate double-click types
     // a key between its two presses, and a cross-context consume (seed a
     // candidate, run a command, click again to consume in a different context)
@@ -349,9 +349,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // surface it cannot reach — do_undo / do_redo's target-tab peek (the
     // ACTIVE tab is writable but the top history entry targets the other,
     // read-only tab; this gate tests only the active tab), and the per-gesture
-    // wheel and pointer guards (wheel and mouse events never pass through
-    // on_key). Full rationale at read_only_key_blocked in
-    // input_key_dispatch.cpp.
+    // wheel and pointer guards (a wheel event never passes through on_key, and
+    // neither does a pointer gesture — the ONE pointer surface that does is the
+    // toolbar row's four buttons, which dispatch their chord through on_key
+    // precisely so this gate applies to them unchanged: Save, Undo, Redo and
+    // Render all drop here in a locked tab exactly as their keys do). Full
+    // rationale at read_only_key_blocked in input_key_dispatch.cpp.
     if (active_view_state(app).read_only &&
         read_only_key_blocked(key, mods)) {
         return;
@@ -546,8 +549,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // Bare 0 toggles between the working zoom and full zoom-out
-    // (run_zoom_toggle_command). The zoom-strip double-click deliberately
-    // DIVERGES from this (run_zoom_double_click_command — it zooms to the region
+    // (run_zoom_toggle_command). The trim-bar double-click deliberately
+    // DIVERGES from this (run_span_framing_command — it zooms to the region
     // / trim / whole-song span, never the working zoom); the key keeps the plain
     // toggle. C remains the direct working-zoom-and-center gesture. Digits 1..9
     // are intentionally unbound.
@@ -903,8 +906,8 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
 void GuiInputHandler::run_zoom_toggle_command() {
     // The bare `0` key toggle: at the working zoom → full zoom-out (the per-file
     // effective ceiling, whole song visible); anywhere else → the working zoom,
-    // centered on the playhead via apply_zoom_change. The zoom-strip DOUBLE-CLICK
-    // deliberately DIVERGES from this (see run_zoom_double_click_command): the
+    // centered on the playhead via apply_zoom_change. The trim-bar DOUBLE-CLICK
+    // deliberately DIVERGES from this (see run_span_framing_command): the
     // toggle here returns any non-working level to the working zoom, whereas the
     // double-click zooms to the region / trim / whole-song span.
     //
@@ -1000,8 +1003,8 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     viewport.apply_zoom_to_start(target_level, target_start);
 }
 
-void GuiInputHandler::run_zoom_double_click_command() {
-    // The zoom-strip double-click ZOOMS TO A SPAN, split from
+void GuiInputHandler::run_span_framing_command() {
+    // The trim-bar double-click ZOOMS TO A SPAN, split from
     // run_zoom_toggle_command so the bare `0` key keeps its working-zoom toggle
     // and `c` keeps its marker-jump working zoom. It only ever FRAMES a span,
     // never the fine working zoom. Span priority: a live region wins (over a
@@ -1111,12 +1114,14 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // chords: zooming or panning while an edit is open changes no state the edit
     // owns and discards nothing, so there is nothing for modality to protect.
     //
-    // The wheel routes by area only — the waveform and the top strip. Under Alt
-    // both pan and under no modifier the waveform zooms, so there is no row-wise
-    // split inside the top strip anymore (the chip-row trim-end move is retired,
-    // and with it the region that existed solely to keep the platform's
-    // sub-detent remainder attribution from bridging two diverging Alt routes).
-    // Fewer regions is strictly safer for the accumulator.
+    // The wheel routes by area — the waveform and the top strip — plus the ONE
+    // row-wise carve-out below, the redesigned rows' inert band. Under Alt both
+    // areas pan and under no modifier the waveform zooms, so the top strip needs
+    // no further split (the chip-row trim-end move is retired, and with it the
+    // region that existed solely to keep the platform's sub-detent remainder
+    // attribution from bridging two diverging Alt routes). Fewer regions is
+    // strictly safer for the accumulator, and the inert band is the safest kind:
+    // it emits nothing at all.
     //
     // A wheel event during ANY active pointer gesture is ignored, matching
     // on_button_press and the keyboard's drag-modal gate. The region drag
@@ -1131,6 +1136,26 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     if (modal_bottom_strip_editor_active()) return -1;
     if (app.loading || audio.total_frames() <= 0) return -1;
     if (any_pointer_gesture_active(app)) return -1;
+
+    // THE REDESIGNED ROWS ARE WHEEL-INERT (architect 2026-07-31) — ONE decision
+    // for the whole family, recorded here where the routing lives, and every
+    // future row inherits it by joining this band test. A wheel over the menu or
+    // toolbar row does NOTHING: those rows are button chrome with no scrollable
+    // content and no relation to the waveform under them, so passing the event
+    // through to the top-strip zoom/pan (which is what happened before row 1's
+    // ruling) made a scroll over the Quit button silently zoom the song. They sit
+    // ABOVE the area tests below because they are sub-bands of the top strip and
+    // must win over it. Returning -1 (rather than 0) also stops the platform's
+    // sub-detent accumulator from growing remainder over them.
+    {
+        const GuiRect menu = top_menu_row_area(app);
+        const GuiRect tool = top_toolbar_row_area(app);
+        const bool in_menu = x >= menu.x && x < menu.x + menu.w &&
+                             y >= menu.y && y < menu.y + menu.h;
+        const bool in_tool = x >= tool.x && x < tool.x + tool.w &&
+                             y >= tool.y && y < tool.y + tool.h;
+        if (in_menu || in_tool) return -1;
+    }
 
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);

@@ -183,7 +183,7 @@ struct Viewport {
     // no-op — no repaint and no state left behind — so a second identical framing
     // does nothing, while any pan/zoom in between
     // makes the target differ and this re-frames. The sole caller is the
-    // zoom-strip double-click (run_zoom_double_click_command).
+    // trim-bar double-click (run_span_framing_command).
     void apply_zoom_to_start(double new_zoom_level, int64_t new_start);
     void zoom_in();
     void zoom_out();

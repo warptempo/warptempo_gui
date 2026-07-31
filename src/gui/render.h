@@ -147,9 +147,11 @@ inline GuiColor kTextDisabled     = hex(0x606263);
 // THE ONE STRUCTURAL LINE COLOR: the DISABLED WindowText role, from the same
 // KColorScheme pass over the shipped scheme as kTextDisabled — the architect's
 // separator value, the desktop's own arithmetic rather than a blend invented
-// against the chrome. Every inert structural rule paints in it — the zoom-strip
-// row ring (render_strip_row_ring) and the waveform area's 1px top and bottom
-// border (render_canvas). It is not an accent and never marks state. The trim
+// against the chrome. Every inert structural rule on an UN-REDESIGNED surface
+// paints in it — now the waveform area's 1px top and bottom border
+// (render_canvas), the strip-row ring having retired with the zoom lane
+// (2026-07-31); the redesigned rows take their own sampled kRedesignLine
+// instead. It is not an accent and never marks state. The trim
 // chips' ring and stems take this same value from their own keys, so every calm
 // 1px rule in the product is one color.
 inline GuiColor kLine             = hex(0x686A6C);
@@ -335,26 +337,37 @@ inline GuiColor kTrimChip         = hex(0x202326);
 inline GuiColor kTrimChipOutline  = hex(0x686A6C);
 inline GuiColor kTrimStem         = hex(0x686A6C);
 
-// -- Row 1: the menu row (HARD-CODED, kdenlive-sampled) ---------------------
+// -- The redesigned rows (HARD-CODED, kdenlive-sampled) ---------------------
 //
-// THE FIRST COLORS THAT ARE NOT PALETTE KEYS (architect 2026-07-31). These three
-// are constexpr, not globals: they are NOT in the 23-key config grammar, not
-// loaded by color_config.cpp, and deliberately not tunable — the carve-out the
-// palette header above records. Their provenance is the pixel truth of the
-// kdenlive menu-bar crops (tmp/screenshots/kdenlive/redesign/
-// row_1_button_{rest,hover}.png), sampled directly, and the screenshots
-// OVERRIDE the Breeze-derived scheme wherever the two disagree.
+// THE COLORS THAT ARE NOT PALETTE KEYS (architect 2026-07-31). These four are
+// constexpr, not globals: they are NOT in the 23-key config grammar, not loaded
+// by color_config.cpp, and deliberately not tunable — the carve-out the palette
+// header above records. Their provenance is the pixel truth of the kdenlive
+// crops (tmp/screenshots/kdenlive/redesign/row_1_button_{rest,hover}.png,
+// row_2_button_{rest,hover}.png, row_2_separator.png, row_2_border_bottom.png),
+// sampled directly, and the screenshots OVERRIDE the Breeze-derived scheme
+// wherever the two disagree.
 //
-// The row ground is a DELIBERATE MISMATCH with kBackground (#202326): the menu
-// bar sits a shade lighter than this product's chrome and the crop wins, so do
-// not "fix" it to the chrome value. The hover pill is Breeze blue at full
-// saturation — the same #3daee9 that is the closed form behind kMarker's 30%
-// wash — and the label is the paper white kText also carries; both are spelled
-// out here rather than borrowed, because these are screenshot samples that
-// happen to coincide, not references to the palette.
-inline constexpr GuiColor kMenuRowGround  = hex(0x292C30);
-inline constexpr GuiColor kMenuHoverPill  = hex(0x3DAEE9);
-inline constexpr GuiColor kMenuLabel      = hex(0xFCFCFC);
+// THE NAMES ARE ROW-INDEPENDENT because the values are: rows 1 and 2 share the
+// same ground, the same accent and the same label white, so a per-row name
+// would go stale at the next row that reuses one. Each row states which of
+// these it paints where.
+//
+// The row ground is a DELIBERATE MISMATCH with kBackground (#202326): the
+// kdenlive bars sit a shade lighter than this product's chrome and the crop
+// wins, so do not "fix" it to the chrome value. The accent is Breeze blue at
+// full saturation — the same #3daee9 that is the closed form behind kMarker's
+// 30% wash — carried as row 1's FILLED hover pill and row 2's 1px hover
+// OUTLINE; the label white is the paper white kText also carries. Both are
+// spelled out here rather than borrowed, because these are screenshot samples
+// that happen to coincide, not references to the palette. The LINE is row 2's
+// separator and its border-bottom, one sampled value for both (they are the
+// same rule seen twice — a 1px inert structural edge), unrelated to the
+// tunable kLine the un-redesigned surfaces still use.
+inline constexpr GuiColor kRedesignRowGround = hex(0x292C30);
+inline constexpr GuiColor kRedesignAccent    = hex(0x3DAEE9);
+inline constexpr GuiColor kRedesignLabel     = hex(0xFCFCFC);
+inline constexpr GuiColor kRedesignLine      = hex(0x535659);
 
 // -- GUI font size ---------------------------------------------------------
 //
@@ -447,8 +460,9 @@ inline constexpr int kChipOutlinePx = 1;
 // monospace_text_box_h), so the outline ring no longer overlaps the glyph
 // band: at scale 1 the band sits exactly inside the ring, its blank leading
 // row separating the ring from the first row of ink. Textless surfaces never
-// see it — the zoom lane sizes from its own kZoomRowHeightPx and the
-// marker/trim shapes from kFlagWidthPx / kFlagHeightPx, which no pad feeds.
+// see it — the marker/trim shapes size from kFlagWidthPx / kFlagHeightPx,
+// which no pad feeds, and the redesigned lanes from their own authored
+// gui_scale constants.
 // std::nearbyint is odd-symmetric, so this cancels flag_pad_y_px() exactly at
 // every scale (their sum is 0, whatever the font size).
 inline constexpr int kTextBoxPadPx = 1;
@@ -544,36 +558,50 @@ inline int flag_lane_h_px() {
     return h < 5 ? 5 : h;
 }
 
-// Authored pixel height of the ZOOM row — the top strip's window-edge lane, a
-// bare drag surface painted as an empty ring (render_strip_row_ring) that hosts
-// no glyph and no shape. Its own authored constant rather than a borrowed text
-// metric: nothing about a font band describes a lane that carries no text.
-// Scaled and floored exactly like the flag dimensions above (the >= 5 px floor
-// keeps the ring's top and bottom edges apart at any font size); 15 at the
-// default font size.
-inline constexpr int kZoomRowHeightPx = 15;
-inline int zoom_row_h_px() {
-    const int h = static_cast<int>(std::nearbyint(
-        static_cast<double>(kZoomRowHeightPx) * gui_font_scale()));
-    return h < 5 ? 5 : h;
-}
-
-// Authored pixel height of the MENU ROW — the top strip's new lane 0, at the
-// window edge, above the zoom row (the kdenlive menu bar, row 1 of the
-// redesign). 30 at 100% gui_scale, measured off the row_1_button crops.
+// Authored pixel height of the MENU ROW — the top strip's lane 0, at the
+// window edge (the kdenlive menu bar, row 1 of the redesign). 30 at 100%
+// gui_scale, measured off the row_1_button crops.
 //
-// THE TWO SCALE AXES MEET HERE: this is the FIRST lane sized on
-// gui_scale_factor() rather than gui_font_scale(). The row hosts PROPORTIONAL
-// text at a fixed design size and belongs to the redesign's scale axis, not to
-// the monospace font's — the five lanes below it keep scaling on the font, and
-// the two knobs move independently by design (see the gui_scale block above).
-// Rounded with std::nearbyint and floored like every other lane metric; the
-// floor is defensive only, since gui_scale never goes below 100.
+// THE TWO SCALE AXES MEET HERE: the redesigned lanes size on
+// gui_scale_factor() rather than gui_font_scale(). They host PROPORTIONAL text
+// at a fixed design size and belong to the redesign's scale axis, not to the
+// monospace font's — the four un-redesigned lanes below them keep scaling on
+// the font, and the two knobs move independently by design (see the gui_scale
+// block above). Rounded with std::nearbyint and floored like every other lane
+// metric; the floor is defensive only, since gui_scale never goes below 100.
 inline constexpr int kMenuRowHeightPx = 30;
 inline int menu_row_h_px() {
     const int h = static_cast<int>(std::nearbyint(
         static_cast<double>(kMenuRowHeightPx) * gui_scale_factor()));
     return h < 5 ? 5 : h;
+}
+
+// Authored pixel geometry of the TOOLBAR ROW — the top strip's lane 1, under
+// the menu row (row 2 of the redesign: Save / Undo / Redo / Render). Measured
+// at 100% gui_scale off row_2_button_{rest,hover}.png (81x32),
+// row_2_separator.png (1x34) and row_2_border_bottom.png.
+//
+// THE CSS BOX MODEL IS THE RULED VOCABULARY (architect 2026-07-31): the
+// architect's stated dimensions are CONTENT, and a border sits OUTSIDE them. So
+// the authored height is 44 and the 1px border-bottom is a separate term — the
+// LANE the strip stack allocates is their sum (45 at 100%), because the lane
+// must physically own every pixel it paints. toolbar_row_content_h_px() is the
+// ground/button band; toolbar_row_h_px() is the lane. The border scales too, so
+// at 200% it is 2 px of line under 88 px of content.
+inline constexpr int kToolbarRowHeightPx = 44;
+inline constexpr int kToolbarBorderPx    = 1;
+inline int toolbar_border_h_px() {
+    const int h = static_cast<int>(std::nearbyint(
+        static_cast<double>(kToolbarBorderPx) * gui_scale_factor()));
+    return h < 1 ? 1 : h;
+}
+inline int toolbar_row_content_h_px() {
+    const int h = static_cast<int>(std::nearbyint(
+        static_cast<double>(kToolbarRowHeightPx) * gui_scale_factor()));
+    return h < 5 ? 5 : h;
+}
+inline int toolbar_row_h_px() {
+    return toolbar_row_content_h_px() + toolbar_border_h_px();
 }
 
 // Height H (px) of the code-generated tip-down triangle, SHARED by the playhead
@@ -1293,14 +1321,6 @@ void render_trim_flags(cairo_t* cr,
                        long long viewport_end_sample,
                        const TrimRange& trim);
 
-// Paints an inert full-width ring around a single strip row's bounding box:
-// 1px opaque kLine edges, antialias off — a structural rule, the same color the
-// waveform area's border takes (no fill). `waveform_width` is the effective
-// waveform width (waveform_area.w); the ring spans [row.x, row.x + width) so
-// the non-multiple-of-16 right gutter stays outside it. Used by the top
-// zoom-strip row (the sole live-drag ring row — the bottom pan row retired).
-void render_strip_row_ring(cairo_t* cr, const GuiRect& row, int waveform_width);
-
 // The two top-strip lanes a flag shape occupies, exactly as the lane accessors
 // report them: `flag_lane` = top_flag_row_area (the rectangle's band) and
 // `triangle_lane` = top_triangle_row_area (the tip-down triangle's band, whose
@@ -1450,9 +1470,11 @@ double monospace_advance();
 // offset (flag_pad_y_px() + kChipOutlinePx + ascent) live as file-scope state in
 // render.cpp, read directly by the box/lane accessors below and by nothing else.
 // NO LANE takes the bare slot and no painter paints against it: every textless
-// lane sizes from its own authored constant (kZoomRowHeightPx, kFlagWidthPx /
-// kFlagHeightPx) and anything carrying text takes the box/lane pair below, so
-// the slot stays purely the ingredient the box is built from.
+// lane sizes from its own authored constant (kFlagWidthPx / kFlagHeightPx) and
+// anything carrying MONOSPACE text takes the box/lane pair below, so the slot
+// stays purely the ingredient the box is built from. The redesigned lanes are
+// outside this family entirely — they carry proportional text at an authored
+// design height on the gui_scale axis (menu_row_h_px, toolbar_row_h_px).
 
 // The text BOX height: the unpadded slot plus kTextBoxPadPx per side, so
 // the outline ring clears the glyph band on all four sides (the horizontal half

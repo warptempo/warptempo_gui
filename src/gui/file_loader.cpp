@@ -258,6 +258,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.strip_drag = StripDragState{};
     app.scroll_drag = ScrollDragState{};
     app.double_click = DoubleClickCandidate{};
+    app.chip_row_press = ChipRowPressSeed{};
     // Belt-and-braces: dissolve the shift-range-select anchor on load (the
     // selection.clear_selection() above already clears it — the Selection
     // mutators are the anchor's only owners).
@@ -559,7 +560,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // sizes which lane) rebuild the waveform/flag surfaces. The full-window invalidation at the end of
     // this load supplies the damage, mirroring the resize path's
     // full-surface damage. The two scales are independent axes feeding that one
-    // table (the menu row rides gui_scale, the five lanes below it the font),
+    // table (the two redesigned rows ride gui_scale, the four lanes below them
+    // the font),
     // so both must be in place before the single rebuild below.
     set_gui_font_size_pt(app.font_size);
     set_gui_scale_percent(app.gui_scale);

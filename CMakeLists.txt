@@ -154,6 +154,12 @@ if(WARPTEMPO_BUILD_GUI)
         # four shared per-directory source lists — warptempo_cli must never
         # carry it, nor the harfbuzz/cairo-ft link it implies.
         src/gui/text_shape.cpp
+        # GUI-ONLY: the in-tree Breeze icon path renderer (an SVG d-string
+        # subset over cairo paths) is a painting concern and exists only here,
+        # so like color_config.cpp and text_shape.cpp it is deliberately in none
+        # of the four shared per-directory source lists — warptempo_cli must
+        # never carry it. It needs no dependency cairo does not already bring.
+        src/gui/icons.cpp
         src/gui/render.cpp
         src/gui/warpmarkers.cpp
         src/gui/text_editor.cpp
