@@ -33,9 +33,12 @@ struct GuiTargetRender;
 // here, every verb site stating only its own class plus a pointer:
 //   * GROUP-CAPABLE where the members are INDEPENDENT of one another or the
 //     selection's SPAN is merely READ: the value edits (Ctrl+D's disable toggle,
-//     the Up/Down cent step, Delete) and, reading the span, `m`, Ctrl+P, Space's
-//     left-bound launch, `x`, the zoom framing, and the undo/redo + paste
-//     restores (which DEFINE a group selection and its extent);
+//     the Up/Down cent step, Delete) and, reading the span, `m`, Ctrl+P, the
+//     zoom framing, and the undo/redo + paste
+//     restores (which DEFINE a group selection). `x` still READS a span — the
+//     trim-scratch region's, which since 2026-07-30 rests only beside an EMPTY
+//     selection; Space left this list the same day, its left-bound region launch
+//     dropped for an unconditional play-from-the-playhead;
 //   * FOCUS-COLLAPSE where the members are COUPLED to one another or the act is
 //     POSITIONAL: Ctrl+N and all horizontal movement. Ctrl+N is coupled because
 //     the pass -> owner freeze reads the RESOLVED walk — a member's frozen tempo
@@ -47,36 +50,27 @@ struct GuiTargetRender;
 // THE ARCHITECT'S GENERAL RULE, verbatim (2026-07-29), which generalizes those two
 // classes and is the authoritative statement for any FUTURE verb: "the rule is - if
 // group is relatively cheap to implement, implement it. otherwise, collapse to last
-// sel." A HYBRID THIRD FORM IS EXPLICITLY REJECTED — the ruling that produced this
-// sentence was a rejection of one: a 2+ selection left resting with no span, which
-// three routes briefly produced and which draws no playhead cue at all (the cursor
-// yields to a non-empty selection, the stem is singleton-only), was ruled out as "a
-// hybrid third option that i did not ask for or ratify". So a verb is EITHER
+// sel." A HYBRID THIRD FORM IS EXPLICITLY REJECTED: a verb is EITHER
 // group-capable OR collapses to the focus with the playhead landed on it; there is
 // no third answer, and "collapse to last selected" means exactly
 // collapse_to_focused + land_playhead_on_marker, the shape below.
-// THE COLLAPSE+LAND SITES, one form and FOUR of them (re-derived 2026-07-30): this
-// prologue serving both position nudges, Ctrl+N (warpmarkers_ops.cpp), the S/T view
-// switch `t` (input_handler.cpp — where the land is the tail's own domain re-express
-// through the focus), and `c` (input_key_dispatch.cpp — collapse only, its jump
-// already being a jump to the focus). The singleton tempo step's call
-// (warpmarkers_ops.cpp's Up/Down arm) is NOT one: its selection is already a
-// singleton, so the collapse moves no focus and owes no land.
-// BARE `0` LEFT THIS LIST (architect 2026-07-30): the overview toggle was
-// overscoped and is a PURE VIEWPORT MOVE again — it clears no region and collapses
-// nothing, so a group and its span ride through it, exactly as they ride the zoom
-// framing and every other viewport-only command. Its clear and its collapse died
-// TOGETHER, deliberately: a clear alone would rest the spanless group this doctrine
-// rejects.
+// THE COLLAPSE+LAND SITES, one form and TWO of them (re-derived by grep over
+// Selection::collapse_to_focused's callers, 2026-07-30): this prologue serving
+// both position nudges, and Ctrl+N (warpmarkers_ops.cpp). The singleton tempo
+// step's call (warpmarkers_ops.cpp's Up/Down arm) is NOT one: its selection is
+// already a singleton, so the collapse moves no focus and owes no land.
+// `t` AND `c` LEFT THIS LIST (architect 2026-07-30): each collapsed only to keep a
+// group from resting SPANLESS — the state the 2026-07-29 rejection was about — and
+// with the SPAN FORM retired that state does not exist, a group's cue being its
+// members' ink triangles plus the always-visible cursor on the focus. Both now
+// CARRY their group (`t` keeping its selection-gated land, `c` jumping to the
+// focus as it always did). Bare `0` had left one day earlier, re-ruled a PURE
+// VIEWPORT MOVE.
 // REACHABILITY, with the pointer deferral dead: the ONLY producers of a resting
 // 2+ selection are the two multi-select clicks (shift-range, ctrl-toggle), the
 // `m` bpm-mode open, the propagate paste, and the undo/redo restores — and every
 // group verb that remains is span-read or member-independent, so nothing that can
-// rest a group can then move it. Each of those five producers rests its group WITH
-// its extent span (the clicks and `m` derive it, the paste and the restores define
-// it), which is why a SPANLESS 2+ selection has no producer at all: the property
-// holds by the PRODUCERS' OWN FORM, not by a distributed enforcement protocol —
-// that protocol was deleted (architect 2026-07-29) and is not coming back.
+// rest a group can then move it.
 //
 // THE WALL POLICY, ONE RULE FOR THE WHOLE PRODUCT (architect 2026-07-30) — stated
 // ONCE here, every arm carrying only its own class plus a pointer back:
@@ -230,13 +224,11 @@ int64_t stepped_anchor_frame(
 //     only (playback was stopped by the twin, past its wall clamp and ahead of
 //     its first write — and by the prologue's collapse arm before that on a 2+
 //     press; either way this tail always runs stopped).
-// (f) THE REGION: a position nudge is a POINT command (one flag standing in for
-//     the cursor) and CLEARS any resting span, unconditionally and blind to
-//     provenance — exactly like the marker click that selects that singleton (the
-//     two playhead forms, at land_playhead_on_marker). There is no span-preserving
-//     arm any more: the extent re-derive died with the group nudge, and a
-//     SelectionExtent span cannot rest beside the singleton this tail always sees
-//     (a membership replace takes it — clear_region_on_membership_replace).
+// (f) THE REGION: a position nudge CLEARS any resting scratch span,
+//     unconditionally — exactly like the marker click that selects that
+//     singleton (the clear-site list is at clear_region_highlight,
+//     input_handler.h). There is no span-preserving arm any more: the extent
+//     re-derive died with the group nudge.
 // (g) target_render.trigger.
 //
 // NO SYNCHRONOUS RE-WARP is needed at either home: the warp nudge authors in

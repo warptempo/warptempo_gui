@@ -816,8 +816,8 @@ void render_playhead(cairo_t* cr,
     // playhead_triangle_h_px()). This is the
     // same width and centered column as every marker/trim flag triangle, so when
     // the cursor sits on a marker the two coincide. Skipped for the scanner call
-    // (draw_triangle=false): the triangle belongs to the cursor exclusively under
-    // the split-playhead model. The clip band is the triangle lane; the vertical
+    // (draw_triangle=false): the triangle belongs to the cursor exclusively.
+    // The clip band is the triangle lane; the vertical
     // line above spans only the waveform area, so the two never overlap.
     if (draw_triangle) {
         cairo_surface_t* triangle_surface = playhead_triangle_mask();
@@ -835,82 +835,6 @@ void render_playhead(cairo_t* cr,
         cairo_mask_surface(cr, triangle_surface, dst_x, dst_y);
     }
     cairo_restore(cr);
-}
-
-void render_split_playhead(cairo_t* cr,
-                           GuiRect area,
-                           GuiRect triangle_lane,
-                           int left_col,
-                           int right_col,
-                           GuiColor color) {
-    if (area.w <= 0 || area.h <= 0) return;
-
-    // The one cached AA-baked tip-down mask (2H-1 wide, H tall). Its full-height
-    // column — the tip column — is image index center = H-1, dividing the mask
-    // into the left slope [0..center] and the right slope [center..2*center].
-    cairo_surface_t* mask = playhead_triangle_mask();
-    const int img_w  = cairo_image_surface_get_width(mask);
-    const int img_h  = cairo_image_surface_get_height(mask);
-    const int center = img_h - 1;
-
-    // Triangle lane: top row at the LANE RECT's top, tip one pixel above the
-    // waveform top edge — identical to the unsplit playhead triangle, and taken
-    // from the same passed-in lane rect for the same reason (see render_playhead).
-    const double dst_y   = static_cast<double>(triangle_lane.y);
-    const double area_x0 = static_cast<double>(area.x);
-    const double area_x1 = static_cast<double>(area.x + area.w);
-
-    // Stamp one half: place the mask so its center column lands on `bound_col`,
-    // then clip to this half's image columns [first_img_col..last_img_col]
-    // (intersected with the waveform's horizontal span, so a bound near an edge
-    // partial-renders and never leaks past the area). The clip selects the half;
-    // the single mask blit supplies its baked slope alphas.
-    auto stamp_half = [&](int bound_col, int first_img_col, int last_img_col) {
-        const double dst_x =
-            static_cast<double>(area.x + bound_col - center);
-        double clip_x0 = dst_x + static_cast<double>(first_img_col);
-        double clip_x1 = dst_x + static_cast<double>(last_img_col + 1);
-        clip_x0 = std::max(clip_x0, area_x0);
-        clip_x1 = std::min(clip_x1, area_x1);
-        if (clip_x1 <= clip_x0) return;
-        cairo_save(cr);
-        cairo_rectangle(cr, clip_x0, dst_y,
-                        clip_x1 - clip_x0, static_cast<double>(img_h));
-        cairo_clip(cr);
-        cairo_set_source_rgb(cr, color.r, color.g, color.b);
-        cairo_mask_surface(cr, mask, dst_x, dst_y);
-        cairo_restore(cr);
-    };
-
-    // DEGENERATE REGION (both bounds on one column): draw THE WHOLE CURSOR FORM
-    // at that column — the 1px vertical line AND the whole triangle — because a
-    // one-column span IS the cursor, its two ends having met (architect
-    // 2026-07-30). The line is painted by render_playhead itself with the
-    // triangle suppressed, so the split form's degenerate arm and the single
-    // cursor are one line-paint by construction rather than two that could drift.
-    // WHY THE LINE WAS ADDED: with the triangle alone this arm could leave a
-    // zero-width extent with NO visible playhead form at all — the region ground
-    // paints nothing at zero width, an active region suppresses both the cursor
-    // and the singleton stem, and in the 2+ case (two markers on one frame, or two
-    // sharing one target image under compression) the z-order flip puts the very
-    // flags that define the span OVER the lone triangle. Net: nothing drawn. The
-    // line is full-height waveform ink and cannot be occluded that way.
-    // The TRIANGLE is one full mask stamp, not two halves: two halves would land
-    // on the same dst_x and composite the shared center (tip) column twice under
-    // Cairo's OVER operator, whose partially-covered AA pixels are not idempotent,
-    // so the tip would render more opaque than an ordinary cursor. One full stamp
-    // is byte-identical to the single cursor triangle.
-    if (left_col == right_col) {
-        render_playhead(cr, area, triangle_lane,
-                        static_cast<double>(left_col), color,
-                        /*draw_triangle=*/false);
-        stamp_half(left_col, 0, img_w - 1);
-        return;
-    }
-    // Left half: full-height edge on the left bound, slope flaring left.
-    stamp_half(left_col, 0, center);
-    // Right half: full-height edge on the right bound, slope flaring right.
-    stamp_half(right_col, center, img_w - 1);
 }
 
 void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {

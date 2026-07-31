@@ -79,9 +79,8 @@ bool spawn_audio_player(const std::string& player,
 }  // namespace
 
 // The lane model's one predicate — see the declaration for the two readers and
-// the rationale. A non-empty selection IS the marker lane: the focus model stops
-// painting the cursor playhead and makes the focused flag's triangle the
-// playhead instead.
+// the rationale. A non-empty selection IS the marker lane: with a focus standing,
+// the bare horizontal arrows move that MARKER and the cursor rides along.
 bool GuiInputHandler::playhead_in_marker_lane() const {
     return !app.selected_markers.empty();
 }
@@ -1390,26 +1389,22 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // blocked set, so playback cannot restart until the editor closes.
         playback_lifecycle.stop_playback_for_modal_open();
         flag_editor.enter_bpm_edit(owner);
-        // The playhead land and the span collapse both ride enter_text_edit (the
-        // shared open chokepoint): it lands on `owner`, the EARLIEST selected,
-        // while the focus that built this span sits wherever the multi-select
-        // click left it (those clicks land on their focus —
-        // land_playhead_on_marker, input_pointer.cpp), and it clears the region
-        // because an open asserts the playhead's POINT form. The open also
-        // collapsed the selection to {owner} on the way through. The span
+        // The playhead land rides enter_text_edit (the shared open chokepoint):
+        // it lands on `owner`, the EARLIEST selected, while the focus that built
+        // this span sits wherever the multi-select click left it (those clicks
+        // land on their focus — land_playhead_on_marker, input_pointer.cpp), and
+        // it clears any resting scratch region as every point command does. The
+        // open also collapsed the selection to {owner} on the way through. The
         // re-insert below restores the MEMBERSHIP only — std::set::insert leaves
-        // last_selected_marker alone — so the focus stays `owner`, and the extent
-        // re-derive after it puts the SPAN form back: the clear-then-extent
-        // sequence the multi-select clicks run, in the one order that works (the
-        // extent must follow the chokepoint's clear, or that clear would kill
-        // it). Self-gated below 2 members, so a single-marker span sets no
-        // region, exactly as a single-marker click does. No second land.
+        // last_selected_marker alone — so the focus stays `owner`. NOTHING
+        // re-derives a region here any more (the extent re-derive died with the
+        // SPAN FORM, architect 2026-07-30): the group's cue is its members' ink
+        // triangles plus the visible cursor on `owner`. No second land.
         bool restored = false;
         for (int s : span_selection) {
             if (app.selected_markers.insert(s).second) restored = true;
         }
         if (restored) viewport.invalidate_top_strip();
-        set_region_to_selection_extent(app, audio, viewport);
         return true;
     }
 
@@ -1555,21 +1550,14 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // path. HELP lists `c` in the clear set unconditionally. The focused arm
         // then double-clears via the jump tail — a no-op, since the helper's
         // !active guard returns immediately on the already-cleared region.
-        // AND A SURVIVING 2+ SELECTION COLLAPSES TO ITS FOCUS, under THE ARCHITECT'S
-        // GENERAL RULE (2026-07-29, verbatim at the group-verb doctrine in
-        // position_nudge.h): if group is relatively cheap to implement, implement it;
-        // otherwise collapse to last selected. `c` re-derives no span, and a group
-        // resting without one is the HYBRID THIRD FORM the architect rejected. The
-        // LAND comes free here — the jump below is a jump TO THE FOCUS, which is
-        // exactly what the collapse leaves selected, so this site needs the collapse
-        // only (the position nudges and Ctrl+N pair it with an explicit land because
-        // nothing else in those routes moves the playhead onto the focus).
-        // Placed before repair_last_selected and the jump: the collapse keeps
-        // last_selected_marker, so the repair and the jump read the same focus they
-        // would have read anyway. The size >= 2 guard is the standard load-bearing
-        // one (collapse_to_focused would insert a bare focus into an empty selection).
+        // A GROUP CARRIES (architect 2026-07-30, with the SPAN FORM retired): the
+        // collapse-to-focus that stood here is deleted — it existed only to keep a
+        // group from resting SPANLESS, a state that no longer exists now the
+        // region is trim scratch rather than a group's playhead form. The jump
+        // below is a jump TO THE FOCUS and accepts a group's focus as-is; the
+        // always-visible cursor lands there, the other members keeping their ink
+        // triangles.
         clear_region_highlight(app, viewport);
-        if (app.selected_markers.size() >= 2) selection.collapse_to_focused();
         selection.repair_last_selected();
         jump_playhead_to_focused_marker();
         viewport.apply_zoom_change(kWorkingZoomLevel);

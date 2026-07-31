@@ -127,9 +127,8 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // releases near the press — or wanders back toward it — can rest a sliver
 // region a pixel or two wide. That was never an intentional window: a
 // sub-threshold rest reads as a click, so it dissolves exactly as a plain
-// click's would, clearing the highlight and the split playhead (the cursor
-// playhead
-// returns when the region deactivates, which the same damage covers). The
+// click's would, clearing the highlight (the recolored ground goes, which the
+// same damage covers). The
 // resting-region minimum floor SCALES with the gate (deliberate): reading
 // kDragMovedThresholdPx here means the sliver floor rose to 8px when the
 // architect unified the gate 2026-07-24, so the smallest region that can rest
@@ -157,80 +156,41 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 
 // THE MARKER LANE OWNS THE PLAYHEAD (architect 2026-07-28) — the rule this
 // helper serves, stated ONCE here; the other landing sites carry only their own
-// class plus a pointer back to this comment. With a non-empty selection the
-// cursor playhead stops painting and the FOCUSED flag's ink triangle IS the
-// playhead (the lane model, GuiInputHandler::playhead_in_marker_lane), so:
+// class plus a pointer back to this comment. With a non-empty selection the bare
+// horizontal arrows move the FOCUSED MARKER rather than the playhead column (the
+// lane model, GuiInputHandler::playhead_in_marker_lane), so:
 //   * any route that changes WHICH marker is focused while the lane is active
-//     LANDS the playhead on the new focus — otherwise a flag asserts it is the
-//     playhead while playhead_cursor_sample rests somewhere else entirely, and
-//     Space plays from that stale spot;
+//     LANDS the playhead on the new focus — otherwise the arrows would move a
+//     marker while playhead_cursor_sample rested somewhere else entirely, and
+//     Space would play from that stale spot;
 //   * any route that LEAVES the lane (empties the selection) leaves the playhead
-//     exactly where it is, for the cursor to paint again — Home/End clear rather
-//     than land for precisely that reason.
+//     exactly where it is — Home/End clear rather than land for precisely that
+//     reason.
+// THE CURSOR PLAYHEAD IS ALWAYS PAINTED (architect 2026-07-30), which is what
+// makes the rule legible rather than merely correct: the land is VISIBLE, so a
+// nudge shows the cursor riding the marker it moves. (The rule used to be argued
+// from a SUPPRESSION — the cursor stopped painting under a selection and the
+// focused flag's ink triangle "was" the playhead — and that argument is retired
+// with the suppression itself. The behaviour it justified is unchanged.)
 // A LAND IS ALWAYS ON THE FOCUS (architect 2026-07-28, closing the rule): the
 // three MULTI-SELECT clicks used to land at the earliest selected while focusing
 // elsewhere, and no longer do — the shift-range click lands on the clicked range
 // END, and both ctrl-toggle arms land on whichever marker the toggle leaves
 // focused. So there is no such thing as a focus set whose land went somewhere
 // else: the "towed" category is empty, and the nudge/drag follow tows nothing.
-// Auditioning a range FROM ITS START is unaffected and never depended on this:
-// Space launches from an active region's LEFT BOUND, and those same clicks set
-// the extent region (set_region_to_selection_extent, below).
 // The landing sites are enumerated below (they are this function's callers, plus
 // the image-moving gestures that re-land through move_playhead_to at their own
 // commits: the two position nudges, and both arms of the Up/Down cent step in
 // their target-view re-warp tails).
 //
-// THE PLAYHEAD HAS TWO FORMS, POINT AND SPAN, AND EXACTLY ONE IS EVER VISIBLE
-// (architect 2026-07-29) — the frame this land now sits inside. The POINT form
-// is the cursor (empty selection) or the singleton stem / focused flag; the SPAN
-// form is the REGION, which is why an active region dissolves the cursor into
-// split half-triangles, suppresses the singleton stem (paint_handler.cpp), and
-// is where Space launches from. The region therefore OUTRANKS every point cue,
-// and a command that asserts the point form must END the span.
 // THE LAND IS A PURE PLAYHEAD WRITE: it has no region side effect whatsoever.
-// Each POINT COMMAND owns its own clear_region_highlight AT ITS OWN SITE, and
-// owns it UNCONDITIONALLY — never gated on whether the playhead actually moved.
-// (The one-day-old 2026-07-28 rule that a land ended a span only when it MOVED
-// the playhead retired with the land's clear it existed to decide: conditioning
-// the collapse on motion is exactly what left a frozen span resting under a
-// marker the arrows then moved, with Space still launching from that stale
-// span.) The collapse sites are the plain marker click, the two
-// multi-select clicks whenever the RESULT is <2
-// selected, enter_text_edit (the one chokepoint of every editor open and
-// retarget), the POSITION NUDGES on both columns (horizontal movement is a focus
-// act, so every one of them is a point command — the doctrine is at the head of
-// position_nudge.h), and the navigation jumps that always
-// owned theirs (the list at clear_region_highlight, input_handler.h). The
-// SPAN-PRESERVING routes each earn it: the whole TEMPO
-// family re-derives or re-syncs the highlight it moves, Space plays the span, `x`
-// consumes it into the trim, `m` re-derives its extent right after the open, and
-// pure viewport moves leave it alone. The other half of the model is the
-// MEMBERSHIP REPLACE, which clears a SelectionExtent span outright
-// (clear_region_on_membership_replace, app_state.h) — that is what covers the
-// ops which change WHO is selected without moving anything: sanitize and
-// the deselecting routes (Home/End, clear_selection's callers — Esc is no longer
-// one of them, being unbound since 2026-07-29). (The Ctrl+N collapse is NOT one
-// of them — it LANDS the playhead
-// on the surviving focus, warpmarkers_ops.cpp, which makes it a point command
-// like the clicks; it simply owes no span clear of its own, the membership
-// replace already taking a SelectionExtent one.) THREE ops go further and clear ANY
-// resting span, provenance and all (architect 2026-07-29): the undo/redo
-// restore, the `p` W/P swap, and the propagate paste — each replaces the whole
-// membership at once (the swap by emptying it, the other two by writing a set
-// they took in wholesale), so a span none of them built has nothing left to
-// describe (the list lives at clear_region_highlight, input_handler.h). THE
-// COROLLARY SURVIVES AS A PROPERTY OF THE VERBS, NOT AS ENFORCEMENT (architect
-// 2026-07-29): a 2+ selection always has a drawn playhead form, because every route
-// that rests a group rests it WITH its extent span and every route that would take
-// the span away COLLAPSES the group to its focus and lands there. The distributed
-// collapse protocol that once policed this from the clear side is DELETED (ruling
-// 6); the guarantee it was defending is kept by the producers' own form instead, and
-// the architect's general rule for any future verb — if group is relatively cheap to
-// implement, implement it; otherwise collapse to last selected, with no hybrid third
-// form — is stated verbatim at the group-verb doctrine (position_nudge.h). The two
-// forms themselves are untouched: an ACTIVE span outranks and suppresses both point
-// cues.
+// The REGION is TRIM SCRATCH (its contract is at RegionState, app_state.h) and
+// every command that moves the playhead or replaces the selection clears it at
+// its OWN site, unconditionally — never gated on whether the playhead actually
+// moved. The one authoritative clear-site enumeration lives at
+// clear_region_highlight (input_handler.h); do not restate it here or anywhere
+// else. What is worth stating at the land is only this: the clear is never a land
+// side effect, and the land never decides it.
 //
 // LANDS the playhead exactly onto marker `hit` (active column's store), with
 // NO viewport move — the sole difference from Tab (which recenters) and `c`
@@ -265,11 +225,10 @@ void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
 //   * THE VIEW / TAB SWITCHES, which re-express a focus into a new domain: the
 //     S<->T flip (input_handler.cpp) is now the only one, landing only on a
 //     NON-EMPTY selection — with no lane the cursor is the playhead in its own
-//     right and keeps its own value. The flip COLLAPSES a 2+ selection to its
-//     focus before this land runs (the architect's group-or-collapse rule, one
-//     of the COLLAPSE+LAND sites at the group-verb doctrine, position_nudge.h),
-//     so the selection here is always a SINGLETON or EMPTY, and the land seats
-//     the cursor on the surviving focus exactly as it did before. Ctrl+Tab left this class
+//     right and keeps its own value. The flip CARRIES a 2+ selection across
+//     since 2026-07-30 (its collapse died with the SPAN FORM), so the selection
+//     here may be a GROUP, and the land seats the cursor on its focus exactly as
+//     it does for a singleton. Ctrl+Tab left this class
 //     when the parked
 //     selections died: it restores its tab's stored cursor VERBATIM, hands the
 //     lane nothing, and its only land is the auto-select's below;
@@ -370,9 +329,9 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 // It stays because the marker lane owns the playhead — a route that hands the lane
 // a focus pays the land, and this route paying it in the degenerate case is what
 // keeps the rule exceptionless.
-// NO REGION WORK: set_single_selection takes a SelectionExtent span through the
-// ordinary membership-replace contract, and every caller has already cleared any
-// resting span of any provenance before reaching here.
+// NO REGION WORK: every caller has already cleared any resting scratch span
+// before reaching here (and a region rests only beside an EMPTY selection
+// anyway, so there is nothing here to invalidate).
 // Read-only allowed (selection and playhead are navigation). Bounds-safe by
 // construction — the index comes from the scan itself.
 void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
@@ -392,86 +351,6 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
     if (hit < 0) return;
     selection.set_single_selection(hit);
     land_playhead_on_marker(app, audio, viewport, hit);
-}
-
-// The DOWNWARD coupling — the selection defines the extent region,
-// SELECTION-FLOWS-DOWNWARD-ONLY (architect 2026-07-23): a
-// multi-select CLICK that leaves 2+ markers selected sets the region to the
-// selection's active-domain position extent [earliest, latest], so the highlight
-// and Space's play-from-region-left-bound agree by construction — auditioning a
-// range from its START is the REGION's doing, not the land's (the clicks land on
-// the FOCUS since 2026-07-28; see land_playhead_on_marker). A selection of <=1
-// sets NOTHING — a result under two markers is a POINT, and the click's own
-// clear_region_highlight (its else-arm, run whatever the land did) is what
-// collapses the span there. Endpoints
-// are clamped through clamp_playhead_to_live_domain (the region domain's
-// playable-frame invariant, as every other former clamps). FOUR caller CLASSES:
-//   (1) CREATORS — the shift-range and ctrl-toggle click paths, plus the `m`
-//       bpm-mode open (input_key_dispatch.cpp), which is the same pattern one
-//       gesture over: the open collapses the selection to the span owner and
-//       lands there, then the handler restores the span membership and re-derives
-//       the extent, so the span cue survives the open. Each MUST run
-//       this AFTER its own point-form clear (the click's else-arm
-//       clear_region_highlight, or the open chokepoint's clear inside
-//       enter_text_edit) — a reorder would let that clear kill this fresh
-//       highlight;
-//   (2) MAINTAINERS — the group image-moving commits that re-derive an
-//       ALREADY-ACTIVE SelectionExtent highlight from the post-commit,
-//       reordered/remapped store (never creating one). Every one of them gates on
-//       region.active && provenance == SelectionExtent, so a Free / TrimWindow /
-//       inactive region is untouched. The class is the group TEMPO gestures — the
-//       position movers left it 2026-07-29, groups being never moved (the doctrine
-//       at the head of position_nudge.h) — and its MEMBERSHIP is not
-//       enumerated here: the
-//       authoritative inventory of the image-follow sites lives at RegionState in
-//       app_state.h, and an inline copy here is exactly the list that goes stale;
-//   (3) the two MASS-MARKER PROGRAMMATIC selections, which unlike the
-//       maintainers MAY CREATE a region: the GROUP undo/redo RESTORE (undo.cpp's
-//       visual tail, architect 2026-07-25) and the PROPAGATE PASTE's target-view
-//       tail (phase_reset_propagate.cpp, architect 2026-07-29 — reversing its
-//       earlier no-region rule; a mass creation should read like the other mass
-//       event). Both share one shape: wholesale region clear, select the set,
-//       land on its FIRST/earliest member, then derive the extent here.
-// (There is no fourth class: the ESC DROP-FORMER — the one caller that derived a
-// span here only to flip it Free and drop the selection — died with the Esc
-// ladder on 2026-07-29, and nothing converts a fresh extent to Free any more.)
-// Touches ONLY the region, never shift_range_anchor, so the shift-range path's
-// anchor survives a downward selection->extent set. The REMAINING programmatic
-// selections (the drops, Tab/`c`) do NOT call this. Declared in input_handler.h
-// so the ops TUs, undo.cpp and the propagate tail can reach it.
-void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
-                                    Viewport& viewport) {
-    if (app.selected_markers.size() < 2) return;
-    const bool phase_reset = (app.active_markers_view == 'P');
-    const auto& warp_vec = app.warpmarkers.markers();
-    const auto& phase_reset_vec = app.phaseresetmarkers.markers();
-    const int n = phase_reset
-        ? static_cast<int>(phase_reset_vec.size())
-        : static_cast<int>(warp_vec.size());
-    int64_t lo = 0, hi = 0;
-    bool have = false;
-    for (int idx : app.selected_markers) {
-        if (idx < 0 || idx >= n) continue;   // defensive; stale indices skipped
-        const int64_t src_f = phase_reset
-            ? phase_reset_vec[idx].time_frame
-            : warp_vec[idx].time_frame;
-        const int64_t pos = clamp_playhead_to_live_domain(
-            source_frame_to_active_domain(app, audio, src_f), app, audio);
-        if (!have) { lo = hi = pos; have = true; }
-        else { if (pos < lo) lo = pos; if (pos > hi) hi = pos; }
-    }
-    if (!have) return;   // every selected index was stale (degenerate)
-    app.region.active     = true;
-    app.region.a_frame    = lo;
-    app.region.b_frame    = hi;
-    // The ONE site that sets SelectionExtent provenance: this region IS the
-    // selection's extent, so the image-follow gesture may track it. Every
-    // legitimate extent re-derive (the multi-select clicks, `m`, the mass-marker
-    // restores, the group cent step) routes through here, so provenance self-maintains
-    // (clear_region_on_membership_replace takes the whole region away on any
-    // membership replace).
-    app.region.provenance = RegionProvenance::SelectionExtent;
-    viewport.invalidate_waveform_area();
 }
 
 // One scrub ACT: STOP, THEN START ON THE NEXT CLICK (architect 2026-07-27,
@@ -1014,17 +893,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // largest remaining index, and a REMOVE of any other member leaves
             // the focus alone — so app.last_selected_marker is the one expression
             // for all three, and it is always a live member here (a non-empty
-            // selection always carries a focus after either arm). Auditioning
-            // from the selection's START survives regardless: that is Space
-            // launching from the extent region's LEFT BOUND, set below. THE
-            // RESULT SIZE DECIDES THE PLAYHEAD'S FORM (architect 2026-07-29):
-            // 2+ left selected is a SPAN, so the click re-owns the region as the
-            // selection's [earliest, latest] extent under the DOWNWARD
-            // selection->extent coupling (SELECTION-FLOWS-DOWNWARD-ONLY,
-            // architect 2026-07-23); a result of <2 — one survivor, or the
-            // emptied selection that lands nothing — is a POINT, so any resting
-            // region collapses through clear_region_highlight, unconditionally
-            // and whatever the land did or did not move. Read-only allowed
+            // selection always carries a focus after either arm). ANY RESTING
+            // REGION CLEARS, unconditionally and whatever the land did or did
+            // not move: the region is trim scratch, never a selection visual, so
+            // there is no result-size split here any more (the >=2 arm's extent
+            // write died with the SPAN FORM, architect
+            // 2026-07-30). Read-only allowed
             // (selection + playhead are navigation). The ctrl-exact WAVEFORM
             // press keeps the zoom-strip drag below (different surface, no
             // collision); a markerless top-strip ctrl press claims only the
@@ -1049,13 +923,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 if (!app.selected_markers.empty())
                     land_playhead_on_marker(app, audio, viewport,
                                             app.last_selected_marker);
-                // Span or point, decided by the RESULT (see above). Land first,
-                // then own the region: the extent must follow the land at a span
-                // result, and the clear is the point result's own act.
-                if (app.selected_markers.size() >= 2)
-                    set_region_to_selection_extent(app, audio, viewport);
-                else
-                    clear_region_highlight(app, viewport);
+                // A marker click is a POINT command, so it takes any resting
+                // scratch span with it (the clear-site list is at
+                // clear_region_highlight, input_handler.h).
+                clear_region_highlight(app, viewport);
                 return;
             }
             // Markerless top-strip ctrl-exact press: the CHIP ROW sets the
@@ -1063,8 +934,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // END, the architect's intended pair;
             // set_trim_bound_at_click refuses read-only AND a missing pair
             // silently — the clicks ADJUST an existing window, never create
-            // one — and runs the
-            // coupling sync). EVERY other lane — an empty flag or triangle
+            // one — and, being a SETTER, deselects past those refusals). EVERY
+            // other lane — an empty flag or triangle
             // lane included — is a strict no-op, falling through to the return
             // below (the ctrl-click clear on an empty flag/triangle spot is
             // RETIRED, architect 2026-07-23: ctrl-click in Ableton is just
@@ -1109,8 +980,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Ctrl+Shift-exact: the chip row is its ONE claim — set the END trim
         // bound at the click (ctrl is BEGIN, ctrl+shift is END;
         // set_trim_bound_at_click refuses read-only AND a missing pair
-        // silently — adjust-only — and runs the
-        // coupling sync). Everywhere else Ctrl+Shift stays a strict no-op,
+        // silently — adjust-only — and deselects as a SETTER past those
+        // refusals). Everywhere else Ctrl+Shift stays a strict no-op,
         // playback included, falling to the return below.
         if (ctrl && shift && !alt && inside_top) {
             const GuiRect chip_row = top_upper_row_area(app);
@@ -1171,60 +1042,39 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // text lane, and the flag/triangle lanes are disjoint y-bands, so
             // this contends with nothing: a marker-part press falls to the marker
             // handling below. The PLAIN click either arms a chip/bridge drag or,
-            // on an unclaimed spot, DESELECTS and highlights the trim window;
-            // the bound-set clicks are the ctrl (BEGIN) / ctrl+shift (END)
+            // on an unclaimed spot, is a CONSUMED NOTHING; the bound-set clicks
+            // are the ctrl (BEGIN) / ctrl+shift (END)
             // claims above. A SHIFT-exact chip-row press claims nothing —
             // trim is transparent to it, and the shift fall-through below is
             // inert here (marker_hit_at's y-bands exclude the chip row), so it
             // ends at the inert top-strip return, having touched nothing at
             // all: it is the only press that reaches the chip row without
             // claiming it (ctrl and alt were discarded at the gate above), and
-            // it stops no playback — that stop belongs to the plain claim.
+            // it stops no playback — nor does the plain press: the chip row's
+            // stop belongs to the DRAG's first accepted bound change
+            // (input_trim.cpp).
             const GuiRect chip_row = top_upper_row_area(app);
             const bool in_chip_row =
                 (y >= chip_row.y && y < chip_row.y + chip_row.h);
             if (!shift && in_chip_row) {
-                // Plain chip-row press. Read-only cannot ARM a trim drag,
-                // but the region-highlight sync is navigation, so it runs directly
-                // there (route_trim_chip_press would claim-without-arming and
-                // skip it). In a writable tab a chip/bridge hit arms the drag (a
-                // motionless release then runs this same click action at
-                // on_button_release), and an UNCLAIMED chip-row spot runs the
-                // region-highlight sync now. With BOTH bounds set the window
-                // is taken; lone/no trim is a silent no-op. Either way the chip
-                // row consumes the press — it never falls to the marker handling.
-                // THE CLICK IS A TrimWindow SETTER, so where it takes the window it
-                // also DESELECTS (architect 2026-07-29 — the rule and the setter
-                // list at sync_region_to_trim_window's declaration,
-                // input_handler.h): the trim-bar click is the span-form sibling of
-                // this same press's deselect-all in the waveform's upper half.
-                // Both acting sync arms below therefore publish through the setter
-                // route, the READ-ONLY one included — read-only blocks persistent
-                // MUTATION, and the selection is session state the same tab's marker
-                // clicks rewrite freely. The refusal side is unchanged: with no
-                // resting pair (have_window false) neither arm runs, so a press
-                // with nothing to highlight leaves the selection exactly as it was.
-                // The consume claims the press, but a RESTING FULL PAIR is what
-                // makes it ACT: with the pair set every arm commits something
-                // (read-only syncs the highlight, a chip/bridge hit arms the
-                // drag, an unclaimed spot syncs the highlight), and with a lone
-                // or absent trim every arm is a silent no-op — route_trim_chip_press
-                // refuses at its own pair gate and both sync arms are gated on
-                // the pair too. So the stop is gated on the pair and runs ahead
-                // of all three acting arms; a press with nothing to highlight
-                // leaves a live audition playing. One predicate, read once —
-                // nothing on any arm mutates the trim (the drag arms, it does
-                // not commit), so the three arms and the stop all read the same
-                // verdict.
-                const bool have_window =
-                    (app.trim.has_begin && app.trim.has_end);
-                if (have_window) playback_lifecycle.stop_playback_if_playing();
-                if (active_view_state(app).read_only) {
-                    if (have_window) deselect_and_sync_trim_window_highlight();
-                    return;
-                }
-                if (route_trim_chip_press(x, y)) return;
-                if (have_window) deselect_and_sync_trim_window_highlight();
+                // Plain chip-row press. In a writable tab a chip/bridge hit ARMS
+                // the trim drag (a motionless release then runs that same click
+                // action at on_button_release); read-only cannot arm one. Either
+                // way the chip row CONSUMES the press — it never falls to the
+                // marker handling.
+                // A PLAIN CHIP-ROW CLICK THAT NEVER BECOMES A DRAG IS NOW A
+                // CONSUMED NOTHING (architect 2026-07-30). Its entire act was
+                // PUBLISHING the trim window as a region highlight, and that
+                // coupling is retired outright with the SPAN FORM — so the two
+                // highlight-only arms that stood here (the read-only press's
+                // direct sync and the writable UNCLAIMED-spot sync) are gone, and
+                // so is the pre-route stop that served them: keeping either would
+                // make a no-op click stop an audition and destroy a selection for
+                // nothing. The drag keeps both — it takes the setter's deselect
+                // and the trim-mutation stop at its FIRST ACCEPTED bound change
+                // (input_trim.cpp), which is where a trim commit actually happens.
+                if (active_view_state(app).read_only) return;
+                route_trim_chip_press(x, y);
                 return;
             }
             if (mh.index >= 0) {
@@ -1263,38 +1113,29 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // (last_selected), and the playhead LANDS THERE (architect
                     // 2026-07-28, replacing the earliest-member land): focus and
                     // land no longer diverge on any click, so nothing is towed
-                    // onto the focus by a later nudge. A Space after a range
-                    // select still auditions from the range's START — that is the
-                    // extent region's LEFT-BOUND launch (set below), which is
-                    // what owned that behavior all along. On an anchoring
+                    // onto the focus by a later nudge. On an anchoring
                     // focus-less first click the selection is {hit} and hit is
                     // the focus, so the land is unchanged. Ctrl+click is the
                     // individual membership toggle (above, landing on its own
                     // resulting focus). It arms no drag, seeds/consumes no
                     // double-click, opens no editor. Allowed in read-only (selection + playhead are
-                    // navigation). The downward selection->extent coupling
-                    // (SELECTION-FLOWS-DOWNWARD-ONLY): a range leaving
-                    // 2+ selected sets the region to the [earliest, latest]
-                    // extent (set_region_to_selection_extent, AFTER the land),
-                    // so the highlight and Space's left-bound launch agree; the
-                    // anchoring first click ({hit}) leaves <=1 selected, which is
-                    // a POINT result and collapses any resting region instead —
-                    // the ctrl toggle's identical span-or-point split.
+                    // navigation). ANY RESTING REGION CLEARS whatever the
+                    // result size (architect 2026-07-30): the region is trim
+                    // scratch, not this selection's extent, so the >=2 arm's
+                    // extent write died with the SPAN FORM and the split with
+                    // it.
                     selection.select_range_from_anchor(hit);
                     // A range leaving exactly one selected shows its always-on stem;
-                    // select_range_from_anchor owns the subject-change damage (a 2+
-                    // range shows the extent region's ground, no stem).
+                    // select_range_from_anchor owns the subject-change damage.
                     // The land target is the FOCUS the mutator just set, which is
                     // `hit` on both its arms — spelled as last_selected_marker so
                     // the three multi-select clicks read as one rule.
                     if (!app.selected_markers.empty())
                         land_playhead_on_marker(app, audio, viewport,
                                                 app.last_selected_marker);
-                    // Span or point by the RESULT size, land-then-region order.
-                    if (app.selected_markers.size() >= 2)
-                        set_region_to_selection_extent(app, audio, viewport);
-                    else
-                        clear_region_highlight(app, viewport);
+                    // A marker click is a POINT command and takes any resting
+                    // scratch span with it.
+                    clear_region_highlight(app, viewport);
                 } else {
                     // ONE PLAIN MARKER PRESS, NO SPECIAL CASE FOR A SELECTED
                     // MEMBER (architect 2026-07-29, HORIZONTAL MOVEMENT IS A FOCUS
@@ -1328,12 +1169,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // the unified item land (flag shape or lane run — hit is the
                     // one index).
                     land_playhead_on_marker(app, audio, viewport, hit);
-                    // THE POINT COMMAND OWNS ITS COLLAPSE (architect 2026-07-29):
-                    // a single-select click asserts the playhead's POINT form, so
-                    // any resting span ends here — unconditionally, of any
-                    // provenance, and whether or not the land moved anything. A
-                    // re-click of the already-selected marker therefore collapses
-                    // a resting TrimWindow or Free highlight too; that is the
+                    // THE CLICK OWNS ITS CLEAR (architect 2026-07-29): a
+                    // single-select click moves the playhead onto a marker, so
+                    // any resting scratch span ends here — unconditionally, and
+                    // whether or not the land moved anything. A
+                    // re-click of the already-selected marker therefore clears
+                    // a resting highlight too; that is the
                     // ruling and not an accident (the click says "the playhead is
                     // HERE, at this point"). The double-click-consume path rides
                     // this same site, so an editor open through it finds no span.
@@ -1497,14 +1338,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         {
             const int click_rel_x = x - area.x;
             if (shift) {
-                // Waveform shift+click: the region former, one of the DROP
-                // formers (it clears the selection; the downward
-                // selection->extent derivation lives on the multi-select clicks
-                // and the SelectionExtent maintainer (the group cent
-                // step's follow), never on a drag-formed region — the plain waveform
-                // drag makes a FREE region and selects nothing, and this shift
-                // former likewise clears; architect 2026-07-23, replacing
-                // the reserved strict no-op). With NO markers
+                // Waveform shift+click: the region former, ONE OF THE TWO
+                // formers there are (this and the plain upper-half drag) and,
+                // like its sibling, it CLEARS THE SELECTION — which is what makes
+                // "a region rests only beside an empty selection" structural
+                // (the inventory is at RegionState, app_state.h; architect
+                // 2026-07-23, replacing the reserved strict no-op). With NO markers
                 // selected it forms a region from the PLAYHEAD to the clicked
                 // column; with markers selected the selection DROPS and the
                 // region spans from the selected marker FURTHEST
@@ -1587,10 +1426,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                             endpoint  = pos;
                         }
                     }
-                    // Deselect — the selection drops, a Free span forms (the
-                    // shift-click waveform former drops the selection by
-                    // explicit ruling, unlike the plain drag and the
-                    // multi-select clicks that promote). This also dissolves the shift-range anchor,
+                    // Deselect — the selection drops and the span forms beside an
+                    // empty selection (the shift-click waveform former drops the
+                    // selection by explicit ruling, exactly as the plain drag's
+                    // press does). This also dissolves the shift-range anchor,
                     // correct here: this shift interaction is on a DIFFERENT
                     // surface (the waveform) than the marker range select, so no
                     // range is being extended.
@@ -1605,9 +1444,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         < kDragMovedThresholdPx) {
                     // Sliver: form NO region — app.region is untouched HERE, so
                     // a motionless release keeps whatever the deselect above left
-                    // standing: a Free or TrimWindow pre-press region rests
-                    // bit-for-bit, while an ex-SelectionExtent one is already
-                    // gone (the deselect's membership clear took it). An Esc
+                    // standing (a pre-press scratch span rests bit-for-bit; the
+                    // deselect above touches no region at all). An Esc
                     // mid-drag from here is a consumed no-op like everywhere else
                     // (no cancel), so the drag simply continues. ALSO
                     // ARM the drag anchored at the far endpoint so dragging out
@@ -1622,12 +1460,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 app.region.active     = true;
                 app.region.a_frame    = endpoint;
                 app.region.b_frame    = click_frame;
-                // The shift-click former DROPS the selection, so this
-                // region is FREE — the cent step's follow skips it. ORDER: the deselect
-                // above ran FIRST, so its membership clear cannot reach this
-                // span — and a Free span is outside that clear's reach in any
-                // case (it takes SelectionExtent only).
-                app.region.provenance = RegionProvenance::Free;
+                // ORDER: the deselect above ran FIRST, so this span rests beside
+                // an EMPTY selection — one of the region's two formers, both of
+                // which deselect at press (the inventory is at RegionState,
+                // app_state.h).
                 viewport.invalidate_waveform_area();
                 // ARM the drag anchored at the FAR endpoint, PRESERVING the
                 // just-formed region: a motionless release keeps it (today's
@@ -1876,10 +1712,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // that check: the SHIFT-exact former's
         // preserving arm (arm_region_drag_preserving) does NOT dissolve
         // app.region, so a motionless shift-sliver press-release rests a legal
-        // narrow region (a TrimWindow or Free highlight, NOT subject to the
-        // drag-rest minimum — a SelectionExtent one cannot reach this rest: the
-        // press's own deselect is a membership replace that clears it, and an
-        // extent span cannot rest beside an empty selection either), and an
+        // narrow region (the pre-press span, NOT subject to the
+        // drag-rest minimum), and an
         // unconditional min-size check would delete
         // it. Capture `moved` BEFORE the state reset (the reset zeroes it). Plain
         // path unaffected: a plain MOVED drag still checks; a plain motionless
@@ -1899,17 +1733,14 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     }
     if (app.pending_trim_drag.active) {
         // The pending trim drag never crossed the threshold: a motionless
-        // chip/bridge press. Under the lane-click model that is the trim-lane
-        // CLICK — highlight the trim window with the REGION, through the
-        // SETTER's publish, which DESELECTS first (architect 2026-07-29; the rule
-        // at sync_region_to_trim_window's declaration). A resting click is a
-        // commit, so nothing restores the deselect. The pending only arms on the
-        // full pair (route_trim_chip_press gates it), so the window exists and the
-        // publish always acts. (A crossed pending became app.trim_drag and
-        // commits through the branch above; read-only never armed a pending, so
-        // this branch is writable-only — the read-only click ran at press.)
+        // chip/bridge press, which is now a CONSUMED NOTHING (architect
+        // 2026-07-30). Its whole act was publishing the trim window as a region
+        // highlight, and that coupling retired with the SPAN FORM; a deselect
+        // and a playback stop left behind would be pure cost on a click that
+        // commits nothing. Just disarm. (A crossed pending became app.trim_drag
+        // and commits through the branch above, where the setter's deselect and
+        // the trim-mutation stop live.)
         app.pending_trim_drag = PendingTrimDrag{};
-        deselect_and_sync_trim_window_highlight();
         return;
     }
     if (app.pending_marker_drag.active) {
@@ -2160,13 +1991,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     if (app.pending_trim_drag.active) {
         viewport.clear_hover_popup();
         if (!mods.primary_button_held) {   // button lost -> just the click
-            // The motionless chip/bridge press is the trim-lane CLICK:
-            // run the same SETTER publish the clean release does — deselect then
-            // sync — so the same physical click cannot rest differently depending
-            // on which path ended it. The pending only arms on the full pair
-            // (writable), so the window exists.
+            // The motionless chip/bridge press commits NOTHING (architect
+            // 2026-07-30, the clean-release twin above): its highlight publish is
+            // retired, so the same physical click rests identically whichever
+            // path ended it — as a consumed nothing.
             app.pending_trim_drag = PendingTrimDrag{};
-            deselect_and_sync_trim_window_highlight();
             return;
         }
         if (std::max(std::abs(mouse_x - app.pending_trim_drag.press_x),
@@ -2278,23 +2107,15 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         app.region.active     = true;
         app.region.a_frame    = app.region_drag.anchor_frame;
         app.region.b_frame    = far_frame;
-        // Drag-formed, so FREE provenance: the cent step's follow does not
-        // re-derive it (it has an empty selection anyway).
-        app.region.provenance = RegionProvenance::Free;
         // SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23): highlighting a
         // region does NOT select the markers it contains (the reverse coupling —
         // a region selecting its contents — was tried and retired; do not
         // re-propose) — the press already deselected all and the drag
-        // leaves the selection EMPTY throughout. The reverse direction stands:
-        // when markers ARE selected the region is set to their extent (the
-        // multi-select clicks via set_region_to_selection_extent — provenance
-        // SelectionExtent; the trim window via the trim setters' publish —
-        // provenance TrimWindow). So a drag-formed region always rests with an
-        // empty selection (Free) — and whenever 2+ markers rest selected WITH an
-        // active SelectionExtent region, that region IS their extent by
-        // construction (a TrimWindow region rests only beside an EMPTY selection
-        // since 2026-07-29: every setter deselects — the rule is at
-        // sync_region_to_trim_window's declaration).
+        // leaves the selection EMPTY throughout. That is now the WHOLE story: the
+        // region is trim scratch with exactly two formers, this drag and the
+        // shift waveform press, and both deselect at press — so a region rests
+        // ONLY beside an EMPTY selection, structurally (the inventory is at
+        // RegionState, app_state.h).
         viewport.invalidate_waveform_area();
         return;
     }

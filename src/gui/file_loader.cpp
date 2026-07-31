@@ -599,8 +599,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // input_pointer.cpp / input_handler.h). A
     // parsed `.settings` band carries a playhead but never a selection, so the
     // session opens with a marker selected exactly when the restored cursor lands
-    // on one — the entry reads like a marker click, and the flag's ink triangle is
-    // the playhead from the first frame. PLACED HERE, past the target-view
+    // on one — the entry reads like a marker click, with the cursor standing on
+    // the selected flag from the first frame. PLACED HERE, past the target-view
     // validity gate and its forced-S re-clamps: the scan's conversion is
     // domain-dependent (source view identity, target view through the warp map),
     // so it must read the view the session actually opens in and the playhead's

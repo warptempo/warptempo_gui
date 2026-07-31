@@ -224,10 +224,13 @@ struct Viewport {
     // playheads' pixels are plate-registered, and damage follows the basis of
     // the pixels it erases (the rule, and the table of which sites take this
     // narrow shape versus a full-area widening, live at playhead_pixel_x in
-    // app_state.h). Since 2026-07-30 the callers are exactly the three that can
-    // see a GuiPaintHandler and so can compute plate columns: main.cpp's tick
-    // heartbeat and pre-paint scanner advance (per-frame, narrow by necessity)
-    // and the Tab/`c` jump's no-scroll branch.
+    // app_state.h). THE CALLERS ARE EXACTLY THE TWO PER-FRAME SCANNER SITES
+    // (re-derived by grep 2026-07-30): main.cpp's tick heartbeat and its
+    // pre-paint scanner advance, both narrow BY NECESSITY at 60 Hz and both
+    // inside a scope that reaches paint_handler. The Tab/`c` jump's no-scroll
+    // branch was the third until it moved onto land_playhead_on_marker and took
+    // that owner's full-area shape with it. Every other playhead write is
+    // discrete and widens; do not add a narrow caller for one.
     void invalidate_playhead_columns(double old_px, double new_px);
     // (There is no stem-column invalidator any more. invalidate_stem_column
     // computed the selected stem's narrow damage on the ITEM basis while

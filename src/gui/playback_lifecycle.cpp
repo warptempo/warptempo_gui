@@ -44,15 +44,13 @@ void GuiPlaybackLifecycle::stop_playback_for_modal_open() {
 
 // Space-bar: start/stop playback. Playback runs from the cursor to
 // trim_end (or total_frames if no e= marker). Pressing space with the
-// cursor at or past trim-end is a silent no-op. THE CURSOR IS THE START ONLY
-// WHERE THE CURSOR IS THE PLAYHEAD: with an active region the span is the
-// playhead's form, so Space's play edge goes to scrub_launch_at with the span's
-// left bound instead and never reaches here (architect 2026-07-29 — an audition
-// does not move the cursor; the site is the Space handler in input_handler.cpp).
-// The STOP edge below is every Space's, region or not. Space-to-stop just
+// cursor at or past trim-end is a silent no-op. THE CURSOR IS ALWAYS THE START
+// (architect 2026-07-30): the region left-bound launch that used to divert
+// Space's play edge to scrub_launch_at is deleted with the SPAN FORM, so every
+// Space — span resting or not — launches from here. Space-to-stop just
 // DEACTIVATES the scanner (its value fields go stale by contract — no
 // snap-back, no separate stash; the cursor is the launch point by
-// definition under the split-playhead model).
+// definition).
 //
 // The play edge computes the launch position — cursor + launch_offset, the
 // offset non-zero only for the target-view lead-in Space auditions — and delegates
@@ -118,9 +116,9 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     launch_playback_from(launch_pos);
 }
 
-// The audition launch entry, shared by the scrub act's stop-then-start START
-// half and by Space's region launch: begin the scanner from `frame` — an
-// absolute active-paint-domain position (both callers hand it in already
+// The audition launch entry, the scrub act's stop-then-start START
+// half: begin the scanner from `frame` — an
+// absolute active-paint-domain position (the caller hands it in already
 // clamped to the live domain) — with the resting cursor, selection, region, and
 // follow all untouched. The SCANNER, not the cursor, is what the gesture
 // drives: the
@@ -133,8 +131,8 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
 // end bound freshly, the point of the fresh-session semantic.
 void GuiPlaybackLifecycle::scrub_launch_at(int64_t frame) {
     // Defensive: a live session never launches — a scrub act over a live
-    // session STOPS it and returns without reaching here, and Space's stop edge
-    // is toggle_playback's, so both callers arrive stopped. This guard only
+    // session STOPS it and returns without reaching here, so the caller always
+    // arrives stopped. This guard only
     // keeps a future caller from stacking play() over a live run.
     if (playback.is_playing()) return;
     // The same defensive clear toggle_playback's play edge runs (the launch
@@ -150,8 +148,7 @@ void GuiPlaybackLifecycle::scrub_launch_at(int64_t frame) {
 // verdict, seed the scanner, and start the audio. Returns whether it
 // launched; every refusal is a silent no-op (the "nothing to audition"
 // family). Two callers: toggle_playback's play edge (cursor + launch_offset)
-// and scrub_launch_at (the scrub's clicked frame, or Space's region left
-// bound). This body never writes the
+// and scrub_launch_at (the scrub's clicked frame). This body never writes the
 // resting cursor — the scanner is the only playhead it touches, so a launch
 // is a pure scanner event and the cursor is untouched by construction.
 // Callers run the defensive follow-override clear before delegating

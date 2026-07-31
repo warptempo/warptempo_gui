@@ -392,7 +392,7 @@ const int64_t kPhaseResetOverlaySamples = static_cast<int64_t>(
 //
 // THE GEOMETRY AND VISIBILITY OWNER, kept SEPARATE from its one consumer
 // (paint_phase_reset_overlay_ring) rather than folded into it. It carries every
-// visibility gate — view, focus, the span-state suppressions, the eligible-marker
+// visibility gate — view, focus, the multi-select suppression, the eligible-marker
 // resolve, the sub-pixel and offscreen refusals — plus the clipped span, and
 // Selection::phase_overlay_subject MIRRORS its selection-state gates — MINUS the
 // geometry ones, which are not selection state — to decide when a subject change
@@ -417,15 +417,22 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // downstream is domain-agnostic.
     if (app.active_markers_view != 'P') return out;
     if (area.w <= 0 || area.h <= 0) return out;
-    // The span-state suppression (architect 2026-07-23): the overlay depicts ONE
-    // focused reset's lead-in, a single-focus authoring aid. Suppress it when the state
-    // is about a SPAN rather than a single focus — a MULTI-select (2+ members) or
-    // an active region — where the overlay would clutter. (A singleton or empty
-    // selection with no region shows it as before; the states that toggle these
-    // conditions — the multi-select builders and every region former/clear — all
-    // damage the waveform, so the overlay's appear/disappear rides their damage.)
+    // The multi-select suppression (architect 2026-07-23): the overlay depicts ONE
+    // focused reset's lead-in, a single-focus authoring aid, so a MULTI-select
+    // (2+ members) suppresses it — the state is about a span of markers rather
+    // than a single focus, and the overlay would clutter. (A singleton or empty
+    // selection shows it as before; the multi-select builders all damage the
+    // waveform, so the overlay's appear/disappear rides their damage.)
+    //
+    // NO REGION GATE HERE, and none is needed — THE DERIVATION, recorded once at
+    // this site with Selection::phase_overlay_subject's mirror pointing here:
+    // every region former DESELECTS at press (the plain upper-half waveform drag
+    // and the shift waveform press are the only two — the inventory is at
+    // RegionState, app_state.h), so a region rests ONLY beside an EMPTY
+    // selection, and an empty selection carries no focused reset for this band
+    // to annotate. A region and a subject cannot coexist, so no region test
+    // could ever decide this band's visibility.
     if (app.selected_markers.size() >= 2) return out;
-    if (app.region.active) return out;
 
     // Paint sample: the exact expression render.cpp's file-local
     // frame_to_paint_sample uses, so marker and overlay can never disagree.
@@ -653,12 +660,11 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 
 // Selected-marker stem (architect 2026-07-25): the stem is the SINGLETON selection's focus
 // visual — it marks where the playhead sits/would land on the one selected
-// marker, and it ALWAYS paints for that marker, with ONE exception: an ACTIVE
-// REGION suppresses it (architect 2026-07-29 — the playhead has two forms, POINT
-// and SPAN, and exactly one is ever visible; the region IS the span form and
-// outranks every point cue, the cursor having yielded to it since 2026-07-23).
-// The visibility predicate is "exactly ONE marker selected AND no active
-// region" (+ the bounds checks below): the hover,
+// marker, and it ALWAYS paints for that marker, with NO exception at all (the
+// active-region suppression it carried died 2026-07-30 with the SPAN FORM — the
+// region is trim scratch, not a playhead, and outranks nothing).
+// The visibility predicate is "exactly ONE marker selected"
+// (+ the bounds checks below): the hover,
 // lateral-gesture PIN, and tempo-drag arms are GONE as gates (the whole
 // conditional-stem apparatus — stem_pin_*, the hover arm, the click-site stem
 // damages — was harvested when the stem became unconditional). "Always" replaces
@@ -688,24 +694,15 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // displayed paint basis (fp_vp_start + disp_spp + the displayed map) matches
 // paint_playheads / the cached flags, so the stem lands on the flag's own column;
 // the drag override reads the frozen displayed map its proposal was computed
-// against. A focused GROUP (2+ selected) paints no stem — its focus cue is the
-// extent region's recolored ground (kRegionCanvas), the stem's "spread" form,
-// WHICH IT ALWAYS HAS: a 2+ selection resting with no span has no producer
-// (architect 2026-07-29 — the derivation and the general rule are at paint_playheads'
-// non-empty-selection else and at the group-verb doctrine, position_nudge.h). The
-// size check below is the whole rule either way — the stem is a SINGLETON visual,
-// never a group's.
+// against. A focused GROUP (2+ selected) paints no stem — the members' kWaveform
+// ink triangles plus the always-visible cursor landed on the focus are the
+// group's cue (architect 2026-07-30, with the span form retired). The size check
+// below is the whole rule — the stem is a SINGLETON visual, never a group's.
 void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
-    // The SPAN form outranks the POINT form: while a region is active the stem
-    // yields exactly as the cursor playhead does, so the split half-triangles and
-    // the recolored ground are the only playhead on screen. The SELECTION is
-    // untouched underneath — the focused flag keeps its kWaveform ink triangle,
-    // the top-strip cue — and the stem returns the moment the region clears
-    // (every region write damages the waveform area at its site, so the frame
-    // that drops the span repaints the stem back in).
-    if (app.region.active) return;
-    // A single selected marker, else no stem (a group's cue is its ground).
+    // A single selected marker, else no stem. The stem is a SINGLETON visual and
+    // nothing suppresses it: the region is trim scratch (a ground recolor), not a
+    // playhead form, so a resting span leaves the stem exactly where it is.
     if (app.selected_markers.size() != 1) return;
     const int idx = *app.selected_markers.begin();
     if (idx < 0) return;
@@ -808,26 +805,19 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // triangles ride the same band as the flag triangles beside them.
     const GuiRect tri_lane = top_triangle_row_area(app);
 
-    // Playheads now paint UNDER the marker flags (the Z-ORDER FLIP, architect
+    // Playheads paint UNDER the marker flags (the Z-ORDER FLIP, architect
     // 2026-07-23 — see the paint-order block in on_redraw): the cursor line +
-    // triangle and the region split half-triangles pass beneath a marker flag
-    // sharing their column, so a multimarker select's extent-region halves rest
-    // hidden behind the earliest/latest members' flags. The scanner line stays
-    // waveform-only (no flag lane), so its stacking is unaffected; the cursor
-    // still draws over the marker STEMS below it in the waveform. The triangle
-    // indicator lives in the top strip, so render whenever either the waveform or
-    // top strip is exposed; otherwise a flag-strip-only repaint would erase the
-    // triangle.
+    // triangle passes beneath a marker flag sharing their column, so a cursor
+    // resting on a marker sits hidden behind that marker's flag. The scanner line
+    // stays waveform-only (no flag lane), so its stacking is unaffected; the
+    // cursor still draws over the marker STEMS below it in the waveform. The
+    // triangle indicator lives in the top strip, so render whenever either the
+    // waveform or top strip is exposed; otherwise a flag-strip-only repaint would
+    // erase the triangle.
     //
-    // Split-playhead paint order: scanner first (line only, gated
-    // on playhead_scanner_active), then cursor (line + triangle).
-    // The cursor draws over the scanner on overlap.
-    //
-    // A region does NOT touch the scanner — only the CURSOR dissolves into
-    // the split half-triangles below. The scanner issues from and tracks the
-    // audition normally, so region playback shows the moving scanner line
-    // (launched from the region's left bound) alongside the two static split
-    // half-triangles and the recolored ground.
+    // Paint order: scanner first (line only, gated on playhead_scanner_active),
+    // then cursor (line + triangle). The cursor draws over the scanner on
+    // overlap.
     if (app.playhead_scanner_active) {
         const double scan_px = scanner_pixel_x(app, wf_cache.fp_vp_start,
                                                disp_spp);
@@ -835,103 +825,26 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
                         /*draw_triangle=*/false);
     }
 
-    // While a region-select is active the normal cursor playhead DISSOLVES —
-    // neither its 1px vertical line nor its single triangle paints — and the
-    // split playhead takes its place: two half-triangles, one on each region
-    // bound. The bound columns use the SAME displayed-viewport recipe (disp_spp
-    // + wf_cache.fp_vp_start) as paint_region_ground, so the halves' shared edges
-    // land exactly on the recolored ground's left/right edges. Region endpoints
-    // are active-domain frames already in the displayed domain, so their column
-    // is the plain viewport transform (no warp map walked, matching the ground).
-    // The scanner is untouched — only the cursor splits.
+    // THE CURSOR PLAYHEAD ALWAYS PAINTS (architect 2026-07-30): ONE playhead
+    // form, drawn at the resting cursor column whatever the selection and
+    // whatever the region are doing. The kPlayheadCursor 1px line + tip-down
+    // triangle, painted solid straight over the plate ink; ONE color for both
+    // forms.
     //
-    // THIS BRANCH IS THE HIGHLIGHT<->CURSOR EXCLUSIVITY OWNER (the highlight IS
-    // the playhead stretched out — the split halves are its two ends, so a
-    // highlighted region and a cursor must never co-display; architect
-    // 2026-07-23). The playhead's SPAN form outranks its POINT form outright, so
-    // it suppresses BOTH point cues: the cursor line + triangle here, and the
-    // SINGLETON STEM (paint_selected_stem's own early return, architect
-    // 2026-07-29) — the selection persisting underneath either way, its focused
-    // flag keeping the ink triangle.
-    // The split halves paint FULL-OPACITY kPlayheadCursor — the
-    // CURSOR's own key, because that is literally what they are: the cursor
-    // dissolved into its two ends, marking the region bounds where its split form
-    // sits. They ride the cursor's key rather than any selection key so that
-    // retuning the SELECTION cannot drag them off the cursor they stand in for
-    // (architect 2026-07-27). Under the compiled defaults kPlayheadCursor and
-    // the region's own kRegionCanvas hold different values outright, so the
-    // halves read as the cursor's two ends rather than as part of the ground
-    // they bound — which is the point of the key choice. The exclusivity is
-    // structural, not per-former: paint_region_ground gates on the same
-    // app.region.active this if/else branches on, and the CURSOR forms emit only
-    // here — the region branch owns the split, the empty-selection else owns the
-    // cursor (a NON-EMPTY
-    // selection moves the cursor COINCIDENT with the marker — hidden behind it, its
-    // line coinciding with the focus stem; the stem/ground are the focus visuals —
-    // the stem for a singleton, the extent-region ground for a group).
-    // render_split_playhead has no other caller and the cursor is emitted
-    // only in the else below (paint_selected_stem also calls render_playhead, but
-    // as a marker overlay, never as the cursor), so within any one frame the
-    // region ground and the cursor are mutually exclusive by state.
-    // Across frames it holds because every
-    // app.region write is paired with waveform-area damage at its site (the
-    // formers, the clears, clear_region_highlight, the membership clear
-    // clear_region_on_membership_replace reports through its return, the region
-    // drag's own release-time sliver dissolve, the tick repair, and the undo/redo
-    // restore's clear and
-    // group-extent set), so the frame that first paints one has already erased
-    // the other — no stale co-display window exists. The same pairing is what
-    // makes the stem's suppression frame-exact.
-    if (app.region.active) {
-        if (disp_spp > 0.0) {
-            // Same displayed basis and region_columns owner as
-            // paint_region_ground, so the split halves' shared edges land exactly
-            // on the recolored ground's left/right edges. Painted full-opacity
-            // kPlayheadCursor — the cursor's key, since the halves ARE the
-            // dissolved cursor (see the exclusivity block above).
-            const RegionColumns cols = region_columns(basis);
-            render_split_playhead(cr, area, tri_lane, cols.lo_col, cols.hi_col,
-                                  kPlayheadCursor);
-        }
-    } else if (app.selected_markers.empty()) {
-        // WAVEFORM FOCUS (architect 2026-07-23): selection empty — the
-        // kPlayheadCursor 1px line + triangle, painted solid straight over
-        // the plate ink. ONE color for both forms: the line and the tip-down
-        // triangle carry the same kPlayheadCursor.
-        render_playhead(cr, area, tri_lane, px_x, kPlayheadCursor,
-                        /*draw_triangle=*/true);
-    }
-    // else: selection non-empty, no region. SEMANTICS (architect 2026-07-25): a
-    // selection conceptually moves the cursor COINCIDENT with the selected marker —
-    // the cursor's 1px line coincides with the marker's focus stem, and the cursor
-    // playhead triangle sits BEHIND the marker flag (the Z-ORDER FLIP paints
-    // playheads under the flag blit), so the cursor playhead is effectively FULLY
-    // HIDDEN behind the marker. Not painting it here is the IMPLEMENTATION of that
-    // hiding, not a semantic absence: the focus stem IS where the cursor line
-    // would be (a singleton), and the flag occludes the triangle.
-    // A SPANLESS 2+ SELECTION WOULD BE THE ONE STATE WITH NO PLAYHEAD FORM DRAWN AT
-    // ALL, and IT HAS NO PRODUCER (architect 2026-07-29, rejecting it as "a hybrid
-    // third option that i did not ask for or ratify" — the general rule it produced
-    // is stated verbatim at the group-verb doctrine, position_nudge.h). If one could
-    // rest, this branch would paint no cursor (the selection is non-empty),
-    // paint_selected_stem would paint no stem (2+ is not a singleton), and there
-    // would be no extent ground to stand in for either — a selection with no playhead
-    // anywhere. THE PROPERTY HOLDS BY THE PRODUCERS' OWN FORM, not by an enforcement
-    // protocol watching the clears: every route that rests a 2+ selection rests it
-    // WITH its extent span (the two multi-select clicks and `m` derive it, the
-    // propagate paste and the undo/redo restores define it), and every route that
-    // takes a span away from a group instead COLLAPSES it to the focus with the
-    // playhead landed there — one shape, enumerated at the doctrine. Bare `0` is
-    // NOT among them and produces nothing here (architect 2026-07-30): the overview
-    // toggle is a pure viewport move that clears no region, so a group crosses it
-    // with its span intact. The
-    // distributed collapse protocol that once policed this from the clear side is
-    // deleted and is NOT to be resurrected; if a new verb ever needs a span taken
-    // from a group, it collapses at its own site by the general rule.
-    // Do not "fix" the paint side either: a selection means the cursor is
-    // conceptually on a marker, and drawing it loose would assert a second playhead.
-    // The scanner above is unaffected — it launches from this resting cursor and
-    // paints its own color.
+    // The three-way chain that used to live here is gone with the SPAN FORM: the
+    // region is no longer a playhead at all (it is TRIM SCRATCH — a ground recolor
+    // formed by the plain upper-half waveform drag and the shift waveform press,
+    // previewed by the lower-half scrub press, consumed by `x`), so it dissolves
+    // nothing and suppresses nothing, and the split half-triangle renderer is
+    // deleted outright. The non-empty-selection suppression is
+    // gone too: a cursor resting ON the focused marker is simply hidden behind
+    // that marker's flag by the z-order flip, which is what the old else-arm was
+    // spelling out by not painting — and when the arrows move the focused marker
+    // the cursor rides along VISIBLY, which is the lane model's honest reading.
+    // The region ground still paints under the plate (paint_region_ground); the
+    // cursor line crosses it exactly as it crosses waveform ink.
+    render_playhead(cr, area, tri_lane, px_x, kPlayheadCursor,
+                    /*draw_triangle=*/true);
 }
 
 // -- GuiPaintHandler::paint_bottom_strip ---------------------------------
@@ -1191,13 +1104,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     is its whole visual, and a boundary line paints AFTER the plate,
         //     crossing the ink like the stems do.
         //   THE Z-ORDER FLIP (architect 2026-07-23) — the cursor playhead (its
-        //     line+triangle) and the region SPLIT half-triangles pass UNDER
-        //     marker flags, so on a multimarker select the extent region's
-        //     half-triangles rest hidden behind the earliest/latest members'
-        //     flags (identical 15-wide triangle geometry at the same column);
-        //     the selected-marker focus triangles are GONE (architect
-        //     2026-07-25 — a singleton's focus is its STEM, a group's is the
-        //     extent-region ground).
+        //     line+triangle) passes UNDER
+        //     marker flags, so a cursor resting on a marker sits hidden behind
+        //     that marker's flag (identical 15-wide triangle geometry at the
+        //     same column); the selected-marker focus triangles are GONE
+        //     (architect 2026-07-25 — a singleton's focus is its STEM, a
+        //     group's is its members' ink triangles plus the landed cursor).
         //   TRIM BELOW THE PLAYHEAD (architect 2026-07-25) — every trim pixel
         //     paints before every playhead element, so the playhead triangle
         //     sits over a trim stem crossing the triangle lane:
@@ -1240,7 +1152,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // Playheads BEFORE the flag blit (Z-ORDER FLIP, architect 2026-07-23):
         // the scanner line stays waveform-only (triangle-free, no lane conflict —
         // its stacking vs the lanes is unaffected by this move), while the cursor
-        // line+triangle and the region split half-triangles now paint UNDER the
+        // line+triangle now paints UNDER the
         // marker flags that follow. flag_cache.surface is ARGB32, CLEAR-cleared
         // each rebuild and transparent outside the painted shapes, so the flag
         // blit composites source-over and never erases the playheads it does not

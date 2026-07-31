@@ -112,17 +112,18 @@ struct GuiPlaybackLifecycle {
     void toggle_playback(int64_t launch_offset = 0);
     // THE AUDITION LAUNCH ENTRY: launch the scanner from `frame`, an ABSOLUTE
     // position in the active paint domain, leaving the resting cursor untouched.
-    // TWO GESTURES, one mechanism — the waveform lower half's scrub act (the
-    // START half of its stop-then-start) and, since 2026-07-29 (architect),
-    // Space's REGION launch, which plays from the span's left bound without
-    // writing the cursor precisely because auditions do not move it. Delegates
+    // ONE CALLER CLASS since 2026-07-30 — the waveform LOWER-HALF scrub act (the
+    // START half of its stop-then-start), which is also the gesture for
+    // previewing a resting region: click inside the span and it auditions from
+    // there. (Space's region left-bound launch was the second caller until the
+    // architect dropped it that day; Space now always toggles from the playhead.)
+    // Delegates
     // to the same launch body as toggle_playback's play edge, so the standing
     // gates apply identically: a frame outside the trim window / target buffer
     // domain, or one leaving fewer than two playable frames of remainder, is a
     // silent no-op — exactly Space's conventions. A live session never
-    // launches (defensive; both callers reach here only with
-    // playback stopped — a scrub act over a live session STOPS it and returns,
-    // and Space's stop edge goes through toggle_playback).
+    // launches (defensive; the caller reaches here only with
+    // playback stopped — a scrub act over a live session STOPS it and returns).
     void scrub_launch_at(int64_t frame);
     void set_playback_speed(float s);
 

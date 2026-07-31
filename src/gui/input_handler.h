@@ -140,154 +140,84 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
                            double scale, int sample_rate, long total_frames);
 
 // Dissolve a resting region-select highlight, damaging the waveform so the
-// recolored ground and split playhead repaint away and the cursor playhead
-// returns under
-// the same damage. A no-op when no region is active. Shared by every POINT
-// COMMAND — the playhead has two forms, POINT and SPAN, and exactly one is ever
-// visible (the rule and its rationale live at land_playhead_on_marker), so a
-// command that asserts the point form ends the span here, UNCONDITIONALLY: never
-// gated on whether the playhead moved, and blind to provenance. Call sites, by
-// class:
+// recolored ground repaints away. A no-op when no region is active.
+//
+// WHAT THE REGION IS, so the clear list reads as one rule: TRIM SCRATCH
+// (architect 2026-07-30 — the SPAN FORM retired). It is formed by exactly two
+// gestures, both of which DESELECT at press (the plain upper-half waveform drag
+// and the shift waveform press), previewed by the lower-half scrub press, and
+// CONSUMED by `x`. It is not a playhead form, not a selection visual, not a
+// trim-window display — the cursor playhead paints straight across it and the
+// singleton stem is never suppressed. So a span rests ONLY beside an EMPTY
+// selection, structurally (the former inventory is at RegionState, app_state.h).
+//
+// EVERYTHING THAT MOVES THE PLAYHEAD OR REPLACES THE SELECTION TAKES THE SPAN
+// WITH IT, unconditionally — never gated on whether the playhead actually moved.
+// The scratch belongs to the gesture that drew it; a command that means something
+// else invalidates it. CALL SITES, BY CLASS (re-derived by grep 2026-07-30; other
+// sites state their own class and point here):
 //   * NAVIGATION jumps: jump_playhead_to_focused_marker (the whole Tab
-//     family, through its own clear tail), `c`'s OWN up-front clear before
-//     that same jump (input_key_dispatch.cpp — the no-focus arm never
+//     family plus `c`, through its own clear tail), `c`'s OWN up-front clear
+//     before that jump (input_key_dispatch.cpp — the no-focus arm never
 //     reaches the jump's tail, so `c` owns one of its own), the
-//     bare Left/Right playhead step, Home/End (the trim-bound jumps), and the
+//     bare Left/Right waveform-lane playhead step, Home/End (the trim-bound
+//     jumps), and the
 //     settings editor's `playhead_cursor=` GUI key (settings_editor.cpp — the
 //     typed navigation-jump twin, no exemptions);
 //   * THE PLAIN UPPER-HALF WAVEFORM PRESS (arm_region_drag_at,
 //     input_pointer.cpp): dissolves any resting highlight at mouse-down,
 //     before the gesture is known to be a click or a fresh region drag —
-//     shares this exact dissolve shape (see the deliberately-not-cleared
-//     paragraph below for its sibling, the SHIFT-exact preserving arm, which
-//     does NOT call this);
-//   * MARKER CLICKS: the plain single-select click (its four deferred completions
-//     died 2026-07-29 with the group drag — every marker press commits its click at
-//     PRESS time now, the doctrine at the head of position_nudge.h), plus
-//     the two MULTI-SELECT clicks whenever their RESULT is under two selected
-//     (at 2+ they instead re-own the region through
-//     set_region_to_selection_extent — the DOWNWARD coupling, the selection
-//     defines the extent region, SELECTION-FLOWS-DOWNWARD-ONLY, a separate call
-//     that must run AFTER any clear);
+//     shares this exact dissolve shape (its sibling the SHIFT-exact preserving
+//     arm does NOT call this: it forms its own span in place);
+//   * MARKER CLICKS, all three (the plain single-select and both multi-select
+//     clicks), UNCONDITIONALLY — the result-size split the multi-select pair
+//     carried died with the extent owner, so every marker click clears;
 //   * enter_text_edit, the one chokepoint of every flag/bpm editor open and
 //     retarget;
-//   * the POSITION NUDGES, both columns (finish_position_nudge, which clears
-//     unconditionally: horizontal movement is a FOCUS ACT since 2026-07-29 — a 2+
-//     selection collapses to its focus in the shared prologue, so a nudge is always
-//     a point command and the span-preserving group arm is gone);
-//   * the MARKER DROPS (architect 2026-07-29, overruling their earlier keep):
-//     a drop seats the playhead on the marker it creates and single-selects it,
-//     so it is a point command like the rest — one clear per column, at the
-//     drop chokepoints drop_marker (warp) and drop_phase_reset_at_position
-//     (phase reset), which both entry routes (bare `s`, the empty-lane
-//     double-click) converge on, placed past every refusal;
-//   * the THREE MEMBERSHIP-WHOLESALE routes (architect 2026-07-29, the
-//     maximally greedy collapse): the UNDO/REDO restore's visual tail, the `p`
-//     W/P swap (toggle_active_markers_view — which since the parked selections
-//     died replaces the membership by EMPTYING it), and the propagate paste's
-//     target-view tail. None of them builds the span it would be resting beside,
-//     so all three collapse it, any provenance. The undo tail's clear runs for
+//   * the POSITION NUDGES, both columns (finish_position_nudge);
+//   * the MARKER DROPS: one clear per column, at the drop chokepoints
+//     drop_marker (warp) and drop_phase_reset_at_position (phase reset), which
+//     both entry routes (bare `s`, the empty-lane double-click) converge on,
+//     placed past every refusal;
+//   * the THREE MEMBERSHIP-WHOLESALE routes: the UNDO/REDO restore's visual tail,
+//     the `p` W/P swap (toggle_active_markers_view) and the propagate paste's
+//     target-view tail. The undo tail's clear runs for
 //     EVERY entry, settings-only ones included — it is the ONE part of the tail
-//     that sits above the 'S' gate (which forbids SELECTING, WRITING a region, and
-//     LANDING, exceptionlessly again since the architect's 2026-07-29 ruling — that
-//     arm now also CLEARS the
-//     selection, which is what killed the one land exception it briefly had),
-//     because a settings restore rebuilds the map under the
-//     span exactly as a marker restore does; for a group entry the extent derive
-//     then runs AFTER this clear;
-//   * the SETTINGS ENGINE-COMMIT chokepoint (same 2026-07-29 ruling): the one committed
+//     that sits above the 'S' gate (which forbids SELECTING and LANDING) —
+//     because a settings restore rebuilds the map under the span exactly as a
+//     marker restore does;
+//   * the SETTINGS ENGINE-COMMIT chokepoint: the one committed
 //     tail every canonical engine key shares (GuiSettingsEditor::commit, past
 //     the unknown-key / invalid-value / collision / unchanged returns), because
 //     the scale among those keys is a warp-map input and the commit rebuilds the
 //     map under any resting highlight. That tail CLEARS THE SELECTION beside the
-//     region (below). The settings editor's TRIM keys never
+//     region. The settings editor's TRIM keys never
 //     reach it — they return through commit_gui_setting, whose active-tab arms
-//     deselect and publish the TrimWindow highlight themselves (they are SETTERS
-//     since 2026-07-30; the class is at sync_region_to_trim_window).
-// A 2+ SELECTION ALWAYS HAS A SPAN, AND NOTHING ENFORCES THAT FROM THE CLEAR SIDE
-// — THE NEVER-SPAN-LESS PROTOCOL IS DELETED, THE PROPERTY MOVED INTO THE VERBS
-// (architect 2026-07-29, plus the same-day rejection that finished it,
-// superseding the corollary this declaration used to carry: nine collapse sites at
-// its peak, six after the parked selections died, all deleted, along with
-// sync_region_to_trim_window's injected Selection& parameter). The two-forms model
-// itself STANDS unchanged
-// (land_playhead_on_marker, input_pointer.cpp): while a span is ACTIVE it outranks
-// every point cue and suppresses both the cursor and the singleton stem. WHAT
-// CHANGED IS ONLY WHERE THE GUARANTEE LIVES: "a group always has a drawn playhead
-// form" is still true, but it is now a property of the VERBS — no protocol watches
-// the clears to make it so, which is what the architect withdrew as not worth its
-// spread across the tree.
-// THE LAST TWO PRODUCERS CLOSED SYMMETRICALLY instead, at the two sites where a
-// map rebuild invalidates every index and image at once: the engine-key settings
-// COMMIT and the settings-only ('S') undo/redo RESTORE each clear the selection
-// beside the region (GUI-kind keys are history-less, so 'S' is the only settings
-// entry kind and the pair is complete). Both #19 map-changer RE-LANDS died with
-// them — nothing selected means no focus to re-land — so the 'S' gate is simple
-// again: no select, no region write, no land.
-// AND A SPANLESS 2+ SELECTION IS NEVERTHELESS UNPRODUCIBLE — the architect REJECTED
-// that state (2026-07-29, "a hybrid third option that i did not ask for or ratify")
-// and it now has no producer at all. The routes that briefly made one — the
-// S/T domain flip (whose span cannot survive the flip: the endpoints are
-// active-domain frames) and `c` — each COLLAPSE a surviving 2+ selection
-// to its focus and land the playhead there, under the architect's general rule
-// (verbatim at the group-verb doctrine, position_nudge.h: if group is relatively
-// cheap to implement, implement it; otherwise collapse to last selected). BARE `0`
-// WAS A THIRD SUCH ROUTE AND IS NO LONGER ONE AT ALL (architect 2026-07-30): the
-// overview toggle clears no region and collapses nothing, so it cannot strip a
-// group's span in the first place — it is a pure viewport move, and its clear and
-// its collapse were removed TOGETHER precisely because the clear alone would rest
-// the rejected state. THE
-// PROPERTY THEREFORE HOLDS BY THE PRODUCERS' OWN FORM, WHICH IS THE WHOLE POINT OF
-// THE RETIREMENT: every route that rests a 2+ selection rests it WITH its extent
-// span, and every route that would take a span from a group collapses at its own
-// site — no protocol watches the clears, and this declaration deliberately carries
-// NO site enumeration for it (that enumeration was the deleted machinery). Two
-// candidates never needed a collapse in the first place, by derivation: the
-// TRIM-SYNC no-window arm (all three of its non-setter callers gate on provenance ==
-// TrimWindow, and a TrimWindow region rests only beside an EMPTY selection — the
-// derivation lives at that function), and the kick validator's DOMAIN-SHRINK clear
-// (the only total-changers that keep a 2+ selection are the group cent step, which
-// re-derives its extent unconditionally AFTER its kick, and the group undo restore,
-// which derives its extent from the already-restored domain and clamps into it, so
-// the validator's out-of-domain test cannot fire on it).
-// The land itself clears NOTHING — it is a pure playhead write, and the
-// motion condition that briefly rode its clear died with that clear
-// (land_playhead_on_marker). DELIBERATELY NOT
-// cleared: the region Space launch (the
-// region IS the launch point there — and since 2026-07-29 it moves no cursor
-// either, launching through the scrub's own entry), the nudge/drag playhead
-// follow, and pure
-// viewport moves (PageUp/PageDown, zoom
-// steps, pans, and since 2026-07-30 the bare `0` overview toggle, which used to
-// clear here) — and the lower-half scrub press, which touches no region at
-// all. The plain upper-half waveform press (arm_region_drag_at) shares this
-// helper — same dissolve shape. ESC IS NOT A CLEAR SITE AT ALL (architect
-// 2026-07-29): the selection/region ladder is deleted, so bare Esc touches neither
-// the region nor the selection anywhere — the whole Esc story is stated at its
-// dispatch point in on_key. The remaining pre-existing clear sites (file load,
-// Ctrl+Tab, and the S/T switch) keep their own in-place clears, pairing the reset
-// with a domain flip or a full-window repaint rather than this exact damage shape.
+//     take the setter's plain deselect and touch no region;
+//   * `x` ITSELF, which READS the span and then clears it (input_trim.cpp): the
+//     one CONSUMER, at its tail past every refusal, because the trim it just set
+//     is what the span was for.
+// DELIBERATELY NOT CLEARED, the whole list: the LOWER-HALF SCRUB PRESS (the
+// region's PREVIEW gesture — click inside a span to audition it, the span
+// resting untouched), SPACE (which touches no region at all and always toggles
+// from the playhead), and PURE VIEWPORT MOVES (PageUp/PageDown, zoom steps,
+// pans, and the bare `0` overview toggle). ESC IS NOT A CLEAR SITE (architect
+// 2026-07-29): the selection/region ladder is deleted, so bare Esc touches
+// neither the region nor the selection anywhere — the whole Esc story is stated
+// at its dispatch point in on_key. The remaining pre-existing clear sites (file
+// load, Ctrl+Tab, and the S/T switch) keep their own in-place clears, pairing the
+// reset with a domain flip or a full-window repaint rather than this exact damage
+// shape; so does the kick validator's live-domain reclamp.
 void clear_region_highlight(AppState& app, Viewport& viewport);
-
-// The DOWNWARD coupling (the selection defines the extent region,
-// SELECTION-FLOWS-DOWNWARD-ONLY): set the region to the
-// current selection's active-domain [earliest, latest] position extent when 2+
-// markers are selected (a <=1 selection sets nothing). MUST run AFTER its
-// caller's own point-form clear_region_highlight.
-// Definition lives in input_pointer.cpp; declared here
-// so the group TEMPO gestures, undo.cpp's restore and the propagate paste can
-// reach the same owner (the class-level contract is at the definition).
-void set_region_to_selection_extent(AppState& app, const GuiAudio& audio,
-                                    Viewport& viewport);
 
 // LAND the playhead exactly onto marker `hit` of the ACTIVE column with NO
 // viewport move (the two-step placement basis source_frame_to_active_domain then
 // clamp_playhead_to_live_domain, a direct cursor write). A PURE PLAYHEAD WRITE:
-// it touches no region and no selection — a caller that wants the span to
-// collapse calls clear_region_highlight itself. Read-only allowed. Definition in
-// input_pointer.cpp, whose comment is the AUTHORITATIVE statement of the two
-// playhead forms, the marker-lane-owns-the-playhead rule, and the one
-// enumeration of the landing sites — do not restate any of them here.
+// it touches no region and no selection — a caller that wants the scratch span
+// cleared calls clear_region_highlight itself. Read-only allowed. Definition in
+// input_pointer.cpp, whose comment is the AUTHORITATIVE statement of the
+// marker-lane-owns-the-playhead rule and the one
+// enumeration of the landing sites — do not restate either here.
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit);
 
@@ -326,101 +256,54 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
                           Viewport& viewport, int64_t lo, int64_t hi,
                           bool margin);
 
-// TWO ARMS (architect 2026-07-29, the coincident middle arm deleted): both bounds
-// set -> the region takes the trim window's active-domain extent with TrimWindow
-// provenance, COINCIDENT IMAGES INCLUDED (a window whose two source bounds round
-// onto one target frame under bracket-legal compression rests ACTIVE at that one
-// column — paint_region_ground draws no ground at zero width and
-// render_split_playhead has its own one-column form, the shape the undo group
-// restore's all-coincident extent already rests at); no full pair -> clear the
-// region.
+// THE TRIM SETTER-DESELECT RULE, stated here where the retired trim-highlight
+// sync used to declare it. THE SYNC ITSELF IS DELETED (architect 2026-07-30, Q3):
+// the trim window no longer publishes itself as a region highlight at all — the
+// region is TRIM SCRATCH, an input to `x` and nothing else (its contract is at
+// clear_region_highlight above and at RegionState, app_state.h). What survives is
+// the DESELECT half (architect 2026-07-29, "agree" 2026-07-30): EVERY TRIM SETTER
+// CLEARS THE SELECTION as it commits — the trim-bar click is the sibling of the
+// plain waveform click's deselect-all: clicking trim means ready to move on.
 //
-// WHAT THAT DOES AND DOES NOT IMPLY (narrowed 2026-07-30, architect — the old
-// sentence here read "a full pair DOES imply an active TrimWindow region" and was
-// false as written). THIS SYNC publishes a region for a full pair every time it
-// runs, so every SETTER leaves a full pair highlighted. A
-// RESTING full pair implies NOTHING: the highlight is a GESTURE-SCOPED cue, and
-// the ENTRY / RESTORE routes deliberately rest a pair BARE — file load, the
-// Ctrl+Tab band pull (which pulls the entering tab's set trim as a matter of
-// course), the `t` and `p` view switches (both clear any region wholesale), and
-// `'` adopt, none of which run this sync at all. The implication runs one way:
-// an active TrimWindow region implies a full pair, never the converse.
-// Definition lives in input_trim.cpp. It was made a FREE function so the group
-// tempo gestures could re-sync a TrimWindow region across their own map change;
-// those re-syncs are DELETED (2026-07-29, see below), so its only callers today are
-// the two GuiInputHandler wrappers — sync_highlight_to_trim_window (the bare form,
-// whose only caller is now Shift+X) and deselect_and_sync_trim_window_highlight
-// (the SETTERS' form, which deselects ahead of the same call).
-//
-// A TrimWindow REGION RESTS ONLY BESIDE AN EMPTY SELECTION (architect 2026-07-29).
-// Stated here once, at the sync that owns the provenance; every other site states
-// its own class plus a pointer. EVERY TrimWindow SETTER CLEARS THE SELECTION — the
-// trim-bar click is the span-form sibling of the plain waveform click's
-// deselect-all: clicking trim means ready to move on.
-//
-// THE SETTER CLASS IS DEFINED BY WHAT A ROUTE DOES (restated 2026-07-30; the old
-// definition — "grep-derived over the callers of deselect_and_sync_trim_window_
-// highlight" — was CIRCULAR, since a list derived from the helper's callers
-// structurally cannot contain a route that should deselect and does not, which is
-// exactly how the settings trim keys sat outside it). A route is a SETTER iff a
-// USER COMMAND runs it and, past that route's own refusals, it COMMITS THE LIVE
-// TAB'S TRIM WINDOW — writing a bound, or claiming the resting pair as the
-// highlight. Membership re-derived by grepping the live-tab trim-bound writers
-// (app.trim.* / the settings arms' active branch) plus the one non-writing
-// claimer:
-//   * the PLAIN chip-row click, all three arms — the read-only press's direct sync,
-//     the writable unclaimed-spot sync, and the deferred motionless completions
-//     (clean release / lost button). The one claimer: it writes no bound, it
-//     claims the resting pair;
+// THE SETTER CLASS IS DEFINED BY WHAT A ROUTE DOES, and since the publish died the
+// definition TIGHTENS to the write alone: a route is a SETTER iff a USER COMMAND
+// runs it and, past that route's own refusals, it WRITES A BOUND of the LIVE tab's
+// trim window. ("Claiming the resting pair" left the definition with the highlight
+// it was claiming for.) Membership re-derived by grepping the live-tab trim-bound
+// writers (app.trim.* / the settings arms' active branch) — SEVEN
+// `selection.clear_selection()` call sites, five in input_trim.cpp and two in
+// settings_editor.cpp:
 //   * the ctrl (BEGIN) and ctrl+shift (END) BOUND-SET clicks, one function
 //     (set_trim_bound_at_click) and so one deselect;
 //   * bare `x` (region -> trim, handle_trim_x), which deselects after its span
-//     is read;
-//   * the trim chip/bridge DRAG's live sync — update_trim_drag's motion arms and
-//     commit_trim_drag;
+//     is read and then CONSUMES the span;
+//   * the trim chip/bridge DRAG — update_trim_drag's two motion arms and
+//     commit_trim_drag — which also carries the drag's PLAYBACK STOP, relocated
+//     there 2026-07-30 from the press when the press's highlight-only publish
+//     retired (the keyboard stop rule is at stop_playback_if_playing's
+//     declaration, playback_lifecycle.h);
 //   * the settings editor's tab_X_trim_begin= / tab_X_trim_end= keys committed on
 //     the ACTIVE tab, BOTH value forms (a frame and the -1 unset) — JOINED
 //     2026-07-30, architect: "a typed commit is a commit", the sibling
 //     playhead_cursor= key having already cleared selection and region under the
 //     no-exemptions rule. Their INACTIVE-tab arm is not a member and never was:
-//     it writes a parked band, publishes no highlight, and changes nothing
-//     visible.
+//     it writes a parked band and changes nothing visible.
 // Each deselects PAST ITS OWN REFUSALS (the refusal-gating rule these routes
 // already hold their playback stop under): a read-only bound set, a chip-row claim
 // with no resting pair, degenerate geometry, a drag event that moved no bound, and
 // a settings commit rejected for a read-only tab / an out-of-wall value / an
-// unchanged value all publish no highlight and so deselect nothing.
-// THE NON-SETTER IS NOW EXACTLY ONE ROUTE and keeps the bare sync: Shift+X, the
-// dedicated trim CLEARER, which destroys both bounds outright so there is no
-// window left for a deselect to hand the user (the architect's own 2026-07-29
-// exemption, kept verbatim). Everything else that touches a trim bound is not a
-// command in this sense: auto_clear_crossed_trim is a shared commit tail every
-// setter already runs INSIDE its own publish, and the ENTRY / RESTORE routes
-// (file load, the Ctrl+Tab band pull, the settings-file tab-band pull, `'` adopt)
-// install a trim wholesale and rest the pair bare. The tempo family's TrimWindow
-// re-syncs were DELETED by the same ruling (see the unreachability below), and
-// the two trim Esc-cancel re-syncs died with the cancels themselves (pointer
-// gestures have no cancel, 2026-07-29).
-// The invariant's OTHER HALF is that nothing puts a selection back beside a
-// resting TrimWindow region: every route that selects a marker either CLEARS the
-// region (the plain/multi-select clicks, the Tab
-// family and `c` through jump_playhead_to_focused_marker, the editor opens, the
-// drops, and the three membership-wholesale routes) or REPLACES it with the
-// selection's own extent (the multi-select clicks at 2+). So
-// TrimWindow-under-a-selection is UNREACHABLE — which is what retired the tempo
-// gestures' region-provenance branches, the singleton tempo step's trim re-sync,
-// and the tempo drag's own grab-time trim-highlight bit (that drag is itself
-// deleted since 2026-07-29 — see marker_drag.h).
-// IT TAKES NO Selection AT ALL any more (architect 2026-07-29): the
-// parameter existed for the never-span-less collapse its clear arm carried, that
-// enforcement is retired (the retirement paragraph is at clear_region_highlight's
-// declaration above), and the collapse was UNREACHABLE from here in the first
-// place — all three non-setter callers gate on provenance == TrimWindow and the
-// invariant above says such a region rests beside an EMPTY selection. So this
-// function touches the REGION only, and the two wrappers differ exactly by whether
-// the caller deselects first.
-void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
-                                Viewport& viewport);
+// unchanged value all write no bound and so deselect nothing.
+// THE NON-SETTER IS EXACTLY ONE ROUTE: Shift+X, the dedicated trim CLEARER, which
+// destroys both bounds outright so there is no window left for a deselect to hand
+// the user (the architect's 2026-07-29 exemption, kept verbatim). Everything else
+// that touches a trim bound is not a command in this sense: auto_clear_crossed_trim
+// is a shared commit tail every setter already runs inside its own body, and the
+// ENTRY / RESTORE routes (file load, the Ctrl+Tab band pull, the settings-file
+// tab-band pull, `'` adopt) install a trim wholesale.
+// A PLAIN CHIP-ROW CLICK IS NO LONGER A TRIM ROUTE AT ALL (architect 2026-07-30):
+// its three arms existed only to publish the highlight, so with the publisher gone
+// they retire outright — a click that never becomes a drag is a consumed nothing,
+// stopping no audition and destroying no selection.
 
 // -- GuiInputHandler ----------------------------------------------------
 //
@@ -932,12 +815,10 @@ private:
 
     // Bare x is SET-ONLY (architect 2026-07-25): it branches on the highlight
     // (no context-awareness beyond that) — a live region trims to it, begin at
-    // the span's lo, end at its hi, overwriting any existing bounds, then KEEPS
-    // and re-syncs the highlight — the coupling tail
-    // (deselect_and_sync_trim_window_highlight) re-derives the REGION (provenance
-    // TrimWindow) from the just-set window, so region and trim rest coupled (x is a
-    // TrimWindow SETTER, so it DESELECTS as it publishes — the rule at
-    // sync_region_to_trim_window's declaration). TWO SILENT REFUSALS, both writing
+    // the span's lo, end at its hi, overwriting any existing bounds, then
+    // DESELECTS (it is a trim SETTER — the rule is at the setter-deselect block
+    // above) and CONSUMES the span, clearing the region at its tail (architect
+    // 2026-07-30: the scratch existed to aim this gesture). TWO SILENT REFUSALS, both writing
     // nothing at all: NO region, and a DEGENERATE result — the inverse-mapped,
     // wall-clamped pair coming out end <= begin, which auto_clear_crossed_trim would
     // read as crossed and destroy (ARCHITECT-CONFIRMED 2026-07-29; the derivation is
@@ -949,11 +830,11 @@ private:
     void handle_trim_x();
 
     // Shift+X UNSETS the trim (architect 2026-07-25 — split off x, which is now
-    // set-only). Read-only is the keyboard gate's (see handle_trim_x above), then
-    // delegates to handle_trim_clear_both and, when the region it just tore down
-    // was the trim's own TrimWindow highlight, re-syncs so that highlight cannot
-    // outlive its window (a Free/SelectionExtent region is NOT trim's to clear).
-    // A trim CLEARER, not a setter: it keeps the BARE sync and does NOT deselect.
+    // set-only). Read-only is the keyboard gate's (see handle_trim_x above); the
+    // body then delegates WHOLE to handle_trim_clear_both. A trim CLEARER, not a
+    // setter: it does NOT deselect, and it touches no region at all (the gated
+    // region re-sync it carried died with the trim-window
+    // highlight, architect 2026-07-30 — a scratch span is the user's).
     void handle_trim_shift_x();
 
     // Clear both trim bounds unconditionally. Silent no-op when neither bound
@@ -984,10 +865,10 @@ private:
     // chip geometry (a chip-rect single hit, or the chip-row inter-chip bridge
     // span) — armed or read-only-refused — so the caller claims with no
     // fallback; false lets the caller fall through to the marker flag handling.
-    // Read-only claims without arming. Trim drags publish the region highlight to
-    // the moving window through the SETTER's route
-    // (deselect_and_sync_trim_window_highlight), so they DESELECT at their first
-    // moved bound; the PLAYHEAD is what they never touch.
+    // Read-only claims without arming. Trim drags are SETTERS, so they DESELECT
+    // and STOP a live audition at their first ACCEPTED bound change (the press
+    // carries neither since 2026-07-30 — a chip-row press that never becomes a
+    // drag is a consumed nothing); the PLAYHEAD is what they never touch.
     // Dual-axis strip drag, INCREMENTAL: applies one motion event at (x, y).
     // Reads the LIVE zoom level and viewport (never a stored press baseline),
     // pans by the dx since the last event at the old level, zooms by the dy off
@@ -1019,34 +900,6 @@ private:
     // unusable.
     bool trim_mouse_x_to_active_frame(int mouse_x, int64_t& out_frame);
     void commit_trim_drag();               // release: trigger render if moved
-
-    // The lane-click model's trim<->REGION coupling (architect 2026-07-23,
-    // region-only under SELECTION FLOWS DOWNWARD ONLY): sync the region highlight
-    // to the CURRENT trim window. Trim is region-related, so it touches the REGION
-    // and nothing else — not the selection (the never-span-less collapse its clear
-    // arm once carried is deleted, architect 2026-07-29) and not the PLAYHEAD, ever. Both
-    // bounds set -> region = the window's active-domain extent (source bounds
-    // through source_frame_to_active_domain, clamped playable), coincident images
-    // included; lone / no trim -> clear the region. Navigation-class (the region is
-    // navigation), so read-only-safe. Owns its own waveform-highlight damage,
-    // raised only when the region's visible identity actually changed (a
-    // per-motion-event path pays narrow damage, not full).
-    // THIS BARE FORM HAS EXACTLY ONE CALLER since 2026-07-30: Shift+X, the trim
-    // CLEARER and the whole non-setter list (the settings editor's two trim keys
-    // left it for the setter form that day). It leaves the selection alone, and it
-    // gates its call on a resting TrimWindow region, which by that provenance's own
-    // rule means the selection is already empty. Every route that SETS the window
-    // calls the setter form below instead.
-    void sync_highlight_to_trim_window();
-
-    // The SETTER's publish: deselect, then sync. EVERY TrimWindow setter goes
-    // through here — the plain chip-row click and its deferred completions, both
-    // bound-set clicks, bare `x`, and the trim drags' live sync — because a
-    // TrimWindow region rests only beside an EMPTY selection (architect
-    // 2026-07-29). The rule, the full setter list, the refusal-gating requirement
-    // on each caller's placement, and the non-setter routes are stated once at
-    // sync_region_to_trim_window's declaration above.
-    void deselect_and_sync_trim_window_highlight();
 
     // Set ONE trim bound (begin or end) at the clicked column — the
     // trim-drag release-snap basis (authored_frame_at_column over the displayed
@@ -1098,6 +951,10 @@ private:
     // none). A gutter/invalid column
     // (outside [0, area.w)) is a silent no-op (no launch position). Touches
     // NOTHING else — no selection, region, cursor, follow, or double-click seed.
+    // THAT is what makes it the REGION'S PREVIEW GESTURE (architect 2026-07-30,
+    // Q2): clicking inside a resting scratch span auditions from the clicked
+    // frame and leaves the span standing, which is why Space no longer carries a
+    // region launch of its own.
     // The caller keeps playback alive across the press (no waveform press stops
     // playback, and the top-strip stops belong to the top-strip claims), so
     // the act sees the LIVE session — load-bearing for the
@@ -1123,19 +980,22 @@ private:
     // set_gui_font_size_pt, not through here).
     void apply_font_size(double pt);
 
-    // THE LANE MODEL (architect 2026-07-28): true when the playhead currently
-    // lives in the MARKER lane. The bare horizontal arrows are always a PLAYHEAD
-    // STEP — one painted column per press; the lane decides what else rides
-    // along. A selection IS the marker lane: the cursor playhead stops painting
-    // and the focused flag's kWaveform-filled triangle IS the playhead (the
-    // focus model), so the step moves that, carrying the marker under it (the
-    // two position nudges, each re-landing the playhead on
-    // its committed focus; the tempo-image step was a third marker-lane route
+    // THE LANE MODEL (architect 2026-07-28, KEPT and re-justified 2026-07-30):
+    // true when the arrows currently address the MARKER lane. The bare
+    // horizontal arrows step one painted column per press; the lane decides WHAT
+    // moves. A selection IS the marker lane: the step moves the FOCUSED MARKER
+    // and the always-visible cursor RIDES ALONG, because both marker-lane routes
+    // (the two position nudges) re-land the playhead on their committed focus.
+    // The tempo-image step was a third marker-lane route
     // until 2026-07-29 and W+target is now a consumed refusal — see
-    // marker_drag.h). With no selection the playhead is in the WAVEFORM
-    // lane and the step moves the cursor alone. LANE EXIT IS ANY DESELECTING
+    // marker_drag.h. With no selection the arrows are in the WAVEFORM
+    // lane and step the cursor alone. THE JUSTIFICATION CHANGED, THE BEHAVIOUR
+    // DID NOT: this used to be argued from a SUPPRESSION — the cursor stopped
+    // painting under a selection and the focused flag's ink triangle "was" the
+    // playhead — and the cursor now always paints, so the model stands on the
+    // marker-nudge behaviour itself. LANE EXIT IS ANY DESELECTING
     // ROUTE (architect 2026-07-29, replacing the explicit Esc collapse — Esc is
-    // unbound here now): Home/End, a waveform click, a trim setter's publish, an
+    // unbound here now): Home/End, a waveform click, a trim setter's deselect, an
     // undo restore that empties the selection, and so on. There is still no
     // gesture fallback, so a marker-lane step that refuses stays a consumed no-op.
     // Distinct from the AUDITION SCRUB, which is untouched by all of this: that

@@ -419,13 +419,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       the top of on_key, unchanged);
     //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
     // Everything else Esc used to do is gone: NO deselect, NO region collapse, NO
-    // drop of a span to Free, NO playhead land, NO drop-to-span. A 2+ selection
-    // with its extent span, a singleton, a resting Free span from a drag — Esc
+    // playhead land, NO drop-to-span. A 2+ selection, a singleton, a resting
+    // scratch span from a drag — Esc
     // leaves every one of them exactly as it found them. Leaving the MARKER LANE is
     // no longer an Esc act either: it is any DESELECTING route (Home/End, a
     // waveform click, the trim setters, an undo restore that clears — see
     // playhead_in_marker_lane). A resting span still clears at the next
-    // playhead-moving point command, by the two-forms model.
+    // playhead-moving command (the clear-site list is at
+    // clear_region_highlight, input_handler.h).
     // A bare Esc that gets past here falls to the bare-key tail, whose Escape case
     // is an explicit no-op (handle_plain_bare_keys) — the one place the press ends.
     // Modified Escape remains unbound everywhere, at every Escape reader.
@@ -478,57 +479,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // scroll or a zoom silently change what Space does.
         // The kN/2 is EXACT output-sample arithmetic. The painted band is a ±1px
         // approximation for jitter reasons and must never enter this number.
-        // COMPOSITION with the region rule below: the subject predicate
-        // suppresses at 2+ selected and with an active region, so a group
-        // selection takes the REGION arm below and starts at the span's left
-        // bound. Deliberate — the two starts are mutually exclusive by
-        // construction, which is why the offset can be computed before the
-        // region arm without either reading the other.
         const int64_t launch_offset =
             (!playback.is_playing() &&
              selection.phase_overlay_subject().has_value()) ? kN / 2 : 0;
-        // THE REGION LAUNCH IS AN AUDITION, AND AUDITIONS DO NOT MOVE THE
-        // CURSOR (architect 2026-07-29): with an active region Space plays from
-        // the span's LEFT bound — the smaller of the two active-domain
-        // endpoints, regardless of drag direction, because the point of the
-        // highlight is to hear its start — through THE SAME MECHANISM as the
-        // waveform lower half's click-to-play, scrub_launch_at over the shared
-        // launch body. The resting cursor is NOT written: the cursor is not a
-        // launch scratchpad. Only on the START edge — a Space that STOPS falls
-        // through to toggle_playback below (the stop edge, its teardown, and
-        // every Space with no active region are untouched).
-        //
-        // CURSOR-NEUTRALITY HERE IS LOAD-BEARING, not a style choice. The
-        // collapse-to-focus sites listed at clear_region_highlight's declaration
-        // (input_handler.h) rest on "the focus is where the playhead already
-        // rests, by land-on-focus" — sound only while NO route separates the
-        // cursor from the focus under a standing span. The old cursor write was
-        // the last such route: it parked the cursor on the span's left bound
-        // while the focused flag went on claiming to BE the playhead, so a later
-        // collapse landed the visible cue on the focus while the true cursor and
-        // the next Space read the stale bound.
-        //
-        // The region sets ONLY the start. Everything else stays where it was:
-        // the trim loop verdict is captured from app.trim inside the shared
-        // launch body (region + trim loops the trim window, region + no trim
-        // plays through to the end with no loop), and DELIBERATE (architect
-        // 2026-07-21) a region left bound outside a set trim's window trips that
-        // body's "launch position outside the trim window" no-op — the same
-        // contradiction resolved the same way, by playing nothing rather than
-        // widening the window, now tested against the LAUNCH position directly
-        // instead of against a cursor moved there first. The frame is clamped
-        // through the live-domain clamp the cursor write used to apply, which is
-        // also scrub_launch_at's stated input contract.
-        //
-        // launch_offset is 0 whenever this arm fires — the lead-in's subject
-        // predicate suppresses with an active region (see above), which is why
-        // the two starts can be computed independently and why this arm needs no
-        // offset of its own.
-        if (!playback.is_playing() && app.region.active) {
-            playback_lifecycle.scrub_launch_at(clamp_playhead_to_live_domain(
-                std::min(app.region.a_frame, app.region.b_frame), app, audio));
-            return;
-        }
+        // SPACE ALWAYS PLAYS FROM THE PLAYHEAD (architect 2026-07-30, Q2: "drop
+        // the left edge launch - play issues from playhead OR scrub - user can
+        // click scrub region to preview"). The region arm that stood here — a
+        // left-bound launch through scrub_launch_at whenever a span rested — is
+        // DELETED with the SPAN FORM: the region is trim scratch, not a launch
+        // point, and the lower-half SCRUB press is the gesture for previewing it
+        // (click anywhere inside the span and it auditions from there, the span
+        // resting untouched). Space now touches no region at all, in either
+        // direction: it neither reads one nor clears one.
         playback_lifecycle.toggle_playback(launch_offset);
         return;
     }
@@ -754,13 +716,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // BARE Left / Right, MARKER-LANE half (architect 2026-07-28). The horizontal
-    // arrows are always a PLAYHEAD STEP of one painted column; the selection
-    // decides which LANE the playhead is in, and playhead_in_marker_lane is that
-    // decision. With a selection the cursor playhead stops painting and the
-    // focused flag's ink triangle IS the playhead, so the step moves THAT and
-    // carries the marker under it — the two routes below both re-land the
-    // playhead on their committed focus (finish_position_nudge), so the lane
-    // model holds on every successful route. HORIZONTAL MOVEMENT IS A FOCUS ACT
+    // arrows step one painted column; the selection
+    // decides which LANE that step happens in, and playhead_in_marker_lane is that
+    // decision. With a selection the arrows move the FOCUSED MARKER and the
+    // always-visible cursor RIDES ALONG — the two routes below both re-land the
+    // playhead on their committed focus (finish_position_nudge), so the marker
+    // and the cursor move together, visibly. (The lane model used to be argued
+    // from a suppression — no cursor painted, the focused flag's ink triangle
+    // standing in for it — and that argument retired 2026-07-30 with the
+    // suppression; the behaviour is unchanged.) HORIZONTAL MOVEMENT IS A FOCUS ACT
     // (architect 2026-07-29): a 2+ selection COLLAPSES to its focus in the position
     // nudges' shared prologue and the focus alone steps — groups are never moved
     // (the doctrine at the head of position_nudge.h). With no selection the
@@ -850,9 +814,8 @@ void clear_region_highlight(AppState& app, Viewport& viewport) {
     // The clear+damage shape the existing region-clear sites use (the navigation
     // jumps, end_region_drag_min_size_check): reset to a blank RegionState and
     // damage
-    // the waveform area once. The recolored ground and the split playhead repaint
-    // away and
-    // the cursor playhead returns under that same damage. Guarded so a call on
+    // the waveform area once, under which the recolored ground repaints away.
+    // Guarded so a call on
     // the common no-region path costs nothing.
     if (!app.region.active) return;
     app.region = RegionState{};
@@ -860,55 +823,40 @@ void clear_region_highlight(AppState& app, Viewport& viewport) {
 }
 
 bool GuiInputHandler::jump_playhead_to_focused_marker() {
-    // The walk is markers-only (trim is not a cycle stop). The playhead moves
-    // to the focused marker's source frame unconditionally, and the viewport
-    // always recenters on it (below) — follow mode does not gate the cycle.
-    int64_t src_sample = 0;
+    // The walk is markers-only (trim is not a cycle stop). The playhead lands on
+    // the focused marker unconditionally, and the viewport always recenters on
+    // it (below) — follow mode does not gate the cycle.
+    // FOCUS RESOLUTION, kept for the `false` RETURN ALONE: a missing or
+    // out-of-range focus aborts the WHOLE jump, stop included, and the land
+    // owner's silent no-op cannot express that, so the two refusals stay spelled
+    // here. The FRAME is not resolved here at all — that is the owner's.
     {
         const int idx = app.last_selected_marker;
         if (idx < 0) return false;
-        if (app.active_markers_view == 'P') {
-            const auto& tv = app.phaseresetmarkers.markers();
-            if (idx >= static_cast<int>(tv.size())) return false;
-            src_sample = tv[idx].time_frame;
-        } else {
-            const auto& mv = app.warpmarkers.markers();
-            if (idx >= static_cast<int>(mv.size())) return false;
-            src_sample = mv[idx].time_frame;
-        }
+        const int n = (app.active_markers_view == 'P')
+            ? static_cast<int>(app.phaseresetmarkers.markers().size())
+            : static_cast<int>(app.warpmarkers.markers().size());
+        if (idx >= n) return false;
     }
-    // Target view: forward-translate the marker's source-frame through
-    // the display context (the live map) so the playhead lands on the
-    // marker's displayed position; the viewport recenter below also uses this
-    // displayed value via center_viewport_on_playhead.
-    int64_t sample = source_frame_to_active_domain(app, audio, src_sample);
-    // Playhead domain clamp through clamp_playhead_to_live_domain (the
-    // domain ruling), exactly like a bare Left/Right sync.
-    sample = clamp_playhead_to_live_domain(sample, app, audio);
 
     playback_lifecycle.stop_playback_if_playing();
 
-    // Capture the old playhead pixel-x before mutating, for the
-    // no-scroll invalidation branch below. PLATE basis, not live: the cursor's
-    // pixels are plate-registered (paint_playheads), so its damage resolves
-    // there — the rule and the per-site shape table live at playhead_pixel_x
-    // (app_state.h). This site keeps the NARROW shape rather than widening
-    // because GuiInputHandler holds a GuiPaintHandler, so the honest basis costs
-    // nothing here.
-    const GuiPaintHandler::PlateViewportBasis pb =
-        paint_handler.plate_viewport_basis();
-    const int64_t pb_vp = static_cast<int64_t>(pb.vp_start);
-    const double old_px = playhead_pixel_x(app, pb_vp, pb.spp);
-    const int64_t old_vp = app.viewport_start_sample;
+    // THE LAND GOES THROUGH ITS ONE OWNER (2026-07-30): the two-step placement
+    // basis, the direct cursor write with NO viewport move, and the damage that
+    // follows it are land_playhead_on_marker's (input_pointer.cpp, where the
+    // marker-lane-owns-the-playhead rule and the caller inventory live). This
+    // site hand-copied that recipe; now it calls it. NOT move_playhead_to, which
+    // would scroll the viewport a second time before the centering below.
+    // The owner OWNS the damage: full waveform area + timestamp on a land that
+    // MOVES, and an early return on a land onto the sample the playhead already
+    // holds — nothing moved there, so nothing needs erasing. What stays HERE is
+    // exactly what the owner does not provide: the stop above, the region clear,
+    // and the recenter below.
+    land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
 
-    // Set the cursor directly — no move_playhead_to, which would scroll
-    // the viewport a second time before centering.
-    app.playhead_cursor_sample = sample;
-
-    // Navigation jump: dissolve a resting region highlight (its span is stale
-    // now the playhead has left it, and the region would suppress the cursor
-    // playhead we just moved). Covers the whole Tab family and `c` through this
-    // one shared tail.
+    // Navigation jump: dissolve a resting region highlight — its span is stale
+    // now the playhead has left it. Covers the whole Tab family and `c` through
+    // this one shared tail.
     clear_region_highlight(app, viewport);
 
     // Center the viewport on the focused marker at the current zoom — Tab
@@ -924,21 +872,6 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
     // synchronous rebuild here — no second call in this function's tail. The
     // unmoved path (EOF-clamped no-op) needs none.
     viewport.center_viewport_on_playhead();
-
-    // The viewport did not move when it was already clamped at EOF
-    // (center_viewport_on_playhead a no-op). In that no-move case the
-    // cursor's column change still needs its own invalidation — mirror
-    // move_playhead_to's no-scroll branch. When the viewport did move, the
-    // playhead columns are already inside the waveform-area damage center
-    // emitted, so only invalidate columns in the unmoved case to avoid a
-    // redundant rect.
-    if (app.viewport_start_sample == old_vp) {
-        // Same plate basis as old_px above — the viewport did not move, so the
-        // fingerprint the columns resolve against is unchanged too.
-        const double new_px = playhead_pixel_x(app, pb_vp, pb.spp);
-        viewport.invalidate_playhead_columns(old_px, new_px);
-    }
-    viewport.invalidate_timestamp_area();
     return true;
 }
 
@@ -1397,46 +1330,20 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // the waveform on its plain canvas ground.
     app.region = RegionState{};
 
-    // A VIEW SWITCH ALWAYS LANDS YOU IN POINT FORM: a surviving 2+ selection
-    // COLLAPSES TO ITS FOCUS here, and the tail's land below seats the playhead on
-    // that focus in the new domain. THE ARCHITECT'S GENERAL RULE (2026-07-29, stated
-    // verbatim at the group-verb doctrine, position_nudge.h): if group is relatively
-    // cheap to implement, implement it; otherwise collapse to last selected. The
-    // OLD ENDPOINTS genuinely die here — they are ACTIVE-DOMAIN frames and the
-    // domain just flipped — which is why the region clear above is STRUCTURAL and
-    // stays. But the SPAN ITSELF IS CARRIABLE, and this comment used to claim
-    // otherwise: the extent is DERIVED state, and set_region_to_selection_extent
-    // recomputes it from each member's SOURCE frame through whatever map is live —
-    // exactly what `m`, the group undo/redo restore, and the propagate paste do —
-    // so carrying the group would be one guarded re-derive beside the land the tail
-    // already performs with the new map available. What is NOT an option is
-    // dropping the collapse alone: a group resting with no span is a HYBRID THIRD
-    // FORM the architect explicitly rejected (it draws no playhead cue at all —
-    // the cursor yields to a non-empty selection and the stem is singleton-only).
-    // THE COLLAPSE IS KEPT BY ARCHITECT DEFERRAL (2026-07-30), not by
-    // impossibility: warp authors across BOTH views while phase reset is
-    // target-only, so what a group should mean across this flip is a question the
-    // pending design pass may answer differently — until then the ruled
-    // collapse-to-focus stands. This is the SAME SHAPE as the position nudges'
-    // collapse+land (position_nudge_prologue) and Ctrl+N's — this site is one member
-    // of the COLLAPSE+LAND class, whose one authoritative enumeration lives at the
-    // group-verb doctrine (position_nudge.h); no count belongs here.
-    // THE size >= 2 GUARD IS LOAD-BEARING, not an optimization: collapse_to_focused
-    // early-returns only on an already-focused SINGLETON, so against an EMPTY
-    // selection carrying a live focus index it would INSERT that focus and resurrect
-    // a selection the user dropped. This switch prunes nothing, so the guard — not a
-    // neighbouring repair — is what makes the precondition local.
-    // ITS NARROW DAMAGE IS SUPERSEDED HERE, DELIBERATELY: collapse_to_focused raises
-    // stem/overlay damage computed on the basis live at the call, and at this point
-    // the basis is TORN — the displayed map and viewport mirrors were reset to cold
-    // above while the domain flips underneath. The tail's FULL-WINDOW invalidate is
-    // what actually repaints the collapse, and that dependency is load-bearing:
-    // narrowing the tail damage would strand this collapse's pixels. No reordering
-    // fixes it either — the collapse must follow the region clear it accompanies.
+    // THE GROUP CARRIES ACROSS THE FLIP (architect 2026-07-30, resolving the
+    // deferral this block used to record): `t` translates the same markers into
+    // another domain rather than changing which column is addressed, so a 2+
+    // selection survives it BY IDENTITY — the collapse-to-focus that stood here
+    // is deleted. It existed to keep a group from resting SPANLESS, and with the
+    // SPAN FORM retired there is no such state to avoid: the group's cue is its
+    // members' ink triangles plus the always-visible cursor, and the
+    // selection-gated land below re-expresses the focus EXACTLY, which is what
+    // seats that cursor where the readout says it is. The region clear above is
+    // STRUCTURAL and stays (its endpoints are ACTIVE-DOMAIN frames and the domain
+    // just flipped); nothing re-derives one, the region being trim scratch.
     // ALL THREE CALLERS get this: the bare `t` key, the settings editor's
-    // `active_audio_view=` GUI-key twin, and the propagate paste's tail (moot there —
-    // its column swap clears the selection immediately after and writes its own).
-    if (app.selected_markers.size() >= 2) selection.collapse_to_focused();
+    // `active_audio_view=` GUI-key twin, and the propagate paste's tail (moot
+    // there — its column swap clears the selection immediately after).
 
     // The S/T toggle translates the active tab's live playhead across the
     // domain flip; the inactive tab's stored playhead must translate too, or
@@ -1548,11 +1455,13 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // (land_playhead_on_marker's doctrine, input_pointer.cpp): pre-switch the
     // cursor rests ON the focus by that same premise, so landing on the focus in
     // the new domain IS the correct re-expression of it — the map-change re-land
-    // form the singleton tempo step's label-coupling fix established. By the time
-    // this runs the selection is a SINGLETON or EMPTY — the collapse above narrowed
-    // any group to its focus — so this lands on exactly one marker either way; an
-    // EMPTY selection has no focus to re-express and keeps the generic translation
-    // untouched.
+    // form the singleton tempo step's label-coupling fix established. It lands on
+    // the FOCUS whatever the selection's size (architect 2026-07-30, with the
+    // collapse dropped): a carried GROUP re-expresses through its focus exactly
+    // as a singleton does, which is the whole reason the collapse was droppable.
+    // An EMPTY selection has no focus to re-express and keeps the generic
+    // translation untouched — that gate is what makes this "t keeps the cursor
+    // where it is" for the on-marker case and nothing at all otherwise.
     // PLACED HERE by domain validity: active_audio_view flipped far above and the
     // collapse has run, so source_frame_to_active_domain reads the NEW view's map
     // (the live target-view map cache, which rebuilds on demand and does not wait

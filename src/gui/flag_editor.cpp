@@ -179,21 +179,15 @@ void GuiFlagEditor::enter_text_edit(int idx,
     // Reached only in W + source view — all three open routes gate the marker
     // view to the WARP column and take active_column_authoring_allowed — so `idx`
     // resolves against the warp store the helper reads, in the identity domain.
-    // AND COLLAPSE ANY RESTING SPAN: an open asserts the playhead's POINT form
-    // (one marker focused, its flag standing in for the cursor), so the region —
-    // the SPAN form — ends here, unconditionally and of any provenance. This one
+    // AND CLEAR ANY RESTING SPAN: an open moves the playhead onto one marker, so
+    // the trim scratch the user drew for some other purpose goes with it —
+    // unconditionally, never gated on the land having moved anything. This one
     // chokepoint covers every open and retarget (bare Return, the pointer
     // double-click, `m`, a pointer retarget of the live editor), which is why no
-    // opener carries a clear of its own. Most opens land on the marker the
-    // playhead already sits on (their route set the focus by landing on it), and
-    // the clear runs there too: the collapse is NOT gated on the land having
-    // moved anything — a span left resting under a point command is exactly the
-    // state this model abolishes. The one open that also RE-DERIVES a span is
-    // `m`: it opens on the span's OWNER, and its handler restores the span
-    // membership and re-derives the extent right after this returns
-    // (input_key_dispatch.cpp) — the clear-then-extent order, in the only
-    // direction that works. The same_target early return above skips both: the
-    // playhead is already there from the first open and no form changed.
+    // opener carries a clear of its own; `m` re-derives NOTHING after it since
+    // 2026-07-30 (the extent owner died with the SPAN FORM). The same_target
+    // early return above skips both: the
+    // playhead is already there from the first open and nothing changed.
     selection.set_single_selection(idx);
     land_playhead_on_marker(app, audio, viewport, idx);
     clear_region_highlight(app, viewport);

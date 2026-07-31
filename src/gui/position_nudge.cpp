@@ -54,9 +54,7 @@ PositionNudgePrologue position_nudge_prologue(
     // Ctrl+N shape, the land sitting at the CALLER of collapse_to_focused because
     // the site that hands the marker lane a focus is the site that owes it a land.
     // The step every caller runs after this is therefore always the singleton op.
-    // The collapse's own membership replace takes the group's SelectionExtent span
-    // (clear_region_on_membership_replace), and the tail's unconditional clear
-    // takes anything else resting.
+    // The tail's unconditional clear takes any resting scratch span.
     if (app.selected_markers.size() >= 2) {
         // THE COLLAPSE ARM'S STOP — the collapse-to-point class of the keyboard
         // stop rule (architect 2026-07-30, stated at stop_playback_if_playing's
@@ -102,11 +100,10 @@ void finish_position_nudge(
     // (e) playhead follows the nudged marker's committed frame.
     viewport.move_playhead_to(
         source_frame_to_active_domain(app, audio, committed_focused_frame));
-    // (f) A POSITION NUDGE IS A POINT COMMAND — one flag standing in for the
-    // cursor — so it collapses any resting span, unconditionally and blind to
-    // provenance, exactly like the marker click that would have selected that
-    // singleton. Groups are never moved (the doctrine at the declarations), so
-    // there is no span to maintain here.
+    // (f) A POSITION NUDGE CLEARS any resting scratch span, unconditionally,
+    // exactly like the marker click that would have selected that singleton.
+    // Groups are never moved (the doctrine at the declarations), so there is no
+    // span to maintain here.
     clear_region_highlight(app, viewport);
     // (g) view-independent target preview.
     target_render.trigger();

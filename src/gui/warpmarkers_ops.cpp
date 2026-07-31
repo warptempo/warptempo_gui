@@ -3,8 +3,8 @@
 #include "audio.h"
 #include "position_nudge.h"  // the shared position-nudge flesh (prologue,
                                   // step, commit tail) + the movement doctrine
-#include "input_handler.h"      // set_region_to_selection_extent (group step),
-                                // clear_region_highlight (the drop's collapse)
+#include "input_handler.h"      // clear_region_highlight (the drop's collapse),
+                                // land_playhead_on_marker (the Ctrl+N collapse)
 #include "warp_frame_map_build.h"
 #include "warp_frame_map_view.h"
 #include "target_render.h"
@@ -95,7 +95,7 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // A DROP IS A POINT COMMAND (architect 2026-07-29, overruling the drops'
     // earlier keep-the-highlight behavior): it seats the playhead on the marker
     // it creates and single-selects it, so any resting span ends here —
-    // unconditionally, any provenance, exactly as the plain marker click's
+    // unconditionally, exactly as the plain marker click's
     // collapse. THE WARP CHOKEPOINT: both entry routes (bare `s` and the
     // empty-lane double-click) reach the warp column only through
     // drop_copy_previous_at_playhead, whose only act is this call, so one clear
@@ -212,55 +212,18 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     // Capture the snapshot before mutating so the undo can restore the pre-delete
     // state.
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
-    // Capture the selected markers' active-domain positions BEFORE the store
-    // mutation, so a multi-marker delete DROPS the selection down to the region
-    // spanning them (a DROP former of the selection<->highlight coupling — the delete
-    // drops the selection and forms the region; architect 2026-07-23). Warp deletes run in the
-    // source home view (home-view binding), where source_frame_to_active_domain
-    // is identity, so pre/post mapping agree regardless.
-    std::vector<int64_t> del_positions;
-    del_positions.reserve(live_idx.size());
-    for (int idx : live_idx) {
-        // Clamp the forward-map image into the live domain: source-view
-        // identity means a legal marker clamps to itself here, so this is a
-        // no-op — the spelling matches the target-domain drop captures
-        // (input_pointer / phaseresetmarkers_ops, where an EOF item's image can
-        // round one past the wall) so all three region-endpoint captures read
-        // uniformly.
-        del_positions.push_back(clamp_playhead_to_live_domain(
-            source_frame_to_active_domain(app, audio, mv[idx].time_frame),
-            app, audio));
-    }
     // Delete in descending order so earlier indices stay valid (live_idx is
     // ascending — app.selected_markers is an ordered set and the skip above
     // preserves its order).
     for (auto it = live_idx.rbegin(); it != live_idx.rend(); ++it) {
         app.warpmarkers.remove_marker(*it);
     }
+    // A DELETE RESTS AN EMPTY SELECTION AND NO REGION (architect 2026-07-30): the
+    // demotion that used to drop a 2+ delete down to a span over the deleted
+    // positions is gone with the SPAN FORM — the region is trim scratch and a
+    // delete has nothing to aim `x` at. The delete leaves whatever span was
+    // already resting exactly as it found it.
     selection.clear_selection();
-    // Drop the deleted selection down to the spanning region — session scratch,
-    // OUTSIDE undo: the delete creates this Free span outside the history entry, and
-    // any later undo/redo of it CLEARS any resting region wholesale before deriving
-    // the restored selection's own current visual form (the region does not
-    // survive undo — it is replaced, not preserved). A single deleted marker is
-    // a point, not a span, so it forms no region (the sliver rule's spirit; the
-    // 2-marker + positive-span gate needs no sub-pixel column compare). The
-    // waveform damage below covers the region paint. ORDER: the deselect above
-    // runs FIRST, so its membership clear cannot reach the span formed here —
-    // and could not touch it anyway, the drop being FREE and the membership
-    // clear SelectionExtent-only.
-    if (del_positions.size() >= 2) {
-        const auto [lo, hi] = std::minmax_element(del_positions.begin(),
-                                                  del_positions.end());
-        if (*hi > *lo) {
-            app.region.active     = true;
-            app.region.a_frame    = *lo;
-            app.region.b_frame    = *hi;
-            // The delete drop-former drops the deleted markers, so this region is
-            // FREE — tempo gestures skip it.
-            app.region.provenance = RegionProvenance::Free;
-        }
-    }
     undo.push_undo_warp(std::move(pre_state));
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
@@ -307,15 +270,10 @@ void GuiWarpMarkersOps::toggle_inherits() {
     // playhead resting anywhere else, the lane would rest with the flag at 5
     // claiming to be the playhead while Space played from that other spot. Land on
     // the focus — a PURE playhead write (land_playhead_on_marker), this gesture
-    // adding no region clear of its own. THE REGION STORY IS THE COLLAPSE'S OWN
-    // membership clear: collapsing a 2+ selection replaces the membership, which
-    // takes that selection's SelectionExtent span with it
-    // (clear_region_on_membership_replace, app_state.h). A TrimWindow highlight
-    // SURVIVES a membership replace by that owner's own rule — moot here since
-    // 2026-07-29, one such highlight never resting beside a 2+ selection any more
-    // (every trim setter deselects; the rule is at sync_region_to_trim_window's
-    // declaration), but the value gesture tears down no cue of the chip row's
-    // either way.
+    // adding no region clear of its own. THERE IS NOTHING TO CLEAR: a region rests
+    // only beside an EMPTY selection (its two formers both deselect at press — the
+    // inventory is at RegionState, app_state.h) and Ctrl+N needs a focus, so no
+    // span can be standing when this runs.
     // The land sits at THIS caller and not inside collapse_to_focused, because the
     // site that hands the lane a new focus is the site that owes it a land — and
     // not every caller does: the singleton tempo step has no focus change to land
@@ -591,15 +549,11 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // repaint there; in target view the synchronous re-warp below repaints the
     // waveform area and carries the stem to its new column with the image.
     if (app.active_audio_view == 'T') {
-        // NO REGION WORK AT ALL HERE. The #16 TrimWindow highlight re-sync was
-        // DELETED 2026-07-29: its reach chain was click a marker -> click the chip
-        // row -> Up/Down, and the middle link is foreclosed now that every
-        // TrimWindow SETTER deselects (the rule at sync_region_to_trim_window's
-        // declaration, input_handler.h) — the chip click empties the selection, and
-        // a tempo step needs one, so no TrimWindow highlight can be resting when
-        // this runs. The other two provenances were already unreachable here: a
-        // SelectionExtent region is cleared by collapse_to_focused above, and a Free
-        // region rests only beside an EMPTY selection.
+        // NO REGION WORK AT ALL HERE, and none is reachable: a region rests only
+        // beside an EMPTY selection (both of its formers deselect at press — the
+        // inventory is at RegionState, app_state.h) while a tempo step needs a
+        // selection. The #16 trim-highlight re-sync that stood here was deleted
+        // 2026-07-29 and the highlight itself 2026-07-30.
         viewport.kick_waveform_sync();
         const auto& mv_post = app.warpmarkers.markers();
         const int f = app.last_selected_marker;
@@ -690,8 +644,8 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
     // (positions untouched), so touched_snapshot == touched_live == the stepped
     // indices. A coalesced repeat skips the push (the hold's physical press owns
     // the pre-burst snapshot and its hints). A 2+ selection paints no
-    // stem (its cue is the extent region's ground), so the group step has no stem to
-    // move.
+    // stem (its cue is the members' ink triangles plus the landed cursor), so the
+    // group step has no stem to move.
     if (merge) undo.note_coalesced_commit();
     else       undo.push_undo_warp(std::move(pre_state),
                                    /*affects_persistence=*/true,
@@ -713,32 +667,23 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
     // repricing that can move even its own image. Source view needs nothing
     // (identity domain — the frame never moved).
     if (app.active_audio_view == 'T') {
-        // NO PROVENANCE BRANCH and NO CAPTURE-BEFORE-KICK PAIR (both deleted
-        // 2026-07-29): a tempo gesture needs a selection, every TrimWindow SETTER
-        // just cleared it, and a Free region rests only beside an empty selection —
-        // so a region resting here is this group's EXTENT by construction (the rule
-        // at sync_region_to_trim_window's declaration, input_handler.h). With one
-        // provenance left there is nothing to decide before the kick either: the
-        // re-derive below runs UNCONDITIONALLY, which is exactly what the captured
-        // boolean made it do for a 2+ selection (kick_waveform_sync's live-domain
-        // reclamp may wholesale-clear the region, and set_region_to_selection_extent
-        // re-activates it), and a <=1 selection cannot reach this group handler.
+        // NOTHING TO DO FOR THE REGION HERE (architect 2026-07-30, with the SPAN
+        // FORM retired): the region is trim SCRATCH, not this selection's extent,
+        // so the group step no longer maintains it — the re-derive that stood
+        // below the kick is deleted with its owner. A region cannot even rest
+        // beside the selection this handler requires: both surviving formers
+        // deselect at press (the inventory is at RegionState, app_state.h). The
+        // kick's live-domain reclamp still wholesale-clears a region whose
+        // endpoint falls outside a shrunken target total, and that stays.
         viewport.kick_waveform_sync();
         const int f = app.last_selected_marker;
         if (f >= 0 && f < n) {
             viewport.move_playhead_to(source_frame_to_active_domain(
                 app, audio, app.warpmarkers.markers()[f].time_frame));
         }
-        // No stem to move here: a 2+ selection paints no stem at all (its cue is
-        // the extent region's ground, re-derived below). The kick_waveform_sync
-        // above already repainted the moved images.
-        // Region follows the images (architect 2026-07-23): the group step moved
-        // the selected markers' target IMAGES (tempos changed, source frames did
-        // not), so re-derive the extent to the selection's NEW extent — the one
-        // surviving arm (see the derivation above the kick). Source view needs
-        // nothing (identity domain — no image moved), which is why this whole block
-        // gates on target view.
-        set_region_to_selection_extent(app, audio, viewport);
+        // No stem to move here: a 2+ selection paints no stem at all (the
+        // members' ink triangles plus the re-landed cursor are its cue). The
+        // kick_waveform_sync above already repainted the moved images.
     }
     target_render.trigger();
 }

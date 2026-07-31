@@ -285,8 +285,8 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     }
     viewport.move_playhead_to(sample);
     // NO REGION WORK, and none is reachable: the arming press single-selected the
-    // marker (a membership replace, which takes any SelectionExtent span) and then
-    // cleared any other resting span at its own site, so a marker drag runs with no
+    // marker and cleared any resting scratch span at its own site, so a marker
+    // drag runs with no
     // region at all. The group live-track that used to re-derive an extent span per
     // motion event died with the group drag (architect 2026-07-29 — groups are
     // never moved; the doctrine is at the head of position_nudge.h).

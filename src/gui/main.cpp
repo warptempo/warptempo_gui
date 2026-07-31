@@ -151,10 +151,10 @@ namespace {
 // the stack reappears correct if either constant is ever un-zeroed. That
 // property has NO EXCEPTION LIST among the consumers: every lane-anchored pixel
 // reaches its band through a lane rect computed here. The
-// three render.cpp sites that used to stack BOTTOM-ANCHORED off the waveform
+// render.cpp sites that used to stack BOTTOM-ANCHORED off the waveform
 // top edge — flag_lane_geometry (the shared owner of the painted marker shapes
-// AND their hit rects) and the triangle blits in render_playhead /
-// render_split_playhead — now take the flag and triangle LANE RECTS as
+// AND their hit rects) and the triangle blit in render_playhead — now take the
+// flag and triangle LANE RECTS as
 // parameters, resolved by their callers from top_flag_row_area /
 // top_triangle_row_area, the same rects the empty-lane press gate tests. So the
 // painted flags, the flag hit rects, and the playhead triangle all move with

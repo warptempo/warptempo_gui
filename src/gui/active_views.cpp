@@ -100,8 +100,8 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // basis — the basis of the pixels it erases. It also subsumes the
     // shift-range anchor clear this site used to spell out by hand (every
     // Selection mutator dissolves the anchor; the authoritative clear list is at
-    // the field, app_state.h), and the region reset above stands because it
-    // takes ANY provenance while a membership clear reaches SelectionExtent only.
+    // the field, app_state.h). The region reset above stands on its own — no
+    // selection mutator touches the region any more.
     selection.clear_selection();
     this->refresh_active_tab_view_from_app();
     app.active_tab_view = target_tab;
@@ -160,14 +160,12 @@ void GuiActiveViews::toggle_active_markers_view() {
     // switch_active_markers_view_to), so `p` owes the marker lane no land: with no
     // lane the cursor IS the playhead and keeps its own value, and the playhead is
     // genuinely untouched across the flip.
-    // THE SWAP CLEARS ANY RESTING REGION, whatever its provenance (architect
-    // 2026-07-29, REVERSING "the STORED highlight survives the column flip"): a
-    // span rests beside a selection only as that selection's own extent or as the
-    // trim's highlight, and after the flip neither has an owner — an extent of the
-    // column just left describes markers no longer addressed (the swap's own
-    // clear_selection already took that one through the membership clear), and a
-    // trim highlight left standing across the flip is the same ownerless span one
-    // storage level up. So the clear is wholesale, and it is unconditional because
+    // THE SWAP CLEARS ANY RESTING REGION (architect
+    // 2026-07-29, REVERSING "the STORED highlight survives the column flip"): the
+    // span is trim SCRATCH drawn against the column the user just left, and the
+    // trim it would aim belongs to the tab, not the column — a span carried
+    // across the flip describes work that is no longer on screen. So the clear is
+    // wholesale, and it is unconditional because
     // the swap always commits: this function flips W<->P outright, so the helper's
     // same-mode early return cannot fire from here, and its two callers (bare `p`
     // and the settings editor's active_markers_view key, which refuses an

@@ -1,12 +1,11 @@
 #include "undo.h"
 
 #include "input_handler.h"        // land_playhead_on_marker,
-                                  // set_region_to_selection_extent,
                                   // clear_region_highlight,
                                   // frame_span_into_view — the restore visual tail
 #include "target_render.h"
 #include "warp_frame_map_view.h"  // source_frame_to_active_domain, for the
-                                  // singleton offscreen recenter
+                                  // singleton recenter and the group framing
 
 #include <algorithm>
 #include <cmath>
@@ -236,10 +235,8 @@ namespace {
 // is at that branch below; it is what closes the tab-entry auto-select hole).
 // The VISUAL tail — the playhead land (on the FOCUS in both arms, which is the
 // touched marker for a singleton and the earliest touched member for a group;
-// the universal land-on-the-focus rule at land_playhead_on_marker), the group
-// SelectionExtent
-// region, and the offscreen framing/recenter — lives in restore_history_entry
-// AFTER sanitize (the region write must follow sanitize's membership clear).
+// the universal land-on-the-focus rule at land_playhead_on_marker) and the
+// offscreen framing/recenter — lives in restore_history_entry AFTER sanitize.
 template <class M, class FieldsDiffer>
 void apply_post_restore_rules_impl(AppState& app,
                                    Selection& selection,
@@ -358,21 +355,12 @@ void apply_post_restore_rules_impl(AppState& app,
         return;
     }
 
-    // Undo/redo replaces the membership with the touched set -> CLEAR a
-    // SelectionExtent region (a restored span must not silently retarget to the
-    // touched set's extent, and an ownerless one must not rest either). sanitize
-    // below also clears, so this is belt-and-braces for the explicit-site rule;
-    // the visible outcome is decided further on by restore_history_entry's visual
-    // tail, which clears ANY resting region regardless of provenance.
-    // No damage call: restore_history_entry — the only route here — invalidates
-    // the whole waveform area (and kicks a sync render) in its tail.
-    (void)clear_region_on_membership_replace(app.region);
     app.selected_markers = target_set;
     // EARLIEST touched marker as focus — one rule for singleton (trivially the
     // touched marker) and group (all members are equal; there is no stored focus
     // hint). sanitize keeps it (it is in the set and in range); the visual tail
     // in restore_history_entry then lands the playhead on that focus in either
-    // arm, and for a group additionally sets/frames the extent region.
+    // arm, and for a group additionally frames the restored set into view.
     app.last_selected_marker = *target_set.begin();
 }
 
@@ -517,9 +505,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // clear plus the mode assignment and nothing else — no slot is stashed and
     // none is restored (the parked selections died 2026-07-29, and their restore
     // half here was already dead: the post-restore rules below write the touched
-    // set wholesale). clear_selection also takes a SelectionExtent region and the
-    // shift-range anchor through the ordinary mutator contract; the visual tail
-    // then clears any region outright on the same non-'S' gate. Damage rides this
+    // set wholesale). clear_selection also takes the shift-range anchor through
+    // the ordinary mutator contract; the visual tail clears any resting region
+    // outright above the 'S' gate. Damage rides this
     // function's own unconditional full-waveform invalidate in the tail.
     //
     // Kept inline rather than delegated to
@@ -549,21 +537,17 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // focus; the land is a PURE playhead write, the tail's own clear below
     // having already taken any resting span) and its
     // always-on focus stem follows from the selection (no stamp); a GROUP
-    // restore re-selects the touched set (done above), LANDS the playhead on its
-    // FOCUS — the EARLIEST touched member, by the focus rule above — AND sets the
-    // SelectionExtent REGION
-    // — undo/redo joins the extent-region writers, then, when any member is
-    // offscreen, PREFERS a plain scroll and only ZOOMS OUT if the group cannot fit
-    // at the current level (the group arm below). The extent's split half-triangles
-    // ARE the dissolved cursor playhead (its left half on the earliest member), so
-    // the readout follows the land; the
-    // multi-select clicks' land-then-extent order is the precedent
-    // (the extent set below re-suppresses the cursor line before the frame
-    // paints, so the land itself moves only the timestamp readout). Runs AFTER
-    // sanitize_selection_after_restore so the region write follows sanitize's
-    // membership clear (the clear-then-derive order the multi-select clicks use),
+    // restore re-selects the touched set (done above) and LANDS the playhead on
+    // its FOCUS — the EARLIEST touched member, by the focus rule above — the
+    // visible cursor on that member plus the members' own ink triangles being the
+    // group's whole cue since the SPAN FORM retired (architect 2026-07-30); then,
+    // when any member is
+    // offscreen, it PREFERS a plain scroll and only ZOOMS OUT if the group cannot fit
+    // at the current level (the group arm below, which derives the framed span
+    // from the restored members' positions). Runs AFTER
+    // sanitize_selection_after_restore so the land sees the final membership,
     // and BEFORE the recompute/invalidate/kick block below so restore's one sync
-    // render covers the final geometry. The LAND/EXTENT block is gated off 'S', and
+    // render covers the final geometry. The LAND/FRAMING block is gated off 'S', and
     // the 'S' gate is now SIMPLE: a settings-only restore selects nothing, writes no
     // region, and lands nothing — it CLEARS both the region and the selection
     // (below), which is why the narrowing it briefly carried (a
@@ -577,12 +561,10 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // REVERSING the recorded boundary that made undo/redo a route where "a
     // resting region is display scratch"): a restore rewrites the world the span
     // was measured against, so any span still standing describes a world that no
-    // longer exists — a TrimWindow highlight resting stale across a map-changing
-    // restore is precisely the pattern break the two-forms model collapses on
-    // sight. Every arm follows from that one clear: a singleton or emptied
-    // restore rests with NO region, and the group arm's
-    // set_region_to_selection_extent runs AFTER it (clear-then-derive), so the
-    // group outcome is unchanged — that write overwrote whatever rested anyway.
+    // longer exists — a scratch span resting stale across a map-changing restore
+    // would aim `x` at a window the user never drew. EVERY arm rests with NO region now, the group arm's extent write
+    // having retired with the SPAN FORM (architect 2026-07-30) — a restore
+    // creates no trim scratch.
     // THE CLEAR IS NOT GATED OFF 'S' (architect 2026-07-29, closing the settings
     // side of the same hole): a SETTINGS-ONLY restore rewrites engine_settings
     // and rebuilds the target map underneath a resting highlight — scale A ->
@@ -590,7 +572,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // B-domain span under A — so it clears too. The REST of the 'S' gate stands
     // exactly: a settings restore still must not select and must not WRITE a
     // region, which is why only this one call sits above the gate and the whole
-    // extent/framing block stays inside it. The no-LAND half is EXCEPTIONLESS again:
+    // land/framing block stays inside it. The no-LAND half is EXCEPTIONLESS again:
     // the target-view re-land it briefly allowed — onto a selection
     // surviving the restore — died with the selection clear directly below, which
     // leaves no focus to land on.
@@ -604,11 +586,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // settings entry kind there is and the pair covers the whole surface. Together
     // they are what let the never-span-less ENFORCEMENT be deleted — these were its
     // last two producers, and closing them symmetrically means no collapse protocol
-    // is owed. The clear runs after the region clear above, so its own
-    // membership-replace clear finds the region already inactive. It does not
+    // is owed. It does not
     // violate the 'S' gate's no-SELECT half: emptying a selection is not selecting.
-    // The non-'S' entries need nothing here — a group restore re-selects and
-    // re-derives its own extent below, and the other arms rest at <=1 selected.
+    // The non-'S' entries need nothing here — they re-select the touched set.
     if (entry.op_mode == 'S') selection.clear_selection();
     if (entry.op_mode != 'S') {
         const size_t sel_size = app.selected_markers.size();
@@ -658,40 +638,25 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 // conditional-stem apparatus was harvested).
             }
         } else if (sel_size >= 2) {
-            // GROUP: LAND the playhead on the restore's FOCUS, THEN set the
-            // SelectionExtent region (architect 2026-07-25). This obeys the
+            // GROUP: LAND the playhead on the restore's FOCUS (architect
+            // 2026-07-25, its region half retired 2026-07-30 with the SPAN
+            // FORM). This obeys the
             // universal land-on-the-focus rule with no special case, because a
             // restore's focus IS the earliest touched member by construction
             // (apply_post_restore_rules_impl) — spelled as
             // *selected_markers.begin() rather than last_selected_marker so a
             // sanitize that pruned the focus still lands somewhere live. The
-            // extent's split
-            // half-triangles ARE the dissolved cursor playhead — its left half sits
-            // ON the earliest member (min(a,b)) — so the playhead is "technically"
-            // there already and the bottom-strip readout should say so; landing here
-            // makes the timestamp and Space's left-bound launch agree by
-            // construction. LAND-THEN-EXTENT mirrors the multi-select clicks' order:
-            // the tail's own clear above took whatever rested (any provenance),
-            // and set_region_to_selection_extent then writes the fresh one — the
-            // clear-then-derive order, the land itself touching no region.
-            // Earliest =
-            // *selected_markers.begin() (sorted set, smallest index = earliest in
-            // time). land_playhead_on_marker is internally bounds-guarded (an
-            // impossible out-of-range index no-ops the land and leaves the region
-            // write to run) — the singleton branch's defensive in-range intent. The
-            // land writes NO viewport, so the three-way offscreen arm below is
-            // byte-identical; playback is already stopped above (land's
-            // scanner-inactive premise). The extent write below re-suppresses the
-            // cursor playhead before the frame paints, so the land's own visible
-            // delta is the timestamp readout.
+            // group's visual is the restored members' ink triangles plus the
+            // always-visible cursor sitting on the earliest of them — the
+            // extent-region write that used to follow this land is gone, the
+            // region being trim scratch that a restore has no business creating.
+            // land_playhead_on_marker is internally bounds-guarded (an
+            // impossible out-of-range index no-ops the land) and writes NO
+            // viewport, so the three-way offscreen arm below is unaffected;
+            // playback is already stopped above (land's scanner-inactive
+            // premise).
             land_playhead_on_marker(app, viewport.audio, viewport,
                                     *app.selected_markers.begin());
-            // Set the SelectionExtent region (the one owner clamps endpoints
-            // playable, sets provenance, and damages the waveform). A degenerate
-            // all-coincident touched set yields an ACTIVE zero-width region (a == b,
-            // the split-playhead's single-mask case), not a clear — matching the
-            // multi-select clicks' land-then-extent bit-for-bit.
-            set_region_to_selection_extent(app, viewport.audio, viewport);
             // OFFSCREEN handling (architect 2026-07-25 post-labwc, decided on
             // PAINTED COLUMNS): PREFER a plain scroll at the current zoom, ZOOM only
             // when the group cannot fit. The fit contract is PAINTED COLUMNS, not a
@@ -762,14 +727,45 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             // render and the unconditional kick_waveform_sync below runs a second
             // over identical final state — a bounded duplicate on a discrete
             // keystroke (the keyboard zoom's per-press cost).
-            if (app.region.active) {
-                const int64_t lo      = app.region.a_frame;
-                const int64_t hi      = app.region.b_frame;
+            // THE SPAN THE FRAMING DECIDES ON IS THE TOUCHED SET'S OWN
+            // [earliest, latest] ACTIVE-DOMAIN EXTENT, derived right here from
+            // the restored members' positions (architect 2026-07-30): it used to
+            // be read back out of the region this arm had just written, and with
+            // that write retired the framing owns its span source directly. The
+            // per-member formula is the LAND'S, exactly —
+            // clamp_playhead_to_live_domain(source_frame_to_active_domain(...)) —
+            // so the endpoints are the same playable frames the old extent
+            // carried and every framing decision below is unchanged. `have`
+            // false (every restored index stale — degenerate, and impossible
+            // post-sanitize) frames nothing, matching the old extent owner's own
+            // no-op return.
+            int64_t lo = 0, hi = 0;
+            bool    have = false;
+            {
+                const bool phase_reset = (app.active_markers_view == 'P');
+                const auto& warp_vec = app.warpmarkers.markers();
+                const auto& phase_reset_vec = app.phaseresetmarkers.markers();
+                const int n = phase_reset
+                    ? static_cast<int>(phase_reset_vec.size())
+                    : static_cast<int>(warp_vec.size());
+                for (int idx : app.selected_markers) {
+                    if (idx < 0 || idx >= n) continue;   // defensive
+                    const int64_t src_f = phase_reset
+                        ? phase_reset_vec[idx].time_frame
+                        : warp_vec[idx].time_frame;
+                    const int64_t pos = clamp_playhead_to_live_domain(
+                        source_frame_to_active_domain(app, viewport.audio, src_f),
+                        app, viewport.audio);
+                    if (!have) { lo = hi = pos; have = true; }
+                    else { if (pos < lo) lo = pos; if (pos > hi) hi = pos; }
+                }
+            }
+            if (have) {
                 const int     W       = waveform_area(app).w;
                 const double  q       = painter_samples_per_pixel(
                     app, viewport.audio, waveform_area(app));
                 // Endpoint column under a given viewport start, on the flag
-                // painters' basis; empty q (no geometry) leaves the region put.
+                // painters' basis; empty q (no geometry) leaves the viewport put.
                 auto both_columns_visible = [&](int64_t vp_start) {
                     const int lo_col = static_cast<int>(std::nearbyint(
                         (static_cast<double>(lo) - static_cast<double>(vp_start)) / q));
@@ -801,8 +797,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // One-shot discrete jump: undo/redo restored markers / phase resets /
     // settings, changing the displayed plate (the target-view warp_frame_map).
     // The visual tail above may have LANDED the playhead (on the restored focus
-    // in either arm), recentered
-    // or framed the viewport, and written a region; these invalidations and the
+    // in either arm) and recentered
+    // or framed the viewport; these invalidations and the
     // sync kick cover all of that as well as the marker change. Render it
     // synchronously so the restored markers and the waveform land together. A
     // single keystroke, so bounded — the drag-time async-warp_frame_map policy is about

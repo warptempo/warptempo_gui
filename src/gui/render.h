@@ -151,10 +151,9 @@ inline GuiColor kLine             = hex(0x686A6C);
 // — see render_strip_anchor_stem).
 inline GuiColor kStripAnchorStem  = hex(0x686A6C);
 
-// The resting cursor: its 1px line and its tip-down triangle, AND the region
-// SPLIT half-triangles, which are that same cursor dissolved into the two ends
-// of a highlighted span and therefore ride this key rather than any selection
-// color (architect 2026-07-27). The compiled default is the breeze-icons grey —
+// The resting cursor: its 1px line and its tip-down triangle — the ONE playhead
+// form, always painted (architect 2026-07-30; the region's split half-triangles
+// rode this key until the span form retired with them). The compiled default is the breeze-icons grey —
 // brighter than kLine so the cursor reads as live rather than structural, calmer
 // than kText so it never competes with the glyphs. kSelectedStem and
 // kOverlayOutline default to the same value: the live 1px marks are one
@@ -278,14 +277,16 @@ inline GuiColor kAccentOutline    = hex(0xDA4453);
 // so the ARGB32 plate composites over the recolored ground and its antialiased
 // fringes blend correctly against it. The ink itself is untouched — over a
 // fully covered pixel the result is bit-identical to ink over plain kCanvas.
-// It is the group's focus cue, the singleton focus stem's "spread" form (a stem
-// marks one selected marker, this ground marks many). Its default is kCanvas
+// It is TRIM SCRATCH: the span the plain waveform drag / the shift waveform
+// press form and `x` consumes into the trim window (architect 2026-07-30 — it
+// was the group's spread focus cue until the span form retired; it is no longer
+// a playhead form, a selection visual, or a trim-window display). Its default is kCanvas
 // lifted by Breeze's OWN shipped View->ViewAlternate step, #141618 -> #1d1f22 =
 // +9/+9/+10 per channel — the theme's native "subtly lighter than the surface"
 // relationship, applied to our canvas instead of a tint invented for it, so the
 // highlighted span reads as the same surface raised rather than as a colour
-// wash. The split half-triangles at its bounds are the dissolved CURSOR, so they
-// paint kPlayheadCursor, not any selection color.
+// wash. The cursor playhead paints straight across it, unchanged — the span is a
+// ground, never a playhead.
 //
 // THE OVERLAY IS A RING ONLY (architect 2026-07-27). kOverlayOutline is the 1px
 // border of the phase reset overlay band — the stretch of output immediately
@@ -959,7 +960,7 @@ void render_waveform(cairo_surface_t* dest,
 // paints (column-gated only); the triangle comes from the code-generated mask
 // (playhead_triangle_mask(), cached in this module's file-scope state), stamped
 // above the stem via cairo_mask_surface and tinted with `color`. The triangle
-// belongs to the cursor exclusively under the split-playhead model; pass
+// belongs to the cursor exclusively; pass
 // `draw_triangle = false` for the scanner and the selected-marker stem so only
 // the vertical line is drawn. (The complementary triangle-only form was retired
 // with the selected-marker focus triangle when the singleton's focus became
@@ -987,32 +988,6 @@ void render_playhead(cairo_t* cr,
                      double  playhead_pixel_x,
                      GuiColor color,
                      bool draw_triangle = true);
-
-// Draws the SPLIT playhead shown while a region-select is active: the normal
-// single cursor triangle dissolves and TWO half-triangles take its place, one on
-// each region bound. Both halves stamp the ONE cached playhead triangle mask
-// (playhead_triangle_mask(), 2H-1 wide, tip-down, full-height center column at
-// image index H-1) clipped to a half each — no new masks are built. left_col /
-// right_col are the region's bound columns relative to `area.x` (screen column =
-// area.x + col; left = the smaller, right = the larger). The LEFT half keeps mask
-// columns [0..center], blitted so the center column lands ON left_col — the
-// full-height edge sits on the bound and the slope flares LEFT, outside the
-// region. The RIGHT half keeps mask columns [center..2*center], center column on
-// right_col, slope flaring RIGHT. Same `triangle_lane` and dst_y as the unsplit
-// playhead triangle (the lane rect from top_triangle_row_area, passed in for the
-// reason stated at render_playhead), and each half is additionally clipped to the
-// waveform's horizontal span so a bound near an edge partial-renders instead of
-// leaking. left_col == right_col draws THE WHOLE CURSOR FORM at that column
-// (architect 2026-07-30): render_playhead's 1px line with the triangle
-// suppressed, plus ONE full mask stamp for the triangle — a one-column span IS
-// the cursor, its two ends having met, and the line is what keeps a zero-width
-// extent visible at all (the reasoning is at the arm itself, render.cpp).
-void render_split_playhead(cairo_t* cr,
-                           GuiRect area,
-                           GuiRect triangle_lane,
-                           int left_col,
-                           int right_col,
-                           GuiColor color);
 
 // Draws the strip-drag ANCHOR STEM: a 1-pixel vertical line at the drag's pivot
 // column `col` (window pixels within `area`, clamped here to [0, area.w-1]),

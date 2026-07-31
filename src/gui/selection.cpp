@@ -8,39 +8,24 @@
 #include <set>
 #include <vector>
 
-void Selection::damage_playhead_if_focus_flipped(bool was_empty) {
-    if (was_empty == app.selected_markers.empty()) return;   // no focus flip
-    if (audio.total_frames() <= 0) return;
-    // Damage the playhead's pixels. The playhead itself has not moved, only its
-    // PRESENCE at the cursor changed with the selection emptiness: empty paints
-    // the cursor line+triangle there; non-empty conceptually moves the cursor
-    // COINCIDENT with the marker (hidden behind it — the always-on focus stem
-    // stands in for the cursor line, the flag occludes the triangle), so the
-    // cursor form stops painting there.
-    // FULL WAVEFORM-AREA DAMAGE (architect 2026-07-30, replacing the narrow
-    // single-column invalidate computed on the LIVE viewport): the cursor's
-    // pixels are PLATE-registered, and Selection sees no GuiPaintHandler, so
-    // this site takes the widening shape — ownership-window-proof by
-    // construction, and a focus flip is a rare discrete selection event. Rule
-    // and per-site shape table at playhead_pixel_x (app_state.h).
-    viewport.invalidate_waveform_area();
-}
-
 std::optional<int64_t> Selection::phase_overlay_subject() const {
     // Mirror phase_reset_overlay_band's SELECTION-STATE visibility guards
     // (paint_handler.cpp) exactly: P view + target view, selection under the
-    // 2-member suppression, no active region, and the focused marker a valid
-    // ENABLED phase reset. The geometry guards there (area size, samples-per-
+    // 2-member suppression, and the focused marker a valid ENABLED phase reset.
+    // The geometry guards there (area size, samples-per-
     // pixel, sub-pixel forward width) are NOT selection state — they cannot
     // change across a Selection mutation — so they are excluded here. The
     // subject is the reset's FRAME, not its store index: a reorder remap
     // preserves frames (subject-stable), and two resets sharing one frame paint
     // the overlay at the same column, so a focus swap between them is not a
     // subject change.
+    // NO REGION GATE, on either side of the mirror: a region rests only beside
+    // an EMPTY selection (both formers deselect at press), and an empty
+    // selection has no focused reset to be a subject, so a region and a subject
+    // cannot coexist. The derivation is at the band (paint_handler.cpp).
     if (app.active_markers_view != 'P') return std::nullopt;
     if (app.active_audio_view != 'T') return std::nullopt;
     if (app.selected_markers.size() >= 2) return std::nullopt;
-    if (app.region.active) return std::nullopt;
     const auto& markers = app.phaseresetmarkers.markers();
     const int idx = app.last_selected_marker;
     if (idx < 0 || idx >= static_cast<int>(markers.size())) return std::nullopt;
@@ -58,9 +43,7 @@ void Selection::damage_overlay_on_subject_change(
     // appearing/disappearing (0<->1 focus, the 1<->2 suppression crossing) or
     // the focus moving to a reset at a different frame — every case the old
     // size-2-only helper missed and that fell back to the stem cache's
-    // (now-deleted) selection-hash rebuild damage. The <2 -> 2+ direction is
-    // ALSO covered by the multi-select builders' own invalidate_waveform_area
-    // (the downward selection->extent coupling) — redundant-but-harmless.
+    // (now-deleted) selection-hash rebuild damage.
     viewport.invalidate_waveform_area();
 }
 
@@ -111,7 +94,7 @@ void Selection::repair_last_selected() {
     if (app.last_selected_marker < 0) return;
     if (app.selected_markers.count(app.last_selected_marker)) return;
     // The focus is no longer a member; it moves to the largest remaining
-    // selected index, or to none. In P + target view with no active region that
+    // selected index, or to none. In P + target view that
     // can change the overlay subject (a stale reset -> the largest remaining
     // selected reset, or -> none), and this runs without a reliable enclosing
     // waveform repaint — bare Return/KpEnter routes here and, in P view, returns
@@ -134,16 +117,6 @@ void Selection::repair_last_selected() {
 }
 
 void Selection::set_single_selection(int idx) {
-    // Membership replace -> CLEAR a SelectionExtent region (it is no longer this
-    // selection's extent, and a span whose owner died does not linger).
-    // Harmless when a downward selection->extent click re-owns right after
-    // (clear-then-re-own). Clearing ACTIVE pixels needs waveform damage of its
-    // own — the recolored ground and split halves go, and the singleton stem the
-    // region was suppressing comes back — and it cannot be left to a nearby
-    // clear_region_highlight, which early-returns on the now-inactive region.
-    if (clear_region_on_membership_replace(app.region))
-        viewport.invalidate_waveform_area();
-    const bool was_empty = app.selected_markers.empty();
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     const std::optional<int64_t> old_stem    = stem_subject();
     // Any non-range selection change dissolves the shift-range anchor (its
@@ -159,34 +132,20 @@ void Selection::set_single_selection(int idx) {
     // too (not only on hover), so a selection change damages the timestamp area
     // like a hover change does — the marker-text lane rides the top-strip damage.
     viewport.invalidate_timestamp_area();
-    damage_playhead_if_focus_flipped(was_empty);
     damage_overlay_on_subject_change(old_subject);
     damage_stem_on_subject_change(old_stem);
 }
 
 void Selection::clear_selection() {
-    // Membership replace (to empty) -> CLEAR a SelectionExtent region: the span's
-    // owner just died, so this takes the span, pixels and all. That is the whole
-    // contract from here, WITH NO EXCEPTIONS AT ALL since 2026-07-29 (the Esc
-    // ladder's first rung was the one caller that patched the pixels back
-    // afterward, and the whole ladder is deleted): no caller gets a surviving
-    // extent span out of a deselect, and no route re-forms one.
-    if (clear_region_on_membership_replace(app.region))
-        viewport.invalidate_waveform_area();
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     if (app.selected_markers.empty() && app.last_selected_marker == -1)
-        return;   // nothing selected (already empty -> no focus flip)
+        return;   // nothing selected (already empty)
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     const std::optional<int64_t> old_stem    = stem_subject();
     app.selected_markers.clear();
     app.last_selected_marker = -1;
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
-    // Non-empty -> empty is always a focus flip here (the already-empty case
-    // returned above), so the playhead column repaints — nothing at the cursor
-    // (non-empty) back to the cursor line+triangle (empty) — even with no
-    // playhead move.
-    damage_playhead_if_focus_flipped(/*was_empty=*/false);
     // Clearing the focus erases any overlay it annotated (subject frame -> none)
     // and any singleton stem (its subject -> none).
     damage_overlay_on_subject_change(old_subject);
@@ -194,28 +153,22 @@ void Selection::clear_selection() {
 }
 
 void Selection::collapse_to_focused() {
-    // THREE CALLER CLASSES, all DELIBERATE ACTS OF THE GESTURE — re-derived by grep
-    // 2026-07-29 (the architect's 2026-07-29 ruling deleted the never-span-less
-    // REPAIR class, and the group-or-collapse ruling then added the third below):
-    //   * the FINE-TUNING VALUE gestures (the inherit toggle, the singleton
+    // TWO CALLER CLASSES, both DELIBERATE ACTS OF THE GESTURE — re-derived by grep
+    // 2026-07-30:
+    //   * the FINE-TUNING VALUE gestures (the Ctrl+N inherit toggle, the singleton
     //     tempo step), which narrow the selection so the operation and the
     //     resulting selection both target last_selected only;
     //   * HORIZONTAL MOVEMENT, which is a FOCUS ACT (architect 2026-07-29 —
     //     groups are never moved): both position nudges collapse here through
-    //     their shared prologue and then step the focus alone;
-    //   * THE SPAN-DROPPING VERBS (re-derived by grep 2026-07-30): the S/T view
-    //     switch `t` (whose span cannot survive the domain flip) and `c`. Each
-    //     would otherwise leave a group resting with no span — the state the
-    //     architect rejected — so each collapses to the focus and lands the
-    //     playhead there instead. Bare `0` left this class the same day: the
-    //     overview toggle drops no span at all now, being a pure viewport move.
-    // The doctrine, the group-verb rule all three instance, and the architect's
+    //     their shared prologue and then step the focus alone.
+    // The doctrine, the group-verb rule both instance, and the architect's
     // general statement of it live at the head of position_nudge.h.
-    // THE DELETED THIRD CLASS was the never-span-less ENFORCEMENT — six sites that
-    // collapsed a group because a clear had taken its span. That invariant is
-    // RETIRED (architect 2026-07-29; the retirement paragraph is at
-    // clear_region_highlight's declaration, input_handler.h), so no caller
-    // collapses as REPAIR any more:
+    // THE SPAN-DROPPING CLASS IS GONE (architect 2026-07-30): `t` and `c` were
+    // its two members, each collapsing only to keep a group from resting SPANLESS
+    // — and with the SPAN FORM retired there is no such state, so both now CARRY
+    // their group. (Bare `0` had left the same class one day earlier, re-ruled a
+    // pure viewport command.) The never-span-less ENFORCEMENT class died before
+    // them, 2026-07-29: no caller collapses as REPAIR any more,
     // every call here is a gesture doing what it means to do.
     // The GROUP TEMPO gestures do NOT collapse — they went group (architect
     // 2026-07-23) and move the whole selection's images rigidly.
@@ -223,15 +176,6 @@ void Selection::collapse_to_focused() {
     // is untouched — it stays the focus. Callers that full-invalidate afterward
     // make the top-strip / timestamp damage here redundant (a benign damage-union,
     // accepted).
-    // Membership replace (collapse to the focused singleton) -> CLEAR a
-    // SelectionExtent region (a 1-marker extent is degenerate, and the collapse
-    // is what killed the span's owner). A TrimWindow region SURVIVES this
-    // membership clear, which is right for both classes: a value gesture and a
-    // nudge have no business tearing down a chip-row highlight — moot in practice,
-    // since a TrimWindow region rests only beside an EMPTY selection and these
-    // callers need a focus.
-    if (clear_region_on_membership_replace(app.region))
-        viewport.invalidate_waveform_area();
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
     // No focus -> nothing to collapse TO. Both surviving classes depend on the
     // focus being a live member of the very selection they are collapsing, and it
@@ -263,12 +207,6 @@ void Selection::collapse_to_focused() {
 }
 
 bool Selection::toggle_selection_membership(int idx) {
-    // Membership replace -> CLEAR a SelectionExtent region. Harmless when a
-    // downward selection->extent ctrl-toggle re-owns right after
-    // (clear-then-re-own).
-    if (clear_region_on_membership_replace(app.region))
-        viewport.invalidate_waveform_area();
-    const bool was_empty = app.selected_markers.empty();
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     const std::optional<int64_t> old_stem    = stem_subject();
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
@@ -286,7 +224,6 @@ bool Selection::toggle_selection_membership(int idx) {
     }
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
-    damage_playhead_if_focus_flipped(was_empty);
     damage_overlay_on_subject_change(old_subject);
     // The stem's singleton subject can change here: a toggle to/from a 1-marker
     // selection. (When repair_last_selected fired above it double-fires its own
@@ -304,12 +241,6 @@ void Selection::select_range_from_anchor(int idx) {
     // idx < 0 (never reached from the
     // shift-click path, which resolves a real hit) is a plain no-op guard.
     if (idx < 0) return;
-    // Membership replace -> CLEAR a SelectionExtent region (the downward
-    // selection->extent shift-range re-owns right after via
-    // set_region_to_selection_extent, so this is clear-then-re-own).
-    if (clear_region_on_membership_replace(app.region))
-        viewport.invalidate_waveform_area();
-    const bool was_empty = app.selected_markers.empty();
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     const std::optional<int64_t> old_stem    = stem_subject();
 
@@ -347,7 +278,6 @@ void Selection::select_range_from_anchor(int idx) {
         app.shift_range_anchor   = idx;
         viewport.invalidate_top_strip();
         viewport.invalidate_timestamp_area();
-        damage_playhead_if_focus_flipped(was_empty);
         damage_overlay_on_subject_change(old_subject);
         damage_stem_on_subject_change(old_stem);
         return;
@@ -369,24 +299,11 @@ void Selection::select_range_from_anchor(int idx) {
     app.last_selected_marker = idx;
     viewport.invalidate_top_strip();
     viewport.invalidate_timestamp_area();
-    damage_playhead_if_focus_flipped(was_empty);
     damage_overlay_on_subject_change(old_subject);
     damage_stem_on_subject_change(old_stem);
 }
 
 void Selection::sanitize_selection_after_restore(int n) {
-    // A restore replaces the selection membership from the entry -> CLEAR a
-    // SelectionExtent region. This is the CLEAR half of the group restore's
-    // clear-then-derive (architect 2026-07-25): restore_history_entry's
-    // visual tail runs AFTER this, so a GROUP restore then RE-DERIVES the
-    // SelectionExtent region from the fresh touched set (the multi-select clicks'
-    // order). For a singleton / settings restore the clear is terminal (no
-    // re-derive) — a stale SelectionExtent region must not retarget silently, and
-    // now does not rest at all. The sole caller (restore_history_entry) repaints
-    // the whole waveform anyway, so this damage is normally redundant; it stays
-    // as the structural owner, like the subject-change owners below.
-    if (clear_region_on_membership_replace(app.region))
-        viewport.invalidate_waveform_area();
     // A restore (undo/redo) dissolves the shift-range anchor, like every other
     // non-range selection mutator (the mutators are its only owners — see the
     // field's lifecycle comment). This is also the route that closes

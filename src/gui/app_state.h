@@ -126,139 +126,60 @@ struct UndoEntry {
     std::vector<int>          touched_live;
 };
 
-// Session-only region selection — an Ableton-style arrangement span, and the
-// PLAYHEAD'S SPAN FORM: while one is active it outranks every point cue (the
-// two-forms rule is stated at land_playhead_on_marker, input_pointer.cpp).
-// Endpoints are ACTIVE-DOMAIN frames (source frames in source view, target frames
-// in target view), stored in drag order and normalized lo/hi at READ time, so the
-// span survives pan/zoom mid-drag and at rest. NEVER serialized, and stored
-// independently of the selection and undo systems (a transient visual — no undo
-// entry, its own field, not derived from the selection set).
+// Session-only region selection — an Ableton-style arrangement span, and TRIM
+// SCRATCH: forming one is how the user aims `x`, and that is its whole purpose
+// (architect 2026-07-30, retiring the SPAN FORM). It is NOT a playhead form, NOT
+// a selection visual, and NOT a trim-window display: the cursor playhead always
+// paints straight across it, the singleton stem is never suppressed, and nothing
+// publishes the trim window back into it. Endpoints are ACTIVE-DOMAIN frames
+// (source frames in source view, target frames in target view), stored in drag
+// order and normalized lo/hi at READ time, so the span survives pan/zoom
+// mid-drag and at rest. NEVER serialized, and stored independently of the
+// selection and undo systems (a transient visual — no undo entry, its own field,
+// not derived from the selection set).
 //
 // SELECTION FLOWS DOWNWARD ONLY (architect 2026-07-23): highlighting a region does
 // NOT select the markers it contains — do not re-propose the reverse coupling. The
-// couplings that exist run selection -> region -> trim: the multi-select clicks set
-// this highlight to the selection's extent, and the trim-lane clicks + trim drags
-// set it to the trim window, CLEARING the selection as they publish (every
-// TrimWindow setter deselects — the trim-bar click is the span-form sibling of the
-// waveform click's deselect-all). Trim never SELECTS a marker; the selection is the
-// master state and trim only ever empties it.
+// one coupling left runs region -> trim, through `x` alone. Trim never SELECTS a
+// marker and no longer publishes a highlight either; the trim setters still EMPTY
+// the selection as they commit (the setter-deselect rule).
 //
 // THE FORMERS — THE AUTHORITATIVE INVENTORY (re-derive by grepping every writer of
-// `region.active = true`; other sites state only their own class and point here).
-// SIX CODE SITES ACTIVATE A REGION: FOUR write the fields directly for a FREE span,
-// ONE writes TrimWindow, and ONE is the extent owner serving many gestures:
-//   * the plain waveform DRAG (paints it live, leaving the selection EMPTY
-//     throughout) — Free;
-//   * the waveform SHIFT+click region former / marker DROP (playhead-to-click
-//     with nothing selected, else furthest-selected-marker-to-click, DROPPING
-//     the selection) — Free;
-//   * a multi-marker DELETE, either column (spans the DELETED positions, also a
-//     DROP) — Free, and two sites under one rule;
-//   * the TRIM SYNC's set arm (sync_region_to_trim_window) — TrimWindow;
-//   * set_region_to_selection_extent — SelectionExtent, the ONE owner of that
-//     provenance. Its callers split into FIVE CREATORS (which may activate from
-//     nothing: the shift-range and ctrl-toggle multi-select clicks, the `m` bpm
-//     open's re-extent, the GROUP undo/redo restore, and the propagate paste's
-//     created-set arm) and ONE MAINTAINER (which gates on an ALREADY-ACTIVE
-//     SelectionExtent region and only re-derives it: the GROUP TEMPO CENT STEP).
-//     The class-level contract for those callers, and the ordering rule each
-//     obeys, live at that function in input_pointer.cpp.
+// `region.active = true`). TWO CODE SITES ACTIVATE A REGION, and BOTH DESELECT AT
+// PRESS:
+//   * the plain upper-half waveform DRAG (paints it live, leaving the selection
+//     EMPTY throughout — the press's deselect-all is the committed act);
+//   * the waveform SHIFT+click region former (playhead-to-click with nothing
+//     selected, else furthest-selected-marker-to-click, DROPPING the selection),
+//     which also arms a drag on the far endpoint.
+// SO A REGION RESTS ONLY BESIDE AN EMPTY SELECTION, structurally — there is no
+// route that rests one beside a live selection, and every consumer may rely on
+// it. Everything that used to write a region from somewhere else is DELETED with
+// the span form: the selection-extent owner, the trim-window sync, the two
+// multi-delete demotions, and the whole three-value origin enum RegionState
+// carried. A region has ONE origin now — the user drew it.
 //
-// THE THREE PROVENANCES (architect 2026-07-23) track WHO the region is derived
-// from. What provenance still ROUTES today is the TRIM coupling alone: Shift+X
-// acts on a TrimWindow region and leaves a Free or extent one alone. It is the
-// last provenance-gated route — the settings-editor trim keys were the other one
-// until 2026-07-30, when they joined the setters and took the unconditional
-// deselect-and-publish instead.
-//   * Free — a drag-formed span, display scratch that no gesture re-derives. FOUR
-//     producers, the four direct writers above, and all four leave the selection
-//     EMPTY. It rests ONLY beside an empty selection: every route that puts a
-//     selection in place clears the span (the marker clicks, Tab/`c`, the editor
-//     opens, the drops, and the three membership-wholesale routes — the undo/redo
-//     restore, the `p` swap, the propagate paste).
-//   * SelectionExtent — the marker selection's [earliest, latest] extent, valid
-//     ONLY while that selection persists: any membership REPLACE clears it through
-//     clear_region_on_membership_replace, outright, pixels and all. THE INVARIANT:
-//     2+ selected with an active SelectionExtent region => the region IS that
-//     selection's current extent — and a 2+ selection resting with NO span is
-//     UNPRODUCIBLE (architect 2026-07-29, rejecting that state): every route that
-//     rests a group rests it WITH its extent, and every route that would take the
-//     extent away collapses the group to its focus instead. It holds by the verbs'
-//     own form, not by anything policing the clears — the derivation and the
-//     architect's group-or-collapse rule are at clear_region_highlight's
-//     declaration (input_handler.h) and at the group-verb doctrine
-//     (position_nudge.h).
-//   * TrimWindow — the trim window's images, published by the trim setters, and
-//     RESTING ONLY BESIDE AN EMPTY SELECTION (the rule and the setter list are at
-//     sync_region_to_trim_window's declaration, input_handler.h). A RESTING full
-//     pair implies nothing in return: the entry / restore routes (load, the
-//     Ctrl+Tab band pull, `t`, `p`, adopt) rest a pair bare, the highlight being a
-//     gesture-scoped cue.
-// Bare `x` is SET-ONLY and branches on THIS highlight: a live region trims to it
-// and the highlight is KEPT (re-derived through the setter publish, which also
-// DESELECTS); no region means `x` is a silent no-op, and so does a DEGENERATE
-// result — an inverse-mapped span coming out end <= begin refuses rather than
-// writing a pair the crossed-commit auto-clear would destroy (at handle_trim_x).
-// Shift+X UNSETS the trim, tearing down a TrimWindow highlight with the window.
+// Bare `x` is SET-ONLY and consumes THIS highlight: a live region trims to it,
+// DESELECTS (the setter rule) and then CLEARS the region — its job is done and
+// nothing re-publishes one. No region means `x` is a silent no-op, and so does a
+// DEGENERATE result — an inverse-mapped span coming out end <= begin refuses
+// rather than writing a pair the crossed-commit auto-clear would destroy (at
+// handle_trim_x).
 //
-// CLEARED wholesale, any provenance, on: file load, the A/B tab switch, the S/T
-// audio-view switch and the W/P marker-column switch (each flips the domain or the
-// owning column out from under the span), a plain UPPER-HALF waveform PRESS (the
-// placement press dissolves any resting highlight at mouse-down, before it knows
-// whether the gesture is a click or a fresh region drag — via arm_region_drag_at; a
-// lower-half scrub press leaves the region alone), and the kick validator's
-// live-domain reclamp when a bound falls outside a shrunken domain. The full
-// clear-site enumeration lives at clear_region_highlight's declaration
-// (input_handler.h). NO POSITION GESTURE FOLLOWS A SPAN: both nudges and the marker
-// drag are POINT commands that clear instead (horizontal movement is a focus act —
-// the doctrine is at the head of position_nudge.h). What survives as
-// re-derive/re-sync rather than clear is exactly two sites: the GROUP TEMPO CENT
-// STEP's unconditional extent re-derive across its own map change, and the
-// settings-editor TRIM commit's TrimWindow re-sync to the edited bounds.
-enum class RegionProvenance { Free, SelectionExtent, TrimWindow };
-
+// CLEARED wholesale on: file load, the A/B tab switch, the S/T audio-view switch
+// and the W/P marker-column switch (each flips the domain or the owning column out
+// from under the span), a plain UPPER-HALF waveform PRESS (the placement press
+// dissolves any resting highlight at mouse-down, before it knows whether the
+// gesture is a click or a fresh region drag — via arm_region_drag_at; a
+// lower-half scrub press leaves the region alone, that press being the region's
+// PREVIEW gesture), and the kick validator's live-domain reclamp when a bound
+// falls outside a shrunken domain. The full clear-site enumeration lives at
+// clear_region_highlight's declaration (input_handler.h).
 struct RegionState {
     bool    active  = false;
     int64_t a_frame = 0;   // the press-anchor endpoint
     int64_t b_frame = 0;   // the far (pointer) endpoint
-    // Provenance (see enum above). The ONLY reader is the trim's own teardown
-    // route (Shift+X), which tests provenance == TrimWindow. SET in three
-    // places — set_region_to_selection_extent -> SelectionExtent,
-    // sync_region_to_trim_window's set arm -> TrimWindow, and every OTHER former
-    // (region drag, shift-click drop-former, both delete drop-formers) -> Free.
-    // NOTHING CONVERTS: provenance is written once, by the route that forms the
-    // span, and is never downgraded in place — clear_region_on_membership_replace
-    // clears a SelectionExtent region whole rather than downgrading it, and no
-    // route re-forms one. Every wholesale RegionState{} reset (load, navigation
-    // clears) defaults Free. The Space launch, `x`, and the navigation clears are
-    // provenance-BLIND — they act on any active region.
-    RegionProvenance provenance = RegionProvenance::Free;
 };
-
-// A MEMBERSHIP REPLACE CLEARS THE EXTENT REGION (architect 2026-07-29,
-// superseding the 2026-07-23 drop-to-Free): SelectionExtent provenance is
-// valid only while the selection it was derived from persists, so EVERY site
-// that REPLACES the selection membership calls this — and what it does is CLEAR
-// the region outright, pixels and all. A span whose owner died does not linger:
-// the region is the playhead's SPAN form, so a highlight resting with no live
-// owner asserts a playhead that is not there, which is exactly the state the
-// point commands then have to fight (a dropped-but-visible extent left the
-// playhead frozen under a stale span in live use). TrimWindow is
-// selection-independent — untouched; Free stays Free. NOT called on an index
-// REMAP (reorder_markers_by_time keeps the same markers at new indices, so the
-// extent is unchanged — the extent is a function of membership only).
-// RETURNS true iff it cleared an ACTIVE region. That return is load-bearing:
-// clearing active pixels changes the waveform (the recolored ground and the
-// split half-triangles go, and the singleton stem the region was suppressing
-// comes back), so a caller that has no full-waveform damage of its own owes
-// viewport.invalidate_waveform_area() on a true return.
-inline bool clear_region_on_membership_replace(RegionState& r) {
-    if (r.provenance != RegionProvenance::SelectionExtent) return false;
-    const bool was_active = r.active;
-    r = RegionState{};
-    return was_active;
-}
 
 // Marker reposition drag state (begun by a plain flag drag past the shared
 // threshold). ONE MARKER, ALWAYS — GROUPS ARE NEVER MOVED (architect 2026-07-29,
@@ -567,13 +488,13 @@ struct PendingMarkerDrag {
 // trim sibling of PendingMarkerDrag: the press CLAIMS the chip/bridge geometry
 // but arms only this pending state; begin_trim_drag runs (and the trim-drag
 // machinery takes over) only once the pointer crosses kDragMovedThresholdPx
-// (Chebyshev from the press). A SUB-THRESHOLD PRESS-RELEASE IS THE RULED
-// PLAIN-CHIP CLICK, not a no-op — the "trim has no click action" contract died with
-// the lane-click model: the motionless release publishes the TrimWindow highlight
-// through the SETTER's route, which CLEARS THE SELECTION first (2026-07-29),
-// and the lost-button path performs the same act so one physical click
-// cannot rest two ways. What it commits is DISPLAY state only — no bound moves and
-// the trim store is untouched. Deferring begin_trim_drag to the crossing keeps
+// (Chebyshev from the press). A SUB-THRESHOLD PRESS-RELEASE IS A CONSUMED
+// NOTHING again (architect 2026-07-30): the lane-click model gave it one act —
+// publishing the trim window as a region highlight — and that publish is retired
+// with the SPAN FORM, so the click stops nothing, deselects nothing and commits
+// nothing on BOTH end paths (clean release and lost button). The DRAG carries the
+// setter's deselect and the trim-mutation stop at its first accepted bound
+// change. Deferring begin_trim_drag to the crossing keeps
 // its anchor capture exact — nothing mutates the trim store between press and
 // crossing. Requires the FULL bound pair (a lone bound is gesture-inert — the
 // router never arms one); a read-only tab claims the press but never arms.
@@ -1252,7 +1173,8 @@ struct AppState {
     // appears/moves/disappears iff the singleton subject changes, and the gestures
     // that move a subject marker's FRAME or IMAGE (nudges, drags, re-warps) already
     // full-damage the waveform. A focused GROUP (2+ selected) shows no stem — its
-    // cue is the extent region's recolored ground.
+    // cue is the members' ink triangles plus the always-visible cursor landed on
+    // the focus.
 
     // Active markers view: 'W' = warp markers, 'P' = phase reset markers.
     // Toggled by `p`. Determines which marker collection is visible / edited /
@@ -1892,20 +1814,27 @@ void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
 // at — a frozen scanner line, or a stop that leaves its last column un-erased,
 // until the next publish heals it.
 //
-// TWO SHAPES SATISFY THE RULE, chosen per site by REACHABILITY:
-//  - NARROW ON PLATE, where the site can see a GuiPaintHandler: the 60 Hz
-//    scanner sites (main.cpp's tick heartbeat and pre-paint advance) and the
-//    Tab/`c` jump's unmoved branch, which pass plate_viewport_basis() through
-//    the explicit-basis overloads.
-//  - FULL WAVEFORM-AREA DAMAGE, where it cannot without new coupling
-//    (Viewport, Selection, GuiPlaybackLifecycle and the free land helper all
-//    see no paint handler): the stop teardowns, the focus flip, the marker
-//    land, move_playhead_to's no-scroll branch, and the live-domain cursor
-//    repair. A full-area invalidate is ownership-window-proof by construction —
-//    it cannot ride the wrong epoch — and every one of those is a discrete,
-//    human-paced command, so the repaint is affordable at the rate it fires
-//    (the project already pays a full synchronous plate RENDER per pan event at
-//    the same key-repeat and pointer-frame cadence).
+// TWO SHAPES SATISFY THE RULE, chosen per site by CADENCE (re-derived by grep
+// 2026-07-30 over Viewport::invalidate_playhead_columns' callers and the
+// playhead-writing full-area sites):
+//  - NARROW ON PLATE, reserved for the PER-FRAME sites, which cannot afford a
+//    full repaint and can see a GuiPaintHandler to compute plate columns: the
+//    two 60 Hz SCANNER sites in main.cpp — the tick heartbeat and the pre-paint
+//    advance — and nothing else. Both pass plate_viewport_basis() through the
+//    explicit-basis overloads.
+//  - FULL WAVEFORM-AREA DAMAGE for every DISCRETE, human-paced playhead write:
+//    the stop teardown (stop_playback_if_playing) and the launch
+//    (launch_playback_from), the MARKER LAND (land_playhead_on_marker — through
+//    which the Tab/`c` jump now inherits this shape too, having stopped
+//    hand-copying the recipe 2026-07-30), move_playhead_to's no-scroll branch,
+//    and the live-domain cursor repair (clamp_display_state_to_live_domain). A
+//    full-area invalidate is ownership-window-proof by construction — it cannot
+//    ride the wrong epoch — and the repaint is affordable at the rate these
+//    fire (the project already pays a full synchronous plate RENDER per pan
+//    event at the same key-repeat and pointer-frame cadence). Several of these
+//    sites additionally CANNOT reach a paint handler (Viewport,
+//    GuiPlaybackLifecycle and the free land helper all see none), so for them
+//    the widening is the only honest shape as well as the affordable one.
 double  playhead_pixel_x(const AppState& a, int64_t vp_start, double spp);
 // Returns the pixel column (offset from waveform_area.x) for the scanner,
 // computed from the CONTINUOUS playhead_scanner_precise (not the integer

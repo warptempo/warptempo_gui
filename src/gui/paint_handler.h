@@ -425,9 +425,9 @@ private:
     // basis. Endpoints are active-domain frames stored in drag order; normalize
     // to [lo, hi] then map to columns via the plain viewport transform (the
     // endpoints already live in the displayed domain, so no warp map is walked).
-    // Shared by paint_region_ground and the split-playhead branch so the
-    // recolored ground's edges and the split half-triangles land on exactly the
-    // same columns.
+    // Its sole consumer since 2026-07-30 is paint_region_ground (the
+    // split-playhead branch that shared it died with the SPAN FORM); it stays a
+    // named helper because the column pair is a rule, not an inline expression.
     struct RegionColumns {
         int lo_col = 0;
         int hi_col = 0;
@@ -436,7 +436,7 @@ private:
 
     // The phase-reset overlay band's clipped screen-x span for this frame, or
     // valid == false when no band shows (wrong view, no eligible focused reset,
-    // a suppressing selection/region, a sub-pixel width, or a span clipped
+    // a suppressing multi-selection, a sub-pixel width, or a span clipped
     // wholly offscreen). Kept SEPARATE from its one consumer
     // (paint_phase_reset_overlay_ring): it owns every visibility gate as well as
     // the span, and Selection::phase_overlay_subject mirrors its selection-state

@@ -625,16 +625,10 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
         input->handle_active_audio_view_toggle();
     }
     active_views.switch_active_markers_view_to('P');
-    // CLEAR ANY RESTING REGION, whatever its provenance (architect 2026-07-29):
-    // this tail hands the marker lane a wholesale new selection in a column the
-    // user was not authoring in, and a span rests beside a selection only as that
-    // selection's own extent or as the trim's highlight — neither describes
-    // anything after the paste. It replaces the narrower membership clear that
-    // stood here (which reached SelectionExtent only), and it is unconditional
-    // because a TrimWindow highlight from the source-view session is just as
-    // ownerless here as an extent: the created-set arm derives its own span right
-    // after, and the no-created arm must rest span-less like the empty selection
-    // it rests beside. No damage call of its own is needed —
+    // CLEAR ANY RESTING REGION (architect 2026-07-29): this tail hands the marker
+    // lane a wholesale new selection in a column the user was not authoring in,
+    // and a trim-scratch span formed against the source-view session describes
+    // nothing here. Unconditional. No damage call of its own is needed —
     // this tail invalidates the whole waveform area below — but the helper owns
     // one anyway.
     clear_region_highlight(app, viewport);
@@ -643,27 +637,20 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
         // FIRST created reset as the focus. This is a PROGRAMMATIC group
         // selection, and the product's other one — undo/redo's touched-set
         // restore — focuses the earliest for the same reason: all members are
-        // equal, so there is no clicked marker to prefer and the earliest is the
-        // extent region's left bound, where Space launches (the multi-select
+        // equal, so there is no clicked marker to prefer (the multi-select
         // CLICKS instead focus what the user clicked, and land there).
         app.last_selected_marker = *created.begin();
         // The marker lane owns the playhead (the rule is stated in full at
         // land_playhead_on_marker, input_pointer.cpp): this tail hands the lane a
-        // brand-new focus, so it lands on it — otherwise the non-empty selection
-        // would suppress the cursor while playhead_cursor_sample still held the
-        // pre-paste value re-expressed through the S->T switch, leaving NO
-        // playhead painted anywhere.
+        // brand-new focus, so it lands on it, and the always-visible cursor then
+        // rests on the first created reset where the timestamp readout says it
+        // is. That is the WHOLE reason for the land — the earlier
+        // suppression-repair rationale (a non-empty selection hiding the cursor
+        // while playhead_cursor_sample held a stale pre-paste value) went with the
+        // suppression itself, and so did the extent-region write that followed
+        // this land, the region being trim scratch a paste has no business
+        // creating (architect 2026-07-30).
         land_playhead_on_marker(app, viewport.audio, viewport, *created.begin());
-        // THEN SET THE EXTENT REGION (architect 2026-07-29, reversing "the paste
-        // deliberately sets no extent region"): a propagate paste is a
-        // MASS-MARKER event, so it reads like the other one — undo/redo's GROUP
-        // restore — and this tail now has that shape exactly: wholesale clear ->
-        // select the created set -> land on the FIRST -> derive the extent. The
-        // span's left half-triangle sits on the marker just landed on, so the
-        // highlight, the timestamp readout and Space's left-bound launch agree by
-        // construction. The owner self-gates below 2 created resets, which is why
-        // a single-reset paste simply rests in point form.
-        set_region_to_selection_extent(app, viewport.audio, viewport);
     }
     // NO CREATED SET — every paste that materialized nothing, not just the state
     // paste (paste_state_apply always lands with {}; a PLACEMENT paste whose run
@@ -677,7 +664,7 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
     viewport.invalidate_top_strip();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
-    // LAST, after the created selection and its extent region are installed, so
+    // LAST, after the created selection is installed, so
     // the flag cache rebuilds against the final column AND the final selection
     // hash in one pass (the reasoning, and the two entry contexts it covers, are
     // in the head comment above; the authoritative caller inventory for this kick

@@ -90,26 +90,21 @@ void GuiInputHandler::handle_trim_clear_both() {
 // positional rules). A live REGION (the drag-painted span, active-domain frames)
 // always TRIMS to it — begin at the span's lo, end at its hi — overwriting any
 // existing bounds (the new span simply replaces them; x re-trims even over an
-// existing trim) — and the highlight is KEPT (architect 2026-07-23, reversing
-// the 2026-07-20 consume ruling): under the trim<->REGION coupling the trim
-// window and the highlight now agree, so after x they coincide — the tail runs the
-// SETTER's publish so the region and window rest coupled through the
-// one owner (provenance RegionProvenance::TrimWindow) — and THE SELECTION IS
-// CLEARED with it: x is a TrimWindow SETTER, and every setter deselects
-// (architect 2026-07-29 — the rule, the setter list, and the routes that do NOT
-// deselect live at sync_region_to_trim_window's declaration, input_handler.h).
-// The COINCIDENT-IMAGE arm of the sync is gone (2026-07-29), so the sync now
-// publishes for every full pair it sees — a window whose two images round onto one
-// target frame rests ACTIVE at that one column — and x GAINS A REFUSAL for exactly
-// that shape: a DEGENERATE RESULT (the inverse-mapped, wall-clamped pair coming out
-// end <= begin — the coincident window's two identical stored endpoints inverse-map
-// to one source frame, reachable around 16x bracket-legal compression) makes x a
+// existing trim) — and the highlight is CONSUMED: x CLEARS the region at its tail
+// (architect 2026-07-30, with the trim-window highlight sync retired — the span's
+// whole job was aiming this gesture, and nothing re-publishes one). THE SELECTION
+// IS CLEARED TOO: x is a trim SETTER, and every setter deselects (architect
+// 2026-07-29).
+// x GAINS A REFUSAL for the degenerate shape: a DEGENERATE RESULT (the
+// inverse-mapped, wall-clamped pair coming out
+// end <= begin — reachable for a narrow span around 16x bracket-legal
+// compression, whose two endpoints inverse-map
+// to one source frame) makes x a
 // silent no-op that writes NOTHING, because the alternative is destruction:
 // auto_clear_crossed_trim reads a degenerate write as crossed and silently destroys
 // the authored pair, and trim has no undo (ARCHITECT-CONFIRMED 2026-07-29
-// ("correct") — the alternative was accepting silent pair destruction; the deleted
-// arm used to prevent this by clearing the highlight, which made x no-op on the
-// no-region test instead). A zero-length window is not authorable, so
+// ("correct") — the alternative was accepting silent pair destruction).
+// A zero-length window is not authorable, so
 // there is nothing for x to set. The refusal is the FIRST thing past the clamps,
 // ahead of every write, so a refused x touches neither trim, region, nor selection.
 // NO region → x is a SILENT NO-OP (the clear
@@ -128,14 +123,11 @@ void GuiInputHandler::handle_trim_clear_both() {
 // this route can no longer reach auto_clear_crossed_trim at all: x writes only
 // non-degenerate pairs now, so the shared commit tail's auto-clear is structural
 // here — kept because every trim commit runs the same tail, not because this route
-// can fire it. The refusal is provenance-BLIND, testing the pair x would write
-// rather than where the span came from, so it also covers a narrow FREE span over
-// stretched audio, whose inverse-mapped endpoints can land on one source frame.
-// The bounds are read into locals ABOVE the deselect deliberately: the
-// span x is trimming to may be a SelectionExtent one, which the deselect takes
-// with the membership. The
+// can fire it. The refusal tests the pair x would write rather than where the
+// span came from, so it covers a narrow span over
+// stretched audio whose inverse-mapped endpoints land on one source frame. The
 // shared trim commit tail (auto_clear_crossed_trim
-// then the repaint/trigger, then the coupling sync) mirrors the other trim
+// then the repaint/trigger) mirrors the other trim
 // commits; the playhead is
 // untouched (trim gestures never move it).
 void GuiInputHandler::handle_trim_x() {
@@ -181,50 +173,28 @@ void GuiInputHandler::handle_trim_x() {
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     target_render.trigger();
-    // The coupling tail (architect 2026-07-23): the highlight is KEPT — the sync
-    // re-derives the REGION (provenance TrimWindow) from the just-set window, so
-    // region and trim rest coupled through the one owner. The sync always takes its
-    // SET arm from here: the degenerate refusal above is what guarantees a full,
-    // non-crossed pair stands at this point. THE SETTER'S
-    // PUBLISH (architect 2026-07-29): deselect FIRST, then sync — x has taken the
-    // selection's span for the trim, so nothing is left to own it.
-    deselect_and_sync_trim_window_highlight();
+    // THE SETTER'S DESELECT (architect 2026-07-29): every trim setter empties the
+    // selection as it commits. Then CONSUME THE SPAN (architect 2026-07-30): the
+    // scratch region existed to aim this gesture and its job is done — the chips
+    // and the bridge bar show the result from here on, and nothing re-publishes a
+    // highlight. ONE clear, at the tail, past every refusal above.
+    selection.clear_selection();
+    clear_region_highlight(app, viewport);
 }
 
 // Shift+X UNSETS the trim (architect 2026-07-25 — the unset arm x used to own
 // when no region was live; x is now set-only). One-shot, history-less like every
 // trim mutation. No read-only check of its own (see handle_trim_x above: the
-// keyboard gate owns that decision for both). Delegates to
+// keyboard gate owns that decision for both). Delegates WHOLE to
 // handle_trim_clear_both — whose has_begin||has_end guard makes an already-empty
 // trim a natural no-op and whose tail owns the repaint (waveform + timestamp) and
-// the target_render trigger. The REGION is touched only through
-// handle_trim_clear_both's own repaint tail's downstream: the clear does NOT run
-// the coupling sync here because it is not a trim COMMIT — but a resting
-// TrimWindow-provenance highlight would then outlive its destroyed window, so run
-// sync_highlight_to_trim_window afterward too. The sync's no-window arm
-// (has_begin && has_end both false after the clear) clears the REGION: a
-// TrimWindow region (the trim's own highlight) dissolves with the window it
-// mirrored, which is exactly right — but so would any Free/SelectionExtent region,
-// since sync_region_to_trim_window's else arm assigns RegionState{} regardless of
-// provenance. A Free/SelectionExtent region is NOT trim's to clear, so gate the
-// sync on TrimWindow provenance: only a highlight the trim itself owns is torn
-// down with the window; a selection-extent or free region rests untouched.
-// Shift+X is a trim CLEARER, not a SETTER, so it keeps the BARE sync and does NOT
-// deselect (architect 2026-07-29 — and since 2026-07-30 it is the ONLY route that
-// does, the settings trim keys having joined the setters; the setter class and its
-// membership are at sync_region_to_trim_window's declaration, input_handler.h).
-// Nothing hinges on
-// that: the TrimWindow highlight it tears down was resting beside an EMPTY
-// selection anyway, by the same ruling's invariant.
+// the target_render trigger. IT TOUCHES NO REGION AND NO SELECTION: it is a trim
+// CLEARER, not a SETTER, so the setter-deselect rule does not reach it, and the
+// gated region re-sync it used to carry died with the
+// trim-window highlight itself (architect 2026-07-30) — a scratch span is the
+// user's, not trim's to dissolve.
 void GuiInputHandler::handle_trim_shift_x() {
-    const bool had_trim_window =
-        app.region.active &&
-        app.region.provenance == RegionProvenance::TrimWindow;
     handle_trim_clear_both();
-    // Only a TrimWindow highlight is trim's to dissolve. Re-sync it so a resting
-    // window-derived region cannot outlive the window; Free/SelectionExtent
-    // regions are left alone (downward-only: trim never touches a non-trim region).
-    if (had_trim_window) sync_highlight_to_trim_window();
 }
 
 // --- Trim boundary mouse gestures ---------------------------------------
@@ -305,12 +275,11 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
         if (trim_mouse_x_to_source_frame(mouse_x, anchor))
             app.trim_drag.anchor_frame = anchor;
     }
-    // The BEGIN only captures drag state — no region write and no deselect here;
-    // the region highlight syncs to the window at motion/commit (the lane-click
-    // coupling), and THOSE publishes are the setter's, so they carry the deselect,
-    // which then rests (nothing restores it — pointer gestures have no cancel).
-    // A press that never moves commits no bound change
-    // (its motionless release runs the same click sync instead).
+    // The BEGIN only captures drag state — no deselect and no stop here; both
+    // ride the FIRST ACCEPTED bound change at motion/commit (architect
+    // 2026-07-30), and the deselect then rests (nothing restores it — pointer
+    // gestures have no cancel). A press that never moves commits no bound change
+    // and is a consumed nothing.
 }
 
 void GuiInputHandler::update_trim_drag(int mouse_x) {
@@ -385,14 +354,22 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
             // repaints; the playhead stays where it is.
             viewport.invalidate_waveform_area();
             viewport.invalidate_timestamp_area();
-            // Live-sync: the region highlight tracks the moving window (both
-            // bounds stay set through the drag; the coupling helper normalizes
-            // crossed bounds). THE DRAG IS A SETTER, so its live sync DESELECTS
-            // (architect 2026-07-29 — rule at sync_region_to_trim_window's
-            // declaration): past the moved-bounds gate above, so a drag event that
-            // changes nothing deselects nothing, and idempotent across the
-            // gesture's later events.
-            deselect_and_sync_trim_window_highlight();
+            // THE DRAG IS A SETTER, so it DESELECTS (architect 2026-07-29) —
+            // past the moved-bounds gate above, so a drag event that changes
+            // nothing deselects nothing, and idempotent across the gesture's
+            // later events. The publish half is gone with the trim-window
+            // highlight (architect 2026-07-30): nothing is written to the region
+            // here at all.
+            // THE STOP LIVES HERE NOW (architect 2026-07-30): the chip/bridge
+            // drag used to stop at the PRESS, beside a highlight-only publish
+            // that has since retired outright, so the stop moved to the FIRST
+            // ACCEPTED TRIM MUTATION — this arm — where a trim change actually
+            // happens. A trim mutation stops a live audition in both views (the
+            // keyboard stop rule, stated at stop_playback_if_playing's
+            // declaration, playback_lifecycle.h); the call is refusal-gated and
+            // idempotent, so the drag's later events cost one early return each.
+            playback_lifecycle.stop_playback_if_playing();
+            selection.clear_selection();
         }
         return;
     }
@@ -462,13 +439,13 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         // repaints; the playhead stays where it is.
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
-        // Live-sync: the region highlight tracks the moving window (both
-        // bounds stay set through the single-bound drag; crossing is normalized
-        // in the coupling helper). THE DRAG IS A SETTER, so its live sync
-        // DESELECTS (the pair arm's twin above; rule at
-        // sync_region_to_trim_window's declaration) — past the moved-bound gate,
-        // and idempotent across the gesture's later events.
-        deselect_and_sync_trim_window_highlight();
+        // THE DRAG IS A SETTER, so it DESELECTS (the pair arm's twin above) —
+        // past the moved-bound gate, and idempotent across the gesture's later
+        // events; it publishes nothing, the trim-window highlight having retired.
+        // The STOP rides the same first-accepted-mutation placement the pair arm
+        // records in full.
+        playback_lifecycle.stop_playback_if_playing();
+        selection.clear_selection();
     }
 }
 
@@ -539,170 +516,17 @@ void GuiInputHandler::commit_trim_drag() {
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         target_render.trigger();
-        // Release-sync: a surviving pair re-syncs the REGION against the
-        // snapped bounds; a dissolved pair (crossed commit) clears the region (the
-        // window is gone) — the coupling helper owns both outcomes. THE RELEASE IS
-        // THE SETTER'S LAST PUBLISH, so it deselects like the motion events did
-        // (already empty by then in the moved case that reaches here — the deselect
-        // is stated at every publish rather than inferred from gesture order). A
-        // RELEASE is a commit, and there is nothing to restore from in any case —
-        // the drag carries no snapshot at all since 2026-07-29.
-        deselect_and_sync_trim_window_highlight();
+        // THE RELEASE IS A COMMIT, so it takes the setter's deselect and the
+        // trim-mutation stop like the motion events did (both already applied by
+        // then in the moved case that reaches here — each is stated at every
+        // accepted mutation rather than inferred from gesture order). There is
+        // nothing to restore from in any case — the drag carries no snapshot at
+        // all since 2026-07-29. The region is untouched: the release publishes no
+        // highlight, that coupling having retired 2026-07-30.
+        playback_lifecycle.stop_playback_if_playing();
+        selection.clear_selection();
     }
     app.trim_drag = TrimDragState{};
-}
-
-// The lane-click model's trim<->REGION coupling (architect 2026-07-23; amended
-// to region-only, SELECTION FLOWS DOWNWARD ONLY). Trim is region-related — the
-// region sets the trim — so this follows the same downward-only rule: TRIM
-// DOESN'T SELECT MARKERS, ONLY THE REGION. No arm here ever adds or removes a
-// member; the DESELECT that every trim SETTER now carries lives one level up, at
-// deselect_and_sync_trim_window_highlight and its callers (the rule and the
-// setter list are at this function's declaration, input_handler.h). The PLAYHEAD
-// this never touches at all.
-// TWO ARMS (architect 2026-07-29, the coincident middle arm deleted):
-//   * BOTH BOUNDS SET -> the region takes the trim window's active-domain extent
-//     (each source bound through source_frame_to_active_domain, clamped to a
-//     playable frame; bounds may be crossed mid-drag, so normalize lo/hi, the map
-//     is monotone) with TrimWindow provenance — COINCIDENT IMAGES INCLUDED. A
-//     window whose two source bounds round onto ONE target frame (bracket-legal
-//     compression, ~16x) rests ACTIVE at that one column: the degenerate paint
-//     shape is already owned elsewhere — paint_region_ground draws nothing at zero
-//     width and render_split_playhead has an explicit one-column branch stamping
-//     the single whole cursor triangle — and the undo group restore already rests
-//     an active zero-width extent on that same shape (undo.cpp). So THIS SYNC
-//     publishes a region for every full pair it sees — but a RESTING full pair
-//     implies nothing, the entry / restore routes never running the sync at all
-//     (the narrowed claim is at this function's declaration, input_handler.h).
-//   * LONE / NO TRIM -> no window -> clear the REGION.
-// Read-only-safe (the region is navigation).
-//
-// THE SELECTION IS UNTOUCHED HERE, full stop (architect 2026-07-29): the
-// never-span-less collapse this function's clear arm used to carry — the reason it
-// took a Selection& at all — is deleted with the rest of that enforcement (ruling
-// 6), and it was unreachable from every caller anyway (the derivation is at the
-// clear arm). What still holds is the SETTER side: every setter empties the
-// selection before publishing, so a trim teardown meets an empty selection, and the
-// one non-setter (Shift+X) only ever re-syncs a window whose highlight was
-// already resting beside no selection.
-// NOTHING RESTORES A TRIM SETTER'S DESELECT: the trim
-// gestures' pre-gesture snapshots are deleted with every other cancel capture
-// (2026-07-29 — pointer gestures have no cancel, the rule at the drag-modal gate
-// in input_handler.cpp), so a chip drag's deselect rests like `x`'s does.
-//
-// It is a FREE function (declared in input_handler.h beside
-// set_region_to_selection_extent) because the tempo gestures once RE-SYNCED a
-// TrimWindow region from app.trim's SOURCE-frame bounds through the NEW live map
-// after a tempo edit; those re-syncs are deleted (2026-07-29 — a TrimWindow region
-// cannot rest beside a selection, see above), so the free form is now just where it
-// lives. GuiInputHandler wraps it
-// twice: sync_highlight_to_trim_window is the bare pass-through, whose only
-// caller since 2026-07-30 is Shift+X — the one CLEARER, the whole non-setter
-// list — and deselect_and_sync_trim_window_highlight is the SETTERS' form, which
-// deselects ahead of the same call.
-void sync_region_to_trim_window(AppState& app, const GuiAudio& audio,
-                                Viewport& viewport) {
-    // Pre-state for the damage calibration at the tail (see there). Four fields
-    // are the whole visible identity of the region: whether it paints, where its
-    // two bounds are, and which provenance it carries.
-    const bool             was_active     = app.region.active;
-    const int64_t          was_a          = app.region.a_frame;
-    const int64_t          was_b          = app.region.b_frame;
-    const RegionProvenance was_provenance = app.region.provenance;
-    if (app.trim.has_begin && app.trim.has_end) {
-        const int64_t a = clamp_playhead_to_live_domain(
-            source_frame_to_active_domain(app, audio, app.trim.begin_frame),
-            app, audio);
-        const int64_t b = clamp_playhead_to_live_domain(
-            source_frame_to_active_domain(app, audio, app.trim.end_frame),
-            app, audio);
-        // COINCIDENT IMAGES ARE NOT A CASE HERE (architect 2026-07-29): the arm
-        // that cleared the highlight when lo == hi is DELETED, so a window
-        // compressed onto one target frame publishes a one-column region like any
-        // other. Its two former justifications are both spent — the sliver rule's
-        // "degenerate spans never rest" was about DRAG-FORMED spans a user aims,
-        // not about an authored window's image; and the older "protect the pair
-        // from a bare x that inverse-maps lo==hi to an equal pair" died with the
-        // 2026-07-25 set-only re-split (x never unsets). The paint shape needs
-        // nothing: paint_region_ground draws no ground at zero width and
-        // render_split_playhead stamps its explicit one-column form.
-        app.region.active     = true;
-        app.region.a_frame    = std::min(a, b);
-        app.region.b_frame    = std::max(a, b);
-        // Trim-DERIVED provenance: the region is the trim's own highlight, not any
-        // selection's extent — which since 2026-07-29 is the whole story, because
-        // every trim SETTER deselects and so a TrimWindow region rests only beside
-        // an EMPTY selection (the rule at this function's declaration). The
-        // provenance still routes the trim/highlight coupling itself: Shift+X
-        // acts on a TrimWindow region and leaves a Free one alone.
-        app.region.provenance = RegionProvenance::TrimWindow;
-    } else {
-        // No window (lone / no trim): clear the REGION (the ONE clear arm left).
-        // A LONE bound still paints its chip
-        // and its stem — but no bridge bar, which needs the pair — and the cursor
-        // playhead stays painted beside it. That is deliberate: the
-        // highlight<->cursor exclusivity (paint_playheads) is scoped to the
-        // REGION highlight, and a half-authored trim has no window to highlight
-        // (the no-window rule: a lone or absent bound clears the region).
-        app.region = RegionState{};
-    }
-    // DAMAGE, CALIBRATED FOR A HIGH-FREQUENCY PATH. This is the one full-band
-    // waveform invalidate on a per-MOTION-EVENT route (every trim drag event
-    // calls here), so unlike the rare discrete commands it does not get to pay
-    // full damage unconditionally: skip it when the region's visible identity is
-    // bit-identical to what it was. The common skip is the
-    // arm nobody notices: no window, no region, nothing to repaint, called on
-    // every event of a drag that dissolved its pair. Any real change — a moved
-    // bound, an activation, a clear, a provenance flip — damages exactly as
-    // before. The second condition this gate carried (a pending never-span-less
-    // COLLAPSE, which changed which flag held the focus cue and so needed damage
-    // even under a bit-identical region) went with the collapse itself — the
-    // never-span-less enforcement retired (architect 2026-07-29), and in any
-    // case the collapse was UNREACHABLE from
-    // here — see the derivation below.
-    const bool region_unchanged =
-        app.region.active     == was_active &&
-        app.region.a_frame    == was_a &&
-        app.region.b_frame    == was_b &&
-        app.region.provenance == was_provenance;
-    if (!region_unchanged) viewport.invalidate_waveform_area();
-    // THIS FUNCTION TOUCHES NO SELECTION, and its clear arm above provably cannot
-    // strand a group (the derivation, recorded because it is what retires the
-    // never-span-less collapse that stood here). RE-DERIVED 2026-07-30, when the
-    // settings trim keys joined the setters and left ONE non-setter: the clear arm
-    // is reachable with a 2+ selection only from Shift+X, which gates its call on
-    // `app.region.active && provenance == TrimWindow`, while a TrimWindow region
-    // rests ONLY beside an EMPTY selection (every setter deselects as it publishes;
-    // the rule and the setter list are at this function's declaration). So the one
-    // route that can reach the clear arrives with nothing selected, and the SETTER
-    // callers deselect before they publish anyway. The never-span-less collapse's
-    // deletion (architect 2026-07-29) is why removing it changed no behavior at all,
-    // and the exempted producer's departure only strengthens it.
-}
-
-void GuiInputHandler::sync_highlight_to_trim_window() {
-    sync_region_to_trim_window(app, audio, viewport);
-}
-
-// THE TrimWindow SETTER'S PUBLISH: deselect, then sync. Every route that SETS the
-// trim window's highlight calls this instead of the bare sync above — the trim-bar
-// click is the span-form sibling of the plain waveform click's deselect-all
-// ("clicking trim means ready to move on", architect 2026-07-29), so a TrimWindow
-// region rests ONLY beside an EMPTY selection. The rule, the setter list, and the
-// clearer/maintainer routes that keep the bare sync are stated once at
-// sync_region_to_trim_window's declaration (input_handler.h).
-// ORDER: the deselect runs FIRST, so the sync writes its region against an already
-// empty selection — clear_selection takes any SelectionExtent span with the
-// membership it belonged to (clear_region_on_membership_replace), which is what
-// makes the published TrimWindow highlight the only span standing.
-// PLACEMENT is each caller's: this goes past every one of that route's refusals
-// (read-only bound sets, the no-resting-pair gate, degenerate geometry, a drag
-// event that moved no bound), so a claim that publishes no highlight deselects
-// nothing. Idempotent under repetition — a drag's later events re-deselect an
-// already-empty selection for the cost of one early return.
-void GuiInputHandler::deselect_and_sync_trim_window_highlight() {
-    selection.clear_selection();
-    sync_region_to_trim_window(app, audio, viewport);
 }
 
 // Set ONE trim bound at the clicked column — ADJUST-ONLY (architect
@@ -721,12 +545,10 @@ void GuiInputHandler::deselect_and_sync_trim_window_highlight() {
 // function OWNS the press's playback stop — placed past every refusal above
 // and immediately ahead of the bound write, so a refused click never stops a
 // live audition (the claim-keyed stop rule at on_button_press's top-strip
-// paragraph, taken inside the gate). The
-// coupling sync runs afterward against whatever the trim now is (the surviving
-// pair -> the REGION highlight takes the window; a crossed dissolve -> the region
-// cleared) — and it is a SETTER's publish, so it DESELECTS FIRST (architect
-// 2026-07-29; the rule and the setter list at sync_region_to_trim_window's
-// declaration). Both bound-set clicks are this one function, so both deselect, and
+// paragraph, taken inside the gate). It DESELECTS at its tail, being a trim
+// SETTER (architect 2026-07-29); it publishes no region, the trim-window
+// highlight having retired 2026-07-30.
+// Both bound-set clicks are this one function, so both deselect, and
 // both deselect only PAST THE REFUSALS above: a read-only tab and a missing
 // resting pair set nothing and leave the selection exactly as it was. The
 // deselect RESTS in every case, including when this click ARMS a drag
@@ -769,11 +591,10 @@ void GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     target_render.trigger();
-    // The lane-click coupling, in its SETTER form (see the header): deselect, then
-    // keep the REGION highlight agreeing with the window (both bounds -> window; a
-    // dissolved/lone result -> cleared). Past every refusal above, so only a click
-    // that actually set a bound deselects.
-    deselect_and_sync_trim_window_highlight();
+    // THE SETTER'S DESELECT (see the header). Past every refusal above, so only
+    // a click that actually set a bound deselects. It publishes no highlight —
+    // the trim-window region retired 2026-07-30.
+    selection.clear_selection();
 }
 
 // (architect 2026-07-23): the ctrl / ctrl+shift chip-row bound-set press
@@ -841,10 +662,10 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 //     like every trim gesture, never moves the playhead), so it always arms as
 //     Begin structurally.
 // Both arms presuppose the full pair (the gate above): a lone bound arms
-// nothing — it is gesture-inert. The drags sync the REGION highlight to the
-// moving window (the lane-click coupling) through the SETTER's publish, which
-// DESELECTS at its first moved bound (architect 2026-07-29 — the rule at
-// sync_region_to_trim_window's declaration); the PLAYHEAD is what they never
+// nothing — it is gesture-inert. The drags DESELECT and STOP a live audition at
+// their FIRST ACCEPTED bound change (architect 2026-07-29 / 2026-07-30 — the
+// press-time stop went with the highlight-only publish it accompanied); the
+// PLAYHEAD is what they never
 // touch, and the deselect RESTS — the gesture has no cancel to restore it from.
 //
 // The bridge-region bound columns come from the displayed MAP
