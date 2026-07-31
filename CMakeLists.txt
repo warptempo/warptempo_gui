@@ -127,6 +127,13 @@ if(WARPTEMPO_BUILD_GUI)
     endforeach()
 
     pkg_check_modules(CAIRO REQUIRED cairo)
+    # Proportional text shaping (src/gui/text_shape.cpp): HarfBuzz shapes on
+    # the cairo scaled font's own FreeType face, which needs cairo's FT
+    # backend headers. freetype2 gets no check of its own — both cairo-ft and
+    # harfbuzz carry its include dir transitively — and hb-ft lives in
+    # libharfbuzz itself, so there is no separate hb-ft module either.
+    pkg_check_modules(HARFBUZZ REQUIRED harfbuzz)
+    pkg_check_modules(CAIRO_FT REQUIRED cairo-ft)
     # Playback is a direct libjack client. JACK is required by policy; under
     # PipeWire this is satisfied by pipewire-jack.
     pkg_check_modules(JACK REQUIRED jack)
@@ -142,6 +149,11 @@ if(WARPTEMPO_BUILD_GUI)
         # of the four shared per-directory source lists — warptempo_cli must
         # never carry it.
         src/gui/color_config.cpp
+        # GUI-ONLY: HarfBuzz text shaping is a painting concern and exists only
+        # here, so like color_config.cpp this is deliberately in none of the
+        # four shared per-directory source lists — warptempo_cli must never
+        # carry it, nor the harfbuzz/cairo-ft link it implies.
+        src/gui/text_shape.cpp
         src/gui/render.cpp
         src/gui/warpmarkers.cpp
         src/gui/text_editor.cpp
@@ -195,6 +207,8 @@ if(WARPTEMPO_BUILD_GUI)
         ${WAYLAND_CURSOR_INCLUDE_DIRS}
         ${XKBCOMMON_INCLUDE_DIRS}
         ${CAIRO_INCLUDE_DIRS}
+        ${HARFBUZZ_INCLUDE_DIRS}
+        ${CAIRO_FT_INCLUDE_DIRS}
         ${JACK_INCLUDE_DIRS}
     )
     target_link_libraries(warptempo_gui PRIVATE
@@ -205,6 +219,8 @@ if(WARPTEMPO_BUILD_GUI)
         ${XKBCOMMON_LIBRARIES}
         rt
         ${CAIRO_LIBRARIES}
+        ${HARFBUZZ_LIBRARIES}
+        ${CAIRO_FT_LIBRARIES}
         ${JACK_LIBRARIES}
         pthread
         dl
