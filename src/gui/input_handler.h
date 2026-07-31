@@ -438,6 +438,17 @@ struct GuiInputHandler {
     int wheel_context(int x, int y) const;
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
+    // THE MENU BUTTON'S HOVER FACE, in two entries over one transition writer
+    // (definitions beside on_motion in input_pointer.cpp). recompute_ re-resolves
+    // the cursor's last position against the painter's stashed button rect and is
+    // called from on_motion's no-gesture tail; clear_ is the pointer-LEAVE /
+    // capability-loss drop, wired in main.cpp beside clear_hover_popup because no
+    // motion event follows those edges. Both damage ONLY on a real transition,
+    // one invalidate_top_strip each. The button has no third face, so a press
+    // calls neither.
+    void recompute_menu_row_hover();
+    void clear_menu_row_hover();
+
     // END every in-flight pointer gesture through its own RELEASE body — a
     // commit, never a cancel: pointer gestures have no cancel (the rule is stated
     // at the drag-modal gate in on_key). The marker drag commits its proposed
@@ -997,6 +1008,16 @@ private:
     // real change (the file-load path pushes font_size straight through
     // set_gui_font_size_pt, not through here).
     void apply_font_size(double pt);
+
+    // Apply a new GUI scale (percent), running the SAME live sequence on the
+    // other scale axis: assign app.gui_scale, push it to the renderer
+    // (set_gui_scale_percent), full-window invalidate, then the resize-path
+    // geometry-and-cache rebuild — the redesigned rows' lane heights come from
+    // this value, so a change re-lays-out the whole window. The settings
+    // editor's `gui_scale=` commit is the sole caller and gates the no-op case
+    // (the file-load and adopt paths push straight through
+    // set_gui_scale_percent, not through here, exactly as font_size does).
+    void apply_gui_scale(int percent);
 
     // THE LANE MODEL (architect 2026-07-28, KEPT and re-justified 2026-07-30):
     // true when the arrows currently address the MARKER lane. The bare

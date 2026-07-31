@@ -1799,6 +1799,13 @@ namespace {
     // factor, scaled pads, triangle height) reads it through the accessors
     // below.
     double g_font_size_pt = kDefaultFontSizePt;
+    // Current GUI scale, in PERCENT. Set by set_gui_scale_percent from the SAME
+    // three application points that push the font size (file load, the settings
+    // editor's gui_scale commit, the adopt). The redesigned rows' pixel
+    // quantities read it through gui_scale_factor(); the monospace surfaces do
+    // not — the two axes are independent (the ruling is at the accessor's
+    // declaration in render.h).
+    int    g_gui_scale_percent = 100;
     double g_advance = 0.0;
     int    g_row_h            = kRowHFallbackPx;
     double g_row_baseline_off = kRowBaselineOffFallbackPx;
@@ -1817,6 +1824,10 @@ namespace {
 
 void   set_gui_font_size_pt(double pt) { g_font_size_pt = pt; }
 double gui_font_scale()    { return g_font_size_pt / kDefaultFontSizePt; }
+void   set_gui_scale_percent(int percent) { g_gui_scale_percent = percent; }
+double gui_scale_factor()  {
+    return static_cast<double>(g_gui_scale_percent) / 100.0;
+}
 double flag_font_size_px() { return g_font_size_pt * 96.0 / 72.0; }
 
 // Build a fresh A8 tip-down triangle mask of height h (W = 2h-1). The triangle

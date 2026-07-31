@@ -622,6 +622,41 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // below.
         return;
     }
+    // THE MENU ROW (top lane 0), claimed ABOVE the loading/empty guard below so
+    // the quit button stays live while a file loads and on a blank state — it is
+    // the one surface that has nothing to do with the loaded audio. It sits
+    // BELOW the modal gates on purpose: a press while a prompt or a bottom-strip
+    // editor is up is swallowed there, exactly as it is for every other pointer
+    // target (a modal owns the pointer; the quit button is no exception, and
+    // Ctrl+Q reaches the same route from the keyboard anyway).
+    //
+    // The band claim is the ZOOM ROW's structural precedent verbatim: the exact
+    // half-open row band, a MODIFIED press is a strict consumed no-op, and any
+    // press in the band that is not on the button is a consumed nothing. The
+    // BUTTON's rect is the painter's stash (app.menu_quit_rect, published by
+    // paint_menu_row) — never re-shaped here, so the clickable rect is the
+    // painted one. The action FIRES ON PRESS: nothing on this row drags, so
+    // there is no arm, no threshold and no release body.
+    //
+    // The action is Ctrl+Q's exact route — end any live pointer gesture, then
+    // request the close (ENDING IS COMMITTING; the prompt handles the dirty
+    // case). Nothing here reads keyboard state, so the bare-`e` mouse key
+    // reaches it as an ordinary left press through the platform translation.
+    {
+        const GuiRect menu_row = top_menu_row_area(app);
+        if (y >= menu_row.y && y < menu_row.y + menu_row.h &&
+            x >= menu_row.x && x < menu_row.x + menu_row.w) {
+            if (mods.ctrl || mods.shift || mods.alt) return;  // strict no-op
+            const GuiRect& b = app.menu_quit_rect;
+            if (button == GuiMouseButton::Left &&
+                x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) {
+                finalize_active_drags();
+                prompt.request_close();
+            }
+            return;
+        }
+    }
+
     if (app.loading || audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
@@ -947,7 +982,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // click, and ctrl stays the zoom modifier here; the PLAIN empty
             // flag/triangle-lane press below is the surviving lane gesture —
             // the waveform's own parity press, not a bare clear). The zoom row
-            // (lane 0) was claimed above and never reaches
+            // (lane 1) was claimed above and never reaches
             // here.
             if (inside_top) {
                 const GuiRect chip_row = top_upper_row_area(app);
@@ -1042,7 +1077,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the playhead and the focused flag are coincident before any subsequent
         // drag or nudge — nothing is towed.
         if (inside_top) {
-            // The chip row (top_upper_row_area, lane 1) is trim's lane and is
+            // The chip row (top_upper_row_area, lane 2) is trim's lane and is
             // claimed BEFORE the marker single-select. The chip row, the marker
             // text lane, and the flag/triangle lanes are disjoint y-bands, so
             // this contends with nothing: a marker-part press falls to the marker
@@ -1846,6 +1881,31 @@ void GuiInputHandler::finalize_active_drags() {
     app.double_click = DoubleClickCandidate{};
 }
 
+// THE MENU BUTTON'S HOVER, in one transition writer. The face changes only when
+// the boolean does, and each change pays exactly one invalidate_top_strip — the
+// strip idiom (no narrow rects; the playhead columns' carve-out stays the sole
+// exception). The rect is the painter's stash, so the hovered region is the
+// painted button and nothing is measured here.
+void GuiInputHandler::clear_menu_row_hover() {
+    if (!app.menu_quit_hovered) return;
+    app.menu_quit_hovered = false;
+    viewport.invalidate_top_strip();
+}
+
+void GuiInputHandler::recompute_menu_row_hover() {
+    const GuiRect& b = app.menu_quit_rect;
+    const int mx = app.last_mouse_x;
+    const int my = app.last_mouse_y;
+    // A zero-width stash (before the row's first paint) contains no point, and
+    // the pre-motion (-1, -1) cursor is outside every rect, so both cold states
+    // resolve to "not hovered" without a special case.
+    const bool inside = mx >= b.x && mx < b.x + b.w &&
+                        my >= b.y && my < b.y + b.h;
+    if (app.menu_quit_hovered == inside) return;
+    app.menu_quit_hovered = inside;
+    viewport.invalidate_top_strip();
+}
+
 // Motion handler. Drives the active pointer gesture: editor-text drag,
 // strip-row zoom/pan drag, trim drag (or
 // a pending trim drag arming past the threshold), region-select drag, or
@@ -2209,6 +2269,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // click owns that stop), so there is no live playhead to chase.
     }
     if (!app.drag.active) {
+        // The menu row's own hover, resolved in the same no-gesture tail and
+        // through its own state (the button is not a marker, so it has no place
+        // in the hover-popup machinery below). An ACTIVE GESTURE FREEZES IT —
+        // the branches above all returned — which is consistent and harmless: a
+        // gesture that ends over the button re-resolves on the next motion, and
+        // a press cannot reach the button mid-gesture anyway.
+        recompute_menu_row_hover();
         // No active gesture: hover recomputation is owned by
         // recompute_hover_at_cursor (one implementation for motion and
         // viewport mutation), suppressions included. The branches above

@@ -84,6 +84,17 @@ struct TrimRange {
 // invalidating, and a retune is a restart. The names stay k-prefixed because
 // every use site treats them as constants.
 //
+// THE TUNABLE DOMAIN IS SHRINKING (architect 2026-07-31, the kdenlive redesign):
+// "every GUI color is runtime-tunable" is TRUE OF THE 23 KEYS BELOW AND OF
+// NOTHING ELSE. The kdenlive screenshots override all prior color work, and the
+// colors.conf domain is contracting to the WAVEFORM AREA AND THE MARKERS (the
+// canvas ground, the waveform ink, the marker classes); every OTHER color the
+// redesign touches is HARD-CODED from a sampled crop — not a key, not tunable,
+// not in the config grammar. The redesigned rows carry their constants at the
+// end of this block (see the row-1 menu colors below); an existing row keeps its
+// tunables until its own redesign row retires them, so no key is deleted here
+// and the grammar is unchanged.
+//
 // EVERY ENTRY IS OPAQUE — the palette carries no compositing alpha at all. A
 // highlight recolors the GROUND UNDER the ink (kRegionCanvas)
 // rather than washing over it, so ink over a highlighted span is the same ink
@@ -324,6 +335,27 @@ inline GuiColor kTrimChip         = hex(0x202326);
 inline GuiColor kTrimChipOutline  = hex(0x686A6C);
 inline GuiColor kTrimStem         = hex(0x686A6C);
 
+// -- Row 1: the menu row (HARD-CODED, kdenlive-sampled) ---------------------
+//
+// THE FIRST COLORS THAT ARE NOT PALETTE KEYS (architect 2026-07-31). These three
+// are constexpr, not globals: they are NOT in the 23-key config grammar, not
+// loaded by color_config.cpp, and deliberately not tunable — the carve-out the
+// palette header above records. Their provenance is the pixel truth of the
+// kdenlive menu-bar crops (tmp/screenshots/kdenlive/redesign/
+// row_1_button_{rest,hover}.png), sampled directly, and the screenshots
+// OVERRIDE the Breeze-derived scheme wherever the two disagree.
+//
+// The row ground is a DELIBERATE MISMATCH with kBackground (#202326): the menu
+// bar sits a shade lighter than this product's chrome and the crop wins, so do
+// not "fix" it to the chrome value. The hover pill is Breeze blue at full
+// saturation — the same #3daee9 that is the closed form behind kMarker's 30%
+// wash — and the label is the paper white kText also carries; both are spelled
+// out here rather than borrowed, because these are screenshot samples that
+// happen to coincide, not references to the palette.
+inline constexpr GuiColor kMenuRowGround  = hex(0x292C30);
+inline constexpr GuiColor kMenuHoverPill  = hex(0x3DAEE9);
+inline constexpr GuiColor kMenuLabel      = hex(0xFCFCFC);
+
 // -- GUI font size ---------------------------------------------------------
 //
 // The single GUI-wide monospace text size is the font_size setting, a plain
@@ -343,6 +375,26 @@ void set_gui_font_size_pt(double pt);
 
 // Proportional scale factor s = font_size / 11. Exactly 1.0 at the default.
 double gui_font_scale();
+
+// -- GUI scale (the redesign's own axis) -----------------------------------
+//
+// THE SECOND SCALE AXIS, and deliberately separate from the font one above. The
+// gui_scale setting is an integer PERCENT in [100, 400] (100 = the 1920x1080
+// design baseline, 200 = the 4K case); the current value lives beside
+// g_font_size_pt as file-scope state in render.cpp, pushed by the SAME three
+// application points that push the font size (file load, the settings editor's
+// `gui_scale=` commit, the `'` adopt).
+//
+// WHICH AXIS A SURFACE RIDES IS A DESIGN FACT, not a preference: the
+// MONOSPACE-TEXT surfaces (every pre-redesign strip lane) size from the font
+// band and keep riding gui_font_scale(); the REDESIGNED rows size from sampled
+// screenshot pixels and ride this one. The two are independent knobs by intent —
+// a user who wants bigger monospace text is not asking for a taller menu bar.
+void   set_gui_scale_percent(int percent);
+
+// Scale factor s = gui_scale / 100. Exactly 1.0 at the default (and never below
+// it: the setting's grammar floors at 100).
+double gui_scale_factor();
 
 // Text pixel size handed to cairo: font_size * 96 / 72, carried as an exact
 // double (points -> pixels at the conventional 96 DPI; warptempo_gui does
@@ -503,6 +555,24 @@ inline constexpr int kZoomRowHeightPx = 15;
 inline int zoom_row_h_px() {
     const int h = static_cast<int>(std::nearbyint(
         static_cast<double>(kZoomRowHeightPx) * gui_font_scale()));
+    return h < 5 ? 5 : h;
+}
+
+// Authored pixel height of the MENU ROW — the top strip's new lane 0, at the
+// window edge, above the zoom row (the kdenlive menu bar, row 1 of the
+// redesign). 30 at 100% gui_scale, measured off the row_1_button crops.
+//
+// THE TWO SCALE AXES MEET HERE: this is the FIRST lane sized on
+// gui_scale_factor() rather than gui_font_scale(). The row hosts PROPORTIONAL
+// text at a fixed design size and belongs to the redesign's scale axis, not to
+// the monospace font's — the five lanes below it keep scaling on the font, and
+// the two knobs move independently by design (see the gui_scale block above).
+// Rounded with std::nearbyint and floored like every other lane metric; the
+// floor is defensive only, since gui_scale never goes below 100.
+inline constexpr int kMenuRowHeightPx = 30;
+inline int menu_row_h_px() {
+    const int h = static_cast<int>(std::nearbyint(
+        static_cast<double>(kMenuRowHeightPx) * gui_scale_factor()));
     return h < 5 ? 5 : h;
 }
 
@@ -1173,7 +1243,7 @@ void render_trim_stems(cairo_t* cr,
 // Draws the begin/end trim-boundary chips in the TRIM CHIP LANE, plus the
 // strip-crossing portion of their stems and the inter-chip bridge band. The
 // lane band is the `chip_row` PARAMETER — the caller passes
-// top_upper_row_area(app) (top-strip lane 1), the same accessor
+// top_upper_row_area(app) (top-strip lane 2), the same accessor
 // hit_test_trim_chip's y-gate and route_trim_chip_press' bridge y-gate read, so
 // paint and hit take the band from ONE owner and cannot drift; nothing in here
 // re-derives the lane's y from the row heights above it. Only the band's y/h

@@ -1060,10 +1060,14 @@ struct AppState {
     // resolution — and 200 is the 4K case. A display preference in the same
     // class as font_size: not engine input, not authoring state, persisted on
     // Ctrl+S, applied at file load, and set through the settings editor
-    // (`:gui_scale=`, no hotkey). DORMANT: nothing reads it yet, so unlike
-    // font_size there is no renderer push and no apply routine — the commit is
-    // the store write alone. The row-by-row GUI redesign adds consumers one row
-    // at a time.
+    // (`:gui_scale=`, no hotkey). LIVE since 2026-07-31, exactly like
+    // font_size: pushed to the renderer's file-scope state via
+    // set_gui_scale_percent at all three application points (file load, the
+    // settings-editor commit, the `'` adopt), and the editor commit APPLIES it
+    // live through GuiInputHandler::apply_gui_scale (the resize-path geometry
+    // rebuild). Its consumers are the REDESIGNED rows only — the menu row is the
+    // first — while every pre-redesign surface stays on the font axis; the
+    // row-by-row redesign adds the rest one row at a time.
     int     gui_scale               = 100;
 
     // GUI-kind launch preference: the external audio player the `l`
@@ -1410,6 +1414,25 @@ struct AppState {
     // Hover-popup state. See HoverPopupState above.
     HoverPopupState   hover_popup;
 
+    // THE MENU ROW'S QUIT BUTTON — hit geometry PUBLISHED BY THE PAINTER, the
+    // displayed-basis doctrine applied to a proportional surface. The button's
+    // width is a HarfBuzz-shaped run's width (text_shape), which only the paint
+    // pass computes; the pointer code reads this stash and never re-shapes, so
+    // the clickable rect is exactly the painted one by construction and the two
+    // cannot drift the way a re-derived measurement would.
+    //
+    // Zero until the first paint of the row, which is the correct pre-display
+    // state: an empty rect contains no point, so neither hover nor press can
+    // fire before the button has been shown.
+    GuiRect menu_quit_rect{0, 0, 0, 0};
+
+    // True while the pointer rests inside menu_quit_rect — the hover face
+    // (the filled pill) is on. Written only on a TRANSITION (the motion tail's
+    // recompute and the pointer-leave hook), each transition paying one
+    // invalidate_top_strip. A press does not change it: there is no third
+    // face — a click keeps the hover face and pointer-out is what rests it.
+    bool    menu_quit_hovered = false;
+
     // Cursor screen position from the last on_motion event. Used by
     // recompute_hover_at_cursor() to re-evaluate hover after a viewport
     // mutation (when the cursor is stationary but rects have shifted). -1
@@ -1651,6 +1674,7 @@ GuiRect bottom_strip_area(const AppState& a);
 // window edge, 0 = edge-most. The named lane accessors below delegate to it.
 GuiRect strip_row_rect(const AppState& a, bool top_strip,
                        int lane_from_window_edge);
+GuiRect top_menu_row_area(const AppState& a);
 GuiRect top_zoom_row_area(const AppState& a);
 GuiRect top_upper_row_area(const AppState& a);
 GuiRect top_marker_text_row_area(const AppState& a);

@@ -960,10 +960,12 @@ bool GuiInputHandler::adopt_render_entry(
 
     // Caller-side side effects the shared routine deliberately omits, run after
     // the live band is in place — the same order and the same point a source
-    // load runs them: push the speed to the engine, the font size to the
-    // renderer, then the geometry-and-cache rebuild on_resize performs.
+    // load runs them: push the speed to the engine, the font size and the gui
+    // scale to the renderer (the two independent scale axes the lane table
+    // reads), then the geometry-and-cache rebuild on_resize performs.
     playback.set_speed(app.playback_speed);
     set_gui_font_size_pt(app.font_size);
+    set_gui_scale_percent(app.gui_scale);
     paint_handler.on_resize(app.width, app.height);
 
     clamp_viewport_start(app, audio);

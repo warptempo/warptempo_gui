@@ -61,10 +61,11 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     // behavior class as playback_speed (see the font_size descriptor in
     // settings_io.cpp).
     app.font_size           = sf.font_size;
-    // GUI rendering scale percent, applied verbatim. Unlike font_size there is
-    // no side-effect push after this routine: nothing consumes gui_scale yet
-    // (the row-by-row GUI redesign adds its consumers one row at a time), so
-    // the store write is the whole of the apply.
+    // GUI rendering scale percent, applied verbatim and pushed to the renderer
+    // after this routine exactly as font_size is (this routine assigns VALUES
+    // ONLY; the side-effect pushes live at each caller's tail). Its consumers
+    // are the redesigned rows — the menu row is the first — which size on
+    // gui_scale_factor() rather than the monospace font's scale.
     app.gui_scale           = sf.gui_scale;
     // GUI launch preference for the `l` render-listen command, applied
     // verbatim: a blank value is the deliberate no-player opt-out. Adopt shares
@@ -196,8 +197,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.font_size      = 11.0;
     // Same mirror for gui_scale, and for the same reason: the schema requires
     // the key, so the parse below always assigns it; this initializer only
-    // covers the no-.settings / first-open path. Nothing consumes it, so it is
-    // pushed nowhere afterwards.
+    // covers the no-.settings / first-open path. Pushed to the renderer beside
+    // font_size after the parse.
     app.gui_scale      = 100;
 
     // Companion files: discover paths, create <basename>.warpmarkers,
@@ -547,7 +548,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // persisted rate rather than the engine's default 1.0.
     playback.set_speed(app.playback_speed);
 
-    // Push the loaded font size to the renderer's file-scope state and
+    // Push the loaded font size AND gui scale to the renderer's file-scope state
+    // and
     // route the geometry consequences through the same rebuild path a
     // window resize performs: on_resize re-clamps zoom/viewport against
     // the (possibly changed) strip geometry, the next redraw re-measures
@@ -556,8 +558,11 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // top_lane_height table is the one place that enumerates which metric
     // sizes which lane) rebuild the waveform/flag surfaces. The full-window invalidation at the end of
     // this load supplies the damage, mirroring the resize path's
-    // full-surface damage.
+    // full-surface damage. The two scales are independent axes feeding that one
+    // table (the menu row rides gui_scale, the five lanes below it the font),
+    // so both must be in place before the single rebuild below.
     set_gui_font_size_pt(app.font_size);
+    set_gui_scale_percent(app.gui_scale);
     paint_handler.on_resize(app.width, app.height);
 
     const double load_ms =

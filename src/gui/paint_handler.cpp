@@ -3,6 +3,7 @@
 #include "render.h"
 #include "text_display.h"
 #include "text_editor.h"
+#include "text_shape.h"
 #include "time_format.h"
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
@@ -93,10 +94,142 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
     }
 }
 
+// -- GuiPaintHandler::paint_menu_row -------------------------------------
+
+namespace {
+
+// ROW 1 OF THE KDENLIVE REDESIGN, in 100%-scale pixels measured off the two
+// 46x30 crops (tmp/screenshots/kdenlive/redesign/row_1_button_{rest,hover}.png).
+// Every one of them scales on gui_scale_factor() — the redesign's own axis, NOT
+// the monospace font's (the ruling is at gui_scale_factor's declaration). The
+// row height itself lives in render.h as kMenuRowHeightPx, because main.cpp's
+// lane table needs it.
+//
+// The button's own face is 12pt through the existing points*4/3 convention =
+// 16px at 100%. THE SANS FACE IS THE REDESIGN'S DEFAULT FAMILY going forward:
+// cairo's toy "sans" selector, which fontconfig resolves to Liberation Sans on
+// the target — the family the crops were rendered in. The monospace face
+// survives untouched on every un-redesigned surface, and each redesign row
+// moves its own text over.
+constexpr double kMenuFontSizePt   = 12.0;   // -> 16.0 px at 100%
+constexpr double kMenuLabelPadPx   = 10.0;   // per side, sets the button width
+constexpr double kMenuPillInsetPx  = 1.0;    // top and bottom -> 28 tall at 100%
+constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
+
+// The one button, and the sole action of the whole row.
+constexpr const char* kMenuQuitLabel = "quit";
+
+double menu_font_size_px() {
+    return kMenuFontSizePt * 96.0 / 72.0 * gui_scale_factor();
+}
+int menu_label_pad_px() {
+    return static_cast<int>(std::nearbyint(kMenuLabelPadPx * gui_scale_factor()));
+}
+int menu_pill_inset_px() {
+    return static_cast<int>(std::nearbyint(kMenuPillInsetPx * gui_scale_factor()));
+}
+double menu_pill_radius_px() {
+    return std::nearbyint(kMenuPillRadiusPx * gui_scale_factor());
+}
+
+// A filled rounded rectangle from four quarter-circle arcs. Fill only, no
+// stroke: the row carries no 1px rules at all, so every edge here lands on an
+// integer pixel bound by construction and only the four corners antialias —
+// which is exactly what the hover crop shows.
+void menu_rounded_rect_path(cairo_t* cr, double x, double y,
+                            double w, double h, double r) {
+    constexpr double kPi = 3.14159265358979323846;
+    if (r > w * 0.5) r = w * 0.5;
+    if (r > h * 0.5) r = h * 0.5;
+    if (r <= 0.0) { cairo_rectangle(cr, x, y, w, h); return; }
+    cairo_new_sub_path(cr);
+    cairo_arc(cr, x + w - r, y + r,     r, -0.5 * kPi, 0.0);
+    cairo_arc(cr, x + w - r, y + h - r, r, 0.0,         0.5 * kPi);
+    cairo_arc(cr, x + r,     y + h - r, r, 0.5 * kPi,   kPi);
+    cairo_arc(cr, x + r,     y + r,     r, kPi,         1.5 * kPi);
+    cairo_close_path(cr);
+}
+
+} // namespace
+
+void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
+    // THE MENU ROW (top lane 0, at the window edge): a flat kdenlive-sampled
+    // ground carrying ONE button, "quit", whose action is Ctrl+Q's exact route.
+    // No ring — unlike the zoom row below it, the kdenlive bar is flat.
+    //
+    // THE HOVER MODEL IS KDENLIVE'S, and it is TWO faces, not three: at rest the
+    // label paints bare on the row ground; hovered, a filled blue pill sits
+    // under it. A PRESS PAINTS NOTHING NEW — a click keeps the hover face and
+    // only pointer-out rests it (architect 2026-07-31), so there is no pressed
+    // state and no press-state machinery anywhere.
+    const GuiRect row = top_menu_row_area(app);
+    if (row.w <= 0 || row.h <= 0) return;
+
+    cairo_save(cr);
+
+    cairo_set_source_rgb(cr, kMenuRowGround.r, kMenuRowGround.g,
+                         kMenuRowGround.b);
+    cairo_rectangle(cr, row.x, row.y, row.w, row.h);
+    cairo_fill(cr);
+
+    // THE FIRST CONSUMER OF THE SHAPING CHOKEPOINT (text_shape.h): the label is
+    // MEASURED and PAINTED from the one ShapedRun, so the button's width and its
+    // glyphs come from the same positions and cannot disagree. Shaping four
+    // glyphs per paint is deliberate — the chokepoint's own comment defers
+    // caching to a profile, and this run is the cheapest possible one.
+    cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_font_size(cr, menu_font_size_px());
+    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+    const text_shape::ShapedRun run =
+        text_shape::shape_text_run(font, kMenuQuitLabel);
+
+    const int pad   = menu_label_pad_px();
+    const int btn_w =
+        static_cast<int>(std::nearbyint(run.width_px)) + 2 * pad;
+
+    // THE PAINTER PUBLISHES THE HIT RECT (the displayed-basis doctrine): the
+    // width above exists only here, so the pointer code reads this stash rather
+    // than re-shaping the string. Written every paint — a font, scale or window
+    // change lands in it on the frame that displays it.
+    app.menu_quit_rect = GuiRect{row.x, row.y, btn_w, row.h};
+
+    if (app.menu_quit_hovered) {
+        const int inset = menu_pill_inset_px();
+        const int pill_h = row.h - 2 * inset;
+        if (pill_h > 0) {
+            cairo_set_source_rgb(cr, kMenuHoverPill.r, kMenuHoverPill.g,
+                                 kMenuHoverPill.b);
+            menu_rounded_rect_path(cr, row.x, row.y + inset,
+                                   static_cast<double>(btn_w),
+                                   static_cast<double>(pill_h),
+                                   menu_pill_radius_px());
+            cairo_fill(cr);
+        }
+    }
+
+    // The baseline is SOLVED from the face's own extents, never a measured
+    // literal: center the (ascent + descent) band in the row and put the
+    // baseline at its foot — row.y + (row.h + ascent - descent) / 2 — then round
+    // to the pixel grid with std::nearbyint like every other integer-domain
+    // conversion here, so the glyphs stay crisp at every scale. The label color
+    // is the SAME in both faces; the pill under it is the whole hover cue.
+    cairo_font_extents_t fe;
+    cairo_scaled_font_extents(font, &fe);
+    const double baseline = std::nearbyint(
+        row.y + (static_cast<double>(row.h) + fe.ascent - fe.descent) * 0.5);
+
+    cairo_set_source_rgb(cr, kMenuLabel.r, kMenuLabel.g, kMenuLabel.b);
+    text_shape::show_shaped_run(cr, run, static_cast<double>(row.x + pad),
+                                baseline);
+
+    cairo_restore(cr);
+}
+
 // -- GuiPaintHandler::paint_marker_text_lane -----------------------------
 
 void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
-    // The marker-text lane (top lane 2, between the trim chips and the flags).
+    // The marker-text lane (top lane 3, between the trim chips and the flags).
     // THE OCCLUSION MODEL: the lane shows EVERY onscreen marker's text ambiently
     // when the whole visible set fits unoccluded at the 9-glyph budget, else it
     // falls back to the ONE-run arbitration (hover, else last-selected). Every
@@ -1061,6 +1194,29 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         render_canvas(cr, canvas.x, canvas.y, canvas.w, canvas.h);
     }
 
+    // THE MENU ROW PAINTS ON EVERY FRAME CLASS, deliberately OUTSIDE the
+    // loading / total>0 branches below: it is the one surface with no dependence
+    // on the loaded audio, and its quit button is claimed ABOVE the pointer
+    // path's loading guard for exactly that reason. A button that is clickable
+    // must be visible — painting it only in the total>0 branch would leave the
+    // press claim live over a lane showing bare chrome during a load, and dead
+    // on a cold launch where the row has never painted (the hit rect is the
+    // painter's stash). Its own opaque ground erases the chrome
+    // render_background laid down.
+    //
+    // Gated on the row's OWN exposure rather than run unconditionally like the
+    // canvas ground above: the pass shapes its label through HarfBuzz, which the
+    // outer Cairo clip would not elide, so a narrow per-frame playhead damage
+    // must not pay for it. Nothing painted after this point touches the lane
+    // (the flag cache is transparent over it, every other pass owns a lane
+    // below it), so painting it first overdraws nothing.
+    {
+        const GuiRect exposed{x, y, w, h};
+        if (rects_intersect(exposed, top_menu_row_area(app))) {
+            paint_menu_row(cr);
+        }
+    }
+
     if (app.loading) {
         // Blank plate during load; the only feedback is the bottom-strip
         // upper-row status ("loading..."), the same slot renders use. Painted
@@ -1160,11 +1316,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
         if (rects_intersect(exposed, top_strip)) {
             paint_flag_annotations(cr, top_strip);
-            // Marker-text lane (top row 2): the hover popup and the flag
+            // Marker-text lane (top row 3): the hover popup and the flag
             // editor's live text, painted over the just-blitted flag cache —
             // the same layering role the bottom strip's hover/editor paints had.
             paint_marker_text_lane(cr);
-            // Zoom-strip row (top row 0, at the window edge): painted on
+            // Zoom-strip row (top row 1, under the menu row): painted on
             // top of the just-blitted flag cache, which is transparent over
             // this row (it carries no chips there). The ring is the row's
             // only paint; it is a live drag surface (see the strip-drag

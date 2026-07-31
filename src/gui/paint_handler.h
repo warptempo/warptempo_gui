@@ -453,6 +453,17 @@ private:
     // on_redraw paint passes. Each renders one strip/layer; on_redraw keeps
     // the rects_intersect gates and calls these in place.
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip);
+    // The MENU ROW (top lane 0, row 1 of the kdenlive redesign): the flat
+    // sampled ground plus the one "quit" button in its rest or hover face. It
+    // PUBLISHES the button's hit rect into app.menu_quit_rect — the painter is
+    // the only place the shaped label's width exists, so the pointer code reads
+    // the stash instead of re-shaping (the displayed-basis doctrine). Called
+    // from on_redraw OUTSIDE the loading / total>0 branches, gated on the row's
+    // OWN exposure — the one pass with no dependence on the loaded audio, so the
+    // button is visible exactly whenever it is clickable (its press claim sits
+    // above the pointer path's loading guard). Nothing painted after it touches
+    // the lane, the flag cache being transparent there.
+    void paint_menu_row(cairo_t* cr);
     void paint_marker_text_lane(cairo_t* cr);
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
     // THE GROUND RECOLOR, painted after render_canvas and BEFORE the plate blit

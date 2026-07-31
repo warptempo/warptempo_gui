@@ -116,16 +116,18 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         applied(); return true;
     }
     if (key == "gui_scale") {
-        // A history-less direct assign, like the *_hash quartet below: unlike
-        // font_size there is no gesture and no apply routine to call, because
-        // nothing consumes gui_scale yet — the store write IS the commit, and
-        // the value persists on the next ordinary Ctrl+S, marking nothing
-        // dirty. The [100, 400] integer grammar was already enforced by
-        // validate_gui_setting above; applied() prints the one stderr line and
-        // deactivates.
+        // History-less like font_size above, and now APPLIED LIVE through the
+        // same shape: the store write is no longer the whole commit — since
+        // 2026-07-31 the redesigned rows size on this value, so the commit
+        // pushes it to the renderer and re-lays-out immediately (apply_gui_scale
+        // runs the resize-path rebuild), and a `:gui_scale=200` is visible
+        // without a restart. The value still persists on the next ordinary
+        // Ctrl+S and marks nothing dirty. The [100, 400] integer grammar was
+        // already enforced by validate_gui_setting above; applied() prints the
+        // one stderr line and deactivates.
         const int v = static_cast<int>(gv.i64);
         if (v == app.gui_scale) { unchanged(); return true; }
-        app.gui_scale = v;
+        input->apply_gui_scale(v);
         applied(); return true;
     }
     if (key == "active_audio_view") {

@@ -1543,3 +1543,17 @@ void GuiInputHandler::apply_font_size(double pt) {
     viewport.invalidate_all();
     paint_handler.on_resize(app.width, app.height);
 }
+
+void GuiInputHandler::apply_gui_scale(int percent) {
+    // apply_font_size's shape on the OTHER scale axis, and for the same reason:
+    // the value feeds main.cpp's per-lane height table (the menu row's
+    // menu_row_h_px), so a change moves every strip boundary and the waveform
+    // area with them. Same four steps in the same order — assign, push, full
+    // invalidate, resize-path geometry-and-cache rebuild — so the new layout is
+    // on screen at the commit rather than at the next restart. The sole caller
+    // (the settings editor's `gui_scale=` commit) gates the no-op case.
+    app.gui_scale = percent;
+    set_gui_scale_percent(percent);
+    viewport.invalidate_all();
+    paint_handler.on_resize(app.width, app.height);
+}

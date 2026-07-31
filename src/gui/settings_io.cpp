@@ -87,9 +87,10 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "font_size",                   SettingKind::FontSizePt,           EngineField::Title,                   "11"       },
     // GUI-kind key, NOT an engine key: the GUI's rendering scale as an integer
     // percent. 100 is the design baseline (1920x1080, the supported
-    // resolution); 200 is the 4K case. Valid range 100..400. DORMANT — no
-    // renderer reads it yet: the value loads, rests, and writes back, and the
-    // row-by-row GUI redesign adds its consumers one row at a time.
+    // resolution); 200 is the 4K case. Valid range 100..400. Applied at load
+    // and live at the editor commit, exactly like font_size; its consumers are
+    // the REDESIGNED rows, which the row-by-row GUI redesign adds one at a time
+    // (the pre-redesign surfaces stay on the font's scale axis).
     { "gui_scale",                   SettingKind::GuiScalePercent,      EngineField::Title,                   "100"      },
     // GUI-kind launch preference, NOT an engine key: an external audio player
     // for the `l` render-listen command. Default "audacious" so the first-open

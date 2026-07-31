@@ -129,11 +129,13 @@ struct SettingsFile {
     float  playback_speed          = 0.7f;  // preset vocabulary only
     double font_size               = 11.0;  // points, [6, 72]
     // GUI rendering scale as an integer PERCENT in [100, 400]; 100 is the
-    // design baseline (1920x1080), 200 the 4K case. DORMANT: no renderer reads
-    // this yet — the value is loaded, held, and written back, and the row-by-row
-    // GUI redesign adds its consumers one row at a time
-    // (architect approval 2026-07-30 — the settings/parser grant this dormant
-    // key landed under).
+    // design baseline (1920x1080), 200 the 4K case. LIVE in the GUI since
+    // 2026-07-31: the redesigned rows size on it (the menu row is the first
+    // consumer), and the row-by-row GUI redesign adds the rest one row at a
+    // time. Inert in the CLI, like every other GUI-kind key here
+    // (architect approval 2026-07-30 — the settings/parser grant this key
+    // landed under; comment-only retell of the retired DORMANT wording,
+    // architect approval 2026-07-31).
     int    gui_scale               = 100;   // percent, [100, 400]
     // GUI-kind launcher for the `l` render-listen command: an external player
     // name or path. A BLANK value (`audio_player=`) is the deliberate
