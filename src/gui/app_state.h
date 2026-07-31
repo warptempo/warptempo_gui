@@ -721,8 +721,8 @@ struct ChipRowPressSeed {
 };
 
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
-// button the kdenlive rows carry, in painted order: row 1's lone Quit, row 2's
-// toolbar four, then row 3's two TABS. It exists ONCE, here, because it indexes
+// button the kdenlive rows carry, in painted order: row 1's Quit and Settings,
+// row 2's toolbar four, then row 3's two TABS. It exists ONCE, here, because it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
 // it; each domain then attaches its own attribute to these ids and to nothing
 // else — the painter's label/icon/layout table (paint_handler.cpp) and the
@@ -735,23 +735,33 @@ struct ChipRowPressSeed {
 // recompute, and their press is the same band claim dispatching a chord through
 // on_key. What they do NOT take is the two row-2-only faces — no click face and
 // no disabled face — which is stated at each face's site rather than modelled
-// here. The enum ORDER is painted order, and redesign_button_index depends on
-// the values staying 0..kRedesignButtonCount-1 contiguous (the tick comparator
-// in main.cpp walks the range by index).
-enum class RedesignButton { Quit, Save, Undo, Redo, Render, TabA, TabB };
-inline constexpr int kRedesignButtonCount = 7;
+// here. Row 1's Settings is the same story: a roster entry with two faces whose
+// press is the bare `;` chord.
+//
+// The enum ORDER is painted order, and redesign_button_index depends on the
+// values staying 0..kRedesignButtonCount-1 contiguous (the tick comparator in
+// main.cpp walks the range by index). The indices are DERIVED and never
+// serialized, so inserting a button mid-roster (as Settings was) renumbers the
+// stash harmlessly.
+enum class RedesignButton {
+    Quit, Settings, Save, Undo, Redo, Render, TabA, TabB
+};
+inline constexpr int kRedesignButtonCount = 8;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
-    // enum's VALUE RANGE is the smallest bit-field holding its enumerators, so
-    // seven enumerators (0..6) make 7 a representable value the optimizer must
-    // assume possible — and that assumption alone makes every roster subscript
-    // look one past the end. This is not an error arm (the validation topology's
-    // "an error arm exists iff a producer exists" applies: there is no producer
-    // — every value comes from a named enumerator or from main.cpp's comparator
-    // loop, which is bounded by kRedesignButtonCount) but a statement that the
-    // out-of-set value cannot occur, which is exactly what std::unreachable is
-    // for.
+    // enum's VALUE RANGE is the smallest BIT-FIELD holding its enumerators, not
+    // its enumerator set — so whenever the count is not a power of two the
+    // optimizer must assume values above the last enumerator are possible, and
+    // that assumption alone makes every roster subscript look one past the end
+    // (-Warray-bounds fires at -O3). This is not an error arm (the validation
+    // topology's "an error arm exists iff a producer exists" applies: there is
+    // no producer — every value comes from a named enumerator or from main.cpp's
+    // comparator loop, which is bounded by kRedesignButtonCount) but a statement
+    // that the out-of-set value cannot occur, which is exactly what
+    // std::unreachable is for. It stays even at a power-of-two count, where the
+    // warning happens not to fire, because the invariant is what is true — not
+    // the current arithmetic coincidence.
     if (i < 0 || i >= kRedesignButtonCount) std::unreachable();
     return i;
 }
@@ -2123,6 +2133,7 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
                                     RedesignButton b) {
     switch (b) {
         case RedesignButton::Quit:
+        case RedesignButton::Settings:
         case RedesignButton::TabA:
         case RedesignButton::TabB:
             return true;
@@ -2144,6 +2155,7 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         case RedesignButton::Render:
             return !a.source_audio_path.empty();
         case RedesignButton::Quit:
+        case RedesignButton::Settings:
         case RedesignButton::TabA:
         case RedesignButton::TabB:
             break;

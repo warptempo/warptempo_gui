@@ -48,11 +48,16 @@ namespace {
 // THE PRESS CLAIM'S HALF OF THE BUTTON ROSTER (the roster itself is
 // RedesignButton, app_state.h): the KEYBOARD CHORD each row 2 button fires. The
 // painter's label/icon table (paint_handler.cpp) is the other half; both key off
-// the same ids. TWO roster entries are absent on purpose, each because its route
-// is not a table row: row 1's Quit is a two-call sequence (finalize +
-// request_close) rather than a chord, and row 3's tabs share ONE chord (Ctrl+Tab
-// toggles, so the inactive tab is the only target) — both are spelled at their
-// own claims.
+// the same ids. THREE roster entries are absent on purpose, each because its
+// route is not a table row: row 1's Quit is a two-call sequence (finalize +
+// request_close) rather than a chord, row 1's Settings is a bare single-key
+// chord with no modifiers to tabulate, and row 3's tabs share ONE chord
+// (Ctrl+Tab toggles, so the inactive tab is the only target) — all three are
+// spelled at their own claims.
+//
+// The `shift` column is each button's OWN chord (only Redo's is set). It is not
+// the whole shift story: Render admits a SHIFT-exact press that ORs into this
+// field to reach Ctrl+Alt+Shift+R, which is spelled at the claim.
 struct ToolbarChord {
     RedesignButton id;
     GuiKey         key;
@@ -664,7 +669,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     //
     // ONE BAND-CLAIM SHAPE FOR ALL THREE ROWS: the exact half-open row band, a
     // MODIFIED press is a strict consumed no-op, and any press in the band that
-    // is not on a button is a consumed nothing. A BUTTON's rect is the painter's
+    // is not on a button is a consumed nothing. THE ONE CARVE-OUT is a
+    // SHIFT-exact press on row 2's RENDER button, which reaches that chord's
+    // shifted twin; it is spelled at the toolbar claim, and every other modified
+    // press in every band still drops. A BUTTON's rect is the painter's
     // stash (app.redesign_buttons, published by paint_menu_row /
     // paint_toolbar_row / paint_tab_row) — never re-shaped here, so the
     // clickable rect is the painted one. The action FIRES ON PRESS: nothing on
@@ -678,13 +686,30 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (y >= menu_row.y && y < menu_row.y + menu_row.h &&
             x >= menu_row.x && x < menu_row.x + menu_row.w) {
             if (mods.ctrl || mods.shift || mods.alt) return;  // strict no-op
-            // Quit's action is Ctrl+Q's exact route — end any live pointer
-            // gesture, then request the close (ENDING IS COMMITTING; the prompt
-            // handles the dirty case).
-            if (button == GuiMouseButton::Left &&
-                redesign_button_hit(app, RedesignButton::Quit, x, y)) {
-                finalize_active_drags();
-                prompt.request_close();
+            if (button == GuiMouseButton::Left) {
+                // TWO BUTTONS, TWO SHAPES OF ACTION, spelled here because
+                // neither is a plain chord-table row.
+                //
+                // QUIT is the row's one NON-CHORD button: Ctrl+Q's exact route
+                // as a two-call sequence — end any live pointer gesture, then
+                // request the close (ENDING IS COMMITTING; the prompt handles
+                // the dirty case).
+                if (redesign_button_hit(app, RedesignButton::Quit, x, y)) {
+                    finalize_active_drags();
+                    prompt.request_close();
+                } else if (redesign_button_hit(app, RedesignButton::Settings,
+                                               x, y)) {
+                    // SETTINGS IS ITS CHORD, the bare `;` through on_key — the
+                    // same route the key takes, so the modal stop, the editor
+                    // open and every gate above them are inherited whole and
+                    // there is no bespoke opener here to drift from the key's.
+                    // Semicolon is what the platform delivers for `;` (the
+                    // settings-prompt arm in input_handler.cpp reads the same
+                    // key), and the chord is BARE — no modifier reaches this
+                    // point, the band's strict no-op above having returned.
+                    GuiInputState chord{};
+                    on_key(GuiKeys::Semicolon, chord);
+                }
             }
             return;
         }
@@ -693,18 +718,32 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         const GuiRect toolbar = top_toolbar_row_area(app);
         if (y >= toolbar.y && y < toolbar.y + toolbar.h &&
             x >= toolbar.x && x < toolbar.x + toolbar.w) {
-            if (mods.ctrl || mods.shift || mods.alt) return;  // strict no-op
+            // THE MODIFIED-PRESS RULE, with ONE binding carved out of it: ctrl
+            // and alt bind nothing anywhere in this band and drop here, and so
+            // does shift EXCEPT on Render (the test is inside the loop, where
+            // the button is known). RENDER IS THE ONE SHIFT-AUGMENTED BUTTON
+            // because its chord comes in a PAIR the keyboard already spells —
+            // Ctrl+Alt+R renders beside the source, Ctrl+Alt+Shift+R renders
+            // into a numbered _miscellaneous cell — and shift is exactly what
+            // distinguishes them there. The other three have no shifted chord to
+            // reach, so a shift press on them stays a strict consumed no-op
+            // rather than silently doing the unshifted thing.
+            if (mods.ctrl || mods.alt) return;               // strict no-op
             if (button == GuiMouseButton::Left) {
                 for (const ToolbarChord& tc : kToolbarChords) {
                     if (!redesign_button_hit(app, tc.id, x, y)) continue;
+                    if (mods.shift && tc.id != RedesignButton::Render) break;
                     // A DISABLED BUTTON'S PRESS IS A CONSUMED NOTHING: the chord
-                    // is not dispatched at all. The predicate is the painter's
-                    // (redesign_button_enabled, app_state.h), so the greyed face
-                    // and the inert press are the same fact read twice, and the
-                    // press cannot slip through on a frame the paint disagreed
-                    // with. Dispatching anyway would be harmless — every one of
-                    // these chords refuses on its own — but it would leave the
-                    // disabled face lying about what a click does.
+                    // is not dispatched at all, and the SHIFT press is swallowed
+                    // exactly like the plain one (one predicate, both routes —
+                    // a greyed Render is greyed for both of its chords). The
+                    // predicate is the painter's (redesign_button_enabled,
+                    // app_state.h), so the greyed face and the inert press are
+                    // the same fact read twice, and the press cannot slip
+                    // through on a frame the paint disagreed with. Dispatching
+                    // anyway would be harmless — every one of these chords
+                    // refuses on its own — but it would leave the disabled face
+                    // lying about what a click does.
                     if (!redesign_button_enabled(app, audio.total_frames(),
                                                  tc.id))
                         break;
@@ -712,7 +751,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // whose route repaints the strip (undo, save) paints the
                     // pressed interior on the very frame it produces. It is
                     // cleared by the release / the pointer-leave hook, never by
-                    // the action.
+                    // the action. The SHIFT press takes it too — it is the same
+                    // physical hold, and the face tracks the hold.
                     if (app.redesign_pressed != redesign_button_index(tc.id)) {
                         app.redesign_pressed = redesign_button_index(tc.id);
                         viewport.invalidate_top_strip();
@@ -727,9 +767,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // inverse of the platform's bare-`e`-as-left-button
                     // translation: one vocabulary expressed on the other's
                     // surface, at a boundary.
+                    //
+                    // The shift term ORs the table's own (Redo's Ctrl+Shift+Z)
+                    // with the pointer's, which is well-defined precisely
+                    // because the only button admitting a shifted press is
+                    // Render, whose table row carries shift=false: Render's two
+                    // chords are Ctrl+Alt+R and Ctrl+Alt+Shift+R, and this one
+                    // expression spells both.
                     GuiInputState chord{};
                     chord.ctrl  = tc.ctrl;
-                    chord.shift = tc.shift;
+                    chord.shift = tc.shift || mods.shift;
                     chord.alt   = tc.alt;
                     on_key(tc.key, chord);
                     break;
@@ -1973,7 +2020,7 @@ void GuiInputHandler::finalize_active_drags() {
 }
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
-// (row 1's Quit, row 2's four and row 3's two tabs — the stash is
+// (row 1's Quit and Settings, row 2's four and row 3's two tabs — the stash is
 // AppState::redesign_buttons).
 // A face changes only when its boolean does, and a motion that changes ANY of
 // them pays exactly ONE invalidate_top_strip — the strip idiom (no narrow rects;

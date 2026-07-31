@@ -133,13 +133,23 @@ int scaled_px(double authored) {
 constexpr double kMenuLabelPadPx   = 10.0;   // per side, sets the button width
 constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 
-// The one button, and the sole action of the whole row.
+// THE MENU ROW'S BUTTONS, in painted order — flush from the row's left edge and
+// ADJACENT WITH NO GAP, the css float model's default (the architect states a
+// gap where one exists; row 2's 2px invisible separator is the only one in the
+// redesign so far, and row 1 was never given one).
 //
 // REDESIGNED ROWS GET CORRECT CAPITALIZATION, row by row (architect
 // 2026-07-31): the all-lowercase program-text rule now CARVES OUT the
 // redesigned rows' labels. It still governs stderr, the prompts, and every
 // un-redesigned surface until that surface's own row lands.
-constexpr const char* kMenuQuitLabel = "Quit";
+struct MenuButtonDef {
+    RedesignButton id;
+    const char*    label;
+};
+constexpr MenuButtonDef kMenuButtons[] = {
+    {RedesignButton::Quit,     "Quit"},
+    {RedesignButton::Settings, "Settings"},
+};
 
 // ROW 2 — THE TOOLBAR, measured at 100% off row_2_button_{rest,hover}.png
 // (81x32), row_2_separator.png (1x34) and row_2_border_bottom.png. The lane
@@ -207,17 +217,30 @@ constexpr ToolbarButtonDef kToolbarButtons[] = {
 //
 // THE CSS FLOAT MODEL AT ITS PUREST: the tabs are FLUSH at the row's left edge,
 // margin zero, adjacent with no gap, each filling the full 30px content height.
-// A tab's whole box is its two 10px paddings around the shaped label — so the
-// two tabs differ in width only as their labels do, and neither carries a
-// margin.
+// A tab's box is its two 10px paddings around the shaped label OR the minimum
+// width below, whichever is larger — and never a margin.
 //
+// THE MINIMUM WIDTH is what keeps a one-glyph label from producing a stub of a
+// tab (architect 2026-07-31, ruled when the labels shortened to "A"/"B").
+// Reconstructed from row_3_min_width.png, an 80x30 Breeze tab carrying a tiny
+// label and a close button this product has no analogue for: behind the 1px
+// left border the label field opens at x=1 and its ink sits at x 24..35,
+// centered on 29.5 — which places the field's own center at 29 and therefore
+// its right edge at 58, giving a 57px field plus the 1px border. 58 is the
+// spec. The close button is IGNORED: it lives to the right of the field
+// (ink at 60..67) and has no counterpart here.
+//
+// AT THE MINIMUM THE LABEL IS CENTERED IN THE WHOLE TAB, not left-padded — the
+// two paddings are a FLOOR term now, not an anchor, so a label narrower than the
+// minimum sits in the middle of the box rather than hugging its left edge.
+constexpr double kTabLabelPadPx      = 10.0;  // per side, the width floor's term
+constexpr double kTabMinWidthPx      = 58.0;  // see the reconstruction above
 // THE 1px SIDE BORDERS OF THE SELECTED TAB ARE DRAWN INSIDE ITS OWN BOX, on the
 // box's outermost columns, NOT outside it. That is a deliberate departure from
 // "a border sits outside the content" and it is what keeps the geometry stable:
 // a border outside would make the selected tab 2px wider than the same tab
 // unselected, so switching tabs would visibly shove the other one sideways.
 // Selection is a FACE, not a size.
-constexpr double kTabLabelPadPx      = 10.0;  // per side, sets the tab width
 constexpr double kTabTrimHeightPx    = 3.0;   // the selected tab's blue top
 constexpr double kTabBorderPx        = 1.0;   // side borders / hover edge
 // The selected tab's top corners round at r = 5, and that is MEASURED, not
@@ -241,8 +264,8 @@ struct TabDef {
     const char*    label;
 };
 constexpr TabDef kTabs[] = {
-    {RedesignButton::TabA, 'A', "Tab A"},
-    {RedesignButton::TabB, 'B', "Tab B"},
+    {RedesignButton::TabA, 'A', "A"},
+    {RedesignButton::TabB, 'B', "B"},
 };
 
 // A rounded rectangle from four quarter-circle arcs, used FILLED for row 1's
@@ -314,15 +337,17 @@ double redesign_baseline(cairo_scaled_font_t* font, double box_y,
 
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE MENU ROW (top lane 0, at the window edge): a flat kdenlive-sampled
-    // ground carrying ONE button, "Quit", whose action is Ctrl+Q's exact route.
-    // No ring; the kdenlive bar is flat.
+    // ground carrying TWO buttons — "Quit", whose action is Ctrl+Q's exact
+    // route, and "Settings", whose action is the bare `;` chord. No ring; the
+    // kdenlive bar is flat.
     //
-    // THE HOVER MODEL IS KDENLIVE'S, and it is TWO faces, not three: at rest the
-    // label paints bare on the row ground; hovered, a filled blue pill sits
-    // under it, FLUSH with the row (the css float model — a flat button fills
-    // its whole row, architect 2026-07-31). A PRESS PAINTS NOTHING NEW — a click
-    // keeps the hover face and only pointer-out rests it, so there is no pressed
-    // state and no press-state machinery anywhere.
+    // THE HOVER MODEL IS KDENLIVE'S, and it is TWO faces, not three, for BOTH
+    // buttons: at rest the label paints bare on the row ground; hovered, a
+    // filled blue pill sits under it, FLUSH with the row (the css float model —
+    // a flat button fills its whole row, architect 2026-07-31). A PRESS PAINTS
+    // NOTHING NEW — a click keeps the hover face and only pointer-out rests it.
+    // Row 2's click and disabled faces are scoped to row 2 and do not reach
+    // here, so this row still has no press-state machinery at all.
     const GuiRect row = top_menu_row_area(app);
     if (row.w <= 0 || row.h <= 0) return;
 
@@ -333,55 +358,64 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     cairo_rectangle(cr, row.x, row.y, row.w, row.h);
     cairo_fill(cr);
 
-    // THE SHAPING CHOKEPOINT (text_shape.h): the label is MEASURED and PAINTED
-    // from the one ShapedRun, so the button's width and its glyphs come from the
-    // same positions and cannot disagree. Shaping four glyphs per paint is
-    // deliberate — the chokepoint's own comment defers caching to a profile, and
-    // this run is the cheapest possible one.
+    // THE SHAPING CHOKEPOINT (text_shape.h): each label is MEASURED and PAINTED
+    // from the one ShapedRun, so a button's width and its glyphs come from the
+    // same positions and cannot disagree. Shaping a handful of glyphs per paint
+    // is deliberate — the chokepoint's own comment defers caching to a profile,
+    // and these are the cheapest runs there are.
     cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
                            CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cr, redesign_font_size_px());
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
-    const text_shape::ShapedRun run =
-        text_shape::shape_text_run(font, kMenuQuitLabel);
 
-    const int pad   = scaled_px(kMenuLabelPadPx);
-    const int btn_w =
-        static_cast<int>(std::nearbyint(run.width_px)) + 2 * pad;
+    const int pad    = scaled_px(kMenuLabelPadPx);
+    const double rad = std::nearbyint(kMenuPillRadiusPx * gui_scale_factor());
 
-    // THE PAINTER PUBLISHES THE HIT RECT (the displayed-basis doctrine): the
-    // width above exists only here, so the pointer code reads this stash rather
-    // than re-shaping the string. Written every paint — a font, scale or window
-    // change lands in it on the frame that displays it.
-    AppState::RedesignButtonFace& face =
-        app.redesign_buttons[redesign_button_index(RedesignButton::Quit)];
-    face.rect = GuiRect{row.x, row.y, btn_w, row.h};
-    // Quit has no disabled face — it is live during a load and on a blank state,
-    // which is the whole reason this row paints outside the audio branches. The
-    // stash is written anyway so the tick comparator's vector is total over the
-    // roster with no membership test.
-    face.enabled = redesign_button_enabled(app, audio.total_frames(),
-                                           RedesignButton::Quit);
+    // THE WALK: flush from the row's left edge, ADJACENT WITH NO GAP. Row 2
+    // inserts a 2px invisible separator between its adjacent buttons because the
+    // architect stated one there; none is stated here, so none exists (the css
+    // float model's default).
+    int x = row.x;
+    for (const MenuButtonDef& def : kMenuButtons) {
+        const text_shape::ShapedRun run =
+            text_shape::shape_text_run(font, def.label);
+        const int btn_w =
+            static_cast<int>(std::nearbyint(run.width_px)) + 2 * pad;
 
-    if (face.hovered) {
-        cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
-                             kRedesignAccent.b);
-        redesign_rounded_rect_path(cr, row.x, row.y,
-                                   static_cast<double>(btn_w),
-                                   static_cast<double>(row.h),
-                                   std::nearbyint(kMenuPillRadiusPx *
-                                                  gui_scale_factor()));
-        cairo_fill(cr);
+        // THE PAINTER PUBLISHES THE HIT RECT (the displayed-basis doctrine): the
+        // width above exists only here, so the pointer code reads this stash
+        // rather than re-shaping the string. Written every paint — a font, scale
+        // or window change lands in it on the frame that displays it.
+        AppState::RedesignButtonFace& face =
+            app.redesign_buttons[redesign_button_index(def.id)];
+        face.rect = GuiRect{x, row.y, btn_w, row.h};
+        // Neither menu button has a disabled face — both are live during a load
+        // and on a blank state, which is the whole reason this row paints
+        // outside the audio branches. The stash is written anyway so the tick
+        // comparator's vector is total over the roster with no membership test.
+        face.enabled = redesign_button_enabled(app, audio.total_frames(),
+                                               def.id);
+
+        if (face.hovered) {
+            cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
+                                 kRedesignAccent.b);
+            redesign_rounded_rect_path(cr, x, row.y,
+                                       static_cast<double>(btn_w),
+                                       static_cast<double>(row.h), rad);
+            cairo_fill(cr);
+        }
+
+        // The label color is the SAME in both faces; the pill under it is the
+        // whole hover cue.
+        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                             kRedesignLabel.b);
+        text_shape::show_shaped_run(
+            cr, run, static_cast<double>(x + pad),
+            redesign_baseline(font, static_cast<double>(row.y),
+                              static_cast<double>(row.h)));
+
+        x += btn_w;
     }
-
-    // The label color is the SAME in both faces; the pill under it is the whole
-    // hover cue.
-    cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                         kRedesignLabel.b);
-    text_shape::show_shaped_run(
-        cr, run, static_cast<double>(row.x + pad),
-        redesign_baseline(font, static_cast<double>(row.y),
-                          static_cast<double>(row.h)));
 
     cairo_restore(cr);
 }
@@ -401,7 +435,7 @@ void GuiPaintHandler::paint_toolbar_row(cairo_t* cr) {
     //   CLICK    — the outline unchanged, the interior filled kRedesignClick,
     //              shown for as long as the physical button is held. The action
     //              already fired at the press; this face is purely visual, and
-    //              it is ROW 2'S ALONE (row 1's Quit keeps its two faces).
+    //              it is ROW 2'S ALONE (rows 1 and 3 keep two faces each).
     //   DISABLED — the icon paths and the label each retaining
     //              kRedesignDisabledMix of themselves over the ground, with NO
     //              hover outline and NO click face. The predicate is
@@ -601,6 +635,7 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
 
     const int pad      = scaled_px(kTabLabelPadPx);
+    const int min_w    = scaled_px(kTabMinWidthPx);
     const int trim_h   = std::max(1, scaled_px(kTabTrimHeightPx));
     const int line_w   = std::max(1, scaled_px(kTabBorderPx));
     const double radius = std::nearbyint(kTabCornerRadiusPx * gui_scale_factor());
@@ -611,14 +646,17 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     int sel_x = 0, sel_w = 0;
 
     // THE WALK: tabs flush from the lane's left edge, adjacent, margin zero. A
-    // tab's width is its two paddings around the shaped label and NOTHING else,
-    // so it is identical selected or not (the side borders draw inside the box).
+    // tab's width is the LARGER of its two paddings around the shaped label and
+    // the minimum — and nothing else, so it is identical selected or not (the
+    // side borders draw inside the box). With one-glyph labels the minimum is
+    // what binds, which makes both tabs exactly the same width and the row
+    // regular by construction.
     int x = lane.x;
     for (const TabDef& def : kTabs) {
         const text_shape::ShapedRun run =
             text_shape::shape_text_run(font, def.label);
-        const int tab_w =
-            static_cast<int>(std::nearbyint(run.width_px)) + 2 * pad;
+        const int label_w = static_cast<int>(std::nearbyint(run.width_px));
+        const int tab_w   = std::max(min_w, label_w + 2 * pad);
 
         AppState::RedesignButtonFace& face =
             app.redesign_buttons[redesign_button_index(def.id)];
@@ -700,12 +738,21 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             }
         }
 
-        // The label is the SAME white in every state, centered in the content
-        // band by the shared extents-solved baseline — one formula, a third box.
+        // The label is the SAME white in every state, CENTERED on both axes:
+        // horizontally in the tab box (the padding is the width FLOOR's term,
+        // not an anchor — at the minimum width a left-padded label would hug the
+        // border instead of sitting in the middle), vertically by the shared
+        // extents-solved baseline. Rounded to the pixel grid like every other
+        // integer-domain conversion, so the glyphs stay crisp; the halving makes
+        // a 1px bias unavoidable at odd leftovers and nearbyint's banker's
+        // rounding is the project's one answer for that.
         cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
                              kRedesignLabel.b);
         text_shape::show_shaped_run(
-            cr, run, static_cast<double>(x + pad),
+            cr, run,
+            static_cast<double>(x) +
+                std::nearbyint((static_cast<double>(tab_w) - run.width_px) *
+                               0.5),
             redesign_baseline(font, static_cast<double>(lane.y),
                               static_cast<double>(content_h)));
 

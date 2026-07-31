@@ -439,8 +439,9 @@ struct GuiInputHandler {
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
-    // writer serving the WHOLE roster — row 1's Quit, row 2's four and row 3's
-    // two tabs (definitions beside on_motion in input_pointer.cpp). recompute_
+    // writer serving the WHOLE roster — row 1's Quit and Settings, row 2's four
+    // and row 3's two tabs (definitions beside on_motion in input_pointer.cpp).
+    // recompute_
     // re-resolves the cursor's last position against the painter's stashed rects
     // and is called from on_motion's no-gesture tail; clear_ is the pointer-LEAVE
     // / capability-loss drop, wired in main.cpp beside clear_hover_popup because

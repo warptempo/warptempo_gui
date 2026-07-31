@@ -454,7 +454,8 @@ private:
     // the rects_intersect gates and calls these in place.
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip);
     // THE THREE REDESIGNED ROWS — the MENU ROW (top lane 0, row 1: the flat
-    // sampled ground plus the one "Quit" button), the TOOLBAR ROW (top lane 1,
+    // sampled ground plus the "Quit" and "Settings" buttons), the TOOLBAR ROW
+    // (top lane 1,
     // row 2: the same ground, its border-bottom, its separators and the four
     // Save/Undo/Redo/Render buttons) and the TAB ROW (top lane 2, row 3: the
     // "Tab A"/"Tab B" Breeze tabs, their frame and its broken border-bottom).
