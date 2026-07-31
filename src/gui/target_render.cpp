@@ -46,8 +46,10 @@ std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
         app.source_audio_path, source_identity, audio.sample_rate(),
         resolved_warp_markers, phase_reset_source_frames.value(),
         app.engine_settings,
-        app.trim.has_begin, app.trim.begin_frame,
-        app.trim.has_end,   app.trim.end_frame);
+        // The full window hashes as the old unset state (the one recognition
+        // owner, trim_window_is_full — see render_fingerprint's trim block).
+        !trim_is_full_window(app.trim, audio.total_frames()),
+        app.trim.begin_frame, app.trim.end_frame);
 }
 
 void GuiTargetRender::trigger() {
@@ -177,20 +179,19 @@ void GuiTargetRender::dispatch_render_now() {
         // stays false since no worker round trip is pending. Live state IS the
         // request state on this synchronous rung, so the stamp is exact.
         const BufferStartVerdict verdict =
-            compute_buffer_start_frame_for(app.trim.has_begin,
-                                           app.trim.begin_frame,
-                                           app.trim.has_end,
+            compute_buffer_start_frame_for(app.trim.begin_frame,
                                            app.trim.end_frame);
         dispatched_buffer_start_frame_ = verdict.start_frame;
         // Reuse skips do_render, whose trim-plan block owns the fallback
         // line on fresh dispatches — so the ruled one-line-per-resolve
         // signal prints here instead. This rung cannot see plan_trim's
-        // error string; the verdict names which fallback (the completed
-        // (0, 0) crossed case — reachable only via a lone END at frame 0 —
-        // or a sub-sample span; a set pair can never rest crossed/equal since
-        // commit and load auto-clear, and past-EOF is adversarial
-        // load-fatal), so the reason below matches the orchestrators'
-        // vocabulary byte-for-byte.
+        // error string; the verdict names which fallback (a sub-sample span,
+        // or the crossed shape kept as a breach mirror — a sub-window can never
+        // rest crossed/equal since commit and load reset it to the full window,
+        // and past-EOF is adversarial load-fatal), so the reason below matches
+        // the orchestrators' vocabulary byte-for-byte. A FULL window flags
+        // nothing: rendering untrimmed is its documented meaning, not a
+        // fallback.
         if (verdict.trim_fell_back) {
             std::fprintf(stderr,
                 "warptempo_gui: %s; rendering untrimmed\n",
@@ -229,16 +230,14 @@ void GuiTargetRender::dispatch_render_now() {
             // Live state IS the request state on this synchronous rung,
             // so the stamp is exact.
             const BufferStartVerdict verdict =
-                compute_buffer_start_frame_for(app.trim.has_begin,
-                                               app.trim.begin_frame,
-                                               app.trim.has_end,
+                compute_buffer_start_frame_for(app.trim.begin_frame,
                                                app.trim.end_frame);
             dispatched_buffer_start_frame_ = verdict.start_frame;
             // Reuse skips do_render's trim-plan block; print the fallback
             // signal here — same rationale as the cache rung above (this
             // is the only other pre-do_render return). The verdict names the
-            // fallback reason (the completed (0, 0) crossed case or a
-            // sub-sample span).
+            // fallback reason (a sub-sample span, or the crossed breach
+            // mirror); a full window flags nothing.
             if (verdict.trim_fell_back) {
                 std::fprintf(stderr,
                     "warptempo_gui: %s; rendering untrimmed\n",
@@ -277,8 +276,7 @@ void GuiTargetRender::dispatch_render_now() {
     RenderRequest req = build_render_request(
         app.source_audio_path, app.warpmarkers.markers(),
         app.phaseresetmarkers.markers(), app.engine_settings,
-        app.trim.has_begin, app.trim.begin_frame,
-        app.trim.has_end,   app.trim.end_frame);
+        app.trim.begin_frame, app.trim.end_frame);
     // Freeze the buffer's domain origin from the same trim values the request
     // was built with. At this instant they equal app.trim, but the request
     // snapshot is immutable while app.trim is not: a trim drag mutates the live
@@ -289,16 +287,15 @@ void GuiTargetRender::dispatch_render_now() {
     // trim-plan block prints the one line per resolve — printing at this
     // stamp too would double it.
     dispatched_buffer_start_frame_ =
-        compute_buffer_start_frame_for(app.trim.has_begin, app.trim.begin_frame,
-                                       app.trim.has_end,   app.trim.end_frame)
+        compute_buffer_start_frame_for(app.trim.begin_frame,
+                                       app.trim.end_frame)
             .start_frame;
     // Buffer-output route. do_render skips the on-disk rename, sidecar
     // writes, and the peak-pyramid sidecar; synth samples append into
     // *output_buffer instead. The post-engine chain runs in place on the
-    // buffer: the post_trim crop when a trim PLAN exists (a plan exists for
-    // any set bound whose — possibly completed — window validated; a lone
-    // bound completes to its extreme at the render boundary and plans that
-    // window like any pair), and the always-on spectral + peak limited
+    // buffer: the post_trim crop when a trim PLAN exists (a plan exists for a
+    // proper SUB-WINDOW that validated; a FULL window builds no plan at all and
+    // renders untrimmed), and the always-on spectral + peak limited
     // chain — the target-view preview gets the same cropping and limiting
     // as the disk path.
     req.output_buffer = &app.target_buffer;
@@ -389,39 +386,43 @@ void GuiTargetRender::complete_successful_buffer() {
 
 GuiTargetRender::BufferStartVerdict
 GuiTargetRender::compute_buffer_start_frame_for(
-    bool has_begin, int64_t begin_frame,
-    bool has_end, int64_t end_frame) const {
+    int64_t begin_frame, int64_t end_frame) const {
     // Buffer frame 0 corresponds to target frame 0 for a full-song render;
     // for every SURVIVING trim window buffer[0] IS llrint(T_b) by construction
-    // — the post_trim crop cut the render at exactly the (possibly completed)
-    // begin's target image (T_b = that begin frame through the map, exact
-    // doubles, the trimmer's own formula) — so the anchor is that same
-    // llrint(T_b) in full-target coordinates and the exact authored begin/end
-    // display falls out. A lone bound is COMPLETED to its extreme here, exactly
-    // as the orchestrators do at the render boundary: a missing begin becomes 0
-    // (so a lone end anchors 0 because its completed T_b = 0), a missing end
-    // becomes total_frames (a lone begin anchors its own T_b). The completion
-    // lives only at the render boundary; the store keeps the authored lone
-    // bound.
+    // — the post_trim crop cut the render at exactly the begin's target image
+    // (T_b = that begin frame through the map, exact doubles, the trimmer's own
+    // formula) — so the anchor is that same llrint(T_b) in full-target
+    // coordinates and the exact authored begin/end display falls out.
+    //
+    // THE FULL-WINDOW TRANSLATION COMES FIRST (architect 2026-07-30), exactly as
+    // at the other two orchestrators: a full window [0, total-1] produces NO
+    // trim plan, so the buffer is the full deliverable anchored at 0 — and it is
+    // NOT a fallback, so nothing is flagged and no reason string is set. Asking
+    // it AHEAD of the crossed / sub-sample diagnostics is what keeps a one-frame
+    // source's canonical [0, 0] from being classified as a crossed trim
+    // fallback. The recognition is the shared owner trim_window_is_full
+    // (settings_file.h); the lone-bound completions that used to live here died
+    // with the lone bound.
     //
     // Survival verdict (orchestrator decoupling; rationale at the struct in
-    // target_render.h). Two reachable fallbacks render the FULL, untrimmed
-    // buffer with anchor 0, mirroring do_render / the CLI:
-    //   - "trim end at or before trim begin": reachable only via a lone END at
-    //     frame 0 completing to (0, 0) (a set pair can never rest crossed/equal:
-    //     commit and load auto-clear); and
+    // target_render.h). For a proper SUB-WINDOW, two fallbacks render the FULL,
+    // untrimmed buffer with anchor 0, mirroring do_render / the CLI:
+    //   - "trim end at or before trim begin": unreachable from a resting store
+    //     (a sub-window can never rest crossed/equal — commit and load reset it
+    //     to the full window), kept as the breach mirror of
+    //     validate_trim_frames' check ORDER; and
     //   - a SUB-SAMPLE span: llrint(T_e) - llrint(T_b) < 1 (validate_trim_frames'
-    //     span rule), for a set pair or a completed lone window under a fast
-    //     tempo. Past-EOF is adversarial load-fatal.
+    //     span rule), reachable for a narrow sub-window under a fast tempo.
+    //     Past-EOF is adversarial load-fatal.
     // trim_fell_back carries either outcome to the reuse rungs' diagnostic,
     // and fallback_reason names which one so the printed line matches the
     // orchestrators' vocabulary. Callers pass the trim pair the produced
     // samples embody and stamp the result at production time, so no
     // buffer-frames gate: the buffer may still be empty at the stamp.
-    if ((has_begin || has_end) &&
+    if (!trim_window_is_full(begin_frame, end_frame, audio.total_frames()) &&
         audio.sample_rate() > 0 && audio.total_frames() > 0) {
-        const int64_t b = has_begin ? begin_frame : 0;
-        const int64_t e = has_end ? end_frame : audio.total_frames();
+        const int64_t b = begin_frame;
+        const int64_t e = end_frame;
         const auto& target_warp_frame_map = target_view_warp_frame_map_cached(
             app, audio.sample_rate(),
             static_cast<long>(audio.total_frames())).warp_frame_map;
@@ -430,10 +431,10 @@ GuiTargetRender::compute_buffer_start_frame_for(
         const int64_t t_end = std::llrint(map_source_to_target(
             static_cast<double>(e), target_warp_frame_map));
         // Mirror validate_trim_frames' check ORDER: e <= b before the span rule,
-        // so fallback_reason matches the orchestrator's printed vocabulary for
-        // the completed-(0, 0) case (T monotone means e <= b implies the span
-        // check would also fire, but with the wrong reason string). Exact
-        // source-domain integer compare.
+        // so fallback_reason matches the orchestrator's printed vocabulary (T
+        // monotone means e <= b implies the span check would also fire, but with
+        // the wrong reason string). Exact source-domain integer compare; a
+        // resting store cannot reach it any more, so this is the breach mirror.
         if (e <= b) {
             return {0, true, "trim end at or before trim begin"};
         }
@@ -442,8 +443,7 @@ GuiTargetRender::compute_buffer_start_frame_for(
             return {0, true,
                     "trim target span rounds below one output sample"};
         }
-        // The anchor is the (completed) begin's target image — llrint(T_b),
-        // bit-identical to the set-pair expression.
+        // The anchor is the sub-window begin's target image — llrint(T_b).
         return {t_begin, false, nullptr};
     }
     return {0, false, nullptr};

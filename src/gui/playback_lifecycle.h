@@ -48,9 +48,9 @@ struct GuiPlaybackLifecycle {
     //     steps — they move the window onto the audio, not the audio.
     //   * TRIM MUTATIONS STOP, IN BOTH VIEWS: `x` and Shift+X, matching every
     //     POINTER trim route (the chip/bridge drags and the bound-set clicks each
-    //     stop at their own commit point). BOTH views because a set trim LOOPS the
-    //     audition: a window mutated under a live session would leave the loop
-    //     wrapping bounds the paint has stopped showing — the source-view case that
+    //     stop at their own commit point). BOTH views because a live audition is
+    //     playing out the very window the mutation replaces: it would keep running
+    //     against bounds the paint has stopped showing — the source-view case that
     //     no render trigger covers.
     // Every stop in the rule is REFUSAL-GATED (the standing 2026-07-28 rule): it
     // sits past its route's refusals and immediately ahead of that route's first
@@ -152,7 +152,7 @@ struct GuiPlaybackLifecycle {
 
 private:
     // The shared launch body (contract at the definition): validate an
-    // absolute paint-domain launch position, capture the loop verdict, seed
+    // absolute paint-domain launch position, seed
     // the scanner, and start the audio. Returns whether it launched. Callers
     // (toggle_playback's play edge, scrub_launch_at) run the defensive
     // follow-override clear before delegating.

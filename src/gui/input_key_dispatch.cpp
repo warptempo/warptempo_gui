@@ -449,8 +449,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         RenderRequest req = build_render_request(
             app.source_audio_path, app.warpmarkers.markers(),
             app.phaseresetmarkers.markers(), app.engine_settings,
-            app.trim.has_begin, app.trim.begin_frame,
-            app.trim.has_end,   app.trim.end_frame);
+            app.trim.begin_frame, app.trim.end_frame);
         req.authoring = snapshot_current_authoring_state();
         attach_shared_render_resources(req);
 
@@ -518,8 +517,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         RenderRequest req = build_render_request(
             app.source_audio_path, app.warpmarkers.markers(),
             app.phaseresetmarkers.markers(), app.engine_settings,
-            app.trim.has_begin, app.trim.begin_frame,
-            app.trim.has_end,   app.trim.end_frame);
+            app.trim.begin_frame, app.trim.end_frame);
         req.authoring = snapshot_current_authoring_state();
         attach_shared_render_resources(req);
 
@@ -751,8 +749,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             RenderRequest req = build_render_request(
                 app.source_audio_path, std::move(cell_warp_markers), base_phase_resets,
                 app.engine_settings,
-                app.trim.has_begin, app.trim.begin_frame,
-                app.trim.has_end,   app.trim.end_frame,
+                app.trim.begin_frame, app.trim.end_frame,
                 batch_folder.string(), std::move(basename));
             req.authoring = snapshot_current_authoring_state();
             attach_shared_render_resources(req);

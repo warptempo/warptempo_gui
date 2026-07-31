@@ -10,7 +10,11 @@
 #include <utility>
 
 // Trim gestures (architect-ruled hardfail model; the full ruling sits at the
-// TrimState store in app_state.h): begin and end are authored named roles.
+// TrimState store in app_state.h): begin and end are authored named roles, and
+// THE WINDOW IS ALWAYS SET — no unset state, no lone bound (architect
+// 2026-07-30). The FULL window [0, total-1] is the old unset state under a new
+// spelling: it renders untrimmed and plays to the natural end, and Shift+X is
+// how the user gets back to it.
 // Every gesture clamps each bound to its absolute walls — frame 0 to EOF-1,
 // the same wall both marker columns hold. All authored positions (both marker
 // columns and both trim bounds) share the inclusive [0, total-1] domain — the
@@ -18,8 +22,8 @@
 // walls: a bound crosses its partner freely during any gesture — but
 // crossed/equal can no longer REST: every trim commit runs
 // auto_clear_crossed_trim (below), so a commit landing on or across the
-// partner destroys both bounds. Every wall check is a plain integer compare —
-// literally the load guard's comparison.
+// partner RESETS the pair to the full window. Every wall check is a plain
+// integer compare — literally the load guard's comparison.
 // The zero floor is subsumed by the walls but remains the reason the floor
 // exists at all: a negative position is unrepresentable in the authored
 // frame form the .settings file persists (parse_authored_frame rejects
@@ -28,55 +32,65 @@
 // forbid authoring one, and the load boundary (file_loader / CLI)
 // hard-fails a past-EOF bound in a hand-edited .settings as adversarial
 // input (a .settings applies only to its own audio). validate_trim_frames
-// (trimmer.h) still authors the trim-validity vocabulary, but a refusal at
-// render time now means "render untrimmed" (do_render's fallback), not a
+// (trimmer.h) still authors the trim-validity vocabulary, but it sees
+// SUB-WINDOWS only (a full window never reaches plan_trim) and a refusal at
+// render time still means "render untrimmed" (do_render's fallback), not a
 // refused render.
 
-// The clear-both field resets, shared verbatim by handle_trim_clear_both (the
-// Shift+X key's clear arm) and the crossed-commit auto-clear (auto_clear_crossed_trim)
-// so the two clears can never drift. Fields only: no invalidation, no trigger —
-// callers own their repaint tail.
-void GuiInputHandler::clear_trim_bounds() {
-    app.trim.has_begin      = false;
-    app.trim.has_end        = false;
-    app.trim.begin_frame    = 0;
-    app.trim.end_frame      = 0;
+// Reset the pair to the canonical FULL window for the loaded source — the
+// field-level act shared verbatim by handle_trim_clear_both (the Shift+X
+// maximizer) and the crossed-commit reset (auto_clear_crossed_trim) so the two
+// can never drift. The seeding formula has ONE owner, full_trim_window
+// (app_state.h), which is also what the load and the per-tab bands use. Fields
+// only: no invalidation, no trigger — callers own their repaint tail.
+void GuiInputHandler::reset_trim_to_full_window() {
+    app.trim = full_trim_window(audio.total_frames());
 }
 
-// Architect ruling (2026-07-15): crossed/equal trim bounds cannot REST —
-// committing one bound onto or across the other destroys BOTH bounds, the
-// trim sibling of the marker normalizations (ambiguous states resolve
-// instead of resting or refusing). SILENT by design: the chips visibly
-// disappear, which is the whole signal. The check is the exact integer
-// compare end_frame <= begin_frame, run only when both bounds are set, and
-// only at COMMIT — mid-gesture crossing stays free (nothing pops
-// mid-gesture; update_trim_drag never calls this). Every trim commit site —
-// the x set-from-region, the chip/bridge drag release, and the settings-editor
-// `:trim_*=` commit — calls this after its mutation and before its
-// invalidations, so the repaint shows the cleared state.
+// Architect ruling (2026-07-15, re-posed 2026-07-30 under always-set):
+// crossed/equal trim bounds cannot REST — committing one bound onto or across
+// the other RESETS BOTH bounds to the song edges, the trim sibling of the
+// marker normalizations (ambiguous states resolve instead of resting or
+// refusing). SILENT by design: the chips visibly JUMP TO THE SONG EDGES, which
+// is the whole signal (it used to be the chips vanishing; with the window
+// always set there is nothing to vanish into). The check is the exact integer
+// compare end_frame <= begin_frame, run only at COMMIT — mid-gesture crossing
+// stays free (nothing pops mid-gesture; update_trim_drag never calls this).
+// Every trim commit site — the x set-from-region, the chip/bridge drag release,
+// the bound-set click and the settings-editor `:trim_*=` commit — calls this
+// after its mutation and before its invalidations, so the repaint shows the
+// reset state.
+//
+// THE ONE-FRAME EXCEPTION: on a one-frame source (load-legal) the canonical
+// full pair is [0, 0], which trips the end <= begin compare. Recognizing the
+// full window FIRST makes the reset a no-op there instead of an every-commit
+// self-reset loop — the same precedence the render orchestrators use.
 void GuiInputHandler::auto_clear_crossed_trim() {
-    if (app.trim.has_begin && app.trim.has_end &&
-        app.trim.end_frame <= app.trim.begin_frame) {
-        clear_trim_bounds();
+    if (trim_is_full_window(app.trim, audio.total_frames())) return;
+    if (app.trim.end_frame <= app.trim.begin_frame) {
+        reset_trim_to_full_window();
     }
 }
 
-// Clear both trim bounds unconditionally. Silent no-op when neither bound is
-// set. The caller is handle_trim_shift_x (the Shift+X unset arm; architect
-// 2026-07-25 split it off x, which is now set-only). Trim is gesture-owned and
-// excluded from undo/redo history.
+// Shift+X IS THE MAXIMIZER (architect 2026-07-30): it writes the FULL window
+// [0, total-1] — the old "unset" outcome, now spelled as a real pair. The
+// caller is handle_trim_shift_x. Trim is gesture-owned and excluded from
+// undo/redo history.
+//
+// THE ALREADY-FULL IDENTITY GUARD replaces the old has-a-bound refusal gate: a
+// Shift+X over an already-maximized window stops nothing, repaints nothing and
+// triggers nothing — a silent no-op, which keeps the refusal-gated stop rule
+// exactly as it was.
 void GuiInputHandler::handle_trim_clear_both() {
-    if (app.trim.has_begin || app.trim.has_end) {
+    if (!trim_is_full_window(app.trim, audio.total_frames())) {
         // A TRIM MUTATION STOPS A LIVE AUDITION, IN BOTH VIEWS — the keyboard stop
         // rule at stop_playback_if_playing's declaration (playback_lifecycle.h).
-        // Inside the has-a-bound guard, so a Shift+X over an already-empty trim
-        // stops nothing (refusal-gated, like every claim's stop). This is the
-        // WORSE case of the pair: destroying the window under a looping session
-        // left it wrapping bounds with no painted chips at all.
+        // Inside the identity guard, so an already-full Shift+X stops nothing
+        // (refusal-gated, like every claim's stop).
         // (architect ruled `x`; `Shift+X` joins as the same trim-mutation class —
         // planner extension 2026-07-30, pending the architect's glance.)
         playback_lifecycle.stop_playback_if_playing();
-        clear_trim_bounds();
+        reset_trim_to_full_window();
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();
         target_render.trigger();
@@ -84,7 +98,7 @@ void GuiInputHandler::handle_trim_clear_both() {
 }
 
 // Bare x is SET-ONLY (architect 2026-07-25, reversing the 2026-07-20 x-branch
-// ruling's clear arm — the unset moved to the shift-exact Shift+X binding,
+// ruling's clear arm — the MAXIMIZE moved to the shift-exact Shift+X binding,
 // handle_trim_shift_x below): x branches on the HIGHLIGHT, not the trim, with no
 // context-awareness beyond that (the playhead plays no part, and there are no
 // positional rules). A live REGION (the drag-painted span, active-domain frames)
@@ -101,14 +115,14 @@ void GuiInputHandler::handle_trim_clear_both() {
 // compression, whose two endpoints inverse-map
 // to one source frame) makes x a
 // silent no-op that writes NOTHING, because the alternative is destruction:
-// auto_clear_crossed_trim reads a degenerate write as crossed and silently destroys
-// the authored pair, and trim has no undo (ARCHITECT-CONFIRMED 2026-07-29
-// ("correct") — the alternative was accepting silent pair destruction).
+// auto_clear_crossed_trim reads a degenerate write as crossed and silently resets
+// the authored pair to the song edges, and trim has no undo (ARCHITECT-CONFIRMED
+// 2026-07-29 ("correct") — the alternative was accepting silent pair loss).
 // A zero-length window is not authorable, so
 // there is nothing for x to set. The refusal is the FIRST thing past the clamps,
 // ahead of every write, so a refused x touches neither trim, region, nor selection.
-// NO region → x is a SILENT NO-OP (the clear
-// arm moved to Shift+X; x never unsets). NO read-only check here: this pair is
+// NO region → x is a SILENT NO-OP (the maximize
+// arm moved to Shift+X; x never widens). NO read-only check here: this pair is
 // keyboard-only (the sole callers are the bare-x / Shift+X dispatch arms), and
 // the keyboard gate — the ONE read-only guard on that path — leaves x off its
 // allowlist, so a locked tab never reaches either function.
@@ -132,7 +146,7 @@ void GuiInputHandler::handle_trim_clear_both() {
 // untouched (trim gestures never move it).
 void GuiInputHandler::handle_trim_x() {
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
-    // No live region → silent no-op: x is set-only, and the unset is Shift+X's
+    // No live region → silent no-op: x is set-only, and the maximize is Shift+X's
     // (handle_trim_shift_x). A resting trim is left exactly as it is.
     if (!app.region.active) return;
 
@@ -149,15 +163,17 @@ void GuiInputHandler::handle_trim_x() {
     // DEGENERATE RESULT → SILENT REFUSAL, on the exact pair this would write and
     // ahead of every write (see the header): end <= begin means there is no
     // authorable window here, and writing it would hand auto_clear_crossed_trim a
-    // pair it destroys — the one silent, unrecoverable outcome trim cannot afford.
+    // pair it resets to the song edges — the one silent, unrecoverable outcome
+    // trim cannot afford.
     // Nothing is touched: trim, region and selection all rest (the deselect is
     // downstream, so the refusal is refusal-gated like every other trim claim).
     if (end <= begin) return;
     // A TRIM MUTATION STOPS A LIVE AUDITION, IN BOTH VIEWS (architect 2026-07-30 —
     // the keyboard stop rule, stated at stop_playback_if_playing's declaration,
-    // playback_lifecycle.h): the window this is about to rewrite is what a set trim
-    // LOOPS, so a session left running would keep wrapping bounds the paint has
-    // stopped showing. REFUSAL-GATED like every other claim's stop — past the
+    // playback_lifecycle.h): the window this is about to rewrite is the window a
+    // live audition is playing out, so a session left running would keep reading
+    // bounds the paint has already replaced. REFUSAL-GATED like every other
+    // claim's stop — past the
     // no-region and degenerate-result returns above, immediately ahead of the first
     // write. In TARGET view the stop was already incidental (target_render.trigger()
     // below halts playback on every T-view mutation); doing it here makes it
@@ -166,9 +182,7 @@ void GuiInputHandler::handle_trim_x() {
     // guarded, so any doubling is one early return.
     playback_lifecycle.stop_playback_if_playing();
     app.trim.begin_frame = begin;
-    app.trim.has_begin   = true;
     app.trim.end_frame   = end;
-    app.trim.has_end     = true;
     auto_clear_crossed_trim();
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
@@ -182,17 +196,19 @@ void GuiInputHandler::handle_trim_x() {
     clear_region_highlight(app, viewport);
 }
 
-// Shift+X UNSETS the trim (architect 2026-07-25 — the unset arm x used to own
-// when no region was live; x is now set-only). One-shot, history-less like every
-// trim mutation. No read-only check of its own (see handle_trim_x above: the
-// keyboard gate owns that decision for both). Delegates WHOLE to
-// handle_trim_clear_both — whose has_begin||has_end guard makes an already-empty
-// trim a natural no-op and whose tail owns the repaint (waveform + timestamp) and
-// the target_render trigger. IT TOUCHES NO REGION AND NO SELECTION: it is a trim
-// CLEARER, not a SETTER, so the setter-deselect rule does not reach it, and the
-// gated region re-sync it used to carry died with the
-// trim-window highlight itself (architect 2026-07-30) — a scratch span is the
-// user's, not trim's to dissolve.
+// Shift+X MAXIMIZES the trim to the full window (architect 2026-07-25 for the
+// binding, re-posed 2026-07-30 under always-set — the old "unset" is now
+// [0, total-1], which renders untrimmed and plays to the natural end, so the
+// user-visible act is unchanged and the chips simply rest at the song edges).
+// One-shot, history-less like every trim mutation. No read-only check of its own
+// (see handle_trim_x above: the keyboard gate owns that decision for both).
+// Delegates WHOLE to handle_trim_clear_both — whose already-full identity guard
+// makes a second Shift+X a natural silent no-op and whose tail owns the repaint
+// (waveform + timestamp) and the target_render trigger. IT TOUCHES NO REGION AND
+// NO SELECTION: it is a trim MAXIMIZER, not a SETTER, so the setter-deselect
+// rule does not reach it, and the gated region re-sync it used to carry died
+// with the trim-window highlight itself (architect 2026-07-30) — a scratch span
+// is the user's, not trim's to dissolve.
 void GuiInputHandler::handle_trim_shift_x() {
     handle_trim_clear_both();
 }
@@ -239,10 +255,10 @@ bool GuiInputHandler::trim_mouse_x_to_source_frame(int mouse_x,
 void GuiInputHandler::begin_trim_drag(TrimHit which, int mouse_x, bool both) {
     if (which == TrimHit::None) return;
     const bool is_begin = (which == TrimHit::Begin);
-    // Any trim drag — single or pair — requires BOTH bounds set: a lone bound
-    // is gesture-inert. The router already gates on the full pair, so this is
-    // the structural backstop.
-    if (!(app.trim.has_begin && app.trim.has_end)) return;
+    // (The old both-bounds-set backstop is gone with the unset state: a full
+    // ordered pair always rests, so there is nothing left to require. The
+    // router's own geometry gate is the only thing standing between a press and
+    // this arm.)
     app.trim_drag.active       = true;
     app.trim_drag.is_begin     = is_begin;
     app.trim_drag.both         = both;
@@ -509,8 +525,8 @@ void GuiInputHandler::commit_trim_drag() {
             // commit snaps the bounds only — there is no playhead pin/sync here.
         }
         // The release is the commit: a bound released on or across its
-        // partner destroys both bounds (crossed/equal cannot rest; ruling at
-        // auto_clear_crossed_trim). Mid-drag crossing above stayed free; the
+        // partner RESETS the pair to the song edges (crossed/equal cannot rest;
+        // ruling at auto_clear_crossed_trim). Mid-drag crossing stayed free; the
         // playhead was never touched by the gesture.
         auto_clear_crossed_trim();
         viewport.invalidate_waveform_area();
@@ -530,17 +546,16 @@ void GuiInputHandler::commit_trim_drag() {
 }
 
 // Set ONE trim bound at the clicked column — ADJUST-ONLY (architect
-// 2026-07-23): the click requires an EXISTING full pair and refuses silently
-// otherwise, matching the standing every-trim-pointer-gesture-requires-the-pair
-// convention. The clicks ADJUST a resting window, never create one from
-// nothing — the window is created by region→x, and the settings editor remains
-// the deliberate lone-bound route. The column maps to a source
+// 2026-07-23; the pair gate it used to spell here is GONE with the unset state
+// 2026-07-30 — a full ordered pair always rests, so "adjust-only" is now a
+// statement about what the click DOES, not a condition it tests). The click
+// moves one bound of the resting window. The column maps to a source
 // frame through authored_frame_at_column over the DISPLAYED paint map — the same
 // release-snap basis commit_trim_drag uses (its snap_moved_bound goes
 // source_frame -> painted_column -> authored_frame; a click carries the column
 // directly). The absolute walls [0, total-1] apply after the snap, then the
-// shared crossed-commit auto-clear (a bound onto/across its partner dissolves
-// both). History-less like every trim mutation; the repaint + trigger tail
+// shared crossed-commit reset (a bound onto/across its partner resets the pair
+// to the song edges). History-less like every trim mutation; the repaint + trigger tail
 // mirrors the drag release. Read-only refuses silently (trim authoring). This
 // function OWNS the press's playback stop — placed past every refusal above
 // and immediately ahead of the bound write, so a refused click never stops a
@@ -549,17 +564,14 @@ void GuiInputHandler::commit_trim_drag() {
 // SETTER (architect 2026-07-29); it publishes no region, the trim-window
 // highlight having retired 2026-07-30.
 // Both bound-set clicks are this one function, so both deselect, and
-// both deselect only PAST THE REFUSALS above: a read-only tab and a missing
-// resting pair set nothing and leave the selection exactly as it was. The
+// both deselect only PAST THE REFUSALS above: a read-only tab and a degenerate
+// audio/geometry state set nothing and leave the selection exactly as it was. The
 // deselect RESTS in every case, including when this click ARMS a drag
 // (set_trim_bound_at_click_then_arm_drag): that gesture has no cancel either, so
 // its caller captures nothing (2026-07-29 — the no-cancel rule at the drag-modal
 // gate, input_handler.cpp).
 void GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     if (active_view_state(app).read_only) return;   // trim authoring
-    // Adjust-only pair gate (see the header comment): no resting window, no
-    // bound-set click.
-    if (!(app.trim.has_begin && app.trim.has_end)) return;
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
     if (current_samples_per_pixel(app, audio) <= 0.0) return;
     const GuiRect area = waveform_area(app);
@@ -575,17 +587,15 @@ void GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     if (frame > wall) frame = wall;
     // The act commits from here on, so THIS is where it stops a live audition
     // (architect 2026-07-27): the trim window is about to change under it,
-    // and every refusal above — read-only, no resting pair, a degenerate
-    // audio/geometry state — has already returned without stopping anything.
+    // and every refusal above — read-only, a degenerate audio/geometry state —
+    // has already returned without stopping anything.
     // The caller (the ctrl / ctrl+shift chip-row press) carries no stop of its
     // own for exactly that reason. Ahead of the write, like every claim's stop.
     playback_lifecycle.stop_playback_if_playing();
     if (is_begin) {
         app.trim.begin_frame = frame;
-        app.trim.has_begin   = true;
     } else {
         app.trim.end_frame = frame;
-        app.trim.has_end   = true;
     }
     auto_clear_crossed_trim();
     viewport.invalidate_waveform_area();
@@ -606,20 +616,19 @@ void GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
 // input_handler.cpp. The click-set is a COMMITTED act the moment it is made (trim
 // is history-less, so nothing takes it back), and the drag it arms commits its own
 // bounds at its release. The
-// set itself owns the read-only / missing-pair refusal; the drag arms only when
-// the set kept a full writable pair.
+// set itself owns the read-only refusal; the drag arms only in a writable tab.
+// The pair survival checks that used to gate the arm died with the unset state
+// (2026-07-30): a full ordered pair always rests here, including after a crossed
+// click-set, which now RESETS to the song edges rather than dissolving — so
+// there is always something to drag.
 void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
                                                             int mouse_x,
                                                             int mouse_y) {
-    const bool had_pair = app.trim.has_begin && app.trim.has_end;
     set_trim_bound_at_click(is_begin, mouse_x);
-    // Arm only when a full writable pair survived the set: read-only / a missing
-    // pair set nothing (had_pair false OR the set refused), and a crossed
-    // click-set dissolved both bounds (auto_clear_crossed_trim) leaving nothing
-    // to drag.
-    if (!had_pair) return;
+    // Arm only where the set itself could commit: a read-only tab and a
+    // degenerate audio/geometry state both set nothing, so neither arms.
     if (active_view_state(app).read_only) return;
-    if (!(app.trim.has_begin && app.trim.has_end)) return;  // crossed -> dissolved
+    if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
     app.pending_trim_drag = PendingTrimDrag{};
     app.pending_trim_drag.active            = true;
     app.pending_trim_drag.is_begin          = is_begin;
@@ -636,10 +645,10 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // outright — the pending+threshold pattern the marker flag uses: the press
 // CLAIMS the chip/bridge geometry, a motionless press-release commits nothing,
 // and only once the pointer crosses kDragMovedThresholdPx does begin_trim_drag
-// run and the existing single/pair drag machinery take over unchanged. Every
-// trim drag requires the FULL pair set; a lone bound is gesture-inert —
-// transparent to the press, which falls through to the caller's flag handling.
-// Returns true iff both bounds are set AND the press landed on trim chip
+// run and the existing single/pair drag machinery take over unchanged. A full
+// ordered pair ALWAYS rests (the unset state died 2026-07-30), so the old
+// pair-required gate is gone and the press is claimed purely on GEOMETRY.
+// Returns true iff the press landed on trim chip
 // geometry (a chip-rect single-bound hit, or the chip-row inter-chip bridge
 // region) — armed or read-only-refused — so the caller CLAIMS the press (no
 // fallback); false lets the caller fall through. Trim bounds are transparent to
@@ -661,8 +670,7 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 //     the subject (no grabbed-bound notion; the pair has no viewport clamp and,
 //     like every trim gesture, never moves the playhead), so it always arms as
 //     Begin structurally.
-// Both arms presuppose the full pair (the gate above): a lone bound arms
-// nothing — it is gesture-inert. The drags DESELECT and STOP a live audition at
+// The drags DESELECT and STOP a live audition at
 // their FIRST ACCEPTED bound change (architect 2026-07-29 / 2026-07-30 — the
 // press-time stop went with the highlight-only publish it accompanied); the
 // PLAYHEAD is what they never
@@ -695,10 +703,6 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
     // painter's cold fallback.
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     if (basis.spp <= 0.0) return false;
-    // Every trim drag needs the full pair set. With a lone bound, trim
-    // contributes NO pointer geometry at all — the press is transparent and
-    // falls through to the caller's flag handling.
-    if (!(app.trim.has_begin && app.trim.has_end)) return false;
 
     // Single-drag hit: the chip rect (hit_test_trim_chip, chip-row-gated).
     const TrimHit single = hit_test_trim_chip(app, audio, mouse_x, mouse_y);
@@ -714,7 +718,7 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
     // top-strip upper-row band (top_upper_row_area, the exact band
     // hit_test_trim_chip y-gates on and the band the bridge bar
     // spans between the two chips) and whose column falls inside the painted bar's
-    // gap between the two chips (both bounds guaranteed set by the gate above). A
+    // gap between the two chips (both bounds always set, structurally). A
     // top-strip press BELOW that band — the marker flag row — is not the bridge
     // handle: it falls through to the caller's flag handling. The pair has no
     // grabbed-bound notion — both bounds are the subject, so it always arms as

@@ -40,9 +40,14 @@ ViewState view_state_from_settings_tab(const SettingsFileTab& t);
 // First-open default `.settings` template. Built by walking the same
 // canonical key list write_settings_file walks, so the template is
 // byte-identical to a save with a default-constructed EngineSettings
-// (title overridden to `<stem>-rendered`), all-zero ViewState, and no
-// trims set.
-std::string format_default_settings_template(const std::string& stem);
+// (title overridden to `<stem>-rendered`), an all-zero ViewState, and the FULL
+// trim window on both tabs. `total_frames` is the just-loaded source's frame
+// count: the full window is [0, total-1], which is not a compile-time constant,
+// so the trim keys are a dynamic template stamp like the four env hashes (the
+// `-1` unset spelling they used to carry died with the unset state 2026-07-30 —
+// a template still writing it would no longer load).
+std::string format_default_settings_template(const std::string& stem,
+                                             int64_t total_frames);
 
 // The complete non-engine (GUI-kind) value set the settings writer
 // serializes, gathered into one snapshot. Constructed at each call site and
@@ -74,8 +79,8 @@ struct NonEngineSettingsSnapshot {
 // in-file descriptor list. Engine keys are formatted from the typed
 // EngineSettings parameter via per-field switch; typed scalars come from
 // the snapshot; all four per-tab trim lines (tab_a/tab_b begin/
-// end) are always emitted, `-1` when the corresponding trim flag is unset
-// on tab_a.trim / tab_b.trim (the load grammar reads -1 back as unset).
+// end) are always emitted as actual source frames — the trim window is always
+// set, so there is no unset spelling to emit (2026-07-30).
 // Matches the `.warpmarkers` write pattern (tmp → fsync → rename).
 // Best-effort: failure is logged by the caller.
 bool write_settings_file(
@@ -89,7 +94,7 @@ bool write_settings_file(
 // the active tab). Shared with the writer through format_nonengine_value so
 // recall and save can never diverge. Returns std::nullopt for engine keys (the
 // settings editor falls back to format_engine_setting_value) and for unknown
-// keys; an unset trim bound recalls as the literal `-1` (the same unset
-// spelling the writer emits). Used by the settings prompt's Tab autocomplete.
+// keys; a trim bound recalls as its actual frame, exactly as the writer emits
+// it. Used by the settings prompt's Tab autocomplete.
 std::optional<std::string> recall_gui_setting_value(const AppState& app,
                                                     const std::string& key);

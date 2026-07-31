@@ -157,18 +157,18 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
             return R(out);
         }
         if (suffix == "trim_begin" || suffix == "trim_end") {
-            // The unset spelling is the exact literal `-1`. It sits outside the
-            // authored-frame domain (parse_authored_frame refuses a sign), so
-            // the value grammar is unambiguous: `-1` (unset) or a canonical
-            // whole source frame. The past-EOF wall stays state-dependent
-            // (caller-side).
-            if (value == "-1") {
-                out.trim_unset = true;
-                return R(out);
-            }
+            // A trim value is a canonical whole source frame, nothing else: the
+            // `-1` unset spelling died with the unset STATE
+            // (architect approval 2026-07-30 — the trim window is always a full
+            // ordered pair now),
+            // so `-1` refuses through parse_authored_frame like any other
+            // malformed value. The GUI can never write it, which makes a
+            // sidecar still carrying one adversarial by the two-category rule:
+            // load-fatal, first error only, identically in both products. The
+            // past-EOF wall stays state-dependent (caller-side).
             int64_t v = 0;
             if (!parse_authored_frame(value, v))
-                return err("must be a whole source-frame position or -1 (unset)");
+                return err("must be a whole source-frame position");
             out.i64 = v;
             return R(out);
         }
@@ -290,8 +290,8 @@ std::expected<SettingsFile, std::string> read_settings_file(
         // neither an engine key (checked above) nor a GUI-kind key — the
         // unknown-key case; an expected error carries the reason bad_value
         // composes. On success, store the typed value into the SettingsFile
-        // fields; tab routing and the trim unset decode stay here (state the
-        // schema function is deliberately blind to).
+        // fields; tab routing stays here (state the schema function is
+        // deliberately blind to).
         auto g = warptempo_settings::validate_gui_setting(key, value);
         if (!g) {
             return prefix_line_error(ln, "unknown key '" + key + "'");
@@ -321,17 +321,12 @@ std::expected<SettingsFile, std::string> read_settings_file(
             } else if (suffix == "read_only") {
                 tab->read_only = gv.b;
             } else if (suffix == "trim_begin") {
-                // The `-1` unset spelling leaves has_begin false (SettingsTrim's
-                // default); any other value sets the bound.
-                if (!gv.trim_unset) {
-                    tab->trim.has_begin = true;
-                    tab->trim.begin_frame = gv.i64;
-                }
+                // Both bounds are always meaningful
+                // (architect approval 2026-07-30): the value grammar admits
+                // only a canonical whole source frame, so it applies verbatim.
+                tab->trim.begin_frame = gv.i64;
             } else if (suffix == "trim_end") {
-                if (!gv.trim_unset) {
-                    tab->trim.has_end = true;
-                    tab->trim.end_frame = gv.i64;
-                }
+                tab->trim.end_frame = gv.i64;
             }
         } else if (key == "follow") {
             out.follow = gv.b;

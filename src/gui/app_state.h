@@ -496,8 +496,8 @@ struct PendingMarkerDrag {
 // setter's deselect and the trim-mutation stop at its first accepted bound
 // change. Deferring begin_trim_drag to the crossing keeps
 // its anchor capture exact — nothing mutates the trim store between press and
-// crossing. Requires the FULL bound pair (a lone bound is gesture-inert — the
-// router never arms one); a read-only tab claims the press but never arms.
+// crossing. A full ordered pair always rests (2026-07-30), so the router arms on
+// GEOMETRY alone; a read-only tab claims the press but never arms.
 // Session-only, never serialized. Cleared on the crossing (begin_trim_drag
 // takes over), on release / lost button before the crossing, by the force-end
 // finalizer, and on file load. `is_begin` names the single bound; `both` marks the
@@ -847,40 +847,73 @@ struct PromptState {
 // whole source frames in int64_t, exactly like marker times (a fractional
 // bound is unrepresentable; the .settings writer persists the exact value as
 // integer text via frame_format.h, so a saved bound reloads bit-identically).
-// Every trim GESTURE clamps each bound to its own
-// absolute walls: begin spans frame 0 to EOF-1 (a begin at or past the
-// source end can never render), end spans frame 0 to EOF exactly
-// (end-at-EOF is valid, so the GUI must be able to represent it) — plain
-// integer compares, the load guard's own comparison — so past-EOF
-// cannot be gestured. There are NO partner walls — a bound crosses its
-// partner freely during any gesture — but crossed or equal bounds can no
-// longer REST anywhere: every trim commit auto-clears a pair left with
-// end_frame <= begin_frame (both bounds destroyed, silently —
-// GuiInputHandler::auto_clear_crossed_trim, the trim sibling of the marker
-// normalizations), and a persisted crossed/equal pair clears per tab at
-// load with one stderr line (file_loader). The zero floor
-// is now subsumed by the per-bound walls, but it remains the reason the
-// floor exists at all: a negative position is unrepresentable in the
-// authored frame form the .settings file persists (parse_authored_frame
-// rejects negatives as malformed) — a format-representability floor, not a
-// validity rule. A past-EOF
-// bound is adversarial (the gesture walls make it
-// uncommittable and a .settings applies only to its own audio, so a
-// past-EOF bound means the audio was swapped outside the GUI), hard-failed
-// at the load boundary (file_loader / CLI) like a corrupt audio file.
-// validate_trim_frames (trimmer.h) stays the sole author of the
-// trim-validity vocabulary, but a refusal at render time means "render
-// untrimmed" (plan_trim's callers fall back to the full deliverable, one
-// stderr line), never a refused render; it never guards a gesture.
-// Readers of MID-GESTURE state must not assume begin <= end — crossing is
-// free until the commit — but at REST the order begin < end now holds
-// whenever both bounds are set.
+//
+// THE WINDOW IS ALWAYS SET (architect 2026-07-30). There is no unset state and
+// no lone bound anywhere: not in the store, not in the .settings grammar, not
+// at the render boundary. THE REST INVARIANT: for total >= 2,
+// 0 <= begin < end <= total-1; for a ONE-FRAME source (load-legal) the
+// canonical full pair is [0, 0], where begin < end is impossible. Mid-gesture
+// crossing stays free and DOCUMENTED — readers of mid-gesture state must not
+// assume begin <= end, because nothing pops mid-gesture.
+//
+// THE FULL WINDOW [0, total-1] IS SEMANTICALLY THE OLD UNSET STATE: it renders
+// UNTRIMMED (no trim plan built at all), plays to the natural end, hashes like
+// the old unset encoding, and Home/End reach the song edges. The recognition
+// has ONE owner, trim_window_is_full (settings_file.h — placed there so the
+// GUI and the CLI cannot disagree); every consumer asks it and no site spells
+// the compare a second time. A PROPER sub-window behaves exactly as a set trim
+// always did.
+//
+// Every trim GESTURE clamps each bound to its own absolute walls: BOTH bounds
+// span frame 0 to EOF-1, the shared inclusive [0, total-1] authored domain —
+// plain integer compares, the load guard's own comparison — so past-EOF cannot
+// be gestured. There are NO partner walls — a bound crosses its partner freely
+// during any gesture — but crossed or equal bounds can no longer REST
+// anywhere: every trim commit RESETS a pair left with end_frame <= begin_frame
+// back to the full window (GuiInputHandler::auto_clear_crossed_trim, the trim
+// sibling of the marker normalizations — the chips jumping to the song edges
+// are the visible signal), and a persisted crossed/equal pair resets per tab at
+// load with one stderr line (file_loader). The zero floor is subsumed by the
+// per-bound walls, but it remains the reason the floor exists at all: a
+// negative position is unrepresentable in the authored frame form the .settings
+// file persists (parse_authored_frame rejects negatives as malformed) — a
+// format-representability floor, not a validity rule. A past-EOF bound is
+// adversarial (the gesture walls make it uncommittable and a .settings applies
+// only to its own audio, so a past-EOF bound means the audio was swapped
+// outside the GUI), hard-failed at the load boundary (file_loader / CLI) like a
+// corrupt audio file. validate_trim_frames (trimmer.h) stays the sole author of
+// the trim-validity vocabulary, but it now sees SUB-WINDOWS ONLY (the full
+// window never reaches plan_trim), and a refusal at render time still means
+// "render untrimmed" (plan_trim's callers fall back to the full deliverable,
+// one stderr line), never a refused render; it never guards a gesture.
+//
+// SEEDING: the default-constructed pair [0, 0] is construction state only —
+// canonical exactly at total == 1. Every entry route seeds the real full pair
+// once the source total is known (the load reset in file_loader, the per-tab
+// bands beside it).
 struct TrimState {
     int64_t begin_frame = 0;    // whole source frame (int64_t)
     int64_t end_frame   = 0;    // whole source frame (int64_t)
-    bool    has_begin   = false;
-    bool    has_end     = false;
 };
+
+// TrimState's own spelling of the shared full-window predicate (the owner and
+// the rationale live at trim_window_is_full, settings_file.h — this is a
+// forwarder, not a second compare).
+inline bool trim_is_full_window(const TrimState& t, int64_t total_frames) {
+    return trim_window_is_full(t.begin_frame, t.end_frame, total_frames);
+}
+
+// Seed a trim pair to the canonical FULL window for a source of `total_frames`
+// frames: [0, total-1], which is [0, 0] at total == 1 and [0, 0] for a
+// degenerate/unloaded total (nothing to trim). The single seeding route — the
+// load reset, the per-tab bands, and the render-entry sidecar's inactive tab
+// all call it, so "what does a fresh window look like" has one answer.
+inline TrimState full_trim_window(int64_t total_frames) {
+    TrimState t;
+    t.begin_frame = 0;
+    t.end_frame   = total_frames > 0 ? total_frames - 1 : 0;
+    return t;
+}
 
 // Navigational bookmark. Holds a snapshot of the fields that define
 // what the user sees and where playback would start. Not in the undo domain.
@@ -1003,25 +1036,12 @@ struct AppState {
     // precision is judged at standstill). Written only on the active path: the
     // playback pre-paint hook writes the predictor's continuous position here,
     // and the launch seed writes the integer value as a double.
-    // The integer sample stays the domain / change-detection anchor (loop-wrap,
-    // the cur == sample short-circuit, the viewport-centering targets, the
+    // The integer sample stays the domain / change-detection anchor (the
+    // cur == sample short-circuit, the viewport-centering targets, the
     // timestamp readout). Meaningful only while active, like the integer sample.
     double  playhead_scanner_precise = 0.0;
     bool    playhead_scanner_active = false;
     float   playback_speed          = 0.7f;
-
-    // Looping audition (trim set, launch-captured at launch_playback_from —
-    // the shared body under the Space toggle and the scrub launch).
-    // `playback_loop_start_sample` is the domain-coordinate loop start decided
-    // ONCE at the play launch (-1 = this session does not loop); the
-    // click-keep-alive reseek threads it back through play() so a mid-session
-    // trim edit cannot alter the running session's loop verdict.
-    // `playback_loop_wrap_seen` is the last loop_wrap_seq() the per-redraw
-    // drive observed; a change means the audio callback wrapped and the drive
-    // resyncs the predictor. It is never reset (loop_wrap_seq is monotonic and
-    // never reset either), so it stays valid across sessions.
-    int64_t  playback_loop_start_sample = -1;
-    uint64_t playback_loop_wrap_seen    = 0;
 
     // GUI-wide monospace text size in points (the font_size setting; 6..72,
     // default 11). A display preference, not engine input and not authoring
@@ -1454,11 +1474,13 @@ struct AppState {
     // Mirrored to/from the active tab's ViewState slot at the tab-swap
     // boundary in active_views.cpp (same pattern as viewport/zoom/playhead).
     // Trim is a region authored purely by the plain chip-row pointer drags
-    // (single-bound chip, chip-row inter-chip bridge/pair), the bare-x set arm
-    // (a live region sets the trim to it and KEEPS/re-syncs the highlight; no
-    // region is a silent no-op), and the Shift+X unset arm (clears both bounds)
-    // — it is NOT part of the selection system (no bound selection, no Tab stop,
-    // no Delete arm).
+    // (single-bound chip, chip-row inter-chip bridge/pair), the ctrl /
+    // ctrl+shift bound-set clicks, the bare-x set arm (a live region sets the
+    // trim to it and consumes the span; no region is a silent no-op), the
+    // Shift+X MAXIMIZER (writes the full window), and the settings editor's
+    // `:tab_X_trim_*=` commits — it is NOT part of the selection system (no
+    // bound selection, no Tab stop, no Delete arm). It is ALWAYS SET: the full
+    // ruling is at the TrimState store.
     TrimState trim;
 
     // Bottom-strip command prompt. Active only when a close / re-detect
@@ -1947,9 +1969,8 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 enum class TrimHit { None, Begin, End };
 
 // hit_test_trim_chip: return which trim bound's painted CHIP RECT (in the upper
-// top row) contains the press, or None. Early-outs to None unless the FULL pair
-// is set — the sole consumer (route_trim_chip_press) routes here only then (a
-// lone bound is gesture-inert), so both bounds are guaranteed present.
+// top row) contains the press, or None. Both bounds are always meaningful (the
+// trim window is always set since 2026-07-30), so it reads the pair directly.
 // AUTHORING views — the active tab's live pair, project-level in both 'W' and
 // 'P' views. Each chip is a textless SQUARE (flag_lane_w_px() wide, and as tall
 // — its lane's height is that same accessor) EDGE-ANCHORED on the bound's

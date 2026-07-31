@@ -56,11 +56,12 @@ struct SettingDescriptor {
     EngineField field;
     // Template default for non-engine kinds. nullptr means "no fixed
     // default": the four env-hash kinds stamp the CURRENT library hashes at
-    // template-build time instead (a fresh project starts matched). Every
-    // other non-engine descriptor carries a fixed default; the trims default
-    // to "-1", the unset spelling. For engine kinds, the template default
-    // comes from a default-constructed EngineSettings and this field is
-    // unused.
+    // template-build time, and the four TRIM kinds stamp the FULL WINDOW for
+    // the just-loaded source ([0, total-1] — the trim window is always set
+    // since 2026-07-30, and the source's frame count is not a compile-time
+    // constant). Every other non-engine descriptor carries a fixed default. For
+    // engine kinds, the template default comes from a default-constructed
+    // EngineSettings and this field is unused.
     const char* default_value;
 };
 
@@ -90,14 +91,14 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     // an explicit empty value (`audio_player=`) is the deliberate opt-out
     // meaning "no external player".
     { "audio_player",                SettingKind::AudioPlayerPath,      EngineField::Title,                   "audacious" },
-    { "tab_a_trim_begin",            SettingKind::TrimBegin_A,          EngineField::Title,                   "-1" },
-    { "tab_a_trim_end",              SettingKind::TrimEnd_A,            EngineField::Title,                   "-1" },
+    { "tab_a_trim_begin",            SettingKind::TrimBegin_A,          EngineField::Title,                   nullptr },
+    { "tab_a_trim_end",              SettingKind::TrimEnd_A,            EngineField::Title,                   nullptr },
     { "tab_a_read_only",             SettingKind::ReadOnly_A,           EngineField::Title,                   "false" },
     { "tab_a_viewport_start",        SettingKind::ViewportStart_A,      EngineField::Title,                   "0" },
     { "tab_a_zoom",                  SettingKind::ZoomLevel_A,          EngineField::Title,                   "2" },
     { "tab_a_playhead_cursor",       SettingKind::Playhead_A,           EngineField::Title,                   "0" },
-    { "tab_b_trim_begin",            SettingKind::TrimBegin_B,          EngineField::Title,                   "-1" },
-    { "tab_b_trim_end",              SettingKind::TrimEnd_B,            EngineField::Title,                   "-1" },
+    { "tab_b_trim_begin",            SettingKind::TrimBegin_B,          EngineField::Title,                   nullptr },
+    { "tab_b_trim_end",              SettingKind::TrimEnd_B,            EngineField::Title,                   nullptr },
     { "tab_b_read_only",             SettingKind::ReadOnly_B,           EngineField::Title,                   "false" },
     { "tab_b_viewport_start",        SettingKind::ViewportStart_B,      EngineField::Title,                   "0" },
     { "tab_b_zoom",                  SettingKind::ZoomLevel_B,          EngineField::Title,                   "2" },
@@ -119,8 +120,9 @@ constexpr SettingDescriptor kSettingsOrder[] = {
 // single byte definition for GUI-kind value serialization:
 // write_settings_file emits `key=<this>` and the settings editor's
 // autocomplete recall (recall_gui_setting_value) reads it back, so the two
-// can never diverge. An unset trim bound returns the literal `-1` (the
-// unset spelling the load schema decodes); every key emits a concrete value.
+// can never diverge. Every key emits a concrete value — the trim bounds
+// ALWAYS write actual frames now (the `-1` unset spelling died with the unset
+// state, 2026-07-30).
 // audio_player's empty value is the free-text no-player opt-out. Returns
 // std::nullopt only for EnginePassthrough (engine kinds serialize through
 // format_engine_field_value).
@@ -150,16 +152,12 @@ std::optional<std::string> format_nonengine_value(
         case SettingKind::AudioPlayerPath:
             return gui.audio_player;
         case SettingKind::TrimBegin_A:
-            if (!gui.tab_a.trim.has_begin) return std::string("-1");
             return format_authored_frame(gui.tab_a.trim.begin_frame);
         case SettingKind::TrimEnd_A:
-            if (!gui.tab_a.trim.has_end) return std::string("-1");
             return format_authored_frame(gui.tab_a.trim.end_frame);
         case SettingKind::TrimBegin_B:
-            if (!gui.tab_b.trim.has_begin) return std::string("-1");
             return format_authored_frame(gui.tab_b.trim.begin_frame);
         case SettingKind::TrimEnd_B:
-            if (!gui.tab_b.trim.has_end) return std::string("-1");
             return format_authored_frame(gui.tab_b.trim.end_frame);
         case SettingKind::ReadOnly_A:
             return std::string(gui.tab_a.read_only ? "true" : "false");
@@ -271,20 +269,31 @@ ViewState view_state_from_settings_tab(const SettingsFileTab& t) {
     v.zoom_level             = t.zoom;
     v.playhead_cursor_sample = t.playhead;
     v.read_only              = t.read_only;
-    v.trim.has_begin   = t.trim.has_begin;
+    // Both bounds are always meaningful in the schema and in the store, so the
+    // pair copies straight across (the unset mapping died 2026-07-30).
     v.trim.begin_frame = t.trim.begin_frame;
-    v.trim.has_end     = t.trim.has_end;
     v.trim.end_frame   = t.trim.end_frame;
     return v;
 }
 
-std::string format_default_settings_template(const std::string& stem) {
+std::string format_default_settings_template(const std::string& stem,
+                                             int64_t total_frames) {
     EngineSettings defaults{};
     defaults.title = default_render_title(stem);
     // First-open env-hash stamp: the template records the CURRENT library
     // hashes (the one place the current environment is written), so a fresh
     // project starts matched and the load-time mismatch prompt stays quiet.
     const RenderEnvHashes& env = compute_render_env_hashes();
+    // First-open trim stamp: BOTH tabs get the FULL window [0, total-1] for the
+    // just-loaded source — the trim window is always set (2026-07-30), and the
+    // full window is exactly what the retired `-1` unset spelling used to mean.
+    // The pair comes from the one seeding owner (full_trim_window, app_state.h)
+    // so the template and the load reset can never disagree; `total_frames` is
+    // the caller's loaded source total, which is why this is a dynamic stamp
+    // and not a fixed descriptor default.
+    const TrimState full = full_trim_window(total_frames);
+    const std::string trim_begin_text = format_authored_frame(full.begin_frame);
+    const std::string trim_end_text   = format_authored_frame(full.end_frame);
     std::string s;
     for (const auto& desc : kSettingsOrder) {
         if (desc.kind == SettingKind::EnginePassthrough) {
@@ -298,18 +307,28 @@ std::string format_default_settings_template(const std::string& stem) {
             s += desc.default_value;
             s += '\n';
         } else {
-            // The env-hash kinds are the only nullptr-default descriptors;
-            // every other non-engine descriptor carries a fixed default (the
-            // trims' is "-1", the unset spelling both products load).
+            // The nullptr-default descriptors are exactly the four env-hash
+            // kinds and the four trim kinds — the two dynamic stamps; every
+            // other non-engine descriptor carries a fixed default above.
+            const std::string* sv = nullptr;
             const char* v = nullptr;
             switch (desc.kind) {
                 case SettingKind::LibmHash:         v = env.libm.c_str(); break;
                 case SettingKind::LibmvecHash:      v = env.libmvec.c_str(); break;
                 case SettingKind::Fftw3Hash:        v = env.fftw3.c_str(); break;
                 case SettingKind::Fftw3ThreadsHash: v = env.fftw3_threads.c_str(); break;
+                case SettingKind::TrimBegin_A:
+                case SettingKind::TrimBegin_B:      sv = &trim_begin_text; break;
+                case SettingKind::TrimEnd_A:
+                case SettingKind::TrimEnd_B:        sv = &trim_end_text; break;
                 default: break;
             }
-            if (v != nullptr) {
+            if (sv != nullptr) {
+                s += desc.key;
+                s += '=';
+                s += *sv;
+                s += '\n';
+            } else if (v != nullptr) {
                 s += desc.key;
                 s += '=';
                 s += v;
@@ -334,9 +353,9 @@ bool write_settings_file(
             continue;
         }
         // Non-engine kinds share their value serialization with the settings
-        // editor's autocomplete recall, and every one emits a line (unset trim
-        // bounds return `-1`). nullopt is EnginePassthrough-only, already
-        // handled above; the guard below is defensive.
+        // editor's autocomplete recall, and every one emits a line (the trim
+        // bounds always write actual frames). nullopt is EnginePassthrough-only,
+        // already handled above; the guard below is defensive.
         std::optional<std::string> v = format_nonengine_value(desc.kind, gui);
         if (!v) continue;
         data += desc.key;
@@ -376,8 +395,8 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     eff_active.trim                   = app.trim;
 
     // desc->kind is non-EnginePassthrough here (guarded above), so
-    // format_nonengine_value always yields a value — an unset trim bound
-    // recalls as `-1` (`tab_a_trim_begin=-1`), matching what Ctrl+S writes.
+    // format_nonengine_value always yields a value — a trim bound recalls as its
+    // actual frame (`tab_a_trim_begin=0`), matching what Ctrl+S writes.
     const NonEngineSettingsSnapshot gui{
         eff_a, eff_b, app.follow_mode,
         app.active_audio_view, app.active_markers_view, app.active_tab_view,

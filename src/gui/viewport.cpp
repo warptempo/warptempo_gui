@@ -20,24 +20,26 @@ std::pair<int64_t, int64_t> Viewport::trim_range() const {
         // handle_trim_x's set-from-region) but Home/End needs to land
         // the playhead in the active target-frame domain. Build
         // the live warp_frame_map and forward-translate the source-domain
-        // trim boundaries; unset sides fall back to 0 / live total,
-        // matching compute_trim_samples' unset-side semantics for
-        // S-view.
+        // trim boundaries.
+        //
+        // THE FULL-WINDOW NORMALIZATION (architect 2026-07-30), the target-view
+        // half of the rule compute_trim_samples records in full: a full source
+        // pair [0, total-1] is the old unset state, so it returns the whole live
+        // domain {0, live_total} — mapping total-1 through the map instead would
+        // land an EXCLUSIVE end one target frame short and cost the last frame
+        // of the deformed timeline. The recognition is the shared owner
+        // trim_window_is_full (settings_file.h), asked on the SOURCE pair
+        // against the SOURCE total, exactly as the render orchestrators ask it.
         const int64_t live_total =
             live_total_frames(app, audio);
-        if (!app.trim.has_begin && !app.trim.has_end) {
+        if (trim_window_is_full(app.trim.begin_frame, app.trim.end_frame,
+                                audio.total_frames())) {
             return {0, live_total};
         }
-        int64_t begin_tgt = 0;
-        int64_t end_tgt   = live_total;
-        if (app.trim.has_begin) {
-            const int64_t begin_src = app.trim.begin_frame;
-            begin_tgt = source_frame_to_active_domain(app, audio, begin_src);
-        }
-        if (app.trim.has_end) {
-            const int64_t end_src = app.trim.end_frame;
-            end_tgt = source_frame_to_active_domain(app, audio, end_src);
-        }
+        int64_t begin_tgt =
+            source_frame_to_active_domain(app, audio, app.trim.begin_frame);
+        int64_t end_tgt =
+            source_frame_to_active_domain(app, audio, app.trim.end_frame);
         // Per-side clamp to the deformed timeline only — no ordering clamp:
         // inverted bounds pass through as authored, mirroring
         // compute_trim_samples' contract (crossed cannot rest, but

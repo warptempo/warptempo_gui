@@ -668,13 +668,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         viewport.zoom_out(); return;
     }
 
-    // x SETS the trim; Shift+X UNSETS it (architect 2026-07-25, splitting the
-    // old x-branch). Bare x is set-only: a live region trims to it (overwriting
-    // any existing bounds; the highlight is KEPT, re-coupled to the new window
-    // through the setter publish, which also DESELECTS — architect 2026-07-23,
-    // the deselect 2026-07-29; a DEGENERATE inverse-mapped span refuses instead of
-    // writing a pair the crossed-commit auto-clear would destroy), and with no
-    // region it is a silent no-op. Shift+X clears both bounds
+    // x SETS the trim; Shift+X MAXIMIZES it to the full window (architect
+    // 2026-07-25 splitting the old x-branch, re-posed 2026-07-30 under
+    // always-set). Bare x is set-only: a live region trims to it (overwriting
+    // the resting window; the span is then CONSUMED and the selection cleared —
+    // architect 2026-07-30 / 2026-07-29; a DEGENERATE inverse-mapped span refuses
+    // instead of writing a pair the crossed-commit reset would throw away), and
+    // with no region it is a silent no-op. Shift+X writes [0, total-1]
     // (handle_trim_shift_x). The playhead plays no part. Trim's pointer routes
     // are the PLAIN chip-row press (single via a chip-rect hit, pair via a bridge
     // press strictly between the two bound columns); trim is outside the
@@ -980,8 +980,9 @@ void GuiInputHandler::run_zoom_double_click_command() {
     // run_zoom_toggle_command so the bare `0` key keeps its working-zoom toggle
     // and `c` keeps its marker-jump working zoom. It only ever FRAMES a span,
     // never the fine working zoom. Span priority: a live region wins (over a
-    // trim); else a set trim completed to its extremes; else the whole song
-    // (full zoom-out). The framing is idempotent — a second double-click with
+    // trim); else a proper trim SUB-WINDOW; else the whole song
+    // (full zoom-out — which is also where the FULL trim window lands, it being
+    // the whole song). The framing is idempotent — a second double-click with
     // the viewport unchanged is a no-op (apply_zoom_to_start's current-vs-target
     // compare), while any pan/zoom between clicks re-frames.
     if (audio.total_frames() <= 0) return;
@@ -1004,10 +1005,14 @@ void GuiInputHandler::run_zoom_double_click_command() {
         lo = std::min(app.region.a_frame, app.region.b_frame);
         hi = std::max(app.region.a_frame, app.region.b_frame);
         margin = true;
-    } else if (app.trim.has_begin || app.trim.has_end) {
-        // A set trim completed to its extremes exactly as playback does (missing
-        // begin -> 0, missing end -> total; compute_trim_samples owns that in
-        // source frames). Express both bounds in the ACTIVE domain: source view
+    } else if (!trim_is_full_window(app.trim, audio.total_frames())) {
+        // A proper SUB-WINDOW frames itself. A FULL window is the old unset
+        // state — nothing to frame beyond the whole song — so it falls through
+        // to the whole-song arm exactly as an unset trim always did (the
+        // recognition is the shared owner trim_window_is_full,
+        // settings_file.h). The bounds come from compute_trim_samples, which
+        // owns the range in source frames. Express both bounds in the ACTIVE
+        // domain: source view
         // uses the source frames directly; target view maps each through
         // displayed_or_live_target_map — the same basis the flags, chips and
         // region paint at — which is identity on the empty source-view map, so

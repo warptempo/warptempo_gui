@@ -122,7 +122,10 @@ int main(int argc, char** argv) {
         es = sf.engine;
         // Both tabs are kept for the past-EOF guard below; the render applies
         // the active tab's trim, matching the GUI, which renders the trim of
-        // the tab persisted in active_tab_view.
+        // the tab persisted in active_tab_view. Both bounds are always
+        // meaningful — the `-1` unset spelling died 2026-07-30 (architect
+        // approval) and is now a load-fatal malformed value — so the pair is
+        // taken directly with no unset mapping.
         const char active_tab = sf.active_tab_view;
         trim = (active_tab == 'B') ? sf.tab_b.trim : sf.tab_a.trim;
     }
@@ -307,26 +310,32 @@ int main(int argc, char** argv) {
         }
     }
 
-    // --- trim plan. The trimmer requires the pair, and the orchestrators
-    // COMPLETE a lone bound to its extreme at this render boundary before
-    // calling: a missing begin becomes 0, a missing end becomes total_frames
-    // (the full source frame count, not total-1). (0, X) trims the tail at X;
-    // (X, total) trims the head at X (validate_trim_frames accepts e_src ==
-    // total). So any set bound reaches plan_trim, which validates the
-    // (possibly completed) pair first (validate_trim_frames stays the sole
-    // author of the trim-validity vocabulary). A refusal is NOT a render
+    // --- trim plan (architect approval 2026-07-30 for this freeze-adjacent
+    // edit). THE FULL WINDOW MEANS NO TRIM PLAN: the trim window is always a
+    // full ordered pair now, and a FULL window [0, total-1] is the old unset
+    // state — it renders UNTRIMMED, with no plan_trim call and no stderr line,
+    // because it is the documented default rather than a refusal. The
+    // recognition is the ONE shared owner trim_window_is_full (settings_file.h),
+    // the same question the GUI's two orchestrators ask, so the two products
+    // cannot disagree about what "untrimmed" means. The lone-bound completions
+    // that used to live here died with the lone bound.
+    //
+    // A proper SUB-WINDOW reaches plan_trim, which validates the pair first
+    // (validate_trim_frames stays the sole author of the trim-validity
+    // vocabulary). A refusal is NOT a render
     // failure: an unhonorable window falls back to the full, untrimmed
     // deliverable with one stderr line — trim_plan stays unset and every
     // downstream stage keys on trim_plan, so the fallback render is
     // byte-identical to a no-trim render of the same recipe (identical to
-    // do_render's wav-arm fallback). The lone→untrimmed fallback class is
-    // gone; the reachable refusals are (a) a lone END at frame 0 completing to
-    // (0, 0), and (b) a target span rounding below one output sample. ---
+    // do_render's wav-arm fallback). The one refusal reachable from a loaded
+    // sidecar is a target span rounding below one output sample; the crossed
+    // refusal stays as validate_trim_frames' breach guard (a crossed pair
+    // cannot rest in the GUI, and the CLI loads such a pair verbatim). ---
     std::optional<TrimPlan> trim_plan;
-    if (trim.has_begin || trim.has_end) {
-        const int64_t b = trim.has_begin ? trim.begin_frame : 0;
-        const int64_t e = trim.has_end
-            ? trim.end_frame : static_cast<int64_t>(total_frames);
+    if (!trim_window_is_full(trim.begin_frame, trim.end_frame,
+                             static_cast<int64_t>(total_frames))) {
+        const int64_t b = trim.begin_frame;
+        const int64_t e = trim.end_frame;
         auto plan = plan_trim(full_warp_frame_map, full_phase_reset_frame_map,
                               b, e, static_cast<int64_t>(total_frames),
                               N_fft, R_s);

@@ -36,12 +36,17 @@ std::optional<std::string> first_past_eof_wall_defect(
     const struct { const char* name; const SettingsTrim& t; } tabs[] = {
         {"tab A", tab_a_trim}, {"tab B", tab_b_trim},
     };
+    // Both bounds are always meaningful since the trim window became
+    // always-set, so both wall compares are unconditional — the has-bit guards
+    // died with SettingsTrim's unset machinery (architect approval 2026-07-30;
+    // the granted `-1` deletion in settings_file.{h,cpp} forces exactly these
+    // two conditions away, nothing else in this file changed).
     for (const auto& [name, t] : tabs) {
-        if (t.has_begin && t.begin_frame > total_frames - 1) {
+        if (t.begin_frame > total_frames - 1) {
             return std::string(name) + " trim begin past end of audio at " +
                    format_timestamp(t.begin_frame / sr_d);
         }
-        if (t.has_end && t.end_frame > total_frames - 1) {
+        if (t.end_frame > total_frames - 1) {
             return std::string(name) + " trim end past end of audio at " +
                    format_timestamp(t.end_frame / sr_d);
         }

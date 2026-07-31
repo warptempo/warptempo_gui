@@ -801,8 +801,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // protect and a live audition survives it. A claim that can still
         // REFUSE goes one step further (architect 2026-07-27): its stop sits
         // INSIDE the refusal gate, at the latest point before the mutation, so
-        // a claimed-but-refused press (a bound set with no resting pair or in a
-        // read-only tab, a chip-row consume with no trim window to highlight)
+        // a claimed-but-refused press (a bound set in a read-only tab or over a
+        // degenerate audio/geometry state)
         // is as playback-inert as an unclaimed one. That covers every modified
         // combination the branches below reject (alt on a marker, ctrl or alt
         // on an empty flag/triangle spot, ctrl+alt, shift+alt, ...), a
@@ -932,9 +932,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // Markerless top-strip ctrl-exact press: the CHIP ROW sets the
             // BEGIN trim bound at the click (ctrl is BEGIN and ctrl+shift is
             // END, the architect's intended pair;
-            // set_trim_bound_at_click refuses read-only AND a missing pair
-            // silently — the clicks ADJUST an existing window, never create
-            // one — and, being a SETTER, deselects past those refusals). EVERY
+            // set_trim_bound_at_click refuses a read-only tab silently — the
+            // clicks ADJUST the window that always rests, they never create one
+            // — and, being a SETTER, deselects past its refusals). EVERY
             // other lane — an empty flag or triangle
             // lane included — is a strict no-op, falling through to the return
             // below (the ctrl-click clear on an empty flag/triangle spot is
@@ -948,8 +948,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 const GuiRect chip_row = top_upper_row_area(app);
                 if (y >= chip_row.y && y < chip_row.y + chip_row.h) {
                     // NO stop here: the bound set has its own refusals
-                    // (read-only, no resting pair, a degenerate audio/geometry
-                    // state), and a refused press changes nothing, so there is
+                    // (read-only, a degenerate audio/geometry state), and a
+                    // refused press changes nothing, so there is
                     // nothing for a stop to protect. The stop lives INSIDE
                     // set_trim_bound_at_click, past every refusal and
                     // immediately ahead of the bound write.
@@ -979,9 +979,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
         // Ctrl+Shift-exact: the chip row is its ONE claim — set the END trim
         // bound at the click (ctrl is BEGIN, ctrl+shift is END;
-        // set_trim_bound_at_click refuses read-only AND a missing pair
-        // silently — adjust-only — and deselects as a SETTER past those
-        // refusals). Everywhere else Ctrl+Shift stays a strict no-op,
+        // set_trim_bound_at_click refuses a read-only tab silently — the
+        // adjust-only pair gate died with the unset state 2026-07-30, a full
+        // pair always resting — and deselects as a SETTER past its refusals). Everywhere else Ctrl+Shift stays a strict no-op,
         // playback included, falling to the return below.
         if (ctrl && shift && !alt && inside_top) {
             const GuiRect chip_row = top_upper_row_area(app);
@@ -1792,7 +1792,7 @@ void GuiInputHandler::finalize_active_drags() {
     // marker_drag.h.)
     // The trim drag keeps its live bounds and runs the full commit tail (the
     // release column-snap, auto_clear_crossed_trim, the repaint/trigger, the
-    // setter's publish). TRIM IS HISTORY-LESS BY RULING, so these bounds are not
+    // setter's deselect). TRIM IS HISTORY-LESS BY RULING, so these bounds are not
     // undoable — that is the standing trim gap (every trim gesture commits
     // outside undo), not something this force-end introduces.
     if (app.trim_drag.active) commit_trim_drag();

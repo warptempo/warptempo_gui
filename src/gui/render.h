@@ -1143,8 +1143,10 @@ double displayed_trim_ms(int64_t frame,
 // fully onscreen.
 GuiRect trim_chip_rect(bool is_begin, int strip_x, int col, GuiRect row);
 
-// Draws the WAVEFORM-AREA portion of the trim begin/end boundary stems. Each set
-// bound (gated by `has_begin` / `has_end`) paints a 1px vertical stem at its
+// Draws the WAVEFORM-AREA portion of the trim begin/end boundary stems. BOTH
+// bounds always paint (the trim window is always set since 2026-07-30 — the
+// per-bound has-gates died with the unset state, and at the full window the two
+// stems stand on the song edges): a 1px vertical stem at its
 // domain-frame column, spanning the WAVEFORM AREA (top at `waveform_area.y`, down
 // to the waveform bottom). Unlike marker stems (waveform-only), the trim stem
 // ALSO has a strip-crossing segment above it — from the chip's bottom edge down
@@ -1166,9 +1168,7 @@ void render_trim_stems(cairo_t* cr,
                        GuiRect waveform_area,
                        long long viewport_start_sample,
                        long long viewport_end_sample,
-                       const TrimRange& trim,
-                       bool has_begin,
-                       bool has_end);
+                       const TrimRange& trim);
 
 // Draws the begin/end trim-boundary chips in the TRIM CHIP LANE, plus the
 // strip-crossing portion of their stems and the inter-chip bridge band. The
@@ -1178,7 +1178,8 @@ void render_trim_stems(cairo_t* cr,
 // paint and hit take the band from ONE owner and cannot drift; nothing in here
 // re-derives the lane's y from the row heights above it. Only the band's y/h
 // are consumed (the chip width is the flag width, the horizontal origin is
-// top_strip_area.x). Each set bound (gated by `has_begin` / `has_end`) paints a
+// top_strip_area.x). BOTH bounds always paint (the window is always set since
+// 2026-07-30; only the viewport cull can suppress a chip): each is a
 // TEXTLESS SQUARE (flag_lane_w_px() on both axes — the chip lane's height is
 // that same accessor, so a chip is shorter than a marker flag and can never go
 // non-square; no glyph, no triangle — Ableton's loop bounds carry none),
@@ -1199,7 +1200,7 @@ void render_trim_stems(cairo_t* cr,
 // system). Below each chip, a 1px stem segment runs from the chip's bottom edge
 // down to the waveform top, meeting the render_trim_stems waveform segment there
 // as one unbroken line at the bound column.
-// With BOTH bounds set, the BRIDGE BAR fills the GAP between the two
+// The BRIDGE BAR fills the GAP between the two
 // edge-anchored chips — the visual affordance of the pair (bridge) drag's grab
 // band, and the one "this is the trim window" signal. It occupies the trim-chip
 // lane's vertical band and is the family's
@@ -1220,9 +1221,7 @@ void render_trim_flags(cairo_t* cr,
                        GuiRect waveform_area,
                        long long viewport_start_sample,
                        long long viewport_end_sample,
-                       const TrimRange& trim,
-                       bool has_begin,
-                       bool has_end);
+                       const TrimRange& trim);
 
 // Paints an inert full-width ring around a single strip row's bounding box:
 // 1px opaque kLine edges, antialias off — a structural rule, the same color the

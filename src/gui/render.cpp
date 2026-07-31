@@ -946,12 +946,9 @@ void render_trim_stems(cairo_t* cr,
                        GuiRect waveform_area,
                        long long viewport_start_sample,
                        long long viewport_end_sample,
-                       const TrimRange& trim,
-                       bool has_begin,
-                       bool has_end) {
+                       const TrimRange& trim) {
     if (waveform_area.w <= 0 || waveform_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
-    if (!has_begin && !has_end) return;
 
     const double span = static_cast<double>(viewport_end_sample -
                                             viewport_start_sample);
@@ -985,8 +982,11 @@ void render_trim_stems(cairo_t* cr,
         cairo_stroke(cr);
     };
 
-    if (has_begin) paint_bound(trim.begin);
-    if (has_end)   paint_bound(trim.end);
+    // Both bounds always paint: the window is always set (2026-07-30), so the
+    // per-bound has-gates are gone. At the full window the stems stand on the
+    // song edges.
+    paint_bound(trim.begin);
+    paint_bound(trim.end);
 
     cairo_restore(cr);
 }
@@ -997,12 +997,9 @@ void render_trim_flags(cairo_t* cr,
                        GuiRect waveform_area,
                        long long viewport_start_sample,
                        long long viewport_end_sample,
-                       const TrimRange& trim,
-                       bool has_begin,
-                       bool has_end) {
+                       const TrimRange& trim) {
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
-    if (!has_begin && !has_end) return;
 
     const double span = static_cast<double>(viewport_end_sample -
                                             viewport_start_sample);
@@ -1051,7 +1048,7 @@ void render_trim_flags(cairo_t* cr,
 
     cairo_save(cr);
 
-    // With both bounds set, the BRIDGE BAR fills the trim-chip-lane GAP between
+    // The BRIDGE BAR fills the trim-chip-lane GAP between
     // the two edge-anchored chips: from the begin chip's inner (right) edge to the
     // end chip's inner (left) edge. The chips edge-anchor ON their bound columns
     // (begin left-edge, end right-edge, bodies facing inward), so this gap is the
@@ -1081,7 +1078,7 @@ void render_trim_flags(cairo_t* cr,
     // floating in a blank strip or the gutter. An end bound at EOF (T-1) stays
     // in_viewport, so it uses the clamped column (a ~1px seam vs the raw column,
     // accepted), preserving the visible EOF chip's connection.
-    if (has_begin && has_end && waveform_area.w > 0) {
+    if (waveform_area.w > 0) {
         const TrimBridgeGap gap =
             trim_bridge_gap(bc, ec, chip_w, waveform_area.w);
         // The gap interval is RAW (offscreen sentinels intact — they carry the
@@ -1147,8 +1144,8 @@ void render_trim_flags(cairo_t* cr,
             cairo_line_to(cr, x_px, static_cast<double>(wave_top));
             cairo_stroke(cr);
         };
-        if (has_begin) paint_strip_stem(bc);
-        if (has_end)   paint_strip_stem(ec);
+        paint_strip_stem(bc);
+        paint_strip_stem(ec);
         cairo_restore(cr);
     }
 
@@ -1166,9 +1163,9 @@ void render_trim_flags(cairo_t* cr,
         bool is_begin;
     };
     std::vector<TrimChip> chips;
-    if (has_begin && bc.in_viewport)
+    if (bc.in_viewport)
         chips.push_back({begin_col, true});
-    if (has_end && ec.in_viewport)
+    if (ec.in_viewport)
         chips.push_back({end_col, false});
     std::sort(chips.begin(), chips.end(),
               [](const TrimChip& a, const TrimChip& b) {

@@ -118,10 +118,10 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
 TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y) {
     // Trim bounds hit-test in the AUTHORING views against the active A/B tab's
-    // live bounds. The sole consumer (route_trim_chip_press) routes here only
-    // with the FULL pair set — a lone bound is gesture-inert —
-    // so both bounds are guaranteed present past this early-out.
-    if (!(app.trim.has_begin && app.trim.has_end)) return TrimHit::None;
+    // live bounds. Both bounds are always meaningful (the unset state died
+    // 2026-07-30 — a full ordered pair always rests), so this reads them
+    // directly; the pair gate that used to stand here is gone with the state it
+    // tested.
     const int64_t begin_frame = app.trim.begin_frame;
     const int64_t end_frame   = app.trim.end_frame;
 

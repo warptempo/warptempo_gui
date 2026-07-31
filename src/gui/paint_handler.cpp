@@ -600,7 +600,9 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 // rect carries its real screen x/y).
 void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
                                  const GuiRect& top_strip) {
-    if (!app.trim.has_begin && !app.trim.has_end) return;
+    // No trim gate: the window is ALWAYS set (2026-07-30), so the chips, the
+    // stems and the bridge bar simply always paint — at the full window the
+    // chips rest on the song edges and the bar spans between them.
     if (area.w <= 0 || area.h <= 0) return;
     if (top_strip.w <= 0 || top_strip.h <= 0) return;
 
@@ -620,15 +622,10 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // Per-bound displayed-domain positions through the shared mapping owner
     // (displayed_trim_ms returns an integral-valued double; the int64 round
     // trip through TrimRange is exact, so trim_bound_column sees the same
-    // value the hit sites pass). Unset bounds stay 0 — the has-bits gate every
-    // consumer, so the value is never read.
-    TrimRange trim{0, 0};
-    if (app.trim.has_begin)
-        trim.begin = static_cast<int64_t>(
-            displayed_trim_ms(app.trim.begin_frame, map_arg));
-    if (app.trim.has_end)
-        trim.end = static_cast<int64_t>(
-            displayed_trim_ms(app.trim.end_frame, map_arg));
+    // value the hit sites pass). Both bounds are always meaningful.
+    TrimRange trim{
+        static_cast<int64_t>(displayed_trim_ms(app.trim.begin_frame, map_arg)),
+        static_cast<int64_t>(displayed_trim_ms(app.trim.end_frame, map_arg))};
 
     // Waveform rect for the renderers: real screen origin/height, width =
     // basis.area_w (the committed item width — the column-mapping denominator
@@ -649,11 +646,9 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // read, so the painted band and the clickable band have ONE owner and
     // cannot drift if the lanes above the chip row ever change.
     render_trim_stems(cr, wave_rect,
-                      basis.vp_start_frame, basis.vp_end_frame,
-                      trim, app.trim.has_begin, app.trim.has_end);
+                      basis.vp_start_frame, basis.vp_end_frame, trim);
     render_trim_flags(cr, top_strip, top_upper_row_area(app), wave_rect,
-                      basis.vp_start_frame, basis.vp_end_frame,
-                      trim, app.trim.has_begin, app.trim.has_end);
+                      basis.vp_start_frame, basis.vp_end_frame, trim);
 }
 
 // -- GuiPaintHandler::paint_selected_stem --------------------------------

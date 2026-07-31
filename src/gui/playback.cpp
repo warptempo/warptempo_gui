@@ -59,20 +59,6 @@ struct GuiPlayback::Impl {
     // thread. end_sample is exclusive.
     std::atomic<int64_t> end_sample{0};
 
-    // Buffer-local loop start, or -1 for no looping. Set in the same publish
-    // block as end_sample (play()), cleared to -1 wherever end_sample resets
-    // to 0 (init / rebind_buffer). When >= 0 the audio callback wraps the read
-    // position back here instead of ending when the cursor reaches end_sample
-    // (a raw cut, clicks accepted by ruling — no crossfade/declick). play()
-    // guarantees the window [loop_start, end_sample) is at least 2 frames wide.
-    std::atomic<int64_t> loop_start{-1};
-
-    // Monotonic loop-wrap counter, bumped (release) by the audio callback once
-    // per wrap. The main thread polls it (acquire) as a resync trigger; it is
-    // never reset (init leaves the fresh 0), so a reader's stored "seen" value
-    // stays valid across sessions and only differs after a real wrap.
-    std::atomic<uint64_t> loop_wrap_seq{0};
-
     // Mutable playback state.
     std::atomic<int64_t> cursor{0};
     // Free-running cursor predictor anchor. The main thread extrapolates
@@ -130,7 +116,6 @@ void fill_output(GuiPlayback::Impl& impl,
         : speed * static_cast<double>(impl.source_rate) / static_cast<double>(graph_rate);
     const int64_t end         = impl.end_sample.load(std::memory_order_relaxed);
     const int64_t total       = impl.total_frames;
-    const int64_t loop_start  = impl.loop_start.load(std::memory_order_relaxed);
 
     if (increment == 0.0) {
         for (int c = 0; c < channel_count; ++c) {
@@ -152,37 +137,22 @@ void fill_output(GuiPlayback::Impl& impl,
         impl.fractional_cursor = static_cast<double>(pending);
     }
 
-    bool     natural_end = false;
-    uint64_t wraps       = 0;
-    // Running fractional source position. Re-anchorable: on a loop wrap it is
-    // re-based into the loop window in place, so the post-loop
-    // fractional_cursor is derived from the ACTUAL last read position plus
-    // increment (below), not from a `base + n*increment` formula that a wrap
-    // would invalidate. This keeps drift-free advance across one or more wraps
-    // in a single buffer.
+    bool natural_end = false;
+    // Running fractional source position — monotonically advancing: with
+    // looping removed (architect 2026-07-30) there is no re-anchoring inside
+    // this loop, so the position is a plain drift-free accumulation of
+    // `increment` from the last buffer's carry.
     double pos = impl.fractional_cursor;
 
     jack_nframes_t n = 0;
     for (; n < frame_count; ++n) {
-        double  floor_pos = std::floor(pos);
-        int64_t src_floor = static_cast<int64_t>(floor_pos);
-        // Resolve the read window for this output frame: while the position is
-        // at or past the end (or total), either wrap it back into the loop
-        // window (looping) or end (non-looping). The while re-validates after
-        // a wrap so a window narrower than the increment still terminates
-        // (each wrap subtracts end-loop_start >= 2 from pos, so pos strictly
-        // decreases; play() guarantees the >= 2-frame width).
-        while (src_floor >= end || src_floor >= total) {
-            if (loop_start < 0) { natural_end = true; break; }
-            // Loop wrap (raw cut). Carry the overshoot past `end` into the
-            // loop start for continuous-time resampling continuity; the sample
-            // CONTENT jumps at the seam (the accepted click).
-            pos = static_cast<double>(loop_start) + (pos - static_cast<double>(end));
-            ++wraps;
-            floor_pos = std::floor(pos);
-            src_floor = static_cast<int64_t>(floor_pos);
-        }
-        if (natural_end) {
+        const double  floor_pos = std::floor(pos);
+        const int64_t src_floor = static_cast<int64_t>(floor_pos);
+        // Reaching or passing the window end (or the buffer total) ends the
+        // session — the NATURAL END, the only terminal this fill has now that
+        // the loop-wrap arm is gone. Fill the remainder with silence and stop.
+        if (src_floor >= end || src_floor >= total) {
+            natural_end = true;
             for (int c = 0; c < channel_count; ++c) {
                 std::memset(channel_buffers[c] + n,
                             0,
@@ -199,7 +169,7 @@ void fill_output(GuiPlayback::Impl& impl,
         const bool ceil_ok = (src_ceil < end && src_ceil < total);
         const float* sp_ceil = ceil_ok
             ? impl.samples + static_cast<size_t>(src_ceil) * src_channels
-            : sp_floor;  // last-sample fallback (loop seam included)
+            : sp_floor;  // last-sample fallback
 
         for (int c = 0; c < channel_count; ++c) {
             const double a = sp_floor[c];
@@ -210,19 +180,13 @@ void fill_output(GuiPlayback::Impl& impl,
         pos += increment;
     }
 
-    // `pos` is now the actual last read position plus one increment, with any
-    // wraps already folded in — the drift-free next-buffer starting position.
+    // `pos` is now the actual last read position plus one increment — the
+    // drift-free next-buffer starting position.
     impl.fractional_cursor = pos;
     int64_t new_cur = static_cast<int64_t>(std::floor(pos));
     if (new_cur > end)   new_cur = end;
     if (new_cur > total) new_cur = total;
-    // Publish the post-wrap cursor BEFORE the wrap-seq bump so a main-thread
-    // reader that observes the bump (acquire) also observes this cursor store,
-    // and its resync anchors to the wrapped position rather than the stale end.
     impl.cursor.store(new_cur, std::memory_order_relaxed);
-    if (wraps != 0) {
-        impl.loop_wrap_seq.fetch_add(wraps, std::memory_order_release);
-    }
     if (natural_end) {
         impl.playing.store(false, std::memory_order_release);
     }
@@ -295,7 +259,6 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
     impl_->anchor_sample.store(0, std::memory_order_relaxed);
     impl_->anchor_ns.store(0, std::memory_order_relaxed);
     impl_->end_sample.store(0, std::memory_order_relaxed);
-    impl_->loop_start.store(-1, std::memory_order_relaxed);
     impl_->speed_x1000.store(1000, std::memory_order_relaxed);
     impl_->playing.store(false, std::memory_order_relaxed);
     impl_->pending_start.store(-1, std::memory_order_relaxed);
@@ -431,8 +394,7 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
     return true;
 }
 
-void GuiPlayback::play(int64_t start_sample, int64_t end_sample,
-                       int64_t loop_start_sample) {
+void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
     if (!impl_->client_active) return;
     if (!impl_->samples || impl_->total_frames <= 0) return;
     // Domain -> buffer-local at the API boundary (playback.h head comment).
@@ -445,18 +407,6 @@ void GuiPlayback::play(int64_t start_sample, int64_t end_sample,
     if (start_sample >= impl_->total_frames) return;
     if (end_sample > impl_->total_frames) end_sample = impl_->total_frames;
     if (end_sample <= start_sample) return;
-
-    // Loop start: translate and clamp exactly like the bounds, then require at
-    // least 2 frames before end (defensive — the Space gates already refuse
-    // sub-2-frame sessions). A window narrower than that, or a loop start that
-    // lands at/after end, disables looping (-1). Computed here so the store
-    // below joins the same publish block as end_sample.
-    int64_t loop_local = -1;
-    if (loop_start_sample >= 0) {
-        loop_local = loop_start_sample - impl_->domain_offset;
-        if (loop_local < 0) loop_local = 0;
-        if (loop_local > end_sample - 2) loop_local = -1;
-    }
 
     // The range and anchor stores below are relaxed; they are published to the
     // audio callback by the release store on `playing` at the end of this
@@ -471,7 +421,6 @@ void GuiPlayback::play(int64_t start_sample, int64_t end_sample,
     // a consistent snapshot immediately (before the next buffer runs).
     impl_->cursor.store(start_sample, std::memory_order_relaxed);
     impl_->end_sample.store(end_sample, std::memory_order_relaxed);
-    impl_->loop_start.store(loop_local, std::memory_order_relaxed);
     impl_->pending_start.store(start_sample, std::memory_order_relaxed);
 
     // Anchor the predictor to start_sample directly: the audio thread may
@@ -534,11 +483,6 @@ void GuiPlayback::set_speed(float speed) {
 
 bool GuiPlayback::is_playing() const {
     return impl_->playing.load(std::memory_order_relaxed);
-}
-
-uint64_t GuiPlayback::loop_wrap_seq() const {
-    if (!impl_) return 0;
-    return impl_->loop_wrap_seq.load(std::memory_order_acquire);
 }
 
 int64_t GuiPlayback::cursor() const {
@@ -658,7 +602,6 @@ void GuiPlayback::rebind_buffer(const float* samples, int64_t total_frames,
     impl_->domain_offset = domain_offset;
     impl_->cursor.store(0, std::memory_order_relaxed);
     impl_->end_sample.store(0, std::memory_order_relaxed);
-    impl_->loop_start.store(-1, std::memory_order_relaxed);
     impl_->pending_start.store(-1, std::memory_order_relaxed);
     impl_->fractional_cursor = 0.0;
     impl_->anchor_sample.store(0, std::memory_order_relaxed);

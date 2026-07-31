@@ -51,7 +51,8 @@ bool stat_artifact_identity(const std::string& path, ArtifactStatIdentity& out);
 // post-upgrade recipe); source path + source file identity; sample rate; every
 // EngineSettings field (full-recipe key — the exhaustive decision switch in
 // the serializer is the single drift guard); the trim
-// bounds (frame values normalized to 0 when their bound is unset); and the
+// bounds (a NOT-trimmed render — the full window — writing the pre-always-set
+// unset bytes, so it hashes like a pre-arc untrimmed render); and the
 // RESOLVED marker state — the exact engine inputs, not the raw stores:
 // resolve_warp_markers_for_render's survivors (per marker: frame, resolved
 // tempo cents, typed scale, label def/ref — precisely the MarkerForRender
@@ -74,8 +75,14 @@ std::vector<uint8_t> render_fingerprint(
     const std::vector<MarkerForRender>& resolved_warp_markers,
     const std::vector<double>& phase_reset_source_frames,
     const EngineSettings& settings,
-    bool has_trim_begin, int64_t trim_begin_frame,
-    bool has_trim_end,   int64_t trim_end_frame);
+    // Trim: `trimmed` is false for the FULL window [0, total-1], which renders
+    // untrimmed and therefore hashes IDENTICALLY to the pre-2026-07-30 unset
+    // state (has-byte 0 + f64 0.0 on both sides), keeping the default window's
+    // renders reuse-identical with pre-arc untrimmed ones. It is true for a
+    // proper sub-window, whose two frames serialize exactly as a set pair always
+    // did. The caller owns the recognition (trim_window_is_full, settings_file.h
+    // — one owner, GUI and CLI alike); this function is pure serialization.
+    bool trimmed, int64_t trim_begin_frame, int64_t trim_end_frame);
 
 std::string fingerprint_sidecar_path(const std::string& wav_path);
 

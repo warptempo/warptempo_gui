@@ -267,32 +267,12 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         if (band.read_only) {
             reject("tab is read-only; trim is not settable here"); return true;
         }
-        // A `-1` value clears that bound (the unset file form); a blank value
-        // fails the validator and red-flashes, so it never reaches here.
-        if (gv.trim_unset) {
-            TrimState& t = active ? app.trim : band.trim;
-            bool& has = is_begin ? t.has_begin : t.has_end;
-            if (!has) { unchanged(); return true; }
-            int64_t& fr = is_begin ? t.begin_frame : t.end_frame;
-            has = false;
-            fr = 0;
-            if (active) {
-                viewport.invalidate_waveform_area();
-                target_render.trigger();
-                // THE SETTER'S DESELECT (architect 2026-07-30, "a typed commit
-                // is a commit") — the shape the chip bound-set click uses, and
-                // the sibling precedent is eight lines up, where
-                // playhead_cursor= already clears selection and region under the
-                // architect's no-exemptions rule. It publishes no highlight (the
-                // trim-window region retired the same day). Placed past every
-                // refusal this arm carries (read-only
-                // tab, schema, the unchanged early return), so a refused commit
-                // deselects nothing. LIVE ARM ONLY — see the parked-band note in
-                // the sibling arm below.
-                selection.clear_selection();
-            }
-            applied(); return true;
-        }
+        // THE `-1` UNSET ARM IS GONE (architect approval 2026-07-30): the trim
+        // window is always set, so there is nothing to unset. A typed `-1` now
+        // fails the SHARED validator (validate_gui_setting, settings_file.h —
+        // the same grammar the whole-file load runs, so a spelling is loadable
+        // iff it commits) and red-flashes like any other invalid value, with no
+        // second spelling of the refusal here. Shift+X is the maximizer.
         const int64_t v = gv.i64;
         // Per-bound walls, exactly the load guard's compare: both bounds
         // 0..EOF-1, the unified inclusive [0, total-1] authored domain.
@@ -302,33 +282,34 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             reject("trim bound is past its wall"); return true;
         }
         TrimState& t = active ? app.trim : band.trim;
-        bool& has = is_begin ? t.has_begin : t.has_end;
         int64_t& fr = is_begin ? t.begin_frame : t.end_frame;
-        if (has && fr == v) { unchanged(); return true; }
-        has = true;
+        if (fr == v) { unchanged(); return true; }
         fr = v;
         if (active) {
             // The same commit tail trim gestures use, including
             // auto_clear_crossed_trim (a bound committed onto/across its
-            // partner destroys both, silently). History-less, like all trim.
+            // partner resets the pair to the song edges, silently).
+            // History-less, like all trim.
             input->auto_clear_crossed_trim();
             viewport.invalidate_waveform_area();
             target_render.trigger();
             // THE SETTER'S DESELECT after the bound commit + auto_clear
-            // (architect 2026-07-30). Same shape and same reason as the unset arm
-            // above; past every refusal (read-only tab, the wall range check,
-            // the unchanged early return), so a refused commit deselects nothing.
+            // (architect 2026-07-30). Past every refusal (read-only tab, the
+            // wall range check, the unchanged early return), so a refused commit
+            // deselects nothing.
             selection.clear_selection();
-        } else if (t.has_begin && t.has_end && t.end_frame <= t.begin_frame) {
+        } else if (!trim_is_full_window(t, total) &&
+                   t.end_frame <= t.begin_frame) {
             // Inactive band: the load convention — a crossed/equal resulting
-            // pair clears both bounds, one stderr line.
-            t.has_begin = false;
-            t.has_end = false;
-            t.begin_frame = 0;
-            t.end_frame = 0;
+            // pair RESETS both bounds to the song edges, one stderr line. The
+            // full-window recognition runs first so a one-frame source's
+            // canonical [0, 0] is not read as crossed (the same precedence
+            // auto_clear_crossed_trim and the render orchestrators use).
+            t = full_trim_window(total);
             std::fprintf(stderr,
                 "warptempo_gui: tab_%c trim crossed (end <= begin); both "
-                "bounds cleared\n", (tab_char == 'B') ? 'b' : 'a');
+                "bounds reset to the song edges\n",
+                (tab_char == 'B') ? 'b' : 'a');
         }
         applied(); return true;
     }
@@ -549,7 +530,7 @@ void GuiSettingsEditor::autocomplete_value() {
     // playback_speed, follow, font_size, audio_player, per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S would write, so recall and save never diverge.
-    // An unset optional trim recalls as `-1` (`tab_a_trim_begin=-1`).
+    // A trim bound recalls as its actual frame (`tab_a_trim_begin=0`).
     // Only a truly unknown key is not recallable.
     std::optional<std::string> cur =
         format_engine_setting_value(app.engine_settings, key);

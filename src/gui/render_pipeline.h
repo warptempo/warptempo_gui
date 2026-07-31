@@ -33,9 +33,9 @@ enum class RenderOutcome { Success, Failed, Cancelled };
 // sidecar, and keeping the block self-contained keeps the writer trivial.
 struct AuthoringSnapshot {
     char    active_tab        = 'A';
-    bool    has_trim_begin    = false;
+    // The commit tab's trim pair, always a full ordered pair (the unset state
+    // and its has-bits died 2026-07-30).
     int64_t trim_begin_frame  = 0;     // source frames
-    bool    has_trim_end      = false;
     int64_t trim_end_frame    = 0;     // source frames
 
     // Dispatch-time session prefs the standard .settings schema needs and
@@ -114,9 +114,10 @@ struct RenderRequest {
     // (plan_trim: cut source view, translated maps, output crop; a plan
     // refusal falls back to the full, untrimmed deliverable with one stderr
     // line). Trim is a render window, never an artifact shape.
-    bool    has_trim_begin = false;
+    // Always a full ordered pair (the unset state died 2026-07-30). A FULL
+    // window [0, total-1] means "render untrimmed": do_render builds no trim
+    // plan at all for it, so plan_trim only ever sees proper sub-windows.
     int64_t trim_begin_frame = 0;    // source frames
-    bool    has_trim_end   = false;
     int64_t trim_end_frame   = 0;    // source frames
 
     AuthoringSnapshot authoring;
@@ -189,7 +190,7 @@ RenderRequest build_render_request(std::string source_audio_path,
                                    std::vector<GuiWarpMarker> warp_markers,
                                    std::vector<GuiPhaseResetMarker> phase_resets,
                                    EngineSettings engine_settings,
-                                   bool has_trim_begin, int64_t trim_begin_frame,
-                                   bool has_trim_end,   int64_t trim_end_frame,
+                                   int64_t trim_begin_frame,
+                                   int64_t trim_end_frame,
                                    std::string batch_folder = {},
                                    std::string batch_basename = {});

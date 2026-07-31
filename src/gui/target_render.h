@@ -148,21 +148,22 @@ private:
     // (no-trim) render; with a surviving trim, the trim-begin source frame
     // mapped through the target-view warp_frame_map (the engine renders
     // only the trim range, so buffer frame 0 is the trim's target-frame
-    // start). A lone bound is COMPLETED to its extreme at the render boundary
-    // — (0, X) or (X, total) — and renders its window like any pair, so a lone
-    // bound no longer forces a fallback; trim_fell_back is true for one of the
-    // two reachable refusal fallbacks: "trim end at or before trim begin"
-    // (reachable exactly via a lone END at frame 0 completing to (0, 0)) or a
-    // surviving pair/completed window whose target span rounds below one output
-    // sample — either way the render is the FULL, untrimmed deliverable. This
+    // start). The FULL window [0, total-1] renders untrimmed and anchors 0
+    // exactly like the old unset state, and that is NOT a fallback —
+    // trim_fell_back stays false there. It is true only for a proper SUB-WINDOW
+    // that plan_trim refuses: a target span rounding below one output sample
+    // (reachable), or "trim end at or before trim begin" (a breach shape now —
+    // a sub-window cannot rest crossed) — either way the render is the FULL,
+    // untrimmed deliverable. This
     // verdict is the one GUI-thread read that must mirror the orchestrators' own
     // completion-then-refusal outcome, and it cannot see the worker's plan — so
     // compute_buffer_start_frame_for re-derives the
     // survival test from the same exact-double images through the same map,
     // once, and the anchor and the diagnostic both consume that single
     // result (no second arithmetic implementation). fallback_reason names
-    // WHICH fallback the reuse-rung diagnostic reports — the crossed (0, 0) case
-    // or a sub-sample span — so its line mirrors the orchestrators' vocabulary
+    // WHICH fallback the reuse-rung diagnostic reports — the crossed pair (a
+    // breach shape now that a sub-window can never rest crossed) or a sub-sample
+    // span — so its line mirrors the orchestrators' vocabulary
     // byte-for-byte; it points at a string literal (static lifetime), set
     // alongside trim_fell_back, and stays null when the render is trimmed or
     // full.
@@ -172,20 +173,20 @@ private:
         const char* fallback_reason = nullptr;
     };
 
-    // Compute the verdict above for an explicit trim pair. Takes BOTH
-    // bounds because it must mirror the orchestrators' ambiguous-trim
-    // fallbacks: a lone bound completes to its extreme and renders that
-    // window like any pair, so only the two reachable refusals still render
-    // the FULL deliverable — the completed (0, 0) crossed case (a lone END
-    // at frame 0) and a (possibly completed) pair whose target span rounds
-    // below one output sample — anchor 0 in both, not the begin's target
-    // image (rule mirror at the definition). No buffer-frames gate: callers
-    // stamp the origin at production time, when the buffer may still be
-    // empty. The stamp rests in dispatched_buffer_start_frame_ below and
-    // travels to GuiPlayback with each bind.
-    BufferStartVerdict compute_buffer_start_frame_for(bool has_begin,
-                                                      int64_t begin_frame,
-                                                      bool has_end,
+    // Compute the verdict above for an explicit trim pair. Takes BOTH bounds
+    // because it must mirror the orchestrators' full-window translation and
+    // their ambiguous-trim fallback: a FULL window [0, total-1] renders
+    // untrimmed and anchors 0 with NO fallback flagged (it is the documented
+    // default, not a refusal — recognized FIRST, ahead of the fallback
+    // diagnostics, so a one-frame source's canonical [0, 0] cannot be misread as
+    // crossed), and a proper sub-window anchors its begin's target image unless
+    // it takes the one reachable refusal — a target span rounding below one
+    // output sample — which anchors 0 too (rule mirror at the definition). No
+    // buffer-frames gate: callers stamp the origin at production time, when the
+    // buffer may still be empty. The stamp rests in
+    // dispatched_buffer_start_frame_ below and travels to GuiPlayback with each
+    // bind.
+    BufferStartVerdict compute_buffer_start_frame_for(int64_t begin_frame,
                                                       int64_t end_frame) const;
 
     // Render fingerprint of the most recent dispatch. Computed at the top of

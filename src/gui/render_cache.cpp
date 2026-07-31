@@ -232,8 +232,7 @@ std::vector<uint8_t> render_fingerprint(
         const std::vector<MarkerForRender>& resolved_warp_markers,
         const std::vector<double>& phase_reset_source_frames,
         const EngineSettings& s,
-        bool has_trim_begin, int64_t trim_begin_frame,
-        bool has_trim_end,   int64_t trim_end_frame) {
+        bool trimmed, int64_t trim_begin_frame, int64_t trim_end_frame) {
     std::vector<uint8_t> fp;
     fp.reserve(256 + resolved_warp_markers.size() * 64);
 
@@ -284,17 +283,23 @@ std::vector<uint8_t> render_fingerprint(
         }
     }
 
-    // Trim, with the frame values normalized to 0 when the bound is unset so
-    // a stale value behind a false has-bound cannot move the key (the engine
-    // ignores it in that state). Authored int64 bounds widened to the f64
-    // encoding (exact — whole frames sit far below 2^53). The authored bounds
-    // serialize verbatim even when plan_trim will refuse them and the render
-    // falls back to untrimmed — accepted conservatism, recorded at do_render's
-    // trim-plan block.
-    put_u8 (fp, has_trim_begin ? 1 : 0);
-    put_f64(fp, has_trim_begin ? static_cast<double>(trim_begin_frame) : 0.0);
-    put_u8 (fp, has_trim_end ? 1 : 0);
-    put_f64(fp, has_trim_end ? static_cast<double>(trim_end_frame) : 0.0);
+    // Trim. THE ENCODING IS UNCHANGED FROM THE PRE-ALWAYS-SET FORM ON PURPOSE
+    // (architect 2026-07-30): a NOT-trimmed render — which since the trim window
+    // became always-set means the FULL window [0, total-1], the caller's
+    // trim_window_is_full verdict arriving here as `trimmed == false` — writes
+    // the OLD UNSET BYTES (has-byte 0 + f64 0.0 on both sides), so a default
+    // window still hashes exactly like a pre-arc untrimmed render and keeps
+    // reusing its cache entries and artifacts. It also makes every spelling of
+    // "render the whole thing" hash the same. A proper SUB-WINDOW writes the two
+    // authored frames exactly as a set pair always did: two has-bytes of 1 and
+    // the int64 bounds widened to the f64 encoding (exact — whole frames sit far
+    // below 2^53). The sub-window bounds serialize verbatim even when plan_trim
+    // will refuse them and the render falls back to untrimmed — accepted
+    // conservatism, recorded at do_render's trim-plan block.
+    put_u8 (fp, trimmed ? 1 : 0);
+    put_f64(fp, trimmed ? static_cast<double>(trim_begin_frame) : 0.0);
+    put_u8 (fp, trimmed ? 1 : 0);
+    put_f64(fp, trimmed ? static_cast<double>(trim_end_frame) : 0.0);
 
     // Warp markers: the RESOLVED render list — exactly the MarkerForRender
     // fields build_warp_frame_map reads (frame, resolved owning tempo cents,

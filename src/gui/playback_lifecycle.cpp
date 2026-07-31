@@ -55,7 +55,7 @@ void GuiPlaybackLifecycle::stop_playback_for_modal_open() {
 // The play edge computes the launch position — cursor + launch_offset, the
 // offset non-zero only for the target-view lead-in Space auditions — and delegates
 // to launch_playback_from, the shared launch body the scrub launch also
-// rides; the validation, loop-verdict capture, scanner seed, follow behavior,
+// rides; the validation, scanner seed, follow behavior,
 // and play() all live there. What stays HERE is the cursor-relative
 // arithmetic and its overflow-ordered pre-sum gate (a cursor-vs-shifted-bound
 // check that must run before the sum exists — see below).
@@ -127,8 +127,8 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
 // anticipated. Riding the shared launch body makes an audition launch
 // indistinguishable from a cursor Space launch except for the start
 // position, so every standing gate applies (contract at
-// the header declaration) — and each launch re-captures the loop verdict and
-// end bound freshly, the point of the fresh-session semantic.
+// the header declaration) — and each launch re-captures the end bound freshly,
+// the point of the fresh-session semantic.
 void GuiPlaybackLifecycle::scrub_launch_at(int64_t frame) {
     // Defensive: a live session never launches — a scrub act over a live
     // session STOPS it and returns without reaching here, so the caller always
@@ -144,8 +144,8 @@ void GuiPlaybackLifecycle::scrub_launch_at(int64_t frame) {
 }
 
 // The shared launch body: validate `launch_pos` — an ABSOLUTE position in the
-// active PAINT domain — against the active view's window, capture the loop
-// verdict, seed the scanner, and start the audio. Returns whether it
+// active PAINT domain — against the active view's window, seed the scanner, and
+// start the audio. Returns whether it
 // launched; every refusal is a silent no-op (the "nothing to audition"
 // family). Two callers: toggle_playback's play edge (cursor + launch_offset)
 // and scrub_launch_at (the scrub's clicked frame). This body never writes the
@@ -177,18 +177,13 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // against the full-domain viewport with no wrong-domain leak.
     int64_t start;
     int64_t end;
-    // Looping audition verdict, LAUNCH-CAPTURED here (computed once, before the
-    // view split) exactly like end_sample: when trim is set (a lone bound
-    // defines a window under the completion semantics), the audition loops — on
-    // reaching the end the audio callback wraps back to the window begin and
-    // keeps playing until the user stops it (Space/Esc/any stop route). Mid-
-    // session trim edits do NOT alter the running session (mirroring how a trim
-    // edit never moves the running end_sample); the next launch picks up the
-    // new state. The per-arm loop start is set below and stashed in
-    // app.playback_loop_start_sample so the click-keep-alive reseek preserves
-    // this session's captured verdict.
-    const bool loop = app.trim.has_begin || app.trim.has_end;
-    int64_t loop_start = -1;
+    // NO LOOPING (architect 2026-07-30, "looping behavior is not that useful.
+    // ok to remove all looping" — re-ruling the 2026-07-19 loop ruling dead).
+    // EVERY audition plays once from `start` to `end` — the trim window's end,
+    // or the natural end when the window is full — and stops there. The launch
+    // verdict, the per-view loop starts, the audio-callback wrap, the wrap
+    // counter and its predictor resync are all gone with it; the natural-end
+    // teardown is what remains and is what every session now takes.
     if (app.active_audio_view == 'T') {
         // Target view: the target buffer is the live playback source.
         // Refuse if no successful target render has populated it yet.
@@ -214,11 +209,6 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
         if (launch_pos < playback.domain_begin()) return false;
         start = launch_pos;
         end   = playback.domain_end();
-        // Target view: the bound buffer IS the trim window under the
-        // completion semantics, so the loop start is the buffer's domain
-        // begin. `loop` is false when trim is unset even though a buffer
-        // domain always exists — no loop then.
-        if (loop) loop_start = playback.domain_begin();
     } else {
         end = viewport.trim_end_sample();
         // A launch requires at least TWO playable frames of remainder: a
@@ -237,17 +227,14 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
         // declick machinery is added (considered and REJECTED by ruling).
         if (launch_pos >= end - 1) return false;
         // A launch position outside the trim region (either side) is a silent
-        // no-op. For unset trim, trim_begin_sample() is 0, so this never
+        // no-op. At the FULL window trim_begin_sample() is 0, so this never
         // bites. A crossed or equal pair cannot rest — every commit and load
-        // auto-clears both bounds — so [begin, end) is well-formed
-        // whenever this runs; the two checks simply bound the launch to the
-        // resting trim window.
+        // resets such a pair to the full window — so [begin, end) is
+        // well-formed whenever this runs; the two checks simply bound the launch
+        // to the resting trim window.
         if (launch_pos < viewport.trim_begin_sample()) return false;
         // The launch position is now guaranteed in [trim_begin, trim_end).
         start = launch_pos;
-        // Source view: loop back to the completed trim begin — the same value
-        // the lower launch gate compares against (0 for a lone end).
-        if (loop) loop_start = viewport.trim_begin_sample();
     }
     // Scanner launch = the validated launch position, in the paint domain
     // in every view (see the comment above `start`). Seed the continuous
@@ -292,11 +279,7 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     viewport.invalidate_timestamp_area();
     const bool force_one_x = (app.active_audio_view == 'T');
     playback.set_speed(force_one_x ? 1.0f : app.playback_speed);
-    // Stash the captured loop start for the click-keep-alive reseek to reuse
-    // (play() decides the real looping window; -1 means this session does not
-    // loop). Must be set before play() so a reseek issued right after sees it.
-    app.playback_loop_start_sample = loop_start;
-    playback.play(start, end, loop_start);
+    playback.play(start, end);
     return true;
 }
 
@@ -313,7 +296,7 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
 // press, the latter stop-free by the claim-keyed stop design precisely so this
 // reseek can reach a live session. Keep-alive is exactly those presses' point
 // (reposition the running audition under the freshly-placed cursor without a
-// restart glitch, preserving the session's launch-captured loop verdict). The
+// restart glitch). The
 // scrub paths never come here: a scrub act over a LIVE session is a pure STOP
 // (scrub_act_at — the clicked frame is ignored, and the NEXT click launches a
 // fresh session from where it lands), so only a stopped session ever reaches
@@ -338,17 +321,15 @@ void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
             stop_playback_if_playing();
             return;
         }
-        // Preserve the running session's launch-captured loop verdict: a
-        // looping audition stays looping across a click-keep-alive reseek
-        // (the window is unchanged; only the immediate resume point moves).
-        playback.play(sample, playback.domain_end(),
-                      app.playback_loop_start_sample);
+        // The window is unchanged; only the immediate resume point moves.
+        playback.play(sample, playback.domain_end());
         return;
     }
     // Source view: enforce the trim window with in-range-only semantics,
     // mirroring the two arms above. Equal or crossed trim bounds make
     // [trim_begin, trim_end) empty; such a pair cannot REST any more (the
-    // commit auto-clear destroys it), but it exists freely mid-gesture, and
+    // commit reset returns it to the full window), but it exists freely
+    // mid-gesture, and
     // whenever the window is empty every live reseek stops — the same sane
     // degradation as Space's silent no-op. This
     // guard also means play() below can never be reached with an empty range
@@ -360,11 +341,9 @@ void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
         stop_playback_if_playing();
         return;
     }
-    // Preserve the running session's launch-captured loop verdict (see the
-    // target arm above): the looping window is unchanged, only the resume
-    // point moves.
-    playback.play(sample, viewport.trim_end_sample(),
-                  app.playback_loop_start_sample);
+    // The window is unchanged, only the resume point moves (see the target arm
+    // above).
+    playback.play(sample, viewport.trim_end_sample());
 }
 
 // Set follow mode (contract at the header declaration). Shared by the bare-`f`

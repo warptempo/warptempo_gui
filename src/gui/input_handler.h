@@ -129,7 +129,7 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
 // timestamp — so it never refuses an authored store), then
 // build_warp_frame_map with `scale` (the whole-song map — trim is
 // render-time, not view-time). Trim plays no part: crossed/equal bounds
-// cannot rest (the commit and load auto-clears), and an ambiguous trim at
+// cannot rest (the commit and load crossed-resets), and an ambiguous trim at
 // render time falls back to the full, untrimmed deliverable — so after the
 // normalizing resolver, entry gates only on the tripwire-class build
 // failures. On success the built map is returned so the toggle can reuse
@@ -283,19 +283,21 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 //     retired (the keyboard stop rule is at stop_playback_if_playing's
 //     declaration, playback_lifecycle.h);
 //   * the settings editor's tab_X_trim_begin= / tab_X_trim_end= keys committed on
-//     the ACTIVE tab, BOTH value forms (a frame and the -1 unset) — JOINED
+//     the ACTIVE tab (one value form now — a whole source frame; the `-1` unset
+//     arm died with the unset state) — JOINED
 //     2026-07-30, architect: "a typed commit is a commit", the sibling
 //     playhead_cursor= key having already cleared selection and region under the
 //     no-exemptions rule. Their INACTIVE-tab arm is not a member and never was:
 //     it writes a parked band and changes nothing visible.
 // Each deselects PAST ITS OWN REFUSALS (the refusal-gating rule these routes
-// already hold their playback stop under): a read-only bound set, a chip-row claim
-// with no resting pair, degenerate geometry, a drag event that moved no bound, and
+// already hold their playback stop under): a read-only bound set,
+// degenerate geometry, a drag event that moved no bound, and
 // a settings commit rejected for a read-only tab / an out-of-wall value / an
 // unchanged value all write no bound and so deselect nothing.
-// THE NON-SETTER IS EXACTLY ONE ROUTE: Shift+X, the dedicated trim CLEARER, which
-// destroys both bounds outright so there is no window left for a deselect to hand
-// the user (the architect's 2026-07-29 exemption, kept verbatim). Everything else
+// THE NON-SETTER IS EXACTLY ONE ROUTE: Shift+X, the dedicated trim MAXIMIZER,
+// which widens the window to the whole song rather than claiming one, so there is
+// no window for a deselect to hand the user (the architect's 2026-07-29
+// exemption, kept verbatim through the 2026-07-30 re-pose). Everything else
 // that touches a trim bound is not a command in this sense: auto_clear_crossed_trim
 // is a shared commit tail every setter already runs inside its own body, and the
 // ENTRY / RESTORE routes (file load, the Ctrl+Tab band pull, the settings-file
@@ -707,9 +709,9 @@ private:
     void run_zoom_toggle_command();
 
     // The zoom-strip DOUBLE-CLICK command: ZOOM TO A SPAN, never the working
-    // zoom. Span priority — a live region (wins over trim) → a set trim
-    // (completed to its extremes, expressed in the active domain) → the whole
-    // song (full zoom-out). The region/trim span is framed with a 2.5%-per-side
+    // zoom. Span priority — a live region (wins over trim) → a proper trim
+    // SUB-WINDOW (expressed in the active domain) → the whole
+    // song (full zoom-out, which the FULL trim window also takes). The region/trim span is framed with a 2.5%-per-side
     // margin; the fit level and span-start are set through the clamp chokepoints
     // via Viewport::apply_zoom_to_start (NOT apply_zoom_change — no playhead
     // recenter). Idempotent: a second click with the viewport unchanged no-ops.
@@ -821,37 +823,44 @@ private:
     // 2026-07-30: the scratch existed to aim this gesture). TWO SILENT REFUSALS, both writing
     // nothing at all: NO region, and a DEGENERATE result — the inverse-mapped,
     // wall-clamped pair coming out end <= begin, which auto_clear_crossed_trim would
-    // read as crossed and destroy (ARCHITECT-CONFIRMED 2026-07-29; the derivation is
-    // at the definition). x never UNSETS either way
+    // read as crossed and reset to the song edges (ARCHITECT-CONFIRMED 2026-07-29;
+    // the derivation is at the definition). x never MAXIMIZES either way
     // (that arm moved to Shift+X).
     // No read-only check: the keyboard gate — the ONE read-only guard
     // on that path — leaves x off its allowlist, and this pair is keyboard-only,
     // so a locked tab never reaches it. The sole dispatch entry for the bare-x key.
     void handle_trim_x();
 
-    // Shift+X UNSETS the trim (architect 2026-07-25 — split off x, which is now
-    // set-only). Read-only is the keyboard gate's (see handle_trim_x above); the
-    // body then delegates WHOLE to handle_trim_clear_both. A trim CLEARER, not a
-    // setter: it does NOT deselect, and it touches no region at all (the gated
-    // region re-sync it carried died with the trim-window
-    // highlight, architect 2026-07-30 — a scratch span is the user's).
+    // Shift+X MAXIMIZES the trim to the full window [0, total-1] (architect
+    // 2026-07-25 for the binding, re-posed 2026-07-30 under always-set: the full
+    // window IS the old unset state — it renders untrimmed and plays to the
+    // natural end). Read-only is the keyboard gate's (see handle_trim_x above);
+    // the body then delegates WHOLE to handle_trim_clear_both. A trim MAXIMIZER,
+    // not a setter: it does NOT deselect, and it touches no region at all (the
+    // gated region re-sync it carried died with the trim-window highlight,
+    // architect 2026-07-30 — a scratch span is the user's).
     void handle_trim_shift_x();
 
-    // Clear both trim bounds unconditionally. Silent no-op when neither bound
-    // is set. The caller is handle_trim_shift_x (the Shift+X unset arm).
+    // Write the FULL window [0, total-1]. Silent no-op when the window is
+    // ALREADY full (the identity guard that replaced the old has-a-bound refusal
+    // gate — an already-maximized Shift+X stops nothing, repaints nothing and
+    // triggers nothing). The caller is handle_trim_shift_x.
     void handle_trim_clear_both();
 
-    // Field-reset core shared by handle_trim_clear_both (the Shift+X unset arm)
-    // and the crossed-commit auto-clear below: unset both bounds, zero both
-    // frames. No invalidation and no trigger — callers own their repaint tail.
-    // One implementation so the two clears can never drift.
-    void clear_trim_bounds();
+    // Field-reset core shared by handle_trim_clear_both (the Shift+X maximizer)
+    // and the crossed-commit reset below: write the canonical full pair for the
+    // loaded source through the one seeding owner, full_trim_window
+    // (app_state.h). No invalidation and no trigger — callers own their repaint
+    // tail. One implementation so the two can never drift.
+    void reset_trim_to_full_window();
 
-    // Crossed/equal trim cannot REST (ruling comment at the definition):
-    // when both bounds are set and end_frame <= begin_frame — exact integer
-    // compare — at a trim COMMIT, destroy both bounds, silently. Called by
-    // every trim commit site after its mutation and before its
-    // invalidations, so the repaint shows the cleared state.
+    // Crossed/equal trim cannot REST (ruling comment at the definition): when
+    // end_frame <= begin_frame — exact integer compare — at a trim COMMIT, RESET
+    // both bounds to the song edges, silently (the chips jumping there are the
+    // signal). Recognizes the already-full window first, so the one-frame
+    // canonical pair [0, 0] is left alone rather than reset every commit. Called
+    // by every trim commit site after its mutation and before its
+    // invalidations, so the repaint shows the reset state.
     void auto_clear_crossed_trim();
 
     // Plain chip-row press trim routing — the sole pointer route into a trim
@@ -859,9 +868,9 @@ private:
     // grab with it; bounds are grabbed by their top-strip chips / the inter-chip
     // bridge only). Arms a PendingTrimDrag (the pending+threshold pattern): the
     // press CLAIMS the chip/bridge geometry, but the trim-drag machinery begins
-    // only once the pointer crosses kDragMovedThresholdPx. Every trim drag needs
-    // the FULL pair set; a lone bound is gesture-inert (transparent to the
-    // press). Returns true iff both bounds are set AND the press landed on trim
+    // only once the pointer crosses kDragMovedThresholdPx. A full ordered pair
+    // always rests (the unset state died 2026-07-30), so the claim is purely
+    // GEOMETRIC. Returns true iff the press landed on trim
     // chip geometry (a chip-rect single hit, or the chip-row inter-chip bridge
     // span) — armed or read-only-refused — so the caller claims with no
     // fallback; false lets the caller fall through to the marker flag handling.
@@ -904,13 +913,13 @@ private:
     // Set ONE trim bound (begin or end) at the clicked column — the
     // trim-drag release-snap basis (authored_frame_at_column over the displayed
     // paint map), walls [0, total-1], then the auto_clear_crossed_trim commit
-    // tail (a bound onto/across its partner dissolves both). History-less like
-    // every trim mutation; repaint + target_render.trigger() like the drag
-    // release. Read-only refuses silently (trim authoring), as does a missing
-    // pair — ADJUST-ONLY (architect 2026-07-23): the clicks adjust an existing
-    // window, never create one (region→x creates; the settings editor is the
-    // deliberate lone-bound route). Runs the coupling
-    // sync afterward. OWNS the press's playback stop, placed past those
+    // tail (a bound onto/across its partner resets the pair to the song edges).
+    // History-less like every trim mutation; repaint + target_render.trigger()
+    // like the drag release. Read-only refuses silently (trim authoring).
+    // ADJUST-ONLY (architect 2026-07-23) is now a statement about what the click
+    // DOES — it moves one bound of the window that always rests — rather than a
+    // condition it tests, the pair gate having died with the unset state
+    // (2026-07-30). OWNS the press's playback stop, placed past those
     // refusals and just ahead of the bound write, so the ctrl / ctrl+shift
     // chip-row press carries none of its own and a refused click leaves a live
     // audition playing. is_begin picks the bound: the ctrl chip-row click sets
@@ -919,14 +928,15 @@ private:
 
     // The ctrl / ctrl+shift chip-row bound-set press (architect
     // 2026-07-23): sets the bound at the clicked column (set_trim_bound_at_click,
-    // adjust-only + sync, above) AND, when the click-set kept a full writable
-    // pair, arms the single-bound trim drag on the just-set bound — so motion
+    // adjust-only, above) AND arms the single-bound trim drag on the just-set
+    // bound — so motion
     // past the threshold drags it live exactly like a plain chip drag, while a
     // motionless release rests the click-set as before. NOTHING is stashed: the
     // click-set is committed when made (trim is history-less) and pointer gestures
-    // have no cancel. Read-only / a missing pair / a crossed
-    // dissolve all leave nothing armed (the set itself already refused or
-    // dissolved). is_begin picks the bound (ctrl=begin, ctrl+shift=end).
+    // have no cancel. Read-only leaves nothing armed (the set itself already
+    // refused); a crossed click-set no longer dissolves the pair, it resets it to
+    // the song edges, so there is always something to drag.
+    // is_begin picks the bound (ctrl=begin, ctrl+shift=end).
     void set_trim_bound_at_click_then_arm_drag(bool is_begin, int mouse_x,
                                                int mouse_y);
 

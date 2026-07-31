@@ -339,29 +339,36 @@ GuiRect bottom_lower_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/false, 0);
 }
 
-// Resolve the trim playback/navigation range from AppState's trim fields.
-// An unset bound (has_begin/has_end false) falls back to its side's extreme
-// of [0, total_frames]. The stored bounds are
-// already whole int64 frames; each side clamps to
-// [0, total_frames] independently so playback ranges stay inside the
-// buffer. There is NO
-// ordering clamp: the pair passes through as authored. Crossed/equal
-// bounds can no longer REST (the commit and load auto-clears destroy such
-// pairs), but MID-GESTURE crossing stays free and this runs per frame, so
-// consumers (the Space gate's cursor-in-[begin,end) check, Home/End via
-// trim_range, the load-time playhead) still degrade to a no-op or a
-// per-side position and must not assume begin <= end.
+// Resolve the SOURCE-view trim playback/navigation range from AppState's trim
+// pair — one of the TWO range owners (Viewport::trim_range is the target-view
+// half), and the reason the full window behaves exactly as the old unset state
+// did everywhere downstream.
+//
+// THE FULL-WINDOW NORMALIZATION (architect 2026-07-30): the store's end bound
+// is an INCLUSIVE authored frame while this range's end is EXCLUSIVE, so a full
+// window [0, total-1] taken literally would return {0, total-1} and silently
+// drop the last source frame — End would land at total-2 and the last legal
+// near-end launch would go inert. A full pair therefore normalizes to
+// {0, total_frames}, the exact pair the retired unset state produced. The
+// recognition is the shared owner trim_window_is_full (settings_file.h), never
+// a second compare. A PROPER sub-window keeps today's arithmetic verbatim.
+//
+// The stored bounds are already whole int64 frames; each side clamps to
+// [0, total_frames] independently so playback ranges stay inside the buffer.
+// There is NO ordering clamp: the pair passes through as authored. Crossed or
+// equal bounds can no longer REST (the commit and load auto-resets reset such
+// pairs to the full window), but MID-GESTURE crossing stays free and this runs
+// per frame, so consumers (the Space gate's cursor-in-[begin,end) check,
+// Home/End via trim_range, the load-time playhead) still degrade to a no-op or
+// a per-side position and must not assume begin <= end.
 std::pair<long long, long long> compute_trim_samples(
     const AppState& a, long long total_frames) {
-    long long begin = 0;
-    long long end   = total_frames;
-
-    if (a.trim.has_begin) {
-        begin = a.trim.begin_frame;
+    if (trim_window_is_full(a.trim.begin_frame, a.trim.end_frame,
+                            total_frames)) {
+        return {0, total_frames};
     }
-    if (a.trim.has_end) {
-        end = a.trim.end_frame;
-    }
+    long long begin = a.trim.begin_frame;
+    long long end   = a.trim.end_frame;
     if (begin < 0) begin = 0;
     if (begin > total_frames) begin = total_frames;
     if (end < 0) end = 0;
@@ -1125,8 +1132,8 @@ int main(int argc, char** argv) {
             // playhead_invalidate_rect yields a zero-width rect for a
             // column outside the waveform area and
             // invalidate_playhead_columns emits no damage for one, so a
-            // scanner that has left the viewport (a looping audition
-            // wrapping back to an offscreen trim begin, follow off)
+            // scanner that has left the viewport (a launch inside a trim
+            // window the user then panned away from, follow off)
             // leaves this tick producing NO damage at all — and with the
             // pre-paint hook the sole advancer of the scanner position
             // while playing, no damage means no paint means the position
@@ -1198,27 +1205,11 @@ int main(int argc, char** argv) {
         if (app.loading || audio.total_frames() <= 0) return;
         if (!playback.is_playing()) return;
 
-        // Loop wrap: a looping audition (trim set, launch-captured in the
-        // shared launch body launch_playback_from — Space toggle and scrub
-        // launch alike) wrapped its read position back to the window
-        // begin. That is a backward cursor jump the free-running predictor
-        // cannot see (it clamps its prediction to end_sample, so cursor() holds
-        // at the window end and never reveals the wrap), so resync the
-        // predictor to the wrapped audio cursor here — the ruled resync event
-        // for the wrap (playback.h head comment). Detected via the audio
-        // thread's monotonic wrap counter rather than a cursor snapshot for
-        // exactly that reason. The normal scanner advance below then reads the
-        // post-resync cursor() (now at the window begin) and invalidates the
-        // old->new column span for the backward jump. Looping no longer needs
-        // follow mode: the resync and invalidation run regardless, and the
-        // advance's follow_scroll_if_needed() simply no-ops when follow is off
-        // (the scanner may wrap to an offscreen column — normal follow-off
-        // playback, nothing else assumes follow-on for the loop).
-        const uint64_t wrap_seq = playback.loop_wrap_seq();
-        if (wrap_seq != app.playback_loop_wrap_seen) {
-            app.playback_loop_wrap_seen = wrap_seq;
-            playback.resync_predictor();
-        }
+        // (The loop-wrap predictor resync that stood here is GONE with all
+        // audition looping, architect 2026-07-30: the read position only ever
+        // advances now, so there is no backward cursor jump for the free-running
+        // predictor to miss and no wrap counter to poll. Every session plays its
+        // window once and takes the natural-end teardown.)
 
         // Read the predictor at paint time. The predictor is continuous
         // in wall time, so this gives the freshest possible position

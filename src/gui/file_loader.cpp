@@ -221,7 +221,12 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // no mandatory first marker, so the seed is empty content, unlike warp's
     // seeded first-marker line.
     create_if_missing(tm_path, "");
-    create_if_missing(set_path, format_default_settings_template(stem));
+    // The first-open template stamps the FULL trim window for this source on
+    // both tabs, so it needs the loaded total (the `-1` unset spelling it used
+    // to write no longer parses).
+    create_if_missing(set_path,
+                      format_default_settings_template(stem,
+                                                       audio.total_frames()));
 
     // Load the markers file. A present-but-malformed sidecar aborts the
     // load: GuiWarpMarkers::load clears the store before parsing, so a parse
@@ -252,16 +257,15 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // adopt runs from the modal commit editor, where no pointer gesture can be
     // live, so it needs no drag clears — only the view-domain region clear.)
     // Project trim is not cleared implicitly by the fresh-ViewState assignment
-    // (it lives on AppState now). Reset it explicitly before the initial-playhead
-    // read: this is construction-state for the no-.settings / first-open path.
-    // A .settings always carries the four trim keys (unset is the `-1` value, not
-    // an absent key), so its parse always assigns; the reset only keeps a
-    // launch with no .settings from reading a leftover begin out of the
-    // base-state struct (playhead at sample 0).
-    app.trim.has_begin      = false;
-    app.trim.has_end        = false;
-    app.trim.begin_frame  = 0;
-    app.trim.end_frame    = 0;
+    // (it lives on AppState now). SEED IT TO THE FULL WINDOW explicitly before
+    // the initial-playhead read: the window is always set (2026-07-30), so
+    // "reset" means [0, total-1] for THIS source, through the one seeding owner
+    // full_trim_window (app_state.h). The audio is already loaded above, so the
+    // total is known here. A .settings always carries the four trim keys, so its
+    // parse always overwrites this; the seed covers the no-.settings /
+    // first-open path and keeps a launch from reading a leftover pair out of the
+    // base-state struct.
+    app.trim = full_trim_window(audio.total_frames());
     app.editor_text_drag = EditorTextDragState{};
     // Fresh file = fresh history. Both stacks cleared; the loaded state
     // is the saved baseline (signed_distance = 0, valid).
@@ -320,6 +324,11 @@ bool GuiFileLoader::load_file(const std::string& path) {
     default_tab.viewport_start_sample = app.viewport_start_sample;
     default_tab.zoom_level            = app.zoom_level;
     default_tab.playhead_cursor_sample       = app.playhead_cursor_sample;
+    // Per-tab trim seeds the FULL window for this source, exactly like the live
+    // app.trim seed above: a ViewState's default-constructed pair is [0, 0],
+    // canonical only at total == 1, so the total has to be applied here rather
+    // than left to the struct default.
+    default_tab.trim                  = full_trim_window(audio.total_frames());
     app.tab_a          = default_tab;
     app.tab_b          = default_tab;
     app.engine_settings = EngineSettings{};
@@ -338,9 +347,10 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // (clamp_playhead_to_live_domain, both tab snapshots) at the end of this
     // block, the earliest point the persisted S/T domain is computable. Trim
     // bound ordering is normalized, not checked: a per-tab pair with end <=
-    // begin clears both of that tab's bounds after the adversarial walls run
-    // (the auto-clear block below the past-EOF guard), and the render's
-    // ambiguous-trim fallback renders untrimmed — never a refusal.
+    // begin RESETS both of that tab's bounds to the song edges after the
+    // adversarial walls run (the crossed-reset block below the past-EOF guard),
+    // and the render's ambiguous-trim fallback renders untrimmed — never a
+    // refusal.
     {
         auto sf_r = read_settings_file(app.settings_path);
         if (!sf_r) {
@@ -393,15 +403,15 @@ bool GuiFileLoader::load_file(const std::string& path) {
         // on_resize) stay below where they always ran. The render-entry adopt
         // shares this exact routine so its in-memory result is 1:1 with a load.
         apply_settings_engine_and_prefs(app, sf);
-        // Per-tab trim: apply each bound the file set (SettingsTrim's has_begin
-        // /has_end reflect the `-1` unset decode); an unset bound leaves the
-        // load-time reset (above) in place. Values apply verbatim here; a
-        // crossed/equal pair normalizes in the auto-clear block after the
-        // past-EOF guard below (order rationale there).
-        if (sf.tab_a.trim.has_begin) { app.tab_a.trim.has_begin = true; app.tab_a.trim.begin_frame = sf.tab_a.trim.begin_frame; }
-        if (sf.tab_a.trim.has_end)   { app.tab_a.trim.has_end   = true; app.tab_a.trim.end_frame   = sf.tab_a.trim.end_frame; }
-        if (sf.tab_b.trim.has_begin) { app.tab_b.trim.has_begin = true; app.tab_b.trim.begin_frame = sf.tab_b.trim.begin_frame; }
-        if (sf.tab_b.trim.has_end)   { app.tab_b.trim.has_end   = true; app.tab_b.trim.end_frame   = sf.tab_b.trim.end_frame; }
+        // Per-tab trim: both bounds are always meaningful in the schema (the
+        // `-1` unset spelling died 2026-07-30 and is now a load-fatal malformed
+        // value), so the pair applies verbatim, overwriting the full-window
+        // seed above. A crossed/equal pair normalizes in the reset block after
+        // the past-EOF guard below (order rationale there).
+        app.tab_a.trim.begin_frame = sf.tab_a.trim.begin_frame;
+        app.tab_a.trim.end_frame   = sf.tab_a.trim.end_frame;
+        app.tab_b.trim.begin_frame = sf.tab_b.trim.begin_frame;
+        app.tab_b.trim.end_frame   = sf.tab_b.trim.end_frame;
         app.tab_a.read_only = sf.tab_a.read_only;
         app.tab_b.read_only = sf.tab_b.read_only;
 
@@ -464,9 +474,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     {
         auto trim_of = [](const TrimState& t) {
             SettingsTrim s;
-            s.has_begin   = t.has_begin;
             s.begin_frame = t.begin_frame;
-            s.has_end     = t.has_end;
             s.end_frame   = t.end_frame;
             return s;
         };
@@ -483,27 +491,31 @@ bool GuiFileLoader::load_file(const std::string& path) {
         }
     }
 
-    // Load auto-clear: a persisted per-tab trim pair with end <= begin —
-    // exact integer compare — clears BOTH of that tab's bounds, one stderr
-    // line per cleared tab (crossed/equal cannot REST anywhere; the trim
-    // sibling of the marker normalizations, gesture half at
-    // auto_clear_crossed_trim). Deliberately AFTER the adversarial past-EOF
+    // Load crossed-reset: a persisted per-tab trim pair with end <= begin —
+    // exact integer compare — RESETS BOTH of that tab's bounds to the song
+    // edges, one stderr line per reset tab (crossed/equal cannot REST anywhere;
+    // the trim sibling of the marker normalizations, gesture half at
+    // auto_clear_crossed_trim, which spells the same full-window-first
+    // precedence so a one-frame source's canonical [0, 0] is not read as
+    // crossed). Deliberately AFTER the adversarial past-EOF
     // hard-fail above: a crossed pair containing a past-EOF bound must
     // still abort the load, identically in warptempo_cli (which loads the
-    // same values, runs the same wall check, and has no clear) — clearing
+    // same values, runs the same wall check, and has no reset) — resetting
     // first would swallow the adversarial defect in one product only. The
     // live app.trim mirror was copied from the active tab at activation
-    // above, so it re-syncs after the clears. Render-entry sidecars reach
+    // above, so it re-syncs after the resets. Render-entry sidecars reach
     // memory through adopt_render_entry's own application path and
     // deliberately skip this: they are written once at dispatch from a live
     // store that can no longer rest crossed — trusted, no re-check.
     {
-        const auto clear_crossed_tab = [](TrimState& t, char tab_name) {
-            if (t.has_begin && t.has_end && t.end_frame <= t.begin_frame) {
-                t = TrimState{};
+        const int64_t total = audio.total_frames();
+        const auto clear_crossed_tab = [total](TrimState& t, char tab_name) {
+            if (trim_is_full_window(t, total)) return;
+            if (t.end_frame <= t.begin_frame) {
+                t = full_trim_window(total);
                 std::fprintf(stderr,
                     "warptempo_gui: tab %c trim bounds crossed or equal; "
-                    "both cleared\n",
+                    "both reset to the song edges\n",
                     tab_name);
             }
         };
@@ -559,7 +571,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // store (the resolver normalizes ambiguous arrangements to tempo 1.00,
     // one stderr line per timestamp — marker arrangements always enter) and
     // build the whole-song warp_frame_map with the loaded scale. Trim plays
-    // no part (crossed/equal cleared above; an ambiguous trim at render
+    // no part (crossed/equal reset above; an ambiguous trim at render
     // time falls back to untrimmed), so a persisted T view restores
     // whenever the map builds. Every input the walk consumes is in place by
     // this point: markers (parsed above, default zero-marker seeded) and

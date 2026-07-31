@@ -39,7 +39,11 @@
 // reads the raw values, then the caller's auto-clear pass clears a crossed
 // or equal per-tab pair (one stderr line) before the store can rest; the
 // CLI loads the values verbatim, and a still-crossed or -equal pair simply
-// makes its render plan fall back to rendering untrimmed.
+// makes its render plan fall back to rendering untrimmed. A trim value is a
+// canonical whole source frame and nothing else — the `-1` unset spelling was
+// deleted when the trim window became always-set
+// (architect approval 2026-07-30), so a sidecar still carrying it is
+// adversarial and refuses here.
 
 // The persisted zoom-level vocabulary, enforced by this schema in both
 // products. The zoom LEVEL is a real-valued exponent that rests anywhere in
@@ -69,16 +73,34 @@ constexpr double kMinZoom = 1.0;
 constexpr double kMaxZoom = 17.0;
 
 // One tab's trim in the .settings schema. Positions are whole source frames
-// (int64_t), decoded via parse_authored_frame (frame_format.h). A has_* of
-// false means the on-disk value was the literal `-1` (the unset spelling); a
-// blank or absent key is load-fatal. The paired _frame field must not be read
-// when has_* is false.
+// (int64_t), decoded via parse_authored_frame (frame_format.h) — BOTH values
+// always meaningful. The unset spelling (`-1`) is GONE
+// (architect approval 2026-07-30 — the trim always-set arc): a trim window
+// always holds a full ordered pair, so a `-1` is now just a malformed value and
+// refuses like any other. A blank or absent key stays load-fatal.
 struct SettingsTrim {
-    bool    has_begin   = false;
     int64_t begin_frame = 0;
-    bool    has_end     = false;
     int64_t end_frame   = 0;
 };
+
+// THE FULL-WINDOW PREDICATE — the ONE owner, deliberately here rather than in
+// the GUI for exactly the reason kMinZoom/kMaxZoom live here: the recognition
+// must be IDENTICAL in warptempo_gui and warptempo_cli, which share no other
+// header (the render orchestrators, the two playback/navigation range owners
+// and the fingerprint all ask this one question).
+// (architect approval 2026-07-30 — the same grant that retired the `-1`
+// grammar above.)
+//
+// The FULL window [0, total-1] IS SEMANTICALLY THE OLD UNSET STATE: it renders
+// untrimmed (no trim plan at all), plays to the natural end, hashes like unset,
+// and Home/End reach the song edges. At total == 1 the canonical full pair is
+// [0, 0] — a one-frame source is load-legal and `begin < end` is impossible
+// there, so the compare below recognizes it without a special case.
+inline bool trim_window_is_full(int64_t begin_frame, int64_t end_frame,
+                                int64_t total_frames) {
+    return total_frames > 0 && begin_frame == 0 &&
+           end_frame == total_frames - 1;
+}
 
 // One tab's view-state band: viewport / zoom / playhead scratch, the
 // read-only flag, and the trim pair.
@@ -175,7 +197,6 @@ struct GuiSettingValue {
     int64_t     i64  = 0;       // tab_X_viewport_start / _playhead_cursor / _trim_*
     float       f    = 0.0f;    // playback_speed
     double      d    = 0.0;     // font_size, tab_X_zoom
-    bool trim_unset  = false;   // tab_X_trim_*: the value was -1 (bound unset)
     std::string text;           // audio_player, the four *_hash keys
 };
 
