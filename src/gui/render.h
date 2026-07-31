@@ -388,20 +388,40 @@ inline constexpr GuiColor kRedesignAccent    = hex(0x3DAEE9);
 inline constexpr GuiColor kRedesignLabel     = hex(0xFCFCFC);
 inline constexpr GuiColor kRedesignLine      = hex(0x535659);
 
+// THE UNFOCUSED GROUND for rows 1 and 2 (architect 2026-07-31, from live use).
+// The crops' #292c30 is Breeze's FOCUSED header shade; when the WINDOW LOSES
+// KEYBOARD FOCUS the header darkens to #202326, tracking the labwc titlebar
+// above it, which darkens on the same edge. A HARD SWAP — no transition, no
+// fade — driven by AppState::window_activated, and it moves the GROUND ONLY:
+// separators, border lines, the accent, labels and icons all keep their colors.
+// Row 3's ground is ALREADY this value and therefore does not change at all.
+//
+// NOTE it coincides with kBackground and with kRedesignTabGround (all three
+// sample the same Breeze Window color) and is nonetheless its OWN constant by
+// the hard-coded rule — three facts that happen to agree, not one fact
+// referenced three times.
+inline constexpr GuiColor kRedesignRowGroundUnfocused = hex(0x202326);
+
 // ROW 2'S CLICK FACE (row_2_button_click.png): the pressed button's interior,
-// sampled #2f5368 and EXACTLY 30% kRedesignAccent over kRedesignRowGround —
+// sampled #2f5368 and found to be EXACTLY 30% kRedesignAccent over the row
+// ground —
 //   r: 0.3*61  + 0.7*41 = 47   (0x2f)
 //   g: 0.3*174 + 0.7*44 = 83   (0x53)
 //   b: 0.3*233 + 0.7*48 = 103.5 -> 104 (0x68)
-// so it is a derived value that happens to have a hex spelling, not a fifth
-// independent sample. Spelled as the literal anyway (the hard-coded rule), with
-// the derivation above as the record of WHY this value and not another. The 1px
-// accent outline and the label over it are unchanged from the hover face.
-inline constexpr GuiColor kRedesignClick      = hex(0x2F5368);
+// so what the crop pins down is a RELATIONSHIP to the ground, not a fifth
+// independent color, and the factor is what ships. THAT IS WHY THE FILL DERIVES
+// FROM THE CURRENT GROUND rather than being frozen at the sampled hex: over the
+// focused ground this reproduces #2f5368 bit-for-bit (the crop is honored
+// exactly), and over the UNFOCUSED ground it applies the same measured 30% tint
+// to the ground actually present — where a frozen literal would leave the
+// pressed button lighter relative to its darker surroundings, i.e. louder
+// unfocused than focused, which is not what the crop says. The 1px accent
+// outline and the label over it are unchanged from the hover face.
+inline constexpr double kRedesignClickMix = 0.30;
 
 // ROW 2'S DISABLED FACE (row_2_disabled.png): every ink a disabled button
 // paints — the icon paths in their own colors AND the label — RETAINS this
-// fraction of itself over kRedesignRowGround, through the one mix_color owner
+// fraction of itself over THE ROW'S CURRENT GROUND, through the one mix_color owner
 // above. ONE shared factor for both halves. MEASURED off the crop's label, whose
 // full-coverage pixels read #6d6f72 = (109, 111, 114) over the (41, 44, 48)
 // ground with a (252, 252, 252) label, solving per channel to

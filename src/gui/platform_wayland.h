@@ -64,6 +64,17 @@ public:
     int height() const;
     bool has_initial_configure() const { return has_initial_configure_; }
 
+    // WINDOW ACTIVATION (keyboard focus), straight off xdg_toplevel.configure's
+    // state array: true while the compositor lists XDG_TOPLEVEL_STATE_ACTIVATED.
+    // The redesigned rows 1 and 2 darken their ground when it goes false, so the
+    // header tracks the labwc titlebar above it (which darkens the same way).
+    //
+    // FALSE UNTIL THE FIRST CONFIGURE, which is the honest cold answer — we have
+    // not been told we are active. labwc focuses a newly mapped window, so the
+    // initial configure carries ACTIVATED and flips this before any frame is
+    // painted; there is no unfocused flash to design around.
+    bool window_activated() const { return window_activated_; }
+
     void set_on_redraw(RedrawCallback cb);
     void set_on_resize(ResizeCallback cb);
     void set_on_key(KeyCallback cb);
@@ -87,6 +98,15 @@ public:
     // incidentally repaints the one-row waveform seam, redrawing the same stem).
     // Null-safe.
     void set_pointer_left_hook(std::function<void()> cb);
+
+    // Fired ONLY on a CHANGE of window_activated(), from the xdg_toplevel
+    // configure handler. The compositor re-sends the full state array on every
+    // configure (resize, maximize, focus), so the edge test lives in the
+    // platform and this hook is the edge itself — main.cpp wires it to mirror
+    // the flag into AppState and damage the top strip, the same shape the
+    // pointer-leave hook takes for the same reason (a protocol edge with no
+    // other event to carry its repaint). Null-safe.
+    void set_activation_changed_hook(std::function<void()> cb);
     void set_on_tick(TickCallback cb);
     void set_on_pre_paint(PrePaintCallback cb);
 
@@ -212,6 +232,8 @@ private:
     int  pending_h_ = 0;   // configure events; consumed by xdg_surface.configure
     bool should_exit_ = false;
     bool has_initial_configure_ = false;
+    // Latest XDG_TOPLEVEL_STATE_ACTIVATED reading; see window_activated().
+    bool window_activated_ = false;
 
     // True only while paint_one_frame is executing the pre-paint hook.
     // invalidate_region() consults this flag and skips its trailing
@@ -428,6 +450,8 @@ private:
     // drops the hover POPUP / marker-text / readout only — the selected-marker stem
     // is always-on for a singleton and never keys on hover. Null-safe.
     std::function<void()> pointer_left_hook_;
+    // Fired at each window_activated_ EDGE (see set_activation_changed_hook).
+    std::function<void()> activation_changed_hook_;
     TickCallback         on_tick_;
     PrePaintCallback     on_pre_paint_;
 
@@ -449,7 +473,8 @@ private:
     void on_output_mode(uint32_t flags, int32_t width, int32_t height,
                         int32_t refresh_mhz);
     void on_xdg_surface_configure(struct xdg_surface* xs, uint32_t serial);
-    void on_toplevel_configure(int32_t width, int32_t height);
+    void on_toplevel_configure(int32_t width, int32_t height,
+                               struct wl_array* states);
     void on_toplevel_close();
     void on_frame_done(struct wl_callback* cb);
 

@@ -120,6 +120,25 @@ int scaled_px(double authored) {
     return static_cast<int>(std::nearbyint(authored * gui_scale_factor()));
 }
 
+// THE GROUND ROWS 1 AND 2 PAINT ON, in one owner because three things read it:
+// the ground fill itself, the disabled face's mix target, and the click face's.
+// Focused it is the crops' #292c30; unfocused it darkens to #202326 with the
+// labwc titlebar above (the ruling and the constant's provenance are at
+// kRedesignRowGroundUnfocused, render.h). Row 3 does NOT call this — its ground
+// is a fixed value that already equals the unfocused shade, so it has nothing
+// to swap.
+//
+// THE TWO MIXES FOLLOW THE GROUND rather than the focused constant, which is
+// the whole reason this is a function and not two literals at the fill sites: a
+// disabled label is measured as a FRACTION of itself over the ground it sits on,
+// and the click fill as a 30% accent tint of that same ground, so both keep
+// their measured relationship in either state instead of drifting when only the
+// ground moves.
+GuiColor redesign_row_ground(const AppState& app) {
+    return app.window_activated ? kRedesignRowGround
+                                : kRedesignRowGroundUnfocused;
+}
+
 // ROW 1, measured off the two 46x30 crops
 // (tmp/screenshots/kdenlive/redesign/row_1_button_{rest,hover}.png). The row
 // height itself lives in render.h as kMenuRowHeightPx, because main.cpp's lane
@@ -353,8 +372,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
 
     cairo_save(cr);
 
-    cairo_set_source_rgb(cr, kRedesignRowGround.r, kRedesignRowGround.g,
-                         kRedesignRowGround.b);
+    const GuiColor ground = redesign_row_ground(app);
+    cairo_set_source_rgb(cr, ground.r, ground.g, ground.b);
     cairo_rectangle(cr, row.x, row.y, row.w, row.h);
     cairo_fill(cr);
 
@@ -432,7 +451,8 @@ void GuiPaintHandler::paint_toolbar_row(cairo_t* cr) {
     //   REST     — the icon and label on the bare row ground.
     //   HOVER    — a 1px accent OUTLINE around the button's exact box, interior
     //              untouched (row 1's model with a different shape).
-    //   CLICK    — the outline unchanged, the interior filled kRedesignClick,
+    //   CLICK    — the outline unchanged, the interior filled with the row
+    //              ground tinted kRedesignClickMix toward the accent,
     //              shown for as long as the physical button is held. The action
     //              already fired at the press; this face is purely visual, and
     //              it is ROW 2'S ALONE (rows 1 and 3 keep two faces each).
@@ -453,8 +473,10 @@ void GuiPaintHandler::paint_toolbar_row(cairo_t* cr) {
     cairo_save(cr);
 
     // Ground over the CONTENT band only (the border sits outside it, css-style).
-    cairo_set_source_rgb(cr, kRedesignRowGround.r, kRedesignRowGround.g,
-                         kRedesignRowGround.b);
+    // THE ONE GROUND READ, shared with both mixes below so the faces and the
+    // surface they sit on can never disagree about which state the window is in.
+    const GuiColor ground = redesign_row_ground(app);
+    cairo_set_source_rgb(cr, ground.r, ground.g, ground.b);
     cairo_rectangle(cr, lane.x, lane.y, lane.w, content_h);
     cairo_fill(cr);
 
@@ -542,8 +564,9 @@ void GuiPaintHandler::paint_toolbar_row(cairo_t* cr) {
             // face. Square fill on integer bounds under a rounded outline: the
             // crop shows the fill running to the outline's inner edge with the
             // corners covered by the ring's own AA.
-            cairo_set_source_rgb(cr, kRedesignClick.r, kRedesignClick.g,
-                                 kRedesignClick.b);
+            const GuiColor click =
+                mix_color(kRedesignAccent, ground, kRedesignClickMix);
+            cairo_set_source_rgb(cr, click.r, click.g, click.b);
             cairo_rectangle(cr, x, btn_y, btn_w, btn_h);
             cairo_fill(cr);
         }
@@ -580,10 +603,10 @@ void GuiPaintHandler::paint_toolbar_row(cairo_t* cr) {
         // the other three are the label white).
         icons::draw(cr, def.icon, static_cast<double>(x + pad_left),
                     static_cast<double>(btn_y + (btn_h - icon_px) / 2),
-                    static_cast<double>(icon_px), keep, kRedesignRowGround);
+                    static_cast<double>(icon_px), keep, ground);
 
         const GuiColor label_c =
-            mix_color(kRedesignLabel, kRedesignRowGround, keep);
+            mix_color(kRedesignLabel, ground, keep);
         cairo_set_source_rgb(cr, label_c.r, label_c.g, label_c.b);
         text_shape::show_shaped_run(
             cr, run, static_cast<double>(x + pad_left + icon_px + icon_gap),

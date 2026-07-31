@@ -2092,8 +2092,28 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // at the cursor's last position.
     app.last_mouse_x = mouse_x;
     app.last_mouse_y = mouse_y;
+    // THE BUTTON HOVER IS A POINTER FACT AND FOLLOWS THE POINTER, under every
+    // modal surface (architect 2026-07-31, fixing a stale Settings pill). It is
+    // recomputed in the two MODAL branches that return before the no-gesture
+    // tail, here and at the bottom-strip editors below, because a modal freezing
+    // it leaves a lit pill under a pointer that has moved away — visible as a
+    // button still coloured after Esc/Enter closes the editor, clearing only at
+    // the next motion. MODALITY IS CHORDS ONLY (the standing ruling): the
+    // editors are pointer- and wheel-transparent, so their hover has no reason
+    // to freeze, and the prompt takes the same answer for the same reason — it
+    // suppresses no other pointer affordance either (the marker hover POPUP's
+    // suppression right here is the one ruled exception, and it is a different
+    // fact: a resolved marker readout, not "the pointer is over this rect").
+    // What DOES still freeze the hover is an active pointer GESTURE — the
+    // branches below all return without this call, exactly as before.
+    //
+    // NO CLOSE-EDGE HOOK EXISTS OR IS NEEDED: with the recompute live through
+    // the whole modal, the stash is already correct when the editor closes. A
+    // pointer resting ON the button at the close keeps its lit pill, and that is
+    // hover, not staleness.
     if (app.prompt.active) {
         viewport.clear_hover_popup();
+        recompute_redesign_button_hover();
         return;
     }
     // F2.1: editor-text drag motion. Handled before the settings swallow
@@ -2121,6 +2141,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     if (text_editor::is_active(app.settings_editor) ||
         text_editor::is_active(app.commit_editor)) {
         viewport.clear_hover_popup();
+        // The button hover stays live under a keyboard-modal editor — the
+        // rationale is at the prompt branch above, and THIS is the branch the
+        // reported staleness came through (the Settings button opens the
+        // settings editor, whose gate is right here).
+        recompute_redesign_button_hover();
         return;
     }
     // Dual-axis strip drag (the incremental v6 model; see apply_strip_drag_at).

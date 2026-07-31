@@ -1533,6 +1533,18 @@ struct AppState {
     // click face is row 2's alone (architect 2026-07-31).
     int redesign_pressed = -1;
 
+    // WINDOW ACTIVATION (keyboard focus), mirrored from the platform's
+    // xdg_toplevel state on each activation EDGE (main.cpp's hook, beside the
+    // pointer-leave one). The redesigned rows 1 and 2 paint their ground from
+    // it — focused #292c30, unfocused #202326 — so the app's header tracks the
+    // labwc titlebar above it, which darkens the same way. Nothing else reads
+    // it and nothing else in the rows changes: separators, borders, the accent,
+    // labels and icons all keep their colors, and there is NO fade — a hard
+    // swap on the edge. Row 3's ground is already the unfocused value and does
+    // not move. False until the first configure, which is the honest cold answer
+    // (the platform's accessor states why that is never visible).
+    bool window_activated = false;
+
     // Cursor screen position from the last on_motion event. Used by
     // recompute_hover_at_cursor() to re-evaluate hover after a viewport
     // mutation (when the cursor is stationary but rects have shifted). -1

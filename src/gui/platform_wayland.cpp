@@ -203,8 +203,9 @@ struct WaylandListeners {
     // forward-compat insurance against a future bind-version bump.
     static void toplevel_configure(void* data, struct xdg_toplevel*,
                                    int32_t width, int32_t height,
-                                   struct wl_array*) {
-        static_cast<GuiPlatform*>(data)->on_toplevel_configure(width, height);
+                                   struct wl_array* states) {
+        static_cast<GuiPlatform*>(data)->on_toplevel_configure(width, height,
+                                                               states);
     }
     static void toplevel_close(void* data, struct xdg_toplevel*) {
         static_cast<GuiPlatform*>(data)->on_toplevel_close();
@@ -1261,9 +1262,34 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
     if (!frame_callback_) schedule_frame_callback();
 }
 
-void GuiPlatform::on_toplevel_configure(int32_t width, int32_t height) {
+void GuiPlatform::on_toplevel_configure(int32_t width, int32_t height,
+                                        struct wl_array* states) {
     pending_w_ = width;
     pending_h_ = height;
+
+    // WINDOW ACTIVATION, read off this configure's state array. The protocol
+    // sends the COMPLETE state set every time, so "activated" is simply whether
+    // the value is present in THIS array — absence means deactivated, and no
+    // separate un-set event exists to listen for.
+    //
+    // The array is walked by hand rather than with wl_array_for_each: that macro
+    // assigns the array's `void* data` straight to the iterator, which is a C
+    // conversion C++ rejects. Same walk, spelled with an explicit cast.
+    bool activated = false;
+    if (states != nullptr && states->data != nullptr) {
+        const uint32_t* v = static_cast<const uint32_t*>(states->data);
+        const size_t    n = states->size / sizeof(uint32_t);
+        for (size_t i = 0; i < n; ++i) {
+            if (v[i] == XDG_TOPLEVEL_STATE_ACTIVATED) { activated = true; break; }
+        }
+    }
+    // EDGE ONLY. Every resize and every maximize re-delivers the same states, so
+    // firing unconditionally would damage the top strip on each one for no
+    // change; the hook's contract is the edge, and it is stated at its setter.
+    if (activated != window_activated_) {
+        window_activated_ = activated;
+        if (activation_changed_hook_) activation_changed_hook_();
+    }
 }
 
 void GuiPlatform::on_toplevel_close() {
@@ -2244,6 +2270,7 @@ void GuiPlatform::set_wheel_context_probe(WheelContextProbe cb)    { wheel_conte
 void GuiPlatform::set_text_editor_active_probe(TextEditorProbe cb) { text_editor_active_probe_ = std::move(cb); }
 void GuiPlatform::set_repeat_eligible_probe(RepeatEligibleProbe cb) { repeat_eligible_probe_ = std::move(cb); }
 void GuiPlatform::set_pointer_left_hook(std::function<void()> cb) { pointer_left_hook_ = std::move(cb); }
+void GuiPlatform::set_activation_changed_hook(std::function<void()> cb) { activation_changed_hook_ = std::move(cb); }
 void GuiPlatform::set_on_tick(TickCallback cb)                  { on_tick_ = std::move(cb); }
 void GuiPlatform::set_on_pre_paint(PrePaintCallback cb)         { on_pre_paint_ = std::move(cb); }
 void GuiPlatform::set_worker_completion_fd(int fd, std::function<void()> on_event) {

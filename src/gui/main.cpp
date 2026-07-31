@@ -961,6 +961,19 @@ int main(int argc, char** argv) {
         input_handler.clear_redesign_button_press();
     });
 
+    // WINDOW-ACTIVATION EDGE -> the redesigned header's ground swap. The hook
+    // fires only when the xdg_toplevel state actually flips (the platform owns
+    // the edge test), so this is a mirror-and-damage pair with no comparison of
+    // its own. It takes the pointer-leave hook's shape for the pointer-leave
+    // hook's reason: a protocol edge that changes what should be on screen and
+    // carries no other event to repaint it.
+    // TOP-STRIP damage is the exact rect — rows 1 and 2 are the only surfaces
+    // that read the flag, and both live there.
+    gui.set_activation_changed_hook([&] {
+        app.window_activated = gui.window_activated();
+        viewport.invalidate_top_strip();
+    });
+
     gui.set_on_motion([&](int mouse_x, int mouse_y, GuiInputState mods) {
         input_handler.on_motion(mouse_x, mouse_y, mods);
     });
