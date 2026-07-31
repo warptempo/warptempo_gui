@@ -397,16 +397,38 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
+    // BARE ESC CLEARS A RESTING REGION (architect 2026-07-30, live-test
+    // refinement: "if 'esc' to clear region (but not cancel drag) cheap now? if
+    // so, implement it also"). It is, and this is the whole implementation: a
+    // resting scratch span is display state with no owner but the user, so
+    // dropping it needs no snapshot, no membership work and no playhead move.
+    // RANKED HERE, between the editors/prompts above and the render cancel below:
+    // a modal surface still wins the key, and a resting region wins over the
+    // render cancel because it is the more local thing on screen. With no region
+    // resting the press falls straight through and cancels the render exactly as
+    // before.
+    // CLEAR BUT NEVER CANCEL, and that is STRUCTURAL rather than a test here: a
+    // drag in flight is swallowed by the DRAG-MODAL GATE far above (which admits
+    // only Ctrl+Q), so a mid-drag Esc never reaches this arm at all — the drag
+    // keeps extending under the pointer and its span survives, matching the
+    // no-cancel rule every pointer gesture holds. Only a span the user has
+    // RELEASED can be cleared from here.
+    // BARE-EXACT, like every other Escape reader (strict modifier validation).
+    if (key == GuiKeys::Escape && !ctrl && !shift && !alt && app.region.active) {
+        clear_region_highlight(app, viewport);
+        return;
+    }
+
     // Bare Esc cancels an in-flight render / queued batch.
     if (handle_escape_cancels(key, mods)) return;
 
     // THE WHOLE ESC STORY, stated here because this is where the selection/region
     // ESC LADDER used to be dispatched and the ladder is DELETED — rungs,
-    // down-only doctrine and all (architect 2026-07-29). BARE ESC IS BOUND IN FOUR
+    // down-only doctrine and all (architect 2026-07-29). BARE ESC IS BOUND IN FIVE
     // PLACES AND NOWHERE ELSE (re-derived 2026-07-30 — the drag-modal gate above
     // tests only Ctrl+Q, so Esc is UNBOUND there and falls through with every
-    // other key while a gesture is in flight; it is NOT one of the four), each of
-    // the four earlier in this function than this point, so reaching here means
+    // other key while a gesture is in flight; it is NOT one of the five), each of
+    // the five earlier in this function than this point, so reaching here means
     // the press has nothing left to do:
     //   (a) THE EDITOR TEXT-DRAG ESC HATCH — a bare-exact Escape ends an in-flight
     //       text-selection drag (above); a SUB-PART of the editor class below,
@@ -417,16 +439,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       cancels the edit (the editor blocks above, bit-for-bit unchanged);
     //   (c) THE PROMPTS — Esc activates the rightmost response (the prompt gate at
     //       the top of on_key, unchanged);
-    //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
-    // Everything else Esc used to do is gone: NO deselect, NO region collapse, NO
-    // playhead land, NO drop-to-span. A 2+ selection, a singleton, a resting
-    // scratch span from a drag — Esc
-    // leaves every one of them exactly as it found them. Leaving the MARKER LANE is
-    // no longer an Esc act either: it is any DESELECTING route (Home/End, a
+    //   (d) THE REGION CLEAR — the arm just above (architect 2026-07-30);
+    //   (e) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
+    // What Esc still does NOT do is the old ladder: NO deselect, NO playhead land,
+    // NO drop-to-span, and no collapse of anything but the span itself. A 2+
+    // selection and a singleton are
+    // left exactly as found. Leaving the MARKER LANE is
+    // not an Esc act either: it is any DESELECTING route (Home/End, a
     // waveform click, the trim setters, an undo restore that clears — see
-    // playhead_in_marker_lane). A resting span still clears at the next
-    // playhead-moving command (the clear-site list is at
-    // clear_region_highlight, input_handler.h).
+    // playhead_in_marker_lane). And the region clear above is now the ONE route
+    // that drops a span WITHOUT moving the playhead or changing the selection —
+    // the standing gap in the clear-site set (clear_region_highlight,
+    // input_handler.h), closed by giving the user a key for it.
     // A bare Esc that gets past here falls to the bare-key tail, whose Escape case
     // is an explicit no-op (handle_plain_bare_keys) — the one place the press ends.
     // Modified Escape remains unbound everywhere, at every Escape reader.
@@ -731,8 +755,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // playhead is in
     // the waveform lane and this branch does not match: the press falls through
     // to the bare-key tail, which steps the cursor alone. The lane is left by any
-    // DESELECTING route (the lane model at playhead_in_marker_lane; Esc is unbound
-    // and collapses nothing since 2026-07-29), and there is no fallback, so an
+    // DESELECTING route (the lane model at playhead_in_marker_lane; Esc is NOT
+    // one — it clears a resting span and nothing else, touching no selection),
+    // and there is no fallback, so an
     // off-home marker-lane press is a consumed no-op, never a
     // waveform-lane step. (The AUDITION SCRUB is a different gesture entirely — the waveform
     // lower-half one-shot press — and no arrow key reaches it.)

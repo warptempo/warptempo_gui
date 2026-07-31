@@ -173,13 +173,13 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_ctrl_shift_tab =
         (ctrl && shift && !alt && key == GuiKeys::Tab);
     // Bare Escape only: a modified Escape carries no binding anywhere, so it has
-    // nothing to be admitted FOR. WHAT BARE Esc IS ADMITTED FOR, since the
-    // selection/region ladder was deleted 2026-07-29 (it was the navigation-class
-    // rung this entry originally served): the RENDER / BATCH CANCEL, which mutates
-    // nothing persistent and must work in a locked tab — read-only-safe, like
-    // every one of Esc's surviving bindings (the authoritative enumeration is at
-    // its dispatch point in on_key, input_handler.cpp; no count belongs here), and
-    // dropping Esc at this gate would break the render cancel.
+    // nothing to be admitted FOR. WHAT BARE Esc IS ADMITTED FOR: the REGION CLEAR
+    // (architect 2026-07-30 — the region is transient display scratch, and a
+    // locked tab may form one by plain drag, so it must be able to drop one) and
+    // the RENDER / BATCH CANCEL. Neither mutates anything persistent, so both are
+    // read-only-safe like every one of Esc's bindings (the authoritative
+    // enumeration is at its dispatch point in on_key, input_handler.cpp; no count
+    // belongs here), and dropping Esc at this gate would break both.
     const bool is_esc =
         (key == GuiKeys::Escape && !ctrl && !shift && !alt);
     const bool is_ctrl_q =

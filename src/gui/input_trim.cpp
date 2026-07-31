@@ -100,8 +100,9 @@ void GuiInputHandler::handle_trim_clear_both() {
 // Bare x is SET-ONLY (architect 2026-07-25, reversing the 2026-07-20 x-branch
 // ruling's clear arm — the MAXIMIZE moved to the shift-exact Shift+X binding,
 // handle_trim_shift_x below): x branches on the HIGHLIGHT, not the trim, with no
-// context-awareness beyond that (the playhead plays no part, and there are no
-// positional rules). A live REGION (the drag-painted span, active-domain frames)
+// context-awareness beyond that (the playhead is an OUTPUT of this gesture since
+// 2026-07-30 — it lands on the committed trim start at the tail — never an input
+// to it, and there are no positional rules). A live REGION (the drag-painted span, active-domain frames)
 // always TRIMS to it — begin at the span's lo, end at its hi — overwriting any
 // existing bounds (the new span simply replaces them; x re-trims even over an
 // existing trim) — and the highlight is CONSUMED: x CLEARS the region at its tail
@@ -194,6 +195,29 @@ void GuiInputHandler::handle_trim_x() {
     // highlight. ONE clear, at the tail, past every refusal above.
     selection.clear_selection();
     clear_region_highlight(app, viewport);
+    // AND THE PLAYHEAD LANDS ON THE TRIM START (architect 2026-07-30, live-test
+    // refinement — the resting half of the drag's carry: "so on trim X move
+    // playhead to trim start"). The drag walked the cursor along the span's
+    // moving end; the commit seats it at the window's BEGIN, so what the user
+    // hears next is the window they just made, from its start.
+    // THE COMMITTED BEGIN, read back out of the store rather than reused from the
+    // local: `begin` above is pre-tail, and the shared commit tail
+    // (auto_clear_crossed_trim) is entitled to rewrite the pair. It cannot fire
+    // here — the degenerate refusal upstream guarantees end > begin — so this is
+    // the same value either way, and reading the store is what keeps that true if
+    // the tail ever gains an arm.
+    // The two-step placement basis and the DIRECT cursor write are
+    // land_playhead_on_marker's (input_pointer.cpp, where the rule lives): source
+    // frame -> active domain -> live-domain clamp, and NO viewport move, so a
+    // trim start offscreen leaves the view exactly where the user left it.
+    // PAST EVERY REFUSAL by construction (the no-region and degenerate returns
+    // are far above), so a refused `x` moves no playhead. The waveform +
+    // timestamp invalidates raised above cover this write: both are
+    // position-fixed rects consumed at the next paint, so raising them ahead of
+    // the write repaints the new value.
+    app.playhead_cursor_sample = clamp_playhead_to_live_domain(
+        source_frame_to_active_domain(app, audio, app.trim.begin_frame),
+        app, audio);
 }
 
 // Shift+X MAXIMIZES the trim to the full window (architect 2026-07-25 for the

@@ -196,15 +196,21 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     take the setter's plain deselect and touch no region;
 //   * `x` ITSELF, which READS the span and then clears it (input_trim.cpp): the
 //     one CONSUMER, at its tail past every refusal, because the trim it just set
-//     is what the span was for.
+//     is what the span was for. It also LANDS the playhead on the committed trim
+//     start there (architect 2026-07-30), so it is a playhead-moving command like
+//     the rest of this list;
+//   * BARE ESC, the one route that clears a span and NOTHING ELSE (architect
+//     2026-07-30, live-test refinement): no playhead move, no selection change,
+//     no trim write. It is ranked under the editors and prompts and over the
+//     render cancel, and a DRAG IN FLIGHT never reaches it — the drag-modal gate
+//     swallows the key first, so Esc clears a rested span but cancels no gesture.
+//     The full Esc enumeration lives at its dispatch point in on_key
+//     (input_handler.cpp).
 // DELIBERATELY NOT CLEARED, the whole list: the LOWER-HALF SCRUB PRESS (the
 // region's PREVIEW gesture — click inside a span to audition it, the span
 // resting untouched), SPACE (which touches no region at all and always toggles
 // from the playhead), and PURE VIEWPORT MOVES (PageUp/PageDown, zoom steps,
-// pans, and the bare `0` overview toggle). ESC IS NOT A CLEAR SITE (architect
-// 2026-07-29): the selection/region ladder is deleted, so bare Esc touches
-// neither the region nor the selection anywhere — the whole Esc story is stated
-// at its dispatch point in on_key. The remaining pre-existing clear sites (file
+// pans, and the bare `0` overview toggle). The remaining pre-existing clear sites (file
 // load, Ctrl+Tab, and the S/T switch) keep their own in-place clears, pairing the
 // reset with a domain flip or a full-window repaint rather than this exact damage
 // shape; so does the kick validator's live-domain reclamp.
@@ -819,8 +825,10 @@ private:
     // (no context-awareness beyond that) — a live region trims to it, begin at
     // the span's lo, end at its hi, overwriting any existing bounds, then
     // DESELECTS (it is a trim SETTER — the rule is at the setter-deselect block
-    // above) and CONSUMES the span, clearing the region at its tail (architect
-    // 2026-07-30: the scratch existed to aim this gesture). TWO SILENT REFUSALS, both writing
+    // above), CONSUMES the span, clearing the region at its tail, and LANDS THE
+    // PLAYHEAD ON THE COMMITTED TRIM START (all architect 2026-07-30: the scratch
+    // existed to aim this gesture, and the cursor comes to rest at the start of
+    // the window the drag just walked out). TWO SILENT REFUSALS, both writing
     // nothing at all: NO region, and a DEGENERATE result — the inverse-mapped,
     // wall-clamped pair coming out end <= begin, which auto_clear_crossed_trim would
     // read as crossed and reset to the song edges (ARCHITECT-CONFIRMED 2026-07-29;

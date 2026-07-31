@@ -138,6 +138,9 @@ void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
 // SELECTION-FLOWS-DOWNWARD-ONLY (architect 2026-07-23) the drag never touches
 // the selection: the press's deselect/drop was the committed act, and the
 // drag holds no selection to clear — so this dissolve drops the region alone.
+// IT DROPS NO PLAYHEAD EITHER: the drag carried the cursor to its last column
+// (architect 2026-07-30) and a sliver release leaves it there, the same
+// what-stands-stands rule the gesture family holds everywhere.
 void end_region_drag_min_size_check(AppState& app, const GuiAudio& audio,
                                     Viewport& viewport) {
     if (!app.region.active) return;
@@ -2118,7 +2121,36 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // shift waveform press, and both deselect at press — so a region rests
         // ONLY beside an EMPTY selection, structurally (the inventory is at
         // RegionState, app_state.h).
+        //
+        // THE DRAG CARRIES THE PLAYHEAD (architect 2026-07-30, live-test
+        // refinement: "i'd prefer the playhead move along with the drag for
+        // region highlight - more intuitive"). The cursor rides the MOVING
+        // endpoint — far_frame, already clamped playable by the conversion above,
+        // so the write needs no clamp of its own — while the anchor stays put as
+        // the span's other bound. BOTH ARMS ride this one motion path, and the
+        // press-time asymmetry between them is unchanged: the plain upper-half
+        // press placed the playhead at its click column, and the SHIFT-exact
+        // former's press still moves NO playhead at all (its ruled shape — it
+        // forms a span and drops the selection, nothing else), but once either
+        // press becomes a drag the pointer carries the cursor from here on.
+        // DIRECT CURSOR WRITE, not move_playhead_to: a keep-visible edge-align
+        // would scroll the viewport out from under a live gesture, and the span's
+        // endpoints are painted against the viewport the drag started in.
+        // PLAYBACK IS UNTOUCHED per motion: the plain press's at-press
+        // reseek-keeping-alive stands as the whole playback story of this
+        // gesture, and a per-column reseek would re-cue the audio on every pixel.
+        // The column-change short-circuit above keeps this to ONE write per
+        // CHANGED column. The waveform invalidate below repaints the cursor's
+        // line and triangle with the ground; the TIMESTAMP invalidate is owed
+        // separately because the bottom-strip readout shows this cursor whenever
+        // no scanner is active, and it lives outside the waveform area.
+        // A SLIVER RELEASE LEAVES THE PLAYHEAD WHERE THE DRAG PUT IT: the
+        // release-time min-size check dissolves the span but writes no playhead,
+        // which is the same "what stands stands" rule every pointer gesture has
+        // (there is no cancel) — accepted.
+        app.playhead_cursor_sample = far_frame;
         viewport.invalidate_waveform_area();
+        viewport.invalidate_timestamp_area();
         return;
     }
     // (No tempo-drag motion arms: the target-view tempo drag and its pending are

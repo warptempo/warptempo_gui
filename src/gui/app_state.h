@@ -401,7 +401,10 @@ struct UndoHistory {
 // press-becomes-drag threshold (kDragMovedThresholdPx) extends app.region from
 // the press frame to the pointer column. Under SELECTION FLOWS DOWNWARD ONLY
 // (architect 2026-07-23) the drag does NOT select the span's markers — the
-// selection stays EMPTY from the press's deselect-all through release. A
+// selection stays EMPTY from the press's deselect-all through release. THE DRAG
+// CARRIES THE PLAYHEAD (architect 2026-07-30): each changed column writes the
+// cursor to the MOVING endpoint, both arms through the one motion path, with no
+// viewport scroll and no playback reseek per motion. A
 // sub-threshold press-release is a
 // plain waveform click and simply disarms — the highlight already dissolved at
 // press, so there is no release-time collapse. TWO presses arm this drag: the
@@ -418,11 +421,12 @@ struct UndoHistory {
 // which dissolves like a click instead (end_region_drag_min_size_check, at both
 // end points). The drag never touches the selection anywhere — the press's
 // deselect/drop was the committed act, and downward-only is structural (there
-// is no selection write in the drag or at its ends). ESC DOES NOTHING AT ALL now
-// (architect 2026-07-29, superseding the same-day Esc-clears-the-region arm):
-// pointer gestures have no cancel, so Esc mid-drag is a consumed no-op and the
-// drag keeps extending under the pointer; the release rests the region where it
-// stands (Free, the drag's normal product, under the sliver gate). This state was
+// is no selection write in the drag or at its ends). ESC DOES NOTHING TO A DRAG
+// IN FLIGHT: pointer gestures have no cancel, so a mid-drag Esc is swallowed by
+// the drag-modal gate and the drag keeps extending under the pointer; the release
+// rests the region where it stands (under the sliver gate). Esc clears a RESTED
+// span (architect 2026-07-30, the arm in on_key) — clear but never cancel, and
+// the gate is what makes those two cases distinct. This state was
 // the first to lose its pre-press snapshot — the whole family followed. The rule
 // is at the drag-modal gate (input_handler.cpp). Session-only, never undoable.
 struct RegionDragState {
