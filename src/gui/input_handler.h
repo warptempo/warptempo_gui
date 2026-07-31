@@ -945,7 +945,7 @@ private:
     // A click while audio PLAYS is a pure stop — the frame is ignored and
     // nothing relaunches; a click on a stopped session runs the launch path
     // (the target-view is_updating gate + scrub_launch_at) at the given frame,
-    // capturing the loop verdict and end bound freshly there. Sole caller:
+    // capturing its end_sample freshly there and playing once to it. Sole caller:
     // the one-shot scrub press body (scrub_press_at).
     void scrub_act_at(int64_t frame);
 

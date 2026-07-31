@@ -795,9 +795,9 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     const PlateViewportBasis basis = plate_viewport_basis();
     const double disp_spp = basis.spp;
     const double px_x = playhead_pixel_x(app, wf_cache.fp_vp_start, disp_spp);
-    // The lane every playhead triangle — whole or split — is stamped in, from
-    // the lane accessor rather than derived from the waveform top edge, so the
-    // triangles ride the same band as the flag triangles beside them.
+    // The lane the cursor's triangle is stamped in, from
+    // the lane accessor rather than derived from the waveform top edge, so it
+    // rides the same band as the flag triangles beside it.
     const GuiRect tri_lane = top_triangle_row_area(app);
 
     // Playheads paint UNDER the marker flags (the Z-ORDER FLIP, architect
@@ -823,8 +823,8 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // THE CURSOR PLAYHEAD ALWAYS PAINTS (architect 2026-07-30): ONE playhead
     // form, drawn at the resting cursor column whatever the selection and
     // whatever the region are doing. The kPlayheadCursor 1px line + tip-down
-    // triangle, painted solid straight over the plate ink; ONE color for both
-    // forms.
+    // triangle, painted solid straight over the plate ink; ONE color for the
+    // line and the triangle alike.
     //
     // The three-way chain that used to live here is gone with the SPAN FORM: the
     // region is no longer a playhead at all (it is TRIM SCRATCH — a ground recolor
@@ -1089,7 +1089,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // kLine border (painted above, unconditionally) -> region ground ->
         // waveform plate -> overlay ring -> LIVE
         // TRIM (chips + bridge bar + strip and waveform stem segments, one pass)
-        // -> selected stem -> playheads (scanner + split/cursor) -> flag blit ->
+        // -> selected stem -> playheads (scanner line + cursor) -> flag blit ->
         // marker-text lane / zoom ring -> strip-drag anchor -> bottom strip.
         // Three structural rulings live in this sequence:
         //   THE RECOLOR MODEL (architect 2026-07-26) — a highlight changes the

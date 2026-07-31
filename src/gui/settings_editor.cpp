@@ -450,10 +450,10 @@ void GuiSettingsEditor::commit() {
     viewport.invalidate_timestamp_area();
     text_editor::deactivate(app.settings_editor);
     // WHOLESALE REGION CLEAR at the engine-commit chokepoint (architect
-    // 2026-07-29, the maximally greedy collapse): the scale is a warp-map input,
+    // 2026-07-29): the scale is a warp-map input,
     // so this commit rebuilds the target map underneath any resting highlight,
-    // and a span measured against the old map is exactly the stale assertion the
-    // two-forms model collapses on sight. This tail is the ONE committed path for
+    // and a scratch span measured against the old map would aim `x` at a window
+    // the user never drew. This tail is the ONE committed path for
     // every canonical engine key — the GUI-kind keys returned through
     // commit_gui_setting far above (the TRIM keys among them, whose active-tab
     // arms take the setter's own deselect and touch no region,
@@ -464,29 +464,30 @@ void GuiSettingsEditor::commit() {
     // (title/bpm/notes/url/cover) moves no image and a SOURCE-view commit changes
     // no display domain at all, so the clear is greed rather than repair there,
     // and one rule beats a second view gate to maintain. The trim WINDOW itself
-    // is untouched — a chip-row re-click brings its highlight back. The helper
+    // is untouched — the chips and the bridge bar go on showing it; only the
+    // user's scratch span goes. The helper
     // owns its own waveform damage, which the source-view path would otherwise
     // not raise.
     clear_region_highlight(app, viewport);
     // AND THE SELECTION GOES WITH IT (architect 2026-07-29): an engine
-    // commit rebuilds the map under every marker INDEX and IMAGE at once, so it
-    // clears BOTH playhead forms and leaves the cursor as the only one — the same
+    // commit rebuilds the map under every marker INDEX and IMAGE at once, so no
+    // marker keeps the identity a focus named — the same
     // "ready to move on" act the trim setters make when a chip click deselects.
     // This is the SYMMETRIC half of a pair: the settings-only ('S') undo/redo
-    // restore clears both at its own restore (undo.cpp), and GUI-kind keys are
+    // restore clears the selection at its own restore (undo.cpp), and GUI-kind
+    // keys are
     // history-less, so no other settings entry kind exists to cover. Together they
     // are what let the never-span-less ENFORCEMENT be deleted: this site was one of
     // its two remaining producers, and closing it here means no collapse protocol
-    // is needed rather than a collapse being owed. The clear runs AFTER the region
-    // clear above, so its own membership-replace clear finds the region already
-    // inactive and raises no second damage.
+    // is needed rather than a collapse being owed. It touches no region — the
+    // clear above already took any scratch span, and a selection mutator writes
+    // no region at all.
     selection.clear_selection();
-    // Full-area damage for the teardown. clear_selection raises its own
-    // NARROW stem/overlay damage, computed against the basis live at the call —
-    // and this commit is about to rebuild the map under it (the kick below), so
-    // that basis is the wrong one to trust here. A settings commit is a rare,
-    // discrete command, so it takes the standing "rare command, full damage"
-    // answer rather than a clever narrow recompute.
+    // Full-area damage for the teardown, and it is the site's own: clear_selection
+    // damages only on a stem/overlay SUBJECT CHANGE, so an already-empty selection
+    // raises nothing there, while this commit rebuilds the map under the whole
+    // plate either way (the kick below). A settings commit is a rare, discrete
+    // command, so it takes the standing "rare command, full damage" answer.
     viewport.invalidate_waveform_area();
     // The engine scale is a warp-map input (build_warp_frame_map's slope
     // product), so an engine commit that moved it re-warps the target-view

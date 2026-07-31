@@ -567,9 +567,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // creates no trim scratch.
     // THE CLEAR IS NOT GATED OFF 'S' (architect 2026-07-29, closing the settings
     // side of the same hole): a SETTINGS-ONLY restore rewrites engine_settings
-    // and rebuilds the target map underneath a resting highlight — scale A ->
-    // commit scale B -> chip-row re-sync under B -> Ctrl+Z would otherwise rest a
-    // B-domain span under A — so it clears too. The REST of the 'S' gate stands
+    // and rebuilds the target map underneath a resting highlight — drag a span
+    // under scale A, commit scale B, and Ctrl+Z would otherwise rest an
+    // A-domain span under B — so it clears too. The REST of the 'S' gate stands
     // exactly: a settings restore still must not select and must not WRITE a
     // region, which is why only this one call sits above the gate and the whole
     // land/framing block stays inside it. The no-LAND half is EXCEPTIONLESS again:
@@ -579,8 +579,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     clear_region_highlight(app, viewport);
     // THE 'S' ARM CLEARS THE SELECTION TOO (architect 2026-07-29): a
     // settings-only restore rewrites engine_settings and rebuilds the map under
-    // every marker INDEX and IMAGE, so it tears down BOTH playhead forms and leaves
-    // the resting cursor as the only one. It is the SYMMETRIC twin of the engine-key
+    // every marker INDEX and IMAGE, so no marker keeps the identity a focus
+    // named. It is the SYMMETRIC twin of the engine-key
     // settings COMMIT, which clears both at its own chokepoint
     // (settings_editor.cpp); GUI-kind keys are history-less, so 'S' is the only
     // settings entry kind there is and the pair covers the whole surface. Together

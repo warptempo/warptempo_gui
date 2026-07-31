@@ -86,9 +86,9 @@ void GuiInputHandler::handle_trim_clear_both() {
         // A TRIM MUTATION STOPS A LIVE AUDITION, IN BOTH VIEWS — the keyboard stop
         // rule at stop_playback_if_playing's declaration (playback_lifecycle.h).
         // Inside the identity guard, so an already-full Shift+X stops nothing
-        // (refusal-gated, like every claim's stop).
-        // (architect ruled `x`; `Shift+X` joins as the same trim-mutation class —
-        // planner extension 2026-07-30, pending the architect's glance.)
+        // (refusal-gated, like every claim's stop). `Shift+X` is in the
+        // trim-mutation class alongside `x` by the same 2026-07-30 ruling that
+        // made it the maximizer.
         playback_lifecycle.stop_playback_if_playing();
         reset_trim_to_full_window();
         viewport.invalidate_waveform_area();
