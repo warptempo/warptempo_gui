@@ -28,9 +28,19 @@ namespace {
 // rule — which is the SVG default too, and what makes document-save's holes
 // (the body cutout and the lid slot) come out as holes: its subpaths wind
 // against the outline. Filling subpath-by-subpath would flood them.
+// `tx`/`ty` carry the path element's own SVG `transform="translate(tx, ty)"`,
+// applied around the path so `d` can stay VERBATIM. Exactly ONE committed file
+// needs it — dialog-ok-apply.svg, whose author drew the check mark at its
+// document coordinates and translated it back into the viewBox — and baking the
+// offset into its twenty-odd numbers by hand would destroy the property that a
+// diff between this table and the file is a transcription bug and nothing else.
+// It is a TRANSLATE ONLY: no scale, rotate or matrix appears in any committed
+// file, so none is modelled and none is silently accepted.
 struct IconPath {
     GuiColor    fill;
     const char* d;
+    double      tx = 0.0;
+    double      ty = 0.0;
 };
 
 struct IconDef {
@@ -74,19 +84,98 @@ constexpr IconPath kMediaRecordPaths[] = {
      "m19 11a8 8 0 0 1 -8 8 8 8 0 0 1 -8-8 8 8 0 0 1 8-8 8 8 0 0 1 8 8z"},
 };
 
-constexpr IconDef kDocumentSave{22.0, kDocumentSavePaths, 1};
-constexpr IconDef kEditUndo    {22.0, kEditUndoPaths,     1};
-constexpr IconDef kEditRedo    {22.0, kEditRedoPaths,     1};
-constexpr IconDef kMediaRecord {22.0, kMediaRecordPaths,  1};
+// -- Row 4's six --------------------------------------------------------------
+//
+// Same rules as the four above: `d` verbatim from the committed file, the fill
+// hard-coded to what that file resolves to. Five of the six are pure
+// `.ColorScheme-Text` = #fcfcfc; preview-render-on is TWO paths, the second
+// carrying its own literal #d24d57 (the "on" pip), which is a third independent
+// red in this tree and deliberately not a reference to media-record's #da4453
+// or to the marker ring.
+
+constexpr GuiColor kIconPreviewOn = hex(0xD24D57);
+
+constexpr IconPath kEditCopyPaths[] = {
+    {kIconText,
+     "M 3 3 L 3 17 L 7 17 L 7 19 L 17 19 L 17 10 L 13 6 L 12 6 L 9 3 L 3 3 Z M "
+     "4 4 L 8 4 L 8 6 L 7 6 L 7 16 L 4 16 L 4 4 Z M 8 7 L 12 7 L 12 11 L 16 11 "
+     "L 16 18 L 8 18 L 8 7 Z"},
+};
+
+constexpr IconPath kEditPastePaths[] = {
+    {kIconText,
+     "M 7 3 L 7 5 L 5 5 L 4 5 L 4 19 L 5 19 L 18 19 L 18 18 L 18 5 L 17 5 L 15 "
+     "5 L 15 3 L 7 3 z M 5 6 L 6 6 L 6 8 L 16 8 L 16 6 L 17 6 L 17 18 L 5 18 L "
+     "5 6 z M 7 9 L 7 10 L 15 10 L 15 9 L 7 9 z M 7 12 L 7 13 L 13 13 L 13 12 L "
+     "7 12 z M 7 15 L 7 16 L 10 16 L 10 15 L 7 15 z "},
+};
+
+constexpr IconPath kMusicNote16thPaths[] = {
+    {kIconText,
+     "m 11,3 0,1 0,3 0,1 0,4 0,2.640625 C 10.450691,14.229206 9.7385673,"
+     "14.001104 9,14 7.3431458,14 6,15.119288 6,16.5 6,17.880712 7.3431458,19 "
+     "9,19 c 1.656854,0 3,-1.119288 3,-2.5 L 12,12 12,8.0957031 c 1.473938,"
+     "0.2519592 3.180894,1.3814645 4,2.1485529 L 16,9.5 16,9 16,8.84375 16,5.5 "
+     "16,4.84375 C 14.788541,3.8472864 12.971189,3 11,3 Z m 1,1.0957031 c "
+     "1.132773,0.1936395 2.194743,0.6800469 3,1.2460938 l 0,2.8046875 C "
+     "14.137786,7.634143 13.107988,7.23782 12,7.0800781 Z M 9,15 c 1.104569,0 "
+     "2,0.671573 2,1.5 C 11,17.328427 10.104569,18 9,18 7.8954305,18 7,"
+     "17.328427 7,16.5 7,15.671573 7.8954305,15 9,15 Z"},
+};
+
+constexpr IconPath kMediaPlaylistRepeatPaths[] = {
+    {kIconText,
+     "m16 5v2h-10c-1.662 0-3 1.338-3 3v1h1v-1c0-1.108 0.892-2 2-2h10v2l3-2.5zm2 "
+     "6v1c0 1.108-0.892 2-2 2h-10v-2l-3 2.5 3 2.5v-2h10c1.662 0 3-1.338 "
+     "3-3v-1z"},
+};
+
+constexpr IconPath kPreviewRenderOnPaths[] = {
+    {kIconText,
+     "M 11 3 C 6.568 3 3 6.568 3 11 C 3 15.432 6.568 19 11 19 C 15.432 19 19 "
+     "15.432 19 11 C 19 6.568 15.432 3 11 3 z M 11 4 C 14.878 4 18 7.122 18 11 "
+     "C 18 14.878 14.878 18 11 18 C 7.122 18 4 14.878 4 11 C 4 7.122 7.122 4 11 "
+     "4 z M 11 8 L 11 14 L 15 11 L 11 8 z "},
+    {kIconPreviewOn,
+     "m 10,8 a 3,3 0 0 0 -3,3 3,3 0 0 0 3,3 l 0,-6 z"},
+};
+
+// THE ONE TRANSLATED PATH in the set — the file's own
+// transform="translate(-364.57143 -525.79075)", carried as data so the `d`
+// string stays byte-identical to dialog-ok-apply.svg.
+constexpr IconPath kDialogOkApplyPaths[] = {
+    {kIconText,
+     "m382.8643 530.79077l-10.43876 10.56644-4.14699-4.19772-.70712.71578 "
+     "4.14699 4.1977-.002.002.70713.71577.002-.002.002.002.70711-.71577-.002-.002 "
+     "10.43877-10.56645-.70712-.71576z",
+     -364.57143, -525.79075},
+};
+
+constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
+constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
+constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
+constexpr IconDef kMediaRecord        {22.0, kMediaRecordPaths,         1};
+constexpr IconDef kEditCopy           {22.0, kEditCopyPaths,            1};
+constexpr IconDef kEditPaste          {22.0, kEditPastePaths,           1};
+constexpr IconDef kMusicNote16th      {22.0, kMusicNote16thPaths,       1};
+constexpr IconDef kMediaPlaylistRepeat{22.0, kMediaPlaylistRepeatPaths, 1};
+constexpr IconDef kPreviewRenderOn    {22.0, kPreviewRenderOnPaths,     2};
+constexpr IconDef kDialogOkApply      {22.0, kDialogOkApplyPaths,       1};
 
 const IconDef& icon_def(Icon icon) {
     switch (icon) {
-        case Icon::DocumentSave: return kDocumentSave;
-        case Icon::EditUndo:     return kEditUndo;
-        case Icon::EditRedo:     return kEditRedo;
-        case Icon::MediaRecord:  break;
+        case Icon::DocumentSave:        return kDocumentSave;
+        case Icon::EditUndo:            return kEditUndo;
+        case Icon::EditRedo:            return kEditRedo;
+        case Icon::MediaRecord:         return kMediaRecord;
+        case Icon::EditCopy:            return kEditCopy;
+        case Icon::EditPaste:           return kEditPaste;
+        case Icon::MusicNote16th:       return kMusicNote16th;
+        case Icon::MediaPlaylistRepeat: return kMediaPlaylistRepeat;
+        case Icon::PreviewRenderOn:     return kPreviewRenderOn;
+        case Icon::DialogOkApply:       break;
     }
-    return kMediaRecord;
+    return kDialogOkApply;
 }
 
 // -- The `d` interpreter ----------------------------------------------------
@@ -335,6 +424,11 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
     cairo_scale(cr, size_px / def.view_box, size_px / def.view_box);
     for (int i = 0; i < def.path_count; ++i) {
         const IconPath& p = def.paths[i];
+        // The path element's own translate, saved/restored around it so it
+        // cannot leak into a sibling path (only one file uses one, but a
+        // per-path transform that escaped its path would be a silent bug).
+        cairo_save(cr);
+        if (p.tx != 0.0 || p.ty != 0.0) cairo_translate(cr, p.tx, p.ty);
         cairo_new_path(cr);
         if (!append_path(cr, p.d)) {
             // A transcription error in an in-tree constant: say so once and
@@ -342,6 +436,7 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
             // typo ship.
             cairo_new_path(cr);
             std::fprintf(stderr, "icons: malformed path data, icon not drawn\n");
+            cairo_restore(cr);
             continue;
         }
         // The path's own color, retained by keep_own and made up with
@@ -351,6 +446,7 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
         const GuiColor c = mix_color(p.fill, mixed_with, keep_own);
         cairo_set_source_rgb(cr, c.r, c.g, c.b);
         cairo_fill(cr);
+        cairo_restore(cr);
     }
     cairo_restore(cr);
 }

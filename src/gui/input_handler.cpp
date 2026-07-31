@@ -1139,8 +1139,8 @@ int GuiInputHandler::wheel_context(int x, int y) const {
 
     // THE REDESIGNED ROWS ARE WHEEL-INERT (architect 2026-07-31) — ONE decision
     // for the whole family, recorded here where the routing lives, and every
-    // future row inherits it by joining this band test. A wheel over the menu,
-    // toolbar or tab row does NOTHING: those rows are chrome with no scrollable
+    // future row inherits it by joining this band list. A wheel over any
+    // redesigned row does NOTHING: those rows are chrome with no scrollable
     // content and no relation to the waveform under them, so passing the event
     // through to the top-strip zoom/pan (which is what happened before row 1's
     // ruling) made a scroll over the Quit button silently zoom the song. They sit
@@ -1148,16 +1148,14 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // must win over it. Returning -1 (rather than 0) also stops the platform's
     // sub-detent accumulator from growing remainder over them.
     {
-        const GuiRect menu = top_menu_row_area(app);
-        const GuiRect tool = top_toolbar_row_area(app);
-        const GuiRect tabs = top_tab_row_area(app);
-        const bool in_menu = x >= menu.x && x < menu.x + menu.w &&
-                             y >= menu.y && y < menu.y + menu.h;
-        const bool in_tool = x >= tool.x && x < tool.x + tool.w &&
-                             y >= tool.y && y < tool.y + tool.h;
-        const bool in_tabs = x >= tabs.x && x < tabs.x + tabs.w &&
-                             y >= tabs.y && y < tabs.y + tabs.h;
-        if (in_menu || in_tool || in_tabs) return -1;
+        const GuiRect bands[] = {
+            top_menu_row_area(app), top_toolbar_row_area(app),
+            top_tab_row_area(app),  top_icon_row_area(app),
+        };
+        for (const GuiRect& b : bands) {
+            if (x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h)
+                return -1;
+        }
     }
 
     const GuiRect area = waveform_area(app);

@@ -445,7 +445,11 @@ inline constexpr double kRedesignDisabledMix = 0.322;
 // kRedesignTabGround is BOTH the row's ground outside the tabs AND the selected
 // tab's interior — one value by the architect's ruling ("the background of the
 // row outside the tabs = the selected tab's background minus the blue trim"),
-// which is what makes the selected tab read as seamless with the row. NOTE that
+// which is what makes the selected tab read as seamless with the row. ROW 4 (the
+// icon row) PAINTS ON IT TOO, and shares the constant rather than declaring a
+// fourth copy of the value: the icon row is literally the surface the selected
+// tab opens into through its broken bottom border, so that is one fact seen
+// twice rather than two samples that agree. NOTE that
 // it COINCIDES with kBackground #202326 (both sample Breeze's Window color);
 // it is its OWN constant by the hard-coded rule, never a reference to the
 // palette, and a retune of one must not follow the other.
@@ -459,6 +463,23 @@ inline constexpr GuiColor kRedesignTabRest      = hex(0x1B1D20);
 inline constexpr GuiColor kRedesignTabHover     = hex(0x263F4D);
 inline constexpr GuiColor kRedesignTabHoverEdge = hex(0x496170);
 inline constexpr GuiColor kRedesignTabLine      = hex(0x4C4E51);
+
+// -- Row 4, the ICON ROW's one new color -----------------------------------
+//
+// The SELECTED (toggled-on) button's interior, sampled #3c3f41 off
+// row_4_button_selected.png. A literal, not a derivation: nothing clean
+// generates (60,63,65) from this row's ground and the accent — it is Breeze's
+// own "button pressed/checked" shade and stands as its own sample, which the
+// architect explicitly allowed.
+//
+// THE TWO GREYS CROSS ROLES ON THIS ROW, and that is worth stating because it
+// looks like a mistake otherwise: row 4's SEPARATORS and its border-bottom are
+// #4c4e51 (kRedesignTabLine, row 3's frame grey) while its selected OUTLINE is
+// #535659 (kRedesignLine, row 2's separator grey) — the opposite pairing to
+// rows 2 and 3. Both are measured off row 4's own crops; the constants are
+// reused rather than re-declared because the VALUES are the same Breeze pair,
+// and only the roles moved.
+inline constexpr GuiColor kRedesignSelectedFill = hex(0x3C3F41);
 
 // -- GUI font size ---------------------------------------------------------
 //
@@ -720,6 +741,38 @@ inline int tab_row_content_h_px() {
 }
 inline int tab_row_h_px() {
     return tab_row_content_h_px() + tab_row_border_h_px();
+}
+
+// Authored pixel geometry of the ICON ROW — the top strip's lane 3, under the
+// tabs (row 4 of the redesign: the eleven view/mode/action buttons). Measured
+// at 100% gui_scale off row_4_button_{rest,hover,click,selected,selectedhover}
+// .png (32x32), row_4_separator.png (1x34) and row_4_bottom_border.png.
+//
+// Same CSS box model as rows 2 and 3: 48 is CONTENT, the 1px border-bottom sits
+// OUTSIDE it, and the LANE is their sum (49 at 100%).
+//
+// RECORDED SPEC DISCREPANCY (architect 2026-07-31, for him to settle): he gave
+// the row as 48 tall AND the separator margins as 6px, but the separator crop
+// he supplied is 34 tall — and 6 + 34 + 6 = 46, not 48. The ROW HEIGHT WINS (it
+// is the lane every other row's stack has to agree with) and the two-pixel
+// difference is absorbed by his own standing rule that elements are VERTICALLY
+// CENTERED in their row: the 34px separator sits at +7 and the 32px buttons at
+// +8, both centered, and neither carries a stated margin any more. If he meant
+// 46, this constant is the one line to change.
+inline constexpr int kIconRowHeightPx = 48;
+inline constexpr int kIconRowBorderPx = 1;
+inline int icon_row_border_h_px() {
+    const int h = static_cast<int>(std::nearbyint(
+        static_cast<double>(kIconRowBorderPx) * gui_scale_factor()));
+    return h < 1 ? 1 : h;
+}
+inline int icon_row_content_h_px() {
+    const int h = static_cast<int>(std::nearbyint(
+        static_cast<double>(kIconRowHeightPx) * gui_scale_factor()));
+    return h < 5 ? 5 : h;
+}
+inline int icon_row_h_px() {
+    return icon_row_content_h_px() + icon_row_border_h_px();
 }
 
 // Height H (px) of the code-generated tip-down triangle, SHARED by the playhead
@@ -1389,7 +1442,7 @@ void render_trim_stems(cairo_t* cr,
 // Draws the begin/end trim-boundary chips in the TRIM CHIP LANE, plus the
 // strip-crossing portion of their stems and the inter-chip bridge band. The
 // lane band is the `chip_row` PARAMETER — the caller passes
-// top_upper_row_area(app) (top-strip lane 3), the same accessor
+// top_upper_row_area(app) (top-strip lane 4), the same accessor
 // hit_test_trim_chip's y-gate and route_trim_chip_press' bridge y-gate read, so
 // paint and hit take the band from ONE owner and cannot drift; nothing in here
 // re-derives the lane's y from the row heights above it. Only the band's y/h

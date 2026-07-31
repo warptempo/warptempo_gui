@@ -96,6 +96,7 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
 }
 
 // -- The redesigned rows: paint_menu_row / paint_toolbar_row / paint_tab_row
+// -- / paint_icon_row -------------------------------------------------------
 
 namespace {
 
@@ -302,6 +303,72 @@ void redesign_rounded_rect_path(cairo_t* cr, double x, double y,
     cairo_arc(cr, x + r,     y + r,     r, kPi,         1.5 * kPi);
     cairo_close_path(cr);
 }
+
+// ROW 4 — THE ICON ROW, measured at 100% off the five 32x32 state crops
+// (row_4_button_{rest,hover,click,selected,selectedhover}.png),
+// row_4_separator.png (1x34) and row_4_bottom_border.png. The lane metrics
+// (48 content + 1 border) live in render.h with rows 1-3's.
+//
+// THE VERTICAL STORY IS PURE CENTERING (and it is what resolves the architect's
+// 48-vs-6+34+6 discrepancy, recorded at kIconRowHeightPx): the 32px buttons
+// land at +8 and the 34px separators at +7, each centered in the 48px content
+// band by its own arithmetic rather than by a stated margin.
+//
+// THE HORIZONTAL WALK uses TWO different gaps, which is this row's own rule and
+// not row 2's: 2px between ADJACENT buttons, and 4px on each side of a
+// SEPARATOR (row 2 used 5). The row opens with 8px of padding.
+constexpr double kIconRowPadLeftPx    = 8.0;
+constexpr double kIconBtnPx           = 32.0;   // the button box, both axes
+constexpr double kIconBtnGapPx        = 2.0;    // between adjacent buttons
+constexpr double kIconSepGapPx        = 4.0;    // each side of a separator
+constexpr double kIconSepWidthPx      = 1.0;
+constexpr double kIconSepHeightPx     = 34.0;
+constexpr double kIconGlyphPx         = 22.0;   // the icon box inside the button
+constexpr double kIconOutlineStrokePx = 1.0;
+// THE CORNER RADIUS IS 5 — MEASURED, and it lands in rows 1-3's family after
+// all. Fitting rendered corners against BOTH the hover crop (stroke only) and
+// the selected crop (fill under stroke) over radii 3.0..5.0 minimises squared
+// per-channel error at a PATH radius of 4.5 in each — hover 2382 against
+// r=4.0's 25347 and r=5.0's 8099, selected 227 against 2685 and 684 — and 4.5
+// is what the authored 5 becomes once the half-stroke inset below is applied.
+// (An earlier read of "4" came from fitting the PATH radius directly and
+// forgetting that inset; the authored constant is the thing to state.)
+constexpr double kIconCornerRadiusPx  = 5.0;
+
+// What precedes an icon-row button in the layout walk.
+enum class IconRowLead {
+    First,       // the row's left padding already placed it
+    Gap,         // 2px, between adjacent buttons
+    Separator,   // 4px, the 1px line, 4px
+};
+
+// THE PAINTER'S HALF OF THE ICON-ROW ROSTER: each button's id, what leads it,
+// and its content — a LETTER GLYPH (shaped sans, centered on both axes) or a
+// 22px breeze ICON. Exactly one of the two is used: a non-null `glyph` selects
+// the letter and `icon` is then never read. The press claim's chord table
+// (input_pointer.cpp) is the other half; both key off the same ids.
+struct IconRowDef {
+    RedesignButton id;
+    IconRowLead    lead;
+    const char*    glyph;   // nullptr -> draw `icon` instead
+    icons::Icon    icon;
+};
+constexpr IconRowDef kIconRowButtons[] = {
+    {RedesignButton::IconS,      IconRowLead::First,     "S", icons::Icon::EditCopy},
+    {RedesignButton::IconT,      IconRowLead::Gap,       "T", icons::Icon::EditCopy},
+    {RedesignButton::IconW,      IconRowLead::Separator, "W", icons::Icon::EditCopy},
+    {RedesignButton::IconP,      IconRowLead::Gap,       "P", icons::Icon::EditCopy},
+    {RedesignButton::IconCopy,   IconRowLead::Separator, nullptr, icons::Icon::EditCopy},
+    {RedesignButton::IconPaste,  IconRowLead::Gap,       nullptr, icons::Icon::EditPaste},
+    {RedesignButton::IconBpm,    IconRowLead::Gap,       nullptr, icons::Icon::MusicNote16th},
+    {RedesignButton::IconIter,   IconRowLead::Gap,       nullptr, icons::Icon::MediaPlaylistRepeat},
+    // FOLLOW'S "F" IS PROVISIONAL (architect 2026-07-31): he wants an
+    // arrow-shaped candidate and has not chosen one, so the letter stands in and
+    // this is the one line that changes when he does.
+    {RedesignButton::IconFollow, IconRowLead::Gap,       "F", icons::Icon::EditCopy},
+    {RedesignButton::IconListen, IconRowLead::Separator, nullptr, icons::Icon::PreviewRenderOn},
+    {RedesignButton::IconCommit, IconRowLead::Gap,       nullptr, icons::Icon::DialogOkApply},
+};
 
 // The selected tab's outline: a rectangle with ROUNDED TOP corners, and — this
 // is the load-bearing part — NO BOTTOM EDGE. It is an OPEN path running up the
@@ -809,10 +876,185 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
     cairo_restore(cr);
 }
 
+void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
+    // THE ICON ROW (top lane 3, row 4 of the redesign): the same #202326 ground
+    // the tab row above opens into, a 1px border-bottom across the WHOLE window
+    // width, three vertical separators, and eleven 32x32 buttons in four groups
+    // — the S/T and W/P view radios, the phase-reset copy/paste pair with the
+    // bpm / iteration / follow modes, and the listen / commit render pair.
+    //
+    // NO FOCUS SWAP HERE: this ground already IS the unfocused shade rows 1 and
+    // 2 darken to, so there is nothing for it to change to (redesign_row_ground
+    // is deliberately not called).
+    //
+    // FIVE FACES, AND NO DISABLED ONE — the architect supplied exactly these:
+    //   REST          — the bare glyph on the row ground, no chrome.
+    //   HOVER         — a 1px accent rounded OUTLINE. THE RULED READING is that
+    //                   hover IS the outline, applied over WHICHEVER fill the
+    //                   button has: the selectedhover crop is the accent outline
+    //                   over the selected fill, unchanged otherwise.
+    //   CLICK         — the interior filled with the row ground tinted 30%
+    //                   toward the accent, the SAME kRedesignClickMix machinery
+    //                   row 2 uses, under the accent outline.
+    //   SELECTED      — kRedesignSelectedFill under a 1px kRedesignLine outline,
+    //                   persistent, reading the live fact its chord flips
+    //                   (redesign_button_selected).
+    //   SELECTED+HOVER— the selected fill under the ACCENT outline.
+    // SELECTED + CLICK was not supplied, and THE CLICK FILL WINS while held: a
+    // press is transient and its feedback should be the same wherever it lands,
+    // so the pressed tint replaces the selected fill for exactly the hold and
+    // the selected fill returns at the release.
+    // THE ABSENT DISABLED FACE IS A SCOPE DIFFERENCE FROM ROW 2, deliberately:
+    // presses here always dispatch and the CHORDS' OWN refusals answer (the
+    // read-only gate blocks the authoring ones, loading blocks everything),
+    // inherited through on_key rather than mirrored — the standing
+    // chord-dispatch ruling doing exactly the work it exists for.
+    const GuiRect lane = top_icon_row_area(app);
+    if (lane.w <= 0 || lane.h <= 0) return;
+
+    const int border_h  = icon_row_border_h_px();
+    const int content_h = lane.h - border_h;
+    if (content_h <= 0) return;
+
+    cairo_save(cr);
+
+    cairo_set_source_rgb(cr, kRedesignTabGround.r, kRedesignTabGround.g,
+                         kRedesignTabGround.b);
+    cairo_rectangle(cr, lane.x, lane.y, lane.w, content_h);
+    cairo_fill(cr);
+
+    // The border-bottom runs the ENTIRE window width with no break — the tab
+    // row's break is the tab row's own fact, about a tab opening into this
+    // surface; nothing opens into what is below here.
+    cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
+                         kRedesignTabLine.b);
+    cairo_rectangle(cr, lane.x, lane.y + content_h, lane.w, border_h);
+    cairo_fill(cr);
+
+    cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_font_size(cr, redesign_font_size_px());
+    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+
+    const int btn      = scaled_px(kIconBtnPx);
+    const int btn_gap  = scaled_px(kIconBtnGapPx);
+    const int sep_gap  = scaled_px(kIconSepGapPx);
+    const int sep_w    = scaled_px(kIconSepWidthPx);
+    const int sep_h    = scaled_px(kIconSepHeightPx);
+    const int glyph_px = scaled_px(kIconGlyphPx);
+    const int lw       = std::max(1, scaled_px(kIconOutlineStrokePx));
+    const double radius = std::nearbyint(kIconCornerRadiusPx *
+                                         gui_scale_factor());
+
+    // EVERYTHING CENTERS IN THE CONTENT BAND — see the constants block: this is
+    // the whole vertical layout, and it is what absorbs the 46/48 discrepancy.
+    const int btn_y = lane.y + (content_h - btn)   / 2;
+    const int sep_y = lane.y + (content_h - sep_h) / 2;
+
+    int x = lane.x + scaled_px(kIconRowPadLeftPx);
+    for (const IconRowDef& def : kIconRowButtons) {
+        if (def.lead == IconRowLead::Separator) {
+            x += sep_gap;
+            cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
+                                 kRedesignTabLine.b);
+            cairo_rectangle(cr, x, sep_y, sep_w, sep_h);
+            cairo_fill(cr);
+            x += sep_w + sep_gap;
+        } else if (def.lead == IconRowLead::Gap) {
+            x += btn_gap;
+        }
+
+        AppState::RedesignButtonFace& face =
+            app.redesign_buttons[redesign_button_index(def.id)];
+        face.rect     = GuiRect{x, btn_y, btn, btn};
+        face.enabled  = redesign_button_enabled(app, audio.total_frames(),
+                                                def.id);
+        face.selected = redesign_button_selected(app, def.id);
+
+        const bool pressed =
+            app.redesign_pressed == redesign_button_index(def.id);
+
+        // THE FILL AND THE OUTLINE ARE DECIDED SEPARATELY, which is exactly the
+        // architect's reading of the five crops: the outline says "the pointer
+        // is here" and the fill says "this is the state", so every combination
+        // of the two falls out instead of being enumerated.
+        const bool has_fill = pressed || face.selected;
+        const bool has_line = face.hovered || pressed || face.selected;
+        if (has_fill || has_line) {
+            // ONE PATH, FILLED AND STROKED — not a fill on the full box under a
+            // stroke on an inset one. The crops settle it: fitting both
+            // constructions against the selected crop, the shared inset path
+            // scores 227 where the full-box fill scores 270 at its own best
+            // radius and 2129 at this one, and it is what the source widget does
+            // (a single rounded rect drawn with both a brush and a pen). Sharing
+            // the path also means the fill's edge and the stroke's centreline
+            // cannot describe different rectangles.
+            //
+            // The inset is HALF THE STROKE on all four sides, so the band lands
+            // on the box's outermost pixel ring with no straight edge
+            // antialiased — rows 2 and 3's alignment term, both parities from
+            // the one expression — and the radius insets by the same half so the
+            // corner stays concentric with the box.
+            const double half = static_cast<double>(lw) * 0.5;
+            redesign_rounded_rect_path(cr, x + half, btn_y + half,
+                                       static_cast<double>(btn - lw),
+                                       static_cast<double>(btn - lw),
+                                       radius - half);
+            if (has_fill) {
+                const GuiColor fill =
+                    pressed ? mix_color(kRedesignAccent, kRedesignTabGround,
+                                        kRedesignClickMix)
+                            : kRedesignSelectedFill;
+                cairo_set_source_rgb(cr, fill.r, fill.g, fill.b);
+                if (has_line) cairo_fill_preserve(cr);
+                else          cairo_fill(cr);
+            }
+            if (has_line) {
+                // Accent when the pointer is on it or it is held; otherwise the
+                // calm grey that frames a resting toggled-on button.
+                const GuiColor line = (face.hovered || pressed)
+                                          ? kRedesignAccent : kRedesignLine;
+                cairo_set_source_rgb(cr, line.r, line.g, line.b);
+                cairo_set_line_width(cr, static_cast<double>(lw));
+                cairo_stroke(cr);
+            }
+        }
+
+        if (def.glyph != nullptr) {
+            // A LETTER BUTTON: the shaped glyph centered on BOTH axes — the
+            // width from the run itself (never a font metric guess) and the
+            // baseline from the shared extents solver.
+            const text_shape::ShapedRun run =
+                text_shape::shape_text_run(font, def.glyph);
+            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                                 kRedesignLabel.b);
+            text_shape::show_shaped_run(
+                cr, run,
+                static_cast<double>(x) +
+                    std::nearbyint((static_cast<double>(btn) - run.width_px) *
+                                   0.5),
+                redesign_baseline(font, static_cast<double>(btn_y),
+                                  static_cast<double>(btn)));
+        } else {
+            // An ICON BUTTON: the 22px box centered in the 32px button (+5 at
+            // 100%), each path in its own color from the icon table. No dimming
+            // term — this row has no disabled face.
+            icons::draw(cr, def.icon,
+                        static_cast<double>(x + (btn - glyph_px) / 2),
+                        static_cast<double>(btn_y + (btn - glyph_px) / 2),
+                        static_cast<double>(glyph_px));
+        }
+
+        x += btn;
+    }
+
+    cairo_restore(cr);
+}
+
 // -- GuiPaintHandler::paint_marker_text_lane -----------------------------
 
 void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
-    // The marker-text lane (top lane 4, between the trim chips and the flags).
+    // The marker-text lane (top lane 5, between the trim chips and the flags).
     // THE OCCLUSION MODEL: the lane shows EVERY onscreen marker's text ambiently
     // when the whole visible set fits unoccluded at the 9-glyph budget, else it
     // falls back to the ONE-run arbitration (hover, else last-selected). Every
@@ -1777,7 +2019,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         render_canvas(cr, canvas.x, canvas.y, canvas.w, canvas.h);
     }
 
-    // THE THREE REDESIGNED ROWS PAINT ON EVERY FRAME CLASS, deliberately OUTSIDE
+    // THE FOUR REDESIGNED ROWS PAINT ON EVERY FRAME CLASS, deliberately OUTSIDE
     // the loading / total>0 branches below: they are the surfaces with no
     // dependence on the loaded audio, and their buttons are claimed ABOVE the
     // pointer path's loading guard for exactly that reason. A button that is
@@ -1790,7 +2032,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // Each is gated on its OWN exposure rather than run unconditionally like the
     // canvas ground above: these passes shape labels through HarfBuzz, which the
     // outer Cairo clip would not elide, so a narrow per-frame playhead damage
-    // must not pay for them. Nothing painted after this point touches the three
+    // must not pay for them. Nothing painted after this point touches the four
     // lanes (the flag cache is transparent over them, every other pass owns a
     // lane below them), so painting them first overdraws nothing.
     {
@@ -1803,6 +2045,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         }
         if (rects_intersect(exposed, top_tab_row_area(app))) {
             paint_tab_row(cr);
+        }
+        if (rects_intersect(exposed, top_icon_row_area(app))) {
+            paint_icon_row(cr);
         }
     }
 

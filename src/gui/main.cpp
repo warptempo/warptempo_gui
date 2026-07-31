@@ -139,10 +139,11 @@ namespace {
 //
 // Per-strip lane stacks with per-lane heights (the former uniform-row contract
 // is superseded). Top and bottom strips now DIFFER in height; the waveform
-// flexes between them. The TOP strip is SEVEN lanes (from the window edge
+// flexes between them. The TOP strip is EIGHT lanes (from the window edge
 // inward): MENU ROW (its own authored menu_row_h_px(), row 1 of the kdenlive
 // redesign), TOOLBAR ROW (its own authored toolbar_row_h_px(), row 2 of the
-// redesign), TAB ROW (its own authored tab_row_h_px(), row 3 — these three are
+// redesign), TAB ROW (its own authored tab_row_h_px(), row 3), ICON ROW (its
+// own authored icon_row_h_px(), row 4 — these four are
 // the lanes on the gui_scale axis), trim-chip row (the
 // flag WIDTH, so the chips are square), marker-text row (the text-lane
 // monospace_text_row_h()), flag row (the flag height), and the triangle row
@@ -166,14 +167,14 @@ namespace {
 // flag_lane_geometry.
 //
 // ONE SEAM IS EXEMPT from a hypothetical nonzero kRowGapPx: the FLAG/TRIANGLE
-// junction (top lanes 5|6). A marker flag is ONE FUSED GLYPH — rectangle plus
+// junction (top lanes 6|7). A marker flag is ONE FUSED GLYPH — rectangle plus
 // tip-down triangle under a single continuous outline — that spans those two
 // lanes, so they are CONTIGUOUS BY INVARIANT and flag_lane_geometry (the reader
 // of that junction, render.cpp) takes the rectangle's bottom edge straight from
 // the triangle lane's TOP. A gap there would cut one asset through its middle:
 // unsupported, a design error rather than a layout choice, and the full record
 // of the consequence lives at flag_lane_geometry. Gaps at every OTHER seam —
-// menu|toolbar, toolbar|tab, tab|chip, chip|text, text|flag, and both outer
+// menu|toolbar, toolbar|tab, tab|icon, icon|chip, chip|text, text|flag, and both outer
 // kFlagBottomLiftPx gaps —
 // are honored structurally by the loop below and by every consumer. ONE shared
 // helper —
@@ -199,21 +200,23 @@ namespace {
 // its ring; the box itself is shorter and is placed inside this band by
 // flag_chip_rect.
 //
-// LANES 0, 1 AND 2 ARE THE EXCEPTION to "the metric that describes it" being a
-// FONT metric: the three REDESIGNED rows carry proportional text at a fixed
-// design size and size from their own authored constants on the GUI-SCALE axis
-// (menu_row_h_px(), toolbar_row_h_px(), tab_row_h_px()), not the monospace
+// LANES 0..3 ARE THE EXCEPTION to "the metric that describes it" being a
+// FONT metric: the four REDESIGNED rows carry proportional text and fixed-size
+// icons at a fixed design size and size from their own authored constants on
+// the GUI-SCALE axis (menu_row_h_px(), toolbar_row_h_px(), tab_row_h_px(),
+// icon_row_h_px()), not the monospace
 // font's — the two-axes ruling is at those accessors' declarations in render.h.
-// The toolbar and tab lanes INCLUDE their 1px border-bottom (the CSS box model:
-// the architect's stated 44 / 30 is content, the border sits outside it, and
-// the lane owns both).
-constexpr int kTopLaneCount    = 7;
+// The toolbar, tab and icon lanes INCLUDE their 1px border-bottom (the CSS box
+// model: the architect's stated 44 / 30 / 48 is content, the border sits
+// outside it, and the lane owns both).
+constexpr int kTopLaneCount    = 8;
 constexpr int kBottomLaneCount = 2;
 int top_lane_height(int lane) {
     switch (lane) {
         case 0: return menu_row_h_px();          // menu row (proportional text)
         case 1: return toolbar_row_h_px();       // toolbar row (+ border-bottom)
         case 2: return tab_row_h_px();           // tab row (+ border-bottom)
+        case 3: return icon_row_h_px();          // icon row (+ border-bottom)
         // The trim-chip row takes the chip's own WIDTH as its height, so the
         // b/e chips are SQUARE BY CONSTRUCTION: trim_chip_rect reads its width
         // from flag_lane_w_px() and its height from this band, and both axes now
@@ -221,10 +224,10 @@ int top_lane_height(int lane) {
         // the row used to borrow, would leave squareness a numeric coincidence
         // that a retune of kFlagHeightPx (or of the scaling) could silently
         // break.
-        case 3: return flag_lane_w_px();         // trim-chip row (square chips)
-        case 4: return monospace_text_row_h();   // marker-text row
-        case 5: return flag_lane_h_px();         // flag row
-        case 6: return playhead_triangle_h_px(); // triangle row (flush on waveform)
+        case 4: return flag_lane_w_px();         // trim-chip row (square chips)
+        case 5: return monospace_text_row_h();   // marker-text row
+        case 6: return flag_lane_h_px();         // flag row
+        case 7: return playhead_triangle_h_px(); // triangle row (flush on waveform)
         default: return 0;
     }
 }
@@ -287,7 +290,7 @@ GuiRect waveform_area(const AppState& a) {
 // further inward. The top strip counts downward from y=0; the bottom strip
 // mirrors it about the window midline (`h - inset - lane_h`).
 //
-// Paint/hit agreement invariant: the trim-chip row is TOP lane 3, and
+// Paint/hit agreement invariant: the trim-chip row is TOP lane 4, and
 // hit_test_trim_chip / the pair-drag y-gate read top_upper_row_area(app) — the
 // exact band render_trim_flags paints the b/e chips in, because the PAINTER is
 // handed that band as a parameter (GuiPaintHandler::paint_trim passes
@@ -314,12 +317,13 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 // Lane 0 is the MENU row (the kdenlive menu bar: a flat ground carrying the Quit
 // button, at the window edge); lane 1 is the TOOLBAR row (the flat ground
 // carrying the Save / Undo / Redo / Render buttons, its separators and its
-// border-bottom); lane 2 is the TAB row (the "Tab A" / "Tab B" Breeze tabs and
-// its border-bottom); lane 3 is the b/e trim-chip row, which also owns the
-// span-framing double-click; lane 4 is the marker-text
+// border-bottom); lane 2 is the TAB row (the "A" / "B" Breeze tabs and
+// its border-bottom); lane 3 is the ICON row (the eleven view/mode/action
+// buttons and its border-bottom); lane 4 is the b/e trim-chip row, which also
+// owns the span-framing double-click; lane 5 is the marker-text
 // row (hosts the hover popup and the flag editor's live text, one at a time —
-// paint_marker_text_lane); lane 5 is the
-// flag row (the marker flag rectangles); lane 6 is the triangle row, whose
+// paint_marker_text_lane); lane 6 is the
+// flag row (the marker flag rectangles); lane 7 is the triangle row, whose
 // bottom edge is flush with the waveform area top and which holds the flags' and
 // the playhead's triangles.
 GuiRect top_menu_row_area(const AppState& a) {
@@ -334,20 +338,24 @@ GuiRect top_tab_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 2);
 }
 
-GuiRect top_upper_row_area(const AppState& a) {
+GuiRect top_icon_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 3);
 }
 
-GuiRect top_marker_text_row_area(const AppState& a) {
+GuiRect top_upper_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 4);
 }
 
-GuiRect top_flag_row_area(const AppState& a) {
+GuiRect top_marker_text_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 5);
 }
 
-GuiRect top_triangle_row_area(const AppState& a) {
+GuiRect top_flag_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 6);
+}
+
+GuiRect top_triangle_row_area(const AppState& a) {
+    return strip_row_rect(a, /*top_strip=*/true, 7);
 }
 
 // Bottom strip lanes, counted up from the window bottom (index 0 = the window
@@ -1089,26 +1097,34 @@ int main(int argc, char** argv) {
         // flags snap together with the just-blitted waveform.
         paint_handler.maybe_rebuild_flag_cache();
 
-        // THE REDESIGNED BUTTONS' ENABLED-VECTOR STALENESS COMPARATOR — the ONE
-        // site that repairs a stale DISABLED face, and the reason no route that
-        // pushes/pops history, toggles read-only or finishes a load carries an
-        // invalidate of its own. Those facts change with no top-strip damage
-        // whatsoever, so the strip would keep showing yesterday's faces; here
-        // the LIVE vector is compared against the one the painter last painted
-        // (AppState::RedesignButtonFace::enabled) and any drift pays a single
-        // invalidate_top_strip. The repaint rewrites the whole stash, so this
-        // settles in one pass — including the cold case, where the roster's
-        // enabled fields start true and the first compare corrects them.
+        // THE REDESIGNED BUTTONS' STATE-VECTOR STALENESS COMPARATOR — the ONE
+        // site that repairs a stale DISABLED or SELECTED face, and the reason no
+        // route that pushes/pops history, toggles read-only, flips follow or
+        // iteration mode, or finishes a load carries an invalidate of its own.
+        // Those facts change with no top-strip damage whatsoever, so the strip
+        // would keep showing yesterday's faces; here the LIVE bits are compared
+        // against the ones the painter last painted
+        // (RedesignButtonFace::enabled and ::selected) and any drift pays a
+        // single invalidate_top_strip. The repaint rewrites the whole stash, so
+        // this settles in one pass — including the cold case, where the roster's
+        // bits start at their defaults and the first compare corrects them.
+        // ONE MECHANISM, BOTH HALVES: the selected half joined with row 4 rather
+        // than growing a second comparator, because it is the same problem — a
+        // painted bit whose source mutates with no damage — with the same
+        // answer. `f` and `i` are the pure cases (a bare flag flip and nothing
+        // else); `t` and `p` happen to damage anyway and still go through here
+        // rather than being trusted to.
         // Placed ABOVE the loading/blank return below on purpose: loading and
-        // total<=0 are themselves inputs to the predicate, so the transition
-        // INTO and OUT OF a load is exactly a drift this must catch.
+        // total<=0 are themselves inputs to the enabled predicate, so the
+        // transition INTO and OUT OF a load is exactly a drift this must catch.
         {
             bool drift = false;
             for (int i = 0; i < kRedesignButtonCount && !drift; ++i) {
-                drift = app.redesign_buttons[i].enabled !=
-                        redesign_button_enabled(
-                            app, audio.total_frames(),
-                            static_cast<RedesignButton>(i));
+                const RedesignButton id = static_cast<RedesignButton>(i);
+                const AppState::RedesignButtonFace& f = app.redesign_buttons[i];
+                drift = f.enabled  != redesign_button_enabled(
+                                          app, audio.total_frames(), id) ||
+                        f.selected != redesign_button_selected(app, id);
             }
             if (drift) invalidate_top_strip();
         }

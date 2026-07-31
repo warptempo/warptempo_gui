@@ -64,12 +64,67 @@ struct ToolbarChord {
     bool           ctrl;
     bool           shift;
     bool           alt;
+    // SHIFT_ADMITS: a shift-exact press on this button ORs shift into the chord
+    // above, reaching its shifted twin. TWO buttons carry it, and both for the
+    // same reason — their chord comes in a PAIR the keyboard already spells:
+    // Render (Ctrl+Alt+R renders beside the source, Ctrl+Alt+Shift+R into a
+    // numbered _miscellaneous cell) and Paste (Ctrl+Alt+P pastes, Ctrl+Alt+Shift+P
+    // pastes with state). Everywhere else a shift press stays a strict consumed
+    // no-op: there is no shifted chord to reach, so doing the unshifted thing
+    // would be a silent lie about what the modifier did.
+    //
+    // The OR is well-defined precisely BECAUSE every shift-admitting row carries
+    // shift=false of its own — the flag and the column cannot both be set, and
+    // the one expression at the dispatch spells both members of each pair.
+    bool           shift_admits;
+    // RADIO: this button reports a state it can only ever turn ON, so a press
+    // while it is already selected is a CONSUMED NOTHING (there is nothing to
+    // switch to, and its chord is a TOGGLE that would switch away from what the
+    // user just clicked). The tab pair and the two view pairs are radios; the
+    // follow and iteration buttons are TOGGLES and press through in both
+    // directions, which is why this is a flag and not `selected` alone.
+    bool           radio;
+    // CLICK_FACE: row 2 and row 4 show a pressed interior; rows 1 and 3 have two
+    // faces by scope and show nothing new on a press.
+    bool           click_face;
 };
+
+// THE PRESS CLAIM'S HALF OF THE BUTTON ROSTER — every CHORD-DISPATCHING button
+// in the redesign, rows 1 through 4, in one table. The three flags above are the
+// only axes the rows differ on, so they share one dispatch body
+// (dispatch_redesign_chord) instead of accumulating a special case per row.
+//
+// ROW 1'S QUIT IS THE ONE ABSENTEE: its route is a two-call sequence (finalize +
+// request_close), not a chord, so it is spelled at its own claim.
 constexpr ToolbarChord kToolbarChords[] = {
-    {RedesignButton::Save,   GuiKeys::S, true, false, false},  // Ctrl+S
-    {RedesignButton::Undo,   GuiKeys::Z, true, false, false},  // Ctrl+Z
-    {RedesignButton::Redo,   GuiKeys::Z, true, true,  false},  // Ctrl+Shift+Z
-    {RedesignButton::Render, GuiKeys::R, true, false, true},   // Ctrl+Alt+R
+    // Row 1.
+    {RedesignButton::Settings,   GuiKeys::Semicolon, false, false, false, false, false, false},
+    // Row 2 — the toolbar.
+    {RedesignButton::Save,       GuiKeys::S,   true,  false, false, false, false, true},   // Ctrl+S
+    {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false, false, false, true},   // Ctrl+Z
+    {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false, false, false, true},   // Ctrl+Shift+Z
+    {RedesignButton::Render,     GuiKeys::R,   true,  false, true,  true,  false, true},   // Ctrl+Alt+R (+Shift)
+    // Row 3 — the tabs. Both halves carry the SAME chord: with two tabs the
+    // toggle IS the direct select, and the radio flag is what makes a press on
+    // the already-selected half a consumed nothing rather than a switch away.
+    {RedesignButton::TabA,       GuiKeys::Tab, true,  false, false, false, true,  false},  // Ctrl+Tab
+    {RedesignButton::TabB,       GuiKeys::Tab, true,  false, false, false, true,  false},  // Ctrl+Tab
+    // Row 4 — the icon row. The four view buttons are radios on the same two
+    // toggling chords the tabs' pair models; the rest are plain dispatches.
+    {RedesignButton::IconS,      GuiKeys::T,   false, false, false, false, true,  true},   // bare t
+    {RedesignButton::IconT,      GuiKeys::T,   false, false, false, false, true,  true},   // bare t
+    {RedesignButton::IconW,      GuiKeys::P,   false, false, false, false, true,  true},   // bare p
+    {RedesignButton::IconP,      GuiKeys::P,   false, false, false, false, true,  true},   // bare p
+    {RedesignButton::IconCopy,   GuiKeys::P,   true,  false, false, false, false, true},   // Ctrl+P
+    {RedesignButton::IconPaste,  GuiKeys::P,   true,  false, true,  true,  false, true},   // Ctrl+Alt+P (+Shift)
+    // BPM'S KEY IS BARE `m`, NOT `b` — the brief expected `b` and the code says
+    // otherwise (the arm is at handle_mode_keys, input_key_dispatch.cpp). The
+    // button is its chord, so it takes the chord the keyboard actually has.
+    {RedesignButton::IconBpm,    GuiKeys::M,   false, false, false, false, false, true},   // bare m
+    {RedesignButton::IconIter,   GuiKeys::I,   false, false, false, false, false, true},   // bare i
+    {RedesignButton::IconFollow, GuiKeys::F,   false, false, false, false, false, true},   // bare f
+    {RedesignButton::IconListen, GuiKeys::L,   false, false, false, false, false, true},   // bare l
+    {RedesignButton::IconCommit, GuiKeys::Apostrophe, false, false, false, false, false, true}, // bare '
 };
 
 // Is (x, y) inside the PAINTED rect of a redesigned button? The rect is the
@@ -658,7 +713,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // below.
         return;
     }
-    // THE THREE REDESIGNED ROWS (top lanes 0, 1 and 2), claimed ABOVE the
+    // THE FOUR REDESIGNED ROWS (top lanes 0..3), claimed ABOVE the
     // loading/empty guard below so their buttons stay live while a file loads
     // and on a blank state — they are the surfaces that have nothing to do with
     // the loaded audio. They sit BELOW the modal gates on purpose: a press while
@@ -667,48 +722,41 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // are no exception, and every one of their chords reaches the same route
     // from the keyboard anyway).
     //
-    // ONE BAND-CLAIM SHAPE FOR ALL THREE ROWS: the exact half-open row band, a
-    // MODIFIED press is a strict consumed no-op, and any press in the band that
-    // is not on a button is a consumed nothing. THE ONE CARVE-OUT is a
-    // SHIFT-exact press on row 2's RENDER button, which reaches that chord's
-    // shifted twin; it is spelled at the toolbar claim, and every other modified
-    // press in every band still drops. A BUTTON's rect is the painter's
-    // stash (app.redesign_buttons, published by paint_menu_row /
-    // paint_toolbar_row / paint_tab_row) — never re-shaped here, so the
-    // clickable rect is the painted one. The action FIRES ON PRESS: nothing on
-    // these rows drags, so there is no arm, no threshold and no release body,
-    // and no double-click surface either. The one thing a RELEASE does carry is
-    // row 2's click face, cleared in clear_redesign_button_press. Nothing here
-    // reads keyboard state, so the bare-`e` mouse key reaches them as an
-    // ordinary left press through the platform translation.
+    // ONE BAND-CLAIM SHAPE FOR ALL FOUR ROWS: the exact half-open row band, a
+    // press carrying CTRL or ALT is a strict consumed no-op, a SHIFT press binds
+    // only where the chord table admits one, and any press in the band that is
+    // not on a button is a consumed nothing. Each band differs ONLY in its rect
+    // and (row 1) in Quit's non-chord route, so the dispatch itself is ONE body,
+    // dispatch_redesign_chord, driven by the table's per-button flags.
+    //
+    // A BUTTON's rect is the painter's stash (app.redesign_buttons, published by
+    // paint_menu_row / paint_toolbar_row / paint_tab_row / paint_icon_row) —
+    // never re-shaped here, so the clickable rect is the painted one. The action
+    // FIRES ON PRESS: nothing on these rows drags, so there is no arm, no
+    // threshold and no release body, and no double-click surface either. The one
+    // thing a RELEASE does carry is the click face, cleared in
+    // clear_redesign_button_press. Nothing here reads keyboard state, so the
+    // bare-`e` mouse key reaches them as an ordinary left press through the
+    // platform translation.
     {
         const GuiRect menu_row = top_menu_row_area(app);
         if (y >= menu_row.y && y < menu_row.y + menu_row.h &&
             x >= menu_row.x && x < menu_row.x + menu_row.w) {
-            if (mods.ctrl || mods.shift || mods.alt) return;  // strict no-op
+            if (mods.ctrl || mods.alt) return;               // strict no-op
             if (button == GuiMouseButton::Left) {
-                // TWO BUTTONS, TWO SHAPES OF ACTION, spelled here because
-                // neither is a plain chord-table row.
-                //
-                // QUIT is the row's one NON-CHORD button: Ctrl+Q's exact route
-                // as a two-call sequence — end any live pointer gesture, then
-                // request the close (ENDING IS COMMITTING; the prompt handles
-                // the dirty case).
-                if (redesign_button_hit(app, RedesignButton::Quit, x, y)) {
+                // QUIT IS THE ROSTER'S ONE NON-CHORD BUTTON, so it is spelled
+                // here rather than in the table: Ctrl+Q's exact route as a
+                // two-call sequence — end any live pointer gesture, then request
+                // the close (ENDING IS COMMITTING; the prompt handles the dirty
+                // case). Shift-exact reaches it too and is refused, because Quit
+                // admits no shift: the table check below owns that for every
+                // other button and this one states its own.
+                if (!mods.shift &&
+                    redesign_button_hit(app, RedesignButton::Quit, x, y)) {
                     finalize_active_drags();
                     prompt.request_close();
-                } else if (redesign_button_hit(app, RedesignButton::Settings,
-                                               x, y)) {
-                    // SETTINGS IS ITS CHORD, the bare `;` through on_key — the
-                    // same route the key takes, so the modal stop, the editor
-                    // open and every gate above them are inherited whole and
-                    // there is no bespoke opener here to drift from the key's.
-                    // Semicolon is what the platform delivers for `;` (the
-                    // settings-prompt arm in input_handler.cpp reads the same
-                    // key), and the chord is BARE — no modifier reaches this
-                    // point, the band's strict no-op above having returned.
-                    GuiInputState chord{};
-                    on_key(GuiKeys::Semicolon, chord);
+                } else {
+                    dispatch_redesign_chord(x, y, mods);
                 }
             }
             return;
@@ -718,70 +766,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         const GuiRect toolbar = top_toolbar_row_area(app);
         if (y >= toolbar.y && y < toolbar.y + toolbar.h &&
             x >= toolbar.x && x < toolbar.x + toolbar.w) {
-            // THE MODIFIED-PRESS RULE, with ONE binding carved out of it: ctrl
-            // and alt bind nothing anywhere in this band and drop here, and so
-            // does shift EXCEPT on Render (the test is inside the loop, where
-            // the button is known). RENDER IS THE ONE SHIFT-AUGMENTED BUTTON
-            // because its chord comes in a PAIR the keyboard already spells —
-            // Ctrl+Alt+R renders beside the source, Ctrl+Alt+Shift+R renders
-            // into a numbered _miscellaneous cell — and shift is exactly what
-            // distinguishes them there. The other three have no shifted chord to
-            // reach, so a shift press on them stays a strict consumed no-op
-            // rather than silently doing the unshifted thing.
             if (mods.ctrl || mods.alt) return;               // strict no-op
-            if (button == GuiMouseButton::Left) {
-                for (const ToolbarChord& tc : kToolbarChords) {
-                    if (!redesign_button_hit(app, tc.id, x, y)) continue;
-                    if (mods.shift && tc.id != RedesignButton::Render) break;
-                    // A DISABLED BUTTON'S PRESS IS A CONSUMED NOTHING: the chord
-                    // is not dispatched at all, and the SHIFT press is swallowed
-                    // exactly like the plain one (one predicate, both routes —
-                    // a greyed Render is greyed for both of its chords). The
-                    // predicate is the painter's (redesign_button_enabled,
-                    // app_state.h), so the greyed face and the inert press are
-                    // the same fact read twice, and the press cannot slip
-                    // through on a frame the paint disagreed with. Dispatching
-                    // anyway would be harmless — every one of these chords
-                    // refuses on its own — but it would leave the disabled face
-                    // lying about what a click does.
-                    if (!redesign_button_enabled(app, audio.total_frames(),
-                                                 tc.id))
-                        break;
-                    // THE CLICK FACE ARMS BEFORE THE ACTION RUNS, so a chord
-                    // whose route repaints the strip (undo, save) paints the
-                    // pressed interior on the very frame it produces. It is
-                    // cleared by the release / the pointer-leave hook, never by
-                    // the action. The SHIFT press takes it too — it is the same
-                    // physical hold, and the face tracks the hold.
-                    if (app.redesign_pressed != redesign_button_index(tc.id)) {
-                        app.redesign_pressed = redesign_button_index(tc.id);
-                        viewport.invalidate_top_strip();
-                    }
-                    // THE BUTTON IS ITS CHORD, dispatched through on_key: the
-                    // action is not merely the same FUNCTION the key calls, it is
-                    // the same ROUTE — every gate the chord passes on the
-                    // keyboard (the loading/blank return, the keyboard-modal
-                    // editor gate, the read-only allowlist, the arm's own
-                    // refusals) applies here, in the same order, with nothing
-                    // restated and nothing that can drift. It is the exact
-                    // inverse of the platform's bare-`e`-as-left-button
-                    // translation: one vocabulary expressed on the other's
-                    // surface, at a boundary.
-                    //
-                    // The shift term ORs the table's own (Redo's Ctrl+Shift+Z)
-                    // with the pointer's, which is well-defined precisely
-                    // because the only button admitting a shifted press is
-                    // Render, whose table row carries shift=false: Render's two
-                    // chords are Ctrl+Alt+R and Ctrl+Alt+Shift+R, and this one
-                    // expression spells both.
-                    GuiInputState chord{};
-                    chord.ctrl  = tc.ctrl;
-                    chord.shift = tc.shift || mods.shift;
-                    chord.alt   = tc.alt;
-                    on_key(tc.key, chord);
-                    break;
-                }
-            }
+            if (button == GuiMouseButton::Left) dispatch_redesign_chord(x, y, mods);
             return;
         }
     }
@@ -789,33 +775,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         const GuiRect tab_row = top_tab_row_area(app);
         if (y >= tab_row.y && y < tab_row.y + tab_row.h &&
             x >= tab_row.x && x < tab_row.x + tab_row.w) {
-            if (mods.ctrl || mods.shift || mods.alt) return;  // strict no-op
-            if (button == GuiMouseButton::Left) {
-                // A CLICK ON THE INACTIVE TAB IS Ctrl+Tab, dispatched through
-                // on_key like every other redesigned button: with exactly two
-                // tabs the toggle IS the direct select, so nothing is
-                // approximated and every gate and side effect of the real chord
-                // (the read-only allowlist entry that admits it, the leaving
-                // tab's viewport/zoom/playhead save, the selection clear, the
-                // coincidence auto-select, the target-render trigger) applies by
-                // construction. It refuses during a load on its own, at on_key's
-                // loading guard, which is why this claim can sit above the
-                // pointer path's.
-                //
-                // A press on the SELECTED tab is a CONSUMED NOTHING — there is
-                // nothing to switch to, and dispatching Ctrl+Tab would switch
-                // AWAY from the tab the user just clicked. So the hit test runs
-                // against the inactive tab alone, which also makes "no tab is
-                // hit" and "the selected tab was hit" the same silent outcome.
-                const RedesignButton inactive =
-                    (app.active_tab_view == 'A') ? RedesignButton::TabB
-                                                 : RedesignButton::TabA;
-                if (redesign_button_hit(app, inactive, x, y)) {
-                    GuiInputState chord{};
-                    chord.ctrl = true;
-                    on_key(GuiKeys::Tab, chord);
-                }
-            }
+            if (mods.ctrl || mods.alt) return;               // strict no-op
+            if (button == GuiMouseButton::Left) dispatch_redesign_chord(x, y, mods);
+            return;
+        }
+    }
+    {
+        const GuiRect icon_row = top_icon_row_area(app);
+        if (y >= icon_row.y && y < icon_row.y + icon_row.h &&
+            x >= icon_row.x && x < icon_row.x + icon_row.w) {
+            if (mods.ctrl || mods.alt) return;               // strict no-op
+            if (button == GuiMouseButton::Left) dispatch_redesign_chord(x, y, mods);
             return;
         }
     }
@@ -1068,8 +1038,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // RETIRED, architect 2026-07-23: ctrl-click in Ableton is just
             // click, and ctrl stays the zoom modifier here; the PLAIN empty
             // flag/triangle-lane press below is the surviving lane gesture —
-            // the waveform's own parity press, not a bare clear). The three
-            // redesigned rows (lanes 0, 1 and 2) were claimed far above and
+            // the waveform's own parity press, not a bare clear). The four
+            // redesigned rows (lanes 0..3) were claimed far above and
             // never reach here.
             if (inside_top) {
                 const GuiRect chip_row = top_upper_row_area(app);
@@ -1162,7 +1132,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the playhead and the focused flag are coincident before any subsequent
         // drag or nudge — nothing is towed.
         if (inside_top) {
-            // The chip row (top_upper_row_area, lane 3) is trim's lane and is
+            // The chip row (top_upper_row_area, lane 4) is trim's lane and is
             // claimed BEFORE the marker single-select. The chip row, the marker
             // text lane, and the flag/triangle lanes are disjoint y-bands, so
             // this contends with nothing: a marker-part press falls to the marker
@@ -2020,7 +1990,8 @@ void GuiInputHandler::finalize_active_drags() {
 }
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
-// (row 1's Quit and Settings, row 2's four and row 3's two tabs — the stash is
+// (row 1's Quit and Settings, row 2's four, row 3's two tabs and row 4's
+// eleven — the stash is
 // AppState::redesign_buttons).
 // A face changes only when its boolean does, and a motion that changes ANY of
 // them pays exactly ONE invalidate_top_strip — the strip idiom (no narrow rects;
@@ -2065,7 +2036,72 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     if (changed) viewport.invalidate_top_strip();
 }
 
-// ROW 2'S CLICK FACE, dropped. The face rides the PHYSICAL button hold, so the
+// THE ONE CHORD-DISPATCH BODY for every redesigned button whose action IS a
+// chord — rows 1 through 4, driven entirely by kToolbarChords' per-button flags
+// so no row carries a special case of its own. Returns true when a button's rect
+// claimed the press, whether or not anything was dispatched (a refusal is still
+// a consumed nothing, which is what the band claims want).
+//
+// THE BUTTON IS ITS CHORD, dispatched through on_key: the action is not merely
+// the same FUNCTION the key calls, it is the same ROUTE — every gate the chord
+// passes on the keyboard (the loading/blank return, the keyboard-modal editor
+// gate, the read-only allowlist, the arm's own refusals) applies here, in the
+// same order, with nothing restated and nothing that can drift. It is the exact
+// inverse of the platform's bare-`e`-as-left-button translation: one vocabulary
+// expressed on the other's surface, at a boundary.
+//
+// The caller has already refused ctrl and alt at the band; shift arrives live
+// and is decided per button here.
+bool GuiInputHandler::dispatch_redesign_chord(int x, int y, GuiInputState mods) {
+    for (const ToolbarChord& tc : kToolbarChords) {
+        if (!redesign_button_hit(app, tc.id, x, y)) continue;
+        // A SHIFT PRESS ON A BUTTON WITH NO SHIFTED CHORD is a consumed nothing
+        // — never the unshifted action, which would be a silent lie about what
+        // the modifier did (the flag's rationale is at its declaration).
+        if (mods.shift && !tc.shift_admits) return true;
+        // A DISABLED BUTTON'S PRESS IS A CONSUMED NOTHING: the chord is not
+        // dispatched at all, and a SHIFT press is swallowed exactly like the
+        // plain one (one predicate, both routes — a greyed Render is greyed for
+        // both of its chords). The predicate is the painter's
+        // (redesign_button_enabled, app_state.h), so the greyed face and the
+        // inert press are the same fact read twice and the press cannot slip
+        // through on a frame the paint disagreed with. Dispatching anyway would
+        // be harmless — every one of these chords refuses on its own — but it
+        // would leave the disabled face lying about what a click does. Rows 1, 3
+        // and 4 have no disabled face and the predicate is simply true there.
+        if (!redesign_button_enabled(app, audio.total_frames(), tc.id))
+            return true;
+        // A RADIO ALREADY SELECTED HAS NOTHING TO SWITCH TO, and its chord is a
+        // TOGGLE — dispatching would switch AWAY from what the user just
+        // clicked. So the press is a consumed nothing, which also makes "no
+        // button was hit" and "the selected half was hit" the same silent
+        // outcome. Toggles (follow, iteration) are NOT radios and press through
+        // in both directions.
+        if (tc.radio && redesign_button_selected(app, tc.id)) return true;
+        // THE CLICK FACE ARMS BEFORE THE ACTION RUNS, so a chord whose route
+        // repaints the strip (undo, save, a view switch) paints the pressed
+        // interior on the very frame it produces. It is cleared by the release /
+        // the pointer-leave hook, never by the action. A SHIFT press takes it
+        // too — it is the same physical hold, and the face tracks the hold.
+        if (tc.click_face &&
+            app.redesign_pressed != redesign_button_index(tc.id)) {
+            app.redesign_pressed = redesign_button_index(tc.id);
+            viewport.invalidate_top_strip();
+        }
+        // The shift term ORs the table's own (Redo's Ctrl+Shift+Z) with the
+        // pointer's — well-defined because no row sets both (see shift_admits),
+        // so this one expression spells both members of each shifted pair.
+        GuiInputState chord{};
+        chord.ctrl  = tc.ctrl;
+        chord.shift = tc.shift || mods.shift;
+        chord.alt   = tc.alt;
+        on_key(tc.key, chord);
+        return true;
+    }
+    return false;
+}
+
+// THE CLICK FACE, dropped. The face rides the PHYSICAL button hold, so the
 // two edges that end a hold both come here: the left release (on_button_release,
 // at its very top so a modal or an early return cannot strand a lit button) and
 // the pointer-leave / capability-loss hook, which is the button-lost edge — no

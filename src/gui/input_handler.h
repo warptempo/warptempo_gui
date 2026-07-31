@@ -439,8 +439,9 @@ struct GuiInputHandler {
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
-    // writer serving the WHOLE roster — row 1's Quit and Settings, row 2's four
-    // and row 3's two tabs (definitions beside on_motion in input_pointer.cpp).
+    // writer serving the WHOLE roster — row 1's Quit and Settings, row 2's four,
+    // row 3's two tabs and row 4's eleven (definitions beside on_motion in
+    // input_pointer.cpp).
     // recompute_
     // re-resolves the cursor's last position against the painter's stashed rects
     // and is called from on_motion's no-gesture tail; clear_ is the pointer-LEAVE
@@ -451,12 +452,21 @@ struct GuiInputHandler {
     void recompute_redesign_button_hover();
     void clear_redesign_button_hover();
 
-    // ROW 2'S CLICK FACE, dropped — the third face's only writer besides the
+    // THE ONE CHORD-DISPATCH BODY shared by every redesigned band claim (rows 1
+    // through 4). Hit-tests the painter-published rects against the chord table
+    // and, on a hit, applies that button's shift / enabled / radio rules, arms
+    // the click face where the row has one, and dispatches the chord through
+    // on_key. Returns true when a rect claimed the press — a refusal still
+    // claims it, a refusal being a consumed nothing. Row 1's Quit is the one
+    // button outside it (a two-call route, not a chord).
+    bool dispatch_redesign_chord(int x, int y, GuiInputState mods);
+
+    // THE CLICK FACE, dropped — the third face's only writer besides the
     // press claim. Called from the top of on_button_release (the physical
     // release) and from the pointer-leave hook beside clear_redesign_button_hover
     // (the button-lost edge, which sends no release). Transition-gated, one
     // invalidate_top_strip when it fires. Rows 1 and 3 never set the state it
-    // clears; the click face is row 2's alone.
+    // clears (their buttons carry click_face=false); rows 2 and 4 do.
     void clear_redesign_button_press();
 
     // END every in-flight pointer gesture through its own RELEASE body — a

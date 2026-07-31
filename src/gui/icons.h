@@ -25,12 +25,20 @@
 
 namespace icons {
 
-// The icon set, one entry per committed SVG. Row 2 uses all four.
+// The icon set, one entry per committed SVG.
 enum class Icon {
-    DocumentSave,   // Save
-    EditUndo,       // Undo
-    EditRedo,       // Redo
-    MediaRecord,    // Render
+    // Row 2, the toolbar.
+    DocumentSave,        // Save
+    EditUndo,            // Undo
+    EditRedo,            // Redo
+    MediaRecord,         // Render
+    // Row 4, the icon row.
+    EditCopy,            // Copy phase resets
+    EditPaste,           // Paste phase resets
+    MusicNote16th,       // BPM editor
+    MediaPlaylistRepeat, // Iteration mode
+    PreviewRenderOn,     // Listen to a render
+    DialogOkApply,       // Commit a render as the baseline
 };
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),

@@ -744,9 +744,20 @@ struct ChipRowPressSeed {
 // serialized, so inserting a button mid-roster (as Settings was) renumbers the
 // stash harmlessly.
 enum class RedesignButton {
-    Quit, Settings, Save, Undo, Redo, Render, TabA, TabB
+    // Row 1, the menu row.
+    Quit, Settings,
+    // Row 2, the toolbar.
+    Save, Undo, Redo, Render,
+    // Row 3, the tabs.
+    TabA, TabB,
+    // Row 4, the icon row, in painted order: the two view radio pairs, the
+    // phase-reset clipboard pair, the three mode/editor buttons, then the two
+    // render-entry buttons.
+    IconS, IconT, IconW, IconP,
+    IconCopy, IconPaste, IconBpm, IconIter, IconFollow,
+    IconListen, IconCommit
 };
-inline constexpr int kRedesignButtonCount = 8;
+inline constexpr int kRedesignButtonCount = 19;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -1514,10 +1525,16 @@ struct AppState {
     // pays one invalidate_top_strip on drift — one comparator site, no
     // per-mutation invalidate anywhere. It starts TRUE, so a cold roster settles
     // in one compare/paint pass.
+    // `selected` is the second stashed bit and rides the SAME comparator for the
+    // same reason: `f` and `i` flip their flags with no top-strip damage at all,
+    // so a toggled face would otherwise stay wrong until something else
+    // repainted. (`t` and `p` do damage — they take the full sync rebuild — but
+    // they go through the one comparator anyway rather than being trusted.)
     struct RedesignButtonFace {
         GuiRect rect{0, 0, 0, 0};
-        bool    hovered = false;
-        bool    enabled = true;
+        bool    hovered  = false;
+        bool    enabled  = true;
+        bool    selected = false;
     };
     std::array<RedesignButtonFace, kRedesignButtonCount> redesign_buttons{};
 
@@ -1789,6 +1806,7 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 GuiRect top_menu_row_area(const AppState& a);
 GuiRect top_toolbar_row_area(const AppState& a);
 GuiRect top_tab_row_area(const AppState& a);
+GuiRect top_icon_row_area(const AppState& a);
 GuiRect top_upper_row_area(const AppState& a);
 GuiRect top_marker_text_row_area(const AppState& a);
 GuiRect top_flag_row_area(const AppState& a);
@@ -2138,16 +2156,36 @@ inline bool history_step_actionable(const AppState& a,
 // MODAL gates are deliberately absent: a prompt or a bottom-strip editor
 // swallows the PRESS at the pointer path's own modal gate, and a modal that
 // greyed the chrome under it would be a fourth face nobody asked for.
-// The two switches below are EXHAUSTIVE over the roster with NO `default` arm,
-// deliberately: adding an eighth button then fails to compile here (-Wswitch)
-// instead of silently inheriting some other button's answer.
+// THE FIRST SWITCH IS EXHAUSTIVE over the roster with NO `default` arm,
+// deliberately: a new button then fails to compile here (-Wswitch) until it is
+// classified, instead of silently inheriting some other button's answer. The
+// second switch can take a `default` because the first has already returned for
+// every id that is not one of row 2's four.
 inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
                                     RedesignButton b) {
     switch (b) {
+        // Rows 1, 3 and 4 have NO DISABLED FACE AT ALL — row 4 by the
+        // architect's design (he provided five states and no disabled one), rows
+        // 1 and 3 by their two-face scope. Their presses always dispatch and the
+        // CHORDS' OWN refusals answer: the read-only gate blocks the authoring
+        // ones, the loading gate blocks everything, each arm keeps its own
+        // guards. Inherited through on_key, never mirrored here — which is why
+        // these are a plain `return true` and not a second copy of those gates.
         case RedesignButton::Quit:
         case RedesignButton::Settings:
         case RedesignButton::TabA:
         case RedesignButton::TabB:
+        case RedesignButton::IconS:
+        case RedesignButton::IconT:
+        case RedesignButton::IconW:
+        case RedesignButton::IconP:
+        case RedesignButton::IconCopy:
+        case RedesignButton::IconPaste:
+        case RedesignButton::IconBpm:
+        case RedesignButton::IconIter:
+        case RedesignButton::IconFollow:
+        case RedesignButton::IconListen:
+        case RedesignButton::IconCommit:
             return true;
         case RedesignButton::Save:
         case RedesignButton::Undo:
@@ -2166,13 +2204,48 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
             return history_step_actionable(a, a.history.redo_stack);
         case RedesignButton::Render:
             return !a.source_audio_path.empty();
-        case RedesignButton::Quit:
-        case RedesignButton::Settings:
-        case RedesignButton::TabA:
-        case RedesignButton::TabB:
-            break;
+        default:
+            break;   // unreachable: the switch above returned for every other id
     }
     return true;
+}
+
+// THE TOGGLED-ON ("selected") FACE'S PREDICATE — row 3's tabs and row 4's four
+// radio/two toggle buttons, each reading THE SAME live fact its chord flips, so
+// a lit button and the state it reports can never drift. Three readers: the
+// painter (which stashes what it painted), the press claim's RADIO refusal (a
+// radio button already selected is a consumed nothing — there is nothing to
+// switch to), and main.cpp's staleness comparator.
+//
+// MOMENTARY BY DESIGN, and therefore false here: Copy, Paste, Listen, Commit —
+// each is an action that completes, with no state to stay lit for — and BPM,
+// whose editor is a transient modal SESSION rather than a resting mode (it
+// cannot rest open, and `m` never reaches dispatch while it is up), so lighting
+// it would advertise a mode this product does not have.
+inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
+    switch (b) {
+        case RedesignButton::TabA:       return a.active_tab_view     == 'A';
+        case RedesignButton::TabB:       return a.active_tab_view     == 'B';
+        case RedesignButton::IconS:      return a.active_audio_view   == 'S';
+        case RedesignButton::IconT:      return a.active_audio_view   == 'T';
+        case RedesignButton::IconW:      return a.active_markers_view == 'W';
+        case RedesignButton::IconP:      return a.active_markers_view == 'P';
+        case RedesignButton::IconFollow: return a.follow_mode;
+        case RedesignButton::IconIter:   return a.iteration_mode_enabled;
+        case RedesignButton::Quit:
+        case RedesignButton::Settings:
+        case RedesignButton::Save:
+        case RedesignButton::Undo:
+        case RedesignButton::Redo:
+        case RedesignButton::Render:
+        case RedesignButton::IconCopy:
+        case RedesignButton::IconPaste:
+        case RedesignButton::IconBpm:
+        case RedesignButton::IconListen:
+        case RedesignButton::IconCommit:
+            break;
+    }
+    return false;
 }
 
 // Hoverability = enabled, plus the tabs' one extra fact: THE SELECTED TAB HAS
@@ -2180,6 +2253,13 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
 // extends and consulted only by the hover recompute, so "a disabled button
 // never sets hovered" and "the selected tab never sets hovered" are one line
 // each at one site rather than a condition smeared over the painter.
+//
+// ROW 4'S SELECTED BUTTONS DO HOVER, and that asymmetry with the tabs is the
+// crops': row 4 ships a selected-hover state (the accent outline over the
+// selected fill) and row 3 does not. So the carve-out below names the tabs
+// alone; the icon row's radios are hoverable in both states, and their
+// already-selected press is refused in the ACTION (the chord table's `radio`
+// flag), not in their hoverability.
 inline bool redesign_button_hoverable(const AppState& a, int64_t total_frames,
                                       RedesignButton b) {
     if (!redesign_button_enabled(a, total_frames, b)) return false;
