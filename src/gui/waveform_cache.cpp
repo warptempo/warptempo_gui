@@ -770,13 +770,32 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // read. The top strip is anchored at screen y=0 and this surface mirrors it
     // 1:1, so the screen-coordinate lane rects are already surface-local.
     const FlagLaneRects flag_lanes{top_marker_row_area(app)};
-    // Effective waveform width: the flag column mapping divides the displayed
-    // span by this width — the same denominator the live trim pass and the hit
-    // tests use — so flags stay column-aligned with the trim/stem verticals
-    // below them. The
-    // surface stays full-strip width; a non-multiple-of-16 window leaves the
-    // gutter columns unpainted.
-    const int wave_w = waveform_area(app).w;
+    // The width the flag column mapping divides the displayed span by — the same
+    // denominator the live trim pass and the hit tests use (this pass stages it
+    // for them at the tail), so flags stay column-aligned with the trim/stem
+    // verticals below them. The surface stays full-strip width; a
+    // non-multiple-of-16 window leaves the gutter columns unpainted.
+    //
+    // IT IS THE PLATE'S OWN WIDTH, NOT THE LIVE ONE (2026-08-01, closing a
+    // resize-window basis split). The numerator here is the DISPLAYED span
+    // (fp_vp_end - fp_vp_start); dividing it by the LIVE effective width mixed
+    // two epochs, so during an async plate publish after a resize the flags,
+    // their stems, their hit rects and the trim geometry were mapped at a
+    // samples-per-pixel the blitted ink did not have — while the playhead, the
+    // region columns and the ruler, which all read plate_viewport_basis
+    // ((fp_vp_end - fp_vp_start)/fp_area_w), had it right. The plate is blitted
+    // 1:1 at its own scale, never stretched, so an overlay that wants to sit on
+    // its ink must use the width that ink was rendered at. Both bases are now
+    // the one expression, and the fingerprint still catches every width change
+    // transitively: fp_vp_end = vp_start + nearbyint(spp·w) and the effective
+    // width moves in steps of 16 at spp >= 27.5 frames/px, so no width change
+    // can leave the displayed span untouched.
+    //
+    // The live-width fallback mirrors plate_viewport_basis's own cold arm: the
+    // fp_rendered gate above makes it unreachable in practice (a plate that has
+    // published rendered at a positive width), and it costs one compare.
+    const int wave_w = wf_cache.fp_area_w > 0 ? wf_cache.fp_area_w
+                                              : waveform_area(app).w;
     const int sr = audio.sample_rate();
 
     const std::vector<WarpFrameMapSegment>* tmap_arg =
@@ -863,9 +882,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // deleting that duplicate is safe exactly because THIS rebuild remains the
     // stage owner on every viewport/map/dimension change — every one of those
     // changes moves a field of this cache's fingerprint (fp_vp span, map hash,
-    // target bit, top-strip dims, measured font px; wave_w changes only with
-    // the window width, which changes surface_w), so the rebuild fires and
-    // re-stages. A trim-only
+    // target bit, top-strip dims, measured font px; wave_w is the PLATE's width
+    // now and cannot move without moving the fp_vp span with it — the
+    // derivation is at wave_w — and the window width moves surface_w besides),
+    // so the rebuild fires and re-stages. A trim-only
     // change no longer stages anything, which is correct: trim never entered
     // the staged basis values, and the live trim pass reads the promoted basis
     // per frame. Ruling at the selector.
@@ -873,10 +893,15 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         app.staged_displayed_target_warp_frame_map = wf_cache.fp_warp_frame_map;
     else
         app.staged_displayed_target_warp_frame_map.clear();
-    // Stage the displayed VIEWPORT alongside the map — same fp_vp span the
-    // flags just mapped through, divided by the LIVE effective waveform width
-    // wave_w these flags were column-mapped against (NOT fp_area_w, the
-    // plate width).
+    // Stage the displayed VIEWPORT alongside the map — the same fp_vp span the
+    // flags just mapped through, over the same width they were column-mapped
+    // against. THAT WIDTH IS NOW THE PLATE'S (wave_w == fp_area_w since
+    // 2026-08-01 — the derivation is at wave_w above), so the item basis, the
+    // plate basis and the flag pass are one {span, width} pair instead of two
+    // that agreed only while no resize was in flight. The contract this line
+    // has always stated — stage what the flags were mapped against — is
+    // unchanged and still what keeps trim paint, trim hits and flag hits on the
+    // flags' own geometry.
     app.staged_displayed_vp_start = wf_cache.fp_vp_start;
     app.staged_displayed_vp_end   = wf_cache.fp_vp_end;
     app.staged_displayed_area_w   = wave_w;

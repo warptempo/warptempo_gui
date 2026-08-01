@@ -92,9 +92,18 @@ void finish_position_nudge(
     undo.record_gesture(kind);
     // (b) dirty flags.
     undo.recompute_dirty();
-    // (c, d) damage. The full-waveform damage here also owns the selected-marker
-    // stem's move: a nudge shifts the nudged marker's frame, so its always-on
-    // focus stem repaints at the new column on this repaint.
+    // (c, d) damage, and it is FULL: invalidate_waveform_area spans y=0 through
+    // the waveform's bottom across the whole window width, so ONE call covers
+    // both halves of a moved marker — the flag box (a top-strip pixel, blitted
+    // from the flag cache) and its stem (a waveform pixel, painted live from the
+    // same pass's stash). That pairing is why the call cannot narrow: row 5 made
+    // the stem a waveform pixel, so a strip-only damage here would repaint the
+    // flag at its new column while the old stem ink stayed on the plate until
+    // some later full-area damage arrived. Verified 2026-08-01 (both nudge twins
+    // reach here; the marker-moving routes were re-grepped against this rule and
+    // every one of them — drop, delete, the disabled/inherits toggles, both
+    // tempo steps, the drag commit, the flag-editor commit, the propagate paste,
+    // the render-entry adopt and the undo restores — pays the same full call).
     viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     // (e) playhead follows the nudged marker's committed frame.
