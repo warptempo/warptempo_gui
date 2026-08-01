@@ -102,33 +102,41 @@ struct TrimRange {
 // invalidating, and a retune is a restart. The names stay k-prefixed because
 // every use site treats them as constants.
 //
-// THE TUNABLE DOMAIN IS SHRINKING (architect 2026-07-31, the kdenlive redesign):
-// "every GUI color is runtime-tunable" is TRUE OF THE 23 KEYS BELOW AND OF
-// NOTHING ELSE. The kdenlive screenshots override all prior color work, and the
-// colors.conf domain is contracting to the WAVEFORM AREA AND THE MARKERS (the
-// canvas ground, the waveform ink, the marker classes); every OTHER color the
-// redesign touches is HARD-CODED from a sampled crop — not a key, not tunable,
-// not in the config grammar. The redesigned rows carry their constants at the
-// end of this block (see the row-1 menu colors below); an existing row keeps its
-// tunables until its own redesign row retires them, so no key is deleted here
-// and the grammar is unchanged.
+// THE TUNABLE DOMAIN'S SHRINK IS COMPLETE (declared architect 2026-07-31 as the
+// kdenlive redesign's shrinking rule; finished with rows 5-7, 2026-08-01). The
+// kdenlive screenshots overrode all prior color work: every redesigned surface
+// paints HARD-CODED constexpr constants sampled from its own crop — not keys,
+// not tunable, not in the config grammar (the redesign blocks at the end of
+// this palette). Of the 23 keys below, exactly FOUR still reach a paint site:
+//   kBackground     — the base chrome erase (render_background);
+//   kAccent + kAccentOutline — the bottom editors' invalid-flash box
+//                     (render_bottom_strip_editor, paint_handler.cpp);
+//   kPlayheadScanner — the moving playback line (paint_playheads).
+// EVERY OTHER KEY IS INERT: declared, loaded, still validated by the whole-file
+// grammar, and read by nothing — each declaration below carries its own
+// retirement record. No key is deleted (a removal is a grammar change, and the
+// grammar is not what the redesign edited), so the conf loads exactly as
+// before; most of it just no longer reaches a pixel.
 //
-// EVERY ENTRY IS OPAQUE — the palette carries no compositing alpha at all. A
-// highlight recolors the GROUND UNDER the ink (kRegionCanvas)
-// rather than washing over it, so ink over a highlighted span is the same ink
-// and only the ground reads the highlight; a disabled item takes its own
-// opaque pair (kMarkerDisabled) rather than fading.
+// EVERY ENTRY IS OPAQUE — the palette carries no compositing alpha at all, and
+// the redesign kept the doctrine: a highlight recolors the GROUND UNDER the ink
+// (kWaveformRegionCanvas now) rather than washing over it, so ink over a
+// highlighted span is the same ink and only the ground reads the highlight; a
+// disabled face resolves to a solid color through mix_color before it reaches
+// cairo, never a fade.
 //
-// THE GROUND SPLIT: two grounds, by surface. kBackground is the CHROME —
-// the top-strip lanes, the bottom strip, editor boxes, every erased pixel
-// OUTSIDE the waveform area (Breeze Window). kCanvas is the WAVEFORM AREA's
-// ground, deliberately lighter than the chrome so the work surface lifts out
-// of the panel around it. Wherever waveform ink paints, the ground is kCanvas.
+// THE GROUND SPLIT, as it stands today: kBackground is the BASE CHROME ERASE —
+// render_background lays it under everything, and the redesigned rows then
+// paint their own sampled grounds over it, so its visible remit is whatever
+// chrome no redesigned surface covers. kCanvas WAS the waveform area's ground
+// (deliberately lighter, the lifted work surface); since row 6 that ground is
+// the hard-coded kWaveformCanvas and kCanvas is inert, per its record below.
 //
 // The declaration order below is the config file's canonical key order; the
 // key->global table in color_config.cpp is that order's one authoritative
 // statement, and this block mirrors it for reading only.
-inline GuiColor kBackground       = hex(0x202326);  // Breeze Window
+// Breeze Window — LIVE, the base chrome erase (the ground split above).
+inline GuiColor kBackground       = hex(0x202326);
 // THESE TWO HAVE NO PAINT SITE LEFT (row 6, 2026-08-01) — they are DECLARED,
 // still loaded, still in the canonical key order and still validated by the
 // whole-file grammar, and nothing reads them: the canvas ground and the waveform
@@ -147,7 +155,11 @@ inline GuiColor kCanvas           = hex(0x393E43);
 // canvas, not a bright trace on black (Breeze View, the deepest ground).
 inline GuiColor kWaveform         = hex(0x141618);
 
-inline GuiColor kText             = hex(0xFCFCFC);  // Breeze paper white
+// Breeze paper white — INERT (rows 5-7, 2026-08-01): every glyph surface now
+// paints the redesign's hard-coded kRedesignLabel (the same value, sampled
+// independently from the crops — a coincidence of fact, not a reference), and
+// nothing reads this key.
+inline GuiColor kText             = hex(0xFCFCFC);
 // Disabled text: Breeze Dark's DISABLED Text role, the View set's faded
 // foreground — the value the desktop gives disabled text, rather than a fade
 // computed from kText. THE SOURCE OF TRUTH FOR THE WHOLE DISABLED FAMILY (this
@@ -166,9 +178,10 @@ inline GuiColor kText             = hex(0xFCFCFC);  // Breeze paper white
 // evaluates it. Re-derive from the shipped scheme, never from a qt6ct conf —
 // the one this family was first read off ran 0-4 units dark per channel and no
 // single darken amount reproduces it (best fit ~0.17-0.18), so that row was
-// never a clean KColorScheme pass at any setting. Paints the
-// disabled glyphs on the surviving PRE-REDESIGN text surfaces (the bottom strip
-// and the flag editor). Its old partner kMarkerDisabled — the shape half of the
+// never a clean KColorScheme pass at any setting. IT HAS NO PAINT SITE LEFT
+// (rows 5-7, 2026-08-01): its last glyph surfaces — the flag editor and the
+// bottom strip — paint the redesign's hard-coded inks now (kRedesignLabel and
+// its dim mixes). Its old partner kMarkerDisabled — the shape half of the
 // same opaque disabled cue — is now paint-site-less on the marker column: row 5
 // disables a flag by BLENDING its own class colour over the lane ground
 // (kMarkerDisabledMix), not by swapping in a second palette pair.
@@ -183,9 +196,9 @@ inline GuiColor kTextDisabled     = hex(0x606263);
 // 1px top and bottom border — with the crops' 2px black (2026-08-01). Declared
 // and inert now, exactly like kCanvas and kWaveform above and for the same
 // reason; the redesigned rows take their own sampled kRedesignLine
-// instead. It is not an accent and never marks state. The trim
-// chips' ring and stems take this same value from their own keys, so every calm
-// 1px rule in the product is one color.
+// instead. It is not an accent and never marked state. The retired trim
+// chips' ring and stems took this same value from their own keys (now inert
+// too, at the trim family below), so every calm 1px rule was one color.
 inline GuiColor kLine             = hex(0x686A6C);
 
 // The strip-drag anchor stem's old value, NOW INERT (architect 2026-08-01): the
@@ -198,13 +211,17 @@ inline GuiColor kLine             = hex(0x686A6C);
 // a gesture and the product's position lines are the one white.
 inline GuiColor kStripAnchorStem  = hex(0x686A6C);
 
-// The resting cursor: its 1px line and its tip-down triangle — the ONE playhead
-// form, always painted (architect 2026-07-30; the region's split half-triangles
-// rode this key until the span form retired with them). The compiled default is the breeze-icons grey —
-// brighter than kLine so the cursor reads as live rather than structural, calmer
-// than kText so it never competes with the glyphs. kSelectedStem and
-// kOverlayOutline default to the same value: the live 1px marks are one
-// family, each on its own key so any of them can be pulled out of it.
+// The resting cursor's OLD key, NOW INERT (row 5, 2026-08-01): the cursor's
+// line paints the hard-coded kPlayheadStem #fcfcfc, its tip-down triangle
+// retired for the marker-lane aliased head (kPlayheadHead), and this key's
+// paint site went with them — declared and unread, like kCanvas and its
+// siblings. (It had been the ONE playhead form since 2026-07-30; the region's
+// split half-triangles rode it until the span form retired with them.) The
+// compiled default is the breeze-icons grey — brighter than kLine so the
+// cursor read as live rather than structural, calmer than kText so it never
+// competed with the glyphs. kSelectedStem and kOverlayOutline default to the
+// same value: the (then-live) 1px marks were one family, each on its own key
+// so any of them could be pulled out of it.
 //
 // THAT VALUE IS THE PALETTE'S ONE PROVENANCE EXCEPTION, recorded here once for
 // all three keys: every other default traces to a BreezeDark.colors scheme
@@ -216,16 +233,24 @@ inline GuiColor kStripAnchorStem  = hex(0x686A6C);
 // cannot be re-derived from that file; take it from the icon art or from
 // BreezeClassic, not by hunting BreezeDark for a role that does not exist.
 inline GuiColor kPlayheadCursor   = hex(0x7F8C8D);
-// The moving scanner reads WHITE against the mid canvas (the Ableton play-head
-// cue; also Breeze's text/icon foreground, so it is the scheme's brightest ink).
+// LIVE — one of the four keys still painting (the header's completed-shrink
+// record): the moving playback line, drawn by paint_playheads while the
+// scanner runs. It reads WHITE against the canvas (the Ableton play-head cue;
+// also Breeze's text/icon foreground, so it is the scheme's brightest ink).
 inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
 
-// THE THREE MARKER CLASSES, each a FILL + OUTLINE pair: a DARK DESATURATED FILL
-// under a brighter 1px RING (see EditorTextBox::outline / kChipOutlinePx) — the
-// live classes carry a genuinely bright ring, the disabled one a ring that only
-// just lifts off its fill, which is exactly how it reads as switched off. Both
-// halves of every pair are tuning knobs. The classes resolve in priority order
-// at the flag renderers — disabled, then red, then default.
+// THE THREE MARKER CLASSES, each a FILL + OUTLINE pair — AND EVERY MARKER PAIR
+// BELOW IS NOW INERT ON THE MARKER COLUMN (row 5, 2026-08-01): the redesigned
+// flags paint the hard-coded kMarkerFlag* constants (fill/edge per class,
+// selection a color swap, disabled the kMarkerDisabledMix blend, the red stem
+// kMarkerStemRed), so kMarker/kMarkerOutline and the kMarkerDisabled pair reach
+// no paint site. The kAccent pair alone stays LIVE, on a NON-marker site (its
+// own record below). What follows is the pairs' provenance and their pre-row-5
+// behavior: a DARK DESATURATED FILL under a brighter 1px RING — the live
+// classes carried a genuinely bright ring, the disabled one a ring that only
+// just lifted off its fill, which is exactly how it read as switched off; the
+// classes resolved in priority order at the flag renderers — disabled, then
+// red, then default.
 //
 // SELECTION IS NOT A CLASS (architect ruling 2026-07-27). There is no fourth
 // class and no selected pair: a selected marker's FILL/OUTLINE PAIR is EXACTLY
@@ -260,7 +285,8 @@ inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
 // paint role is gone rather than merely moved.
 inline GuiColor kSelectedStem     = hex(0x7F8C8D);
 
-// DEFAULT — the pair every marker paints unless it is disabled or red. Both
+// DEFAULT (INERT — the class header above records the row-5 retirement): the
+// pair every marker painted unless it was disabled or red. Both
 // halves are pixels SAMPLED FROM ONE WIDGET: a Breeze-hovered file-list row in
 // the last of the pcmanfm-qt shots under tmp/screenshots/ (2026-07-26; tmp/ is
 // untracked, so the closed form below is what actually reproduces off a fresh
@@ -289,7 +315,9 @@ inline GuiColor kSelectedStem     = hex(0x7F8C8D);
 inline GuiColor kMarker           = hex(0x264A5E);
 inline GuiColor kMarkerOutline    = hex(0x3895C7);
 
-// DISABLED, shared by every marker family (warp flags, phase reset flags).
+// DISABLED (INERT — the class header above records the row-5 retirement; the
+// disabled face is the kMarkerDisabledMix blend now), formerly shared by every
+// marker family (warp flags, phase reset flags).
 // Opaque, not an alpha fade, and not computed from the default pair: both halves
 // come from the same KColorScheme disabled set as kTextDisabled — the fill is
 // the disabled LINK role (Breeze's link blue #1d99f3 faded 65% toward the
@@ -308,18 +336,27 @@ inline GuiColor kMarkerOutline    = hex(0x3895C7);
 inline GuiColor kMarkerDisabled        = hex(0x164160);
 inline GuiColor kMarkerDisabledOutline = hex(0x42464A);
 
-// RED — the normalization cue: a marker whose render falls back to the 1.00
-// tempo. The RING is the shipped Breeze ForegroundNegative #da4453; the FILL is
-// mix(kWaveform, that same negative, 0.35), a deliberate blend rather than a
-// sample: it puts the red flag in the same dark-fill/bright-ring system as the
-// sampled default pair — comparably dark, comparably desaturated — instead of
-// leaving it the one saturated block. It also paints the editor box's
-// invalid-commit flash, so a parse failure and a red flag read as one family.
+// RED — LIVE, one pair of the four still-painting keys (the header's
+// completed-shrink record), and its one surviving site is the BOTTOM EDITORS'
+// INVALID-COMMIT FLASH: a parse failure fills the editable run's band in
+// kAccent under a 1px kAccentOutline ring (render_bottom_strip_editor,
+// paint_handler.cpp — kept tunable deliberately, no crop shows that state).
+// Its ORIGINAL role — the marker normalization cue, a marker whose render falls
+// back to the 1.00 tempo — retired with row 5: red flags paint the hard-coded
+// kMarkerFlagFillRed/kMarkerFlagEdgeRed pair and stem kMarkerStemRed now.
+// THE VALUES: the RING is the shipped Breeze ForegroundNegative #da4453; the
+// FILL is mix(kWaveform, that same negative, 0.35), a deliberate blend rather
+// than a sample — it put the red flag in the same dark-fill/bright-ring system
+// as the sampled default pair, comparably dark, comparably desaturated, instead
+// of leaving it the one saturated block, and it is why the editor flash and a
+// red flag still read as one family.
 inline GuiColor kAccent           = hex(0x59262D);
 inline GuiColor kAccentOutline    = hex(0xDA4453);
 
-// THE GROUND RECOLOR (the Ableton model): the region-select span's CANVAS
-// becomes kRegionCanvas, painted after render_canvas and BEFORE the plate blit,
+// THE GROUND RECOLOR (the Ableton model — the MECHANISM is live, this KEY is
+// not; its inert record closes this block): the region-select span's CANVAS is
+// recolored (kWaveformRegionCanvas since row 6), painted after render_canvas
+// and BEFORE the plate blit,
 // so the ARGB32 plate composites over the recolored ground and its transparent
 // gaps show it correctly. The ink itself is untouched — over a
 // fully covered pixel the result is bit-identical to ink over plain kCanvas.
@@ -359,21 +396,22 @@ inline GuiColor kAccentOutline    = hex(0xDA4453);
 inline GuiColor kRegionCanvas     = hex(0x42474D);
 inline GuiColor kOverlayOutline   = hex(0x7F8C8D);
 
-// THE TRIM FAMILY, in three roles — no longer an orange family of its own
-// (architect 2026-07-27): it joins the marker system and the structural line.
-// The BRIDGE BAR is the chip-lane band spanning the gap between the two chips
-// (render_trim_flags), the pair-drag's grab affordance and the sole "inside the
-// trim window" signal now that the out-of-trim dim is retired — and its default
-// pair IS the marker pair (kMarker/kMarkerOutline values), so the bar reads as
-// an ordinary unselected marker stretched across the span it bounds. The CHIPS
-// dissolve into the strip: kTrimChip is the kBackground chrome value exactly, so
-// a chip's fill is invisible against the lane it sits in and what marks the
-// bound is its RING plus its stems — kTrimChipOutline and kTrimStem both took
-// the kLine value, one calm rule. (The 1px STEMS are the waveform-area segments
-// in render_trim_stems plus the strip-crossing segments in render_trim_flags;
-// they read as part of the chip handle, which is why they follow the chip's ring
-// rather than the bar.) Trim sits outside the selection system entirely — a
-// trim bound is never a selection member.
+// THE TRIM FAMILY — ALL FIVE KEYS NOW INERT (row 5, 2026-08-01): the redesigned
+// trim lane paints the hard-coded kTrimLaneBar / kTrimLaneEndcap surfaces and
+// their sampled bevels (render_trim_flags), the b/e chips are deleted with
+// their lane, and the waveform trim stems retired outright (render_trim_stems
+// IS DELETED — the bar and its endcaps are the window's whole display).
+// Declared and unread, like kCanvas and its siblings.
+// THE VALUES' PROVENANCE (the pre-row-5 roles, architect 2026-07-27 — no
+// longer an orange family of its own; it joined the marker system and the
+// structural line): the BRIDGE BAR spanned the gap between the two chips, the
+// pair-drag's grab affordance and the sole "inside the trim window" signal,
+// its default pair the marker pair's values (kMarker/kMarkerOutline) so the
+// bar read as an ordinary unselected marker stretched across its span; the
+// CHIPS dissolved into the strip — kTrimChip the kBackground chrome value
+// exactly, the bound marked by its RING plus its stems, kTrimChipOutline and
+// kTrimStem both the kLine value, one calm rule. Trim still sits outside the
+// selection system entirely — a trim bound is never a selection member.
 inline GuiColor kTrimBar          = hex(0x264A5E);
 inline GuiColor kTrimBarOutline   = hex(0x3895C7);
 inline GuiColor kTrimChip         = hex(0x202326);
@@ -406,7 +444,8 @@ inline GuiColor kTrimStem         = hex(0x686A6C);
 // that happen to coincide, not references to the palette. The LINE is row 2's
 // separator and its border-bottom, one sampled value for both (they are the
 // same rule seen twice — a 1px inert structural edge), unrelated to the
-// tunable kLine the un-redesigned surfaces still use.
+// tunable kLine, which no surface reads any more (its inert record is in the
+// palette block).
 inline constexpr GuiColor kRedesignRowGround = hex(0x292C30);
 inline constexpr GuiColor kRedesignAccent    = hex(0x3DAEE9);
 inline constexpr GuiColor kRedesignLabel     = hex(0xFCFCFC);
@@ -598,10 +637,13 @@ inline constexpr double kMarkerDisabledMix = 0.25;
 // what moves is their PAINT SITES, of which each had exactly one: render_canvas
 // (this file) and the two render_waveform calls in waveform_cache.cpp.
 //
-// EVERY OTHER WAVEFORM-AREA TUNABLE IS UNTOUCHED and still reads its key,
-// awaiting a crop of its own state: the region highlight ground (kRegionCanvas),
-// the phase-reset overlay ring, the disabled/red marker classes' remaining
-// tunables, and the trim colors. Row 6 is the ground and the ink, nothing else.
+// Row 6 itself took only the ground and the ink; the waveform area's OTHER
+// tunables did not outlast the same day's work: the region highlight
+// re-derived onto kWaveformRegionCanvas (kRegionCanvas inert), the phase-reset
+// overlay ring reads kMarkerFlagFill (kOverlayOutline inert), the marker
+// classes paint the row-5 kMarkerFlag* constants, and the trim lane paints its
+// own sampled surfaces. The four keys still live are enumerated at the palette
+// header's completed-shrink record.
 inline constexpr GuiColor kWaveformCanvas = hex(0x12312B);  // (18, 49, 43)
 inline constexpr GuiColor kWaveformInk    = hex(0x1C816B);  // (28, 129, 107)
 

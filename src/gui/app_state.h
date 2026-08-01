@@ -787,7 +787,7 @@ inline constexpr int redesign_button_index(RedesignButton b) {
 // what the menu row's Settings button drops down. Each row pairs the HUMAN
 // LABEL (the redesign's capitalization ruling; "GUI scale" and "URL" keep their
 // acronym case) with the .settings KEY the click prefills into the editor, and
-// `separator_before` marks the one place the two categories part: the three GUI
+// `separator_before` marks the one place the two categories part: the two GUI
 // keys, then the four metadata keys.
 //
 // It lives here rather than in the painter because three domains read it — the
@@ -2001,8 +2001,10 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 
 // architect ruling 2026-07-22: each marker column authors in its HOME view
 // only — warp markers in source view, phase resets in target view. In the
-// non-home view a column is display/navigation-only (selection, hover, Tab,
-// readouts all live; every placement/store mutation refuses silently,
+// non-home view a column is display/navigation-only (selection, Tab and the
+// selection-only readout all live — the retired hover popup and lane readouts
+// are recorded at the HoverPopupState deletion note above;
+// every placement/store mutation refuses silently,
 // navigation-class, exactly the read-only-tab convention). The TWO ruled
 // exceptions live at their sites: (1) the bare UP/DOWN TEMPO CENT STEP in
 // W+target (owner-only there, adjust_tempo_cents — singleton and group), which is

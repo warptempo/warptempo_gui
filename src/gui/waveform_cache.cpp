@@ -806,9 +806,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // after them — so the cache carries marker/phase-reset flag shapes only.)
 
     // Red-flag sets: the marker indices whose render normalizes to the 1.00
-    // fallback, painted kAccent/kAccentOutline whether or not selected —
-    // selection only fills the flag's triangle interior, never the class
-    // pair. Read from the memoized caches (keyed on the respective store
+    // fallback, painted the hard-coded kMarkerFlagFillRed/kMarkerFlagEdgeRed
+    // pair with the kMarkerStemRed stem whatever their selection state
+    // (resolve_flag_face — a disabled red marker blends that same pair toward
+    // the lane ground and stays recognisably red).
+    // Read from the memoized caches (keyed on the respective store
     // generation), so the silent classification runs only on a marker change,
     // not on this per-tick rebuild; the committed store means a red flag
     // freezes through a marker drag and re-evaluates at commit. The active
