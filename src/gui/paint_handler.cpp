@@ -2121,9 +2121,19 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // painted AFTER the plate. It is a BOUNDARY LINE, like the playheads and the
 // stems, so an opaque line crossing waveform ink is correct and intended, and
 // with no fill inside it the band now READS as the two edges of a span rather
-// than as a tinted region. The CONTENT band bounds it, so the top and bottom
-// runs sit inside the area's border
-// rather than on them. A vertical side is drawn only where the band's own edge
+// than as a tinted region.
+//
+// THE HORIZONTALS RIDE THE BORDER'S OUTERMOST ROWS (architect 2026-08-01,
+// GIMP-verified at the row-6 live look). They sat on the CONTENT band, one row
+// inside each 2px border — which put them where the marker and playhead stems
+// cross, so the ring read as broken by every stem. The top run moved UP 2px onto
+// the top border's FIRST row and the bottom run DOWN 2px onto the bottom
+// border's LAST row, and the verticals extend to meet them. This pass is
+// therefore the ONE band-filling pass that deliberately does NOT clip to
+// waveform_content_rect (the inventory at that helper says so): the ring is not
+// content, it is a frame drawn ON the frame.
+//
+// A vertical side is drawn only where the band's own edge
 // is the true edge — both x0 and x1 come back already clipped to the area, so a
 // band running past a viewport edge draws its border there too; that is the
 // same flush-to-the-edge reading the trim bridge's clipped fill has, and the
@@ -2133,14 +2143,16 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     const PhaseResetOverlayBand band = phase_reset_overlay_band(area);
     if (!band.valid) return;
 
-    const GuiRect content = waveform_content_rect(area);
     const double w = band.x1 - band.x0;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     cairo_set_source_rgb(cr, kOverlayOutline.r, kOverlayOutline.g,
                          kOverlayOutline.b);
-    const double y0 = static_cast<double>(content.y);
-    const double h  = static_cast<double>(content.h);
+    // THE FULL AREA, not the content band: the top run lands on row area.y (the
+    // top border's first row) and the bottom on row area.y + area.h - 1 (the
+    // bottom border's last), with the verticals spanning every row between them.
+    const double y0 = static_cast<double>(area.y);
+    const double h  = static_cast<double>(area.h);
     cairo_rectangle(cr, band.x0, y0, w, 1.0);            // top
     cairo_rectangle(cr, band.x0, y0 + h - 1.0, w, 1.0);  // bottom
     cairo_rectangle(cr, band.x0, y0, 1.0, h);            // left
@@ -2836,8 +2848,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         if (rects_intersect(exposed, area)) {
             // THE GROUND RECOLOR, under the plate. render_canvas already laid
             // the kCanvas ground for the whole area above; this repaints the
-            // region's span of it opaquely, so the plate's ink and its
-            // antialiased fringes composite against the recolored ground.
+            // region's span of it opaquely, so the plate's transparent gaps show
+            // the recolored ground rather than the plain one.
             paint_region_ground(cr, area);
             paint_waveform_plate(cr, area);
             // The overlay band's boundary ring — the phase-reset overlay's whole

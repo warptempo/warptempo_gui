@@ -320,8 +320,8 @@ inline GuiColor kAccentOutline    = hex(0xDA4453);
 
 // THE GROUND RECOLOR (the Ableton model): the region-select span's CANVAS
 // becomes kRegionCanvas, painted after render_canvas and BEFORE the plate blit,
-// so the ARGB32 plate composites over the recolored ground and its antialiased
-// fringes blend correctly against it. The ink itself is untouched — over a
+// so the ARGB32 plate composites over the recolored ground and its transparent
+// gaps show it correctly. The ink itself is untouched — over a
 // fully covered pixel the result is bit-identical to ink over plain kCanvas.
 // It is TRIM SCRATCH: the span the plain waveform drag / the shift waveform
 // press form and `x` consumes into the trim window (architect 2026-07-30 — it
@@ -631,29 +631,14 @@ inline constexpr int      kWaveformBorderPx = 2;
 // in tmp/ and this paragraph is why re-deriving from them would be a
 // re-litigation rather than a discovery.
 
-// THE ALIASING TOGGLE (architect 2026-08-01). TRUE is the shipped renderer —
-// the 2026-07-26 draw arc's coverage plate, byte-for-byte — and FALSE selects a
-// hard-edged classic variant: per-column opaque min/max bars, no Wu tip
-// polylines, no halos, no fractional coverage anywhere.
-//
-// IT IS ADDITIVE BY RULING. The AA machinery stays fully COMPILED and
-// syntactically untouched in both settings (the branch is an ordinary runtime
-// `if` on this constant, not `#if` and not `if constexpr`, precisely so the
-// discarded path keeps being type-checked and warned about; -O3 folds it), and
-// the aliased arm adds code beside it rather than editing it. The architect's
-// standing instruction: this is the one piece of code to leave in even if the
-// comparison goes against it.
-//
-// COMPILE-TIME FOR NOW — the architect A/Bs by rebuilding. A settings key could
-// follow (the six-edit engine-key recipe in settings.md); nothing here would
-// change but the constant becoming a read of app.engine_settings, since the two
-// arms already share every input.
-//
-// IT IS FALSE AS SHIPPED (architect 2026-08-01, at the row-6 live look): the
-// ALIASED variant is what the product draws, with the AA binary snapshotted for
-// the side-by-side. Nothing about the AA path changed to get here — this line is
-// the whole flip, which is the property the toggle was built for.
-inline constexpr bool kWaveformAntialiased = false;
+// THE ANTIALIASED PLATE RENDERER IS DELETED (architect 2026-08-01, at the
+// side-by-side against a snapshotted AA binary: "subtle but noticeable — I
+// prefer without it", reversing the keep-it-inert ruling this constant was
+// built for). The waveform is drawn ALIASED: hard per-column min/max bars, no
+// coverage anywhere. The toggle died with the choice it existed to make; the
+// technique it selected between is recorded in
+// docs/engineering/waveform_antialiasing_retired.md, and the deletion inventory
+// is at render_waveform's own header.
 
 // -- The TOOLTIP CHROME (the dropdown has its own, below) -------------------
 //
@@ -1500,9 +1485,12 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 // The waveform area's CONTENT band: the area minus the border rows
 // render_canvas paints at its top and bottom — 2px each since row 6
 // (waveform_border_px, the black border that replaced the 1px kLine one). Every
-// pass that fills a BAND inside the area clips to this — the plate blit, the
-// region ground recolor, and the overlay ring's runs — so the border rows
-// survive the frame no matter what covers the area. 1px VERTICALS deliberately
+// pass that fills a BAND inside the area clips to this — the plate blit and the
+// region ground recolor — so the border rows survive the frame no matter what
+// covers the area. THE PHASE-RESET OVERLAY RING LEFT THIS LIST 2026-08-01: its
+// horizontals now ride the borders' OUTERMOST rows deliberately (the ruling is
+// at paint_phase_reset_overlay_ring), so it reads the full area. 1px VERTICALS
+// deliberately
 // do not: the playheads, the marker/trim stems, and the strip-drag anchor stem
 // run the full area height and cross the border, which is correct for a position
 // line and is not special-cased anywhere — row 6 KEEPS that (the stems' recorded
@@ -1563,104 +1551,58 @@ struct WaveformBasis {
 // [t0, t1) is translated to source-frame via `map_target_to_source` before the
 // pyramid read, producing the deformed-waveform display.
 //
-// THE SILHOUETTE IS A TIP POLYLINE. Each column reduces to two TIPS in float
-// rows — its raw maximum as the top tip, its raw minimum as the bottom — and
-// every adjacent pair is joined by TWO Wu-style antialiased segments, top tip to
-// top tip and bottom tip to bottom tip. Those segments are the whole of the
-// inter-column connectivity, at every scale. The earlier raw-to-raw BRIDGE that
-// widened a column's interval to overlap its neighbour's is RETIRED with them:
-// it joined a spike to a short neighbour by filling the gap with a hard solid
-// block, so a spike had soft tips but hard 1-px vertical sides. Two steep
-// diagonals put an antialiased slope on those sides instead, which is what the
-// level-1 jaggedness needed.
+// THE SILHOUETTE IS A COLUMN OF HARD BARS. Each column reduces to two TIPS in
+// float rows — its raw maximum as the top tip, its raw minimum as the bottom —
+// and paints as ONE opaque bar spanning floor(top) .. floor(bot) inclusive.
+// There is no interior/edge split, no fractional coverage, no regime threshold,
+// and NO INTER-COLUMN CONNECTIVITY AT ALL: a spike stands alone beside a short
+// neighbour, which is the classic min/max look the architect chose.
 //
-// A column additionally fills an INTERIOR when it is TALL — its two tips more
-// than kThinIntervalPx (1.0 row, tunable) apart, i.e. it has real envelope mass:
-// opaque rows between the tips, with the two boundary rows taking FRACTIONAL
-// COVERAGE (row floor(yt) gets floor(yt)+1-yt, row floor(yb) gets
-// yb-floor(yb)). A THIN column has no interior to fill, so its two tip segments
-// ARE its whole rendering: they stay separate and render the subpixel extent as
-// a soft partial-coverage BAND — which is the honest antialiasing of a feature
-// narrower than a pixel, and the look the arc was after. They land on the same
-// centre line only at exactly ZERO extent. The never-fade floor is unaffected
-// either way, since it comes from each segment's endpoint units. At spp 1-8
-// nearly every column is thin, so this band IS the rendering there — exactly the
-// thin-signal material the old bar-chart look was worst on. That is the only
-// thing the tall/thin distinction still decides: whether an interior is filled.
+// THE ANTIALIASED RENDERER IS DELETED (architect 2026-08-01, at a side-by-side
+// against a snapshotted AA binary — "subtle but noticeable, I prefer without
+// it"). What went: the Wu-style tip polylines joining adjacent columns' tips,
+// their max-coverage compositing and endpoint unit deposits, the tall/thin
+// regime and its kThinIntervalPx threshold, the two fractional boundary rows,
+// the 256-entry premultiplied coverage table, and BOTH EDGE HALOS with their
+// wall clamps. The technique is recorded in
+// docs/engineering/waveform_antialiasing_retired.md rather than in the tree;
+// this paragraph exists so the absence reads as a decision.
 //
-// SEGMENT GEOMETRY: dx is always one column, dy unbounded (a transient can step
-// hundreds of rows between neighbours). Each segment first deposits a FULL unit
-// of coverage at both endpoint tips — unconditionally, so an endpoint can never
-// be left at a fraction by its row phase, which is what would otherwise let a
-// V-vertex composite to half alpha and read as a dropout — and then, when it
-// spans more than one row, walks those rows and splits each one's unit between
-// the two columns by where the segment crosses that row's centre. Deposits
-// clamp their CENTRE into the band so a tip resting exactly on a rail (PCM -1.0
-// does) still renders one full in-band row; the diagonal's walk instead DROPS
-// out-of-band rows, which is geometrically right for a clipped tail. So every
-// column carries at least one full pixel-equivalent at every slope and at the
-// rails: flat material softens to a hairline but can never fade out or vanish.
+// THE >=1px NEVER-FADE FLOOR SURVIVES, re-expressed: it came from each segment
+// depositing a full unit at its endpoint tips, and it now comes from integer
+// geometry — floor(top) == floor(bot) for any sub-pixel interval, so the
+// inclusive fill always writes at least one row. Flat or silent material draws
+// a hairline; nothing can fade out or vanish.
 //
-// THE TWO HALOS: both edge columns have a neighbour this call does not draw, and
-// each needs it for the same reason — a column's ink comes from the segments on
-// BOTH its sides, so an edge column missing one is under-covered relative to the
-// same audio rendered interior, and it shifts under a pan.
-//   LEFT, global column col0-1, read before the loop: supplies the previous tips
-//     the FIRST drawn column's incoming segments run back to.
-//   RIGHT, global column col0+area.w, read after the loop: supplies the tips the
-//     LAST drawn column's outgoing segments run forward to. Only that column's
-//     share lands — deposits aimed at the offscreen column fall outside the
-//     columns this call owns and are dropped.
-// Both are SAMPLE-SPAN reads through this same basis, never read-backs of
-// painted pixels, and both pick their pyramid level from their own span exactly
-// as a drawn column does.
-//
-// THE TWO WALL CLAMPS MIRROR. At the SONG wall the left halo's span is clamped
-// to start at frame 0, and if nothing remains it is EMPTY and the first column
-// simply has no left neighbour (a thin one then deposits its own unit, so it
-// still cannot vanish). At the EOF wall the right halo's span is clamped to END
-// at total_frames, and if nothing remains it is EMPTY too and the last column
-// keeps exactly the ink it has — the flush-right rest's contract. Connecting the
-// edge columns to offscreen neighbours rather than special-casing them is what
-// makes a render's output depend only on its basis and column range — two
-// renders of the same columns at the same basis agree exactly, and an edge
-// column matches the same audio rendered interior.
+// PAN INVARIANCE IS STRENGTHENED, NOT WEAKENED, BY THE HALOS' REMOVAL. They
+// existed because a column's ink came from the segments on BOTH its sides, so an
+// edge column missing an undrawn neighbour was under-covered against the same
+// audio rendered interior and shifted under a pan. A bar depends on nothing but
+// its own interval, so a column's pixels are now a pure function of its own
+// (k0+c) span — two renders of the same columns at the same basis agree
+// exactly, and an edge column matches the same audio rendered interior, with no
+// correction needed. The AUTHORING LATTICE below is untouched and is still what
+// makes that span depend on the global index alone.
 //
 // THE WRITER: this function does NOT draw through cairo. It writes `dest`'s
 // ARGB32 pixel words directly, which is why it takes the surface rather than a
-// context. TWO COMPOSITING RULES, side by side:
-//   INTERIORS REPLACE. Each tall column's interior is written once into a
-//     column the caller already cleared, so replacing is correct and idempotent.
-//   SEGMENTS MAX-COMPOSITE. A segment necessarily writes into the column to its
-//     left, which is already rendered, so replacing there would punch holes in
-//     it; taking the max can only add ink.
-// Per column the interior is painted FIRST and its segments after. Because
-// segments take the max, an opaque interior pixel stays opaque and a segment
-// entering an envelope cannot erode it — that intent rides on the arithmetic,
-// not on the paint order. A zero-coverage row writes nothing at all.
+// context. ONE COMPOSITING RULE, where there were two: every write REPLACES.
+// The caller cleared every column this call regenerates and each column is
+// written exactly once by exactly one bar, so replacing is correct and
+// idempotent — the max-compositing that the segments needed (they wrote into an
+// already-rendered neighbour) went with them.
 //
-// Because a tall interval is wider than a pixel it necessarily spans two or more
-// distinct rows, so the interior's fractional path can never emit a coincident
-// top/bottom write: that case stays discharged by construction, with
-// max-compositing covering overlap on the segment side.
-//
-// Words are PREMULTIPLIED (coverage a gives alpha round(a*255) and channels
-// round(a*C)) and come from a 256-entry table built once per call for the one
-// ink colour; entry 255 is the opaque interior word, and the alpha byte of any
-// pixel on the plate is the table index that produced it — which is what lets a
-// segment's max-composite read back a coverage without a side buffer. The
-// surface is flushed before the first
-// CPU write and marked dirty after the last, so later cairo use sees the
-// pixels.
+// The word is PREMULTIPLIED ARGB32, built once per call for the one ink colour;
+// at full coverage that is the ink itself, so there is a single word rather than
+// a table. The surface is flushed before the first CPU write and marked dirty
+// after the last, so later cairo use sees the pixels.
 //
 // The plate paints uniformly in `color` — it is trim-agnostic, and nothing
 // recolors it after the fact: the out-of-trim dim that once masked a second
 // color through this alpha is retired, the trim bridge bar being the whole
-// inside-the-window signal now. Its alpha is not binary: opaque interiors,
-// fractional silhouette edges, transparent gaps. The gaps are what let a
-// recolored GROUND (kRegionCanvas, painted before the blit)
-// show through, and the fractional edges blend against whichever ground is
-// under them.
+// inside-the-window signal now. Its alpha is BINARY now: opaque bars and
+// transparent gaps, with no fractional edges left. The gaps are what let a
+// recolored GROUND (kRegionCanvas, painted before the blit) show through.
 void render_waveform(cairo_surface_t* dest,
                      GuiRect area,
                      int col0,
@@ -2205,14 +2147,17 @@ double measured_monospace_font_px();
 // (flag_text_iter). DISPLAY ONLY — a phase reset authors no payload and
 // serializes as a bare frame, so this string exists nowhere but the flag.
 //
-// FOUR GLYPHS, and the reason it is four has RETIRED WITH THE MARKER-TEXT LANE
-// (row 5, 2026-08-01). It was widened from the former one-glyph "p" because a
-// dense reset cluster sat right on that lane's all-or-nothing fit verdict and a
-// small zoom change flipped the whole lane between modes — the lane blinked.
-// There is no verdict any more (flags simply overlap, later over earlier), so
-// nothing depends on the width; the token stays at "p.r." because it is what a
-// phase reset reads as, and it stays well under the nine-glyph budget so it
-// never truncates. Its producers collapsed to ONE with the resolver: the flag
-// painter (render.cpp).
-inline constexpr char kPhaseResetLaneToken[] = "p.r.";
+// ONE GLYPH (architect 2026-08-01, at the row-6 live look). It had been "p.r."
+// since the marker-text lane widened it from the original "p": a dense reset
+// cluster sat right on that lane's all-or-nothing fit verdict, and a small zoom
+// change flipped the whole lane between modes — the lane blinked. THAT LANE AND
+// ITS VERDICT ARE GONE (row 5 — flags simply overlap, later over earlier), so
+// nothing depends on the width any more, and the reason to spend four glyphs
+// went with the mechanism that needed them. Back to "p", which is what the
+// widening had taken away. Nothing else moves: every flag's width is
+// pad + shaped(label) + pad, so the boxes re-derive from the shaping pass by
+// construction, and the token stays far under the nine-glyph budget so it never
+// truncates. Its producers collapsed to ONE with the resolver: the flag painter
+// (render.cpp).
+inline constexpr char kPhaseResetLaneToken[] = "p";
 

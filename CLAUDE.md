@@ -62,6 +62,7 @@ All in `docs/engineering/architecture/` unless noted. Each file holds the full h
 | The colors.conf grammar + the canonical key block | `docs/engineering/color-configuration.md` |
 | Any guard/validator (add/move/remove) | `docs/engineering/validation_topology.md` |
 | Engine performance (closed campaign; retired candidates need new data) | `docs/engineering/perf_campaign_2026_07.md` |
+| The retired waveform antialiasing (technique record + reinstatement seed) | `docs/engineering/waveform_antialiasing_retired.md` |
 | User-facing behavior reference | `docs/HELP.md` |
 
 Trim spans several files by nature: store/commit rules in `normalization-and-boundaries.md`, chips/router/geometry in `pointer-hit-testing.md` and `marker-ui.md`, the prepost render window in `render-pipeline.md`, the highlight sync in `region-scrub-esc.md`.

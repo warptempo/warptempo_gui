@@ -49,7 +49,8 @@ void render_waveform_to_cache_surface(
     // (kCanvas, or a kRegionCanvas recolor) shows through
     // wherever the waveform samples don't paint. No ground color is ever baked
     // into the plate: its alpha is exactly what composites the ink over that
-    // ground, gaps and antialiased fringes alike, which is why a highlighted
+    // ground through its gaps (binary alpha since the aliasing deletion), which
+    // is why a highlighted
     // span needs no plate of its own.
     // This is the LAST cairo drawing on the surface: render_waveform writes the
     // pixel words directly, so the context is destroyed before those CPU writes
