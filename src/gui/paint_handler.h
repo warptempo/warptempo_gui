@@ -41,19 +41,37 @@ class GuiWaveformWorker;
 // Declared here so paint_handler.cpp can reach them. Other constants
 // (kMarkerHitHalfPx) is paint-handler-independent and
 // lives in main.cpp's anonymous namespace; playhead_half_px() lives in
-// render.h. flag_font_size_px() lives in render.h so render.cpp can reach
+// render.h. bottom_row_font_size_px() lives in render.h so render.cpp can reach
 // it without pulling paint_handler.h into the lower-layer include graph.
 
-// Timestamp text layout (bottom-left of the status strip). The
-// window-bottom baseline anchor (kTimestampBaselineFromBottom) was replaced
-// with row-relative baselines derived from bottom_lower_row_area /
-// bottom_upper_row_area. Scales proportionally with the font_size
-// setting: the authored value (8) times gui_font_scale(), rounded with
-// std::nearbyint so it stays an integer and the sharp-edge conventions keep
-// holding. At scale 1 it equals its authored value by identity
-// (nearbyint(8*1) == 8).
-inline int timestamp_pad_x() {
-    return static_cast<int>(std::nearbyint(8.0 * gui_font_scale()));
+// THE BOTTOM ROW'S LEFT PAD — the pen x of the first glyph on the line,
+// MEASURED off row_7_text.png: fitting the crop's own string offscreen at the
+// row's 16px size puts the pen at x = 13 (12 and 14 both fit worse; the fit is
+// at the crop's left edge, which is the window's). Authored at 100% and scaled
+// on gui_scale_factor() like every other redesigned dimension, rounded with
+// std::nearbyint so it stays an integer.
+//
+// (It replaces timestamp_pad_x, the authored 8 on the font axis. The row rides
+// gui_scale now — see bottom_row_h_px.)
+inline int bottom_row_pad_x() {
+    return static_cast<int>(std::nearbyint(13.0 * gui_scale_factor()));
+}
+
+// THE ONE LINE'S FIXED LEAD-IN, in MONOSPACE CELLS, and the reason the line can
+// carry a modal without anything jumping: "MM:SS.mmm" (9) + a space + the DIRTY
+// COLUMN (1) + a space = 12 cells. The dirty column is RESERVED whether or not
+// the dot is showing, so saving mid-edit cannot slide an open editor's text —
+// which matters because Ctrl+S reaches through the editors' modal gate. The
+// timestamp is a fixed 9-glyph format (time_format.h) and the face is monospace,
+// so the lead-in is exact arithmetic, not a measurement.
+inline constexpr int kBottomRowLeadInCells = 12;
+
+// Char-0 origin of the line's AFTER-TIMESTAMP span: where the modal / editor /
+// prompt / status text starts, and the one owner both the painters and the
+// click-to-caret geometry (active_editor_text, input_pointer.cpp) read.
+inline double bottom_row_content_left_x() {
+    return static_cast<double>(bottom_row_pad_x()) +
+           kBottomRowLeadInCells * monospace_advance();
 }
 
 // Single source for the two bottom-strip editor prefixes. The paint

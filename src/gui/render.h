@@ -1380,26 +1380,26 @@ inline int waveform_inset_px() { return playhead_triangle_h_px(); }
 // render.cpp (cull) and main.cpp (invalidation). At scale 1 it is 7.
 inline int playhead_half_px() { return playhead_triangle_h_px() - 1; }
 
-// Pre-first-paint fallback for the measured monospace row height and baseline
-// offset (Liberation Mono at the DEFAULT 11 pt — these stay compile-time and
-// assume the default font size). SEED ONLY, never live geometry:
+// Pre-first-paint fallback for the measured monospace slot height and baseline
+// offset (Liberation Mono at the bottom row's own 16 px — these stay
+// compile-time and assume gui_scale 100). SEED ONLY, never live geometry:
 // init_monospace_grid_metrics runs at the top of every redraw and overwrites
 // BOTH before anything paints, so no pixel is ever placed against these values.
 // They exist because on_resize can fire before that first redraw, and the
-// geometry it computes must be sane (never a negative waveform) meanwhile.
-// Both seed the UNPADDED metrics, which no lane takes directly: the -1.0 term
-// is the authored flag_pad_y_px value at scale 1, the 1.0 term is
-// kChipOutlinePx, and the 13.0 is the font ascent — the ascent measured for the
-// font `fc-match monospace` resolves to on this host (Liberation Mono at
-// 14.6667 px), the same 13 that puts the row height at 18 (ascent 13 + descent
-// 5 = 18, then nearbyint(18 - 2) + 2*1 = 18; baseline -1.0 + 1.0 + 13.0 = 13.0).
-// The TEXT-row accessors derive from these seeds like they do from a real
-// measure, adding kTextBoxPadPx per side for the box (20 tall at scale 1) and
-// kTextBoxMarginPx per side for the lane hosting it (24 tall, lane-relative
-// baseline 16.0).
-constexpr int    kRowHFallbackPx       = 18;
+// geometry it computes must be sane (never a negative waveform) meanwhile —
+// which since row 7 is a weaker claim than it was, because no lane height reads
+// them any more: the bottom lane is an authored 33 and these feed only the
+// editors' box.
+// Both seed the UNPADDED metrics: the -1.0 term is the authored flag_pad_y_px
+// value at scale 1, the 1.0 term is kChipOutlinePx, and the 14.0 is the font
+// ascent — the ascent measured for the font `fc-match monospace` resolves to on
+// this host (Liberation Mono at 16 px), the same 14 that puts the slot height at
+// 19 (ascent 14 + descent 5 = 19, then nearbyint(19 - 2) + 2*1 = 19; baseline
+// -1.0 + 1.0 + 14.0 = 14.0). The box accessor derives from these seeds like it
+// does from a real measure, adding kTextBoxPadPx per side (21 tall at scale 1).
+constexpr int    kRowHFallbackPx       = 19;
 constexpr double kRowBaselineOffFallbackPx =
-    -1.0 + 1.0 + 13.0;
+    -1.0 + 1.0 + 14.0;
 
 // Forward declarations: defined with their full doc comments below. Needed here
 // because flag_chip_rect (inline) reads the text BOX height and the lane-top
@@ -1453,12 +1453,13 @@ inline int flag_chip_width_px(size_t glyph_count) {
 // The fill starts one pixel right of the left edge, and the glyph run sits
 // kChipOutlinePx + flag_pad_x_px() + text_box_pad_px() (=
 // flag_glyph_inset_px()) inside the chip edge. The vertical geometry is the BOX
-// pair, not the LANE's: the height is monospace_text_box_h() (ring + four-side
-// pad baked in, never the unpadded metric) and the top is the lane top —
-// baseline_y - monospace_text_row_baseline_offset(), that offset being measured
-// from the LANE top — INSET DOWNWARD by text_box_margin_px(). So the box sits
-// centered in its lane with one clear margin above and below, and r.h is
-// strictly less than the lane height it sits in.
+// pair: the height is monospace_text_box_h() (ring + four-side pad baked in,
+// never the unpadded metric) and the top is recovered from the baseline —
+// baseline_y - monospace_text_row_baseline_offset() — then INSET DOWNWARD by
+// text_box_margin_px(), the margin that offset spent. The two operations cancel
+// exactly, so the box lands centered on the glyph band whatever row the caller
+// solved that baseline in, and r.h is strictly less than the bottom row's
+// content height.
 //
 // Width is computed from the cached per-character monospace advance
 // (flag_chip_width_px -> monospace_advance(), measured once on the real paint
@@ -1478,12 +1479,10 @@ inline int flag_chip_width_px(size_t glyph_count) {
 //                 vs. text_left (see consumers).
 //   glyph_count - number of glyphs in the box's text (== text.length()).
 //                 Width = flag_chip_width_px(glyph_count).
-//   baseline_y  - the text baseline y the caller solved for its row (every
-//                 caller solves it as lane.y + the lane-top baseline offset).
-//                 The lane top is baseline_y -
-//                 monospace_text_row_baseline_offset(); the box top is one
-//                 text_box_margin_px() below it and the height is
-//                 monospace_text_box_h().
+//   baseline_y  - the text baseline y the caller solved for its row (the bottom
+//                 row centers the face's extents in its content band). The box
+//                 top is baseline_y - monospace_text_row_baseline_offset() +
+//                 text_box_margin_px() and the height is monospace_text_box_h().
 //
 // Returns the integer GuiRect [x, y, w, h]; rounding happens here, once, through
 // std::nearbyint like every other pixel conversion.
@@ -1495,17 +1494,17 @@ inline GuiRect flag_chip_rect(double text_left, size_t glyph_count,
     // Both conversions are std::nearbyint, the project's single rounding
     // convention for fractional->integer pixels.
     r.x = static_cast<int>(std::nearbyint(text_left));
-    const int lane_top = static_cast<int>(std::nearbyint(
+    const int band_top = static_cast<int>(std::nearbyint(
               baseline_y - monospace_text_row_baseline_offset()));
-    r.y = lane_top + static_cast<int>(text_box_margin_px());
+    r.y = band_top + static_cast<int>(text_box_margin_px());
     r.w = flag_chip_width_px(glyph_count);
     r.h = monospace_text_box_h();
     return r;
 }
 
-// The former kFlagFontSize constant (11.0 * 96.0 / 72.0) is now the runtime
-// accessor flag_font_size_px() declared above — same pt->px arithmetic,
-// driven by the font_size setting instead of a fixed 11.
+// The former kFlagFontSize constant (11.0 * 96.0 / 72.0) became the font_size-
+// driven flag_font_size_px(), and row 7 retired that in turn: the one monospace
+// size left is bottom_row_font_size_px() = the redesign's 12pt on gui_scale.
 
 // Editor text-box primitive: the full MONOSPACE editable-text-box anatomy, in
 // paint order — solid fill behind the editable region, optional static prefix,
@@ -1528,28 +1527,29 @@ inline GuiRect flag_chip_rect(double text_left, size_t glyph_count,
 // `anchor_x + prefix_advance`; the solid fill covers only the editable
 // region (the prefix, if any, sits to its left on the canvas), via the
 // shared flag_chip_rect helper. The box height is monospace_text_box_h() and
-// its top is one text_box_margin_px() below the lane top (`baseline_y -
-// monospace_text_row_baseline_offset()`), so the box sits centered in its lane
-// with a clear margin above and below — callers solve baseline_y from their
-// lane rect and the box lands inside it. The cursor is a filled one-pixel
+// its top is one text_box_margin_px() below `baseline_y -
+// monospace_text_row_baseline_offset()`, so the box sits centered on the glyph
+// band with a clear margin above and below — the caller solves baseline_y from
+// the bottom row's content band and the box lands inside it. The cursor is a
+// filled one-pixel
 // integer rectangle at the nearbyint'd column (the half-pixel +0.5 convention
 // belongs to 1px STROKES and left with the stroked form), AA off, for a
 // crisp single-pixel column. The cursor and the selection highlight span only
 // the glyph ink band (ascent-to-descent) — NOT the whole box; only the step-1
-// fill spans the full padded box. Nothing paints in the lane's margin.
+// fill spans the full padded box. Nothing paints in the box's outer margin.
 //
 // Colors are pre-resolved by the caller: `fill` is the resolved chip
-// color and `text_color` is kText. The selection swap fills the selected
-// range with `text_color` and repaints the selected substring in `fill`
-// for contrast.
+// color and `text_color` the ink (since row 7 the bottom row's hard-coded
+// kRedesignLabel). The selection swap fills the selected range with
+// `text_color` and repaints the selected substring in `fill` for contrast.
 //
 // Step 1 always paints the outer kChipOutlinePx band of the chip rect
 // (flag_chip_rect, which includes the ring) in `outline`, then fills the inner
 // rect inset by kChipOutlinePx in `fill` — the solid outline ring around the
-// box. The chips pass their state-dependent outline siblings; the bottom-strip
-// editors pass kBackground for BOTH ring and fill (an invisible ring — the box
-// reads as light text on the dark strip) and kAccent/kAccentOutline when
-// red-flashing, exactly a parse-fail chip's colors. The cursor and the
+// box. The bottom-strip editors pass THE ROW'S OWN GROUND (kRedesignTabGround)
+// for BOTH ring and fill — an invisible ring, the box reading as light text on
+// the row — and kAccent/kAccentOutline when red-flashing, exactly a parse-fail
+// chip's colors. The cursor and the
 // selection highlight span the glyph ink band, which sits inside the padding
 // inside the outline, so both stay within the ring whenever visible.
 struct EditorTextBox {
@@ -2249,11 +2249,10 @@ void init_monospace_grid_metrics(cairo_t* cr);
 // (negative before the first measure). It changes EXACTLY when
 // init_monospace_grid_metrics re-measures — that is the whole reason it exists
 // as an accessor: it is the ONE scalar that stands for the whole measured grid
-// (advance, slot height, baseline) and therefore for every lane height and text
-// box derived from it. The pixel caches fold it into their fingerprints so a
-// font change is detected BY FIELD rather than by trusting that some other
-// fingerprinted quantity (an area dimension, a lane split) must have moved with
-// it.
+// (advance, slot height, baseline) and therefore for the text box derived from
+// it. The pixel caches fold it into their fingerprints so a grid change is
+// detected BY FIELD rather than by trusting that some other fingerprinted
+// quantity (an area dimension, a lane split) must have moved with it.
 double measured_monospace_font_px();
 
 // (THE MARKER-LANE PLACEMENT OWNERS ARE GONE, 2026-08-01. lane_text_left_x /

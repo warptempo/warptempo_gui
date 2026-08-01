@@ -423,17 +423,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // able to unlock). Pure view-state mutation: not undoable, not dirty;
     // silently persisted on the next Ctrl+S from a writable surface (Ctrl+S
     // drops at the read-only gate, so a tab just locked here reaches disk from
-    // the other, unlocked tab — or after a bare-o unlock). The bottom strip's
-    // "(read-only)" token is the whole visible cue, and its update lands through
-    // invalidate_timestamp_area, which covers that status line.
+    // the other, unlocked tab — or after a bare-o unlock). THE TAB'S PADLOCK IS
+    // THE WHOLE VISIBLE CUE since row 7 deleted the bottom strip's
+    // "(read-only)" token as a restatement of it.
     if (key == GuiKeys::O && !ctrl && !shift && !alt) {
         ViewState& vs = active_view_state(app);
         vs.read_only = !vs.read_only;
+        // The bottom row still repaints here: it is cheap, and the row-2/row-4
+        // enabled faces below share this flag's fate frame for frame.
         viewport.invalidate_timestamp_area();
         // AND THE TOP STRIP (2026-08-01): the active tab now WEARS its lock — a
-        // padlock in the tab's close-icon slot, drawn iff that tab is read-only
-        // — so this toggle changes pixels in row 3 as well as the bottom strip's
-        // "(read-only)" token. The tick comparator cannot cover it: it stashes
+        // padlock in the tab's close-icon slot, drawn iff that tab is read-only.
+        // The tick comparator cannot cover it: it stashes
         // the roster's own face bits (rect/hovered/enabled/selected) and
         // read_only is none of them. One damage at the one writer is the
         // cheaper and more honest answer than a fifth stashed bit.
@@ -1558,8 +1559,10 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
         static_cast<int64_t>(std::nearbyint(new_vp_d));
 
     // Clamp viewport into the new domain's bounds, then full-window
-    // invalidate so the bottom-strip S/T indicator, the waveform
-    // surface, and the playhead column all repaint in one frame.
+    // invalidate so the icon row's lit S/T pair, the waveform
+    // surface, and the playhead column all repaint in one frame. (The S/T
+    // indicator was the bottom strip's until the row-7 collapse deleted the
+    // letters — row 4's buttons carry that state now.)
     clamp_viewport_start(app, audio);
     // A SURVIVING SELECTION RE-EXPRESSES THROUGH ITS FOCUS, NOT THROUGH THE
     // CURSOR. The generic translation above is a double round trip — the cursor
@@ -1596,7 +1599,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // One-shot discrete jump with a domain change: is_target, the viewport, and
     // the warp_frame_map hash all flip, so the displayed plate must change. Render it
     // synchronously and publish the displayed fingerprint now, so the
-    // bottom-strip S/T indicator and the playhead column do not repaint a frame
+    // icon row's lit S/T pair and the playhead column do not repaint a frame
     // ahead of the deformed waveform. The plate is built from source audio plus
     // the live warp_frame_map, independent of the target render buffer, so this is
     // unaffected by the ensure_ready / rebind_to_source below.
@@ -1624,6 +1627,13 @@ void GuiInputHandler::apply_font_size(double pt) {
     // tail runs (assign the field, push to the renderer, full invalidate, then
     // the resize-path geometry-and-cache rebuild). Both callers gate the no-op
     // case, so no early-return here.
+    //
+    // NOTHING VISIBLE MOVES since row 7 took the monospace grid onto the
+    // gui_scale axis (the note is at kDefaultFontSizePt, render.h): the field is
+    // assigned and persisted, the repaint repaints the same pixels. The sequence
+    // is kept intact rather than gutted because whether the KEY retires at all
+    // is the architect's call, and a half-removed application path would be the
+    // worse of the two states to leave behind.
     app.font_size = pt;
     set_gui_font_size_pt(pt);
     viewport.invalidate_all();

@@ -1798,8 +1798,10 @@ struct AppState {
     // practice (these updates can't fire while a prompt is up).
     std::string queue_progress_text;
 
-    // Transient one-line status message shown in the bottom strip after
-    // the dirty dot, alongside the S/T·W/P·A/B indicators. Set by a
+    // Transient one-line status message shown in the bottom row's
+    // after-timestamp span, one tier above the resolved readout (the row-7
+    // chain; it was an appendix after the dirty dot when the strip had two
+    // rows and view letters). Set by a
     // command that wants to report a non-fatal outcome (e.g. phase-reset
     // state-paste divergence); cleared on the next keyboard press in
     // on_key. Empty = nothing to show. General-purpose: not specific to
@@ -1906,8 +1908,11 @@ GuiRect top_icon_row_area(const AppState& a);
 GuiRect top_trim_row_area(const AppState& a);
 GuiRect top_ruler_row_area(const AppState& a);
 GuiRect top_marker_row_area(const AppState& a);
-GuiRect bottom_upper_row_area(const AppState& a);
-GuiRect bottom_lower_row_area(const AppState& a);
+// ROW 7's single bottom lane (2026-08-01), replacing the legacy
+// upper/lower pair: the lane with its two borders, and the content band inside
+// them.
+GuiRect bottom_row_area(const AppState& a);
+GuiRect bottom_row_content_area(const AppState& a);
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);
 double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);
 // The pure level→spp exponent: ms_per_px = 0.625 * 2^(level - 1), fully

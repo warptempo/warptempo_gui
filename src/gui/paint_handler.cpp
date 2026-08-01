@@ -27,10 +27,11 @@
 // The settings-prompt editor and the BPM editor paint the same
 // bottom-strip text box through render_editor_text_box, differing only
 // in the prefix and which text_editor::State they read. This is the one
-// body both branches share. It takes the row geometry (anchor_x,
-// baseline_y) the caller already solved (upper_baseline) rather than
-// computing a row of its own, so the two call sites stay the single
-// source for where the bottom-strip editor sits.
+// body all three branches share. It takes the geometry (anchor_x,
+// baseline_y) the caller already solved — since row 7 that is the ONE line's
+// after-timestamp origin and its single baseline — rather than computing a row
+// of its own, so the call sites stay the single source for where a bottom-strip
+// editor sits.
 static void render_bottom_strip_editor(cairo_t* cr,
                                        const text_editor::State& ed,
                                        const char* prefix,
@@ -40,7 +41,7 @@ static void render_bottom_strip_editor(cairo_t* cr,
     cairo_select_font_face(cr, "monospace",
                            CAIRO_FONT_SLANT_NORMAL,
                            CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cr, flag_font_size_px());
+    cairo_set_font_size(cr, bottom_row_font_size_px());
 
     EditorTextBox box;
     box.anchor_x        = anchor_x;
@@ -52,12 +53,19 @@ static void render_bottom_strip_editor(cairo_t* cr,
     // consistent with the chip renderers even though the box body reads as plain
     // light text on the dark strip.
     box.hl_pad          = flag_glyph_inset_px();
-    // The normal-state ring and fill are both the background color, so the box
-    // body is the same as a chip's but invisible — light text on dark bg; the
-    // red flash colors match a parse-fail chip.
-    box.fill            = ed.red ? kAccent        : kBackground;
-    box.outline         = ed.red ? kAccentOutline : kBackground;
-    box.text_color      = kText;
+    // THE NORMAL-STATE RING AND FILL ARE THE ROW'S OWN GROUND, so the box body
+    // is a chip's shape painted invisibly — light text on the row. Row 7 moved
+    // this pair (and the ink) off the TUNABLE kBackground / kText and onto the
+    // row's hard-coded crop constants, per the redesign's color ruling: the row
+    // ground is a constant now, so an "invisible" ring taken from a config key
+    // would become a visible rectangle the moment that key was retuned.
+    // THE RED FLASH STAYS TUNABLE, deliberately: no crop shows a parse failure —
+    // kdenlive has no comparable surface — so the existing kAccent /
+    // kAccentOutline pair (a parse-fail chip's exact colors) is kept as-is until
+    // a screenshot rules on it.
+    box.fill            = ed.red ? kAccent        : kRedesignTabGround;
+    box.outline         = ed.red ? kAccentOutline : kRedesignTabGround;
+    box.text_color      = kRedesignLabel;
     box.has_selection   = text_editor::has_selection(ed);
     box.selection_start = text_editor::selection_start(ed);
     box.selection_end   = text_editor::selection_end(ed);
@@ -2716,35 +2724,82 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
 // -- GuiPaintHandler::paint_bottom_strip ---------------------------------
 
 void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
-    // Bottom strip: TWO text rows. The status line lives on the lower (outer)
-    // row and paints UNCONDITIONALLY — it is no longer the trailing else of a
-    // chain, so it stays visible while an editor is open on the upper
-    // (inner) row, letting the user keep their timestamp / S-T / W-P /
-    // A-B bearings while typing. The upper row carries the transient /
-    // modal chain in precedence order: prompt > queue > settings editor
-    // > BPM editor > pass/ref hover readout. The prompt is a one-key-answer modal
-    // and owns the upper row; status stays visible under it (harmless
-    // context). (The readout is the resolved-tempo string for the SELECTED
-    // pass / label_ref marker; a marker's OWN value is written on its flag.)
-    // Each row's baseline is derived from its row rect, not
-    // from the window bottom. (The former pan-strip row retired — pan lives on
-    // the Alt+drag waveform grab and the strip drag's horizontal axis.)
-    const GuiRect lower_row = bottom_lower_row_area(app);
-    const GuiRect upper_row = bottom_upper_row_area(app);
-
-    const double lower_baseline =
-        lower_row.y + monospace_text_row_baseline_offset();
-    const double upper_baseline =
-        upper_row.y + monospace_text_row_baseline_offset();
-
-    // --- Lower row: status line (always on). One assembled field
-    //     drawn in a single pass; elements are space-separated and
-    //     paint uniformly in kText: timestamp, S/T, W/P, A/B, then the
-    //     literal "(read-only)" token when the active A/B tab carries the
-    //     read-only flag.
+    // ROW 7 — THE BOTTOM STRIP IS ONE LINE (architect 2026-08-01). The status
+    // row and the modal/editor row collapsed into a single lane reading, left to
+    // right: the TIMESTAMP, the DIRTY FLAG, and then — when one applies — the
+    // active modal / editor / prompt / status text in the span after them.
     //
-    //     The dirty * and transient message appendices follow the
-    //     tokens — they are status, not view letters.
+    // WHAT DIED WITH THE COLLAPSE, and why it is not missing: the S/T · W/P ·
+    // A/B view readout and the "(read-only)" token. Rows 3 and 4 display all
+    // three view states as lit buttons and tabs, and the tab locks show
+    // read-only, so the letters were restating what the redesigned rows say in
+    // their own vocabulary.
+    //
+    // PRECEDENCE IN THE AFTER-TIMESTAMP SPAN, highest first: prompt > queue /
+    // loading status > settings editor > commit editor > BPM editor > transient
+    // status message > the resolved-value readout. MODAL TEXT WINS OVER THE
+    // READOUT (the planner's call at the row-7 brief, FLAGGED for the architect):
+    // the readout is a passive description of the selection, the others are
+    // things the user is doing or waiting on, and only one span exists. The
+    // transient message sits directly above the readout for the same reason and
+    // cannot collide with an editor in practice — it is cleared by the next key
+    // press, and opening any editor is one.
+    //
+    // The row paints on EVERY frame class (loading, blank, loaded) like the four
+    // redesigned rows above it: the line is audio-independent, and the loading
+    // status is one of the things it carries.
+    const GuiRect lane    = bottom_row_area(app);
+    const GuiRect content = bottom_row_content_area(app);
+    const int     border  = bottom_row_border_h_px();
+
+    // THE ROW'S OWN GROUND AND ITS TWO BORDERS, hard-coded from row_7_text.png
+    // per the redesign's color ruling (the constants and the two-greys note are
+    // at kRedesignBottomLine, render.h). The ground erases whatever chrome
+    // render_background laid down, so the strip no longer depends on the tunable
+    // kBackground happening to hold the same value.
+    {
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_set_source_rgb(cr, kRedesignTabGround.r, kRedesignTabGround.g,
+                             kRedesignTabGround.b);
+        cairo_rectangle(cr, content.x, content.y, content.w, content.h);
+        cairo_fill(cr);
+        cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
+                             kRedesignTabLine.b);
+        cairo_rectangle(cr, lane.x, lane.y, lane.w, border);
+        cairo_fill(cr);
+        cairo_set_source_rgb(cr, kRedesignBottomLine.r, kRedesignBottomLine.g,
+                             kRedesignBottomLine.b);
+        cairo_rectangle(cr, lane.x, lane.y + lane.h - border, lane.w, border);
+        cairo_fill(cr);
+        cairo_restore(cr);
+    }
+
+    // ONE BASELINE FOR THE WHOLE LINE, solved the way every redesigned row
+    // solves one: center the FACE'S OWN (ascent + descent) band in the content
+    // band and round to the pixel grid. The face here is the monospace one (the
+    // architect's ruled exception for the timestamp, which the editors' grid
+    // machinery shares), at the row's crop-derived size. On the crop's own sans
+    // metrics this formula reproduces its measured baseline (row 22 of 33)
+    // exactly, which is the check that the rule and the screenshot agree.
+    double baseline = 0.0;
+    {
+        cairo_save(cr);
+        cairo_select_font_face(cr, "monospace", CAIRO_FONT_SLANT_NORMAL,
+                               CAIRO_FONT_WEIGHT_NORMAL);
+        cairo_set_font_size(cr, bottom_row_font_size_px());
+        baseline = redesign_baseline(cairo_get_scaled_font(cr),
+                                     static_cast<double>(content.y),
+                                     static_cast<double>(content.h));
+        cairo_restore(cr);
+    }
+    const double content_left = bottom_row_content_left_x();
+
+    // --- The timestamp and the dirty flag: the line's fixed lead-in. The
+    //     timestamp is MONOSPACE and 9 glyphs wide by format, the dirty column
+    //     is reserved whether or not the dot shows, and the span after them
+    //     therefore begins at a column that never moves
+    //     (bottom_row_content_left_x / kBottomRowLeadInCells).
     //
     //     sr is the loaded file's sample rate and the playhead samples are
     //     source-frames. Split-playhead: track the scanner during playback
@@ -2763,32 +2818,21 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         if (seconds > 5999.999) seconds = 5999.999;
 
         std::string assembled = format_timestamp(seconds);
-        assembled += ' ';
-        assembled += (app.active_audio_view == 'T'
-                        ? 'T' : 'S');
-        assembled += ' ';
-        assembled += app.active_markers_view;
-        assembled += ' ';
-        assembled += app.active_tab_view;
-        if (active_view_state(app).read_only) {
-            assembled += ' ';
-            assembled += "(read-only)";
-        }
+        // The dirty flag KEEPS ITS GLYPH (a bare '*') and its one-space gap —
+        // the architect ruled the form unchanged and the crop says nothing about
+        // it. Appending it costs nothing on the fixed grid: dirty or not, the
+        // next span starts at the same column.
         if (app.dirty) {
             assembled += ' ';
             assembled += '*';
         }
-        if (!app.transient_status_message.empty()) {
-            assembled += ' ';
-            assembled += app.transient_status_message;
-        }
 
         text_display::draw_line(
-            cr, static_cast<double>(timestamp_pad_x()), lower_baseline,
-            assembled, kText, flag_font_size_px());
+            cr, static_cast<double>(bottom_row_pad_x()), baseline,
+            assembled, kRedesignLabel, bottom_row_font_size_px());
     }
 
-    // --- Upper row: transient / modal chain. ---
+    // --- The after-timestamp span: the modal / editor / status chain. ---
     if (app.prompt.active) {
         // Plain tier: the prompt text and its response labels assembled
         // into one string joined by single ' ' characters and drawn in a
@@ -2800,30 +2844,32 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
             assembled += label;
         }
         text_display::draw_line(
-            cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
-            assembled, kText, flag_font_size_px());
+            cr, content_left, baseline,
+            assembled, kRedesignLabel, bottom_row_font_size_px());
     } else if (!app.queue_progress_text.empty()) {
+        // The render/batch/queue status AND the startup "loading..." line —
+        // one slot, and the reason this painter runs on the loading frame class
+        // too (it is the only feedback there).
         text_display::draw_line(
-            cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
-            app.queue_progress_text, kText, flag_font_size_px());
+            cr, content_left, baseline,
+            app.queue_progress_text, kRedesignLabel,
+            bottom_row_font_size_px());
     } else if (text_editor::is_active(app.settings_editor)) {
         // Settings prompt overlay: "setting: <pending>"
-        // through the shared bottom-strip editor helper. Fill is
-        // kBackground normally, kAccent on parse failure (handled
+        // through the shared bottom-strip editor helper. Fill is the row
+        // ground normally, kAccent on parse failure (handled
         // inside the helper).
         render_bottom_strip_editor(cr, app.settings_editor,
                                    kSettingsEditorPrefix,
-                                   static_cast<double>(timestamp_pad_x()),
-                                   upper_baseline);
+                                   content_left, baseline);
     } else if (text_editor::is_active(app.commit_editor)) {
         // Render-commit prompt overlay: "commit: ./renders/<pending>"
         // through the same shared bottom-strip editor helper as the settings
-        // branch above. Fill is kBackground normally, kAccent on an
+        // branch above. Fill is the row ground normally, kAccent on an
         // unresolved / bad commit (handled inside the helper).
         render_bottom_strip_editor(cr, app.commit_editor,
                                    kCommitEditorPrefix,
-                                   static_cast<double>(timestamp_pad_x()),
-                                   upper_baseline);
+                                   content_left, baseline);
     } else if (text_editor::is_active(app.top_flag_editor) &&
                app.top_flag_editor.kind ==
                    text_editor::Kind::BpmBracket) {
@@ -2833,8 +2879,18 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // flag in the top strip.
         render_bottom_strip_editor(cr, app.top_flag_editor,
                                    kBpmEditorPrefix,
-                                   static_cast<double>(timestamp_pad_x()),
-                                   upper_baseline);
+                                   content_left, baseline);
+    } else if (!app.transient_status_message.empty()) {
+        // The transient one-line outcome report (phase-reset paste divergence,
+        // "no renders to commit", ...). It used to ride the status line as an
+        // appendix after the dirty dot; with one line and one span it takes its
+        // place in the chain, directly above the readout. Cleared by the next
+        // key press, which is also what opens every editor above it, so the two
+        // cannot compete in practice.
+        text_display::draw_line(
+            cr, content_left, baseline,
+            app.transient_status_message, kRedesignLabel,
+            bottom_row_font_size_px());
     } else {
         // THE RESOLVED READOUT IS SELECTION-ONLY (row 5, 2026-08-01). It used
         // to be "hover wins, else the last-selected marker"; the hover arm died
@@ -2852,7 +2908,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // itself at its own site.
         //
         // LIVE-TEST FLAGGED: whether the readout should follow the selection
-        // alone is the architect's call at the row-5 look.
+        // alone is the architect's call at the row-5 look. Row 7 adds a second
+        // flagged fact — it is the LOWEST tier of the one span, so any modal,
+        // editor or status message hides it while it is up.
         std::string readout;
         if (popup_eligible_marker(app, app.last_selected_marker)) {
             readout = compute_hover_popup_text(
@@ -2861,8 +2919,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         }
         if (!readout.empty()) {
             text_display::draw_line(
-                cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
-                readout, kText, flag_font_size_px());
+                cr, content_left, baseline,
+                readout, kRedesignLabel, bottom_row_font_size_px());
         }
     }
 }
@@ -2931,7 +2989,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         render_canvas(cr, canvas.x, canvas.y, canvas.w, canvas.h);
     }
 
-    // THE FOUR REDESIGNED ROWS PAINT ON EVERY FRAME CLASS, deliberately OUTSIDE
+    // THE FOUR REDESIGNED TOP ROWS AND THE BOTTOM ROW PAINT ON EVERY FRAME
+    // CLASS, deliberately OUTSIDE
     // the loading / total>0 branches below: they are the surfaces with no
     // dependence on the loaded audio, and their buttons are claimed ABOVE the
     // pointer path's loading guard for exactly that reason. A button that is
@@ -2945,8 +3004,14 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // canvas ground above: these passes shape labels through HarfBuzz, which the
     // outer Cairo clip would not elide, so a narrow per-frame playhead damage
     // must not pay for them. Nothing painted after this point touches the four
-    // lanes (the flag cache is transparent over them, every other pass owns a
+    // top lanes (the flag cache is transparent over them, every other pass owns a
     // lane below them), so painting them first overdraws nothing.
+    //
+    // THE BOTTOM ROW JOINS THEM (row 7): it is audio-independent in the same
+    // sense — the timestamp reads 00:00.000 with no source, and the loading line
+    // is one of the things the row carries, which is why the separate loading-
+    // only draw that used to sit below is gone. Nothing painted later overlaps
+    // it except the floating surfaces, which paint over everything by design.
     {
         const GuiRect exposed{x, y, w, h};
         if (rects_intersect(exposed, top_menu_row_area(app))) {
@@ -2961,24 +3026,15 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         if (rects_intersect(exposed, top_icon_row_area(app))) {
             paint_icon_row(cr);
         }
+        if (rects_intersect(exposed, bottom_row_area(app))) {
+            paint_bottom_strip(cr, audio.sample_rate());
+        }
     }
 
-    if (app.loading) {
-        // Blank plate during load; the only feedback is the bottom-strip
-        // upper-row status ("loading..."), the same slot renders use. Painted
-        // here because the total>0 bottom-strip block below does not run while
-        // loading (and total_frames is 0 on a cold launch).
-        const GuiRect upper_row = bottom_upper_row_area(app);
-        const double  upper_baseline =
-            upper_row.y + monospace_text_row_baseline_offset();
-        text_display::draw_line(
-            cr, static_cast<double>(timestamp_pad_x()), upper_baseline,
-            app.queue_progress_text, kText, flag_font_size_px());
-    } else if (audio.total_frames() > 0) {
+    if (audio.total_frames() > 0 && !app.loading) {
         const GuiRect area       = waveform_area(app);
         const GuiRect top_strip  = top_strip_area(app);
         const GuiRect exposed{x, y, w, h};
-        const int     sr         = audio.sample_rate();
 
         // The live viewport / target-warp_frame_map computations live in the
         // cache rebuild paths (waveform via the worker, flags via
@@ -2992,7 +3048,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // waveform plate -> overlay ring -> LIVE
         // TRIM (bar + endcaps + waveform stem segments, one pass)
         // -> playheads (scanner line + cursor stem) -> MARKER STEMS -> ruler ->
-        // flag blit -> flag editor overlay -> strip-drag anchor -> bottom strip.
+        // flag blit -> flag editor overlay -> strip-drag anchor. (The bottom row
+        // left the tail of this sequence in row 7 — it paints with the other
+        // redesigned rows above, on every frame class, and overlaps none of
+        // these passes.)
         // Three structural rulings live in this sequence:
         //   THE RECOLOR MODEL (architect 2026-07-26) — a highlight changes the
         //     GROUND, so the ONE ground recolor (the region's) paints BEFORE the
@@ -3088,10 +3147,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             paint_strip_drag_anchor(cr, area);
         }
 
-        const GuiRect bottom_strip = timestamp_invalidate_rect(app);
-        if (rects_intersect(exposed, bottom_strip)) {
-            paint_bottom_strip(cr, sr);
-        }
     }
 
     // THE FLOATING SURFACES PAINT TOPMOST — after EVERY pass above, including

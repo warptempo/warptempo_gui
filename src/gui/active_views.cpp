@@ -139,8 +139,10 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // One-shot discrete jump (Ctrl+Tab A/B switch): the entering tab restores a
     // different viewport / zoom / playhead, so render the plate synchronously
     // and publish the displayed fingerprint now instead of leaving it to the
-    // tick. invalidate_timestamp_area still covers the bottom-strip letter +
-    // ts text the sync rebuild does not.
+    // tick. invalidate_timestamp_area still covers the bottom row the sync
+    // rebuild does not — the timestamp itself, and the readout, whose eligibility
+    // reads the marker view. (The A/B letter it also used to cover left the row
+    // with the row-7 collapse; the tabs show the active tab now.)
     viewport.kick_waveform_sync();
     viewport.invalidate_timestamp_area();
 }

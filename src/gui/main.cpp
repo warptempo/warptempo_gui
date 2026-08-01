@@ -82,15 +82,15 @@
 
 namespace {
 
-// flag_font_size_px() (render.h) and timestamp_pad_x() (paint_handler.h)
+// bottom_row_font_size_px() (render.h) and bottom_row_pad_x() (paint_handler.h)
 // live where paint_handler.cpp can reach them; the constants
 // below are paint-handler-independent and stay file-local.
 
 // The strip/lane geometry is a fixed-pixel per-strip lane stack derived from
-// menu_row_h_px(), toolbar_row_h_px(), flag_lane_w_px() / flag_lane_h_px(),
-// monospace_text_row_h(), playhead_triangle_h_px(), kRowGapPx, and
-// kFlagBottomLiftPx (see the geometry helpers below); nothing is
-// window-proportional.
+// the eight authored gui_scale row heights (menu_row_h_px() ... the row-5 trio,
+// plus bottom_row_h_px()), kRowGapPx and kFlagBottomLiftPx (see the geometry
+// helpers below); nothing is window-proportional, and since row 7 nothing is
+// font-proportional either.
 
 // kMarkerHitHalfPx lives in app_state.h so the hit_test_* free
 // functions and the GuiInputHandler mouse handler can reach it.
@@ -148,8 +148,10 @@ namespace {
 // (ruler_lane_h_px(), timestamps + the zoom strip + the playhead head) and the
 // MARKER lane (marker_lane_h_px(), the flags), whose bottom edge is the
 // waveform top. ALL SEVEN ride the gui_scale axis: row 5 retired the last
-// font-scaled lanes in this strip. The BOTTOM strip is TWO lanes:
-// the status row (outer) and the editor/modal row (inner), both text lanes.
+// font-scaled lanes in this strip. The BOTTOM strip is ONE lane since row 7
+// (2026-08-01) — the status row and the editor/modal row COLLAPSED INTO ONE
+// LINE, which is bottom_row_h_px() tall and rides the gui_scale axis like every
+// other redesigned row, so no lane anywhere is font-scaled any more.
 // The lanes pack tight — the inter-lane gaps kRowGapPx and the
 // outer/waveform-side gaps
 // kFlagBottomLiftPx are all 0 — and the derivation below keeps them explicit so
@@ -185,26 +187,18 @@ static void clamp_dims(int& w, int& h) {
 }
 
 namespace {
-// Per-lane pixel heights, indexed from each strip's window edge inward. Every
-// lane sizes from the metric that DESCRIBES it: the flag row from the flag
-// height, the innermost lane from the triangle height, and the trim-chip row
-// from the flag WIDTH (see the case below). The TEXT-BEARING lanes — the
-// marker-text row and both bottom lanes — carry the LANE metric, which is the
-// text box (glyph band, ring, four-side pad) plus the vertical margin outside
-// its ring; the box itself is shorter and is placed inside this band by
-// flag_chip_rect.
+// Per-lane pixel heights, indexed from each strip's window edge inward. EVERY
+// LANE IN BOTH STRIPS is now an authored crop-measured constant on the GUI-SCALE
+// axis (menu_row_h_px(), toolbar_row_h_px(), tab_row_h_px(), icon_row_h_px(),
+// row 5's trio, and — since row 7 — bottom_row_h_px()); no lane sizes from a
+// font metric any more. The two-axes ruling and what became of the font axis are
+// at those accessors' declarations in render.h.
 //
-// LANES 0..3 ARE THE EXCEPTION to "the metric that describes it" being a
-// FONT metric: the four REDESIGNED rows carry proportional text and fixed-size
-// icons at a fixed design size and size from their own authored constants on
-// the GUI-SCALE axis (menu_row_h_px(), toolbar_row_h_px(), tab_row_h_px(),
-// icon_row_h_px()), not the monospace
-// font's — the two-axes ruling is at those accessors' declarations in render.h.
-// The toolbar, tab and icon lanes INCLUDE their 1px border-bottom (the CSS box
-// model: the architect's stated 44 / 30 / 48 is content, the border sits
-// outside it, and the lane owns both).
+// The toolbar, tab and icon lanes INCLUDE their 1px border-bottom, and the
+// bottom lane BOTH its borders (the CSS box model: the architect's stated
+// content height excludes its borders, and the lane owns every pixel it paints).
 constexpr int kTopLaneCount    = 7;
-constexpr int kBottomLaneCount = 2;
+constexpr int kBottomLaneCount = 1;
 int top_lane_height(int lane) {
     switch (lane) {
         case 0: return menu_row_h_px();          // menu row (proportional text)
@@ -217,16 +211,17 @@ int top_lane_height(int lane) {
         // resolver, and the flag+triangle pair became ONE marker lane carrying
         // kdenlive's text-on-flag boxes. All three size on the gui_scale axis
         // from their own crop-measured constants, like lanes 0-3 — so the LAST
-        // font-scaled lane in the top strip is gone with them, and
-        // monospace_text_row_h now has bottom-strip callers only.
+        // font-scaled lane in the top strip went with them.
         case 4: return trim_lane_h_px();         // trim bar + endcaps
         case 5: return ruler_lane_h_px();        // timestamps / zoom strip / playhead head
         case 6: return marker_lane_h_px();       // marker flags (bottom edge = waveform top)
         default: return 0;
     }
 }
+// The bottom strip's ONE lane (row 7): the status line, its 1px top border and
+// its 1px bottom border on the window's last row.
 int bottom_lane_height() {
-    return monospace_text_row_h();               // status row, editor/modal row
+    return bottom_row_h_px();
 }
 int strip_total_h(bool top_strip) {
     int sum = 2 * static_cast<int>(kFlagBottomLiftPx);  // outer + waveform-side gaps
@@ -370,19 +365,23 @@ GuiRect top_marker_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 6);
 }
 
-// Bottom strip lanes, counted up from the window bottom (index 0 = the window
-// edge). bottom_lower_row (outer, index 0) carries the always-on status line;
-// bottom_upper_row (inner, index 1) carries the modal/editor/queue chain and,
-// below it, the pass/ref resolved readout for the FOCUSED marker (a marker's
-// own value is written on its own flag).
-// (The former pan-strip row retired — pan lives on the Alt+drag waveform grab
-// and the ctrl+waveform strip drag's horizontal axis.)
-GuiRect bottom_upper_row_area(const AppState& a) {
-    return strip_row_rect(a, /*top_strip=*/false, 1);
+// THE BOTTOM STRIP IS ONE LANE (row 7, architect 2026-08-01): the status row and
+// the modal/editor row collapsed into a single line carrying, left to right, the
+// timestamp, the dirty flag, and — when one applies — the active modal / editor /
+// prompt / status text. bottom_row_area is that lane INCLUDING both 1px borders,
+// as the strip stack allocates it; bottom_row_content_area is the ground between
+// them, the band every painter and baseline works in.
+//
+// (The former pan-strip row retired earlier — pan lives on the Alt+drag waveform
+// grab and the ctrl+waveform strip drag's horizontal axis.)
+GuiRect bottom_row_area(const AppState& a) {
+    return strip_row_rect(a, /*top_strip=*/false, 0);
 }
 
-GuiRect bottom_lower_row_area(const AppState& a) {
-    return strip_row_rect(a, /*top_strip=*/false, 0);
+GuiRect bottom_row_content_area(const AppState& a) {
+    const GuiRect lane = bottom_row_area(a);
+    const int b = bottom_row_border_h_px();
+    return GuiRect{lane.x, lane.y + b, lane.w, lane.h - 2 * b};
 }
 
 // Resolve the SOURCE-view trim playback/navigation range from AppState's trim
@@ -637,9 +636,9 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     return GuiRect{x0, y0, x1 - x0, y1 - y0};
 }
 
-// The status line and the transient/modal chain occupy the two rows of the
-// bottom strip, so the invalidation region is the whole bottom strip rect (both
-// rows repaint together).
+// The status line, the dirty flag and the modal/editor/status chain share the
+// bottom strip's ONE lane (row 7), so the invalidation region is the whole
+// bottom strip rect — borders included, since the lane owns them.
 GuiRect timestamp_invalidate_rect(const AppState& a) {
     return bottom_strip_area(a);
 }
