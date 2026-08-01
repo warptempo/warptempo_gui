@@ -1447,6 +1447,184 @@ void GuiPaintHandler::paint_settings_popup(cairo_t* cr) {
     cairo_restore(cr);
 }
 
+// -- THE RULER LANE (top lane 5, row 5 of the redesign) ---------------------
+//
+// A LOOK/MODEL SPLIT, and it is deliberate: the ruler takes KDENLIVE'S LOOK and
+// REAPER'S GEOMETRY MODEL (architect 2026-08-01).
+//   LOOK, from row_5_full.png: 1px #737373 ticks, a #c2c2c2 label at the
+//     redesign's ordinary 12pt, and the two tick lengths differing at their TOP
+//     — majors rise 4px above the marker lane, minors start at it, and BOTH run
+//     down to the marker lane's bottom (the waveform top). That shared bottom is
+//     what makes "the majors peek above the flags" the whole mechanism; the
+//     brief's "minors end where the marker band begins" was superseded by the
+//     measurement.
+//   MODEL, from Reaper: WHERE the ticks go. A round ladder of labeled steps, the
+//     smallest rung whose label pitch clears the minimum, and eight binary
+//     minors inside each step.
+// The composite's own tick spacing is neither — it is a hand-assembled kdenlive
+// frame, and it carries elements (a zone edge or a guide) this product has no
+// analogue for. It was measured for the LOOK only.
+//
+// PAINT-ONLY. Nothing here snaps, authors, or hit-tests: the ladder decides
+// pixels and nothing else.
+namespace {
+
+// THE ROUND LADDER of labeled steps, in milliseconds. Every rung is a value a
+// musician reads without arithmetic; the gaps (no 3s, no 15s, no 45s) are the
+// point, not an omission.
+constexpr int64_t kRulerLadderMs[] = {
+    125, 250, 500, 1000, 2000, 5000, 10000, 30000,
+    60000, 120000, 300000, 600000, 1800000, 3600000,
+};
+// Eight binary minors inside each labeled step: the step halves three times, so
+// a minor is always a musically-round fraction of its label.
+constexpr int  kRulerMinorsPerStep = 8;
+// The pitch rule, stated on the MINOR because that is the crowding that matters:
+// a rung is admissible while its minors stay at least this far apart, which puts
+// its labels at least 8x that apart.
+constexpr double kRulerMinMinorPitchPx = 12.0;
+// The label band's top padding; with the 12pt band this lands the baseline on
+// the composite's own label rows.
+constexpr double kRulerLabelPadTopPx   = 4.0;
+// How far a MAJOR tick rises above the marker lane. Minors rise none.
+constexpr double kRulerMajorRisePx     = 4.0;
+
+// The smallest ladder rung whose minors clear the minimum pitch. Falls back to
+// the coarsest rung when even that crowds (an absurd zoom-out), which is the
+// honest answer: keep the topmost rung rather than draw a solid band of ticks.
+int64_t ruler_step_ms(double ms_per_px) {
+    if (ms_per_px <= 0.0) return kRulerLadderMs[0];
+    for (int64_t step : kRulerLadderMs) {
+        const double minor_px =
+            (static_cast<double>(step) / kRulerMinorsPerStep) / ms_per_px;
+        if (minor_px >= kRulerMinMinorPitchPx * gui_scale_factor()) return step;
+    }
+    return kRulerLadderMs[std::size(kRulerLadderMs) - 1];
+}
+
+// `M:SS.mmm` with REDUNDANT LEADING UNITS DROPPED: the minutes field appears
+// only once some label on screen reaches a minute, and the milliseconds field
+// only while the step is sub-second. So a bar-level ruler reads "1:30" and a
+// transient-level one reads "2.250", each showing exactly what varies.
+std::string ruler_label_text(int64_t ms, int64_t step_ms, bool show_minutes) {
+    if (ms < 0) ms = 0;
+    const int64_t m   = ms / 60000;
+    const int64_t s   = (ms % 60000) / 1000;
+    const int64_t mil = ms % 1000;
+    char buf[32];
+    const bool show_ms = (step_ms % 1000) != 0;
+    if (show_minutes && show_ms)
+        std::snprintf(buf, sizeof(buf), "%lld:%02lld.%03lld",
+                      (long long)m, (long long)s, (long long)mil);
+    else if (show_minutes)
+        std::snprintf(buf, sizeof(buf), "%lld:%02lld",
+                      (long long)m, (long long)s);
+    else if (show_ms)
+        std::snprintf(buf, sizeof(buf), "%lld.%03lld",
+                      (long long)(ms / 1000), (long long)mil);
+    else
+        std::snprintf(buf, sizeof(buf), "%lld", (long long)(ms / 1000));
+    return std::string(buf);
+}
+
+} // namespace
+
+void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
+    const GuiRect lane   = top_ruler_row_area(app);
+    const GuiRect marker = top_marker_row_area(app);
+    if (lane.w <= 0 || lane.h <= 0) return;
+
+    cairo_save(cr);
+    cairo_set_source_rgb(cr, kRedesignTabGround.r, kRedesignTabGround.g,
+                         kRedesignTabGround.b);
+    cairo_rectangle(cr, lane.x, lane.y, lane.w, lane.h);
+    cairo_fill(cr);
+
+    // THE DISPLAYED BASIS, not the live viewport: the ruler must agree with the
+    // pixels actually on screen, so it reads the same plate epoch the playheads
+    // and the flag cache do. That is also what hooks it to the per-pan/zoom
+    // repaint — every user-driven viewport change runs the synchronous plate
+    // rebuild and repaints the strip, and this pass rides along with it.
+    const PlateViewportBasis basis = plate_viewport_basis();
+    const int sr = audio.sample_rate();
+    if (basis.spp <= 0.0 || sr <= 0) { cairo_restore(cr); return; }
+
+    const double ms_per_px = basis.spp * 1000.0 / static_cast<double>(sr);
+    const double vp_ms     = basis.vp_start * 1000.0 / static_cast<double>(sr);
+    const int    wave_w    = waveform_area(app).w;
+    if (ms_per_px <= 0.0 || wave_w <= 0) { cairo_restore(cr); return; }
+
+    const int64_t step  = ruler_step_ms(ms_per_px);
+    const double  minor = static_cast<double>(step) / kRulerMinorsPerStep;
+    const double  end_ms = vp_ms + ms_per_px * wave_w;
+
+    const int tick_bottom = marker.y + marker.h;         // the waveform top
+    const int minor_top   = marker.y;                    // no rise
+    const int major_top   = marker.y - static_cast<int>(std::nearbyint(
+                                kRulerMajorRisePx * gui_scale_factor()));
+
+    cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_font_size(cr, redesign_font_size_px());
+    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+    cairo_font_extents_t fe;
+    cairo_scaled_font_extents(font, &fe);
+    const double baseline =
+        redesign_baseline(font,
+                          static_cast<double>(lane.y) +
+                              std::nearbyint(kRulerLabelPadTopPx *
+                                             gui_scale_factor()),
+                          fe.ascent + fe.descent);
+
+    // Minutes appear only once a label on screen reaches one — decided from the
+    // RIGHT edge, so the field does not flicker in and out as the view pans
+    // within the same minute.
+    const bool show_minutes = end_ms >= 60000.0;
+    // SUB-SECOND EMPHASIS: while the step is finer than a second, the WHOLE
+    // SECONDS are the landmarks, so they take the brighter label white while
+    // every other label stays the ruler's dim grey. One color swap, no second
+    // type size — the simplest reproduction of Reaper's emphasis that survives
+    // at every scale.
+    const bool emphasize = step < 1000;
+
+    // Walk the MINORS from the first one at or before the left edge; every
+    // eighth is a labeled MAJOR. Fractional minor values are fine — nothing
+    // here snaps.
+    const int64_t first_step = static_cast<int64_t>(std::floor(vp_ms / step));
+    for (int64_t k = first_step; ; ++k) {
+        const double step_ms = static_cast<double>(k) * static_cast<double>(step);
+        if (step_ms > end_ms) break;
+        for (int i = 0; i < kRulerMinorsPerStep; ++i) {
+            const double t  = step_ms + i * minor;
+            if (t < vp_ms - minor || t > end_ms) continue;
+            const int col = static_cast<int>(std::nearbyint((t - vp_ms) / ms_per_px));
+            if (col < 0 || col >= wave_w) continue;
+            const bool major = (i == 0);
+            cairo_set_source_rgb(cr, kRulerTick.r, kRulerTick.g, kRulerTick.b);
+            cairo_rectangle(cr, lane.x + col, major ? major_top : minor_top,
+                            1, tick_bottom - (major ? major_top : minor_top));
+            cairo_fill(cr);
+            if (!major) continue;
+            // The label sits just right of its own major tick, so the number and
+            // the line it names cannot drift apart.
+            const int64_t label_ms = static_cast<int64_t>(std::llround(t));
+            if (label_ms < 0) continue;
+            const std::string txt =
+                ruler_label_text(label_ms, step, show_minutes);
+            const text_shape::ShapedRun run =
+                text_shape::shape_text_run(font, txt.c_str());
+            const GuiColor c = (emphasize && (label_ms % 1000) == 0)
+                                   ? kRedesignLabel : kRulerLabel;
+            cairo_set_source_rgb(cr, c.r, c.g, c.b);
+            text_shape::show_shaped_run(cr, run,
+                                        static_cast<double>(lane.x + col + 3),
+                                        baseline);
+        }
+    }
+
+    cairo_restore(cr);
+}
+
 // -- GuiPaintHandler::paint_marker_text_lane -----------------------------
 
 void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
@@ -2554,6 +2732,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         }
 
         if (rects_intersect(exposed, top_strip)) {
+            // The ruler paints BEFORE the flags: its ticks descend past the
+            // marker lane's top and must sit UNDER whatever that lane draws.
+            paint_ruler_row(cr);
             paint_flag_annotations(cr, top_strip);
             // Marker-text lane (top row 3): the hover popup and the flag
             // editor's live text, painted over the just-blitted flag cache —

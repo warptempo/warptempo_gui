@@ -991,6 +991,28 @@ void render_trim_stems(cairo_t* cr,
     cairo_restore(cr);
 }
 
+// THE TRIM LANE (top lane 4, row 5 of the redesign). The b/e CHIPS and the
+// bridge bar are gone: the lane is now one continuous BAR spanning the trim
+// window with a 2px ENDCAP standing at each bound, on kdenlive's own anatomy
+// (row_5_lane_1_trim_*.png).
+//
+// THREE SURFACES, NINE ROWS, AND A BEVEL. Every column of the lane belongs to
+// exactly one of three surfaces — ground outside the window, bar inside it,
+// endcap at a bound — and each paints its own color in rows 0..6 and its OWN
+// two-row bevel in rows 7 and 8 (a lighter shade then a darker one). The bevel
+// is not derivable: the three measured pairs fit neither a constant delta nor a
+// constant mix toward white or black, so the six constants are sampled and a
+// fourth surface would force the question rather than inherit a wrong formula
+// (the record is at their declaration in render.h).
+//
+// NO CENTER GRIP — ruled off. The old bridge bar's bright kTrimBar/kTrimBarOutline
+// pair and the square chips retire with this painter; their colors.conf keys
+// stay in the tree and simply go inert, per the standing shrink ruling.
+//
+// The INTERACTIONS are unchanged in routing and still read their own geometry
+// owners (hit_test_trim_chip, trim_bridge_gap); mapping them onto the endcap and
+// bar rects is the next arc's work, so paint and hit are DELIBERATELY not yet
+// one owner here — stated so it is not mistaken for the usual invariant.
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
                        GuiRect chip_row,
@@ -999,212 +1021,85 @@ void render_trim_flags(cairo_t* cr,
                        long long viewport_end_sample,
                        const TrimRange& trim) {
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
+    if (chip_row.w <= 0 || chip_row.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
+    if (waveform_area.w <= 0) return;
 
-    const double span = static_cast<double>(viewport_end_sample -
-                                            viewport_start_sample);
-    // Map columns against the EFFECTIVE waveform width (this rect's own .w),
-    // not the strip's full width, so the b/e chips share the trim stems'
-    // samples-per-pixel and stay column-aligned with them at every window
-    // width (they differ only at a non-multiple-of-16 window, where the
-    // waveform floors to an effective width; a no-op at 1920/2560/3840).
-    const double samples_per_pixel =
-        span / static_cast<double>(waveform_area.w);
-    if (samples_per_pixel <= 0.0) return;
-
-    // Trim chip lane band. `chip_row` ARRIVES from the caller as
-    // top_trim_row_area(app) — the same accessor hit_test_trim_chip's y-gate
-    // and the pair drag's bridge y-gate read — so paint and hit take the lane
-    // from ONE owner and cannot drift; nothing here re-derives a lane position
-    // from the row heights above it. Only the y-band comes from the row: the
-    // chip WIDTH is the flag width, and the horizontal origin stays
-    // top_strip_area.x (the strip and the row share it). Screen and
-    // top-strip-local coords coincide (the top strip sits at y=0).
-    const int chip_w    = flag_lane_w_px();
-    const int chip_top  = chip_row.y;
-    const int chip_h    = chip_row.h;
-    const int chip_bottom = chip_top + chip_h;
-    // Waveform top edge in this (top-strip-local) coord system: the strip sits
-    // at y=0, so it is the strip's own height. The strip-crossing stem segment
-    // painted below runs from the chip's bottom edge down to here, where the
-    // waveform-area trim stem (render_trim_stems) continues to the waveform
-    // bottom — one unbroken 1px line at the bound column.
-    const int wave_top = top_strip_area.y + top_strip_area.h;
-
-    // One shared resolver call per bound (frames pre-mapped by the live trim
-    // pass through displayed_trim_ms), read four ways: .col (clamped), .col_raw
-    // (unclamped, the offscreen sentinel input), .in_viewport (visibility), and
-    // .side (offscreen left/right, the sentinel selector — trim_bridge_gap).
-    // Computed unconditionally so the bridge bar spans between the bounds even
-    // when a chip is culled; chips and their stems draw only for a visible bound.
+    // Both bounds resolve through the ONE shared column owner, exactly as the
+    // chips did: .col is the clamped column, .side the offscreen verdict. The
+    // bar spans between them even when a bound is culled, so the columns are
+    // computed unconditionally.
     const TrimBoundColumn bc = trim_bound_column(
         static_cast<double>(trim.begin), viewport_start_sample,
         viewport_end_sample, waveform_area.w);
     const TrimBoundColumn ec = trim_bound_column(
         static_cast<double>(trim.end), viewport_start_sample,
         viewport_end_sample, waveform_area.w);
-    const int begin_col = bc.col;
-    const int end_col   = ec.col;
+
+    const int lane_x   = chip_row.x;
+    const int lane_w   = waveform_area.w;   // the effective width, as the chips used
+    const int lane_y   = chip_row.y;
+    const int lane_h   = chip_row.h;
+    const int bevel_h  = std::min(trim_bevel_h_px(), lane_h);
+    const int face_h   = lane_h - bevel_h;  // rows 0..6 at 100%
+    const int hi_h     = bevel_h / 2;       // row 7: the lighter shade
+    const int lo_h     = bevel_h - hi_h;    // row 8: the darker one
+    const int cap_w    = trim_endcap_w_px();
 
     cairo_save(cr);
+    cairo_rectangle(cr, lane_x, lane_y, lane_w, lane_h);
+    cairo_clip(cr);
 
-    // The BRIDGE BAR fills the trim-chip-lane GAP between
-    // the two edge-anchored chips: from the begin chip's inner (right) edge to the
-    // end chip's inner (left) edge. The chips edge-anchor ON their bound columns
-    // (begin left-edge, end right-edge, bodies facing inward), so this gap is the
-    // span the pair (bridge) drag grabs — route_trim_chip_press tests the SAME gap
-    // interval (the shared trim_bridge_gap owner below), so the clickable band is
-    // exactly the painted bar. The bar carries the trim family's BRIGHT pair — an
-    // opaque kTrimBar fill with a 1px kTrimBarOutline ring — because it is the
-    // sole "this is the trim window" signal; the chips beside it stay calm.
-    // Columns are computed
-    // unconditionally (a chip's viewport cull must not suppress the band). A gap
-    // exists only when the begin chip sits fully left of the end chip
-    // (wide-enough, non-inverted span); an inverted or narrow trim shows no
-    // bridge (trim_bridge_gap returns hi <= lo), its chips simply overlap.
-    //
-    // Offscreen-border rule: a gap edge follows its chip offscreen. The gap
-    // interval comes from the shared owner trim_bridge_gap (the SAME owner
-    // route_trim_chip_press' bridge hit consumes, so paint and hit cannot drift):
-    // an in_viewport bound bounds the gap at its drawn chip's inner edge; an
-    // OFFSCREEN bound (no chip) runs the bar FLUSH via a side-specific sentinel
-    // (keyed on the bound's SIDE, not col_raw — the rounding seam), pushing that
-    // edge STRICTLY past the visible range. The interval is RAW; the PAINTER clips
-    // the DRAWN extent to the effective width [0, wave_w) (below) — the inert
-    // gutter never paints, so paint == hit exactly. The flush fill therefore stops
-    // at the edge with no chip-width gap (even a BARELY-offscreen bound), and an
-    // offscreen side's ring border is not drawn at all (its raw edge column is
-    // outside [0, wave_w)), so it goes offscreen with the absent chip rather than
-    // floating in a blank strip or the gutter. An end bound at EOF (T-1) stays
-    // in_viewport, so it uses the clamped column (a ~1px seam vs the raw column,
-    // accepted), preserving the visible EOF chip's connection.
-    if (waveform_area.w > 0) {
-        const TrimBridgeGap gap =
-            trim_bridge_gap(bc, ec, chip_w, waveform_area.w);
-        // The gap interval is RAW (offscreen sentinels intact — they carry the
-        // border semantics); the PAINTER is the visible-interval clip owner. Clip
-        // the DRAWN extent to the EFFECTIVE width [0, wave_w): only strip
-        // backgrounds and damage use the full top_strip.w, so the inert
-        // non-multiple-of-16 gutter [wave_w, strip_w) must NOT paint — this makes
-        // paint == hit exact (the router's [0, area_w) gate refuses the gutter).
-        const int clip_lo = std::max(gap.lo, 0);
-        const int clip_hi = std::min(gap.hi, waveform_area.w);
-        if (clip_hi > clip_lo) {
-            cairo_set_source_rgb(cr, kTrimBar.r, kTrimBar.g, kTrimBar.b);
-            cairo_rectangle(cr, static_cast<double>(top_strip_area.x + clip_lo),
-                            static_cast<double>(chip_top),
-                            static_cast<double>(clip_hi - clip_lo),
-                            static_cast<double>(chip_h));
+    // ONE PAINTER FOR A SURFACE'S WHOLE COLUMN RUN: the face rows, then the two
+    // bevel rows, all pixel-bound integer fills (crisp by construction, no
+    // stroke, no antialiasing anywhere in this lane).
+    auto surface = [&](int x0, int w, GuiColor face, GuiColor hi, GuiColor lo) {
+        if (w <= 0) return;
+        cairo_set_source_rgb(cr, face.r, face.g, face.b);
+        cairo_rectangle(cr, x0, lane_y, w, face_h);
+        cairo_fill(cr);
+        if (hi_h > 0) {
+            cairo_set_source_rgb(cr, hi.r, hi.g, hi.b);
+            cairo_rectangle(cr, x0, lane_y + face_h, w, hi_h);
             cairo_fill(cr);
-            // 1px ring, AA off. The top/bottom runs span the CLIPPED width; the
-            // side borders draw at the RAW gap edge columns (gap.lo, gap.hi-1) and
-            // ONLY when that column lies in [0, wave_w) — an offscreen side edge
-            // draws NO border (it goes offscreen with the absent chip), never a
-            // floating border pinned to the clip boundary.
-            const int rx = top_strip_area.x + clip_lo;
-            const int rw = clip_hi - clip_lo;
-            const int left_col  = gap.lo;
-            const int right_col = gap.hi - 1;
-            cairo_save(cr);
-            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            cairo_set_source_rgb(cr, kTrimBarOutline.r, kTrimBarOutline.g,
-                                 kTrimBarOutline.b);
-            cairo_rectangle(cr, rx, chip_top, rw, 1);              // top
-            cairo_rectangle(cr, rx, chip_top + chip_h - 1, rw, 1); // bottom
-            if (left_col >= 0 && left_col < waveform_area.w)
-                cairo_rectangle(cr, top_strip_area.x + left_col,
-                                chip_top, 1, chip_h);              // left
-            if (right_col >= 0 && right_col < waveform_area.w)
-                cairo_rectangle(cr, top_strip_area.x + right_col,
-                                chip_top, 1, chip_h);              // right
-            cairo_fill(cr);
-            cairo_restore(cr);
         }
-    }
-
-    // Strip-crossing stem segment for each visible bound: from the chip's bottom
-    // edge down through the intervening lanes (marker text, flag, triangle) to
-    // the waveform top, where render_trim_stems continues it to the waveform
-    // bottom. The stem attaches at the bound column — the begin chip's leftmost
-    // edge and the end chip's rightmost edge — so the chip's anchored edge and
-    // its stem share one column and read as a single handle. Marker stems stay
-    // waveform-only; this strip-crossing gap-closing segment is TRIM-only. 1px,
-    // AA off (axis-aligned, +0.5), kTrimStem — the same stem color the
-    // waveform-side segment takes, so the joined line is one color end to end.
-    {
-        cairo_save(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, kTrimStem.r, kTrimStem.g, kTrimStem.b);
-        cairo_set_line_width(cr, 1.0);
-        auto paint_strip_stem = [&](const TrimBoundColumn& c) {
-            if (!c.in_viewport) return;
-            const double x_px =
-                static_cast<double>(top_strip_area.x + c.col) + 0.5;
-            cairo_move_to(cr, x_px, static_cast<double>(chip_bottom));
-            cairo_line_to(cr, x_px, static_cast<double>(wave_top));
-            cairo_stroke(cr);
-        };
-        paint_strip_stem(bc);
-        paint_strip_stem(ec);
-        cairo_restore(cr);
-    }
-
-    // The b/e chips are TEXTLESS SQUARES of the flag's width on both axes (the
-    // chip lane's height is that same accessor, so they are shorter than a
-    // marker flag), EDGE-ANCHORED on their bound columns (begin left-edge, end
-    // right-edge), no triangle (Ableton's loop bounds carry none). Deliberate
-    // asymmetry vs marker flags: a marker is a POINT (its flag centers and may
-    // hang half offscreen), a trim bound is an EDGE (its chip sits fully to one
-    // side, so a bound at frame 0 / EOF shows its chip fully onscreen). Build
-    // the visible list carrying each chip's bound column and role, sorted by
-    // column ascending.
-    struct TrimChip {
-        int  col;
-        bool is_begin;
+        if (lo_h > 0) {
+            cairo_set_source_rgb(cr, lo.r, lo.g, lo.b);
+            cairo_rectangle(cr, x0, lane_y + face_h + hi_h, w, lo_h);
+            cairo_fill(cr);
+        }
     };
-    std::vector<TrimChip> chips;
-    if (bc.in_viewport)
-        chips.push_back({begin_col, true});
-    if (ec.in_viewport)
-        chips.push_back({end_col, false});
-    std::sort(chips.begin(), chips.end(),
-              [](const TrimChip& a, const TrimChip& b) {
-                  if (a.col != b.col) return a.col < b.col;
-                  // Deterministic tie-break at an equal column: begin first, so
-                  // the reverse paint below lands it on top (mirrors the hit
-                  // test's forward-walk begin-first pick).
-                  return a.is_begin && !b.is_begin;
-              });
 
-    // Overlapping chips occlude rather than elide (as the marker flags do):
-    // paint the sorted list in REVERSE order so the leftmost lands on top. Trim
-    // bounds are unselectable (recorded asymmetry), so there is no selected pass.
-    // Each chip is a plain kTrimChip rectangle with a kTrimChipOutline border,
-    // no triangle; the bottom argument is unused for the rectangle shape. The
-    // calm pair, not the bar's bright one — the chips are the handles, the bar
-    // between them is the window. THE FILL IS MEANT TO DISAPPEAR: kTrimChip's
-    // compiled default is the kBackground chrome value exactly, so the rectangle
-    // below draws in the lane's own color and what actually marks the bound is
-    // its RING plus its stems. A chip whose interior is indistinguishable from
-    // the strip is the designed result, not a painter that failed to draw; the
-    // trim palette block in render.h carries the rationale.
-    for (auto it = chips.rbegin(); it != chips.rend(); ++it) {
-        // The chip rect (edge-anchored begin/end) comes from the shared owner
-        // trim_chip_rect, handed the lane band `chip_row` itself (the owner
-        // reads only the row's y/h) — the SAME rule AND the SAME band
-        // hit_test_trim_chip uses. paint_flag_shape then draws the rectangle
-        // with its left column ON rect.x (LeftEdge means "rect left =
-        // center_x"), so the begin/end asymmetry lives only in trim_chip_rect.
-        // chip_bottom is the tri-top row (no triangle here).
-        const GuiRect r =
-            trim_chip_rect(it->is_begin, top_strip_area.x, it->col, chip_row);
-        paint_flag_shape(cr, static_cast<double>(r.x),
-                         static_cast<double>(chip_top),
-                         static_cast<double>(chip_bottom),
-                         static_cast<double>(chip_bottom),
-                         kTrimChip, kTrimChipOutline,
-                         /*with_triangle=*/false,
-                         FlagHAnchor::LeftEdge);
+    // GROUND everywhere first, then the window's BAR over it, then the endcaps
+    // over that — painting back to front means no run has to know what its
+    // neighbour is, and an inverted or degenerate window simply leaves the
+    // ground showing.
+    surface(lane_x, lane_w, kRedesignTabGround,
+            kTrimGroundBevelHi, kTrimGroundBevelLo);
+
+    // THE BAR SPANS THE WINDOW, and it follows a bound OFFSCREEN rather than
+    // stopping short: an out-of-view bound means the window continues past that
+    // edge, so the bar runs flush to it. The clip above trims the overhang.
+    const int bar_lo = (bc.side == TrimBoundSide::OffLeft)  ? 0 : bc.col;
+    const int bar_hi = (ec.side == TrimBoundSide::OffRight) ? lane_w : ec.col + 1;
+    if (bar_hi > bar_lo) {
+        surface(lane_x + bar_lo, bar_hi - bar_lo, kTrimLaneBar,
+                kTrimBarBevelHi, kTrimBarBevelLo);
+    }
+
+    // THE ENDCAPS stand ON their bound columns, bodies facing INWARD (the begin
+    // cap starts at its column, the end cap ends on its own), which is the same
+    // edge-anchoring the chips used — so a bound's painted mark still sits on
+    // the column the bound actually occupies. A culled bound paints no cap: it
+    // has no column on screen to stand on, and the bar's flush edge is what says
+    // the window continues past the view.
+    if (bc.in_viewport) {
+        surface(lane_x + bc.col, cap_w, kTrimLaneEndcap,
+                kTrimCapBevelHi, kTrimCapBevelLo);
+    }
+    if (ec.in_viewport) {
+        surface(lane_x + ec.col + 1 - cap_w, cap_w, kTrimLaneEndcap,
+                kTrimCapBevelHi, kTrimCapBevelLo);
     }
 
     cairo_restore(cr);
