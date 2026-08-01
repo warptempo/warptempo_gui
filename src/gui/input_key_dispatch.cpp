@@ -1678,8 +1678,21 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             },
             [this] { viewport.invalidate_timestamp_area(); });
     }
-    // FlagPayload: the same modal route, top-strip repaint.
-    return route_modal_editor_key(
+    // FlagPayload: the same modal route, top-strip repaint — plus the WAVEFORM
+    // on a red-flash EDGE. The invalid-commit flash reaches the marker's STEM
+    // now (GuiPaintHandler::paint_marker_stems), and a stem is a waveform pixel
+    // while the box the flash was designed for is a strip one, so the route's
+    // top-strip repaint no longer covers the whole flash. Compared as an EDGE
+    // rather than damaged unconditionally: typing inside the editor is a
+    // key-repeat-cadence event and the flash flips at most once per commit
+    // attempt. ONE site covers every keyboard flip in both directions — the
+    // commit's own refusals and the pending-cap refusal SET it (both inside the
+    // route), the next mutating keystroke CLEARS it, and Esc / Ctrl+Q / a
+    // successful commit clear it through deactivate. The POINTER close is the
+    // one flip that does not pass here; it pays the same damage at its own
+    // chokepoint (exit_top_flag_edit_no_commit).
+    const bool was_red = app.top_flag_editor.red;
+    const bool consumed = route_modal_editor_key(
         app.top_flag_editor, key, mods,
         /*autocomplete=*/nullptr,
         [this] {
@@ -1694,6 +1707,8 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             flag_editor.exit_top_flag_edit_no_commit();
         },
         [this] { viewport.invalidate_top_strip(); });
+    if (app.top_flag_editor.red != was_red) viewport.invalidate_waveform_area();
+    return consumed;
 }
 
 // Settings-prompt editor key routing, through the shared modal route.

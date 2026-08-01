@@ -131,6 +131,20 @@ std::string GuiFlagEditor::build_locked_prefix(const GuiWarpMarker& m) {
 
 void GuiFlagEditor::exit_top_flag_edit_no_commit() {
     if (!text_editor::is_active(app.top_flag_editor)) return;
+    // A close while the editor is RED un-flashes the marker's STEM, and a stem
+    // is a waveform pixel (the flash reaches it since 2026-08-01 —
+    // GuiPaintHandler::paint_marker_stems), so the strip repaint below is not
+    // the whole damage. Gated on the flash rather than paid on every close: the
+    // ordinary close changes no waveform pixel at all. This is the chokepoint
+    // the POINTER close comes through (any left press with the editor open
+    // closes it, input_pointer.cpp) — the keyboard flips are edge-damaged at
+    // handle_top_flag_editor_key, and the two overlap harmlessly on Esc/Ctrl+Q.
+    // (Kind-exact: this teardown serves the BPM bracket session too, and that
+    // editor's flash is a bottom-strip fact with no stem behind it.)
+    if (app.top_flag_editor.red &&
+        app.top_flag_editor.kind == text_editor::Kind::FlagPayload) {
+        viewport.invalidate_waveform_area();
+    }
     text_editor::deactivate(app.top_flag_editor);
     viewport.invalidate_top_strip();
 }

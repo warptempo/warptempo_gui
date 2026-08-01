@@ -1854,6 +1854,10 @@ struct FlagLaneRects {
 // the stem under it) and the color its class resolved to. The painter is the
 // only producer; the per-frame waveform pass (GuiPaintHandler::paint_marker_stems)
 // is the only consumer, so a stem and its flag can never disagree about a column.
+// The published COLOUR is the marker's resolved CLASS; the consumer applies
+// exactly one override over it, the open flag editor's invalid-commit red flash
+// (a transient the painter has no business baking into a cache — the contract is
+// at GuiPaintHandler::paint_marker_stems).
 // A DISABLED marker publishes NO ENTRY AT ALL — disabled markers have no stem
 // ever (architect), and expressing that as an absent entry rather than a flag
 // on the entry means the consumer has nothing to re-decide. That absence is

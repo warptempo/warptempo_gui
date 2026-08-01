@@ -1803,7 +1803,17 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // head+stem); and before the flag blit, so a marker sharing the
             // column hides it — the hidden-by-marker model, which now reaches
             // the head as well as this segment.
-            const int stem_h = tick_bottom - head_bottom;
+            // AND IT SUPPRESSES WITH THE WAVEFORM SEGMENT (2026-08-01): the two
+            // are one line, so where a marker's stem stands on the playhead's
+            // frame neither half paints (the ruling is at
+            // playhead_stem_suppressed; the head above is deliberately NOT
+            // gated). At the head's present position the segment is already zero
+            // rows, so this reads as belt — which is the point of keeping the
+            // term: if the head ever leaves the waveform boundary again, the
+            // remnant it grows back is suppressed with its other half rather
+            // than reappearing as a stub.
+            const int stem_h =
+                playhead_stem_suppressed() ? 0 : (tick_bottom - head_bottom);
             if (stem_h > 0) {
                 cairo_set_source_rgb(cr, kPlayheadStem.r, kPlayheadStem.g,
                                      kPlayheadStem.b);
@@ -2253,6 +2263,33 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
     if (app.marker_stems.empty()) return;
 
+    // THE INVALID-COMMIT RED FLASH REACHES THE STEM (architect 2026-08-01): a
+    // flashing flag and its stem read as one object, exactly as a coincident
+    // marker's red pair already does (#da4453 either way — the flash borrows the
+    // red CLASS, it does not invent a colour).
+    //
+    // IT IS A PAINT-TIME OVERRIDE, mirroring how the flash face itself is stored
+    // and painted: render_flag_editor_box resolves the marker's ordinary face
+    // through the one class ladder and then overrides the pair when `ed.red` is
+    // set, per frame, out of any cache. This is that override on the stem's own
+    // live pass — the stash keeps publishing the marker's real class, so nothing
+    // has to be un-published when the flash clears and the flag cache needs no
+    // fingerprint for a transient. A DISABLED marker has no stash entry and
+    // therefore no flashing stem, which is the same absence its flag's missing
+    // stem always was.
+    //
+    // The 'W' test is the guard the index needs, not decoration: the flag editor
+    // is a warp-column surface by its open gates, and stash indices belong to
+    // whichever column is active, so without it a P-view stash row could match a
+    // warp target's index and redden an unrelated phase reset.
+    const text_editor::State& ed = app.top_flag_editor;
+    const int flash_idx =
+        (text_editor::is_active(ed) &&
+         ed.kind == text_editor::Kind::FlagPayload && ed.red &&
+         app.active_markers_view == 'W')
+            ? ed.target
+            : -1;
+
     cairo_save(cr);
     cairo_set_line_width(cr, 1.0);
     const double y0 = static_cast<double>(area.y);
@@ -2264,7 +2301,9 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
         const double col = stem.x - static_cast<double>(area.x);
         if (col < 0.0 || col >= static_cast<double>(area.w)) continue;
         const double x_px = static_cast<double>(area.x) + col + 0.5;
-        cairo_set_source_rgb(cr, stem.color.r, stem.color.g, stem.color.b);
+        const GuiColor c = (stem.marker_index == flash_idx) ? kMarkerStemRed
+                                                            : stem.color;
+        cairo_set_source_rgb(cr, c.r, c.g, c.b);
         cairo_move_to(cr, x_px, y0);
         cairo_line_to(cr, x_px, y1);
         cairo_stroke(cr);
@@ -2297,6 +2336,111 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
     const int col = static_cast<int>(std::nearbyint(
         (app.strip_drag.anchor_sample - vp_start) / spp));
     render_strip_anchor_stem(cr, area, col);
+}
+
+// -- GuiPaintHandler::playhead_stem_suppressed ---------------------------
+
+// THE PLAYHEAD'S STEM SUPPRESSES WHERE A MARKER'S STEM ALREADY STANDS
+// (architect 2026-08-01). This REINSTATES 035e669's model — "the cursor playhead
+// is conceptually COINCIDENT with the selection and fully hidden behind the
+// marker — line on the stem, triangle behind the flag; suppression as
+// implementation, not absence" — which the 2026-07-30 always-paints ruling
+// deleted. It is the coincident case ALONE that the always-paints clause loses:
+// the playhead still paints everywhere else, unconditionally, and the HEAD
+// paints even here (the architect expects it partly visible behind a coincident
+// flag; a ±1 column on a 19px head is invisible, which is exactly what a 1px
+// stem beside another 1px stem is not).
+//
+// WHY IT IS PRINCIPLED AGAIN, and why it was not on 2026-07-30: in the OLD
+// visual model only a selected SINGLETON stemmed, so suppressing the playhead
+// over an unstemmed marker would have left the column blank — absence, not
+// hiding. Row 5 gives EVERY ENABLED marker an always-on stem, so a coincident
+// marker's own stem is a real, always-present line for the playhead to hide
+// behind, and the deleted model becomes true again.
+//
+// WHAT IT FIXES: the two stems are derived through DIFFERENT spp arithmetic —
+// marker stems publish from the flag-cache rebuild over waveform_area(app).w,
+// the playhead from playhead_pixel_x against plate_viewport_basis — so at some
+// zoom rests a marker and a playhead standing on the SAME frame round to columns
+// one pixel apart, and nudging or dragging the marker made the pair flicker
+// between one line and two. Suppression removes the second line rather than
+// trying to make two roundings agree.
+//
+// A STATE COMPARE, NEVER A PIXEL ONE: the qualifying test is the LAND's own
+// exact-int64 formula — clamp_playhead_to_live_domain(source_frame_to_active_-
+// domain(time_frame)) == playhead_cursor_sample — reused verbatim from
+// auto_select_marker_at_playhead (input_pointer.cpp), which owns the coincidence
+// family's question "is the playhead standing on a marker". Comparing columns
+// instead would ask the two roundings to agree, which is the defect.
+//
+// THE WALK IS OVER THE PAINTED STEMS (app.marker_stems), not over a store, and
+// that is what makes "a stem is standing there" the literal predicate: the stash
+// holds one entry per ENABLED, VISIBLE marker (a disabled marker publishes none,
+// a culled one publishes none), so a marker with no stem can never suppress the
+// playhead's — the blank-column failure mode is structurally unreachable rather
+// than argued. It is also bounded by the visible marker count.
+//
+// TWO WAYS A STEM QUALIFIES:
+//   * THE DRAG RIDE. While a marker drag tows the playhead (apply_drag_motion
+//     writes the cursor to the proposal's own active-domain position every
+//     motion event, and commit_drag lands it on the committed frame), the
+//     dragged marker's stem and the playhead ARE one object by construction —
+//     but mid-motion the proposal is a fractional double and the store still
+//     holds the pre-drag frame, so the exact compare below cannot see it. The
+//     drag's own fact is what the arm reads instead, and it is the same fact the
+//     overlay paints the flag and the stash publishes the stem with: the
+//     marker's index appearing in the DragOverlay.
+//   * EXACT COINCIDENCE AT REST, the compare above — which is what the keyboard
+//     nudge leaves behind (the nudges re-land the playhead through
+//     land_playhead_on_marker, whose write IS this formula, so a nudged marker
+//     rests exactly coincident) and what every marker click, Tab jump and
+//     coincidence auto-select leave behind too.
+//
+// SCOPE NOTE, deliberately WIDER than "the focused marker": any marker with a
+// painted stem suppresses, focused or not. The artifact is the same ±1 wherever
+// the playhead stands on a marker, the display is that marker's stem either way,
+// and reading the FOCUS here would make a waveform pixel depend on the
+// SELECTION — the exact dependency row 5 deleted Selection::stem_subject /
+// damage_stem_on_subject_change for (selection.cpp), whose mutators damage the
+// top strip and not the waveform. Keyed on the playhead and the stash instead,
+// every input this reads is already damaged by its own writer.
+bool GuiPaintHandler::playhead_stem_suppressed() const {
+    if (app.marker_stems.empty()) return false;
+
+    // The dragged marker, or -1. The view compare is a statement, not a repair:
+    // the drag-modal gate swallows `p`, so a live drag's mode is always the
+    // active column — the stash indices this compares against are that column's.
+    const int dragged =
+        (app.drag.active && app.drag.drag_mode == app.active_markers_view &&
+         !app.drag.dragging_markers.empty())
+            ? app.drag.dragging_markers[0]
+            : -1;
+
+    const auto coincident = [&](int64_t source_frame) {
+        return clamp_playhead_to_live_domain(
+                   source_frame_to_active_domain(app, audio, source_frame),
+                   app, audio) == app.playhead_cursor_sample;
+    };
+
+    const auto& wv = app.warpmarkers.markers();
+    const auto& pv = app.phaseresetmarkers.markers();
+    const bool phase = (app.active_markers_view == 'P');
+    for (const MarkerStem& stem : app.marker_stems) {
+        const int i = stem.marker_index;
+        if (i == dragged) return true;
+        if (i < 0) continue;
+        // Index-guarded against the store the stash was published from having
+        // shrunk since (an undo under a stale stash): a missing row simply does
+        // not suppress.
+        if (phase) {
+            if (i < static_cast<int>(pv.size()) && coincident(pv[i].time_frame))
+                return true;
+        } else {
+            if (i < static_cast<int>(wv.size()) && coincident(wv[i].time_frame))
+                return true;
+        }
+    }
+    return false;
 }
 
 // -- GuiPaintHandler::paint_playheads ------------------------------------
@@ -2345,7 +2489,12 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // THE CURSOR PLAYHEAD ALWAYS PAINTS (architect 2026-07-30): ONE playhead
     // form, drawn at the resting cursor column whatever the selection and
     // whatever the region are doing — a 1px line painted solid straight over the
-    // plate ink.
+    // plate ink. WITH ONE EXCEPTION SINCE 2026-08-01, and exactly one: where a
+    // MARKER'S stem already stands on the playhead's frame, the playhead's STEM
+    // does not paint and that marker's stem is the display (035e669's
+    // hidden-behind-the-marker model, reinstated — the whole ruling is at
+    // playhead_stem_suppressed). The clause above still holds everywhere else,
+    // and the HEAD paints in the suppressed case too (paint_ruler_row).
     //
     // The three-way chain that used to live here is gone with the SPAN FORM: the
     // region is no longer a playhead at all (it is TRIM SCRATCH — a ground recolor
@@ -2376,8 +2525,10 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // the old triangle — and it is also why the stem is drawn to run OVER the
     // waveform's own borders when row 6 adds them: the stem is a boundary line
     // like the marker stems beside it, not a thing the borders clip.
-    render_playhead(cr, area, tri_lane, px_x, kPlayheadStem,
-                    /*draw_triangle=*/false);
+    if (!playhead_stem_suppressed()) {
+        render_playhead(cr, area, tri_lane, px_x, kPlayheadStem,
+                        /*draw_triangle=*/false);
+    }
 }
 
 // -- GuiPaintHandler::paint_bottom_strip ---------------------------------

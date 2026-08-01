@@ -541,12 +541,28 @@ private:
     // publish window. A live overlay, not a cache — the stash is the cached
     // part.
     //
+    // ONE PAINT-TIME COLOUR OVERRIDE, and one only (2026-08-01): the open flag
+    // editor's invalid-commit RED FLASH reaches its marker's stem, so a flashing
+    // flag and its stem agree. It is applied here rather than published into the
+    // stash because that is how the flash face itself works — an override over
+    // the resolved class, per frame, out of any cache (the definition carries
+    // the reasoning and the damage story).
+    //
     // The old singleton stem's whole apparatus goes with it: the size()==1 gate,
     // the DragOverlay re-derivation (the stash already carries the mid-drag
     // column), the kSelectedStem paint, and selection.cpp's stem capture/damage
     // pairs. kSelectedStem and its colors.conf key STAY DECLARED under the
     // palette ruling — only this paint site is gone.
     void paint_marker_stems(cairo_t* cr, const GuiRect& area);
+    // THE COINCIDENT-STEM SUPPRESSION (architect 2026-08-01) — 035e669's model
+    // reinstated under row 5's always-on-stem regime. True when a MARKER'S OWN
+    // STEM is standing where the cursor playhead's stem would stand, in which
+    // case the playhead's stem does not paint at all (neither its waveform
+    // segment nor its marker-lane remnant) and the marker's stem IS the display.
+    // The HEAD still paints — see the definition for the whole ruling, the two
+    // ways a stem qualifies, and why this is a state compare and never a pixel
+    // one.
+    bool playhead_stem_suppressed() const;
     void paint_playheads(cairo_t* cr, const GuiRect& area);
     void paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr, int sr);
