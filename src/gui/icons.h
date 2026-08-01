@@ -33,6 +33,8 @@ enum class Icon {
     EditRedo,            // Redo
     MediaRecord,         // Render
     // Row 4, the icon row.
+    ZoomOut,             // Zoom out
+    ZoomIn,              // Zoom in
     EditCopy,            // Copy phase resets
     EditPaste,           // Paste phase resets
     MusicNote16th,       // BPM editor
@@ -40,14 +42,17 @@ enum class Icon {
     MediaSeekForward,    // Follow mode
     PreviewRenderOn,     // Listen to a render
     DialogOkApply,       // Commit a render as the baseline
-    // Row 3, the tab row.
-    Lock,                // A read-only tab's padlock, in its close-icon slot
+    // Row 3, the tab row. BOTH states of the lock slot, which is always drawn:
+    // the closed padlock for a read-only tab and the OPEN one for a writable
+    // one (the slot's contract is at the tab painter).
+    Lock,                // Locked: closed padlock, full color
+    Unlock,              // Unlocked: open padlock, drawn dimmed by the caller
 };
 
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-inline constexpr int kIconCount = 12;
+inline constexpr int kIconCount = 15;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

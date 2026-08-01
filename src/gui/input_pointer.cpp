@@ -123,6 +123,12 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconT,      GuiKeys::T,   false, false, false, true,  true},   // bare t
     {RedesignButton::IconW,      GuiKeys::P,   false, false, false, true,  true},   // bare p
     {RedesignButton::IconP,      GuiKeys::P,   false, false, false, true,  true},   // bare p
+    // THE ZOOM PAIR: bare `-` and bare `=`, the spellings the keyboard actually
+    // has (GuiKeys::Minus / GuiKeys::Equal, both bare-exact at their arms in
+    // input_handler.cpp — grepped, not assumed). Navigation-class, so neither
+    // takes the read-only gate; the arms' own guards are the whole story.
+    {RedesignButton::IconZoomOut, GuiKeys::Minus, false, false, false, false, true}, // bare -
+    {RedesignButton::IconZoomIn,  GuiKeys::Equal, false, false, false, false, true}, // bare =
     {RedesignButton::IconCopy,   GuiKeys::P,   true,  false, false, false, true},   // Ctrl+P
     {RedesignButton::IconPaste,  GuiKeys::P,   true,  false, true,  false, true},   // Ctrl+Alt+P (+Shift)
     // BPM'S KEY IS BARE `m`, NOT `b` — the brief expected `b` and the code says
@@ -890,10 +896,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // and no second writer of read_only exists.
                 //
                 // The rect is published ONLY for the active tab (contract at
-                // AppState::tab_lock_rect) and zeroed when no lock is drawn, so
-                // this test is exactly "the user clicked a padlock that is
-                // there". Everything else in the row — the inactive tab's whole
-                // box, padlock included — falls to the chord table's Ctrl+Tab.
+                // AppState::tab_lock_rect), and since the slot became permanent
+                // (2026-08-01) it is non-zero on every painted frame — so this
+                // test is "the user clicked the active tab's lock", and the
+                // dispatch TOGGLES: it locks a writable tab and unlocks a
+                // read-only one, which is exactly what bare `o` does. Everything
+                // else in the row — the inactive tab's whole box, its lock
+                // included — falls to the chord table's Ctrl+Tab.
                 // Shift-exact is refused like every other non-admitting button.
                 const GuiRect& lk = app.tab_lock_rect;
                 if (!mods.shift && lk.w > 0 && lk.h > 0 &&

@@ -246,9 +246,12 @@ constexpr ToolbarButtonDef kToolbarButtons[] = {
 // spec. The close button is IGNORED: it lives to the right of the field
 // (ink at 60..67) and has no counterpart here.
 //
-// AT THE MINIMUM THE LABEL IS CENTERED IN THE WHOLE TAB, not left-padded — the
-// two paddings are a FLOOR term now, not an anchor, so a label narrower than the
-// minimum sits in the middle of the box rather than hugging its left edge.
+// AT THE MINIMUM THE LABEL IS CENTERED IN ITS FIELD, not left-padded — the two
+// paddings are a FLOOR term, not an anchor, so a label narrower than the minimum
+// sits in the middle of the field rather than hugging its left edge. THE FIELD,
+// NOT THE TAB (2026-08-01): the lock slot below adds its own width on the right,
+// and centering in the total would push the A/B off-centre in the space the eye
+// reads as the tab's label area.
 constexpr double kTabLabelPadPx      = 10.0;  // per side, the width floor's term
 constexpr double kTabMinWidthPx      = 58.0;  // see the reconstruction above
 // THE 1px SIDE BORDERS OF THE SELECTED TAB ARE DRAWN INSIDE ITS OWN BOX, on the
@@ -268,15 +271,29 @@ constexpr double kTabBorderPx        = 1.0;   // side borders / hover edge
 // whatever is behind them, which here is the row ground the lane fill already
 // laid down.
 constexpr double kTabCornerRadiusPx  = 5.0;
-// THE READ-ONLY PADLOCK'S BOX, in the tab's CLOSE-ICON SLOT: a 16px icon box
-// right-aligned inside the tab's own right padding. Reconstructed from
-// row_3_min_width.png, where an 80px Breeze tab puts its label field at 1..58
-// and its close-button ink at 60..67 — a 16px box ending at the tab's right pad
-// lands its 22-unit glyph's ink on that span. THE TAB DOES NOT GROW FOR IT:
-// selection is a face and not a size in this row (the standing ruling at the
-// side borders), and a lock that widened its tab would shove the other one
-// sideways every time a tab was locked.
-constexpr double kTabLockBoxPx = 16.0;
+// THE LOCK SLOT — its OWN RESERVED SPACE, which ADDS to the tab's width
+// (architect 2026-08-01, correcting the first build: the lock is not a
+// conditional overlay on the label field, it is the pcmanfm CLOSE-ICON slot,
+// always present on both tabs, and the tab is as wide as its label field plus
+// that slot).
+//
+// THE TWO CROPS AGREE ON EXACTLY TWO NUMBERS, and those are what this is built
+// from. In row_3_min_width.png (80 wide) the close-icon ink runs columns 59..68
+// with the tab's right border at 79; in row_3_tab_pcmanfmqt.png (87 wide) it
+// runs 66..75 with the border at 86. So in BOTH: the ink is 10px wide, and its
+// right edge sits exactly 11px inside the border — i.e. a 22-unit Breeze glyph
+// in a 16px box (its own inset gives the 10px ink) with 8px between that box
+// and the tab's right edge. 16 and 8 are the spec; everything else about those
+// foreign tabs (their label fields, their paddings) is theirs and not ours.
+//
+// THE TAB THEREFORE GROWS BY THE SLOT, and only by the slot: tab width = the
+// label field (the same max(minimum, shaped + 2*pad) it always was) + this. The
+// side-border ruling is untouched — selection is still a face and not a size,
+// because the slot is there in EVERY state on BOTH tabs, so nothing a tab does
+// can shove its neighbour sideways.
+constexpr double kTabLockBoxPx     = 16.0;
+constexpr double kTabLockMarginPx  = 8.0;   // box's right edge to the tab's
+constexpr double kTabLockSlotPx    = kTabLockBoxPx + kTabLockMarginPx;
 
 // THE PAINTER'S HALF OF THE TAB ROSTER: each tab's roster id, its A/B letter
 // and its label. The press claim (input_pointer.cpp) reads the same ids out of
@@ -363,6 +380,12 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::IconT,      IconRowLead::Gap,       "T", icons::Icon::EditCopy},
     {RedesignButton::IconW,      IconRowLead::Separator, "W", icons::Icon::EditCopy},
     {RedesignButton::IconP,      IconRowLead::Gap,       "P", icons::Icon::EditCopy},
+    // THE ZOOM PAIR (architect 2026-08-01), between separators of its own so it
+    // reads as its own group rather than as a tail of the view radios or a head
+    // of the clipboard set. Momentary like the clipboard buttons — zoom is an
+    // action, not a mode, so neither takes the selected face.
+    {RedesignButton::IconZoomOut, IconRowLead::Separator, nullptr, icons::Icon::ZoomOut},
+    {RedesignButton::IconZoomIn,  IconRowLead::Gap,       nullptr, icons::Icon::ZoomIn},
     {RedesignButton::IconCopy,   IconRowLead::Separator, nullptr, icons::Icon::EditCopy},
     {RedesignButton::IconPaste,  IconRowLead::Gap,       nullptr, icons::Icon::EditPaste},
     {RedesignButton::IconBpm,    IconRowLead::Gap,       nullptr, icons::Icon::MusicNote16th},
@@ -831,6 +854,9 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 
     const int pad      = scaled_px(kTabLabelPadPx);
     const int min_w    = scaled_px(kTabMinWidthPx);
+    const int lock_box = scaled_px(kTabLockBoxPx);
+    const int lock_mar = scaled_px(kTabLockMarginPx);
+    const int slot_w   = scaled_px(kTabLockSlotPx);
     const int trim_h   = std::max(1, scaled_px(kTabTrimHeightPx));
     const int line_w   = std::max(1, scaled_px(kTabBorderPx));
     const double radius = std::nearbyint(kTabCornerRadiusPx * gui_scale_factor());
@@ -851,7 +877,11 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         const text_shape::ShapedRun run =
             text_shape::shape_text_run(font, def.label);
         const int label_w = static_cast<int>(std::nearbyint(run.width_px));
-        const int tab_w   = std::max(min_w, label_w + 2 * pad);
+        // THE FIELD, then THE SLOT. The field is what it always was; the slot is
+        // reserved on every tab in every state, so both tabs stay identical in
+        // width by construction and locking one shoves nothing.
+        const int field_w = std::max(min_w, label_w + 2 * pad);
+        const int tab_w   = field_w + slot_w;
 
         AppState::RedesignButtonFace& face =
             app.redesign_buttons[redesign_button_index(def.id)];
@@ -946,30 +976,54 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         text_shape::show_shaped_run(
             cr, run,
             static_cast<double>(x) +
-                std::nearbyint((static_cast<double>(tab_w) - run.width_px) *
+                std::nearbyint((static_cast<double>(field_w) - run.width_px) *
                                0.5),
             redesign_baseline(font, static_cast<double>(lane.y),
                               static_cast<double>(content_h)));
 
-        // THE PADLOCK, drawn last so it sits over whatever face the tab wears,
-        // and drawn ONLY when that tab is read-only — its presence IS the state,
-        // so there is no unlocked icon and no empty slot to explain. It takes
-        // no face of its own: it is the label's own white on the tab's own fill,
-        // which is what "rides the tab's face" means here.
+        // THE LOCK, drawn last so it sits over whatever face the tab wears, and
+        // drawn ALWAYS — on both tabs, in both states, in its own reserved slot
+        // (the geometry and its two measured numbers are at kTabLockBoxPx).
+        //
+        // TWO STATES, ONE CONTROL. LOCKED is the closed padlock at the icon
+        // table's own kIconText white: full colour, because a read-only tab is
+        // a state worth seeing from across the window. UNLOCKED is the OPEN
+        // padlock DIMMED — the same treatment row 2's disabled icons take, a
+        // per-path mix of the glyph's own colour toward the ground it sits on by
+        // kRedesignDisabledMix (0.322), through the icons module's own keep_own/
+        // mixed_with pair. That is the redesign's ONE dim family reused rather
+        // than a new grey invented here, and mixing toward THE TAB'S CURRENT
+        // FACE (selected ground, rest, or hover) is what the disabled rule
+        // already says: a fraction of itself over the row's current ground.
+        //
+        // The dim is what makes the pair read as one control: the open lock is
+        // present, legible and quiet, and locking it brightens rather than
+        // conjures. It is also why the slot can be permanent without shouting.
         //
         // BOTH TABS SHOW IT; only the ACTIVE one's rect is published (the
-        // contract is at AppState::tab_lock_rect).
+        // contract is at AppState::tab_lock_rect) — the click is bare `o`, which
+        // is defined on the active tab alone.
         {
             const ViewState& vs = (def.letter == 'B') ? app.tab_b : app.tab_a;
+            const int lx = x + tab_w - lock_mar - lock_box;
+            const int ly = lane.y + (content_h - lock_box) / 2;
             if (vs.read_only) {
-                const int box = scaled_px(kTabLockBoxPx);
-                const int lx  = x + tab_w - pad - box;
-                const int ly  = lane.y + (content_h - box) / 2;
                 icons::draw(cr, icons::Icon::Lock,
                             static_cast<double>(lx), static_cast<double>(ly),
-                            static_cast<double>(box));
-                if (selected) app.tab_lock_rect = GuiRect{lx, ly, box, box};
+                            static_cast<double>(lock_box));
+            } else {
+                // The face this tab is actually wearing, which is the ground the
+                // dim mixes toward.
+                const GuiColor ground =
+                    selected ? kRedesignTabGround
+                             : (face.hovered ? kRedesignTabHover
+                                             : kRedesignTabRest);
+                icons::draw(cr, icons::Icon::Unlock,
+                            static_cast<double>(lx), static_cast<double>(ly),
+                            static_cast<double>(lock_box),
+                            kRedesignDisabledMix, ground);
             }
+            if (selected) app.tab_lock_rect = GuiRect{lx, ly, lock_box, lock_box};
         }
 
         x += tab_w;

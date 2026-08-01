@@ -754,14 +754,16 @@ enum class RedesignButton {
     Save, Undo, Redo, Render,
     // Row 3, the tabs.
     TabA, TabB,
-    // Row 4, the icon row, in painted order: the two view radio pairs, the
-    // phase-reset clipboard pair, the three mode/editor buttons, then the two
-    // render-entry buttons.
+    // Row 4, the icon row, in painted order: the two view radio pairs, the ZOOM
+    // pair (joined 2026-08-01 — the architect's "more used than most as
+    // actions"), the phase-reset clipboard pair, the three mode/editor buttons,
+    // then the two render-entry buttons.
     IconS, IconT, IconW, IconP,
+    IconZoomOut, IconZoomIn,
     IconCopy, IconPaste, IconBpm, IconIter, IconFollow,
     IconListen, IconCommit
 };
-inline constexpr int kRedesignButtonCount = 19;
+inline constexpr int kRedesignButtonCount = 21;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -1515,18 +1517,24 @@ struct AppState {
     };
     std::array<RedesignButtonFace, kRedesignButtonCount> redesign_buttons{};
 
-    // THE ACTIVE TAB'S PADLOCK, in its close-icon slot — published by
-    // paint_tab_row and read by the press claim. A ZERO RECT whenever the active
-    // tab is writable, which is also when nothing is drawn there, so "visible"
-    // and "clickable" are one fact.
+    // THE ACTIVE TAB'S LOCK, in its own reserved close-icon slot — published by
+    // paint_tab_row and read by the press claim. THE SLOT IS PERMANENT since
+    // 2026-08-01 (architect): every tab carries it in every state, closed and
+    // bright when read-only, open and dimmed when writable, so this rect is
+    // non-zero whenever the tab row has painted at all. "Visible" and
+    // "clickable" are still one fact — they are now both simply always true,
+    // and the click TOGGLES rather than only releasing.
     //
-    // ONLY THE ACTIVE TAB'S IS PUBLISHED, deliberately. Both tabs SHOW a lock
-    // when they are read-only — a read-only B is worth seeing from A — but only
-    // the active one's is a target, because the act it performs (bare `o`) is
-    // defined on the ACTIVE tab: `o` toggles active_view_state(app).read_only
-    // and nothing else. Clicking the INACTIVE tab stays Ctrl+Tab whole,
-    // padlock included; switch first, then unlock, which is also the order the
-    // keyboard makes you take.
+    // It is still zeroed at the top of every paint run: a cold frame, a
+    // degenerate lane or a row that never painted must not strand a target.
+    //
+    // ONLY THE ACTIVE TAB'S IS PUBLISHED, deliberately. Both tabs SHOW their
+    // lock — a read-only B is worth seeing from A — but only the active one's
+    // is a target, because the act it performs (bare `o`) is defined on the
+    // ACTIVE tab: `o` toggles active_view_state(app).read_only and nothing
+    // else. Clicking the INACTIVE tab stays Ctrl+Tab whole, lock included;
+    // switch first, then unlock, which is also the order the keyboard makes you
+    // take.
     GuiRect tab_lock_rect{0, 0, 0, 0};
 
     // THE MARKER PAINTER'S STASH — the second surface on the painter-publishes
@@ -2266,6 +2274,8 @@ inline bool redesign_button_enabled(const AppState& a, int64_t total_frames,
         case RedesignButton::IconT:
         case RedesignButton::IconW:
         case RedesignButton::IconP:
+        case RedesignButton::IconZoomOut:
+        case RedesignButton::IconZoomIn:
         case RedesignButton::IconCopy:
         case RedesignButton::IconPaste:
         case RedesignButton::IconBpm:
@@ -2325,6 +2335,8 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::Undo:
         case RedesignButton::Redo:
         case RedesignButton::Render:
+        case RedesignButton::IconZoomOut:
+        case RedesignButton::IconZoomIn:
         case RedesignButton::IconCopy:
         case RedesignButton::IconPaste:
         case RedesignButton::IconBpm:
@@ -2400,6 +2412,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconT:      return {"Target view (T)", nullptr};
         case RedesignButton::IconW:      return {"Warp markers (P)", nullptr};
         case RedesignButton::IconP:      return {"Phase resets (P)", nullptr};
+        case RedesignButton::IconZoomOut: return {"Zoom out (-)", nullptr};
+        case RedesignButton::IconZoomIn:  return {"Zoom in (=)", nullptr};
         case RedesignButton::IconCopy:   return {"Copy phase resets (Ctrl+P)", nullptr};
         case RedesignButton::IconPaste:  return {"Paste phase resets (Ctrl+Alt+P)",
                                                  "Press Shift for paste phase state."};
