@@ -11,7 +11,6 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
-#include <filesystem>   // the filename overlay's basename
 #include <string>
 #include <utility>
 #include <vector>
@@ -703,76 +702,6 @@ void render_waveform(cairo_surface_t* dest,
     cairo_surface_mark_dirty(dest);
 }
 
-// -- render_waveform_filename ---------------------------------------------
-
-// THE FILENAME OVERLAY (row 6): the source wav's BASENAME on its own dark band
-// at the waveform's top-left. The anatomy, every measurement behind it and the
-// deliberate 4px width give-up are at the row-6 palette block (render.h).
-//
-// STATIC BY DESIGN: it names the loaded file and nothing else — no viewport, no
-// zoom, no playhead, no selection enters it, so it is the one waveform-area
-// element that does not move when anything moves. It needs no damage of its own
-// for that reason: its pixels are waveform-area pixels, so every existing
-// waveform damage repaints it, and the only event that changes its TEXT is a
-// source load, which rebuilds and damages everything.
-//
-// TRUNCATION IS A CLIP, NOT A RE-SHAPE. The band is clamped to the area's width
-// and the run paints under a clip to the band's interior, so a long filename is
-// cut mid-glyph at the window edge. That is deliberately the flag EDITOR's
-// model (a view that truncates) rather than the flag LABEL's (an ellipsis at a
-// glyph budget): a filename is an identity, not a label, and re-shaping a byte
-// prefix would need cluster-boundary care to no visible benefit at a cut that
-// only ever happens at the window edge. No scrolling, no ellipsis, no marquee.
-void render_waveform_filename(cairo_t* cr, const AppState& app, GuiRect area) {
-    if (area.w <= 0 || area.h <= 0) return;
-    if (app.source_audio_path.empty()) return;
-    const std::string name =
-        std::filesystem::path(app.source_audio_path).filename().string();
-    if (name.empty()) return;
-
-    const int border   = waveform_border_px();
-    const int band_h   = filename_band_h_px();
-    const int pad      = filename_pad_x_px();
-    const int margin_l = filename_margin_left_px();
-    // FLUSH UNDER THE TOP BORDER (the crop: border rows 0-1, band from row 2),
-    // and inside the content band by construction. A window too short to show
-    // the band under its own border draws nothing rather than spilling.
-    const int band_y = area.y + border;
-    if (band_y + band_h > area.y + area.h - border) return;
-
-    cairo_save(cr);
-    cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cr, redesign_font_size_px());
-    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
-    const text_shape::ShapedRun run = text_shape::shape_text_run(font, name);
-
-    const int band_x = area.x + margin_l;
-    int band_w = 2 * pad + static_cast<int>(std::nearbyint(run.width_px));
-    const int max_w = area.x + area.w - band_x;
-    if (max_w <= 0) { cairo_restore(cr); return; }
-    if (band_w > max_w) band_w = max_w;
-
-    // The band, then the label clipped to it. AA off on the fill so the band's
-    // edges are exactly the integer rows and columns the crop shows.
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_source_rgb(cr, kWaveformFilenameBand.r, kWaveformFilenameBand.g,
-                         kWaveformFilenameBand.b);
-    cairo_rectangle(cr, band_x, band_y, band_w, band_h);
-    cairo_fill(cr);
-    cairo_restore(cr);
-
-    cairo_rectangle(cr, band_x, band_y, band_w, band_h);
-    cairo_clip(cr);
-    cairo_set_source_rgb(cr, kWaveformFilenameLabel.r,
-                         kWaveformFilenameLabel.g, kWaveformFilenameLabel.b);
-    text_shape::show_shaped_run(
-        cr, run, static_cast<double>(band_x + pad),
-        static_cast<double>(band_y + filename_baseline_px()));
-    cairo_restore(cr);
-}
-
 void render_playhead(cairo_t* cr,
                      GuiRect area,
                      GuiRect triangle_lane,
@@ -848,8 +777,14 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
 
     const double x_px = static_cast<double>(area.x) + col + 0.5;
     cairo_save(cr);
-    cairo_set_source_rgb(cr, kStripAnchorStem.r, kStripAnchorStem.g,
-                         kStripAnchorStem.b);
+    // THE ANCHOR STEM IS THE PLAYHEAD'S WHITE (architect 2026-08-01, at the
+    // row-6 live look): kPlayheadStem #fcfcfc, hard-coded per the redesign's
+    // colour ruling, superseding the dim tunable kStripAnchorStem — whose ONE
+    // paint site this was, so that key is now declared and inert like kCanvas,
+    // kWaveform and kLine. The affordance is deliberately no longer "less loud
+    // than a marker stem": it is a position line during a gesture, and the
+    // product's position lines are this white.
+    cairo_set_source_rgb(cr, kPlayheadStem.r, kPlayheadStem.g, kPlayheadStem.b);
     cairo_set_line_width(cr, 1.0);
     cairo_move_to(cr, x_px, static_cast<double>(area.y));
     cairo_line_to(cr, x_px, static_cast<double>(area.y + area.h));

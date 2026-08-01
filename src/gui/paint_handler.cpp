@@ -2807,7 +2807,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //
         // Final paint order (bottom to top of the stack): canvas ground + its
         // 2px black border (painted above, unconditionally) -> region ground ->
-        // waveform plate -> THE FILENAME OVERLAY -> overlay ring -> LIVE
+        // waveform plate -> overlay ring -> LIVE
         // TRIM (bar + endcaps + waveform stem segments, one pass)
         // -> playheads (scanner line + cursor stem) -> MARKER STEMS -> ruler ->
         // flag blit -> flag editor overlay -> strip-drag anchor -> bottom strip.
@@ -2840,14 +2840,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // antialiased fringes composite against the recolored ground.
             paint_region_ground(cr, area);
             paint_waveform_plate(cr, area);
-            // ROW 6's FILENAME OVERLAY, immediately over the ink and under
-            // everything else in the area: the phase-reset ring, trim, the
-            // playheads and the stems all follow, so a position line crosses the
-            // band exactly as it crosses the area's borders. It is inside this
-            // area-gated block because its pixels ARE waveform-area pixels —
-            // which is also why it needs no damage of its own (it is static; the
-            // contract is at render_waveform_filename).
-            render_waveform_filename(cr, app, area);
             // The overlay band's boundary ring — the phase-reset overlay's whole
             // visual — over the plate and under trim
             // and the stems, so the focused reset's own stem stays crisp on top

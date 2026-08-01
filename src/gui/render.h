@@ -188,12 +188,14 @@ inline GuiColor kTextDisabled     = hex(0x606263);
 // 1px rule in the product is one color.
 inline GuiColor kLine             = hex(0x686A6C);
 
-// The strip-drag anchor stem: a transient pivot affordance shown only mid-drag,
-// so it reads as a muted structural guide rather than competing with the crisp
-// marker/text ink — which is why its default is the kLine default. It stays its
-// own key so it can be pulled off the line color independently. Dimmed by hue,
-// not alpha; it paints straight over any waveform samples it crosses (no notch
-// — see render_strip_anchor_stem).
+// The strip-drag anchor stem's old value, NOW INERT (architect 2026-08-01): the
+// stem recolored to kPlayheadStem #fcfcfc, hard-coded at
+// render_strip_anchor_stem, and this key's one paint site went with it —
+// declared and unread, like kCanvas, kWaveform and kLine above. It read as a
+// muted structural guide (the kLine default, dimmed by hue rather than alpha)
+// on the rationale that a transient affordance should not compete with the
+// crisp marker ink; the architect's ruling is that it is a POSITION LINE during
+// a gesture and the product's position lines are the one white.
 inline GuiColor kStripAnchorStem  = hex(0x686A6C);
 
 // The resting cursor: its 1px line and its tip-down triangle — the ONE playhead
@@ -616,42 +618,18 @@ inline constexpr GuiColor kWaveformInk    = hex(0x1C816B);  // (28, 129, 107)
 inline constexpr GuiColor kWaveformBorder   = hex(0x000000);
 inline constexpr int      kWaveformBorderPx = 2;
 
-// THE FILENAME OVERLAY — the source wav's basename on a dark band at the
-// waveform's top-left, measured off the two crops together.
-//
-// THE BAND: ground #0b1d1a, x 1..635 and y 2..16 of the full crop — so it sits
-// FLUSH under the 2px border (no gap: the border ends at row 1, the band begins
-// at row 2) with a 1px left margin from the area's own left edge, and it is 15
-// rows tall. Its width is DERIVED, pad + shaped basename + pad, with the pads at
-// 2 (the filename crop's ink runs columns 2..632 of its 635, giving 2 on each
-// side).
-//
-// THE TEXT: pure #ffffff — the crop is subpixel-rendered (its histogram is full
-// of colour fringes), and a fully covered pixel is the true colour: 41 pixels
-// land on exactly (255,255,255). It is NOT kRedesignLabel #fcfcfc; two
-// independent samples kept apart, the row-3 precedent.
-//
-// THE SIZE IS THE REDESIGN'S OWN 12pt, and the crop agrees to the pixel — which
-// is why no third type size appears here. Measured offscreen on our sans face at
-// 16px: a digit's ink is exactly 12.00 rows tall (the crop's "05" occupies rows
-// 0..11), and the real filename's ink box runs -12.00 to +3.00 about the
-// baseline = exactly 15 rows (the crop's band). So the baseline is band row 12,
-// authored like the marker flag's for the same reason: the band height is
-// authored off the crop too, and the two must agree with the crop rather than
-// with a font's internal leading. Ascenders touch the band's first row and
-// descenders its last, exactly as the crop shows — the band has NO vertical
-// padding at all.
-//
-// The advance of the crop's own filename is 627px on our face against
-// kdenlive's 631 (band 631 vs 635) — a 4px give-up on a 600px band, the same
-// class of deliberate difference as the marker flag's 54-vs-55, recorded so the
-// next reader does not chase it.
-inline constexpr GuiColor kWaveformFilenameBand  = hex(0x0B1D1A);  // (11,29,26)
-inline constexpr GuiColor kWaveformFilenameLabel = hex(0xFFFFFF);
-inline constexpr int kFilenameBandHPx      = 15;
-inline constexpr int kFilenameBaselinePx   = 12;
-inline constexpr int kFilenamePadXPx       = 2;
-inline constexpr int kFilenameMarginLeftPx = 1;
+// THE FILENAME OVERLAY IS REMOVED (architect 2026-08-01, at the row-6 live
+// look) — a retirement record, not a parked feature. It shipped for one look:
+// the source wav's basename on a dark #0b1d1a band at the waveform's top-left,
+// 15 rows flush under the border, white 12pt through the shaping chokepoint,
+// and it reproduced row_6_waveform_filename.png to the pixel (ink rows 0..14,
+// digit rows 0..11, pads 2/2, verified offscreen). IT COLLIDES WITH MARKER
+// STEMS AT OUR DENSITY, and both z-orders read wrong — the band cuts the stems
+// or the stems cut the band. Kdenlive's own markers are sparse enough that the
+// question never arises there, so this is a place where design parity is
+// correctly LOOSE. There is no replacement and none is wanted; the crops stay
+// in tmp/ and this paragraph is why re-deriving from them would be a
+// re-litigation rather than a discovery.
 
 // THE ALIASING TOGGLE (architect 2026-08-01). TRUE is the shipped renderer —
 // the 2026-07-26 draw arc's coverage plate, byte-for-byte — and FALSE selects a
@@ -670,7 +648,12 @@ inline constexpr int kFilenameMarginLeftPx = 1;
 // follow (the six-edit engine-key recipe in settings.md); nothing here would
 // change but the constant becoming a read of app.engine_settings, since the two
 // arms already share every input.
-inline constexpr bool kWaveformAntialiased = true;
+//
+// IT IS FALSE AS SHIPPED (architect 2026-08-01, at the row-6 live look): the
+// ALIASED variant is what the product draws, with the AA binary snapshotted for
+// the side-by-side. Nothing about the AA path changed to get here — this line is
+// the whole flip, which is the property the toggle was built for.
+inline constexpr bool kWaveformAntialiased = false;
 
 // -- The TOOLTIP CHROME (the dropdown has its own, below) -------------------
 //
@@ -1110,36 +1093,13 @@ inline int marker_flag_baseline_px() {
         static_cast<double>(kMarkerFlagBaselinePx) * gui_scale_factor()));
     return v < 1 ? 1 : v;
 }
-// ROW 6's LENGTHS on the same axis (the measurements and the reasoning are at
-// the row-6 palette block: 2px borders taken from the area, a 15px filename band
-// flush under the top border with a 1px left margin, 2px pads, baseline at band
-// row 12).
+// ROW 6's ONE LENGTH on the same axis: the area's border, 2px taken FROM the
+// area (the measurement and the reasoning are at the row-6 palette block).
 inline int waveform_border_px() {
     const int v = static_cast<int>(std::nearbyint(
         static_cast<double>(kWaveformBorderPx) * gui_scale_factor()));
     return v < 1 ? 1 : v;
 }
-inline int filename_band_h_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kFilenameBandHPx) * gui_scale_factor()));
-    return v < 1 ? 1 : v;
-}
-inline int filename_baseline_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kFilenameBaselinePx) * gui_scale_factor()));
-    return v < 1 ? 1 : v;
-}
-inline int filename_pad_x_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kFilenamePadXPx) * gui_scale_factor()));
-    return v < 1 ? 1 : v;
-}
-inline int filename_margin_left_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kFilenameMarginLeftPx) * gui_scale_factor()));
-    return v < 1 ? 1 : v;
-}
-
 // THE NINE-GLYPH BUDGET, kept from the retired marker-text lane: a label longer
 // than nine glyphs displays as its first EIGHT bytes plus the UTF-8 ellipsis
 // (U+2026, 3 bytes) — 11 bytes, 9 glyphs. Composed marker text is ASCII by
@@ -1536,15 +1496,6 @@ struct FlagHitRect {
 void render_background(cairo_t* cr, int x, int y, int w, int h);
 void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 
-// ROW 6's FILENAME OVERLAY: the loaded source's basename on its own dark band at
-// the waveform's top-left, flush under the top border. Painted AFTER the plate
-// blit (it sits over the ink) and before every position line, so the playheads
-// and the marker/trim stems cross it exactly as they cross the borders — a
-// boundary line is not something an overlay clips. Static: nothing about the
-// viewport, the zoom or the selection enters it, so it never needs damage of its
-// own (its pixels are waveform-area pixels; the full contract is at the
-// definition).
-void render_waveform_filename(cairo_t* cr, const AppState& app, GuiRect area);
 
 // The waveform area's CONTENT band: the area minus the border rows
 // render_canvas paints at its top and bottom — 2px each since row 6
@@ -1759,9 +1710,10 @@ void render_playhead(cairo_t* cr,
 
 // Draws the strip-drag ANCHOR STEM: a 1-pixel vertical line at the drag's pivot
 // column `col` (window pixels within `area`, clamped here to [0, area.w-1]),
-// spanning the full waveform height like a marker stem, in the dimmer
-// kStripAnchorStem (a transient drag affordance, deliberately less loud than a
-// marker stem). The anchor is
+// spanning the full waveform height like a marker stem, in kPlayheadStem
+// #fcfcfc since 2026-08-01 — the product's one position-line white, replacing
+// the dimmer kStripAnchorStem this drew in (the ruling is at the paint site).
+// The anchor is
 // the clamped column the strip-drag math pins each event — edge-included, so an
 // edge-pinned anchor draws the stem exactly at the edge and the clamp becomes
 // visible (the Ableton affordance). Like every other stem it paints ONE solid
