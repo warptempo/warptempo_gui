@@ -334,18 +334,23 @@ inline GuiColor kAccentOutline    = hex(0xDA4453);
 // wash. The cursor playhead paints straight across it, unchanged — the span is a
 // ground, never a playhead.
 //
-// THE OVERLAY IS A RING ONLY (architect 2026-07-27). kOverlayOutline is the 1px
-// border of the phase reset overlay band — the stretch of output immediately
-// following the focused reset over which the re-seeded phase takes hold —
-// painted OVER the plate, a boundary line like the playheads and the stems, so
-// an opaque line crossing ink is correct and intended. The band recolors NO
-// ground: it had one until this ruling, and dropping it leaves the aid reading
-// as the two EDGES of a span rather than as a tinted region, which is what a
-// narrow authoring marker wants. So this is a line color, not the outline
-// sibling of any fill — and its default is accordingly the live-1px-mark
-// breeze-icons grey kPlayheadCursor and kSelectedStem also default to (its
-// provenance recorded at kPlayheadCursor), not a ring value like
-// kMarkerOutline.
+// THE OVERLAY IS A RING ONLY (architect 2026-07-27). It is the 1px border of the
+// phase reset overlay band — the stretch of output immediately following the
+// focused reset over which the re-seeded phase takes hold — painted OVER the
+// plate, a boundary line like the playheads and the stems, so an opaque line
+// crossing ink is correct and intended. The band recolors NO ground: it had one
+// until that ruling, and dropping it leaves the aid reading as the two EDGES of
+// a span rather than as a tinted region, which is what a narrow authoring marker
+// wants.
+//
+// kOverlayOutline IS NOW INERT (architect 2026-08-01): the ring paints in
+// kMarkerFlagFill #9b59b6 — the phase-reset class's own unselected fill, the
+// colour of the STEM of the reset it annotates, "one unit" by his word — and
+// this key's one paint site went with the change. Declared and unread, like
+// kCanvas, kWaveform, kLine and kStripAnchorStem. Its value below was the
+// live-1px-mark breeze-icons grey that kPlayheadCursor and kSelectedStem also
+// default to (provenance at kPlayheadCursor), a line colour rather than the
+// outline sibling of any fill.
 inline GuiColor kRegionCanvas     = hex(0x42474D);
 inline GuiColor kOverlayOutline   = hex(0x7F8C8D);
 

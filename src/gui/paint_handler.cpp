@@ -11,6 +11,7 @@
 #include "engine/engine_geometry.h"  // kRs
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <string>
@@ -1586,8 +1587,13 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     if (ms_per_px <= 0.0 || wave_w <= 0) { cairo_restore(cr); return; }
 
     const int64_t step  = ruler_step_ms(ms_per_px);
-    const double  minor = static_cast<double>(step) / kRulerMinorsPerStep;
     const double  end_ms = vp_ms + ms_per_px * wave_w;
+    // (There is no `minor` time step any more. It had two consumers — the float
+    // placement of each minor tick and the head's float re-derivation of which
+    // columns carried one — and the rigid comb replaced both with integer
+    // distribution across a segment. The MINORS-PER-STEP count is still the
+    // ladder's own kRulerMinorsPerStep; only its expression as a duration is
+    // gone.)
 
     const int tick_bottom = marker.y + marker.h;         // the waveform top
     const int minor_top   = marker.y;                    // no rise
@@ -1614,19 +1620,94 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // at every scale.
     const bool emphasize = step < 1000;
 
-    // Walk the MINORS from the first one at or before the left edge; every
-    // eighth is a labeled MAJOR. Fractional minor values are fine — nothing
-    // here snaps.
+    // THE PLAYHEAD HEAD'S TICK-CROSSING WINDOW, declared before the walk because
+    // the walk fills it: one byte per column across the head's widest row —
+    // 0 = no tick, 1 = minor, 2 = major. The head block below repaints exactly
+    // these columns in the pre-blended value, so the crossing is the ticks the
+    // walk actually painted rather than a second derivation of where ticks ought
+    // to be (which is what it was, and what the rigid comb would have made
+    // wrong).
+    //
+    // FIXED CAPACITY, no allocation: kPlayheadHeadHalf[0] is 9 authored px and
+    // the gui_scale schema caps at 200%, so the window is at most 2*18+1 = 37
+    // columns. 48 is headroom; the recording clamps to it, so a raised ceiling
+    // would lose the pre-blend at the outermost head columns rather than write
+    // out of bounds.
+    constexpr int kHeadTickWindowCap = 48;
+    std::array<uint8_t, kHeadTickWindowCap> head_ticks{};
+    const int head_half_max = static_cast<int>(std::nearbyint(
+        static_cast<double>(kPlayheadHeadHalf[0]) * gui_scale_factor()));
+    const double head_px_pre = playhead_pixel_x(app, basis.vp_start, basis.spp);
+    const int head_cursor_col = static_cast<int>(std::nearbyint(head_px_pre));
+    int head_window = 2 * head_half_max + 1;
+    if (head_window > kHeadTickWindowCap) head_window = kHeadTickWindowCap;
+    const int head_col0 = head_cursor_col - head_half_max;
+
+    // THE COMB IS RIGID UNDER PAN (architect 2026-08-01, from the alt+drag
+    // shimmer at working zoom: the minor ticks visibly stepped at different
+    // moments, a breathing comb; the majors read fine).
+    //
+    // THE MECHANISM, verified in the code this replaces: every tick rounded its
+    // OWN float time->pixel position independently, `nearbyint((t - vp_ms) /
+    // ms_per_px)`. Tick spacing in pixels is minor/ms_per_px, which is not an
+    // integer in general, so each tick carries its own fractional phase; a pan
+    // shifts every phase by the same amount but each tick crosses ITS rounding
+    // boundary at a different viewport offset, so neighbours take their 1px step
+    // on different frames. The comb breathes even though nothing about the time
+    // grid moved.
+    //
+    // THE FIX: each MAJOR keeps its own rounded position, and its EIGHT MINORS
+    // are placed at integer offsets DISTRIBUTED ACROSS THE SEGMENT'S INTEGER
+    // WIDTH — offset(i) = nearbyint(i * seg_w / 8) from the major's rounded x,
+    // where seg_w is the distance between two rounded majors. A distribution of
+    // an integer width is a pure function of that width, so while the majors
+    // translate by whole columns the entire comb translates with them, rigidly:
+    // no minor rounds against the screen at all. Under ZOOM the widths change
+    // and the distribution re-derives, which is a real spacing change rather
+    // than jitter.
+    //
+    // THE TRADE, the architect's own ("the ticks are purely informative — I'd
+    // rather have smoothness than total precision"): a distributed minor can sit
+    // up to ONE PIXEL off its exact time position — half from its major's own
+    // anchor rounding and half from the distribution's — measured at 1.000px
+    // worst case over a swept zoom/rung/phase range, on segments the ladder
+    // keeps at least 96px wide. It NEVER ACCUMULATES: every segment re-anchors
+    // on its own major, so the error is bounded inside one segment rather than
+    // walking across the ruler. One pixel on a countable informative line, in
+    // exchange for a comb that stops breathing under every pan.
     const int64_t first_step = static_cast<int64_t>(std::floor(vp_ms / step));
+    // A step index's own rounded column: the ONE place a tick position meets the
+    // screen grid. Majors anchor here; minors are distributed between them.
+    const auto major_col = [&](int64_t k) {
+        const double t = static_cast<double>(k) * static_cast<double>(step);
+        return static_cast<int>(std::nearbyint((t - vp_ms) / ms_per_px));
+    };
     for (int64_t k = first_step; ; ++k) {
         const double step_ms = static_cast<double>(k) * static_cast<double>(step);
         if (step_ms > end_ms) break;
+        const int mx    = major_col(k);
+        const int seg_w = major_col(k + 1) - mx;
         for (int i = 0; i < kRulerMinorsPerStep; ++i) {
-            const double t  = step_ms + i * minor;
-            if (t < vp_ms - minor || t > end_ms) continue;
-            const int col = static_cast<int>(std::nearbyint((t - vp_ms) / ms_per_px));
+            // THE INTEGER COMB, and the only culling test there is: a tick is at
+            // its distributed column or it is offscreen. The old float-time
+            // pre-filter went with the float positions it filtered.
+            const int col = (i == 0)
+                ? mx
+                : mx + static_cast<int>(std::nearbyint(
+                      static_cast<double>(i) * static_cast<double>(seg_w) /
+                      static_cast<double>(kRulerMinorsPerStep)));
             if (col < 0 || col >= wave_w) continue;
             const bool major = (i == 0);
+            // Record the crossing for the playhead head below, which repaints
+            // these exact columns in the pre-blended value. Recording what the
+            // walk PAINTS is what keeps head and ticks one source of truth; the
+            // head used to re-derive them from the float minor grid, which now
+            // no longer describes where the ticks are.
+            if (head_window > 0) {
+                const int w_idx = col - head_col0;
+                if (w_idx >= 0 && w_idx < head_window)
+                    head_ticks[static_cast<size_t>(w_idx)] = major ? 2 : 1;
+            }
             cairo_set_source_rgb(cr, kRulerTick.r, kRulerTick.g, kRulerTick.b);
             cairo_rectangle(cr, lane.x + col, major ? major_top : minor_top,
                             1, tick_bottom - (major ? major_top : minor_top));
@@ -1634,7 +1715,11 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             if (!major) continue;
             // The label sits just right of its own major tick, so the number and
             // the line it names cannot drift apart.
-            const int64_t label_ms = static_cast<int64_t>(std::llround(t));
+            // The label's TIME is still the exact step time — only tick
+            // PLACEMENT is distributed, and a major is at its own exact time
+            // anyway. Its x rides `col`, which for a major IS the rounded major,
+            // so number and line cannot drift apart.
+            const int64_t label_ms = static_cast<int64_t>(std::llround(step_ms));
             if (label_ms < 0) continue;
             const std::string txt =
                 ruler_label_text(label_ms, step);
@@ -1758,24 +1843,30 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // as a silent lie.
             cairo_set_source_rgb(cr, kPlayheadHeadTick.r, kPlayheadHeadTick.g,
                                  kPlayheadHeadTick.b);
-            const int max_half = static_cast<int>(std::nearbyint(
-                                     kPlayheadHeadHalf[0] * s));
-            for (int dx = -max_half; dx <= max_half; ++dx) {
+            // THE CROSSING READS THE COMB THE WALK PAINTED. It used to re-derive
+            // the tick columns from the float minor grid — "is this column within
+            // half a pixel of a whole multiple of `minor`" — which was a second
+            // derivation that happened to agree while every tick rounded its own
+            // float position. IT WOULD NOT AGREE NOW: the minors are distributed
+            // across their segment's integer width (the rigid-comb note at the
+            // walk), so their columns are no longer a function of time alone.
+            // The walk records each painted tick into head_ticks, and this reads
+            // it back — one source of truth by construction rather than by two
+            // expressions being kept in step.
+            //
+            // The window is centred on the same cursor column this block paints
+            // the head at (head_col0 was derived from it before the walk), so
+            // the two cannot drift.
+            for (int dx = -head_half_max; dx <= head_half_max; ++dx) {
                 const int tc = col + dx;
                 if (tc < 0 || tc >= wave_w) continue;
-                const double t = vp_ms + tc * ms_per_px;
-                const double k = t / minor;
-                const double kr = std::nearbyint(k);
-                // Within half a pixel of a minor line: the same rounding the
-                // tick walk performs, expressed at the column.
-                if (std::fabs(k - kr) * minor > ms_per_px * 0.5) continue;
-                // WHICH tick it is decides where it starts — the walk's own
-                // `major = (i == 0)` test, expressed on the minor index: a
-                // column is a major exactly when its minor index is a whole
-                // multiple of the minors-per-step.
-                const long long ki = static_cast<long long>(kr);
-                const bool major_here =
-                    ((ki % kRulerMinorsPerStep) == 0);
+                const int w_idx = tc - head_col0;
+                if (w_idx < 0 || w_idx >= head_window) continue;
+                const uint8_t kind = head_ticks[static_cast<size_t>(w_idx)];
+                if (kind == 0) continue;
+                // WHICH tick it is decides where it starts, straight off the
+                // walk's own `major = (i == 0)` verdict (2 = major, 1 = minor).
+                const bool major_here = (kind == 2);
                 const int tick_top = major_here ? major_top : minor_top;
                 const int y_lo = std::max(tick_top, head_top);
                 const int y_hi = std::min(tick_bottom, head_bottom);
@@ -2117,7 +2208,8 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 }
 
 // THE OVERLAY RING — the phase-reset overlay's WHOLE visual (architect
-// 2026-07-27): the band's 1px opaque kOverlayOutline border and nothing else,
+// 2026-07-27): the band's 1px opaque border in the phase-reset stem's own
+// purple (2026-08-01) and nothing else,
 // painted AFTER the plate. It is a BOUNDARY LINE, like the playheads and the
 // stems, so an opaque line crossing waveform ink is correct and intended, and
 // with no fill inside it the band now READS as the two edges of a span rather
@@ -2146,8 +2238,15 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     const double w = band.x1 - band.x0;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_source_rgb(cr, kOverlayOutline.r, kOverlayOutline.g,
-                         kOverlayOutline.b);
+    // THE RING IS THE STEM'S PURPLE (architect 2026-08-01): kMarkerFlagFill
+    // #9b59b6, the phase-reset class's own UNSELECTED fill — "they're one unit",
+    // the ring and the stem of the reset it annotates. Hard-coded per the
+    // redesign's colour ruling, superseding the tunable kOverlayOutline, whose
+    // ONE paint site this was; that key is now declared and inert like kCanvas,
+    // kWaveform, kLine and kStripAnchorStem. It reads the same constant the
+    // stems resolve to rather than a copy of its value, so the two cannot drift.
+    cairo_set_source_rgb(cr, kMarkerFlagFill.r, kMarkerFlagFill.g,
+                         kMarkerFlagFill.b);
     // THE FULL AREA, not the content band: the top run lands on row area.y (the
     // top border's first row) and the bottom on row area.y + area.h - 1 (the
     // bottom border's last), with the verticals spanning every row between them.
