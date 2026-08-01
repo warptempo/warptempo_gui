@@ -878,7 +878,33 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (y >= tab_row.y && y < tab_row.y + tab_row.h &&
             x >= tab_row.x && x < tab_row.x + tab_row.w) {
             if (mods.ctrl || mods.alt) return;               // strict no-op
-            if (button == GuiMouseButton::Left) dispatch_redesign_chord(x, y, mods);
+            if (button == GuiMouseButton::Left) {
+                // THE ACTIVE TAB'S PADLOCK IS A SECOND TARGET INSIDE ITS TAB,
+                // and the row's only one — spelled here rather than in the chord
+                // table for the reason Settings is: its action is NOT A CHORD
+                // the table can carry. It is BARE `o`, which toggles
+                // active_view_state(app).read_only and nothing else, so the
+                // padlock is that key's pointer affordance on the tab whose
+                // state it names. Dispatched through on_key like every other
+                // redesign button, so every keyboard gate applies identically
+                // and no second writer of read_only exists.
+                //
+                // The rect is published ONLY for the active tab (contract at
+                // AppState::tab_lock_rect) and zeroed when no lock is drawn, so
+                // this test is exactly "the user clicked a padlock that is
+                // there". Everything else in the row — the inactive tab's whole
+                // box, padlock included — falls to the chord table's Ctrl+Tab.
+                // Shift-exact is refused like every other non-admitting button.
+                const GuiRect& lk = app.tab_lock_rect;
+                if (!mods.shift && lk.w > 0 && lk.h > 0 &&
+                    x >= lk.x && x < lk.x + lk.w &&
+                    y >= lk.y && y < lk.y + lk.h) {
+                    GuiInputState chord{};
+                    on_key(GuiKeys::O, chord);
+                } else {
+                    dispatch_redesign_chord(x, y, mods);
+                }
+            }
             return;
         }
     }
@@ -979,6 +1005,23 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // what makes a spot EMPTY) all read this one hit.
         int mh_index = -1;
         if (inside_top) mh_index = hit_test_flag(app, audio, x, y);
+        // THE STEM IS A SECOND SURFACE OF THE SAME ITEM (architect 2026-08-01):
+        // a press within a few px of an ENABLED marker's stem column, in the
+        // WAVEFORM'S UPPER HALF, resolves to that marker and routes through the
+        // very same click bodies its flag does — select / land / range / toggle
+        // / arm / open, nothing restated. It is resolved HERE, beside the flag
+        // hit, so exactly one `mh_index` reaches every branch below and the two
+        // surfaces cannot answer differently. The full contract (why upper-half
+        // only, why the painter's stash, the tie rule) is at
+        // hit_test_marker_stem, app_state.h.
+        //
+        // `stem_click` is what widens the marker branches' own gate from
+        // "inside_top" to "inside_top OR a stem": the chip-row and empty-lane
+        // arms inside those branches are y-band tests that a waveform press
+        // fails, so they fall through untouched.
+        const bool stem_click =
+            !inside_top && inside_waveform && !alt &&
+            (mh_index = hit_test_marker_stem(app, x, y)) >= 0;
 
         // A top-strip press stops playback WHEN IT CLAIMS SOMETHING, never
         // merely because it landed in the strip (architect 2026-07-27). The
@@ -1095,7 +1138,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // chip row (BEGIN bound set, next block) and is a strict no-op on
             // every other lane — no-op in the playback sense too, since only a
             // CLAIM stops playback.
-            if (inside_top && mh_index >= 0) {
+            if ((inside_top || stem_click) && mh_index >= 0) {
                 // The toggle is an act, so it owns its stop: selecting while a
                 // session plays is the authoring case the top-strip stop
                 // exists for. It runs AHEAD of the toggle and the land, like
@@ -1177,7 +1220,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // re-zoom), and all three land ON THEIR FOCUS (architect 2026-07-28), so
         // the playhead and the focused flag are coincident before any subsequent
         // drag or nudge — nothing is towed.
-        if (inside_top) {
+        if (inside_top || stem_click) {
+            // A STEM CLICK ENTERS HERE TOO (2026-08-01). Its y is in the
+            // waveform, so every band test inside this branch — the chip row
+            // below, the ruler's strip-drag arm, the empty-marker-lane parity
+            // press — simply fails for it, and it lands on the one arm it is
+            // for: `mh_index >= 0`, the marker click. Nothing in those bodies
+            // knows or needs to know which surface resolved the index.
+            //
             // The chip row (top_trim_row_area, lane 4) is trim's lane and is
             // claimed BEFORE the marker single-select. The chip row, the marker
             // trim lane and the marker lane are disjoint y-bands, so
@@ -1208,6 +1258,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // the span-framing double-click lives on the TRIM lane, and giving
             // the ruler one too would make two neighbouring bands answer the
             // same gesture differently.
+            //
+            // THE BAND IS EXACTLY top_ruler_row_area AND NOTHING BELOW IT, and
+            // that survived the head's move into the marker lane unchanged
+            // (2026-08-01) because the claim was never keyed on the head — it
+            // reads the lane accessor and only the lane accessor. So the ruler
+            // lane is now labels + tick-tops + this drag, the marker lane is
+            // head + flags + their routes, and a press in the marker lane can
+            // never arm the strip drag: it falls past this block to the marker
+            // hit and the empty-marker-lane parity press below.
             {
                 const GuiRect ruler = top_ruler_row_area(app);
                 if (!shift && y >= ruler.y && y < ruler.y + ruler.h) {
@@ -1415,10 +1474,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                             .press_x = x, .press_y = y,
                             .target  = hit};
                         // A writable tab arms the pending REPOSITION drag on a
-                        // plain FLAG press IN THE COLUMN'S HOME VIEW only — and
-                        // EVERY marker hit is a flag hit since row 5, so the
-                        // on_flag half of the old two-part test is gone with the
-                        // lane run it distinguished; read-only selects but never arms (marker
+                        // plain marker press IN THE COLUMN'S HOME VIEW only —
+                        // from EITHER surface, the flag box or its stem
+                        // (2026-08-01): the drag tracks the pointer's x from the
+                        // press point, which is the same gesture whichever the
+                        // press started on. The old on_flag half of this test
+                        // went with the marker-text lane's run in row 5;
+                        // read-only selects but never arms (marker
                         // mutation refused). ONE DRAG, ONE GATE since 2026-07-29:
                         // the home-view split that used to arm the TEMPO drag
                         // instead in W view + TARGET view exactly — the pointer

@@ -1335,7 +1335,7 @@ void render_flag_boxes_impl(
             }
             if (out_stems && face.has_stem) {
                 out_stems->push_back(
-                    MarkerStem{static_cast<double>(bx), face.stem});
+                    MarkerStem{i, static_cast<double>(bx), face.stem});
             }
         });
 

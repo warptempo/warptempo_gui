@@ -157,6 +157,17 @@ constexpr IconPath kDialogOkApplyPaths[] = {
      -364.57143, -525.79075},
 };
 
+// THE READ-ONLY TAB'S PADLOCK, from track-head/lock.svg — one path, currentColor
+// (the scheme's #fcfcfc, which is kIconText). Transcribed verbatim like every
+// other entry; the file is committed beside it under assets/icons/breeze.
+constexpr IconPath kLockPaths[] = {
+    {kIconText,
+     "M 11,3 C 8.784,3 7,4.784 7,7 l 0,4 -2,0 c 0,2.666667 0,5.333333 0,8 4,0 "
+     "8,0 12,0 l 0,-8 c -0.666667,0 -1.333333,0 -2,0 L 15,7 C 15,4.784 13.216,3 "
+     "11,3 m 0,1 c 1.662,0 3,1.561 3,3.5 L 14,11 8,11 8,7.5 C 8,5.561 9.338,4 "
+     "11,4"},
+};
+
 constexpr IconDef kDocumentSave       {22.0, kDocumentSavePaths,        1};
 constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
@@ -168,6 +179,7 @@ constexpr IconDef kMediaPlaylistRepeat{22.0, kMediaPlaylistRepeatPaths, 1};
 constexpr IconDef kMediaSeekForward    {22.0, kMediaSeekForwardPaths,    1};
 constexpr IconDef kPreviewRenderOn    {22.0, kPreviewRenderOnPaths,     2};
 constexpr IconDef kDialogOkApply      {22.0, kDialogOkApplyPaths,       1};
+constexpr IconDef kLock               {22.0, kLockPaths,                1};
 
 const IconDef& icon_def(Icon icon) {
     switch (icon) {
@@ -181,6 +193,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::MediaPlaylistRepeat: return kMediaPlaylistRepeat;
         case Icon::MediaSeekForward:    return kMediaSeekForward;
         case Icon::PreviewRenderOn:     return kPreviewRenderOn;
+        case Icon::Lock:                return kLock;
         case Icon::DialogOkApply:       break;
     }
     return kDialogOkApply;

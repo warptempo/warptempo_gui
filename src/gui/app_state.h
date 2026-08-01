@@ -1515,6 +1515,20 @@ struct AppState {
     };
     std::array<RedesignButtonFace, kRedesignButtonCount> redesign_buttons{};
 
+    // THE ACTIVE TAB'S PADLOCK, in its close-icon slot — published by
+    // paint_tab_row and read by the press claim. A ZERO RECT whenever the active
+    // tab is writable, which is also when nothing is drawn there, so "visible"
+    // and "clickable" are one fact.
+    //
+    // ONLY THE ACTIVE TAB'S IS PUBLISHED, deliberately. Both tabs SHOW a lock
+    // when they are read-only — a read-only B is worth seeing from A — but only
+    // the active one's is a target, because the act it performs (bare `o`) is
+    // defined on the ACTIVE tab: `o` toggles active_view_state(app).read_only
+    // and nothing else. Clicking the INACTIVE tab stays Ctrl+Tab whole,
+    // padlock included; switch first, then unlock, which is also the order the
+    // keyboard makes you take.
+    GuiRect tab_lock_rect{0, 0, 0, 0};
+
     // THE MARKER PAINTER'S STASH — the second surface on the painter-publishes
     // contract the roster above established, and for a harder reason than the
     // roster had. A row-5 marker flag's WIDTH is derived from its shaped label,
@@ -2374,6 +2388,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // exception, scoped to exactly these two buttons.
         case RedesignButton::Render:     return {"Render (Ctrl+Alt+R)",
                                                  "Press Shift for miscellaneous render."};
+        // THE PADLOCK GETS NO TOOLTIP OF ITS OWN, and the tab's does not
+        // mention it (planner's call, 2026-08-01). Two reasons, both about
+        // keeping this table's shape: a lock icon in a tab's close slot is
+        // self-evident, and a tooltip whose TEXT moved with state would be the
+        // only stateful string here — every other row is a constant naming a
+        // constant chord. The lock's key is `o`, which HELP carries.
         case RedesignButton::TabA:       return {"Tab A (Ctrl+Tab)", nullptr};
         case RedesignButton::TabB:       return {"Tab B (Ctrl+Tab)", nullptr};
         case RedesignButton::IconS:      return {"Source view (T)", nullptr};
@@ -2454,6 +2474,41 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // that is the column the painter drew.
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
+
+// THE MARKER STEM AS A POINTER TARGET (architect 2026-08-01, at the row-5 live
+// test): a press within kMarkerStemGrabPx of an ENABLED marker's stem column,
+// IN THE WAVEFORM'S UPPER HALF, is that marker's click. Returns the marker index
+// or -1.
+//
+// UPPER HALF ONLY, and that is a structural fit rather than a compromise: the
+// plain waveform press already splits by half — upper is playhead placement +
+// the region-drag arm, lower is the one-shot scrub — so this claim slots into a
+// seam that already exists. A full-height band would need a carve-out inside the
+// scrub branch and would make it impossible to scrub at a marker's column, which
+// is exactly where a user scrubs most.
+//
+// IT READS THE PAINTER'S STASH (AppState::marker_stems), so the grabbable stem
+// is the DRAWN stem by construction — same column, same displayed basis — and a
+// DISABLED marker, which publishes no stem entry at all, is not grabbable for
+// the same reason it is not visible. One fact, not two.
+//
+// NEAREST WINS, TIES TO LATER-IN-STORE. The stash is in paint order, so a tie
+// resolving to the later entry is the same "topmost = last painted" rule
+// hit_test_flag uses on the boxes — two overlapping stems answer the way the two
+// overlapping flags above them do.
+int hit_test_marker_stem(const AppState& app, int mouse_x, int mouse_y);
+
+// The stem's grab half-width in AUTHORED pixels, per side. A 1px line is under
+// any pointing tolerance, so the drawn stem and the grabbable stem are
+// deliberately NOT the same column — the same deliberate difference the trim
+// endcaps record (kTrimEndcapGrabPx), and stated here for the same reason:
+// everywhere else in the redesign paint and hit are identical by construction.
+inline constexpr int kMarkerStemGrabPx = 4;
+inline int marker_stem_grab_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kMarkerStemGrabPx) * gui_scale_factor()));
+    return v < 0 ? 0 : v;
+}
 
 // Which trim boundary, if any, a waveform-area click lands on.
 enum class TrimHit { None, Begin, End };

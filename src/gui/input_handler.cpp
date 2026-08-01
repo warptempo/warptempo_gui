@@ -430,6 +430,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         ViewState& vs = active_view_state(app);
         vs.read_only = !vs.read_only;
         viewport.invalidate_timestamp_area();
+        // AND THE TOP STRIP (2026-08-01): the active tab now WEARS its lock — a
+        // padlock in the tab's close-icon slot, drawn iff that tab is read-only
+        // — so this toggle changes pixels in row 3 as well as the bottom strip's
+        // "(read-only)" token. The tick comparator cannot cover it: it stashes
+        // the roster's own face bits (rect/hovered/enabled/selected) and
+        // read_only is none of them. One damage at the one writer is the
+        // cheaper and more honest answer than a fifth stashed bit.
+        // (The row 2 buttons' ENABLED faces also move with this flag, and those
+        // the comparator does catch — this damage merely arrives first.)
+        viewport.invalidate_top_strip();
         return;
     }
 

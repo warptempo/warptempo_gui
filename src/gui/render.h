@@ -956,21 +956,19 @@ inline double redesign_font_size_px() {
 // symmetric and has no tip, so centering it would put the frame under the
 // middle of a word.
 //
-// THE WIDTH IS DERIVED, NEVER FIXED: pad_left + shaped(truncated label) +
-// pad_right — and the two pads are NOT equal, which is a measurement, not a
-// taste. The crop's label is "Marker"; shaping it offscreen through the same
-// chokepoint at the same size (Liberation Sans 16px, the redesign's face) gives
-// an advance of 49.797px with the first glyph's left side bearing at exactly
-// 1.00 and its ink 49.00 wide. Against the 55px box that pins both edges:
-//   * LEFT = 2. The crop's ink core starts at box column 3, and 2 + 1.00 = 3,
-//     so the run's ORIGIN stands on column 2 exactly.
-//   * RIGHT = 3. The run ends at 2 + 49.797 = 51.8 and the box's last column is
-//     54, leaving 3 columns of bare fill. 2 + round(49.797) + 3 = 55, the crop's
-//     width to the pixel; a symmetric 2 would give 54 and a symmetric 3 would
-//     give 56, so neither reproduces it.
-// The asymmetry is kdenlive's, not ours, and it is kept because the alternative
-// is being a pixel wrong in one direction or the other on every flag.
-inline constexpr int kMarkerFlagPadRightPx = 3;
+// THE WIDTH IS DERIVED, NEVER FIXED: pad + shaped(truncated label) + pad, and
+// THE TWO PADS ARE EQUAL (architect 2026-08-01, at the row-5 live test).
+//
+// THE CROP SAYS 2 AND 3, AND THE ARCHITECT OVERRODE IT. Shaping the crop's
+// "Marker" offscreen through the same chokepoint at the same size (Liberation
+// Sans 16px) gives an advance of 49.797px with the first glyph's left side
+// bearing at exactly 1.00; against the 55px box that pins the left pad at 2
+// (2 + 1.00 = column 3, where the crop's ink core starts) and leaves 3 on the
+// right. Reproduced faithfully, that extra right pixel READS as slack rather
+// than as padding — so the box goes symmetric at 2 and comes out 54 wide where
+// kdenlive's is 55. A measured pixel deliberately given up, recorded here so
+// the next reader does not "fix" it back.
+inline constexpr int kMarkerFlagPadRightPx = 2;
 inline constexpr int kMarkerFlagPadLeftPx  = 2;
 inline int marker_flag_pad_left_px() {
     const int v = static_cast<int>(std::nearbyint(
@@ -1858,8 +1856,13 @@ struct FlagLaneRects {
 // is the only consumer, so a stem and its flag can never disagree about a column.
 // A DISABLED marker publishes NO ENTRY AT ALL — disabled markers have no stem
 // ever (architect), and expressing that as an absent entry rather than a flag
-// on the entry means the consumer has nothing to re-decide.
+// on the entry means the consumer has nothing to re-decide. That absence is
+// LOAD-BEARING TWICE since 2026-08-01: the stem is a POINTER TARGET now
+// (hit_test_marker_stem, app_state.h), so "no stem" and "not grabbable" are the
+// same fact rather than two that could drift, and `marker_index` is what lets
+// the hit route into the marker-click bodies.
 struct MarkerStem {
+    int      marker_index;
     double   x;
     GuiColor color;
 };
