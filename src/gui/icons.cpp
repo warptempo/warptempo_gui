@@ -124,16 +124,27 @@ constexpr IconPath kMusicNote16thPaths[] = {
      "17.328427 7,16.5 7,15.671573 7.8954305,15 9,15 Z"},
 };
 
-constexpr IconPath kMediaPlaylistRepeatPaths[] = {
+// ITERATION MODE's icon since 2026-08-01 (architect-picked, replacing
+// media-playlist-repeat): black_sum, the summation sigma — an iteration sweep is
+// a SUM over cells, which the repeat arrows never said.
+constexpr IconPath kBlackSumPaths[] = {
     {kIconText,
-     "m16 5v2h-10c-1.662 0-3 1.338-3 3v1h1v-1c0-1.108 0.892-2 2-2h10v2l3-2.5zm2 "
-     "6v1c0 1.108-0.892 2-2 2h-10v-2l-3 2.5 3 2.5v-2h10c1.662 0 3-1.338 "
-     "3-3v-1z"},
+     "M 3 3 L 7 11 L 3 19 L 3.5 19 L 4 19 L 4.0625 19 L 4.5 19 L 19 19 L 19 16 "
+     "L 19 15 L 18 15 L 18 18 L 14 18 L 13 18 L 12 18 L 5.65625 18 L 4.9375 18 "
+     "L 8.25 11 L 4.8125 4 L 5.71875 4 L 12 4 L 16 4 L 18 4 L 18 6 L 18 7 L 19 "
+     "7 L 19 6 L 19 3 L 4.5 3 L 4.0625 3 L 4 3 L 3.5 3 L 3 3 z "},
 };
 
-constexpr IconPath kMediaSeekForwardPaths[] = {
+// FOLLOW MODE's icon since 2026-08-01 (architect-picked, replacing
+// media-seek-forward): go-jump, the chevron with its destination dot — the
+// playhead chase reads as GOING somewhere, not as fast-forwarding a transport.
+constexpr IconPath kGoJumpPaths[] = {
     {kIconText,
-     "m1 3v16l10-8zm10 8v8l10-8-10-8z"},
+     "M 5.7070312 3 L 5 3.7070312 L 11.125 9.8320312 L 12.292969 11 L 11.125 "
+     "12.167969 L 5 18.292969 L 5.7070312 19 L 11.832031 12.875 L 13.707031 11 "
+     "L 11.832031 9.125 L 5.7070312 3 z M 16 10 C 15.446 10 15 10.446 15 11 C "
+     "15 11.554 15.446 12 16 12 C 16.554 12 17 11.554 17 11 C 17 10.446 16.554 "
+     "10 16 10 z "},
 };
 
 constexpr IconPath kPreviewRenderOnPaths[] = {
@@ -206,8 +217,8 @@ constexpr IconDef kMediaRecord        {22.0, kMediaRecordPaths,         1};
 constexpr IconDef kEditCopy           {22.0, kEditCopyPaths,            1};
 constexpr IconDef kEditPaste          {22.0, kEditPastePaths,           1};
 constexpr IconDef kMusicNote16th      {22.0, kMusicNote16thPaths,       1};
-constexpr IconDef kMediaPlaylistRepeat{22.0, kMediaPlaylistRepeatPaths, 1};
-constexpr IconDef kMediaSeekForward    {22.0, kMediaSeekForwardPaths,    1};
+constexpr IconDef kBlackSum           {22.0, kBlackSumPaths,            1};
+constexpr IconDef kGoJump             {22.0, kGoJumpPaths,              1};
 constexpr IconDef kPreviewRenderOn    {22.0, kPreviewRenderOnPaths,     2};
 constexpr IconDef kDialogOkApply      {22.0, kDialogOkApplyPaths,       1};
 constexpr IconDef kLock               {22.0, kLockPaths,                1};
@@ -224,8 +235,8 @@ const IconDef& icon_def(Icon icon) {
         case Icon::EditCopy:            return kEditCopy;
         case Icon::EditPaste:           return kEditPaste;
         case Icon::MusicNote16th:       return kMusicNote16th;
-        case Icon::MediaPlaylistRepeat: return kMediaPlaylistRepeat;
-        case Icon::MediaSeekForward:    return kMediaSeekForward;
+        case Icon::BlackSum:            return kBlackSum;
+        case Icon::GoJump:              return kGoJump;
         case Icon::PreviewRenderOn:     return kPreviewRenderOn;
         case Icon::Lock:                return kLock;
         case Icon::Unlock:              return kUnlock;

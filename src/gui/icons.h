@@ -38,8 +38,8 @@ enum class Icon {
     EditCopy,            // Copy phase resets
     EditPaste,           // Paste phase resets
     MusicNote16th,       // BPM editor
-    MediaPlaylistRepeat, // Iteration mode
-    MediaSeekForward,    // Follow mode
+    BlackSum,            // Iteration mode
+    GoJump,              // Follow mode
     PreviewRenderOn,     // Listen to a render
     DialogOkApply,       // Commit a render as the baseline
     // Row 3, the tab row. BOTH states of the lock slot, which is always drawn:

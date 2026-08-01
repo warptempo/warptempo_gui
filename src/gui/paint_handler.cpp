@@ -291,6 +291,22 @@ constexpr double kTabCornerRadiusPx  = 5.0;
 // side-border ruling is untouched — selection is still a face and not a size,
 // because the slot is there in EVERY state on BOTH tabs, so nothing a tab does
 // can shove its neighbour sideways.
+//
+// CONFIRMED AGAINST row_3_tab_pcmanfm-qt_close_hover.png (2026-08-01), the same
+// 80x30 tab with its close button HOVERED — which is the crop that finally shows
+// the slot's own box instead of only its ink. The hover face spans x 56..71 and
+// y 7..22: a 16x16 box, vertically centred in the 30px row ((30-16)/2 = 7,
+// exactly what this painter computes), with its right edge 8px inside the tab's
+// right edge (72..79). Both authored numbers reproduce it bit-for-bit, and the
+// plain crop's 10px ink (59..68) centres in that box at 63.5 — so the box, the
+// margin and the ink placement are all measured facts now rather than one
+// measurement and two inferences. Nothing changed.
+//
+// THE REFERENCE HAS A HOVER FACE AND WE DELIBERATELY DO NOT: that 16x16 box is
+// filled #7d343d — a destructive-action red — under the hovered close glyph. It
+// is recorded because it is what the reference does, not because it is wanted:
+// our slot's act is a lock TOGGLE, not a destructive close, and no hover face
+// has been asked for. If one is ever wanted, this crop is its measurement.
 constexpr double kTabLockBoxPx     = 16.0;
 constexpr double kTabLockMarginPx  = 8.0;   // box's right edge to the tab's
 constexpr double kTabLockSlotPx    = kTabLockBoxPx + kTabLockMarginPx;
@@ -389,11 +405,12 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::IconCopy,   IconRowLead::Separator, nullptr, icons::Icon::EditCopy},
     {RedesignButton::IconPaste,  IconRowLead::Gap,       nullptr, icons::Icon::EditPaste},
     {RedesignButton::IconBpm,    IconRowLead::Gap,       nullptr, icons::Icon::MusicNote16th},
-    {RedesignButton::IconIter,   IconRowLead::Gap,       nullptr, icons::Icon::MediaPlaylistRepeat},
-    // Follow's provisional "F" letter gave way to the arrow the architect chose
-    // (2026-07-31): media-seek-forward, the double-triangle that reads as
-    // "chase what is playing".
-    {RedesignButton::IconFollow, IconRowLead::Gap,   nullptr, icons::Icon::MediaSeekForward},
+    {RedesignButton::IconIter,   IconRowLead::Gap,       nullptr, icons::Icon::BlackSum},
+    // Follow's icon walked twice: the provisional "F" letter, then
+    // media-seek-forward (2026-07-31), then go-jump (2026-08-01) — the architect
+    // settling on the chevron-and-dot, which reads as GOING to a place rather
+    // than as a transport control.
+    {RedesignButton::IconFollow, IconRowLead::Gap,   nullptr, icons::Icon::GoJump},
     {RedesignButton::IconListen, IconRowLead::Separator, nullptr, icons::Icon::PreviewRenderOn},
     {RedesignButton::IconCommit, IconRowLead::Gap,       nullptr, icons::Icon::DialogOkApply},
 };
@@ -2098,8 +2115,8 @@ void GuiPaintHandler::paint_region_ground(cairo_t* cr, const GuiRect& area) {
     const GuiRect content = waveform_content_rect(area);
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_source_rgb(cr, kRegionCanvas.r, kRegionCanvas.g,
-                         kRegionCanvas.b);
+    cairo_set_source_rgb(cr, kWaveformRegionCanvas.r, kWaveformRegionCanvas.g,
+                         kWaveformRegionCanvas.b);
     cairo_rectangle(cr, x0, static_cast<double>(content.y),
                     x1 - x0, static_cast<double>(content.h));
     cairo_fill(cr);

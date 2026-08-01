@@ -351,6 +351,11 @@ inline GuiColor kAccentOutline    = hex(0xDA4453);
 // live-1px-mark breeze-icons grey that kPlayheadCursor and kSelectedStem also
 // default to (provenance at kPlayheadCursor), a line colour rather than the
 // outline sibling of any fill.
+// kRegionCanvas IS NOW INERT (2026-08-01): the region highlight paints
+// kWaveformRegionCanvas, re-derived on the row-6 canvas by the same lift that
+// produced this value on the old one, and this key's one paint site went with
+// it. Declared and unread, like kCanvas, kWaveform, kLine, kStripAnchorStem and
+// kOverlayOutline.
 inline GuiColor kRegionCanvas     = hex(0x42474D);
 inline GuiColor kOverlayOutline   = hex(0x7F8C8D);
 
@@ -600,6 +605,33 @@ inline constexpr double kMarkerDisabledMix = 0.25;
 inline constexpr GuiColor kWaveformCanvas = hex(0x12312B);  // (18, 49, 43)
 inline constexpr GuiColor kWaveformInk    = hex(0x1C816B);  // (28, 129, 107)
 
+// THE REGION HIGHLIGHT, RE-DERIVED ON THE NEW GROUND (architect 2026-08-01: the
+// old value read GREY on the green canvas — "start over, don't just tune it;
+// leave it more greenish").
+//
+// DERIVED, NOT SAMPLED — and deliberately so: there is no kdenlive reference for
+// it, because kdenlive has no comparable highlight. What is transplanted is the
+// RELATIONSHIP, not the colour. The old kRegionCanvas #42474d was the old grey
+// canvas #393e43 plus Breeze's own View -> ViewAlternate lift, +9/+9/+10 per
+// channel; applying that same lift to the crop's canvas
+//     kWaveformCanvas (18, 49, 43) + (9, 9, 10) = (27, 58, 53) = #1b3a35
+// keeps the theme's-native-lift logic and lands same-hue and subtly lifted on
+// the green, which is what the grey pair was on the grey.
+//
+// THE ARCHITECT'S TUNING KNOB, explicitly: the lift is a derivation and not a
+// measurement, so this constant is the one to move if the highlight wants to be
+// stronger or weaker. Nothing else in the region path has a value to tune.
+//
+// IT IS AN OPAQUE GROUND RECOLOR, NOT A BLEND — the same mechanism it always
+// was (paint_region_ground, painted BEFORE the plate blit): the span's canvas
+// is REPLACED by this colour and the ink then composites over it exactly as it
+// composites over the plain canvas. Since the aliasing deletion the plate's
+// alpha is BINARY, so an ink pixel is fully opaque and a gap is fully
+// transparent: the highlight shows through the gaps and the ink is bit-identical
+// either way. "The ink looks unaffected" is now structurally true rather than a
+// near-miss, which is why nothing in the ink path is touched here.
+inline constexpr GuiColor kWaveformRegionCanvas = hex(0x1B3A35);  // (27, 58, 53)
+
 // THE AREA'S BORDER: 2px of pure black at the top and the bottom, full window
 // width. Both rows of row_6_waveform_border.png are (0,0,0), and the full crop's
 // rows 0-1 are black across all 741 columns with the canvas starting at row 2.
@@ -644,6 +676,23 @@ inline constexpr int      kWaveformBorderPx = 2;
 // technique it selected between is recorded in
 // docs/engineering/waveform_antialiasing_retired.md, and the deletion inventory
 // is at render_waveform's own header.
+
+// -- ROW 7: THE BOTTOM ROW (the status line) --------------------------------
+//
+// Measured off row_7_text.png (407x33): a 1px #4c4e51 TOP border, 31 rows of
+// #202326 ground, and a 1px #17181a BOTTOM border which is the window's LAST
+// row. Two DIFFERENT line greys on the two edges — that is what the crop says,
+// verified column by column (every one of the 407 columns carries both values),
+// so the row does not get one border color applied twice.
+//
+// THE GROUND AND THE TOP LINE ARE THE ROW-3/4 CONSTANTS REUSED, on the judgment
+// those rows already set: #202326 is kRedesignTabGround (the tab row's ground,
+// the selected tab's interior, the icon row's ground — one Breeze Window fact
+// seen again, not a fifth sample of the same number), and #4c4e51 is
+// kRedesignTabLine (row 3's frame grey, row 4's separators and border). Only the
+// BOTTOM edge is new, and it is new because no surface in the tree has ever
+// carried it: a near-black seam under the whole window.
+inline constexpr GuiColor kRedesignBottomLine = hex(0x17181A);
 
 // -- The TOOLTIP CHROME (the dropdown has its own, below) -------------------
 //
@@ -698,13 +747,22 @@ inline constexpr double kRedesignHoverLightenMix = 0.15;
 
 // -- GUI font size ---------------------------------------------------------
 //
-// The single GUI-wide monospace text size is the font_size setting, a plain
-// number of points at the conventional 96 DPI. The current value lives as
-// file-scope state in render.cpp beside the monospace grid metrics; the
-// file-load and settings-editor application points push it through
-// set_gui_font_size_pt. Everything in the two strips scales proportionally
-// via gui_font_scale() = font_size / kDefaultFontSizePt, so at the default
-// (11) every derived quantity equals its former fixed constant exactly.
+// The font_size setting is a plain number of points at the conventional 96 DPI.
+// The current value lives as file-scope state in render.cpp beside the monospace
+// grid metrics; the file-load and settings-editor application points push it
+// through set_gui_font_size_pt. It was the single GUI-wide monospace text size,
+// and everything in the two strips scaled proportionally via gui_font_scale() =
+// font_size / kDefaultFontSizePt.
+//
+// ROW 7 TOOK ITS LAST PAINTED CONSUMER (2026-08-01), and that is stated here
+// rather than acted on. Every surface has now moved to the redesign's own axis:
+// the top strip's lanes went with rows 1-5, and the bottom strip — the monospace
+// holdout, and the last font-scaled lane pair in the tree — went with row 7,
+// text size (bottom_row_font_size_px) and box padding alike. What is LEFT of
+// this axis is flag_lane_w_px / flag_lane_h_px, themselves callerless residue.
+// So the setting still LOADS, still round-trips through every sidecar, and
+// changes no pixel. RETIRING THE KEY IS THE ARCHITECT'S CALL, not a coder's:
+// nothing here is deleted, and the schema is untouched.
 inline constexpr double kDefaultFontSizePt = 11.0;
 
 // Set the current GUI font size (points). The setter only records the
@@ -714,6 +772,7 @@ inline constexpr double kDefaultFontSizePt = 11.0;
 void set_gui_font_size_pt(double pt);
 
 // Proportional scale factor s = font_size / 11. Exactly 1.0 at the default.
+// (No painted surface reads it any more — see the block above.)
 double gui_font_scale();
 
 // -- GUI scale (the redesign's own axis) -----------------------------------
@@ -725,30 +784,31 @@ double gui_font_scale();
 // application points that push the font size (file load, the settings editor's
 // `gui_scale=` commit, the `'` adopt).
 //
-// WHICH AXIS A SURFACE RIDES IS A DESIGN FACT, not a preference: the
-// MONOSPACE-TEXT surfaces (every pre-redesign strip lane) size from the font
-// band and keep riding gui_font_scale(); the REDESIGNED rows size from sampled
-// screenshot pixels and ride this one. The two are independent knobs by intent —
-// a user who wants bigger monospace text is not asking for a taller menu bar.
+// WHICH AXIS A SURFACE RIDES WAS A DESIGN FACT while both axes had surfaces:
+// the MONOSPACE-TEXT lanes sized from the font band on gui_font_scale() and the
+// REDESIGNED rows from sampled screenshot pixels on this one. Row 7 moved the
+// last of them (the bottom strip), so THIS AXIS NOW CARRIES EVERY PAINTED
+// DIMENSION IN THE TREE — including the monospace grid itself, whose text size
+// and box pads are authored constants here like any other redesigned metric.
 void   set_gui_scale_percent(int percent);
 
 // Scale factor s = gui_scale / 100. Exactly 1.0 at the default (and never below
 // it: the setting's grammar floors at 100).
 double gui_scale_factor();
 
-// Text pixel size handed to cairo: font_size * 96 / 72, carried as an exact
-// double (points -> pixels at the conventional 96 DPI; warptempo_gui does
-// not support HiDPI). Text is the only thing that renders at fractional
-// sizes — every other scaled quantity below rounds to an integer. At the
-// default this is 11.0 * 96.0 / 72.0, the former kFlagFontSize constant.
-double flag_font_size_px();
+// (The former flag_font_size_px() — font_size * 96/72 — is gone with row 7. The
+// one monospace size left in the tree is bottom_row_font_size_px(), declared
+// with the bottom row's geometry below, and it rides gui_scale.)
 
 // Flag chip internal BASE padding around the text glyph bounding box, split
 // per axis so the two can be tuned independently. These plus kTextBoxPadPx
 // (the uniform four-side text-box gap below) are the whole padding story —
 // every chip renderer and the hit-rect computation must read the accessors,
 // never a literal. Each is the authored value (1 / -1) scaled by
-// gui_font_scale() and rounded with std::nearbyint so it stays an integer:
+// gui_scale_factor() — the row-7 axis move: these pad the ONE text box left in
+// the tree, the bottom-strip editors', and a box's padding rides the same axis
+// as the glyphs inside it and the row around it — and rounded with
+// std::nearbyint so it stays an integer:
 // the aliased plus-point-five sharp-edge convention for 1 px strokes and
 // integer-edged rects keeps holding at every size. At scale 1 each equals
 // its authored value by identity (nearbyint(1*1) == 1, nearbyint(-1*1) == -1).
@@ -767,11 +827,11 @@ double flag_font_size_px();
 // nearbyint(font_height - 2) + 2*kChipOutlinePx = font_height at scale 1, the ring
 // landing ON the band's outermost row (top and bottom) — empty leading, not
 // glyph ink. Every text BOX adds text_box_pad_px() per side on top of it
-// (monospace_text_box_h), which lifts the ring clear of the band, and the LANE
-// hosting that box adds text_box_margin_px() per side outside the ring
-// (monospace_text_row_h).
-inline double flag_pad_x_px() { return std::nearbyint(1.0 * gui_font_scale()); }
-inline double flag_pad_y_px() { return std::nearbyint(-1.0 * gui_font_scale()); }
+// (monospace_text_box_h), which lifts the ring clear of the band, and the box
+// carries text_box_margin_px() per side outside the ring (the term the box's
+// own top-to-baseline offset, monospace_text_row_baseline_offset, still spends).
+inline double flag_pad_x_px() { return std::nearbyint(1.0 * gui_scale_factor()); }
+inline double flag_pad_y_px() { return std::nearbyint(-1.0 * gui_scale_factor()); }
 
 // The solid outline ring outside the chip padding: part of the chip rect and
 // the row metric (a chip is outline + pad + glyph ink). The single width knob;
@@ -795,24 +855,28 @@ inline constexpr int kChipOutlinePx = 1;
 inline constexpr int kTextBoxPadPx = 1;
 inline double text_box_pad_px() {
     return std::nearbyint(
-        static_cast<double>(kTextBoxPadPx) * gui_font_scale());
+        static_cast<double>(kTextBoxPadPx) * gui_scale_factor());
 }
 
 // The empty gap a text box carries OUTSIDE its ring, VERTICAL ONLY: two
-// authored pixels of bare lane above the box and two below. The distinction
+// authored pixels of bare row above the box and two below. The distinction
 // from kTextBoxPadPx is exactly css's — PADDING is inside the border (glyph
-// band to ring), MARGIN is outside it (ring to lane edge) — and this is the one
-// term that makes a text LANE taller than the text BOX it hosts:
-// monospace_text_row_h() (the lane) is monospace_text_box_h() (the box) plus one
-// margin per side, flag_chip_rect insets the box top by one margin from the lane
-// top, and the lane-top-relative baseline offset carries the same term so the
-// glyphs travel with the box. Horizontal geometry is untouched — a box's left
-// and right edges still sit exactly where its caller places them. Scaled and
-// rounded like the pads above so it stays an integer at every font size.
+// band to ring), MARGIN is outside it (ring to the band the box floats in) — and
+// this is the one term that separates the box from that band:
+// monospace_text_row_baseline_offset() spends one margin above the box, and
+// flag_chip_rect adds it back to recover the box top from the baseline, so the
+// box floats one margin inside the band its caller solved the baseline in.
+// (BEFORE ROW 7 that band was a real LANE — the bottom strip's two font-sized
+// rows, whose height was box + one margin per side. The lane is gone; the term
+// survives as the box's own breathing room, and both formulas still spend it in
+// the same direction, so nothing about the box moved.) Horizontal geometry is
+// untouched — a box's left and right edges still sit exactly where its caller
+// places them. Scaled and rounded like the pads above so it stays an integer at
+// every scale.
 inline constexpr int kTextBoxMarginPx = 2;
 inline double text_box_margin_px() {
     return std::nearbyint(
-        static_cast<double>(kTextBoxMarginPx) * gui_font_scale());
+        static_cast<double>(kTextBoxMarginPx) * gui_scale_factor());
 }
 
 // The glyph-run inset from a chip's left edge: the outline ring plus the left
@@ -1015,6 +1079,40 @@ inline int marker_lane_h_px() {
     return h < 5 ? 5 : h;
 }
 
+// Authored pixel geometry of THE BOTTOM ROW — the bottom strip's ONE lane
+// (row 7 of the redesign: the status line). Measured off row_7_text.png
+// (407x33). The bottom strip COLLAPSED FROM TWO LANES TO ONE here (architect
+// 2026-08-01): the status row and the modal/editor row became a single line, so
+// this accessor is the whole bottom strip's height.
+//
+// THE CSS BOX MODEL, WITH A BORDER ON BOTH EDGES: 31 is CONTENT, and the two 1px
+// borders sit OUTSIDE it — the TOP one under the waveform area, the BOTTOM one
+// on the window's last row — so the LANE is their sum (33 at 100%). Every other
+// redesigned row has a border on one edge only; this one is the window's foot
+// and closes on both. bottom_row_content_h_px() is the ground the text sits on;
+// bottom_row_h_px() is the lane the strip stack allocates.
+//
+// IT RIDES gui_scale_factor() LIKE EVERY REDESIGNED ROW, and that is the change
+// this row makes to the strip stack: the bottom lanes were the LAST font-scaled
+// lanes in the tree (they sized from monospace_text_row_h, i.e. from the
+// measured font band), and with them gone no lane anywhere sizes on
+// gui_font_scale().
+inline constexpr int kBottomRowHeightPx = 31;
+inline constexpr int kBottomRowBorderPx = 1;     // top AND bottom, equal
+inline int bottom_row_border_h_px() {
+    const int h = static_cast<int>(std::nearbyint(
+        static_cast<double>(kBottomRowBorderPx) * gui_scale_factor()));
+    return h < 1 ? 1 : h;
+}
+inline int bottom_row_content_h_px() {
+    const int h = static_cast<int>(std::nearbyint(
+        static_cast<double>(kBottomRowHeightPx) * gui_scale_factor()));
+    return h < 5 ? 5 : h;
+}
+inline int bottom_row_h_px() {
+    return bottom_row_content_h_px() + 2 * bottom_row_border_h_px();
+}
+
 // THE REDESIGN'S SHARED TEXT SIZE, in device pixels. Every redesigned row's
 // label is 12pt through the existing points*4/3 convention = 16px at 100%,
 // scaled on gui_scale_factor() — the redesign's own axis, NOT the monospace
@@ -1026,6 +1124,30 @@ inline constexpr double kRedesignFontSizePt = 12.0;   // -> 16.0 px at 100%
 inline double redesign_font_size_px() {
     return kRedesignFontSizePt * 96.0 / 72.0 * gui_scale_factor();
 }
+
+// THE BOTTOM ROW'S TEXT SIZE — the redesign's own size, on the MONOSPACE face.
+//
+// THE FACE IS THE RULED EXCEPTION (architect 2026-08-01): the timestamp stays
+// monospace because it is the one surface whose width must not breathe as the
+// digits change, and the three editors that share the line keep the monospace
+// grid their whole click-to-caret machinery is built on. The SIZE is not an
+// exception — it is measured off row_7_text.png like every other redesigned
+// dimension, and it lands exactly on the redesign's existing 12pt:
+//   * the crop's capital band is rows 10..21 and its baseline row 22, i.e. CAP
+//     HEIGHT 12 and X-HEIGHT 9 (rows 13..21), with no partial rows on either
+//     edge (the source is hinted, so the measurement is exact);
+//   * OUR sans face (fontconfig "sans" -> Liberation Sans) at 16px reports
+//     cap 12 / x-height 9 — the crop's numbers, not near them;
+//   * a full offscreen re-render of the crop's own string at 16px, pen x=13,
+//     baseline 22 fits the crop better than every neighbouring size, baseline
+//     and pen tried (15/15.5/16/16.5/17 x 21/22/23 x 12..14).
+//   * our monospace face (Liberation Mono) at the same 16px carries the same
+//     x-height 9; its capitals are one row shorter, which is that face's own
+//     proportion and not a size difference.
+// So the row's whole text — timestamp, dirty flag, prompts, editors, status —
+// paints at ONE size, gui_scale-scaled like the row that hosts it. THE font_size
+// SETTING NO LONGER REACHES IT (its last painted consumer); see gui_font_scale.
+inline double bottom_row_font_size_px() { return redesign_font_size_px(); }
 
 // THE MARKER FLAG's anatomy, measured off row_5_lane_3_marker_unselected.png
 // (56x20, first column a crop-edge artifact -> a 55x20 box) and confirmed
@@ -2078,50 +2200,48 @@ void render_phase_reset_flags(cairo_t* cr,
 std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
                            int idx, bool iteration_on);
 
-// Per-character pixel advance for the monospace font at flag_font_size_px().
-// Measured via init_monospace_grid_metrics(); returns 0 if not yet
-// measured. Used by click-to-position-cursor in the
-// editor (input_handler.cpp -> flag_editor.cpp).
+// Per-character pixel advance for the monospace font at
+// bottom_row_font_size_px(). Measured via init_monospace_grid_metrics();
+// returns 0 if not yet measured. It is the bottom row's whole horizontal
+// grammar: the timestamp's fixed lead-in, the editors' prefix origins and their
+// click-to-caret arithmetic all count cells with it.
 double monospace_advance();
 
 // THE UNPADDED GLYPH SLOT HAS NO ACCESSOR. Its height — cairo_font_extents
-// (ascent + descent) at flag_font_size_px() plus 2*flag_pad_y_px() plus
+// (ascent + descent) at bottom_row_font_size_px() plus 2*flag_pad_y_px() plus
 // 2*kChipOutlinePx, the outline ring baked in, kRowHFallbackPx until
 // init_monospace_grid_metrics has measured the real font — and its baseline
 // offset (flag_pad_y_px() + kChipOutlinePx + ascent) live as file-scope state in
-// render.cpp, read directly by the box/lane accessors below and by nothing else.
-// NO LANE takes the bare slot and no painter paints against it: every textless
-// lane sizes from its own authored constant (kFlagWidthPx / kFlagHeightPx) and
-// anything carrying MONOSPACE text takes the box/lane pair below, so the slot
-// stays purely the ingredient the box is built from. The redesigned lanes are
-// outside this family entirely — they carry proportional text at an authored
-// design height on the gui_scale axis (menu_row_h_px, toolbar_row_h_px).
+// render.cpp, read directly by the box accessors below and by nothing else.
+// NO LANE takes the bare slot and no painter paints against it: every lane in
+// the tree now sizes from its own authored gui_scale constant, and the slot is
+// purely the ingredient the ONE remaining text box is built from.
 
 // The text BOX height: the unpadded slot plus kTextBoxPadPx per side, so
 // the outline ring clears the glyph band on all four sides (the horizontal half
 // of that gap rides flag_glyph_inset_px / flag_chip_width_px). This is the
 // PAINTED box — the rect flag_chip_rect returns and render_editor_text_box
 // fills and rings.
+//
+// (THE TEXT LANE HEIGHT — box + one kTextBoxMarginPx per side — retired with row
+// 7. Its only readers were the two bottom-strip lanes, and the one bottom lane
+// that replaced them is an authored 31+2 on the gui_scale axis. The margin term
+// itself survives inside the baseline offset below.)
 int monospace_text_box_h();
 
-// The text LANE height: the box above plus kTextBoxMarginPx per side, the empty
-// margin outside the ring. A lane is therefore TALLER than the box it hosts —
-// the two are separate metrics and must not be substituted for each other. Its
-// readers are BOTH BOTTOM-STRIP LANES ONLY now (main.cpp's lane tables) — the
-// marker-text lane was the last top-strip reader and died in row 5.
-int monospace_text_row_h();
-
-// Baseline offset from a text LANE's top edge: the unpadded offset plus one
-// text_box_pad_px() (the box's own top pad) plus one text_box_margin_px() (the
-// lane's margin above the box), so the glyphs sit centered in the box wherever
-// the margin puts it. EVERY text-row painter solves its baseline as
-// lane.y + this, and flag_chip_rect inverts it to recover the lane top.
+// Baseline offset from the top of the band a text box floats in: the unpadded
+// offset plus one text_box_pad_px() (the box's own top pad) plus one
+// text_box_margin_px() (the margin above the box), so the glyphs sit centered in
+// the box wherever the margin puts it. Its ONE reader is flag_chip_rect, which
+// inverts it to recover the box top from a baseline its caller solved some other
+// way — the bottom row solves its baseline by centering the face's own extents
+// in the row (redesign_baseline), exactly as every other redesigned row does.
 double monospace_text_row_baseline_offset();
 
 // Measure and cache the advance width and row metrics. Runs at the top of
 // every redraw; no-ops while the pixel size it last measured equals the
-// current flag_font_size_px(), and re-measures on the first frame after a
-// font_size change. The supplied cairo_t* is used only for measurement;
+// current bottom_row_font_size_px(), and re-measures on the first frame after a
+// gui_scale change. The supplied cairo_t* is used only for measurement;
 // the font state is restored on return.
 void init_monospace_grid_metrics(cairo_t* cr);
 
