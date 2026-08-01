@@ -76,6 +76,14 @@ struct GuiSettingsEditor {
           playback_lifecycle(playback_lifecycle_) {}
 
     void open();
+    // Open the settings prompt PREFILLED with `<key>=<current value>`, the
+    // settings dropdown's item click. Identical to open() plus the same recall
+    // autocomplete_value performs, so the value is byte-identical to what a
+    // Ctrl+S would write and there is no second serializer. The cursor rests at
+    // the end of the line, ready to be edited or replaced; an unknown or
+    // unrecallable key opens with the bare `<key>=` so the surface still tells
+    // the user which key they picked.
+    void open_prefilled(const char* key);
     void exit_no_commit();
     void commit();
     // Tab handler for the prompt: when any settable key is typed with an empty

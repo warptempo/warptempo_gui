@@ -479,6 +479,19 @@ private:
     void paint_toolbar_row(cairo_t* cr);
     void paint_tab_row(cairo_t* cr);
     void paint_icon_row(cairo_t* cr);
+
+    // THE TWO FLOATING SURFACES, painted TOPMOST — after every row pass, so they
+    // overlap the rows they hang over. They cannot coexist: the dropdown opens
+    // on a PRESS and any press hides the tooltip, and while the dropdown is open
+    // no roster button hovers (redesign_button_hoverable), so no tooltip can
+    // arm. Both PUBLISH the rect they painted (AppState::redesign_tooltip.rect,
+    // AppState::settings_popup.rect + item_rects) — the dropdown's for its hit
+    // tests, the tooltip's only so the hide edge can damage it — and both write
+    // a zero rect when not shown, which is the correct empty answer.
+    void paint_shift_tooltip(cairo_t* cr);
+    void paint_settings_popup(cairo_t* cr);
+    // The shared box both draw: #292c30 under a 1px #535659 rounded border.
+    void paint_popup_chrome(cairo_t* cr, const GuiRect& r);
     void paint_marker_text_lane(cairo_t* cr);
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
     // THE GROUND RECOLOR, painted after render_canvas and BEFORE the plate blit

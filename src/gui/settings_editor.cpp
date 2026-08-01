@@ -36,6 +36,25 @@ bool is_key_char(char c) {
 
 } // namespace
 
+void GuiSettingsEditor::open_prefilled(const char* key) {
+    // THE DROPDOWN'S ITEM CLICK, and it is open() plus the recall
+    // autocomplete_value already performs — no parallel opener and no second
+    // serializer. Seed `<key>=`, then let autocomplete_value fill the value
+    // side through format_engine_setting_value / recall_gui_setting_value,
+    // which is byte-identical to what a Ctrl+S writes; it leaves the cursor at
+    // the line end and no-ops on an unrecallable key, so the bare `<key>=` is
+    // the honest fallback rather than an error.
+    if (key == nullptr) return;
+    open();
+    if (!text_editor::is_active(app.settings_editor)) return;
+    app.settings_editor.pending          = std::string(key) + "=";
+    app.settings_editor.cursor_pos       =
+        static_cast<int>(app.settings_editor.pending.size());
+    app.settings_editor.selection_anchor = -1;
+    autocomplete_value();
+    viewport.invalidate_timestamp_area();
+}
+
 void GuiSettingsEditor::open() {
     if (text_editor::is_active(app.settings_editor)) return;
     text_editor::enter(app.settings_editor,

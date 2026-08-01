@@ -535,6 +535,11 @@ void Viewport::invalidate_top_strip() {
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h + 1);
 }
 
+void Viewport::invalidate_rect(const GuiRect& r) {
+    if (r.w <= 0 || r.h <= 0) return;
+    gui.invalidate_region(r.x, r.y, r.w, r.h);
+}
+
 void Viewport::invalidate_all() {
     gui.invalidate_region(0, 0, app.width, app.height);
 }

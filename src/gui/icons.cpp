@@ -130,6 +130,11 @@ constexpr IconPath kMediaPlaylistRepeatPaths[] = {
      "3-3v-1z"},
 };
 
+constexpr IconPath kMediaSeekForwardPaths[] = {
+    {kIconText,
+     "m1 3v16l10-8zm10 8v8l10-8-10-8z"},
+};
+
 constexpr IconPath kPreviewRenderOnPaths[] = {
     {kIconText,
      "M 11 3 C 6.568 3 3 6.568 3 11 C 3 15.432 6.568 19 11 19 C 15.432 19 19 "
@@ -159,6 +164,7 @@ constexpr IconDef kEditCopy           {22.0, kEditCopyPaths,            1};
 constexpr IconDef kEditPaste          {22.0, kEditPastePaths,           1};
 constexpr IconDef kMusicNote16th      {22.0, kMusicNote16thPaths,       1};
 constexpr IconDef kMediaPlaylistRepeat{22.0, kMediaPlaylistRepeatPaths, 1};
+constexpr IconDef kMediaSeekForward    {22.0, kMediaSeekForwardPaths,    1};
 constexpr IconDef kPreviewRenderOn    {22.0, kPreviewRenderOnPaths,     2};
 constexpr IconDef kDialogOkApply      {22.0, kDialogOkApplyPaths,       1};
 
@@ -172,6 +178,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::EditPaste:           return kEditPaste;
         case Icon::MusicNote16th:       return kMusicNote16th;
         case Icon::MediaPlaylistRepeat: return kMediaPlaylistRepeat;
+        case Icon::MediaSeekForward:    return kMediaSeekForward;
         case Icon::PreviewRenderOn:     return kPreviewRenderOn;
         case Icon::DialogOkApply:       break;
     }

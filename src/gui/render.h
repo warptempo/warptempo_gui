@@ -481,6 +481,30 @@ inline constexpr GuiColor kRedesignTabLine      = hex(0x4C4E51);
 // and only the roles moved.
 inline constexpr GuiColor kRedesignSelectedFill = hex(0x3C3F41);
 
+// -- The POPUP CHROME: the shift tooltips and the settings dropdown ---------
+//
+// One chrome for both floating surfaces, measured off hover_shift.png (129x41)
+// and hover_plain.png (112x26), which are byte-identical in every chrome pixel:
+// kRedesignRowGround #292c30 fill under a 1px kRedesignLine #535659 border,
+// with rounded corners. Nothing new is declared for those two — they are the
+// same samples rows 1 and 2 already carry, reused rather than re-spelled,
+// because a popup IS a floating piece of the same chrome.
+//
+// THE POPUP GROUND DOES NOT FOLLOW WINDOW FOCUS, unlike rows 1 and 2: a popup
+// exists only while the window owns the pointer or the keyboard, so the
+// unfocused shade has no state to appear in.
+//
+// THE SECOND TOOLTIP LINE IS DIMMED, and by ONE factor like the disabled face:
+// its full-coverage pixels read #97989a = (151, 152, 154), solving per channel
+// against the (41, 44, 48) ground and the (252, 252, 252) label to
+//   (151-41)/211 = 0.5213,  (152-44)/208 = 0.5192,  (154-48)/204 = 0.5196
+// — 0.52 reproduces #97989a bit-for-bit through the shared mix_color owner.
+// MEASURED AND REJECTED: kdenlive is described as emphasising the word "Shift"
+// in that line, and the crop does NOT — sampling the brightest pixel in every
+// 10px band across the line gives one flat value (0x78..0x97, i.e. AA variation
+// around a single ink), so the line ships uniformly dim.
+inline constexpr double kRedesignDimMix = 0.52;
+
 // -- GUI font size ---------------------------------------------------------
 //
 // The single GUI-wide monospace text size is the font_size setting, a plain
@@ -751,15 +775,15 @@ inline int tab_row_h_px() {
 // Same CSS box model as rows 2 and 3: 48 is CONTENT, the 1px border-bottom sits
 // OUTSIDE it, and the LANE is their sum (49 at 100%).
 //
-// RECORDED SPEC DISCREPANCY (architect 2026-07-31, for him to settle): he gave
-// the row as 48 tall AND the separator margins as 6px, but the separator crop
-// he supplied is 34 tall — and 6 + 34 + 6 = 46, not 48. The ROW HEIGHT WINS (it
-// is the lane every other row's stack has to agree with) and the two-pixel
-// difference is absorbed by his own standing rule that elements are VERTICALLY
-// CENTERED in their row: the 34px separator sits at +7 and the 32px buttons at
-// +8, both centered, and neither carries a stated margin any more. If he meant
-// 46, this constant is the one line to change.
-inline constexpr int kIconRowHeightPx = 48;
+// 46, AND THE ARITHMETIC CLOSES EXACTLY (architect 2026-07-31, settling the
+// discrepancy this constant first recorded): the row was briefed as 48 tall
+// with 6px separator margins while the supplied separator crop is 34 tall, and
+// 6 + 34 + 6 = 46. He confirmed 46 was meant, so the stated margins are now
+// EXACT rather than absorbed — the 34px separator sits at +6 and the 32px
+// buttons at +7, both still placed by the standing vertical-centering rule, and
+// the centering now REPRODUCES the stated margins instead of papering over a
+// two-pixel gap.
+inline constexpr int kIconRowHeightPx = 46;
 inline constexpr int kIconRowBorderPx = 1;
 inline int icon_row_border_h_px() {
     const int h = static_cast<int>(std::nearbyint(
@@ -773,6 +797,20 @@ inline int icon_row_content_h_px() {
 }
 inline int icon_row_h_px() {
     return icon_row_content_h_px() + icon_row_border_h_px();
+}
+
+// THE SHIFT TOOLTIP'S two SHARED numbers — its box height and its hover dwell.
+// They live out here, rather than with the rest of the tooltip's anatomy in
+// paint_handler.cpp, because the RUN LOOP reads both: the tick compares the
+// dwell to decide when to show, and damages a band of this height below the top
+// strip to cover whatever the box overhangs. Everything else about the tooltip
+// (paddings, line step, strings) is the painter's alone.
+inline constexpr int     kTooltipHeightPx = 41;   // the two-line form, 100%
+inline constexpr int64_t kTooltipDelayMs  = 700;  // kdenlive-ish; architect-tunable
+inline int tooltip_h_px() {
+    const int h = static_cast<int>(std::nearbyint(
+        static_cast<double>(kTooltipHeightPx) * gui_scale_factor()));
+    return h < 5 ? 5 : h;
 }
 
 // Height H (px) of the code-generated tip-down triangle, SHARED by the playhead

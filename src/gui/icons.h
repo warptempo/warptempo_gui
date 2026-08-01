@@ -37,6 +37,7 @@ enum class Icon {
     EditPaste,           // Paste phase resets
     MusicNote16th,       // BPM editor
     MediaPlaylistRepeat, // Iteration mode
+    MediaSeekForward,    // Follow mode
     PreviewRenderOn,     // Listen to a render
     DialogOkApply,       // Commit a render as the baseline
 };

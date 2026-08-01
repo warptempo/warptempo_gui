@@ -452,6 +452,22 @@ struct GuiInputHandler {
     void recompute_redesign_button_hover();
     void clear_redesign_button_hover();
 
+    // THE SETTINGS DROPDOWN's two state writers and its hover. toggle_ is the
+    // Settings button's whole action (the roster's one non-chord button);
+    // close_ is what every dismissal route calls — an outside press, a wheel,
+    // bare Esc, Ctrl+Q, an item click, and any full relayout. Both damage the
+    // top strip AND the popup's published rect, because the popup hangs below
+    // the strip. recompute_ resolves the item hover on motion while it is open.
+    void toggle_settings_popup();
+    void close_settings_popup();
+    void recompute_settings_popup_hover();
+
+    // THE SHIFT TOOLTIP's hide, called from the hover recompute (hover ended),
+    // every press and every wheel. Showing is NOT here: the run loop's tick
+    // owns the dwell, comparing AppState::redesign_tooltip.hover_ms against the
+    // delay. Damages the strip and the box's last painted rect.
+    void hide_shift_tooltip();
+
     // THE ONE CHORD-DISPATCH BODY shared by every redesigned band claim (rows 1
     // through 4). Hit-tests the painter-published rects against the chord table
     // and, on a hit, applies that button's shift / enabled / radio rules, arms
@@ -460,6 +476,11 @@ struct GuiInputHandler {
     // claims it, a refusal being a consumed nothing. Row 1's Quit is the one
     // button outside it (a two-call route, not a chord).
     bool dispatch_redesign_chord(int x, int y, GuiInputState mods);
+    // True when the settings dropdown swallowed `key` — the popup-modal gate,
+    // ranked directly under the prompt at the top of on_key. Bare Esc closes,
+    // Ctrl+Q closes and falls through to the close route, everything else is
+    // swallowed inert so no command can run under an open popup.
+    bool settings_popup_key_blocked(GuiKey key, GuiInputState mods);
 
     // THE CLICK FACE, dropped — the third face's only writer besides the
     // press claim. Called from the top of on_button_release (the physical

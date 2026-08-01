@@ -865,6 +865,15 @@ int main(int argc, char** argv) {
         // selection drag is finalized there too (collapsed to a caret,
         // selection-only, nothing to revert).
         input_handler.finalize_active_drags();
+        // ANY FULL RELAYOUT CLOSES THE SETTINGS DROPDOWN, and a resize is the
+        // one relayout edge that can reach it: it moves the menu row and every
+        // published rect with it, so a popup left open would hang from a button
+        // no longer under it. The other relayout-class events cannot happen
+        // while it is open — a file load is startup-only, and a tab switch or a
+        // gui_scale commit both need the keyboard, which the popup gate
+        // swallows. Ordered with finalize_active_drags above and the layout
+        // below, so the resize still lands on a gesture-free, popup-free state.
+        input_handler.close_settings_popup();
         paint_handler.on_resize(w, h);
     });
 
@@ -1117,6 +1126,29 @@ int main(int argc, char** argv) {
         // Placed ABOVE the loading/blank return below on purpose: loading and
         // total<=0 are themselves inputs to the enabled predicate, so the
         // transition INTO and OUT OF a load is exactly a drift this must catch.
+        // THE SHIFT TOOLTIP'S DUE-CHECK — the whole timer, and it is two number
+        // comparisons on a tick that already runs. The hover recompute stamped
+        // hover_ms when a tooltip-bearing button was entered (and zeroed it on
+        // every exit / press / wheel through hide_shift_tooltip), so all that is
+        // left is: is a dwell running, has it come due, and is the tooltip not
+        // already up. One invalidate on the show edge; the HIDE edge is owned by
+        // the input side, which knows the box's painted rect. No timer object,
+        // no callback, no per-frame damage.
+        if (!app.redesign_tooltip.visible && app.redesign_tooltip.hover_ms != 0 &&
+            monotonic_ms() - app.redesign_tooltip.hover_ms >= kTooltipDelayMs) {
+            app.redesign_tooltip.visible = true;
+            invalidate_top_strip();
+            // The box hangs from a button INSIDE the top strip and is at most
+            // tooltip_h_px() tall, so everything it can reach below the strip
+            // lies in this one full-width band — damaged here because the show
+            // edge cannot know the box's own rect yet (the paint that publishes
+            // it is the frame this schedules). The HIDE edge has the published
+            // rect and damages exactly that.
+            const GuiRect ts = top_strip_area(app);
+            viewport.invalidate_rect(
+                GuiRect{0, ts.y + ts.h, app.width, tooltip_h_px()});
+        }
+
         {
             bool drift = false;
             for (int i = 0; i < kRedesignButtonCount && !drift; ++i) {

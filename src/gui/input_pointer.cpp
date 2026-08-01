@@ -48,35 +48,25 @@ namespace {
 // THE PRESS CLAIM'S HALF OF THE BUTTON ROSTER (the roster itself is
 // RedesignButton, app_state.h): the KEYBOARD CHORD each row 2 button fires. The
 // painter's label/icon table (paint_handler.cpp) is the other half; both key off
-// the same ids. THREE roster entries are absent on purpose, each because its
-// route is not a table row: row 1's Quit is a two-call sequence (finalize +
-// request_close) rather than a chord, row 1's Settings is a bare single-key
-// chord with no modifiers to tabulate, and row 3's tabs share ONE chord
-// (Ctrl+Tab toggles, so the inactive tab is the only target) — all three are
-// spelled at their own claims.
+// the same ids. ONE roster entry is absent, and only one: row 1's SETTINGS,
+// whose action is a POPUP TOGGLE — not a chord at all, since no keyboard chord
+// opens or closes a dropdown. It is spelled at its own claim.
 //
 // The `shift` column is each button's OWN chord (only Redo's is set). It is not
-// the whole shift story: Render admits a SHIFT-exact press that ORs into this
-// field to reach Ctrl+Alt+Shift+R, which is spelled at the claim.
+// the whole shift story: the two SHIFT-ADMITTING buttons OR a shift-exact press
+// into this field to reach their twins, and which buttons those are lives at
+// redesign_button_shift_admits (app_state.h), shared with the tooltip.
 struct ToolbarChord {
     RedesignButton id;
     GuiKey         key;
     bool           ctrl;
     bool           shift;
     bool           alt;
-    // SHIFT_ADMITS: a shift-exact press on this button ORs shift into the chord
-    // above, reaching its shifted twin. TWO buttons carry it, and both for the
-    // same reason — their chord comes in a PAIR the keyboard already spells:
-    // Render (Ctrl+Alt+R renders beside the source, Ctrl+Alt+Shift+R into a
-    // numbered _miscellaneous cell) and Paste (Ctrl+Alt+P pastes, Ctrl+Alt+Shift+P
-    // pastes with state). Everywhere else a shift press stays a strict consumed
-    // no-op: there is no shifted chord to reach, so doing the unshifted thing
-    // would be a silent lie about what the modifier did.
+    // (WHICH BUTTONS ADMIT SHIFT is NOT a column here: it is
+    // redesign_button_shift_admits in app_state.h, because the TOOLTIP reads the
+    // same membership and the hint must appear exactly where a shift press does
+    // something. One fact, two readers.)
     //
-    // The OR is well-defined precisely BECAUSE every shift-admitting row carries
-    // shift=false of its own — the flag and the column cannot both be set, and
-    // the one expression at the dispatch spells both members of each pair.
-    bool           shift_admits;
     // RADIO: this button reports a state it can only ever turn ON, so a press
     // while it is already selected is a CONSUMED NOTHING (there is nothing to
     // switch to, and its chord is a TOGGLE that would switch away from what the
@@ -90,41 +80,51 @@ struct ToolbarChord {
 };
 
 // THE PRESS CLAIM'S HALF OF THE BUTTON ROSTER — every CHORD-DISPATCHING button
-// in the redesign, rows 1 through 4, in one table. The three flags above are the
+// in the redesign, rows 1 through 4, in one table. The two flags above are the
 // only axes the rows differ on, so they share one dispatch body
 // (dispatch_redesign_chord) instead of accumulating a special case per row.
 //
-// ROW 1'S QUIT IS THE ONE ABSENTEE: its route is a two-call sequence (finalize +
-// request_close), not a chord, so it is spelled at its own claim.
+// ROW 1'S SETTINGS IS THE ONE ABSENTEE, and it changed hands: Quit joined the
+// table when Ctrl+Q was recognised as its chord, and Settings left it when its
+// action became the DROPDOWN TOGGLE — a popup open/close is not a chord at all
+// (the bare `;` keyboard route still opens the editor directly, untouched). So
+// there is still exactly one non-chord button; it is just the other one.
 constexpr ToolbarChord kToolbarChords[] = {
-    // Row 1.
-    {RedesignButton::Settings,   GuiKeys::Semicolon, false, false, false, false, false, false},
+    // Row 1. QUIT IS A CHORD — Ctrl+Q — and joined the table when the architect
+    // corrected the "two-call sequence" framing (2026-07-31): on_key's own
+    // Ctrl+Q route performs EXACTLY finalize_active_drags() then
+    // prompt.request_close() when a gesture is live (the drag-modal gate's one
+    // hatch), and prompt.request_close() alone otherwise — which is the same
+    // thing, finalize_active_drags being a no-op with nothing active. So the
+    // dispatch is behaviourally identical to the hand-spelled pair in every
+    // state, and the pair is gone.
+    {RedesignButton::Quit,       GuiKeys::Q,   true,  false, false, false, true},   // Ctrl+Q
     // Row 2 — the toolbar.
-    {RedesignButton::Save,       GuiKeys::S,   true,  false, false, false, false, true},   // Ctrl+S
-    {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false, false, false, true},   // Ctrl+Z
-    {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false, false, false, true},   // Ctrl+Shift+Z
-    {RedesignButton::Render,     GuiKeys::R,   true,  false, true,  true,  false, true},   // Ctrl+Alt+R (+Shift)
+    {RedesignButton::Save,       GuiKeys::S,   true,  false, false, false, true},   // Ctrl+S
+    {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false, false, true},   // Ctrl+Z
+    {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false, false, true},   // Ctrl+Shift+Z
+    {RedesignButton::Render,     GuiKeys::R,   true,  false, true,  false, true},   // Ctrl+Alt+R (+Shift)
     // Row 3 — the tabs. Both halves carry the SAME chord: with two tabs the
     // toggle IS the direct select, and the radio flag is what makes a press on
     // the already-selected half a consumed nothing rather than a switch away.
-    {RedesignButton::TabA,       GuiKeys::Tab, true,  false, false, false, true,  false},  // Ctrl+Tab
-    {RedesignButton::TabB,       GuiKeys::Tab, true,  false, false, false, true,  false},  // Ctrl+Tab
+    {RedesignButton::TabA,       GuiKeys::Tab, true,  false, false, true,  false},  // Ctrl+Tab
+    {RedesignButton::TabB,       GuiKeys::Tab, true,  false, false, true,  false},  // Ctrl+Tab
     // Row 4 — the icon row. The four view buttons are radios on the same two
     // toggling chords the tabs' pair models; the rest are plain dispatches.
-    {RedesignButton::IconS,      GuiKeys::T,   false, false, false, false, true,  true},   // bare t
-    {RedesignButton::IconT,      GuiKeys::T,   false, false, false, false, true,  true},   // bare t
-    {RedesignButton::IconW,      GuiKeys::P,   false, false, false, false, true,  true},   // bare p
-    {RedesignButton::IconP,      GuiKeys::P,   false, false, false, false, true,  true},   // bare p
-    {RedesignButton::IconCopy,   GuiKeys::P,   true,  false, false, false, false, true},   // Ctrl+P
-    {RedesignButton::IconPaste,  GuiKeys::P,   true,  false, true,  true,  false, true},   // Ctrl+Alt+P (+Shift)
+    {RedesignButton::IconS,      GuiKeys::T,   false, false, false, true,  true},   // bare t
+    {RedesignButton::IconT,      GuiKeys::T,   false, false, false, true,  true},   // bare t
+    {RedesignButton::IconW,      GuiKeys::P,   false, false, false, true,  true},   // bare p
+    {RedesignButton::IconP,      GuiKeys::P,   false, false, false, true,  true},   // bare p
+    {RedesignButton::IconCopy,   GuiKeys::P,   true,  false, false, false, true},   // Ctrl+P
+    {RedesignButton::IconPaste,  GuiKeys::P,   true,  false, true,  false, true},   // Ctrl+Alt+P (+Shift)
     // BPM'S KEY IS BARE `m`, NOT `b` — the brief expected `b` and the code says
     // otherwise (the arm is at handle_mode_keys, input_key_dispatch.cpp). The
     // button is its chord, so it takes the chord the keyboard actually has.
-    {RedesignButton::IconBpm,    GuiKeys::M,   false, false, false, false, false, true},   // bare m
-    {RedesignButton::IconIter,   GuiKeys::I,   false, false, false, false, false, true},   // bare i
-    {RedesignButton::IconFollow, GuiKeys::F,   false, false, false, false, false, true},   // bare f
-    {RedesignButton::IconListen, GuiKeys::L,   false, false, false, false, false, true},   // bare l
-    {RedesignButton::IconCommit, GuiKeys::Apostrophe, false, false, false, false, false, true}, // bare '
+    {RedesignButton::IconBpm,    GuiKeys::M,   false, false, false, false, true},   // bare m
+    {RedesignButton::IconIter,   GuiKeys::I,   false, false, false, false, true},   // bare i
+    {RedesignButton::IconFollow, GuiKeys::F,   false, false, false, false, true},   // bare f
+    {RedesignButton::IconListen, GuiKeys::L,   false, false, false, false, true},   // bare l
+    {RedesignButton::IconCommit, GuiKeys::Apostrophe, false, false, false, false, true}, // bare '
 };
 
 // Is (x, y) inside the PAINTED rect of a redesigned button? The rect is the
@@ -618,6 +618,12 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
 
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                       GuiInputState mods) {
+    // ANY PRESS HIDES THE TOOLTIP, above every gate — it has said what it had to
+    // say, and a hint left floating over the thing the user just clicked is
+    // noise. It also resets the dwell, so a fresh hover starts a fresh wait.
+    // Placed here rather than at the release because the hint's job ends the
+    // moment the user acts on it, not when they let go.
+    hide_shift_tooltip();
     // Prompt-modal input handling: while the bottom-strip prompt is
     // active, all mouse events are swallowed. Responses go through
     // the keyboard.
@@ -713,6 +719,50 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // below.
         return;
     }
+    // THE OPEN DROPDOWN OWNS THE POINTER, claimed above every band because it
+    // FLOATS over them: a press on one of its items runs that item, and a press
+    // anywhere else closes it and is CONSUMED so nothing underneath acts. The
+    // one press it does not swallow is a second press on the Settings button
+    // itself, which falls through to the band claim below and toggles the popup
+    // shut — the same gesture that opened it, closing it.
+    //
+    // It sits BELOW the modal gates like every other pointer target, which is
+    // also why a popup and an editor can never be open together: the popup opens
+    // only from a press, and while an editor is up every press dies at those
+    // gates. (The reverse is closed by the keyboard gate: while the popup is
+    // open, `;` is swallowed, so the editor cannot open under it either.)
+    if (app.settings_popup.open && button == GuiMouseButton::Left) {
+        const AppState::SettingsPopup& pop = app.settings_popup;
+        const bool on_settings_button =
+            redesign_button_hit(app, RedesignButton::Settings, x, y);
+        if (!on_settings_button) {
+            int hit = -1;
+            for (int i = 0; i < kSettingsPopupItemCount; ++i) {
+                const GuiRect& r = pop.item_rects[static_cast<size_t>(i)];
+                if (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) {
+                    hit = i;
+                    break;
+                }
+            }
+            // A MODIFIED press inside the popup closes it and does nothing else:
+            // no item carries a modified binding, and leaving the popup open
+            // under a press it refused would be the worse answer.
+            const bool plain = !mods.ctrl && !mods.shift && !mods.alt;
+            close_settings_popup();
+            if (hit >= 0 && plain) {
+                // CLOSE FIRST, THEN OPEN THE EDITOR — the popup is gone before
+                // the modal takes the keyboard, so the two never overlap even
+                // for a frame. The editor's open is its own ordinary route (the
+                // shared modal playback stop inside it), prefilled through the
+                // one recall serializer.
+                playback_lifecycle.stop_playback_for_modal_open();
+                settings_editor.open_prefilled(
+                    kSettingsPopupItems[static_cast<size_t>(hit)].key);
+            }
+            return;   // consumed either way
+        }
+    }
+
     // THE FOUR REDESIGNED ROWS (top lanes 0..3), claimed ABOVE the
     // loading/empty guard below so their buttons stay live while a file loads
     // and on a blank state — they are the surfaces that have nothing to do with
@@ -726,7 +776,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // press carrying CTRL or ALT is a strict consumed no-op, a SHIFT press binds
     // only where the chord table admits one, and any press in the band that is
     // not on a button is a consumed nothing. Each band differs ONLY in its rect
-    // and (row 1) in Quit's non-chord route, so the dispatch itself is ONE body,
+    // and (row 1) in Settings' non-chord dropdown toggle, so the dispatch is ONE body,
     // dispatch_redesign_chord, driven by the table's per-button flags.
     //
     // A BUTTON's rect is the painter's stash (app.redesign_buttons, published by
@@ -744,17 +794,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             x >= menu_row.x && x < menu_row.x + menu_row.w) {
             if (mods.ctrl || mods.alt) return;               // strict no-op
             if (button == GuiMouseButton::Left) {
-                // QUIT IS THE ROSTER'S ONE NON-CHORD BUTTON, so it is spelled
-                // here rather than in the table: Ctrl+Q's exact route as a
-                // two-call sequence — end any live pointer gesture, then request
-                // the close (ENDING IS COMMITTING; the prompt handles the dirty
-                // case). Shift-exact reaches it too and is refused, because Quit
-                // admits no shift: the table check below owns that for every
-                // other button and this one states its own.
+                // SETTINGS IS THE ROSTER'S ONE NON-CHORD BUTTON, so it is
+                // spelled here rather than in the table: its action is a POPUP
+                // TOGGLE, which no keyboard chord performs (the bare `;` key
+                // opens the settings editor DIRECTLY and is untouched by this —
+                // the dropdown is a pointer affordance that leads to the same
+                // editor by another road). Shift-exact is refused like every
+                // other non-admitting button.
                 if (!mods.shift &&
-                    redesign_button_hit(app, RedesignButton::Quit, x, y)) {
-                    finalize_active_drags();
-                    prompt.request_close();
+                    redesign_button_hit(app, RedesignButton::Settings, x, y)) {
+                    toggle_settings_popup();
                 } else {
                     dispatch_redesign_chord(x, y, mods);
                 }
@@ -1763,7 +1812,7 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
 
 void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
                                         int y, GuiInputState /*mods*/) {
-    // ROW 2'S CLICK FACE ENDS WITH THE PHYSICAL HOLD, above every gate below: a
+    // THE CLICK FACE ENDS WITH THE PHYSICAL HOLD, above every gate below: a
     // prompt opened by the press (or any other early return) must not strand a
     // lit interior on a button nobody is pressing any more. Nothing else about
     // the redesigned rows happens at a release — they have no release body.
@@ -2034,6 +2083,50 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         changed = true;
     }
     if (changed) viewport.invalidate_top_strip();
+
+    // THE TOOLTIP'S DWELL STAMP, written here because this is the one place that
+    // knows a hover STARTED. A tooltip-bearing button that is newly hovered
+    // stamps the clock; anything else (including moving between two of them)
+    // hides and re-stamps, so a fresh dwell begins on each arrival. The run
+    // loop's tick compares the stamp against kTooltipDelayMs and flips
+    // `visible` — no timer is created and nothing here decides visibility.
+    int hovered_tip = -1;
+    for (int i = 0; i < kRedesignButtonCount; ++i) {
+        const RedesignButton id = static_cast<RedesignButton>(i);
+        if (redesign_button_shift_admits(id) &&
+            app.redesign_buttons[i].hovered) {
+            hovered_tip = i;
+            break;
+        }
+    }
+    if (hovered_tip < 0) {
+        hide_shift_tooltip();
+    } else if (app.redesign_tooltip.hover_ms == 0) {
+        app.redesign_tooltip.hover_ms = monotonic_ms();
+    }
+}
+
+// THE OPEN DROPDOWN'S OWN HOVER, the pointer's only hover while it is up. One
+// transition writer like the roster's, damaging the strip and the popup box on
+// a change; the rects are the painter's published item boxes, so a highlighted
+// item is exactly the box that lights and exactly the box a click hits.
+void GuiInputHandler::recompute_settings_popup_hover() {
+    if (!app.settings_popup.open) return;
+    const int mx = app.last_mouse_x;
+    const int my = app.last_mouse_y;
+    int hit = -1;
+    for (int i = 0; i < kSettingsPopupItemCount; ++i) {
+        const GuiRect& r =
+            app.settings_popup.item_rects[static_cast<size_t>(i)];
+        if (mx >= r.x && mx < r.x + r.w && my >= r.y && my < r.y + r.h) {
+            hit = i;
+            break;
+        }
+    }
+    if (app.settings_popup.hovered_item == hit) return;
+    app.settings_popup.hovered_item = hit;
+    viewport.invalidate_top_strip();
+    viewport.invalidate_rect(app.settings_popup.rect);
 }
 
 // THE ONE CHORD-DISPATCH BODY for every redesigned button whose action IS a
@@ -2058,7 +2151,7 @@ bool GuiInputHandler::dispatch_redesign_chord(int x, int y, GuiInputState mods) 
         // A SHIFT PRESS ON A BUTTON WITH NO SHIFTED CHORD is a consumed nothing
         // — never the unshifted action, which would be a silent lie about what
         // the modifier did (the flag's rationale is at its declaration).
-        if (mods.shift && !tc.shift_admits) return true;
+        if (mods.shift && !redesign_button_shift_admits(tc.id)) return true;
         // A DISABLED BUTTON'S PRESS IS A CONSUMED NOTHING: the chord is not
         // dispatched at all, and a SHIFT press is swallowed exactly like the
         // plain one (one predicate, both routes — a greyed Render is greyed for
@@ -2099,6 +2192,49 @@ bool GuiInputHandler::dispatch_redesign_chord(int x, int y, GuiInputState mods) 
         return true;
     }
     return false;
+}
+
+// THE SETTINGS DROPDOWN'S TWO WRITERS. Both damage the same pair of rects —
+// the top strip AND the popup's own published box — because the popup hangs
+// BELOW the strip and overlaps the rows and the waveform under it, so strip
+// damage alone would leave its overhang stale on the close. On the OPEN the box
+// has not been painted yet (its rect is still zero), so the strip damage is what
+// schedules the frame that paints it and publishes the rect; on the CLOSE the
+// rect from the last paint is exactly the region to erase, which is why the
+// close reads it BEFORE zeroing the state.
+void GuiInputHandler::close_settings_popup() {
+    if (!app.settings_popup.open) return;
+    const GuiRect painted = app.settings_popup.rect;
+    app.settings_popup = AppState::SettingsPopup{};
+    viewport.invalidate_top_strip();
+    viewport.invalidate_rect(painted);
+}
+
+void GuiInputHandler::toggle_settings_popup() {
+    if (app.settings_popup.open) { close_settings_popup(); return; }
+    app.settings_popup.open         = true;
+    app.settings_popup.hovered_item = -1;
+    // THE ROSTER UNHOVERS AT THE OPEN: the pointer belongs to the popup now
+    // (redesign_button_hoverable refuses every button while it is up), and no
+    // motion event follows a press — so without this the Settings button would
+    // keep its lit pill under its own dropdown. Clearing hover also disarms any
+    // pending tooltip, which is the other half of "these two never coexist".
+    clear_redesign_button_hover();
+    viewport.invalidate_top_strip();
+}
+
+// THE SHIFT TOOLTIP'S HIDE, called from every edge that ends a hover or takes
+// the pointer away — the hover recompute, a press, a wheel. Damages the strip
+// AND the box's last painted rect, for the overhang reason above. Showing is
+// the tick's job (the dwell); this is only the hide, plus the stamp reset that
+// makes the next hover start its dwell from zero.
+void GuiInputHandler::hide_shift_tooltip() {
+    app.redesign_tooltip.hover_ms = 0;
+    if (!app.redesign_tooltip.visible) return;
+    const GuiRect painted = app.redesign_tooltip.rect;
+    app.redesign_tooltip.visible = false;
+    viewport.invalidate_top_strip();
+    viewport.invalidate_rect(painted);
 }
 
 // THE CLICK FACE, dropped. The face rides the PHYSICAL button hold, so the
@@ -2147,6 +2283,14 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // the whole modal, the stash is already correct when the editor closes. A
     // pointer resting ON the button at the close keeps its lit pill, and that is
     // hover, not staleness.
+    // THE OPEN DROPDOWN TAKES THE MOTION, above every gate: it owns the pointer,
+    // so its item hover is the only hover to resolve and no gesture can be live
+    // under it (its own press consumed everything).
+    if (app.settings_popup.open) {
+        viewport.clear_hover_popup();
+        recompute_settings_popup_hover();
+        return;
+    }
     if (app.prompt.active) {
         viewport.clear_hover_popup();
         recompute_redesign_button_hover();

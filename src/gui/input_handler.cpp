@@ -115,6 +115,24 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
+    // THE OPEN DROPDOWN IS KEYBOARD-MODAL, in the editors' shape and ranked
+    // directly under the prompt (a prompt still wins: it is the older modal and
+    // Ctrl+Q below can open one). While the popup is up NO COMMAND RUNS — the
+    // gate swallows every chord it does not name, which is the whole point: a
+    // popup that let `s` drop a marker underneath it would be a trap.
+    //
+    // It admits exactly two keys, and both DISMISS:
+    //   - bare Esc CLOSES it, and that is THE SIXTH BARE-ESC BINDING (the
+    //     enumeration further down carries the full list and this rank);
+    //   - Ctrl+Q closes it and FALLS THROUGH so the ordinary close route runs
+    //     below, matching every other modal's Ctrl+Q hatch.
+    // A popup and an editor CANNOT be open together (the popup opens only from a
+    // press, and a press dies at the editor gates; `;` is swallowed here), so
+    // this gate can never contend with route_modal_editor_key.
+    if (app.settings_popup.open) {
+        if (settings_popup_key_blocked(key, mods)) return;
+    }
+
     // Blank / loading state: only the quit / close-gesture bindings run;
     // everything else no-ops. Dialog can't fire here because dirty is
     // always false in blank state (the only blank state is the transient
@@ -427,12 +445,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // THE WHOLE ESC STORY, stated here because this is where the selection/region
     // ESC LADDER used to be dispatched and the ladder is DELETED — rungs,
-    // down-only doctrine and all (architect 2026-07-29). BARE ESC IS BOUND IN FIVE
-    // PLACES AND NOWHERE ELSE (re-derived 2026-07-30 — the drag-modal gate above
+    // down-only doctrine and all (architect 2026-07-29). BARE ESC IS BOUND IN SIX
+    // PLACES AND NOWHERE ELSE (re-derived 2026-07-31 — the drag-modal gate above
     // tests only Ctrl+Q, so Esc is UNBOUND there and falls through with every
-    // other key while a gesture is in flight; it is NOT one of the five), each of
-    // the five earlier in this function than this point, so reaching here means
-    // the press has nothing left to do:
+    // other key while a gesture is in flight; it is NOT one of the six), each of
+    // the six earlier in this function than this point, so reaching here means
+    // the press has nothing left to do. THEY ARE LISTED IN RANK ORDER, outermost
+    // modal first:
     //   (a) THE EDITOR TEXT-DRAG ESC HATCH — a bare-exact Escape ends an in-flight
     //       text-selection drag (above); a SUB-PART of the editor class below,
     //       since it can only fire while one of the four editors owns the
@@ -442,6 +461,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       cancels the edit (the editor blocks above, bit-for-bit unchanged);
     //   (c) THE PROMPTS — Esc activates the rightmost response (the prompt gate at
     //       the top of on_key, unchanged);
+    //   (c2) THE SETTINGS DROPDOWN — Esc closes the popup (the popup gate,
+    //       directly under the prompt gate; architect 2026-07-31, the SIXTH
+    //       binding). It cannot collide with (a)/(b): a popup and an editor can
+    //       never be open together, the popup opening only from a press and a
+    //       press dying at the editor gates. It ranks BELOW the prompt because
+    //       Ctrl+Q from inside the popup can raise one;
     //   (d) THE REGION CLEAR — the arm just above (architect 2026-07-30);
     //   (e) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above.
     // What Esc still does NOT do is the old ladder: NO deselect, NO playhead land,
@@ -1133,6 +1158,11 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // every gesture — the pending marker drag included, so a wheel cannot pan
     // or zoom the viewport out from under a flag press before its drag begins.
     if (app.prompt.active) return -1;
+    // AN OPEN DROPDOWN SWALLOWS THE WHEEL. It cannot close from here — this
+    // predicate is const and the platform probes it speculatively — so on_wheel
+    // owns the close and this owns only the swallow, which is also what keeps
+    // the sub-detent accumulator from growing remainder under a popup.
+    if (app.settings_popup.open) return -1;
     if (modal_bottom_strip_editor_active()) return -1;
     if (app.loading || audio.total_frames() <= 0) return -1;
     if (any_pointer_gesture_active(app)) return -1;
@@ -1188,6 +1218,12 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
     // after accumulating sub-detent remainder itself, so every call here is a
     // completed detent frame, matching on_key's unconditional placement.
     app.double_click = DoubleClickCandidate{};
+    // A WHEEL DISMISSES BOTH FLOATING SURFACES: the popup closes (and the event
+    // is consumed — wheel_context refuses it while open, so nothing scrolls
+    // under it), and the tooltip hides. Both run before the context test so the
+    // dismissal happens on the very frame the wheel arrives.
+    close_settings_popup();
+    hide_shift_tooltip();
     const int ctx = wheel_context(x, y);
     if (ctx < 0) return;
     // ctx: 1 waveform, 2 the top strip. The waveform zooms (plain) or pans

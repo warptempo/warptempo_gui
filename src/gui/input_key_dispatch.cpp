@@ -202,6 +202,27 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_esc || is_ctrl_q);
 }
 
+// The settings dropdown's keyboard gate. Returns true when the press is
+// SWALLOWED (the popup consumed it, or it was inert); false only for Ctrl+Q,
+// which closes the popup and then lets on_key run the close route.
+//
+// Bare-exact and ctrl-exact respectively, like every other modal predicate here:
+// a modified Escape and a shifted Ctrl+Q carry no binding anywhere, so they fall
+// into the swallow with everything else rather than dismissing.
+bool GuiInputHandler::settings_popup_key_blocked(GuiKey key,
+                                                 GuiInputState mods) {
+    const bool bare = !mods.ctrl && !mods.shift && !mods.alt;
+    if (key == GuiKeys::Escape && bare) {
+        close_settings_popup();
+        return true;
+    }
+    if (key == GuiKeys::Q && mods.ctrl && !mods.shift && !mods.alt) {
+        close_settings_popup();
+        return false;   // fall through to the close route
+    }
+    return true;        // every other chord is inert while the popup is up
+}
+
 // The BOTTOM-STRIP modal surfaces: the settings editor, the render-commit
 // editor, and the bpm editor (top_flag_editor reused with Kind::BpmBracket,
 // painted in the bottom strip) — plus the prompts, which own input through

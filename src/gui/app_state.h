@@ -777,6 +777,34 @@ inline constexpr int redesign_button_index(RedesignButton b) {
     return i;
 }
 
+// THE SETTINGS DROPDOWN'S ITEMS — the single enumeration, in painted order, of
+// what the menu row's Settings button drops down. Each row pairs the HUMAN
+// LABEL (the redesign's capitalization ruling; "GUI scale" and "URL" keep their
+// acronym case) with the .settings KEY the click prefills into the editor, and
+// `separator_before` marks the one place the two categories part: the three GUI
+// keys, then the four metadata keys.
+//
+// It lives here rather than in the painter because three domains read it — the
+// painter (labels, layout), the press claim (which key a click prefills) and
+// the popup's own geometry (item count). The keys are the canonical .settings
+// spellings, so the prefill goes through the ordinary recall serializer with
+// nothing translated on the way.
+struct SettingsPopupItem {
+    const char* label;
+    const char* key;
+    bool        separator_before;
+};
+inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
+    {"Font size",      "font_size",      false},
+    {"GUI scale",      "gui_scale",      false},
+    {"Playback speed", "playback_speed", false},
+    {"Title",          "title",          true},
+    {"Notes",          "notes",          false},
+    {"URL",            "url",            false},
+    {"Cover",          "cover",          false},
+};
+inline constexpr int kSettingsPopupItemCount = 7;
+
 // Double-click window and positional slack (architect-tunable). Two motionless
 // plain clicks in the same strip row inside this time and pixel distance are a
 // double-click.
@@ -1550,6 +1578,38 @@ struct AppState {
     // click face is row 2's alone (architect 2026-07-31).
     int redesign_pressed = -1;
 
+    // THE SHIFT TOOLTIP'S TIMING STATE — the whole of it. `hover_ms` is the
+    // CLOCK_MONOTONIC stamp of the moment a tooltip-bearing button became
+    // hovered (0 = none is), written by the hover recompute; `visible` is what
+    // the painter draws, flipped by the run loop's existing tick when the delay
+    // comes due. No timer, no callback, no per-frame damage: the tick already
+    // runs, it compares two numbers, and it damages ONCE on each edge.
+    // `rect` is the painter's published tooltip box, needed only for damage
+    // (nothing hit-tests a tooltip).
+    struct RedesignTooltip {
+        int64_t hover_ms = 0;
+        bool    visible  = false;
+        GuiRect rect{0, 0, 0, 0};
+    };
+    RedesignTooltip redesign_tooltip;
+
+    // THE SETTINGS DROPDOWN — the product's first popup, hanging under the menu
+    // row's Settings button. `open` is the whole modality: while it is true the
+    // popup owns the keyboard (on_key's popup gate), the pointer (the press
+    // claim's popup-first block) and the wheel, and the roster stops hovering.
+    // `hovered_item` is -1 or an index into the item table; `rect` and
+    // `item_rects` are PAINTER-PUBLISHED, so the hit tests read exactly the
+    // painted boxes and never re-shape a label (the displayed-basis doctrine).
+    // Every rect is zero while closed, which is the correct cold answer: an
+    // empty rect contains no point.
+    struct SettingsPopup {
+        bool    open         = false;
+        int     hovered_item = -1;
+        GuiRect rect{0, 0, 0, 0};
+        std::array<GuiRect, kSettingsPopupItemCount> item_rects{};
+    };
+    SettingsPopup settings_popup;
+
     // WINDOW ACTIVATION (keyboard focus), mirrored from the platform's
     // xdg_toplevel state on each activation EDGE (main.cpp's hook, beside the
     // pointer-leave one). The redesigned rows 1 and 2 paint their ground from
@@ -2248,6 +2308,21 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
     return false;
 }
 
+// THE SHIFT-AUGMENTED BUTTONS — the ONE owner of "this button's chord comes in
+// a pair the keyboard already spells, so a SHIFT-exact press reaches the twin".
+// Exactly two carry it, and both for that reason: Render (Ctrl+Alt+R renders
+// beside the source, Ctrl+Alt+Shift+R into a numbered _miscellaneous cell) and
+// Paste (Ctrl+Alt+P pastes phase resets, Ctrl+Alt+Shift+P pastes with state).
+//
+// It lives here rather than as a column in the press claim's chord table
+// because it has TWO readers that must not drift: that table's shift rule, and
+// the TOOLTIP — the shift hint exists exactly where a shift press does
+// something, so "which buttons admit shift" and "which buttons advertise it"
+// are one fact by construction rather than two lists to keep in step.
+inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
+    return b == RedesignButton::Render || b == RedesignButton::IconPaste;
+}
+
 // Hoverability = enabled, plus the tabs' one extra fact: THE SELECTED TAB HAS
 // NO HOVER FACE (only the inactive one lights). Kept beside the predicate it
 // extends and consulted only by the hover recompute, so "a disabled button
@@ -2262,6 +2337,11 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
 // flag), not in their hoverability.
 inline bool redesign_button_hoverable(const AppState& a, int64_t total_frames,
                                       RedesignButton b) {
+    // THE OPEN DROPDOWN OWNS THE POINTER: while it is up, no roster button
+    // hovers at all — the popup's own item hover is the only hover there is, and
+    // a lit button under a popup would advertise a click the popup is about to
+    // swallow. The next motion after the close re-resolves the roster normally.
+    if (a.settings_popup.open) return false;
     if (!redesign_button_enabled(a, total_frames, b)) return false;
     if (b == RedesignButton::TabA) return a.active_tab_view != 'A';
     if (b == RedesignButton::TabB) return a.active_tab_view != 'B';
