@@ -1465,7 +1465,7 @@ void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
     // monospace text over its marker's painted column and clamps it fully onscreen
     // (lane_text_left_x_at_frame) on a kBackground fill behind the run with no
     // border. The editor box flashes its fill kAccent on an invalid commit.
-    const GuiRect lane      = top_marker_text_row_area(app);
+    const GuiRect lane      = top_marker_row_area(app);
     const double  baseline  = lane.y + monospace_text_row_baseline_offset();
     const double  advance   = monospace_advance();
     if (advance <= 0.0) return;
@@ -1994,14 +1994,14 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // render_trim_flags). The two halves are geometrically disjoint and meet
     // at the waveform top edge, so their relative order is cosmetic.
     //
-    // The chip lane's y-band is THREADED IN as top_upper_row_area(app) rather
+    // The chip lane's y-band is THREADED IN as top_trim_row_area(app) rather
     // than re-derived inside the painter: this is the same accessor
     // hit_test_trim_chip's y-gate and route_trim_chip_press' bridge y-gate
     // read, so the painted band and the clickable band have ONE owner and
     // cannot drift if the lanes above the chip row ever change.
     render_trim_stems(cr, wave_rect,
                       basis.vp_start_frame, basis.vp_end_frame, trim);
-    render_trim_flags(cr, top_strip, top_upper_row_area(app), wave_rect,
+    render_trim_flags(cr, top_strip, top_trim_row_area(app), wave_rect,
                       basis.vp_start_frame, basis.vp_end_frame, trim);
 }
 
@@ -2105,9 +2105,10 @@ void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
 
     // render_playhead draws only the 1px line here (draw_triangle=false), which
     // is exactly the stem; it column-culls px_x itself, so a stem off the visible
-    // strip paints nothing. The triangle lane rect is still handed over — the
-    // parameter is unconditional so no call site can drift from the lane owner.
-    render_playhead(cr, area, top_triangle_row_area(app), px_x, kSelectedStem,
+    // strip paints nothing. The lane rect is still handed over — the parameter is
+    // unconditional so no call site can drift from the lane owner — and it is now
+    // the RULER lane, the band the playhead's head will occupy.
+    render_playhead(cr, area, top_ruler_row_area(app), px_x, kSelectedStem,
                     /*draw_triangle=*/false);
 }
 
@@ -2149,10 +2150,13 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     const PlateViewportBasis basis = plate_viewport_basis();
     const double disp_spp = basis.spp;
     const double px_x = playhead_pixel_x(app, wf_cache.fp_vp_start, disp_spp);
-    // The lane the cursor's triangle is stamped in, from
-    // the lane accessor rather than derived from the waveform top edge, so it
-    // rides the same band as the flag triangles beside it.
-    const GuiRect tri_lane = top_triangle_row_area(app);
+    // The lane the cursor's HEAD belongs to, from the lane accessor rather than
+    // derived from the waveform top edge. ROW 5 RETIRED THE TRIANGLE: the
+    // tip-down triangle that stood here died with its lane, and its successor is
+    // the ruler lane's aliased head. Until that head lands, the cursor paints its
+    // STEM only — every call passes draw_triangle=false — so nothing stamps in
+    // this band and the parameter is threaded purely to keep the one lane owner.
+    const GuiRect tri_lane = top_ruler_row_area(app);
 
     // Playheads paint UNDER the marker flags (the Z-ORDER FLIP, architect
     // 2026-07-23 — see the paint-order block in on_redraw): the cursor line +
@@ -2192,8 +2196,13 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // the cursor rides along VISIBLY, which is the lane model's honest reading.
     // The region ground still paints under the plate (paint_region_ground); the
     // cursor line crosses it exactly as it crosses waveform ink.
+    // THE TRIANGLE IS OFF EVERYWHERE NOW (row 5): the cursor's tip-down triangle
+    // retired with the triangle lane, and its successor — the ruler lane's
+    // aliased head — is painted by the ruler pass, which owns the tick columns
+    // the head's pre-blended crossing needs. So this call is the STEM alone,
+    // like every other, until that pass lands.
     render_playhead(cr, area, tri_lane, px_x, kPlayheadCursor,
-                    /*draw_triangle=*/true);
+                    /*draw_triangle=*/false);
 }
 
 // -- GuiPaintHandler::paint_bottom_strip ---------------------------------

@@ -139,15 +139,16 @@ namespace {
 //
 // Per-strip lane stacks with per-lane heights (the former uniform-row contract
 // is superseded). Top and bottom strips now DIFFER in height; the waveform
-// flexes between them. The TOP strip is EIGHT lanes (from the window edge
+// flexes between them. The TOP strip is SEVEN lanes (from the window edge
 // inward): MENU ROW (its own authored menu_row_h_px(), row 1 of the kdenlive
 // redesign), TOOLBAR ROW (its own authored toolbar_row_h_px(), row 2 of the
 // redesign), TAB ROW (its own authored tab_row_h_px(), row 3), ICON ROW (its
-// own authored icon_row_h_px(), row 4 — these four are
-// the lanes on the gui_scale axis), trim-chip row (the
-// flag WIDTH, so the chips are square), marker-text row (the text-lane
-// monospace_text_row_h()), flag row (the flag height), and the triangle row
-// (the triangle height) flush on the waveform. The BOTTOM strip is TWO lanes:
+// own authored icon_row_h_px(), row 4), then row 5's three — the TRIM lane
+// (trim_lane_h_px(), the bar and its endcaps), the RULER lane
+// (ruler_lane_h_px(), timestamps + the zoom strip + the playhead head) and the
+// MARKER lane (marker_lane_h_px(), the flags), whose bottom edge is the
+// waveform top. ALL SEVEN ride the gui_scale axis: row 5 retired the last
+// font-scaled lanes in this strip. The BOTTOM strip is TWO lanes:
 // the status row (outer) and the editor/modal row (inner), both text lanes.
 // The lanes pack tight — the inter-lane gaps kRowGapPx and the
 // outer/waveform-side gaps
@@ -155,28 +156,21 @@ namespace {
 // the stack reappears correct if either constant is ever un-zeroed. That
 // property has NO EXCEPTION LIST among the consumers: every lane-anchored pixel
 // reaches its band through a lane rect computed here. The
-// render.cpp sites that used to stack BOTTOM-ANCHORED off the waveform
-// top edge — flag_lane_geometry (the shared owner of the painted marker shapes
-// AND their hit rects) and the triangle blit in render_playhead — now take the
-// flag and triangle LANE RECTS as
-// parameters, resolved by their callers from top_flag_row_area /
-// top_triangle_row_area, the same rects the empty-lane press gate tests. So the
-// painted flags, the flag hit rects, and the playhead triangle all move with
-// the lanes by construction, and marker paint and marker hit-testing stay
-// coherent with each other as they always did, both riding
-// flag_lane_geometry.
+// render.cpp sites that stack marker geometry take their LANE RECT as a
+// parameter, resolved by their callers from top_marker_row_area — the same rect
+// the empty-lane press gate tests — so painted flags and flag hit rects move
+// with the lane by construction and cannot drift from each other.
 //
-// ONE SEAM IS EXEMPT from a hypothetical nonzero kRowGapPx: the FLAG/TRIANGLE
-// junction (top lanes 6|7). A marker flag is ONE FUSED GLYPH — rectangle plus
-// tip-down triangle under a single continuous outline — that spans those two
-// lanes, so they are CONTIGUOUS BY INVARIANT and flag_lane_geometry (the reader
-// of that junction, render.cpp) takes the rectangle's bottom edge straight from
-// the triangle lane's TOP. A gap there would cut one asset through its middle:
-// unsupported, a design error rather than a layout choice, and the full record
-// of the consequence lives at flag_lane_geometry. Gaps at every OTHER seam —
-// menu|toolbar, toolbar|tab, tab|icon, icon|chip, chip|text, text|flag, and both outer
-// kFlagBottomLiftPx gaps —
-// are honored structurally by the loop below and by every consumer. ONE shared
+// THE FLAG/TRIANGLE SEAM INVARIANT IS RETIRED (row 5, 2026-08-01). It read:
+// those two lanes were CONTIGUOUS BY INVARIANT because a marker flag was ONE
+// FUSED GLYPH — rectangle plus tip-down triangle under a single continuous
+// outline — spanning both, so a gap there would have cut one asset through its
+// middle. The fused glyph is gone: a marker is now a single text-on-flag BOX
+// inside ONE lane, and the playhead's triangle became the ruler lane's aliased
+// head. No seam is exempt any more — every seam (menu|toolbar, toolbar|tab,
+// tab|icon, icon|trim, trim|ruler, ruler|marker, and both outer
+// kFlagBottomLiftPx gaps) is honored structurally by the loop below and by every
+// consumer, with no asset spanning any of them. ONE shared
 // helper —
 // strip_row_rect — is the single geometry owner; every named accessor delegates
 // to it, so a lane is a pure index from its strip's window edge, and a bottom
@@ -209,7 +203,7 @@ namespace {
 // The toolbar, tab and icon lanes INCLUDE their 1px border-bottom (the CSS box
 // model: the architect's stated 44 / 30 / 48 is content, the border sits
 // outside it, and the lane owns both).
-constexpr int kTopLaneCount    = 8;
+constexpr int kTopLaneCount    = 7;
 constexpr int kBottomLaneCount = 2;
 int top_lane_height(int lane) {
     switch (lane) {
@@ -217,17 +211,17 @@ int top_lane_height(int lane) {
         case 1: return toolbar_row_h_px();       // toolbar row (+ border-bottom)
         case 2: return tab_row_h_px();           // tab row (+ border-bottom)
         case 3: return icon_row_h_px();          // icon row (+ border-bottom)
-        // The trim-chip row takes the chip's own WIDTH as its height, so the
-        // b/e chips are SQUARE BY CONSTRUCTION: trim_chip_rect reads its width
-        // from flag_lane_w_px() and its height from this band, and both axes now
-        // resolve through the one accessor. A plain 15 here, or the flag height
-        // the row used to borrow, would leave squareness a numeric coincidence
-        // that a retune of kFlagHeightPx (or of the scaling) could silently
-        // break.
-        case 4: return flag_lane_w_px();         // trim-chip row (square chips)
-        case 5: return monospace_text_row_h();   // marker-text row
-        case 6: return flag_lane_h_px();         // flag row
-        case 7: return playhead_triangle_h_px(); // triangle row (flush on waveform)
+        // ROW 5 REPLACED THE FOUR LEGACY LANES WITH THREE (2026-08-01). The old
+        // trim-chip / marker-text / flag / triangle stack is gone: the chips
+        // became the trim BAR, the marker-text lane died with its occlusion
+        // resolver, and the flag+triangle pair became ONE marker lane carrying
+        // kdenlive's text-on-flag boxes. All three size on the gui_scale axis
+        // from their own crop-measured constants, like lanes 0-3 — so the LAST
+        // font-scaled lane in the top strip is gone with them, and
+        // monospace_text_row_h now has bottom-strip callers only.
+        case 4: return trim_lane_h_px();         // trim bar + endcaps
+        case 5: return ruler_lane_h_px();        // timestamps / zoom strip / playhead head
+        case 6: return marker_lane_h_px();       // marker flags (bottom edge = waveform top)
         default: return 0;
     }
 }
@@ -315,10 +309,10 @@ GuiRect waveform_area(const AppState& a) {
 // mirrors it about the window midline (`h - inset - lane_h`).
 //
 // Paint/hit agreement invariant: the trim-chip row is TOP lane 4, and
-// hit_test_trim_chip / the pair-drag y-gate read top_upper_row_area(app) — the
+// hit_test_trim_chip / the pair-drag y-gate read top_trim_row_area(app) — the
 // exact band render_trim_flags paints the b/e chips in, because the PAINTER is
 // handed that band as a parameter (GuiPaintHandler::paint_trim passes
-// top_upper_row_area(app) as render_trim_flags' `chip_row`) instead of
+// top_trim_row_area(app) as render_trim_flags' `chip_row`) instead of
 // re-deriving a lane y from the row heights above it. Both sides therefore
 // reach the band through this one helper, so paint and hit cannot drift when a
 // lane above the chip row changes height, is removed, or gains a gap.
@@ -343,13 +337,11 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 // carrying the Save / Undo / Redo / Render buttons, its separators and its
 // border-bottom); lane 2 is the TAB row (the "A" / "B" Breeze tabs and
 // its border-bottom); lane 3 is the ICON row (the eleven view/mode/action
-// buttons and its border-bottom); lane 4 is the b/e trim-chip row, which also
-// owns the span-framing double-click; lane 5 is the marker-text
-// row (hosts the hover popup and the flag editor's live text, one at a time —
-// paint_marker_text_lane); lane 6 is the
-// flag row (the marker flag rectangles); lane 7 is the triangle row, whose
-// bottom edge is flush with the waveform area top and which holds the flags' and
-// the playhead's triangles.
+// buttons and its border-bottom); lane 4 is the TRIM lane (the bar, its
+// endcaps, every trim gesture the b/e chips used to carry, and the span-framing
+// double-click); lane 5 is the RULER lane (the timestamp ladder, the reborn
+// zoom strip, and the playhead's aliased head); lane 6 is the MARKER lane (the
+// flags), whose bottom edge is flush with the waveform area top.
 GuiRect top_menu_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 0);
 }
@@ -366,20 +358,16 @@ GuiRect top_icon_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 3);
 }
 
-GuiRect top_upper_row_area(const AppState& a) {
+GuiRect top_trim_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 4);
 }
 
-GuiRect top_marker_text_row_area(const AppState& a) {
+GuiRect top_ruler_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 5);
 }
 
-GuiRect top_flag_row_area(const AppState& a) {
+GuiRect top_marker_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 6);
-}
-
-GuiRect top_triangle_row_area(const AppState& a) {
-    return strip_row_rect(a, /*top_strip=*/true, 7);
 }
 
 // Bottom strip lanes, counted up from the window bottom (index 0 = the window

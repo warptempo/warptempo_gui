@@ -1013,7 +1013,7 @@ void render_trim_flags(cairo_t* cr,
     if (samples_per_pixel <= 0.0) return;
 
     // Trim chip lane band. `chip_row` ARRIVES from the caller as
-    // top_upper_row_area(app) — the same accessor hit_test_trim_chip's y-gate
+    // top_trim_row_area(app) — the same accessor hit_test_trim_chip's y-gate
     // and the pair drag's bridge y-gate read — so paint and hit take the lane
     // from ONE owner and cannot drift; nothing here re-derives a lane position
     // from the row heights above it. Only the y-band comes from the row: the
@@ -1492,43 +1492,27 @@ void iterate_visible_flags_impl(
     }
 }
 
-// Resolves the flag lane / triangle lane / tip Y — a pure READ of the two lane
-// rects the caller resolved from the lane accessors (top_flag_row_area /
-// top_triangle_row_area, both delegating to strip_row_rect). The rectangle spans
-// the flag lane, the triangle spans the triangle lane directly below it, and the
-// tip sits on the triangle lane's bottom edge, which the lane stack places flush
-// on the waveform top. Nothing here is derived by stacking upward from the strip
-// bottom any more, so the shapes and their hit rects follow the lanes wherever
-// the stack puts them — a waveform-side gap (kFlagBottomLiftPx) or an inter-lane
-// gap (kRowGapPx) at any OTHER seam moves the lanes and these shapes together,
-// and the empty flag/triangle-lane press gate keeps testing the bands the shapes
-// occupy.
+// Resolves the marker box's top and bottom — a pure READ of the ONE lane rect
+// the caller resolved from top_marker_row_area. The box spans the whole marker
+// lane, whose bottom edge the lane stack places flush on the waveform top, so
+// the shapes and their hit rects follow the lane wherever the stack puts it.
 //
-// THE FLAG/TRIANGLE SEAM IS EXEMPT FROM THE INTER-LANE GAP. A marker flag is ONE
-// FUSED GLYPH — rectangle plus tip-down triangle, one fill, one continuous
-// outside-only outline — that happens to span two lanes; the two lanes are
-// CONTIGUOUS BY INVARIANT, and `rect bottom == triangle lane top` (g.tri_top,
-// read once and used as both) is that invariant, not a coincidence this function
-// could paper over. A gap opened at THIS seam would slice a single asset through
-// its middle, so it is not a supported state: kRowGapPx un-zeroed is honored at
-// the zoom/chip/text seams and is a design error at this one. That is why the
-// junction is taken straight from the triangle lane's top rather than as
-// flag_lane.y + flag_lane.h — one edge, so the fill's hard boundary, the
-// outline's path, and the hit rect's bottom cannot disagree even by a pixel.
-// (The consequence if the exemption were ever violated is recorded so it is not
-// rediscovered as a bug: the span would be absorbed as extra flag HEIGHT —
-// painted and clickable — rather than left blank.)
+// THE TRIANGLE IS GONE (row 5, 2026-08-01) and with it the seam invariant that
+// made the flag and triangle lanes contiguous-by-invariant: a marker is one box
+// in one lane now, spanning no seam, so `tri_top` degenerates to the box's
+// bottom and `tip_y` sits on it — a zero-height triangle, which every consumer
+// draws as nothing. The full retirement record is at the lane table (main.cpp).
 struct FlagLaneY {
-    double flag_top;   // flag-lane top (rectangle top)
-    double tri_top;    // triangle-lane top (= flag-lane bottom / rect bottom)
-    double tip_y;      // triangle-lane bottom (= waveform top edge, triangle tip)
+    double flag_top;   // marker-lane top (box top)
+    double tri_top;    // box bottom (= marker-lane bottom, = waveform top)
+    double tip_y;      // same edge: the triangle has no height any more
 };
 FlagLaneY flag_lane_geometry(const FlagLaneRects& lanes) {
     FlagLaneY g;
-    g.flag_top = static_cast<double>(lanes.flag_lane.y);
-    g.tri_top  = static_cast<double>(lanes.triangle_lane.y);
-    g.tip_y    = static_cast<double>(lanes.triangle_lane.y +
-                                     lanes.triangle_lane.h);
+    g.flag_top = static_cast<double>(lanes.marker_lane.y);
+    g.tri_top  = static_cast<double>(lanes.marker_lane.y +
+                                     lanes.marker_lane.h);
+    g.tip_y    = g.tri_top;
     return g;
 }
 
@@ -1934,7 +1918,7 @@ double lane_text_left_x_at_frame(
     // Center over the column, then clamp the whole run fully onscreen within
     // the lane (unlike the flags, the lane text never hangs off an edge). A run
     // wider than the lane pins to the left edge.
-    const GuiRect lane = top_marker_text_row_area(app);
+    const GuiRect lane = top_marker_row_area(app);
     const double min_left = static_cast<double>(lane.x);
     const double max_left = static_cast<double>(lane.x + lane.w) - run_w;
     double left = center_x - run_w / 2.0;
@@ -2245,7 +2229,7 @@ MarkerHit marker_hit_at(const AppState& app, const GuiAudio& audio,
     }
     const double advance = monospace_advance();
     if (advance <= 0.0) return h;
-    const GuiRect lane = top_marker_text_row_area(app);
+    const GuiRect lane = top_marker_row_area(app);
     if (y < lane.y || y >= lane.y + lane.h) return h;   // y-band already half-open
 
     const LaneRunSet set = current_marker_lane_runs(app, audio);

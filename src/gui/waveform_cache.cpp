@@ -763,8 +763,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // accessors — the same bands the empty-lane press gate and the hit rects
     // read. The top strip is anchored at screen y=0 and this surface mirrors it
     // 1:1, so the screen-coordinate lane rects are already surface-local.
-    const FlagLaneRects flag_lanes{top_flag_row_area(app),
-                                   top_triangle_row_area(app)};
+    const FlagLaneRects flag_lanes{top_marker_row_area(app)};
     // Effective waveform width: the flag column mapping divides the displayed
     // span by this width — the same denominator the live trim pass and the hit
     // tests use — so flags stay column-aligned with the trim/stem verticals

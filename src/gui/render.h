@@ -481,6 +481,52 @@ inline constexpr GuiColor kRedesignTabLine      = hex(0x4C4E51);
 // and only the roles moved.
 inline constexpr GuiColor kRedesignSelectedFill = hex(0x3C3F41);
 
+// -- Row 5: the TRIM lane, the RULER lane, the MARKER lane ------------------
+//
+// All sampled from tmp/screenshots/kdenlive/redesign/row_5_*, and all
+// HARD-CODED under the architect's blanket ruling — which now reaches even
+// marker and waveform territory. The colors.conf machinery, its 23 keys and its
+// loader STAY IN THE TREE UNTOUCHED; what happens is that the paint sites which
+// READ those globals die with the painters they belonged to, so the conf goes
+// progressively inert rather than being dismantled.
+//
+// The three lanes share row 3's #202326 ground (kRedesignTabGround), one fact
+// seen again rather than a fourth copy of the number.
+
+// THE TRIM LANE is 9 rows of exactly THREE surfaces — ground, bar, endcap — and
+// each carries its own 2-row BOTTOM BEVEL: row 7 a lighter shade, row 8 a
+// darker one. The bevel is NOT a derivable rule (the three measured pairs fit
+// neither a constant delta nor a constant mix toward white/black), so it ships
+// as six sampled constants, one pair per surface. A FOURTH surface would have
+// no pair and would force the question then, which is the point of spelling
+// them out rather than inventing a formula from three samples.
+inline constexpr GuiColor kTrimLaneBar       = hex(0x2F6888);
+inline constexpr GuiColor kTrimLaneEndcap    = hex(0x97B4C4);
+inline constexpr GuiColor kTrimGroundBevelHi = hex(0x393E43);
+inline constexpr GuiColor kTrimGroundBevelLo = hex(0x131516);
+inline constexpr GuiColor kTrimBarBevelHi    = hex(0x3B7696);
+inline constexpr GuiColor kTrimBarBevelLo    = hex(0x286180);
+inline constexpr GuiColor kTrimCapBevelHi    = hex(0x9DBBCB);
+inline constexpr GuiColor kTrimCapBevelLo    = hex(0x94B0C0);
+
+// THE RULER LANE's two inks. The label size is the redesign's ordinary 12pt:
+// the composite's label band measures 12 ink rows and ~84px for its label, which
+// is what 16px sans produces — the brief's impression that kdenlive's ruler font
+// "looks smaller" is not what the pixels say, and the measurement wins.
+inline constexpr GuiColor kRulerLabel = hex(0xC2C2C2);
+inline constexpr GuiColor kRulerTick  = hex(0x737373);
+
+// THE PLAYHEAD's three. The HEAD is an aliased shape in a single flat grey; the
+// STEM is the paper white that replaces the old cursor line at this surface.
+// THE TICK-THROUGH-HEAD value is a PRE-BLENDED CONSTANT, never a runtime alpha:
+// where a ruler tick's column crosses the head, those head pixels paint #b7b7b7
+// (183,183,183, measured off row_5_lane_3_playhead_tick.png) instead of the
+// head's own grey. The opaque-palette doctrine has no compositing to offer, and
+// a measured blend is exact where an alpha would only approximate it.
+inline constexpr GuiColor kPlayheadHead     = hex(0x8E8F91);
+inline constexpr GuiColor kPlayheadHeadTick = hex(0xB7B7B7);
+inline constexpr GuiColor kPlayheadStem     = hex(0xFCFCFC);
+
 // -- The TOOLTIP CHROME (the dropdown has its own, below) -------------------
 //
 // One chrome for both floating surfaces, measured off hover_shift.png (129x41)
@@ -825,6 +871,57 @@ inline int icon_row_content_h_px() {
 inline int icon_row_h_px() {
     return icon_row_content_h_px() + icon_row_border_h_px();
 }
+
+// ROW 5's THREE LANES, measured off row_5_full.png (the composite is the
+// authority): trim y0..8, ruler y9..36, marker y37..56, and the waveform starts
+// at 57 — so the marker lane's bottom edge IS the waveform top, with no gap.
+// These replace the four legacy lanes (trim chip / marker text / flag /
+// triangle) and, like every redesigned row, ride gui_scale_factor() rather than
+// the monospace font's axis.
+inline constexpr int kTrimLaneHeightPx   = 9;
+inline constexpr int kRulerLaneHeightPx  = 28;
+inline constexpr int kMarkerLaneHeightPx = 20;
+inline int trim_lane_h_px() {
+    const int h = static_cast<int>(std::nearbyint(
+        static_cast<double>(kTrimLaneHeightPx) * gui_scale_factor()));
+    return h < 3 ? 3 : h;
+}
+inline int ruler_lane_h_px() {
+    const int h = static_cast<int>(std::nearbyint(
+        static_cast<double>(kRulerLaneHeightPx) * gui_scale_factor()));
+    return h < 5 ? 5 : h;
+}
+inline int marker_lane_h_px() {
+    const int h = static_cast<int>(std::nearbyint(
+        static_cast<double>(kMarkerLaneHeightPx) * gui_scale_factor()));
+    return h < 5 ? 5 : h;
+}
+
+// THE TRIM LANE's bevel band: the bottom TWO rows, a lighter then a darker
+// shade of whatever surface owns the column. Scales with the lane.
+inline int trim_bevel_h_px() {
+    const int h = static_cast<int>(std::nearbyint(2.0 * gui_scale_factor()));
+    return h < 2 ? 2 : h;
+}
+// The endcap's own width, 2px at 100% (row_5_lane_1_trim_endcap.png is 2x9).
+inline constexpr int kTrimEndcapWidthPx = 2;
+inline int trim_endcap_w_px() {
+    const int w = static_cast<int>(std::nearbyint(
+        static_cast<double>(kTrimEndcapWidthPx) * gui_scale_factor()));
+    return w < 1 ? 1 : w;
+}
+
+// THE PLAYHEAD HEAD, redrawn rather than imported: 19x12 at 100%, ALIASED, from
+// row_5_lane_3_playhead.png. Its silhouette is a per-row HALF-WIDTH table, not a
+// formula — the shape has doubled rows (y3/y4, y6/y7, y10/y11) that no linear
+// ramp produces, so the pixels are transcribed and the table IS the drawing.
+// Painting it as integer rectangles keeps it hard-edged at every scale, which a
+// path fill would not.
+inline constexpr int kPlayheadHeadWidthPx  = 19;
+inline constexpr int kPlayheadHeadHeightPx = 12;
+inline constexpr int kPlayheadHeadHalf[kPlayheadHeadHeightPx] = {
+    9, 8, 7, 6, 6, 5, 4, 4, 3, 2, 1, 1
+};
 
 // THE HOVER TOOLTIP'S two SHARED numbers — a DAMAGE BOUND on its box height and
 // its dwell. They live out here, rather than with the rest of the tooltip's
@@ -1512,7 +1609,7 @@ double displayed_trim_ms(int64_t frame,
 // chip's LEFT edge sits ON the bound column (rect left = strip_x+col), the end
 // chip's RIGHT edge sits on it (rightmost pixel = strip_x+col, so rect left =
 // strip_x+col - flag_w + 1). The chip is flag_lane_w_px() wide; its y-band comes
-// from `row` (the trim chip lane = top_upper_row_area), whose height is that
+// from `row` (the trim chip lane = top_trim_row_area), whose height is that
 // same accessor, so the chip is SQUARE at every font size. Deliberate
 // asymmetry vs centered marker flags: a bound at frame 0 / EOF shows its chip
 // fully onscreen.
@@ -1548,7 +1645,7 @@ void render_trim_stems(cairo_t* cr,
 // Draws the begin/end trim-boundary chips in the TRIM CHIP LANE, plus the
 // strip-crossing portion of their stems and the inter-chip bridge band. The
 // lane band is the `chip_row` PARAMETER — the caller passes
-// top_upper_row_area(app) (top-strip lane 4), the same accessor
+// top_trim_row_area(app) (top-strip lane 4), the same accessor
 // hit_test_trim_chip's y-gate and route_trim_chip_press' bridge y-gate read, so
 // paint and hit take the band from ONE owner and cannot drift; nothing in here
 // re-derives the lane's y from the row heights above it. Only the band's y/h
@@ -1599,7 +1696,7 @@ void render_trim_flags(cairo_t* cr,
                        const TrimRange& trim);
 
 // The two top-strip lanes a flag shape occupies, exactly as the lane accessors
-// report them: `flag_lane` = top_flag_row_area (the rectangle's band) and
+// report them: `flag_lane` = top_marker_row_area (the rectangle's band) and
 // `triangle_lane` = top_triangle_row_area (the tip-down triangle's band, whose
 // bottom edge is flush with the waveform top). Both accessors delegate to
 // strip_row_rect, the single strip-geometry owner, and both take AppState —
@@ -1608,9 +1705,14 @@ void render_trim_flags(cairo_t* cr,
 // land on the SAME bands the empty-lane press gate and every other lane
 // consumer read, whatever the strip's gaps and lane heights are, instead of
 // being re-derived by stacking upward from the waveform top edge.
+// ROW 5 COLLAPSED THE TWO LANES INTO ONE (2026-08-01). The flag was a fused
+// rectangle-plus-triangle glyph spanning a flag lane and a triangle lane; it is
+// now a single box inside the ONE marker lane, so this carries one rect and the
+// seam invariant that bound the pair is retired (the record is at the lane table
+// in main.cpp). Kept as a struct rather than a bare GuiRect so the call sites
+// that thread it through keep naming what they are threading.
 struct FlagLaneRects {
-    GuiRect flag_lane;
-    GuiRect triangle_lane;
+    GuiRect marker_lane;
 };
 
 // Draws marker flags in `top_strip_area` above visible markers. Each flag is a
@@ -1916,7 +2018,7 @@ LaneRunSet current_marker_lane_runs(const AppState& app, const GuiAudio& audio);
 // set current_marker_lane_runs resolves — the ONE arbitration the lane paint
 // also reads — when the point lands inside a run's screen rect, derived exactly
 // as paint derives it: lane_text_left_x_at_frame for the left edge, glyphs times
-// monospace_advance for the width, top_marker_text_row_area for the y-band). The
+// monospace_advance for the width, top_marker_row_area for the y-band). The
 // EXPANDED run (a text-hover expansion) paints on top, so it is hit FIRST (a
 // point over a neighbor's occluded pixels resolves to the expanded run — WYSIWYG)
 // with a HALF-OPEN interval; then the ambient runs — all-visible with HALF-OPEN

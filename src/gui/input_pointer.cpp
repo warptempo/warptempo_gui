@@ -657,14 +657,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 in_region = x >= bs.x && x < bs.x + bs.w &&
                             y >= bs.y && y < bs.y + bs.h;
             } else {
-                // FlagPayload: the editable text lives in the marker-text lane,
-                // centered on the target marker's column. A press within the
+                // FlagPayload: the editable text lives on the marker's own flag
+                // (the marker-text lane is gone with row 5). A press within the
                 // rendered run's x-extent (in the lane's y-band) repositions the
                 // caret and arms the drag; g.text_left is that run's left edge
                 // (flag_pending_text_left_x, the one caret-origin owner). Any
                 // OTHER press is a non-caret click, which closes the editor
                 // below and then routes normally (the guard-free lifecycle).
-                const GuiRect lane = top_marker_text_row_area(app);
+                const GuiRect lane = top_marker_row_area(app);
                 const double run_w = static_cast<double>(
                     app.top_flag_editor.pending.size()) * g.advance;
                 in_region = y >= lane.y && y < lane.y + lane.h &&
@@ -1092,7 +1092,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // redesigned rows (lanes 0..3) were claimed far above and
             // never reach here.
             if (inside_top) {
-                const GuiRect chip_row = top_upper_row_area(app);
+                const GuiRect chip_row = top_trim_row_area(app);
                 if (y >= chip_row.y && y < chip_row.y + chip_row.h) {
                     // NO stop here: the bound set has its own refusals
                     // (read-only, a degenerate audio/geometry state), and a
@@ -1129,7 +1129,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // pair always resting — and deselects as a SETTER past its refusals). Everywhere else Ctrl+Shift stays a strict no-op,
         // playback included, falling to the return below.
         if (ctrl && shift && !alt && inside_top) {
-            const GuiRect chip_row = top_upper_row_area(app);
+            const GuiRect chip_row = top_trim_row_area(app);
             if (y >= chip_row.y && y < chip_row.y + chip_row.h) {
                 // NO stop here either: like the BEGIN set above, the stop sits
                 // inside set_trim_bound_at_click past that act's refusals, so a
@@ -1182,7 +1182,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the playhead and the focused flag are coincident before any subsequent
         // drag or nudge — nothing is towed.
         if (inside_top) {
-            // The chip row (top_upper_row_area, lane 4) is trim's lane and is
+            // The chip row (top_trim_row_area, lane 4) is trim's lane and is
             // claimed BEFORE the marker single-select. The chip row, the marker
             // text lane, and the flag/triangle lanes are disjoint y-bands, so
             // this contends with nothing: a marker-part press falls to the marker
@@ -1199,7 +1199,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // it stops no playback — nor does the plain press: the chip row's
             // stop belongs to the DRAG's first accepted bound change
             // (input_trim.cpp).
-            const GuiRect chip_row = top_upper_row_area(app);
+            const GuiRect chip_row = top_trim_row_area(app);
             const bool in_chip_row =
                 (y >= chip_row.y && y < chip_row.y + chip_row.h);
             if (!shift && in_chip_row) {
@@ -1426,13 +1426,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             } else {
                 // Empty top-strip spot — no marker run/flag under the point (the
                 // chip row already returned above; mh.index < 0 here).
-                const GuiRect flag_lane = top_flag_row_area(app);
-                const GuiRect tri_lane  = top_triangle_row_area(app);
+                // ONE lane to test now: the flag and triangle lanes became the
+                // single marker lane with row 5.
+                const GuiRect marker_lane = top_marker_row_area(app);
                 const bool in_flag_or_tri =
-                    (y >= flag_lane.y && y < flag_lane.y + flag_lane.h) ||
-                    (y >= tri_lane.y  && y < tri_lane.y  + tri_lane.h);
+                    y >= marker_lane.y && y < marker_lane.y + marker_lane.h;
                 if (in_flag_or_tri && !shift) {
-                    // The empty flag/triangle-lane parity press (architect
+                    // The empty marker-lane parity press (architect
                     // 2026-07-23): the empty lane works like the waveform upper half. A
                     // DOUBLE-CLICK consume creates a marker at the clicked
                     // position — the AUGMENTED drop, the same and only drop bare

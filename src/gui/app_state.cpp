@@ -125,10 +125,10 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     const int64_t begin_frame = app.trim.begin_frame;
     const int64_t end_frame   = app.trim.end_frame;
 
-    // The b/e chips are SQUARES in the trim-chip lane (top_upper_row_area,
+    // The b/e chips are SQUARES in the trim-chip lane (top_trim_row_area,
     // whose height is the chip width flag_lane_w_px()). A press outside that
     // vertical band is not on a chip.
-    const GuiRect row = top_upper_row_area(app);
+    const GuiRect row = top_trim_row_area(app);
     if (mouse_y < row.y || mouse_y >= row.y + row.h) return TrimHit::None;
 
     const GuiRect top = top_strip_area(app);
@@ -255,10 +255,10 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // viewport + width, so the rects computed here are exactly the painted flag
     // rectangles.
     // The lane rects the shapes were painted in, from the same accessors the
-    // painter was handed (top_flag_row_area / top_triangle_row_area) — so the
+    // painter was handed (top_marker_row_area) — so the
     // rect built here is the painted rectangle vertically as well as
     // horizontally, whatever the strip's lane stack looks like.
-    const FlagLaneRects lanes{top_flag_row_area(app), top_triangle_row_area(app)};
+    const FlagLaneRects lanes{top_marker_row_area(app)};
     std::vector<FlagHitRect> rects;
     if (app.active_markers_view == 'P') {
         rects = compute_phase_reset_flag_hit_rects(

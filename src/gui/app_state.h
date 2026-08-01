@@ -1916,10 +1916,11 @@ GuiRect top_menu_row_area(const AppState& a);
 GuiRect top_toolbar_row_area(const AppState& a);
 GuiRect top_tab_row_area(const AppState& a);
 GuiRect top_icon_row_area(const AppState& a);
-GuiRect top_upper_row_area(const AppState& a);
-GuiRect top_marker_text_row_area(const AppState& a);
-GuiRect top_flag_row_area(const AppState& a);
-GuiRect top_triangle_row_area(const AppState& a);
+// ROW 5's three lanes (2026-08-01), replacing the legacy
+// chip / marker-text / flag / triangle four.
+GuiRect top_trim_row_area(const AppState& a);
+GuiRect top_ruler_row_area(const AppState& a);
+GuiRect top_marker_row_area(const AppState& a);
 GuiRect bottom_upper_row_area(const AppState& a);
 GuiRect bottom_lower_row_area(const AppState& a);
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);

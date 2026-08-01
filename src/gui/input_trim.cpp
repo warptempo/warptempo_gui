@@ -681,7 +681,7 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 //   CHIP HIT: a chip-rect hit (hit_test_trim_chip, itself y-gated to the chip
 //     row) arms that bound's single drag.
 //   BRIDGE: else, a press whose y lies in the chip (upper) row band —
-//     top_upper_row_area, the band the bridge bar spans between
+//     top_trim_row_area, the band the bridge bar spans between
 //     the two chips — and whose column falls inside the shared trim_bridge_gap
 //     interval (render.h) arms the pair drag. That is the SAME owner
 //     render_trim_flags' bar uses, so the clickable band IS the painted bar
@@ -739,7 +739,7 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
     }
 
     // Bridge (pair) drag: the CHIP ROW ONLY — a press whose y lies in the
-    // top-strip upper-row band (top_upper_row_area, the exact band
+    // top-strip upper-row band (top_trim_row_area, the exact band
     // hit_test_trim_chip y-gates on and the band the bridge bar
     // spans between the two chips) and whose column falls inside the painted bar's
     // gap between the two chips (both bounds always set, structurally). A
@@ -750,7 +750,7 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
     // moves the playhead). The gap interval uses the forward-map + column math on
     // the painted items' own map AND displayed viewport (the event-sync ruling
     // above), computed only on this path.
-    const GuiRect row = top_upper_row_area(app);
+    const GuiRect row = top_trim_row_area(app);
     if (mouse_y >= row.y && mouse_y < row.y + row.h) {
         const GuiRect area = waveform_area(app);
         // click_rel_x is waveform-relative from the layout origin area.x (a
