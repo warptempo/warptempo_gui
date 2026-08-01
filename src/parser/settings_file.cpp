@@ -233,15 +233,24 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         return R(out);
     }
     if (key == "gui_scale") {
-        // GUI rendering scale, an integer PERCENT in [100, 400]. One canonical
+        // GUI rendering scale, an integer PERCENT in [100, 200]. One canonical
         // spelling: plain digits through parse_authored_frame (no sign, point,
         // or leading zeros — exactly the writer's %d output), then the range
         // check. 100 is the design baseline; 200 is the 4K case.
+        //
+        // THE CEILING CAME DOWN FROM 400 (architect approval 2026-07-31): 200 is
+        // the largest scale the supported 1920x1080 window has room for, and the
+        // vocabulary now says so rather than accepting values whose layout does
+        // not fit. This is the ONE range owner — the editor's grammar and the
+        // file loader both reach the domain through here, so nothing else moves.
+        // The defensive waveform-height floor (waveform_area, main.cpp) STAYS:
+        // it guards the whole gui_scale x font_size cross-product, not just the
+        // corner this shrink removes.
         // (architect approval 2026-07-30 — the settings/parser grant this key
         // landed under.)
         int64_t v = 0;
-        if (!parse_authored_frame(value, v) || v < 100 || v > 400)
-            return err("must be an integer in [100, 400] in canonical spelling");
+        if (!parse_authored_frame(value, v) || v < 100 || v > 200)
+            return err("must be an integer in [100, 200] in canonical spelling");
         out.i64 = v;
         return R(out);
     }
@@ -354,7 +363,7 @@ std::expected<SettingsFile, std::string> read_settings_file(
         } else if (key == "font_size") {
             out.font_size = gv.d;
         } else if (key == "gui_scale") {
-            // Range-checked into [100, 400] by validate_gui_setting above, so
+            // Range-checked into [100, 200] by validate_gui_setting above, so
             // the narrowing to int is exact (architect approval 2026-07-30).
             out.gui_scale = static_cast<int>(gv.i64);
         } else if (key == "audio_player") {

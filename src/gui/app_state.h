@@ -1182,7 +1182,7 @@ struct AppState {
     // each of those application points.
     double  font_size               = 11.0;
 
-    // GUI rendering scale in PERCENT (the gui_scale setting; 100..400, default
+    // GUI rendering scale in PERCENT (the gui_scale setting; 100..200, default
     // 100). 100 is the design baseline — 1920x1080, the one supported
     // resolution — and 200 is the 4K case. A display preference in the same
     // class as font_size: not engine input, not authoring state, persisted on
@@ -2378,9 +2378,15 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // and because membership is the interesting part: a null `line1` means "this
 // button has no tooltip", which is the whole story for the two that carry none.
 //
-// EVERY BUTTON HAS ONE EXCEPT QUIT AND SETTINGS (architect 2026-07-31): Quit
-// says what it does in its own label, and Settings opens a menu that names
-// itself. The names follow HELP's vocabulary so the hint and the manual agree.
+// THE MENU ROW CARRIES NO TOOLTIPS, and that is the RULE rather than a list of
+// two names (architect 2026-07-31): row 1's buttons are word labels that already
+// say what they do — "Quit" quits, "Settings" opens a menu that names itself —
+// so a hint repeating the label would be noise. Stating it as the ROW's property
+// means a future menu-row button inherits the exclusion instead of having to be
+// remembered. Every button on rows 2, 3 and 4 has one; its icon or single letter
+// is not self-describing.
+//
+// The names follow HELP's vocabulary so the hint and the manual agree.
 //
 // `line2` is the SHIFT LINE and is non-null on exactly the two shift-admitting
 // buttons, which is not a coincidence to be maintained: it is asserted against
@@ -2392,6 +2398,7 @@ struct RedesignTooltipText {
 };
 inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
     switch (b) {
+        // Row 1 — the menu row: no tooltips, per the rule above.
         case RedesignButton::Quit:
         case RedesignButton::Settings:   return {nullptr, nullptr};
         case RedesignButton::Save:       return {"Save (Ctrl+S)", nullptr};

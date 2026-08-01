@@ -442,8 +442,10 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 // from dropdown_full): its items put text 36px from the highlight's left edge,
 // but that 36 is a RESERVED ICON COLUMN plus the text pad, and icons are ruled
 // OFF here exactly as they are on the tabs. Subtracting a ~28px Breeze icon
-// column (the 22px glyph plus its gaps) leaves 8, which is the pad.
-constexpr double kPopupLabelPadLeftPx = 8.0;
+// column (the 22px glyph plus its gaps) leaves 8 — which the architect then
+// widened to 12 at the live look, wanting the labels further from the Settings
+// button's own text above them. It remains the tweak knob.
+constexpr double kPopupLabelPadLeftPx = 12.0;
 
 // THE MINIMUM ITEM WIDTH, so the right side carries clearly more empty space
 // than the left — the tab-min-width pattern, and the reason a menu of short
@@ -1201,28 +1203,40 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
                            CAIRO_FONT_WEIGHT_NORMAL);
 
-    // THE NAME LINE at the redesign's 12pt, measured with its own extents.
-    cairo_set_font_size(cr, redesign_font_size_px());
-    cairo_scaled_font_t*  font1 = cairo_get_scaled_font(cr);
-    const text_shape::ShapedRun r1 =
-        text_shape::shape_text_run(font1, text.line1);
+    // TWO SIZES ON ONE CONTEXT, IN TWO PHASES — MEASURE, THEN PAINT — and the
+    // phase split is not tidiness, it is the chokepoint's stated precondition:
+    // show_shaped_run must run with THE SAME scaled font set on `cr` that shaped
+    // the run (text_shape.h). Shaping both lines up front and then painting both
+    // would leave the SECOND size on the context while the FIRST line's glyphs
+    // were emitted — its 12pt-shaped positions rendered at 10pt, which is a
+    // wrong-size line with mis-spaced glyphs, exactly the mismatch signature the
+    // contract warns about. So each line's size is (re-)set immediately before
+    // its own paint, below.
+    //
+    // The SIZE, not the font POINTER, is what is carried between the phases:
+    // cairo_get_scaled_font returns a borrowed reference that a later
+    // cairo_set_font_size releases, so a pointer held across a size change is not
+    // ours to use. Each phase re-fetches; only plain doubles cross.
+    const double size1 = redesign_font_size_px();
+    const double size2 =
+        kTooltipShiftFontSizePt * 96.0 / 72.0 * gui_scale_factor();
+    const bool two_line = (text.line2 != nullptr);
+
+    cairo_set_font_size(cr, size1);
+    cairo_scaled_font_t* f1 = cairo_get_scaled_font(cr);
+    const text_shape::ShapedRun r1 = text_shape::shape_text_run(f1, text.line1);
     cairo_font_extents_t fe1;
-    cairo_scaled_font_extents(font1, &fe1);
+    cairo_scaled_font_extents(f1, &fe1);
     const double band1 = fe1.ascent + fe1.descent;
 
-    // THE SHIFT LINE at 10pt, when there is one. Shaped through the SAME
-    // chokepoint at a second size — the contract is per-run, not per-face.
-    const bool two_line = (text.line2 != nullptr);
     double band2 = 0.0, w2 = 0.0;
     text_shape::ShapedRun r2;
-    cairo_scaled_font_t* font2 = nullptr;
-    cairo_font_extents_t fe2{};
     if (two_line) {
-        cairo_set_font_size(cr, kTooltipShiftFontSizePt * 96.0 / 72.0 *
-                                    gui_scale_factor());
-        font2 = cairo_get_scaled_font(cr);
-        r2 = text_shape::shape_text_run(font2, text.line2);
-        cairo_scaled_font_extents(font2, &fe2);
+        cairo_set_font_size(cr, size2);
+        cairo_scaled_font_t* f2 = cairo_get_scaled_font(cr);
+        r2 = text_shape::shape_text_run(f2, text.line2);
+        cairo_font_extents_t fe2;
+        cairo_scaled_font_extents(f2, &fe2);
         band2 = fe2.ascent + fe2.descent;
         w2 = r2.width_px;
     }
@@ -1253,22 +1267,32 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     paint_popup_chrome(cr, app.redesign_tooltip.rect, kRedesignRowGround,
                        kRedesignLine);
 
-    // Each line sits on ITS OWN band, so each baseline is that band's foot —
-    // the shared centrer applied to a slot that is exactly the band, which makes
-    // the symmetry above true of the ink and not merely of the arithmetic.
+    // THE PAINT PHASE. Each line RE-SETS its own size first, so the context
+    // carries the very font that shaped the run it is about to emit — the
+    // chokepoint's precondition, honored per line. Line 1 is therefore
+    // byte-identical in face, size and paint to the one-line form's line, which
+    // is the whole point: the two forms differ by an added line, not by anything
+    // about the first one.
+    //
+    // Each line sits on ITS OWN band, so each baseline is that band's foot — the
+    // shared centrer applied to a slot that is exactly the band, which makes the
+    // symmetry above true of the ink and not merely of the arithmetic.
+    cairo_set_font_size(cr, size1);
     cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
                          kRedesignLabel.b);
     text_shape::show_shaped_run(
         cr, r1, static_cast<double>(x + pad_x),
-        redesign_baseline(font1, static_cast<double>(y + pad_y), band1));
+        redesign_baseline(cairo_get_scaled_font(cr),
+                          static_cast<double>(y + pad_y), band1));
     if (two_line) {
+        cairo_set_font_size(cr, size2);
         // The hint line is DIMMED by the one measured factor, uniformly.
         const GuiColor dim =
             mix_color(kRedesignLabel, kRedesignRowGround, kRedesignDimMix);
         cairo_set_source_rgb(cr, dim.r, dim.g, dim.b);
         text_shape::show_shaped_run(
             cr, r2, static_cast<double>(x + pad_x),
-            redesign_baseline(font2,
+            redesign_baseline(cairo_get_scaled_font(cr),
                               static_cast<double>(y + pad_y) + band1 + gap,
                               band2));
     }

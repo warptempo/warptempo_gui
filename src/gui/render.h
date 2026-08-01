@@ -555,7 +555,7 @@ double gui_font_scale();
 // -- GUI scale (the redesign's own axis) -----------------------------------
 //
 // THE SECOND SCALE AXIS, and deliberately separate from the font one above. The
-// gui_scale setting is an integer PERCENT in [100, 400] (100 = the 1920x1080
+// gui_scale setting is an integer PERCENT in [100, 200] (100 = the 1920x1080
 // design baseline, 200 = the 4K case); the current value lives beside
 // g_font_size_pt as file-scope state in render.cpp, pushed by the SAME three
 // application points that push the font size (file load, the settings editor's

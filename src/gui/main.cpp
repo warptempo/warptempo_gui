@@ -284,10 +284,10 @@ GuiRect waveform_area(const AppState& a) {
     // in the ruled sense: no stderr, no refusal, no clamp of anybody's settings.
     //
     // The two scale axes are independently schema-legal to their ceilings, and
-    // their CROSS-PRODUCT is not budgeted anywhere: gui_scale=400 with
-    // font_size=72 makes the four redesigned rows and the six font-sized lanes
-    // together exceed 1080, so this subtraction goes NEGATIVE on the supported
-    // window. A negative-height rect is a silent-wrong input to every consumer
+    // their CROSS-PRODUCT is not budgeted anywhere: gui_scale at its ceiling
+    // with font_size=72 pushes the four redesigned rows and the six font-sized
+    // lanes toward and past 1080, so this subtraction can go NEGATIVE on the
+    // supported window. A negative-height rect is a silent-wrong input to every consumer
     // that takes a width/height pair, which is exactly the class this project
     // keeps a guard for; the absurd-but-legal combination is allowed to look
     // broken (strips overlapping out the bottom of the window) but is not
@@ -299,8 +299,10 @@ GuiRect waveform_area(const AppState& a) {
     // playhead_invalidate_rect yields an empty rect (whose tick fallback damages
     // the bottom strip instead), and cairo treats an empty rectangle as a no-op.
     // A positive floor would instead invent a strip of waveform that has nowhere
-    // to live. THE VOCABULARY QUESTION — whether [100, 400] should shrink — is
-    // the architect's and is asked separately; nothing here narrows it.
+    // to live. THE VOCABULARY QUESTION WAS ANSWERED SEPARATELY — gui_scale's
+    // ceiling came down to 200 (architect 2026-07-31) — and this guard STAYS
+    // regardless: it covers the whole cross-product, not the one corner that
+    // shrink removed, and font_size alone still reaches 72.
     const int h_avail = h - top_h - bot_h;
     return GuiRect{0, top_h, effective_w, h_avail < 0 ? 0 : h_avail};
 }

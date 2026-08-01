@@ -128,7 +128,7 @@ struct SettingsFile {
     char   active_tab_view         = 'A';   // A | B
     float  playback_speed          = 0.7f;  // preset vocabulary only
     double font_size               = 11.0;  // points, [6, 72]
-    // GUI rendering scale as an integer PERCENT in [100, 400]; 100 is the
+    // GUI rendering scale as an integer PERCENT in [100, 200]; 100 is the
     // design baseline (1920x1080), 200 the 4K case. LIVE in the GUI since
     // 2026-07-31: the redesigned rows size on it (the menu row is the first
     // consumer), and the row-by-row GUI redesign adds the rest one row at a
@@ -136,7 +136,7 @@ struct SettingsFile {
     // (architect approval 2026-07-30 — the settings/parser grant this key
     // landed under; comment-only retell of the retired DORMANT wording,
     // architect approval 2026-07-31).
-    int    gui_scale               = 100;   // percent, [100, 400]
+    int    gui_scale               = 100;   // percent, [100, 200]
     // GUI-kind launcher for the `l` render-listen command: an external player
     // name or path. A BLANK value (`audio_player=`) is the deliberate
     // no-player opt-out — the only spelling of it. The key is required, so the

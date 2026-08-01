@@ -87,7 +87,7 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "font_size",                   SettingKind::FontSizePt,           EngineField::Title,                   "11"       },
     // GUI-kind key, NOT an engine key: the GUI's rendering scale as an integer
     // percent. 100 is the design baseline (1920x1080, the supported
-    // resolution); 200 is the 4K case. Valid range 100..400. Applied at load
+    // resolution); 200 is the 4K case. Valid range 100..200. Applied at load
     // and live at the editor commit, exactly like font_size; its consumers are
     // the REDESIGNED rows, which the row-by-row GUI redesign adds one at a time
     // (the pre-redesign surfaces stay on the font's scale axis).
