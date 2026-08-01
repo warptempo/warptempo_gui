@@ -539,8 +539,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // persisted rate rather than the engine's default 1.0.
     playback.set_speed(app.playback_speed);
 
-    // Push the loaded font size AND gui scale to the renderer's file-scope state
-    // and
+    // Push the loaded gui scale to the renderer's file-scope state and
     // route the geometry consequences through the same rebuild path a
     // window resize performs: on_resize re-clamps zoom/viewport against
     // the (possibly changed) strip geometry, the next redraw re-measures

@@ -212,9 +212,16 @@ static void render_bottom_strip_editor(cairo_t* cr,
                              kAccentOutline.b);
         cairo_rectangle(cr, rx0, band_y, rw, band_h);
         cairo_fill(cr);
-        cairo_set_source_rgb(cr, kAccent.r, kAccent.g, kAccent.b);
-        cairo_rectangle(cr, rx0 + 1, band_y + 1, rw - 2, band_h - 2);
-        cairo_fill(cr);
+        // Interior only when the 1px inset leaves positive dimensions: an
+        // EMPTY invalid run is forced to rw == 1 above, and a negative-width
+        // rectangle is not a no-op in cairo — it normalizes back over the
+        // outline's own span, so the accent fill would overwrite the outline's
+        // vertical sides. When the inset vanishes, the outline IS the box.
+        if (rw - 2 > 0 && band_h - 2 > 0) {
+            cairo_set_source_rgb(cr, kAccent.r, kAccent.g, kAccent.b);
+            cairo_rectangle(cr, rx0 + 1, band_y + 1, rw - 2, band_h - 2);
+            cairo_fill(cr);
+        }
         cairo_restore(cr);
     }
 
@@ -1280,9 +1287,10 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE ICON ROW (top lane 3, row 4 of the redesign): the same #202326 ground
     // the tab row above opens into, a 1px border-bottom across the WHOLE window
-    // width, three vertical separators, and eleven 32x32 buttons in four groups
-    // — the S/T and W/P view radios, the phase-reset copy/paste pair with the
-    // bpm / iteration / follow modes, and the listen / commit render pair.
+    // width, four vertical separators, and thirteen 32x32 buttons in five
+    // groups — the S/T and W/P view radios, the zoom out/in pair, the
+    // phase-reset copy/paste pair with the bpm / iteration / follow modes, and
+    // the listen / commit render pair.
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade rows 1 and
     // 2 darken to, so there is nothing for it to change to (redesign_row_ground
@@ -1858,7 +1866,19 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
 
     const double ms_per_px = basis.spp * 1000.0 / static_cast<double>(sr);
     const double vp_ms     = basis.vp_start * 1000.0 / static_cast<double>(sr);
-    const int    wave_w    = waveform_area(app).w;
+    // THE WALK WIDTH IS THE PLATE'S OWN, NOT THE LIVE ONE — the same
+    // published-width rule the flag cache spells at its wave_w read
+    // (waveform_cache.cpp). The spp above comes from the published fingerprint,
+    // so the width bounding the tick walk, the label span and the head's
+    // tick-crossing recording must be the width that spp was published AGAINST:
+    // during the async resize window (on_resize stores new dimensions while the
+    // OLD plate stays blitted until the worker publishes) a grown live width
+    // would walk ticks across the newly exposed right-hand area at the old
+    // plate's scale — ticks disagreeing with the ink they sit over. The
+    // live-width fallback mirrors plate_viewport_basis's own cold arm (no plate
+    // published yet, spp already live).
+    const int wave_w = wf_cache.fp_area_w > 0 ? wf_cache.fp_area_w
+                                              : waveform_area(app).w;
     if (ms_per_px <= 0.0 || wave_w <= 0) { cairo_restore(cr); return; }
 
     const int64_t step  = ruler_step_ms(ms_per_px);
@@ -2231,8 +2251,9 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     // is the whole inside-the-window signal now, and the plate's pixels are
     // exactly what the renderer wrote, composited once over whichever ground —
     // kCanvas, or a kRegionCanvas recolor — the pass before
-    // this one left. That is what makes ink over a highlighted span identical
-    // to ink over plain canvas wherever coverage is full.
+    // this one left. The aliased renderer's alpha is binary (the antialiased
+    // plate is deleted), so ink over a highlighted span is identical to ink
+    // over plain canvas everywhere.
     //
     // The clip is the CONTENT band, not the full area: the area's top and
     // bottom rows are render_canvas's 2px black border (row 6) and no
@@ -2285,10 +2306,11 @@ GuiPaintHandler::region_columns(const PlateViewportBasis& basis) const {
 // 2026-07-26): the span's CANVAS becomes the opaque kRegionCanvas over the full
 // content height. Called from on_redraw after render_canvas and BEFORE
 // paint_waveform_plate, so the ARGB32 plate composites over the recolored
-// ground and its antialiased fringes blend against it — the ink over a
-// highlighted span is bit-identical to ink over plain canvas wherever coverage
-// is full, and only the ground carries the highlight. The retired form was a
-// translucent wash painted OVER the plate, which lifted the ink itself —
+// ground — and since the aliased renderer's alpha is BINARY (the antialiased
+// plate is deleted; docs/engineering/waveform_antialiasing_retired.md), the
+// ink over a highlighted span is bit-identical to ink over plain canvas
+// everywhere, and only the ground carries the highlight. The retired form was
+// a translucent wash painted OVER the plate, which lifted the ink itself —
 // exactly what the recolor model rejects.
 // Session-only, nothing persisted; not part of the plate/flag caches — a direct
 // per-frame pass, so no cache is involved. AA off, integer edges. The fill is
@@ -2744,9 +2766,11 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
 // marker's own stem is a real, always-present line for the playhead to hide
 // behind, and the deleted model becomes true again.
 //
-// WHAT IT FIXES: the two stems are derived through DIFFERENT spp arithmetic —
-// marker stems publish from the flag-cache rebuild over waveform_area(app).w,
-// the playhead from playhead_pixel_x against plate_viewport_basis — so at some
+// WHAT IT FIXES: the two stems are derived through DIFFERENT column arithmetic
+// — marker stems publish from the flag-cache rebuild (the flag layout's own
+// column resolution; its spp rides the plate's published width since the
+// 2026-08-01 resize-window fix, see waveform_cache.cpp's wave_w read), the
+// playhead from playhead_pixel_x against plate_viewport_basis — so at some
 // zoom rests a marker and a playhead standing on the SAME frame round to columns
 // one pixel apart, and nudging or dragging the marker made the pair flicker
 // between one line and two. Suppression removes the second line rather than

@@ -97,7 +97,7 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // (x), Delete, and every propagate command all drop at this gate.
 // Ctrl+S (save) is likewise NOT on the allowlist: read-only means no save, so
 // it drops here like the authoring chords. Gesture-owned state changed in a
-// locked tab (the read-only flag, trim, view state, font size, playback speed)
+// locked tab (the read-only flag, trim, view state, playback speed)
 // reaches disk only after unlocking (bare o) or via Ctrl+S from the writable
 // tab — never by saving from the locked tab itself.
 // ALL propagate commands are read-only-blocked: the copy (Ctrl+P) explicitly,

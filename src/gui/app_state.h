@@ -722,7 +722,7 @@ struct ChipRowPressSeed {
 
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the kdenlive rows carry, in painted order: row 1's Quit and Settings,
-// row 2's toolbar four, row 3's two TABS, then row 4's eleven view / mode /
+// row 2's toolbar four, row 3's two TABS, then row 4's thirteen view / mode /
 // action buttons. It exists ONCE, here, because it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
 // it; each domain then attaches its own attribute to these ids and to nothing

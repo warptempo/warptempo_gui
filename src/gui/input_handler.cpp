@@ -370,8 +370,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Ctrl+Q                 → close-prompt routing
     // Ctrl+S is NOT admitted: read-only means no save, so it drops at this
     // gate like the authoring chords. Gesture-owned state changed in a locked
-    // tab (the read-only flag itself, trim, view state, font size, playback
-    // speed) reaches disk only after unlocking (bare o) or via Ctrl+S from the
+    // tab (the read-only flag itself, trim, view state, playback speed)
+    // reaches disk only after unlocking (bare o) or via Ctrl+S from the
     // writable tab.
     // Authoring-mutation chords are BLOCKED at this gate, not admitted for a
     // deeper refusal: the marker / tempo / phase-reset drop / nudge /

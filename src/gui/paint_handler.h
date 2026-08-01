@@ -461,7 +461,7 @@ private:
     // row 2: the same ground, its border-bottom, its separators and the four
     // Save/Undo/Redo/Render buttons) and the TAB ROW (top lane 2, row 3: the
     // "A"/"B" Breeze tabs, their frame and its broken border-bottom) and the
-    // ICON ROW (top lane 3, row 4: the eleven view/mode/action buttons, their
+    // ICON ROW (top lane 3, row 4: the thirteen view/mode/action buttons, their
     // separators and its border-bottom).
     // All four PUBLISH their buttons' hit rects into app.redesign_buttons —
     // the painter is the only place a shaped label's width exists, so the
