@@ -121,20 +121,54 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y) {
 }
 
 std::vector<double> byte_offsets_px(const ShapedRun& run, size_t byte_count) {
-    // byte_count + 1 boundaries; the contract (including the middle-of-a-cluster
-    // rule) is at the declaration.
+    // byte_count + 1 boundaries; the contract (including the
+    // every-byte-of-a-cluster-reports-its-cluster's-START rule) is at the
+    // declaration.
+    //
+    // THE WALK IS BY CLUSTER, NOT BY GLYPH, and that distinction is the whole
+    // correctness argument. A first draft filled boundaries up to each glyph's
+    // cluster as it arrived, which quietly gave every INTERIOR byte of a cluster
+    // the pen of where that cluster ENDS — so an `fi` ligature's byte 1 reported
+    // the ligature's right edge, and a click just past the rendered ligature
+    // tied against that interior boundary and put the caret between the `f` and
+    // the `i`. Here the fill for a cluster happens only once its SUCCESSOR is
+    // known, using the pen recorded at the cluster's FIRST glyph, so every byte
+    // the cluster covers reports that one start.
     std::vector<double> out(byte_count + 1, 0.0);
-    double pen  = 0.0;
-    size_t next = 0;
+    double pen         = 0.0;   // running pen across the whole run
+    double cluster_pen = 0.0;   // pen at the current cluster's first glyph
+    size_t cluster_lo  = 0;     // that cluster's first byte
+    bool   open        = false; // a cluster is being accumulated
     for (const ShapedGlyph& glyph : run.glyphs) {
         const size_t cluster = static_cast<size_t>(glyph.cluster);
-        while (next <= cluster && next <= byte_count) out[next++] = pen;
+        // Several glyphs may share one cluster (a decomposed character); only
+        // the first of them sets the pen the cluster's bytes will report.
+        if (!open || cluster != cluster_lo) {
+            if (open) {
+                for (size_t b = cluster_lo; b < cluster && b <= byte_count; ++b)
+                    out[b] = cluster_pen;
+            }
+            cluster_lo  = cluster;
+            cluster_pen = pen;
+            open        = true;
+        }
         pen += glyph.x_advance_px;
     }
-    // Everything after the last glyph's cluster — the trailing boundary
-    // included — is the run's full width. `pen` is that width by construction
-    // (run.width_px is the same sum), so this is not a second derivation.
-    while (next <= byte_count) out[next++] = pen;
+    // The LAST cluster's bytes, by the same rule — its successor is the end of
+    // the string rather than another cluster, which is the arm the first draft
+    // also got wrong (a run ending in a ligature reported its end pen for its
+    // interior bytes).
+    if (open) {
+        for (size_t b = cluster_lo; b <= byte_count; ++b) out[b] = cluster_pen;
+    }
+    // THE TRAILING BOUNDARY IS ALWAYS THE RUN'S END — it is the caret position
+    // after the last cluster, not a byte inside one, so it is written last and
+    // unconditionally. `pen` is that width by construction (run.width_px is the
+    // same sum), so this is not a second derivation.
+    out[byte_count] = pen;
+    // Bytes BEFORE the first cluster (which LTR shaping does not produce — the
+    // first glyph's cluster is 0) keep their zero initialisation, the correct
+    // answer for a boundary at the run's origin.
     return out;
 }
 

@@ -1635,13 +1635,19 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // TIP-DOWN AT THE LANE'S BOTTOM, centered on the playhead column — the same
     // column the stem below runs on, so head and stem are one object.
     //
-    // THE HEAD IS THE RESTING CURSOR'S FORM ONLY. The SCANNER keeps its bare
-    // line: the two have always been distinct surfaces (the old triangle was
-    // drawn for the cursor alone, draw_triangle=false on every scanner call),
-    // and the damage table at playhead_pixel_x turns on that split — the
-    // scanner's per-frame damage is deliberately NARROW, and widening it to this
-    // head's 19px would make every playing frame pay for a shape the scanner
-    // does not draw. So the narrow scanner damage keeps its width unchanged.
+    // AND THIS PAINTER OWNS THE STEM'S MARKER-LANE SEGMENT TOO (2026-08-01).
+    // The head ends at the ruler's bottom and render_playhead's line begins at
+    // the waveform's top, which left the whole marker lane blank between them —
+    // and the hidden-by-marker model needs a LINE IN THAT LANE for a flag to
+    // occlude. The segment lands here rather than in paint_playheads for a
+    // reason that is not aesthetic: render_playhead is SHARED WITH THE SCANNER,
+    // and the scanner is waveform-only by ruling (it draws no head and belongs
+    // to no strip lane), so reaching that function up into a strip lane would
+    // give the scanner a lane presence it must not have. Here the segment sits
+    // inside the CURSOR-ONLY head block, under the same column gate, and the
+    // pass order does the rest: this painter runs after paint_playheads and
+    // BEFORE the flag blit, so the z-order holds end to end — ticks, then the
+    // head and both its stem segments, then the marker stems, then the flags.
     {
         const double cursor_px = playhead_pixel_x(app, basis.vp_start, basis.spp);
         const int col = static_cast<int>(std::nearbyint(cursor_px));
@@ -1650,6 +1656,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             const int    rows = static_cast<int>(std::nearbyint(
                                     kPlayheadHeadHeightPx * s));
             const int    head_bottom = lane.y + lane.h;
+            const int    head_top    = head_bottom - rows;
             for (int r = 0; r < rows; ++r) {
                 // Each device row reads its SOURCE row's half-width, so the
                 // transcribed silhouette survives scaling as steps, not slopes.
@@ -1657,7 +1664,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                                          static_cast<int>(r / s));
                 const int half = static_cast<int>(std::nearbyint(
                                      kPlayheadHeadHalf[src] * s));
-                const int y0 = head_bottom - rows + r;
+                const int y0 = head_top + r;
                 const int x0 = lane.x + col - half;
                 const int w  = 2 * half + 1;
                 cairo_set_source_rgb(cr, kPlayheadHead.r, kPlayheadHead.g,
@@ -1670,6 +1677,23 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // the crossing is decided the cheap way instead: a column carries a
             // tick exactly when it is a whole number of minors from the origin,
             // which is the same test the walk above used.
+            //
+            // ONLY THE ACTUAL INTERSECTION IS RECOLORED, and the intersection is
+            // computed from the SAME two tops the tick walk drew with rather
+            // than assumed. Two facts fall out of the lane stack and are worth
+            // stating because they are structural, not incidental:
+            //   * A MINOR NEVER TOUCHES THE HEAD AT ANY SCALE. Its top is
+            //     marker.y, and marker.y IS head_bottom — the ruler lane's
+            //     bottom edge and the marker lane's top edge are the same
+            //     coordinate in a contiguous lane stack. So the bands abut and
+            //     the intersection below is empty, every time, with no special
+            //     case needed to say so.
+            //   * A MAJOR touches exactly its RISE: it starts
+            //     kRulerMajorRisePx above marker.y, so it overlaps the head's
+            //     bottom `rise` rows (4 of 12 at 100%) and no others.
+            // The loop expresses both by intersecting [tick_top, head_bottom)
+            // with [head_top, head_bottom), so if either metric ever moves the
+            // recolor follows it instead of drifting.
             cairo_set_source_rgb(cr, kPlayheadHeadTick.r, kPlayheadHeadTick.g,
                                  kPlayheadHeadTick.b);
             const int max_half = static_cast<int>(std::nearbyint(
@@ -1679,20 +1703,46 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                 if (tc < 0 || tc >= wave_w) continue;
                 const double t = vp_ms + tc * ms_per_px;
                 const double k = t / minor;
+                const double kr = std::nearbyint(k);
                 // Within half a pixel of a minor line: the same rounding the
                 // tick walk performs, expressed at the column.
-                if (std::fabs(k - std::nearbyint(k)) * minor > ms_per_px * 0.5)
-                    continue;
-                for (int r = 0; r < rows; ++r) {
+                if (std::fabs(k - kr) * minor > ms_per_px * 0.5) continue;
+                // WHICH tick it is decides where it starts — the walk's own
+                // `major = (i == 0)` test, expressed on the minor index: a
+                // column is a major exactly when its minor index is a whole
+                // multiple of the minors-per-step.
+                const long long ki = static_cast<long long>(kr);
+                const bool major_here =
+                    ((ki % kRulerMinorsPerStep) == 0);
+                const int tick_top = major_here ? major_top : minor_top;
+                const int y_lo = std::max(tick_top, head_top);
+                // Every tick runs to the waveform top, which is strictly below
+                // the head, so the intersection's lower bound is always the
+                // head's own bottom — min(tick_bottom, head_bottom) with the
+                // min already resolved.
+                const int y_hi = head_bottom;
+                for (int y = y_lo; y < y_hi; ++y) {
                     const int src = std::min(kPlayheadHeadHeightPx - 1,
-                                             static_cast<int>(r / s));
+                                             static_cast<int>((y - head_top) / s));
                     const int half = static_cast<int>(std::nearbyint(
                                          kPlayheadHeadHalf[src] * s));
                     if (dx < -half || dx > half) continue;
-                    cairo_rectangle(cr, lane.x + tc,
-                                    head_bottom - rows + r, 1, 1);
+                    cairo_rectangle(cr, lane.x + tc, y, 1, 1);
                 }
             }
+            cairo_fill(cr);
+
+            // THE STEM'S MARKER-LANE SEGMENT: from the head's tip row (the lane
+            // seam) down to the waveform's top edge, where render_playhead's own
+            // segment picks it up — one unbroken line from the head through the
+            // waveform. It paints AFTER the ticks, so a tick crossing the
+            // cursor's column in this lane passes UNDER the stem, which is the
+            // stated order (ticks below the head+stem); and before the flag
+            // blit, so a marker sharing the column hides it, which is the whole
+            // hidden-by-marker model this segment exists to make possible.
+            cairo_set_source_rgb(cr, kPlayheadStem.r, kPlayheadStem.g,
+                                 kPlayheadStem.b);
+            cairo_rectangle(cr, lane.x + col, marker.y, 1, marker.h);
             cairo_fill(cr);
         }
     }
@@ -2030,7 +2080,7 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 // segments, and the waveform stem segments — paints here per frame, in the old
 // trim-stem-cache slot (after the phase-reset overlay's ring, before
 // paint_marker_stems and hence before every playhead element), so the playhead
-// triangle sits OVER a trim stem crossing the triangle lane while marker flags
+// stem sits OVER a trim stem sharing its column while marker flags
 // stay above the playheads (the z-order flip untouched). "Markers over trim" is
 // now STRUCTURAL pass order — trim < selected stem < playheads < flag blit —
 // not an intra-cache paint convention; the two-segment stem join (strip segment
@@ -2194,27 +2244,30 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     const PlateViewportBasis basis = plate_viewport_basis();
     const double disp_spp = basis.spp;
     const double px_x = playhead_pixel_x(app, wf_cache.fp_vp_start, disp_spp);
-    // The lane the cursor's HEAD belongs to, from the lane accessor rather than
-    // derived from the waveform top edge. ROW 5 RETIRED THE TRIANGLE: the
-    // tip-down triangle that stood here died with its lane, and its successor is
-    // the ruler lane's aliased head. Until that head lands, the cursor paints its
-    // STEM only — every call passes draw_triangle=false — so nothing stamps in
-    // this band and the parameter is threaded purely to keep the one lane owner.
+    // ROW 5 RETIRED THE TRIANGLE and this pass draws NOTHING in a strip lane
+    // any more: the tip-down triangle died with its lane, its successor is the
+    // ruler lane's aliased head, and paint_ruler_row owns that head (it needs
+    // the tick columns for the pre-blended crossing) along with the stem's
+    // marker-lane segment. So both calls below pass draw_triangle=false and this
+    // pass is the WAVEFORM segment of the stem, plus the scanner's line. The
+    // lane rect is still threaded through — render_playhead requires it
+    // unconditionally so a triangle-drawing call can never omit it — and it is
+    // the ruler lane, the band the head occupies.
     const GuiRect tri_lane = top_ruler_row_area(app);
 
     // Playheads paint UNDER the marker flags (the Z-ORDER FLIP, architect
-    // 2026-07-23 — see the paint-order block in on_redraw): the cursor line +
-    // triangle passes beneath a marker flag sharing their column, so a cursor
-    // resting on a marker sits hidden behind that marker's flag. The scanner line
-    // stays waveform-only (no flag lane), so its stacking is unaffected; the
-    // cursor still draws over the marker STEMS below it in the waveform. The
-    // triangle indicator lives in the top strip, so render whenever either the
-    // waveform or top strip is exposed; otherwise a flag-strip-only repaint would
-    // erase the triangle.
+    // 2026-07-23 — see the paint-order block in on_redraw): the cursor's line
+    // passes beneath a marker flag sharing its column, so a cursor resting on a
+    // marker sits hidden behind that marker's flag. The scanner line is
+    // waveform-only and has no strip presence at all, so its stacking is
+    // unaffected; the cursor still draws over the marker STEMS below it in the
+    // waveform. Gated on the waveform OR the top strip being exposed: the head
+    // and the marker-lane stem segment live in the strip and are repainted by
+    // paint_ruler_row on the same frame, so a strip-only damage must reach both
+    // passes.
     //
-    // Paint order: scanner first (line only, gated on playhead_scanner_active),
-    // then cursor (line + triangle). The cursor draws over the scanner on
-    // overlap.
+    // Paint order: scanner first (gated on playhead_scanner_active), then the
+    // cursor. The cursor draws over the scanner on overlap.
     if (app.playhead_scanner_active) {
         const double scan_px = scanner_pixel_x(app, wf_cache.fp_vp_start,
                                                disp_spp);
@@ -2224,9 +2277,8 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
 
     // THE CURSOR PLAYHEAD ALWAYS PAINTS (architect 2026-07-30): ONE playhead
     // form, drawn at the resting cursor column whatever the selection and
-    // whatever the region are doing. The kPlayheadCursor 1px line + tip-down
-    // triangle, painted solid straight over the plate ink; ONE color for the
-    // line and the triangle alike.
+    // whatever the region are doing — a 1px line painted solid straight over the
+    // plate ink.
     //
     // The three-way chain that used to live here is gone with the SPAN FORM: the
     // region is no longer a playhead at all (it is TRIM SCRATCH — a ground recolor
@@ -2240,11 +2292,12 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // the cursor rides along VISIBLY, which is the lane model's honest reading.
     // The region ground still paints under the plate (paint_region_ground); the
     // cursor line crosses it exactly as it crosses waveform ink.
-    // THE TRIANGLE IS OFF EVERYWHERE NOW (row 5): the cursor's tip-down triangle
+    // THE TRIANGLE IS OFF EVERYWHERE (row 5): the cursor's tip-down triangle
     // retired with the triangle lane, and its successor — the ruler lane's
     // aliased head — is painted by the ruler pass, which owns the tick columns
-    // the head's pre-blended crossing needs. So this call is the STEM alone,
-    // like every other, until that pass lands.
+    // the head's pre-blended crossing needs. So this call is the stem's WAVEFORM
+    // segment; the ruler pass draws the head and the marker-lane segment above
+    // it, and the three make one unbroken line.
     // THE STEM IS kPlayheadStem NOW (#fcfcfc), superseding the old cursor line's
     // color at this surface: the head above it is the playhead's identity, and
     // the stem is that head's line continued down through the waveform.
@@ -2596,7 +2649,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // each rebuild and transparent outside the painted shapes, so the flag
         // blit composites source-over and never erases the playheads it does not
         // cover. Gated on area OR top_strip: the cursor line lives in the waveform
-        // area, its triangle in the triangle lane (top strip).
+        // area, its head and marker-lane segment in the top strip.
         if (rects_intersect(exposed, area) ||
             rects_intersect(exposed, top_strip)) {
             paint_playheads(cr, area);
@@ -2626,8 +2679,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // only. It now paints AFTER the playheads (the flip moved them up), so
         // where the pivot column coincides with the cursor/scanner column during
         // a strip drag the anchor stem sits OVER the playhead LINE (both are
-        // waveform verticals; the playhead's triangle lane is untouched, the
-        // anchor carries no triangle). The anchor shows only mid-strip-drag, so
+        // waveform verticals; the playhead's strip-lane pixels are untouched,
+        // the anchor has none). The anchor shows only mid-strip-drag, so
         // this overlap is transient and the pivot affordance reading on top is
         // acceptable. The flag editor's box likewise ends up after the
         // playheads, but on the non-overlapping marker lane.

@@ -714,9 +714,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const char      mv         = app.active_markers_view;
     // The measured font grid these shapes would be laid out against. The strip
     // dims above move with it in every ordinary case, but they are the STRIP's
-    // dims, not the flag's: the shape sizes and the flag/triangle lane split are
-    // font-derived independently, so keying the metric itself makes the cache
-    // sound by FIELD instead of by that coupling.
+    // dims, not the flag's. IT IS A VESTIGE SINCE ROW 5: the flag boxes moved to
+    // the gui_scale axis with their lane, so nothing they paint is derived from
+    // the MONOSPACE grid any more and this field can no longer move on its own.
+    // It stays because keying the metric costs one compare and keeps the cache
+    // sound by FIELD rather than by an argument about which axis feeds what.
     const double    font_px    = measured_monospace_font_px();
     // The flags carry TEXT since row 5, and iteration mode changes what that
     // text says (flag_text_iter splices the bracket). See fp_iteration_mode.

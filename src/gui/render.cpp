@@ -675,24 +675,19 @@ void render_playhead(cairo_t* cr,
         cairo_stroke(cr);
     }
 
-    // Inverted-triangle indicator: stamped from the cached ANTIALIASED A8 mask
-    // (playhead_triangle_mask()) so the per-frame playhead redraw is a cheap
-    // blit with the slope edge alphas already baked in. The mask is 2H-1 x H
-    // (odd width) with the tip at column index H-1 (image-local); integer
-    // division places that tip column at `area.x + col`. The triangle sits in
-    // the TRIANGLE LANE — dst_y is the LANE RECT's top (`triangle_lane.y`, from
-    // top_triangle_row_area), not `area.y - H` re-derived from the waveform top
-    // edge, so the stamp follows the lane the accessors report wherever the
-    // strip's gaps put it. Its top row is the lane top and its tip (bottom row)
-    // lands one pixel above the waveform top edge, where the marker/trim stems
-    // begin, because the lane stack rests that lane flush on the waveform; the
-    // mask height equals the lane height by construction (both are
-    // playhead_triangle_h_px()). This is the
-    // same width and centered column as every marker/trim flag triangle, so when
-    // the cursor sits on a marker the two coincide. Skipped for the scanner call
-    // (draw_triangle=false): the triangle belongs to the cursor exclusively.
-    // The clip band is the triangle lane; the vertical
-    // line above spans only the waveform area, so the two never overlap.
+    // Inverted-triangle indicator, stamped from the cached ANTIALIASED A8 mask
+    // (playhead_triangle_mask()): the mask is 2H-1 x H (odd width) with the tip
+    // at column index H-1 (image-local), and dst_y is the passed lane rect's own
+    // top rather than `area.y - H` re-derived from the waveform edge.
+    //
+    // NO CALLER TAKES THIS BRANCH. Row 5 retired the cursor triangle along with
+    // the triangle lane it stamped into, and its successor is the ruler lane's
+    // ALIASED HEAD, which paint_ruler_row draws because the head's pre-blended
+    // tick crossing needs the tick columns. Every call site passes
+    // draw_triangle=false. The branch and its mask are kept rather than ripped
+    // out mid-arc — they are the one place the triangle geometry still lives —
+    // and the lane parameter stays unconditional so a call that ever revives it
+    // cannot forget which band it lands in.
     if (draw_triangle) {
         cairo_surface_t* triangle_surface = playhead_triangle_mask();
         const int img_w = cairo_image_surface_get_width(triangle_surface);
@@ -1204,11 +1199,21 @@ void iterate_visible_flags_impl(
 
     // THE CULL IS ASYMMETRIC BECAUSE THE BOX IS. A flag opens at its column and
     // runs RIGHTWARD, so a marker to the LEFT of the viewport can still reach
-    // into it (by up to a full box width) while a marker at or past the right
+    // into it (by up to a full box width) while a marker AT OR PAST the right
     // edge can show nothing at all. The left margin is the width BOUND
     // (marker_flag_max_width_px) rather than the real width, which is not known
     // until the label is shaped — a bound over-admits a handful of offscreen
     // markers per frame and never drops a visible one.
+    //
+    // THE RIGHT BOUND IS EXCLUSIVE, like every other viewport-end compare in
+    // this tree. `ms == viewport_end_sample` maps to left_x == waveform_width —
+    // the first column of the INERT RIGHT GUTTER that a non-multiple-of-16
+    // window leaves beside the effective waveform width. At 1920 there is no
+    // gutter and the box simply fell off the surface, but at a gutter width the
+    // flag painted there AND published a clickable hit rect there, so a marker
+    // sitting exactly on the displayed end was visible and selectable outside
+    // every grid-aligned surface. "At or past the right edge shows nothing" is
+    // the stated rule; this is it spelled.
     const double cull_lo = static_cast<double>(viewport_start_sample) -
                            marker_flag_max_width_px() * samples_per_pixel;
     const double cull_hi = static_cast<double>(viewport_end_sample);
@@ -1221,7 +1226,7 @@ void iterate_visible_flags_impl(
         const double ms =
             frame_to_paint_sample(eff_time, warp_frame_map);
         if (ms < cull_lo) continue;
-        if (ms > cull_hi) continue;
+        if (ms >= cull_hi) continue;   // exclusive — see the cull note above
 
         const double x_raw =
             (ms - static_cast<double>(viewport_start_sample)) /

@@ -679,7 +679,7 @@ enum class DoubleClickSurface { None, TrimBar, Marker, EditorText, EmptyLane };
 //                 / whitespace) in the active text editor (target unused; both
 //                 axes' slack compared).
 //   EmptyLane  -> creates a marker at the clicked position on an EMPTY flag /
-//                 triangle lane spot (architect 2026-07-23): the AUGMENTED
+//                 marker lane spot (architect 2026-07-23): the AUGMENTED
 //                 drop, exactly what bare `s` performs (warp copy-previous /
 //                 phase reset N/2 lead-in), home-view and read-only gated
 //                 silently. PLAIN presses only — a modified press on the lane

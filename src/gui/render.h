@@ -1158,10 +1158,11 @@ cairo_surface_t* playhead_triangle_mask();
 // are confined to [area.y + waveform_inset_px(), area.y + area.h -
 // waveform_inset_px()] so the waveform is symmetric about its area center and
 // the marker/trim stems have a clean stem-only band at the top before the
-// samples begin. Equal to the triangle mask height by construction. (The
-// cursor triangle no longer sits inside this band — it moved to its own
-// triangle lane above the waveform — so the former triangle-clearance
-// rationale retires; the symmetric-margin purpose remains.)
+// samples begin. Equal to the triangle mask height by construction, which is
+// now only a sizing coincidence: no triangle is drawn anywhere (the cursor's
+// moved to its own lane in 2026-07 and then retired outright in row 5), so the
+// former triangle-clearance rationale is gone and the symmetric-margin purpose
+// is the whole of it.
 inline int waveform_inset_px() { return playhead_triangle_h_px(); }
 
 // Half-width (px) of the tip-down triangle's horizontal footprint, H - 1
@@ -1586,13 +1587,15 @@ void render_waveform(cairo_surface_t* dest,
 // it patched is solved by the scheme, so the parameter went with it. The
 // triangle likewise paints in `color` over the line.
 //
-// `triangle_lane` is the TRIANGLE LANE rect as top_triangle_row_area reports it
-// (the caller holds AppState and this module does not); the mask's top row lands
-// on triangle_lane.y. Passing the lane in — rather than deriving it as
-// `area.y - mask height` — is what keeps the stamp on the lane the accessors
-// report even if the strip gained an inter-lane or waveform-side gap. Required
-// on every call, `draw_triangle = false` included, so the parameter cannot be
-// forgotten on a call that later starts drawing one.
+// `triangle_lane` IS A VESTIGE, and named for a lane that no longer exists. It
+// was the top_triangle_row_area rect the tip-down cursor triangle stamped into;
+// row 5 deleted that lane and replaced the triangle with the RULER lane's
+// aliased head, which this function does not draw (paint_ruler_row does, because
+// the head's pre-blended tick crossing needs the tick columns). Every caller now
+// passes top_ruler_row_area and `draw_triangle = false`, so the parameter feeds
+// nothing but the mask stamp's dst_y on a branch nothing takes. It is kept
+// UNCONDITIONAL rather than defaulted so a call that ever starts drawing a
+// triangle again cannot forget to say which band it lands in.
 void render_playhead(cairo_t* cr,
                      GuiRect area,
                      GuiRect triangle_lane,
@@ -1849,17 +1852,15 @@ void render_trim_flags(cairo_t* cr,
                        long long viewport_end_sample,
                        const TrimRange& trim);
 
-// The two top-strip lanes a flag shape occupies, exactly as the lane accessors
-// report them: `flag_lane` = top_marker_row_area (the rectangle's band) and
-// `triangle_lane` = top_triangle_row_area (the tip-down triangle's band, whose
-// bottom edge is flush with the waveform top). Both accessors delegate to
-// strip_row_rect, the single strip-geometry owner, and both take AppState —
-// which this module does not see, so the caller resolves them and passes them
-// in. That is the point of the parameter: the flag shapes and their hit rects
-// land on the SAME bands the empty-lane press gate and every other lane
-// consumer read, whatever the strip's gaps and lane heights are, instead of
-// being re-derived by stacking upward from the waveform top edge.
-// ROW 5 COLLAPSED THE TWO LANES INTO ONE (2026-08-01). The flag was a fused
+// The top-strip lane a flag box occupies, exactly as the lane accessor reports
+// it: `marker_lane` = top_marker_row_area, whose bottom edge is flush with the
+// waveform top. The accessor delegates to strip_row_rect, the single
+// strip-geometry owner, and takes AppState — which this module does not see, so
+// the caller resolves it and passes it in. That is the point of the parameter:
+// the flag boxes and their hit rects land on the SAME band the empty-lane press
+// gate and every other lane consumer read, whatever the strip's lane heights
+// are, instead of being re-derived by stacking upward from the waveform top.
+// ROW 5 COLLAPSED TWO LANES INTO ONE (2026-08-01). The flag was a fused
 // rectangle-plus-triangle glyph spanning a flag lane and a triangle lane; it is
 // now a single box inside the ONE marker lane, so this carries one rect and the
 // seam invariant that bound the pair is retired (the record is at the lane table

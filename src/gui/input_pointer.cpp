@@ -1057,11 +1057,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Ctrl-exact left press splits by surface. On a top-strip MARKER it is
         // the individual membership toggle + land on the resulting focus (the
         // marker claim below). On the WAVEFORM it arms the dual-axis strip drag
-        // (StripDragState / apply_strip_drag_at) — THE GESTURE'S ONE ENTRY since
-        // the dedicated zoom lane was deleted (architect 2026-07-31), and the
-        // reason that deletion cost no capability: this press has the gesture's
-        // full reach — the cursor capture ("swallow"), the anchor stem, the edge
-        // clamp, and dual-axis zoom+pan. The waveform strip-drag is
+        // (StripDragState / apply_strip_drag_at) — ONE OF THE GESTURE'S TWO
+        // ENTRIES. It was the only one between the zoom lane's deletion
+        // (architect 2026-07-31) and row 5, which is what proved the deletion
+        // cost no capability: this press has the gesture's full reach — the
+        // cursor capture ("swallow"), the anchor stem, the edge clamp, and
+        // dual-axis zoom+pan. Row 5 gave it a second entry on the RULER band
+        // (arm_strip_drag_at, the zoom strip reborn), through the same hoisted
+        // arm body, so the two cannot drift. The waveform strip-drag is
         // navigation-class: allowed in read-only, never touches the playhead or
         // selection — and a MOTIONLESS ctrl+waveform press-release commits
         // nothing at all (the ctrl+waveform selection clear is RETIRED,
@@ -1208,7 +1211,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (inside_top) {
             // The chip row (top_trim_row_area, lane 4) is trim's lane and is
             // claimed BEFORE the marker single-select. The chip row, the marker
-            // text lane, and the flag/triangle lanes are disjoint y-bands, so
+            // trim lane and the marker lane are disjoint y-bands, so
             // this contends with nothing: a marker-part press falls to the marker
             // handling below. The PLAIN click consumes the span-framing
             // double-click, else arms a chip/bridge drag, else — on an unclaimed
@@ -1469,8 +1472,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             } else {
                 // Empty top-strip spot — no marker flag under the point (the
                 // chip row already returned above; mh_index < 0 here).
-                // ONE lane to test now: the flag and triangle lanes became the
-                // single marker lane with row 5.
+                // ONE lane to test: the flag and triangle lanes became the
+                // single marker lane in row 5.
                 const GuiRect marker_lane = top_marker_row_area(app);
                 const bool in_flag_or_tri =
                     y >= marker_lane.y && y < marker_lane.y + marker_lane.h;
