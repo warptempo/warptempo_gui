@@ -263,10 +263,23 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // point, yet it is a real drag that commit lands the playhead for.
     // Playhead follows the marker, mid-motion: slide the resting cursor
     // playhead to the dragged marker's live proposed position. Target
-    // view maps the free double through displayed_or_live_target_map —
-    // the SAME basis the DragOverlay paints the flag through, so the
-    // playhead tracks the flag in lockstep (mid-motion is paint
-    // coherence; commit_drag's two-step placement is the truth).
+    // view maps through displayed_or_live_target_map — the SAME basis the
+    // DragOverlay paints the flag through, so the playhead tracks the flag in
+    // lockstep (mid-motion is paint coherence; commit_drag's two-step placement
+    // is the truth).
+    // THE MAP INPUT IS THE ROUNDED PROPOSAL, which is what makes that lockstep
+    // TRUE rather than merely intended (2026-08-01). The painters do not map the
+    // free double: frame_to_paint_sample (render.cpp) rounds the source frame
+    // FIRST and rounds the map's output second, and painted_column_of_source_-
+    // frame_on_basis restates that shape for the gesture-commit helpers. This
+    // site mapped the fraction directly, so on a compressing segment the cursor
+    // could land a target frame off the flag's own paint sample and paint one
+    // column beside the stem it is supposed to be riding — measured at ~0.08% of
+    // motion events over a swept zoom range. Rounding here first makes the two
+    // one expression; it also matches the COMMIT below, which maps an integer
+    // frame by construction, so the ride and its landing now agree too.
+    // Reachable through the PHASE-RESET column, whose home view is the target one
+    // (a warp drag is source-home by the arming press's authoring gate).
     // A marker drag can never run under live playback — the arming
     // top-strip flag press stops playback — so the scanner is always
     // inactive here; move_playhead_to only ever writes the cursor
@@ -278,7 +291,7 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     int64_t sample;
     if (target_domain) {
         sample = static_cast<int64_t>(std::nearbyint(
-            map_source_to_target(new_t, dmap)));
+            map_source_to_target(std::nearbyint(new_t), dmap)));
     } else {
         sample = static_cast<int64_t>(std::nearbyint(new_t));
     }
