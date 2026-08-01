@@ -1115,63 +1115,32 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 clear_region_highlight(app, viewport);
                 return;
             }
-            // Markerless top-strip ctrl-exact press: the CHIP ROW sets the
-            // BEGIN trim bound at the click (ctrl is BEGIN and ctrl+shift is
-            // END, the architect's intended pair;
-            // set_trim_bound_at_click refuses a read-only tab silently — the
-            // clicks ADJUST the window that always rests, they never create one
-            // — and, being a SETTER, deselects past its refusals). EVERY
-            // other lane — an empty flag or triangle
-            // lane included — is a strict no-op, falling through to the return
-            // below (the ctrl-click clear on an empty flag/triangle spot is
-            // RETIRED, architect 2026-07-23: ctrl-click in Ableton is just
-            // click, and ctrl stays the zoom modifier here; the PLAIN empty
-            // flag/triangle-lane press below is the surviving lane gesture —
-            // the waveform's own parity press, not a bare clear). The four
-            // redesigned rows (lanes 0..3) were claimed far above and
-            // never reach here.
-            if (inside_top) {
-                const GuiRect chip_row = top_trim_row_area(app);
-                if (y >= chip_row.y && y < chip_row.y + chip_row.h) {
-                    // NO stop here: the bound set has its own refusals
-                    // (read-only, a degenerate audio/geometry state), and a
-                    // refused press changes nothing, so there is
-                    // nothing for a stop to protect. The stop lives INSIDE
-                    // set_trim_bound_at_click, past every refusal and
-                    // immediately ahead of the bound write.
-                    // Set the BEGIN bound AND arm the single-bound drag on it,
-                    // so motion drags it live (a motionless release rests the set).
-                    set_trim_bound_at_click_then_arm_drag(/*is_begin=*/true, x, y);
-                    return;
-                }
-            }
+            // Markerless top-strip ctrl-exact press: A STRICT NO-OP IN EVERY
+            // LANE (architect 2026-08-01, retiring the trim-lane bound sets).
+            // Ctrl on the chip row used to set the BEGIN bound at the click and
+            // ctrl+shift the END; BOTH CLAIMS ARE DELETED. The endcap and bar
+            // DRAGS are the whole trim authoring surface now — one gesture
+            // family instead of a drag plus a modifier-click that did the same
+            // thing by another route — and the standing strict-modifier rule
+            // absorbs the presses: a modifier combination with no explicit
+            // binding is a no-op everywhere, so ctrl and ctrl+shift over the
+            // trim lane simply fall to the inert return below, playback
+            // included. The four redesigned rows (lanes 0..3) were claimed far
+            // above and never reach here.
             if (inside_waveform) arm_strip_drag_at(x, y);
             return;
         }
 
-        // Ctrl+Shift-exact: the chip row is its ONE claim — set the END trim
-        // bound at the click (ctrl is BEGIN, ctrl+shift is END;
-        // set_trim_bound_at_click refuses a read-only tab silently — the
-        // adjust-only pair gate died with the unset state 2026-07-30, a full
-        // pair always resting — and deselects as a SETTER past its refusals). Everywhere else Ctrl+Shift stays a strict no-op,
-        // playback included, falling to the return below.
-        if (ctrl && shift && !alt && inside_top) {
-            const GuiRect chip_row = top_trim_row_area(app);
-            if (y >= chip_row.y && y < chip_row.y + chip_row.h) {
-                // NO stop here either: like the BEGIN set above, the stop sits
-                // inside set_trim_bound_at_click past that act's refusals, so a
-                // refused END set leaves a live audition alone.
-                // Set the END bound AND arm the single-bound drag on it.
-                set_trim_bound_at_click_then_arm_drag(/*is_begin=*/false, x, y);
-                return;
-            }
-        }
+        // (NO CTRL+SHIFT CLAIM ANYWHERE. The chip row's END bound set was its
+        // one claim and died with the BEGIN set above, so ctrl+shift is now a
+        // strict no-op on every surface — the rule below covers it with every
+        // other unbound combination.)
 
         // Strict modifier matching: the marker reposition arm lives on the plain
         // flag press and trim's chip/bridge drags on the plain chip-row press, so
-        // every remaining modified combination — Ctrl+Alt (now a strict no-op),
-        // Ctrl+Shift off the chip row (its one claim is the END bound set
-        // above), Shift+Alt, Ctrl+Alt+Shift, ... — no-ops here. Only a plain
+        // every remaining modified combination — Ctrl+Alt, Ctrl+Shift (which
+        // has no claim left anywhere), Shift+Alt, Ctrl+Alt+Shift, ... — no-ops
+        // here. Only a plain
         // or Shift-on-the-top-strip base press proceeds (Shift adjusts the
         // marker selection). Alt is POINTER-ONLY vocabulary: the Alt+wheel
         // stepped pan and the Alt+drag captured grab-pan are untouched (separate

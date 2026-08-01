@@ -62,8 +62,7 @@ inline constexpr GuiColor mix_color(GuiColor own, GuiColor toward,
 
 // Trim boundaries in domain-frame samples (source-frame in source view,
 // target-frame in target view). Trim no longer dims any renderer — it is
-// consumed by render_trim_stems / render_trim_flags to place the boundary
-// stems and chips. Values
+// consumed by render_trim_flags to place the bar and its endcaps. Values
 // are the AUTHORED positions mapped into the displayed domain by the live
 // trim pass (GuiPaintHandler::paint_trim, through displayed_trim_ms):
 // per-bound, unordered (bounds may be inverted mid-gesture — crossed cannot
@@ -345,7 +344,7 @@ inline GuiColor kOverlayOutline   = hex(0x7F8C8D);
 // an ordinary unselected marker stretched across the span it bounds. The CHIPS
 // dissolve into the strip: kTrimChip is the kBackground chrome value exactly, so
 // a chip's fill is invisible against the lane it sits in and what marks the
-// bound is its RING plus its stems — kTrimChipOutline and kTrimStem both take
+// bound is its RING plus its stems — kTrimChipOutline and kTrimStem both took
 // the kLine value, one calm rule. (The 1px STEMS are the waveform-area segments
 // in render_trim_stems plus the strip-crossing segments in render_trim_flags;
 // they read as part of the chip handle, which is why they follow the chip's ring
@@ -1625,8 +1624,8 @@ void render_strip_anchor_stem(cairo_t* cr,
 // GuiPaintHandler::paint_trim, below the playheads; no stem is cached anywhere.)
 
 // The ONE trim bound-to-column geometry owner. Every consumer of a
-// trim bound's pixel column funnels here: the two paint sites (render_trim_stems'
-// waveform stem, render_trim_flags' chips / strip stems / bridge gap) and the two
+// trim bound's pixel column funnels here: the ONE paint site (render_trim_flags'
+// endcaps and bar gap — the waveform stem site left with render_trim_stems) and the two
 // hit sites (hit_test_trim_chip's chip rects, route_trim_chip_press' bridge
 // test). It replaced five hand-copied `nearbyint` + `clamp(0, W-1)` formulas
 // maintained "byte-identical" by comment discipline.
@@ -1772,32 +1771,14 @@ inline int trim_endcap_grab_px() {
     return v < 0 ? 0 : v;
 }
 
-// Draws the WAVEFORM-AREA portion of the trim begin/end boundary stems. BOTH
-// bounds always paint (the trim window is always set since 2026-07-30 — the
-// per-bound has-gates died with the unset state, and at the full window the two
-// stems stand on the song edges): a 1px vertical stem at its
-// domain-frame column, spanning the WAVEFORM AREA (top at `waveform_area.y`, down
-// to the waveform bottom). Unlike marker stems (waveform-only), the trim stem
-// ALSO has a strip-crossing segment above it — from the chip's bottom edge down
-// through the intervening lanes to the waveform top — painted by render_trim_flags
-// (top-strip pass); the two segments meet at `waveform_area.y` to form one
-// unbroken line at the bound column. Trim bounds carry NO
-// triangle frame tick (unlike markers): Ableton's loop bounds carry none, so
-// the stem+chip pair is the whole waveform-side cue. Color is always
-// kTrimStem — the stem reads as part of the chip handle, so it follows the
-// calm chip pair rather than the bright bridge bar; trim has no
-// selected variant. `trim.begin` /
-// `trim.end` are in the displayed domain (already warp_frame_map-translated by the
-// caller), so no further translation happens here — the columns are placed
-// exactly like marker stems against the same viewport. View-independent: drawn
-// identically in 'W' and 'P' views. The stem paints solid kTrimStem straight
-// over the waveform ink — the ink-notch overdraw and its plate parameter are
-// retired (architect 2026-07-26, with the polarity inversion).
-void render_trim_stems(cairo_t* cr,
-                       GuiRect waveform_area,
-                       long long viewport_start_sample,
-                       long long viewport_end_sample,
-                       const TrimRange& trim);
+// (render_trim_stems IS DELETED, architect 2026-08-01. It drew the WAVEFORM-AREA
+// portion of the trim bounds — a 1px kTrimStem vertical at each bound's column,
+// spanning the waveform, meeting the strip-crossing segment at the waveform top
+// to form one unbroken line. THE BAR AND ITS TWO ENDCAPS ARE THE WHOLE DISPLAY
+// now: the redesigned trim lane states the window at the window, and two
+// full-height verticals competing with the marker stems stated it a second time
+// in the same pixels. kTrimStem stays a declared palette key with no paint site,
+// like kSelectedStem — the conf goes progressively inert, it is not dismantled.)
 
 // Draws the begin/end trim-boundary chips in the TRIM CHIP LANE, plus the
 // strip-crossing portion of their stems and the inter-chip bridge band. The
@@ -1822,7 +1803,7 @@ void render_trim_stems(cairo_t* cr,
 // waveform rect, read for its `.w` only — the column-mapping denominator (the
 // strip-crossing stems end at the waveform top edge, which this function takes
 // from `top_strip_area.y + .h`, the strip's own bottom). Column placement
-// matches render_trim_stems against the same viewport — `trim.begin` /
+// is on the same viewport basis — `trim.begin` /
 // `trim.end` are already in the displayed
 // domain, so no further translation happens here. The chip has NO editable
 // payload; it is a plain-press grab target only (trim is outside the selection

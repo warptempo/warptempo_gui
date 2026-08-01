@@ -569,97 +569,18 @@ void GuiInputHandler::commit_trim_drag() {
     app.trim_drag = TrimDragState{};
 }
 
-// Set ONE trim bound at the clicked column — ADJUST-ONLY (architect
-// 2026-07-23; the pair gate it used to spell here is GONE with the unset state
-// 2026-07-30 — a full ordered pair always rests, so "adjust-only" is now a
-// statement about what the click DOES, not a condition it tests). The click
-// moves one bound of the resting window. The column maps to a source
-// frame through authored_frame_at_column over the DISPLAYED paint map — the same
-// release-snap basis commit_trim_drag uses (its snap_moved_bound goes
-// source_frame -> painted_column -> authored_frame; a click carries the column
-// directly). The absolute walls [0, total-1] apply after the snap, then the
-// shared crossed-commit reset (a bound onto/across its partner resets the pair
-// to the song edges). History-less like every trim mutation; the repaint + trigger tail
-// mirrors the drag release. Read-only refuses silently (trim authoring). This
-// function OWNS the press's playback stop — placed past every refusal above
-// and immediately ahead of the bound write, so a refused click never stops a
-// live audition (the claim-keyed stop rule at on_button_press's top-strip
-// paragraph, taken inside the gate). It DESELECTS at its tail, being a trim
-// SETTER (architect 2026-07-29); it publishes no region, the trim-window
-// highlight having retired 2026-07-30.
-// Both bound-set clicks are this one function, so both deselect, and
-// both deselect only PAST THE REFUSALS above: a read-only tab and a degenerate
-// audio/geometry state set nothing and leave the selection exactly as it was. The
-// deselect RESTS in every case, including when this click ARMS a drag
-// (set_trim_bound_at_click_then_arm_drag): that gesture has no cancel either, so
-// its caller captures nothing (2026-07-29 — the no-cancel rule at the drag-modal
-// gate, input_handler.cpp).
-void GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
-    if (active_view_state(app).read_only) return;   // trim authoring
-    if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
-    if (current_samples_per_pixel(app, audio) <= 0.0) return;
-    const GuiRect area = waveform_area(app);
-    if (area.w <= 0) return;
-    int col = mouse_x - area.x;
-    if (col < 0)         col = 0;
-    if (col >= area.w)   col = area.w - 1;
-    const std::vector<WarpFrameMapSegment>& dmap =
-        displayed_or_live_target_map(app, audio);
-    int64_t frame = authored_frame_at_column(app, audio, col, dmap);
-    const int64_t wall = audio.total_frames() - 1;
-    if (frame < 0)    frame = 0;
-    if (frame > wall) frame = wall;
-    // The act commits from here on, so THIS is where it stops a live audition
-    // (architect 2026-07-27): the trim window is about to change under it,
-    // and every refusal above — read-only, a degenerate audio/geometry state —
-    // has already returned without stopping anything.
-    // The caller (the ctrl / ctrl+shift chip-row press) carries no stop of its
-    // own for exactly that reason. Ahead of the write, like every claim's stop.
-    playback_lifecycle.stop_playback_if_playing();
-    if (is_begin) {
-        app.trim.begin_frame = frame;
-    } else {
-        app.trim.end_frame = frame;
-    }
-    auto_clear_crossed_trim();
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
-    target_render.trigger();
-    // THE SETTER'S DESELECT (see the header). Past every refusal above, so only
-    // a click that actually set a bound deselects. It publishes no highlight —
-    // the trim-window region retired 2026-07-30.
-    selection.clear_selection();
-}
-
-// (architect 2026-07-23): the ctrl / ctrl+shift chip-row bound-set press
-// sets the bound at the click AND arms the single-bound trim drag on it, so
-// motion past the threshold drags it live (a motionless release rests the
-// click-set). NOTHING IS SNAPSHOTTED (2026-07-29): the pre-press pair, the
-// selection and the region were all captured here for an Esc-cancel, and pointer
-// gestures have no cancel — the rule is at the drag-modal gate in
-// input_handler.cpp. The click-set is a COMMITTED act the moment it is made (trim
-// is history-less, so nothing takes it back), and the drag it arms commits its own
-// bounds at its release. The
-// set itself owns the read-only refusal; the drag arms only in a writable tab.
-// The pair survival checks that used to gate the arm died with the unset state
-// (2026-07-30): a full ordered pair always rests here, including after a crossed
-// click-set, which now RESETS to the song edges rather than dissolving — so
-// there is always something to drag.
-void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
-                                                            int mouse_x,
-                                                            int mouse_y) {
-    set_trim_bound_at_click(is_begin, mouse_x);
-    // Arm only where the set itself could commit: a read-only tab and a
-    // degenerate audio/geometry state both set nothing, so neither arms.
-    if (active_view_state(app).read_only) return;
-    if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return;
-    app.pending_trim_drag = PendingTrimDrag{};
-    app.pending_trim_drag.active            = true;
-    app.pending_trim_drag.is_begin          = is_begin;
-    app.pending_trim_drag.both              = false;
-    app.pending_trim_drag.press_x           = mouse_x;
-    app.pending_trim_drag.press_y           = mouse_y;
-}
+// (THE TWO BOUND-SET CLICKS ARE DELETED, architect 2026-08-01.
+// set_trim_bound_at_click and set_trim_bound_at_click_then_arm_drag were the
+// ctrl (BEGIN) and ctrl+shift (END) chip-row presses: one function that snapped
+// the clicked column to a bound, owned that press's playback stop and deselected
+// as a trim SETTER, plus a wrapper that additionally armed the single-bound drag
+// on the bound it had just set. Both claims died with the trim lane's redesign —
+// the ENDCAP and BAR DRAGS are the whole authoring surface now, and the
+// modifier-clicks were a second route to the same edit. The presses fall to the
+// standing strict-modifier no-op. What they owned went with them: their deselect
+// leaves the setter inventory at input_handler.h, their stop leaves the
+// claim-keyed stop list, and no route into `authored_frame_at_column` from a
+// bare click remains.)
 
 // Plain chip-row press trim routing — the sole pointer route into a trim drag.
 // The Alt pointer gesture retired wholesale, and the waveform stem grab with it:

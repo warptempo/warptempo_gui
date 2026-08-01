@@ -1497,28 +1497,28 @@ int64_t ruler_step_ms(double ms_per_px) {
     return kRulerLadderMs[std::size(kRulerLadderMs) - 1];
 }
 
-// `M:SS.mmm` with REDUNDANT LEADING UNITS DROPPED: the minutes field appears
-// only once some label on screen reaches a minute, and the milliseconds field
-// only while the step is sub-second. So a bar-level ruler reads "1:30" and a
-// transient-level one reads "2.250", each showing exactly what varies.
-std::string ruler_label_text(int64_t ms, int64_t step_ms, bool show_minutes) {
+// `M:SS.mmm`, REAPER VERBATIM: the minutes field is ALWAYS present, zero
+// included — "0:47.250" below a minute, not "47.250" (architect 2026-08-01,
+// retiring the leading-unit dropping, which was the planner's invention and not
+// what Reaper does; a field that appears and disappears makes the ruler's own
+// format a moving target to read).
+//
+// THE MILLISECONDS RULE STANDS: the fraction shows only while the labelled step
+// is sub-second, so a bar-level ruler reads "1:30" and a transient-level one
+// reads "0:02.250" — each showing exactly what varies, which is the half of the
+// old rule that was actually Reaper's.
+std::string ruler_label_text(int64_t ms, int64_t step_ms) {
     if (ms < 0) ms = 0;
     const int64_t m   = ms / 60000;
     const int64_t s   = (ms % 60000) / 1000;
     const int64_t mil = ms % 1000;
     char buf[32];
-    const bool show_ms = (step_ms % 1000) != 0;
-    if (show_minutes && show_ms)
+    if ((step_ms % 1000) != 0)
         std::snprintf(buf, sizeof(buf), "%lld:%02lld.%03lld",
                       (long long)m, (long long)s, (long long)mil);
-    else if (show_minutes)
+    else
         std::snprintf(buf, sizeof(buf), "%lld:%02lld",
                       (long long)m, (long long)s);
-    else if (show_ms)
-        std::snprintf(buf, sizeof(buf), "%lld.%03lld",
-                      (long long)(ms / 1000), (long long)mil);
-    else
-        std::snprintf(buf, sizeof(buf), "%lld", (long long)(ms / 1000));
     return std::string(buf);
 }
 
@@ -1571,10 +1571,6 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                                              gui_scale_factor()),
                           fe.ascent + fe.descent);
 
-    // Minutes appear only once a label on screen reaches one — decided from the
-    // RIGHT edge, so the field does not flicker in and out as the view pans
-    // within the same minute.
-    const bool show_minutes = end_ms >= 60000.0;
     // SUB-SECOND EMPHASIS: while the step is finer than a second, the WHOLE
     // SECONDS are the landmarks, so they take the brighter label white while
     // every other label stays the ruler's dim grey. One color swap, no second
@@ -1605,7 +1601,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             const int64_t label_ms = static_cast<int64_t>(std::llround(t));
             if (label_ms < 0) continue;
             const std::string txt =
-                ruler_label_text(label_ms, step, show_minutes);
+                ruler_label_text(label_ms, step);
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, txt.c_str());
             const GuiColor c = (emphasize && (label_ms % 1000) == 0)
@@ -2084,7 +2080,7 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 // stay above the playheads (the z-order flip untouched). "Markers over trim" is
 // now STRUCTURAL pass order — trim < selected stem < playheads < flag blit —
 // not an intra-cache paint convention; the two-segment stem join (strip segment
-// from render_trim_flags, waveform segment from render_trim_stems) lives in
+// (retired with render_trim_stems, 2026-08-01) lived in
 // this ONE pass instead of joining bit-exactly across two caches.
 //
 // BASIS: the FREE item-geometry owners — item_viewport_basis(app, audio)
@@ -2145,20 +2141,20 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // accepted resize window; equal to waveform_area(app).w at rest).
     const GuiRect wave_rect{area.x, area.y, basis.area_w, area.h};
 
-    // Waveform stem segments first (verbatim geometry: hard-aliased 1-px
-    // verticals, solid kTrimStem straight over the ink),
-    // then the top-strip half (chips + bridge bar + strip stem segments, with
-    // the side-aware offscreen sentinels and the effective-width clip inside
-    // render_trim_flags). The two halves are geometrically disjoint and meet
-    // at the waveform top edge, so their relative order is cosmetic.
+    // ONE HALF ONLY since 2026-08-01: the waveform stem pass is deleted, so
+    // this is the strip's bar + endcaps (with the side-aware offscreen
+    // sentinels and the effective-width clip inside render_trim_flags).
     //
     // The chip lane's y-band is THREADED IN as top_trim_row_area(app) rather
     // than re-derived inside the painter: this is the same accessor
     // hit_test_trim_chip's y-gate and route_trim_chip_press' bridge y-gate
     // read, so the painted band and the clickable band have ONE owner and
     // cannot drift if the lanes above the chip row ever change.
-    render_trim_stems(cr, wave_rect,
-                      basis.vp_start_frame, basis.vp_end_frame, trim);
+    // NO WAVEFORM STEMS (architect 2026-08-01): the bar and its two endcaps are
+    // the trim window's WHOLE display. render_trim_stems drew a 1px kTrimStem
+    // vertical down the waveform at each bound; the redesigned lane says the
+    // window where the window is, and a pair of full-height lines competing with
+    // the marker stems said it a second time in the same pixels.
     render_trim_flags(cr, top_strip, top_trim_row_area(app), wave_rect,
                       basis.vp_start_frame, basis.vp_end_frame, trim);
 }

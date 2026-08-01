@@ -276,11 +276,10 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // runs it and, past that route's own refusals, it WRITES A BOUND of the LIVE tab's
 // trim window. ("Claiming the resting pair" left the definition with the highlight
 // it was claiming for.) Membership re-derived by grepping the live-tab trim-bound
-// writers (app.trim.* / the settings arms' active branch) — SEVEN
-// `selection.clear_selection()` call sites, five in input_trim.cpp and two in
-// settings_editor.cpp:
-//   * the ctrl (BEGIN) and ctrl+shift (END) BOUND-SET clicks, one function
-//     (set_trim_bound_at_click) and so one deselect;
+// writers (app.trim.* / the settings arms' active branch) — SIX
+// `selection.clear_selection()` call sites, four in input_trim.cpp and two in
+// settings_editor.cpp (the ctrl / ctrl+shift bound-set clicks were the seventh
+// and left the list with their own deletion, 2026-08-01):
 //   * bare `x` (region -> trim, handle_trim_x), which deselects after its span
 //     is read and then CONSUMES the span;
 //   * the trim chip/bridge DRAG — update_trim_drag's two motion arms and
@@ -985,35 +984,11 @@ private:
     bool trim_mouse_x_to_active_frame(int mouse_x, int64_t& out_frame);
     void commit_trim_drag();               // release: trigger render if moved
 
-    // Set ONE trim bound (begin or end) at the clicked column — the
-    // trim-drag release-snap basis (authored_frame_at_column over the displayed
-    // paint map), walls [0, total-1], then the auto_clear_crossed_trim commit
-    // tail (a bound onto/across its partner resets the pair to the song edges).
-    // History-less like every trim mutation; repaint + target_render.trigger()
-    // like the drag release. Read-only refuses silently (trim authoring).
-    // ADJUST-ONLY (architect 2026-07-23) is now a statement about what the click
-    // DOES — it moves one bound of the window that always rests — rather than a
-    // condition it tests, the pair gate having died with the unset state
-    // (2026-07-30). OWNS the press's playback stop, placed past those
-    // refusals and just ahead of the bound write, so the ctrl / ctrl+shift
-    // chip-row press carries none of its own and a refused click leaves a live
-    // audition playing. is_begin picks the bound: the ctrl chip-row click sets
-    // begin, ctrl+shift sets end.
-    void set_trim_bound_at_click(bool is_begin, int mouse_x);
-
-    // The ctrl / ctrl+shift chip-row bound-set press (architect
-    // 2026-07-23): sets the bound at the clicked column (set_trim_bound_at_click,
-    // adjust-only, above) AND arms the single-bound trim drag on the just-set
-    // bound — so motion
-    // past the threshold drags it live exactly like a plain chip drag, while a
-    // motionless release rests the click-set as before. NOTHING is stashed: the
-    // click-set is committed when made (trim is history-less) and pointer gestures
-    // have no cancel. Read-only leaves nothing armed (the set itself already
-    // refused); a crossed click-set no longer dissolves the pair, it resets it to
-    // the song edges, so there is always something to drag.
-    // is_begin picks the bound (ctrl=begin, ctrl+shift=end).
-    void set_trim_bound_at_click_then_arm_drag(bool is_begin, int mouse_x,
-                                               int mouse_y);
+    // (set_trim_bound_at_click / set_trim_bound_at_click_then_arm_drag are
+    // DELETED, architect 2026-08-01 — the ctrl and ctrl+shift chip-row bound-set
+    // presses they served are retired outright, the endcap and bar drags being
+    // trim's whole pointer authoring surface. The retirement record is at their
+    // old site in input_trim.cpp.)
 
     // One scrub ACT at an active-domain frame: STOP, THEN START ON THE NEXT
     // CLICK (architect 2026-07-27, superseding the 2026-07-23 kill-and-revive).
