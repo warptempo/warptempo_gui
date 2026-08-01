@@ -14,7 +14,7 @@ struct GuiTargetRender;
 
 // Flag-editor cluster. Covers the top-flag canonical-line editor, the
 // iteration popup editor, the BPM popup editor, and the BPM-mode
-// enter/exit transitions. clear_hover_popup is reached through viewport.
+// enter/exit transitions. Damage is reached through viewport.
 struct GuiFlagEditor {
     AppState&             app;
     GuiAudio&             audio;
@@ -62,7 +62,7 @@ struct GuiFlagEditor {
     // public wrappers handle their kind-specific eligibility gates
     // and seed-text builders, then delegate here for the rest:
     // target-switching (selection + editor reseat), open-selected
-    // seeding, hover-popup clear, top-strip invalidate.
+    // seeding, top-strip invalidate.
     void enter_text_edit(int idx,
                          text_editor::Kind kind,
                          std::string locked_prefix,

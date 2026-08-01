@@ -1363,8 +1363,8 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
         wl_pointer_ = nullptr;
         pointer_focused_   = false;
         // Same hover drop as wl_pointer.leave: capability loss ends the pointer
-        // stream with no leave/motion to follow, so clear the hover popup /
-        // marker-text / readout here (the stem is always-on and unaffected).
+        // stream with no leave/motion to follow, so the hovered button faces
+        // must be cleared here.
         if (pointer_left_hook_) pointer_left_hook_();
 
         // Capability loss is the hard end of this wl_pointer event stream:
@@ -1785,16 +1785,12 @@ void GuiPlatform::on_pointer_leave(uint32_t /*serial*/,
                                    struct wl_surface* surface) {
     if (surface != wl_surface_) return;
     pointer_focused_ = false;
-    // Drop hover: no motion event follows a leave, so without this a hover POPUP /
-    // marker-text run / readout would keep showing the marker under the old pointer
-    // position after the pointer slid out the window edge. The hook owns the erase
-    // damage (clear_hover_popup) — hover surfaces only. The selected-marker stem is
-    // always-on for a singleton: the hover clear neither changes its visibility nor
-    // issues any dedicated stem-column damage (its top-strip invalidation may
-    // incidentally repaint the one-row waveform seam, redrawing the same stem, never
-    // hiding it). Re-entry fires a synthesized motion (on_pointer_enter)
-    // that re-resolves — and since the clear reset hover_popup to no marker, that
-    // first re-entry motion cannot short-circuit on a stale cached hit.
+    // Drop hover: no motion event follows a leave, so without this a redesigned
+    // row's button would keep its lit face after the pointer slid out the window
+    // edge. The hook owns the erase damage. (The MARKER hover popup rode this
+    // edge too until row 5 deleted it; a marker's value lives on its flag now,
+    // so there is no pointer-position-dependent marker surface left.) Re-entry
+    // fires a synthesized motion (on_pointer_enter) that re-resolves.
     if (pointer_left_hook_) pointer_left_hook_();
     // Left-held state persists across leave; the next press/release
     // will resync it. We do NOT clear pointer_left_held_ here because

@@ -189,8 +189,8 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
             static_cast<double>(timestamp_pad_x()), kBpmEditorPrefix);
         g.bottom_strip = true;
     } else if (text_editor::is_active(app.top_flag_editor)) {
-        // FlagPayload — marker-text lane. text_left is the lane run's left
-        // edge (flag_pending_text_left_x); it is -1 only for an invalid editor
+        // FlagPayload — the open editor's box over the marker lane. text_left
+        // is its left edge (flag_pending_text_left_x); it is -1 only for an invalid editor
         // target (a valid off-view marker still yields a clamped onscreen
         // origin, so the caret math keeps working while the text stays visible).
         const double tl = flag_pending_text_left_x(
@@ -917,24 +917,14 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // is no own-marker special case.
         if (text_editor::is_active(app.top_flag_editor)) {
             flag_editor.exit_top_flag_edit_no_commit();
-            // Re-resolve hover NOW, before the fall-through arms anything. While
-            // the editor was open, hover_popup stayed cleared (recompute is
-            // suppressed by an open editor, and motion kept it clear), so the
-            // hover-driven POPUP / lane-text surfaces would be stale after a
-            // fall-through marker click. Recomputing here reflects the pointer's
-            // true position so the popup/lane text settle correctly (one of the
-            // 57f7196 hover-settling fixes; the always-on stem does not key on
-            // hover). Placed before any pending-drag arm on purpose:
-            // a recompute AFTER an arm would hit the drags-suppress-hover rule
-            // (any_pointer_gesture_active) and clear it again; here no gesture is
-            // active yet, so this is a genuine resolve.
-            viewport.recompute_hover_at_cursor();
         }
 
-        // Unified marker hit, computed ONLY on the path that consumes it. The
-        // marker is ONE pointer item — flag shape OR rendered lane run
-        // (marker_hit_at, the shared resolver in render.cpp the hover recompute
-        // also reads) — and the TOP-STRIP hit feeds the plain/Shift/Ctrl
+        // The marker hit, computed ONLY on the path that consumes it. The
+        // marker is ONE pointer item and that item is now its FLAG BOX alone
+        // (hit_test_flag against the painter's stash — the rendered lane run
+        // that used to be its second half died with the marker-text lane, and
+        // with it the MarkerHit pair and its shared resolver marker_hit_at).
+        // The TOP-STRIP hit feeds the plain/Shift/Ctrl
         // marker-click branches (plain = single-select + land the playhead on
         // the marker + double-click seed / consume + arm the pending marker
         // drag on the flag part, Shift = file-manager inclusive RANGE select
@@ -942,9 +932,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // to the clicked marker + land on that range END, Ctrl = the individual
         // membership toggle + land on the resulting focus), so it is resolved
         // once here — every one of the three lands on its own focus.
-        // The editor lifecycle block above already closed any open flag editor,
-        // so the lane run this resolves is the committed (non-editor) run. The
-        // WAVEFORM never SELECTS a marker by HIT — a plain press splits by half
+        // The WAVEFORM never SELECTS a marker by HIT — a plain press splits by half
         // (upper: deselect-all + playhead placement + region-drag arm; lower:
         // the scanner scrub, which touches no selection at all), and a Shift
         // press FORMS a region waveform-wide (from the playhead, or a marker
@@ -959,10 +947,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // click (the stem grab retired), so no trim hit test runs on the
         // waveform at all. Resolved ONCE here, ahead of every branch that
         // consumes it: the ctrl-exact membership toggle, the plain / Shift
-        // marker click, and the empty-top-strip fallthrough (mh.index < 0 is
+        // marker click, and the empty-top-strip fallthrough (mh_index < 0 is
         // what makes a spot EMPTY) all read this one hit.
-        MarkerHit mh;
-        if (inside_top) mh = marker_hit_at(app, audio, x, y);
+        int mh_index = -1;
+        if (inside_top) mh_index = hit_test_flag(app, audio, x, y);
 
         // A top-strip press stops playback WHEN IT CLAIMS SOMETHING, never
         // merely because it landed in the strip (architect 2026-07-27). The
@@ -1076,7 +1064,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // chip row (BEGIN bound set, next block) and is a strict no-op on
             // every other lane — no-op in the playback sense too, since only a
             // CLAIM stops playback.
-            if (inside_top && mh.index >= 0) {
+            if (inside_top && mh_index >= 0) {
                 // The toggle is an act, so it owns its stop: selecting while a
                 // session plays is the authoring case the top-strip stop
                 // exists for. It runs AHEAD of the toggle and the land, like
@@ -1086,11 +1074,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // above (so the mutator's idx < 0 guard is unreachable here),
                 // and every path below changes membership.
                 playback_lifecycle.stop_playback_if_playing();
-                selection.toggle_selection_membership(mh.index);
-                // The selected-marker stem is always-on for a singleton;
-                // toggle_selection_membership owns its appear/move/disappear
-                // damage via the subject-change owner, so no explicit stem
-                // damage is needed here.
+                selection.toggle_selection_membership(mh_index);
                 if (!app.selected_markers.empty())
                     land_playhead_on_marker(app, audio, viewport,
                                             app.last_selected_marker);
@@ -1177,11 +1161,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the waveform instead FORMS a region waveform-wide
         // (the former / marker drop, one-shot — see the waveform block). In the top strip a plain
         // CHIP-ROW press arms a trim chip/bridge drag (claimed ahead of the
-        // marker select); otherwise (a marker click on EITHER part — flag shape
-        // or lane run) selection is the whole interface, BOTH views. Plain click:
-        // single-select, LAND the playhead on the marker (below), and — on the
-        // FLAG part only — ARM a pending marker drag (moves the marker if the
-        // pointer crosses the threshold, else a pure click). Shift+click: a
+        // marker select); otherwise a marker click — its FLAG BOX, the marker's
+        // one pointer item — is the whole selection interface, BOTH views. Plain
+        // click: single-select, LAND the playhead on the marker (below), and ARM
+        // a pending marker drag (moves the marker if the pointer crosses the
+        // threshold, else a pure click). Shift+click: a
         // file-manager INCLUSIVE RANGE select from the interaction's anchor
         // (shift-held, else the adopted focus) to the
         // clicked marker (the range end = FOCUS), which LANDS the playhead THERE.
@@ -1204,7 +1188,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // are the ctrl (BEGIN) / ctrl+shift (END)
             // claims above. A SHIFT-exact chip-row press claims nothing —
             // trim is transparent to it, and the shift fall-through below is
-            // inert here (marker_hit_at's y-bands exclude the chip row), so it
+            // inert here (the flag boxes' y-band excludes the trim row), so it
             // ends at the inert top-strip return, having touched nothing at
             // all: it is the only press that reaches the chip row without
             // claiming it (ctrl and alt were discarded at the gate above), and
@@ -1286,8 +1270,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 route_trim_chip_press(x, y);
                 return;
             }
-            if (mh.index >= 0) {
-                // A marker click — plain or Shift, flag shape or lane run — is
+            if (mh_index >= 0) {
+                // A marker click — plain or Shift — is
                 // an act (select, land, arm, open), so it owns the stop for the
                 // whole branch: selecting or editing under a live audition is
                 // the case the top-strip stop was written for. One site ahead
@@ -1300,7 +1284,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // OPEN can decline (read-only / P view / off home), and that is
                 // a second act layered on a click that already committed.
                 playback_lifecycle.stop_playback_if_playing();
-                const int hit = mh.index;
+                const int hit = mh_index;
                 if (shift) {
                     // Shift+click is a file-manager INCLUSIVE RANGE select
                     // (architect 2026-07-23): the click ranges from the
@@ -1374,9 +1358,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // helper; see land_playhead_on_marker). Runs on EVERY plain
                     // marker click — the double-click-consume path below (whose
                     // first click already landed, leaving the second land a
-                    // same-sample no-op) and the plain-select path; both parts of
-                    // the unified item land (flag shape or lane run — hit is the
-                    // one index).
+                    // same-sample no-op) and the plain-select path.
                     land_playhead_on_marker(app, audio, viewport, hit);
                     // THE CLICK OWNS ITS CLEAR (architect 2026-07-29): a
                     // single-select click moves the playhead onto a marker, so
@@ -1433,9 +1415,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                             .press_x = x, .press_y = y,
                             .target  = hit};
                         // A writable tab arms the pending REPOSITION drag on a
-                        // plain FLAG press IN THE COLUMN'S HOME VIEW only (the
-                        // flag is the sole drag handle; the lane run selects but
-                        // never arms); read-only selects but never arms (marker
+                        // plain FLAG press IN THE COLUMN'S HOME VIEW only — and
+                        // EVERY marker hit is a flag hit since row 5, so the
+                        // on_flag half of the old two-part test is gone with the
+                        // lane run it distinguished; read-only selects but never arms (marker
                         // mutation refused). ONE DRAG, ONE GATE since 2026-07-29:
                         // the home-view split that used to arm the TEMPO drag
                         // instead in W view + TARGET view exactly — the pointer
@@ -1445,7 +1428,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         // (W+target and P+source alike) selects and LANDS the
                         // playhead but arms nothing at all — the silent
                         // navigation-class refusal, marker motion being authoring.
-                        if (mh.on_flag && !active_view_state(app).read_only &&
+                        if (!active_view_state(app).read_only &&
                             active_column_authoring_allowed(app)) {
                             app.pending_marker_drag = PendingMarkerDrag{};
                             app.pending_marker_drag.active  = true;
@@ -1456,8 +1439,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     }
                 }
             } else {
-                // Empty top-strip spot — no marker run/flag under the point (the
-                // chip row already returned above; mh.index < 0 here).
+                // Empty top-strip spot — no marker flag under the point (the
+                // chip row already returned above; mh_index < 0 here).
                 // ONE lane to test now: the flag and triangle lanes became the
                 // single marker lane with row 5.
                 const GuiRect marker_lane = top_marker_row_area(app);
@@ -1512,21 +1495,18 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // playhead, no marker, no selection or region change, and no
                 // playback effect either, because this press claimed nothing
                 // and the stops all live at the claims. That covers the whole
-                // marker-text lane, plain or modified: its empty spots are
-                // inert by ruling (architect 2026-07-27, the scrub that lived
-                // there deleted), leaving it a pure display surface for the
-                // rendered runs — a run under the point is a marker hit and
-                // never reaches this branch. The inter-lane gaps, the SHIFT-exact
-                // chip-row press, and the SHIFT-exact flag/triangle-lane press
-                // land here too, equally inert.
+                // marker lane outside every flag box — a box under the point is
+                // a marker hit and never reaches this branch. The inter-lane
+                // gaps, the SHIFT-exact chip-row press and the SHIFT-exact
+                // marker-lane press land here too, equally inert.
                 return;
             }
             return;
         }
 
         // Waveform-area press: marker-blind for SELECTION (it never SELECTS a
-        // hit marker — the invisible stem is not a grab target; marker_hit_at
-        // runs only for top-strip presses). The PLAIN press splits by HALF
+        // hit marker — the stem is not a grab target; hit_test_flag runs only
+        // for top-strip presses). The PLAIN press splits by HALF
         // (architect 2026-07-23): the UPPER half keeps the placement press —
         // CLEARS the selection (the deselect-all: a waveform click dismisses
         // the marker selection, the Ableton behaviour), drops the playhead at
@@ -1987,12 +1967,6 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // (A crossed pending became app.drag — dropping the candidate at the
         // threshold crossing — and commits through the branch below.)
         app.pending_marker_drag = PendingMarkerDrag{};
-        // Settle hover to the pointer's ACTUAL position: a sub-threshold slide off
-        // the flag left hover_popup stale,
-        // so re-resolve while the pointer is still here (a clean release always
-        // is) — the hover popup / lane text then reflect the true pointer
-        // position.
-        if (gui.pointer_focused()) viewport.recompute_hover_at_cursor();
         return;
     }
     if (!app.drag.active) return;
@@ -2408,12 +2382,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // so its item hover is the only hover to resolve and no gesture can be live
     // under it (its own press consumed everything).
     if (app.settings_popup.open) {
-        viewport.clear_hover_popup();
         recompute_settings_popup_hover();
         return;
     }
     if (app.prompt.active) {
-        viewport.clear_hover_popup();
         recompute_redesign_button_hover();
         return;
     }
@@ -2436,12 +2408,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         }
         // !g.valid (only an invalid editor target — the lane text stays
         // onscreen even off-view): no-op this frame, leaving the caret put.
-        viewport.clear_hover_popup();
         return;
     }
     if (text_editor::is_active(app.settings_editor) ||
         text_editor::is_active(app.commit_editor)) {
-        viewport.clear_hover_popup();
         // The button hover stays live under a keyboard-modal editor — the
         // rationale is at the prompt branch above, and THIS is the branch the
         // reported staleness came through (the Settings button opens the
@@ -2489,7 +2459,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         }
         app.strip_drag.moved = true;
         apply_strip_drag_at(mouse_x, mouse_y, /*final_event=*/false);
-        viewport.clear_hover_popup();
         return;
     }
     // Alt+drag grab-pan (continuous 1:1). The viewport snaps to whole pixels in
@@ -2522,7 +2491,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // longer has to ask for a distinct pan mode.
             viewport.scroll_viewport(-delta, /*continuous=*/true);
         }
-        viewport.clear_hover_popup();
         return;
     }
     // (No scrub motion branch: the scrub is a ONE-SHOT act at the press — the
@@ -2535,7 +2503,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // machinery). A lost button commits at the current position, mirroring the
     // marker-drag motion handler.
     if (app.trim_drag.active) {
-        viewport.clear_hover_popup();
         if (!mods.primary_button_held) {
             commit_trim_drag();
             return;
@@ -2550,7 +2517,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // begins the drag AND applies its first update inline, so it does not fall
     // back into that branch this event.
     if (app.pending_trim_drag.active) {
-        viewport.clear_hover_popup();
         if (!mods.primary_button_held) {   // button lost -> just the click
             // The motionless chip/bridge press commits NOTHING (architect
             // 2026-07-30, the clean-release twin above): its highlight publish is
@@ -2603,7 +2569,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // gated. Per-site translation (drag anchor capture, motion delta
     // conversion, hit tests) lives in the handlers below.
     if (app.region_drag.active) {
-        viewport.clear_hover_popup();
         // Left button must still be held; if not, the release was lost —
         // end the gesture, resting the region at its current extent (as a
         // clean release would). Modifier changes mid-drag are ignored. A
@@ -2734,12 +2699,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // land, span collapse), so this just disarms (the deferred completion
             // died with the group drag — see the release branch).
             app.pending_marker_drag = PendingMarkerDrag{};
-            // Settle hover to the pointer's ACTUAL state: re-resolve while the
-            // pointer is here, else the pointer-leave
-            // hook owns the clear. Replaces the old unconditional clear that broke
-            // its own "matches the clean release" promise by erasing a hovering
-            // popup. Same observable end state as the clean release.
-            if (gui.pointer_focused()) viewport.recompute_hover_at_cursor();
             return;
         }
         if (std::max(std::abs(mouse_x - app.pending_marker_drag.press_x),
@@ -2764,8 +2723,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // the press.
         app.double_click = DoubleClickCandidate{};
         if (!marker_drag.begin_drag(marker, press_x)) {
-            viewport.clear_hover_popup();
-            return;   // begin refused (bad index / no audio): drop the gesture
+                return;   // begin refused (bad index / no audio): drop the gesture
         }
         // No follow override needed: the marker drag always begins from a
         // top-strip flag press, which already stopped playback (the marker
@@ -2778,19 +2736,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // IT — the branches above all returned — which is consistent and
         // harmless: a gesture that ends over a button re-resolves on the next
         // motion, and a press cannot reach one mid-gesture anyway.
+        // The redesigned rows' hover is the ONLY hover left: the marker hover
+        // popup and its whole recompute machinery died with the marker-text lane
+        // (row 5), so the no-gesture tail has nothing else to resolve.
         recompute_redesign_button_hover();
-        // No active gesture: hover recomputation is owned by
-        // recompute_hover_at_cursor (one implementation for motion and
-        // viewport mutation), suppressions included. The branches above
-        // already returned on the suppressions it re-checks (prompt, the
-        // editors, the other drags), so those re-checks are harmless; its
-        // W-mode / iter-mode / top_flag_editor / queue_running arms clear
-        // the popup exactly like this path's own else-clear did.
-        viewport.recompute_hover_at_cursor();
         return;
     }
-    // A drag is active — drop any pending popup.
-    viewport.clear_hover_popup();
     // Left button must still be held down — otherwise release was lost.
     if (!mods.primary_button_held) {
         marker_drag.commit_drag();

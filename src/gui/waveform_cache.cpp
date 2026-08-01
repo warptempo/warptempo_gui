@@ -676,7 +676,7 @@ uint64_t hash_selection(const std::set<int>& s,
 // keyed directly rather than inferred from the strip dims moving with it. The
 // cache holds
 // EVERY flag shape (marker + phase reset) — the flag editor's text renders live
-// in the marker-text lane, not in this cache, so the editing target's flag is an
+// as a live overlay AFTER this cache's blit, so the editing target's flag is an
 // ordinary cached shape (no skip-guard). Trim's chips/stems left this cache and
 // the retired trim-stem cache for the live paint_trim pass, so no trim field
 // remains in the fingerprint (a trim edit repaints through its own mutation
@@ -718,6 +718,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // font-derived independently, so keying the metric itself makes the cache
     // sound by FIELD instead of by that coupling.
     const double    font_px    = measured_monospace_font_px();
+    // The flags carry TEXT since row 5, and iteration mode changes what that
+    // text says (flag_text_iter splices the bracket). See fp_iteration_mode.
+    const bool      iter_on    = app.iteration_mode_enabled;
 
     const bool matches =
         flag_cache.surface &&
@@ -732,7 +735,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_drag_overlay_hash       == drag_hash &&
         flag_cache.fp_selection_hash          == sel_hash &&
         flag_cache.fp_active_markers_view     == mv &&
-        flag_cache.fp_measured_font_px        == font_px;
+        flag_cache.fp_measured_font_px        == font_px &&
+        flag_cache.fp_iteration_mode          == iter_on;
 
     if (matches) return;
 
@@ -797,6 +801,13 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // not on this per-tick rebuild; the committed store means a red flag
     // freezes through a marker drag and re-evaluates at commit. The active
     // view supplies only its own column's set.
+    //
+    // THIS IS THE SOLE PRODUCER of the marker painter's stash (app.flag_hit_rects
+    // / app.marker_stems, contract at their declaration): the boxes' widths are
+    // derived from shaped labels, so the pass that draws them is the only one
+    // that can report them. The active view supplies its own column's stash and
+    // the other column's is not retained — hit tests and the stem pass are both
+    // active-column-only.
     if (mv == 'P') {
         const std::set<int>& pr_red =
             phase_reset_red_flag_set_cached(app).red;
@@ -806,6 +817,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             vp_start, vp_end, sr,
             app.selected_markers,
             pr_red,
+            &app.flag_hit_rects,
+            &app.marker_stems,
             tmap_arg,
             drag_overlay);
     } else {
@@ -816,6 +829,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                      vp_start, vp_end, sr,
                      app.selected_markers,
                      warp_red,
+                     iter_on,
+                     &app.flag_hit_rects,
+                     &app.marker_stems,
                      tmap_arg,
                      drag_overlay);
     }
@@ -834,6 +850,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_selection_hash          = sel_hash;
     flag_cache.fp_active_markers_view     = mv;
     flag_cache.fp_measured_font_px        = font_px;
+    flag_cache.fp_iteration_mode          = iter_on;
 
     // Event-synchronized hit geometry, STAGE phase: these OFFSCREEN flags just
     // rebuilt, so stage the

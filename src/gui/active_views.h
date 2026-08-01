@@ -16,7 +16,7 @@
 // flip (switch_active_tab_view_to). The S/T audio-view axis is handled
 // elsewhere (input_handler) — it's a domain translation, not a snapshot
 // swap, and lives outside this cluster's scope by design.
-// clear_hover_popup is reached through viewport;
+// Damage and viewport mutation are reached through viewport;
 // stop_playback_if_playing through playback_lifecycle.
 struct GuiActiveViews {
     AppState&             app;

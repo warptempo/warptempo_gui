@@ -117,7 +117,7 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
 
 // `s` (W view): drop an explicit owner that copies the immediate-prior
 // marker's effective tempo (base x scale), via the shared resolver also
-// used by the hover popup.
+// used by the bottom-strip resolved readout and the Ctrl+C copy.
 // Exception: when the prior marker is a label ref, the copy is skipped and a
 // neutral owner (base 1.0 / empty scale) is dropped instead. Copying the
 // ref's resolved effective value would freeze a literal of the pre-drop
@@ -519,12 +519,21 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);
     // Coalesce a held tempo step: the repeats skip the redundant push so one
-    // Ctrl+Z reverts the whole hold.
-    if (merge) undo.note_coalesced_commit();
-    else       undo.push_undo_warp(std::move(pre_state));
+    // Ctrl+Z reverts the whole hold. The skip is the WHOLE per-press action now
+    // — note_coalesced_commit existed to mirror the push helpers' hover-popup
+    // clear, and died with the hover popup (row 5).
+    if (!merge) undo.push_undo_warp(std::move(pre_state));
     undo.record_gesture(GestureKind::TempoStep);
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
+    // AND THE WAVEFORM, for the STEMS (row 5): a tempo step can move a marker in
+    // or out of the RED set (a value that normalizes to the 1.00 fallback), and
+    // the stem carries its class's colour now — #da4453 for red, the calm purple
+    // otherwise. In SOURCE view nothing else here damages the waveform at all, so
+    // without this the stem would keep its old colour until some unrelated
+    // repaint. In target view the synchronous re-warp below repaints anyway; this
+    // is the cheaper honest owner for both.
+    viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     // Discrete warp_frame_map change that CAN run in target view: the Up/Down
     // step is a
@@ -645,14 +654,22 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
     // indices. A coalesced repeat skips the push (the hold's physical press owns
     // the pre-burst snapshot and its hints). A 2+ selection paints no
     // stem (its cue is the members' ink triangles plus the landed cursor), so the
-    // group step has no stem to move.
-    if (merge) undo.note_coalesced_commit();
-    else       undo.push_undo_warp(std::move(pre_state),
-                                   /*affects_persistence=*/true,
-                                   touched, touched);
+    // group step has no stem to move. (The skip is the whole per-press action:
+    // note_coalesced_commit died with the hover popup in row 5.)
+    if (!merge) undo.push_undo_warp(std::move(pre_state),
+                                    /*affects_persistence=*/true,
+                                    touched, touched);
     undo.record_gesture(GestureKind::TempoStep);
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
+    // AND THE WAVEFORM, for the STEMS (row 5): a tempo step can move a marker in
+    // or out of the RED set (a value that normalizes to the 1.00 fallback), and
+    // the stem carries its class's colour now — #da4453 for red, the calm purple
+    // otherwise. In SOURCE view nothing else here damages the waveform at all, so
+    // without this the stem would keep its old colour until some unrelated
+    // repaint. In target view the synchronous re-warp below repaints anyway; this
+    // is the cheaper honest owner for both.
+    viewport.invalidate_waveform_area();
     viewport.invalidate_timestamp_area();
     // Target-view synchronous re-warp tail (the plate must re-warp when authoring
     // off source home), THEN re-land the playhead on the FOCUSED marker's
@@ -803,7 +820,6 @@ void GuiWarpMarkersOps::nudge_selected_markers(
     // same marker, since a selection change needs a command and a command ends the
     // hold). The post-mutation re-record happens in the shared tail.
     if (merge) {
-        undo.note_coalesced_commit();
         undo.refresh_coalesced_touched_live(std::move(touched_live));
     } else {
         // The warp POSITION NUDGE (the receiving marker's own image slides). The

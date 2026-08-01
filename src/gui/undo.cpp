@@ -73,7 +73,6 @@ void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state,
     e.touched_live       = std::move(touched_live);
     app.history.push(std::move(e));
     last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
-    viewport.clear_hover_popup();
 }
 
 void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
@@ -94,7 +93,6 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     e.touched_live       = std::move(touched_live);
     app.history.push(std::move(e));
     last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
-    viewport.clear_hover_popup();
 }
 
 void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
@@ -108,7 +106,6 @@ void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
     e.tab                = tab_override ? tab_override : app.active_tab_view;
     app.history.push(std::move(e));
     last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
-    viewport.clear_hover_popup();
 }
 
 void Undo::push_settings_undo(SettingsSnapshot pre_state) {
@@ -120,7 +117,6 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
     e.tab                = app.active_tab_view;
     app.history.push(std::move(e));
     last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
-    viewport.clear_hover_popup();
     recompute_dirty();
 }
 
@@ -195,13 +191,6 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
 
 void Undo::record_gesture(GestureKind kind) {
     last_gesture_kind_ = kind;
-}
-
-void Undo::note_coalesced_commit() {
-    // Mirror the side effects of the push_undo_* helpers, minus the history
-    // push the merge deliberately suppresses: the hover popup clears
-    // per-press.
-    viewport.clear_hover_popup();
 }
 
 void Undo::refresh_coalesced_touched_live(std::vector<int> touched_live) {
@@ -436,7 +425,6 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                                  std::vector<UndoEntry>& to,
                                  int saved_distance_delta) {
     playback_lifecycle.stop_playback_if_playing();
-    viewport.clear_hover_popup();
     UndoEntry entry = std::move(from.back());
     from.pop_back();
     // A restore rewrites BOTH stack tops, so it invalidates the coalesce stamp for
@@ -515,8 +503,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // Kept inline rather than delegated to
     // GuiActiveViews::switch_active_markers_view_to only because Undo does not
     // hold that cluster; the two now agree on the whole selection story (clear,
-    // then flip), and the helper's one extra act — the hover-popup clear — this
-    // function already performed at its own top.
+    // then flip); the helper's one extra act was a hover-popup clear, and the
+    // hover popup no longer exists (row 5).
     if (entry.op_mode != 'S' && entry.op_mode != app.active_markers_view) {
         selection.clear_selection();
         app.active_markers_view = entry.op_mode;

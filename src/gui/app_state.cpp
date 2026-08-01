@@ -223,105 +223,36 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y) {
-    const GuiRect top  = top_strip_area(app);
-    // Event-synchronized hit geometry, the VIEWPORT half: the flag pixels are
-    // painted from the item cache's committed fp_vp span over the effective
-    // waveform width the render used (the flag cache's own basis), NOT the live
-    // viewport. So the hit rects must build on the DISPLAYED basis
-    // (item_viewport_basis, the twin of the displayed MAP below) — else
-    // during an async plate-publish window a click over the visible OLD flag
-    // would be tested at the NEW/live column, splitting the one marker item from
-    // its lane run (which already rides the displayed basis). With the basis
-    // triple the rects here are exactly the painted flag rectangles across the
-    // publish window, not just at rest. Cold falls back to the live basis
-    // bit-for-bit (see the accessor).
-    const ItemViewportBasis basis = item_viewport_basis(app, audio);
-    const int64_t vp_start = basis.vp_start_frame;
-    const int64_t vp_end   = basis.vp_end_frame;
-    const int     wave_w   = basis.area_w;
-    // The mapped views' flags paint at translated positions
-    // (compute_flag_hit_rects with a non-null warp_frame_map), so hit-test
-    // must walk the same warp_frame_map — the item pixels' own via
-    // displayed_or_live_target_map (event-synchronized hit geometry — the
-    // ruling at that selector): empty (identity) in source view, the map the
-    // flag item cache baked when warm in target view.
-    const std::vector<WarpFrameMapSegment>& dmap =
-        displayed_or_live_target_map(app, audio);
-    const std::vector<WarpFrameMapSegment>* tmap_arg =
-        dmap.empty() ? nullptr : &dmap;
-    DragOverlay drag_overlay_storage;
-    const DragOverlay* drag_overlay = nullptr;
-    if (app.drag.active) {
-        drag_overlay_storage.indices = &app.drag.dragging_markers;
-        drag_overlay_storage.times   = &app.drag.moveable_times;
-        drag_overlay = &drag_overlay_storage;
-    }
-    // This two-way branch chain is the sole hit-rect builder: the flag paint
-    // and this hit test share the fixed flag rectangle (via
-    // compute_flag_hit_rects / iterate_visible_flags_impl) on the same displayed
-    // viewport + width, so the rects computed here are exactly the painted flag
-    // rectangles.
-    // The lane rects the shapes were painted in, from the same accessors the
-    // painter was handed (top_marker_row_area) — so the
-    // rect built here is the painted rectangle vertically as well as
-    // horizontally, whatever the strip's lane stack looks like.
-    const FlagLaneRects lanes{top_marker_row_area(app)};
-    std::vector<FlagHitRect> rects;
-    if (app.active_markers_view == 'P') {
-        rects = compute_phase_reset_flag_hit_rects(
-            top, lanes, wave_w, app.phaseresetmarkers.markers(),
-            vp_start, vp_end, audio.sample_rate(),
-            tmap_arg, drag_overlay);
-    } else {
-        rects = compute_flag_hit_rects(
-            top, lanes, wave_w, app.warpmarkers.markers(),
-            vp_start, vp_end, audio.sample_rate(),
-            tmap_arg, drag_overlay);
-    }
-    // A point hits a flag when it lies inside the flag RECTANGLE (the emitted
-    // FlagHitRect) OR inside the fused tip-down TRIANGLE directly below it. The
-    // triangle shares the rect's center as its vertical centerline; its top edge
-    // is the rect bottom (r.y + r.h) and it tapers over playhead_triangle_h_px()
-    // rows to the tip. Half-width per row comes from flag_triangle_half_width_at
-    // — the SAME taper owner paint_flag_shape fills with — so the clickable slope
-    // matches the painted one. The queried pixel is tested at its center
-    // (+0.5, +0.5). The playhead triangle paints in the same lane but is not in
-    // `rects`, so it is never a hit target; the marker test covers the triangle
-    // even where the playhead visually overlaps it.
-    const int tri_h = playhead_triangle_h_px();
-    auto contains = [&](const FlagHitRect& r) -> bool {
+    (void)audio;
+    // THE PAINTER'S STASH IS THE HIT GEOMETRY (row 5, 2026-08-01). A marker box
+    // is as wide as its SHAPED label, so there is no formula to re-derive it
+    // from — recomputing here would mean a second HarfBuzz pass that could
+    // disagree with the pixels. The flag-cache rebuild publishes
+    // app.flag_hit_rects as it paints (contract at the field), which also
+    // settles the event-synchronised-hit-geometry question outright: the rects
+    // ARE the painted rects, on the displayed basis those pixels were laid out
+    // against, for free and at every moment rather than by two derivations
+    // agreeing. The old live rebuild — item_viewport_basis + the displayed map +
+    // the drag overlay, threaded into compute_flag_hit_rects — is gone with the
+    // functions it called.
+    //
+    // Cold (nothing painted yet) the stash is empty and nothing is clickable,
+    // which is the honest answer: a flag with no pixels has no box to grab.
+    //
+    // THE SHAPE IS A PLAIN RECT. The fused tip-down triangle below the old flag
+    // — and its slope test through flag_triangle_half_width_at — died with the
+    // triangle lane; a marker is one box in one lane now.
+    //
+    // Z-ORDER: the painter walks the store FORWARD and later boxes cover
+    // earlier ones, so the topmost box under a point is the LAST containing
+    // rect. Walk backwards and take the first hit. Selection no longer lifts
+    // anything (it is a colour swap, not a z-rule), so this is the whole
+    // arbitration — one pass, no class split.
+    for (auto it = app.flag_hit_rects.rbegin();
+         it != app.flag_hit_rects.rend(); ++it) {
+        const FlagHitRect& r = *it;
         if (mouse_x >= r.x && mouse_x < r.x + r.w &&
             mouse_y >= r.y && mouse_y < r.y + r.h) {
-            return true;
-        }
-        if (tri_h <= 0) return false;
-        const double rb   = r.y + r.h;                       // triangle top
-        const double tbot = rb + static_cast<double>(tri_h); // tip row (exclusive)
-        const double py   = static_cast<double>(mouse_y) + 0.5;
-        if (py < rb || py >= tbot) return false;
-        const double hw  = flag_triangle_half_width_at(py - rb);
-        const double cxl = r.x + r.w / 2.0;                  // triangle centerline
-        const double px  = static_cast<double>(mouse_x) + 0.5;
-        return std::fabs(px - cxl) <= hw;
-    };
-
-    // Mirror of the painters' z-order (render_flags / render_phase_reset_flags):
-    // selected shapes paint above unselected, and within each class the leftmost
-    // paints on top. Walk the rects TWICE — first the first-containing shape whose
-    // marker is selected, else the first-containing shape unconditionally. rects
-    // are emitted ascending-x, so each forward pass resolves to that class's
-    // leftmost = topmost. Topmost = selected leftmost > leftmost. WYSIWYG for
-    // every consumer (selection clicks, plain flag-drag reposition grabs, the
-    // hover popup's target): the topmost-painted flag is what a click grabs. The
-    // flags are now fixed-width shapes, so there is no editor-pending width to
-    // track — the editing target's flag is an ordinary cached shape.
-    for (const auto& r : rects) {
-        if (contains(r) && app.selected_markers.count(r.marker_index)) {
-            return r.marker_index;
-        }
-    }
-    for (const auto& r : rects) {
-        if (contains(r)) {
             return r.marker_index;
         }
     }
@@ -337,8 +268,8 @@ bool popup_eligible_marker(const AppState& app, int idx) {
     const auto& mv = app.warpmarkers.markers();
     if (idx >= static_cast<int>(mv.size())) return false;
     const auto& m = mv[idx];
-    // This gates the BOTTOM-STRIP resolved readout only — the marker-text lane
-    // shows every hovered marker's own value regardless of eligibility. Render
+    // This gates the BOTTOM-STRIP resolved readout and the Ctrl+C copy — a
+    // marker's OWN value is written on its flag regardless of eligibility. Render
     // resolution (resolve_warp_markers_for_render) drops disabled markers
     // outright and drops label refs whose definition is disabled (the
     // cascade). The readout must not report a tempo the render never applies,

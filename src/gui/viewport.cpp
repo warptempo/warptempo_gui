@@ -152,11 +152,6 @@ void Viewport::move_playhead_to(int64_t new_sample) {
         invalidate_waveform_area();
     }
     invalidate_timestamp_area();
-    // Viewport may have shifted (Home/End or any playhead jump that pushed the
-    // viewport). Re-evaluate hover at the cursor's last known coords.
-    if (viewport_changed) {
-        recompute_hover_at_cursor();
-    }
     if (playback.is_playing()) playback.resync_predictor();
 }
 
@@ -265,13 +260,10 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     invalidate_timestamp_area();
     // Flags live in the top strip — rect positions change when the viewport
     // scale changes. (The hovered marker's lane text renders in the top strip's
-    // marker-text lane, covered by this top-strip invalidation; the pass/ref
+    // marker lane's flags, covered by this top-strip invalidation; the
     // resolved readout is covered by the bottom-strip invalidation above.)
     const GuiRect ts = top_strip_area(app);
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
-    // Rects shifted under the (possibly stationary)
-    // cursor — re-evaluate hover.
-    recompute_hover_at_cursor();
     if (playback.is_playing()) playback.resync_predictor();
     // Reaching here means the zoom level changed (early-return above guards
     // the no-op case), so the waveform fingerprint differs. Zoom is a one-shot
@@ -347,8 +339,6 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // scale or start changes.
     const GuiRect ts = top_strip_area(app);
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
-    // Rects shifted under the (possibly stationary) cursor — re-evaluate hover.
-    recompute_hover_at_cursor();
 
     // Rest state (final) re-anchors the playback predictor once, like the
     // continuous pan's release; mid-gesture events do NOT resync (the predictor
@@ -394,8 +384,6 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     // Flags live in the top strip — rect positions change with the viewport.
     const GuiRect ts = top_strip_area(app);
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
-    // Rects shifted under the (possibly stationary) cursor — re-evaluate hover.
-    recompute_hover_at_cursor();
     if (playback.is_playing()) playback.resync_predictor();
     // A discrete one-shot viewport jump: render the plate synchronously and
     // publish the displayed fingerprint now so the top-strip flags and the
@@ -475,15 +463,10 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
         if (playback.is_playing()) app.follow_overridden_for_session = true;
         invalidate_waveform_area();
         // Flag positions move with the viewport, so the top strip must
-        // repaint too. (The hovered marker's lane text renders in the top
-        // strip's marker-text lane, covered here; recompute_hover_at_cursor
-        // below re-damages both surfaces if the hit changes — the bottom-strip
-        // readout sits at a fixed screen position and needs damage only then.)
+        // repaint too — the flags carry their own text now, so this one
+        // invalidation covers every marker pixel the move affects.
         const GuiRect ts = top_strip_area(app);
         gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
-        // Rects shifted under the (possibly
-        // stationary) cursor — re-evaluate hover.
-        recompute_hover_at_cursor();
         // A discrete pan (alt+wheel, PageUp/PageDown) re-anchors here -
         // a single snap is invisible. A continuous drag pan passes
         // continuous=true and does NOT resync per motion event: the
@@ -518,9 +501,6 @@ void Viewport::center_viewport_on_playhead() {
         invalidate_waveform_area();
         const GuiRect ts = top_strip_area(app);
         gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
-        // Rects shifted under the (possibly
-        // stationary) cursor — re-evaluate hover.
-        recompute_hover_at_cursor();
         if (playback.is_playing()) playback.resync_predictor();
         // Viewport actually moved (inside the changed guard). Center-on-
         // playhead is a one-shot discrete jump (the C key, and the Tab recenter
@@ -572,227 +552,4 @@ void Viewport::follow_scroll_if_needed() {
             kick_waveform_render();
         }
     }
-}
-
-// Reset the hover state. If either surface was showing, invalidate both the top
-// strip (the marker-text lane) and the bottom strip (the pass/ref resolved
-// readout) so the next paint erases whichever was up. Safe to call from any path.
-void Viewport::clear_hover_popup() {
-    const bool was_visible = app.hover_popup.any_visible();
-    app.hover_popup = HoverPopupState{};
-    if (was_visible) {
-        invalidate_top_strip();
-        invalidate_timestamp_area();
-    }
-    // No DEDICATED stem-column damage here, and the hover clear never changes stem
-    // VISIBILITY: the selected-marker stem is always-on for the singleton selection
-    // under no further condition, so hover no longer drives it — its
-    // appear/move/disappear rides the subject-change owner on Selection instead.
-    // (invalidate_top_strip above damages top_strip_area.h + 1; that one extra seam
-    // row overlaps the waveform's first scanline under the half-open
-    // rects_intersect, so the always-on stem incidentally repaints its top row
-    // identically — a same-pixel redraw, never a hide.)
-}
-
-// Re-evaluate hover at the cursor's last on_motion coordinates. The single
-// hover implementation: on_motion's no-gesture path delegates here, and
-// viewport mutations (zoom, scroll, center, playhead-driven viewport shift)
-// call it so a stationary cursor's hover state tracks the rects that just slid
-// under it. Suppression set: prompt, any_pointer_gesture_active (the pointer
-// drags), the three text editors, render queue — each clears both surfaces.
-// The marker view and iter mode are NOT suppressors: the lane shows every
-// hovered marker's own value on BOTH columns, and in iteration mode the warp
-// lane text carries the iter bracket exactly as the flag editor's seed does.
-void Viewport::recompute_hover_at_cursor() {
-    if (app.last_mouse_x < 0 || app.last_mouse_y < 0) return;
-    if (app.prompt.active ||
-        any_pointer_gesture_active(app) ||
-        text_editor::is_active(app.settings_editor) ||
-        text_editor::is_active(app.commit_editor) ||
-        text_editor::is_active(app.top_flag_editor) ||
-        app.queue_running) {
-        clear_hover_popup();
-        return;
-    }
-    // Hover runs the same way in target view as in source view. marker_hit_at
-    // builds the target_warp_frame_map internally (via hit_test_flag and the
-    // lane-run resolver) when active_audio_view == Target so the flag rects and
-    // lane run it walks match what paint_handler renders at translated columns.
-    // Mutation-sensitive short-circuit: the same hovered marker with both stores
-    // unchanged needs no re-read. A store mutation (either column) bumps its
-    // generation, so an in-place edit of the hovered marker — tempo step, Ctrl+N,
-    // nudge — falls through here and re-reads fields, position, eligibility, and
-    // payload from the live store below, even though the hit index is unchanged.
-    // The displayed-map generation joins the short-circuit: marker_hit_at
-    // resolves identity against the displayed flag / run positions, so a silent
-    // map promotion (which advances displayed_map_gen without a store mutation)
-    // can move the flag under a stationary cursor. Requiring the map generation
-    // to match forces a full re-read after a promotion. The hit is now an index
-    // AND a part (flag vs run — the part drives the text-hover expansion), so the
-    // short-circuit compares both; the three generation keys still cover every
-    // store/map input the run set and the expansion depend on.
-    //
-    // The hover identity adopts the UNIFIED marker hit (flag shape OR a rendered
-    // lane run's rect), the same resolver the press chain reads, so moving the
-    // pointer off the flag up into the marker-text lane holds the hover instead
-    // of dropping it. STABILITY (no oscillation), TWO-MODE (via
-    // current_marker_lane_runs):
-    //   ALL-VISIBLE mode — the CAPPED run set is the whole visible set, depending
-    //   only on store / viewport(displayed) / map / drag / iteration state, never
-    //   on hover; the ONE hover-dependence is the TEXT-HOVER EXPANSION overlaid on
-    //   it (the hovered run, if its full text exceeds the budget, expands and is
-    //   hit FIRST). That expansion is a STABLE LATCH, not an oscillation: the
-    //   expanded rect CONTAINS the marker's capped rect, so a pointer that hit
-    //   marker-M (landing inside M's capped rect) is inside M's expanded rect,
-    //   which the re-resolve tests first → returns M → fixed point (the
-    //   convergence argument below).
-    //   FALLBACK mode — the single capped run's rect derives from the marker the
-    //   run CURRENTLY shows (hover-else-last-selected). Pointer over hovered-M's
-    //   run → the resolver returns M (hover tier), a fixed point; entering over
-    //   the last-selected run with NO hover shows that marker, text/frame IDENTICAL
-    //   under both tiers, so the rect does not move when the tier flips — one
-    //   settle, no flicker. The same expansion latch applies to M's single run.
-    // BOTH the marker index AND the part (mh.on_flag) feed hover now — a
-    // flag->run move on the same marker is a real transition (it turns the
-    // expansion on) — so the short-circuit and the loop compare both.
-    const long long warp_gen  = app.warpmarkers.generation();
-    const long long phase_gen = app.phaseresetmarkers.generation();
-    const long long disp_gen  = app.displayed_map_gen;
-
-    // A store mutation or a silent map promotion invalidates the cached hover
-    // run that marker_hit_at resolves against: in FALLBACK mode, while a hover
-    // shows, current_marker_lane_runs' hover tier serves hover_popup.lane_text /
-    // source_frame, so the first resolve below is judged against the OLD rect;
-    // in ALL-VISIBLE mode the capped run set is hover-independent, but the
-    // text-hover EXPANSION overlaid on it is hover-dependent (a stale hover could
-    // leave the wrong run expanded). Either way the recompose must CONVERGE. On
-    // the pure-motion path these three keys still match the cache, the cache is
-    // accurate, and one resolve+recompose is the fixed point (unchanged cost).
-    // When any key differs the cache is stale, so the recompose must converge
-    // rather than latch a hover whose run shrank away from the cursor.
-    const bool cache_invalidated =
-        warp_gen  != app.hover_popup.warp_gen ||
-        phase_gen != app.hover_popup.phase_gen ||
-        disp_gen  != app.hover_popup.displayed_gen;
-
-    const MarkerHit mh = marker_hit_at(app, audio,
-                                       app.last_mouse_x, app.last_mouse_y);
-    const int hit = mh.index;
-    // Short-circuit on index AND PART (mh.on_flag): the lane's text-hover
-    // expansion keys on hovering the RUN not the flag, so a same-index move from a
-    // marker's FLAG up into its own RUN (index unchanged, part flipped) MUST fall
-    // through and recompute — else the expansion would never appear. Part is
-    // stored into the hover cache below and compared here.
-    if (hit == app.hover_popup.marker_index &&
-        mh.on_flag == app.hover_popup.on_flag && !cache_invalidated) return;
-
-    const bool was_visible = app.hover_popup.any_visible();
-
-    // Recompose both surfaces from a hit index INTO the live hover cache.
-    // current_marker_lane_runs' fallback hover tier serves exactly this cached
-    // run, so applying here is precisely what a re-resolve of marker_hit_at reads
-    // back. The LANE shows the hovered marker's own value regardless of
-    // eligibility — the canonical flag line for a warp marker (flag_text_iter,
-    // the one composer the flag paint, hit-rects, and the Enter editor seed all
-    // share, so lane and editor content always agree) or kPhaseResetLaneToken
-    // for a phase reset marker (render.h owns that token and the reason for its
-    // width; this is one of its three producers). The
-    // BOTTOM readout keeps the pass/ref gate
-    // (popup_eligible_marker): owners and phase resets have nothing to resolve.
-    auto apply_hit = [&](int h, bool on_flag) {
-        app.hover_popup.marker_index = h;
-        app.hover_popup.on_flag      = on_flag;
-        app.hover_popup.source_frame = 0;
-        app.hover_popup.lane_text.clear();
-        app.hover_popup.readout_text.clear();
-        app.hover_popup.copy_payload.clear();
-        if (h >= 0) {
-            if (app.active_markers_view == 'P') {
-                const auto& pv = app.phaseresetmarkers.markers();
-                if (h < static_cast<int>(pv.size())) {
-                    app.hover_popup.lane_text    = kPhaseResetLaneToken;
-                    app.hover_popup.source_frame = pv[h].time_frame;
-                }
-            } else {
-                const auto& mv = app.warpmarkers.markers();
-                if (h < static_cast<int>(mv.size())) {
-                    app.hover_popup.lane_text =
-                        flag_text_iter(mv, h, app.iteration_mode_enabled);
-                    app.hover_popup.source_frame = mv[h].time_frame;
-                }
-            }
-            if (popup_eligible_marker(app, h)) {
-                app.hover_popup.readout_text = compute_hover_popup_text(
-                    slice_to_warp_markers(app.warpmarkers.markers()), h,
-                    audio.sample_rate(), audio.total_frames(),
-                    &app.hover_popup.copy_payload);
-            }
-        }
-    };
-
-    apply_hit(mh.index, mh.on_flag);
-
-    // Converge the resolve-recompose cycle when the cache was stale. The first
-    // resolve above ran against the pre-mutation run; re-resolve marker_hit_at
-    // against the freshly composed run and, while the resolved identity differs
-    // from what we just applied, re-apply — driving to a fixed point.
-    //
-    // Termination (bounded at 3 passes): the expansion is a self-stabilizing
-    // latch, so applying ANY hit H settles on the NEXT re-resolve. After apply_hit
-    // sets hover to H (index + part), the re-resolve tests H's EXPANDED rect FIRST
-    // (when H's text exceeds the budget and its RUN, not flag, is hovered); H was
-    // returned because the pointer sat in H's rect (capped or expanded), and the
-    // expanded rect CONTAINS the capped one, so the pointer is in H's expanded
-    // rect → the re-resolve returns H → agreement. When H does not expand (short
-    // text, or a FLAG hit) the run set is hover-independent for that resolve and
-    // the same-rect fixed point holds (fallback also composes the hover and
-    // last-selected tiers identically). A mode flip cannot occur inside the loop —
-    // the VERDICT depends on store/viewport/map/drag/iteration state, none of
-    // which mutate here (only hover_popup, which the verdict ignores; only the
-    // expansion reads it). No A->B->A cycle: the capped rects are pairwise
-    // disjoint, the pointer sits in at most one, and an applied hover's expanded
-    // rect is tested with precedence — so a hit the loop already visited cannot
-    // re-appear with a different follow-on. If the hard bound is somehow hit
-    // without agreement, clear the hover — never latch a stale one.
-    if (cache_invalidated) {
-        constexpr int kMaxHoverConvergePasses = 3;
-        int passes = 1;  // apply_hit above counts as the first pass
-        for (;;) {
-            const MarkerHit re = marker_hit_at(app, audio,
-                                               app.last_mouse_x,
-                                               app.last_mouse_y);
-            if (re.index == app.hover_popup.marker_index &&
-                re.on_flag == app.hover_popup.on_flag) break;  // settled (index + part)
-            if (passes >= kMaxHoverConvergePasses) {
-                apply_hit(-1, false);  // bound reached without agreement — drop
-                break;
-            }
-            apply_hit(re.index, re.on_flag);
-            ++passes;
-        }
-    }
-
-    // Stamp the generations that produced this FINAL settled set (both columns,
-    // even when marker_index < 0), so the short-circuit and the on_tick refresh
-    // settle until the next real store change. The generations are loop-invariant
-    // (no store mutates inside this function), so stamping once after convergence
-    // matches every intermediate pass.
-    app.hover_popup.warp_gen  = warp_gen;
-    app.hover_popup.phase_gen = phase_gen;
-    app.hover_popup.displayed_gen = disp_gen;
-
-    // The lane renders in the top strip, the readout in the bottom strip; damage
-    // both when either surface was showing or will show.
-    if (was_visible || app.hover_popup.any_visible()) {
-        invalidate_top_strip();
-        invalidate_timestamp_area();
-    }
-    // No DEDICATED stem-column damage here, and a hover change never changes stem
-    // VISIBILITY: the selected-marker stem is always-on for the singleton selection
-    // under no further condition, so a hover change never appears/erases it —
-    // its transitions ride the subject-change owner on Selection.
-    // (invalidate_top_strip above damages top_strip_area.h + 1; that one extra
-    // seam row overlaps the waveform's first scanline under the half-open
-    // rects_intersect, so the always-on stem incidentally repaints its top row
-    // identically — a same-pixel redraw, never a hide.)
 }

@@ -54,7 +54,6 @@ void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     if (target_mode == app.active_markers_view) return;
     selection.clear_selection();
     app.active_markers_view = target_mode;
-    viewport.clear_hover_popup();
 }
 
 // Ctrl+Tab toggles A/B navigational tabs. Stops playback (deactivating the
@@ -84,7 +83,6 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // the window from y=0 through the waveform's bottom, top strip included,
     // which is a superset of the stop's own full waveform-area invalidate.
     playback_lifecycle.stop_playback_if_playing();
-    viewport.clear_hover_popup();
     // The region-select span is view-domain scratch; the entering tab restores
     // a different viewport (and, under a differing map, a different active
     // domain), so a resting region cannot carry across. The kick_waveform_sync

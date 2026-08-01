@@ -72,26 +72,11 @@ struct Selection {
     // focus moving between resets at different frames.
     void damage_overlay_on_subject_change(std::optional<int64_t> old_subject);
 
-    // The selected-marker STEM (paint_selected_stem, architect 2026-07-25) is
-    // the SINGLETON selection's always-on focus visual (BOTH columns, BOTH
-    // audio views — unlike the phase overlay's P+target gate). Its SUBJECT is
-    // the one selected marker's ACTIVE-COLUMN SOURCE frame, or none when the
-    // selection is empty or multi (a group's cue is the members' ink triangles
-    // plus the cursor landed on the focus — never a stem). Frame, not index: a reorder remap preserves frames
-    // (subject-stable), exactly like phase_overlay_subject. Captured BEFORE a
-    // selection mutation.
-    std::optional<int64_t> stem_subject() const;
-
-    // Damage the stem's OLD and NEW subject columns when the subject changed across
-    // a mutation (`old_subject` captured before via stem_subject()); a no-op when
-    // unchanged (the common case: a Tab within a non-empty set, a range shrink to
-    // still-2+). FULL waveform-area damage since 2026-07-30 (the narrow
-    // per-column invalidator it used rode the wrong coordinate epoch and is
-    // deleted; the reason is at the definition). This is the ONE owner of the stem's
-    // appear/move/disappear under always-on (mirroring the phase-overlay owner):
-    // the FRAME/IMAGE-moving gestures (nudges, drags, re-warps) already full-damage
-    // the waveform. Wired at the SAME selection mutators the overlay owner is;
-    // where a route ALSO full-damages (undo restore, load/adopt, W/P, S/T) the
-    // narrow stem damage is harmlessly redundant.
-    void damage_stem_on_subject_change(std::optional<int64_t> old_subject);
+    // THE STEM'S SUBJECT PAIR IS DELETED (row 5, 2026-08-01). stem_subject() /
+    // damage_stem_on_subject_change() were the phase-overlay owner's twin for the
+    // selected-marker stem, because that stem was a SELECTION visual that could
+    // appear, move or vanish with no other repaint. Stems are
+    // selection-independent now — every enabled marker stems, always, in its
+    // class's unselected colour — so there is no selection-driven stem
+    // transition left to own. The overlay owner above stands.
 };

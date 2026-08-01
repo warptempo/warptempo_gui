@@ -40,7 +40,6 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     app.prompt.response_keys   = {'s', '\x7f', '\x1b'};
     app.prompt.response_labels = {"[s]ave", "[delete]", "[esc]"};
     app.prompt.trigger         = t;
-    viewport.clear_hover_popup();
     viewport.invalidate_all();
 }
 
@@ -58,7 +57,6 @@ void GuiPrompt::open_error_notice(std::string text) {
     app.prompt.response_keys   = {'\x1b'};
     app.prompt.response_labels = {"[esc]"};
     app.prompt.trigger         = DialogTrigger::ERROR_NOTICE;
-    viewport.clear_hover_popup();
     viewport.invalidate_all();
 }
 
@@ -80,7 +78,6 @@ void GuiPrompt::open_env_hash_mismatch(const std::string& changed_list) {
     app.prompt.response_keys   = {'o'};
     app.prompt.response_labels = {"[o]k"};
     app.prompt.trigger         = DialogTrigger::ENV_HASH_MISMATCH;
-    viewport.clear_hover_popup();
     viewport.invalidate_all();
 }
 

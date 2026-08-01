@@ -270,7 +270,6 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // index (touched_snapshot stays the first press's pre-burst coordinates). The
     // post-mutation re-record happens in the shared tail.
     if (merge) {
-        undo.note_coalesced_commit();
         undo.refresh_coalesced_touched_live(std::move(touched_live));
     } else {
         // The phase-reset POSITION NUDGE. The restore's always-on focus stem

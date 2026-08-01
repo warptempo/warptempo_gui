@@ -2,6 +2,7 @@
 #include "app_state.h"
 #include "audio.h"
 #include "gui_display_context.h"
+#include "text_shape.h"
 #include "time_format.h"
 #include "value_format.h"
 #include "warp_frame_map_view.h"
@@ -27,7 +28,7 @@ namespace {
 // Flag text mirrors the canonical line's PAYLOAD (post-pipe); metadata
 // (b=/e=/#) never appears in it. The flag shape itself is textless — this is
 // the base composer flag_text_iter wraps, and every marker-text-lane surface
-// (the hover popup over an eligible pass/ref marker, and the Enter flag
+// (the FLAG itself, truncated at the nine-glyph budget, and the Enter flag
 // editor's seeded initial text) routes through that wrapper, so what they
 // show mirrors this exactly.
 //
@@ -92,133 +93,6 @@ static inline double frame_to_paint_sample(
         return std::nearbyint(map_source_to_target(src_frame, *warp_frame_map));
     }
     return std::nearbyint(eff_frame);
-}
-
-// Fills and outlines ONE marker/phase-reset/trim flag SHAPE at `center_x` (the
-// item's pixel column). `anchor` places the rectangle relative to that column:
-// Center (markers/phase resets — straddles the column, may hang half offscreen)
-// or LeftEdge (rect left column ON `center_x`). Trim chips call with LeftEdge and
-// `center_x` = the edge-anchored rect left from trim_chip_rect (which owns the
-// begin/end edge asymmetry), so a chip's begin/end handedness lives THERE, not
-// here. The shape is the fixed-width rectangle
-// in the flag lane [rx, flag_top, flag_w, rect_h] plus (when `with_triangle`)
-// the tip-down triangle in the triangle lane directly beneath it, tip on the
-// column at `tip_y` (= the waveform top edge). The two are ONE shape: the
-// triangle's TOP is the rectangle's FULL width, so its slopes leave the rect's
-// exact bottom corners and run to the tip with NO inward step — the outline
-// flows continuously from the vertical sides straight into the diagonals (no
-// horizontal seam, no 90-degree jog). The rectangle fills crisp (AA off); the
-// triangle fills as an ANTIALIASED PATH whose base coincides with the rect's
-// hard bottom edge, so the two meet across the full width with no gap and no
-// shared row (which is what lets a SELECTED flag paint the triangle in a
-// DIFFERENT color from the rectangle over a hard boundary — see `tri_fill` at
-// the definition), and the triangle's slope fill blends with the outline's
-// slope stroke. The 1px
-// `outline` runs the TRUE OUTSIDE only. ALIASING: axis-aligned edges (rect
-// sides, top, base) use the +0.5 half-pixel convention for crisp 1px lines; the
-// two diagonal slopes antialias (the relaxed rule — only verticals/horizontals
-// are hard-aliased). Trim chips pass with_triangle=false — a plain rectangle, no
-// triangle (Ableton's loop bounds carry none). The shape is always OPAQUE: a
-// disabled marker is a color class (the kMarkerDisabled pair its caller
-// resolves), not a faded one, so the cairo-group dim this once took an `alpha`
-// for is gone. The triangle is the identical geometry the cached playhead mask
-// stamps, so a flag's triangle and the playhead's coincide when the cursor sits
-// on it.
-// Horizontal anchor of the shape's rectangle relative to `center_x`'s column.
-// Center is the marker-flag default (and the playhead triangle) — straddles the
-// column and may hang half offscreen. LeftEdge puts the rect's LEFT column ON
-// `center_x`; it serves the trim chips, which pass the already-edge-anchored
-// rect left from trim_chip_rect (the begin/end asymmetry owner), so both begin
-// and end chips are painted LeftEdge at their resolved rect.x.
-enum class FlagHAnchor { Center, LeftEdge };
-
-// `tri_fill`, when non-null, fills the TRIANGLE in its own color while the
-// rectangle keeps `fill` — the SELECTED marker's ink triangle (2026-07-27; the
-// callers explain why that is not a color class). Null means "same as fill",
-// so every caller that omits it paints exactly as it did before the two-tone
-// shape existed. The two-tone BOUNDARY is the rect's bottom edge `rb`, and it
-// is HARD by construction, no seam and no blend row: `rb` is an integer pixel
-// boundary, the AA-off rectangle fills rows [ry, rb) and the triangle path's
-// topmost y is exactly rb, so row rb-1 is pure `fill` and row rb is pure
-// `tri_fill` across the base. Nothing here may nudge that base by a half pixel
-// — the +0.5 convention is for 1px STROKES centered on a pixel; applied to
-// this fill edge it would leave a half-covered row of bare strip between the
-// two colors. The triangle's two SLOPES antialias as always.
-void paint_flag_shape(cairo_t* cr, double center_x,
-                      double flag_top_d, double tri_top_d, double tip_y_d,
-                      GuiColor fill, GuiColor outline,
-                      bool with_triangle,
-                      FlagHAnchor anchor = FlagHAnchor::Center,
-                      const GuiColor* tri_fill = nullptr) {
-    const int flag_w = flag_lane_w_px();
-
-    // Every one of these four conversions takes an ALREADY-INTEGRAL double —
-    // center_x is a nearbyint'd column (or an int chip rect left), and the three
-    // y edges come from integer lane rects — so the rounding is an identity
-    // here; it is std::nearbyint because that is the project's single
-    // fractional->integer pixel convention.
-    const int cx     = static_cast<int>(std::nearbyint(center_x));
-    // Rect left per anchor: Center straddles the column; LeftEdge puts the
-    // rect's left column ON it. cx is otherwise the triangle apex (Center only).
-    const int rx =
-        anchor == FlagHAnchor::LeftEdge ? cx
-      :                                   cx - flag_w / 2;   // rect left
-    const int rw     = flag_w;
-    const int ry     = static_cast<int>(std::nearbyint(flag_top_d));
-    const int rb     = static_cast<int>(std::nearbyint(tri_top_d)); // rect bottom = tri top
-    const int tbot   = static_cast<int>(std::nearbyint(tip_y_d));   // triangle lane bottom
-
-    // Triangle centerline = the rect's own center, and its base half-width comes
-    // from the shared taper owner (flag_triangle_half_width_at at row 0 = the
-    // full flag half-width). Deriving the base corners/apex from these keeps the
-    // painted slope identical to hit_test_flag's triangle-lane slope. For the
-    // marker flags (center anchor + odd width) the centerline lands exactly on
-    // cx+0.5 and the base corners on rx / rx+rw, so the base shares the rect's
-    // hard bottom edge with no gap or double-drawn seam.
-    const double tri_cx    = static_cast<double>(rx) + rw / 2.0;
-    const double tri_bhalf = flag_triangle_half_width_at(0.0);
-
-    cairo_save(cr);
-
-    // Fill: rectangle crisp (AA off) then, if present, the triangle as an AA path
-    // whose base is the rect's full-width bottom edge and whose apex is the
-    // bottom-center column. The base row coincides with the rect's hard bottom
-    // edge (rb), so the shared full-width boundary carries no gap or double-drawn
-    // seam.
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_source_rgb(cr, fill.r, fill.g, fill.b);
-    cairo_rectangle(cr, rx, ry, rw, rb - ry);
-    cairo_fill(cr);
-    cairo_restore(cr);
-    if (with_triangle) {
-        const GuiColor tf = tri_fill ? *tri_fill : fill;
-        cairo_set_source_rgb(cr, tf.r, tf.g, tf.b);
-        cairo_move_to(cr, tri_cx - tri_bhalf, static_cast<double>(rb));
-        cairo_line_to(cr, tri_cx + tri_bhalf, static_cast<double>(rb));
-        cairo_line_to(cr, tri_cx,             static_cast<double>(tbot));
-        cairo_close_path(cr);
-        cairo_fill(cr);
-    }
-
-    // Outline: the true outside as one closed polygon. Rect edges, then (for a
-    // triangle-bearing flag) the two slopes directly from the rect's bottom
-    // corners to the tip — no step, no horizontal seam.
-    cairo_set_source_rgb(cr, outline.r, outline.g, outline.b);
-    cairo_set_line_width(cr, 1.0);
-    cairo_move_to(cr, rx + 0.5,           ry + 0.5);          // top-left
-    cairo_line_to(cr, rx + rw - 0.5,      ry + 0.5);          // top edge
-    cairo_line_to(cr, rx + rw - 0.5,      rb - 0.5);          // right edge to rect bottom
-    if (with_triangle) {
-        cairo_line_to(cr, tri_cx,          tbot - 0.5);       // right slope to tip
-        cairo_line_to(cr, rx + 0.5,        rb - 0.5);         // left slope up
-    } else {
-        cairo_line_to(cr, rx + 0.5,        rb - 0.5);         // rect bottom edge
-    }
-    cairo_close_path(cr);                                     // up the left edge
-    cairo_stroke(cr);
-
-    cairo_restore(cr);
 }
 
 } // namespace
@@ -960,8 +834,8 @@ void render_trim_stems(cairo_t* cr,
 
     // Stem geometry: the trim stem spans the waveform area, top at
     // waveform_area.y (where its b/e chip's structure ends above) down to the
-    // waveform bottom — the same span the selected-marker stem (paint_selected_stem)
-    // uses.
+    // waveform bottom — the same span the marker stems (paint_marker_stems)
+    // use.
     const double y_stem_top = static_cast<double>(waveform_area.y);
     const double y1 = static_cast<double>(waveform_area.y + waveform_area.h);
 
@@ -1293,29 +1167,20 @@ void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
 
 namespace {
 
-// Shared flag iteration used by render_flags / compute_flag_hit_rects and their
-// phase-reset analogues. Invokes `emit(i, center_x)` for EVERY visible marker,
-// in ascending painted-x order (equal columns tie-break by ascending store
-// index via the stable sort below). There is no elision: overlapping shapes
-// occlude instead.
+// Shared flag iteration used by render_flags and its phase-reset analogue.
+// Invokes `emit(i, left_x)` for EVERY visible marker IN STORE ORDER — which is
+// also the PAINT order, and therefore the occlusion order: LATER OVER EARLIER,
+// with no other occlusion management of any kind (row 5, 2026-08-01). The
+// ascending-x stable sort that used to run here is GONE with the z-order it
+// served: the old flags lifted selected shapes above unselected and tie-broke by
+// column, and both of those rules retired when selection became a colour swap
+// and the marker-text lane's arbitration was deleted.
 //
-// THE PAINT/HIT INVARIANT. `center_x` — the marker's painted pixel column — is
-// computed ONCE here, and every flag is CENTERED on it (rectangle in the flag
-// lane, triangle in the triangle lane, both centered; the triangle tip marks
-// the frame). Both the painter (render_flags / render_phase_reset_flags) AND
-// the hit-rect builder (compute_flag_hit_rects_impl) consume this one center_x,
-// so the clickable flag rectangle and the painted flag are the same rectangle
-// by construction. No cairo context is needed — center_x is pure viewport
-// arithmetic and the flag width is fixed (flag_lane_w_px()).
-//
-// Occlusion model: the emit order is ascending x. The painters paint the
-// collected list in TWO REVERSE passes keyed on selection — unselected first,
-// then selected — so a selected shape lands above every unselected one and,
-// within each class, the leftmost (lowest store index on an equal column) lands
-// on top; the hit walk runs FORWARD in two matching passes (selected first,
-// then unconditional). Consistency invariant across the paint and hit paths:
-// topmost = the leftmost SELECTED flag when any selected flag contains the
-// point, else the leftmost flag (lowest index on ties).
+// THE PAINT/HIT INVARIANT. `left_x` — the marker's painted pixel column — is
+// computed ONCE here and is the box's LEFT EDGE (the composite shows the stem
+// standing on that same column). The painter fills from it, the hit rect is
+// published from it, and the stem is published at it, so all three are one
+// number by construction.
 template <typename MarkerVec, typename Emit>
 void iterate_visible_flags_impl(
     GuiRect top_strip_area,
@@ -1337,29 +1202,16 @@ void iterate_visible_flags_impl(
         span / static_cast<double>(waveform_width);
     if (samples_per_pixel <= 0.0) return;
 
-    // Candidates iterate in VISUAL x order, not store order. During a
-    // marker drag the store is frozen (positions come from the DragOverlay),
-    // so once the dragged flag crosses a neighbor the store walk's ascending-x
-    // assumption is false. Collect the visible candidates with their
-    // overlay-effective paint positions and stable-sort by position; the stable
-    // sort makes the store index the tiebreaker for exactly-equal positions, so
-    // the occlusion z-order the painters derive stays deterministic. At rest,
-    // store order equals x order and the sort is a no-op reorder.
-    struct FlagCandidate {
-        int    i;
-        double ms;
-    };
-    std::vector<FlagCandidate> candidates;
-    candidates.reserve(markers.size());
-    // A flag may hang up to HALF offscreen at the viewport edges (like the
-    // playhead triangle always did): cull only when the shape is fully
-    // offscreen. The horizontal half-footprint is half the flag width.
-    const double half_flag =
-        static_cast<double>(flag_lane_w_px()) / 2.0;
+    // THE CULL IS ASYMMETRIC BECAUSE THE BOX IS. A flag opens at its column and
+    // runs RIGHTWARD, so a marker to the LEFT of the viewport can still reach
+    // into it (by up to a full box width) while a marker at or past the right
+    // edge can show nothing at all. The left margin is the width BOUND
+    // (marker_flag_max_width_px) rather than the real width, which is not known
+    // until the label is shaped — a bound over-admits a handful of offscreen
+    // markers per frame and never drops a visible one.
     const double cull_lo = static_cast<double>(viewport_start_sample) -
-                           half_flag * samples_per_pixel;
-    const double cull_hi = static_cast<double>(viewport_end_sample) +
-                           half_flag * samples_per_pixel;
+                           marker_flag_max_width_px() * samples_per_pixel;
+    const double cull_hi = static_cast<double>(viewport_end_sample);
     for (size_t i = 0; i < markers.size(); ++i) {
         const auto& m = markers[i];
         const double eff_time = drag_overlay
@@ -1370,53 +1222,193 @@ void iterate_visible_flags_impl(
             frame_to_paint_sample(eff_time, warp_frame_map);
         if (ms < cull_lo) continue;
         if (ms > cull_hi) continue;
-        candidates.push_back({static_cast<int>(i), ms});
-    }
-    std::stable_sort(candidates.begin(), candidates.end(),
-                     [](const FlagCandidate& a, const FlagCandidate& b) {
-                         return a.ms < b.ms;
-                     });
-
-    for (const FlagCandidate& cand : candidates) {
-        const int    i  = cand.i;
-        const double ms = cand.ms;
 
         const double x_raw =
             (ms - static_cast<double>(viewport_start_sample)) /
             samples_per_pixel;
-
-        // Center the flag on the marker's pixel column — see the paint/hit
-        // invariant above. No edge clamp; a flag near an edge hangs up to half
-        // offscreen exactly as its column dictates.
-        const double center_x =
+        const double left_x =
             static_cast<double>(top_strip_area.x) + std::nearbyint(x_raw);
 
-        emit(i, center_x);
+        emit(static_cast<int>(i), left_x);
     }
 }
 
-// Resolves the marker box's top and bottom — a pure READ of the ONE lane rect
-// the caller resolved from top_marker_row_area. The box spans the whole marker
-// lane, whose bottom edge the lane stack places flush on the waveform top, so
-// the shapes and their hit rects follow the lane wherever the stack puts it.
-//
-// THE TRIANGLE IS GONE (row 5, 2026-08-01) and with it the seam invariant that
-// made the flag and triangle lanes contiguous-by-invariant: a marker is one box
-// in one lane now, spanning no seam, so `tri_top` degenerates to the box's
-// bottom and `tip_y` sits on it — a zero-height triangle, which every consumer
-// draws as nothing. The full retirement record is at the lane table (main.cpp).
-struct FlagLaneY {
-    double flag_top;   // marker-lane top (box top)
-    double tri_top;    // box bottom (= marker-lane bottom, = waveform top)
-    double tip_y;      // same edge: the triangle has no height any more
+// Cap a marker label at the nine-glyph budget — the contract, the byte/glyph
+// identity and the display-only rule all live at kMarkerLabelGlyphBudget
+// (render.h). Eight bytes plus U+2026.
+std::string cap_marker_label(std::string text) {
+    if (text.size() > kMarkerLabelGlyphBudget) {
+        text = text.substr(0, kMarkerLabelGlyphBudget - 1) + "\xe2\x80\xa6";
+    }
+    return text;
+}
+
+// The resolved paint of ONE marker flag: the three surfaces plus the stem.
+struct FlagFace {
+    GuiColor fill;
+    GuiColor edge;
+    GuiColor label;
+    GuiColor stem;
+    bool     has_stem;
 };
-FlagLaneY flag_lane_geometry(const FlagLaneRects& lanes) {
-    FlagLaneY g;
-    g.flag_top = static_cast<double>(lanes.marker_lane.y);
-    g.tri_top  = static_cast<double>(lanes.marker_lane.y +
-                                     lanes.marker_lane.h);
-    g.tip_y    = g.tri_top;
-    return g;
+
+// THE COLOR-CLASS LADDER, one owner for both marker columns (the full statement
+// is at render_flags' declaration): disabled wins outright, then red, then the
+// default pair with selection swapping it for the bright one.
+//
+// THE DISABLED FACE'S LABEL DIMS AGAINST THE FLAG, NOT AGAINST THE LANE. Every
+// SHAPE surface takes 25% of itself over the lane ground, as ruled. The LABEL
+// takes the same 25%-of-itself through the same mix_color owner but toward the
+// surface it actually sits on — the already-blended fill — because that is what
+// the redesign's disabled-label rule says ("a fraction of itself over the row's
+// CURRENT ground", render.h) and the label's ground here is the flag, not the
+// lane. The numbers are why it matters: blending the label toward the LANE
+// gives #575757 on a #3f304a flag, a contrast ratio of 1.7 that is not text any
+// more; blending it toward the FLAG gives ~#6e6377 at 2.1, which reads as
+// dimmed-but-present. Neither is a fade — both resolve to an opaque color
+// before cairo sees them, which is the point of the no-alpha rule when flags
+// overlap.
+FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
+    FlagFace f;
+    if (disabled) {
+        // The class the marker WOULD paint, blended. Red keeps its own hue
+        // through the blend rather than collapsing to the default one, so a
+        // disabled red marker is still recognisably red.
+        const GuiColor base_fill = red ? kMarkerFlagFillRed : kMarkerFlagFill;
+        const GuiColor base_edge = red ? kMarkerFlagEdgeRed : kMarkerFlagEdge;
+        f.fill  = mix_color(base_fill, kRedesignTabGround, kMarkerDisabledMix);
+        f.edge  = mix_color(base_edge, kRedesignTabGround, kMarkerDisabledMix);
+        f.label = mix_color(kRedesignLabel, f.fill, kMarkerDisabledMix);
+        f.stem  = f.fill;
+        f.has_stem = false;      // NO STEM EVER for a disabled marker
+        return f;
+    }
+    if (red) {
+        f.fill  = kMarkerFlagFillRed;
+        f.edge  = kMarkerFlagEdgeRed;
+        f.label = kRedesignLabel;
+        f.stem  = kMarkerStemRed;
+        f.has_stem = true;
+        return f;
+    }
+    f.fill  = selected ? kMarkerFlagFillSel : kMarkerFlagFill;
+    f.edge  = selected ? kMarkerFlagEdgeSel : kMarkerFlagEdge;
+    f.label = kRedesignLabel;
+    // The stem reads the CLASS ALONE, never the selection bit: a selected
+    // default marker keeps the calm #9b59b6 stem (the architect's explicit
+    // rule), so only the flag brightens.
+    f.stem  = kMarkerFlagFill;
+    f.has_stem = true;
+    return f;
+}
+
+// The one body both columns' painters call. `label_of(i)` composes the marker's
+// display text and `disabled_of(i)` answers its column's disabled question (the
+// warp side's label_ref cascade, the phase-reset side's bare bool).
+template <typename MarkerVec, typename LabelFn, typename DisabledFn>
+void render_flag_boxes_impl(
+    cairo_t* cr,
+    GuiRect top_strip_area,
+    FlagLaneRects lanes,
+    int waveform_width,
+    const MarkerVec& markers,
+    long long viewport_start_sample,
+    long long viewport_end_sample,
+    int sample_rate,
+    const std::set<int>& selected_set,
+    const std::set<int>& red_set,
+    LabelFn&& label_of,
+    DisabledFn&& disabled_of,
+    std::vector<FlagHitRect>* out_hit_rects,
+    std::vector<MarkerStem>* out_stems,
+    const std::vector<WarpFrameMapSegment>* warp_frame_map,
+    const DragOverlay* drag_overlay) {
+    if (out_hit_rects) out_hit_rects->clear();
+    if (out_stems)     out_stems->clear();
+    if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
+    if (viewport_end_sample <= viewport_start_sample) return;
+    if (sample_rate <= 0) return;
+
+    const GuiRect lane = lanes.marker_lane;
+    if (lane.h <= 0) return;
+
+    cairo_save(cr);
+    // THE REDESIGN'S SANS FACE, set ONCE for the whole pass: every label is
+    // shaped and painted at this one size on this one scaled font, which is the
+    // text_shape precondition (shape with the font you paint with). Nothing
+    // below changes the size, so the borrowed scaled-font pointer stays valid
+    // for the whole loop.
+    cairo_select_font_face(cr, "sans",
+                           CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_font_size(cr, redesign_font_size_px());
+    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+
+    const int    pad_l    = marker_flag_pad_left_px();
+    const int    pad_r    = marker_flag_pad_right_px();
+    const int    edge_h   = marker_flag_edge_h_px();
+    const double baseline = static_cast<double>(lane.y) +
+                            static_cast<double>(marker_flag_baseline_px());
+
+    iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
+                               viewport_start_sample, viewport_end_sample,
+                               warp_frame_map, drag_overlay,
+        [&](int i, double left_x) {
+            const std::string text = cap_marker_label(label_of(i));
+            const text_shape::ShapedRun run =
+                text_shape::shape_text_run(font, text);
+
+            const int bx = static_cast<int>(std::nearbyint(left_x));
+            const int bw = pad_l + pad_r +
+                static_cast<int>(std::nearbyint(run.width_px));
+
+            // RED IS COMPUTED INDEPENDENTLY OF DISABLED, unlike the old
+            // three-pair ladder where `red` tested `!dis` because disabled had
+            // its own opaque PAIR and could not show a hue underneath. Disabled
+            // is a BLEND of the marker's own class now, so "which class" is a
+            // real question and the answer is the one it belongs to: a disabled
+            // red marker blends the RED pair and stays recognisably red.
+            // Disabled still WINS — it decides the blend and the missing stem —
+            // it just no longer erases the hue.
+            const bool dis = disabled_of(i);
+            const bool red = red_set.count(i) > 0;
+            const bool sel = selected_set.count(i) > 0;
+            const FlagFace face = resolve_flag_face(dis, red, sel);
+
+            // Box then top edge, both AA-off so the 1px band is exactly one
+            // row and the box's sides are exactly one column.
+            cairo_save(cr);
+            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+            cairo_set_source_rgb(cr, face.fill.r, face.fill.g, face.fill.b);
+            cairo_rectangle(cr, bx, lane.y, bw, lane.h);
+            cairo_fill(cr);
+            cairo_set_source_rgb(cr, face.edge.r, face.edge.g, face.edge.b);
+            cairo_rectangle(cr, bx, lane.y, bw, edge_h);
+            cairo_fill(cr);
+            cairo_restore(cr);
+
+            // The label, on the run just measured — same font, same glyphs, so
+            // the box width and the painted text cannot disagree.
+            cairo_set_source_rgb(cr, face.label.r, face.label.g, face.label.b);
+            text_shape::show_shaped_run(
+                cr, run, static_cast<double>(bx + pad_l), baseline);
+
+            if (out_hit_rects) {
+                FlagHitRect r;
+                r.marker_index = i;
+                r.x = static_cast<double>(bx);
+                r.y = static_cast<double>(lane.y);
+                r.w = static_cast<double>(bw);
+                r.h = static_cast<double>(lane.h);
+                out_hit_rects->push_back(r);
+            }
+            if (out_stems && face.has_stem) {
+                out_stems->push_back(
+                    MarkerStem{static_cast<double>(bx), face.stem});
+            }
+        });
+
+    cairo_restore(cr);
 }
 
 } // namespace
@@ -1431,151 +1423,22 @@ void render_flags(cairo_t* cr,
                   int sample_rate,
                   const std::set<int>& selected_set,
                   const std::set<int>& red_set,
+                  bool iteration_on,
+                  std::vector<FlagHitRect>* out_hit_rects,
+                  std::vector<MarkerStem>* out_stems,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map,
                   const DragOverlay* drag_overlay) {
-    if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
-    if (viewport_end_sample <= viewport_start_sample) return;
-    if (sample_rate <= 0) return;
-
-    cairo_save(cr);
-
-    const FlagLaneY g = flag_lane_geometry(lanes);
-
-    // Collect flag centers in ascending-x order, then paint in TWO reverse
-    // passes keyed on selection: UNSELECTED in reverse, then SELECTED in
-    // reverse. So every selected shape lands above every unselected one, and
-    // within each class the leftmost (lowest-index on ties) paints last = on
-    // top. Selection drives the flag-cache fingerprint, so a selection change
-    // rebuilds the cache and this z-order follows.
-    struct FlagEmit {
-        int    i;
-        double center_x;
-    };
-    std::vector<FlagEmit> emits;
-    iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
-                               viewport_start_sample, viewport_end_sample,
-                               warp_frame_map, drag_overlay,
-        [&](int i, double center_x) {
-            emits.push_back({i, center_x});
-        });
-
-    auto paint_emit = [&](const FlagEmit& e, bool sel) {
-        // THREE color classes, resolved in priority order: DISABLED wins over
-        // red and default, red over default. Each is one opaque fill/outline
-        // pair and nothing composes with anything — a disabled marker no longer
-        // combines with a color class, it IS one. SELECTION IS STILL NOT A
-        // CLASS: the ladder below resolves fill/outline WITHOUT reading `sel`,
-        // so a selected flag's rectangle and its whole outline are exactly what
-        // it would paint unselected. That is why `red` tests only `!dis` — a
-        // selected marker whose render normalizes to 1.00 keeps its red cue
-        // rather than having it masked.
-        const bool dis = effective_disabled(markers, e.i);
-        const bool red = !dis && red_set.count(e.i) > 0;
-        const GuiColor fill    = dis ? kMarkerDisabled
-                               : red ? kAccent : kMarker;
-        const GuiColor outline = dis ? kMarkerDisabledOutline
-                               : red ? kAccentOutline : kMarkerOutline;
-        // Selection's ONE paint (architect 2026-07-27): a SELECTED flag fills
-        // its TRIANGLE with the waveform ink and nothing else changes — the
-        // rectangle keeps the class fill, the outline rings the whole shape
-        // unchanged, the hit geometry is untouched. It is a fill LAYERED on one
-        // part of the shape, keyed on selection ALONE and resolved after the
-        // ladder, not a fourth class competing inside it: it never displaces a
-        // class pair, so it cannot repeat the 2026-07-27 defect where a
-        // selection color outranked the disabled one. Selection reads through
-        // this triangle, the kSelectedStem cue, the z-order lift, and the
-        // playhead land.
-        const GuiColor tri = kWaveform;
-        paint_flag_shape(cr, e.center_x, g.flag_top, g.tri_top, g.tip_y,
-                         fill, outline, /*with_triangle=*/true,
-                         FlagHAnchor::Center, sel ? &tri : nullptr);
-    };
-    for (auto it = emits.rbegin(); it != emits.rend(); ++it)
-        if (!selected_set.count(it->i)) paint_emit(*it, /*sel=*/false);
-    for (auto it = emits.rbegin(); it != emits.rend(); ++it)
-        if (selected_set.count(it->i)) paint_emit(*it, /*sel=*/true);
-
-    cairo_restore(cr);
+    render_flag_boxes_impl(
+        cr, top_strip_area, lanes, waveform_width, markers,
+        viewport_start_sample, viewport_end_sample, sample_rate,
+        selected_set, red_set,
+        // The ONE composer the flag paint, the editor seed and the copy payload
+        // all share, so a flag shows exactly what its editor would open with.
+        [&](int i) { return flag_text_iter(markers, i, iteration_on); },
+        // The warp column's disabled verdict follows the label_ref cascade.
+        [&](int i) { return effective_disabled(markers, i); },
+        out_hit_rects, out_stems, warp_frame_map, drag_overlay);
 }
-
-namespace {
-
-template <typename MarkerVec>
-std::vector<FlagHitRect> compute_flag_hit_rects_impl(
-    GuiRect top_strip_area,
-    FlagLaneRects lanes,
-    int waveform_width,
-    const MarkerVec& markers,
-    long long viewport_start_sample,
-    long long viewport_end_sample,
-    int sample_rate,
-    const std::vector<WarpFrameMapSegment>* warp_frame_map,
-    const DragOverlay* drag_overlay) {
-    std::vector<FlagHitRect> out;
-    if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return out;
-    if (viewport_end_sample <= viewport_start_sample) return out;
-    if (sample_rate <= 0) return out;
-
-    // The emitted rect is the flag RECTANGLE only, sized and placed EXACTLY as
-    // paint_flag_shape draws the rectangle: centered on the column, width
-    // flag_lane_w_px(), top/bottom the flag lane. It is also the geometric
-    // base the fused tip-down triangle is derived from: the caller
-    // (hit_test_flag) additionally derives and tests that triangle from each
-    // rect, so the actual hit area is the rectangle plus the triangle. One
-    // rect per VISIBLE flag (no elision), emitted in ascending-x order, so
-    // overlapping flags yield overlapping rects; the caller resolves an
-    // overlap with two forward passes mirroring the painters' two reverse
-    // passes — the leftmost SELECTED containing rect, else the leftmost
-    // containing rect = the topmost-painted flag.
-    //
-    // The rect's vertical span is the painter's exactly: paint_flag_shape fills
-    // rows [flag_top, tri_top), and flag_lane_geometry reports those two edges
-    // as the flag lane's top and the triangle lane's top. Both are already whole
-    // pixels (lane rects are integers), so the nearbyint here is an identity
-    // that keeps the conversion convention rather than a live rounding. Taking
-    // the bottom from tri_top (not flag_lane.h) is deliberate and is the SAME
-    // fused-glyph junction the painter uses — the two lanes are contiguous by
-    // the invariant recorded at flag_lane_geometry, so this reads one shared
-    // edge instead of a second derivation that could disagree with the paint.
-    const FlagLaneY g = flag_lane_geometry(lanes);
-    const int flag_w = flag_lane_w_px();
-    const int ry     = static_cast<int>(std::nearbyint(g.flag_top));
-    const int rh     = static_cast<int>(std::nearbyint(g.tri_top)) - ry;
-    iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
-                               viewport_start_sample, viewport_end_sample,
-                               warp_frame_map, drag_overlay,
-        [&](int i, double center_x) {
-            const int cx = static_cast<int>(std::nearbyint(center_x));
-            FlagHitRect r;
-            r.marker_index = i;
-            r.x = cx - flag_w / 2;
-            r.y = ry;
-            r.w = flag_w;
-            r.h = rh;
-            out.push_back(r);
-        });
-
-    return out;
-}
-
-} // namespace
-
-std::vector<FlagHitRect> compute_flag_hit_rects(
-    GuiRect top_strip_area,
-    FlagLaneRects lanes,
-    int waveform_width,
-    const std::vector<GuiWarpMarker>& markers,
-    long long viewport_start_sample,
-    long long viewport_end_sample,
-    int sample_rate,
-    const std::vector<WarpFrameMapSegment>* warp_frame_map,
-    const DragOverlay* drag_overlay) {
-    return compute_flag_hit_rects_impl(top_strip_area, lanes, waveform_width,
-        markers, viewport_start_sample, viewport_end_sample,
-        sample_rate, warp_frame_map, drag_overlay);
-}
-
-// ---------- Phase reset marker rendering ----------
 
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
@@ -1587,74 +1450,20 @@ void render_phase_reset_flags(cairo_t* cr,
                             int sample_rate,
                             const std::set<int>& selected_set,
                             const std::set<int>& red_set,
+                            std::vector<FlagHitRect>* out_hit_rects,
+                            std::vector<MarkerStem>* out_stems,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map,
                             const DragOverlay* drag_overlay) {
-    if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
-    if (viewport_end_sample <= viewport_start_sample) return;
-    if (sample_rate <= 0) return;
-
-    cairo_save(cr);
-
-    const FlagLaneY g = flag_lane_geometry(lanes);
-
-    // Collect-then-paint in TWO reverse passes keyed on selection, mirroring
-    // render_flags: UNSELECTED in reverse, then SELECTED in reverse, so every
-    // selected shape lands above every unselected one and within each class the
-    // leftmost (lowest-index on ties) paints last = on top.
-    struct PhaseResetEmit {
-        int    i;
-        double center_x;
-    };
-    std::vector<PhaseResetEmit> emits;
-    iterate_visible_flags_impl(top_strip_area, waveform_width, phase_resets,
-                               viewport_start_sample, viewport_end_sample,
-                               warp_frame_map, drag_overlay,
-        [&](int i, double center_x) {
-            emits.push_back({i, center_x});
-        });
-
-    auto paint_emit = [&](const PhaseResetEmit& e, bool sel) {
-        // The identical three-class ladder render_flags resolves: disabled wins
-        // over red, red over default, and selection is not a class — the ladder
-        // never reads `sel` — so `red` tests only `!dis` and a selected reset
-        // keeps its normalization cue. A phase reset carries no label_ref
-        // cascade, so its disabled verdict is the bool itself.
-        const bool dis = phase_resets[e.i].disabled;
-        const bool red = !dis && red_set.count(e.i) > 0;
-        const GuiColor fill    = dis ? kMarkerDisabled
-                               : red ? kAccent : kMarker;
-        const GuiColor outline = dis ? kMarkerDisabledOutline
-                               : red ? kAccentOutline : kMarkerOutline;
-        // Selection's ONE paint, identical to render_flags' (the full rationale
-        // lives there — a triangle fill layered on after the ladder, never a
-        // fourth class): a SELECTED reset's triangle takes the waveform ink,
-        // its rectangle keeps the class fill, and its outline is unchanged.
-        const GuiColor tri = kWaveform;
-        paint_flag_shape(cr, e.center_x, g.flag_top, g.tri_top, g.tip_y,
-                         fill, outline, /*with_triangle=*/true,
-                         FlagHAnchor::Center, sel ? &tri : nullptr);
-    };
-    for (auto it = emits.rbegin(); it != emits.rend(); ++it)
-        if (!selected_set.count(it->i)) paint_emit(*it, /*sel=*/false);
-    for (auto it = emits.rbegin(); it != emits.rend(); ++it)
-        if (selected_set.count(it->i)) paint_emit(*it, /*sel=*/true);
-
-    cairo_restore(cr);
-}
-
-std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
-    GuiRect top_strip_area,
-    FlagLaneRects lanes,
-    int waveform_width,
-    const std::vector<GuiPhaseResetMarker>& phase_resets,
-    long long viewport_start_sample,
-    long long viewport_end_sample,
-    int sample_rate,
-    const std::vector<WarpFrameMapSegment>* warp_frame_map,
-    const DragOverlay* drag_overlay) {
-    return compute_flag_hit_rects_impl(top_strip_area, lanes, waveform_width,
-        phase_resets, viewport_start_sample, viewport_end_sample,
-        sample_rate, warp_frame_map, drag_overlay);
+    render_flag_boxes_impl(
+        cr, top_strip_area, lanes, waveform_width, phase_resets,
+        viewport_start_sample, viewport_end_sample, sample_rate,
+        selected_set, red_set,
+        // A phase reset authors no payload, so its flag carries the display-only
+        // token (render.h owns it and the reason for its width).
+        [&](int) { return std::string(kPhaseResetLaneToken); },
+        // No label_ref cascade on this column — the bool is the whole verdict.
+        [&](int i) { return phase_resets[i].disabled; },
+        out_hit_rects, out_stems, warp_frame_map, drag_overlay);
 }
 
 namespace {
@@ -1700,7 +1509,7 @@ double flag_font_size_px() { return g_font_size_pt * 96.0 / 72.0; }
 // bottom-center apex (column (W-1)/2 = h-1) — so its two slopes carry baked gray
 // edge alphas (the relaxed aliasing rule: diagonals may antialias). This is the
 // tip-down triangle the playhead cursor stamps, the identical geometry the
-// marker/trim flags path-fill in paint_flag_shape (at scale 1, H = 8, W = 15).
+// marker/trim flags that path-filled the same triangle are gone (row 5).
 static cairo_surface_t* build_triangle_mask(int h) {
     const int w = 2 * h - 1;
     cairo_surface_t* s = cairo_image_surface_create(CAIRO_FORMAT_A8, w, h);
@@ -1797,7 +1606,7 @@ double lane_text_left_x_at_frame(
     const double advance = monospace_advance();
     if (advance <= 0.0) return -1.0;
     // The marker's painted pixel column (window coords) via the painters' own
-    // math. BASIS CONTRACT: the lane run annotates painted flag pixels, so it
+    // math. BASIS CONTRACT: the editor box overlays painted flag pixels, so it
     // must read the SAME basis those pixels were painted with — BOTH halves of
     // that basis. (1) The displayed MAP (displayed_or_live_target_map): the
     // event-synchronized map the hit tests use — identity/empty in source view;
@@ -1852,336 +1661,4 @@ double flag_pending_text_left_x(
 {
     return lane_text_left_x(app, audio, marker_idx,
                             app.top_flag_editor.pending.size());
-}
-
-namespace {
-
-// The 9-glyph ambient budget: the "N.NN:a.NN" base form. A composed value longer
-// than 9 glyphs displays as its first 8 bytes plus the UTF-8 ellipsis (U+2026 =
-// "\xe2\x80\xa6"), 11 bytes / 9 glyphs. Composed text is ASCII by construction
-// (printable-ASCII keyboard insert, lowercase-ASCII label grammar), so 8 bytes
-// == 8 glyphs and the ellipsis is a collision-free truncation marker no
-// clipboard route can author. DISPLAY-ONLY: the store, sidecars, editor seed,
-// hover fields, and the copy payload never see it. Sets `glyphs` to the display
-// glyph count.
-constexpr size_t kLaneAmbientGlyphBudget = 9;
-
-void cap_lane_run_text(std::string& text, size_t& glyphs) {
-    if (text.size() > kLaneAmbientGlyphBudget) {
-        text = text.substr(0, 8) + "\xe2\x80\xa6";
-        glyphs = kLaneAmbientGlyphBudget;
-    } else {
-        glyphs = text.size();
-    }
-}
-
-// The FALLBACK single run — the one-run arbitration: tier 1 the HOVERED marker's
-// value, else tier 2 the LAST-SELECTED marker's value composed from the live
-// store, with the mid-drag DragOverlay substitution and the painted-column
-// offscreen cull the flags apply. TRUNCATION IS PERMANENT (architect): the
-// fallback run CAPS at the 9-glyph budget too, so a dragged/selected truncated
-// marker stays truncated here — it does NOT spell out in full when the verdict
-// fails. The text-hover EXPANSION (applied to the returned set) is the sole
-// route back to the full text, and only while the run's TEXT is hovered.
-LaneTextRun current_marker_lane_run_fallback(const AppState& app,
-                                             const GuiAudio& audio) {
-    LaneTextRun run;
-
-    // Tier 1: the HOVERED marker's own value wins whenever a hover is showing.
-    // recompute_hover_at_cursor already composed lane_text (flag_text_iter for a
-    // warp marker, kPhaseResetLaneToken for a phase reset) and captured the hovered
-    // marker's index and source_frame. No painted-column cull here — matching
-    // paint, a shown hover always paints (subject only to the caller's advance
-    // guard).
-    if (!app.hover_popup.lane_text.empty()) {
-        run.valid        = true;
-        run.marker_index = app.hover_popup.marker_index;
-        run.source_frame = static_cast<double>(app.hover_popup.source_frame);
-        run.text         = app.hover_popup.lane_text;
-        cap_lane_run_text(run.text, run.glyphs);
-        return run;
-    }
-
-    // Tier 2: else the LAST-SELECTED marker's own value, composed from the live
-    // store the same way the hover composer does — flag_text_iter for a warp
-    // marker, kPhaseResetLaneToken for a phase reset. The index is validated
-    // against the active view's list.
-    const int idx = app.last_selected_marker;
-    if (idx < 0) return run;
-    int64_t     src_f;
-    std::string txt;
-    if (app.active_markers_view == 'P') {
-        const auto& pv = app.phaseresetmarkers.markers();
-        if (idx >= static_cast<int>(pv.size())) return run;
-        src_f = pv[idx].time_frame;
-        txt   = kPhaseResetLaneToken;
-    } else {
-        const auto& mv = app.warpmarkers.markers();
-        if (idx >= static_cast<int>(mv.size())) return run;
-        src_f = mv[idx].time_frame;
-        txt   = flag_text_iter(mv, idx, app.iteration_mode_enabled);
-    }
-    // During an active marker drag, center the run on the dragged member's live
-    // proposed position (a free source-frame double) instead of the committed
-    // store frame — the store is not mutated until commit, so the run would
-    // otherwise lag at the pre-drag spot while the flag slides. Read through
-    // DragOverlay::effective_time rather than moveable_times[0] directly — the
-    // overlay's index lookup substitutes the proposed time only for the DRAGGED
-    // marker and falls back to the committed frame for any other run, which is the
-    // same shape it had when a drag could carry a whole group (it cannot since
-    // 2026-07-29 — groups are never moved).
-    double display_src_f = static_cast<double>(src_f);
-    if (app.drag.active) {
-        DragOverlay overlay{&app.drag.dragging_markers,
-                            &app.drag.moveable_times};
-        display_src_f = overlay.effective_time(idx, display_src_f);
-    }
-    // Cull to the visible strip by the painted column exactly as the flags do
-    // (a fully-offscreen marker paints no flag, so it shows no run). The basis is
-    // the displayed MAP and the displayed VIEWPORT, the same pair the flag/lane
-    // painters and hit tests use.
-    const std::vector<WarpFrameMapSegment>& map =
-        displayed_or_live_target_map(app, audio);
-    const ItemViewportBasis basis = item_viewport_basis(app, audio);
-    const int col = painted_column_of_source_frame_on_basis(
-        app, audio, display_src_f, map, basis.vp_start, basis.spp);
-    if (col < 0 || col >= waveform_area(app).w) return run;
-
-    run.valid        = true;
-    run.marker_index = idx;
-    run.source_frame = display_src_f;
-    run.text         = std::move(txt);
-    cap_lane_run_text(run.text, run.glyphs);
-    return run;
-}
-
-// Wrap the fallback single run in a LaneRunSet (all_visible = false).
-LaneRunSet lane_run_set_fallback(const AppState& app, const GuiAudio& audio) {
-    LaneRunSet set;
-    set.all_visible = false;
-    const LaneTextRun run = current_marker_lane_run_fallback(app, audio);
-    if (run.valid) set.runs.push_back(run);
-    return set;
-}
-
-// THE TEXT-HOVER EXPANSION (applied to the base set in BOTH modes): when the
-// pointer hovers a marker's rendered TEXT RUN — not its flag (hover_popup.on_flag
-// == false) — and that marker's FULL composed text (hover_popup.lane_text, which
-// the recompose keeps uncapped) exceeds the budget, expand that run to the full
-// text. The expanded run reuses its ambient run's source_frame so it centers on
-// the SAME column (the expanded rect always CONTAINS the capped one — both center
-// on that column and the expanded is wider — so a pointer in the capped rect is
-// in the expanded rect, the hysteresis latch the recompute convergence relies
-// on). It paints LAST / hits FIRST (LaneRunSet contract). The verdict is already
-// decided on the capped widths; this never touches it. kPhaseResetLaneToken is
-// well under the budget, so a reset never reaches this.
-// Only expands a marker actually IN the base set (onscreen)
-// — a hover is always over an onscreen run, but the search also fixes the exact
-// centering frame.
-void apply_hover_expansion(LaneRunSet& set, const AppState& app) {
-    if (app.hover_popup.on_flag) return;               // hovering the flag, not the run
-    const int idx = app.hover_popup.marker_index;
-    if (idx < 0) return;
-    if (app.hover_popup.lane_text.size() <= kLaneAmbientGlyphBudget) return;
-    for (const LaneTextRun& r : set.runs) {
-        if (r.marker_index != idx) continue;
-        set.expanded.valid        = true;
-        set.expanded.marker_index = idx;
-        set.expanded.source_frame = r.source_frame;    // same column as its capped run
-        set.expanded.text         = app.hover_popup.lane_text;   // FULL (uncapped)
-        set.expanded.glyphs       = set.expanded.text.size();    // ASCII: byte == glyph
-        set.has_expanded          = true;
-        return;
-    }
-}
-
-} // namespace
-
-// The base run set (capped, mode decided) WITHOUT the text-hover expansion —
-// current_marker_lane_runs wraps this and applies apply_hover_expansion to the
-// result, so both the all-visible and fallback returns pick up the expansion at
-// one site.
-static LaneRunSet resolve_base_lane_run_set(const AppState& app,
-                                            const GuiAudio& audio)
-{
-    // The occlusion arbitration the paint pass and the unified marker hit
-    // resolver (marker_hit_at) share (contract at the declaration). The open
-    // FlagPayload editor is NOT handled here — it is an overlay resolved by the
-    // paint pass (its marker's capped ambient run still participates in the
-    // verdict; the editor's full-width box never does).
-    const double advance = monospace_advance();
-    // Font not measured yet — the whole geometry is undefined. Return the empty
-    // fallback shape; paint/hit keep their own advance guards.
-    if (advance <= 0.0) return lane_run_set_fallback(app, audio);
-
-    const GuiRect area = waveform_area(app);
-    if (area.w <= 0) return lane_run_set_fallback(app, audio);
-
-    // The displayed MAP + VIEWPORT basis the flag pixels were painted with, so
-    // the visible-set cull, the run columns, and the verdict all read the same
-    // basis the flags do (see lane_text_left_x_at_frame's basis contract).
-    const std::vector<WarpFrameMapSegment>& map =
-        displayed_or_live_target_map(app, audio);
-    const std::vector<WarpFrameMapSegment>* map_arg =
-        map.empty() ? nullptr : &map;
-    const ItemViewportBasis basis = item_viewport_basis(app, audio);
-    if (basis.spp <= 0.0) return lane_run_set_fallback(app, audio);
-
-    // The flags' own half-offscreen cull (iterate_visible_flags_impl): a flag may
-    // hang up to half its width offscreen; cull only when FULLY offscreen. Sample
-    // space, on the displayed basis — the EXACT committed vp span (vp_start_frame/
-    // vp_end_frame, the flag cache's own fp_vp span), the same {span, width} the
-    // flags divided by, so the cull matches the flags' visibility on the
-    // committing frame, not just at rest.
-    const double vp_end   = static_cast<double>(basis.vp_end_frame);
-    const double half_flag =
-        static_cast<double>(flag_lane_w_px()) / 2.0;
-    const double cull_lo  = basis.vp_start - half_flag * basis.spp;
-    const double cull_hi  = vp_end + half_flag * basis.spp;
-
-    // Positions ride the DragOverlay when a drag is active (every dragged
-    // member's run tracks its live proposed position, matching the flags).
-    DragOverlay overlay_storage{&app.drag.dragging_markers,
-                                &app.drag.moveable_times};
-    const DragOverlay* overlay = app.drag.active ? &overlay_storage : nullptr;
-    const bool is_phase = (app.active_markers_view == 'P');
-
-    // Compose the visible set: every active-column marker whose flag paints, its
-    // capped display run, centered on the displayed column.
-    LaneRunSet set;
-    auto add_visible = [&](int idx, int64_t time_frame, std::string text) {
-        const double eff_time = overlay
-            ? overlay->effective_time(idx, static_cast<double>(time_frame))
-            : static_cast<double>(time_frame);
-        const double ms = frame_to_paint_sample(eff_time, map_arg);
-        if (ms < cull_lo || ms > cull_hi) return;   // fully offscreen — no flag
-        LaneTextRun run;
-        run.valid        = true;
-        run.marker_index = idx;
-        run.source_frame = eff_time;
-        run.text         = std::move(text);
-        cap_lane_run_text(run.text, run.glyphs);
-        set.runs.push_back(std::move(run));
-    };
-
-    if (is_phase) {
-        const auto& pv = app.phaseresetmarkers.markers();
-        for (size_t i = 0; i < pv.size(); ++i)
-            add_visible(static_cast<int>(i), pv[i].time_frame,
-                        kPhaseResetLaneToken);
-    } else {
-        const auto& mv = app.warpmarkers.markers();
-        for (size_t i = 0; i < mv.size(); ++i)
-            add_visible(static_cast<int>(i), mv[i].time_frame,
-                        flag_text_iter(mv, static_cast<int>(i),
-                                       app.iteration_mode_enabled));
-    }
-
-    // Empty visible set: nothing to show either way — fall through to the
-    // fallback shape (its arbitration also finds nothing onscreen, so behavior
-    // is identical; the fallback keeps the tier code as the ONE owner of "no
-    // ambient set" too).
-    if (set.runs.empty()) return lane_run_set_fallback(app, audio);
-
-    // THE VERDICT: pass iff no two capped runs' rects overlap. Each rect's left
-    // comes from the shared placement owner (clamped fully onscreen), width =
-    // glyphs * advance. Sort by left; a right edge is HALF-OPEN, so right(a) ==
-    // left(b) (abutting, gap 0) is legal and passes.
-    struct RunRect { double left; double right; };
-    std::vector<RunRect> rects;
-    rects.reserve(set.runs.size());
-    for (const LaneTextRun& r : set.runs) {
-        const double left = lane_text_left_x_at_frame(
-            app, audio, r.source_frame, r.glyphs);
-        const double width = static_cast<double>(r.glyphs) * advance;
-        rects.push_back({left, left + width});
-    }
-    std::sort(rects.begin(), rects.end(),
-              [](const RunRect& a, const RunRect& b) { return a.left < b.left; });
-    for (size_t i = 1; i < rects.size(); ++i) {
-        if (rects[i - 1].right > rects[i].left) {
-            // Occlusion — fall back to the one-run arbitration EXACTLY.
-            return lane_run_set_fallback(app, audio);
-        }
-    }
-
-    set.all_visible = true;
-    return set;
-}
-
-LaneRunSet current_marker_lane_runs(const AppState& app, const GuiAudio& audio)
-{
-    // Resolve the capped base set (mode decided on the capped widths), then layer
-    // the text-hover expansion on top — one application site covering both modes.
-    LaneRunSet set = resolve_base_lane_run_set(app, audio);
-    apply_hover_expansion(set, app);
-    return set;
-}
-
-MarkerHit marker_hit_at(const AppState& app, const GuiAudio& audio,
-                        int x, int y) {
-    MarkerHit h;
-    // The flag lane and the marker-text lane are disjoint y-bands, so at most
-    // one of the two tests can hit; the flag test runs first only to settle
-    // on_flag directly.
-    const int flag = hit_test_flag(app, audio, x, y);
-    if (flag >= 0) {
-        h.index   = flag;
-        h.on_flag = true;
-        return h;
-    }
-    const double advance = monospace_advance();
-    if (advance <= 0.0) return h;
-    const GuiRect lane = top_marker_row_area(app);
-    if (y < lane.y || y >= lane.y + lane.h) return h;   // y-band already half-open
-
-    const LaneRunSet set = current_marker_lane_runs(app, audio);
-    // The expanded run (text-hover expansion) paints on top, so it is hit FIRST —
-    // a point over a neighbor's occluded pixels resolves to the expanded run
-    // (WYSIWYG). Its rect CONTAINS the marker's capped rect, so once expanded the
-    // pointer stays inside it across the whole capped area and beyond — the
-    // hysteresis latch the hover convergence relies on. HALF-OPEN, like the
-    // all-visible runs.
-    if (set.has_expanded) {
-        const LaneTextRun& e = set.expanded;
-        const double left = lane_text_left_x_at_frame(
-            app, audio, e.source_frame, e.glyphs);
-        if (left >= 0.0) {
-            const double run_w = static_cast<double>(e.glyphs) * advance;
-            if (static_cast<double>(x) >= left &&
-                static_cast<double>(x) < left + run_w) {
-                h.index = e.marker_index;
-                return h;
-            }
-        }
-    }
-    if (set.all_visible) {
-        // Every run's rect is disjoint by construction (the verdict passed), so
-        // order is irrelevant; test with HALF-OPEN x intervals [left, left+w) so
-        // two abutting runs (right(a) == left(b)) cannot double-hit.
-        for (const LaneTextRun& run : set.runs) {
-            const double left = lane_text_left_x_at_frame(
-                app, audio, run.source_frame, run.glyphs);
-            if (left < 0.0) continue;   // advance not measured (already guarded)
-            const double run_w = static_cast<double>(run.glyphs) * advance;
-            if (static_cast<double>(x) >= left &&
-                static_cast<double>(x) < left + run_w) {
-                h.index = run.marker_index;
-                return h;
-            }
-        }
-        return h;
-    }
-    // Fallback (0-or-1 run): today's CLOSED interval test, byte-identical.
-    if (set.runs.empty()) return h;
-    const LaneTextRun& run = set.runs.front();
-    const double left = lane_text_left_x_at_frame(
-        app, audio, run.source_frame, run.glyphs);
-    if (left < 0.0) return h;
-    const double run_w = static_cast<double>(run.glyphs) * advance;
-    if (static_cast<double>(x) >= left &&
-        static_cast<double>(x) <= left + run_w) {
-        h.index = run.marker_index;
-    }
-    return h;
 }

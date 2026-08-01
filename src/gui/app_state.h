@@ -630,8 +630,8 @@ struct ScrollDragState {
 };
 
 // (The SCRUB has no drag state: the plain lower-half waveform press — the ONE
-// scrub surface, the marker-text lane's having been deleted (architect
-// 2026-07-27) — is a ONE-SHOT scrub act (scrub_act_at: stop a live session,
+// scrub surface, the marker-text lane's own scrub having been deleted (architect
+// 2026-07-27, and the lane itself in row 5) — is a ONE-SHOT scrub act (scrub_act_at: stop a live session,
 // else start one at the clicked frame), issued once per click — the press arms
 // nothing, a held press does nothing further, and motion over the scrub
 // surface is inert (architect 2026-07-23, the Ableton model; the former
@@ -861,83 +861,18 @@ constexpr int     kDoubleClickSlackPx = 8;
 // at 8).
 constexpr int     kDragMovedThresholdPx = 8;
 
-// Hover state, two surfaces driven by one hovered marker. Any marker under the
-// cursor — either column — shows its OWN value in the marker-text lane (top
-// strip; paint_marker_text_lane), and a pass/label_ref warp marker ALSO shows
-// its resolved tempo in the bottom strip's transient row (paint_bottom_strip).
-// SELECTION now drives BOTH surfaces too (paint-side, not through this struct):
-// every selected marker shows its own value persistently in the lane, and the
-// last-selected pass/ref shows its readout in the bottom strip when no hover
-// readout wins. This struct stays the HOVER cache; the persistent selection runs
-// read the live store directly in the paint path.
-// The motion and viewport-recompute handlers set these fields the instant the
-// cursor lands on a flag rect (no dwell); dismiss conditions clear the whole
-// struct. A store mutation under a stationary cursor does NOT clear — the cached
-// generations go stale, and the recompute (driven by the on_tick refresh when no
-// motion follows) re-reads the hovered marker's current fields in place.
-//
-// `lane_text` is the marker's own payload — the canonical flag line
-// (flag_text_iter) for a warp marker, kPhaseResetLaneToken for a phase reset
-// marker (render.h: a display-only token, since a phase reset authors no
-// payload) — sized and centered by `source_frame` in the lane. `readout_text`
-// is the pass/ref resolved readout for the bottom strip (compute_hover_popup_text),
-// empty on owners and phase resets. Both are computed once per rect-entry (or
-// per in-place mutation of the hovered marker) and read unchanged by the paint
-// path, so paint never repeats the math. Discarded on rect-exit; there is no
-// asynchronous work to cancel — a transition recomputes the text and the prior
-// result is dropped.
-struct HoverPopupState {
-    int         marker_index = -1;
-    // WHICH part of the unified marker item the hover hit came from (MarkerHit::
-    // on_flag): true = the FLAG shape, false = the rendered lane RUN. The lane's
-    // TEXT-HOVER EXPANSION keys on this — a run whose full composed text exceeds
-    // the ambient budget expands to full text ONLY while its own TEXT run is
-    // hovered (on_flag == false), not its flag. The recompute short-circuit
-    // compares this alongside marker_index (a flag->run move is the same index but
-    // a different part, and must recompute so the expansion appears). Irrelevant
-    // when marker_index < 0.
-    bool        on_flag = false;
-    // Marker-store generations captured at set time, one per column (the same
-    // counters the flag cache fingerprints). marker_index alone identifies
-    // WHICH marker is hovered, but every derived field (lane_text, readout_text,
-    // copy_payload, source_frame) is read from that marker's CURRENT fields and
-    // position, so an in-place mutation under a stationary cursor — a tempo step,
-    // a Ctrl+N eligibility change, a nudge — would otherwise leave the cached
-    // text stale. The recompute short-circuit requires index AND both generations
-    // equal, so any store mutation forces a full re-read on the next recompute;
-    // the on_tick refresh drives that recompute even when no pointer motion
-    // follows the keyboard mutation.
-    long long   warp_gen  = -1;
-    long long   phase_gen = -1;
-    // The displayed-map generation (app.displayed_map_gen) captured at set time.
-    // The hovered marker's IDENTITY is resolved by marker_hit_at (flag shape OR
-    // rendered lane run) against the displayed flag / run positions, so when the
-    // displayed map advances (a promotion) the flag under a stationary cursor can
-    // change even though neither marker store mutated. Bundling the map generation into the short-circuit forces a
-    // re-read on the next recompute, and the on_tick repair fires on a map-gen
-    // mismatch too — so a silent promotion cannot leave the hover naming a marker
-    // whose flag moved away (and cannot leave a stale copy_payload).
-    long long   displayed_gen = -1;
-    // The hovered marker's authored source frame, the lane run's centering
-    // origin (lane_text_left_x_at_frame) — column-agnostic, so the lane paint
-    // needs no knowledge of which store the marker came from.
-    int64_t     source_frame = 0;
-    std::string lane_text;
-    std::string readout_text;
-    // The pasteable effective tempo value for the hovered marker, in the exact
-    // form the flag editor accepts (base, plus "*scale" when a scale is
-    // present). Computed alongside readout_text at each rect-entry and copied to
-    // the clipboard by the Ctrl+C hover-copy binding while a readout shows.
-    // Non-empty exactly when readout_text is (both are pass/ref only), so the
-    // binding never fires with an unset payload.
-    std::string copy_payload;
-
-    // Whether either hover surface currently paints. Drives the damage decision
-    // at hover transitions and the clear path.
-    bool any_visible() const {
-        return !lane_text.empty() || !readout_text.empty();
-    }
-};
+// THE HOVER POPUP STATE IS DELETED (row 5, 2026-08-01). HoverPopupState cached
+// one hovered marker's identity, its composed lane text, its pass/ref resolved
+// readout, its pasteable copy payload and three staleness generations (both
+// marker stores plus the displayed map), and it drove three surfaces: the
+// marker-text lane's one-run fallback tier and its spell-out expansion, the
+// bottom strip's resolved readout, and the Ctrl+C copy. All three are settled
+// without it — the lane and its resolver are gone (a marker's value is written
+// on its flag), and the readout and the copy both took the SELECTION
+// translation (their sites: paint_bottom_strip and the Ctrl+C binding in
+// input_handler.cpp). The staleness machinery went with it: the three
+// generations, the convergence loop, the on_tick repair and the pointer-leave
+// clear all existed to keep a CACHE honest, and there is no cache left.
 
 // What action triggered the modal prompt; the activate-response dispatch
 // switches on this together with the response key. Save/Discard/Cancel
@@ -1325,22 +1260,16 @@ struct AppState {
     // the surviving anchor 2.
     int           shift_range_anchor = -1;
 
-    // Selected-marker stem visibility model (architect 2026-07-25, superseding
-    // the conditional-stem apparatus). The focus stem
-    // (paint_selected_stem) is the SINGLETON selection's focus visual and ALWAYS
-    // paints for the one selected marker — no hover, pin, or gesture condition.
-    // The former LATERAL-GESTURE PIN (stem_pin_marker / stem_pin_command_seq, the
-    // five stamp sites, the on_tick reaper, StemPinPreserveGuard, and the damage_seq
-    // counter it consumed) existed only to keep the stem visible after a lateral
-    // gesture without a hover; always-on subsumes that purpose, so the whole
-    // apparatus was harvested. Stem-transition DAMAGE now rides ONE subject-change
-    // owner on Selection (stem_subject / damage_stem_on_subject_change, the
-    // phase-overlay pattern's sibling), wired at the selection mutators: the stem
-    // appears/moves/disappears iff the singleton subject changes, and the gestures
-    // that move a subject marker's FRAME or IMAGE (nudges, drags, re-warps) already
-    // full-damage the waveform. A focused GROUP (2+ selected) shows no stem — its
-    // cue is the members' ink triangles plus the always-visible cursor landed on
-    // the focus.
+    // STEMS ARE NO LONGER A SELECTION VISUAL AT ALL (row 5, architect). Every
+    // ENABLED marker of the active column stems, always, in its class's
+    // UNSELECTED colour (GuiPaintHandler::paint_marker_stems, off the marker
+    // painter's stash); a disabled marker stems never. Selection's cue is its
+    // flags' bright colour pair and nothing else. The successive apparatus this
+    // replaces is worth naming once, because each layer was deleted for the same
+    // reason the next one was: the conditional stem's hover/pin arms
+    // (harvested 2026-07-25 for always-on-for-a-singleton), then the singleton
+    // model's subject-change damage pair on Selection (deleted with row 5 —
+    // stems no longer key on selection, so no selection mutation can move one).
 
     // Active markers view: 'W' = warp markers, 'P' = phase reset markers.
     // Toggled by `p`. Determines which marker collection is visible / edited /
@@ -1412,10 +1341,11 @@ struct AppState {
     // Monotonic counter bumped once each time on_redraw PROMOTES a staged
     // displayed map into displayed_target_warp_frame_map (the top-of-frame
     // promotion). Every promotion — target-view map swap or source-view clear —
-    // advances it, so hover identity (HoverPopupState::displayed_gen) can detect
-    // a silent geometry change under a stationary cursor and refresh on the next
-    // tick. Never reset (shutdown is terminal); wrap is unreachable at any real
-    // frame rate.
+    // advances it. Its ONE former subscriber — the hover cache's staleness key —
+    // died in row 5, so today it is the promotion's record and nothing reads it;
+    // it stays because the promotion is a real event and a counter for it is the
+    // cheapest way to make the next reader honest. Never reset (shutdown is
+    // terminal); wrap is unreachable at any real frame rate.
     long long displayed_map_gen = 0;
 
     // Displayed-VIEWPORT mirror — the SIBLING of displayed_target_warp_frame_map
@@ -1426,19 +1356,18 @@ struct AppState {
     // (app.viewport_start_sample). During an async plate-publish window (a
     // worker-dispatched viewport change — follow-scroll, center-on-playhead) the
     // live viewport already holds the NEW span while the flags still paint at the
-    // OLD one, so a lane run centered by the LIVE viewport would jump off its
+    // OLD one, so an overlay centered by the LIVE viewport would jump off its
     // flag until the worker caught up. These fields hold the vp_start/vp_end/
     // area_w the LAST COMMITTED frame's flag cache was built against, promoted
     // in LOCKSTEP with displayed_target_warp_frame_map at the frame that blits
-    // that cache, so the marker-text lane geometry (run centering, the visible-
-    // set cull, the run hit rects — see item_viewport_basis in this header),
-    // the LIVE TRIM pass (GuiPaintHandler::paint_trim — its chips/stems paint on
+    // that cache, so the flag editor's box placement (see item_viewport_basis
+    // in this header) and the LIVE TRIM pass (GuiPaintHandler::paint_trim — its chips/stems paint on
     // this basis so hit_test_trim_chip / route_trim_chip_press land on the drawn
     // pixels) ride the
     // same basis the flags do. (The selected-stem DAMAGE was listed here until
-    // 2026-07-30 and never belonged: the stem paints on the PLATE basis, so its
-    // item-basis narrow damage was the wrong epoch. It is a full waveform-area
-    // invalidate now — see Selection::damage_stem_on_subject_change.)
+    // 2026-07-30 and never belonged: that stem painted on the PLATE basis, so
+    // its item-basis narrow damage was the wrong epoch. Both the damage and the
+    // stem it served are gone — row 5's stems key on no selection at all.)
     // area_w == 0 means cold (nothing promoted
     // yet); the accessor then falls back to the live viewport, matching
     // displayed_or_live_target_map's cold live-map fallback. Written by the
@@ -1542,8 +1471,6 @@ struct AppState {
     // button release, on a lost button mid-drag, and on file load.
     EditorTextDragState editor_text_drag;
 
-    // Hover-popup state. See HoverPopupState above.
-    HoverPopupState   hover_popup;
 
     // THE REDESIGNED ROWS' BUTTONS — hit geometry PUBLISHED BY THE PAINTER, the
     // displayed-basis doctrine applied to proportional surfaces. Each button's
@@ -1587,6 +1514,29 @@ struct AppState {
         bool    selected = false;
     };
     std::array<RedesignButtonFace, kRedesignButtonCount> redesign_buttons{};
+
+    // THE MARKER PAINTER'S STASH — the second surface on the painter-publishes
+    // contract the roster above established, and for a harder reason than the
+    // roster had. A row-5 marker flag's WIDTH is derived from its shaped label,
+    // so no consumer can re-derive the box without repeating a HarfBuzz pass;
+    // the pixels' own painter is the only honest owner of the geometry. Both
+    // vectors are written by ONE producer (the flag-cache rebuild's
+    // render_flags / render_phase_reset_flags call — grep them: there is
+    // exactly one call site each) against the DISPLAYED basis those pixels were
+    // painted with, so a click during an async publish window tests the flag it
+    // can see rather than the one the live viewport would put there.
+    //
+    // `flag_hit_rects` is in PAINT order (store order), so hit_test_flag walks
+    // it BACKWARDS: last painted = topmost = what a click grabs. `marker_stems`
+    // carries one entry per ENABLED marker only — a disabled marker has no stem
+    // ever, expressed as an absent entry (MarkerStem, render.h).
+    //
+    // Cold (before the first rebuild) both are empty, so nothing is clickable
+    // and no stem paints — the same "visible iff hit-testable" property the
+    // redesigned rows' stash has, and the honest one: a flag that has never
+    // painted has no box to click.
+    std::vector<FlagHitRect> flag_hit_rects;
+    std::vector<MarkerStem>  marker_stems;
 
     // THE PRESSED BUTTON — the CLICK FACE, and the only piece of press-state
     // machinery the redesigned rows have. A roster index while a left button is
@@ -1660,9 +1610,9 @@ struct AppState {
     bool window_activated = false;
 
     // Cursor screen position from the last on_motion event. Used by
-    // recompute_hover_at_cursor() to re-evaluate hover after a viewport
-    // mutation (when the cursor is stationary but rects have shifted). -1
-    // means "no motion seen yet".
+    // recompute_redesign_button_hover() — the one surviving hover — to
+    // re-evaluate the button faces from the tick when the cursor is stationary.
+    // -1 means "no motion seen yet".
     int               last_mouse_x = -1;
     int               last_mouse_y = -1;
 
@@ -1865,18 +1815,20 @@ struct AppState {
     int                pending_paste_anchor = -1;
 
     // Internal text clipboard (session-only, lost on app close). The GUI has
-    // no outside-world clipboard: hover-copy (Ctrl+C over a hover popup) and
-    // the bottom-strip editors' copy/cut/paste all round-trip through this
-    // one string, so a hover value pastes into a flag/settings text box.
+    // no outside-world clipboard: the Ctrl+C resolved-value copy (the FOCUSED
+    // marker's, since row 5 — it was the hovered marker's) and the bottom-strip
+    // editors' copy/cut/paste all round-trip through this one string, so a
+    // resolved value pastes into a flag/settings text box.
     std::string        text_clipboard;
 
     // Iteration mode. Toggled by plain `i` in warp's home (W marker view +
     // source audio view; no-op elsewhere). Session-only (off at load, lost on
     // app close); survives the W/P marker-view switch, but entering target
     // audio view (S->T) exits the mode through wipe_iter_state, so the mode
-    // can never rest in target view. When true, hover popups are suppressed
-    // and a persistent iteration popup is rendered above every owning
-    // marker's flag rect.
+    // can never rest in target view. When true, flag_text_iter splices the
+    // inline `+[lo, hi]` bracket into every eligible owning marker's composed
+    // label, so the mode is visible directly on the flags (it is a flag-cache
+    // fingerprint field for exactly that reason).
     bool iteration_mode_enabled = false;
 
     // BPM mode. Toggled by plain `m` in warp view. Mutually
@@ -2477,22 +2429,18 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // and pull in cairo + paint_handler.h for the popup-rect math; the
 // signatures stay free of cairo so the header keeps a clean include list.
 //
-// hit_test_flag: scan the flag rectangles in the top strip and return the
-// marker index under (mouse_x, mouse_y), or -1. The hit area is each fixed
-// flag rectangle PLUS its fused tip-down triangle, derived from the rect via
-// flag_triangle_half_width_at (the same taper owner paint_flag_shape fills
-// with) — see the body for the exact test. Rects may overlap, and the walk
-// resolves an overlap to the topmost-painted flag. Mirror of the painters'
-// z-order (render_flags / render_phase_reset_flags): the SELECTED shapes paint
-// above the unselected, and within each class the leftmost paints on top. So
-// the walk runs twice — first the first-containing rect whose marker is
-// selected, else the first-containing rect unconditionally (rects are emitted
-// ascending-x, so each pass resolves to that class's leftmost = topmost).
-// Priority overall: topmost = selected leftmost > leftmost. Deliberately
-// visible to every consumer (selection clicks, plain flag-drag reposition grabs,
-// the hover popup's target): the topmost-painted flag is what the user sees, so
-// it is what a click grabs (WYSIWYG). Works in both 'W' and 'P' authoring views
-// (each column's own flag list).
+// hit_test_flag: return the marker index whose PAINTED FLAG BOX contains
+// (mouse_x, mouse_y), or -1. It reads the painter's own stash
+// (AppState::flag_hit_rects — the contract, including why a derived width has
+// no second owner, is at the field) and tests plain rects: the fused tip-down
+// triangle and its taper test died with the triangle lane in row 5, and so did
+// the live rect rebuild. Boxes OVERLAP freely (later over earlier in store
+// order, the whole occlusion model), and the walk runs BACKWARDS so the topmost
+// = last-painted box wins — WYSIWYG for every consumer (selection clicks, the
+// drag grab, the double-click editor). Selection does not lift a box: it is a
+// colour swap now, so there is no second pass. Works in both 'W' and 'P'
+// authoring views — the stash holds the ACTIVE column's boxes only, because
+// that is the column the painter drew.
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
 
@@ -2544,9 +2492,10 @@ const std::vector<WarpFrameMapSegment>&
 displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 
 // item_viewport_basis: the VIEWPORT twin of displayed_or_live_target_map —
-// the viewport span the item hit tests (flag shape, trim chip, marker-text lane)
-// and the lane geometry decide against, so a run centers on and a hit lands on
-// the column the flag/chip pixels were painted at. In target OR source view with
+// the viewport span the item PAINTERS and the trim hit test decide against, so
+// a chip is grabbed and the flag editor's box is centered on the column those
+// pixels were painted at. (The flag HIT no longer reads it — hit_test_flag
+// takes the painter's published rects, which are that basis by construction.) In target OR source view with
 // a warm promoted mirror (app.displayed_area_w > 0) it returns the vp_start/
 // vp_end/area_w triple the LAST COMMITTED frame's flag cache was built
 // against — vp_start/vp_end from wf_cache.fp_* and area_w the LIVE effective
@@ -2560,16 +2509,14 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // hit_test_trim_chip live basis, so cold behavior is unchanged).
 //
 // This is the free-function owner homed beside displayed_or_live_target_map so
-// the render.cpp free functions (lane_text_left_x_at_frame, the lane run
-// resolver, marker_hit_at), the app_state.cpp hit tests (hit_test_flag,
-// hit_test_trim_chip), and the LIVE TRIM paint pass (GuiPaintHandler::paint_trim —
-// paint and hit share the one basis by construction) share ONE basis. (The
-// selected-stem DAMAGE was listed here as a consumer until 2026-07-30 and was
-// never one: paint_selected_stem paints on the PLATE basis, so the narrow
-// item-basis stem invalidator erased columns the stem was never drawn at inside
-// the resize window named below. That damage is a full waveform-area invalidate
-// now, owned by Selection::damage_stem_on_subject_change, and the narrow route
-// is deleted.) It
+// the render.cpp free function lane_text_left_x_at_frame (the flag editor's
+// placement), the app_state.cpp trim hit test (hit_test_trim_chip), and the LIVE
+// TRIM paint pass (GuiPaintHandler::paint_trim — paint and hit share the one
+// basis by construction) share ONE basis. (Two former consumers left the list:
+// the marker-text lane's run resolver and marker_hit_at, both deleted in row 5;
+// hit_test_flag now reads the painter's stash instead of re-deriving on this
+// basis. And the selected-stem DAMAGE was listed here until 2026-07-30 and was
+// never a consumer at all.) It
 // is DELIBERATELY DISTINCT from
 // GuiPaintHandler::plate_viewport_basis, which reads the LIVE wf_cache.fp_*
 // (the plate's current fingerprint): the paint-handler method registers the
@@ -2600,10 +2547,12 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // geometry; do not collapse them on the strength of the plate-writer equality —
 // any future unification has to resolve the resize window first.
 //
-// The double vp_start/spp serve the lane column math (painted_column_of_source_
-// frame_on_basis); the int64 vp_start_frame/vp_end_frame/area_w serve the hit
-// tests, which pass the integer span + width to compute_flag_hit_rects /
-// trim_bound_column verbatim, and the lane cull (exact vp_end, no reconstruction).
+// The double vp_start/spp serve the editor-box column math
+// (painted_column_of_source_frame_on_basis); the int64
+// vp_start_frame/vp_end_frame/area_w serve the trim hit test, which passes the
+// integer span + width to trim_bound_column verbatim. (compute_flag_hit_rects
+// was the other verbatim consumer until row 5 replaced it with the painter's
+// stash.)
 struct ItemViewportBasis {
     double  vp_start       = 0.0;
     double  spp            = 0.0;
@@ -2614,9 +2563,11 @@ struct ItemViewportBasis {
 ItemViewportBasis item_viewport_basis(const AppState& app,
                                                 const GuiAudio& audio);
 
-// Promoted from a lambda in main(). True iff the warp marker
-// at `idx` is hover-popup-eligible — i.e. its rect doesn't already
-// display a numeric tempo (pass markers and label_ref markers qualify;
-// owning markers don't). Requires warp view with iteration mode off.
-// Always false in phase reset view (no pass concept).
+// Promoted from a lambda in main(). True iff the warp marker at `idx` has a
+// RESOLVED value worth showing — i.e. its flag does not already display a
+// numeric tempo (pass markers and label_ref markers qualify; owning markers
+// don't). Requires warp view with iteration mode off; always false in phase
+// reset view (no pass concept). Its two callers are the surfaces that took the
+// SELECTION translation in row 5: the bottom strip's readout and the Ctrl+C
+// copy. The name is the hover popup's — the gate is not.
 bool popup_eligible_marker(const AppState& app, int idx);

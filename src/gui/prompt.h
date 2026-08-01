@@ -14,9 +14,8 @@
 // prompt is active). The other two former lambdas (open_unsaved, proceed) are
 // private helpers; they have no callers outside this cluster.
 //
-// save_markers is reached through save_ops; clear_hover_popup
-// through viewport. viewport, phase_reset_propagate, and gui are reached
-// directly.
+// save_markers is reached through save_ops. viewport, phase_reset_propagate,
+// and gui are reached directly.
 struct GuiPrompt {
     AppState&             app;
     GuiPlatform&          gui;

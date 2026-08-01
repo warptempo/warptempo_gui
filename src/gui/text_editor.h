@@ -14,7 +14,7 @@
 // keyboard-driven mutation of `pending` + cursor state and exposes hooks
 // for blink and the parse-failure red flash.
 //
-// Reuse: hover popups and bottom-flag iteration syntax supply different
+// Reuse: the several editor surfaces supply different
 // validators and writers but reuse this state shape and keystroke routing.
 
 namespace text_editor {

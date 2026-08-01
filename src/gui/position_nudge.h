@@ -211,10 +211,9 @@ int64_t stepped_anchor_frame(
 // (a) record_gesture (re-stamps this press's kind for the next coalesce test);
 // (b) recompute_dirty;
 // (c) invalidate_waveform_area — this full-waveform damage also OWNS the
-//     selected-marker stem's move: a nudge shifts the nudged marker's frame, and
-//     its always-on focus stem (architect 2026-07-25) repaints at the new column
-//     here. The selection is a singleton by the prologue's collapse, so there is
-//     always exactly that one stem;
+//     nudged marker's STEM move: a nudge shifts that marker's frame, and its
+//     always-on stem repaints at the new column here. Every ENABLED marker stems
+//     since row 5, so this covers the moved one whatever the selection is;
 // (d) invalidate_timestamp_area;
 // (e) PLAYHEAD FOLLOW: move_playhead_to the nudged marker's committed frame
 //     through the two-step placement basis (source_frame_to_active_domain —

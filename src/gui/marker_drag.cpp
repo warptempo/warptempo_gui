@@ -154,7 +154,6 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // EOF wall, or the viewport clamp saturated) honest, since commit_drag lands the
     // playhead on the dragged marker regardless of net change.
     selection.set_single_selection(hit);
-    viewport.clear_hover_popup();
     return true;
 }
 
@@ -463,9 +462,10 @@ void MarkerDragOps::commit_drag() {
         viewport.move_playhead_to(
             source_frame_to_active_domain(app, audio, ridden_final_frame));
     }
-    // The selected-marker stem's move at commit is owned by the full-waveform
-    // invalidate_waveform_area above: the drag shifts the selected marker's frame,
-    // so its always-on focus stem repaints at the committed column.
+    // The dragged marker's STEM moves at commit under the full-waveform
+    // invalidate_waveform_area above: the drag shifts its frame, so its
+    // always-on stem repaints at the committed column (every enabled marker
+    // stems since row 5 — nothing here keys on selection).
     // NO REGION WORK, and none is reachable: the arming press single-selected the
     // marker and cleared any resting span, and nothing during the drag forms one.
     // The extent re-derive that used to snap a live-tracked group span back to its

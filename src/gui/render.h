@@ -158,9 +158,11 @@ inline GuiColor kText             = hex(0xFCFCFC);  // Breeze paper white
 // the one this family was first read off ran 0-4 units dark per channel and no
 // single darken amount reproduces it (best fit ~0.17-0.18), so that row was
 // never a clean KColorScheme pass at any setting. Paints the
-// marker-text-lane run of a disabled marker, the glyph half of the opaque
-// disabled cue whose shape half is kMarkerDisabled (whose default comes from the
-// same disabled set, so the two halves are one family by provenance).
+// disabled glyphs on the surviving PRE-REDESIGN text surfaces (the bottom strip
+// and the flag editor). Its old partner kMarkerDisabled — the shape half of the
+// same opaque disabled cue — is now paint-site-less on the marker column: row 5
+// disables a flag by BLENDING its own class colour over the lane ground
+// (kMarkerDisabledMix), not by swapping in a second palette pair.
 inline GuiColor kTextDisabled     = hex(0x606263);
 
 // THE ONE STRUCTURAL LINE COLOR: the DISABLED WindowText role, from the same
@@ -227,23 +229,22 @@ inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
 // flag fills the triangle half of its shape with kWaveform while the rectangle
 // keeps the class fill and the outline rings the whole shape untouched. It
 // introduces NO KEY of its own — it re-uses the ink the waveform already paints
-// in — and it is applied AFTER the ladder resolves, layered on one part of the
-// shape, so it can never displace a class pair the way the deleted selected
-// pair did. Selection also reads from the focus STEM (kSelectedStem below),
-// from the z-order lift (selected shapes paint above unselected), and from the
-// playhead landing on the marker.
+// in.
 //
-// The SELECTED-MARKER STEM (paint_selected_stem) — the singleton selection's
-// focus column, full waveform height. Its own key by ruling (architect
-// 2026-07-27), separate from every flag ring: the same value that is right for a
-// 1px border around a small shape reads far louder run the whole height of the
-// waveform, so a bright ring wants a calmer stem and the two must tune
-// independently. It is the singleton's cue in the WAVEFORM, below the strip
-// where the ink triangle reads, and it takes the calm breeze-icons grey
-// (the kPlayheadCursor value — its provenance and its standing as the
-// palette's one non-Breeze-Dark-role default are recorded at kPlayheadCursor
-// above) rather than a ring value like kMarkerOutline — a full-height line at
-// ring brightness would shout.
+// EVERYTHING THIS BLOCK SAYS ABOUT MARKER SELECTION IS PRE-ROW-5 HISTORY. The
+// ink triangle, the z-order lift and the "selection is not a class" rule all
+// belonged to the fused rectangle-plus-triangle flag; row 5's flag is a text box
+// whose SELECTION IS A COLOUR SWAP (kMarkerFlagFillSel / kMarkerFlagEdgeSel),
+// resolved below the disabled class so the old masking defect has no site. The
+// remaining selection cues are that swap and the playhead landing on the marker.
+//
+// kSelectedStem SURVIVES AS A DECLARED KEY WITH NO PAINT SITE. It was the
+// singleton selection's full-height focus column, given its own key in
+// 2026-07-27 precisely because a full-height line tunes differently than a 1px
+// ring; row 5 replaced it with per-class always-on stems in hard-coded colours.
+// The key and its colors.conf row STAY (the palette ruling: the conf goes
+// progressively inert, it is not dismantled), and this is the record that its
+// paint role is gone rather than merely moved.
 inline GuiColor kSelectedStem     = hex(0x7F8C8D);
 
 // DEFAULT — the pair every marker paints unless it is disabled or red. Both
@@ -526,6 +527,41 @@ inline constexpr GuiColor kRulerTick  = hex(0x737373);
 inline constexpr GuiColor kPlayheadHead     = hex(0x8E8F91);
 inline constexpr GuiColor kPlayheadHeadTick = hex(0xB7B7B7);
 inline constexpr GuiColor kPlayheadStem     = hex(0xFCFCFC);
+
+// THE MARKER LANE's colors, measured off row_5_lane_3_marker_{unselected,
+// selected,red}.png (56x20 crops whose FIRST column is a #131516 crop-edge
+// artifact — the flag box is the remaining 55). Each class is a FILL plus a
+// 1px TOP-EDGE color; there is no side or bottom outline in any crop.
+//
+// SELECTION IS A COLOR SWAP AND NOTHING ELSE (row 5): a selected marker paints
+// the bright pair, an unselected one the calm pair, and the geometry, the stem
+// and the hit rect are identical either way. This RETIRES the "selection is not
+// a class" ruling for the marker flags — that rule existed because a selected
+// OUTLINE would have outranked the disabled pair; here disabled still wins
+// outright (it is resolved first, below the selection swap), so the defect it
+// guarded against has no site left.
+//
+// The RED crop is 56x17 and supplies COLORS ONLY — its dimensions are the
+// regular class's (the architect's own instruction).
+inline constexpr GuiColor kMarkerFlagFill        = hex(0x9B59B6);
+inline constexpr GuiColor kMarkerFlagEdge        = hex(0x563165);
+inline constexpr GuiColor kMarkerFlagFillSel     = hex(0xC974ED);
+inline constexpr GuiColor kMarkerFlagEdgeSel     = hex(0x704083);
+inline constexpr GuiColor kMarkerFlagFillRed     = hex(0xFF6C7B);
+inline constexpr GuiColor kMarkerFlagEdgeRed     = hex(0x8E3C44);
+// The RED class's STEM is NOT its fill: #da4453 is the architect's own explicit
+// value for it, so the red stem is its own constant while the default and
+// selected classes both stem in kMarkerFlagFill (a selected marker keeps the
+// CALM stem — also his explicit rule, which is why the stem color is resolved
+// from the class ALONE and never from the selection bit).
+inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
+
+// THE DISABLED FACE OF A MARKER IS A BLEND, NEVER AN ALPHA (architect): 25% of
+// the class color over the lane ground (kRedesignTabGround #202326), per
+// channel, through the ONE mix_color owner. Alpha would be wrong here for a
+// reason specific to this lane — flags OVERLAP, so a translucent disabled flag
+// would show its neighbour through itself and read as a third color.
+inline constexpr double kMarkerDisabledMix = 0.25;
 
 // -- The TOOLTIP CHROME (the dropdown has its own, below) -------------------
 //
@@ -897,6 +933,98 @@ inline int marker_lane_h_px() {
     return h < 5 ? 5 : h;
 }
 
+// THE REDESIGN'S SHARED TEXT SIZE, in device pixels. Every redesigned row's
+// label is 12pt through the existing points*4/3 convention = 16px at 100%,
+// scaled on gui_scale_factor() — the redesign's own axis, NOT the monospace
+// font's (the ruling is at gui_scale_factor's declaration). It lives here
+// rather than in a painter's anonymous namespace because row 5's marker flags
+// shape their labels inside render.cpp while rows 1-4 shape theirs in
+// paint_handler.cpp, and one design size cannot have two definitions.
+inline constexpr double kRedesignFontSizePt = 12.0;   // -> 16.0 px at 100%
+inline double redesign_font_size_px() {
+    return kRedesignFontSizePt * 96.0 / 72.0 * gui_scale_factor();
+}
+
+// THE MARKER FLAG's anatomy, measured off row_5_lane_3_marker_unselected.png
+// (56x20, first column a crop-edge artifact -> a 55x20 box) and confirmed
+// against row_5_full.png, where the same box occupies rows 37..56 with its stem
+// running on at column 23 = the box's OWN LEFT EDGE.
+//
+// LEFT-ANCHORED, NOT CENTERED. The composite settles it: the 1px stem stands on
+// the box's leftmost column, so a marker's box opens AT its frame and runs
+// rightward, exactly as a kdenlive guide label does. The old flag was centered
+// on its column (it was a symmetric shape with a tip); a text box is not
+// symmetric and has no tip, so centering it would put the frame under the
+// middle of a word.
+//
+// THE WIDTH IS DERIVED, NEVER FIXED: pad_left + shaped(truncated label) +
+// pad_right — and the two pads are NOT equal, which is a measurement, not a
+// taste. The crop's label is "Marker"; shaping it offscreen through the same
+// chokepoint at the same size (Liberation Sans 16px, the redesign's face) gives
+// an advance of 49.797px with the first glyph's left side bearing at exactly
+// 1.00 and its ink 49.00 wide. Against the 55px box that pins both edges:
+//   * LEFT = 2. The crop's ink core starts at box column 3, and 2 + 1.00 = 3,
+//     so the run's ORIGIN stands on column 2 exactly.
+//   * RIGHT = 3. The run ends at 2 + 49.797 = 51.8 and the box's last column is
+//     54, leaving 3 columns of bare fill. 2 + round(49.797) + 3 = 55, the crop's
+//     width to the pixel; a symmetric 2 would give 54 and a symmetric 3 would
+//     give 56, so neither reproduces it.
+// The asymmetry is kdenlive's, not ours, and it is kept because the alternative
+// is being a pixel wrong in one direction or the other on every flag.
+inline constexpr int kMarkerFlagPadRightPx = 3;
+inline constexpr int kMarkerFlagPadLeftPx  = 2;
+inline int marker_flag_pad_left_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kMarkerFlagPadLeftPx) * gui_scale_factor()));
+    return v < 1 ? 1 : v;
+}
+inline int marker_flag_pad_right_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kMarkerFlagPadRightPx) * gui_scale_factor()));
+    return v < 1 ? 1 : v;
+}
+// The 1px TOP EDGE — the box's whole outline. The crops show no side and no
+// bottom edge, which is why this is a single band and not a ring.
+inline constexpr int kMarkerFlagEdgePx = 1;
+inline int marker_flag_edge_h_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kMarkerFlagEdgePx) * gui_scale_factor()));
+    return v < 1 ? 1 : v;
+}
+// The label BASELINE, measured from the box's top edge. The crop's cap ink runs
+// rows 4..15 of the 20 — a 12-row cap height, which is what 16px Liberation
+// Sans produces — so the baseline is row 16 and the remaining 4 rows are the
+// descender band. Authored as a length rather than solved from font extents
+// because the box height (kMarkerLaneHeightPx) is authored too: both come off
+// the same crop and must agree with it, not with a font's internal leading.
+inline constexpr int kMarkerFlagBaselinePx = 16;
+inline int marker_flag_baseline_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kMarkerFlagBaselinePx) * gui_scale_factor()));
+    return v < 1 ? 1 : v;
+}
+// THE NINE-GLYPH BUDGET, kept from the retired marker-text lane: a label longer
+// than nine glyphs displays as its first EIGHT bytes plus the UTF-8 ellipsis
+// (U+2026, 3 bytes) — 11 bytes, 9 glyphs. Composed marker text is ASCII by
+// construction (printable-ASCII inserts, lowercase-ASCII label grammar), so a
+// byte is a glyph and the ellipsis is a truncation marker no clipboard route
+// can author. DISPLAY ONLY: the store, the sidecars, the editor seed and the
+// copy payload never see it.
+inline constexpr size_t kMarkerLabelGlyphBudget = 9;
+
+// An UPPER BOUND on a flag box's painted width, used only to decide how far
+// LEFT of the viewport a marker may sit and still reach into it (flags run
+// rightward, so the left cull needs a width and the right cull does not). No
+// ASCII glyph in a sans face advances more than one em, so budget * em + the
+// two pads bounds every box the truncation can produce. A bound, not a size:
+// nothing is laid out against it.
+inline double marker_flag_max_width_px() {
+    return static_cast<double>(kMarkerLabelGlyphBudget) *
+               redesign_font_size_px() +
+           static_cast<double>(marker_flag_pad_left_px() +
+                               marker_flag_pad_right_px());
+}
+
 // THE TRIM LANE's bevel band: the bottom TWO rows, a lighter then a darker
 // shade of whatever surface owns the column. Scales with the lane.
 inline int trim_bevel_h_px() {
@@ -1000,9 +1128,10 @@ inline int playhead_triangle_h_px() {
 // its BASE (top) edge. The base row spans the full flag width — half-width
 // flag_lane_w_px()/2 — and the triangle tapers LINEARLY to a zero-width tip
 // playhead_triangle_h_px() rows further down. This is the single owner of that
-// taper: paint_flag_shape derives the triangle's base corners and apex from it,
-// and hit_test_flag uses it to decide whether a point in the triangle lane is
-// inside the shape, so the painted slope and the clickable slope cannot drift.
+// taper. IT HAS NO CALLERS SINCE ROW 5 (2026-08-01): both — the fused flag
+// shape's path fill and hit_test_flag's slope test — died with the triangle
+// lane. It survives as the taper's statement beside the mask that still uses
+// the same geometry, and would be the owner again if any triangle returns.
 // Clamped to the [base, tip] span (0 above the base, 0 at/below the tip).
 inline double flag_triangle_half_width_at(double rows_below_base) {
     const double H = static_cast<double>(playhead_triangle_h_px());
@@ -1018,10 +1147,11 @@ inline double flag_triangle_half_width_at(double rows_below_base) {
 // carry baked gray edge alphas). Owned by render.cpp file-scope state beside the
 // grid metrics; regenerated when H changes. Stamps the PLAYHEAD cursor triangle
 // (centered on the column, tip at the waveform top edge); the per-frame playhead
-// redraws take the cheap cached-mask stamp rather than a live path fill. The
-// marker/trim flags fill their own AA triangle path in paint_flag_shape (so fill
-// and outline blend as one shape); both are the identical 15-wide/H=8 geometry.
-// Never null.
+// redraws take the cheap cached-mask stamp rather than a live path fill.
+// REACHABLE ONLY THROUGH render_playhead's draw_triangle parameter, which every
+// caller now passes false: row 5 replaced the cursor's triangle with the ruler
+// lane's aliased head, and the marker/trim flags that shared this geometry are
+// boxes now. Kept with the parameter rather than ripped out mid-arc. Never null.
 cairo_surface_t* playhead_triangle_mask();
 
 // Waveform-internal top/bottom inset, in pixels. The drawn waveform samples
@@ -1102,7 +1232,7 @@ inline int flag_chip_width_px(size_t glyph_count) {
 // Single source of truth for a text-box's painted/hit rectangle. The
 // bottom-strip editors (settings / bpm / render-commit) derive their fill rect
 // from this one function so paint and hit cannot drift. (Marker flags and trim
-// chips are now fixed-width geometric shapes — see paint_flag_shape — and no
+// chips are geometric shapes with their own painters and no
 // longer route through here.)
 //
 // The returned rect is the TOTAL chip footprint INCLUDING the outline ring: it
@@ -1433,8 +1563,9 @@ void render_waveform(cairo_surface_t* dest,
 // (playhead_triangle_mask(), cached in this module's file-scope state), stamped
 // above the stem via cairo_mask_surface and tinted with `color`. The triangle
 // belongs to the cursor exclusively; pass
-// `draw_triangle = false` for the scanner and the selected-marker stem so only
-// the vertical line is drawn. (The complementary triangle-only form was retired
+// `draw_triangle = false` for every caller that wants the line alone — which
+// since row 5 is every caller there is, the cursor's tip-down triangle having
+// been replaced by the ruler lane's aliased head. (The complementary triangle-only form was retired
 // with the selected-marker focus triangle when the singleton's focus became
 // an always-on stem, architect 2026-07-25, so there is no draw_line flag — the
 // line is unconditional.)
@@ -1477,12 +1608,10 @@ void render_strip_anchor_stem(cairo_t* cr,
                               int col);
 
 // (The cached marker-stem renderers render_markers / render_phaseresetmarkers
-// are retired: the marker stem became a live overlay,
-// GuiPaintHandler::paint_selected_stem — the SINGLE selected marker's stem, shown
-// ALWAYS for a singleton selection (no hover, pin, or gesture condition;
-// architect 2026-07-25; a live position drag tracks the proposed position). The
-// trim stems below are live too — GuiPaintHandler::paint_trim, below the
-// playheads; no stem is cached anywhere.)
+// are retired: marker stems are a live overlay,
+// GuiPaintHandler::paint_marker_stems — EVERY enabled marker's column, painted
+// from the flag painter's stash. The trim stems below are live too —
+// GuiPaintHandler::paint_trim, below the playheads; no stem is cached anywhere.)
 
 // The ONE trim bound-to-column geometry owner. Every consumer of a
 // trim bound's pixel column funnels here: the two paint sites (render_trim_stems'
@@ -1732,39 +1861,63 @@ struct FlagLaneRects {
     GuiRect marker_lane;
 };
 
-// Draws marker flags in `top_strip_area` above visible markers. Each flag is a
-// FIXED-WIDTH SHAPE centered on its marker's pixel column (see
-// iterate_visible_flags_impl): the flag_lane_w_px() x flag_lane_h_px()
-// rectangle in the FLAG LANE plus the tip-down triangle directly beneath it in
-// the TRIANGLE LANE, treated as one shape and filled in the marker's color
-// class. There is NO TEXT (the payload lives in the marker-text lane, shown on
-// hover and edited in the Enter flag editor). There is no elision — overlapping
-// shapes occlude instead.
+// ONE MARKER STEM, as the flag painter publishes it: the window x of the
+// column the stem stands on (the flag box's own LEFT edge — the composite shows
+// the stem under it) and the color its class resolved to. The painter is the
+// only producer; the per-frame waveform pass (GuiPaintHandler::paint_marker_stems)
+// is the only consumer, so a stem and its flag can never disagree about a column.
+// A DISABLED marker publishes NO ENTRY AT ALL — disabled markers have no stem
+// ever (architect), and expressing that as an absent entry rather than a flag
+// on the entry means the consumer has nothing to re-decide.
+struct MarkerStem {
+    double   x;
+    GuiColor color;
+};
+
+// Draws the marker lane's flags in `top_strip_area` above visible markers, in
+// THE KDENLIVE TEXT-ON-FLAG FORM (row 5, 2026-08-01): each flag is a filled box
+// whose LEFT EDGE stands on its marker's pixel column, spanning the whole marker
+// lane vertically, carrying a 1px top edge in its class's edge color and the
+// marker's own composed label in the redesign's sans face. The width is DERIVED
+// from the shaped label (pad + shaped + pad); the anatomy, the pad and the
+// nine-glyph truncation live at kMarkerFlagPadXPx above.
 //
-// Color class (`red_set` = the store indices whose render normalizes to the
-// 1.00 fallback, from warp_red_flag_set_cached), in priority order — ONE opaque
-// pair per shape, no alpha anywhere, and THREE classes only: selection is not
-// a fourth one, so a selected flag's rectangle fill and its whole outline are
-// exactly the pair it would paint unselected. Selection's one paint is the
-// triangle interior (kWaveform), layered on after the ladder below resolves —
-// the full rationale lives at the SELECTION IS NOT A CLASS ruling earlier in
-// this file.
-//   Disabled:          fill kMarkerDisabled, outline kMarkerDisabledOutline
-//                      (WINS over red and default; selection does not alter it).
-//   Red (in red_set):  fill kAccent,         outline kAccentOutline.
-//   Otherwise:         fill kMarker,         outline kMarkerOutline.
-// Trim membership has no effect on flags.
+// OVERLAP IS LATER-OVER-EARLIER IN STORE ORDER and there is NO OTHER OCCLUSION
+// MANAGEMENT AT ALL — no elision, no z-lift for selection, no run arbitration.
+// That is the whole model the marker-text lane's resolver used to stand in for,
+// and it is deliberately the simplest thing that can be true: a later marker's
+// box covers an earlier one's tail, and the user pans or zooms to read it.
 //
-// `warp_frame_map`: the displayed-axis translation the painters share (the
-// live map in target view). Shapes are collected in ascending painted-x order,
-// so in target view the occlusion z-order is applied against post-translation
-// positions. Painting is two reverse passes keyed on `selected_set` — selected
-// shapes above unselected, leftmost on top within each class (see render.cpp).
-// `waveform_width` is the EFFECTIVE waveform width (waveform_area.w), the
-// column-mapping denominator; flags share the marker stems' samples-per-pixel so
-// a flag centered on its column lands over the column its stem rises at, at
-// every window width (the width differs from top_strip_area.w only at a
-// non-multiple-of-16 window).
+// COLOR CLASSES, resolved in priority order. DISABLED WINS, then red, then the
+// default/selected pair:
+//   Disabled:  every surface of the flag BLENDED 25% over the lane ground
+//              (kMarkerDisabledMix, through mix_color) — fill, top edge and
+//              label alike — and NO STEM. It blends the marker's OWN class, so
+//              a disabled red marker stays red; disabled decides the blend and
+//              the missing stem, not the hue. (The old ladder's disabled was a
+//              separate opaque PAIR, which is why red used to test `!dis`.)
+//   Red:       kMarkerFlagFillRed / kMarkerFlagEdgeRed; stem kMarkerStemRed.
+//   Otherwise: kMarkerFlagFill / kMarkerFlagEdge, swapping to the bright
+//              kMarkerFlagFillSel / kMarkerFlagEdgeSel pair when selected —
+//              SELECTION IS THAT SWAP AND NOTHING ELSE. The stem stays the
+//              CALM kMarkerFlagFill either way (the architect's explicit rule).
+//
+// `iteration_on` reaches the one composer (flag_text_iter) so the flag shows
+// exactly what the editor would seed. `cr`'s scaled font is set by this
+// function (the redesign sans face at redesign_font_size_px) and restored.
+//
+// THE PAINTER PUBLISHES ITS GEOMETRY. `out_hit_rects` receives one rect per
+// painted box in PAINT ORDER (so the hit walk reads it backwards to get the
+// topmost box) and `out_stems` one entry per ENABLED painted marker. A derived
+// width cannot be recomputed without shaping, so the pixels' own pass is the
+// single owner of both — the same painter-stash contract the redesigned rows'
+// buttons already use. Either pointer may be null.
+//
+// `warp_frame_map`: the displayed-axis translation the painters share (the live
+// map in target view). `waveform_width` is the EFFECTIVE waveform width
+// (waveform_area.w), the column-mapping denominator; flags share the marker
+// stems' samples-per-pixel so a flag's left edge lands on the column its stem
+// rises at, at every window width.
 void render_flags(cairo_t* cr,
                   GuiRect top_strip_area,
                   FlagLaneRects lanes,
@@ -1775,50 +1928,16 @@ void render_flags(cairo_t* cr,
                   int sample_rate,
                   const std::set<int>& selected_set,
                   const std::set<int>& red_set,
+                  bool iteration_on,
+                  std::vector<FlagHitRect>* out_hit_rects = nullptr,
+                  std::vector<MarkerStem>* out_stems = nullptr,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                   const DragOverlay* drag_overlay = nullptr);
 
-// Same column placement as render_flags, without drawing — returns the
-// screen-coord rects of the flag RECTANGLES that would be rendered (one per
-// visible flag, no elision, so overlapping shapes yield overlapping rects).
-// This builder emits the rectangle only — the geometric base the fused
-// tip-down triangle is derived from; the caller (hit_test_flag) additionally
-// derives and tests that triangle from each rect, so the actual clickable
-// area is the rectangle plus the triangle. The caller resolves a rect
-// overlap with two forward passes mirroring the painters' two reverse
-// passes — the leftmost SELECTED containing rect, else the leftmost
-// containing rect = the topmost-painted flag. No cairo context is needed:
-// the rect is the fixed flag width/height centered on the column.
-// `warp_frame_map` mirrors render_flags so the two stay in sync. In target
-// view the flags paint at translated positions, so this helper is called with a
-// non-null warp_frame_map and the hit-rects walk the same map (see app_state's
-// hit-test path). In source view it is null and positions are untranslated.
-// `waveform_width` is the effective waveform width (see render_flags): the hit
-// rects must use the SAME column-mapping denominator as the paint so the
-// clickable rect coincides with the painted flag.
-std::vector<FlagHitRect> compute_flag_hit_rects(
-    GuiRect top_strip_area,
-    FlagLaneRects lanes,
-    int waveform_width,
-    const std::vector<GuiWarpMarker>& markers,
-    long long viewport_start_sample,
-    long long viewport_end_sample,
-    int sample_rate,
-    const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
-    const DragOverlay* drag_overlay = nullptr);
-
-// The phase-reset flag is the same fixed shape as a warp flag (rectangle +
-// triangle centered on the column), textless, and takes the identical
-// color-class ladder render_flags documents above — three classes, selection
-// none of them: a disabled reset paints the opaque `kMarkerDisabled` /
-// `kMarkerDisabledOutline` pair (WINNING over red and default, and unaltered by
-// selection), else red (in `red_set` — a coincident-collapse member from
-// phase_reset_red_flag_set_cached) fill `kAccent` with `kAccentOutline`, else
-// the default `kMarker` / `kMarkerOutline`. Trim membership has no effect.
-// `waveform_width` is the effective waveform width (see render_flags), the
-// column-mapping denominator shared with the phase-reset stems. Painting is two
-// reverse passes keyed on `selected_set` — selected shapes above unselected,
-// leftmost on top within each class (see render.cpp).
+// The phase-reset column's flags: the identical box, the identical class ladder
+// and the identical publication contract render_flags documents above. Their
+// LABEL is the display-only kPhaseResetLaneToken (a phase reset authors no
+// payload), so there is no iteration_on parameter — nothing to compose.
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
                             FlagLaneRects lanes,
@@ -1829,27 +1948,18 @@ void render_phase_reset_flags(cairo_t* cr,
                             int sample_rate,
                             const std::set<int>& selected_set,
                             const std::set<int>& red_set,
+                            std::vector<FlagHitRect>* out_hit_rects = nullptr,
+                            std::vector<MarkerStem>* out_stems = nullptr,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                             const DragOverlay* drag_overlay = nullptr);
-
-// `waveform_width` is the effective waveform width (see compute_flag_hit_rects).
-std::vector<FlagHitRect> compute_phase_reset_flag_hit_rects(
-    GuiRect top_strip_area,
-    FlagLaneRects lanes,
-    int waveform_width,
-    const std::vector<GuiPhaseResetMarker>& phase_resets,
-    long long viewport_start_sample,
-    long long viewport_end_sample,
-    int sample_rate,
-    const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
-    const DragOverlay* drag_overlay = nullptr);
 
 // Iteration-aware flag text composer. Returns the
 // plain flag text when `iteration_on` is false or the marker is iter-
 // ineligible; otherwise splices the inline `+[lo, hi]` bracket after
-// the tempo. The single canonical composer for warp flag text — used to seed
-// the flag editor in iteration mode (the flags themselves are now textless
-// shapes; the payload text moves to the marker-text lane in a later change).
+// the tempo. The single canonical composer for warp flag text: the FLAG ITSELF
+// paints it (row 5, truncated at the nine-glyph budget) and the flag editor
+// seeds from it, so what a marker shows and what its editor opens with are one
+// string by construction.
 std::string flag_text_iter(const std::vector<GuiWarpMarker>& markers,
                            int idx, bool iteration_on);
 
@@ -1881,9 +1991,9 @@ int monospace_text_box_h();
 
 // The text LANE height: the box above plus kTextBoxMarginPx per side, the empty
 // margin outside the ring. A lane is therefore TALLER than the box it hosts —
-// the two are separate metrics and must not be substituted for each other. The
-// lanes that read this are the marker-text lane and both bottom-strip lanes
-// (main.cpp's lane tables).
+// the two are separate metrics and must not be substituted for each other. Its
+// readers are BOTH BOTTOM-STRIP LANES ONLY now (main.cpp's lane tables) — the
+// marker-text lane was the last top-strip reader and died in row 5.
 int monospace_text_row_h();
 
 // Baseline offset from a text LANE's top edge: the unpadded offset plus one
@@ -1911,147 +2021,56 @@ void init_monospace_grid_metrics(cairo_t* cr);
 // it.
 double measured_monospace_font_px();
 
-// Left x (window pixels) of a transient text run of `glyph_count` monospace
-// glyphs shown in the marker-text lane over marker `marker_idx`'s painted
-// column. Both lane occupants — the hover popup and the flag editor — center
-// their run on the marker and clamp it fully onscreen within the lane (unlike
-// the flags, the lane text never hangs off an edge); this is that one
-// placement owner. Uses the painters' own column math against
-// displayed_or_live_target_map — the event-synchronized displayed basis the
-// flag pixels were painted with (identity/empty in source view; in target view
-// the map the last committed frame's flag cache baked, with the live map as the
-// cold-state fallback) — so the run centers on the same column the flag paints.
-// Returns -1.0 for an invalid marker index; a valid off-view marker still
-// returns a clamped onscreen origin (the lane text is always visible). No cairo
-// context.
+// Left x (window pixels) of a transient run of `glyph_count` MONOSPACE glyphs
+// placed over marker `marker_idx`'s painted column in the marker lane. ITS ONE
+// REMAINING OCCUPANT IS THE FLAG EDITOR (row 5, 2026-08-01): the hover popup and
+// the ambient lane runs it also placed died with the marker-text lane, so this
+// is the editor's placement owner and nothing else's — which is also why it is
+// still on the MONOSPACE grid while the flags beside it went proportional. The
+// editor keeps its own machinery until its own unroll lands.
+// The run centers on the marker and clamps fully onscreen within the lane
+// (unlike a flag box, which runs off the right edge freely). Column math is the
+// painters' own against displayed_or_live_target_map — the event-synchronized
+// displayed basis the flag pixels were painted with (identity/empty in source
+// view; in target view the map the last committed frame's flag cache baked,
+// with the live map as the cold-state fallback) — so the run sits on the same
+// column the flag paints. Returns -1.0 for an invalid marker index; a valid
+// off-view marker still returns a clamped onscreen origin. No cairo context.
 double lane_text_left_x(
     const AppState& app, const GuiAudio& audio,
     int marker_idx, size_t glyph_count);
 
-// The frame-addressed core of lane_text_left_x: same placement math, but keyed
-// on a marker's authored source frame rather than a warp-store index, so the
-// phase-reset column's lane hover (which lives in a different store) shares one
-// placement owner with the warp column. The idx overload above delegates here.
+// The frame-addressed core of lane_text_left_x: same placement math, keyed on a
+// marker's authored source frame rather than a warp-store index. The idx
+// overload above delegates here; it kept the frame form when the phase-reset
+// column's lane surfaces (a different store) shared the owner, and it stays the
+// core because that is where the math lives.
 double lane_text_left_x_at_frame(
     const AppState& app, const GuiAudio& audio,
     double source_frame, size_t glyph_count);
 
-// The flag editor's caret / text-run origin owner: lane_text_left_x sized by
-// the flag editor's current pending text. The single reference the lane paint,
-// the click->byte caret math, and the editor-text drag all read, so what is
-// shown is where the caret lands. Returns -1.0 for an invalid marker index. No
-// cairo context.
+// The flag editor's caret / text-run origin owner: lane_text_left_x sized by the
+// editor's current pending text. The single reference the editor's paint, the
+// click->byte caret math, and the editor-text drag all read, so what is shown is
+// where the caret lands. Returns -1.0 for an invalid marker index. No cairo
+// context.
 double flag_pending_text_left_x(
     const AppState& app, const GuiAudio& audio,
     int marker_idx);
 
-// THE PHASE-RESET LANE DISPLAY TOKEN, and the one statement of it: what the
-// marker-text lane shows over a phase reset, where a warp marker shows its
-// composed flag line (flag_text_iter). DISPLAY ONLY — a phase reset authors no
-// payload and serializes as a bare frame, so this string exists nowhere but the
-// lane. Its three producers are the ambient set builder, the last-selected
-// fallback tier (both render.cpp) and the hover composer (viewport.cpp); they
-// must agree, or the same reset would render at different widths depending on
-// which path resolved it.
+// THE PHASE-RESET DISPLAY TOKEN, and the one statement of it: what a phase
+// reset's FLAG shows, where a warp marker shows its composed line
+// (flag_text_iter). DISPLAY ONLY — a phase reset authors no payload and
+// serializes as a bare frame, so this string exists nowhere but the flag.
 //
-// FOUR GLYPHS BY RULING (architect 2026-07-27). The former one-glyph "p" sat a
-// dense reset cluster right at the marker-text lane's fit verdict threshold, so
-// a small zoom change flipped the whole lane between all-texts and the one-run
-// fallback and back — the lane blinked. A wider token fails that verdict
-// DECISIVELY in a dense cluster and rests in the fallback instead of oscillating
-// across it. It stays well under the 9-glyph ambient budget, so it never
-// truncates and never reaches the text-hover expansion.
+// FOUR GLYPHS, and the reason it is four has RETIRED WITH THE MARKER-TEXT LANE
+// (row 5, 2026-08-01). It was widened from the former one-glyph "p" because a
+// dense reset cluster sat right on that lane's all-or-nothing fit verdict and a
+// small zoom change flipped the whole lane between modes — the lane blinked.
+// There is no verdict any more (flags simply overlap, later over earlier), so
+// nothing depends on the width; the token stays at "p.r." because it is what a
+// phase reset reads as, and it stays well under the nine-glyph budget so it
+// never truncates. Its producers collapsed to ONE with the resolver: the flag
+// painter (render.cpp).
 inline constexpr char kPhaseResetLaneToken[] = "p.r.";
 
-// One marker-text-lane run: a marker's composed value at its displayed column.
-// `text` is the DISPLAY bytes (may end in the UTF-8 ellipsis "\xe2\x80\xa6" when
-// the composed value exceeds the 9-glyph ambient budget), and `glyphs` is the
-// DISPLAY glyph count — ALL width math (fill, verdict, hit) uses `glyphs`, never
-// text.size(), since a truncated run is 11 bytes / 9 glyphs. `marker_index` is
-// the active-column store index (warp or phase-reset per active_markers_view);
-// `source_frame` is the DOUBLE centering basis (the mid-drag proposed position
-// substituted for a dragged member).
-struct LaneTextRun {
-    bool        valid        = false;
-    int         marker_index = -1;
-    double      source_frame = 0.0;
-    std::string text;
-    size_t      glyphs       = 0;
-};
-
-// The marker-text lane's current run SET, arbitrated once so the paint pass and
-// the unified marker hit resolver (marker_hit_at, below) read the SAME runs and
-// cannot drift. THE OCCLUSION RULE: the lane shows EVERY onscreen marker's text
-// ambiently IFF the whole visible set fits without any 9-glyph-capped run
-// occluding another (all-or-nothing); when the verdict fails it falls back to
-// the one-run arbitration — tier 1 the HOVERED marker's value
-// (hover_popup.lane_text), else tier 2 the LAST-SELECTED marker's value composed
-// from the live store (flag_text_iter for a warp marker, kPhaseResetLaneToken
-// for a phase reset — whose width is chosen against this very verdict, see
-// there),
-// with the mid-drag DragOverlay substitution and the painted-column offscreen
-// cull the flags apply. TRUNCATION IS PERMANENT: every ambient run — both the
-// all-visible set AND the fallback single run — caps at the 9-glyph budget (8
-// bytes + U+2026), so a dragged/selected truncated marker stays truncated when
-// the verdict fails (it does NOT spell out in full). The editor seed, hover
-// readout, and copy payload keep full text; the lane run is display-only.
-//
-// TEXT-HOVER EXPANSION (has_expanded / expanded): the ONE expansion — when the
-// pointer hovers a marker's rendered TEXT RUN (not its flag; hover_popup.on_flag
-// == false) and that marker's full composed text exceeds the budget, that run
-// EXPANDS to the full text in place, painted LAST among the ambient runs (on top,
-// occluding neighbors — the one text occlusion) and hit FIRST. It is display+hit
-// only: the occlusion VERDICT still runs on the 9-glyph-capped widths (the
-// expanded width never participates), and it applies in BOTH modes (in fallback
-// the hover-via-TEXT single run expands, reproducing the pre-cap full-text bytes;
-// fallback hover-via-FLAG and the last-selected tier stay truncated).
-// kPhaseResetLaneToken never exceeds the budget, so a reset never expands.
-//
-// all_visible == true: `runs` is the whole visible set (capped). all_visible ==
-// false: `runs` is the 0-or-1 fallback run (capped). All lane geometry is on the
-// DISPLAYED viewport basis (item_viewport_basis) and
-// displayed_or_live_target_map — the flag pixels' own basis. The open FlagPayload
-// editor is NOT resolved here (it is an OVERLAY: the ambient runs still resolve,
-// paint suppresses the editor marker's ambient run and draws the editor box on
-// top). advance <= 0 (font not measured) → the empty fallback shape.
-struct LaneRunSet {
-    bool all_visible = false;
-    std::vector<LaneTextRun> runs;
-    bool        has_expanded = false;  // a text-hover expansion is active
-    LaneTextRun expanded;              // full-text run: paint LAST, hit FIRST
-};
-
-// Resolve the current marker-text-lane run set (the occlusion arbitration above),
-// the single owner both paint_marker_text_lane and the unified marker hit
-// resolver read so the painted runs and the clickable runs are one set. Each
-// run's screen rect is derived by the caller exactly as paint does (left =
-// lane_text_left_x_at_frame(app, audio, source_frame, glyphs), width =
-// glyphs * monospace_advance()). No cairo context.
-LaneRunSet current_marker_lane_runs(const AppState& app, const GuiAudio& audio);
-
-// The unified marker hit: the marker is ONE pointer item, hit either by its
-// FLAG SHAPE (hit_test_flag: the fixed rectangle plus the fused triangle,
-// topmost-painted wins) or by its RENDERED MARKER-TEXT LANE RUN (a run from the
-// set current_marker_lane_runs resolves — the ONE arbitration the lane paint
-// also reads — when the point lands inside a run's screen rect, derived exactly
-// as paint derives it: lane_text_left_x_at_frame for the left edge, glyphs times
-// monospace_advance for the width, top_marker_row_area for the y-band). The
-// EXPANDED run (a text-hover expansion) paints on top, so it is hit FIRST (a
-// point over a neighbor's occluded pixels resolves to the expanded run — WYSIWYG)
-// with a HALF-OPEN interval; then the ambient runs — all-visible with HALF-OPEN
-// intervals (abutting runs cannot double-hit), fallback single run with the
-// closed-interval test. `on_flag` records WHICH part was hit: the flag is the
-// sole DRAG handle (a run press selects / double-clicks / lands but never arms a
-// reposition), AND the hover recompute now reads it (the lane's text-hover
-// expansion keys on hovering the RUN, not the flag — see current_marker_lane_runs
-// and the recompute short-circuit). index is the active-column store index, -1
-// when neither part is under the point. Pure geometry over app/audio (no cairo
-// context); homed here beside current_marker_lane_runs so the press chain
-// (input_pointer.cpp) and the hover recompute (viewport.cpp) share one resolver.
-struct MarkerHit {
-    int  index   = -1;
-    bool on_flag = false;
-};
-
-MarkerHit marker_hit_at(const AppState& app, const GuiAudio& audio,
-                        int x, int y);

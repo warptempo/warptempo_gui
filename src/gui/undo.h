@@ -47,7 +47,7 @@ enum class GestureKind {
 // Undo-cluster operations, extracted from main.cpp's inline lambdas.
 // The struct holds references to the long-lived state the methods read and
 // write; bodies are byte-identical to the originals modulo `this->` access
-// on the captured references. clear_hover_popup is reached through
+// on the captured references. The viewport reference is reached through
 // viewport; stop_playback_if_playing is reached through playback_lifecycle;
 // switch_active_tab_view_to is reached through active_views (so do_undo / do_redo
 // can restore the originating A/B tab before applying the marker change).
@@ -106,8 +106,9 @@ struct Undo {
     // burst's existing undo entry. `synthesized_repeat` is the press's own
     // platform bit (GuiInputState::synthesized_repeat), threaded from the key
     // event that reached the handler. When it returns true the caller SKIPS its
-    // undo push (and calls note_coalesced_commit for the per-press side
-    // effects); either way the caller then calls record_gesture.
+    // undo push — and a coalesced press has NO other side effect since row 5
+    // (note_coalesced_commit mirrored the push helpers' hover-popup clear, and
+    // died with the popup). Either way the caller then calls record_gesture.
     // NOT A PURE QUERY since 2026-07-29: a PHYSICAL
     // press (synthesized_repeat false) INVALIDATES the coalescing stamp here, on
     // arrival, so it cannot leave an older burst's stamp standing for a later repeat
@@ -119,9 +120,6 @@ struct Undo {
     // Record this eligible press as the burst's latest by KIND. Call after the
     // push / skip.
     void record_gesture(GestureKind kind);
-    // Per-press side effects for a coalesced (push-skipped) press: the same
-    // hover-popup clear the push_undo_* helpers do, minus the history push.
-    void note_coalesced_commit();
     // Refresh the coalesced burst entry's touched_live to a continuation press's
     // LATEST post-reorder indices (the position nudges, which reorder — the
     // tempo step never does). The surviving first-press undo entry keeps its

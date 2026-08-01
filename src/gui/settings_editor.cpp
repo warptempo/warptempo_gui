@@ -211,12 +211,6 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             clamp_viewport_start(app, audio);
             viewport.invalidate_waveform_area();
             viewport.kick_waveform_sync();
-            // A pre-`:` marker hover popup would repaint stale over the shifted
-            // viewport; clear it, mirroring the scroll/pan gesture path. (The
-            // sibling zoom and playhead_cursor arms need no clear here: their
-            // chokepoints -- apply_zoom_change / move_playhead_to -- carry the
-            // hover tail internally, exactly as their gestures do.)
-            viewport.clear_hover_popup();
         } else {
             if (v == band.viewport_start_sample) { unchanged(); return true; }
             band.viewport_start_sample = v;   // the restore clamps at tab-in

@@ -20,8 +20,8 @@
 // written there, empty on success — the cache below stores it so the
 // target-view validity gate can distinguish "empty because invalid" from
 // never-built and kick the user back to source view with the popup. Callers
-// in target view route this through compute_flag_hit_rects / render_flags /
-// popup-hit helpers so hit-test math and paint stay in sync.
+// in target view route this through render_flags / the trim painters so hit-test
+// math and paint stay in sync.
 // EVERY BUILD IS LOUD: the `quiet` parameter that forwarded into
 // resolve_warp_markers_for_render to suppress normalization stderr lines is DELETED
 // (2026-07-29), together with the frozen parser's own — an explicit surgical freeze
@@ -216,8 +216,8 @@ inline double source_grid_position_at_column(int64_t viewport_start,
 //
 // painted_column_of_source_frame: the pixel column (offset from
 // waveform_area(app).x) the stem painters draw `source_frame` at,
-// computed with the painters' own math (render_trim_stems / the selected-marker
-// stem paint_selected_stem): nearbyint the frame; in the TargetLive domain
+// computed with the painters' own math (render_trim_stems / the marker-stem
+// overlay paint_marker_stems): nearbyint the frame; in the TargetLive domain
 // forward-map it through `warp_frame_map` and nearbyint the map output;
 // then divide by the painters' samples-per-pixel — the visible span
 // nearbyint-quantized to whole samples over the strip width — and round
@@ -234,15 +234,16 @@ int painted_column_of_source_frame(
 // The explicit-basis variant of painted_column_of_source_frame: the same
 // painters' math, but the viewport (`vp_start`) and samples-per-pixel (`spp`)
 // come from the CALLER instead of the live viewport / painter_samples_per_pixel.
-// painted_column_of_source_frame delegates here with the LIVE basis; the
-// marker-text lane geometry passes the ITEM basis (item_viewport_basis in
-// app_state.h) — damage follows the pixels it erases, so the run centering
-// lands on the column the flag pixels were painted at even mid-publish, when
-// the live viewport already holds a not-yet-blitted span. (The selected-stem
-// invalidator was the other _on_basis caller until 2026-07-30; it rode the ITEM
-// basis for PLATE-painted pixels, and the stem's damage was widened to a full
-// waveform-area invalidate rather than re-based — the reason is at
-// Selection::damage_stem_on_subject_change.)
+// painted_column_of_source_frame delegates here with the LIVE basis; the flag
+// EDITOR's box placement passes the ITEM basis (item_viewport_basis in
+// app_state.h) — damage follows the pixels it erases, so the box lands on the
+// column the flag pixels were painted at even mid-publish, when the live
+// viewport already holds a not-yet-blitted span. (Two other ITEM-basis callers
+// died in row 5 with the marker-text lane: the run centering and the run hit.
+// The selected-stem invalidator was the other _on_basis caller until
+// 2026-07-30; it rode the ITEM basis for PLATE-painted pixels, was widened to a
+// full waveform-area invalidate rather than re-based, and is gone entirely with
+// the selection-keyed stem itself.)
 // `spp` must be > 0 (returns 0, a valid column, on a degenerate spp — callers
 // guard the geometry, exactly like the live-basis form). The domain and the
 // source->target mapping are unchanged (they don't depend on the viewport).

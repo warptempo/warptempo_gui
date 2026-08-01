@@ -118,7 +118,7 @@ namespace {
 // render.cpp over GuiWarpMarker.
 
 // UndoEntry, DragState, UndoHistory, RegionState, RegionDragState,
-// HoverPopupState, DialogTrigger, PromptState, ViewState,
+// DialogTrigger, PromptState, ViewState,
 // AppState live in app_state.h, alongside the Viewport struct.
 
 
@@ -373,8 +373,8 @@ GuiRect top_marker_row_area(const AppState& a) {
 // Bottom strip lanes, counted up from the window bottom (index 0 = the window
 // edge). bottom_lower_row (outer, index 0) carries the always-on status line;
 // bottom_upper_row (inner, index 1) carries the modal/editor/queue chain and,
-// below it, the pass/ref resolved hover readout (a marker's own value shows in
-// the top strip's marker-text lane).
+// below it, the pass/ref resolved readout for the FOCUSED marker (a marker's
+// own value is written on its own flag).
 // (The former pan-strip row retired — pan lives on the Alt+drag waveform grab
 // and the ctrl+waveform strip drag's horizontal axis.)
 GuiRect bottom_upper_row_area(const AppState& a) {
@@ -682,8 +682,8 @@ int main(int argc, char** argv) {
     // synchronously from on_tick. Constructed alongside wf_cache so they share
     // the same lifetime; passed by reference into GuiPaintHandler. (Trim has no
     // cache — every trim pixel paints live per frame in
-    // GuiPaintHandler::paint_trim, below the playheads; the marker stem is the
-    // selected-marker live overlay paint_selected_stem.)
+    // GuiPaintHandler::paint_trim, below the playheads; marker stems are the
+    // live overlay paint_marker_stems, off this cache's own published stash.)
     FlagCache     flag_cache;
     if (!gui.init(app.width, app.height, "warptempo_gui")) {
         return 1;
@@ -692,8 +692,7 @@ int main(int argc, char** argv) {
     // -- Viewport + invalidation helpers ------------------------------------
     //
     // The viewport-mutation and invalidation helpers are methods on the
-    // Viewport struct (viewport.{cpp,h}), including the two substantive hover
-    // helpers clear_hover_popup and recompute_hover_at_cursor and the
+    // Viewport struct (viewport.{cpp,h}), including the
     // timestamp invalidation helper invalidate_timestamp_area. Every other
     // cross-cutting operation is a method on its owning struct constructed
     // below — stop_playback_if_playing / toggle_playback / set_playback_speed
@@ -839,14 +838,6 @@ int main(int argc, char** argv) {
     input_handler.end_strip_pointer_capture   = [&]() { gui.end_pointer_capture(); };
     input_handler.set_strip_capture_restore_x = [&](double sx) { gui.set_capture_restore_x(sx); };
 
-    // Displayed-map promotion → same-frame hover refresh. on_redraw fires this
-    // the instant it advances displayed_map_gen (before any painting), so the
-    // hover run/readout this promoting frame paints — and any Ctrl+C before the
-    // next tick — resolve against the just-promoted map. The on_tick displayed_gen
-    // check stays as the backstop for promotion-free store mutations.
-    paint_handler.on_displayed_map_promoted =
-        [&]() { viewport.recompute_hover_at_cursor(); };
-
     auto invalidate_timestamp_area   = [&]() { viewport.invalidate_timestamp_area(); };
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };
@@ -891,11 +882,12 @@ int main(int argc, char** argv) {
 
     auto invalidate_top_strip     = [&]() { viewport.invalidate_top_strip(); };
 
-    // popup_eligible_marker is a free function in app_state.{h,cpp}. Its
-    // callers in this TU (Viewport::recompute_hover_at_cursor, on_tick) reach
-    // it directly with the (app, idx) signature; on_motion calls it from
-    // input_handler.cpp. The hover-popup and iteration-mode comments live
-    // above the declaration in app_state.h.
+    // popup_eligible_marker is a free function in app_state.{h,cpp}. Its two
+    // remaining callers reach it directly with the (app, idx) signature — the
+    // bottom strip's resolved readout (paint_handler.cpp) and the Ctrl+C copy
+    // (input_handler.cpp), the two surfaces that took the SELECTION translation
+    // when the hover machinery was deleted. The iteration-mode part of its gate
+    // is documented above its declaration in app_state.h.
 
     // The drag and selection-shift operations are methods on the
     // GuiWarpMarkersOps struct (warpmarkers_ops.{cpp,h}).
@@ -969,24 +961,17 @@ int main(int argc, char** argv) {
         return input_handler.repeat_eligible(key, mods);
     });
 
-    // Pointer-leave / capability-loss hover drop: no motion event follows those
-    // edges, so clear_hover_popup here erases the hover POPUP / marker-text run /
-    // readout when the pointer slides out the window edge. It is NOT a
-    // stem-visibility arm — the selected-marker stem is always-on for a singleton
-    // and the hover clear neither changes stem visibility nor issues any
-    // dedicated stem-column damage (its top-strip invalidation may
-    // incidentally repaint the one-row waveform seam, which redraws the same stem,
-    // never hides it); re-entry's synthesized motion re-resolves the hover surfaces.
-    // The redesigned rows' button hover faces ride the same edge for the same
-    // reason (no motion event follows a leave, so a pointer that slides out of
-    // the window over a button would leave its pill / outline lit); that is
-    // separate state from the marker hover, so it takes its own clear. Row 2's
-    // CLICK face joins them: a leave is also the BUTTON-LOST edge (no release
-    // event follows it either), and a stranded pressed interior would outlive
-    // the hold that justified it. All three are transition-gated.
+    // Pointer-leave / capability-loss drop: no motion event follows those edges,
+    // so the hover-driven faces must be cleared here or a pointer that slides
+    // out of the window over a button leaves its pill / outline lit. THE MARKER
+    // HOVER USED TO RIDE THIS EDGE TOO and no longer exists (row 5) — the
+    // redesigned rows' button hover is the only hover left, and it is separate
+    // state with its own clear. Row 2's CLICK face joins it: a leave is also the
+    // BUTTON-LOST edge (no release event follows it either), and a stranded
+    // pressed interior would outlive the hold that justified it. Both are
+    // transition-gated.
     gui.set_pointer_left_hook([&] {
         app.pointer_in_window = false;
-        viewport.clear_hover_popup();
         input_handler.clear_redesign_button_hover();
         input_handler.clear_redesign_button_press();
         input_handler.clear_settings_popup_press();
@@ -1202,24 +1187,13 @@ int main(int argc, char** argv) {
         // Stationary-cursor hover refresh (the BACKSTOP). A keyboard mutation
         // (tempo step, Ctrl+N, nudge) changes the hovered marker's fields/position
         // without a pointer-motion event, so nothing else re-reads the hover text.
-        // A silent displayed-map promotion also moves the flag under the
-        // stationary cursor, but the promoting frame now refreshes hover itself
-        // (paint_handler.on_displayed_map_promoted, fired inside on_redraw before
-        // painting) — so the displayed_gen arm here only catches a promotion whose
-        // frame does not run this recompute (and re-stamps displayed_gen so the two
-        // routes settle together after one pass). When a hover is showing and
-        // either store's generation OR the displayed-map generation moved past what
-        // the hover cached, drive one recompute here — the shared per-frame route,
-        // not a per-mutation-site call — so the lane/readout refresh in the same
-        // frame the change paints. recompute_hover_at_cursor re-stamps all three,
-        // so this settles after one pass; a cleared hover (marker_index < 0) never
-        // trips it.
-        if (app.hover_popup.marker_index >= 0 &&
-            (app.hover_popup.warp_gen  != app.warpmarkers.generation() ||
-             app.hover_popup.phase_gen != app.phaseresetmarkers.generation() ||
-             app.hover_popup.displayed_gen != app.displayed_map_gen)) {
-            viewport.recompute_hover_at_cursor();
-        }
+        // THE HOVER REPAIR TICK IS GONE (row 5). A per-frame arm stood here
+        // driving one recompute_hover_at_cursor whenever either marker store's
+        // generation or the displayed-map generation moved past what the hover
+        // cache had stamped — the backstop for a store mutation or a silent map
+        // promotion under a stationary cursor. There is no hover cache to keep
+        // honest any more: a marker's value is painted on its own flag, and the
+        // readout and the copy both read the live store through the selection.
 
         // Blink the editor cursor independently of playback. Compare the
         // current visibility against the last painted state and invalidate

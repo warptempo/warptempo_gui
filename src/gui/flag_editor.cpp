@@ -218,7 +218,6 @@ void GuiFlagEditor::enter_text_edit(int idx,
         app.top_flag_editor.cursor_pos = 0;
     }
 
-    viewport.clear_hover_popup();
     viewport.invalidate_top_strip();
 }
 
@@ -760,7 +759,6 @@ void GuiFlagEditor::enter_bpm_mode() {
     }
 
     app.bpm_mode_enabled = true;
-    viewport.clear_hover_popup();
     viewport.invalidate_top_strip();
 }
 

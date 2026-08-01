@@ -71,15 +71,15 @@ static void render_bottom_strip_editor(cairo_t* cr,
 
 void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
                                              const GuiRect& top_strip) {
-    // Flag annotations in the top strip. The fixed-width marker/phase-reset
-    // flag shapes live on
-    // flag_cache.surface (rebuilt from on_tick via maybe_rebuild_flag_cache);
-    // this pass is a pure blit. (Trim's b/e chips left this cache for the live
-    // paint_trim pass, which runs BEFORE the playheads — the z-order ruling.)
-    // The flag shapes are textless; a marker's flag
-    // payload text (and the hover popup) surface in the marker-text lane, painted
-    // live per-frame in paint_marker_text_lane after this blit — the editing
-    // target's flag paints here as an ordinary selected shape. Like the other
+    // Flag annotations in the top strip. The marker/phase-reset flag BOXES live
+    // on flag_cache.surface (rebuilt from on_tick via maybe_rebuild_flag_cache);
+    // this pass is a pure blit. (Trim's bar and endcaps left this cache for the
+    // live paint_trim pass, which runs BEFORE the playheads — the z-order
+    // ruling.) The boxes CARRY THEIR TEXT since row 5 — the marker-text lane
+    // that used to show it beneath them is gone — so the only thing painted
+    // after this blit in that band is the open editor's overlay
+    // (paint_flag_editor_box); the editing target's flag blits here as an
+    // ordinary box and the overlay covers it. Like the other
     // caches, the surface may be null on the very first paint after a load
     // (before the first rebuild fires); the blit is skipped and the background
     // shows through for that one frame.
@@ -100,19 +100,14 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
 
 namespace {
 
-// THE KDENLIVE REDESIGN'S SHARED TEXT FACE, in 100%-scale pixels. Every
-// redesigned row's label is 12pt through the existing points*4/3 convention =
-// 16px at 100%, scaled on gui_scale_factor() — the redesign's own axis, NOT the
-// monospace font's (the ruling is at gui_scale_factor's declaration). THE SANS
-// FACE IS THE REDESIGN'S DEFAULT FAMILY: cairo's toy "sans" selector, which
-// fontconfig resolves to Liberation Sans on the target — the family the crops
-// were rendered in. The monospace face survives untouched on every
-// un-redesigned surface, and each redesign row moves its own text over.
-constexpr double kRedesignFontSizePt = 12.0;   // -> 16.0 px at 100%
-
-double redesign_font_size_px() {
-    return kRedesignFontSizePt * 96.0 / 72.0 * gui_scale_factor();
-}
+// THE KDENLIVE REDESIGN'S SHARED TEXT FACE. The SIZE (kRedesignFontSizePt /
+// redesign_font_size_px) moved to render.h when row 5's marker flags began
+// shaping their own labels inside render.cpp — one design size cannot have two
+// definitions. THE FACE itself is stated here, where every row selects it: it
+// is cairo's toy "sans" selector, which fontconfig resolves to Liberation Sans
+// on the target — the family the crops were rendered in. The monospace face
+// survives untouched on every un-redesigned surface, and each redesign row
+// moves its own text over.
 
 // One authored 100%-scale length -> device pixels, the ONE conversion every
 // dimension below takes (std::nearbyint like every other integer-domain
@@ -1705,149 +1700,66 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     cairo_restore(cr);
 }
 
-// -- GuiPaintHandler::paint_marker_text_lane -----------------------------
+// -- GuiPaintHandler::paint_flag_editor_box ------------------------------
 
-void GuiPaintHandler::paint_marker_text_lane(cairo_t* cr) {
-    // The marker-text lane (top lane 5, between the trim chips and the flags).
-    // THE OCCLUSION MODEL: the lane shows EVERY onscreen marker's text ambiently
-    // when the whole visible set fits unoccluded at the 9-glyph budget, else it
-    // falls back to the ONE-run arbitration (hover, else last-selected). Every
-    // ambient run is CAPPED at the budget (truncation is permanent). Two OVERLAYS
-    // paint on top of the ambient runs (each suppresses its own marker's ambient
-    // run, then draws its replacement last — the same pattern): the TEXT-HOVER
-    // EXPANSION (a run whose full text exceeds the budget, drawn in full while its
-    // TEXT is hovered) and, above it, the FlagPayload editor box. All paint live
-    // here (per-keystroke editor, per-motion hover, per-frame ambient set), after
-    // the flag-cache blit — no cache, the live-overlay role the bottom strip's
-    // editor/hover paints had before the lane existed. Each run centers its
-    // monospace text over its marker's painted column and clamps it fully onscreen
-    // (lane_text_left_x_at_frame) on a kBackground fill behind the run with no
-    // border. The editor box flashes its fill kAccent on an invalid commit.
-    const GuiRect lane      = top_marker_row_area(app);
-    const double  baseline  = lane.y + monospace_text_row_baseline_offset();
-    const double  advance   = monospace_advance();
+void GuiPaintHandler::paint_flag_editor_box(cairo_t* cr) {
+    // THE OPEN FLAG EDITOR, and nothing else. This pass was the marker-text
+    // lane: an ambient run per visible marker, arbitrated by a fit-at-budget
+    // verdict with a one-run fallback and a hover spell-out expansion on top.
+    // ALL OF THAT IS GONE with row 5 — the marker's text lives ON its flag now,
+    // truncated at the same nine-glyph budget, overlapping its neighbours later
+    // over earlier with no arbitration at all. What survives here is the ONE
+    // overlay the resolver never owned: the open editor's box, still on the
+    // MONOSPACE grid and still centered/clamped by lane_text_left_x, until the
+    // editor's own unroll (the flag-becomes-textbox change) lands.
+    //
+    // It paints AFTER the flag-cache blit, so it covers its own marker's flag —
+    // which is the whole reason there is no "suppress the editing marker's
+    // flag" arm any more: an overlay that covers what it replaces needs none.
+    if (!text_editor::is_active(app.top_flag_editor) ||
+        app.top_flag_editor.kind != text_editor::Kind::FlagPayload) return;
+    const double advance = monospace_advance();
     if (advance <= 0.0) return;
 
-    const bool editor_active =
-        text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind == text_editor::Kind::FlagPayload;
-    const int editor_target = editor_active ? app.top_flag_editor.target : -1;
+    const GuiRect lane     = top_marker_row_area(app);
+    const double  baseline = lane.y + monospace_text_row_baseline_offset();
 
-    // A run's marker is DISABLED — the glyph half of the opaque disabled cue
-    // whose shape half is the flag's kMarkerDisabled pair. Runs are indexed in
-    // the ACTIVE column's store (see LaneTextRun), so the verdict follows that
-    // column: the warp side respects the label_ref cascade through
-    // effective_disabled, the phase-reset side reads its bool (it has no
-    // cascade) — the same split the selection walk's disabled-skip uses.
-    const bool phase_reset_column = app.active_markers_view == 'P';
-    auto run_disabled = [&](int idx) -> bool {
-        if (idx < 0) return false;
-        if (phase_reset_column) {
-            const auto& pv = app.phaseresetmarkers.markers();
-            return idx < static_cast<int>(pv.size()) && pv[idx].disabled;
-        }
-        const auto& mv = app.warpmarkers.markers();
-        return idx < static_cast<int>(mv.size()) && effective_disabled(mv, idx);
-    };
-
-    // Per-run painter: kBackground fill exactly behind the run (AA off for a
-    // crisp edge), then the display text — no border, no caret. Glyphs paint
-    // kText, or the opaque kTextDisabled when the run's marker is disabled (a
-    // color class, never an alpha fade). WIDTH uses the
-    // run's glyph count (never txt.size(): a truncated run is 11 bytes / 9
-    // glyphs), while cairo receives the whole UTF-8 display string (the toy API
-    // draws U+2026 at the uniform mono advance). source_frame centers the run on
-    // the marker's painted column (lane_text_left_x_at_frame), column-agnostic so
-    // this needs no knowledge of which store the marker came from; a bad advance
-    // or clamp yields left<0 and skips. source_frame is a DOUBLE so a mid-drag run
-    // centers on the dragged member's free proposed position.
-    auto paint_run = [&](double source_frame, const std::string& txt,
-                         size_t glyphs, bool disabled) {
-        if (glyphs == 0) return;
-        const double left = lane_text_left_x_at_frame(
-            app, audio, source_frame, glyphs);
-        if (left < 0.0) return;
-        const double run_w = static_cast<double>(glyphs) * advance;
-        cairo_save(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, kBackground.r, kBackground.g, kBackground.b);
-        cairo_rectangle(cr, left, static_cast<double>(lane.y),
-                        run_w, static_cast<double>(lane.h));
-        cairo_fill(cr);
-        cairo_restore(cr);
-        text_display::draw_line(cr, left, baseline, txt,
-                                disabled ? kTextDisabled : kText,
-                                flag_font_size_px());
-    };
-
-    // Every ambient run (all-visible: the whole set; fallback: the 0/1 run),
-    // resolved by the shared owner current_marker_lane_runs — the ONE arbitration
-    // the unified marker hit resolver (marker_hit_at) also reads, so the painted
-    // runs and the clickable runs cannot drift. Two overlay suppressions: while
-    // the editor is open SKIP its own marker's ambient run (the editor box below
-    // replaces it), and while a text-hover expansion is active SKIP the expanded
-    // marker's capped run (the full-text run below replaces it). Both suppressed
-    // markers' CAPPED runs still participated in the verdict.
-    const LaneRunSet set = current_marker_lane_runs(app, audio);
-    const int expanded_target = set.has_expanded ? set.expanded.marker_index : -1;
-    for (const LaneTextRun& run : set.runs) {
-        if (editor_active && run.marker_index == editor_target) continue;
-        if (run.marker_index == expanded_target) continue;
-        paint_run(run.source_frame, run.text, run.glyphs,
-                  run_disabled(run.marker_index));
-    }
-
-    // The text-hover EXPANDED run paints LAST among the ambient runs (on top,
-    // occluding the neighbors it overlaps — the one text occlusion), before the
-    // editor box. Full text, centered on the marker's column exactly like its
-    // capped run was. (Hover is cleared while any editor is open, so an expansion
-    // and the editor box never coexist.)
-    if (set.has_expanded)
-        paint_run(set.expanded.source_frame, set.expanded.text,
-                  set.expanded.glyphs,
-                  run_disabled(set.expanded.marker_index));
-
-    // The FlagPayload editor box LAST, overlaying any ambient run it overlaps.
-    if (editor_active) {
-        const text_editor::State& ed = app.top_flag_editor;
-        // The caret-origin owner supplies the box's left x, centered on the
-        // marker and clamped onscreen, so paint and the click->byte caret math
-        // share one origin.
-        const double left = flag_pending_text_left_x(app, audio, ed.target);
-        if (left < 0.0) return;   // invalid editor target
-        cairo_save(cr);
-        cairo_select_font_face(cr, "monospace",
-                               CAIRO_FONT_SLANT_NORMAL,
-                               CAIRO_FONT_WEIGHT_NORMAL);
-        cairo_set_font_size(cr, flag_font_size_px());
-        EditorTextBox box;
-        box.anchor_x        = left;
-        box.baseline_y      = baseline;
-        // The MM:SS.mmm| locked prefix is display-only and not shown in the
-        // lane — only the editable payload paints, centered on the marker.
-        box.prefix          = "";
-        box.text            = ed.pending;
-        box.hl_pad          = flag_glyph_inset_px();
-        // The open editor paints like an ordinary MARKER chip: kMarker fill +
-        // kMarkerOutline ring — the one live marker pair, the same
-        // rectangle/outline a selected chip paints too (selection only fills
-        // a flag's triangle interior, which this box — a plain rectangle —
-        // has none of). So the box reads as "this marker, open for editing"
-        // instead of an invisible bg-on-bg box. On an invalid commit both
-        // flash to kAccent — a color CHANGE on an already-visible box, not a
-        // box appearing from nowhere. Text stays kText and readable on
-        // kMarker (the same pairing a chip's context uses).
-        box.fill            = ed.red ? kAccent        : kMarker;
-        box.outline         = ed.red ? kAccentOutline : kMarkerOutline;
-        box.text_color      = kText;
-        box.has_selection   = text_editor::has_selection(ed);
-        box.selection_start = text_editor::selection_start(ed);
-        box.selection_end   = text_editor::selection_end(ed);
-        box.cursor_visible  = text_editor::cursor_visible_now(ed);
-        box.cursor_pos      = ed.cursor_pos;
-        render_editor_text_box(cr, box);
-        cairo_restore(cr);
-    }
+    const text_editor::State& ed = app.top_flag_editor;
+    // The caret-origin owner supplies the box's left x, centered on the marker
+    // and clamped onscreen, so paint and the click->byte caret math share one
+    // origin.
+    const double left = flag_pending_text_left_x(app, audio, ed.target);
+    if (left < 0.0) return;   // invalid editor target
+    cairo_save(cr);
+    cairo_select_font_face(cr, "monospace",
+                           CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_font_size(cr, flag_font_size_px());
+    EditorTextBox box;
+    box.anchor_x        = left;
+    box.baseline_y      = baseline;
+    // The MM:SS.mmm| locked prefix is display-only and not shown here — only
+    // the editable payload paints, centered on the marker.
+    box.prefix          = "";
+    box.text            = ed.pending;
+    box.hl_pad          = flag_glyph_inset_px();
+    // The open editor paints like an ordinary MARKER chip: kMarker fill +
+    // kMarkerOutline ring, flashing to kAccent on an invalid commit — a color
+    // CHANGE on an already-visible box, not a box appearing from nowhere.
+    // THESE ARE PRE-REDESIGN, colors.conf-tunable values sitting beside a
+    // hard-coded row-5 lane, and deliberately so: the editor has not had its
+    // own redesign pass yet, and giving it row-5 colors now would be inventing
+    // an unruled face. The unroll change owns that question.
+    box.fill            = ed.red ? kAccent        : kMarker;
+    box.outline         = ed.red ? kAccentOutline : kMarkerOutline;
+    box.text_color      = kText;
+    box.has_selection   = text_editor::has_selection(ed);
+    box.selection_start = text_editor::selection_start(ed);
+    box.selection_end   = text_editor::selection_end(ed);
+    box.cursor_visible  = text_editor::cursor_visible_now(ed);
+    box.cursor_pos      = ed.cursor_pos;
+    render_editor_text_box(cr, box);
+    cairo_restore(cr);
 }
 
 // -- GuiPaintHandler::paint_waveform_plate -------------------------------
@@ -2179,7 +2091,7 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 // every trim pixel — both b/e chips, the bridge bar, the strip-crossing stem
 // segments, and the waveform stem segments — paints here per frame, in the old
 // trim-stem-cache slot (after the phase-reset overlay's ring, before
-// paint_selected_stem and hence before every playhead element), so the playhead
+// paint_marker_stems and hence before every playhead element), so the playhead
 // triangle sits OVER a trim stem crossing the triangle lane while marker flags
 // stay above the playheads (the z-order flip untouched). "Markers over trim" is
 // now STRUCTURAL pass order — trim < selected stem < playheads < flag blit —
@@ -2263,111 +2175,47 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
                       basis.vp_start_frame, basis.vp_end_frame, trim);
 }
 
-// -- GuiPaintHandler::paint_selected_stem --------------------------------
+// -- GuiPaintHandler::paint_marker_stems ---------------------------------
 
-// Selected-marker stem (architect 2026-07-25): the stem is the SINGLETON selection's focus
-// visual — it marks where the playhead sits/would land on the one selected
-// marker, and it ALWAYS paints for that marker, with NO exception at all (the
-// active-region suppression it carried died 2026-07-30 with the SPAN FORM — the
-// region is trim scratch, not a playhead, and outranks nothing).
-// The visibility predicate is "exactly ONE marker selected"
-// (+ the bounds checks below): the hover,
-// lateral-gesture PIN, and tempo-drag arms are GONE as gates (the whole
-// conditional-stem apparatus — stem_pin_*, the hover arm, the click-site stem
-// damages — was harvested when the stem became unconditional). "Always" replaces
-// every prior expiry semantic: the stem is hover-INDEPENDENT (a keyboard-only
-// selection shows it too) and playback-INDEPENDENT (it persists through scrubs
-// and auditions), because it is the selection's focus cue, not a working
-// affordance. A marker GRAB is always a SINGLETON selection now (the arming press
-// single-selects, and groups are never moved — architect 2026-07-29, the doctrine
-// at the head of position_nudge.h), so a live position drag paints its stem
-// with no gesture arm needed, and there is no group-grab case to reject beyond the
-// size check below.
-// The ONE non-selection
-// input is the DragOverlay proposal override below: under a live POSITION drag —
-// the only marker pointer gesture left, the W+target tempo drag having been deleted
-// with the tempo-image family (marker_drag.h) — the
-// stem tracks the flag 1:1 at the mid-gesture proposed frame.
-// Painted in kSelectedStem — its OWN palette key (architect 2026-07-27), tuned
-// independently of every flag fill and ring: a line run the full height of the
-// waveform reads far louder than the same value does as a 1px border around a
-// flag, so what is right for the ring is not right here — through
-// render_playhead's line-only form (draw_triangle=false): one solid line
-// straight over whatever it crosses, the waveform ink included (the former
-// ink-notch two-tone is retired). It lives OUT of the stem cache as a per-frame
-// one-column overlay
-// over the plate; a disabled marker's stem is not recolored here (the flag's
-// opaque disabled pair conveys it). The
-// displayed paint basis (fp_vp_start + disp_spp + the displayed map) matches
-// paint_playheads / the cached flags, so the stem lands on the flag's own column;
-// the drag override reads the frozen displayed map its proposal was computed
-// against. A focused GROUP (2+ selected) paints no stem — the members' kWaveform
-// ink triangles plus the always-visible cursor landed on the focus are the
-// group's cue (architect 2026-07-30, with the span form retired). The size check
-// below is the whole rule — the stem is a SINGLETON visual, never a group's.
-void GuiPaintHandler::paint_selected_stem(cairo_t* cr, const GuiRect& area) {
+// EVERY ENABLED MARKER STEMS, ALWAYS (row 5, architect): the per-frame waveform
+// overlay that replaced the singleton selected-marker stem. The full contract —
+// what stems, in what colour, and why selection changes none of it — is at the
+// declaration.
+//
+// It reads the marker painter's stash (app.marker_stems) instead of walking a
+// store: the stem stands on its flag box's LEFT EDGE, and that column was
+// already resolved by the pass that painted the box, on the displayed basis
+// those pixels were laid out against. So the DragOverlay substitution, the
+// source->target map walk, the per-marker cull and the colour ladder all happen
+// exactly once, in the painter, and a stem can never land a pixel away from its
+// own flag. Disabled markers are simply absent from the stash.
+//
+// The stem spans the waveform area top to bottom — the flag's bottom edge IS
+// the waveform top (the marker lane rests flush on it), so the two meet with no
+// seam and no strip-crossing segment to draw. It runs OVER the waveform's own
+// borders when row 6 adds them, the same z-intent the playhead stem records: a
+// stem is a boundary line, not something the borders clip.
+void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
-    // A single selected marker, else no stem. The stem is a SINGLETON visual and
-    // nothing suppresses it: the region is trim scratch (a ground recolor), not a
-    // playhead form, so a resting span leaves the stem exactly where it is.
-    if (app.selected_markers.size() != 1) return;
-    const int idx = *app.selected_markers.begin();
-    if (idx < 0) return;
+    if (app.marker_stems.empty()) return;
 
-    // The one non-selection input: a live POSITION drag grabbing the active column
-    // overrides the store frame with the mid-gesture proposed position so the stem
-    // tracks the flag 1:1 (the only marker pointer gesture there is — see the
-    // header).
-    const bool drag_arm =
-        app.drag.active && app.drag.drag_mode == app.active_markers_view;
-
-    // The marker's effective time: the live store frame, or — under a drag that
-    // grabs it — the proposed mid-gesture position (a source-frame double) from
-    // the DragOverlay, so the stem tracks the flag 1:1 during the drag.
-    double eff_time = 0.0;
-    if (app.active_markers_view == 'P') {
-        const auto& pv = app.phaseresetmarkers.markers();
-        if (idx >= static_cast<int>(pv.size())) return;
-        eff_time = static_cast<double>(pv[idx].time_frame);
-    } else {
-        const auto& mv = app.warpmarkers.markers();
-        if (idx >= static_cast<int>(mv.size())) return;
-        eff_time = static_cast<double>(mv[idx].time_frame);
+    cairo_save(cr);
+    cairo_set_line_width(cr, 1.0);
+    const double y0 = static_cast<double>(area.y);
+    const double y1 = static_cast<double>(area.y + area.h);
+    for (const MarkerStem& stem : app.marker_stems) {
+        // Column-gate exactly like render_playhead's line does, so a stem whose
+        // flag hangs into view from the left (the boxes run rightward) never
+        // leaks its column into the chrome beside the waveform.
+        const double col = stem.x - static_cast<double>(area.x);
+        if (col < 0.0 || col >= static_cast<double>(area.w)) continue;
+        const double x_px = static_cast<double>(area.x) + col + 0.5;
+        cairo_set_source_rgb(cr, stem.color.r, stem.color.g, stem.color.b);
+        cairo_move_to(cr, x_px, y0);
+        cairo_line_to(cr, x_px, y1);
+        cairo_stroke(cr);
     }
-    if (drag_arm) {
-        DragOverlay ov;
-        ov.indices = &app.drag.dragging_markers;
-        ov.times   = &app.drag.moveable_times;
-        eff_time = ov.effective_time(idx, eff_time);
-    }
-
-    const PlateViewportBasis basis = plate_viewport_basis();
-    const double disp_spp = basis.spp;
-    if (disp_spp <= 0.0) return;
-    const double vp_start = basis.vp_start;
-
-    // Forward-map the (possibly fractional) source frame to the displayed axis
-    // (identity in source view), the same shape render.cpp's frame_to_paint_sample
-    // uses (nearbyint, then the map).
-    double ms = std::nearbyint(eff_time);
-    if (app.active_audio_view == 'T') {
-        const std::vector<WarpFrameMapSegment>& dmap =
-            displayed_or_live_target_map(app, audio);
-        if (!dmap.empty()) {
-            const size_t q = ms < 0.0 ? static_cast<size_t>(0)
-                                      : static_cast<size_t>(ms);
-            ms = std::nearbyint(map_source_to_target(q, dmap));
-        }
-    }
-    const double px_x = (ms - vp_start) / disp_spp;
-
-    // render_playhead draws only the 1px line here (draw_triangle=false), which
-    // is exactly the stem; it column-culls px_x itself, so a stem off the visible
-    // strip paints nothing. The lane rect is still handed over — the parameter is
-    // unconditional so no call site can drift from the lane owner — and it is now
-    // the RULER lane, the band the playhead's head will occupy.
-    render_playhead(cr, area, top_ruler_row_area(app), px_x, kSelectedStem,
-                    /*draw_triangle=*/false);
+    cairo_restore(cr);
 }
 
 // -- GuiPaintHandler::paint_strip_drag_anchor ----------------------------
@@ -2485,9 +2333,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // modal chain in precedence order: prompt > queue > settings editor
     // > BPM editor > pass/ref hover readout. The prompt is a one-key-answer modal
     // and owns the upper row; status stays visible under it (harmless
-    // context). (The hover readout is the resolved-tempo string for a pass /
-    // label_ref marker; a marker's OWN value shows in the marker-text lane —
-    // paint_marker_text_lane.) Each row's baseline is derived from its row rect, not
+    // context). (The readout is the resolved-tempo string for the SELECTED
+    // pass / label_ref marker; a marker's OWN value is written on its flag.)
+    // Each row's baseline is derived from its row rect, not
     // from the window bottom. (The former pan-strip row retired — pan lives on
     // the Alt+drag waveform grab and the strip drag's horizontal axis.)
     const GuiRect lower_row = bottom_lower_row_area(app);
@@ -2597,19 +2445,25 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                                    static_cast<double>(timestamp_pad_x()),
                                    upper_baseline);
     } else {
-        // The pass/ref resolved readout renders below every modal/progress tier,
-        // driven by BOTH hover and selection. Simple rule: the HOVERED marker's
-        // readout wins when present (compute_hover_popup_text, cached in
-        // hover_popup at recompute); else the LAST-SELECTED marker's, computed
-        // live here when it is an eligible pass/label_ref (popup_eligible_marker,
-        // itself 'W'-view + non-iteration only). One readout, hover wins. Owners
-        // and phase resets have nothing to resolve, so their strip stays clean
-        // while their own value shows in the marker-text lane. The live
-        // computation is the notice-free string (copy_payload is a hover-only
-        // concern, so no out-param here).
-        std::string readout = app.hover_popup.readout_text;
-        if (readout.empty() &&
-            popup_eligible_marker(app, app.last_selected_marker)) {
+        // THE RESOLVED READOUT IS SELECTION-ONLY (row 5, 2026-08-01). It used
+        // to be "hover wins, else the last-selected marker"; the hover arm died
+        // with the whole hover-popup machinery, so what is left is the arm that
+        // was already here — the LAST-SELECTED marker's resolved tempo, computed
+        // live when it is an eligible pass/label_ref (popup_eligible_marker,
+        // itself 'W'-view + non-iteration only). Owners and phase resets have
+        // nothing to resolve, so their strip stays clean while their own value
+        // shows on their flag.
+        //
+        // compute_hover_popup_text — in the FROZEN parser, and untouched — keeps
+        // this one live caller; only the hover half of its name is now history.
+        // The out-param for the pasteable payload stays unused here: this site
+        // wants the notice-free display string, and Ctrl+C asks for the payload
+        // itself at its own site.
+        //
+        // LIVE-TEST FLAGGED: whether the readout should follow the selection
+        // alone is the architect's call at the row-5 look.
+        std::string readout;
+        if (popup_eligible_marker(app, app.last_selected_marker)) {
             readout = compute_hover_popup_text(
                 slice_to_warp_markers(app.warpmarkers.markers()),
                 app.last_selected_marker, sr, audio.total_frames());
@@ -2630,8 +2484,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // Event-synchronized hit geometry, PROMOTE phase (ruling at the selector):
     // done at the TOP of the frame, BEFORE any painting, so the flag cache this
     // frame blits (blit-only below) AND the overlays this
-    // frame paints around it (the live trim pass, the marker-text lane, hover,
-    // selection, the
+    // frame paints around it (the live trim pass, the flag editor overlay, the
+    // marker stems, the
     // playhead) all land on the SAME map — the one the committed items were
     // built against. Promoting at the frame's END instead let the overlays paint
     // against the OLD map on the very frame that first blit the rebuilt cache,
@@ -2645,24 +2499,18 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // mid-loop (single-threaded) and the whole frame still commits atomically
     // after the loop in GuiPlatform::paint_one_frame, so a press only ever reads
     // the last COMMITTED frame's geometry — that guarantee is unchanged. Bump
-    // displayed_map_gen so a silent geometry change is visible to hover identity.
+    // displayed_map_gen so the promotion has a record.
     //
-    // Refresh the hover identity against the JUST-promoted map, still before any
-    // painting: the hook (recompute_hover_at_cursor, wired in main.cpp) hit-tests
-    // the new flag positions and re-stamps lane_text/readout_text/copy_payload,
-    // so the run/readout this frame paints — and any Ctrl+C landing after this
-    // frame but before the next tick — reads the new identity, not the old map's
-    // (the run could otherwise follow a marker to its new column though it is no
-    // longer under the cursor). No input dispatches mid-paint (single-threaded),
-    // so the recompute is safe here. The on_tick displayed_gen check remains the
-    // BACKSTOP for a promotion-free store mutation; this hook owns the
-    // promoting-frame case that the tick (running before the paint) cannot.
+    // THE HOVER REFRESH HOOK THAT HUNG OFF THIS EDGE IS GONE (row 5): it
+    // re-resolved the marker hover cache against the just-promoted map, and
+    // there is no hover cache any more. Nothing subscribes to the promotion; the
+    // overlays below simply read the promoted basis.
     if (app.staged_displayed_valid) {
         app.displayed_target_warp_frame_map =
             std::move(app.staged_displayed_target_warp_frame_map);
         app.staged_displayed_target_warp_frame_map.clear();
         // Promote the displayed VIEWPORT mirror in the SAME block (one promote,
-        // one gen bump): the marker-text lane geometry advances to the fp_*
+        // one gen bump): the flag editor's box geometry advances to the fp_*
         // viewport the just-blitted flag cache was built against, in
         // lockstep with the map above.
         app.displayed_vp_start = app.staged_displayed_vp_start;
@@ -2670,7 +2518,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         app.displayed_area_w   = app.staged_displayed_area_w;
         app.staged_displayed_valid = false;
         ++app.displayed_map_gen;
-        if (on_displayed_map_promoted) on_displayed_map_promoted();
     }
 
     cairo_save(cr);
@@ -2752,9 +2599,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // Final paint order (bottom to top of the stack): canvas ground + its
         // kLine border (painted above, unconditionally) -> region ground ->
         // waveform plate -> overlay ring -> LIVE
-        // TRIM (chips + bridge bar + strip and waveform stem segments, one pass)
-        // -> selected stem -> playheads (scanner line + cursor) -> flag blit ->
-        // marker-text lane / zoom ring -> strip-drag anchor -> bottom strip.
+        // TRIM (bar + endcaps + waveform stem segments, one pass)
+        // -> playheads (scanner line + cursor stem) -> MARKER STEMS -> ruler ->
+        // flag blit -> flag editor overlay -> strip-drag anchor -> bottom strip.
         // Three structural rulings live in this sequence:
         //   THE RECOLOR MODEL (architect 2026-07-26) — a highlight changes the
         //     GROUND, so the ONE ground recolor (the region's) paints BEFORE the
@@ -2770,9 +2617,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     (architect 2026-07-25 — a singleton's focus is its STEM, a
         //     group's is its members' ink triangles plus the landed cursor).
         //   TRIM BELOW THE PLAYHEAD (architect 2026-07-25) — every trim pixel
-        //     paints before every playhead element, so the playhead triangle
-        //     sits over a trim stem crossing the triangle lane:
-        //     trim < selected stem < playheads < marker flags.
+        //     paints before every playhead element, so the playhead sits over a
+        //     trim stem sharing its column: trim < playheads < marker stems <
+        //     marker flags. (Row 5 moved the marker stems ABOVE the playheads,
+        //     where the singleton selected stem used to sit below them — the
+        //     hidden-by-marker z-intent; the trim half of the rule is
+        //     untouched.)
 
         if (rects_intersect(exposed, area)) {
             // THE GROUND RECOLOR, under the plate. render_canvas already laid
@@ -2800,14 +2650,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             paint_trim(cr, area, top_strip);
         }
 
-        if (rects_intersect(exposed, area)) {
-            // Selected-marker stem over the plate + trim, under the playhead and
-            // the flags: the single selected marker's focus column, live per-frame
-            // (not cached), ALWAYS painted for a singleton selection (no
-            // hover/pin/gesture condition).
-            paint_selected_stem(cr, area);
-        }
-
         // Playheads BEFORE the flag blit (Z-ORDER FLIP, architect 2026-07-23):
         // the scanner line stays waveform-only (triangle-free, no lane conflict —
         // its stacking vs the lanes is unaffected by this move), while the cursor
@@ -2822,15 +2664,27 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             paint_playheads(cr, area);
         }
 
+        // MARKER STEMS AFTER THE PLAYHEADS (row 5's z-intent, now verifiable
+        // because both exist): ruler ticks, then the playhead head + stem, then
+        // the marker flags and their stems ON TOP. That is the hidden-by-marker
+        // model translated — a marker sharing the cursor's column hides it,
+        // exactly as flags painted over the old triangle — and it is why the
+        // stems paint here rather than in the pre-playhead slot the singleton
+        // selected stem occupied. The flag BOXES follow in the strip blit below;
+        // the stems are their waveform half and must not be split across the
+        // playhead by paint order.
+        if (rects_intersect(exposed, area)) {
+            paint_marker_stems(cr, area);
+        }
+
         if (rects_intersect(exposed, top_strip)) {
             // The ruler paints BEFORE the flags: its ticks descend past the
             // marker lane's top and must sit UNDER whatever that lane draws.
             paint_ruler_row(cr);
             paint_flag_annotations(cr, top_strip);
-            // Marker-text lane (top row 3): the hover popup and the flag
-            // editor's live text, painted over the just-blitted flag cache —
-            // the same layering role the bottom strip's hover/editor paints had.
-            paint_marker_text_lane(cr);
+            // The open flag editor's box, over the just-blitted flags — the
+            // live-overlay role the marker-text lane's whole pass used to fill.
+            paint_flag_editor_box(cr);
         }
 
         // Strip-drag anchor stem: over the plate/stems in the waveform area
@@ -2840,8 +2694,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // waveform verticals; the playhead's triangle lane is untouched, the
         // anchor carries no triangle). The anchor shows only mid-strip-drag, so
         // this overlap is transient and the pivot affordance reading on top is
-        // acceptable. paint_marker_text_lane likewise ends up after the playheads
-        // but on the non-overlapping text lane.
+        // acceptable. paint_flag_editor_box likewise ends up after the playheads
+        // but on the non-overlapping marker lane.
         if (rects_intersect(exposed, area)) {
             paint_strip_drag_anchor(cr, area);
         }

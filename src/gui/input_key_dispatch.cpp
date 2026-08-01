@@ -990,7 +990,6 @@ bool GuiInputHandler::adopt_render_entry(
     paint_handler.on_resize(app.width, app.height);
 
     clamp_viewport_start(app, audio);
-    viewport.clear_hover_popup();
     // COINCIDENCE AUTO-SELECT, the adopt chokepoint (the rule, the formula and the
     // authoritative call-site inventory live at auto_select_marker_at_playhead,
     // input_pointer.cpp / input_handler.h). The adopt
@@ -1325,7 +1324,6 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
                 flag_editor.wipe_iter_state();
             }
             app.iteration_mode_enabled = !app.iteration_mode_enabled;
-            viewport.clear_hover_popup();
             viewport.invalidate_top_strip();
         }
         return true;

@@ -23,7 +23,7 @@ struct PhaseResetPropagate {
     Undo&               undo;
     GuiTargetRender& target_render;
     // Owned end-of-paste view switch goes through switch_active_markers_view_to
-    // so the column switch's selection clear + hover-popup clear stay consistent
+    // so the column switch's selection clear stays consistent
     // with the keyboard `p`-toggle path. The two call sites
     // for paste_apply / paste_state_apply live in different files
     // (prompt.cpp / input_handler.cpp), only one of which holds

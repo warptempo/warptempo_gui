@@ -239,7 +239,6 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
     app.queue_cancel_requested = false;
     app.queue_running          = true;
     app.queue_progress_text    = "rendering...";
-    viewport.clear_hover_popup();
     viewport.invalidate_timestamp_area();
     async_renderer.dispatch(std::move(req),
         [this](RenderOutcome o) {
@@ -301,7 +300,6 @@ void GuiInputHandler::start_render_batch(std::vector<RenderRequest> reqs,
 
     app.queue_cancel_requested = false;
     app.queue_running          = true;
-    viewport.clear_hover_popup();
 
     dispatch_next_batch_entry();
 }

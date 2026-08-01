@@ -232,14 +232,13 @@ struct Viewport {
     // that owner's full-area shape with it. Every other playhead write is
     // discrete and widens; do not add a narrow caller for one.
     void invalidate_playhead_columns(double old_px, double new_px);
-    // (There is no stem-column invalidator any more. invalidate_stem_column
-    // computed the selected stem's narrow damage on the ITEM basis while
-    // paint_selected_stem paints on the PLATE basis; the stem's subject-change
-    // damage was WIDENED to invalidate_waveform_area 2026-07-30 — a selection
-    // change is rare enough to pay for a full repaint, and a full-area
-    // invalidate cannot ride the wrong basis. The reason lives at the one owner,
-    // Selection::damage_stem_on_subject_change; deleting the narrow route left
-    // it caller-less.)
+    // (There is no stem-column invalidator any more, and since row 5 no
+    // selection-driven stem damage either. invalidate_stem_column computed the
+    // old singleton stem's narrow damage on the ITEM basis while the stem
+    // painted on the PLATE basis; that damage was widened to
+    // invalidate_waveform_area in 2026-07-30 and then deleted outright with
+    // Selection's stem subject pair, because stems no longer key on selection
+    // at all.)
     void invalidate_top_strip();
     void invalidate_all();
 
@@ -251,14 +250,14 @@ struct Viewport {
     // only these two callers would ever use. A zero/negative rect is a no-op.
     void invalidate_rect(const GuiRect& r);
 
-    // Reset the hover popup state. If the popup was visible, invalidate
-    // the readout area so the next paint erases it. Safe to call from any
-    // path.
-    void clear_hover_popup();
-
-    // Recompute the hover state at the cursor's last on_motion position.
-    // Called from viewport mutators (so a scroll/zoom updates which
-    // marker is under the cursor) and from the platform tick (so the
-    // dwell-to-visible flip fires after delay).
-    void recompute_hover_at_cursor();
+    // THE MARKER HOVER IS GONE (row 5, 2026-08-01). clear_hover_popup and
+    // recompute_hover_at_cursor lived here — one clear reachable from every
+    // mutation path, one recompute the motion handler and every viewport
+    // mutator called — and both died with the marker-text lane they served
+    // (the spell-out popup, the lane's one-run fallback tier, and the
+    // pass/ref readout's hover arm). Nothing replaced them: a marker's value
+    // is written on its flag now, so there is no hover-only surface left to
+    // keep in sync. The redesigned rows' own button hover
+    // (recompute_redesign_button_hover, input_pointer.cpp) is unrelated and
+    // untouched.
 };

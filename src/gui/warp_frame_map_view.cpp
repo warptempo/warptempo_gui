@@ -210,9 +210,9 @@ int painted_column_of_source_frame(
     // Gesture-commit callers (the nudges, drag commits, trim drags) anchor to the
     // LIVE on-screen grid by ruling, and live-painted DAMAGE (playhead columns)
     // stays live too. The boundary is damage-follows-the-pixels: damage rides the
-    // basis of the pixels it erases, so the marker-text lane geometry instead
-    // rides the ITEM basis via _on_basis — the run text paints on the promoted
-    // item mirror, so its narrow damage must too.
+    // basis of the pixels it erases, so the flag editor's box placement instead
+    // rides the ITEM basis via _on_basis — the box paints on the promoted item
+    // mirror, so its geometry must read it too.
     return painted_column_of_source_frame_on_basis(
         app, audio, source_frame, warp_frame_map,
         static_cast<double>(app.viewport_start_sample), spp);

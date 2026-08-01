@@ -89,14 +89,12 @@ public:
     // Fired when the pointer LEAVES the surface (wl_pointer.leave) and at
     // pointer-capability loss — the two edges that drop pointer focus without a
     // motion event. The one owner of the hover-off-on-leave behavior: main.cpp
-    // wires it to Viewport::clear_hover_popup so a pointer that slides out through
-    // the window edge erases any hover POPUP / marker-text run / readout (which no
-    // motion event would otherwise damage). It does not change the selected-marker
-    // stem's VISIBILITY nor issue any dedicated stem-column damage — that stem is
-    // always-on for a singleton selection, driven only by the selection
-    // subject, never by hover (the clear's top-strip invalidation only
-    // incidentally repaints the one-row waveform seam, redrawing the same stem).
-    // Null-safe.
+    // wires it to the REDESIGNED ROWS' button-face clears (hover, click, popup
+    // press), so a pointer that slides out through the window edge cannot leave
+    // a lit pill or a stranded pressed interior behind. It USED to clear the
+    // marker hover popup as well; that whole surface died with the marker-text
+    // lane in row 5, so the button faces are the only hover state left on this
+    // edge. Null-safe.
     void set_pointer_left_hook(std::function<void()> cb);
 
     // Fired ONLY on a CHANGE of window_activated(), from the xdg_toplevel
@@ -136,10 +134,13 @@ public:
     void begin_pointer_capture();
     void end_pointer_capture();
 
-    // Is the pointer currently over our surface? Read by the deferred-click
-    // completions (input_pointer.cpp) to decide whether to re-resolve hover at
-    // the pointer's position (still here) or leave the clear to the pointer-left
-    // hook (already gone). True between wl_pointer.enter and .leave.
+    // Is the pointer currently over our surface? True between wl_pointer.enter
+    // and .leave. CALLER-LESS SINCE ROW 5 (2026-08-01), and recorded as such
+    // rather than removed: its two callers were the deferred-click completions,
+    // which read it to decide between re-resolving the marker hover here and
+    // leaving the clear to the pointer-left hook — and the marker hover is gone.
+    // The FIELD is still live inside this class (the synthesized-enter motion
+    // gate below), so only the accessor is idle.
     bool pointer_focused() const { return pointer_focused_; }
 
     // Override the release-restore x for the active capture. The strip drags
@@ -446,9 +447,8 @@ private:
     RepeatEligibleProbe  repeat_eligible_probe_;
     // The one owner of hover-off-on-pointer-leave: fired at wl_pointer.leave and
     // at pointer-capability loss (the two focus-dropping edges with no motion
-    // event to re-resolve hover). Wired to Viewport::clear_hover_popup, which
-    // drops the hover POPUP / marker-text / readout only — the selected-marker stem
-    // is always-on for a singleton and never keys on hover. Null-safe.
+    // event to re-resolve hover). Wired to the redesigned rows' face clears; the
+    // marker hover popup it also dropped no longer exists. Null-safe.
     std::function<void()> pointer_left_hook_;
     // Fired at each window_activated_ EDGE (see set_activation_changed_hook).
     std::function<void()> activation_changed_hook_;

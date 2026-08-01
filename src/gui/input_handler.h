@@ -445,8 +445,8 @@ struct GuiInputHandler {
     // recompute_
     // re-resolves the cursor's last position against the painter's stashed rects
     // and is called from on_motion's no-gesture tail; clear_ is the pointer-LEAVE
-    // / capability-loss drop, wired in main.cpp beside clear_hover_popup because
-    // no motion event follows those edges. Both damage ONLY on a real
+    // / capability-loss drop, wired in main.cpp on the pointer-leave hook
+    // because no motion event follows those edges. Both damage ONLY on a real
     // transition, and at most one invalidate_top_strip per call however many
     // faces moved.
     void recompute_redesign_button_hover();

@@ -236,22 +236,37 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (handle_commit_editor_key(key, mods)) return;
     }
 
-    // Ctrl+C while the tempo hover popup is showing copies the hovered
-    // marker's effective tempo value (the pasteable "base" / "base*scale"
-    // form the flag editor accepts) to the internal text clipboard
-    // (AppState::text_clipboard), the same session-only clipboard the flag
-    // and settings editors use, for pasting the implied value of a pass or
-    // label ref into a neighbor's flag editor.
-    // Placed below the prompt gate (line above returns while a modal is up)
-    // and the two editor blocks (which return on their own Ctrl+C, keeping
-    // the editor's copy-selection working while an editor owns input), so
-    // reaching here means neither a modal nor an editor is active. Fires only
-    // while a pass/ref resolved readout is showing, in which case copy_payload
-    // is non-empty (owners and phase resets carry no payload). Ctrl+C was
-    // otherwise unbound globally.
-    if (ctrl && !shift && !alt && key == GuiKeys::C &&
-        !app.hover_popup.copy_payload.empty()) {
-        app.text_clipboard = app.hover_popup.copy_payload;
+    // Ctrl+C copies the FOCUSED marker's resolved effective tempo — the
+    // pasteable "base" / "base*scale" form the flag editor accepts — into the
+    // internal text clipboard (AppState::text_clipboard, the same session-only
+    // clipboard the flag and settings editors use), for pasting the implied
+    // value of a pass or label ref into a neighbour's flag editor.
+    //
+    // THE SELECTION TRANSLATION of the old hover copy (row 5, 2026-08-01). The
+    // payload used to be cached in hover_popup at each rect-entry and this
+    // binding fired only while a hover readout showed; the hover machinery is
+    // gone, so the subject is the LAST-SELECTED marker — the same subject the
+    // bottom-strip readout now names, resolved through the same eligibility gate
+    // and the same frozen composer, so what you see is what you copy. An EMPTY
+    // SELECTION (or an ineligible focus — an owner, a phase reset, iteration
+    // mode, the 'P' column) is a CONSUMED NO-OP: the payload comes back empty
+    // and nothing is written. Ctrl+C is otherwise unbound globally.
+    //
+    // LIVE-TEST FLAGGED, like the readout it follows.
+    //
+    // Placed below the prompt gate (the line above returns while a modal is up)
+    // and the two editor blocks (which return on their own Ctrl+C, keeping the
+    // editor's copy-selection working while an editor owns input), so reaching
+    // here means neither a modal nor an editor is active.
+    if (ctrl && !shift && !alt && key == GuiKeys::C) {
+        if (popup_eligible_marker(app, app.last_selected_marker)) {
+            std::string payload;
+            compute_hover_popup_text(
+                slice_to_warp_markers(app.warpmarkers.markers()),
+                app.last_selected_marker, audio.sample_rate(),
+                audio.total_frames(), &payload);
+            if (!payload.empty()) app.text_clipboard = std::move(payload);
+        }
         return;
     }
 
@@ -1568,7 +1583,6 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // the column is.
     if (!app.selected_markers.empty() && app.last_selected_marker >= 0)
         land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
-    viewport.clear_hover_popup();
     // One-shot discrete jump with a domain change: is_target, the viewport, and
     // the warp_frame_map hash all flip, so the displayed plate must change. Render it
     // synchronously and publish the displayed fingerprint now, so the

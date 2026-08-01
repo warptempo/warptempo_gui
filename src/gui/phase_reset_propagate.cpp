@@ -572,8 +572,8 @@ void PhaseResetPropagate::paste_state_apply() {
 //     fire exactly once). It is a TOGGLE, so it is called only when the session
 //     is not already in target view.
 //   * switch_active_markers_view_to('P') CLEARS the selection (a column switch
-//     clears) and clears the hover popup — so the selection must be set AFTER it
-//     or that clear would wipe the new one.
+//     clears) — so the selection must be set AFTER it or that clear would wipe
+//     the new one.
 //   * handle_active_audio_view_toggle DOES touch the selection since 2026-07-29
 //     (it collapses a 2+ selection to its focus, the point-form view-switch
 //     rule), but its placement here is still free — SELECTION-NEUTRAL for every

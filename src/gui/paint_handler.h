@@ -27,9 +27,8 @@ class GuiWaveformWorker;
 //     deliberately omitted: paint never calls a Viewport method (geometry
 //     queries go through free functions waveform_area / top_strip_area /
 //     current_samples_per_pixel declared in app_state.h) and never calls
-//     popup_eligible_marker (the eligibility check is inlined as
-//     `tempo_inherits || !label_ref.empty()` at each hover-popup paint
-//     site). Both omitted to avoid dead weight.
+//     popup_eligible_marker directly through this reference (the bottom strip's
+//     readout calls the free function). Both omitted to avoid dead weight.
 //   - GuiPlatform& is used by the cache-rebuild paths (waveform_cache.cpp)
 //     for gui.invalidate_region calls. The playhead triangle mask now lives
 //     in render.cpp file-scope state (playhead_triangle_mask()), not on
@@ -199,7 +198,7 @@ struct WaveformCache {
 // holds the fixed-width marker/phase-reset flag shapes ONLY (trim's b/e chips
 // left it for the live trim pass); the paint pass is a pure blit. The flag
 // editor's text renders
-// live in the marker-text lane, not in this cache, so the editing target's flag
+// live as an overlay AFTER this cache's blit, so the editing target's flag
 // paints here as an ordinary selected shape — no skip-guard, no per-frame live
 // flag render in the cache.
 //
@@ -229,6 +228,14 @@ struct FlagCache {
     // pixels were laid out with"; without it the cache would rely on some other
     // fingerprinted quantity happening to move whenever the font does.
     double    fp_measured_font_px         = -1.0;
+    // ITERATION MODE joined the fingerprint with row 5 (2026-08-01): the flags
+    // CARRY TEXT now, composed through flag_text_iter, which splices the
+    // `+[lo, hi]` bracket exactly when this bit is on. Before row 5 the shapes
+    // were textless and the bracket surfaced only in the marker-text lane, a
+    // live per-frame pass that needed no fingerprint; `i` damages the top strip
+    // but the rebuild is fingerprint-guarded, so without this field the damage
+    // would repaint the same cached bytes.
+    bool      fp_iteration_mode           = false;
 
     void destroy_surface() {
         if (surface) {
@@ -272,17 +279,6 @@ struct GuiPaintHandler {
           waveform_worker(waveform_worker_),
           gui(gui_) {}
 
-    // Installed hook (kick_waveform_* pattern), fired inside on_redraw the
-    // instant the displayed-map promotion advances displayed_map_gen — BEFORE
-    // any painting — and only when a promotion actually happened. main.cpp wires
-    // it to Viewport::recompute_hover_at_cursor so the just-promoted map's flag
-    // positions re-resolve the hover identity and rewrite lane_text/readout_text/
-    // copy_payload in-place, and every overlay this frame paints (and any Ctrl+C
-    // landing before the next tick) sees the new identity rather than the old
-    // map's. Held as a std::function to avoid a Viewport& member on the paint
-    // handler. Empty until wired.
-    std::function<void()> on_displayed_map_promoted;
-
     void on_redraw(cairo_t* cr, int x, int y, int w, int h);
     void on_resize(int w, int h);
 
@@ -319,7 +315,7 @@ struct GuiPaintHandler {
     // marker-driven inputs, read live from app state), and
     // fp_measured_font_px (the measured font grid the flag shapes are laid
     // out against — the flag editor's text is NOT one of these fields; it
-    // renders live in the marker-text lane, not in this cache). Rebuilds are
+    // renders live as an overlay after this cache's blit). Rebuilds are
     // synchronous (sub-millisecond at observed flag counts). This rebuild
     // is the SOLE item-basis STAGE site (the retired trim-stem cache's
     // rebuild was the only other one) — see the staging comment at its
@@ -498,7 +494,11 @@ private:
     // #292c30 under #535659, the dropdown its own darker #1c1f22 under #4c4e51.
     void paint_popup_chrome(cairo_t* cr, const GuiRect& r,
                             GuiColor ground, GuiColor border);
-    void paint_marker_text_lane(cairo_t* cr);
+    // The open flag editor's box — all that is left of the marker-text lane's
+    // paint pass. The ambient runs, the fit verdict, the one-run fallback and
+    // the hover spell-out died with the lane in row 5; the editor's overlay
+    // survives, still monospace, until its own unroll change.
+    void paint_flag_editor_box(cairo_t* cr);
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
     // THE GROUND RECOLOR, painted after render_canvas and BEFORE the plate blit
     // (the Ableton model — the highlight changes the ground, the ink is
@@ -513,32 +513,38 @@ private:
     // playhead): paints EVERY trim pixel per frame — the b/e chips, the bridge
     // bar, the strip-crossing stem segments, and the waveform stem segments —
     // in ONE pass, in the old trim-stem-cache slot: after
-    // paint_phase_reset_overlay_ring, before paint_selected_stem and hence before
+    // paint_phase_reset_overlay_ring, before paint_marker_stems and hence before
     // every playhead element, while the flag blit still follows the playheads.
     // "Markers over trim" and "playhead over trim" are therefore STRUCTURAL
-    // pass order (trim < selected stem < playheads < flags), not an intra-cache
+    // pass order (trim < marker stems < playheads < flags), not an intra-cache
     // paint convention. Invoked whenever the exposed rect intersects the top
     // strip OR the waveform area — render_background erases every exposed
     // top-strip pixel, so a strip-only damage (hover text, a flag change) must
     // repaint the live chips/bridge/strip stems too; the outer Cairo damage
     // clip bounds the actual work. See the definition for the basis contract.
     void paint_trim(cairo_t* cr, const GuiRect& area, const GuiRect& top_strip);
-    // Selected-marker stem (architect 2026-07-25): a per-frame
-    // live overlay marking the SINGLE selected marker's column — where the playhead
-    // sits/would land on it — ALWAYS painted for a singleton selection. It is the
-    // singleton's focus visual: hover-, pin-, and gesture-INDEPENDENT (the whole
-    // conditional-stem apparatus was harvested when the stem became
-    // unconditional), so a keyboard-only selection shows it and it persists
-    // through scrubs/auditions. The ONE
-    // non-selection input is a live position DRAG, which overrides the store frame
-    // with the proposed position so the stem tracks the flag. Painted in
-    // kSelectedStem — its own tunable, independent of every flag fill and ring
-    // (a full-height line carries a color differently than a 1px flag border) —
-    // through render_playhead's line-only form
-    // over the plate; a live overlay, so selection changes never rebuild a cache.
-    // A focused GROUP (2+ selected) shows no stem — its focus cue is the extent
-    // region's recolored ground (kRegionCanvas), the stem's "spread" form.
-    void paint_selected_stem(cairo_t* cr, const GuiRect& area);
+    // MARKER STEMS (row 5, 2026-08-01) — the per-frame waveform overlay that
+    // replaced the singleton selected-marker stem outright. EVERY ENABLED marker
+    // of the active column stems, always, from its flag's bottom (= the marker
+    // lane's bottom = the waveform top) down through the waveform to the
+    // window's content bottom, in its class's UNSELECTED color; a DISABLED
+    // marker stems never. Selection changes nothing here — a selected default
+    // marker keeps the calm #9b59b6 stem, the architect's explicit rule, and the
+    // selection cue is entirely the flag's bright colour pair.
+    //
+    // It paints from the marker painter's stash (AppState::marker_stems) rather
+    // than walking the store: the stem stands on its flag box's LEFT EDGE, and
+    // that column is the one the painter already resolved on the displayed
+    // basis, so stem and flag cannot land on different pixels during an async
+    // publish window. A live overlay, not a cache — the stash is the cached
+    // part.
+    //
+    // The old singleton stem's whole apparatus goes with it: the size()==1 gate,
+    // the DragOverlay re-derivation (the stash already carries the mid-drag
+    // column), the kSelectedStem paint, and selection.cpp's stem capture/damage
+    // pairs. kSelectedStem and its colors.conf key STAY DECLARED under the
+    // palette ruling — only this paint site is gone.
+    void paint_marker_stems(cairo_t* cr, const GuiRect& area);
     void paint_playheads(cairo_t* cr, const GuiRect& area);
     void paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr, int sr);
