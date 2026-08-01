@@ -129,6 +129,16 @@ struct TrimRange {
 // key->global table in color_config.cpp is that order's one authoritative
 // statement, and this block mirrors it for reading only.
 inline GuiColor kBackground       = hex(0x202326);  // Breeze Window
+// THESE TWO HAVE NO PAINT SITE LEFT (row 6, 2026-08-01) — they are DECLARED,
+// still loaded, still in the canonical key order and still validated by the
+// whole-file grammar, and nothing reads them: the canvas ground and the waveform
+// ink now paint from kWaveformCanvas / kWaveformInk, the crops' own values.
+// Kept rather than deleted under the inert-conf ruling that already keeps
+// kSelectedStem and kTrimStem — a key's removal is a grammar change, and the
+// grammar is not what the redesign is editing. (kLine below joined them: the 1px
+// area border was its last paint site.) Their comments below describe the
+// values they hold, which is now history rather than behavior.
+//
 // The work surface: the Breeze/qt6ct "Light" bevel role — the desktop's own
 // lifted-panel value, still clearly lighter than the chrome above, so the
 // inversion the ground split describes reads at a glance.
@@ -167,10 +177,12 @@ inline GuiColor kTextDisabled     = hex(0x606263);
 // THE ONE STRUCTURAL LINE COLOR: the DISABLED WindowText role, from the same
 // KColorScheme pass over the shipped scheme as kTextDisabled — the architect's
 // separator value, the desktop's own arithmetic rather than a blend invented
-// against the chrome. Every inert structural rule on an UN-REDESIGNED surface
-// paints in it — now the waveform area's 1px top and bottom border
-// (render_canvas), the strip-row ring having retired with the zoom lane
-// (2026-07-31); the redesigned rows take their own sampled kRedesignLine
+// against the chrome. It was every inert structural rule on an UN-REDESIGNED
+// surface, and IT HAS NO PAINT SITE LEFT: the strip-row ring retired with the
+// zoom lane (2026-07-31) and row 6 replaced its last one — the waveform area's
+// 1px top and bottom border — with the crops' 2px black (2026-08-01). Declared
+// and inert now, exactly like kCanvas and kWaveform above and for the same
+// reason; the redesigned rows take their own sampled kRedesignLine
 // instead. It is not an accent and never marks state. The trim
 // chips' ring and stems take this same value from their own keys, so every calm
 // 1px rule in the product is one color.
@@ -561,6 +573,104 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // reason specific to this lane — flags OVERLAP, so a translucent disabled flag
 // would show its neighbour through itself and read as a third color.
 inline constexpr double kMarkerDisabledMix = 0.25;
+
+// -- ROW 6: THE WAVEFORM ITSELF ---------------------------------------------
+//
+// Measured off row_6_waveform_full.png (741x338), row_6_waveform_border.png
+// (1x2) and row_6_waveform_filename.png (635x15). THE BLANKET HARD-CODING
+// RULING REACHES THE WAVEFORM AREA (architect 2026-08-01): the canvas ground and
+// the waveform ink were the LAST two colors the shrinking colors.conf domain was
+// contracting TOWARD, and the crops take them too. The keys `canvas` and
+// `waveform_ink` STAY DECLARED and stay in the grammar (kCanvas / kWaveform
+// above, the inert-conf ruling that already keeps kSelectedStem and kTrimStem) —
+// what moves is their PAINT SITES, of which each had exactly one: render_canvas
+// (this file) and the two render_waveform calls in waveform_cache.cpp.
+//
+// EVERY OTHER WAVEFORM-AREA TUNABLE IS UNTOUCHED and still reads its key,
+// awaiting a crop of its own state: the region highlight ground (kRegionCanvas),
+// the phase-reset overlay ring, the disabled/red marker classes' remaining
+// tunables, and the trim colors. Row 6 is the ground and the ink, nothing else.
+inline constexpr GuiColor kWaveformCanvas = hex(0x12312B);  // (18, 49, 43)
+inline constexpr GuiColor kWaveformInk    = hex(0x1C816B);  // (28, 129, 107)
+
+// THE AREA'S BORDER: 2px of pure black at the top and the bottom, full window
+// width. Both rows of row_6_waveform_border.png are (0,0,0), and the full crop's
+// rows 0-1 are black across all 741 columns with the canvas starting at row 2.
+//
+// ONLY THE TOP BORDER IS CROP-PROVEN: row_6_waveform_full.png ends inside the
+// waveform (its last rows are plain canvas), so the bottom border is the
+// architect's instruction rather than a measurement, applied symmetrically.
+//
+// TAKEN FROM THE AREA, NOT ADDED TO IT — the shape render_canvas already used
+// for the 1px kLine border it replaces, kept deliberately. The CSS reading says
+// a border sits OUTSIDE the stated content, and it does: waveform_content_rect
+// is that content, and it shrinks by these rows. What does NOT move is
+// waveform_area itself, so the lane stack, the strip geometry, the effective
+// width, samples-per-pixel and every column mapping are bit-identical to before
+// row 6 — the border costs 2 rows of INK HEIGHT and nothing else. Shrinking the
+// area instead would have rescaled the plate and moved every basis that divides
+// by it, for a border drawn at the same pixels either way.
+// (The gui_scale accessors for every row-6 LENGTH live with the other scaled
+// accessors below — gui_scale_factor is not declared yet at this point in the
+// header, exactly as for rows 1-5.)
+inline constexpr GuiColor kWaveformBorder   = hex(0x000000);
+inline constexpr int      kWaveformBorderPx = 2;
+
+// THE FILENAME OVERLAY — the source wav's basename on a dark band at the
+// waveform's top-left, measured off the two crops together.
+//
+// THE BAND: ground #0b1d1a, x 1..635 and y 2..16 of the full crop — so it sits
+// FLUSH under the 2px border (no gap: the border ends at row 1, the band begins
+// at row 2) with a 1px left margin from the area's own left edge, and it is 15
+// rows tall. Its width is DERIVED, pad + shaped basename + pad, with the pads at
+// 2 (the filename crop's ink runs columns 2..632 of its 635, giving 2 on each
+// side).
+//
+// THE TEXT: pure #ffffff — the crop is subpixel-rendered (its histogram is full
+// of colour fringes), and a fully covered pixel is the true colour: 41 pixels
+// land on exactly (255,255,255). It is NOT kRedesignLabel #fcfcfc; two
+// independent samples kept apart, the row-3 precedent.
+//
+// THE SIZE IS THE REDESIGN'S OWN 12pt, and the crop agrees to the pixel — which
+// is why no third type size appears here. Measured offscreen on our sans face at
+// 16px: a digit's ink is exactly 12.00 rows tall (the crop's "05" occupies rows
+// 0..11), and the real filename's ink box runs -12.00 to +3.00 about the
+// baseline = exactly 15 rows (the crop's band). So the baseline is band row 12,
+// authored like the marker flag's for the same reason: the band height is
+// authored off the crop too, and the two must agree with the crop rather than
+// with a font's internal leading. Ascenders touch the band's first row and
+// descenders its last, exactly as the crop shows — the band has NO vertical
+// padding at all.
+//
+// The advance of the crop's own filename is 627px on our face against
+// kdenlive's 631 (band 631 vs 635) — a 4px give-up on a 600px band, the same
+// class of deliberate difference as the marker flag's 54-vs-55, recorded so the
+// next reader does not chase it.
+inline constexpr GuiColor kWaveformFilenameBand  = hex(0x0B1D1A);  // (11,29,26)
+inline constexpr GuiColor kWaveformFilenameLabel = hex(0xFFFFFF);
+inline constexpr int kFilenameBandHPx      = 15;
+inline constexpr int kFilenameBaselinePx   = 12;
+inline constexpr int kFilenamePadXPx       = 2;
+inline constexpr int kFilenameMarginLeftPx = 1;
+
+// THE ALIASING TOGGLE (architect 2026-08-01). TRUE is the shipped renderer —
+// the 2026-07-26 draw arc's coverage plate, byte-for-byte — and FALSE selects a
+// hard-edged classic variant: per-column opaque min/max bars, no Wu tip
+// polylines, no halos, no fractional coverage anywhere.
+//
+// IT IS ADDITIVE BY RULING. The AA machinery stays fully COMPILED and
+// syntactically untouched in both settings (the branch is an ordinary runtime
+// `if` on this constant, not `#if` and not `if constexpr`, precisely so the
+// discarded path keeps being type-checked and warned about; -O3 folds it), and
+// the aliased arm adds code beside it rather than editing it. The architect's
+// standing instruction: this is the one piece of code to leave in even if the
+// comparison goes against it.
+//
+// COMPILE-TIME FOR NOW — the architect A/Bs by rebuilding. A settings key could
+// follow (the six-edit engine-key recipe in settings.md); nothing here would
+// change but the constant becoming a read of app.engine_settings, since the two
+// arms already share every input.
+inline constexpr bool kWaveformAntialiased = true;
 
 // -- The TOOLTIP CHROME (the dropdown has its own, below) -------------------
 //
@@ -1000,6 +1110,36 @@ inline int marker_flag_baseline_px() {
         static_cast<double>(kMarkerFlagBaselinePx) * gui_scale_factor()));
     return v < 1 ? 1 : v;
 }
+// ROW 6's LENGTHS on the same axis (the measurements and the reasoning are at
+// the row-6 palette block: 2px borders taken from the area, a 15px filename band
+// flush under the top border with a 1px left margin, 2px pads, baseline at band
+// row 12).
+inline int waveform_border_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kWaveformBorderPx) * gui_scale_factor()));
+    return v < 1 ? 1 : v;
+}
+inline int filename_band_h_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kFilenameBandHPx) * gui_scale_factor()));
+    return v < 1 ? 1 : v;
+}
+inline int filename_baseline_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kFilenameBaselinePx) * gui_scale_factor()));
+    return v < 1 ? 1 : v;
+}
+inline int filename_pad_x_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kFilenamePadXPx) * gui_scale_factor()));
+    return v < 1 ? 1 : v;
+}
+inline int filename_margin_left_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kFilenameMarginLeftPx) * gui_scale_factor()));
+    return v < 1 ? 1 : v;
+}
+
 // THE NINE-GLYPH BUDGET, kept from the retired marker-text lane: a label longer
 // than nine glyphs displays as its first EIGHT bytes plus the UTF-8 ellipsis
 // (U+2026, 3 bytes) — 11 bytes, 9 glyphs. Composed marker text is ASCII by
@@ -1380,32 +1520,49 @@ struct FlagHitRect {
 
 // The two ground fills, one per surface class (see the palette's ground split):
 // render_background erases CHROME in kBackground, render_canvas erases the
-// WAVEFORM AREA in the lighter kCanvas. on_redraw calls the first over the whole
-// exposed rect, then the second over the exposed part of the waveform area, so
-// the canvas wins exactly the pixels the plate, playheads, ground recolors, and
-// trim stems paint on — cold frames (no plate yet) included.
+// WAVEFORM AREA in kWaveformCanvas — the row-6 crop's own #12312b, no longer the
+// tunable kCanvas. on_redraw calls the first over the whole exposed rect, then
+// the second over the exposed part of the waveform area, so the canvas wins
+// exactly the pixels the plate, playheads, ground recolors, and trim stems paint
+// on — cold frames (no plate yet) included.
 //
-// render_canvas ALSO owns the waveform area's 1px BORDER: after the kCanvas
-// fill it paints the area's topmost and bottommost pixel rows in kLine. The
-// border is taken FROM the area, not added to it — the waveform area rect is
-// unchanged and the CONTENT band shrinks by one row at each end
+// render_canvas ALSO owns the waveform area's BORDER: after the ground fill it
+// paints the area's topmost and bottommost rows in kWaveformBorder, 2px each
+// since row 6 (it was 1px of kLine). The border is taken FROM the area, not
+// added to it — the waveform area rect is unchanged, so no lane or column
+// arithmetic moves, and the CONTENT band shrinks by those rows at each end
 // (waveform_content_rect below). Top and bottom only; the area's sides are the
 // window edges (and the inert right gutter), which need no rule.
 void render_background(cairo_t* cr, int x, int y, int w, int h);
 void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 
-// The waveform area's CONTENT band: the area minus the two kLine border rows
-// render_canvas paints at its top and bottom. Every pass that fills a BAND
-// inside the area clips to this — the plate blit, the region ground recolor,
-// and the overlay ring's runs — so the border rows survive the frame no
-// matter what covers the area. 1px VERTICALS deliberately do not: the
-// playheads, the marker/trim stems, and the strip-drag anchor stem run the full
-// area height and cross the border, which is correct for a position line and is
-// not special-cased anywhere. Degenerate areas (h <= 2, unreachable under the
-// window floor) pass through unshrunk rather than inverting.
+// ROW 6's FILENAME OVERLAY: the loaded source's basename on its own dark band at
+// the waveform's top-left, flush under the top border. Painted AFTER the plate
+// blit (it sits over the ink) and before every position line, so the playheads
+// and the marker/trim stems cross it exactly as they cross the borders — a
+// boundary line is not something an overlay clips. Static: nothing about the
+// viewport, the zoom or the selection enters it, so it never needs damage of its
+// own (its pixels are waveform-area pixels; the full contract is at the
+// definition).
+void render_waveform_filename(cairo_t* cr, const AppState& app, GuiRect area);
+
+// The waveform area's CONTENT band: the area minus the border rows
+// render_canvas paints at its top and bottom — 2px each since row 6
+// (waveform_border_px, the black border that replaced the 1px kLine one). Every
+// pass that fills a BAND inside the area clips to this — the plate blit, the
+// region ground recolor, and the overlay ring's runs — so the border rows
+// survive the frame no matter what covers the area. 1px VERTICALS deliberately
+// do not: the playheads, the marker/trim stems, and the strip-drag anchor stem
+// run the full area height and cross the border, which is correct for a position
+// line and is not special-cased anywhere — row 6 KEEPS that (the stems' recorded
+// z-intent is to run over the borders, and both borders are painted by
+// render_canvas at the very bottom of the pass order, so every stem still
+// crosses them). Degenerate areas (too short to carry both borders) pass through
+// unshrunk rather than inverting.
 inline GuiRect waveform_content_rect(GuiRect area) {
-    if (area.h <= 2) return area;
-    return GuiRect{area.x, area.y + 1, area.w, area.h - 2};
+    const int b = waveform_border_px();
+    if (area.h <= 2 * b) return area;
+    return GuiRect{area.x, area.y + b, area.w, area.h - 2 * b};
 }
 
 // THE COLUMN MAPPING BASIS — the plate's viewport start, the PAINTER's

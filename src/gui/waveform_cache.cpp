@@ -85,11 +85,16 @@ void render_waveform_to_cache_surface(
     const GuiRect ch1{0, cache_area.y + ch_h, cache_area.w, ch_h};
     // The full render IS the basis: global column 0 at the plate's own width.
     const WaveformBasis basis{vp_start, painter_spp, area_w};
+    // ROW 6: the ink is the CROP's #1c816b, hard-coded (kWaveformInk). These two
+    // calls were the `waveform_ink` key's only paint sites; the key stays
+    // declared and stays in the grammar (the ruling is at the row-6 palette
+    // block, render.h). Both channels take the one constant, as they took the
+    // one global.
     render_waveform(dest, ch0, /*col0=*/0, audio, 0,
-                    basis, kWaveform,
+                    basis, kWaveformInk,
                     warp_frame_map_or_null);
     render_waveform(dest, ch1, /*col0=*/0, audio, 1,
-                    basis, kWaveform,
+                    basis, kWaveformInk,
                     warp_frame_map_or_null);
 }
 

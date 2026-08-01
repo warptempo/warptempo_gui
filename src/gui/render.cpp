@@ -11,6 +11,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>   // the filename overlay's basename
 #include <string>
 #include <utility>
 #include <vector>
@@ -137,21 +138,30 @@ void render_background(cairo_t* cr, int x, int y, int w, int h) {
 void render_canvas(cairo_t* cr, int x, int y, int w, int h) {
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_set_source_rgb(cr, kCanvas.r, kCanvas.g, kCanvas.b);
+    // ROW 6: the ground is the CROP's #12312b, hard-coded (kWaveformCanvas).
+    // The `canvas` colors.conf key stays declared and stays in the grammar; this
+    // was its one paint site. The ruling and the key's inert status are at the
+    // row-6 palette block.
+    cairo_set_source_rgb(cr, kWaveformCanvas.r, kWaveformCanvas.g,
+                         kWaveformCanvas.b);
     cairo_rectangle(cr, x, y, w, h);
     cairo_fill(cr);
-    // The 1px kLine border, taken FROM the area: the topmost and bottommost
-    // pixel rows of the same rect, painted in the same pass as the ground so
-    // the two can never disagree about where the area ends. Every band-filling
-    // pass that follows clips to waveform_content_rect (the rows between them),
-    // so nothing covers the border but the deliberate full-height 1px verticals
-    // (playheads, stems). Integer-edged rects with AA off, the crisp-line
-    // convention. A degenerate area (h <= 2) draws no border rather than
-    // overlapping them.
-    if (h > 2) {
-        cairo_set_source_rgb(cr, kLine.r, kLine.g, kLine.b);
-        cairo_rectangle(cr, x, y, w, 1);
-        cairo_rectangle(cr, x, y + h - 1, w, 1);
+    // THE BORDER, taken FROM the area: its topmost and bottommost rows, painted
+    // in the same pass as the ground so the two can never disagree about where
+    // the area ends. Row 6 made it 2px of pure black (it was 1px of the tunable
+    // kLine, whose last paint site this was); the shape is unchanged, and
+    // waveform_content_rect — the band every band-filling pass clips to — reads
+    // the same waveform_border_px, so the two cannot drift. Nothing covers the
+    // border but the deliberate full-height 1px verticals (playheads, stems),
+    // which is their recorded z-intent and survives row 6 unchanged. Integer-
+    // edged rects with AA off, the crisp-line convention. An area too short to
+    // carry both borders draws neither rather than overlapping them.
+    const int border = waveform_border_px();
+    if (h > 2 * border) {
+        cairo_set_source_rgb(cr, kWaveformBorder.r, kWaveformBorder.g,
+                             kWaveformBorder.b);
+        cairo_rectangle(cr, x, y, w, border);
+        cairo_rectangle(cr, x, y + h - border, w, border);
         cairo_fill(cr);
     }
     cairo_restore(cr);
@@ -486,7 +496,11 @@ void render_waveform(cairo_surface_t* dest,
     // simply starts one column earlier in target view.
     const double g_halo0 = to_source(edge_at(static_cast<long long>(col0) - 1));
     double       g_prev  = to_source(edge_at(static_cast<long long>(col0)));
-    {
+    // THE HALOS EXIST ONLY TO FEED THE TIP SEGMENTS, so the aliased variant skips
+    // both — it has no inter-column connectivity for an offscreen neighbour to
+    // contribute to, and the read would be pure waste. (The right halo's own skip
+    // is at the end of this function.)
+    if (kWaveformAntialiased) {
         long long hs0 = static_cast<long long>(std::nearbyint(g_halo0));
         const long long hs1 = static_cast<long long>(std::nearbyint(g_prev));
         if (hs0 < 0) hs0 = 0;
@@ -528,6 +542,55 @@ void render_waveform(cairo_surface_t* dest,
         const double cur_top_y = y_center - raw_max * half_h;
         const double cur_bot_y = y_center - raw_min * half_h;
         const bool   cur_thin  = (cur_bot_y - cur_top_y) <= kThinIntervalPx;
+
+        // -- THE ALIASED VARIANT (kWaveformAntialiased == false) -------------
+        //
+        // The classic look: this column's own raw interval as a HARD opaque bar
+        // and nothing else — no fractional boundary rows, no tip segments, no
+        // halo contribution, no coverage anywhere. It is an ADDITIVE arm by
+        // ruling: everything the AA renderer does is below and untouched, and
+        // this returns to the top of the loop before reaching any of it.
+        //
+        // AN ORDINARY `if`, NOT `#if` OR `if constexpr`: the AA machinery must
+        // stay compiled and warned-about in both settings (the toggle's own
+        // contract), and -O3 folds a constexpr bool test to nothing. With the
+        // toggle TRUE the generated code is what it was — the acceptance bar is
+        // byte-identical output, and the only way to guarantee that is for the
+        // AA path to keep executing unmodified.
+        //
+        // ROWS, NOT COVERAGE: floor both tips into rows and fill inclusively.
+        // The interval is at least one row wide however small it is (top and
+        // bottom floor to the same row), so flat and silent material draws a
+        // 1px line rather than fading out — the never-fade floor the AA renderer
+        // gets from its unit deposits, expressed here as integer geometry.
+        // The bar is this column's OWN interval, so there is no inter-column
+        // connectivity at all: a spike stands alone, exactly as in a classic
+        // min/max renderer.
+        if (!kWaveformAntialiased) {
+            if (x >= 0 && x < surf_w) {
+                double yt = cur_top_y;
+                double yb = cur_bot_y;
+                const double row_lo = static_cast<double>(y_lo);
+                const double row_hi = static_cast<double>(y_hi);   // exclusive
+                if (yt < row_lo) yt = row_lo;
+                if (yb < row_lo) yb = row_lo;
+                if (yt > row_hi) yt = row_hi;
+                if (yb > row_hi) yb = row_hi;
+                int r0 = static_cast<int>(std::floor(yt));
+                int r1 = static_cast<int>(std::floor(yb));
+                if (r0 < y_lo)     r0 = y_lo;
+                if (r1 > y_hi - 1) r1 = y_hi - 1;
+                for (int y = r0; y <= r1; ++y) put(x, y, opaque_word);
+            }
+            // The carry the AA path keeps for its segments is maintained anyway:
+            // it costs two stores, and leaving it correct means the two arms
+            // differ only in what they PAINT.
+            prev_top_y = cur_top_y;
+            prev_bot_y = cur_bot_y;
+            have_prev  = true;
+            g_prev     = g1;
+            continue;
+        }
 
         // 1. INTERIOR FIRST (tall only), REPLACE-written into the cleared
         //    column. Its extent is this column's OWN raw interval: there is no
@@ -613,7 +676,7 @@ void render_waveform(cairo_surface_t* dest,
     // col0+area.w's left edge — so this costs one more map call in target view.
     // Only the deposits landing on the last drawn column survive the owned-column
     // clip; the ones aimed at the offscreen column are dropped.
-    if (have_prev) {
+    if (kWaveformAntialiased && have_prev) {
         const double rg0 = g_prev;
         const double rg1 =
             to_source(edge_at(static_cast<long long>(col0) + area.w + 1));
@@ -638,6 +701,76 @@ void render_waveform(cairo_surface_t* dest,
 
     // Last CPU write is done — hand the buffer back to cairo.
     cairo_surface_mark_dirty(dest);
+}
+
+// -- render_waveform_filename ---------------------------------------------
+
+// THE FILENAME OVERLAY (row 6): the source wav's BASENAME on its own dark band
+// at the waveform's top-left. The anatomy, every measurement behind it and the
+// deliberate 4px width give-up are at the row-6 palette block (render.h).
+//
+// STATIC BY DESIGN: it names the loaded file and nothing else — no viewport, no
+// zoom, no playhead, no selection enters it, so it is the one waveform-area
+// element that does not move when anything moves. It needs no damage of its own
+// for that reason: its pixels are waveform-area pixels, so every existing
+// waveform damage repaints it, and the only event that changes its TEXT is a
+// source load, which rebuilds and damages everything.
+//
+// TRUNCATION IS A CLIP, NOT A RE-SHAPE. The band is clamped to the area's width
+// and the run paints under a clip to the band's interior, so a long filename is
+// cut mid-glyph at the window edge. That is deliberately the flag EDITOR's
+// model (a view that truncates) rather than the flag LABEL's (an ellipsis at a
+// glyph budget): a filename is an identity, not a label, and re-shaping a byte
+// prefix would need cluster-boundary care to no visible benefit at a cut that
+// only ever happens at the window edge. No scrolling, no ellipsis, no marquee.
+void render_waveform_filename(cairo_t* cr, const AppState& app, GuiRect area) {
+    if (area.w <= 0 || area.h <= 0) return;
+    if (app.source_audio_path.empty()) return;
+    const std::string name =
+        std::filesystem::path(app.source_audio_path).filename().string();
+    if (name.empty()) return;
+
+    const int border   = waveform_border_px();
+    const int band_h   = filename_band_h_px();
+    const int pad      = filename_pad_x_px();
+    const int margin_l = filename_margin_left_px();
+    // FLUSH UNDER THE TOP BORDER (the crop: border rows 0-1, band from row 2),
+    // and inside the content band by construction. A window too short to show
+    // the band under its own border draws nothing rather than spilling.
+    const int band_y = area.y + border;
+    if (band_y + band_h > area.y + area.h - border) return;
+
+    cairo_save(cr);
+    cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_font_size(cr, redesign_font_size_px());
+    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+    const text_shape::ShapedRun run = text_shape::shape_text_run(font, name);
+
+    const int band_x = area.x + margin_l;
+    int band_w = 2 * pad + static_cast<int>(std::nearbyint(run.width_px));
+    const int max_w = area.x + area.w - band_x;
+    if (max_w <= 0) { cairo_restore(cr); return; }
+    if (band_w > max_w) band_w = max_w;
+
+    // The band, then the label clipped to it. AA off on the fill so the band's
+    // edges are exactly the integer rows and columns the crop shows.
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    cairo_set_source_rgb(cr, kWaveformFilenameBand.r, kWaveformFilenameBand.g,
+                         kWaveformFilenameBand.b);
+    cairo_rectangle(cr, band_x, band_y, band_w, band_h);
+    cairo_fill(cr);
+    cairo_restore(cr);
+
+    cairo_rectangle(cr, band_x, band_y, band_w, band_h);
+    cairo_clip(cr);
+    cairo_set_source_rgb(cr, kWaveformFilenameLabel.r,
+                         kWaveformFilenameLabel.g, kWaveformFilenameLabel.b);
+    text_shape::show_shaped_run(
+        cr, run, static_cast<double>(band_x + pad),
+        static_cast<double>(band_y + filename_baseline_px()));
+    cairo_restore(cr);
 }
 
 void render_playhead(cairo_t* cr,

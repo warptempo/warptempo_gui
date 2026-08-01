@@ -1869,8 +1869,8 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     // to ink over plain canvas wherever coverage is full.
     //
     // The clip is the CONTENT band, not the full area: the area's top and
-    // bottom rows are render_canvas's kLine border and no band-filling pass may
-    // cover them. (The plate's own inset band leaves those rows transparent
+    // bottom rows are render_canvas's 2px black border (row 6) and no
+    // band-filling pass may cover them. (The plate's own inset band leaves those rows transparent
     // anyway, so this is the structural statement of the rule rather than a
     // pixel change.)
     if (wf_cache.surface) {
@@ -1926,7 +1926,7 @@ GuiPaintHandler::region_columns(const PlateViewportBasis& basis) const {
 // exactly what the recolor model rejects.
 // Session-only, nothing persisted; not part of the plate/flag caches — a direct
 // per-frame pass, so no cache is involved. AA off, integer edges. The fill is
-// clipped to the CONTENT band so it cannot cover the area's kLine border rows.
+// clipped to the CONTENT band so it cannot cover the area's border rows.
 void GuiPaintHandler::paint_region_ground(cairo_t* cr, const GuiRect& area) {
     if (!app.region.active) return;
     if (area.w <= 0 || area.h <= 0) return;
@@ -2122,7 +2122,7 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // stems, so an opaque line crossing waveform ink is correct and intended, and
 // with no fill inside it the band now READS as the two edges of a span rather
 // than as a tinted region. The CONTENT band bounds it, so the top and bottom
-// runs sit inside the kLine border
+// runs sit inside the area's border
 // rather than on them. A vertical side is drawn only where the band's own edge
 // is the true edge — both x0 and x1 come back already clipped to the area, so a
 // band running past a viewport edge draws its border there too; that is the
@@ -2806,8 +2806,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // (paint_trim) on the free item-basis owners.
         //
         // Final paint order (bottom to top of the stack): canvas ground + its
-        // kLine border (painted above, unconditionally) -> region ground ->
-        // waveform plate -> overlay ring -> LIVE
+        // 2px black border (painted above, unconditionally) -> region ground ->
+        // waveform plate -> THE FILENAME OVERLAY -> overlay ring -> LIVE
         // TRIM (bar + endcaps + waveform stem segments, one pass)
         // -> playheads (scanner line + cursor stem) -> MARKER STEMS -> ruler ->
         // flag blit -> flag editor overlay -> strip-drag anchor -> bottom strip.
@@ -2840,6 +2840,14 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // antialiased fringes composite against the recolored ground.
             paint_region_ground(cr, area);
             paint_waveform_plate(cr, area);
+            // ROW 6's FILENAME OVERLAY, immediately over the ink and under
+            // everything else in the area: the phase-reset ring, trim, the
+            // playheads and the stems all follow, so a position line crosses the
+            // band exactly as it crosses the area's borders. It is inside this
+            // area-gated block because its pixels ARE waveform-area pixels —
+            // which is also why it needs no damage of its own (it is static; the
+            // contract is at render_waveform_filename).
+            render_waveform_filename(cr, app, area);
             // The overlay band's boundary ring — the phase-reset overlay's whole
             // visual — over the plate and under trim
             // and the stems, so the focused reset's own stem stays crisp on top
