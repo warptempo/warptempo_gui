@@ -722,7 +722,8 @@ struct ChipRowPressSeed {
 
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the kdenlive rows carry, in painted order: row 1's Quit and Settings,
-// row 2's toolbar four, then row 3's two TABS. It exists ONCE, here, because it indexes
+// row 2's toolbar four, row 3's two TABS, then row 4's eleven view / mode /
+// action buttons. It exists ONCE, here, because it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
 // it; each domain then attaches its own attribute to these ids and to nothing
 // else — the painter's label/icon/layout table (paint_handler.cpp) and the
@@ -735,8 +736,11 @@ struct ChipRowPressSeed {
 // recompute, and their press is the same band claim dispatching a chord through
 // on_key. What they do NOT take is the two row-2-only faces — no click face and
 // no disabled face — which is stated at each face's site rather than modelled
-// here. Row 1's Settings is the same story: a roster entry with two faces whose
-// press is the bare `;` chord.
+// here (row 4 takes the click face but not the disabled one). Row 1's SETTINGS
+// is the roster's ONE non-chord entry: its press TOGGLES THE DROPDOWN, which no
+// keyboard chord does, and it is spelled at the menu claim rather than in the
+// chord table. Quit is not that entry — Ctrl+Q is its chord and it sits in the
+// table like the rest.
 //
 // The enum ORDER is painted order, and redesign_button_index depends on the
 // values staying 0..kRedesignButtonCount-1 contiguous (the tick comparator in
@@ -804,6 +808,23 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Cover",          "cover",          false},
 };
 inline constexpr int kSettingsPopupItemCount = 7;
+
+// The dropdown's painted HEIGHT, derived from the table above and the scale
+// alone — no shaping, no paint. Its one non-painter reader is the OPEN EDGE
+// (toggle_settings_popup), which has to damage the box on the frame BEFORE the
+// box exists: at 100% the popup happens to fit inside the top strip, but at 200%
+// it hangs ~40px past it, and a redraw is clipped to the damage it was given.
+// The painter calls this too, so the damaged height and the painted height are
+// one expression and cannot drift.
+inline int settings_popup_h_px() {
+    int separators = 0;
+    for (const SettingsPopupItem& it : kSettingsPopupItems)
+        if (it.separator_before) ++separators;
+    const int border = popup_border_px();
+    return kSettingsPopupItemCount * popup_item_h_px() +
+           separators * (2 * popup_sep_margin_y_px() + border) +
+           2 * border;
+}
 
 // Double-click window and positional slack (architect-tunable). Two motionless
 // plain clicks in the same strip row inside this time and pixel distance are a
@@ -1566,16 +1587,17 @@ struct AppState {
     };
     std::array<RedesignButtonFace, kRedesignButtonCount> redesign_buttons{};
 
-    // THE PRESSED BUTTON — row 2's CLICK FACE, and the only piece of press-state
+    // THE PRESSED BUTTON — the CLICK FACE, and the only piece of press-state
     // machinery the redesigned rows have. A roster index while a left button is
-    // physically held down on an ENABLED row 2 button, -1 otherwise. Written by
-    // exactly two routes, each damaging the strip on the transition: the press
-    // claim sets it (input_pointer.cpp) and clear_redesign_button_press clears
-    // it (the left release and the pointer-leave / button-lost hook). The face
-    // rides the PHYSICAL hold, not the action — the chord already fired at the
-    // press — so it is visual only and survives the pointer wandering off the
-    // button mid-hold. Row 1's Quit and row 3's tabs never appear here: the
-    // click face is row 2's alone (architect 2026-07-31).
+    // physically held down on an ENABLED button that HAS the face, -1 otherwise.
+    // Written by exactly two routes, each damaging the strip on the transition:
+    // the press claim sets it (input_pointer.cpp) and clear_redesign_button_press
+    // clears it (the left release and the pointer-leave / button-lost hook). The
+    // face rides the PHYSICAL hold, not the action — the chord already fired at
+    // the press — so it is visual only and survives the pointer wandering off
+    // the button mid-hold. WHICH buttons have it is the chord table's
+    // `click_face` column (rows 2 and 4 do; rows 1 and 3 keep two faces), not a
+    // fact restated here.
     int redesign_pressed = -1;
 
     // THE SHIFT TOOLTIP'S TIMING STATE — the whole of it. `hover_ms` is the
@@ -1586,8 +1608,15 @@ struct AppState {
     // runs, it compares two numbers, and it damages ONCE on each edge.
     // `rect` is the painter's published tooltip box, needed only for damage
     // (nothing hit-tests a tooltip).
+    // `owner` is the roster index the dwell belongs to (-1 = none). It is what
+    // makes "a fresh dwell on each arrival" TRUE rather than merely intended: a
+    // single motion can leave one tooltip-bearing button and enter the other in
+    // the same recompute, and without the id the stamp would survive that change
+    // — the second button would inherit however much of the first's dwell had
+    // already elapsed, showing instantly if the first tooltip was already up.
     struct RedesignTooltip {
         int64_t hover_ms = 0;
+        int     owner    = -1;
         bool    visible  = false;
         GuiRect rect{0, 0, 0, 0};
     };
@@ -1628,6 +1657,18 @@ struct AppState {
     // means "no motion seen yet".
     int               last_mouse_x = -1;
     int               last_mouse_y = -1;
+
+    // Is the pointer INSIDE the window? last_mouse_{x,y} keep the last position
+    // the pointer was seen at, which is a point INSIDE the window even after it
+    // has left — so anything that re-resolves hover from those coordinates
+    // without this flag would re-light a button under a pointer that is gone.
+    // That matters because the hover recompute is no longer motion-only: the run
+    // loop's tick runs it too (so state and geometry changes that arrive without
+    // motion still re-resolve), and the tick keeps running after a leave.
+    // Written at exactly two edges: true in on_motion, false in the
+    // pointer-leave / capability-loss hook beside the hover and press clears.
+    // Re-entry delivers a synthesized motion, which sets it back.
+    bool              pointer_in_window = false;
 
     // Undo/redo history for marker mutations. The dirty flags below are
     // derived from it (Undo::recompute_dirty walks saved_distance against

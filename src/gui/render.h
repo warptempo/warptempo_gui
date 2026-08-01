@@ -807,6 +807,33 @@ inline int icon_row_h_px() {
 // (paddings, line step, strings) is the painter's alone.
 inline constexpr int     kTooltipHeightPx = 41;   // the two-line form, 100%
 inline constexpr int64_t kTooltipDelayMs  = 700;  // kdenlive-ish; architect-tunable
+// THE SETTINGS DROPDOWN'S VERTICAL metrics, out here for the same reason the
+// tooltip's height is: the popup's OPEN EDGE must damage the box before the box
+// has ever been painted, and its HEIGHT is fully derivable without shaping a
+// single label (item count x item height, plus the separator blocks and the two
+// borders). Its WIDTH is not — that needs the widest shaped label — so the
+// horizontal terms stay with the painter and the open edge damages full-width
+// instead. settings_popup_h_px (app_state.h) does the sum, where the item table
+// is visible.
+inline constexpr int kPopupItemHeightPx = 24;  // = the one-line tooltip's interior
+inline constexpr int kPopupSepMarginYPx = 2;   // above and below the separator
+inline constexpr int kPopupBorderPx     = 1;
+inline int popup_border_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kPopupBorderPx) * gui_scale_factor()));
+    return v < 1 ? 1 : v;
+}
+inline int popup_item_h_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kPopupItemHeightPx) * gui_scale_factor()));
+    return v < 5 ? 5 : v;
+}
+inline int popup_sep_margin_y_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kPopupSepMarginYPx) * gui_scale_factor()));
+    return v < 0 ? 0 : v;
+}
+
 inline int tooltip_h_px() {
     const int h = static_cast<int>(std::nearbyint(
         static_cast<double>(kTooltipHeightPx) * gui_scale_factor()));

@@ -385,7 +385,6 @@ constexpr IconRowDef kIconRowButtons[] = {
 // make this the one surface whose constant means something different from rows
 // 1-4's. (The brief's eyeball estimate of 2-3 is well outside the fit.)
 constexpr double kPopupCornerRadiusPx = 5.0;
-constexpr double kPopupBorderPx       = 1.0;
 
 // THE TOOLTIP, in the crop's own numbers. Two 15px line SLOTS whose block
 // starts 5px below the top border — which puts the two baselines at 18 and 33,
@@ -428,11 +427,13 @@ constexpr TooltipDef kTooltips[] = {
 // the redesign's standing 10px label padding per side (rows 1 and 3's), plus the
 // 3px item inset per side, plus the two 1px borders. The architect pixel-tweaks
 // at 100% by moving these terms.
-constexpr double kPopupItemHeightPx  = 24.0;
+// (The item height, the separator's vertical margin and the border live in
+// render.h with settings_popup_h_px's other ingredients — the popup's OPEN EDGE
+// must size the box before it is painted. Only the HORIZONTAL terms, which
+// depend on the widest shaped label, are the painter's alone.)
 constexpr double kPopupItemInsetPx   = 3.0;   // the highlight box, per side
 constexpr double kPopupLabelPadPx    = 10.0;  // inside the highlight box
 constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
-constexpr double kPopupSepMarginYPx  = 2.0;   // above and below the separator
 
 // The selected tab's outline: a rectangle with ROUNDED TOP corners, and — this
 // is the load-bearing part — NO BOTTOM EDGE. It is an OPEN path running up the
@@ -488,7 +489,7 @@ double redesign_baseline(cairo_scaled_font_t* font, double box_y,
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE MENU ROW (top lane 0, at the window edge): a flat kdenlive-sampled
     // ground carrying TWO buttons — "Quit", whose action is Ctrl+Q's exact
-    // route, and "Settings", whose action is the bare `;` chord. No ring; the
+    // route, and "Settings", whose action is the dropdown toggle. No ring; the
     // kdenlive bar is flat.
     //
     // THE HOVER MODEL IS KDENLIVE'S, and it is TWO faces, not three, for BOTH
@@ -496,8 +497,14 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // filled blue pill sits under it, FLUSH with the row (the css float model —
     // a flat button fills its whole row, architect 2026-07-31). A PRESS PAINTS
     // NOTHING NEW — a click keeps the hover face and only pointer-out rests it.
-    // Row 2's click and disabled faces are scoped to row 2 and do not reach
-    // here, so this row still has no press-state machinery at all.
+    // The click and disabled faces belong to rows 2 and 4 and do not reach here,
+    // so this row has no press-state machinery at all.
+    //
+    // THE TWO ACTIONS DIFFER IN KIND: Quit is its chord (Ctrl+Q, dispatched
+    // through the shared chord table like every other redesigned button), while
+    // SETTINGS TOGGLES THE DROPDOWN — the roster's one non-chord action, since
+    // no keyboard chord opens or closes a popup. The bare `;` key still opens
+    // the settings editor directly and is untouched by the dropdown.
     const GuiRect row = top_menu_row_area(app);
     if (row.w <= 0 || row.h <= 0) return;
 
@@ -1124,7 +1131,7 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r) {
     // they share this and cannot drift apart. ONE PATH, filled then stroked, the
     // construction the row-4 fit settled: the fill's edge and the stroke's
     // centreline describe the same rectangle by construction.
-    const int    lw   = std::max(1, scaled_px(kPopupBorderPx));
+    const int    lw   = popup_border_px();
     const double half = static_cast<double>(lw) * 0.5;
     const double rad  = std::nearbyint(kPopupCornerRadiusPx * gui_scale_factor());
     redesign_rounded_rect_path(cr, r.x + half, r.y + half,
@@ -1238,12 +1245,12 @@ void GuiPaintHandler::paint_settings_popup(cairo_t* cr) {
     cairo_set_font_size(cr, redesign_font_size_px());
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
 
-    const int border    = std::max(1, scaled_px(kPopupBorderPx));
-    const int item_h    = scaled_px(kPopupItemHeightPx);
+    const int border    = popup_border_px();
+    const int item_h    = popup_item_h_px();
     const int inset     = scaled_px(kPopupItemInsetPx);
     const int label_pad = scaled_px(kPopupLabelPadPx);
     const int sep_inset = scaled_px(kPopupSepInsetPx);
-    const int sep_mar   = scaled_px(kPopupSepMarginYPx);
+    const int sep_mar   = popup_sep_margin_y_px();
     const int sep_block = 2 * sep_mar + border;   // margin, line, margin
 
     // WIDTH FROM THE WIDEST SHAPED LABEL — the runs are shaped once here and
@@ -1251,16 +1258,16 @@ void GuiPaintHandler::paint_settings_popup(cairo_t* cr) {
     // measurements (the displayed-basis doctrine, again).
     text_shape::ShapedRun runs[kSettingsPopupItemCount];
     double widest = 0.0;
-    int separators = 0;
     for (int i = 0; i < kSettingsPopupItemCount; ++i) {
         runs[i] = text_shape::shape_text_run(font, kSettingsPopupItems[i].label);
         widest = std::max(widest, runs[i].width_px);
-        if (kSettingsPopupItems[i].separator_before) ++separators;
     }
     const int w = static_cast<int>(std::nearbyint(widest)) +
                   2 * label_pad + 2 * inset + 2 * border;
-    const int h = kSettingsPopupItemCount * item_h + separators * sep_block +
-                  2 * border;
+    // THE HEIGHT COMES FROM THE SHARED SUM, not a second walk here: the open
+    // edge damages settings_popup_h_px() before this ever runs, so the two must
+    // be one expression.
+    const int h = settings_popup_h_px();
 
     int x = btn.x;
     int y = btn.y + btn.h;               // flush: zero margin under the row

@@ -280,7 +280,29 @@ GuiRect waveform_area(const AppState& a) {
     // (never at 1920/2560/3840).
     constexpr int kGridStepPx = 16;
     const int effective_w = w - (w % kGridStepPx);
-    return GuiRect{0, top_h, effective_w, h - top_h - bot_h};
+    // DEFENSIVE NON-NEGATIVE FLOOR on the height, and it is a SILENT-WRONG guard
+    // in the ruled sense: no stderr, no refusal, no clamp of anybody's settings.
+    //
+    // The two scale axes are independently schema-legal to their ceilings, and
+    // their CROSS-PRODUCT is not budgeted anywhere: gui_scale=400 with
+    // font_size=72 makes the four redesigned rows and the six font-sized lanes
+    // together exceed 1080, so this subtraction goes NEGATIVE on the supported
+    // window. A negative-height rect is a silent-wrong input to every consumer
+    // that takes a width/height pair, which is exactly the class this project
+    // keeps a guard for; the absurd-but-legal combination is allowed to look
+    // broken (strips overlapping out the bottom of the window) but is not
+    // allowed to compute nonsense.
+    //
+    // ZERO, not a positive minimum: zero is the honest answer ("no room left"),
+    // and every consumer already handles it — the painters gate on `w <= 0 ||
+    // h <= 0`, the plate render and the flag/waveform caches skip an empty area,
+    // playhead_invalidate_rect yields an empty rect (whose tick fallback damages
+    // the bottom strip instead), and cairo treats an empty rectangle as a no-op.
+    // A positive floor would instead invent a strip of waveform that has nowhere
+    // to live. THE VOCABULARY QUESTION — whether [100, 400] should shrink — is
+    // the architect's and is asked separately; nothing here narrows it.
+    const int h_avail = h - top_h - bot_h;
+    return GuiRect{0, top_h, effective_w, h_avail < 0 ? 0 : h_avail};
 }
 
 // ONE shared layout contract for every strip lane — the single geometry owner.
@@ -973,6 +995,7 @@ int main(int argc, char** argv) {
     // event follows it either), and a stranded pressed interior would outlive
     // the hold that justified it. All three are transition-gated.
     gui.set_pointer_left_hook([&] {
+        app.pointer_in_window = false;
         viewport.clear_hover_popup();
         input_handler.clear_redesign_button_hover();
         input_handler.clear_redesign_button_press();
@@ -1160,6 +1183,30 @@ int main(int argc, char** argv) {
             }
             if (drift) invalidate_top_strip();
         }
+
+        // HOVER IS NO LONGER MOTION-ONLY. It is resolved from the pointer's last
+        // position against the painter's rects and redesign_button_hoverable —
+        // and BOTH of those move without any pointer event: a keyboard Ctrl+Tab
+        // makes the tab under a stationary pointer hoverable (it was the
+        // selected one, which does not hover), an enabled-state change makes a
+        // greyed button hoverable, and a live gui_scale commit relays out every
+        // rect under a pointer that never moved. Each of those left the face
+        // wrong until the next motion.
+        //
+        // The fix is to run the ONE recompute here as well: it is transition-
+        // gated internally and damages only on a real change, so a per-tick call
+        // is a handful of rect compares and, on the frames that matter, exactly
+        // the same single invalidate a motion would have paid. It runs AFTER the
+        // comparator so it reads the freshest published stash.
+        //
+        // GATED ON "no pointer gesture", which preserves the standing rule that
+        // an ACTIVE GESTURE FREEZES HOVER — the motion path enforces that by
+        // returning before its tail, and an ungated tick would quietly undo it.
+        // A pointer that has LEFT the window is handled inside the recompute
+        // (app.pointer_in_window), so the tick cannot re-light what the leave
+        // hook just cleared.
+        if (!any_pointer_gesture_active(app))
+            input_handler.recompute_redesign_button_hover();
 
         // Stationary-cursor hover refresh (the BACKSTOP). A keyboard mutation
         // (tempo step, Ctrl+N, nudge) changes the hovered marker's fields/position

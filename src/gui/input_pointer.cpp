@@ -2073,7 +2073,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // app_state.h): a DISABLED row-2 button and the SELECTED tab both refuse
         // the hover face, and both refusals live in that one predicate rather
         // than as conditions here or in the painter.
-        const bool inside = mx >= f.rect.x && mx < f.rect.x + f.rect.w &&
+        const bool inside = app.pointer_in_window &&
+                            mx >= f.rect.x && mx < f.rect.x + f.rect.w &&
                             my >= f.rect.y && my < f.rect.y + f.rect.h &&
                             redesign_button_hoverable(
                                 app, audio.total_frames(),
@@ -2101,7 +2102,13 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     }
     if (hovered_tip < 0) {
         hide_shift_tooltip();
-    } else if (app.redesign_tooltip.hover_ms == 0) {
+    } else if (app.redesign_tooltip.owner != hovered_tip) {
+        // A DIFFERENT tooltip button (or the first one) — hide whatever was up
+        // and start this button's dwell from zero. Keying on the id is what
+        // makes a direct Render->Paste motion wait the full delay again instead
+        // of inheriting the dwell that was already running.
+        hide_shift_tooltip();
+        app.redesign_tooltip.owner    = hovered_tip;
         app.redesign_tooltip.hover_ms = monotonic_ms();
     }
 }
@@ -2214,6 +2221,25 @@ void GuiInputHandler::toggle_settings_popup() {
     if (app.settings_popup.open) { close_settings_popup(); return; }
     app.settings_popup.open         = true;
     app.settings_popup.hovered_item = -1;
+    // THE OPEN EDGE DAMAGES THE BOX BEFORE THE BOX EXISTS. Its rect is not
+    // published until paint_settings_popup runs, and a redraw is CLIPPED to the
+    // damage it was handed — so strip damage alone would clip away whatever the
+    // popup hangs past the strip. At 100% it happens to fit (175px of popup
+    // inside a 217px strip); at 200% it overhangs by ~40px and the bottom band
+    // would never paint.
+    //
+    // The HEIGHT is derivable without painting (settings_popup_h_px — item count
+    // times item height, plus the separator blocks and the borders), so the
+    // damage is exact vertically. The WIDTH is not (it needs the widest shaped
+    // label), so this damages FULL WIDTH from the button's top down — a band,
+    // not a guess, and cheap because it happens once per open.
+    {
+        const GuiRect& btn =
+            app.redesign_buttons[redesign_button_index(RedesignButton::Settings)]
+                .rect;
+        viewport.invalidate_rect(
+            GuiRect{0, btn.y + btn.h, app.width, settings_popup_h_px()});
+    }
     // THE ROSTER UNHOVERS AT THE OPEN: the pointer belongs to the popup now
     // (redesign_button_hoverable refuses every button while it is up), and no
     // motion event follows a press — so without this the Settings button would
@@ -2230,6 +2256,7 @@ void GuiInputHandler::toggle_settings_popup() {
 // makes the next hover start its dwell from zero.
 void GuiInputHandler::hide_shift_tooltip() {
     app.redesign_tooltip.hover_ms = 0;
+    app.redesign_tooltip.owner    = -1;
     if (!app.redesign_tooltip.visible) return;
     const GuiRect painted = app.redesign_tooltip.rect;
     app.redesign_tooltip.visible = false;
@@ -2264,6 +2291,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // at the cursor's last position.
     app.last_mouse_x = mouse_x;
     app.last_mouse_y = mouse_y;
+    app.pointer_in_window = true;
     // THE BUTTON HOVER IS A POINTER FACT AND FOLLOWS THE POINTER, under every
     // modal surface (architect 2026-07-31, fixing a stale Settings pill). It is
     // recomputed in the two MODAL branches that return before the no-gesture
@@ -2436,6 +2464,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // retired, so the same physical click rests identically whichever
             // path ended it — as a consumed nothing.
             app.pending_trim_drag = PendingTrimDrag{};
+            // THE CHIP-ROW SEED DIES WITH IT. A button lost mid-press is not a
+            // clean click sequence, so it may not leave a seed behind for an
+            // unrelated later release to consume into a TrimBar double-click
+            // candidate — the same rule the force-end finalizer follows, and the
+            // lifetime the seed's own declaration states (app_state.h). Only the
+            // CLEAN release is allowed to seed.
+            app.chip_row_press = ChipRowPressSeed{};
             return;
         }
         if (std::max(std::abs(mouse_x - app.pending_trim_drag.press_x),

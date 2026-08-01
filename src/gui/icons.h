@@ -42,6 +42,11 @@ enum class Icon {
     DialogOkApply,       // Commit a render as the baseline
 };
 
+// Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
+// to the enumerator count above; a mismatch only costs that icon its latch (the
+// latch is bounds-checked), never correctness.
+inline constexpr int kIconCount = 11;
+
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'
 // and are hard-coded per the redesign color ruling — see the table).

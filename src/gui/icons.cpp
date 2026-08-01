@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <iterator>
 
 namespace icons {
 namespace {
@@ -426,6 +427,44 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
     const IconDef& def = icon_def(icon);
     if (def.view_box <= 0.0) return;
 
+    // ONE STDERR, DRAW NOTHING — and both halves are now literally true.
+    //
+    // VALIDATE EVERY PATH BEFORE FILLING ANY. The old loop parsed and filled
+    // path by path, so a malformed LATER path of a multi-path icon left the
+    // EARLIER ones already on the surface: a partial glyph, which is exactly
+    // the "placeholder that lets the typo ship" the contract refuses. The
+    // dry-run below parses each `d` into a scratch context and bails as a whole
+    // before a single pixel is committed.
+    //
+    // AND SAY IT ONCE. `reported` latches per icon, so a transcription error is
+    // one line at the first paint rather than one line per repaint forever —
+    // a tripwire that floods is a tripwire nobody reads. Function-local static:
+    // the GUI is single-threaded at every draw site.
+    {
+        cairo_surface_t* probe_surf =
+            cairo_image_surface_create(CAIRO_FORMAT_A8, 1, 1);
+        cairo_t* probe = cairo_create(probe_surf);
+        bool ok = true;
+        for (int i = 0; i < def.path_count && ok; ++i) {
+            cairo_new_path(probe);
+            ok = append_path(probe, def.paths[i].d);
+        }
+        cairo_destroy(probe);
+        cairo_surface_destroy(probe_surf);
+        if (!ok) {
+            static bool reported[kIconCount] = {};
+            const int idx = static_cast<int>(icon);
+            if (idx >= 0 &&
+                idx < static_cast<int>(std::size(reported)) && !reported[idx]) {
+                reported[idx] = true;
+                std::fprintf(stderr,
+                             "icons: malformed path data, icon %d not drawn\n",
+                             idx);
+            }
+            return;
+        }
+    }
+
     cairo_save(cr);
     cairo_translate(cr, x, y);
     cairo_scale(cr, size_px / def.view_box, size_px / def.view_box);
@@ -437,15 +476,10 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
         cairo_save(cr);
         if (p.tx != 0.0 || p.ty != 0.0) cairo_translate(cr, p.tx, p.ty);
         cairo_new_path(cr);
-        if (!append_path(cr, p.d)) {
-            // A transcription error in an in-tree constant: say so once and
-            // draw nothing. No fallback shape — a placeholder would let the
-            // typo ship.
-            cairo_new_path(cr);
-            std::fprintf(stderr, "icons: malformed path data, icon not drawn\n");
-            cairo_restore(cr);
-            continue;
-        }
+        // Cannot fail: the dry run above proved every path in this icon parses,
+        // and the strings are compile-time constants that cannot change between
+        // the two walks.
+        append_path(cr, p.d);
         // The path's own color, retained by keep_own and made up with
         // mixed_with — the disabled face. keep_own == 1 (the default every
         // enabled caller takes) returns the table's color bit-identically, so

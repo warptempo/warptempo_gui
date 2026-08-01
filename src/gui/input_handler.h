@@ -474,7 +474,8 @@ struct GuiInputHandler {
     // the click face where the row has one, and dispatches the chord through
     // on_key. Returns true when a rect claimed the press — a refusal still
     // claims it, a refusal being a consumed nothing. Row 1's Quit is the one
-    // button outside it (a two-call route, not a chord).
+    // button outside it (Settings, whose action is the dropdown toggle — not a
+    // chord, since no keyboard chord opens or closes a popup).
     bool dispatch_redesign_chord(int x, int y, GuiInputState mods);
     // True when the settings dropdown swallowed `key` — the popup-modal gate,
     // ranked directly under the prompt at the top of on_key. Bare Esc closes,
