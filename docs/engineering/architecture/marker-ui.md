@@ -1,5 +1,7 @@
 # Marker UI (flags, lane text occlusion, stems, focus model, editors, key repeat)
 
+> SUPERSEDED IN LARGE PART BY ROW 5 OF THE KDENLIVE REDESIGN (2026-08-01 — kdenlive-redesign.md's row-5 record is authoritative): the marker-text lane, the occlusion resolver, the hover popup/spell-out, the flag+triangle two-lane glyph, the selection ink-triangle and singleton-stem cues are ALL RETIRED. Markers are text-on-flag boxes with always-on class-colored stems; the flag editor unrolls the flag. Passages below describing those retired surfaces are historical; the editors' KEY handling, modality, double-click and focus-model rules remain live.
+
 Moved verbatim from CLAUDE.md in the 2026-07-25 slim-down (project feature-complete). This file is now the authoritative home for this detail; CLAUDE.md carries only a digest and a pointer here. Keep it current with landed rulings.
 Continues from selection-model.md; continues in region-scrub-esc.md.
 

@@ -1,5 +1,7 @@
 # Pixel Anchoring, Waveform Width, Viewport, Continuous Zoom, Strip Lanes and Drags
 
+> PARTLY SUPERSEDED BY THE KDENLIVE REDESIGN (rows 1-5, 2026-07-31/2026-08-01 — kdenlive-redesign.md is authoritative for the top strip): the strip is SEVEN redesigned lanes; the zoom-strip drag lives on the RULER lane (one shared arm body with the ctrl-waveform entry); the trim bar replaced the chips; the marker lanes replaced flag/triangle/text. The viewport/zoom/pan machinery, the strip-drag mechanics, the framing double-click on the trim band, and the scanner rules below remain live.
+
 Moved verbatim from CLAUDE.md in the 2026-07-25 slim-down (project feature-complete). This file is now the authoritative home for this detail; CLAUDE.md carries only a digest and a pointer here. Keep it current with landed rulings.
 
 ### Gesture Commits are Pixel-Anchored
