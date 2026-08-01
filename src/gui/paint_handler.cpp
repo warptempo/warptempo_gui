@@ -66,28 +66,37 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 }
 
 // THE LINE'S FIXED SECTIONS (the architect's kdenlive model, 2026-08-01):
-// nothing on the row moves when the timestamp grows a digit or the dirty dot
+// nothing on the row moves when the timestamp's digits change or the dirty dot
 // appears and disappears. Every boundary is computed from SHAPED MAXIMA, never
 // from the text currently on screen.
 //
-//   pad | A: the timestamp | pad | B: the dirty dot | pad | C: everything else
+//   pad | A: the timestamp | space | B: the dirty dot | pad | C: everything else
 //
-// A is the widest timestamp the product can ever display. The bound is the
-// CONTAINER's, not the format's: a RIFF data chunk tops out near 4 GiB, which at
-// the heaviest supported source (44.1kHz stereo 24-bit) is ~16232 s = 270:32, so
-// the minutes field can reach three digits and no more (the derivation and the
-// matching format cap are at format_timestamp, time_format.h). kWidestTimestamp
-// is a three-digit specimen; with tabular digits its shaped width is EVERY
-// three-digit timestamp's width, and a two-digit one is narrower by one digit
-// and simply leaves that much slack at the section's right.
+// A IS SIZED ON THE WIDEST DIGIT, not on a specimen that assumes the face
+// (architect 2026-08-01: "use the widest digit in Liberation Sans or the avg
+// linux sans"). The ten digits are shaped at the CURRENT scaled font, the widest
+// advance wins, and the section is a specimen built from THAT digit —
+// "DD:DD.DDD", the MM:SS.mmm shape with its 7 digit slots — shaped through the
+// same one-run path the painted clock takes. On Liberation Sans the digits are
+// tabular (all ten advance identically, verified on the resolved face), so this
+// degenerates to exactly the width the clock paints; the derivation is what
+// keeps it right if hinting at some scale, or a face swap, ever makes one digit
+// wider than another.
+//
+// TWO MINUTE DIGITS, and longer sources TRUNCATE (the ruling and what it costs
+// are at format_timestamp, time_format.h). The section is that format's width
+// and no wider.
 //
 // B is one dot's own shaped width, present or not.
 //
-// THE PADDING IS ONE CONSTANT used three times — the row's own measured left
-// pad, reused as the inter-section gap by eye-consistency (the architect's
-// allowance; the alternative, a shaped space at ~4px, read cramped against a
-// 13px lead-in). C runs from the last boundary to the window's right edge.
-static constexpr const char* kWidestTimestamp = "000:00.000";
+// THE TWO GAPS DIFFER, and deliberately: A→B is ONE SHAPED SPACE, because the
+// dot belongs to the clock ("the dot should look like it's basically attached to
+// the timestamp, with about a space char's worth of distance" — architect
+// 2026-08-01, at the live look); B→C is the row's own 13px pad, the same
+// constant as the left lead-in, because C is a different thing on the line
+// rather than a suffix of the clock. C runs from that boundary to the window's
+// right edge.
+static constexpr const char* kTimestampShape = "DD:DD.DDD";
 
 struct BottomRowSections {
     double a_x = 0.0;   // the timestamp's pen
@@ -95,18 +104,52 @@ struct BottomRowSections {
     double c_x = 0.0;   // the modal / status span's pen
 };
 
+// The three shaped widths the section arithmetic needs, MEMOISED ON THE FONT
+// SIZE. Deriving A costs eleven tiny shaping passes (ten digits plus the
+// specimen) and they answer the same thing on every frame: the face is fixed
+// ("sans") and the size is the only variable, so the size is the whole key.
+// Single-threaded paint state — the waveform worker never reaches this file's
+// bottom-row tier.
+struct BottomRowTextMetrics {
+    double px      = -1.0;   // the size these were measured at
+    double a_w     = 0.0;    // the widest timestamp's shaped width
+    double b_w     = 0.0;    // the dirty dot's
+    double space_w = 0.0;    // one space, the A->B gap
+};
+static BottomRowTextMetrics g_bottom_metrics;
+
+static const BottomRowTextMetrics& bottom_row_text_metrics(
+        cairo_scaled_font_t* font, double size_px) {
+    if (g_bottom_metrics.px == size_px) return g_bottom_metrics;
+    // The widest of the ten digits at this size, by shaped advance.
+    char widest = '0';
+    double widest_w = -1.0;
+    for (char d = '0'; d <= '9'; ++d) {
+        const char one[2] = {d, '\0'};
+        const double w = text_shape::shape_text_run(font, one).width_px;
+        if (w > widest_w) { widest_w = w; widest = d; }
+    }
+    std::string specimen(kTimestampShape);
+    for (char& c : specimen) if (c == 'D') c = widest;
+
+    g_bottom_metrics.a_w     = text_shape::shape_text_run(font, specimen).width_px;
+    g_bottom_metrics.b_w     = text_shape::shape_text_run(font, "*").width_px;
+    g_bottom_metrics.space_w = text_shape::shape_text_run(font, " ").width_px;
+    g_bottom_metrics.px      = size_px;
+    return g_bottom_metrics;
+}
+
 static BottomRowSections bottom_row_sections(cairo_scaled_font_t* font,
                                              const GuiRect& lane) {
     const double pad = static_cast<double>(bottom_row_pad_x());
-    const double a_w =
-        text_shape::shape_text_run(font, kWidestTimestamp).width_px;
-    const double b_w = text_shape::shape_text_run(font, "*").width_px;
+    const BottomRowTextMetrics& m =
+        bottom_row_text_metrics(font, redesign_font_size_px());
     BottomRowSections s;
     // Every boundary lands on an integer pen so the hinted glyphs stay crisp,
     // the same rounding convention the redesigned rows' label origins take.
     s.a_x = std::nearbyint(static_cast<double>(lane.x) + pad);
-    s.b_x = std::nearbyint(s.a_x + a_w + pad);
-    s.c_x = std::nearbyint(s.b_x + b_w + pad);
+    s.b_x = std::nearbyint(s.a_x + m.a_w + m.space_w);
+    s.c_x = std::nearbyint(s.b_x + m.b_w + pad);
     return s;
 }
 
@@ -314,10 +357,11 @@ constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 // gap where one exists; row 2's 2px invisible separator is the only one in the
 // redesign so far, and row 1 was never given one).
 //
-// REDESIGNED ROWS GET CORRECT CAPITALIZATION, row by row (architect
-// 2026-07-31): the all-lowercase program-text rule now CARVES OUT the
-// redesigned rows' labels. It still governs stderr, the prompts, and every
-// un-redesigned surface until that surface's own row lands.
+// EVERY GUI-FACING STRING CARRIES PROPER CAPITALIZATION (architect 2026-08-01,
+// generalizing the row-by-row carve-out that started here): labels are proper
+// nouns/labels, messages and prose are sentence case. What STAYS lowercase is
+// stderr — swept in its own later round — plus user-authored data (marker
+// labels, titles, filenames) and literal settings KEY names shown as keys.
 struct MenuButtonDef {
     RedesignButton id;
     const char*    label;
@@ -2958,9 +3002,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     //     playhead samples are source-frames. Split-playhead: track the scanner
     //     during playback (what the user hears), the cursor otherwise (the
     //     scanner is meaningful only while active, so the ternary takes the
-    //     cursor at rest). The old paint-site clamp at 5999.999 is GONE with the
-    //     fixed section: format_timestamp owns the cap, and a second clamp here
-    //     would silently cut the display an octave below the format's own bound.
+    //     cursor at rest). The old paint-site clamp at 5999.999 is GONE: one
+    //     owner caps the clock, and it is format_timestamp (at 59:59.999 — a
+    //     longer source truncates, the architect's ruling, recorded there).
     {
         const int64_t ts_sample = app.playhead_scanner_active
             ? app.playhead_scanner_sample
@@ -2975,10 +3019,12 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                       format_timestamp(seconds), kRedesignLabel);
     }
 
-    // --- Section B: the dirty dot, in its own reserved cell. It KEEPS ITS GLYPH
-    //     (a bare '*') — the architect ruled the form unchanged and the crop
-    //     says nothing about it — and its cell exists whether or not it shows,
-    //     so appearing and disappearing moves nothing.
+    // --- Section B: the dirty dot, in its own reserved cell ONE SPACE after the
+    //     clock — close enough to read as attached to it (the architect's
+    //     ruling at the live look; the section table above carries the two
+    //     gaps). It KEEPS ITS GLYPH (a bare '*') — the form was ruled unchanged
+    //     and the crop says nothing about it — and its cell exists whether or
+    //     not it shows, so appearing and disappearing moves nothing.
     if (app.dirty) {
         show_row_text(cr, font, sec.b_x, baseline, "*", kRedesignLabel);
     }

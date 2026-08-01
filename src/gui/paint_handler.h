@@ -65,12 +65,12 @@ inline int bottom_row_pad_x() {
 // longer measures a prefix at all: the painter shapes prefix and pending as ONE
 // run and publishes where the pending half begins, so the click-to-caret origin
 // IS the painted one rather than a re-derivation that could drift from it.
-constexpr const char* kSettingsEditorPrefix = "setting: ";
-constexpr const char* kBpmEditorPrefix      = "bpm: ";
+constexpr const char* kSettingsEditorPrefix = "Setting: ";
+constexpr const char* kBpmEditorPrefix      = "BPM: ";
 // The render-commit prompt (bare `'`) label. The typed entry identifier —
 // `<batch_dir>/<basename>` relative to renders/ — renders directly after the
 // trailing slash, so the prefix carries no trailing space.
-constexpr const char* kCommitEditorPrefix   = "commit: ./renders/";
+constexpr const char* kCommitEditorPrefix   = "Commit: ./renders/";
 
 // -- Off-screen pixel cache for the waveform subsystem -------------------
 //

@@ -97,9 +97,9 @@ void GuiTargetRender::trigger() {
     app.queue_cancel_requested = true;
 
     // Surface the target-render status through queue_progress_text.
-    // "rendering..." (archival) and "updating..." (target render) share
+    // "Rendering..." (archival) and "Updating..." (target render) share
     // the slot.
-    app.queue_progress_text = "updating...";
+    app.queue_progress_text = "Updating...";
     viewport.invalidate_timestamp_area();
 
     pending_ = true;
@@ -138,7 +138,7 @@ void GuiTargetRender::dispatch_render_now() {
     if (app.active_audio_view != 'T' ||
         audio.total_frames() <= 0 || app.source_audio_path.empty()) {
         pending_ = false;
-        if (app.queue_progress_text == "updating...") {
+        if (app.queue_progress_text == "Updating...") {
             viewport.invalidate_timestamp_area();
             app.queue_progress_text.clear();
         }
@@ -263,7 +263,7 @@ void GuiTargetRender::dispatch_render_now() {
     // (finalize_render_run) clears the text in its terminal branch,
     // and the target render's dispatch may run in that callback's pumping
     // path. Target-render status uses queue_progress_text.
-    app.queue_progress_text = "updating...";
+    app.queue_progress_text = "Updating...";
     viewport.invalidate_timestamp_area();
 
     // Clear the target buffer; do_render appends synthesised samples
@@ -511,7 +511,7 @@ void GuiTargetRender::cancel_in_flight_update() {
         async_renderer.request_cancel();
     }
     pending_ = false;
-    if (app.queue_progress_text == "updating...") {
+    if (app.queue_progress_text == "Updating...") {
         viewport.invalidate_timestamp_area();
         app.queue_progress_text.clear();
     }

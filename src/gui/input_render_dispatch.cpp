@@ -237,7 +237,7 @@ void GuiInputHandler::maybe_reestablish_target_buffer() {
 void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
     app.queue_cancel_requested = false;
     app.queue_running          = true;
-    app.queue_progress_text    = "rendering...";
+    app.queue_progress_text    = "Rendering...";
     viewport.invalidate_timestamp_area();
     async_renderer.dispatch(std::move(req),
         [this](RenderOutcome o) {
@@ -338,11 +338,19 @@ void GuiInputHandler::dispatch_next_batch_entry() {
         return;
     }
 
+    // THE BATCH LABEL MOVED INTO A PARENTHETICAL (2026-08-01, at the
+    // proper-capitalization sweep) and the sentence now leads: the label is a
+    // lowercase data token SHARED WITH THE STDERR SUMMARY above, and the
+    // terminal pass is a later, separate round — so capitalizing it here would
+    // have changed a stderr line, and leaving it in front would have started a
+    // GUI sentence in lowercase. Trailing it keeps both true, with zero stderr
+    // bytes moved. (If the terminal round ever capitalizes the labels, this can
+    // go back to leading with one.)
     char buf[128];
     std::snprintf(buf, sizeof(buf),
-                  "%s: rendering %d of %d...",
-                  batch_.label.c_str(),
-                  batch_.next_index + 1, total);
+                  "Rendering %d of %d (%s)...",
+                  batch_.next_index + 1, total,
+                  batch_.label.c_str());
     app.queue_progress_text = buf;
     viewport.invalidate_timestamp_area();
 

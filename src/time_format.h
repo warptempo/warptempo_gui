@@ -30,17 +30,19 @@
 
 inline std::string format_timestamp(double seconds) {
     if (seconds < 0) seconds = 0;
-    // Hard cap: 999:59.999, a THREE-digit minutes field (raised from the old
-    // two-digit 59:59.999 by row 7, 2026-08-01). The minutes field is
-    // MINIMUM-two-digit and grows to three, so every ordinary source reads
-    // exactly as it always did and a long one is no longer clamped to a wrong
-    // time. THREE DIGITS IS ENOUGH BY THE CONTAINER: a RIFF data chunk tops out
-    // near 4 GiB, which at the product's heaviest supported source (44.1 kHz
-    // stereo 24-bit = 264600 B/s) is ~16232 s = 270:32 — so no loadable source
-    // can reach four minute digits, and the bottom row's fixed timestamp section
-    // is sized on exactly this bound. Display-only clamping — no persisted value
-    // flows through this function.
-    if (seconds > 59999.999) seconds = 59999.999;
+    // Hard cap: 59:59.999. The format carries EXACTLY TWO minute digits, and a
+    // longer source is TRUNCATED rather than given a third (architect
+    // 2026-08-01: "ok to truncate larger — kdenlive also truncates long msgs").
+    //
+    // THE THIRD DIGIT EXISTED FOR ONE COMMIT and is recorded here so it is not
+    // rediscovered as an oversight: the container does allow a longer source (a
+    // RIFF data chunk tops out near 4 GiB, ~16232 s = 270:32 at 44.1 kHz stereo
+    // 24-bit), and this cap does read wrong past an hour. The architect ruled
+    // that cost preferable to a wider clock — the bottom row's timestamp section
+    // is a fixed width and the third digit spends it on a case his material
+    // never reaches. Display-only clamping; no persisted value flows through
+    // this function, and nothing but the display is affected either way.
+    if (seconds > 3599.999) seconds = 3599.999;
     long total_ms = static_cast<long>(std::nearbyint(seconds * 1000.0));
     const long m  = total_ms / 60000;
     total_ms     -= m * 60000;

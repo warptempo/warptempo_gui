@@ -140,7 +140,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     }
 
     app.loading       = true;
-    app.queue_progress_text = "loading...";
+    app.queue_progress_text = "Loading...";
     gui.invalidate_region(0, 0, app.width, app.height);
     gui.paint_now();
 

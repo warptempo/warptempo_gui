@@ -225,10 +225,10 @@ void PhaseResetPropagate::open_paste_confirmation() {
     playback_lifecycle.stop_playback_if_playing();
     app.prompt.active          = true;
     app.prompt.text            =
-        "paste phase resets into matching blocks? "
-        "existing phase resets in matched ranges will be cleared.";
+        "Paste phase resets into matching blocks? "
+        "Existing phase resets in matched ranges will be cleared.";
     app.prompt.response_keys   = {'y', '\x1b'};
-    app.prompt.response_labels = {"[y]es", "[esc]"};
+    app.prompt.response_labels = {"[y]es", "[Esc]"};
     app.prompt.trigger         = DialogTrigger::PASTE_CONFIRM;
     viewport.invalidate_all();
 }
@@ -260,7 +260,7 @@ void PhaseResetPropagate::paste_apply() {
     // paste_state's silent partial-run rule).
     std::string stop_message;
     if (matched < pair_count) {
-        stop_message = "stopped at " +
+        stop_message = "Stopped at " +
             format_domain_timestamp(dest_blocks[matched].start, app,
                                     target_render.audio) +
             " (label name diverged)";
@@ -462,7 +462,7 @@ void PhaseResetPropagate::paste_state_apply() {
         // Label first, then count — mirrors paste_apply's
         // stop-on-divergence order.
         if (clip_blocks[i].label_name != dest_blocks[i].label) {
-            stop_message = "stopped at " +
+            stop_message = "Stopped at " +
                 format_domain_timestamp(dest_blocks[i].start, app,
                                         target_render.audio) +
                 " (label name diverged)";
@@ -517,7 +517,7 @@ void PhaseResetPropagate::paste_state_apply() {
             dest_indices.push_back(static_cast<int>(k));
         }
         if (dest_indices.size() != windowed_clip.size()) {
-            stop_message = "stopped at " +
+            stop_message = "Stopped at " +
                 format_domain_timestamp(dest_blocks[i].start, app,
                                         target_render.audio) +
                 " (marker count mismatch)";

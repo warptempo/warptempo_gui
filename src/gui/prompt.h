@@ -54,7 +54,7 @@ struct GuiPrompt {
     // Load-time render-environment mismatch (ENV_HASH_MISMATCH), advisory
     // only. `changed_list` is the comma+space-joined subset of
     // `libm, libmvec, fftw3, fftw3_threads` whose stored hash mismatched the
-    // running environment's. Text and label are all-lowercase. ONE response:
+    // running environment's. ONE response:
     // 'o' stamps all four stored hashes to the current environment's
     // (history-less, no-dirty GUI-kind state; the next ordinary Ctrl+S
     // persists it). There is no dismiss-without-ack path — Esc is not a

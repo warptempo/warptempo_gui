@@ -25,7 +25,7 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     // until it closes.
     playback_lifecycle.stop_playback_for_modal_open();
     app.prompt.active          = true;
-    app.prompt.text            = "save unsaved changes?";
+    app.prompt.text            = "Save unsaved changes?";
     // Sentinel chars for non-letter keys: 0x7F = Delete, 0x1B = Escape.
     // The GuiKey → char mapping in input_handler.cpp's prompt dispatch
     // produces these for GuiKeys::Delete / GuiKeys::Escape; the prompt
@@ -38,7 +38,7 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     // the GUI never writes a LOAD-invalid state. [s]ave / [delete]
     // (discard-and-proceed) / [esc] (cancel).
     app.prompt.response_keys   = {'s', '\x7f', '\x1b'};
-    app.prompt.response_labels = {"[s]ave", "[delete]", "[esc]"};
+    app.prompt.response_labels = {"[s]ave", "[Delete]", "[Esc]"};
     app.prompt.trigger         = t;
     viewport.invalidate_all();
 }
@@ -55,13 +55,13 @@ void GuiPrompt::open_error_notice(std::string text) {
     app.prompt.active          = true;
     app.prompt.text            = std::move(text);
     app.prompt.response_keys   = {'\x1b'};
-    app.prompt.response_labels = {"[esc]"};
+    app.prompt.response_labels = {"[Esc]"};
     app.prompt.trigger         = DialogTrigger::ERROR_NOTICE;
     viewport.invalidate_all();
 }
 
-// Load-time render-environment mismatch, advisory only (all-lowercase text
-// and label per the style ruling). ONE response key: 'o' acknowledges by
+// Load-time render-environment mismatch, advisory only. ONE response key:
+// 'o' acknowledges by
 // restamping the four live hashes (history-less, no-dirty GUI-kind state).
 // There is deliberately NO dismiss-without-ack path — Esc is not a response
 // key, so the prompt's key filter swallows it like every other non-response
@@ -72,9 +72,9 @@ void GuiPrompt::open_env_hash_mismatch(const std::string& changed_list) {
     // the chokepoint keeps the invariant unconditional).
     playback_lifecycle.stop_playback_for_modal_open();
     app.prompt.active          = true;
-    app.prompt.text            = "render libraries changed since last save (" +
+    app.prompt.text            = "Render libraries changed since last save (" +
                                  changed_list +
-                                 "). new renders may not match old ones.";
+                                 "). New renders may not match old ones.";
     app.prompt.response_keys   = {'o'};
     app.prompt.response_labels = {"[o]k"};
     app.prompt.trigger         = DialogTrigger::ENV_HASH_MISMATCH;
@@ -140,10 +140,10 @@ void GuiPrompt::activate_response(char k) {
         if (k == 's' || k == 'r') {
             const bool ok = save_ops.save();
             if (!ok) {
-                app.prompt.text            = "save failed.";
+                app.prompt.text            = "Save failed.";
                 app.prompt.response_keys   = {'r', '\x7f', '\x1b'};
                 app.prompt.response_labels =
-                    {"[r]etry", "[delete]", "[esc]"};
+                    {"[r]etry", "[Delete]", "[Esc]"};
                 viewport.invalidate_all();
                 return;
             }

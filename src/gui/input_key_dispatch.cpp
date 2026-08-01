@@ -668,10 +668,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             // product. Iteration mode and the brackets survive for
             // correction — the wipe-and-exit tail below does not run.
             prompt.open_error_notice(
-                "iteration sweep refused: more than " +
+                "Iteration sweep refused: more than " +
                 std::to_string(kMaxIterSweepCells) +
                 " cells (cap " + std::to_string(kMaxIterSweepCells) +
-                "). narrow the marker brackets and retry.");
+                "). Narrow the marker brackets and retry.");
             return true;
         }
 
@@ -1040,14 +1040,14 @@ void GuiInputHandler::open_commit_editor() {
     // sweep writing into it. Refuse, don't cancel — a running batch may be
     // irreplaceable queued work; Esc is the explicit cancel.
     if (app.queue_running || app.pending_archival.armed) {
-        app.transient_status_message = "render running; esc cancels it";
+        app.transient_status_message = "Render running; Esc cancels it";
         viewport.invalidate_timestamp_area();
         return;
     }
     std::vector<AppState::RenderEntry> list =
         renders_dir.enumerate_render_entries();
     if (list.empty()) {
-        app.transient_status_message = "no renders to commit";
+        app.transient_status_message = "No renders to commit";
         viewport.invalidate_timestamp_area();
         return;
     }
@@ -1437,14 +1437,14 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // and does nothing.
     if (key == GuiKeys::L && !ctrl && !shift && !alt) {
         if (app.audio_player.empty()) {
-            app.transient_status_message = "no audio_player set";
+            app.transient_status_message = "No audio_player set";
             viewport.invalidate_timestamp_area();
             return true;
         }
         std::vector<AppState::RenderEntry> list =
             renders_dir.enumerate_render_entries();
         if (list.empty()) {
-            app.transient_status_message = "no renders to play";
+            app.transient_status_message = "No renders to play";
             viewport.invalidate_timestamp_area();
             return true;
         }
