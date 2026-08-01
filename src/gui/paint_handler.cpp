@@ -1622,6 +1622,86 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         }
     }
 
+    // -- THE PLAYHEAD HEAD, the successor to the retired cursor triangle -----
+    //
+    // IT LIVES IN THIS PAINTER because it must know where the TICKS are: where a
+    // tick's column crosses the head, those head pixels take a PRE-BLENDED
+    // constant rather than the head's own grey, and the opaque-palette doctrine
+    // has no compositing to do that with. Ticks and head therefore share one
+    // owner and the crossing is exact instead of approximated.
+    //
+    // ALIASED BY CONSTRUCTION: the shape is a transcribed per-row HALF-WIDTH
+    // table (kPlayheadHeadHalf), painted as integer rectangles — one per row —
+    // so it has hard edges at every scale, which a path fill would not. At
+    // gui_scale > 100% each source row becomes `s` device rows and each
+    // half-width scales with it, which enlarges the pixel steps rather than
+    // smoothing them: the shape stays the drawing it was transcribed from.
+    //
+    // TIP-DOWN AT THE LANE'S BOTTOM, centered on the playhead column — the same
+    // column the stem below runs on, so head and stem are one object.
+    //
+    // THE HEAD IS THE RESTING CURSOR'S FORM ONLY. The SCANNER keeps its bare
+    // line: the two have always been distinct surfaces (the old triangle was
+    // drawn for the cursor alone, draw_triangle=false on every scanner call),
+    // and the damage table at playhead_pixel_x turns on that split — the
+    // scanner's per-frame damage is deliberately NARROW, and widening it to this
+    // head's 19px would make every playing frame pay for a shape the scanner
+    // does not draw. So the narrow scanner damage keeps its width unchanged.
+    {
+        const double cursor_px = playhead_pixel_x(app, basis.vp_start, basis.spp);
+        const int col = static_cast<int>(std::nearbyint(cursor_px));
+        if (col >= 0 && col < wave_w) {
+            const double s   = gui_scale_factor();
+            const int    rows = static_cast<int>(std::nearbyint(
+                                    kPlayheadHeadHeightPx * s));
+            const int    head_bottom = lane.y + lane.h;
+            for (int r = 0; r < rows; ++r) {
+                // Each device row reads its SOURCE row's half-width, so the
+                // transcribed silhouette survives scaling as steps, not slopes.
+                const int src = std::min(kPlayheadHeadHeightPx - 1,
+                                         static_cast<int>(r / s));
+                const int half = static_cast<int>(std::nearbyint(
+                                     kPlayheadHeadHalf[src] * s));
+                const int y0 = head_bottom - rows + r;
+                const int x0 = lane.x + col - half;
+                const int w  = 2 * half + 1;
+                cairo_set_source_rgb(cr, kPlayheadHead.r, kPlayheadHead.g,
+                                     kPlayheadHead.b);
+                cairo_rectangle(cr, x0, y0, w, 1);
+                cairo_fill(cr);
+            }
+            // THE TICK CROSSINGS, painted back over the head in the pre-blended
+            // value. Re-walking the ladder would be a second source of truth, so
+            // the crossing is decided the cheap way instead: a column carries a
+            // tick exactly when it is a whole number of minors from the origin,
+            // which is the same test the walk above used.
+            cairo_set_source_rgb(cr, kPlayheadHeadTick.r, kPlayheadHeadTick.g,
+                                 kPlayheadHeadTick.b);
+            const int max_half = static_cast<int>(std::nearbyint(
+                                     kPlayheadHeadHalf[0] * s));
+            for (int dx = -max_half; dx <= max_half; ++dx) {
+                const int tc = col + dx;
+                if (tc < 0 || tc >= wave_w) continue;
+                const double t = vp_ms + tc * ms_per_px;
+                const double k = t / minor;
+                // Within half a pixel of a minor line: the same rounding the
+                // tick walk performs, expressed at the column.
+                if (std::fabs(k - std::nearbyint(k)) * minor > ms_per_px * 0.5)
+                    continue;
+                for (int r = 0; r < rows; ++r) {
+                    const int src = std::min(kPlayheadHeadHeightPx - 1,
+                                             static_cast<int>(r / s));
+                    const int half = static_cast<int>(std::nearbyint(
+                                         kPlayheadHeadHalf[src] * s));
+                    if (dx < -half || dx > half) continue;
+                    cairo_rectangle(cr, lane.x + tc,
+                                    head_bottom - rows + r, 1, 1);
+                }
+            }
+            cairo_fill(cr);
+        }
+    }
+
     cairo_restore(cr);
 }
 
@@ -2379,7 +2459,18 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // aliased head — is painted by the ruler pass, which owns the tick columns
     // the head's pre-blended crossing needs. So this call is the STEM alone,
     // like every other, until that pass lands.
-    render_playhead(cr, area, tri_lane, px_x, kPlayheadCursor,
+    // THE STEM IS kPlayheadStem NOW (#fcfcfc), superseding the old cursor line's
+    // color at this surface: the head above it is the playhead's identity, and
+    // the stem is that head's line continued down through the waveform.
+    //
+    // Z-INTENT, stated now and to be verified when the marker painter lands:
+    // ruler ticks, then the playhead head + stem, then the marker flags and
+    // their stems on top. That order is the HIDDEN-BY-MARKER model translated —
+    // a flag sharing the cursor's column hides it, exactly as flags painted over
+    // the old triangle — and it is also why the stem is drawn to run OVER the
+    // waveform's own borders when row 6 adds them: the stem is a boundary line
+    // like the marker stems beside it, not a thing the borders clip.
+    render_playhead(cr, area, tri_lane, px_x, kPlayheadStem,
                     /*draw_triangle=*/false);
 }
 

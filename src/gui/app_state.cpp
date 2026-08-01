@@ -184,8 +184,15 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
         const TrimBoundColumn c =
             trim_bound_column(ms, vp_start, vp_end, wave_w);
         if (!c.in_viewport) return;
-        const GuiRect cr_rect =
+        // THE DRAWN CAP, INFLATED BY THE GRAB TOLERANCE. The rect comes from
+        // the one owner so the target is centred on exactly what is painted; the
+        // widening is the hit side's own term, because a 2px endcap is below any
+        // usable pointing tolerance (the rationale is at trim_chip_rect).
+        GuiRect cr_rect =
             trim_chip_rect(which == TrimHit::Begin, top.x, c.col, row);
+        const int grab = trim_endcap_grab_px();
+        cr_rect.x -= grab;
+        cr_rect.w += 2 * grab;
         const double center_x = static_cast<double>(top.x + c.col);
         chips.push_back({center_x, cr_rect, which});
     };

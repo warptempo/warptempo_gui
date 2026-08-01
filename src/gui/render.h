@@ -1603,17 +1603,34 @@ TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
 double displayed_trim_ms(int64_t frame,
                          const std::vector<WarpFrameMapSegment>* map);
 
-// The ONE trim chip screen-rect owner: the begin/end edge-anchoring
-// rule lives here, consumed by both the painter (render_trim_flags) and the hit
-// test (hit_test_trim_chip). A trim bound is an EDGE, not a point: the begin
-// chip's LEFT edge sits ON the bound column (rect left = strip_x+col), the end
-// chip's RIGHT edge sits on it (rightmost pixel = strip_x+col, so rect left =
-// strip_x+col - flag_w + 1). The chip is flag_lane_w_px() wide; its y-band comes
-// from `row` (the trim chip lane = top_trim_row_area), whose height is that
-// same accessor, so the chip is SQUARE at every font size. Deliberate
-// asymmetry vs centered marker flags: a bound at frame 0 / EOF shows its chip
-// fully onscreen.
+// The ONE trim ENDCAP screen-rect owner: the begin/end edge-anchoring rule
+// lives here, consumed by both the painter (render_trim_flags) and the hit test
+// (hit_test_trim_chip), so paint and hit are one owner again — row 5's endcaps
+// replaced the square chips in BOTH at once.
+//
+// A trim bound is an EDGE, not a point: the begin cap's LEFT edge sits ON the
+// bound column (rect left = strip_x+col), the end cap's RIGHT edge sits on it
+// (rightmost pixel = strip_x+col). The cap is trim_endcap_w_px() wide — 2px at
+// 100%, where the chip was a flag-width square — and its y-band is the trim
+// lane `row`. Deliberate asymmetry vs centered marker flags: a bound at frame 0
+// / EOF shows its cap fully onscreen.
+//
+// THE HIT TEST INFLATES THIS by kTrimEndcapGrabPx per side. A 2px target is
+// under any reasonable pointing tolerance, so the drawn cap and the grabbable
+// cap are deliberately NOT the same rect — the one place in this lane where
+// they differ, stated here because everywhere else in the redesign they are
+// identical by construction.
 GuiRect trim_chip_rect(bool is_begin, int strip_x, int col, GuiRect row);
+
+// Grab tolerance added to EACH SIDE of the drawn endcap for hit-testing. The
+// caps are 2px; this makes the target 2 + 2*4 = 10px, close to the square chip's
+// old width, so the bound drags feel as they always did.
+inline constexpr int kTrimEndcapGrabPx = 4;
+inline int trim_endcap_grab_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kTrimEndcapGrabPx) * gui_scale_factor()));
+    return v < 0 ? 0 : v;
+}
 
 // Draws the WAVEFORM-AREA portion of the trim begin/end boundary stems. BOTH
 // bounds always paint (the trim window is always set since 2026-07-30 — the

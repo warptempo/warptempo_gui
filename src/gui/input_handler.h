@@ -486,6 +486,9 @@ struct GuiInputHandler {
     // claims it, a refusal being a consumed nothing. Row 1's Quit is the one
     // button outside it (Settings, whose action is the dropdown toggle — not a
     // chord, since no keyboard chord opens or closes a popup).
+    // Arm the dual-axis strip drag — ONE body shared by the gesture's TWO
+    // entries: the ctrl-exact waveform press and row 5's plain ruler-band press.
+    void arm_strip_drag_at(int x, int y);
     bool dispatch_redesign_chord(int x, int y, GuiInputState mods);
     // True when the settings dropdown swallowed `key` — the popup-modal gate,
     // ranked directly under the prompt at the top of on_key. Bare Esc closes,

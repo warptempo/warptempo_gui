@@ -779,7 +779,7 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
         const TrimBoundColumn bc = bound_column(app.trim.begin_frame);
         const TrimBoundColumn ec = bound_column(app.trim.end_frame);
         const TrimBridgeGap gap =
-            trim_bridge_gap(bc, ec, flag_lane_w_px(), basis.area_w);
+            trim_bridge_gap(bc, ec, trim_endcap_w_px(), basis.area_w);
         // The [0, area_w) click gate — the SAME effective-width clip the bridge
         // PAINTER applies (render_trim_flags intersects its drawn extent with
         // [0, wave_w)): the inert non-multiple-of-16 right gutter (or a newly

@@ -617,6 +617,30 @@ void GuiInputHandler::apply_strip_drag_at(int x, int y, bool final_event) {
                                    final_event);
 }
 
+// ARM THE DUAL-AXIS STRIP DRAG at (x, y) — ONE body, TWO entries. The gesture
+// had a dedicated zoom LANE, lost it when that lane was deleted (2026-07-31),
+// and ROW 5 GAVE IT A SECOND ENTRY BACK: the ruler band. Both entries arm
+// exactly this — the same StripDragState, the same pointer capture ("swallow"),
+// the same anchor stem, the same edge clamp and 8px threshold — so the two
+// surfaces cannot drift, and the ruler press is the zoom strip reborn rather
+// than a lookalike.
+//
+// The anchor is the SONG position under the press column, which is what makes
+// the zoom pivot on the pixel the user grabbed.
+void GuiInputHandler::arm_strip_drag_at(int x, int y) {
+    const double spp = current_samples_per_pixel(app, audio);
+    app.strip_drag = StripDragState{};
+    app.strip_drag.active  = true;
+    app.strip_drag.press_x = x;
+    app.strip_drag.press_y = y;
+    app.strip_drag.last_x  = x;
+    app.strip_drag.last_y  = y;
+    app.strip_drag.anchor_sample =
+        static_cast<double>(app.viewport_start_sample) +
+        static_cast<double>(x) * spp;
+    begin_strip_pointer_capture();
+}
+
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                       GuiInputState mods) {
     // ANY PRESS HIDES THE TOOLTIP, above every gate — it has said what it had to
@@ -1106,19 +1130,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     return;
                 }
             }
-            if (inside_waveform) {
-                const double spp = current_samples_per_pixel(app, audio);
-                app.strip_drag = StripDragState{};
-                app.strip_drag.active  = true;
-                app.strip_drag.press_x = x;
-                app.strip_drag.press_y = y;
-                app.strip_drag.last_x  = x;
-                app.strip_drag.last_y  = y;
-                app.strip_drag.anchor_sample =
-                    static_cast<double>(app.viewport_start_sample) +
-                    static_cast<double>(x) * spp;
-                begin_strip_pointer_capture();
-            }
+            if (inside_waveform) arm_strip_drag_at(x, y);
             return;
         }
 
@@ -1199,6 +1211,26 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // it stops no playback — nor does the plain press: the chip row's
             // stop belongs to the DRAG's first accepted bound change
             // (input_trim.cpp).
+            // THE RULER BAND IS THE ZOOM STRIP REBORN (row 5): a PLAIN left
+            // drag here arms the dual-axis strip drag through the shared arm
+            // above — the gesture's second entry, beside the ctrl-waveform one.
+            // Claimed before the trim and marker bands (disjoint y-bands, so it
+            // contends with nothing) and NAVIGATION-CLASS: allowed in read-only,
+            // touching neither playhead nor selection.
+            //
+            // A MOTIONLESS plain press-release is a CONSUMED NOTHING — the
+            // release body disarms without committing, exactly as the
+            // ctrl+waveform entry does. There is NO DOUBLE-CLICK SURFACE here:
+            // the span-framing double-click lives on the TRIM lane, and giving
+            // the ruler one too would make two neighbouring bands answer the
+            // same gesture differently.
+            {
+                const GuiRect ruler = top_ruler_row_area(app);
+                if (!shift && y >= ruler.y && y < ruler.y + ruler.h) {
+                    arm_strip_drag_at(x, y);
+                    return;
+                }
+            }
             const GuiRect chip_row = top_trim_row_area(app);
             const bool in_chip_row =
                 (y >= chip_row.y && y < chip_row.y + chip_row.h);

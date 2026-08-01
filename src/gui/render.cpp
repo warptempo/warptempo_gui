@@ -930,14 +930,17 @@ double displayed_trim_ms(int64_t frame,
 }
 
 GuiRect trim_chip_rect(bool is_begin, int strip_x, int col, GuiRect row) {
-    const int flag_w = flag_lane_w_px();
+    const int cap_w = trim_endcap_w_px();
     const int abs_col = strip_x + col;
     GuiRect r;
     // Begin left-edge-anchored (rect left ON the column); end right-edge-anchored
-    // (rightmost pixel ON the column). Y-band from the chip lane `row`.
-    r.x = is_begin ? abs_col : abs_col - flag_w + 1;
+    // (rightmost pixel ON the column) — the SAME edge rule the square chips
+    // used, so a bound's mark still stands on the column the bound occupies.
+    // Only the WIDTH changed with row 5: the endcap is 2px where the chip was a
+    // flag-width square. Y-band from the trim lane `row`.
+    r.x = is_begin ? abs_col : abs_col - cap_w + 1;
     r.y = row.y;
-    r.w = flag_w;
+    r.w = cap_w;
     r.h = row.h;
     return r;
 }
@@ -1009,10 +1012,13 @@ void render_trim_stems(cairo_t* cr,
 // pair and the square chips retire with this painter; their colors.conf keys
 // stay in the tree and simply go inert, per the standing shrink ruling.
 //
-// The INTERACTIONS are unchanged in routing and still read their own geometry
-// owners (hit_test_trim_chip, trim_bridge_gap); mapping them onto the endcap and
-// bar rects is the next arc's work, so paint and hit are DELIBERATELY not yet
-// one owner here — stated so it is not mistaken for the usual invariant.
+// PAINT AND HIT ARE ONE OWNER: the endcaps below come from trim_chip_rect, the
+// same rect hit_test_trim_chip reads (inflated there by its stated grab
+// tolerance, the lane's one deliberate paint/hit difference), and the bar's
+// grabbable span is trim_bridge_gap measured between those same caps. The
+// routing is otherwise unchanged from the chip row — the bound drags, the
+// bridge drag, the ctrl / ctrl+shift bound sets, the framing double-click seed
+// and every read-only refusal all kept their bodies and only changed geometry.
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
                        GuiRect chip_row,
@@ -1044,7 +1050,6 @@ void render_trim_flags(cairo_t* cr,
     const int face_h   = lane_h - bevel_h;  // rows 0..6 at 100%
     const int hi_h     = bevel_h / 2;       // row 7: the lighter shade
     const int lo_h     = bevel_h - hi_h;    // row 8: the darker one
-    const int cap_w    = trim_endcap_w_px();
 
     cairo_save(cr);
     cairo_rectangle(cr, lane_x, lane_y, lane_w, lane_h);
@@ -1093,13 +1098,16 @@ void render_trim_flags(cairo_t* cr,
     // the column the bound actually occupies. A culled bound paints no cap: it
     // has no column on screen to stand on, and the bar's flush edge is what says
     // the window continues past the view.
+    // Both caps come from the ONE rect owner the hit test reads
+    // (trim_chip_rect), so the painted cap and the grabbable cap describe the
+    // same edge — the hit side adds only its stated grab tolerance.
     if (bc.in_viewport) {
-        surface(lane_x + bc.col, cap_w, kTrimLaneEndcap,
-                kTrimCapBevelHi, kTrimCapBevelLo);
+        const GuiRect r = trim_chip_rect(true, lane_x, bc.col, chip_row);
+        surface(r.x, r.w, kTrimLaneEndcap, kTrimCapBevelHi, kTrimCapBevelLo);
     }
     if (ec.in_viewport) {
-        surface(lane_x + ec.col + 1 - cap_w, cap_w, kTrimLaneEndcap,
-                kTrimCapBevelHi, kTrimCapBevelLo);
+        const GuiRect r = trim_chip_rect(false, lane_x, ec.col, chip_row);
+        surface(r.x, r.w, kTrimLaneEndcap, kTrimCapBevelHi, kTrimCapBevelLo);
     }
 
     cairo_restore(cr);
