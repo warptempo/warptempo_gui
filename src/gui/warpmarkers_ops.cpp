@@ -492,7 +492,7 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
             start_scale = m.tempo_scale;
         }
         // Constructive clamp into the authored-value bracket, the same
-        // convention font_size uses: the value walks to the bracket edge
+        // convention the settings brackets use: the value walks to the edge
         // and stops there, rather than refusing. This SINGLETON arm already
         // conformed to the unified wall policy (singleton steps clamp; the
         // policy is stated once at the head of position_nudge.h) and is

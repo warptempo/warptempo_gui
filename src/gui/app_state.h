@@ -800,8 +800,10 @@ struct SettingsPopupItem {
     const char* key;
     bool        separator_before;
 };
+// (THE "Font size" ITEM LEFT WITH ITS KEY — row 7, 2026-08-01. The widest label
+// is still "Playback speed", so the popup's authored width is unchanged; only
+// the item count and the height derived from it moved.)
 inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
-    {"Font size",      "font_size",      false},
     {"GUI scale",      "gui_scale",      false},
     {"Playback speed", "playback_speed", false},
     {"Title",          "title",          true},
@@ -809,7 +811,8 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"URL",            "url",            false},
     {"Cover",          "cover",          false},
 };
-inline constexpr int kSettingsPopupItemCount = 7;
+inline constexpr int kSettingsPopupItemCount =
+    static_cast<int>(std::size(kSettingsPopupItems));
 
 // The dropdown's painted HEIGHT, derived from the table above and the scale
 // alone — no shaping, no paint. Its one non-painter reader is the OPEN EDGE
@@ -1111,27 +1114,25 @@ struct AppState {
     bool    playhead_scanner_active = false;
     float   playback_speed          = 0.7f;
 
-    // GUI-wide monospace text size in points (the font_size setting; 6..72,
-    // default 11). A display preference, not engine input and not authoring
-    // state: persisted on Ctrl+S like playback_speed, applied at file load
-    // and set through the settings editor (`:font_size=`, no hotkey), and
-    // pushed to the renderer's file-scope state via set_gui_font_size_pt at
-    // each of those application points.
-    double  font_size               = 11.0;
+    // (THE font_size FIELD IS GONE — architect approval 2026-08-01. It was the
+    // GUI-wide monospace text size in points, and row 7 deleted the monospace
+    // face it sized: gui_scale below is the product's ONE scale axis now. The
+    // key left the .settings schema whole in the same arc, so nothing carries
+    // the value any more — a sidecar still holding it is load-fatal as an
+    // unknown key, by the architect's explicit no-legacy instruction.)
 
     // GUI rendering scale in PERCENT (the gui_scale setting; 100..200, default
     // 100). 100 is the design baseline — 1920x1080, the one supported
-    // resolution — and 200 is the 4K case. A display preference in the same
-    // class as font_size: not engine input, not authoring state, persisted on
-    // Ctrl+S, applied at file load, and set through the settings editor
-    // (`:gui_scale=`, no hotkey). LIVE since 2026-07-31, exactly like
-    // font_size: pushed to the renderer's file-scope state via
+    // resolution — and 200 is the 4K case. A display preference: not engine
+    // input, not authoring state, persisted on Ctrl+S, applied at file load, and
+    // set through the settings editor (`:gui_scale=`, no hotkey). LIVE since
+    // 2026-07-31: pushed to the renderer's file-scope state via
     // set_gui_scale_percent at all three application points (file load, the
     // settings-editor commit, the `'` adopt), and the editor commit APPLIES it
     // live through GuiInputHandler::apply_gui_scale (the resize-path geometry
-    // rebuild). Its consumers are the REDESIGNED rows only — the menu row is the
-    // first — while every pre-redesign surface stays on the font axis; the
-    // row-by-row redesign adds the rest one row at a time.
+    // rebuild). SINCE ROW 7 IT IS THE ONE SCALE AXIS — every painted dimension
+    // in the product rides it, the former font_size axis having died with the
+    // monospace face.
     int     gui_scale               = 100;
 
     // GUI-kind launch preference: the external audio player the `l`
@@ -1571,6 +1572,28 @@ struct AppState {
     // contract, including why `byte_x` is what click-to-byte searches.
     FlagEditorBox flag_editor_box;
 
+    // THE OPEN BOTTOM-STRIP EDITOR'S TEXT GEOMETRY — the same painter-publishes-
+    // shaped-geometry contract one row down, for the settings / render-commit /
+    // BPM editors after row 7 took them off the monospace grid (2026-08-01).
+    // There is no BOX to publish: those editors have no chip around them any
+    // more (the press region is the whole bottom strip, as it has always been),
+    // so this carries only what click-to-byte needs.
+    //
+    // `text_origin_x` is the window x of PENDING's byte 0 — the prefix's own
+    // shaped width is already spent in it — and `byte_x` holds pending.size()+1
+    // pen offsets RELATIVE to that origin, so the pair reads exactly like
+    // FlagEditorBox's and editor_byte_index_at searches either the same way.
+    // Written by paint_bottom_strip: zeroed at the top of every run, filled by
+    // whichever editor branch actually paints. That makes it a statement about
+    // what is ON SCREEN — an editor the row's precedence hides (a prompt is up)
+    // publishes nothing and takes no clicks, which is the correct answer.
+    struct BottomEditorText {
+        bool                valid         = false;
+        double              text_origin_x = 0.0;
+        std::vector<double> byte_x;
+    };
+    BottomEditorText bottom_editor_text;
+
     // THE PRESSED BUTTON — the CLICK FACE, and the only piece of press-state
     // machinery the redesigned rows have. A roster index while a left button is
     // physically held down on an ENABLED button that HAS the face, -1 otherwise.
@@ -1678,7 +1701,7 @@ struct AppState {
     // in dirty via settings_dirty. View-state keys — the GUI-kind keys
     // (viewport/zoom/playhead per tab, follow, active_audio_view,
     // active_markers_view, active_tab_view, playback_speed, trim, read_only,
-    // font_size, gui_scale, audio_player, and the four *_hash env-attestation
+    // gui_scale, audio_player, and the four *_hash env-attestation
     // keys) — do
     // NOT participate: they are silently persisted on Ctrl+S and not tracked as
     // dirty, so quitting without saving simply drops them. Trim is
@@ -2536,8 +2559,8 @@ enum class TrimHit { None, Begin, End };
 // top row) contains the press, or None. Both bounds are always meaningful (the
 // trim window is always set since 2026-07-30), so it reads the pair directly.
 // AUTHORING views — the active tab's live pair, project-level in both 'W' and
-// 'P' views. Each chip is a textless SQUARE (flag_lane_w_px() wide, and as tall
-// — its lane's height is that same accessor) EDGE-ANCHORED on the bound's
+// 'P' views. Each chip is a textless SQUARE (the trim lane's own height on both
+// axes) EDGE-ANCHORED on the bound's
 // painted column — the begin chip's LEFT edge on it, the end chip's RIGHT edge
 // on it — exactly what render_trim_flags fills, this rect built the same way,
 // so paint and hit cannot drift. Tests both mouse_x and mouse_y. Walks the

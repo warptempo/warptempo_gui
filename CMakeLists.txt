@@ -163,7 +163,6 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/render.cpp
         src/gui/warpmarkers.cpp
         src/gui/text_editor.cpp
-        src/gui/text_display.cpp
         src/gui/phaseresetmarkers.cpp
         src/gui/playback.cpp
         src/gui/playback_lifecycle.cpp

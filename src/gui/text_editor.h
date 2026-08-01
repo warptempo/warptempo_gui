@@ -246,17 +246,8 @@ void        replace_selection(State& s, const std::string& raw);
 // keystroke.
 bool cursor_visible_now(const State& s);
 
-// Translate a click x-coordinate to a byte index into `pending` based on
-// the monospace per-character advance and a known text-left x (the char-0
-// origin). Both `advance > 0` and `text_left_x >= 0` must hold; callers
-// gate on those before invoking. The returned index is clamped to
-// [0, pending_size]. Shared by the flag editor's click-to-caret path and
-// the F2.1 mouse drag-to-select path in input_handler.cpp.
-int byte_index_from_click_x(double click_x, double text_left_x,
-                            double advance, int pending_size);
-
-// THE PROPORTIONAL SUCCESSOR of the function above, for a surface whose text is
-// SHAPED rather than gridded: `boundaries` is the per-byte pen offset vector the
+// THE ONE CLICK-X -> BYTE MAPPING (row 7 deleted its monospace predecessor,
+// byte_index_from_click_x, with the face): `boundaries` is the per-byte pen offset vector the
 // shaping chokepoint produces (text_shape::byte_offsets_px — one entry per byte
 // boundary, index 0 at 0.0 and the last at the run's full width), and
 // `text_origin_x` is the window x that boundary 0 paints at (already carrying
@@ -281,7 +272,8 @@ int byte_index_from_shaped_x(double click_x, double text_origin_x,
 // [A-Za-z0-9_] plus any byte >= 0x80 (multibyte UTF-8 stays whole), WHITESPACE
 // is ' ' and '\t', PUNCTUATION is every other byte — so clicking `=`, `.`, or
 // `::` selects that punctuation run. The double-click path in the input handler
-// calls this after mapping the click x to a byte index (byte_index_from_click_x).
+// calls this after mapping the click x to a byte index
+// (byte_index_from_shaped_x).
 void select_word_at(State& s, int pos);
 
 } // namespace text_editor

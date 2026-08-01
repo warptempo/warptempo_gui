@@ -65,7 +65,6 @@ bool GuiSaveOps::save() {
             app.active_markers_view,
             app.active_tab_view,
             app.playback_speed,
-            app.font_size,
             app.gui_scale,
             app.audio_player,
             app.libm_hash,

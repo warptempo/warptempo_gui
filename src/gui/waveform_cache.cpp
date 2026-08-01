@@ -111,7 +111,7 @@ void render_waveform_to_cache_surface(
 // consumer derivation must stay in sync with the helper the same way it
 // tracked the prior inline block. It also snapshots the GUI thread's
 // font-dependent geometry (area_w/area_h and inset_px = waveform_inset_px())
-// so the worker render never reads gui_font_scale()/g_font_size_pt directly.
+// so the worker render never reads the gui_scale state directly.
 
 GuiPaintHandler::WaveformRenderInputs
 GuiPaintHandler::compute_waveform_render_inputs() const {
@@ -147,9 +147,6 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.area_w        = area.w;
     in.area_h        = area.h;
     in.inset_px      = waveform_inset_px();
-    // The measured grid the font-derived geometry above came from, captured on
-    // the GUI thread with it — a fingerprint field, not a render input.
-    in.measured_font_px = measured_monospace_font_px();
     in.is_target     = is_target;
     in.warp_frame_map_hash  = target_warp_frame_map_hash;
     in.warp_frame_map       = std::move(target_warp_frame_map);
@@ -190,22 +187,23 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     WaveformRenderInputs in = compute_waveform_render_inputs();
     if (!in.valid) return;
 
-    // fp_font is the measured font pixel size the compared pixels were laid out
-    // under: the plate's inset band is font-derived and is NOT itself a
-    // fingerprint field, and the area dims move with the strip heights only
-    // because the lanes do — so the measure is keyed directly and the detect is
-    // sound by field rather than by that derivation.
+    // fp_inset is the waveform inset the compared pixels were laid out under —
+    // the plate's one geometry input that is not an area dimension, and the area
+    // dims move with the strip heights only because the lanes do, so it is keyed
+    // directly and the detect is sound by field rather than by that derivation.
+    // (It keyed the measured MONOSPACE font size until row 7, as a proxy for
+    // this same inset back when the inset was font-derived.)
     auto fingerprint_differs = [&](
         int64_t fp_vp_s, int64_t fp_vp_e,
         int     fp_aw,   int     fp_ah,
-        double  fp_font,
+        int     fp_inset,
         bool    fp_t,
         uint64_t fp_h) -> bool {
         if (fp_vp_s != in.vp_start)        return true;
         if (fp_vp_e != in.vp_end)          return true;
         if (fp_aw   != in.area_w)          return true;
         if (fp_ah   != in.area_h)          return true;
-        if (fp_font != in.measured_font_px) return true;
+        if (fp_inset != in.inset_px)       return true;
         if (fp_t    != in.is_target)       return true;
         if (fp_h    != in.warp_frame_map_hash) return true;
         return false;
@@ -216,7 +214,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.pending_fp_vp_end,
         wf_cache.pending_fp_area_w,
         wf_cache.pending_fp_area_h,
-        wf_cache.pending_fp_measured_font_px,
+        wf_cache.pending_fp_inset_px,
         wf_cache.pending_fp_target,
         wf_cache.pending_fp_warp_frame_map_hash);
 
@@ -234,7 +232,6 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.supersede_area_w      = in.area_w;
         wf_cache.supersede_area_h      = in.area_h;
         wf_cache.supersede_inset_px    = in.inset_px;
-        wf_cache.supersede_measured_font_px = in.measured_font_px;
         wf_cache.supersede_target      = in.is_target;
         wf_cache.supersede_warp_frame_map_hash = in.warp_frame_map_hash;
         wf_cache.supersede_warp_frame_map     = std::move(in.warp_frame_map);
@@ -278,7 +275,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     wf_cache.pending_fp_vp_end      = in.vp_end;
     wf_cache.pending_fp_area_w      = in.area_w;
     wf_cache.pending_fp_area_h      = in.area_h;
-    wf_cache.pending_fp_measured_font_px = in.measured_font_px;
+    wf_cache.pending_fp_inset_px = in.inset_px;
     wf_cache.pending_fp_target      = in.is_target;
     wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
 
@@ -321,7 +318,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_vp_end              = wf_cache.fp_vp_end;
         wf_cache.pending_fp_area_w              = wf_cache.fp_area_w;
         wf_cache.pending_fp_area_h              = wf_cache.fp_area_h;
-        wf_cache.pending_fp_measured_font_px    = wf_cache.fp_measured_font_px;
+        wf_cache.pending_fp_inset_px            = wf_cache.fp_inset_px;
         wf_cache.pending_fp_target              = wf_cache.fp_target;
         wf_cache.pending_fp_warp_frame_map_hash = wf_cache.fp_warp_frame_map_hash;
         wf_cache.pending_fp_warp_frame_map      = wf_cache.fp_warp_frame_map;
@@ -375,8 +372,6 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         job.area_h         = sh;
         job.inset_px       = wf_cache.supersede_inset_px;
         job.target         = wf_cache.supersede_target;
-        // (measured_font_px is a fingerprint field only — the job needs the
-        // inset it produced, not the measure itself.)
         job.warp_frame_map_hash   = wf_cache.supersede_warp_frame_map_hash;
         // Thread the supersede warp_frame_map into both the job and
         // pending_fp_warp_frame_map, the same way the idle-path dispatch does.
@@ -392,7 +387,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_vp_end      = wf_cache.supersede_vp_end;
         wf_cache.pending_fp_area_w      = sw;
         wf_cache.pending_fp_area_h      = sh;
-        wf_cache.pending_fp_measured_font_px = wf_cache.supersede_measured_font_px;
+        wf_cache.pending_fp_inset_px = wf_cache.supersede_inset_px;
         wf_cache.pending_fp_target      = wf_cache.supersede_target;
         wf_cache.pending_fp_warp_frame_map_hash = wf_cache.supersede_warp_frame_map_hash;
 
@@ -417,7 +412,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     wf_cache.fp_vp_end       = wf_cache.pending_fp_vp_end;
     wf_cache.fp_area_w       = wf_cache.pending_fp_area_w;
     wf_cache.fp_area_h       = wf_cache.pending_fp_area_h;
-    wf_cache.fp_measured_font_px = wf_cache.pending_fp_measured_font_px;
+    wf_cache.fp_inset_px = wf_cache.pending_fp_inset_px;
     wf_cache.fp_rendered     = true;
     wf_cache.fp_target       = wf_cache.pending_fp_target;
     wf_cache.fp_warp_frame_map_hash = wf_cache.pending_fp_warp_frame_map_hash;
@@ -578,7 +573,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.fp_vp_end       = in.vp_end;
     wf_cache.fp_area_w       = in.area_w;
     wf_cache.fp_area_h       = in.area_h;
-    wf_cache.fp_measured_font_px = in.measured_font_px;
+    wf_cache.fp_inset_px = in.inset_px;
     wf_cache.fp_rendered     = true;
     wf_cache.fp_target       = in.is_target;
     wf_cache.fp_warp_frame_map_hash = in.warp_frame_map_hash;
@@ -587,7 +582,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.pending_fp_vp_end       = in.vp_end;
     wf_cache.pending_fp_area_w       = in.area_w;
     wf_cache.pending_fp_area_h       = in.area_h;
-    wf_cache.pending_fp_measured_font_px = in.measured_font_px;
+    wf_cache.pending_fp_inset_px = in.inset_px;
     wf_cache.pending_fp_target       = in.is_target;
     wf_cache.pending_fp_warp_frame_map_hash = in.warp_frame_map_hash;
     wf_cache.pending_fp_warp_frame_map      = in.warp_frame_map;
@@ -676,11 +671,10 @@ uint64_t hash_selection(const std::set<int>& s,
 //
 // Called from on_tick AFTER maybe_enqueue_waveform_render: wf_cache.fp_*
 // coupling for the displayed-viewport half of the fingerprint, live-app-state
-// reads for the marker-driven half, plus the measured font pixel size
-// (measured_monospace_font_px) for the GEOMETRY half — every flag dimension and
-// the lane rects the shapes land in are derived from that measure, so it is
-// keyed directly rather than inferred from the strip dims moving with it. The
-// cache holds
+// reads for the marker-driven half. (THE GEOMETRY HALF IS GONE — it keyed the
+// measured monospace grid every flag dimension used to derive from; row 5 moved
+// those onto the gui_scale axis, leaving the field a recorded vestige, and row 7
+// deleted the measurement itself.) The cache holds
 // EVERY flag shape (marker + phase reset) — the flag editor's text renders live
 // as a live overlay AFTER this cache's blit, so the editing target's flag is an
 // ordinary cached shape (no skip-guard). Trim's chips/stems left this cache and
@@ -718,14 +712,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                                      app.selected_markers,
                                      app.last_selected_marker);
     const char      mv         = app.active_markers_view;
-    // The measured font grid these shapes would be laid out against. The strip
-    // dims above move with it in every ordinary case, but they are the STRIP's
-    // dims, not the flag's. IT IS A VESTIGE SINCE ROW 5: the flag boxes moved to
-    // the gui_scale axis with their lane, so nothing they paint is derived from
-    // the MONOSPACE grid any more and this field can no longer move on its own.
-    // It stays because keying the metric costs one compare and keeps the cache
-    // sound by FIELD rather than by an argument about which axis feeds what.
-    const double    font_px    = measured_monospace_font_px();
     // The flags carry TEXT since row 5, and iteration mode changes what that
     // text says (flag_text_iter splices the bracket). See fp_iteration_mode.
     const bool      iter_on    = app.iteration_mode_enabled;
@@ -743,7 +729,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_drag_overlay_hash       == drag_hash &&
         flag_cache.fp_selection_hash          == sel_hash &&
         flag_cache.fp_active_markers_view     == mv &&
-        flag_cache.fp_measured_font_px        == font_px &&
         flag_cache.fp_iteration_mode          == iter_on;
 
     if (matches) return;
@@ -876,7 +861,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_drag_overlay_hash       = drag_hash;
     flag_cache.fp_selection_hash          = sel_hash;
     flag_cache.fp_active_markers_view     = mv;
-    flag_cache.fp_measured_font_px        = font_px;
     flag_cache.fp_iteration_mode          = iter_on;
 
     // Event-synchronized hit geometry, STAGE phase: these OFFSCREEN flags just

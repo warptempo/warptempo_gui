@@ -30,10 +30,17 @@
 
 inline std::string format_timestamp(double seconds) {
     if (seconds < 0) seconds = 0;
-    // Hard cap: 59:59.999. The format carries two minute digits; movement-length
-    // source never reaches this, and the cap keeps the display shape stable.
-    // Display-only clamping — no persisted value flows through this function.
-    if (seconds > 3599.999) seconds = 3599.999;
+    // Hard cap: 999:59.999, a THREE-digit minutes field (raised from the old
+    // two-digit 59:59.999 by row 7, 2026-08-01). The minutes field is
+    // MINIMUM-two-digit and grows to three, so every ordinary source reads
+    // exactly as it always did and a long one is no longer clamped to a wrong
+    // time. THREE DIGITS IS ENOUGH BY THE CONTAINER: a RIFF data chunk tops out
+    // near 4 GiB, which at the product's heaviest supported source (44.1 kHz
+    // stereo 24-bit = 264600 B/s) is ~16232 s = 270:32 — so no loadable source
+    // can reach four minute digits, and the bottom row's fixed timestamp section
+    // is sized on exactly this bound. Display-only clamping — no persisted value
+    // flows through this function.
+    if (seconds > 59999.999) seconds = 59999.999;
     long total_ms = static_cast<long>(std::nearbyint(seconds * 1000.0));
     const long m  = total_ms / 60000;
     total_ms     -= m * 60000;

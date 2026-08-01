@@ -677,184 +677,6 @@ void render_trim_flags(cairo_t* cr,
     cairo_restore(cr);
 }
 
-void render_editor_text_box(cairo_t* cr, const EditorTextBox& s) {
-    cairo_save(cr);
-    cairo_select_font_face(cr, "monospace",
-                           CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
-
-    // Prefix is monospace ASCII like the rest of the box; its advance is
-    // exact arithmetic (glyph count * monospace_advance()), matching the flag
-    // paths, with no transient cairo_text_extents over s.prefix.
-    const double editable_left = editor_text_glyph0_x(s.anchor_x, s.prefix);
-
-    cairo_text_extents_t text_ext;
-    cairo_text_extents(cr, s.text.c_str(), &text_ext);
-
-    // The step-1 fill box fills its whole BOX rect rather than the tight glyph
-    // bounding box — that geometry lives entirely inside flag_chip_rect (height
-    // = monospace_text_box_h(), top = the lane top the baseline offset recovers,
-    // inset downward by text_box_margin_px()), so baseline_y sits centered in
-    // the box and the box sits centered in its lane with a clear margin above
-    // and below. Callers solve baseline_y as lane.y +
-    // monospace_text_row_baseline_offset(); the box lands inside that lane.
-    //
-    // The cursor (step 5) and the selection highlight (step 4) span exactly the
-    // glyph ink band (ascent-to-descent), no vertical padding. The band is
-    // recovered by INVERTING the BOX formula, term for term — never the LANE's,
-    // which carries a margin the box does not: the lane-top baseline offset is
-    // text_box_margin_px() + text_box_pad_px() + flag_pad_y_px() +
-    // kChipOutlinePx + ascent, and the box height is 2*text_box_pad_px() +
-    // nearbyint(font_height + 2*flag_pad_y_px()) + 2*kChipOutlinePx — so every
-    // pad and margin the metrics added comes back off here. Taking bg_h from the
-    // LANE instead would inflate the derived font_height by both margins and
-    // mis-span the band. These three lines MUST move with the box/lane formulas.
-    // The nearbyint on the box height can leak a sub-pixel into the derived
-    // descent; that is cosmetically irrelevant here and saves adding a new
-    // metric accessor.
-    const double bg_h        = static_cast<double>(monospace_text_box_h());
-    const double ascent      = monospace_text_row_baseline_offset()
-                             - text_box_margin_px() - text_box_pad_px()
-                             - flag_pad_y_px() - kChipOutlinePx;
-    const double font_height = bg_h - 2.0 * text_box_pad_px()
-                             - 2.0 * flag_pad_y_px()
-                             - 2.0 * kChipOutlinePx;
-    const double descent     = font_height - ascent;
-    const double glyph_top   = s.baseline_y - ascent;
-    const double glyph_h     = ascent + descent;
-
-    // Chip rect (fill + ring) from the single source of truth (flag_chip_rect),
-    // so the painted chip and the hit rect are the same rectangle. chip_text_left
-    // is the chip's left edge = editable_left - hl_pad (the renderers pass
-    // anchor_x = text_left + flag_glyph_inset_px(); prefix-bearing editors have
-    // their editable text begin past the prefix, and the fill still covers
-    // exactly the editable glyph run, which is what the chip rect measures).
-    const double chip_text_left = editable_left - s.hl_pad;
-    const GuiRect fr =
-        flag_chip_rect(chip_text_left, s.text.length(), s.baseline_y);
-
-    // Snap the shared glyph ink band to integer pixel rows once, so the
-    // selection highlight (step 4) and the cursor (step 5) both fill crisp
-    // integer-edged rectangles with antialiasing off — the same anti-aliased-
-    // tip defect corrected in render_waveform. Glyph text (steps 2-3) keeps
-    // antialiasing and is untouched.
-    //
-    // The band is CLAMPED to the BOX's fill interior [fr.y + kChipOutlinePx,
-    // fr.y + fr.h - kChipOutlinePx] so a cursor/highlight rect can never punch
-    // through the ring top or bottom (the standing rule) — and, since fr is the
-    // margin-inset box, never into the lane's margin either. text_box_pad_px()
-    // cancels flag_pad_y_px() exactly, so the band lands ON the interior edges
-    // and the clamp is a no-op whenever the box height rounds cleanly; it stays
-    // as the guard for the sub-pixel the box's own nearbyint can leak at other
-    // font sizes. The antialiased glyph text and the selection substring repaint are
-    // NOT clamped — their extreme leading rows are blank, the ring paints
-    // first, and only these filled rects could otherwise show through it.
-    // std::nearbyint, the project's one fractional->integer pixel conversion.
-    int band_y0 = static_cast<int>(std::nearbyint(glyph_top));
-    int band_y1 = static_cast<int>(std::nearbyint(glyph_top + glyph_h));
-    const int band_lo = fr.y + kChipOutlinePx;
-    const int band_hi = fr.y + fr.h - kChipOutlinePx;
-    band_y0 = std::clamp(band_y0, band_lo, band_hi);
-    band_y1 = std::clamp(band_y1, band_lo, band_hi);
-    const int band_h  = (band_y1 > band_y0) ? (band_y1 - band_y0) : 1;
-
-    // 1. Solid fill behind the editable region: the full rect (the outline ring)
-    //    in s.outline, then the inner rect inset by kChipOutlinePx on every side
-    //    in s.fill. fr already includes the ring (flag_chip_rect), so the ring is
-    //    the outer kChipOutlinePx band left exposed. The glyph ink band (and thus
-    //    cursor/selection) is clamped inside the ring above. The bottom-strip
-    //    editors pass the bottom row's own ground for both, so their ring is
-    //    invisible and the box reads as light text on the row.
-    //
-    //    Both fills paint with antialiasing OFF: integer-edged rects, the same
-    //    crisp-edge convention as steps 4/5 and render_waveform — the default AA
-    //    softened the ring edges. The surrounding cairo_save/restore brackets the
-    //    AA state.
-    if (fr.w > 0 && fr.h > 0) {
-        cairo_save(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr, s.outline.r, s.outline.g, s.outline.b);
-        cairo_rectangle(cr, fr.x, fr.y, fr.w, fr.h);
-        cairo_fill(cr);
-        cairo_set_source_rgb(cr, s.fill.r, s.fill.g, s.fill.b);
-        cairo_rectangle(cr, fr.x + kChipOutlinePx, fr.y + kChipOutlinePx,
-                        fr.w - 2 * kChipOutlinePx,
-                        fr.h - 2 * kChipOutlinePx);
-        cairo_fill(cr);
-        cairo_restore(cr);
-    }
-
-    // 2. Optional static prefix, drawn on the canvas to the left of the box.
-    if (!s.prefix.empty()) {
-        cairo_set_source_rgb(cr,
-            s.text_color.r, s.text_color.g, s.text_color.b);
-        cairo_move_to(cr, s.anchor_x, s.baseline_y);
-        cairo_show_text(cr, s.prefix.c_str());
-    }
-
-    // 3. Editable text.
-    cairo_set_source_rgb(cr,
-        s.text_color.r, s.text_color.g, s.text_color.b);
-    cairo_move_to(cr, editable_left, s.baseline_y);
-    cairo_show_text(cr, s.text.c_str());
-
-    // 4. Selection swap: fill the selected range with text_color, repaint
-    //    the selected substring in the fill color for contrast. The highlight
-    //    band is the integer-snapped glyph ink band (band_y0 / band_h) with
-    //    AA off, distinct from the full-slot step-1 fill; the horizontal
-    //    extent is snapped too (hx0 / hw). hi_x / hi_w (the exact glyph-run
-    //    extent from monospace arithmetic) still position the antialiased
-    //    substring repaint.
-    if (s.has_selection) {
-        const double adv  = monospace_advance();
-        const double hi_x = editable_left + s.selection_start * adv;
-        const double hi_w = (s.selection_end - s.selection_start) * adv;
-        // std::nearbyint, the project's one fractional->integer pixel
-        // conversion, the same one the band rows above take.
-        const int hx0 = static_cast<int>(std::nearbyint(hi_x));
-        const int hx1 = static_cast<int>(std::nearbyint(hi_x + hi_w));
-        const int hw  = (hx1 > hx0) ? (hx1 - hx0) : 1;
-        cairo_save(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr,
-            s.text_color.r, s.text_color.g, s.text_color.b);
-        cairo_rectangle(cr, hx0, band_y0, hw, band_h);
-        cairo_fill(cr);
-        cairo_restore(cr);
-        cairo_set_source_rgb(cr, s.fill.r, s.fill.g, s.fill.b);
-        cairo_move_to(cr, hi_x, s.baseline_y);
-        cairo_show_text(cr,
-            s.text.substr(static_cast<size_t>(s.selection_start),
-                          static_cast<size_t>(s.selection_end -
-                                              s.selection_start))
-                .c_str());
-    }
-
-    // 5. Cursor (blink-gated): a crisp one-pixel-wide integer rectangle, AA
-    //    off, spanning the integer-snapped glyph ink band (band_y0 / band_h),
-    //    not the full step-1 slot. cur_col is the nearbyint'd column; the
-    //    former round(x)+0.5 half-pixel was a stroke-aliasing device, unneeded
-    //    for a filled integer rectangle.
-    if (s.cursor_visible) {
-        const double cursor_x_offset = s.cursor_pos * monospace_advance();
-        // An integer one-pixel rectangle at cur_col occupies exactly the
-        // cursor column with AA off; the former round(x)+0.5 half-pixel was a
-        // stroke-aliasing device and is no longer needed. std::nearbyint, the
-        // project's one fractional->integer pixel conversion.
-        const int cur_col =
-            static_cast<int>(std::nearbyint(editable_left + cursor_x_offset));
-        cairo_save(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        cairo_set_source_rgb(cr,
-            s.text_color.r, s.text_color.g, s.text_color.b);
-        cairo_rectangle(cr, cur_col, band_y0, 1, band_h);
-        cairo_fill(cr);
-        cairo_restore(cr);
-    }
-
-    cairo_restore(cr);
-}
-
 namespace {
 
 // Shared flag iteration used by render_flags and its phase-reset analogue.
@@ -1167,26 +989,11 @@ void render_phase_reset_flags(cairo_t* cr,
 }
 
 namespace {
-    // Current GUI font size, in points. Set by set_gui_font_size_pt from
-    // the two application points (file load, the settings-editor font_size
-    // commit). NO PAINTED QUANTITY READS IT since row 7 took the monospace
-    // grid onto the gui_scale axis — gui_font_scale() is its only reader and
-    // that accessor's own callers are callerless residue (the note is at
-    // kDefaultFontSizePt in render.h; retiring the key is the architect's call).
-    double g_font_size_pt = kDefaultFontSizePt;
-    // Current GUI scale, in PERCENT. Set by set_gui_scale_percent from the SAME
-    // three application points that push the font size (file load, the settings
-    // editor's gui_scale commit, the adopt). EVERY painted pixel quantity reads
-    // it through gui_scale_factor() now, the monospace grid included.
+    // Current GUI scale, in PERCENT. Set by set_gui_scale_percent from the
+    // three application points (file load, the settings editor's gui_scale
+    // commit, the adopt). EVERY painted pixel quantity in the product reads it
+    // through gui_scale_factor().
     int    g_gui_scale_percent = 100;
-    double g_advance = 0.0;
-    int    g_row_h            = kRowHFallbackPx;
-    double g_row_baseline_off = kRowBaselineOffFallbackPx;
-    // Pixel size the grid metrics were last measured at; negative until the
-    // first measure. init_monospace_grid_metrics re-measures whenever this
-    // differs from the current bottom_row_font_size_px(), so a gui_scale change
-    // picks up fresh metrics on the next frame.
-    double g_measured_font_px = -1.0;
     // Cached triangle masks and the H each was built at; regenerated by their
     // accessors when H changes. The playhead mask is the full triangle
     // (2H-1 x H), stamped centered on the column at the playhead cursor and at
@@ -1195,8 +1002,6 @@ namespace {
     int              g_playhead_triangle_h = 0;
 } // namespace
 
-void   set_gui_font_size_pt(double pt) { g_font_size_pt = pt; }
-double gui_font_scale()    { return g_font_size_pt / kDefaultFontSizePt; }
 void   set_gui_scale_percent(int percent) { g_gui_scale_percent = percent; }
 double gui_scale_factor()  {
     return static_cast<double>(g_gui_scale_percent) / 100.0;
@@ -1243,57 +1048,6 @@ cairo_surface_t* playhead_triangle_mask() {
     g_playhead_triangle_h = h;
     return g_playhead_triangle;
 }
-
-double monospace_advance() { return g_advance; }
-
-// g_row_h / g_row_baseline_off — the measured UNPADDED glyph slot and its
-// baseline — are deliberately accessor-less: nothing outside this file has any
-// use for the bare slot, so the box/lane accessors below read the globals
-// directly and the slot never becomes a metric a lane could take by mistake.
-//
-// The text BOX: that measured slot plus kTextBoxPadPx on each side.
-// The BAND-TOP baseline offset carries both that pad and one kTextBoxMarginPx,
-// the empty margin outside the ring — flag_chip_rect adds the margin back to
-// recover the box top, so the two cancel and the box lands on the glyph band
-// wherever the caller's baseline is. Both are derived rather than cached so a
-// gui_scale change needs no second measure.
-// (monospace_text_row_h — the box plus a margin per side — retired with row 7;
-// its only readers were the two bottom-strip lanes it sized.)
-int monospace_text_box_h() {
-    return g_row_h + 2 * static_cast<int>(text_box_pad_px());
-}
-double monospace_text_row_baseline_offset() {
-    return g_row_baseline_off + text_box_pad_px() + text_box_margin_px();
-}
-
-void init_monospace_grid_metrics(cairo_t* cr) {
-    const double px = bottom_row_font_size_px();
-    if (g_measured_font_px == px) return;
-    cairo_save(cr);
-    cairo_select_font_face(cr, "monospace",
-        CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cr, px);
-    cairo_text_extents_t ext;
-    cairo_text_extents(cr, "M", &ext);
-    g_advance = ext.x_advance;
-    cairo_font_extents_t fe;
-    cairo_font_extents(cr, &fe);
-    const double font_height = fe.ascent + fe.descent;
-    // The UNPADDED pair, which no lane takes: the text BOX adds kTextBoxPadPx
-    // per side on top of it (monospace_text_box_h) and the band-top baseline
-    // offset one kTextBoxMarginPx more. The outline ring sits
-    // outside the padding, so both formulas add 2*kChipOutlinePx /
-    // kChipOutlinePx: the slot is font_height + 2*flag_pad_y_px() +
-    // 2*kChipOutlinePx tall, and the baseline drops by flag_pad_y_px() +
-    // kChipOutlinePx + ascent from the top.
-    g_row_h = static_cast<int>(std::nearbyint(
-        font_height + 2.0 * flag_pad_y_px())) + 2 * kChipOutlinePx;
-    g_row_baseline_off = flag_pad_y_px() + kChipOutlinePx + fe.ascent;
-    cairo_restore(cr);
-    g_measured_font_px = px;
-}
-
-double measured_monospace_font_px() { return g_measured_font_px; }
 
 // -- The flag editor's unrolled box ---------------------------------------
 
@@ -1451,7 +1205,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     cairo_clip(cr);
 
     // 2. The selection highlight, then 3. the text — the two-tone convention
-    //    the monospace box already uses: the selected span fills with the label
+    //    convention the retired monospace box used: the selected span fills with the label
     //    colour and its glyphs repaint in the box fill for contrast. Both edges
     //    come from byte_x, so the highlight cannot drift off the glyphs it
     //    marks however proportional they are.
@@ -1493,7 +1247,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     // 4. The caret: a blink-gated filled integer column at the cursor's own
     //    byte boundary, AA off — the same crisp-column convention the
-    //    monospace box uses, on the shaped position instead of a grid one.
+    //    retired monospace box used, on a shaped position instead of a grid one.
     if (text_editor::cursor_visible_now(ed)) {
         const int cx =
             static_cast<int>(std::nearbyint(text_origin_x + caret_off));

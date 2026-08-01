@@ -411,7 +411,7 @@ struct GuiInputHandler {
     // The settings editor is a keyboard front-end that funnels each `:`-typed
     // GUI-kind key into the SAME gesture chokepoint the key's gesture uses.
     // Three of those chokepoints are private methods here
-    // (handle_active_audio_view_toggle, apply_font_size,
+    // (handle_active_audio_view_toggle, apply_gui_scale,
     // auto_clear_crossed_trim); the friendship lets the editor reach them
     // through its back-pointer without a parallel writer.
     friend struct GuiSettingsEditor;
@@ -1031,23 +1031,15 @@ private:
     // update-in-progress gates playback elsewhere.
     void handle_active_audio_view_toggle();
 
-    // Apply a new GUI font size (points), running the shared live sequence:
-    // assign app.font_size, push it to the renderer (set_gui_font_size_pt),
-    // full-window invalidate, then the resize-path geometry-and-cache rebuild.
-    // The settings editor's `font_size=` commit is the sole caller and gates
-    // the no-op case before calling (its same-value gate), so this assumes a
-    // real change (the file-load path pushes font_size straight through
-    // set_gui_font_size_pt, not through here).
-    void apply_font_size(double pt);
-
-    // Apply a new GUI scale (percent), running the SAME live sequence on the
-    // other scale axis: assign app.gui_scale, push it to the renderer
+    // Apply a new GUI scale (percent), running the shared live sequence:
+    // assign app.gui_scale, push it to the renderer
     // (set_gui_scale_percent), full-window invalidate, then the resize-path
     // geometry-and-cache rebuild — the redesigned rows' lane heights come from
     // this value, so a change re-lays-out the whole window. The settings
     // editor's `gui_scale=` commit is the sole caller and gates the no-op case
     // (the file-load and adopt paths push straight through
-    // set_gui_scale_percent, not through here, exactly as font_size does).
+    // set_gui_scale_percent, not through here). It is the ONE such applier since
+    // row 7 deleted apply_font_size with the font_size key.
     void apply_gui_scale(int percent);
 
     // THE LANE MODEL (architect 2026-07-28, KEPT and re-justified 2026-07-30):

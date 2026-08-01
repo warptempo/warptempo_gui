@@ -28,7 +28,6 @@ enum class SettingKind {
     ActiveTabViewChar,
     PlaybackSpeedFloat,
     FollowFlag,
-    FontSizePt,
     GuiScalePercent,
     AudioPlayerPath,
     TrimBegin_A,
@@ -80,17 +79,13 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "active_tab_view",             SettingKind::ActiveTabViewChar,    EngineField::Title,                   "A"        },
     { "playback_speed",              SettingKind::PlaybackSpeedFloat,   EngineField::Title,                   "0.7" },
     { "follow",                      SettingKind::FollowFlag,           EngineField::Title,                   "true"     },
-    // GUI-kind key, NOT an engine key: the single GUI-wide monospace text
-    // size in points (pixels = points * 4/3). Valid range 6..72. Like
-    // playback_speed, the file's value is applied once at launch when the
-    // source loads.
-    { "font_size",                   SettingKind::FontSizePt,           EngineField::Title,                   "11"       },
     // GUI-kind key, NOT an engine key: the GUI's rendering scale as an integer
     // percent. 100 is the design baseline (1920x1080, the supported
     // resolution); 200 is the 4K case. Valid range 100..200. Applied at load
-    // and live at the editor commit, exactly like font_size; its consumers are
-    // the REDESIGNED rows, which the row-by-row GUI redesign adds one at a time
-    // (the pre-redesign surfaces stay on the font's scale axis).
+    // and live at the editor commit. It is THE scale axis since row 7 — every
+    // painted dimension in the product rides it, and the font_size key that
+    // used to own the text half of that job left the schema with the monospace
+    // face (architect approval 2026-08-01).
     { "gui_scale",                   SettingKind::GuiScalePercent,      EngineField::Title,                   "100"      },
     // GUI-kind launch preference, NOT an engine key: an external audio player
     // for the `l` render-listen command. Default "audacious" so the first-open
@@ -152,11 +147,6 @@ std::optional<std::string> format_nonengine_value(
             return std::string(buf);
         case SettingKind::FollowFlag:
             return std::string(gui.follow ? "true" : "false");
-        case SettingKind::FontSizePt:
-            // %g so the default round-trips as `11` (matching the template)
-            // and a fractional value as e.g. `10.5`.
-            std::snprintf(buf, sizeof(buf), "%g", gui.font_size);
-            return std::string(buf);
         case SettingKind::GuiScalePercent:
             // Plain digits, matching the canonical integer spelling
             // validate_gui_setting accepts (parse_authored_frame): the default
@@ -414,7 +404,7 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     const NonEngineSettingsSnapshot gui{
         eff_a, eff_b, app.follow_mode,
         app.active_audio_view, app.active_markers_view, app.active_tab_view,
-        app.playback_speed, app.font_size, app.gui_scale, app.audio_player,
+        app.playback_speed, app.gui_scale, app.audio_player,
         app.libm_hash, app.libmvec_hash,
         app.fftw3_hash, app.fftw3_threads_hash};
     return format_nonengine_value(desc->kind, gui);

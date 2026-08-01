@@ -402,8 +402,8 @@ RenderOutcome do_render(const RenderRequest& req,
                 // The view zoom / typed live prefs all sit inside the strict
                 // schema's vocabularies by construction (the live zoom rests in
                 // the persisted zoom vocabulary [kMinZoom, kMaxZoom],
-                // playback_speed is a live preset, font_size and gui_scale are
-                // the live in-range values), so the file strict-parses under
+                // playback_speed is a live preset, gui_scale is the live
+                // in-range value), so the file strict-parses under
                 // read_settings_file — same writer, same canonical key order
                 // as a source save — with no validation added here.
                 const std::filesystem::path st_path =
@@ -416,7 +416,6 @@ RenderOutcome do_render(const RenderRequest& req,
                     req.authoring.active_markers_view,
                     req.authoring.active_tab,
                     req.authoring.playback_speed,
-                    req.authoring.font_size,
                     req.authoring.gui_scale,
                     req.authoring.audio_player,
                     req.authoring.libm_hash,

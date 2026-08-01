@@ -57,15 +57,11 @@ void apply_settings_engine_and_prefs(AppState& app, const SettingsFile& sf) {
     app.active_markers_view = sf.active_markers_view;
     app.active_tab_view     = sf.active_tab_view;
     app.playback_speed      = sf.playback_speed;
-    // GUI font size, applied once at launch when the source loads — the same
-    // behavior class as playback_speed (see the font_size descriptor in
-    // settings_io.cpp).
-    app.font_size           = sf.font_size;
-    // GUI rendering scale percent, applied verbatim and pushed to the renderer
-    // after this routine exactly as font_size is (this routine assigns VALUES
-    // ONLY; the side-effect pushes live at each caller's tail). Its consumers
-    // are the redesigned rows — the menu row is the first — which size on
-    // gui_scale_factor() rather than the monospace font's scale.
+    // GUI rendering scale percent, applied verbatim; this routine assigns
+    // VALUES ONLY and the side-effect push lives at each caller's tail. Since
+    // row 7 it is the product's one scale axis — every painted dimension rides
+    // gui_scale_factor() (architect approval 2026-08-01 for the font_size
+    // removal this paragraph used to name).
     app.gui_scale           = sf.gui_scale;
     // GUI launch preference for the `l` render-listen command, applied
     // verbatim: a blank value is the deliberate no-player opt-out. Adopt shares
@@ -189,16 +185,10 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // Reset playback bookkeeping; the device is brought up after markers
     // are parsed so the initial playhead has the final trim-begin.
     app.playback_speed = 0.7f;
-    // Mirror for font_size: construction-state default before the .settings
-    // parse below. Every key is required by the schema, so the parse always
-    // assigns font_size; this initializer only covers the no-.settings /
-    // first-open path. Applied to the renderer after the parse, beside
-    // set_speed.
-    app.font_size      = 11.0;
-    // Same mirror for gui_scale, and for the same reason: the schema requires
-    // the key, so the parse below always assigns it; this initializer only
-    // covers the no-.settings / first-open path. Pushed to the renderer beside
-    // font_size after the parse.
+    // Mirror for gui_scale: construction-state default before the .settings
+    // parse below. The schema requires the key, so the parse always assigns it;
+    // this initializer only covers the no-.settings / first-open path. Pushed to
+    // the renderer after the parse, beside set_speed.
     app.gui_scale      = 100;
 
     // Companion files: discover paths, create <basename>.warpmarkers,
@@ -409,9 +399,9 @@ bool GuiFileLoader::load_file(const std::string& path) {
         apply(sf.tab_b, app.tab_b);
         // Engine block plus the scalar session prefs (follow,
         // active_audio_view, active_markers_view, active_tab_view,
-        // playback_speed, font_size, gui_scale, audio_player, the four stored
+        // playback_speed, gui_scale, audio_player, the four stored
         // render-environment hashes), VALUES ONLY. The
-        // side effects that consume these (set_speed, set_gui_font_size_pt,
+        // side effects that consume these (set_speed, set_gui_scale_percent,
         // on_resize) stay below where they always ran. The render-entry adopt
         // shares this exact routine so its in-memory result is 1:1 with a load.
         apply_settings_engine_and_prefs(app, sf);
@@ -559,11 +549,8 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // top_lane_height table is the one place that enumerates which metric
     // sizes which lane) rebuild the waveform/flag surfaces. The full-window invalidation at the end of
     // this load supplies the damage, mirroring the resize path's
-    // full-surface damage. The two scales are independent axes feeding that one
-    // table (the four redesigned rows ride gui_scale, the four lanes below
-    // them the font),
-    // so both must be in place before the single rebuild below.
-    set_gui_font_size_pt(app.font_size);
+    // full-surface damage. ONE scale feeds that table since row 7, so the one
+    // push must land before the single rebuild below.
     set_gui_scale_percent(app.gui_scale);
     paint_handler.on_resize(app.width, app.height);
 

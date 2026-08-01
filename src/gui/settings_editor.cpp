@@ -129,14 +129,9 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         playback_lifecycle.set_follow_mode(gv.b);
         applied(); return true;
     }
-    if (key == "font_size") {
-        if (gv.d == app.font_size) { unchanged(); return true; }
-        input->apply_font_size(gv.d);
-        applied(); return true;
-    }
     if (key == "gui_scale") {
-        // History-less like font_size above, and now APPLIED LIVE through the
-        // same shape: the store write is no longer the whole commit — since
+        // History-less, and APPLIED LIVE: the store write is no longer the
+        // whole commit — since
         // 2026-07-31 the redesigned rows size on this value, so the commit
         // pushes it to the renderer and re-lays-out immediately (apply_gui_scale
         // runs the resize-path rebuild), and a `:gui_scale=200` is visible
@@ -378,7 +373,7 @@ void GuiSettingsEditor::commit() {
     // routes every OTHER GUI key into its gesture chokepoint). Set it directly
     // (an empty value means no external player — the writer always emits the
     // line as `audio_player=`, which re-loads as no-player). A launch
-    // preference like font_size: no undo history, no dirty tracking, silently
+    // preference: no undo history, no dirty tracking, silently
     // persisted on Ctrl+S. A same-value commit no-op-deactivates like every
     // routed GUI-kind key (the empty value included).
     if (key == "audio_player") {
@@ -556,7 +551,7 @@ void GuiSettingsEditor::autocomplete_value() {
     const std::string key = trim_ws(pending.substr(0, eq));
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // playback_speed, follow, font_size, gui_scale, audio_player, per-tab
+    // playback_speed, follow, gui_scale, audio_player, per-tab
     // trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S would write, so recall and save never diverge.

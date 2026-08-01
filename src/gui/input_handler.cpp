@@ -1622,29 +1622,13 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     }
 }
 
-void GuiInputHandler::apply_font_size(double pt) {
-    // The shared live sequence a source load's apply_settings_engine_and_prefs
-    // tail runs (assign the field, push to the renderer, full invalidate, then
-    // the resize-path geometry-and-cache rebuild). Both callers gate the no-op
-    // case, so no early-return here.
-    //
-    // NOTHING VISIBLE MOVES since row 7 took the monospace grid onto the
-    // gui_scale axis (the note is at kDefaultFontSizePt, render.h): the field is
-    // assigned and persisted, the repaint repaints the same pixels. The sequence
-    // is kept intact rather than gutted because whether the KEY retires at all
-    // is the architect's call, and a half-removed application path would be the
-    // worse of the two states to leave behind.
-    app.font_size = pt;
-    set_gui_font_size_pt(pt);
-    viewport.invalidate_all();
-    paint_handler.on_resize(app.width, app.height);
-}
-
 void GuiInputHandler::apply_gui_scale(int percent) {
-    // apply_font_size's shape on the OTHER scale axis, and for the same reason:
-    // the value feeds main.cpp's per-lane height table (the menu row's
-    // menu_row_h_px), so a change moves every strip boundary and the waveform
-    // area with them. Same four steps in the same order — assign, push, full
+    // The shared live sequence a source load's apply_settings_engine_and_prefs
+    // tail runs, and the only one left since row 7 deleted apply_font_size with
+    // its key (architect approval 2026-08-01): the value feeds main.cpp's
+    // per-lane height table and every other painted dimension, so a change moves
+    // every strip boundary and the waveform area with them. Four steps —
+    // assign, push, full
     // invalidate, resize-path geometry-and-cache rebuild — so the new layout is
     // on screen at the commit rather than at the next restart. The sole caller
     // (the settings editor's `gui_scale=` commit) gates the no-op case.

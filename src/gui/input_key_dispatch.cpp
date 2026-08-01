@@ -936,7 +936,7 @@ bool GuiInputHandler::adopt_render_entry(
     // Engine block plus the scalar session prefs, VALUES ONLY, through the one
     // routine a source load also calls — so adopt applies engine_settings,
     // follow, active_audio_view, active_markers_view, active_tab_view,
-    // playback_speed, font_size, gui_scale, and audio_player 1:1 with load.
+    // playback_speed, gui_scale, and audio_player 1:1 with load.
     // There is NO
     // W/P carve-out: active_markers_view is now applied from the file like
     // every other key. The one selection was cleared above, so landing on the
@@ -981,11 +981,10 @@ bool GuiInputHandler::adopt_render_entry(
 
     // Caller-side side effects the shared routine deliberately omits, run after
     // the live band is in place — the same order and the same point a source
-    // load runs them: push the speed to the engine, the font size and the gui
-    // scale to the renderer (the two independent scale axes the lane table
-    // reads), then the geometry-and-cache rebuild on_resize performs.
+    // load runs them: push the speed to the engine and the gui scale to the
+    // renderer (the one scale axis the lane table reads), then the
+    // geometry-and-cache rebuild on_resize performs.
     playback.set_speed(app.playback_speed);
-    set_gui_font_size_pt(app.font_size);
     set_gui_scale_percent(app.gui_scale);
     paint_handler.on_resize(app.width, app.height);
 

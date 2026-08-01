@@ -47,8 +47,8 @@ struct WaveformJob {
 
     // Font-dependent waveform inset (waveform_inset_px()), captured on the GUI
     // thread at dispatch alongside area_w/area_h. The worker must never read
-    // gui_font_scale()/g_font_size_pt itself — the GUI thread mutates that via
-    // set_gui_font_size_pt without draining in-flight jobs — so ALL
+    // g_gui_scale_percent itself — the GUI thread mutates that via
+    // set_gui_scale_percent without draining in-flight jobs — so ALL
     // font-derived geometry is snapshotted here for a coherent render.
     int       inset_px         = 0;
 
@@ -163,9 +163,9 @@ private:
 // load), the caller's warp_frame_map snapshot, and the job-captured geometry
 // scalars (area_w/area_h/inset_px) — no other shared or main-thread state. The
 // inset is passed in rather than read via waveform_inset_px() so the render
-// touches no gui_font_scale()/g_font_size_pt state: ALL font-dependent geometry
+// touches no gui_scale state: ALL scale-dependent geometry
 // is snapshotted on the GUI thread at dispatch, closing the race with a
-// mid-render set_gui_font_size_pt. Such a job COMPLETES from its coherent
+// mid-render set_gui_scale_percent. Such a job COMPLETES from its coherent
 // old-geometry snapshot on either reachable ordering: it may publish before the
 // next dirty-detect, or be discarded by a supersede request (a tick's
 // maybe_enqueue_waveform_render seeing the changed geometry while the job is

@@ -39,13 +39,13 @@
 // and arms the drag, motion moves cursor_pos (extending the highlight),
 // release finalizes.
 //
-// TWO CLICK-TO-BYTE MAPPINGS NOW (row 5's flag-editor unroll). The three
-// BOTTOM-STRIP editors are monospace: one char-0 origin plus one shared cell
-// advance, divided — unchanged. The FLAG editor is proportional, so there is no
-// advance to divide by and its geometry comes from the painter's published
-// FlagEditorBox: an origin plus the shaped run's per-byte boundaries, searched
-// for the nearest one. ActiveEditorText carries whichever pair applies and the
-// two call sites branch on it once, in editor_byte_index_at.
+// ONE CLICK-TO-BYTE MAPPING (row 7, 2026-08-01). Every editor in the product is
+// PROPORTIONAL now, so there is no advance to divide by anywhere: each takes an
+// origin plus the shaped run's per-byte boundaries from ITS OWN painter's
+// publication — the flag editor's FlagEditorBox, the three bottom-strip
+// editors' BottomEditorText — and click-to-byte is the same nearest-boundary
+// search over both. The monospace arm (a char-0 origin times one cell advance)
+// died with the face; ActiveEditorText carries the one pair.
 namespace {
 
 // monotonic_ms() (the press-driven CLOCK_MONOTONIC ms time base for double-click
@@ -177,12 +177,8 @@ struct ActiveEditorText {
     bool                valid        = false;
     text_editor::State* ed           = nullptr;  // the active editor
     double              text_left    = 0.0;       // byte-0 origin (px)
-    // MONOSPACE half: the shared cell advance, > 0 for the three bottom-strip
-    // editors and 0 for the flag editor.
-    double              advance      = 0.0;
-    // SHAPED half: the painter's per-byte pen offsets, non-null for the flag
-    // editor and null for the bottom-strip editors. Exactly one of the two is
-    // set; editor_byte_index_at picks on that.
+    // The painter's per-byte pen offsets for that editor's own shaped run.
+    // Never null on a valid resolution — every editor is shaped since row 7.
     const std::vector<double>* byte_x = nullptr;
     bool                bottom_strip = false;      // which strip to repaint
 };
@@ -190,26 +186,27 @@ struct ActiveEditorText {
 ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
     (void)audio;
     ActiveEditorText g;
-    // The monospace grid gate belongs to the THREE BOTTOM-STRIP branches only —
-    // the flag editor left that grid with its unroll, so an unmeasured font must
-    // not disable it.
-    const double adv = monospace_advance();
-    if (adv > 0.0 && text_editor::is_active(app.settings_editor)) {
-        g.ed = &app.settings_editor;
-        g.text_left = editor_text_glyph0_x(
-            bottom_row_content_left_x(), kSettingsEditorPrefix);
+    // THE THREE BOTTOM-STRIP EDITORS share ONE publication — only one of them is
+    // ever open, and paint_bottom_strip fills it from whichever branch actually
+    // painted. An invalid publication (nothing painted yet, or an editor the
+    // row's precedence chain is hiding) leaves this invalid, exactly as the flag
+    // editor's does: what is not on screen takes no clicks.
+    const AppState::BottomEditorText& be = app.bottom_editor_text;
+    const bool bottom_open =
+        text_editor::is_active(app.settings_editor) ||
+        text_editor::is_active(app.commit_editor) ||
+        (text_editor::is_active(app.top_flag_editor) &&
+         app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
+    if (bottom_open) {
+        if (!be.valid) return g;
+        g.ed = text_editor::is_active(app.settings_editor) ? &app.settings_editor
+             : text_editor::is_active(app.commit_editor)   ? &app.commit_editor
+                                                           : &app.top_flag_editor;
+        g.text_left    = be.text_origin_x;
+        g.byte_x       = &be.byte_x;
         g.bottom_strip = true;
-    } else if (adv > 0.0 && text_editor::is_active(app.commit_editor)) {
-        g.ed = &app.commit_editor;
-        g.text_left = editor_text_glyph0_x(
-            bottom_row_content_left_x(), kCommitEditorPrefix);
-        g.bottom_strip = true;
-    } else if (adv > 0.0 && text_editor::is_active(app.top_flag_editor) &&
-               app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
-        g.ed = &app.top_flag_editor;
-        g.text_left = editor_text_glyph0_x(
-            bottom_row_content_left_x(), kBpmEditorPrefix);
-        g.bottom_strip = true;
+        g.valid        = true;
+        return g;
     } else if (text_editor::is_active(app.top_flag_editor)) {
         // FlagPayload — the UNROLLED FLAG BOX. Its geometry is the painter's,
         // published at app.flag_editor_box (contract at FlagEditorBox,
@@ -225,26 +222,17 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
         g.byte_x    = &fb.byte_x;
         g.valid     = true;
         return g;
-    } else {
-        return g;
     }
-    g.advance = adv;
-    g.valid = true;
     return g;
 }
 
-// The ONE click-x -> byte owner for both mappings (see ActiveEditorText): the
-// shaped nearest-boundary search when the painter published boundaries, else
-// the monospace division. Every caret and drag-select site funnels through it,
-// so the two families cannot drift apart at one call site.
+// The ONE click-x -> byte owner (see ActiveEditorText): a nearest-boundary
+// search over the painter's published per-byte pen offsets. Every caret and
+// drag-select site funnels through it, and since row 7 there is one family of
+// editors rather than two, so there is nothing left for them to drift apart on.
 int editor_byte_index_at(const ActiveEditorText& g, int mouse_x) {
-    if (g.byte_x) {
-        return text_editor::byte_index_from_shaped_x(
-            static_cast<double>(mouse_x), g.text_left, *g.byte_x);
-    }
-    return text_editor::byte_index_from_click_x(
-        static_cast<double>(mouse_x), g.text_left, g.advance,
-        static_cast<int>(g.ed->pending.size()));
+    return text_editor::byte_index_from_shaped_x(
+        static_cast<double>(mouse_x), g.text_left, *g.byte_x);
 }
 
 void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {

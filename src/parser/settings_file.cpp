@@ -14,7 +14,9 @@
 namespace {
 
 using warptempo_parse::parse_bool_token;
-using warptempo_parse::parse_double_strict;
+// (parse_double_strict's using-declaration went with the font_size arm, its one
+// consumer here — architect approval 2026-08-01. The helper itself stays in
+// parse_text_util.h.)
 using warptempo_parse::prefix_line_error;
 
 // Every canonical .settings key, in kSettingsOrder's on-disk order. This is
@@ -28,7 +30,7 @@ using warptempo_parse::prefix_line_error;
 constexpr const char* kCanonicalSettingsKeys[] = {
     "title", "scale", "bpm", "notes", "url", "cover",
     "active_audio_view", "active_markers_view", "active_tab_view",
-    "playback_speed", "follow", "font_size", "gui_scale", "audio_player",
+    "playback_speed", "follow", "gui_scale", "audio_player",
     "tab_a_trim_begin", "tab_a_trim_end", "tab_a_read_only",
     "tab_a_viewport_start", "tab_a_zoom", "tab_a_playhead_cursor",
     "tab_b_trim_begin", "tab_b_trim_end", "tab_b_read_only",
@@ -217,21 +219,13 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         }
         return err("must be a preset speed");
     }
-    if (key == "font_size") {
-        // One canonical spelling: the value must parse into [6, 72] AND
-        // re-serialize byte-identically through the writer's %g form (the same
-        // format format_nonengine_value uses), so "11" and "10.5" load while
-        // "11.0" and "011" refuse.
-        double v = 0.0;
-        if (!parse_double_strict(value, v) || v < 6.0 || v > 72.0)
-            return err("must be a number in [6, 72] in canonical spelling");
-        char buf[64];
-        std::snprintf(buf, sizeof(buf), "%g", v);
-        if (value != buf)
-            return err("must be a number in [6, 72] in canonical spelling");
-        out.d = v;
-        return R(out);
-    }
+    // (font_size IS GONE FROM THE SCHEMA — architect approval 2026-08-01. It was
+    // the GUI-wide monospace text size, and row 7 of the kdenlive redesign
+    // deleted the monospace face itself: every surface in the product now sizes
+    // on gui_scale. The key is not deprecated or tolerated — it is UNKNOWN, so a
+    // sidecar still carrying it is load-fatal in both products by the ordinary
+    // unknown-key rule. NO legacy path, by the architect's explicit instruction;
+    // he updates his own files.)
     if (key == "gui_scale") {
         // GUI rendering scale, an integer PERCENT in [100, 200]. One canonical
         // spelling: plain digits through parse_authored_frame (no sign, point,
@@ -244,8 +238,9 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         // not fit. This is the ONE range owner — the editor's grammar and the
         // file loader both reach the domain through here, so nothing else moves.
         // The defensive waveform-height floor (waveform_area, main.cpp) STAYS:
-        // it guards the whole gui_scale x font_size cross-product, not just the
-        // corner this shrink removes.
+        // it guards gui_scale against the font-size ceiling it never had to
+        // budget for anyway (font_size left the schema in row 7, architect
+        // approval 2026-08-01).
         // (architect approval 2026-07-30 — the settings/parser grant this key
         // landed under.)
         int64_t v = 0;
@@ -360,8 +355,6 @@ std::expected<SettingsFile, std::string> read_settings_file(
             out.active_tab_view = gv.c;
         } else if (key == "playback_speed") {
             out.playback_speed = gv.f;
-        } else if (key == "font_size") {
-            out.font_size = gv.d;
         } else if (key == "gui_scale") {
             // Range-checked into [100, 200] by validate_gui_setting above, so
             // the narrowing to int is exact (architect approval 2026-07-30).

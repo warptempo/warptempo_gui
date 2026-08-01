@@ -26,8 +26,10 @@ inline bool parse_bool_token(const std::string& s, bool& out) {
     return false;
 }
 
-// Strict whole-token double parser for the settings schemas (the font_size
-// arm): the entire field must be consumed (no leading '+', whitespace, or
+// Strict whole-token double parser for the settings schemas. IT HAS NO CALLER
+// since row 7 deleted the font_size key it was written for (architect approval
+// 2026-08-01); it stays as the schemas' strict-double primitive, beside
+// parse_bool_token. The entire field must be consumed (no leading '+', whitespace, or
 // trailing junk — std::from_chars grammar), and the value must be finite. It
 // parses SYNTAX only; range and vocabulary rules belong to the per-key schema.
 //

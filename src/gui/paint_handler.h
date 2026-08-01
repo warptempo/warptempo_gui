@@ -41,8 +41,9 @@ class GuiWaveformWorker;
 // Declared here so paint_handler.cpp can reach them. Other constants
 // (kMarkerHitHalfPx) is paint-handler-independent and
 // lives in main.cpp's anonymous namespace; playhead_half_px() lives in
-// render.h. bottom_row_font_size_px() lives in render.h so render.cpp can reach
-// it without pulling paint_handler.h into the lower-layer include graph.
+// render.h. redesign_font_size_px() — the product's ONE text size since row 7 —
+// lives in render.h so render.cpp can reach it without pulling paint_handler.h
+// into the lower-layer include graph.
 
 // THE BOTTOM ROW'S LEFT PAD — the pen x of the first glyph on the line,
 // MEASURED off row_7_text.png: fitting the crop's own string offscreen at the
@@ -52,35 +53,18 @@ class GuiWaveformWorker;
 // std::nearbyint so it stays an integer.
 //
 // (It replaces timestamp_pad_x, the authored 8 on the font axis. The row rides
-// gui_scale now — see bottom_row_h_px.)
+// gui_scale now — see bottom_row_h_px.) It is also the line's INTER-SECTION gap,
+// used three times by bottom_row_sections; the reuse is an eye-consistency
+// choice, stated there.
 inline int bottom_row_pad_x() {
     return static_cast<int>(std::nearbyint(13.0 * gui_scale_factor()));
 }
 
-// THE ONE LINE'S FIXED LEAD-IN, in MONOSPACE CELLS, and the reason the line can
-// carry a modal without anything jumping: "MM:SS.mmm" (9) + a space + the DIRTY
-// COLUMN (1) + a space = 12 cells. The dirty column is RESERVED whether or not
-// the dot is showing, so saving mid-edit cannot slide an open editor's text —
-// which matters because Ctrl+S reaches through the editors' modal gate. The
-// timestamp is a fixed 9-glyph format (time_format.h) and the face is monospace,
-// so the lead-in is exact arithmetic, not a measurement.
-inline constexpr int kBottomRowLeadInCells = 12;
-
-// Char-0 origin of the line's AFTER-TIMESTAMP span: where the modal / editor /
-// prompt / status text starts, and the one owner both the painters and the
-// click-to-caret geometry (active_editor_text, input_pointer.cpp) read.
-inline double bottom_row_content_left_x() {
-    return static_cast<double>(bottom_row_pad_x()) +
-           kBottomRowLeadInCells * monospace_advance();
-}
-
-// Single source for the two bottom-strip editor prefixes. The paint
-// sites (render_bottom_strip_editor calls) and the mouse drag-to-select
-// geometry helper (active_editor_text in input_pointer.cpp) both derive
-// the editable text's char-0 origin from these, so the origin math can
-// never drift from the painted prefix. THEY ARE THE MONOSPACE HALF of that
-// helper: the flag editor left the grid with its unroll and takes its origin
-// from the painter's published box instead.
+// Single source for the three bottom-strip editor prefixes, read by the paint
+// sites (render_bottom_strip_editor) alone since row 7. The pointer path no
+// longer measures a prefix at all: the painter shapes prefix and pending as ONE
+// run and publishes where the pending half begins, so the click-to-caret origin
+// IS the painted one rather than a re-derivation that could drift from it.
 constexpr const char* kSettingsEditorPrefix = "setting: ";
 constexpr const char* kBpmEditorPrefix      = "bpm: ";
 // The render-commit prompt (bare `'`) label. The typed entry identifier —
@@ -117,7 +101,14 @@ struct WaveformCache {
     // plate's own font dependence is the inset band and the area height; keying
     // the measure itself makes both sound by field (see the fingerprint note in
     // waveform_cache.cpp).
-    double    fp_measured_font_px = -1.0;
+    // The waveform INSET the live pixels were rendered with (waveform_inset_px()
+    // — the plate's one geometry input that is not an area dimension). Keyed
+    // directly, so an inset change dirties the plate BY FIELD rather than
+    // through whichever area dimension happens to move with it. (It keyed the
+    // measured MONOSPACE font size until row 7, as a proxy for this: the inset
+    // was font-derived then. The proxy died with the grid; the thing itself is
+    // what the job takes.)
+    int       fp_inset_px = -1;
     // false until the first worker completion (or synchronous rebuild) has
     // published live pixels. The flag cache gates on it — it holds no
     // sensible displayed-viewport values before the first waveform paint.
@@ -148,7 +139,7 @@ struct WaveformCache {
     int64_t   pending_fp_vp_end      = 0;
     int       pending_fp_area_w      = 0;
     int       pending_fp_area_h      = 0;
-    double    pending_fp_measured_font_px = -1.0;
+    int       pending_fp_inset_px = -1;
     bool      pending_fp_target      = false;
     uint64_t  pending_fp_warp_frame_map_hash = 0;
 
@@ -169,8 +160,7 @@ struct WaveformCache {
     double    supersede_painter_spp = 0.0;  // the lattice q, like the job's
     int       supersede_area_w      = 0;
     int       supersede_area_h      = 0;
-    int       supersede_inset_px    = 0;   // GUI-captured font-dependent inset
-    double    supersede_measured_font_px = -1.0;  // the metrics that inset came from
+    int       supersede_inset_px    = 0;   // GUI-captured waveform inset
     bool      supersede_target      = false;
     uint64_t  supersede_warp_frame_map_hash = 0;
     std::vector<WarpFrameMapSegment> supersede_warp_frame_map;
@@ -241,12 +231,10 @@ struct FlagCache {
     uint64_t  fp_drag_overlay_hash        = 0;
     uint64_t  fp_selection_hash           = 0;
     char      fp_active_markers_view      = '\0';
-    // The measured grid's font pixel size (measured_monospace_font_px()) at the
-    // rebuild. Every flag SHAPE dimension and the two lane rects it paints in
-    // are font-derived, so this is the field that says "the metrics these
-    // pixels were laid out with"; without it the cache would rely on some other
-    // fingerprinted quantity happening to move whenever the font does.
-    double    fp_measured_font_px         = -1.0;
+    // (THE MEASURED-FONT FIELD IS GONE — row 7. It said "the metrics these flag
+    // pixels were laid out with", true while flag shapes were monospace-derived;
+    // row 5 moved every flag dimension onto the gui_scale axis and left it a
+    // recorded vestige, and row 7 deleted the measurement it keyed.)
     // ITERATION MODE joined the fingerprint with row 5 (2026-08-01): the flags
     // CARRY TEXT now, composed through flag_text_iter, which splices the
     // `+[lo, hi]` bracket exactly when this bit is on. Before row 5 the shapes
@@ -326,15 +314,15 @@ struct GuiPaintHandler {
     // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the
     // waveform's completion swap. THE ONE AUTHORITATIVE FINGERPRINT FIELD LIST
-    // (12 fields, re-derived 2026-07-30 — other sites state only a pointer
+    // (12 fields, re-derived 2026-08-01 — other sites state only a pointer
     // here): fp_vp_start, fp_vp_end, fp_area_w, fp_area_h, fp_target,
-    // fp_warp_frame_map_hash (all five displayed-viewport inputs, read from
+    // fp_warp_frame_map_hash (all six displayed-viewport inputs, read from
     // wf_cache.fp_*), plus fp_warp_generation, fp_phase_reset_generation,
     // fp_drag_overlay_hash, fp_selection_hash, fp_active_markers_view (the
-    // marker-driven inputs, read live from app state), and
-    // fp_measured_font_px (the measured font grid the flag shapes are laid
-    // out against — the flag editor's text is NOT one of these fields; it
-    // renders live as an overlay after this cache's blit). Rebuilds are
+    // marker-driven inputs, read live from app state) and fp_iteration_mode
+    // (which changes what the flags SAY). The measured-font field left the list
+    // with row 7's monospace deletion; the flag editor's text was never one of
+    // these — it renders live as an overlay after this cache's blit. Rebuilds are
     // synchronous (sub-millisecond at observed flag counts). This rebuild
     // is the SOLE item-basis STAGE site (the retired trim-stem cache's
     // rebuild was the only other one) — see the staging comment at its
@@ -404,18 +392,13 @@ private:
         double   painter_spp   = 0.0;
         int      area_w        = 0;
         int      area_h        = 0;
-        // Font-dependent waveform inset (waveform_inset_px()), captured on the
-        // GUI thread beside area_w/area_h so the worker render reads no
-        // gui_font_scale()/g_font_size_pt state (the GUI thread mutates that
-        // without draining jobs). All font-derived geometry is snapshotted.
+        // The waveform inset (waveform_inset_px()), captured on the GUI thread
+        // beside area_w/area_h so the worker render reads no scale state (the
+        // GUI thread mutates that without draining jobs). All scale-derived
+        // geometry is snapshotted. It is BOTH a render input and a fingerprint
+        // field — the plate's only non-area geometry, so nothing else would
+        // move if it changed alone.
         int      inset_px      = 0;
-        // The measured grid's font pixel size (measured_monospace_font_px()),
-        // a FINGERPRINT input: it is the one field that moves whenever the font
-        // metrics do, and inset_px above is font-derived without being
-        // fingerprinted itself. Keying it makes a font change dirty the plate
-        // BY FIELD rather than through whichever area dimension happens to
-        // shift with the lane heights.
-        double   measured_font_px = -1.0;
         bool     is_target     = false;
         uint64_t warp_frame_map_hash  = 0;
         // The translation map: the target-view map in target view, empty in

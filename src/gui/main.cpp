@@ -40,7 +40,6 @@
 #include "settings_io.h"
 #include "render_cache.h"
 #include "target_render.h"
-#include "text_display.h"
 #include "text_editor.h"
 #include "time_format.h"
 #include "phaseresetmarkers.h"
@@ -82,7 +81,7 @@
 
 namespace {
 
-// bottom_row_font_size_px() (render.h) and bottom_row_pad_x() (paint_handler.h)
+// redesign_font_size_px() (render.h) and bottom_row_pad_x() (paint_handler.h)
 // live where paint_handler.cpp can reach them; the constants
 // below are paint-handler-independent and stay file-local.
 
@@ -272,11 +271,13 @@ GuiRect waveform_area(const AppState& a) {
     // DEFENSIVE NON-NEGATIVE FLOOR on the height, and it is a SILENT-WRONG guard
     // in the ruled sense: no stderr, no refusal, no clamp of anybody's settings.
     //
-    // The two scale axes are independently schema-legal to their ceilings, and
-    // their CROSS-PRODUCT is not budgeted anywhere: gui_scale at its ceiling
-    // with font_size=72 pushes the four redesigned rows and the six font-sized
-    // lanes toward and past 1080, so this subtraction can go NEGATIVE on the
-    // supported window. A negative-height rect is a silent-wrong input to every consumer
+    // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW: gui_scale at its 200
+    // ceiling doubles all eight lanes (roughly 250 px of top strip plus 66 of
+    // bottom), which the supported 1080-tall window still holds — but the guard
+    // does not rest on that arithmetic, because the ceiling is a vocabulary the
+    // architect moves and the lane set is one the redesign keeps adding to. If
+    // the sum ever exceeds the window this subtraction goes NEGATIVE on it.
+    // A negative-height rect is a silent-wrong input to every consumer
     // that takes a width/height pair, which is exactly the class this project
     // keeps a guard for; the absurd-but-legal combination is allowed to look
     // broken (strips overlapping out the bottom of the window) but is not
@@ -289,9 +290,11 @@ GuiRect waveform_area(const AppState& a) {
     // the bottom strip instead), and cairo treats an empty rectangle as a no-op.
     // A positive floor would instead invent a strip of waveform that has nowhere
     // to live. THE VOCABULARY QUESTION WAS ANSWERED SEPARATELY — gui_scale's
-    // ceiling came down to 200 (architect 2026-07-31) — and this guard STAYS
-    // regardless: it covers the whole cross-product, not the one corner that
-    // shrink removed, and font_size alone still reaches 72.
+    // ceiling came down to 200 (architect 2026-07-31), and font_size, the other
+    // half of the cross-product this guard was written against, left the schema
+    // entirely in row 7 — and the guard STAYS regardless: it costs one compare
+    // and it is the class of fault (silent-wrong geometry) the project keeps
+    // guards for.
     const int h_avail = h - top_h - bot_h;
     return GuiRect{0, top_h, effective_w, h_avail < 0 ? 0 : h_avail};
 }
@@ -734,9 +737,9 @@ int main(int argc, char** argv) {
     // it into source-view-only call sites is harmless.
     GuiTargetRender target_render(app, audio, async_renderer, playback,
                                   viewport, render_cache);
-    // Paint handler constructed before file_loader, which applies font_size
+    // Paint handler constructed before file_loader, which applies gui_scale
     // changes through its on_resize (the shared geometry-and-cache rebuild
-    // path). The settings-editor font_size commit uses the input handler's own
+    // path). The settings-editor gui_scale commit uses the input handler's own
     // paint_handler ref for the same rebuild.
     GuiPaintHandler paint_handler(app, audio, playback, wf_cache,
                                   flag_cache, waveform_worker, gui);
@@ -784,7 +787,7 @@ int main(int argc, char** argv) {
     // Back-wire the settings editor to the input handler (constructed after the
     // editor, which the input handler holds by reference — the cycle is
     // resolved with a pointer set here). The editor reaches
-    // handle_active_audio_view_toggle / apply_font_size / auto_clear_crossed_trim
+    // handle_active_audio_view_toggle / apply_gui_scale / auto_clear_crossed_trim
     // through it, so a `:`-typed GUI key funnels into the same gesture code.
     settings_editor.input = &input_handler;
     // Same back-wire for the phase-reset propagate: its paste tail lands in

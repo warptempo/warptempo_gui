@@ -693,8 +693,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             //     song-wide. When the conjunction holds the endpoint rests AT or
             //     PAST the effective waveform's right edge: half-culled, or (at a
             //     non-multiple-of-16 window width) sitting in the 0-15px inert right
-            //     gutter, where the flag (its scaled width, flag_lane_w_px();
-            //     15px at the default font size) can even show WHOLE just
+            //     gutter, where the flag (at its painted width) can show WHOLE just
             //     outside the effective span — flag centers use the effective
             //     W (floored to a multiple of 16) while the flag surface
             //     spans the full strip. At

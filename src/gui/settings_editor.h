@@ -24,7 +24,7 @@ struct GuiInputHandler;
 // 1. audio_player (a launcher path with no gesture): set directly.
 // 2. GUI-kind keys (viewport / zoom / playhead / follow / active_audio_view /
 //    active_markers_view / active_tab_view / playback_speed / per-tab trim /
-//    per-tab read_only / font_size / gui_scale / the four *_hash keys):
+//    per-tab read_only / gui_scale / the four *_hash keys):
 //    commit_gui_setting
 //    parses strictly (red-flash on any malformed or out-of-vocabulary value,
 //    mirroring the load schema) then applies through the key's own gesture
@@ -55,7 +55,7 @@ struct GuiSettingsEditor {
     // dependency is a cycle resolved with a pointer set post-construction —
     // the same shape as the viewport request_* callbacks). Used to reach the
     // gesture chokepoints that live on GuiInputHandler:
-    // handle_active_audio_view_toggle, apply_font_size, auto_clear_crossed_trim.
+    // handle_active_audio_view_toggle, apply_gui_scale, auto_clear_crossed_trim.
     GuiInputHandler*      input = nullptr;
 
     GuiSettingsEditor(AppState&             app_,

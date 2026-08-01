@@ -2,7 +2,6 @@
 
 #include "icons.h"
 #include "render.h"
-#include "text_display.h"
 #include "text_editor.h"
 #include "text_shape.h"
 #include "time_format.h"
@@ -15,6 +14,7 @@
 #include <cmath>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -24,56 +24,208 @@
 // cache — are produced in waveform_cache.cpp. Trim paints live per frame
 // (paint_trim), out of any cache.
 
-// The settings-prompt editor and the BPM editor paint the same
-// bottom-strip text box through render_editor_text_box, differing only
-// in the prefix and which text_editor::State they read. This is the one
-// body all three branches share. It takes the geometry (anchor_x,
-// baseline_y) the caller already solved — since row 7 that is the ONE line's
-// after-timestamp origin and its single baseline — rather than computing a row
-// of its own, so the call sites stay the single source for where a bottom-strip
-// editor sits.
-static void render_bottom_strip_editor(cairo_t* cr,
-                                       const text_editor::State& ed,
-                                       const char* prefix,
-                                       double anchor_x,
-                                       double baseline_y) {
-    cairo_save(cr);
-    cairo_select_font_face(cr, "monospace",
+// -- The bottom row's shaped-text tier (row 7, 2026-08-01) ------------------
+//
+// MONOSPACE IS GONE FROM THE PRODUCT (architect 2026-08-01: "I wanted to get rid
+// of monospace altogether — the last row should be the same font as the rest").
+// Every string on the bottom line — the timestamp, the dirty dot, the prompts,
+// the queue/render/transient status, the resolved readout and the three editors'
+// own text — is the redesign's sans at the redesign's size, shaped and painted
+// through the ONE chokepoint like every other redesigned row.
+//
+// WHAT THE TIMESTAMP LOST AND HOW IT IS REPLACED: a monospace face guaranteed
+// the clock could not wiggle as its digits changed. Two facts replace that
+// guarantee, and both are stronger than the face was. (1) Liberation Sans's
+// lining digits are TABULAR — verified by shaping, every digit 0-9 advances
+// exactly 9.0px at 16px, so "270:32.999" and "000:00.000" measure the same 80px
+// — so the clock's own glyphs never move. (2) The line is laid out in FIXED
+// SECTIONS (bottom_row_sections below), so nothing after the clock can move
+// either, whatever the clock says.
+
+// The bottom row's ONE face, selected on `cr`. Returns the scaled font every
+// shape and paint on the row must share — the text_shape precondition is that a
+// run is shown with the same font it was shaped with.
+static cairo_scaled_font_t* select_bottom_row_face(cairo_t* cr) {
+    cairo_select_font_face(cr, "sans",
                            CAIRO_FONT_SLANT_NORMAL,
                            CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cr, bottom_row_font_size_px());
+    cairo_set_font_size(cr, redesign_font_size_px());
+    return cairo_get_scaled_font(cr);
+}
 
-    EditorTextBox box;
-    box.anchor_x        = anchor_x;
-    box.baseline_y      = baseline_y;
-    box.prefix          = prefix;
-    box.text            = ed.pending;
-    // hl_pad is the glyph inset (ring + pad); anchor_x here is the caller-solved
-    // glyph origin, so this back-derivation keeps the invisible ring geometry
-    // consistent with the chip renderers even though the box body reads as plain
-    // light text on the dark strip.
-    box.hl_pad          = flag_glyph_inset_px();
-    // THE NORMAL-STATE RING AND FILL ARE THE ROW'S OWN GROUND, so the box body
-    // is a chip's shape painted invisibly — light text on the row. Row 7 moved
-    // this pair (and the ink) off the TUNABLE kBackground / kText and onto the
-    // row's hard-coded crop constants, per the redesign's color ruling: the row
-    // ground is a constant now, so an "invisible" ring taken from a config key
-    // would become a visible rectangle the moment that key was retuned.
-    // THE RED FLASH STAYS TUNABLE, deliberately: no crop shows a parse failure —
-    // kdenlive has no comparable surface — so the existing kAccent /
-    // kAccentOutline pair (a parse-fail chip's exact colors) is kept as-is until
-    // a screenshot rules on it.
-    box.fill            = ed.red ? kAccent        : kRedesignTabGround;
-    box.outline         = ed.red ? kAccentOutline : kRedesignTabGround;
-    box.text_color      = kRedesignLabel;
-    box.has_selection   = text_editor::has_selection(ed);
-    box.selection_start = text_editor::selection_start(ed);
-    box.selection_end   = text_editor::selection_end(ed);
-    box.cursor_visible  = text_editor::cursor_visible_now(ed);
-    box.cursor_pos      = ed.cursor_pos;
-    render_editor_text_box(cr, box);
+// Shape and paint one run at (x, baseline) in `color`. The row's plain-text
+// tier — the successor of text_display::draw_line, which died with the
+// monospace path it drew in.
+static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
+                          double x, double baseline,
+                          std::string_view text, GuiColor color) {
+    if (text.empty()) return;
+    const text_shape::ShapedRun run = text_shape::shape_text_run(font, text);
+    cairo_set_source_rgb(cr, color.r, color.g, color.b);
+    text_shape::show_shaped_run(cr, run, x, baseline);
+}
 
-    cairo_restore(cr);
+// THE LINE'S FIXED SECTIONS (the architect's kdenlive model, 2026-08-01):
+// nothing on the row moves when the timestamp grows a digit or the dirty dot
+// appears and disappears. Every boundary is computed from SHAPED MAXIMA, never
+// from the text currently on screen.
+//
+//   pad | A: the timestamp | pad | B: the dirty dot | pad | C: everything else
+//
+// A is the widest timestamp the product can ever display. The bound is the
+// CONTAINER's, not the format's: a RIFF data chunk tops out near 4 GiB, which at
+// the heaviest supported source (44.1kHz stereo 24-bit) is ~16232 s = 270:32, so
+// the minutes field can reach three digits and no more (the derivation and the
+// matching format cap are at format_timestamp, time_format.h). kWidestTimestamp
+// is a three-digit specimen; with tabular digits its shaped width is EVERY
+// three-digit timestamp's width, and a two-digit one is narrower by one digit
+// and simply leaves that much slack at the section's right.
+//
+// B is one dot's own shaped width, present or not.
+//
+// THE PADDING IS ONE CONSTANT used three times — the row's own measured left
+// pad, reused as the inter-section gap by eye-consistency (the architect's
+// allowance; the alternative, a shaped space at ~4px, read cramped against a
+// 13px lead-in). C runs from the last boundary to the window's right edge.
+static constexpr const char* kWidestTimestamp = "000:00.000";
+
+struct BottomRowSections {
+    double a_x = 0.0;   // the timestamp's pen
+    double b_x = 0.0;   // the dirty dot's pen
+    double c_x = 0.0;   // the modal / status span's pen
+};
+
+static BottomRowSections bottom_row_sections(cairo_scaled_font_t* font,
+                                             const GuiRect& lane) {
+    const double pad = static_cast<double>(bottom_row_pad_x());
+    const double a_w =
+        text_shape::shape_text_run(font, kWidestTimestamp).width_px;
+    const double b_w = text_shape::shape_text_run(font, "*").width_px;
+    BottomRowSections s;
+    // Every boundary lands on an integer pen so the hinted glyphs stay crisp,
+    // the same rounding convention the redesigned rows' label origins take.
+    s.a_x = std::nearbyint(static_cast<double>(lane.x) + pad);
+    s.b_x = std::nearbyint(s.a_x + a_w + pad);
+    s.c_x = std::nearbyint(s.b_x + b_w + pad);
+    return s;
+}
+
+// The three bottom-strip editors (settings / render-commit / BPM) share this one
+// body, differing only in prefix and which State they read. It shapes PREFIX AND
+// PENDING AS ONE RUN — so the pair kerns exactly as it paints — and addresses
+// the pending half through that run's own byte boundaries, which it publishes
+// for the pointer path (AppState::BottomEditorText).
+//
+// NO VIEW OFFSET, deliberately: unlike the flag editor's unrolled box these
+// editors run off the right edge of the window rather than scrolling. That was
+// the monospace path's intent too and it is kept — the settings and commit
+// strings that reach the edge are pathological, and a scrolling field here would
+// need a right boundary the row does not have.
+static void render_bottom_strip_editor(cairo_t* cr,
+                                       AppState& app,
+                                       cairo_scaled_font_t* font,
+                                       const text_editor::State& ed,
+                                       const char* prefix,
+                                       double origin_x,
+                                       double baseline_y,
+                                       int band_y, int band_h) {
+    const std::string prefix_s(prefix);
+    const std::string full = prefix_s + ed.pending;
+    const text_shape::ShapedRun run = text_shape::shape_text_run(font, full);
+    const std::vector<double> bx = text_shape::byte_offsets_px(run, full.size());
+    const size_t p0 = prefix_s.size();
+
+    // PUBLISH the pending half's geometry: origin at its byte 0, boundaries
+    // rebased to it. Same shape as FlagEditorBox's pair, so editor_byte_index_at
+    // searches this exactly as it searches the flag editor's.
+    AppState::BottomEditorText& out = app.bottom_editor_text;
+    out.valid         = true;
+    out.text_origin_x = origin_x + bx[p0];
+    out.byte_x.clear();
+    out.byte_x.reserve(ed.pending.size() + 1);
+    for (size_t i = p0; i < bx.size(); ++i) out.byte_x.push_back(bx[i] - bx[p0]);
+
+    // THE GLYPH INK BAND — the caret's, the selection highlight's and the red
+    // flash's shared vertical extent, the face's own ascent-to-descent about the
+    // baseline. The retired monospace box derived the same band by inverting a
+    // chip formula; here the extents ARE the band, with no box to invert.
+    const double sel_x0 = origin_x + bx[p0];
+    const double sel_x1 = origin_x + run.width_px;
+
+    // 1. THE RED FLASH, and it is the box's whole remaining visual. At rest the
+    //    editors paint no box at all: the old one filled and ringed itself in
+    //    the row ground, i.e. invisibly. A parse failure fills the editable
+    //    run's band in kAccent under a 1px kAccentOutline ring — a parse-fail
+    //    chip's exact colors, kept TUNABLE deliberately (no crop shows this
+    //    state; kdenlive has no comparable surface) while everything else on the
+    //    row is hard-coded.
+    if (ed.red) {
+        const int rx0 = static_cast<int>(std::nearbyint(sel_x0));
+        const int rx1 = static_cast<int>(std::nearbyint(sel_x1));
+        const int rw  = (rx1 > rx0) ? (rx1 - rx0) : 1;
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_set_source_rgb(cr, kAccentOutline.r, kAccentOutline.g,
+                             kAccentOutline.b);
+        cairo_rectangle(cr, rx0, band_y, rw, band_h);
+        cairo_fill(cr);
+        cairo_set_source_rgb(cr, kAccent.r, kAccent.g, kAccent.b);
+        cairo_rectangle(cr, rx0 + 1, band_y + 1, rw - 2, band_h - 2);
+        cairo_fill(cr);
+        cairo_restore(cr);
+    }
+
+    // 2. The selection highlight, from the same boundaries the glyphs came from.
+    const bool has_sel = text_editor::has_selection(ed);
+    const size_t s0 = p0 + static_cast<size_t>(text_editor::selection_start(ed));
+    const size_t s1 = p0 + static_cast<size_t>(text_editor::selection_end(ed));
+    if (has_sel) {
+        const int hx0 = static_cast<int>(std::nearbyint(origin_x + bx[s0]));
+        const int hx1 = static_cast<int>(std::nearbyint(origin_x + bx[s1]));
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                             kRedesignLabel.b);
+        cairo_rectangle(cr, hx0, band_y, (hx1 > hx0) ? (hx1 - hx0) : 1, band_h);
+        cairo_fill(cr);
+        cairo_restore(cr);
+    }
+
+    // 3. Prefix and pending in one pass — one run, one paint.
+    cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                         kRedesignLabel.b);
+    text_shape::show_shaped_run(cr, run, origin_x, baseline_y);
+
+    // 4. The selected substring repainted in the ground colour for contrast, the
+    //    WHOLE run re-shown under a clip — shaping the substring on its own
+    //    could kern its first glyph differently and shift the ink.
+    if (has_sel) {
+        cairo_save(cr);
+        cairo_rectangle(cr, origin_x + bx[s0], static_cast<double>(band_y),
+                        bx[s1] - bx[s0], static_cast<double>(band_h));
+        cairo_clip(cr);
+        cairo_set_source_rgb(cr, kRedesignTabGround.r, kRedesignTabGround.g,
+                             kRedesignTabGround.b);
+        text_shape::show_shaped_run(cr, run, origin_x, baseline_y);
+        cairo_restore(cr);
+    }
+
+    // 5. The caret: a blink-gated 1px filled column on the cursor's own byte
+    //    boundary, AA off.
+    if (text_editor::cursor_visible_now(ed)) {
+        const int cursor_pos =
+            std::clamp(ed.cursor_pos, 0, static_cast<int>(ed.pending.size()));
+        const double cx =
+            origin_x + bx[p0 + static_cast<size_t>(cursor_pos)];
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
+                             kRedesignLabel.b);
+        cairo_rectangle(cr, static_cast<int>(std::nearbyint(cx)), band_y,
+                        1, band_h);
+        cairo_fill(cr);
+        cairo_restore(cr);
+    }
 }
 
 // -- GuiPaintHandler::paint_flag_annotations -----------------------------
@@ -2725,9 +2877,12 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
 
 void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // ROW 7 — THE BOTTOM STRIP IS ONE LINE (architect 2026-08-01). The status
-    // row and the modal/editor row collapsed into a single lane reading, left to
-    // right: the TIMESTAMP, the DIRTY FLAG, and then — when one applies — the
-    // active modal / editor / prompt / status text in the span after them.
+    // row and the modal/editor row collapsed into a single lane of THREE FIXED
+    // SECTIONS: the TIMESTAMP, the DIRTY DOT, and — when one applies — the
+    // active modal / editor / prompt / status text in the span after them. The
+    // boundaries come from shaped maxima and never from the current text, so
+    // nothing on the line moves when the clock grows a digit or the dot
+    // appears (bottom_row_sections, at the top of this file, with the layout).
     //
     // WHAT DIED WITH THE COLLAPSE, and why it is not missing: the S/T · W/P ·
     // A/B view readout and the "(read-only)" token. Rows 3 and 4 display all
@@ -2775,36 +2930,37 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         cairo_restore(cr);
     }
 
-    // ONE BASELINE FOR THE WHOLE LINE, solved the way every redesigned row
-    // solves one: center the FACE'S OWN (ascent + descent) band in the content
-    // band and round to the pixel grid. The face here is the monospace one (the
-    // architect's ruled exception for the timestamp, which the editors' grid
-    // machinery shares), at the row's crop-derived size. On the crop's own sans
-    // metrics this formula reproduces its measured baseline (row 22 of 33)
-    // exactly, which is the check that the rule and the screenshot agree.
-    double baseline = 0.0;
-    {
-        cairo_save(cr);
-        cairo_select_font_face(cr, "monospace", CAIRO_FONT_SLANT_NORMAL,
-                               CAIRO_FONT_WEIGHT_NORMAL);
-        cairo_set_font_size(cr, bottom_row_font_size_px());
-        baseline = redesign_baseline(cairo_get_scaled_font(cr),
-                                     static_cast<double>(content.y),
-                                     static_cast<double>(content.h));
-        cairo_restore(cr);
-    }
-    const double content_left = bottom_row_content_left_x();
+    // ONE FACE, ONE BASELINE, ONE SET OF SECTION BOUNDARIES for the whole line.
+    // The baseline is solved the way every redesigned row solves one: center the
+    // face's own (ascent + descent) band in the content band and round to the
+    // pixel grid. With the row on the redesign's sans this formula reproduces
+    // the crop's measured baseline (row 22 of 33) exactly.
+    cairo_save(cr);
+    cairo_scaled_font_t* font = select_bottom_row_face(cr);
+    const double baseline = redesign_baseline(font,
+                                              static_cast<double>(content.y),
+                                              static_cast<double>(content.h));
+    const BottomRowSections sec = bottom_row_sections(font, lane);
 
-    // --- The timestamp and the dirty flag: the line's fixed lead-in. The
-    //     timestamp is MONOSPACE and 9 glyphs wide by format, the dirty column
-    //     is reserved whether or not the dot shows, and the span after them
-    //     therefore begins at a column that never moves
-    //     (bottom_row_content_left_x / kBottomRowLeadInCells).
-    //
-    //     sr is the loaded file's sample rate and the playhead samples are
-    //     source-frames. Split-playhead: track the scanner during playback
-    //     (what the user hears), the cursor otherwise (the scanner is
-    //     meaningful only while active, so the ternary takes the cursor at rest).
+    // The glyph ink band the editors' caret, selection and red flash share.
+    cairo_font_extents_t fe;
+    cairo_scaled_font_extents(font, &fe);
+    const int band_y = static_cast<int>(std::nearbyint(baseline - fe.ascent));
+    const int band_h = static_cast<int>(
+        std::nearbyint(fe.ascent + fe.descent));
+
+    // The published editor geometry is rewritten from scratch every run, so an
+    // editor that is not painted (closed, or outranked in the chain below)
+    // leaves nothing behind for the pointer path to grab.
+    app.bottom_editor_text = AppState::BottomEditorText{};
+
+    // --- Section A: the timestamp. sr is the loaded file's sample rate and the
+    //     playhead samples are source-frames. Split-playhead: track the scanner
+    //     during playback (what the user hears), the cursor otherwise (the
+    //     scanner is meaningful only while active, so the ternary takes the
+    //     cursor at rest). The old paint-site clamp at 5999.999 is GONE with the
+    //     fixed section: format_timestamp owns the cap, and a second clamp here
+    //     would silently cut the display an octave below the format's own bound.
     {
         const int64_t ts_sample = app.playhead_scanner_active
             ? app.playhead_scanner_sample
@@ -2815,24 +2971,20 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                       static_cast<double>(sr);
         }
         if (seconds < 0.0) seconds = 0.0;
-        if (seconds > 5999.999) seconds = 5999.999;
-
-        std::string assembled = format_timestamp(seconds);
-        // The dirty flag KEEPS ITS GLYPH (a bare '*') and its one-space gap —
-        // the architect ruled the form unchanged and the crop says nothing about
-        // it. Appending it costs nothing on the fixed grid: dirty or not, the
-        // next span starts at the same column.
-        if (app.dirty) {
-            assembled += ' ';
-            assembled += '*';
-        }
-
-        text_display::draw_line(
-            cr, static_cast<double>(bottom_row_pad_x()), baseline,
-            assembled, kRedesignLabel, bottom_row_font_size_px());
+        show_row_text(cr, font, sec.a_x, baseline,
+                      format_timestamp(seconds), kRedesignLabel);
     }
 
-    // --- The after-timestamp span: the modal / editor / status chain. ---
+    // --- Section B: the dirty dot, in its own reserved cell. It KEEPS ITS GLYPH
+    //     (a bare '*') — the architect ruled the form unchanged and the crop
+    //     says nothing about it — and its cell exists whether or not it shows,
+    //     so appearing and disappearing moves nothing.
+    if (app.dirty) {
+        show_row_text(cr, font, sec.b_x, baseline, "*", kRedesignLabel);
+    }
+
+    // --- Section C: the modal / editor / status chain, in the span that runs
+    //     from the last fixed boundary to the window's right edge. ---
     if (app.prompt.active) {
         // Plain tier: the prompt text and its response labels assembled
         // into one string joined by single ' ' characters and drawn in a
@@ -2843,33 +2995,26 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
             assembled += ' ';
             assembled += label;
         }
-        text_display::draw_line(
-            cr, content_left, baseline,
-            assembled, kRedesignLabel, bottom_row_font_size_px());
+        show_row_text(cr, font, sec.c_x, baseline, assembled, kRedesignLabel);
     } else if (!app.queue_progress_text.empty()) {
         // The render/batch/queue status AND the startup "loading..." line —
         // one slot, and the reason this painter runs on the loading frame class
         // too (it is the only feedback there).
-        text_display::draw_line(
-            cr, content_left, baseline,
-            app.queue_progress_text, kRedesignLabel,
-            bottom_row_font_size_px());
+        show_row_text(cr, font, sec.c_x, baseline, app.queue_progress_text,
+                      kRedesignLabel);
     } else if (text_editor::is_active(app.settings_editor)) {
-        // Settings prompt overlay: "setting: <pending>"
-        // through the shared bottom-strip editor helper. Fill is the row
-        // ground normally, kAccent on parse failure (handled
-        // inside the helper).
-        render_bottom_strip_editor(cr, app.settings_editor,
+        // Settings prompt overlay: "setting: <pending>", through the shared
+        // shaped-editor body (which publishes the caret geometry and owns the
+        // parse-failure red flash).
+        render_bottom_strip_editor(cr, app, font, app.settings_editor,
                                    kSettingsEditorPrefix,
-                                   content_left, baseline);
+                                   sec.c_x, baseline, band_y, band_h);
     } else if (text_editor::is_active(app.commit_editor)) {
-        // Render-commit prompt overlay: "commit: ./renders/<pending>"
-        // through the same shared bottom-strip editor helper as the settings
-        // branch above. Fill is the row ground normally, kAccent on an
-        // unresolved / bad commit (handled inside the helper).
-        render_bottom_strip_editor(cr, app.commit_editor,
+        // Render-commit prompt overlay: "commit: ./renders/<pending>", through
+        // the same shared body; its red flash is an unresolved / bad commit.
+        render_bottom_strip_editor(cr, app, font, app.commit_editor,
                                    kCommitEditorPrefix,
-                                   content_left, baseline);
+                                   sec.c_x, baseline, band_y, band_h);
     } else if (text_editor::is_active(app.top_flag_editor) &&
                app.top_flag_editor.kind ==
                    text_editor::Kind::BpmBracket) {
@@ -2877,9 +3022,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // editor helper as the settings branch above. top_flag_editor
         // with kind==BpmBracket only ever paints here, never over the
         // flag in the top strip.
-        render_bottom_strip_editor(cr, app.top_flag_editor,
+        render_bottom_strip_editor(cr, app, font, app.top_flag_editor,
                                    kBpmEditorPrefix,
-                                   content_left, baseline);
+                                   sec.c_x, baseline, band_y, band_h);
     } else if (!app.transient_status_message.empty()) {
         // The transient one-line outcome report (phase-reset paste divergence,
         // "no renders to commit", ...). It used to ride the status line as an
@@ -2887,10 +3032,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
         // place in the chain, directly above the readout. Cleared by the next
         // key press, which is also what opens every editor above it, so the two
         // cannot compete in practice.
-        text_display::draw_line(
-            cr, content_left, baseline,
-            app.transient_status_message, kRedesignLabel,
-            bottom_row_font_size_px());
+        show_row_text(cr, font, sec.c_x, baseline,
+                      app.transient_status_message, kRedesignLabel);
     } else {
         // THE RESOLVED READOUT IS SELECTION-ONLY (row 5, 2026-08-01). It used
         // to be "hover wins, else the last-selected marker"; the hover arm died
@@ -2918,17 +3061,18 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                 app.last_selected_marker, sr, audio.total_frames());
         }
         if (!readout.empty()) {
-            text_display::draw_line(
-                cr, content_left, baseline,
-                readout, kRedesignLabel, bottom_row_font_size_px());
+            show_row_text(cr, font, sec.c_x, baseline, readout, kRedesignLabel);
         }
     }
+    cairo_restore(cr);
 }
 
 // -- GuiPaintHandler::on_redraw ------------------------------------------
 
 void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
-    init_monospace_grid_metrics(cr);
+    // (The monospace grid measure that opened every frame is gone with the face
+    // — row 7. Nothing in the product measures text outside a shaping pass now,
+    // and every such pass owns its own font selection.)
 
     // Event-synchronized hit geometry, PROMOTE phase (ruling at the selector):
     // done at the TOP of the frame, BEFORE any painting, so the flag cache this
