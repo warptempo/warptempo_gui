@@ -999,6 +999,7 @@ int main(int argc, char** argv) {
         viewport.clear_hover_popup();
         input_handler.clear_redesign_button_hover();
         input_handler.clear_redesign_button_press();
+        input_handler.clear_settings_popup_press();
     });
 
     // WINDOW-ACTIVATION EDGE -> the redesigned header's ground swap. The hook
@@ -1149,7 +1150,7 @@ int main(int argc, char** argv) {
         // Placed ABOVE the loading/blank return below on purpose: loading and
         // total<=0 are themselves inputs to the enabled predicate, so the
         // transition INTO and OUT OF a load is exactly a drift this must catch.
-        // THE SHIFT TOOLTIP'S DUE-CHECK — the whole timer, and it is two number
+        // THE HOVER TOOLTIP'S DUE-CHECK — the whole timer, and it is two number
         // comparisons on a tick that already runs. The hover recompute stamped
         // hover_ms when a tooltip-bearing button was entered (and zeroed it on
         // every exit / press / wheel through hide_shift_tooltip), so all that is
@@ -1162,14 +1163,14 @@ int main(int argc, char** argv) {
             app.redesign_tooltip.visible = true;
             invalidate_top_strip();
             // The box hangs from a button INSIDE the top strip and is at most
-            // tooltip_h_px() tall, so everything it can reach below the strip
+            // tooltip_damage_h_px() tall, so everything it can reach below the strip
             // lies in this one full-width band — damaged here because the show
             // edge cannot know the box's own rect yet (the paint that publishes
             // it is the frame this schedules). The HIDE edge has the published
             // rect and damages exactly that.
             const GuiRect ts = top_strip_area(app);
             viewport.invalidate_rect(
-                GuiRect{0, ts.y + ts.h, app.width, tooltip_h_px()});
+                GuiRect{0, ts.y + ts.h, app.width, tooltip_damage_h_px()});
         }
 
         {

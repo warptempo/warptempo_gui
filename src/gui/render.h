@@ -481,7 +481,7 @@ inline constexpr GuiColor kRedesignTabLine      = hex(0x4C4E51);
 // and only the roles moved.
 inline constexpr GuiColor kRedesignSelectedFill = hex(0x3C3F41);
 
-// -- The POPUP CHROME: the shift tooltips and the settings dropdown ---------
+// -- The TOOLTIP CHROME (the dropdown has its own, below) -------------------
 //
 // One chrome for both floating surfaces, measured off hover_shift.png (129x41)
 // and hover_plain.png (112x26), which are byte-identical in every chrome pixel:
@@ -504,6 +504,33 @@ inline constexpr GuiColor kRedesignSelectedFill = hex(0x3C3F41);
 // 10px band across the line gives one flat value (0x78..0x97, i.e. AA variation
 // around a single ink), so the line ships uniformly dim.
 inline constexpr double kRedesignDimMix = 0.52;
+
+// -- The SETTINGS DROPDOWN's own chrome (its own crops) ---------------------
+//
+// THE MENU IS NOT THE TOOLTIP. kdenlive dresses the two differently and the
+// dropdown_full crop is the authority for this one: ground #1c1f22 under a 1px
+// #4c4e51 border, where the tooltip is #292c30 under #535659. The tooltip's
+// constants are UNCHANGED — its own crops pinned them — and these are new.
+//
+// #1c1f22 is ONE LSB from kRedesignTabRest #1b1d20 and is NOT it: two
+// independent samples that happen to land next to each other, kept apart under
+// the hard-coded rule so a retune of one cannot drag the other.
+//
+// The BORDER value equals kRedesignTabLine's #4c4e51 — the same Breeze line
+// grey playing a third role — and reuses that constant rather than declaring a
+// fourth copy of the number.
+inline constexpr GuiColor kRedesignPopupGround = hex(0x1C1F22);
+
+// THE HOVER OUTLINE of a dropdown item: kRedesignAccent lightened 15% toward
+// white, sampled #5abaec = (90, 186, 236) and reproduced exactly —
+//   r: 61  + 0.15*(255-61)  = 90.1
+//   g: 174 + 0.15*(255-174) = 186.2
+//   b: 233 + 0.15*(255-233) = 236.3
+// so it ships as the FACTOR through the one mix_color owner, not as a literal.
+// The item's hover FILL is kRedesignClickMix (30%) accent over the popup
+// ground — (38, 74, 94) = the crop's #264a5e exactly — one more instance of the
+// same ratio the row-2 click face established, over a different ground.
+inline constexpr double kRedesignHoverLightenMix = 0.15;
 
 // -- GUI font size ---------------------------------------------------------
 //
@@ -799,14 +826,24 @@ inline int icon_row_h_px() {
     return icon_row_content_h_px() + icon_row_border_h_px();
 }
 
-// THE SHIFT TOOLTIP'S two SHARED numbers — its box height and its hover dwell.
-// They live out here, rather than with the rest of the tooltip's anatomy in
-// paint_handler.cpp, because the RUN LOOP reads both: the tick compares the
-// dwell to decide when to show, and damages a band of this height below the top
-// strip to cover whatever the box overhangs. Everything else about the tooltip
-// (paddings, line step, strings) is the painter's alone.
-inline constexpr int     kTooltipHeightPx = 41;   // the two-line form, 100%
-inline constexpr int64_t kTooltipDelayMs  = 700;  // kdenlive-ish; architect-tunable
+// THE HOVER TOOLTIP'S two SHARED numbers — a DAMAGE BOUND on its box height and
+// its dwell. They live out here, rather than with the rest of the tooltip's
+// anatomy in paint_handler.cpp, because the RUN LOOP reads both: the tick
+// compares the dwell to decide when to show, and damages a band below the top
+// strip to cover whatever the box overhangs.
+//
+// THE HEIGHT HERE IS A BOUND, NOT THE HEIGHT. The painter derives the real box
+// from the FACE'S OWN EXTENTS at both type sizes (one line, or 12pt over 10pt),
+// so the box follows the font instead of a literal that could drift from it;
+// the run loop only needs to know it can never exceed this. 60 clears the
+// two-line form (51 at 100%) with room for a font whose metrics run larger.
+inline constexpr int     kTooltipDamageHeightPx = 60;
+inline constexpr int64_t kTooltipDelayMs        = 700;  // kdenlive-ish; architect-tunable
+inline int tooltip_damage_h_px() {
+    const int h = static_cast<int>(std::nearbyint(
+        static_cast<double>(kTooltipDamageHeightPx) * gui_scale_factor()));
+    return h < 5 ? 5 : h;
+}
 // THE SETTINGS DROPDOWN'S VERTICAL metrics, out here for the same reason the
 // tooltip's height is: the popup's OPEN EDGE must damage the box before the box
 // has ever been painted, and its HEIGHT is fully derivable without shaping a
@@ -815,9 +852,13 @@ inline constexpr int64_t kTooltipDelayMs  = 700;  // kdenlive-ish; architect-tun
 // horizontal terms stay with the painter and the open edge damages full-width
 // instead. settings_popup_h_px (app_state.h) does the sum, where the item table
 // is visible.
-inline constexpr int kPopupItemHeightPx = 24;  // = the one-line tooltip's interior
+inline constexpr int kPopupItemHeightPx = 29;  // measured off dropdown_full
 inline constexpr int kPopupSepMarginYPx = 2;   // above and below the separator
 inline constexpr int kPopupBorderPx     = 1;
+// The item block's own margin inside the border, top AND bottom. The full crop
+// puts the first item 3px below the container top; the bottom mirrors it, which
+// the crop's own trailing space agrees with.
+inline constexpr int kPopupItemMarginYPx = 3;
 inline int popup_border_px() {
     const int v = static_cast<int>(std::nearbyint(
         static_cast<double>(kPopupBorderPx) * gui_scale_factor()));
@@ -833,12 +874,12 @@ inline int popup_sep_margin_y_px() {
         static_cast<double>(kPopupSepMarginYPx) * gui_scale_factor()));
     return v < 0 ? 0 : v;
 }
-
-inline int tooltip_h_px() {
-    const int h = static_cast<int>(std::nearbyint(
-        static_cast<double>(kTooltipHeightPx) * gui_scale_factor()));
-    return h < 5 ? 5 : h;
+inline int popup_item_margin_y_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kPopupItemMarginYPx) * gui_scale_factor()));
+    return v < 0 ? 0 : v;
 }
+
 
 // Height H (px) of the code-generated tip-down triangle, SHARED by the playhead
 // cursor and every marker/trim flag. The triangle width is 2*H - 1 (odd by

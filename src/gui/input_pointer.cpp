@@ -55,7 +55,8 @@ namespace {
 // The `shift` column is each button's OWN chord (only Redo's is set). It is not
 // the whole shift story: the two SHIFT-ADMITTING buttons OR a shift-exact press
 // into this field to reach their twins, and which buttons those are lives at
-// redesign_button_shift_admits (app_state.h), shared with the tooltip.
+// redesign_button_shift_admits (app_state.h), which the tooltip's own table is
+    // static_asserted against.
 struct ToolbarChord {
     RedesignButton id;
     GuiKey         key;
@@ -63,9 +64,9 @@ struct ToolbarChord {
     bool           shift;
     bool           alt;
     // (WHICH BUTTONS ADMIT SHIFT is NOT a column here: it is
-    // redesign_button_shift_admits in app_state.h, because the TOOLTIP reads the
-    // same membership and the hint must appear exactly where a shift press does
-    // something. One fact, two readers.)
+    // redesign_button_shift_admits in app_state.h, because the TOOLTIP's SHIFT
+    // LINE must appear exactly where a shift press does something — a
+    // static_assert beside that table enforces it. One fact, two readers.)
     //
     // RADIO: this button reports a state it can only ever turn ON, so a press
     // while it is already selected is a CONSUMED NOTHING (there is nothing to
@@ -736,30 +737,30 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         const bool on_settings_button =
             redesign_button_hit(app, RedesignButton::Settings, x, y);
         if (!on_settings_button) {
-            int hit = -1;
-            for (int i = 0; i < kSettingsPopupItemCount; ++i) {
-                const GuiRect& r = pop.item_rects[static_cast<size_t>(i)];
-                if (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) {
-                    hit = i;
-                    break;
-                }
-            }
+            const int hit = settings_popup_item_at(x, y);
             // A MODIFIED press inside the popup closes it and does nothing else:
             // no item carries a modified binding, and leaving the popup open
             // under a press it refused would be the worse answer.
             const bool plain = !mods.ctrl && !mods.shift && !mods.alt;
-            close_settings_popup();
             if (hit >= 0 && plain) {
-                // CLOSE FIRST, THEN OPEN THE EDITOR — the popup is gone before
-                // the modal takes the keyboard, so the two never overlap even
-                // for a frame. The editor's open is its own ordinary route (the
-                // shared modal playback stop inside it), prefilled through the
-                // one recall serializer.
-                playback_lifecycle.stop_playback_for_modal_open();
-                settings_editor.open_prefilled(
-                    kSettingsPopupItems[static_cast<size_t>(hit)].key);
+                // ITEMS ACT ON RELEASE — this press only ARMS one. The whole
+                // redesign fires its buttons on press; a MENU is the exception,
+                // because that is the universal convention (press, slide, release
+                // on what you meant) and because it is what makes the pressed
+                // face worth painting at all: a press-to-act item would show its
+                // accent fill for a single frame. The release body below decides
+                // whether the arm becomes an action.
+                if (pop.pressed_item != hit) {
+                    app.settings_popup.pressed_item = hit;
+                    viewport.invalidate_top_strip();
+                    viewport.invalidate_rect(pop.rect);
+                }
+                return;
             }
-            return;   // consumed either way
+            // Anywhere else inside the popup, or a modified press: close and
+            // consume, so nothing underneath acts.
+            close_settings_popup();
+            return;
         }
     }
 
@@ -1812,6 +1813,11 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
 
 void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
                                         int y, GuiInputState /*mods*/) {
+    // THE DROPDOWN'S RELEASE, above every gate: while it is open it owns the
+    // pointer, and its items are the redesign's one act-on-release surface.
+    if (button == GuiMouseButton::Left && app.settings_popup.open) {
+        if (finish_settings_popup_release(x, y)) return;
+    }
     // THE CLICK FACE ENDS WITH THE PHYSICAL HOLD, above every gate below: a
     // prompt opened by the press (or any other early return) must not strand a
     // lit interior on a button nobody is pressing any more. Nothing else about
@@ -2086,15 +2092,16 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     if (changed) viewport.invalidate_top_strip();
 
     // THE TOOLTIP'S DWELL STAMP, written here because this is the one place that
-    // knows a hover STARTED. A tooltip-bearing button that is newly hovered
-    // stamps the clock; anything else (including moving between two of them)
-    // hides and re-stamps, so a fresh dwell begins on each arrival. The run
+    // knows a hover STARTED. EVERY roster button but Quit and Settings carries a
+    // tooltip (redesign_button_tooltip owns that membership), so this walks the
+    // whole roster: a newly hovered one stamps the clock, and moving between two
+    // of them hides and re-stamps, so a fresh dwell begins on each arrival. The run
     // loop's tick compares the stamp against kTooltipDelayMs and flips
     // `visible` — no timer is created and nothing here decides visibility.
     int hovered_tip = -1;
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         const RedesignButton id = static_cast<RedesignButton>(i);
-        if (redesign_button_shift_admits(id) &&
+        if (redesign_button_tooltip(id).line1 != nullptr &&
             app.redesign_buttons[i].hovered) {
             hovered_tip = i;
             break;
@@ -2201,6 +2208,50 @@ bool GuiInputHandler::dispatch_redesign_chord(int x, int y, GuiInputState mods) 
     return false;
 }
 
+// WHICH ITEM IS AT (x, y), or -1. The rects are the painter's published item
+// boxes, so a hit is exactly the box that lights; a closed popup has zero rects
+// and therefore contains no point, which is the correct cold answer.
+int GuiInputHandler::settings_popup_item_at(int x, int y) const {
+    for (int i = 0; i < kSettingsPopupItemCount; ++i) {
+        const GuiRect& r =
+            app.settings_popup.item_rects[static_cast<size_t>(i)];
+        if (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) return i;
+    }
+    return -1;
+}
+
+// THE DROPDOWN'S RELEASE — the one place in the redesign where an action fires
+// on the button coming UP. Returns true when the release belonged to the popup
+// and the caller must stop.
+//
+// RELEASE ON THE ARMED ITEM triggers it; release ANYWHERE ELSE (another item,
+// the popup's chrome, outside the window) just drops the armed face and LEAVES
+// THE POPUP OPEN — the menu convention, and the escape hatch for a press that
+// landed on the wrong row. The outside-press close is untouched by this: that is
+// a PRESS act and still closes and consumes, so the two rules do not overlap —
+// a press outside never arms anything, so no release can be owed.
+bool GuiInputHandler::finish_settings_popup_release(int x, int y) {
+    if (!app.settings_popup.open) return false;
+    const int armed = app.settings_popup.pressed_item;
+    if (armed < 0) return true;   // a popup press that armed nothing; consumed
+    app.settings_popup.pressed_item = -1;
+    if (settings_popup_item_at(x, y) != armed) {
+        // Slid off: drop the face, keep the menu up.
+        viewport.invalidate_top_strip();
+        viewport.invalidate_rect(app.settings_popup.rect);
+        return true;
+    }
+    // CLOSE FIRST, THEN OPEN THE EDITOR — the popup is gone before the modal
+    // takes the keyboard, so the two never overlap even for a frame. The
+    // editor's open is its own ordinary route, prefilled through the one recall
+    // serializer.
+    const char* key = kSettingsPopupItems[static_cast<size_t>(armed)].key;
+    close_settings_popup();
+    playback_lifecycle.stop_playback_for_modal_open();
+    settings_editor.open_prefilled(key);
+    return true;
+}
+
 // THE SETTINGS DROPDOWN'S TWO WRITERS. Both damage the same pair of rects —
 // the top strip AND the popup's own published box — because the popup hangs
 // BELOW the strip and overlaps the rows and the waveform under it, so strip
@@ -2249,11 +2300,21 @@ void GuiInputHandler::toggle_settings_popup() {
     viewport.invalidate_top_strip();
 }
 
-// THE SHIFT TOOLTIP'S HIDE, called from every edge that ends a hover or takes
+// THE HOVER TOOLTIP'S HIDE, called from every edge that ends a hover or takes
 // the pointer away — the hover recompute, a press, a wheel. Damages the strip
 // AND the box's last painted rect, for the overhang reason above. Showing is
 // the tick's job (the dwell); this is only the hide, plus the stamp reset that
 // makes the next hover start its dwell from zero.
+// The armed item dies with a pointer that leaves the window: no release will
+// follow, so the face would otherwise stay lit under a pointer that is gone.
+// The menu itself STAYS OPEN — leaving the window is not a dismissal.
+void GuiInputHandler::clear_settings_popup_press() {
+    if (app.settings_popup.pressed_item < 0) return;
+    app.settings_popup.pressed_item = -1;
+    viewport.invalidate_top_strip();
+    viewport.invalidate_rect(app.settings_popup.rect);
+}
+
 void GuiInputHandler::hide_shift_tooltip() {
     app.redesign_tooltip.hover_ms = 0;
     app.redesign_tooltip.owner    = -1;

@@ -461,8 +461,18 @@ struct GuiInputHandler {
     void toggle_settings_popup();
     void close_settings_popup();
     void recompute_settings_popup_hover();
+    // Which item is at (x, y), or -1 — the painter's published boxes.
+    int  settings_popup_item_at(int x, int y) const;
+    // The dropdown's RELEASE body: the redesign's one act-on-release surface.
+    // Returns true when the popup owned the release. Release on the ARMED item
+    // triggers it (close + modal stop + the prefilled editor); release anywhere
+    // else drops the armed face and leaves the menu open.
+    bool finish_settings_popup_release(int x, int y);
+    // Drop the armed face with no release to follow (the pointer-leave edge).
+    // The menu stays OPEN — leaving the window is not a dismissal.
+    void clear_settings_popup_press();
 
-    // THE SHIFT TOOLTIP's hide, called from the hover recompute (hover ended),
+    // THE HOVER TOOLTIP's hide, called from the hover recompute (hover ended),
     // every press and every wheel. Showing is NOT here: the run loop's tick
     // owns the dwell, comparing AppState::redesign_tooltip.hover_ms against the
     // delay. Damages the strip and the box's last painted rect.

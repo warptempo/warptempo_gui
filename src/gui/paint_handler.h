@@ -490,8 +490,10 @@ private:
     // a zero rect when not shown, which is the correct empty answer.
     void paint_shift_tooltip(cairo_t* cr);
     void paint_settings_popup(cairo_t* cr);
-    // The shared box both draw: #292c30 under a 1px #535659 rounded border.
-    void paint_popup_chrome(cairo_t* cr, const GuiRect& r);
+    // The shared box shape both draw, dressed by the caller: the tooltip takes
+    // #292c30 under #535659, the dropdown its own darker #1c1f22 under #4c4e51.
+    void paint_popup_chrome(cairo_t* cr, const GuiRect& r,
+                            GuiColor ground, GuiColor border);
     void paint_marker_text_lane(cairo_t* cr);
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
     // THE GROUND RECOLOR, painted after render_canvas and BEFORE the plate blit

@@ -370,53 +370,57 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::IconCommit, IconRowLead::Gap,       nullptr, icons::Icon::DialogOkApply},
 };
 
-// -- THE FLOATING SURFACES: the shift tooltip and the settings dropdown -----
+// -- THE FLOATING SURFACES: the hover tooltip and the settings dropdown -----
 //
 // Measured off hover_shift.png (129x41, the two-line form we ship) and
 // hover_plain.png (112x26, the one-line reference we do not). Both share every
 // chrome pixel; the colors and the dim factor live in render.h.
 //
-// THE CORNER RADIUS IS THE REDESIGN'S ONE RADIUS, 5, and that is a CHOICE over a
-// half-pixel: fitting the crop's corner (fill under border over the window
-// ground) by summed squared per-channel error minimises at a PATH radius of 5.0
-// (1034) with 4.5 next (1686) and 3.0 far behind (18008), and 4.5 is what the
-// authored 5 becomes under the half-stroke inset every rounded surface here
-// takes. Authoring 5.0 as a PATH radius would score marginally better but would
-// make this the one surface whose constant means something different from rows
-// 1-4's. (The brief's eyeball estimate of 2-3 is well outside the fit.)
+// THE CORNER RADIUS IS THE REDESIGN'S ONE RADIUS, 5, on BOTH floating surfaces
+// and on the dropdown's items — and it is measured, not assumed. Fitting each
+// corner by summed squared per-channel error:
+//   the tooltip's chrome  -> best at a PATH radius of 5.0 (1034), 4.5 next (1686);
+//   a dropdown item HOVER -> best at a PATH radius of 5.0 (6856), 4.5 next (15059);
+//   a dropdown item CLICK -> best as a FULL-BOX fill at 5.5 (1853), 5.0 next (9639).
+// All three agree on an OUTER corner of ~5.5 (a stroked path at 5.0 has its
+// outer edge half a line further out). The authored 5 is the nearest integer,
+// half a pixel tight, and keeps ONE radius across the whole redesign rather than
+// giving this surface a fractional constant of its own. The briefs' eyeball
+// estimates (2-3 here, 2-3 for the tooltip) are far outside every fit.
 constexpr double kPopupCornerRadiusPx = 5.0;
 
-// THE TOOLTIP, in the crop's own numbers. Two 15px line SLOTS whose block
-// starts 5px below the top border — which puts the two baselines at 18 and 33,
-// the crop's own, through the shared extents solver rather than by spelling
-// them — inside a 41px box, with 5px of horizontal padding each side. The
-// one-line crop's 26px total is the sibling anatomy the dropdown's item height
-// borrows from (26 less its two 1px borders = 24).
-constexpr double kTooltipPadXPx      = 5.0;
-constexpr double kTooltipPadTopPx    = 5.0;
-constexpr double kTooltipLineStepPx  = 15.0;
-// (The box height and the hover dwell live in render.h — the run loop reads
-// both, for the due-check and for the damage band under the strip.)
-
-// THE TOOLTIP'S TEXT, on the two shift-admitting buttons and nowhere else
-// (redesign_button_shift_admits, app_state.h, is the one owner of that
-// membership — this table is keyed off the same fact, so the hint cannot appear
-// where a shift press does nothing).
+// THE TOOLTIP'S TYPE AND SPACING. Two sizes now: the NAME line stays at the
+// redesign's 12pt, and the SHIFT line drops to 10pt (architect 2026-07-31 — the
+// hint is subordinate text and should read as such). Both go through the one
+// shaping chokepoint, which takes whatever size the context carries.
 //
-// LINE 2 IS A GESTURE HINT, and the standing preference is that UI text never
-// hints gestures — the user reads HELP. THE ARCHITECT COMMISSIONED THIS ONE
-// EXPLICITLY (2026-07-31, adopting kdenlive's own wording), so it is a ruled
-// exception scoped to exactly these two buttons, not a softening of the rule.
-struct TooltipDef {
-    RedesignButton id;
-    const char*    line1;   // kdenlive's pattern: name + its chord
-    const char*    line2;
-};
-constexpr const char* kTooltipShiftLine = "Press Shift for more.";
-constexpr TooltipDef kTooltips[] = {
-    {RedesignButton::Render,    "Render (Ctrl+Alt+R)",             kTooltipShiftLine},
-    {RedesignButton::IconPaste, "Paste phase resets (Ctrl+Alt+P)", kTooltipShiftLine},
-};
+// THE VERTICAL LAYOUT IS DERIVED, NOT AUTHORED, and it is SYMMETRIC BY
+// CONSTRUCTION: each line occupies its own face's (ascent + descent) band, the
+// two bands are separated by a real gap, and the SAME padding closes the box
+// above the first band and below the last. So the box height falls out as
+//     pad + band1 [+ gap + band2] + pad
+// and the top and bottom air are equal by the arithmetic rather than by a
+// measured pair that could drift. At 100% on the target face that is 6 + 19 + 6
+// = 31 for one line and 6 + 19 + 4 + 16 + 6 = 51 for two — replacing the old
+// 41px two-line box, which the architect read as too tight between the lines and
+// bottom-heavy. render.h carries only a BOUND on this for the damage band.
+constexpr double kTooltipShiftFontSizePt = 10.0;
+constexpr double kTooltipPadYPx          = 6.0;   // top AND bottom, equal
+constexpr double kTooltipLineGapPx       = 4.0;   // between the two bands
+constexpr double kTooltipPadXPx      = 5.0;
+// (The damage BOUND on the height and the hover dwell live in render.h — the
+// run loop reads both, for the due-check and for the band under the strip.)
+
+// THE TOOLTIP'S TEXT lives with the roster, not here
+// (redesign_button_tooltip, app_state.h, owns both the membership and the text;
+// its shift line is static_asserted against redesign_button_shift_admits, so the
+// hint cannot appear where a shift press does nothing).
+//
+// EVERY BUTTON BUT QUIT AND SETTINGS HAS ONE (architect 2026-07-31): the
+// one-line form is the whole story for most, and the two shift-admitting
+// buttons add the hint line below it.
+// (The TEXT and its membership live at redesign_button_tooltip, app_state.h —
+// beside the roster, because the pointer side reads the same table.)
 
 // THE DROPDOWN, in the architect's CSS terms. The item height is the ONE-LINE
 // TOOLTIP'S INTERIOR (26 total less its two 1px borders = 24), which is what
@@ -427,13 +431,30 @@ constexpr TooltipDef kTooltips[] = {
 // the redesign's standing 10px label padding per side (rows 1 and 3's), plus the
 // 3px item inset per side, plus the two 1px borders. The architect pixel-tweaks
 // at 100% by moving these terms.
-// (The item height, the separator's vertical margin and the border live in
-// render.h with settings_popup_h_px's other ingredients — the popup's OPEN EDGE
-// must size the box before it is painted. Only the HORIZONTAL terms, which
-// depend on the widest shaped label, are the painter's alone.)
+// (The item height, its block margin, the separator's vertical margin and the
+// border live in render.h with settings_popup_h_px's other ingredients — the
+// popup's OPEN EDGE must size the box before it is painted. Only the HORIZONTAL
+// terms, which depend on the widest shaped label, are the painter's alone.)
 constexpr double kPopupItemInsetPx   = 3.0;   // the highlight box, per side
-constexpr double kPopupLabelPadPx    = 10.0;  // inside the highlight box
 constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
+
+// THE LABEL IS LEFT-ALIGNED at a small pad, NOT centred (architect 2026-07-31,
+// from dropdown_full): its items put text 36px from the highlight's left edge,
+// but that 36 is a RESERVED ICON COLUMN plus the text pad, and icons are ruled
+// OFF here exactly as they are on the tabs. Subtracting a ~28px Breeze icon
+// column (the 22px glyph plus its gaps) leaves 8, which is the pad.
+constexpr double kPopupLabelPadLeftPx = 8.0;
+
+// THE MINIMUM ITEM WIDTH, so the right side carries clearly more empty space
+// than the left — the tab-min-width pattern, and the reason a menu of short
+// labels still reads as a menu. DERIVED rather than copied: the crop's items are
+// 401px for labels of ~150px ink, but roughly half that width is the accelerator
+// and submenu column this product has no analogue for. Taking the text half
+// alone and scaling to our label set (widest "Playback speed" at 113px) leaves
+// 200 as the authored floor: 8px of left pad and 113 of label leaves 79px
+// trailing, about ten times the left pad, which is the stated asymmetry. This is
+// the knob the architect tweaks at 100%.
+constexpr double kPopupItemMinWidthPx = 200.0;
 
 // The selected tab's outline: a rectangle with ROUNDED TOP corners, and — this
 // is the load-bearing part — NO BOTTOM EDGE. It is an OPEN path running up the
@@ -1125,102 +1146,132 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 
 // -- The floating surfaces ---------------------------------------------------
 
-void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r) {
-    // ONE CHROME FOR BOTH FLOATING SURFACES — the tooltip and the dropdown are
-    // the same box (the two crops are byte-identical in every chrome pixel), so
-    // they share this and cannot drift apart. ONE PATH, filled then stroked, the
-    // construction the row-4 fit settled: the fill's edge and the stroke's
-    // centreline describe the same rectangle by construction.
+void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
+                                         GuiColor ground, GuiColor border) {
+    // ONE BOX SHAPE FOR BOTH FLOATING SURFACES, TWO COLOR PAIRS. The tooltip and
+    // the dropdown are built the same way and dressed differently — kdenlive
+    // gives its menus a darker ground and a softer border than its tooltips, and
+    // each crop pinned its own pair — so the colors are the caller's and only
+    // the geometry is shared. ONE PATH, filled then stroked, the construction
+    // the row-4 fit settled: the fill's edge and the stroke's centreline
+    // describe the same rectangle by construction.
     const int    lw   = popup_border_px();
     const double half = static_cast<double>(lw) * 0.5;
     const double rad  = std::nearbyint(kPopupCornerRadiusPx * gui_scale_factor());
     redesign_rounded_rect_path(cr, r.x + half, r.y + half,
                                static_cast<double>(r.w - lw),
                                static_cast<double>(r.h - lw), rad - half);
-    cairo_set_source_rgb(cr, kRedesignRowGround.r, kRedesignRowGround.g,
-                         kRedesignRowGround.b);
+    cairo_set_source_rgb(cr, ground.r, ground.g, ground.b);
     cairo_fill_preserve(cr);
-    cairo_set_source_rgb(cr, kRedesignLine.r, kRedesignLine.g, kRedesignLine.b);
+    cairo_set_source_rgb(cr, border.r, border.g, border.b);
     cairo_set_line_width(cr, static_cast<double>(lw));
     cairo_stroke(cr);
 }
 
 void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
-    // THE TWO-LINE SHIFT TOOLTIP, on whichever of the two shift-admitting
-    // buttons is hovered — at most one, because at most one button is hovered.
-    // The tick owns WHEN it appears (the dwell); this owns only what it looks
-    // like, and publishes the rect it painted so the hide edge can damage it.
+    // THE HOVER TOOLTIP, on whichever roster button is hovered — at most one,
+    // because at most one button is hovered. The tick owns WHEN it appears (the
+    // dwell); this owns only what it looks like, and publishes the rect it
+    // painted so the hide edge can damage it.
     app.redesign_tooltip.rect = GuiRect{0, 0, 0, 0};
     if (!app.redesign_tooltip.visible) return;
 
-    const TooltipDef* def = nullptr;
-    for (const TooltipDef& t : kTooltips) {
-        const AppState::RedesignButtonFace& f =
-            app.redesign_buttons[redesign_button_index(t.id)];
-        // A DISABLED BUTTON ADVERTISES NOTHING: a greyed Render's shift chord is
-        // as refused as its plain one, so it gets no hint. The hover recompute
-        // already refuses to hover a disabled button, so this is the belt to
-        // that braces — cheap, and it keeps the rule stated where it is visible.
-        if (f.hovered &&
-            redesign_button_enabled(app, audio.total_frames(), t.id)) {
-            def = &t;
+    int hovered = -1;
+    for (int i = 0; i < kRedesignButtonCount; ++i) {
+        const RedesignButton id = static_cast<RedesignButton>(i);
+        if (redesign_button_tooltip(id).line1 == nullptr) continue;
+        // A DISABLED BUTTON ADVERTISES NOTHING: a greyed Render's chords are as
+        // refused as each other, so it gets no hint. The hover recompute already
+        // refuses to hover a disabled button; this is the belt to that braces,
+        // and it keeps the rule stated where it is visible.
+        if (app.redesign_buttons[i].hovered &&
+            redesign_button_enabled(app, audio.total_frames(), id)) {
+            hovered = i;
             break;
         }
     }
-    if (def == nullptr) return;
+    if (hovered < 0) return;
 
-    const GuiRect& btn =
-        app.redesign_buttons[redesign_button_index(def->id)].rect;
+    const RedesignTooltipText text =
+        redesign_button_tooltip(static_cast<RedesignButton>(hovered));
+    const GuiRect& btn = app.redesign_buttons[hovered].rect;
     if (btn.w <= 0 || btn.h <= 0) return;
 
     cairo_save(cr);
     cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
                            CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cr, redesign_font_size_px());
-    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
 
-    const text_shape::ShapedRun r1 = text_shape::shape_text_run(font, def->line1);
-    const text_shape::ShapedRun r2 = text_shape::shape_text_run(font, def->line2);
+    // THE NAME LINE at the redesign's 12pt, measured with its own extents.
+    cairo_set_font_size(cr, redesign_font_size_px());
+    cairo_scaled_font_t*  font1 = cairo_get_scaled_font(cr);
+    const text_shape::ShapedRun r1 =
+        text_shape::shape_text_run(font1, text.line1);
+    cairo_font_extents_t fe1;
+    cairo_scaled_font_extents(font1, &fe1);
+    const double band1 = fe1.ascent + fe1.descent;
+
+    // THE SHIFT LINE at 10pt, when there is one. Shaped through the SAME
+    // chokepoint at a second size — the contract is per-run, not per-face.
+    const bool two_line = (text.line2 != nullptr);
+    double band2 = 0.0, w2 = 0.0;
+    text_shape::ShapedRun r2;
+    cairo_scaled_font_t* font2 = nullptr;
+    cairo_font_extents_t fe2{};
+    if (two_line) {
+        cairo_set_font_size(cr, kTooltipShiftFontSizePt * 96.0 / 72.0 *
+                                    gui_scale_factor());
+        font2 = cairo_get_scaled_font(cr);
+        r2 = text_shape::shape_text_run(font2, text.line2);
+        cairo_scaled_font_extents(font2, &fe2);
+        band2 = fe2.ascent + fe2.descent;
+        w2 = r2.width_px;
+    }
 
     const int pad_x = scaled_px(kTooltipPadXPx);
-    const int w = static_cast<int>(std::nearbyint(std::max(r1.width_px,
-                                                           r2.width_px))) +
+    const int pad_y = scaled_px(kTooltipPadYPx);
+    const int gap   = two_line ? scaled_px(kTooltipLineGapPx) : 0;
+    const int w = static_cast<int>(std::nearbyint(std::max(r1.width_px, w2))) +
                   2 * pad_x;
-    const int h = tooltip_h_px();
+    // THE SYMMETRIC BOX: the same pad above the first band and below the last,
+    // with a real gap between them. Nothing is authored but the two paddings and
+    // the gap; the bands are the face's own.
+    const int h = static_cast<int>(std::nearbyint(band1 + band2)) + gap +
+                  2 * pad_y;
 
     // BELOW THE BUTTON, LEFT-ALIGNED WITH IT, then CLAMPED FULLY ON-WINDOW so a
-    // button near the right edge cannot push it off. The clamp is a pure
-    // position fix — the box never shrinks, because a truncated hint would be
-    // worse than one that shifted.
+    // button near an edge cannot push it off. The clamp is a pure position fix —
+    // the box never shrinks, because a truncated hint would be worse than one
+    // that shifted.
     int x = btn.x;
     int y = btn.y + btn.h;
-    if (x + w > app.width) x = app.width - w;
+    if (x + w > app.width)  x = app.width - w;
     if (x < 0) x = 0;
     if (y + h > app.height) y = app.height - h;
     if (y < 0) y = 0;
     app.redesign_tooltip.rect = GuiRect{x, y, w, h};
 
-    paint_popup_chrome(cr, app.redesign_tooltip.rect);
+    paint_popup_chrome(cr, app.redesign_tooltip.rect, kRedesignRowGround,
+                       kRedesignLine);
 
-    // Two 15px slots from the top padding, each baseline solved by the shared
-    // extents centrer — the crop's 18 and 33 fall out rather than being spelled.
-    const int step  = scaled_px(kTooltipLineStepPx);
-    const int top   = y + scaled_px(kTooltipPadTopPx);
+    // Each line sits on ITS OWN band, so each baseline is that band's foot —
+    // the shared centrer applied to a slot that is exactly the band, which makes
+    // the symmetry above true of the ink and not merely of the arithmetic.
     cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
                          kRedesignLabel.b);
     text_shape::show_shaped_run(
         cr, r1, static_cast<double>(x + pad_x),
-        redesign_baseline(font, static_cast<double>(top),
-                          static_cast<double>(step)));
-    // The hint line is DIMMED by the one measured factor (kRedesignDimMix),
-    // uniformly — the crop emphasises no word inside it.
-    const GuiColor dim =
-        mix_color(kRedesignLabel, kRedesignRowGround, kRedesignDimMix);
-    cairo_set_source_rgb(cr, dim.r, dim.g, dim.b);
-    text_shape::show_shaped_run(
-        cr, r2, static_cast<double>(x + pad_x),
-        redesign_baseline(font, static_cast<double>(top + step),
-                          static_cast<double>(step)));
+        redesign_baseline(font1, static_cast<double>(y + pad_y), band1));
+    if (two_line) {
+        // The hint line is DIMMED by the one measured factor, uniformly.
+        const GuiColor dim =
+            mix_color(kRedesignLabel, kRedesignRowGround, kRedesignDimMix);
+        cairo_set_source_rgb(cr, dim.r, dim.g, dim.b);
+        text_shape::show_shaped_run(
+            cr, r2, static_cast<double>(x + pad_x),
+            redesign_baseline(font2,
+                              static_cast<double>(y + pad_y) + band1 + gap,
+                              band2));
+    }
 
     cairo_restore(cr);
 }
@@ -1231,6 +1282,14 @@ void GuiPaintHandler::paint_settings_popup(cairo_t* cr) {
     // button's left edge. Publishes its own rect and every item rect, so the
     // press claim hit-tests exactly what was painted and never re-shapes a
     // label.
+    //
+    // ITS CHROME IS ITS OWN (kRedesignPopupGround under kRedesignTabLine), not
+    // the tooltip's: kdenlive dresses menus darker than hints, and dropdown_full
+    // is the authority for this surface.
+    //
+    // NO ICONS, by ruling — the crop reserves an icon column and this product
+    // does not, exactly as the tabs dropped theirs. The space that column would
+    // have taken is what the labels' left pad is measured against.
     app.settings_popup.rect = GuiRect{0, 0, 0, 0};
     app.settings_popup.item_rects = {};
     if (!app.settings_popup.open) return;
@@ -1247,23 +1306,30 @@ void GuiPaintHandler::paint_settings_popup(cairo_t* cr) {
 
     const int border    = popup_border_px();
     const int item_h    = popup_item_h_px();
+    const int block_mar = popup_item_margin_y_px();
     const int inset     = scaled_px(kPopupItemInsetPx);
-    const int label_pad = scaled_px(kPopupLabelPadPx);
+    const int label_pad = scaled_px(kPopupLabelPadLeftPx);
     const int sep_inset = scaled_px(kPopupSepInsetPx);
     const int sep_mar   = popup_sep_margin_y_px();
     const int sep_block = 2 * sep_mar + border;   // margin, line, margin
+    const int lw        = border;
+    const double radius = std::nearbyint(kPopupCornerRadiusPx *
+                                         gui_scale_factor());
 
-    // WIDTH FROM THE WIDEST SHAPED LABEL — the runs are shaped once here and
-    // reused for the paint below, so the box and the glyphs come from the same
-    // measurements (the displayed-basis doctrine, again).
+    // WIDTH FROM THE WIDEST SHAPED LABEL behind the authored minimum — the runs
+    // are shaped once here and reused for the paint below, so the box and the
+    // glyphs come from the same measurements (the displayed-basis doctrine).
     text_shape::ShapedRun runs[kSettingsPopupItemCount];
     double widest = 0.0;
     for (int i = 0; i < kSettingsPopupItemCount; ++i) {
         runs[i] = text_shape::shape_text_run(font, kSettingsPopupItems[i].label);
         widest = std::max(widest, runs[i].width_px);
     }
-    const int w = static_cast<int>(std::nearbyint(widest)) +
-                  2 * label_pad + 2 * inset + 2 * border;
+    const int item_w =
+        std::max(scaled_px(kPopupItemMinWidthPx),
+                 label_pad + static_cast<int>(std::nearbyint(widest)) +
+                     label_pad);
+    const int w = item_w + 2 * inset + 2 * border;
     // THE HEIGHT COMES FROM THE SHARED SUM, not a second walk here: the open
     // edge damages settings_popup_h_px() before this ever runs, so the two must
     // be one expression.
@@ -1275,43 +1341,80 @@ void GuiPaintHandler::paint_settings_popup(cairo_t* cr) {
     if (x < 0) x = 0;
     app.settings_popup.rect = GuiRect{x, y, w, h};
 
-    paint_popup_chrome(cr, app.settings_popup.rect);
+    paint_popup_chrome(cr, app.settings_popup.rect, kRedesignPopupGround,
+                       kRedesignTabLine);
 
-    int iy = y + border;
+    // The item block opens BELOW the border by its own margin, and closes with
+    // the same margin above the bottom border — the crop's 3px, mirrored.
+    int iy = y + border + block_mar;
     for (int i = 0; i < kSettingsPopupItemCount; ++i) {
         if (kSettingsPopupItems[i].separator_before) {
             // 1px line, inset horizontally, with its own vertical margin against
             // the item on each side. Pixel-bound fill, crisp by construction.
-            cairo_set_source_rgb(cr, kRedesignLine.r, kRedesignLine.g,
-                                 kRedesignLine.b);
+            cairo_set_source_rgb(cr, kRedesignTabLine.r, kRedesignTabLine.g,
+                                 kRedesignTabLine.b);
             cairo_rectangle(cr, x + sep_inset, iy + sep_mar,
                             w - 2 * sep_inset, border);
             cairo_fill(cr);
             iy += sep_block;
         }
         // ITEMS TOUCH — zero vertical gap between adjacent ones — and each
-        // one's HIGHLIGHT box insets horizontally from the border. The published
-        // rect is the highlight box, so the clickable area is exactly the area
-        // that lights.
-        const GuiRect item{x + inset, iy, w - 2 * inset, item_h};
+        // one's box insets horizontally from the border. The published rect is
+        // that box, so the clickable area is exactly the area that lights.
+        const GuiRect item{x + inset, iy, item_w, item_h};
         app.settings_popup.item_rects[static_cast<size_t>(i)] = item;
 
-        if (app.settings_popup.hovered_item == i) {
-            // The Breeze menu model, and the menu-row pill's sibling: a flat
-            // accent fill under an unchanged white label.
-            cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
-                                 kRedesignAccent.b);
-            cairo_rectangle(cr, item.x, item.y, item.w, item.h);
-            cairo_fill(cr);
+        const bool pressed = (app.settings_popup.pressed_item == i);
+        const bool hovered = (app.settings_popup.hovered_item == i);
+        if (pressed || hovered) {
+            // TWO FACES FROM THE ITEM CROPS, and they are built differently
+            // because one has an outline and the other does not:
+            //   PRESSED — the FULL accent fill over the WHOLE item box. No
+            //     stroke, so no inset: the fill's own edge is the visible edge.
+            //     It is visible at all only because items act on RELEASE, the
+            //     one redesign surface that does.
+            //   HOVERED — the same 30% accent tint the click faces use, over
+            //     THIS popup's ground, under a 1px outline of the accent
+            //     lightened 15% toward white. Fill and stroke share ONE INSET
+            //     path so they describe one rectangle.
+            // The half-stroke inset on the hovered form makes the two faces the
+            // SAME SIZE on screen (both outer edges land at `radius` from the
+            // box corner), which is what the crops show — each saturates in the
+            // same column.
+            if (pressed) {
+                cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
+                                     kRedesignAccent.b);
+                redesign_rounded_rect_path(cr, item.x, item.y,
+                                           static_cast<double>(item.w),
+                                           static_cast<double>(item.h), radius);
+                cairo_fill(cr);
+            } else {
+                const double half = static_cast<double>(lw) * 0.5;
+                const GuiColor fill = mix_color(kRedesignAccent,
+                                                kRedesignPopupGround,
+                                                kRedesignClickMix);
+                const GuiColor line = mix_color(GuiColor{1.0, 1.0, 1.0},
+                                                kRedesignAccent,
+                                                kRedesignHoverLightenMix);
+                redesign_rounded_rect_path(cr, item.x + half, item.y + half,
+                                           static_cast<double>(item.w - lw),
+                                           static_cast<double>(item.h - lw),
+                                           radius - half);
+                cairo_set_source_rgb(cr, fill.r, fill.g, fill.b);
+                cairo_fill_preserve(cr);
+                cairo_set_source_rgb(cr, line.r, line.g, line.b);
+                cairo_set_line_width(cr, static_cast<double>(lw));
+                cairo_stroke(cr);
+            }
         }
 
+        // LEFT-ALIGNED at the pad, vertically centred by the shared solver. The
+        // right side carries the leftover, which the minimum width above is what
+        // guarantees.
         cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
                              kRedesignLabel.b);
         text_shape::show_shaped_run(
-            cr, runs[i],
-            static_cast<double>(item.x) +
-                std::nearbyint((static_cast<double>(item.w) -
-                                runs[i].width_px) * 0.5),
+            cr, runs[i], static_cast<double>(item.x + label_pad),
             redesign_baseline(font, static_cast<double>(item.y),
                               static_cast<double>(item.h)));
         iy += item_h;

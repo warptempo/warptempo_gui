@@ -823,6 +823,7 @@ inline int settings_popup_h_px() {
     const int border = popup_border_px();
     return kSettingsPopupItemCount * popup_item_h_px() +
            separators * (2 * popup_sep_margin_y_px() + border) +
+           2 * popup_item_margin_y_px() +
            2 * border;
 }
 
@@ -1600,7 +1601,7 @@ struct AppState {
     // fact restated here.
     int redesign_pressed = -1;
 
-    // THE SHIFT TOOLTIP'S TIMING STATE — the whole of it. `hover_ms` is the
+    // THE HOVER TOOLTIP'S TIMING STATE — the whole of it. `hover_ms` is the
     // CLOCK_MONOTONIC stamp of the moment a tooltip-bearing button became
     // hovered (0 = none is), written by the hover recompute; `visible` is what
     // the painter draws, flipped by the run loop's existing tick when the delay
@@ -1631,9 +1632,16 @@ struct AppState {
     // painted boxes and never re-shape a label (the displayed-basis doctrine).
     // Every rect is zero while closed, which is the correct cold answer: an
     // empty rect contains no point.
+    // `pressed_item` is the ARMED item: set by a press on one, cleared by the
+    // release (wherever it lands) and by every close. It exists because the
+    // dropdown is the ONE redesign surface that acts on RELEASE — every row
+    // button fires on press, a menu triggers on release by universal
+    // convention — which is also the only reason a pressed face is visible long
+    // enough to be worth painting.
     struct SettingsPopup {
         bool    open         = false;
         int     hovered_item = -1;
+        int     pressed_item = -1;
         GuiRect rect{0, 0, 0, 0};
         std::array<GuiRect, kSettingsPopupItemCount> item_rects{};
     };
@@ -2363,6 +2371,67 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render || b == RedesignButton::IconPaste;
 }
+
+// THE HOVER TOOLTIP'S TEXT — name and chord, kdenlive's pattern, one row per
+// button that has one. It sits with the roster (rather than with the chord
+// table in input_pointer.cpp) because BOTH the painter and the pointer read it,
+// and because membership is the interesting part: a null `line1` means "this
+// button has no tooltip", which is the whole story for the two that carry none.
+//
+// EVERY BUTTON HAS ONE EXCEPT QUIT AND SETTINGS (architect 2026-07-31): Quit
+// says what it does in its own label, and Settings opens a menu that names
+// itself. The names follow HELP's vocabulary so the hint and the manual agree.
+//
+// `line2` is the SHIFT LINE and is non-null on exactly the two shift-admitting
+// buttons, which is not a coincidence to be maintained: it is asserted against
+// redesign_button_shift_admits below, so the hint cannot advertise a shift press
+// that does nothing (or stay silent about one that does).
+struct RedesignTooltipText {
+    const char* line1;   // nullptr -> no tooltip at all
+    const char* line2;   // nullptr -> the one-line form
+};
+inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
+    switch (b) {
+        case RedesignButton::Quit:
+        case RedesignButton::Settings:   return {nullptr, nullptr};
+        case RedesignButton::Save:       return {"Save (Ctrl+S)", nullptr};
+        case RedesignButton::Undo:       return {"Undo (Ctrl+Z)", nullptr};
+        case RedesignButton::Redo:       return {"Redo (Ctrl+Shift+Z)", nullptr};
+        // THE SHIFT LINE NAMES THE OTHER FUNCTION (architect 2026-07-31), not
+        // "for more": a hint that does not say what it gets you is not a hint.
+        // It is also the standing no-gesture-hints preference's ONE ruled
+        // exception, scoped to exactly these two buttons.
+        case RedesignButton::Render:     return {"Render (Ctrl+Alt+R)",
+                                                 "Press Shift for miscellaneous render."};
+        case RedesignButton::TabA:       return {"Tab A (Ctrl+Tab)", nullptr};
+        case RedesignButton::TabB:       return {"Tab B (Ctrl+Tab)", nullptr};
+        case RedesignButton::IconS:      return {"Source view (T)", nullptr};
+        case RedesignButton::IconT:      return {"Target view (T)", nullptr};
+        case RedesignButton::IconW:      return {"Warp markers (P)", nullptr};
+        case RedesignButton::IconP:      return {"Phase resets (P)", nullptr};
+        case RedesignButton::IconCopy:   return {"Copy phase resets (Ctrl+P)", nullptr};
+        case RedesignButton::IconPaste:  return {"Paste phase resets (Ctrl+Alt+P)",
+                                                 "Press Shift for paste phase state."};
+        case RedesignButton::IconBpm:    return {"BPM editor (M)", nullptr};
+        case RedesignButton::IconIter:   return {"Iteration mode (I)", nullptr};
+        case RedesignButton::IconFollow: return {"Follow (F)", nullptr};
+        case RedesignButton::IconListen: return {"Listen to renders (L)", nullptr};
+        case RedesignButton::IconCommit: return {"Commit render (')", nullptr};
+    }
+    return {nullptr, nullptr};
+}
+
+// THE SHIFT LINE EXISTS EXACTLY WHERE A SHIFT PRESS DOES SOMETHING. Checked at
+// compile time so the two tables cannot drift: a button that gains a shifted
+// chord without gaining the line (or the reverse) fails to build here.
+static_assert(
+    (redesign_button_tooltip(RedesignButton::Render).line2 != nullptr) ==
+        redesign_button_shift_admits(RedesignButton::Render) &&
+    (redesign_button_tooltip(RedesignButton::IconPaste).line2 != nullptr) ==
+        redesign_button_shift_admits(RedesignButton::IconPaste) &&
+    (redesign_button_tooltip(RedesignButton::Save).line2 == nullptr) &&
+    (redesign_button_tooltip(RedesignButton::IconCopy).line2 == nullptr),
+    "the shift hint and the shift binding must name the same buttons");
 
 // Hoverability = enabled, plus the tabs' one extra fact: THE SELECTED TAB HAS
 // NO HOVER FACE (only the inactive one lights). Kept beside the predicate it
