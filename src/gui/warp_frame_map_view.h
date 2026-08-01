@@ -235,9 +235,9 @@ int painted_column_of_source_frame(
 // painters' math, but the viewport (`vp_start`) and samples-per-pixel (`spp`)
 // come from the CALLER instead of the live viewport / painter_samples_per_pixel.
 // painted_column_of_source_frame delegates here with the LIVE basis; the flag
-// EDITOR's box placement passes the ITEM basis (item_viewport_basis in
-// app_state.h) — damage follows the pixels it erases, so the box lands on the
-// column the flag pixels were painted at even mid-publish, when the live
+// EDITOR's unrolled box passes the ITEM basis (item_viewport_basis in
+// app_state.h) — damage follows the pixels it erases, so the box unrolls from
+// the column the flag pixels were painted at even mid-publish, when the live
 // viewport already holds a not-yet-blitted span. (Two other ITEM-basis callers
 // died in row 5 with the marker-text lane: the run centering and the run hit.
 // The selected-stem invalidator was the other _on_basis caller until

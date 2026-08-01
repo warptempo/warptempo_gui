@@ -6,6 +6,7 @@
 #include <chrono>
 #include <functional>
 #include <string>
+#include <vector>
 
 // Generic in-place text editor for a small constrained vocabulary, used
 // by the top-flag editor. State is a POD-ish struct so callers can
@@ -43,10 +44,18 @@ constexpr int kMaxPendingCharsBpm = 60;
 // Settings prompt. Sized for the free-text provenance fields (url, notes),
 // which are generous for a typical URL or note. The scalar keys are still
 // bounded by their commit-time validators, not by this cap. 1024 bytes is
-// the editor's growth ceiling: a wider on-disk value still loads, displays
-// (running off the right edge while typing — no horizontal scroll), commits
-// and persists unchanged, and can be shortened, but the editor will not grow
-// any pending past the cap.
+// the editor's growth ceiling: a wider on-disk value still loads, displays,
+// commits and persists unchanged, and can be shortened, but the editor will not
+// grow any pending past the cap.
+//
+// HORIZONTAL SCROLLING EXISTS NOW, AND ONLY ON ONE SURFACE (row 5, 2026-08-01).
+// This note used to record "running off the right edge while typing — no
+// horizontal scroll" as the settings prompt's accepted behaviour. The FLAG
+// editor grew a view offset when it became the unrolled flag box, because that
+// box is clamped on-window and its text genuinely does not fit; the bottom-strip
+// editors are UNCHANGED and still run off the right edge, deliberately — the
+// feature is scoped to the surface that needed it, not adopted product-wide.
+// See `view_offset_px` below for which side writes it.
 constexpr int kMaxPendingCharsSettings = 1024;
 // Render-commit prompt (bare `'`). Holds a render entry's identifier relative
 // to renders/ — `<batch_dir>/<basename>` (e.g. `1_iterations/01`) or a
@@ -105,6 +114,22 @@ struct State {
     // True after a failed commit. Cleared by any keystroke that mutates
     // `pending`.
     bool red = false;
+
+    // HORIZONTAL VIEW OFFSET, in pixels: how far the visible text window has
+    // scrolled right through `pending`. Byte 0 paints at (text origin -
+    // view_offset_px), so a positive value hides text off the box's left edge.
+    //
+    // ONE WRITER, ONE READER, AND BOTH ARE THE FLAG EDITOR. Its unrolled box is
+    // clamped fully on-window, so a long payload does not fit and the view must
+    // travel to keep the caret visible; the painter recomputes the MINIMAL
+    // offset that shows the caret each frame (scroll only as far as it must, in
+    // whichever direction the caret left the window) and the click-to-byte path
+    // reads the same published geometry. The BOTTOM-STRIP editors never touch
+    // it — they are monospace, unclamped, and behave exactly as before — so this
+    // field is 0 for their whole session. It lives on State rather than beside
+    // the geometry because it is SESSION state: it must survive from frame to
+    // frame and die with the edit, which enter/deactivate already own.
+    double view_offset_px = 0.0;
 
     // Cursor blink: monotonic timestamp at which the cursor became
     // visible. The renderer tests `(now - blink_epoch) % period < period/2`
@@ -229,6 +254,20 @@ bool cursor_visible_now(const State& s);
 // the F2.1 mouse drag-to-select path in input_handler.cpp.
 int byte_index_from_click_x(double click_x, double text_left_x,
                             double advance, int pending_size);
+
+// THE PROPORTIONAL SUCCESSOR of the function above, for a surface whose text is
+// SHAPED rather than gridded: `boundaries` is the per-byte pen offset vector the
+// shaping chokepoint produces (text_shape::byte_offsets_px — one entry per byte
+// boundary, index 0 at 0.0 and the last at the run's full width), and
+// `text_origin_x` is the window x that boundary 0 paints at (already carrying
+// any view offset). There is no advance to divide by with a proportional face,
+// so the mapping is a SEARCH, and the rule is NEAREST BOUNDARY: the caret lands
+// on whichever byte edge is closest to the click, ties going to the LOWER index.
+// Clicking the left half of a glyph puts the caret before it and the right half
+// after it, which is what every text field does. The returned index is within
+// [0, boundaries.size() - 1] by construction; an empty vector returns 0.
+int byte_index_from_shaped_x(double click_x, double text_origin_x,
+                             const std::vector<double>& boundaries);
 
 // Select the maximal run of the clicked character's class under byte index
 // `pos`, setting selection_anchor to the run start and cursor_pos to its end

@@ -42,8 +42,17 @@ namespace text_shape {
 // One positioned glyph of a shaped run, in pixels, relative to the run's pen
 // position. `glyph_index` is a FONT GLYPH ID (post-substitution), never a
 // character codepoint.
+//
+// `cluster` is HarfBuzz's own cluster value: the BYTE INDEX into the shaped
+// utf8 where this glyph's cluster begins. It is what makes a shaped run
+// addressable BY BYTE — which an editor needs and a label does not — and it is
+// monotone non-decreasing across an LTR run. Several glyphs may share a cluster
+// (a decomposed character) and one glyph may cover several bytes (a ligature or
+// a multibyte character); byte_offsets_px below is the one place that turns
+// either shape into a per-byte answer.
 struct ShapedGlyph {
     unsigned glyph_index = 0;
+    unsigned cluster     = 0;
     double   x_offset_px = 0.0;
     double   y_offset_px = 0.0;  // harfbuzz sense: up-positive
     double   x_advance_px = 0.0;
@@ -66,5 +75,24 @@ ShapedRun shape_text_run(cairo_scaled_font_t* font, std::string_view utf8);
 // Paint `run` with its baseline origin at (x, y), using cairo's current source
 // and current scaled font. Cairo state is not modified.
 void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y);
+
+// THE BYTE ADDRESS OF A SHAPED RUN: `byte_count + 1` pen offsets, in pixels
+// from the run's origin, one per byte BOUNDARY of the shaped string — index 0
+// is 0.0 and index `byte_count` is exactly `run.width_px`, so the vector spans
+// the run end to end and every caret position and selection edge is one lookup.
+//
+// This exists because a proportional run has no advance to divide by: the
+// monospace path could turn a pixel into a character with one division, and the
+// only faithful successor is the run's OWN accumulated pen, read at the
+// boundaries the glyphs' clusters name. Editors are the consumers (caret
+// placement, selection extents, click-to-byte); labels never need it.
+//
+// The walk is: accumulate the pen glyph by glyph, and when a glyph's cluster is
+// reached, every boundary up to and including it takes the pen's CURRENT value.
+// A byte in the MIDDLE of a multi-byte cluster therefore reports its cluster's
+// START — a caret cannot land inside an indivisible glyph, which is the correct
+// answer and not an approximation. Boundaries past the last glyph take the full
+// width. Monotone non-decreasing by construction.
+std::vector<double> byte_offsets_px(const ShapedRun& run, size_t byte_count);
 
 } // namespace text_shape

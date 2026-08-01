@@ -91,6 +91,8 @@ ShapedRun shape_text_run(cairo_scaled_font_t* font, std::string_view utf8) {
         ShapedGlyph glyph;
         // After shaping, `codepoint` holds the substituted GLYPH ID.
         glyph.glyph_index  = infos[i].codepoint;
+        // The byte index this glyph's cluster starts at (see ShapedGlyph).
+        glyph.cluster      = infos[i].cluster;
         glyph.x_offset_px  = positions[i].x_offset / k26Dot6;
         glyph.y_offset_px  = positions[i].y_offset / k26Dot6;
         glyph.x_advance_px = positions[i].x_advance / k26Dot6;
@@ -116,6 +118,24 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y) {
         pen_x += glyph.x_advance_px;
     }
     cairo_show_glyphs(cr, glyphs.data(), static_cast<int>(glyphs.size()));
+}
+
+std::vector<double> byte_offsets_px(const ShapedRun& run, size_t byte_count) {
+    // byte_count + 1 boundaries; the contract (including the middle-of-a-cluster
+    // rule) is at the declaration.
+    std::vector<double> out(byte_count + 1, 0.0);
+    double pen  = 0.0;
+    size_t next = 0;
+    for (const ShapedGlyph& glyph : run.glyphs) {
+        const size_t cluster = static_cast<size_t>(glyph.cluster);
+        while (next <= cluster && next <= byte_count) out[next++] = pen;
+        pen += glyph.x_advance_px;
+    }
+    // Everything after the last glyph's cluster — the trailing boundary
+    // included — is the run's full width. `pen` is that width by construction
+    // (run.width_px is the same sum), so this is not a second derivation.
+    while (next <= byte_count) out[next++] = pen;
+    return out;
 }
 
 } // namespace text_shape

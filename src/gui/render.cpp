@@ -1599,66 +1599,221 @@ void init_monospace_grid_metrics(cairo_t* cr) {
 
 double measured_monospace_font_px() { return g_measured_font_px; }
 
-double lane_text_left_x_at_frame(
-    const AppState& app, const GuiAudio& audio,
-    double source_frame, size_t glyph_count)
-{
-    const double advance = monospace_advance();
-    if (advance <= 0.0) return -1.0;
-    // The marker's painted pixel column (window coords) via the painters' own
-    // math. BASIS CONTRACT: the editor box overlays painted flag pixels, so it
-    // must read the SAME basis those pixels were painted with — BOTH halves of
-    // that basis. (1) The displayed MAP (displayed_or_live_target_map): the
-    // event-synchronized map the hit tests use — identity/empty in source view;
-    // in target view the map the last committed frame's flag cache baked. (2) The
-    // displayed VIEWPORT (item_viewport_basis): the vp_start/spp the same
-    // committed frame's flag cache baked, NOT the live viewport. Reading the live
-    // map OR the live viewport would center the run on the NEW column during an
-    // async republish while the flag still paints at the OLD one, so the run would
-    // visibly jump off its flag until the worker caught up (a real improvement for
-    // the fallback run's mid-follow-scroll centering, not an accident). The frame
-    // is the marker's authored source frame; both marker columns translate through
-    // this same map.
+// -- The flag editor's unrolled box ---------------------------------------
+
+// The contract (the face, the clamp, the view truncation, the non-const
+// AppState) is at the declaration in render.h. What follows is the mechanics.
+void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
+    // The publication is unconditional: every run that finds no open editor
+    // writes the invalid state, so a closed session can never leave the pointer
+    // path a stale box to grab.
+    FlagEditorBox& out = app.flag_editor_box;
+    out = FlagEditorBox{};
+
+    text_editor::State& ed = app.top_flag_editor;
+    if (!text_editor::is_active(ed)) return;
+    if (ed.kind != text_editor::Kind::FlagPayload) return;
+
+    // The flag editor is a WARP-column, source-home surface by its own open
+    // gates, so the marker is a warp marker and its class ladder is the warp
+    // one. A target index the store has since shrunk past is the only failure
+    // shape, and it simply paints nothing.
+    const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
+    const int idx = ed.target;
+    if (idx < 0 || idx >= static_cast<int>(mv.size())) return;
+
+    const GuiRect lane = top_marker_row_area(app);
+    if (lane.w <= 0 || lane.h <= 0) return;
+
+    cairo_save(cr);
+    // The redesign's sans, set once — shape and paint on ONE scaled font, the
+    // text_shape precondition. Nothing below changes the size.
+    cairo_select_font_face(cr, "sans",
+                           CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_font_size(cr, redesign_font_size_px());
+    cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
+
+    // THE FULL, UNTRUNCATED pending — the unroll's whole point. The nine-glyph
+    // budget is a LABEL rule; an editor shows what it is editing.
+    const text_shape::ShapedRun run =
+        text_shape::shape_text_run(font, ed.pending);
+    std::vector<double> byte_x =
+        text_shape::byte_offsets_px(run, ed.pending.size());
+
+    const int pad_l  = marker_flag_pad_left_px();
+    const int pad_r  = marker_flag_pad_right_px();
+    const int edge_h = marker_flag_edge_h_px();
+    // CARET ROOM. The caret at end-of-text stands one column past the last
+    // glyph, so the box must own a column the run does not; without it the
+    // caret would sit on the right pad or, at the clamp, off the box entirely.
+    // One authored pixel, scaled like every other row-5 length.
+    const int caret_w = static_cast<int>(std::nearbyint(1.0 * gui_scale_factor()));
+    const int caret_px = caret_w < 1 ? 1 : caret_w;
+
+    const int run_w = static_cast<int>(std::nearbyint(run.width_px));
+    int box_w = pad_l + run_w + caret_px + pad_r;
+
+    // THE CLAMP, in two stages. First the box is capped at the LANE's own width
+    // — a payload wider than the window cannot be shown whole, and this is
+    // where the view starts truncating instead. Then the box's left edge, which
+    // wants to be the marker's painted column (the flag's own left edge, so the
+    // box unrolls FROM the flag rather than jumping), slides left far enough to
+    // keep the right edge on-window.
+    if (box_w > lane.w) box_w = lane.w;
+
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     const int col = painted_column_of_source_frame_on_basis(
-        app, audio, source_frame, map, basis.vp_start, basis.spp);
+        app, audio, static_cast<double>(mv[idx].time_frame),
+        map, basis.vp_start, basis.spp);
     const GuiRect area = waveform_area(app);
-    const double center_x = static_cast<double>(area.x + col);
-    const double run_w = static_cast<double>(glyph_count) * advance;
-    // Center over the column, then clamp the whole run fully onscreen within
-    // the lane (unlike the flags, the lane text never hangs off an edge). A run
-    // wider than the lane pins to the left edge.
-    const GuiRect lane = top_marker_row_area(app);
+
     const double min_left = static_cast<double>(lane.x);
-    const double max_left = static_cast<double>(lane.x + lane.w) - run_w;
-    double left = center_x - run_w / 2.0;
-    if (max_left <= min_left) {
-        left = min_left;
-    } else {
-        if (left < min_left) left = min_left;
-        if (left > max_left) left = max_left;
+    const double max_left = static_cast<double>(lane.x + lane.w - box_w);
+    double box_left = static_cast<double>(area.x + col);
+    if (max_left <= min_left) box_left = min_left;
+    else if (box_left < min_left) box_left = min_left;
+    else if (box_left > max_left) box_left = max_left;
+    const int bx = static_cast<int>(std::nearbyint(box_left));
+
+    // The text VIEWPORT inside the box: the band the run is clipped to, and the
+    // width the view offset is measured against. The caret column belongs to it
+    // (a caret at the end must be inside the clip to be seen), which is why
+    // caret room is added to the viewport and not just to the box.
+    const double view_x0 = static_cast<double>(bx + pad_l);
+    const double view_x1 = static_cast<double>(bx + box_w - pad_r);
+    const double view_w  = view_x1 - view_x0;
+
+    // THE MINIMAL-TRAVEL VIEW OFFSET (the field's contract is at
+    // State::view_offset_px). Scroll only as far as the caret demands, in
+    // whichever direction it left the window, then clamp to the run's own
+    // travel — so a caret walking right pushes the view right one glyph at a
+    // time and walking back left pulls it back the same way, never jumping.
+    // The caret's own column is reserved at the right edge, so the comparison
+    // is against (view_w - caret) rather than view_w: a caret at end-of-text
+    // stops with its column inside the clip instead of half past it.
+    const int cursor_pos =
+        std::clamp(ed.cursor_pos, 0, static_cast<int>(ed.pending.size()));
+    const double caret_off = byte_x[static_cast<size_t>(cursor_pos)];
+    const double travel_w  = view_w - static_cast<double>(caret_px);
+    double vo = ed.view_offset_px;
+    if (caret_off - vo < 0.0)        vo = caret_off;
+    if (caret_off - vo > travel_w)   vo = caret_off - travel_w;
+    const double max_vo = run.width_px + static_cast<double>(caret_px) - view_w;
+    if (vo > max_vo) vo = max_vo;
+    if (vo < 0.0)    vo = 0.0;
+    ed.view_offset_px = vo;
+
+    const double text_origin_x = view_x0 - vo;
+    const double baseline = static_cast<double>(lane.y) +
+                            static_cast<double>(marker_flag_baseline_px());
+
+    // THE MARKER'S OWN FACE, through the one class ladder — so the open editor
+    // is visibly the same flag, only wider. The red flash overrides the whole
+    // pair (this lane's red, not the bottom strip's chip red — see the
+    // declaration), because a failed commit must read as a state of THIS box
+    // and not as a marker that suddenly normalized.
+    const bool dis = effective_disabled(mv, idx);
+    const bool red_class =
+        warp_red_flag_set_cached(
+            app, audio.sample_rate(),
+            static_cast<long>(audio.total_frames())).red.count(idx) > 0;
+    const bool sel = app.selected_markers.count(idx) > 0;
+    FlagFace face = resolve_flag_face(dis, red_class, sel);
+    if (ed.red) {
+        face.fill  = kMarkerFlagFillRed;
+        face.edge  = kMarkerFlagEdgeRed;
+        face.label = kRedesignLabel;
     }
-    return left;
-}
 
-double lane_text_left_x(
-    const AppState& app, const GuiAudio& audio,
-    int marker_idx, size_t glyph_count)
-{
-    const auto& mv = app.warpmarkers.markers();
-    if (marker_idx < 0 ||
-        marker_idx >= static_cast<int>(mv.size())) return -1.0;
-    return lane_text_left_x_at_frame(
-        app, audio, static_cast<double>(mv[marker_idx].time_frame),
-        glyph_count);
-}
+    // 1. The box: fill, then the 1px top edge — AA off, exactly as a flag.
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    cairo_set_source_rgb(cr, face.fill.r, face.fill.g, face.fill.b);
+    cairo_rectangle(cr, bx, lane.y, box_w, lane.h);
+    cairo_fill(cr);
+    cairo_set_source_rgb(cr, face.edge.r, face.edge.g, face.edge.b);
+    cairo_rectangle(cr, bx, lane.y, box_w, edge_h);
+    cairo_fill(cr);
+    cairo_restore(cr);
 
-double flag_pending_text_left_x(
-    const AppState& app, const GuiAudio& audio,
-    int marker_idx)
-{
-    return lane_text_left_x(app, audio, marker_idx,
-                            app.top_flag_editor.pending.size());
+    // The caret / selection band: the box interior under the top edge. A text
+    // field's caret spans its whole field, and here the field IS the box, so
+    // this needs no font-extent solve — the top edge is the only row it must
+    // stay clear of.
+    const int band_y = lane.y + edge_h;
+    const int band_h = lane.h - edge_h;
+
+    // Everything from here paints CLIPPED to the text viewport, so a scrolled
+    // run, its selection and its caret all stop at the pads instead of bleeding
+    // over the box edge into the neighbouring flags.
+    cairo_save(cr);
+    cairo_rectangle(cr, view_x0, static_cast<double>(lane.y),
+                    view_w, static_cast<double>(lane.h));
+    cairo_clip(cr);
+
+    // 2. The selection highlight, then 3. the text — the two-tone convention
+    //    the monospace box already uses: the selected span fills with the label
+    //    colour and its glyphs repaint in the box fill for contrast. Both edges
+    //    come from byte_x, so the highlight cannot drift off the glyphs it
+    //    marks however proportional they are.
+    const bool has_sel = text_editor::has_selection(ed);
+    if (has_sel) {
+        const size_t s0 = static_cast<size_t>(text_editor::selection_start(ed));
+        const size_t s1 = static_cast<size_t>(text_editor::selection_end(ed));
+        const double hx0 = text_origin_x + byte_x[s0];
+        const double hx1 = text_origin_x + byte_x[s1];
+        const int ix0 = static_cast<int>(std::nearbyint(hx0));
+        const int ix1 = static_cast<int>(std::nearbyint(hx1));
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_set_source_rgb(cr, face.label.r, face.label.g, face.label.b);
+        cairo_rectangle(cr, ix0, band_y, (ix1 > ix0) ? (ix1 - ix0) : 1, band_h);
+        cairo_fill(cr);
+        cairo_restore(cr);
+    }
+
+    cairo_set_source_rgb(cr, face.label.r, face.label.g, face.label.b);
+    text_shape::show_shaped_run(cr, run, text_origin_x, baseline);
+    if (has_sel) {
+        // The selected substring repainted in the FILL colour, clipped to the
+        // highlight's own span. Re-showing the whole run under a clip keeps the
+        // glyph positions bit-identical to the pass above — shaping the
+        // substring separately could kern its first glyph differently.
+        const size_t s0 = static_cast<size_t>(text_editor::selection_start(ed));
+        const size_t s1 = static_cast<size_t>(text_editor::selection_end(ed));
+        cairo_save(cr);
+        cairo_rectangle(cr, text_origin_x + byte_x[s0],
+                        static_cast<double>(lane.y),
+                        byte_x[s1] - byte_x[s0],
+                        static_cast<double>(lane.h));
+        cairo_clip(cr);
+        cairo_set_source_rgb(cr, face.fill.r, face.fill.g, face.fill.b);
+        text_shape::show_shaped_run(cr, run, text_origin_x, baseline);
+        cairo_restore(cr);
+    }
+
+    // 4. The caret: a blink-gated filled integer column at the cursor's own
+    //    byte boundary, AA off — the same crisp-column convention the
+    //    monospace box uses, on the shaped position instead of a grid one.
+    if (text_editor::cursor_visible_now(ed)) {
+        const int cx =
+            static_cast<int>(std::nearbyint(text_origin_x + caret_off));
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_set_source_rgb(cr, face.label.r, face.label.g, face.label.b);
+        cairo_rectangle(cr, cx, band_y, caret_px, band_h);
+        cairo_fill(cr);
+        cairo_restore(cr);
+    }
+
+    cairo_restore(cr);   // the text-viewport clip
+    cairo_restore(cr);   // the font state
+
+    out.valid         = true;
+    out.box           = GuiRect{bx, lane.y, box_w, lane.h};
+    out.text_origin_x = text_origin_x;
+    out.byte_x        = std::move(byte_x);
 }

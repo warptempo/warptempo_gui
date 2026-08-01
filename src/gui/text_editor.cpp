@@ -89,6 +89,25 @@ int byte_index_from_click_x(double click_x, double text_left_x,
     return std::clamp(idx, 0, pending_size);
 }
 
+// Nearest boundary, ties to the lower index — the contract is at the
+// declaration. Linear over at most kMaxPendingCharsFlagIter + 1 entries, run
+// once per click; a binary search would be the same answer with more code.
+int byte_index_from_shaped_x(double click_x, double text_origin_x,
+                             const std::vector<double>& boundaries) {
+    if (boundaries.empty()) return 0;
+    const double target = click_x - text_origin_x;
+    int    best     = 0;
+    double best_gap = std::abs(target - boundaries[0]);
+    for (size_t i = 1; i < boundaries.size(); ++i) {
+        const double gap = std::abs(target - boundaries[i]);
+        if (gap < best_gap) {   // strict: a tie keeps the lower index
+            best_gap = gap;
+            best     = static_cast<int>(i);
+        }
+    }
+    return best;
+}
+
 void select_word_at(State& s, int pos) {
     const int n = static_cast<int>(s.pending.size());
     if (n <= 0) {
@@ -171,6 +190,7 @@ void deactivate(State& s) {
     s.cursor_pos        = 0;
     s.selection_anchor  = -1;
     s.red               = false;
+    s.view_offset_px    = 0.0;
 }
 
 void enter(State& s, int target,
@@ -186,6 +206,10 @@ void enter(State& s, int target,
     s.cursor_pos        = static_cast<int>(s.pending.size());
     s.selection_anchor  = -1;
     s.red               = false;
+    // A fresh session starts unscrolled; the flag editor's painter travels it on
+    // the first frame if the seeded cursor (at end of text) is already past the
+    // box. The bottom-strip editors leave it at zero for their whole session.
+    s.view_offset_px    = 0.0;
     touch_blink(s);
 }
 

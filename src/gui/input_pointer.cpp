@@ -37,8 +37,15 @@
 // highlight is already painted from the editor State's selection_anchor /
 // cursor_pos, so the whole gesture is input-side: a press sets the anchor
 // and arms the drag, motion moves cursor_pos (extending the highlight),
-// release finalizes. The only per-editor geometry the mouse path needs is
-// each editor's char-0 text origin; advance is the shared monospace cell.
+// release finalizes.
+//
+// TWO CLICK-TO-BYTE MAPPINGS NOW (row 5's flag-editor unroll). The three
+// BOTTOM-STRIP editors are monospace: one char-0 origin plus one shared cell
+// advance, divided — unchanged. The FLAG editor is proportional, so there is no
+// advance to divide by and its geometry comes from the painter's published
+// FlagEditorBox: an origin plus the shaped run's per-byte boundaries, searched
+// for the nearest one. ActiveEditorText carries whichever pair applies and the
+// two call sites branch on it once, in editor_byte_index_at.
 namespace {
 
 // monotonic_ms() (the press-driven CLOCK_MONOTONIC ms time base for double-click
@@ -163,41 +170,55 @@ int64_t playhead_frame_at_click_column(const AppState& app,
 struct ActiveEditorText {
     bool                valid        = false;
     text_editor::State* ed           = nullptr;  // the active editor
-    double              text_left    = 0.0;       // char-0 origin (px)
+    double              text_left    = 0.0;       // byte-0 origin (px)
+    // MONOSPACE half: the shared cell advance, > 0 for the three bottom-strip
+    // editors and 0 for the flag editor.
     double              advance      = 0.0;
+    // SHAPED half: the painter's per-byte pen offsets, non-null for the flag
+    // editor and null for the bottom-strip editors. Exactly one of the two is
+    // set; editor_byte_index_at picks on that.
+    const std::vector<double>* byte_x = nullptr;
     bool                bottom_strip = false;      // which strip to repaint
 };
 
 ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
+    (void)audio;
     ActiveEditorText g;
+    // The monospace grid gate belongs to the THREE BOTTOM-STRIP branches only —
+    // the flag editor left that grid with its unroll, so an unmeasured font must
+    // not disable it.
     const double adv = monospace_advance();
-    if (adv <= 0.0) return g;
-    if (text_editor::is_active(app.settings_editor)) {
+    if (adv > 0.0 && text_editor::is_active(app.settings_editor)) {
         g.ed = &app.settings_editor;
         g.text_left = editor_text_glyph0_x(
             static_cast<double>(timestamp_pad_x()), kSettingsEditorPrefix);
         g.bottom_strip = true;
-    } else if (text_editor::is_active(app.commit_editor)) {
+    } else if (adv > 0.0 && text_editor::is_active(app.commit_editor)) {
         g.ed = &app.commit_editor;
         g.text_left = editor_text_glyph0_x(
             static_cast<double>(timestamp_pad_x()), kCommitEditorPrefix);
         g.bottom_strip = true;
-    } else if (text_editor::is_active(app.top_flag_editor) &&
+    } else if (adv > 0.0 && text_editor::is_active(app.top_flag_editor) &&
                app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
         g.ed = &app.top_flag_editor;
         g.text_left = editor_text_glyph0_x(
             static_cast<double>(timestamp_pad_x()), kBpmEditorPrefix);
         g.bottom_strip = true;
     } else if (text_editor::is_active(app.top_flag_editor)) {
-        // FlagPayload — the open editor's box over the marker lane. text_left
-        // is its left edge (flag_pending_text_left_x); it is -1 only for an invalid editor
-        // target (a valid off-view marker still yields a clamped onscreen
-        // origin, so the caret math keeps working while the text stays visible).
-        const double tl = flag_pending_text_left_x(
-            app, audio, app.top_flag_editor.target);
-        if (tl < 0.0) return g;   // invalid target: leave invalid
-        g.ed = &app.top_flag_editor;
-        g.text_left = tl;
+        // FlagPayload — the UNROLLED FLAG BOX. Its geometry is the painter's,
+        // published at app.flag_editor_box (contract at FlagEditorBox,
+        // render.h): the origin already carries the view offset and the
+        // boundaries are the shaped run's own pen, so there is nothing to
+        // re-derive and nothing that could disagree with the pixels. An invalid
+        // publication (no box painted yet, or a target the store shrank past)
+        // simply leaves this invalid — the same answer the old -1 origin gave.
+        const FlagEditorBox& fb = app.flag_editor_box;
+        if (!fb.valid) return g;
+        g.ed        = &app.top_flag_editor;
+        g.text_left = fb.text_origin_x;
+        g.byte_x    = &fb.byte_x;
+        g.valid     = true;
+        return g;
     } else {
         return g;
     }
@@ -206,11 +227,22 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
     return g;
 }
 
-void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
-    const int idx = text_editor::byte_index_from_click_x(
+// The ONE click-x -> byte owner for both mappings (see ActiveEditorText): the
+// shaped nearest-boundary search when the painter published boundaries, else
+// the monospace division. Every caret and drag-select site funnels through it,
+// so the two families cannot drift apart at one call site.
+int editor_byte_index_at(const ActiveEditorText& g, int mouse_x) {
+    if (g.byte_x) {
+        return text_editor::byte_index_from_shaped_x(
+            static_cast<double>(mouse_x), g.text_left, *g.byte_x);
+    }
+    return text_editor::byte_index_from_click_x(
         static_cast<double>(mouse_x), g.text_left, g.advance,
         static_cast<int>(g.ed->pending.size()));
-    g.ed->cursor_pos = idx;
+}
+
+void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
+    g.ed->cursor_pos = editor_byte_index_at(g, mouse_x);
 }
 
 // Region-drag end: dissolve a resting region whose on-screen span is under the
@@ -681,19 +713,17 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 in_region = x >= bs.x && x < bs.x + bs.w &&
                             y >= bs.y && y < bs.y + bs.h;
             } else {
-                // FlagPayload: the editable text lives on the marker's own flag
-                // (the marker-text lane is gone with row 5). A press within the
-                // rendered run's x-extent (in the lane's y-band) repositions the
-                // caret and arms the drag; g.text_left is that run's left edge
-                // (flag_pending_text_left_x, the one caret-origin owner). Any
-                // OTHER press is a non-caret click, which closes the editor
-                // below and then routes normally (the guard-free lifecycle).
-                const GuiRect lane = top_marker_row_area(app);
-                const double run_w = static_cast<double>(
-                    app.top_flag_editor.pending.size()) * g.advance;
-                in_region = y >= lane.y && y < lane.y + lane.h &&
-                    static_cast<double>(x) >= g.text_left &&
-                    static_cast<double>(x) <= g.text_left + run_w;
+                // FlagPayload: the editable text lives IN THE UNROLLED FLAG BOX.
+                // The claim is the whole published BOX, pads included, not just
+                // the glyph run's extent — the box is the field, and clicking
+                // its padding should place the caret at the nearest end exactly
+                // as clicking a text field's margin does (the nearest-boundary
+                // search gives that for free). Any press OUTSIDE the box is a
+                // non-caret click, which closes the editor below and then routes
+                // normally (the guard-free lifecycle).
+                const GuiRect& b = app.flag_editor_box.box;
+                in_region = x >= b.x && x < b.x + b.w &&
+                            y >= b.y && y < b.y + b.h;
             }
             if (in_region) {
                 // Double-click: a second click within the window on this
@@ -707,10 +737,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
                     std::abs(x - dc.press_x) <= kDoubleClickSlackPx &&
                     std::abs(y - dc.press_y) <= kDoubleClickSlackPx) {
-                    const int idx = text_editor::byte_index_from_click_x(
-                        static_cast<double>(x), g.text_left, g.advance,
-                        static_cast<int>(g.ed->pending.size()));
-                    text_editor::select_word_at(*g.ed, idx);
+                    text_editor::select_word_at(
+                        *g.ed, editor_byte_index_at(g, x));
                     if (g.bottom_strip) viewport.invalidate_timestamp_area();
                     else                viewport.invalidate_top_strip();
                     return;

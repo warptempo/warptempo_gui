@@ -1538,6 +1538,17 @@ struct AppState {
     std::vector<FlagHitRect> flag_hit_rects;
     std::vector<MarkerStem>  marker_stems;
 
+    // THE OPEN FLAG EDITOR'S BOX, published by the same painter-owns-derived-
+    // geometry rule the two stashes above follow, and for the same reason: the
+    // unrolled box's width is its SHAPED text's width and its per-byte caret
+    // stops are that run's own accumulated pen, neither of which any consumer
+    // can re-derive without repeating a HarfBuzz pass. Written every frame by
+    // render_flag_editor_box (which zeroes it when no FlagPayload editor is
+    // open), read by the pointer path for the in-box test, the click-to-caret
+    // mapping and the drag-select. See FlagEditorBox (render.h) for the field
+    // contract, including why `byte_x` is what click-to-byte searches.
+    FlagEditorBox flag_editor_box;
+
     // THE PRESSED BUTTON — the CLICK FACE, and the only piece of press-state
     // machinery the redesigned rows have. A roster index while a left button is
     // physically held down on an ENABLED button that HAS the face, -1 otherwise.
@@ -2509,13 +2520,14 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // hit_test_trim_chip live basis, so cold behavior is unchanged).
 //
 // This is the free-function owner homed beside displayed_or_live_target_map so
-// the render.cpp free function lane_text_left_x_at_frame (the flag editor's
-// placement), the app_state.cpp trim hit test (hit_test_trim_chip), and the LIVE
-// TRIM paint pass (GuiPaintHandler::paint_trim — paint and hit share the one
-// basis by construction) share ONE basis. (Two former consumers left the list:
-// the marker-text lane's run resolver and marker_hit_at, both deleted in row 5;
-// hit_test_flag now reads the painter's stash instead of re-deriving on this
-// basis. And the selected-stem DAMAGE was listed here until 2026-07-30 and was
+// render_flag_editor_box (the unrolled editor box's column), the app_state.cpp
+// trim hit test (hit_test_trim_chip), and the LIVE TRIM paint pass
+// (GuiPaintHandler::paint_trim — paint and hit share the one basis by
+// construction) share ONE basis. (Three former consumers left the list in row 5:
+// the marker-text lane's run resolver, marker_hit_at, and lane_text_left_x —
+// hit_test_flag and the editor's click-to-caret both read a PAINTER'S STASH now
+// instead of re-deriving on this basis, which is the stronger form of the same
+// guarantee. The selected-stem DAMAGE was listed here until 2026-07-30 and was
 // never a consumer at all.) It
 // is DELIBERATELY DISTINCT from
 // GuiPaintHandler::plate_viewport_basis, which reads the LIVE wf_cache.fp_*

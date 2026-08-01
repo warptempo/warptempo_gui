@@ -1297,13 +1297,21 @@ inline GuiRect flag_chip_rect(double text_left, size_t glyph_count,
 // accessor flag_font_size_px() declared above — same pt->px arithmetic,
 // driven by the font_size setting instead of a fixed 11.
 
-// Editor text-box primitive. Draws the full editable-text-box
-// anatomy shared by the flag-payload editor (top strip) and the settings
-// editor (bottom strip), in paint order: solid fill behind the editable
-// region, optional static prefix, editable text, selection swap, and a
-// blink-gated 1-px cursor. Killing the duplication between the two editors
-// is the point — both callers differ only in the resolved fill color, the
-// optional prefix, and the anchor.
+// Editor text-box primitive: the full MONOSPACE editable-text-box anatomy, in
+// paint order — solid fill behind the editable region, optional static prefix,
+// editable text, selection swap, and a blink-gated 1-px cursor.
+//
+// THE BOTTOM STRIP IS ITS WHOLE AUDIENCE NOW (row 5, 2026-08-01): the settings,
+// render-commit and BPM prompts, which share one call site
+// (render_bottom_strip_editor, paint_handler.cpp) and differ only in prefix and
+// which State they read. The FLAG-payload editor was the other caller and left
+// with its unroll — it is a shaped box on the marker's own flag now
+// (render_flag_editor_box), with its own caret and selection geometry off the
+// shaped run. So everything below — the monospace advance arithmetic, the chip
+// ring, the flag_chip_rect box, the lane-baseline inversion — describes the
+// bottom strip alone, and the outline/fill pair that once carried a marker
+// chip's colours is exercised only by those editors' invisible ring and their
+// kAccent red flash.
 //
 // Geometry: `anchor_x` is the left edge of the prefix (or of the editable
 // text when `prefix` is empty). The editable region paints at
@@ -1934,6 +1942,68 @@ void render_flags(cairo_t* cr,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                   const DragOverlay* drag_overlay = nullptr);
 
+// THE OPEN FLAG EDITOR'S RESOLVED GEOMETRY, published by render_flag_editor_box
+// and consumed by the pointer path. Every field is DERIVED FROM A SHAPED RUN,
+// which is exactly why it is published rather than recomputed: a second shaping
+// pass in the hit path could disagree with the pixels.
+//
+//   `box`           the painted box in window coordinates — the marker's flag,
+//                   unrolled to hold the FULL untruncated pending plus caret
+//                   room, and CLAMPED fully on-window.
+//   `text_origin_x` the window x that pending BYTE 0 paints at. It already
+//                   carries the view offset, so it is negative-of-nothing and
+//                   directly usable: byte k sits at text_origin_x + byte_x[k].
+//   `byte_x`        the shaping chokepoint's per-byte-boundary pen offsets
+//                   (text_shape::byte_offsets_px) — pending.size() + 1 entries.
+//                   The caret, both selection edges and click-to-byte all index
+//                   it, so what is drawn and what is grabbed are one vector.
+//
+// `valid` is false whenever no FlagPayload editor is open, and the painter
+// writes that state on every frame it runs, so a stale box can never outlive
+// its session.
+//
+// THE BOX IS THE CLAIM, pads included: a press anywhere inside it places the
+// caret, which is why the text VIEWPORT (the clip band inside the pads) is not
+// published — clicking a field's padding should put the caret at the nearest
+// end, and the nearest-boundary search gives exactly that with no extra term.
+struct FlagEditorBox {
+    bool                valid         = false;
+    GuiRect             box{0, 0, 0, 0};
+    double              text_origin_x = 0.0;
+    std::vector<double> byte_x;
+};
+
+// THE FLAG EDITOR'S UNROLL (row 5's last piece, 2026-08-01): the marker's flag
+// box EXPANDS to hold its full untruncated payload plus room for the caret, and
+// the editor's text is drawn inside it — kdenlive's flag-becomes-the-text-box,
+// which is also how this product's own editor read before the marker-text lane
+// took the payload away.
+//
+// THE BOX WEARS THE MARKER'S OWN FACE: the class fill and top edge
+// render_flags would have given it (disabled blend, red, selected swap, all
+// through the one ladder), so opening an editor changes the flag's SIZE and
+// nothing else about how it reads. An invalid commit flashes the marker lane's
+// OWN red pair — kMarkerFlagFillRed / kMarkerFlagEdgeRed, not the pre-redesign
+// kAccent the bottom-strip editors still flash: this surface is hard-coded
+// row-5 colour now and a chip pair here would be a face nobody ruled.
+//
+// THE TEXT IS THE REDESIGN'S SANS, matching the labels it replaces — the
+// monospace face dies at this surface with the lane placement owner
+// (lane_text_left_x) that used to put it here.
+//
+// AT A WINDOW EDGE THE BOX CLAMPS AND THE VIEW TRUNCATES. The box slides left
+// to stay fully on-window; when the payload is wider than the lane itself the
+// box spans the lane and the text scrolls inside it, the caret staying visible
+// through State::view_offset_px (the minimal-travel rule lives at that field).
+// Left/Right/Home/End then navigate it exactly like any one-line field —
+// nothing in the key path knows the box scrolls.
+//
+// Takes AppState by NON-CONST reference, alone among the renderers, and for two
+// honest reasons: it advances the editor's view offset (session state that must
+// persist across frames) and it publishes app.flag_editor_box. Both are the
+// painter owning what only the painter can compute.
+void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio);
+
 // The phase-reset column's flags: the identical box, the identical class ladder
 // and the identical publication contract render_flags documents above. Their
 // LABEL is the display-only kPhaseResetLaneToken (a phase reset authors no
@@ -2021,42 +2091,16 @@ void init_monospace_grid_metrics(cairo_t* cr);
 // it.
 double measured_monospace_font_px();
 
-// Left x (window pixels) of a transient run of `glyph_count` MONOSPACE glyphs
-// placed over marker `marker_idx`'s painted column in the marker lane. ITS ONE
-// REMAINING OCCUPANT IS THE FLAG EDITOR (row 5, 2026-08-01): the hover popup and
-// the ambient lane runs it also placed died with the marker-text lane, so this
-// is the editor's placement owner and nothing else's — which is also why it is
-// still on the MONOSPACE grid while the flags beside it went proportional. The
-// editor keeps its own machinery until its own unroll lands.
-// The run centers on the marker and clamps fully onscreen within the lane
-// (unlike a flag box, which runs off the right edge freely). Column math is the
-// painters' own against displayed_or_live_target_map — the event-synchronized
-// displayed basis the flag pixels were painted with (identity/empty in source
-// view; in target view the map the last committed frame's flag cache baked,
-// with the live map as the cold-state fallback) — so the run sits on the same
-// column the flag paints. Returns -1.0 for an invalid marker index; a valid
-// off-view marker still returns a clamped onscreen origin. No cairo context.
-double lane_text_left_x(
-    const AppState& app, const GuiAudio& audio,
-    int marker_idx, size_t glyph_count);
-
-// The frame-addressed core of lane_text_left_x: same placement math, keyed on a
-// marker's authored source frame rather than a warp-store index. The idx
-// overload above delegates here; it kept the frame form when the phase-reset
-// column's lane surfaces (a different store) shared the owner, and it stays the
-// core because that is where the math lives.
-double lane_text_left_x_at_frame(
-    const AppState& app, const GuiAudio& audio,
-    double source_frame, size_t glyph_count);
-
-// The flag editor's caret / text-run origin owner: lane_text_left_x sized by the
-// editor's current pending text. The single reference the editor's paint, the
-// click->byte caret math, and the editor-text drag all read, so what is shown is
-// where the caret lands. Returns -1.0 for an invalid marker index. No cairo
-// context.
-double flag_pending_text_left_x(
-    const AppState& app, const GuiAudio& audio,
-    int marker_idx);
+// (THE MARKER-LANE PLACEMENT OWNERS ARE GONE, 2026-08-01. lane_text_left_x /
+// lane_text_left_x_at_frame / flag_pending_text_left_x centered a MONOSPACE run
+// over a marker's painted column and clamped it onscreen — first for the
+// marker-text lane's runs and the hover popup, then, after row 5's checkpoint B
+// deleted those, for the flag editor alone. The editor's unroll took the last
+// of it: the box is LEFT-anchored on the marker's own column like the flag it
+// replaces, sized by shaped text, and clamped by render_flag_editor_box, which
+// is now the single owner of that whole question. The column math they wrapped
+// — painted_column_of_source_frame_on_basis over the displayed map and the item
+// viewport basis — is unchanged and called directly there.)
 
 // THE PHASE-RESET DISPLAY TOKEN, and the one statement of it: what a phase
 // reset's FLAG shows, where a warp marker shows its composed line

@@ -78,7 +78,7 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
     // ruling.) The boxes CARRY THEIR TEXT since row 5 — the marker-text lane
     // that used to show it beneath them is gone — so the only thing painted
     // after this blit in that band is the open editor's overlay
-    // (paint_flag_editor_box); the editing target's flag blits here as an
+    // (render_flag_editor_box); the editing target's flag blits here as an
     // ordinary box and the overlay covers it. Like the other
     // caches, the surface may be null on the very first paint after a load
     // (before the first rebuild fires); the blit is skipped and the background
@@ -1700,68 +1700,6 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     cairo_restore(cr);
 }
 
-// -- GuiPaintHandler::paint_flag_editor_box ------------------------------
-
-void GuiPaintHandler::paint_flag_editor_box(cairo_t* cr) {
-    // THE OPEN FLAG EDITOR, and nothing else. This pass was the marker-text
-    // lane: an ambient run per visible marker, arbitrated by a fit-at-budget
-    // verdict with a one-run fallback and a hover spell-out expansion on top.
-    // ALL OF THAT IS GONE with row 5 — the marker's text lives ON its flag now,
-    // truncated at the same nine-glyph budget, overlapping its neighbours later
-    // over earlier with no arbitration at all. What survives here is the ONE
-    // overlay the resolver never owned: the open editor's box, still on the
-    // MONOSPACE grid and still centered/clamped by lane_text_left_x, until the
-    // editor's own unroll (the flag-becomes-textbox change) lands.
-    //
-    // It paints AFTER the flag-cache blit, so it covers its own marker's flag —
-    // which is the whole reason there is no "suppress the editing marker's
-    // flag" arm any more: an overlay that covers what it replaces needs none.
-    if (!text_editor::is_active(app.top_flag_editor) ||
-        app.top_flag_editor.kind != text_editor::Kind::FlagPayload) return;
-    const double advance = monospace_advance();
-    if (advance <= 0.0) return;
-
-    const GuiRect lane     = top_marker_row_area(app);
-    const double  baseline = lane.y + monospace_text_row_baseline_offset();
-
-    const text_editor::State& ed = app.top_flag_editor;
-    // The caret-origin owner supplies the box's left x, centered on the marker
-    // and clamped onscreen, so paint and the click->byte caret math share one
-    // origin.
-    const double left = flag_pending_text_left_x(app, audio, ed.target);
-    if (left < 0.0) return;   // invalid editor target
-    cairo_save(cr);
-    cairo_select_font_face(cr, "monospace",
-                           CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
-    cairo_set_font_size(cr, flag_font_size_px());
-    EditorTextBox box;
-    box.anchor_x        = left;
-    box.baseline_y      = baseline;
-    // The MM:SS.mmm| locked prefix is display-only and not shown here — only
-    // the editable payload paints, centered on the marker.
-    box.prefix          = "";
-    box.text            = ed.pending;
-    box.hl_pad          = flag_glyph_inset_px();
-    // The open editor paints like an ordinary MARKER chip: kMarker fill +
-    // kMarkerOutline ring, flashing to kAccent on an invalid commit — a color
-    // CHANGE on an already-visible box, not a box appearing from nowhere.
-    // THESE ARE PRE-REDESIGN, colors.conf-tunable values sitting beside a
-    // hard-coded row-5 lane, and deliberately so: the editor has not had its
-    // own redesign pass yet, and giving it row-5 colors now would be inventing
-    // an unruled face. The unroll change owns that question.
-    box.fill            = ed.red ? kAccent        : kMarker;
-    box.outline         = ed.red ? kAccentOutline : kMarkerOutline;
-    box.text_color      = kText;
-    box.has_selection   = text_editor::has_selection(ed);
-    box.selection_start = text_editor::selection_start(ed);
-    box.selection_end   = text_editor::selection_end(ed);
-    box.cursor_visible  = text_editor::cursor_visible_now(ed);
-    box.cursor_pos      = ed.cursor_pos;
-    render_editor_text_box(cr, box);
-    cairo_restore(cr);
-}
-
 // -- GuiPaintHandler::paint_waveform_plate -------------------------------
 
 void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
@@ -2682,9 +2620,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // marker lane's top and must sit UNDER whatever that lane draws.
             paint_ruler_row(cr);
             paint_flag_annotations(cr, top_strip);
-            // The open flag editor's box, over the just-blitted flags — the
-            // live-overlay role the marker-text lane's whole pass used to fill.
-            paint_flag_editor_box(cr);
         }
 
         // Strip-drag anchor stem: over the plate/stems in the waveform area
@@ -2694,8 +2629,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // waveform verticals; the playhead's triangle lane is untouched, the
         // anchor carries no triangle). The anchor shows only mid-strip-drag, so
         // this overlap is transient and the pivot affordance reading on top is
-        // acceptable. paint_flag_editor_box likewise ends up after the playheads
-        // but on the non-overlapping marker lane.
+        // acceptable. The flag editor's box likewise ends up after the
+        // playheads, but on the non-overlapping marker lane.
         if (rects_intersect(exposed, area)) {
             paint_strip_drag_anchor(cr, area);
         }
@@ -2716,6 +2651,16 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // THEY CANNOT COEXIST, so their order between themselves is moot: the
     // dropdown opens on a PRESS and a press hides the tooltip, and while the
     // dropdown is open no roster button hovers, so no tooltip can arm under it.
+    //
+    // THE OPEN FLAG EDITOR'S BOX PAINTS HERE, ahead of those two and after every
+    // pass above — including the flag blit it must cover — and UNCONDITIONALLY,
+    // for the floating surfaces' own reason: it publishes the geometry the
+    // pointer path grabs, and a run that skipped would strand a stale box. Off
+    // the damage the outer Cairo clip makes it free, and with no editor open it
+    // is two boolean tests. It sits OUTSIDE the loading / total>0 branch above
+    // for the same reason — that branch is where the publication would go
+    // missing.
+    render_flag_editor_box(cr, app, audio);
     paint_settings_popup(cr);
     paint_shift_tooltip(cr);
 

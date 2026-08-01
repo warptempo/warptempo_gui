@@ -58,9 +58,11 @@ inline int timestamp_pad_x() {
 
 // Single source for the two bottom-strip editor prefixes. The paint
 // sites (render_bottom_strip_editor calls) and the mouse drag-to-select
-// geometry helper (active_editor_text in input_handler.cpp) both derive
+// geometry helper (active_editor_text in input_pointer.cpp) both derive
 // the editable text's char-0 origin from these, so the origin math can
-// never drift from the painted prefix.
+// never drift from the painted prefix. THEY ARE THE MONOSPACE HALF of that
+// helper: the flag editor left the grid with its unroll and takes its origin
+// from the painter's published box instead.
 constexpr const char* kSettingsEditorPrefix = "setting: ";
 constexpr const char* kBpmEditorPrefix      = "bpm: ";
 // The render-commit prompt (bare `'`) label. The typed entry identifier —
@@ -195,12 +197,11 @@ struct WaveformCache {
 // Synchronous main-thread rebuild; the fingerprint's full field list is the
 // ONE authoritative copy at maybe_rebuild_flag_cache's declaration below — do
 // not restate it here. The cache
-// holds the fixed-width marker/phase-reset flag shapes ONLY (trim's b/e chips
-// left it for the live trim pass); the paint pass is a pure blit. The flag
-// editor's text renders
-// live as an overlay AFTER this cache's blit, so the editing target's flag
-// paints here as an ordinary selected shape — no skip-guard, no per-frame live
-// flag render in the cache.
+// holds the marker/phase-reset flag BOXES ONLY (trim's bar and endcaps left it
+// for the live trim pass); the paint pass is a pure blit. The open flag editor's
+// UNROLLED box renders live as an overlay AFTER this blit and always covers the
+// flag it replaces, so the editing target's flag caches here as an ordinary box
+// — no skip-guard, no per-frame live flag render in the cache.
 //
 // The cache surface matches `top_strip_area(app)`: width = window width,
 // height = top_strip_height, origin (0,0). The blit at on_redraw time
@@ -494,11 +495,12 @@ private:
     // #292c30 under #535659, the dropdown its own darker #1c1f22 under #4c4e51.
     void paint_popup_chrome(cairo_t* cr, const GuiRect& r,
                             GuiColor ground, GuiColor border);
-    // The open flag editor's box — all that is left of the marker-text lane's
-    // paint pass. The ambient runs, the fit verdict, the one-run fallback and
-    // the hover spell-out died with the lane in row 5; the editor's overlay
-    // survives, still monospace, until its own unroll change.
-    void paint_flag_editor_box(cairo_t* cr);
+    // (The open flag editor has no pass member here. It is render_flag_editor_box
+    // in render.cpp — the last of the marker-text lane's paint pass, unrolled
+    // into the flag itself in row 5's checkpoint C, where it shares the flag
+    // painter's class ladder, pads, baseline and shaping. on_redraw calls the
+    // free function directly, in the floating-surfaces slot and for their
+    // reason: it publishes geometry the pointer path reads.)
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
     // THE GROUND RECOLOR, painted after render_canvas and BEFORE the plate blit
     // (the Ableton model — the highlight changes the ground, the ink is
