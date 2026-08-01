@@ -907,6 +907,46 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     app.staged_displayed_area_w   = wave_w;
     app.staged_displayed_valid = true;
 
-    gui.invalidate_region(top_strip.x, top_strip.y,
-                          top_strip.w, top_strip.h);
+    // THE REBUILD'S OWN DAMAGE REACHES THE WAVEFORM (architect 2026-08-01,
+    // closing the ONE-PRESS STEM LAG). It was the top strip alone, which was
+    // exactly right while this cache was a strip surface and nothing else; ROW 5
+    // MADE IT A PRODUCER OF WAVEFORM PIXELS — app.marker_stems, painted live by
+    // GuiPaintHandler::paint_marker_stems inside the waveform area — and the
+    // damage never followed.
+    //
+    // THE LAG, in the order the loop actually runs it: a nudge press mutates the
+    // store and queues its own full strip+waveform damage; THE FRAME PAINTS
+    // BEFORE THE NEXT TICK (the run loop services the compositor's frame
+    // callback, and this rebuild lives in on_tick — the same
+    // paint-outruns-the-fingerprint-check ordering the `p` view switch was
+    // fixed for), so that repaint consumed the OLD cache and the OLD stash and
+    // was internally consistent: stale flag, stale stem. Then the tick ran, this
+    // function rebuilt both, and damaged the STRIP only — so the next frame
+    // blitted the NEW flag surface over an untouched waveform, leaving the stem
+    // ink at the old column. Flag moved, stem did not, and the stem caught up
+    // only when the NEXT press's own waveform damage arrived: every press showed
+    // the previous press's stem, which reads as "stepping back resyncs them".
+    //
+    // WHY THE DAMAGE AND NOT A SYNCHRONOUS REBUILD AT EVERY MUTATION: this shape
+    // is what DELAY-AND-SYNC asks for. The stash is BOTH the stem paint source
+    // and the hit geometry (flag_hit_rects + marker_stems, one producer — this
+    // function), and it is staged into the item basis three lines above, so
+    // stash, basis and pixels now all advance at the SAME frame — one frame
+    // behind the press, consistently, with the display never showing a column
+    // the hit test disagrees with. Making every marker mutation rebuild
+    // synchronously would also land them together, but it moves a HarfBuzz
+    // shaping pass over every visible label onto each press at key-repeat
+    // cadence, and it would need a mutation-site inventory that can rot; this is
+    // one rect at the one producer.
+    //
+    // The rect is the top strip PLUS the waveform — Viewport::invalidate_-
+    // waveform_area's exact shape, re-spelled because this struct holds no
+    // Viewport (the same widening that free helper documents). It CONTAINS the
+    // old strip-only rect by construction (waveform_area.y IS the top strip's
+    // height and its own height floors at 0), so it replaces rather than joins
+    // it; and the platform's containment coalescing drops it wholesale on the
+    // paths that already damaged the waveform this frame — every marker
+    // mutation, every pan/zoom, every drag motion event — so those pay nothing.
+    const GuiRect wave = waveform_area(app);
+    gui.invalidate_region(0, 0, app.width, wave.y + wave.h);
 }
