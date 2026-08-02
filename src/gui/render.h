@@ -1393,8 +1393,8 @@ struct WaveformBasis {
 //
 // The plate paints uniformly in `color` — it is trim-agnostic, and nothing
 // recolors it after the fact: the out-of-trim dim that once masked a second
-// color through this alpha is retired, the trim bridge bar being the whole
-// inside-the-window signal now. Its alpha is BINARY now: opaque bars and
+// color through this alpha is retired, the trim bar spanning the window being
+// the whole inside-the-window signal now. Its alpha is BINARY now: opaque bars and
 // transparent gaps, with no fractional edges left. The gaps are what let a
 // recolored GROUND (kWaveformRegionCanvas, painted before the blit) show
 // through.
@@ -1488,15 +1488,15 @@ void render_strip_anchor_stem(cairo_t* cr,
 // EOF-WALL CLAMP (the one copy, formerly installed at three sites at once):
 // `col` clamps col_raw into the visible column range [0, wave_w-1]. The
 // inclusive END wall T-1 at full zoom-out rounds to column wave_w (one past the
-// surface); left unclamped, the right-edge-anchored end chip loses its
-// bound-edge pixel and outline to the cache clip and its stems fall offscreen.
-// Clamping lands the wall on the last visible column so the chip stays fully
-// visible and connected. Begin/frame-0 already maps to column 0, unaffected.
-// The bridge bar (trim_bridge_gap) reads an OFFSCREEN bound's SIDE (below) to pick
-// a side-specific flush sentinel past the visible edge, and the painter clips its
-// DRAWN extent to the effective width [0, wave_w) so the fill/ring stop flush at
-// the edge (the inert gutter never paints; col_raw is the sentinel input, not the
-// drawn position).
+// surface); left unclamped, the right-edge-anchored end CAP loses its
+// bound-edge pixel to the lane clip. Clamping lands the wall on the last
+// visible column so the cap stays fully visible on the bar's end.
+// Begin/frame-0 already maps to column 0, unaffected.
+// The bridge interval (trim_bridge_gap) reads an OFFSCREEN bound's SIDE (below)
+// to pick a side-specific flush sentinel past the visible edge, and the painter
+// clips its DRAWN extent to the effective width [0, wave_w) so the bar's runs
+// stop flush at the edge (the inert gutter never paints; col_raw is the
+// sentinel input, not the drawn position).
 // Which side of the viewport an OFFSCREEN bound lies on — meaningful only when
 // !in_viewport. Derived from the SAME unrounded ms compare that sets in_viewport,
 // NOT from col_raw: a bound less than half a pixel off the LEFT rounds to

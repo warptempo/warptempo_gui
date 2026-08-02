@@ -59,8 +59,11 @@
 // the original path. The .bk is the whole recovery contract — a failed or torn
 // write leaves the legacy bytes intact beside it — so an already-existing .bk
 // is a refusal, never an overwrite: it is the only copy of an earlier run's
-// legacy input. There is no confirmation prompt; the backup is the answer the
-// prompt used to ask for.
+// legacy input. That refusal is the RENAME ITSELF, not a check before it
+// (renameat2 with RENAME_NOREPLACE — the Linux-only primitive this Linux-only
+// tool is entitled to): plain rename REPLACES its destination, so a check-then-
+// rename pair could still overwrite a .bk that appeared in between. There is no
+// confirmation prompt; the backup is the answer the prompt used to ask for.
 //
 // THE TIMESTAMP PARSE HELPERS ARE TOOL-LOCAL (architect 2026-07-30), joining
 // this file's other local mirrors (the zoom-2 pixel scale below): they had no
@@ -79,7 +82,10 @@
 
 #include <cerrno>
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
+#include <cstring>
+#include <fcntl.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -438,9 +444,41 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // Read the whole file as bytes.
+    // Read the whole file as bytes — COMPLETELY OR NOT AT ALL. A short or
+    // failed read must refuse here, before the conversion and long before the
+    // destructive rename below: accepting a prefix would publish it as the
+    // finished migration and move the real input aside as the backup.
+    //
+    // THE COMPLETENESS VERDICT IS A LENGTH COMPARE, not a stream flag, because
+    // the stream flags cannot carry it. `ss << f.rdbuf()` never touches `f`'s
+    // state at all, and it sets failbit on `ss` whenever ZERO characters were
+    // inserted — which an empty file and an unreadable one produce alike (a
+    // DIRECTORY with a recognized suffix is the concrete case: the read-only
+    // open succeeds, the buffer read yields nothing, and neither badbit nor
+    // eofbit is raised anywhere). So the input is first required to be a
+    // REGULAR FILE, and the bytes actually read are then compared against the
+    // size the filesystem reports. badbit is still checked — it is the one
+    // genuine hard-error signal the idiom does raise — but the length compare
+    // is what makes the read all-or-nothing. A file changing size underneath a
+    // one-shot conversion refuses too, which is the right answer.
     std::string data;
     {
+        std::error_code fec;
+        const std::filesystem::file_status st =
+            std::filesystem::status(path, fec);
+        if (fec) {
+            diag("Read", path, "cannot stat file: " + fec.message());
+            return 1;
+        }
+        if (!std::filesystem::is_regular_file(st)) {
+            diag("Read", path, "not a regular file");
+            return 1;
+        }
+        const std::uintmax_t size = std::filesystem::file_size(path, fec);
+        if (fec) {
+            diag("Read", path, "cannot read file size: " + fec.message());
+            return 1;
+        }
         std::ifstream f(path, std::ios::binary);
         if (!f) {
             diag("Read", path, "cannot open file");
@@ -448,7 +486,17 @@ int main(int argc, char** argv) {
         }
         std::ostringstream ss;
         ss << f.rdbuf();
+        if (f.bad() || ss.bad()) {
+            diag("Read", path, "cannot read file");
+            return 1;
+        }
         data = ss.str();
+        if (static_cast<std::uintmax_t>(data.size()) != size) {
+            diag("Read", path,
+                 "short read (" + std::to_string(data.size()) + " of " +
+                     std::to_string(size) + " bytes)");
+            return 1;
+        }
     }
 
     // Convert fully in memory first, so a conversion error refuses before
@@ -493,22 +541,28 @@ int main(int argc, char** argv) {
     // run's legacy input, the exact copy this tool exists to protect. Nothing
     // has been written or moved at this point, so the refusal leaves the
     // original in place.
+    //
+    // THE REFUSAL IS THE SYSCALL'S, IN ONE FILESYSTEM OPERATION. There is no
+    // preflight existence check, deliberately: POSIX rename REPLACES its
+    // destination, so a check-then-rename pair leaves a window in which a .bk
+    // appearing after the check — a second invocation on the same file is
+    // enough — is silently destroyed, which is exactly the loss the recovery
+    // contract above exists to prevent. renameat2's RENAME_NOREPLACE makes the
+    // "only if the backup does not exist" condition part of the move itself and
+    // reports EEXIST when it does; that errno IS the refusal arm. This is a
+    // Linux-only primitive, and this Linux-only tool is entitled to it (the
+    // product's binaries are -march=native for one Arch host).
     const std::string backup_path = path + ".bk";
-    std::error_code ec;
-    if (std::filesystem::exists(backup_path, ec)) {
-        diag("Migrate", path,
-             "backup '" + backup_path + "' already exists");
-        return 1;
-    }
-    if (ec) {
-        diag("Migrate", path,
-             "cannot check for backup '" + backup_path + "': " + ec.message());
-        return 1;
-    }
-    std::filesystem::rename(path, backup_path, ec);
-    if (ec) {
+    if (::renameat2(AT_FDCWD, path.c_str(), AT_FDCWD, backup_path.c_str(),
+                    RENAME_NOREPLACE) != 0) {
+        if (errno == EEXIST) {
+            diag("Migrate", path,
+                 "backup '" + backup_path + "' already exists");
+            return 1;
+        }
         diag("Backup", path,
-             "cannot rename to '" + backup_path + "': " + ec.message());
+             "cannot rename to '" + backup_path + "': " +
+                 std::strerror(errno));
         return 1;
     }
 

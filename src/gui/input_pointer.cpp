@@ -1367,8 +1367,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // drag or nudge — nothing is towed.
         if (inside_top || stem_click) {
             // A PLAIN STEM CLICK ENTERS HERE TOO (2026-08-01). Its y is in the
-            // waveform, so every band test inside this branch — the chip row
-            // below, the ruler's strip-drag arm, the empty-marker-lane parity
+            // waveform, so every band test inside this branch — the trim bar
+            // lane below, the ruler's strip-drag arm, the empty-marker-lane parity
             // press — simply fails for it, and it lands on the one arm it is
             // for: `mh_index >= 0`, the marker click. Nothing in those bodies
             // knows or needs to know which surface resolved the index.
@@ -1379,9 +1379,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // shift is the region former. Shift reaches the marker RANGE select
             // through the FLAG BOX alone, which is `inside_top`.
             //
-            // The chip row (top_trim_row_area, lane 4) is trim's lane and is
-            // claimed BEFORE the marker single-select. The chip row, the marker
-            // trim lane and the marker lane are disjoint y-bands, so
+            // The TRIM BAR (top_trim_row_area, lane 4) is trim's lane and is
+            // claimed BEFORE the marker single-select. Row 5's three lanes —
+            // the trim bar, the ruler (lane 5) and the marker lane (lane 6) —
+            // are disjoint y-bands, so
             // this contends with nothing: a marker-part press falls to the marker
             // handling below. The PLAIN click consumes the span-framing
             // double-click, else arms a chip/bridge drag, else — on an unclaimed
@@ -1607,8 +1608,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                             active_column_authoring_allowed(app)) {
                             // Every open route opens fully SELECTED (open-
                             // selected), so there is no clicked-glyph caret to
-                            // seat — the flag-shape vs lane-run press are the
-                            // same open. A specific caret spot is a click inside
+                            // seat — a press on the flag BOX and a press on the
+                            // marker's STEM are the same open. A specific caret
+                            // spot is a click inside
                             // the already-open editor (the F2.1 path).
                             flag_editor.enter_top_flag_edit(hit);
                             opened_editor = true;

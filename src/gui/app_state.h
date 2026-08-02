@@ -492,9 +492,9 @@ struct PendingMarkerDrag {
 // marker_drag.h. So the reposition drag above is the ONLY pointer marker gesture,
 // and W+target has no pointer authoring gesture at all.)
 
-// Pending trim chip/bridge drag, armed by a PLAIN (unmodified) left press in the
-// top-strip CHIP ROW (a b/e chip rect, or the inter-chip bridge span). The
-// trim sibling of PendingMarkerDrag: the press CLAIMS the chip/bridge geometry
+// Pending trim cap/bridge drag, armed by a PLAIN (unmodified) left press in the
+// top-strip TRIM BAR lane (an endcap rect, or the bar's inter-cap bridge span).
+// The trim sibling of PendingMarkerDrag: the press CLAIMS the cap/bridge geometry
 // but arms only this pending state; begin_trim_drag runs (and the trim-drag
 // machinery takes over) only once the pointer crosses kDragMovedThresholdPx
 // (Chebyshev from the press). A SUB-THRESHOLD PRESS-RELEASE IS A CONSUMED
@@ -665,20 +665,23 @@ enum class DoubleClickSurface { None, TrimBar, Marker, EditorText, EmptyLane };
 // position AND (for Marker) targets the same marker, is consumed as that
 // surface's double-click action instead of the single-click action. A drag that
 // MOVED records nothing and clears any candidate. Surfaces:
-//   TrimBar    -> the SPAN-FRAMING command on the trim chip row
+//   TrimBar    -> the SPAN-FRAMING command on the trim bar lane, its whole band
 //                 (run_span_framing_command: a live region, else a proper trim
 //                 sub-window, else the whole song). Target unused; both axes'
 //                 slack compared. It REHOMED here from the deleted zoom lane
-//                 (architect 2026-07-31) and consumes AHEAD of the chip/bridge
+//                 (architect 2026-07-31) and consumes AHEAD of the cap/bridge
 //                 drag arm, so the second click frames rather than grabs. The
-//                 seed is the chip row's own press record (ChipRowPressSeed),
-//                 not a strip-drag field: the chip row arms a pending trim drag
+//                 seed is that lane's own press record (ChipRowPressSeed — the
+//                 chip-era name, kept),
+//                 not a strip-drag field: the lane arms a pending trim drag
 //                 rather than a live one, so there is no drag state to hang it
 //                 on and the motionless test is the release's own slack compare.
 //   Marker     -> opens the marker's flag editor (target = marker index; both
 //                 axes' slack compared). The marker is ONE pointer item: the hit
-//                 is its flag SHAPE or its rendered marker-text LANE RUN, and a
-//                 candidate seeded on one part consumes on the other. One seed
+//                 is its FLAG BOX (the painter's published rect) or its STEM in
+//                 the waveform's upper half — the marker-text lane's run died in
+//                 row 5 — and a candidate seeded on one part consumes on the
+//                 other. One seed
 //                 timing for the whole surface — the PRESS; a press that then
 //                 becomes a real marker drag (the reposition drag, the only one
 //                 left since the tempo drag's deletion) drops the candidate at the
@@ -713,8 +716,9 @@ struct DoubleClickCandidate {
 };
 
 // THE TRIM-BAR FRAMING DOUBLE-CLICK'S FIRST HALF, recorded at the press because
-// only the RELEASE can tell a click from a drag. A plain chip-row press (any
-// spot in the band — chip, bridge, or empty; read-only included, the framing
+// only the RELEASE can tell a click from a drag. A plain trim-bar-lane press
+// (any spot in the band — endcap, bridge, or bare ground; read-only included,
+// the framing
 // being pure navigation) records this; the left release seeds the TrimBar
 // candidate when the pointer is still within kDoubleClickSlackPx of the recorded
 // point and no trim drag went live. That slack IS the motionless test: it equals
@@ -960,7 +964,7 @@ struct PromptState {
 // during any gesture — but crossed or equal bounds can no longer REST
 // anywhere: every trim commit RESETS a pair left with end_frame <= begin_frame
 // back to the full window (GuiInputHandler::auto_clear_crossed_trim, the trim
-// sibling of the marker normalizations — the chips jumping to the song edges
+// sibling of the marker normalizations — the endcaps jumping to the song edges
 // are the visible signal), and a persisted crossed/equal pair resets per tab at
 // load with one stderr line (file_loader). The zero floor is subsumed by the
 // per-bound walls, but it remains the reason the floor exists at all: a
@@ -1792,9 +1796,10 @@ struct AppState {
 
     // Shared text-editor state for two editors distinguished by Kind: the
     // top-strip flag editor (Kind::FlagPayload — active when editing a warp
-    // marker's payload, its text run and caret painted live in the marker-text
-    // lane centered over the marker, not on the flags, which are textless
-    // shapes) and the bottom-strip BPM editor (Kind::BpmBracket). The editor
+    // marker's payload, its text run and caret painted live ON THE FLAG ITSELF
+    // since row 5's text-on-flag model: render_flag_editor_box unrolls the
+    // marker's own box, which the flag pass therefore skips) and the
+    // bottom-strip BPM editor (Kind::BpmBracket). The editor
     // owns the keyboard while active.
     text_editor::State top_flag_editor;
     // Last-painted cursor visibility, so the tick can detect a flip and
@@ -2643,18 +2648,23 @@ inline int marker_stem_grab_px() {
 // Which trim boundary, if any, a waveform-area click lands on.
 enum class TrimHit { None, Begin, End };
 
-// hit_test_trim_chip: return which trim bound's painted CHIP RECT (in the upper
-// top row) contains the press, or None. Both bounds are always meaningful (the
-// trim window is always set since 2026-07-30), so it reads the pair directly.
+// hit_test_trim_chip: return which trim bound's painted ENDCAP contains the
+// press, or None. Both bounds are always meaningful (the trim window is always
+// set since 2026-07-30), so it reads the pair directly.
 // AUTHORING views — the active tab's live pair, project-level in both 'W' and
-// 'P' views. Each chip is a textless SQUARE (the trim lane's own height on both
-// axes) EDGE-ANCHORED on the bound's
-// painted column — the begin chip's LEFT edge on it, the end chip's RIGHT edge
-// on it — exactly what render_trim_flags fills, this rect built the same way,
-// so paint and hit cannot drift. Tests both mouse_x and mouse_y. Walks the
-// display warp_frame_map in target view so the hit lands on the drawn chip.
-// The chip and the inter-chip bridge are the ONLY trim grab handles (the
-// waveform stem grab retired).
+// 'P' views. Each bound's mark is one of row 5's trim-bar ENDCAPS (the square
+// b/e chips of the old chip row are gone, 2026-08-01): a trim_endcap_w_px()
+// column run spanning the trim bar lane's full height, EDGE-ANCHORED on the
+// bound's painted column — the begin cap's LEFT edge on it, the end cap's RIGHT
+// edge on it — from trim_chip_rect, the ONE rect owner render_trim_flags fills
+// through, so paint and hit cannot drift. THE HIT RECT IS THAT CAP INFLATED by
+// kTrimEndcapGrabPx per side (a 2px cap is under any pointing tolerance); it is
+// the one place in this lane where the drawn and the grabbable rect differ, and
+// it is why two caps at nearby columns can overlap as targets at all (the
+// arbitration is at the sort). Tests both mouse_x and mouse_y. Walks the
+// display warp_frame_map in target view so the hit lands on the drawn cap.
+// The endcaps and the bar's inter-cap bridge span are the ONLY trim grab
+// handles (the waveform stem grab retired).
 TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y);
 

@@ -126,17 +126,19 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     const int64_t begin_frame = app.trim.begin_frame;
     const int64_t end_frame   = app.trim.end_frame;
 
-    // The b/e chips are SQUARES in the trim-chip lane (top_trim_row_area,
-    // whose height is the trim lane's own). A press outside that
-    // vertical band is not on a chip.
+    // The bounds are marked by the trim bar's two ENDCAPS (row 5, 2026-08-01 —
+    // the square b/e chips and their strip-crossing stems are gone): a narrow
+    // full-lane-height column run per bound, edge-anchored on its own column,
+    // inside the trim bar lane (top_trim_row_area). A press outside that
+    // vertical band is not on an endcap.
     const GuiRect row = top_trim_row_area(app);
     if (mouse_y < row.y || mouse_y >= row.y + row.h) return TrimHit::None;
 
     const GuiRect top = top_strip_area(app);
-    // Event-synchronized hit geometry, the VIEWPORT half: the b/e chip pixels
+    // Event-synchronized hit geometry, the VIEWPORT half: the endcap pixels
     // are painted live by the trim pass (GuiPaintHandler::paint_trim ->
     // render_trim_flags) on the DISPLAYED basis, NOT the live viewport. So the
-    // chip columns must resolve on the SAME basis (item_viewport_basis)
+    // cap columns must resolve on the SAME basis (item_viewport_basis)
     // — the same reason hit_test_flag does — else during an async publish window a
     // chip painted at the OLD column would be grabbed at the NEW/live column.
     // The visibility
@@ -152,8 +154,8 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     const int sr = audio.sample_rate();
     if (sr <= 0) return TrimHit::None;
 
-    // Column translation so the chip column lands
-    // where the stem (and chip) are painted in the mapped views: the map is
+    // Column translation so the cap column lands
+    // where the cap is painted in the mapped views: the map is
     // the item pixels' own via displayed_or_live_target_map (event-synchronized
     // hit geometry — the ruling at that selector), empty (identity) in source
     // view and the map the flag item cache baked when warm in target view
@@ -163,12 +165,21 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
         dmap.empty() ? nullptr : &dmap;
 
-    // Build the same visible, sorted candidate list render_trim_flags paints.
-    // The painter culls a bound whose column is outside the viewport, then
-    // reverse-paints so the leftmost chip (b over e at an equal column) lands
-    // on top. Hit testing walks the same sorted list FORWARD and returns the
-    // first chip whose rect contains mouse_x = the topmost-painted chip, so a
-    // click on the visible overlap grabs the chip the user sees on top.
+    // Build the same visible candidate list render_trim_flags paints — the same
+    // cull (a bound whose column leaves the viewport gets no cap) through the
+    // same column owners — and sort it left to right.
+    //
+    // OVERLAP ARBITRATION IS THIS HIT TEST'S OWN POLICY, not a mirror of
+    // painter z-order: render_trim_flags lays the begin cap down and then the
+    // end cap, with no sort and no reverse pass, so there is no
+    // "topmost-painted" cap to defer to and the caps carry identical colours
+    // anyway — the pixels give no cue either verdict could contradict. The rule
+    // here is LEFTMOST WINS, with Begin ahead of End at an equal column (the
+    // tie-break below): deterministic and stable, and it names the bound a user
+    // aiming at the left of an overlapping pair means. Overlap is mostly the
+    // GRAB TOLERANCE's doing — the inflated rects reach far past the caps they
+    // came from, while the drawn caps themselves can share at most a cap width
+    // (see the tie-break).
     struct TrimChipHit {
         double  center_x;
         GuiRect rect;
@@ -180,7 +191,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
         // column through the SAME owners the painter uses (render.h): the mapping
         // via displayed_trim_ms, the column via trim_bound_column against the
         // displayed-basis vp span (the painters' quantized-span denominator), the
-        // chip rect via trim_chip_rect. So a hit lands on exactly the drawn chip.
+        // cap rect via trim_chip_rect. So a hit lands on exactly the drawn cap.
         const double ms = displayed_trim_ms(frame, target_warp_frame_map);
         const TrimBoundColumn c =
             trim_bound_column(ms, vp_start, vp_end, wave_w);
@@ -205,14 +216,18 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
                   if (a.center_x != b.center_x)
                       return a.center_x < b.center_x;
                   // Deterministic tie-break at an equal column: Begin first, so
-                  // the forward walk below returns it. The painted rectangles
-                  // are identical there, so occlusion is not visually
-                  // distinguishable; this only fixes which bound a click grabs.
+                  // the forward walk below returns it. The two DRAWN caps are
+                  // NOT the same rect there — trim_chip_rect anchors them in
+                  // opposite directions (begin's left edge on the column, end's
+                  // right edge on it), so they mirror about the column and share
+                  // only it — but they are the same colour, so nothing painted
+                  // distinguishes them. This fixes which bound a click in the
+                  // inflated overlap grabs, and nothing else.
                   return a.which == TrimHit::Begin && b.which == TrimHit::End;
               });
 
-    // Forward walk = ascending-x = topmost-painted first. The first chip whose
-    // [rect.x, rect.x + w) contains mouse_x is the one the user sees on top.
+    // Forward walk = ascending-x = LEFTMOST FIRST, the policy stated above. The
+    // first cap whose inflated [rect.x, rect.x + w) contains mouse_x wins.
     for (const TrimChipHit& chip : chips) {
         if (mouse_x >= chip.rect.x &&
             mouse_x < chip.rect.x + chip.rect.w) {

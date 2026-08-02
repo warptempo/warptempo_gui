@@ -107,8 +107,9 @@ void GuiInputHandler::reset_trim_to_full_window() {
 // crossed/equal trim bounds cannot REST — committing one bound onto or across
 // the other RESETS BOTH bounds to the song edges, the trim sibling of the
 // marker normalizations (ambiguous states resolve instead of resting or
-// refusing). SILENT by design: the chips visibly JUMP TO THE SONG EDGES, which
-// is the whole signal (it used to be the chips vanishing; with the window
+// refusing). SILENT by design: the bar's endcaps visibly JUMP TO THE SONG
+// EDGES, which
+// is the whole signal (it used to be the old chips vanishing; with the window
 // always set there is nothing to vanish into). The check is the exact integer
 // compare end_frame <= begin_frame, run only at COMMIT — nothing pops
 // mid-gesture, and update_trim_drag never calls this.
@@ -258,8 +259,8 @@ void GuiInputHandler::handle_trim_x() {
     commit_trim_mutation();
     // THE SETTER'S DESELECT (architect 2026-07-29): every trim setter empties the
     // selection as it commits. Then CONSUME THE SPAN (architect 2026-07-30): the
-    // scratch region existed to aim this gesture and its job is done — the chips
-    // and the bridge bar show the result from here on, and nothing re-publishes a
+    // scratch region existed to aim this gesture and its job is done — the trim
+    // bar and its endcaps show the result from here on, and nothing re-publishes a
     // highlight. ONE clear, at the tail, past every refusal above.
     selection.clear_selection();
     clear_region_highlight(app, viewport);
@@ -292,7 +293,7 @@ void GuiInputHandler::handle_trim_x() {
 // Shift+X MAXIMIZES the trim to the full window (architect 2026-07-25 for the
 // binding, re-posed 2026-07-30 under always-set — the old "unset" is now
 // [0, total-1], which renders untrimmed and plays to the natural end, so the
-// user-visible act is unchanged and the chips simply rest at the song edges).
+// user-visible act is unchanged and the endcaps simply rest at the song edges).
 // One-shot, history-less like every trim mutation. No read-only check of its own
 // (see handle_trim_x above: the keyboard gate owns that decision for both).
 // Delegates WHOLE to handle_trim_clear_both — whose already-full identity guard
@@ -833,13 +834,14 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
     arm_pending_trim_drag(is_begin, /*both=*/false, mouse_x, mouse_y);
 }
 
-// Plain chip-row press trim routing — the PLAIN press's route into a trim drag,
+// Plain trim-bar press routing — the PLAIN press's route into a trim drag,
 // and one of TWO (re-derived by grepping arm_pending_trim_drag's callers,
 // 2026-08-01): this router, and the ctrl / ctrl+shift BOUND-SET press above,
 // which arms the same single-bound pending on the bound it has just written.
 // The Alt pointer gesture retired wholesale, and the waveform stem grab with it:
-// a bound is grabbed ONLY by its top-strip chip or the inter-chip bridge (the
-// chip was already the unambiguous handle), leaving the waveform purely
+// a bound is grabbed ONLY by its top-strip ENDCAP or by the bar's inter-cap
+// bridge span (the bound's own mark was already the unambiguous handle),
+// leaving the waveform purely
 // region/playhead. Arms a PendingTrimDrag rather than beginning the drag
 // outright — the pending+threshold pattern the marker flag uses: the press
 // CLAIMS the chip/bridge geometry, a motionless press-release commits nothing,
@@ -847,26 +849,27 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // run and the existing single/pair drag machinery take over unchanged. A full
 // ordered pair ALWAYS rests (the unset state died 2026-07-30), so the old
 // pair-required gate is gone and the press is claimed purely on GEOMETRY.
-// Returns true iff the press landed on trim chip
-// geometry (a chip-rect single-bound hit, or the chip-row inter-chip bridge
-// region) — armed or read-only-refused — so the caller CLAIMS the press (no
+// Returns true iff the press landed on trim
+// geometry (an endcap-rect single-bound hit, or the bar's inter-cap bridge
+// span) — armed or read-only-refused — so the caller CLAIMS the press (no
 // fallback); false lets the caller fall through. Trim bounds are transparent to
 // every OTHER chord (the caller gates this to the plain, unmodified press).
 // Read-only claims WITHOUT arming (a silent return, no fallback). The two arms:
-//   CHIP HIT: a chip-rect hit (hit_test_trim_chip, itself y-gated to the chip
-//     row) arms that bound's single drag.
+//   CAP HIT: an endcap-rect hit (hit_test_trim_chip, itself y-gated to the trim
+//     bar lane) arms that bound's single drag.
 //   BRIDGE: else, a press whose y lies in the trim lane band —
 //     top_trim_row_area, the band the bar and its endcaps paint in — and whose
 //     column falls inside the shared trim_bridge_gap interval (render.h) arms
 //     the pair drag. The interval is the bar's stretch BETWEEN the two endcaps
 //     (the painter draws the bar under them and the caps over it, so the
-//     endcap-covered ends belong to the CHIP HIT above — and this arm needs no
+//     endcap-covered ends belong to the CAP HIT above — and this arm needs no
 //     reliance on that, the cap rects sitting outside the gap either way), plus
 //     a [0, area_w) click gate so
 //     the inert non-multiple-of-16 gutter cannot arm past the painted surface.
-//     The bridge handle is the chip-ROW inter-chip span, NOT the whole strip
-//     height: a top-strip press below the chip row (the marker flag row) is not
-//     claimed and falls through to the caller's flag handling. Both bounds are
+//     The bridge handle is the TRIM BAR lane's inter-cap span, NOT the whole
+//     strip height: a top-strip press below that lane — the ruler, then the
+//     marker lane — is not claimed and falls through to the caller's ruler /
+//     flag handling. Both bounds are
 //     the subject (no grabbed-bound notion; the pair has no viewport clamp and,
 //     like every trim gesture, never moves the playhead), so it always arms as
 //     Begin structurally.
@@ -879,7 +882,7 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // The bridge-region bound columns come from the displayed MAP
 // (displayed_or_live_target_map) AND the displayed VIEWPORT
 // (item_viewport_basis) — the EXACT basis and owner chain the live trim
-// pass (GuiPaintHandler::paint_trim) paints the chips/bar from every frame
+// pass (GuiPaintHandler::paint_trim) paints the bar and its endcaps from every frame
 // (displayed_trim_ms -> trim_bound_column -> trim_bridge_gap), so a hit lands
 // on what is drawn BY SHARED OWNERS: paint and hit read the same functions on
 // the same basis (the
@@ -904,7 +907,7 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     if (basis.spp <= 0.0) return false;
 
-    // Single-drag hit: the chip rect (hit_test_trim_chip, chip-row-gated).
+    // Single-drag hit: the endcap rect (hit_test_trim_chip, trim-lane-gated).
     const TrimHit single = hit_test_trim_chip(app, audio, mouse_x, mouse_y);
     if (single != TrimHit::None) {
         // Read-only claims the press but never arms (no fallback).
@@ -914,13 +917,14 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
         return true;
     }
 
-    // Bridge (pair) drag: the CHIP ROW ONLY — a press whose y lies in the
-    // top-strip upper-row band (top_trim_row_area, the exact band
-    // hit_test_trim_chip y-gates on and the band the bridge bar
-    // spans between the two chips) and whose column falls inside the painted bar's
-    // gap between the two chips (both bounds always set, structurally). A
-    // top-strip press BELOW that band — the marker flag row — is not the bridge
-    // handle: it falls through to the caller's flag handling. The pair has no
+    // Bridge (pair) drag: the TRIM BAR LANE ONLY — a press whose y lies in that
+    // lane's band (top_trim_row_area, the exact band
+    // hit_test_trim_chip y-gates on and the band the bar and its endcaps paint
+    // in) and whose column falls inside the painted bar's
+    // gap between the two endcaps (both bounds always set, structurally). A
+    // top-strip press BELOW that band — the ruler lane, then the marker lane —
+    // is not the bridge handle: it falls through to the caller's ruler / flag
+    // handling. The pair has no
     // grabbed-bound notion — both bounds are the subject, so it always arms as
     // Begin structurally (there is no nearer-bound pick, and the gesture never
     // moves the playhead). The gap interval uses the forward-map + column math on

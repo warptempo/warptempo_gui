@@ -3007,8 +3007,8 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 // (paint == hit by shared owners). Deliberately NOT the member
 // GuiPaintHandler::plate_viewport_basis(): that is the PLATE-fingerprint
 // basis for plate-registered overlays, and the two differ inside the accepted
-// resize item-only-promotion window — trim must ride the ITEM basis the chips'
-// hit rects resolve on. The renderers' column math therefore divides the
+// resize item-only-promotion window — trim must ride the ITEM basis the
+// endcaps' hit rects resolve on. The renderers' column math therefore divides the
 // basis span by basis.area_w (the width the committed items were mapped
 // against), which is why the waveform rect handed to them carries that width.
 //
@@ -3061,11 +3061,11 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // this is the strip's bar + endcaps (with the side-aware offscreen
     // sentinels and the effective-width clip inside render_trim_flags).
     //
-    // The chip lane's y-band is THREADED IN as top_trim_row_area(app) rather
-    // than re-derived inside the painter: this is the same accessor
+    // The trim bar lane's y-band is THREADED IN as top_trim_row_area(app)
+    // rather than re-derived inside the painter: this is the same accessor
     // hit_test_trim_chip's y-gate and route_trim_chip_press' bridge y-gate
     // read, so the painted band and the clickable band have ONE owner and
-    // cannot drift if the lanes above the chip row ever change.
+    // cannot drift if the lanes above the trim bar ever change.
     // NO WAVEFORM STEMS (architect 2026-08-01): the bar and its two endcaps are
     // the trim window's WHOLE display. render_trim_stems drew a 1px grey
     // vertical down the waveform at each bound; the redesigned lane says the

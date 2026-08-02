@@ -26,11 +26,11 @@
 namespace {
 
 // Flag text mirrors the canonical line's PAYLOAD (post-pipe); metadata
-// (b=/e=/#) never appears in it. The flag shape itself is textless — this is
-// the base composer flag_text_iter wraps, and every marker-text-lane surface
-// (the FLAG itself, truncated at the nine-glyph budget, and the Enter flag
-// editor's seeded initial text) routes through that wrapper, so what they
-// show mirrors this exactly.
+// (b=/e=/#) never appears in it. This is the base composer flag_text_iter
+// wraps, and every surface that shows a marker's label (the FLAG BOX itself,
+// truncated at the nine-glyph budget, and the Enter flag editor's seeded
+// initial text) routes through that wrapper, so what they show mirrors this
+// exactly.
 //
 // Variants:
 //   label_ref              → "a.42"

@@ -491,7 +491,7 @@ void GuiSettingsEditor::commit() {
     // (title/bpm/notes/url/cover) moves no image and a SOURCE-view commit changes
     // no display domain at all, so the clear is greed rather than repair there,
     // and one rule beats a second view gate to maintain. The trim WINDOW itself
-    // is untouched — the chips and the bridge bar go on showing it; only the
+    // is untouched — the trim bar and its endcaps go on showing it; only the
     // user's scratch span goes. The helper
     // owns its own waveform damage, which the source-view path would otherwise
     // not raise.

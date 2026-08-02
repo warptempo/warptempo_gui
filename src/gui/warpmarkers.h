@@ -21,14 +21,17 @@
 // resolver and the engine path never see these GUI-only fields.
 struct GuiWarpMarker : WarpMarker {
     // Iteration mode. Session-only render-parameter scratchpad: never
-    // serialized, lost on app close, populated and edited through the marker-text
-    // lane — the bracket surfaces in the hover lane text and is authored in the
-    // Enter flag editor (the flags themselves are textless). Signed tempo deltas
+    // serialized, lost on app close, authored in the Enter flag editor and
+    // surfaced ON THE FLAG ITSELF since row 5 — the flags carry text now, and
+    // flag_text_iter splices the `+[lo, hi]` bracket into the label exactly
+    // while iteration mode is on (the marker-text lane that used to show it,
+    // and its hover popup, are deleted). Signed tempo deltas
     // in integer cents —
     // the same integer-cents domain the tempo itself lives in, so the
     // sweep's per-cell base + delta is plain integer addition. nullopt
-    // means "blank" (popup shows []); when set, both are set and
-    // iter_start_cents <= iter_end_cents.
+    // means "blank" (the flag shows the zero-filled `+[+0.00,+0.00]` — the one
+    // locked display form at format_iter_bracket_inline below); when set, both
+    // are set and iter_start_cents <= iter_end_cents.
     std::optional<int64_t> iter_start_cents;
     std::optional<int64_t> iter_end_cents;
 
@@ -141,9 +144,11 @@ inline std::string format_iter_bracket_inline(const GuiWarpMarker& m) {
     return out;
 }
 
-// Iteration mode: an owning marker (tempo_inherits=false AND no
-// label_ref) gets a persistent iteration popup. Pass markers and
-// label_ref markers are excluded; disabled status does not matter.
+// Iteration mode: which markers CARRY the bracket. An owning marker
+// (tempo_inherits=false AND no label_ref) shows it spliced into its flag label
+// while iteration mode is on; pass markers and label_ref markers are excluded;
+// disabled status does not matter. (The name is the retired hover popup's — the
+// eligibility rule outlived the surface that first displayed it.)
 inline bool iter_popup_eligible_marker(const GuiWarpMarker& m) {
     return !m.tempo_inherits && m.label_ref.empty();
 }

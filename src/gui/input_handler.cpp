@@ -816,7 +816,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // instead of writing a pair the crossed-commit reset would throw away), and
     // with no region it is a silent no-op. Shift+X writes [0, total-1]
     // (handle_trim_shift_x). The playhead plays no part. Trim's pointer routes
-    // are the PLAIN chip-row press (single via a chip-rect hit, pair via a bridge
+    // are the PLAIN trim-bar press (single via an endcap hit, pair via a bridge
     // press strictly between the two bound columns); trim is outside the
     // selection system, so there is no Delete arm. Plain Ctrl+x is cut
     // (text_editor.cpp) and stays unbound here.
@@ -885,8 +885,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // listening session running). Merging the regimes would give a refused press a
     // stop it does not have.
     // Trim is not part of the selection system, so the nudge never acts on a
-    // bound (trim's pointer route is the plain chip-row press-drag on its chip /
-    // the inter-chip bridge).
+    // bound (trim's pointer route is the plain trim-bar press-drag on its
+    // endcap / the bar's inter-cap bridge).
     // ROUTING — TWO ROUTES AND ONE REFUSAL (architect 2026-07-29, down from three
     // routes): each column's POSITION nudge runs in its HOME view only — warp in
     // source, phase reset in target (the home-view binding) — and every other

@@ -805,7 +805,7 @@ private:
     // the definition.
     void run_zoom_toggle_command();
 
-    // THE SPAN-FRAMING command, run by the TRIM-BAR (chip row) DOUBLE-CLICK:
+    // THE SPAN-FRAMING command, run by the TRIM BAR LANE's DOUBLE-CLICK:
     // ZOOM TO A SPAN, never the working zoom. Span priority — a live region
     // (wins over trim) → a proper trim
     // SUB-WINDOW (expressed in the active domain) → the whole
@@ -956,8 +956,8 @@ private:
 
     // Crossed/equal trim cannot REST (ruling comment at the definition): when
     // end_frame <= begin_frame — exact integer compare — at a trim COMMIT, RESET
-    // both bounds to the song edges, silently (the chips jumping there are the
-    // signal). Recognizes the already-full window first, so the one-frame
+    // both bounds to the song edges, silently (the endcaps jumping there are
+    // the signal). Recognizes the already-full window first, so the one-frame
     // canonical pair [0, 0] is left alone rather than reset every commit. Called
     // by every trim commit site after its mutation and before its
     // invalidations, so the repaint shows the reset state.
@@ -977,23 +977,25 @@ private:
     // through its own applied() routing instead.
     void commit_trim_mutation();
 
-    // Plain chip-row press trim routing — the PLAIN press's route into a trim
+    // Plain trim-bar press routing — the PLAIN press's route into a trim
     // drag, and ONE OF TWO since the bound-set clicks came back 2026-08-01 (the
     // other is set_trim_bound_at_click_then_arm_drag, which arms the same
     // single-bound pending on the bound it has just written; the Alt pointer
     // gesture retired wholesale, and the waveform stem
-    // grab with it; bounds are grabbed by their top-strip chips / the inter-chip
-    // bridge only). Arms a PendingTrimDrag (the pending+threshold pattern): the
-    // press CLAIMS the chip/bridge geometry, but the trim-drag machinery begins
+    // grab with it; bounds are grabbed by their top-strip ENDCAPS / the bar's
+    // inter-cap bridge only). Arms a PendingTrimDrag (the pending+threshold
+    // pattern): the
+    // press CLAIMS the cap/bridge geometry, but the trim-drag machinery begins
     // only once the pointer crosses kDragMovedThresholdPx. A full ordered pair
     // always rests (the unset state died 2026-07-30), so the claim is purely
     // GEOMETRIC. Returns true iff the press landed on trim
-    // chip geometry (a chip-rect single hit, or the chip-row inter-chip bridge
-    // span) — armed or read-only-refused — so the caller claims with no
-    // fallback; false lets the caller fall through to the marker flag handling.
+    // geometry (an endcap-rect single hit, or the trim bar lane's inter-cap
+    // bridge span) — armed or read-only-refused — so the caller claims with no
+    // fallback; false lets the caller fall through to its ruler / marker flag
+    // handling.
     // Read-only claims without arming. Trim drags are SETTERS, so they DESELECT
     // and STOP a live audition at their first ACCEPTED bound change (the press
-    // carries neither since 2026-07-30 — a chip-row press that never becomes a
+    // carries neither since 2026-07-30 — a trim-bar press that never becomes a
     // drag is a consumed nothing); the PLAYHEAD is what they never touch.
     // Dual-axis strip drag, INCREMENTAL: applies one motion event at (x, y).
     // Reads the LIVE zoom level and viewport (never a stored press baseline),

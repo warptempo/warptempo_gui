@@ -444,7 +444,8 @@ private:
     // (The out-of-trim DIM and its two private helpers — compute_displayed_trim
     // and compute_out_of_trim_rects — are retired wholesale with the opaque
     // recolor model, architect 2026-07-26: the plate is never recolored after
-    // the blit, and the trim bridge bar is the whole inside-the-window signal.
+    // the blit, and the trim bar spanning the window is the whole
+    // inside-the-window signal.
     // Neither helper had any other consumer, so both went with the pass.)
 
     // The region-select span's on-screen column pair under a given displayed
@@ -547,9 +548,10 @@ private:
     // crosses the ink deliberately.
     void paint_phase_reset_overlay_ring(cairo_t* cr, const GuiRect& area);
     // The LIVE trim pass (architect 2026-07-25 — trim z-order below the
-    // playhead): paints EVERY trim pixel per frame — the b/e chips, the bridge
-    // bar, the strip-crossing stem segments, and the waveform stem segments —
-    // in ONE pass, in the old trim-stem-cache slot: after
+    // playhead): paints EVERY trim pixel per frame — since row 5 that is the
+    // trim bar lane whole (its ground, the window's bar, the two endcaps and
+    // the midpoint mark; the strip-crossing and waveform stem segments are
+    // deleted) — in ONE pass, in the old trim-stem-cache slot: after
     // paint_phase_reset_overlay_ring, before paint_marker_stems and hence before
     // every playhead element, while the flag blit still follows the playheads.
     // "Markers over trim" and "playhead over trim" are therefore STRUCTURAL

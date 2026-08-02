@@ -307,14 +307,15 @@ GuiRect waveform_area(const AppState& a) {
 // further inward. The top strip counts downward from y=0; the bottom strip
 // mirrors it about the window midline (`h - inset - lane_h`).
 //
-// Paint/hit agreement invariant: the trim-chip row is TOP lane 4, and
-// hit_test_trim_chip / the pair-drag y-gate read top_trim_row_area(app) — the
-// exact band render_trim_flags paints the b/e chips in, because the PAINTER is
+// Paint/hit agreement invariant: the TRIM BAR is TOP lane 4 (the ruler is lane
+// 5 and the marker lane lane 6), and hit_test_trim_chip / the pair-drag y-gate
+// read top_trim_row_area(app) — the exact band render_trim_flags paints the
+// lane ground, the window's bar and its two endcaps in, because the PAINTER is
 // handed that band as a parameter (GuiPaintHandler::paint_trim passes
 // top_trim_row_area(app) as render_trim_flags' `chip_row`) instead of
 // re-deriving a lane y from the row heights above it. Both sides therefore
 // reach the band through this one helper, so paint and hit cannot drift when a
-// lane above the chip row changes height, is removed, or gains a gap.
+// lane above the trim bar changes height, is removed, or gains a gap.
 GuiRect strip_row_rect(const AppState& a, bool top_strip,
                        int lane_from_window_edge) {
     int w = a.width, h = a.height;
@@ -646,9 +647,14 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     if (x1 <= x0) return GuiRect{area.x, 0, 0, 0};
     // Envelope extends up from the top of the window to the bottom of the
     // waveform area so it covers the playhead's stem inside the waveform AND
-    // its top-strip half above — the aliased head on the ruler and the
-    // marker-lane segment, which since row 5 are where the cursor's
-    // non-waveform pixels live.
+    // its top-strip half above — the aliased head, which since row 5 stands in
+    // the MARKER lane's bottom rows with its tip on the waveform boundary (it
+    // moved out of the ruler lane at the 2026-08-01 live test; the occlusion
+    // rationale is at the paint site, paint_handler.cpp), plus the marker-lane
+    // stem segment that shares the head's block and is zero-height while the
+    // tip sits on that boundary. That top-strip half is where the cursor's
+    // non-waveform pixels live, and the envelope covers the whole lane band
+    // above the waveform rather than tracking the head's own rows.
     const int y0 = 0;
     const int y1 = area.y + area.h;
     return GuiRect{x0, y0, x1 - x0, y1 - y0};
