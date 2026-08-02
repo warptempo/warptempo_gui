@@ -257,8 +257,9 @@ static void render_bottom_strip_editor(cairo_t* cr,
     //    drift), the flag's two pads around the run, the marker lane's height,
     //    and the flag's baseline offset, which is what seats the box on the text
     //    the way a flag sits on its label instead of merely being lane-tall
-    //    somewhere on the row. The pre-redesign kAccent / kAccentOutline chip
-    //    pair leaves with it, and takes the last paint site either key had.
+    //    somewhere on the row. The pre-redesign dark-red chip pair leaves with
+    //    it — the last two tunable colours in the tree, which is what let the
+    //    whole colors.conf system retire the same day.
     //
     //    THE SUBJECT IS UNCHANGED — the EDITABLE RUN, not the prefix. The prefix
     //    names the field; what failed to parse is what the user typed, and the
@@ -2584,7 +2585,7 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     // off the same displayed-viewport.
     //
     // If wf_cache.surface is null (initial load, before the first
-    // worker completion), the blit is skipped and the kCanvas
+    // worker completion), the blit is skipped and the canvas
     // ground fill shows through. The user-visible difference is one
     // extra paint frame of empty canvas between load and first
     // waveform display, masked by the existing load-time progress
@@ -2595,7 +2596,7 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     // with the opaque recolor model (architect 2026-07-26). The trim bridge bar
     // is the whole inside-the-window signal now, and the plate's pixels are
     // exactly what the renderer wrote, composited once over whichever ground —
-    // kCanvas, or a kRegionCanvas recolor — the pass before
+    // kWaveformCanvas, or a kWaveformRegionCanvas recolor — the pass before
     // this one left. The aliased renderer's alpha is binary (the antialiased
     // plate is deleted), so ink over a highlighted span is identical to ink
     // over plain canvas everywhere.
@@ -2714,7 +2715,8 @@ GuiPaintHandler::region_columns(const PlateViewportBasis& basis) const {
 // -- GuiPaintHandler::paint_region_ground --------------------------------
 
 // THE REGION HIGHLIGHT IS A GROUND RECOLOR (the Ableton model, architect
-// 2026-07-26): the span's CANVAS becomes the opaque kRegionCanvas over the full
+// 2026-07-26): the span's CANVAS becomes the opaque kWaveformRegionCanvas over
+// the full
 // content height. Called from on_redraw after render_canvas and BEFORE
 // paint_waveform_plate, so the ARGB32 plate composites over the recolored
 // ground — and since the aliased renderer's alpha is BINARY (the antialiased
@@ -2949,9 +2951,10 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     // THE RING IS THE STEM'S PURPLE (architect 2026-08-01): kMarkerFlagFill
     // #9b59b6, the phase-reset class's own UNSELECTED fill — "they're one unit",
     // the ring and the stem of the reset it annotates. Hard-coded per the
-    // redesign's colour ruling, superseding the tunable kOverlayOutline, whose
-    // ONE paint site this was; that key is now declared and inert like kCanvas,
-    // kWaveform, kLine and kStripAnchorStem. It reads the same constant the
+    // redesign's colour ruling, superseding the tunable grey #7f8c8d this drew
+    // in, whose ONE paint site this was — which is what left its config key
+    // unread and, a day later, deleted with the whole tunable palette. It reads
+    // the same constant the
     // stems resolve to rather than a copy of its value, so the two cannot drift.
     cairo_set_source_rgb(cr, kMarkerFlagFill.r, kMarkerFlagFill.g,
                          kMarkerFlagFill.b);
@@ -3050,7 +3053,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // read, so the painted band and the clickable band have ONE owner and
     // cannot drift if the lanes above the chip row ever change.
     // NO WAVEFORM STEMS (architect 2026-08-01): the bar and its two endcaps are
-    // the trim window's WHOLE display. render_trim_stems drew a 1px kTrimStem
+    // the trim window's WHOLE display. render_trim_stems drew a 1px grey
     // vertical down the waveform at each bound; the redesigned lane says the
     // window where the window is, and a pair of full-height lines competing with
     // the marker stems said it a second time in the same pixels.
@@ -3651,7 +3654,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
     render_background(cr, x, y, w, h);
     // THE GROUND SPLIT: the chrome erase above covers the whole exposed rect;
-    // the waveform area then takes the lighter kCanvas ground. Unconditional and
+    // the waveform area then takes its own kWaveformCanvas ground. Unconditional and
     // ahead of every content branch, so a cold frame (loading, no audio, or a
     // null plate before the first worker publish) shows canvas where the
     // waveform will be rather than a chrome-colored hole. The outer clip already
@@ -3754,7 +3757,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
         if (rects_intersect(exposed, area)) {
             // THE GROUND RECOLOR, under the plate. render_canvas already laid
-            // the kCanvas ground for the whole area above; this repaints the
+            // the kWaveformCanvas ground for the whole area above; this repaints the
             // region's span of it opaquely, so the plate's transparent gaps show
             // the recolored ground rather than the plain one.
             paint_region_ground(cr, area);

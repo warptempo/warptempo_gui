@@ -145,20 +145,16 @@ if(WARPTEMPO_BUILD_GUI)
         src/gui/waveform_worker.cpp
         src/gui/platform_wayland.cpp
         src/gui/audio.cpp
-        # GUI-ONLY: colors exist only here, so this is deliberately not in any
-        # of the four shared per-directory source lists — warptempo_cli must
-        # never carry it.
-        src/gui/color_config.cpp
         # GUI-ONLY: HarfBuzz text shaping is a painting concern and exists only
-        # here, so like color_config.cpp this is deliberately in none of the
-        # four shared per-directory source lists — warptempo_cli must never
-        # carry it, nor the harfbuzz/cairo-ft link it implies.
+        # here, so it is deliberately in none of the four shared per-directory
+        # source lists — warptempo_cli must never carry it, nor the
+        # harfbuzz/cairo-ft link it implies.
         src/gui/text_shape.cpp
         # GUI-ONLY: the in-tree Breeze icon path renderer (an SVG d-string
         # subset over cairo paths) is a painting concern and exists only here,
-        # so like color_config.cpp and text_shape.cpp it is deliberately in none
-        # of the four shared per-directory source lists — warptempo_cli must
-        # never carry it. It needs no dependency cairo does not already bring.
+        # so like text_shape.cpp it is deliberately in none of the four shared
+        # per-directory source lists — warptempo_cli must never carry it. It
+        # needs no dependency cairo does not already bring.
         src/gui/icons.cpp
         src/gui/render.cpp
         src/gui/warpmarkers.cpp

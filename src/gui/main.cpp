@@ -19,7 +19,6 @@
 #include "app_state.h"
 #include "async_renderer.h"
 #include "audio.h"
-#include "color_config.h"
 #include "env_fingerprint.h"
 #include "waveform_worker.h"
 #include "warpmarkers.h"
@@ -673,12 +672,13 @@ int main(int argc, char** argv) {
     }
     const char* cli_path = argv[1];
 
-    // The palette, before anything can paint or derive from a color. Missing
-    // config is silent (compiled defaults); a malformed one prints one line and
-    // keeps the compiled defaults. Nothing writes the palette after this point,
-    // so every later reader — including the waveform worker thread — sees one
-    // fixed set of colors for the process's life.
-    load_color_config();
+    // (NO PALETTE LOAD HERE ANY MORE. The colors were 23 mutable globals filled
+    // from ~/.config/warptempo_gui/colors.conf by load_color_config() at exactly
+    // this point — before the first paint and before anything could derive a
+    // value from them. The whole system retired 2026-08-02: the palette is
+    // constexpr, so there is nothing to initialize and every reader, the
+    // waveform worker thread included, sees compile-time constants. The record
+    // is at the palette block, render.h.)
 
     AppState     app;
     GuiAudio     audio;

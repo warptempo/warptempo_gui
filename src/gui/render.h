@@ -86,371 +86,64 @@ struct TrimRange {
 // -- Palette ---------------------------------------------------------------
 //
 // The GUI's colors, shared across the renderer module, the paint handler, and
-// main.cpp. The scheme is Plasma 6 Breeze Dark roles carrying Ableton's value
-// polarity (architect 2026-07-26, the breeze option-a trial): the waveform area
-// is a MID ground with DARK ink, while the surrounding chrome sits DARKER THAN
-// THAT CANVAS at the desktop's panel color.
+// main.cpp. THE WHOLE PALETTE IS HARD-CODED (architect 2026-08-02): every
+// constant here and in the redesign blocks below is constexpr, there are no
+// user-settable colors, nothing is read from ~/.config, and a retune is a
+// recompile. Every painted surface in the product takes its value from one of
+// these constants.
 //
-// THE DEFAULTS BELOW ARE THE ARCHITECT'S TUNED SCHEME (2026-07-27), folded in
-// from the config file that carried it, so a fresh machine with no colors.conf
-// looks exactly like the tuned desktop. Its shape: the CHROME and the LINES take
-// the desktop's own values, and every marker-family shape is a DARK DESATURATED
-// FILL under a BRIGHT RING — the shipped saturated roles survive as the rings
-// and as nothing else. NOTHING BELOW IS TUNED BY EYE: every default is one of
-// three kinds — a shipped Breeze role (live, or disabled as KColorScheme
-// computes it), a documented blend of such a role with another key, or a PIXEL
-// SAMPLED from a named screenshot of the desktop. Each entry records which kind
-// it is, so the architect can re-derive it after retuning a base; where a
-// sampled value has no closed form, that is said instead of inventing one.
-//
-// MUTABLE, WRITTEN ONCE. Each entry is a plain global holding its compiled
-// default. load_color_config() (color_config.h) overwrites the whole set once
-// at startup in main(), before the first paint and before anything derives a
-// value from the palette; nothing writes them afterwards. So the waveform
-// worker thread's kWaveform read needs no synchronization, no surface needs
-// invalidating, and a retune is a restart. The names stay k-prefixed because
-// every use site treats them as constants.
-//
-// THE TUNABLE DOMAIN'S SHRINK IS COMPLETE (declared architect 2026-07-31 as the
-// kdenlive redesign's shrinking rule; finished with rows 5-7, 2026-08-01). The
-// kdenlive screenshots overrode all prior color work: every redesigned surface
-// paints HARD-CODED constexpr constants sampled from its own crop — not keys,
-// not tunable, not in the config grammar (the redesign blocks at the end of
-// this palette). Of the 23 keys below, exactly TWO still reach a paint site:
-//   kBackground     — the base chrome erase (render_background);
-//   kPlayheadScanner — the moving playback line (paint_scanner).
-// It was FOUR until 2026-08-02, when the bottom editors' invalid flash became a
-// marker-flag box in the marker lane's own hard-coded red and kAccent +
-// kAccentOutline lost the last paint site either had (their record is at their
-// declaration below).
-// EVERY OTHER KEY IS INERT: declared, loaded, still validated by the whole-file
-// grammar, and read by nothing — each declaration below carries its own
-// retirement record. No key is deleted (a removal is a grammar change, and the
-// grammar is not what the redesign edited), so the conf loads exactly as
-// before; most of it just no longer reaches a pixel.
+// WHAT WAS HERE BEFORE, in one paragraph, because this file's shape is its
+// residue. The palette used to be 23 MUTABLE globals overwritten once at startup
+// from ~/.config/warptempo_gui/colors.conf by a strict whole-file loader
+// (src/gui/color_config.{h,cpp}), so the scheme could be retuned without a
+// build. The kdenlive redesign (rows 1-7, 2026-07-31..08-01) sampled every
+// surface straight from its screenshot crops and hard-coded the result, which
+// emptied that tunable domain key by key until only the chrome erase and the
+// scanner line still reached a pixel; on 2026-08-02 the architect retired the
+// remaining system WHOLE — the loader, the file grammar, the ~/.config support
+// and the 21 by-then-unread keys are all deleted, and the two survivors are
+// hardcoded below at exactly the values the conf carried, so the retirement
+// moved no pixel. A colors.conf left on disk is simply never read: no stderr, no
+// migration, no recognition of any kind. The deleted keys' values and their
+// per-key provenance records live in the git history and nothing in the product
+// needs them back.
 //
 // EVERY ENTRY IS OPAQUE — the palette carries no compositing alpha at all, and
 // the redesign kept the doctrine: a highlight recolors the GROUND UNDER the ink
-// (kWaveformRegionCanvas now) rather than washing over it, so ink over a
-// highlighted span is the same ink and only the ground reads the highlight; a
-// disabled face resolves to a solid color through mix_color before it reaches
-// cairo, never a fade.
-//
-// THE GROUND SPLIT, as it stands today: kBackground is the BASE CHROME ERASE —
-// render_background lays it under everything, and the redesigned rows then
-// paint their own sampled grounds over it, so its visible remit is whatever
-// chrome no redesigned surface covers. kCanvas WAS the waveform area's ground
-// (deliberately lighter, the lifted work surface); since row 6 that ground is
-// the hard-coded kWaveformCanvas and kCanvas is inert, per its record below.
-//
-// The declaration order below is the config file's canonical key order; the
-// key->global table in color_config.cpp is that order's one authoritative
-// statement, and this block mirrors it for reading only.
-// Breeze Window — LIVE, the base chrome erase (the ground split above).
-inline GuiColor kBackground       = hex(0x202326);
-// THESE TWO HAVE NO PAINT SITE LEFT (row 6, 2026-08-01) — they are DECLARED,
-// still loaded, still in the canonical key order and still validated by the
-// whole-file grammar, and nothing reads them: the canvas ground and the waveform
-// ink now paint from kWaveformCanvas / kWaveformInk, the crops' own values.
-// Kept rather than deleted under the inert-conf ruling that already keeps
-// kSelectedStem and kTrimStem — a key's removal is a grammar change, and the
-// grammar is not what the redesign is editing. (kLine below joined them: the 1px
-// area border was its last paint site.) Their comments below describe the
-// values they hold, which is now history rather than behavior.
-//
-// The work surface: the Breeze/qt6ct "Light" bevel role — the desktop's own
-// lifted-panel value, still clearly lighter than the chrome above, so the
-// inversion the ground split describes reads at a glance.
-inline GuiColor kCanvas           = hex(0x393E43);
-// The ink is DARKER than its ground — the waveform is a dark cut into the
-// canvas, not a bright trace on black (Breeze View, the deepest ground).
-inline GuiColor kWaveform         = hex(0x141618);
+// (kWaveformRegionCanvas) rather than washing over it, so ink over a highlighted
+// span is the same ink and only the ground reads the highlight; a disabled face
+// resolves to a solid color through mix_color before it reaches cairo, never a
+// fade.
 
-// Breeze paper white — INERT (rows 5-7, 2026-08-01): every glyph surface now
-// paints the redesign's hard-coded kRedesignLabel (the same value, sampled
-// independently from the crops — a coincidence of fact, not a reference), and
-// nothing reads this key.
-inline GuiColor kText             = hex(0xFCFCFC);
-// Disabled text: Breeze Dark's DISABLED Text role, the View set's faded
-// foreground — the value the desktop gives disabled text, rather than a fade
-// computed from kText. THE SOURCE OF TRUTH FOR THE WHOLE DISABLED FAMILY (this
-// key, kLine, kStripAnchorStem, the kMarkerDisabled pair, the trim chip ring and
-// stem) is the shipped /usr/share/color-schemes/BreezeDark.colors run through
-// KColorScheme, which applies Breeze's own [ColorEffects:Disabled] block: an
-// intensity Darken of 0.10 on the backgrounds, then a contrast Fade of 0.65 on
-// each foreground. THE RECIPE IS "RUN KColorScheme", not those two numbers: the
-// darken half IS reproducible standalone (KColorUtils::darken(#141618, 0.10) =
-// #131517, byte-identical to the disabled View ground), but the fade half is
-// NOT a per-channel mix of the foreground toward that darkened ground — applied
-// literally it lands 3-5 units off every value here (mix(#fcfcfc, #131517,
-// 0.65) = #656667 against the true #606263), and no consistent mix target
-// reproduces the set. "Contrast Fade 0.65" is the EFFECT'S NAME out of the
-// .colors block, quoted so the source is identifiable; only KColorScheme
-// evaluates it. Re-derive from the shipped scheme, never from a qt6ct conf —
-// the one this family was first read off ran 0-4 units dark per channel and no
-// single darken amount reproduces it (best fit ~0.17-0.18), so that row was
-// never a clean KColorScheme pass at any setting. IT HAS NO PAINT SITE LEFT
-// (rows 5-7, 2026-08-01): its last glyph surfaces — the flag editor and the
-// bottom strip — paint the redesign's hard-coded inks now (kRedesignLabel and
-// its dim mixes). Its old partner kMarkerDisabled — the shape half of the
-// same opaque disabled cue — is now paint-site-less on the marker column: row 5
-// disables a flag by BLENDING its own class colour over the lane ground
-// (kMarkerDisabledMix), not by swapping in a second palette pair.
-inline GuiColor kTextDisabled     = hex(0x606263);
-
-// THE ONE STRUCTURAL LINE COLOR: the DISABLED WindowText role, from the same
-// KColorScheme pass over the shipped scheme as kTextDisabled — the architect's
-// separator value, the desktop's own arithmetic rather than a blend invented
-// against the chrome. It was every inert structural rule on an UN-REDESIGNED
-// surface, and IT HAS NO PAINT SITE LEFT: the strip-row ring retired with the
-// zoom lane (2026-07-31) and row 6 replaced its last one — the waveform area's
-// 1px top and bottom border — with the crops' 2px black (2026-08-01). Declared
-// and inert now, exactly like kCanvas and kWaveform above and for the same
-// reason; the redesigned rows take their own sampled kRedesignLine
-// instead. It is not an accent and never marked state. The retired trim
-// chips' ring and stems took this same value from their own keys (now inert
-// too, at the trim family below), so every calm 1px rule was one color.
-inline GuiColor kLine             = hex(0x686A6C);
-
-// The strip-drag anchor stem's old value, NOW INERT (architect 2026-08-01): the
-// stem recolored to kPlayheadStem #fcfcfc, hard-coded at
-// render_strip_anchor_stem, and this key's one paint site went with it —
-// declared and unread, like kCanvas, kWaveform and kLine above. It read as a
-// muted structural guide (the kLine default, dimmed by hue rather than alpha)
-// on the rationale that a transient affordance should not compete with the
-// crisp marker ink; the architect's ruling is that it is a POSITION LINE during
-// a gesture and the product's position lines are the one white.
-inline GuiColor kStripAnchorStem  = hex(0x686A6C);
-
-// The resting cursor's OLD key, NOW INERT (row 5, 2026-08-01): the cursor's
-// line paints the hard-coded kPlayheadStem #fcfcfc, its tip-down triangle
-// retired for the marker-lane aliased head (kPlayheadHead), and this key's
-// paint site went with them — declared and unread, like kCanvas and its
-// siblings. (It had been the ONE playhead form since 2026-07-30; the region's
-// split half-triangles rode it until the span form retired with them.) The
-// compiled default is the breeze-icons grey — brighter than kLine so the
-// cursor read as live rather than structural, calmer than kText so it never
-// competed with the glyphs. kSelectedStem and kOverlayOutline default to the
-// same value: the (then-live) 1px marks were one family, each on its own key
-// so any of them could be pulled out of it.
+// THE BASE CHROME ERASE (render_background) — and the surviving half of the
+// GROUND SPLIT: this goes under everything, and the redesigned rows then paint
+// their own sampled grounds over it, so its visible remit is whatever chrome no
+// redesigned surface covers. The waveform area's ground is the row-6
+// kWaveformCanvas and has been since 2026-08-01; this color never reaches it.
 //
-// THAT VALUE IS THE PALETTE'S ONE PROVENANCE EXCEPTION, recorded here once for
-// all three keys: every other default traces to a BreezeDark.colors scheme
-// ROLE (directly, or through KColorScheme/KColorUtils), but 127,140,141 appears
-// NOWHERE in BreezeDark.colors. It is the breeze-icons ART grey — 101
-// occurrences across the breeze-dark icon SVGs — and its nearest scheme home is
-// BreezeClassic.colors' ForegroundInactive, a DIFFERENT scheme's role. So it is
-// the desktop's own value either way, but it is not a Breeze Dark role and
-// cannot be re-derived from that file; take it from the icon art or from
-// BreezeClassic, not by hunting BreezeDark for a role that does not exist.
-inline GuiColor kPlayheadCursor   = hex(0x7F8C8D);
-// LIVE — one of the TWO keys still painting (the header's completed-shrink
-// record): the moving playback line, drawn by paint_scanner while the
-// scanner runs (its own pass since 2026-08-01 — it paints over the marker
-// stems, where the cursor still paints under them). It reads WHITE against the
-// canvas (the Ableton play-head cue; also Breeze's text/icon foreground, so it
-// is the scheme's brightest ink).
-inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
+// THE VALUE is Breeze Window, the desktop's own panel color — the scheme this
+// palette has carried since the 2026-07-26 breeze trial, whose polarity the
+// redesign then overrode surface by surface.
+inline constexpr GuiColor kBackground      = hex(0x202326);
 
-// THE THREE MARKER CLASSES, each a FILL + OUTLINE pair — AND EVERY MARKER PAIR
-// BELOW IS NOW INERT ON THE MARKER COLUMN (row 5, 2026-08-01): the redesigned
-// flags paint the hard-coded kMarkerFlag* constants (fill/edge per class,
-// selection a color swap, disabled the kMarkerDisabledMix blend, the red stem
-// kMarkerStemRed), so kMarker/kMarkerOutline and the kMarkerDisabled pair reach
-// no paint site. The kAccent pair outlived them on a NON-marker site and is
-// inert too since 2026-08-02 (its own record below), so NOTHING in this marker
-// block reaches a pixel. What follows is the pairs' provenance and their pre-row-5
-// behavior: a DARK DESATURATED FILL under a brighter 1px RING — the live
-// classes carried a genuinely bright ring, the disabled one a ring that only
-// just lifted off its fill, which is exactly how it read as switched off; the
-// classes resolved in priority order at the flag renderers — disabled, then
-// red, then default.
+// THE MOVING PLAYBACK LINE, drawn by paint_scanner while the scanner runs (its
+// own pass since 2026-08-01: it paints OVER the marker stems, where the resting
+// cursor paints under them).
 //
-// SELECTION IS NOT A CLASS (architect ruling 2026-07-27). There is no fourth
-// class and no selected pair: a selected marker's FILL/OUTLINE PAIR is EXACTLY
-// the one it would paint unselected, whichever of the three it belongs to. That
-// was the intent while a selected pair still existed too, but it was carried by
-// two keys merely HOLDING the default pair's values rather than by the
-// structure — and the outline arm preferred the selected ring over the disabled
-// one, so a disabled marker that was ALSO selected took the live bright ring and
-// read as switched on. With the class deleted the property cannot regress under
-// retuning, and a selected marker whose render normalizes to 1.00 keeps its red
-// cue instead of having it masked.
-//
-// Selection's ONE paint is the INK TRIANGLE (architect 2026-07-27): a selected
-// flag fills the triangle half of its shape with kWaveform while the rectangle
-// keeps the class fill and the outline rings the whole shape untouched. It
-// introduces NO KEY of its own — it re-uses the ink the waveform already paints
-// in.
-//
-// EVERYTHING THIS BLOCK SAYS ABOUT MARKER SELECTION IS PRE-ROW-5 HISTORY. The
-// ink triangle, the z-order lift and the "selection is not a class" rule all
-// belonged to the fused rectangle-plus-triangle flag; row 5's flag is a text box
-// whose SELECTION IS A COLOUR SWAP (kMarkerFlagFillSel / kMarkerFlagEdgeSel),
-// and since 2026-08-01 a DISABLED marker takes that swap too — inside its own
-// blend, so the muting still wins and the old masking defect has no site. The
-// remaining selection cues are that swap and the playhead landing on the marker.
-//
-// kSelectedStem SURVIVES AS A DECLARED KEY WITH NO PAINT SITE. It was the
-// singleton selection's full-height focus column, given its own key in
-// 2026-07-27 precisely because a full-height line tunes differently than a 1px
-// ring; row 5 replaced it with per-class always-on stems in hard-coded colours.
-// The key and its colors.conf row STAY (the palette ruling: the conf goes
-// progressively inert, it is not dismantled), and this is the record that its
-// paint role is gone rather than merely moved.
-inline GuiColor kSelectedStem     = hex(0x7F8C8D);
-
-// DEFAULT (INERT — the class header above records the row-5 retirement): the
-// pair every marker painted unless it was disabled or red. Both
-// halves are pixels SAMPLED FROM ONE WIDGET: a Breeze-hovered file-list row in
-// the last of the pcmanfm-qt shots under tmp/screenshots/ (2026-07-26; tmp/ is
-// untracked, so the closed form below is what actually reproduces off a fresh
-// clone). The row's low-alpha highlight wash is the fill, the 1px
-// highlight-colored border along its top edge is the ring — the fill and ring of
-// the same thing, which is why they work as a fill/ring pair here. It is the
-// HOVER treatment, not a selection: the selected row in that shot is a separate
-// full-saturation #3daee9 one, and the same wash appears elsewhere in the series
-// with no selected row present anywhere.
-//
-// THE FILL HAS AN EXACT CLOSED FORM: Breeze blue #3daee9 at alphaF 0.3 —
-// Breeze's own 30% hover wash (Helper::alphaColor(highlight, 0.3)), composited
-// by Qt's FLOAT-alpha path — over the View-ALTERNATE row ground #1d1f22
-// reproduces #264a5e byte-exact on all three channels, and that same wash over
-// the plain View row ground #141618 gives #204357 byte-exact too: one formula,
-// the two alternating row grounds. The factor must stay the float 0.3; the
-// 8-bit integer restatement 77/255 is lossy and reproduces NEITHER ground's
-// sample (it lands green +1 on both, #264b5e and #204457). THE RING HAS NO
-// SINGLE FORM: the border carries a slight vertical gradient, #3895c7 at its
-// top edge and #3794c5 at its bottom. A scalar does reproduce EITHER edge on
-// its own (#3895c7 is #3daee9 at alphaF 0.828 over #1d1f22, #3794c5 the same
-// blue at 0.818); what no single scalar does is cover BOTH edges at once, so
-// the key takes the top-edge sample. Fill dark enough to sit quietly on
-// the canvas, ring bright enough to draw the shape — the dark-fill/bright-ring
-// system every marker-family pair follows.
-inline GuiColor kMarker           = hex(0x264A5E);
-inline GuiColor kMarkerOutline    = hex(0x3895C7);
-
-// DISABLED (INERT — the class header above records the row-5 retirement; the
-// disabled face is the kMarkerDisabledMix blend now), formerly shared by every
-// marker family (warp flags, phase reset flags).
-// Opaque, not an alpha fade, and not computed from the default pair: both halves
-// come from the same KColorScheme disabled set as kTextDisabled — the fill is
-// the disabled LINK role (Breeze's link blue #1d99f3 faded 65% toward the
-// darkened view ground, which is exactly why a disabled marker stays in the
-// default fill's family while sitting darker than it), the ring its
-// PlaceholderText grey. It is NOT the disabled Highlight, which is the grey
-// window ground #1f2124 and would be useless as a marker fill. The disabled
-// lane text (kTextDisabled) is that set's Text, so shape and glyph go disabled
-// together by provenance. It WINS over red and over the default class, and
-// there is nothing left for it to compose with: a disabled marker paints BOTH
-// halves of this pair whatever its red-flag status. Selection did not alter
-// the pair either (architect 2026-07-27) — its one paint was the triangle
-// interior described in SELECTION IS NOT A CLASS above, never the ring — so a
-// selected disabled marker kept both muted halves and read instead through
-// that triangle ink, the paint order, and the stem. (The LIVE disabled face
-// does take the selection lift, inside its blend — kMarkerDisabledMix and the
-// row-5 marker block carry that rule; this key reaches no pixel either way.)
-inline GuiColor kMarkerDisabled        = hex(0x164160);
-inline GuiColor kMarkerDisabledOutline = hex(0x42464A);
-
-// RED — NOW INERT, and it was the LAST tunable pair on any painted surface
-// (architect 2026-08-02). Its final site was the BOTTOM EDITORS' INVALID-COMMIT
-// FLASH — a parse failure filling the editable run's band in kAccent under a 1px
-// kAccentOutline ring — and that flash is now a MARKER-FLAG BOX in the marker
-// lane's own hard-coded red (kMarkerFlagFillRed / kMarkerFlagEdgeRed under
-// kMarkerFlagBorder, at the flag's pads and height; render_bottom_strip_editor,
-// paint_handler.cpp), which is the pair the flag editor already flashed. So the
-// product has ONE invalid red across all four editors instead of two that could
-// drift, and the tunable-domain shrink the palette header tracks is down to two
-// keys. Declared and unread now, like kCanvas and its siblings; the ruling that
-// keeps it in the grammar is the same one that keeps them.
-// Its ORIGINAL role — the marker normalization cue, a marker whose render falls
-// back to the 1.00 tempo — retired earlier, with row 5: red flags paint the
-// hard-coded kMarkerFlagFillRed/kMarkerFlagEdgeRed pair and stem kMarkerStemRed.
-// THE VALUES: the RING is the shipped Breeze ForegroundNegative #da4453; the
-// FILL is mix(kWaveform, that same negative, 0.35), a deliberate blend rather
-// than a sample — it put the red flag in the same dark-fill/bright-ring system
-// as the sampled default pair, comparably dark, comparably desaturated, instead
-// of leaving it the one saturated block, and it is why the editor flash and a
-// red flag still read as one family.
-inline GuiColor kAccent           = hex(0x59262D);
-inline GuiColor kAccentOutline    = hex(0xDA4453);
-
-// THE GROUND RECOLOR (the Ableton model — the MECHANISM is live, this KEY is
-// not; its inert record closes this block): the region-select span's CANVAS is
-// recolored (kWaveformRegionCanvas since row 6), painted after render_canvas
-// and BEFORE the plate blit,
-// so the ARGB32 plate composites over the recolored ground and its transparent
-// gaps show it correctly. The ink itself is untouched — over a
-// fully covered pixel the result is bit-identical to ink over plain kCanvas.
-// It is TRIM SCRATCH: the span the plain waveform drag / the shift waveform
-// press form and `x` consumes into the trim window (architect 2026-07-30 — it
-// was the group's spread focus cue until the span form retired; it is no longer
-// a playhead form, a selection visual, or a trim-window display). THIS KEY's
-// default is kCanvas lifted ONCE by Breeze's OWN shipped View->ViewAlternate
-// step, #141618 -> #1d1f22 = +9/+9/+10 per channel — the theme's native "subtly
-// lighter than the surface" relationship, applied to our canvas instead of a
-// tint invented for it, so the highlighted span reads as the same surface raised
-// rather than as a colour wash. The LIVE constant takes that same step TWICE
-// (the architect's brighter-highlight tweak; the derivation is at
-// kWaveformRegionCanvas). The cursor playhead paints straight across it,
-// unchanged — the span is a ground, never a playhead.
-//
-// THE OVERLAY IS A RING ONLY (architect 2026-07-27). It is the 1px border of the
-// phase reset overlay band — the stretch of output immediately following the
-// focused reset over which the re-seeded phase takes hold — painted OVER the
-// plate, a boundary line like the playheads and the stems, so an opaque line
-// crossing ink is correct and intended. The band recolors NO ground: it had one
-// until that ruling, and dropping it leaves the aid reading as the two EDGES of
-// a span rather than as a tinted region, which is what a narrow authoring marker
-// wants.
-//
-// kOverlayOutline IS NOW INERT (architect 2026-08-01): the ring paints in
-// kMarkerFlagFill #9b59b6 — the phase-reset class's own unselected fill, the
-// colour of the STEM of the reset it annotates, "one unit" by his word — and
-// this key's one paint site went with the change. Declared and unread, like
-// kCanvas, kWaveform, kLine and kStripAnchorStem. Its value below was the
-// live-1px-mark breeze-icons grey that kPlayheadCursor and kSelectedStem also
-// default to (provenance at kPlayheadCursor), a line colour rather than the
-// outline sibling of any fill.
-// kRegionCanvas IS NOW INERT (2026-08-01): the region highlight paints
-// kWaveformRegionCanvas, re-derived on the row-6 canvas from the same
-// View->ViewAlternate lift that produced this value on the old one (taken TWICE
-// there since the architect's brighter-highlight tweak), and this key's one
-// paint site went with it. Declared and unread, like kCanvas, kWaveform, kLine,
-// kStripAnchorStem and kOverlayOutline.
-inline GuiColor kRegionCanvas     = hex(0x42474D);
-inline GuiColor kOverlayOutline   = hex(0x7F8C8D);
-
-// THE TRIM FAMILY — ALL FIVE KEYS NOW INERT (row 5, 2026-08-01): the redesigned
-// trim lane paints the hard-coded kTrimLaneBar / kTrimLaneEndcap surfaces and
-// their sampled bevels (render_trim_flags), the b/e chips are deleted with
-// their lane, and the waveform trim stems retired outright (render_trim_stems
-// IS DELETED — the bar and its endcaps are the window's whole display).
-// Declared and unread, like kCanvas and its siblings.
-// THE VALUES' PROVENANCE (the pre-row-5 roles, architect 2026-07-27 — no
-// longer an orange family of its own; it joined the marker system and the
-// structural line): the BRIDGE BAR spanned the gap between the two chips, the
-// pair-drag's grab affordance and the sole "inside the trim window" signal,
-// its default pair the marker pair's values (kMarker/kMarkerOutline) so the
-// bar read as an ordinary unselected marker stretched across its span; the
-// CHIPS dissolved into the strip — kTrimChip the kBackground chrome value
-// exactly, the bound marked by its RING plus its stems, kTrimChipOutline and
-// kTrimStem both the kLine value, one calm rule. Trim still sits outside the
-// selection system entirely — a trim bound is never a selection member.
-inline GuiColor kTrimBar          = hex(0x264A5E);
-inline GuiColor kTrimBarOutline   = hex(0x3895C7);
-inline GuiColor kTrimChip         = hex(0x202326);
-inline GuiColor kTrimChipOutline  = hex(0x686A6C);
-inline GuiColor kTrimStem         = hex(0x686A6C);
+// THE VALUE reads WHITE against the canvas — the Ableton play-head cue, and also
+// Breeze's text/icon foreground, so it is the scheme's brightest ink. The
+// redesign's kRedesignLabel and kPlayheadStem hold the same #fcfcfc, sampled
+// independently from the crops: three facts that agree, not one referenced three
+// times.
+inline constexpr GuiColor kPlayheadScanner = hex(0xFCFCFC);
 
 // -- The redesigned rows (HARD-CODED, kdenlive-sampled) ---------------------
 //
-// THE COLORS THAT ARE NOT PALETTE KEYS (architect 2026-07-31). Every constant
-// in this block and the two below it is constexpr, not a global: they are NOT
-// in the 23-key config grammar, not loaded by color_config.cpp, and
-// deliberately not tunable — the carve-out the palette header above records.
-// Their provenance is the pixel truth of the kdenlive crops
+// THE COLORS THAT WERE NEVER PALETTE KEYS (architect 2026-07-31). Every constant
+// in this block and the two below it arrived constexpr and deliberately
+// untunable, outside the config grammar that then still existed — the carve-out
+// that grew until it was the whole palette and the grammar retired (the header
+// above). Their provenance is the pixel truth of the kdenlive crops
 // (tmp/screenshots/kdenlive/redesign/), sampled directly, and the screenshots
 // OVERRIDE the Breeze-derived scheme wherever the two disagree. Each row's own
 // crops are named at the constants that row introduced.
@@ -463,15 +156,15 @@ inline GuiColor kTrimStem         = hex(0x686A6C);
 // The row ground is a DELIBERATE MISMATCH with kBackground (#202326): the
 // kdenlive bars sit a shade lighter than this product's chrome and the crop
 // wins, so do not "fix" it to the chrome value. The accent is Breeze blue at
-// full saturation — the same #3daee9 that is the closed form behind kMarker's
-// 30% wash — carried as row 1's FILLED hover pill and row 2's 1px hover
-// OUTLINE; the label white is the paper white kText also carries. Both are
-// spelled out here rather than borrowed, because these are screenshot samples
-// that happen to coincide, not references to the palette. The LINE is row 2's
-// separator and its border-bottom, one sampled value for both (they are the
-// same rule seen twice — a 1px inert structural edge), unrelated to the
-// tunable kLine, which no surface reads any more (its inert record is in the
-// palette block).
+// full saturation — #3daee9, which was also the closed form behind the retired
+// `marker` key's 30% hover wash — carried as row 1's FILLED hover pill and row
+// 2's 1px hover OUTLINE; the label white is Breeze's paper white #fcfcfc. Both
+// are spelled out here rather than borrowed, because these are screenshot
+// samples that happen to coincide with values the old tunable palette also
+// carried, not references to anything. The LINE is row 2's separator and its
+// border-bottom, one sampled value for both (they are the same rule seen twice —
+// a 1px inert structural edge); the retired `line` key's #686a6c was a different
+// value for a different era's rules.
 inline constexpr GuiColor kRedesignRowGround = hex(0x292C30);
 inline constexpr GuiColor kRedesignAccent    = hex(0x3DAEE9);
 inline constexpr GuiColor kRedesignLabel     = hex(0xFCFCFC);
@@ -643,10 +336,10 @@ inline constexpr GuiColor kRedesignSelectedFill = hex(0x3C3F41);
 //
 // All sampled from tmp/screenshots/kdenlive/redesign/row_5_*, and all
 // HARD-CODED under the architect's blanket ruling — which now reaches even
-// marker and waveform territory. The colors.conf machinery, its 23 keys and its
-// loader STAY IN THE TREE UNTOUCHED; what happens is that the paint sites which
-// READ those globals die with the painters they belonged to, so the conf goes
-// progressively inert rather than being dismantled.
+// marker and waveform territory. At the time this row landed the colors.conf
+// machinery still stood and merely went inert as each painter that read a key
+// died; the machinery itself was retired whole on 2026-08-02 (the palette
+// header carries that record).
 //
 // The three lanes share row 3's #202326 ground (kRedesignTabGround), one fact
 // seen again rather than a fourth copy of the number.
@@ -772,20 +465,19 @@ inline constexpr double kMarkerDisabledMix = 0.25;
 // (1x2) and row_6_waveform_filename.png (635x15). THE BLANKET HARD-CODING
 // RULING REACHES THE WAVEFORM AREA (architect 2026-08-01): the canvas ground and
 // the waveform ink were the LAST two colors the shrinking colors.conf domain was
-// contracting TOWARD, and the crops take them too. The keys `canvas` and
-// `waveform_ink` STAY DECLARED and stay in the grammar (kCanvas / kWaveform
-// above, the inert-conf ruling that already keeps kSelectedStem and kTrimStem) —
-// what moves is their PAINT SITES, of which each had exactly one: render_canvas
-// (this file) and the two render_waveform calls in waveform_cache.cpp.
+// contracting TOWARD, and the crops take them too. The old `canvas` and
+// `waveform_ink` keys kept their declarations for one more day under the
+// then-standing inert-conf rule and lost only their PAINT SITES, of which each
+// had exactly one: render_canvas (this file) and the two render_waveform calls
+// in waveform_cache.cpp.
 //
 // Row 6 itself took only the ground and the ink; the waveform area's OTHER
-// tunables did not outlast the same day's work: the region highlight
-// re-derived onto kWaveformRegionCanvas (kRegionCanvas inert), the phase-reset
-// overlay ring reads kMarkerFlagFill (kOverlayOutline inert), the marker
-// classes paint the row-5 kMarkerFlag* constants, and the trim lane paints its
-// own sampled surfaces. The keys still live — two, since the editors' invalid
-// flash left kAccent in 2026-08-02 — are enumerated at the palette header's
-// completed-shrink record.
+// tunables did not outlast the same day's work: the region highlight re-derived
+// onto kWaveformRegionCanvas, the phase-reset overlay ring onto kMarkerFlagFill,
+// the marker classes onto the row-5 kMarkerFlag* constants, and the trim lane
+// onto its own sampled surfaces. THE WHOLE TUNABLE SYSTEM RETIRED THE NEXT DAY
+// (2026-08-02) — every key above is deleted along with the loader and the config
+// file itself; the record is at the palette header.
 inline constexpr GuiColor kWaveformCanvas = hex(0x12312B);  // (18, 49, 43)
 inline constexpr GuiColor kWaveformInk    = hex(0x1C816B);  // (28, 129, 107)
 
@@ -837,8 +529,8 @@ inline constexpr GuiColor kWaveformChannelSplit =
 //
 // DERIVED, NOT SAMPLED — and deliberately so: there is no kdenlive reference for
 // it, because kdenlive has no comparable highlight. What is transplanted is the
-// RELATIONSHIP, not the colour. The old kRegionCanvas #42474d was the old grey
-// canvas #393e43 plus Breeze's own View -> ViewAlternate lift, +9/+9/+10 per
+// RELATIONSHIP, not the colour. The old region highlight #42474d was the old
+// grey canvas #393e43 plus Breeze's own View -> ViewAlternate lift, +9/+9/+10 per
 // channel; applying that same lift to the crop's canvas keeps the
 // theme's-native-lift logic and lands same-hue and subtly lifted on the green,
 // which is what the grey pair was on the grey.
@@ -874,7 +566,7 @@ inline constexpr GuiColor kWaveformRegionCanvas = hex(0x24433F);  // (36, 67, 63
 // architect's instruction rather than a measurement, applied symmetrically.
 //
 // TAKEN FROM THE AREA, NOT ADDED TO IT — the shape render_canvas already used
-// for the 1px kLine border it replaces, kept deliberately. The CSS reading says
+// for the 1px grey border it replaces, kept deliberately. The CSS reading says
 // a border sits OUTSIDE the stated content, and it does: waveform_content_rect
 // is that content, and it shrinks by these rows. What does NOT move is
 // waveform_area itself, so the lane stack, the strip geometry, the effective
@@ -1581,15 +1273,16 @@ struct FlagHitRect {
 
 // The two ground fills, one per surface class (see the palette's ground split):
 // render_background erases CHROME in kBackground, render_canvas erases the
-// WAVEFORM AREA in kWaveformCanvas — the row-6 crop's own #12312b, no longer the
-// tunable kCanvas. on_redraw calls the first over the whole exposed rect, then
+// WAVEFORM AREA in kWaveformCanvas — the row-6 crop's own #12312b, which since
+// row 6 replaces the grey ground the area used to take. on_redraw calls the
+// first over the whole exposed rect, then
 // the second over the exposed part of the waveform area, so the canvas wins
 // exactly the pixels the plate, playheads, ground recolors, and trim stems paint
 // on — cold frames (no plate yet) included.
 //
 // render_canvas ALSO owns the waveform area's BORDER: after the ground fill it
 // paints the area's topmost and bottommost rows in kWaveformBorder, 2px each
-// since row 6 (it was 1px of kLine). The border is taken FROM the area, not
+// since row 6 (it was a 1px grey rule). The border is taken FROM the area, not
 // added to it — the waveform area rect is unchanged, so no lane or column
 // arithmetic moves, and the CONTENT band shrinks by those rows at each end
 // (waveform_content_rect below). Top and bottom only; the area's sides are the
@@ -1600,7 +1293,7 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 
 // The waveform area's CONTENT band: the area minus the border rows
 // render_canvas paints at its top and bottom — 2px each since row 6
-// (waveform_border_px, the black border that replaced the 1px kLine one). Every
+// (waveform_border_px, the black border that replaced the 1px grey one). Every
 // pass that fills a BAND inside the area clips to this — the plate blit and the
 // region ground recolor — so the border rows survive the frame no matter what
 // covers the area. THE PHASE-RESET OVERLAY RING LEFT THIS LIST 2026-08-01: its
@@ -1718,7 +1411,8 @@ struct WaveformBasis {
 // color through this alpha is retired, the trim bridge bar being the whole
 // inside-the-window signal now. Its alpha is BINARY now: opaque bars and
 // transparent gaps, with no fractional edges left. The gaps are what let a
-// recolored GROUND (kRegionCanvas, painted before the blit) show through.
+// recolored GROUND (kWaveformRegionCanvas, painted before the blit) show
+// through.
 void render_waveform(cairo_surface_t* dest,
                      GuiRect area,
                      int col0,
@@ -1770,7 +1464,7 @@ void render_playhead(cairo_t* cr,
 // column `col` (window pixels within `area`, clamped here to [0, area.w-1]),
 // spanning the full waveform height like a marker stem, in kPlayheadStem
 // #fcfcfc since 2026-08-01 — the product's one position-line white, replacing
-// the dimmer kStripAnchorStem this drew in (the ruling is at the paint site).
+// the dimmer grey #686a6c this drew in (the ruling is at the paint site).
 // The anchor is
 // the clamped column the strip-drag math pins each event — edge-included, so an
 // edge-pinned anchor draws the stem exactly at the edge and the clamp becomes
@@ -1937,13 +1631,13 @@ inline int trim_endcap_grab_px() {
 }
 
 // (render_trim_stems IS DELETED, architect 2026-08-01. It drew the WAVEFORM-AREA
-// portion of the trim bounds — a 1px kTrimStem vertical at each bound's column,
+// portion of the trim bounds — a 1px grey vertical at each bound's column,
 // spanning the waveform, meeting the strip-crossing segment at the waveform top
 // to form one unbroken line. THE BAR AND ITS TWO ENDCAPS ARE THE WHOLE DISPLAY
 // now: the redesigned trim lane states the window at the window, and two
 // full-height verticals competing with the marker stems stated it a second time
-// in the same pixels. kTrimStem stays a declared palette key with no paint site,
-// like kSelectedStem — the conf goes progressively inert, it is not dismantled.)
+// in the same pixels. The `trim_stem` config key it painted from outlived it by
+// a day and died with the whole tunable palette on 2026-08-02.)
 
 // Draws the begin/end trim-boundary chips in the TRIM CHIP LANE, plus the
 // strip-crossing portion of their stems and the inter-chip bridge band. The
@@ -1960,10 +1654,11 @@ inline int trim_endcap_grab_px() {
 // EDGE-ANCHORED on its bound column: the begin chip's LEFT edge on the column
 // (body rightward), the end chip's RIGHT edge on it (body leftward). A bound is
 // an EDGE, not a point — the deliberate asymmetry vs centered marker flags — so
-// a bound at frame 0 / EOF shows its chip fully onscreen. Chip color is the
-// CALM pair kTrimChip with a kTrimChipOutline border — the bright pair belongs
-// to the bridge bar below, which carries the family's loudness (a chip is a
-// handle, the bar is the window). `waveform_area` is the real
+// a bound at frame 0 / EOF shows its chip fully onscreen. Its colour was the
+// CALM half of the retired trim key family, the loud half belonging to the
+// bridge bar below (a chip is a handle, the bar is the window); the redesigned
+// lane paints kTrimLaneEndcap and kTrimLaneBar with their sampled bevels
+// instead. `waveform_area` is the real
 // waveform rect, read for its `.w` only — the column-mapping denominator (the
 // strip-crossing stems end at the waveform top edge, which this function takes
 // from `top_strip_area.y + .h`, the strip's own bottom). Column placement
@@ -1977,9 +1672,9 @@ inline int trim_endcap_grab_px() {
 // The BRIDGE BAR fills the GAP between the two
 // edge-anchored chips — the visual affordance of the pair (bridge) drag's grab
 // band, and the one "this is the trim window" signal. It occupies the trim-chip
-// lane's vertical band and is the family's
-// BRIGHT pair: an opaque kTrimBar fill with a 1px kTrimBarOutline ring, over the
-// strip background. The gap interval is the
+// lane's vertical band and was the family's
+// BRIGHT pair — an opaque fill under a 1px ring, over the strip background —
+// where the redesigned lane paints kTrimLaneBar. The gap interval is the
 // shared trim_bridge_gap owner (computed unconditionally, independent of the
 // chips' viewport cull): an in_viewport bound bounds the gap at its drawn chip's
 // inner edge; an OFFSCREEN bound runs the bar FLUSH via a side-specific sentinel.
@@ -2174,8 +1869,9 @@ struct FlagEditorBox {
 // invalid commit flashes the marker lane's OWN red pair — kMarkerFlagFillRed /
 // kMarkerFlagEdgeRed. Since 2026-08-02 the BOTTOM-STRIP editors flash that same
 // pair in this same box anatomy (render_bottom_strip_editor), so there is one
-// invalid red and one editor box in the product; the pre-redesign kAccent pair
-// they used to flash has no paint site anywhere now.
+// invalid red and one editor box in the product; the pre-redesign dark-red chip
+// pair they used to flash was the last tunable colour in the tree and went with
+// the whole palette-config system the next day.
 //
 // THE TEXT IS THE REDESIGN'S SANS, matching the labels it replaces — the
 // monospace face dies at this surface with the lane placement owner

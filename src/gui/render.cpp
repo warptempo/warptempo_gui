@@ -138,9 +138,9 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h) {
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     // ROW 6: the ground is the CROP's #12312b, hard-coded (kWaveformCanvas).
-    // The `canvas` colors.conf key stays declared and stays in the grammar; this
-    // was its one paint site. The ruling and the key's inert status are at the
-    // row-6 palette block.
+    // This was the one paint site of the old tunable `canvas` key, which is why
+    // that key went inert here and was deleted outright with the rest of the
+    // colors.conf system on 2026-08-02 (the record is at the palette header).
     cairo_set_source_rgb(cr, kWaveformCanvas.r, kWaveformCanvas.g,
                          kWaveformCanvas.b);
     cairo_rectangle(cr, x, y, w, h);
@@ -148,7 +148,7 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h) {
     // THE BORDER, taken FROM the area: its topmost and bottommost rows, painted
     // in the same pass as the ground so the two can never disagree about where
     // the area ends. Row 6 made it 2px of pure black (it was 1px of the tunable
-    // kLine, whose last paint site this was); the shape is unchanged, and
+    // grey #686a6c, whose last paint site this was); the shape is unchanged, and
     // waveform_content_rect — the band every band-filling pass clips to — reads
     // the same waveform_border_px, so the two cannot drift. Nothing covers the
     // border but the deliberate full-height 1px verticals (playheads, stems),
@@ -480,9 +480,10 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
     cairo_save(cr);
     // THE ANCHOR STEM IS THE PLAYHEAD'S WHITE (architect 2026-08-01, at the
     // row-6 live look): kPlayheadStem #fcfcfc, hard-coded per the redesign's
-    // colour ruling, superseding the dim tunable kStripAnchorStem — whose ONE
-    // paint site this was, so that key is now declared and inert like kCanvas,
-    // kWaveform and kLine. The affordance is deliberately no longer "less loud
+    // colour ruling, superseding the dim tunable grey #686a6c this drew in —
+    // whose ONE paint site this was, which is what left its config key unread
+    // and, a day later, deleted with the whole tunable palette. The affordance
+    // is deliberately no longer "less loud
     // than a marker stem": it is a position line during a gesture, and the
     // product's position lines are this white.
     cairo_set_source_rgb(cr, kPlayheadStem.r, kPlayheadStem.g, kPlayheadStem.b);

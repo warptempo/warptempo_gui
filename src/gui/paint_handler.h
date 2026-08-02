@@ -567,9 +567,10 @@ private:
     //
     // The old singleton stem's whole apparatus goes with it: the size()==1 gate,
     // the DragOverlay re-derivation (the stash already carries the mid-drag
-    // column), the kSelectedStem paint, and selection.cpp's stem capture/damage
-    // pairs. kSelectedStem and its colors.conf key STAY DECLARED under the
-    // palette ruling — only this paint site is gone.
+    // column), the grey focus-column paint, and selection.cpp's stem
+    // capture/damage pairs. The `selected_stem` config key it painted from
+    // outlived this site by a day and died with the whole tunable palette
+    // (2026-08-02).
     void paint_marker_stems(cairo_t* cr, const GuiRect& area);
     // THE COINCIDENT-STEM SUPPRESSION (architect 2026-08-01) — 035e669's model
     // reinstated under row 5's always-on-stem regime. True when a MARKER'S OWN

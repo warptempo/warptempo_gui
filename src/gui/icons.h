@@ -16,7 +16,7 @@
 // transcription bug and nothing else. They are read by no code at runtime — the
 // product ships no icon files and reads none.
 //
-// GUI-ONLY, like text_shape and color_config: icons exist only where pixels do,
+// GUI-ONLY, like text_shape: icons exist only where pixels do,
 // and warptempo_cli must never carry this TU.
 
 #include "render.h"        // GuiColor
