@@ -3002,8 +3002,8 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 // BASIS: the FREE item-geometry owners — item_viewport_basis(app, audio)
 // and displayed_or_live_target_map(app, audio) — feeding the shared geometry
 // owners displayed_trim_ms / trim_bound_column / trim_bridge_gap /
-// trim_chip_rect inside the two renderers, so paint stays column-coherent with
-// hit_test_trim_chip / route_trim_chip_press, which read exactly that basis
+// trim_endcap_rect inside the two renderers, so paint stays column-coherent with
+// hit_test_trim_endcap / route_trim_bar_press, which read exactly that basis
 // (paint == hit by shared owners). Deliberately NOT the member
 // GuiPaintHandler::plate_viewport_basis(): that is the PLATE-fingerprint
 // basis for plate-registered overlays, and the two differ inside the accepted
@@ -3037,7 +3037,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 
     // The item pixels' map: empty (identity) in source view, the committed
     // displayed map (live fallback cold) in target view — exactly
-    // hit_test_trim_chip's selection.
+    // hit_test_trim_endcap's selection.
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
     const std::vector<WarpFrameMapSegment>* map_arg =
@@ -3063,7 +3063,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     //
     // The trim bar lane's y-band is THREADED IN as top_trim_row_area(app)
     // rather than re-derived inside the painter: this is the same accessor
-    // hit_test_trim_chip's y-gate and route_trim_chip_press' bridge y-gate
+    // hit_test_trim_endcap's y-gate and route_trim_bar_press' bridge y-gate
     // read, so the painted band and the clickable band have ONE owner and
     // cannot drift if the lanes above the trim bar ever change.
     // NO WAVEFORM STEMS (architect 2026-08-01): the bar and its two endcaps are
@@ -3785,12 +3785,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         }
 
         // LIVE TRIM PASS — the old trim-stem-cache slot, now covering ALL trim
-        // pixels (waveform stems AND the strip's chips/bridge/stem segments).
+        // pixels (the trim bar lane's ground, the window's bar, the endcaps and
+        // the midpoint mark).
         // Gated on EITHER half being exposed: render_background erased every
         // exposed top-strip pixel above, so a strip-only damage (hover text, a
-        // flag change) must repaint the strip-resident trim pixels, and a
-        // waveform-only damage the stem segments; the outer Cairo damage clip
-        // bounds the actual work either way.
+        // flag change) must repaint the strip-resident trim pixels; the outer
+        // Cairo damage clip bounds the actual work either way.
         if (rects_intersect(exposed, area) ||
             rects_intersect(exposed, top_strip)) {
             paint_trim(cr, area, top_strip);

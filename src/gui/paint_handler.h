@@ -198,10 +198,10 @@ struct WaveformCache {
 
 // -- Off-screen pixel cache for the top-strip flag rects ----------------
 //
-// (The former trim-stem cache is retired: EVERY trim pixel — chips, bridge
-// bar, strip stem segments, waveform stem segments — paints live per frame in
-// GuiPaintHandler::paint_trim, below the playheads. This flag cache is the one
-// remaining item cache.)
+// (The former trim-stem cache is retired: EVERY trim pixel — the lane ground,
+// the window's bar, the two endcaps and the midpoint mark — paints live per
+// frame in GuiPaintHandler::paint_trim, below the playheads. This flag cache is
+// the one remaining item cache.)
 //
 // Synchronous main-thread rebuild; the fingerprint's full field list is the
 // ONE authoritative copy at maybe_rebuild_flag_cache's declaration below — do
@@ -556,7 +556,7 @@ private:
     // paint convention. Invoked whenever the exposed rect intersects the top
     // strip OR the waveform area — render_background erases every exposed
     // top-strip pixel, so a strip-only damage (hover text, a flag change) must
-    // repaint the live chips/bridge/strip stems too; the outer Cairo damage
+    // repaint the live trim bar/endcaps too; the outer Cairo damage
     // clip bounds the actual work. See the definition for the basis contract.
     void paint_trim(cairo_t* cr, const GuiRect& area, const GuiRect& top_strip);
     // MARKER STEMS (row 5, 2026-08-01) — the per-frame waveform overlay that

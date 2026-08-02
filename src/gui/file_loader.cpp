@@ -267,7 +267,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.strip_drag = StripDragState{};
     app.scroll_drag = ScrollDragState{};
     app.double_click = DoubleClickCandidate{};
-    app.chip_row_press = ChipRowPressSeed{};
+    app.trim_bar_press = TrimBarPressSeed{};
     // Belt-and-braces: dissolve the shift-range-select anchor on load (the
     // selection.clear_selection() above already clears it — the Selection
     // mutators are the anchor's only owners).

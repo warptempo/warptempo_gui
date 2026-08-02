@@ -1145,7 +1145,7 @@ void GuiInputHandler::run_span_framing_command() {
         // owns the range in source frames. Express both bounds in the ACTIVE
         // domain: source view
         // uses the source frames directly; target view maps each through
-        // displayed_or_live_target_map — the same basis the flags, chips and
+        // displayed_or_live_target_map — the same basis the flags, endcaps and
         // region paint at — which is identity on the empty source-view map, so
         // one call covers both views.
         const std::pair<long long, long long> trim_src =

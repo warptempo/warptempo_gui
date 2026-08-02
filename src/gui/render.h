@@ -1464,7 +1464,7 @@ void render_strip_anchor_stem(cairo_t* cr,
 // The ONE trim bound-to-column geometry owner. Every consumer of a
 // trim bound's pixel column funnels here: the ONE paint site (render_trim_flags'
 // endcaps and bar gap — the waveform stem site left with render_trim_stems) and the two
-// hit sites (hit_test_trim_chip's chip rects, route_trim_chip_press' bridge
+// hit sites (hit_test_trim_endcap's endcap rects, route_trim_bar_press' bridge
 // test). It replaced five hand-copied `nearbyint` + `clamp(0, W-1)` formulas
 // maintained "byte-identical" by comment discipline.
 //
@@ -1520,7 +1520,7 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 
 // The BETWEEN-THE-ENDCAPS column interval [lo, hi) (waveform-relative,
 // half-open, EMPTY when hi <= lo), the ONE owner shared by the router
-// (route_trim_chip_press' pair-drag between test) and the painter
+// (route_trim_bar_press' pair-drag between test) and the painter
 // (render_trim_flags' midpoint-mark fit test), so the bridge's clickable band
 // and the mark's clearance read the same interval. The bar itself no longer
 // comes from here — it spans the WINDOW, bound column to bound column, and the
@@ -1528,28 +1528,28 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 // offscreen arms key on the bound's SIDE (TrimBoundColumn::side, the unrounded
 // verdict) — NOT col_raw, which cannot tell the side across the rounding seam
 // (a barely-off-left bound rounds to col_raw == 0). The 4x2 semantics:
-//   BEGIN — the gap's LEFT edge, a left-edge-anchored chip:
-//     InView (chip painted) -> lo = col + chip_w           (the drawn chip's
-//        inner RIGHT edge; the gap starts just past the chip).
-//     OffLeft (no chip)     -> lo = min(col_raw, -1)        (a STRICTLY NEGATIVE
+//   BEGIN — the gap's LEFT edge, a left-edge-anchored endcap:
+//     InView (endcap painted) -> lo = col + endcap_w         (the drawn endcap's
+//        inner RIGHT edge; the gap starts just past the endcap).
+//     OffLeft (no endcap)   -> lo = min(col_raw, -1)        (a STRICTLY NEGATIVE
 //        flush sentinel: the fill clips flush to column 0 AND the left ring border
 //        lands offscreen — true only via the sentinel; raw col_raw == 0 would
 //        float the border at the edge).
-//     OffRight (no chip)    -> lo = max(col_raw, wave_w)     (>= wave_w: nothing
+//     OffRight (no endcap)  -> lo = max(col_raw, wave_w)     (>= wave_w: nothing
 //        paints in the visible [0, wave_w) and the router's [0, wave_w) gate can
 //        never arm — an empty gap in the visible area).
-//   END — the gap's RIGHT edge, a right-edge-anchored chip:
-//     InView (chip painted) -> hi = col - chip_w + 1        (the drawn chip's
+//   END — the gap's RIGHT edge, a right-edge-anchored endcap:
+//     InView (endcap painted) -> hi = col - endcap_w + 1      (the drawn endcap's
 //        inner LEFT edge, exclusive).
-//     OffRight (no chip)    -> hi = max(col_raw + 1, wave_w + 1)  (a PAST-THE-EDGE
+//     OffRight (no endcap)  -> hi = max(col_raw + 1, wave_w + 1)  (a PAST-THE-EDGE
 //        flush sentinel: the fill clips flush to the right edge AND the right ring
 //        border lands offscreen).
-//     OffLeft (no chip)     -> hi = min(col_raw + 1, 0)      (<= 0: empty against
+//     OffLeft (no endcap)   -> hi = min(col_raw + 1, 0)      (<= 0: empty against
 //        any lo >= 0 — closes the one-pixel bridge a raw col_raw == 0 left, which
 //        gave hi = 1 and painted/accepted a column-0 sliver for a window wholly
 //        left of the viewport).
-// The +chip_w inset is the ROOM a PAINTED chip occupies; an offscreen bound
-// paints no chip, so the inset is dropped and the bar fills FLUSH. This interval
+// The +endcap_w inset is the ROOM a PAINTED endcap occupies; an offscreen bound
+// paints no endcap, so the inset is dropped and the bar fills FLUSH. This interval
 // is returned UNCLAMPED (raw sentinels included) — its role is to carry the
 // offscreen-flush and empty semantics past the visible edge; it is NOT a drawn
 // interval. The two consumers clamp it to the visible range identically: the
@@ -1565,9 +1565,9 @@ struct TrimBridgeGap {
     int hi;  // exclusive right column (empty gap when hi <= lo)
 };
 TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
-                              const TrimBoundColumn& end, int chip_w, int wave_w);
+                              const TrimBoundColumn& end, int endcap_w, int wave_w);
 
-// The source-frame -> displayed-domain mapping the two HIT sites (add_chip,
+// The source-frame -> displayed-domain mapping the two HIT sites (add_endcap,
 // bound_col) AND the live trim paint pass (GuiPaintHandler::paint_trim)
 // share. Byte-identical to render.cpp's file-local
 // frame_to_paint_sample for every reachable (non-negative) trim bound: in a
@@ -1575,7 +1575,7 @@ TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
 // then rounded again; the identity (null/empty map) path returns the frame
 // as-is. A negative frame is guarded to 0 (unreachable — past-EOF is load-fatal
 // and bounds are never negative — kept for exactness vs the prior hit code).
-// One mapping owner for paint and hit, so a chip is grabbed exactly where it
+// One mapping owner for paint and hit, so an endcap is grabbed exactly where it
 // is drawn. `map` is null in source view (identity) and the item pixels' own map
 // (displayed_or_live_target_map) in target view.
 double displayed_trim_ms(int64_t frame,
@@ -1583,7 +1583,7 @@ double displayed_trim_ms(int64_t frame,
 
 // The ONE trim ENDCAP screen-rect owner: the begin/end edge-anchoring rule
 // lives here, consumed by both the painter (render_trim_flags) and the hit test
-// (hit_test_trim_chip), so paint and hit are one owner again — row 5's endcaps
+// (hit_test_trim_endcap), so paint and hit are one owner again — row 5's endcaps
 // replaced the square chips in BOTH at once.
 //
 // A trim bound is an EDGE, not a point: the begin cap's LEFT edge sits ON the
@@ -1598,7 +1598,7 @@ double displayed_trim_ms(int64_t frame,
 // cap are deliberately NOT the same rect — the one place in this lane where
 // they differ, stated here because everywhere else in the redesign they are
 // identical by construction.
-GuiRect trim_chip_rect(bool is_begin, int strip_x, int col, GuiRect row);
+GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row);
 
 // Grab tolerance added to EACH SIDE of the drawn endcap for hit-testing. The
 // caps are 2px; this makes the target 2 + 2*4 = 10px, close to the square chip's
@@ -1623,11 +1623,11 @@ inline int trim_endcap_grab_px() {
 // paints through ONE lambda — a face band above a two-row bevel pair, all
 // pixel-bound integer fills, no stroke and no antialiasing anywhere in this
 // lane — so a surface is named by its four constants and nothing else.
-// The lane band is the `chip_row` PARAMETER — the caller passes
+// The lane band is the `trim_bar` PARAMETER — the caller passes
 // top_trim_row_area(app) (top-strip lane 4), the same accessor
-// hit_test_trim_chip's y-gate and route_trim_chip_press' bridge y-gate read, so
+// hit_test_trim_endcap's y-gate and route_trim_bar_press' bridge y-gate read, so
 // paint and hit take the band from ONE owner and cannot drift; nothing in here
-// re-derives the lane's y from the row heights above it. `chip_row` gives the
+// re-derives the lane's y from the row heights above it. `trim_bar` gives the
 // lane's x/y/h; `waveform_area` is read for its `.w` ALONE — both the
 // column-mapping denominator and the lane's effective width, so the inert
 // non-multiple-of-16 gutter is outside the clip and never paints.
@@ -1652,7 +1652,7 @@ inline int trim_endcap_grab_px() {
 // column on screen to stand on, and the bar's flush edge is what says the
 // window continues past the view.
 // Both caps come from the ONE rect owner the hit test reads
-// (trim_chip_rect), so the painted cap and the grabbable cap describe the same
+// (trim_endcap_rect), so the painted cap and the grabbable cap describe the same
 // edge; the hit side adds only its stated grab tolerance. Column placement is
 // on the displayed viewport basis — `trim.begin` / `trim.end` are already in
 // the displayed domain, so no further translation happens here. A cap has NO
@@ -1673,7 +1673,7 @@ inline int trim_endcap_grab_px() {
 // paint site (render.cpp).
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
-                       GuiRect chip_row,
+                       GuiRect trim_bar,
                        GuiRect waveform_area,
                        long long viewport_start_sample,
                        long long viewport_end_sample,

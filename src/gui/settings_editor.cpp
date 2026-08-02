@@ -496,7 +496,7 @@ void GuiSettingsEditor::commit() {
     // AND THE SELECTION GOES WITH IT (architect 2026-07-29): an engine
     // commit rebuilds the map under every marker INDEX and IMAGE at once, so no
     // marker keeps the identity a focus named — the same
-    // "ready to move on" act the trim setters make when a chip click deselects.
+    // "ready to move on" act the trim setters make when a trim-bar click deselects.
     // This is the SYMMETRIC half of a pair: the settings-only ('S') undo/redo
     // restore clears the selection at its own restore (undo.cpp), and GUI-kind
     // keys are

@@ -289,7 +289,7 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 //     function (set_trim_bound_at_click) and so one deselect — REINSTATED
 //     2026-08-01 with the strictly-inside guard, which is simply a fourth refusal
 //     ahead of the same deselect;
-//   * the trim chip/bridge DRAG — update_trim_drag's two motion arms and
+//   * the trim endcap/bridge DRAG — update_trim_drag's two motion arms and
 //     commit_trim_drag — which also carries the drag's PLAYBACK STOP, relocated
 //     there 2026-07-30 from the press when the press's highlight-only publish
 //     retired (the keyboard stop rule is at stop_playback_if_playing's
@@ -320,7 +320,7 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // is a shared commit tail every setter already runs inside its own body, and the
 // ENTRY / RESTORE routes (file load, the Ctrl+Tab band pull, the settings-file
 // tab-band pull, `'` adopt) install a trim wholesale.
-// A PLAIN CHIP-ROW CLICK IS NO LONGER A TRIM ROUTE AT ALL (architect 2026-07-30):
+// A PLAIN TRIM-BAR CLICK IS NO LONGER A TRIM ROUTE AT ALL (architect 2026-07-30):
 // its three arms existed only to publish the highlight, so with the publisher gone
 // they retire outright — a click that never becomes a drag is a consumed nothing,
 // stopping no audition and destroying no selection.
@@ -1014,8 +1014,8 @@ private:
     // changed or only the viewport moved.
     void apply_strip_drag_at(int x, int y, bool final_event);
 
-    bool route_trim_chip_press(int mouse_x, int mouse_y);
-    // Arm the pending trim chip/bridge drag (pending+threshold): the begin runs
+    bool route_trim_bar_press(int mouse_x, int mouse_y);
+    // Arm the pending trim endcap/bridge drag (pending+threshold): the begin runs
     // only once on_motion crosses kDragMovedThresholdPx from the press.
     void arm_pending_trim_drag(bool is_begin, bool both, int press_x,
                                int press_y);

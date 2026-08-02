@@ -74,7 +74,7 @@ std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx) {
 // warp_frame_map) the result is the frame double rounded with nearbyint.
 // Both branches return the same integer displayed frame the playhead
 // cursor stores (the active-domain translators apply the same
-// nearbyint), so the stem, chip, hit rect, and playhead share a column
+// nearbyint), so the stem, endcap, hit rect, and playhead share a column
 // in every view. Painting from the fractional map_source_to_target value
 // placed the stem one pixel off the playhead whenever rounding the
 // target frame crossed a pixel-column boundary. Callers that need an
@@ -460,7 +460,7 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
 }
 
 // -- Trim bound geometry owners -------------------------------------------
-// One column formula, one mapping helper, one chip rect, one bridge-gap owner.
+// One column formula, one mapping helper, one endcap rect, one bridge-gap owner.
 // See render.h for the full rationale (the UNIFIED displayed basis — both
 // painters and hit sites decide against the same committed viewport, the
 // event-sync ruling; the quantized-span denominator; the EOF-wall clamp; and the
@@ -496,11 +496,11 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 }
 
 TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
-                              const TrimBoundColumn& end, int chip_w,
+                              const TrimBoundColumn& end, int endcap_w,
                               int wave_w) {
-    // Contract (4x2 table) at the declaration. A PAINTED (InView) chip bounds the
-    // gap at its inner edge (inset by chip_w — the room the chip occupies); an
-    // OFFSCREEN bound paints no chip, so the bar runs FLUSH. The offscreen arms
+    // Contract (4x2 table) at the declaration. A PAINTED (InView) endcap bounds the
+    // gap at its inner edge (inset by endcap_w — the room the endcap occupies); an
+    // OFFSCREEN bound paints no endcap, so the bar runs FLUSH. The offscreen arms
     // key on the bound's SIDE (not col_raw, which cannot tell the side across the
     // rounding seam), and use side-specific SENTINELS so an offscreen edge lands
     // STRICTLY past the visible range — never col 0 / col wave_w-1 — which is what
@@ -508,7 +508,7 @@ TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
     TrimBridgeGap g;
     switch (begin.side) {
         case TrimBoundSide::InView:
-            g.lo = begin.col + chip_w; break;
+            g.lo = begin.col + endcap_w; break;
         case TrimBoundSide::OffLeft:
             g.lo = std::min(begin.col_raw, -1); break;      // strictly < 0
         case TrimBoundSide::OffRight:
@@ -516,7 +516,7 @@ TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
     }
     switch (end.side) {
         case TrimBoundSide::InView:
-            g.hi = end.col - chip_w + 1; break;
+            g.hi = end.col - endcap_w + 1; break;
         case TrimBoundSide::OffRight:
             g.hi = std::max(end.col_raw + 1, wave_w + 1); break;  // > wave_w
         case TrimBoundSide::OffLeft:
@@ -535,7 +535,7 @@ double displayed_trim_ms(int64_t frame,
     return ms;
 }
 
-GuiRect trim_chip_rect(bool is_begin, int strip_x, int col, GuiRect row) {
+GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row) {
     const int cap_w = trim_endcap_w_px();
     const int abs_col = strip_x + col;
     GuiRect r;
@@ -553,18 +553,18 @@ GuiRect trim_chip_rect(bool is_begin, int strip_x, int col, GuiRect row) {
 
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
-                       GuiRect chip_row,
+                       GuiRect trim_bar,
                        GuiRect waveform_area,
                        long long viewport_start_sample,
                        long long viewport_end_sample,
                        const TrimRange& trim) {
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
-    if (chip_row.w <= 0 || chip_row.h <= 0) return;
+    if (trim_bar.w <= 0 || trim_bar.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
     if (waveform_area.w <= 0) return;
 
-    // Both bounds resolve through the ONE shared column owner, exactly as the
-    // chips did: .col is the clamped column, .side the offscreen verdict. The
+    // Both bounds resolve through the ONE shared column owner:
+    // .col is the clamped column, .side the offscreen verdict. The
     // bar spans between them even when a bound is culled, so the columns are
     // computed unconditionally.
     const TrimBoundColumn bc = trim_bound_column(
@@ -574,10 +574,10 @@ void render_trim_flags(cairo_t* cr,
         static_cast<double>(trim.end), viewport_start_sample,
         viewport_end_sample, waveform_area.w);
 
-    const int lane_x   = chip_row.x;
-    const int lane_w   = waveform_area.w;   // the effective width, as the chips used
-    const int lane_y   = chip_row.y;
-    const int lane_h   = chip_row.h;
+    const int lane_x   = trim_bar.x;
+    const int lane_w   = waveform_area.w;   // the effective width
+    const int lane_y   = trim_bar.y;
+    const int lane_h   = trim_bar.h;
     const int bevel_h  = std::min(trim_bevel_h_px(), lane_h);
     const int face_h   = lane_h - bevel_h;  // rows 0..6 at 100%
     const int hi_h     = bevel_h / 2;       // row 7: the lighter shade
@@ -631,14 +631,14 @@ void render_trim_flags(cairo_t* cr,
     // has no column on screen to stand on, and the bar's flush edge is what says
     // the window continues past the view.
     // Both caps come from the ONE rect owner the hit test reads
-    // (trim_chip_rect), so the painted cap and the grabbable cap describe the
+    // (trim_endcap_rect), so the painted cap and the grabbable cap describe the
     // same edge — the hit side adds only its stated grab tolerance.
     if (bc.in_viewport) {
-        const GuiRect r = trim_chip_rect(true, lane_x, bc.col, chip_row);
+        const GuiRect r = trim_endcap_rect(true, lane_x, bc.col, trim_bar);
         surface(r.x, r.w, kTrimLaneEndcap, kTrimCapBevelHi, kTrimCapBevelLo);
     }
     if (ec.in_viewport) {
-        const GuiRect r = trim_chip_rect(false, lane_x, ec.col, chip_row);
+        const GuiRect r = trim_endcap_rect(false, lane_x, ec.col, trim_bar);
         surface(r.x, r.w, kTrimLaneEndcap, kTrimCapBevelHi, kTrimCapBevelLo);
     }
 

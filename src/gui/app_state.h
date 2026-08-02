@@ -513,18 +513,18 @@ struct PendingMarkerDrag {
 // CANCEL (the rule at the drag-modal gate, input_handler.cpp). A bound-set press's
 // click-set is committed the moment it is made — trim is history-less, so nothing
 // takes it back — which is why the pending no longer needs to distinguish itself
-// from a plain chip-drag pending at all.
+// from a plain endcap-drag pending at all.
 struct PendingTrimDrag {
     bool active   = false;
     bool is_begin = false;  // which bound the single drag targets (Begin if both)
-    bool both     = false;  // the inter-chip bridge (pair) drag
+    bool both     = false;  // the inter-endcap bridge (pair) drag
     int  press_x  = 0;      // press position (window px): the gate + begin anchor
     int  press_y  = 0;
 };
 
 // Trim boundary drag (the live trim pointer gesture). Armed from a PendingTrim-
-// Drag once the plain chip-row press crosses the threshold — a chip-rect hit
-// drags one bound, the inter-chip bridge drags the pair. Parallel to DragState
+// Drag once the plain trim-bar press crosses the threshold — an endcap-rect hit
+// drags one bound, the inter-endcap bridge drags the pair. Parallel to DragState
 // but motion mutates the active tab's live trim mirror directly (no overlay);
 // release triggers a target render when the bound moved. Trim is excluded from
 // undo/redo. Session-only.
@@ -541,7 +541,7 @@ struct TrimDragState {
     // initial snap. See DragState::anchor_mouse_time_frame.
     double anchor_frame     = 0.0;
 
-    // Inter-chip bridge (top-strip chip-row span) move-both-bounds drag: both
+    // Inter-endcap bridge (top-strip trim-bar span) move-both-bounds drag: both
     // bounds translate together by
     // the same delta in the active (on-screen) domain, preserving the gap
     // as it appears under warp. The pair has no grabbed-bound notion — both
@@ -667,8 +667,7 @@ enum class DoubleClickSurface { None, TrimBar, Marker, EditorText, EmptyLane };
 //                 slack compared. It REHOMED here from the deleted zoom lane
 //                 (architect 2026-07-31) and consumes AHEAD of the cap/bridge
 //                 drag arm, so the second click frames rather than grabs. The
-//                 seed is that lane's own press record (ChipRowPressSeed — the
-//                 chip-era name, kept),
+//                 seed is that lane's own press record (TrimBarPressSeed),
 //                 not a strip-drag field: the lane arms a pending trim drag
 //                 rather than a live one, so there is no drag state to hang it
 //                 on and the motionless test is the release's own slack compare.
@@ -722,7 +721,7 @@ struct DoubleClickCandidate {
 // the same condition by construction. Cleared at every left release (the release
 // consumes it) and by the force-end finalizer, beside the candidate's own clear.
 // Session-only.
-struct ChipRowPressSeed {
+struct TrimBarPressSeed {
     bool active  = false;
     int  press_x = 0;
     int  press_y = 0;
@@ -1382,8 +1381,8 @@ struct AppState {
     // area_w the LAST COMMITTED frame's flag cache was built against, promoted
     // in LOCKSTEP with displayed_target_warp_frame_map at the frame that blits
     // that cache, so the flag editor's box placement (see item_viewport_basis
-    // in this header) and the LIVE TRIM pass (GuiPaintHandler::paint_trim — its chips/stems paint on
-    // this basis so hit_test_trim_chip / route_trim_chip_press land on the drawn
+    // in this header) and the LIVE TRIM pass (GuiPaintHandler::paint_trim — its bar/endcaps paint on
+    // this basis so hit_test_trim_endcap / route_trim_bar_press land on the drawn
     // pixels) ride the
     // same basis the flags do. (The selected-stem DAMAGE was listed here until
     // 2026-07-30 and never belonged: that stem painted on the PLATE basis, so
@@ -1454,7 +1453,7 @@ struct AppState {
     // release / lost button, by the force-end finalizer, and on file load.
     PendingMarkerDrag pending_marker_drag;
 
-    // Pending trim chip/bridge drag, armed by a plain chip-row press (the
+    // Pending trim endcap/bridge drag, armed by a plain trim-bar press (the
     // trim-drag machinery begins only past the threshold). Cleared on the
     // threshold crossing, on button release / lost button, by the force-end
     // finalizer, and on file load.
@@ -1465,7 +1464,7 @@ struct AppState {
     // the ladder is deleted).
     RegionState region;
 
-    // Live trim boundary drag (chip / inter-chip bridge). Cleared on button
+    // Live trim boundary drag (endcap / inter-endcap bridge). Cleared on button
     // release / lost button, by the force-end finalizer (both COMMIT its live
     // bounds), and on file load.
     TrimDragState trim_drag;
@@ -1480,9 +1479,9 @@ struct AppState {
     // cleared on file load and when the double-click action fires.
     DoubleClickCandidate double_click;
 
-    // The trim-bar framing double-click's press record (see ChipRowPressSeed).
-    // Written by every plain chip-row press, consumed by the next left release.
-    ChipRowPressSeed chip_row_press;
+    // The trim-bar framing double-click's press record (see TrimBarPressSeed).
+    // Written by every plain trim-bar press, consumed by the next left release.
+    TrimBarPressSeed trim_bar_press;
 
     // Alt+drag on the waveform (continuous 1:1 grab-pan). Cleared on button
     // release / lost button, by the force-end finalizer, and file load.
@@ -1774,8 +1773,8 @@ struct AppState {
     // backing store lives in ViewState::trim. Excluded from undo/redo.
     // Mirrored to/from the active tab's ViewState slot at the tab-swap
     // boundary in active_views.cpp (same pattern as viewport/zoom/playhead).
-    // Trim is a region authored purely by the plain chip-row pointer drags
-    // (single-bound chip, chip-row inter-chip bridge/pair), the ctrl /
+    // Trim is a region authored purely by the plain trim-bar pointer drags
+    // (single-bound endcap, inter-endcap bridge/pair), the ctrl /
     // ctrl+shift bound-set clicks, the bare-x set arm (a live region sets the
     // trim to it and consumes the span; no region is a silent no-op), the
     // Shift+X MAXIMIZER (writes the full window), and the settings editor's
@@ -2644,7 +2643,7 @@ inline int marker_stem_grab_px() {
 // Which trim boundary, if any, a waveform-area click lands on.
 enum class TrimHit { None, Begin, End };
 
-// hit_test_trim_chip: return which trim bound's painted ENDCAP contains the
+// hit_test_trim_endcap: return which trim bound's painted ENDCAP contains the
 // press, or None. Both bounds are always meaningful (the trim window is always
 // set since 2026-07-30), so it reads the pair directly.
 // AUTHORING views — the active tab's live pair, project-level in both 'W' and
@@ -2652,7 +2651,7 @@ enum class TrimHit { None, Begin, End };
 // b/e chips of the old chip row are gone, 2026-08-01): a trim_endcap_w_px()
 // column run spanning the trim bar lane's full height, EDGE-ANCHORED on the
 // bound's painted column — the begin cap's LEFT edge on it, the end cap's RIGHT
-// edge on it — from trim_chip_rect, the ONE rect owner render_trim_flags fills
+// edge on it — from trim_endcap_rect, the ONE rect owner render_trim_flags fills
 // through, so paint and hit cannot drift. THE HIT RECT IS THAT CAP INFLATED by
 // kTrimEndcapGrabPx per side (a 2px cap is under any pointing tolerance); it is
 // the one place in this lane where the drawn and the grabbable rect differ, and
@@ -2661,7 +2660,7 @@ enum class TrimHit { None, Begin, End };
 // display warp_frame_map in target view so the hit lands on the drawn cap.
 // The endcaps and the bar's inter-cap bridge span are the ONLY trim grab
 // handles (the waveform stem grab retired).
-TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
+TrimHit hit_test_trim_endcap(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y);
 
 // displayed_or_live_target_map: the warp_frame_map the item hit tests decide
@@ -2695,7 +2694,7 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 
 // item_viewport_basis: the VIEWPORT twin of displayed_or_live_target_map —
 // the viewport span the item PAINTERS and the trim hit test decide against, so
-// a chip is grabbed and the flag editor's box is centered on the column those
+// an endcap is grabbed and the flag editor's box is centered on the column those
 // pixels were painted at. (The flag HIT no longer reads it — hit_test_flag
 // takes the painter's published rects, which are that basis by construction.) In target OR source view with
 // a warm promoted mirror (app.displayed_area_w > 0) it returns the vp_start/
@@ -2708,11 +2707,11 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // it falls back to the LIVE viewport {viewport_start_sample, viewport_end_sample
 // at current_samples_per_pixel, effective width}, matching the live-map cold
 // fallback of displayed_or_live_target_map (and the pre-mirror hit_test_flag /
-// hit_test_trim_chip live basis, so cold behavior is unchanged).
+// hit_test_trim_endcap live basis, so cold behavior is unchanged).
 //
 // This is the free-function owner homed beside displayed_or_live_target_map so
 // render_flag_editor_box (the unrolled editor box's column), the app_state.cpp
-// trim hit test (hit_test_trim_chip), and the LIVE TRIM paint pass
+// trim hit test (hit_test_trim_endcap), and the LIVE TRIM paint pass
 // (GuiPaintHandler::paint_trim — paint and hit share the one basis by
 // construction) share ONE basis. (Three former consumers left the list in row 5:
 // the marker-text lane's run resolver, marker_hit_at, and lane_text_left_x —
@@ -2725,7 +2724,7 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // (the plate's current fingerprint): the paint-handler method registers the
 // PLATE-REGISTERED paint overlays — enumerated at its own declaration
 // (paint_handler.h), the one authoritative site for that membership — with the
-// just-blitted plate, whereas this owner registers the flag/chip/lane/hit
+// just-blitted plate, whereas this owner registers the flag/endcap/lane/hit
 // geometry with the committed FLAG item cache (the promoted mirror). The two
 // are NUMERICALLY EQUAL at every frame committed by the TWO PLATE WRITERS
 // (worker publish, synchronous rebuild) — the old one-frame

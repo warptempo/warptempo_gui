@@ -118,7 +118,7 @@ void GuiInputHandler::reset_trim_to_full_window() {
 // begin == end rather than a crossed pair — which this compare has always
 // caught, so the drag's route to clearing the trim (drag one handle onto the
 // other) is served by the rule exactly as written, with nothing added.
-// Every trim commit site — the x set-from-region, the chip/bridge drag release,
+// Every trim commit site — the x set-from-region, the endcap/bridge drag release,
 // the bound-set click and the settings-editor `:trim_*=` commit — calls this
 // after its mutation and before its invalidations, so the repaint shows the
 // reset state.
@@ -333,7 +333,7 @@ bool GuiInputHandler::trim_mouse_x_to_source_frame(int mouse_x,
     // Target view: the cursor column is an active-domain frame; the trim
     // store is source-domain. Inverse-translate at the boundary through the
     // DISPLAYED paint basis (displayed_or_live_target_map — the SAME map the
-    // trim chips/stems are painted with; identity in source view), in full
+    // trim bar/endcaps are painted with; identity in source view), in full
     // double precision like the marker drag's anchor, so the tracked bound
     // stays locked to the pointer under any map, stale or fresh, and the
     // release column-snap in commit_trim_drag owns the single
@@ -399,7 +399,7 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
 
     if (app.trim_drag.both) {
         // The DISPLAYED paint basis, hoisted for every translation this event —
-        // the SAME map the trim chips/stems are painted with (identity in source
+        // the SAME map the trim bar/endcaps are painted with (identity in source
         // view), so the rigid pair tracks the pointer against WHAT IS PAINTED
         // even inside a worker publish window where the displayed map lags the
         // live one. map_source_to_target / map_target_to_source are the two hops
@@ -420,7 +420,7 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         int64_t df = cur_active - app.trim_drag.anchor_active_frame;
         // No viewport clamp on the pair path: blind partner — and blind pair —
         // motion is deliberate. The offscreen ruling forbids blind GRABS (a
-        // single grab still requires a visible stem/chip at press, and the
+        // single grab still requires a visible endcap at press, and the
         // single-bound path below keeps its viewport clamp), not blind MOTION
         // of a rigid pair the user visibly holds by its middle. The pair rides
         // the rigid delta bounded ONLY by the absolute walls below.
@@ -474,7 +474,7 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
             // later events. The publish half is gone with the trim-window
             // highlight (architect 2026-07-30): nothing is written to the region
             // here at all.
-            // THE STOP LIVES HERE NOW (architect 2026-07-30): the chip/bridge
+            // THE STOP LIVES HERE NOW (architect 2026-07-30): the endcap/bridge
             // drag used to stop at the PRESS, beside a highlight-only publish
             // that has since retired outright, so the stop moved to the FIRST
             // ACCEPTED TRIM MUTATION — this arm — where a trim change actually
@@ -510,10 +510,10 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     // Viewport clamp: keep the grabbed bound within the visible strip (pixel 0
     // through the last fully-visible pixel) so the drag can't push it
     // offscreen, where its precise location would be hidden. The cursor column
-    // is already viewport-bound, but a grab a few pixels off the chip can
+    // is already viewport-bound, but a grab a few pixels off the endcap can
     // trail the bound past the edge; this makes the bound itself exact. The
-    // grab can only begin on a visible bound (hit_test_trim_chip tests the
-    // chip painted at a visible column), so this is a live tracking clamp, not a
+    // grab can only begin on a visible bound (hit_test_trim_endcap tests the
+    // endcap painted at a visible column), so this is a live tracking clamp, not a
     // correction for an offscreen grab. The bounds are active-domain while
     // src_frame is source, so inverse-translate the edges through the DISPLAYED
     // paint basis (the same map the tracked bound rode above; monotonic, so the
@@ -615,7 +615,7 @@ void GuiInputHandler::commit_trim_drag() {
         // under the home-view binding, where the displayed map is identity): a
         // worker job dispatched by a
         // viewport change and still in flight across the grab, carrying the
-        // then-current map. That is the same displayed basis route_trim_chip_press's
+        // then-current map. That is the same displayed basis route_trim_bar_press's
         // hit test and the drag mechanics above all read. The absolute walls
         // — both bounds 0..EOF-1, plain integer compares —
         // re-apply AFTER the snap so the walls win over the pixel grid and a
@@ -843,7 +843,7 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // leaving the waveform purely
 // region/playhead. Arms a PendingTrimDrag rather than beginning the drag
 // outright — the pending+threshold pattern the marker flag uses: the press
-// CLAIMS the chip/bridge geometry, a motionless press-release commits nothing,
+// CLAIMS the endcap/bridge geometry, a motionless press-release commits nothing,
 // and only once the pointer crosses kDragMovedThresholdPx does begin_trim_drag
 // run and the existing single/pair drag machinery take over unchanged. A full
 // ordered pair ALWAYS rests (the unset state died 2026-07-30), so the old
@@ -854,7 +854,7 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // fallback); false lets the caller fall through. Trim bounds are transparent to
 // every OTHER chord (the caller gates this to the plain, unmodified press).
 // Read-only claims WITHOUT arming (a silent return, no fallback). The two arms:
-//   CAP HIT: an endcap-rect hit (hit_test_trim_chip, itself y-gated to the trim
+//   CAP HIT: an endcap-rect hit (hit_test_trim_endcap, itself y-gated to the trim
 //     bar lane) arms that bound's single drag.
 //   BRIDGE: else, a press whose y lies in the trim lane band —
 //     top_trim_row_area, the band the bar and its endcaps paint in — and whose
@@ -892,12 +892,12 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // toggle, or just after load, live map until the first committed target frame),
 // and the playhead-placement clicks (column-based, out of scope by ruling — a
 // far subtler seam).
-bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
+bool GuiInputHandler::route_trim_bar_press(int mouse_x, int mouse_y) {
     if (audio.total_frames() <= 0) return false;
     // Event-synchronized hit geometry, the VIEWPORT half (the ruling at the
-    // header): the chip AND bridge pixels are painted live (paint_trim) on the
+    // header): the endcap AND bridge pixels are painted live (paint_trim) on the
     // DISPLAYED basis, so both the
-    // single-chip hit (hit_test_trim_chip, which takes its own displayed basis)
+    // single-endcap hit (hit_test_trim_endcap, which takes its own displayed basis)
     // and the bridge column math below ride the SAME basis, never the live
     // viewport — else a press on the visible bridge during an async publish window
     // could fall through unclaimed (or a blank point falsely arm the pair drag).
@@ -906,8 +906,8 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     if (basis.spp <= 0.0) return false;
 
-    // Single-drag hit: the endcap rect (hit_test_trim_chip, trim-lane-gated).
-    const TrimHit single = hit_test_trim_chip(app, audio, mouse_x, mouse_y);
+    // Single-drag hit: the endcap rect (hit_test_trim_endcap, trim-lane-gated).
+    const TrimHit single = hit_test_trim_endcap(app, audio, mouse_x, mouse_y);
     if (single != TrimHit::None) {
         // Read-only claims the press but never arms (no fallback).
         if (active_view_state(app).read_only) return true;
@@ -918,7 +918,7 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
 
     // Bridge (pair) drag: the TRIM BAR LANE ONLY — a press whose y lies in that
     // lane's band (top_trim_row_area, the exact band
-    // hit_test_trim_chip y-gates on and the band the bar and its endcaps paint
+    // hit_test_trim_endcap y-gates on and the band the bar and its endcaps paint
     // in) and whose column falls inside the painted bar's
     // gap between the two endcaps (both bounds always set, structurally). A
     // top-strip press BELOW that band — the ruler lane, then the marker lane —
@@ -978,7 +978,7 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
     return false;
 }
 
-// Arm the pending trim chip/bridge drag from a plain chip-row press. Mirrors
+// Arm the pending trim endcap/bridge drag from a plain trim-bar press. Mirrors
 // PendingMarkerDrag: nothing mutates the trim store yet — begin_trim_drag runs
 // only when on_motion sees the pointer cross kDragMovedThresholdPx from the
 // press. is_begin names the single bound (Begin for a bridge/pair drag); both

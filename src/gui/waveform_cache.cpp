@@ -693,7 +693,7 @@ uint64_t hash_selection(const std::set<int>& s,
 // EVERY flag shape (marker + phase reset) EXCEPT THE EDITING TARGET'S, whose box
 // and hit rect are skipped here because the live editor overlay painted after
 // this blit cannot be assumed to cover them (2026-08-02) — which is why the
-// edited marker is a fingerprint field of its own below. Trim's chips/stems left this cache and
+// edited marker is a fingerprint field of its own below. Trim's pixels left this cache and
 // the retired trim-stem cache for the live paint_trim pass, so no trim field
 // remains in the fingerprint (a trim edit repaints through its own mutation
 // damage, no cache rebuild).

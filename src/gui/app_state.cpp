@@ -85,8 +85,8 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio) {
 
 // The viewport twin of displayed_or_live_target_map (full rationale at the
 // declaration): the vp_start/vp_end/area_w the flag item cache was painted
-// with on the last committed frame, so the marker/chip/lane geometry rides the
-// same basis the flag/chip pixels do. The warm spp is (vp_end - vp_start) /
+// with on the last committed frame, so the marker/endcap/lane geometry rides the
+// same basis the flag/endcap pixels do. The warm spp is (vp_end - vp_start) /
 // area_w — the flags' OWN samples-per-pixel (span over the effective waveform
 // width the item render used), exact on the committing frame. Cold (area_w == 0,
 // nothing promoted yet) falls back to the live viewport span at the effective
@@ -113,7 +113,7 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
     return b;
 }
 
-TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
+TrimHit hit_test_trim_endcap(const AppState& app, const GuiAudio& audio,
                            int mouse_x, int mouse_y) {
     // Trim bounds hit-test in the AUTHORING views against the active A/B tab's
     // live bounds. Both bounds are always meaningful (the unset state died
@@ -136,8 +136,8 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     // are painted live by the trim pass (GuiPaintHandler::paint_trim ->
     // render_trim_flags) on the DISPLAYED basis, NOT the live viewport. So the
     // cap columns must resolve on the SAME basis (item_viewport_basis)
-    // — the same reason hit_test_flag does — else during an async publish window a
-    // chip painted at the OLD column would be grabbed at the NEW/live column.
+    // — the same reason hit_test_flag does — else during an async publish window an
+    // endcap painted at the OLD column would be grabbed at the NEW/live column.
     // The visibility
     // cull matches the painter's viewport extent (the painter maps against
     // this same {span, width}), so a gutter column at a non-multiple-of-16 window
@@ -156,7 +156,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     // the item pixels' own via displayed_or_live_target_map (event-synchronized
     // hit geometry — the ruling at that selector), empty (identity) in source
     // view and the map the flag item cache baked when warm in target view
-    // (the live trim pass paints its chips through the same selector).
+    // (the live trim pass paints its endcaps through the same selector).
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
     const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
@@ -177,18 +177,18 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
     // GRAB TOLERANCE's doing — the inflated rects reach far past the caps they
     // came from, while the drawn caps themselves can share at most a cap width
     // (see the tie-break).
-    struct TrimChipHit {
+    struct TrimEndcapHit {
         double  center_x;
         GuiRect rect;
         TrimHit which;
     };
-    std::vector<TrimChipHit> chips;
-    auto add_chip = [&](int64_t frame, TrimHit which) {
+    std::vector<TrimEndcapHit> endcaps;
+    auto add_endcap = [&](int64_t frame, TrimHit which) {
         // Map the authored source frame to the displayed domain and resolve its
         // column through the SAME owners the painter uses (render.h): the mapping
         // via displayed_trim_ms, the column via trim_bound_column against the
         // displayed-basis vp span (the painters' quantized-span denominator), the
-        // cap rect via trim_chip_rect. So a hit lands on exactly the drawn cap.
+        // cap rect via trim_endcap_rect. So a hit lands on exactly the drawn cap.
         const double ms = displayed_trim_ms(frame, target_warp_frame_map);
         const TrimBoundColumn c =
             trim_bound_column(ms, vp_start, vp_end, wave_w);
@@ -196,25 +196,25 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
         // THE DRAWN CAP, INFLATED BY THE GRAB TOLERANCE. The rect comes from
         // the one owner so the target is centred on exactly what is painted; the
         // widening is the hit side's own term, because a 2px endcap is below any
-        // usable pointing tolerance (the rationale is at trim_chip_rect).
+        // usable pointing tolerance (the rationale is at trim_endcap_rect).
         GuiRect cr_rect =
-            trim_chip_rect(which == TrimHit::Begin, top.x, c.col, row);
+            trim_endcap_rect(which == TrimHit::Begin, top.x, c.col, row);
         const int grab = trim_endcap_grab_px();
         cr_rect.x -= grab;
         cr_rect.w += 2 * grab;
         const double center_x = static_cast<double>(top.x + c.col);
-        chips.push_back({center_x, cr_rect, which});
+        endcaps.push_back({center_x, cr_rect, which});
     };
 
-    add_chip(begin_frame, TrimHit::Begin);
-    add_chip(end_frame,   TrimHit::End);
-    std::sort(chips.begin(), chips.end(),
-              [](const TrimChipHit& a, const TrimChipHit& b) {
+    add_endcap(begin_frame, TrimHit::Begin);
+    add_endcap(end_frame,   TrimHit::End);
+    std::sort(endcaps.begin(), endcaps.end(),
+              [](const TrimEndcapHit& a, const TrimEndcapHit& b) {
                   if (a.center_x != b.center_x)
                       return a.center_x < b.center_x;
                   // Deterministic tie-break at an equal column: Begin first, so
                   // the forward walk below returns it. The two DRAWN caps are
-                  // NOT the same rect there — trim_chip_rect anchors them in
+                  // NOT the same rect there — trim_endcap_rect anchors them in
                   // opposite directions (begin's left edge on the column, end's
                   // right edge on it), so they mirror about the column and share
                   // only it — but they are the same colour, so nothing painted
@@ -225,10 +225,10 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 
     // Forward walk = ascending-x = LEFTMOST FIRST, the policy stated above. The
     // first cap whose inflated [rect.x, rect.x + w) contains mouse_x wins.
-    for (const TrimChipHit& chip : chips) {
-        if (mouse_x >= chip.rect.x &&
-            mouse_x < chip.rect.x + chip.rect.w) {
-            return chip.which;
+    for (const TrimEndcapHit& endcap : endcaps) {
+        if (mouse_x >= endcap.rect.x &&
+            mouse_x < endcap.rect.x + endcap.rect.w) {
+            return endcap.which;
         }
     }
     return TrimHit::None;

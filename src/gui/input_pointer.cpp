@@ -716,7 +716,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // The consume checks below read this snapshot; each surface then re-seeds
     // its own fresh candidate (TrimBar / EditorText at a motionless release,
     // Marker / EmptyLane at the press). One closed instrumentation point — the clear covers
-    // every non-consuming press (a strip/region/chip arm, a modal swallow)
+    // every non-consuming press (a strip/region/trim arm, a modal swallow)
     // without a clear scattered on each path.
     const DoubleClickCandidate dc_at_press = app.double_click;
     app.double_click = DoubleClickCandidate{};
@@ -1072,8 +1072,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // not a grab target). The plain DRAG never selects markers either
         // (SELECTION FLOWS DOWNWARD ONLY, architect 2026-07-23 — the region no
         // longer selects its contents; it leaves the selection empty).
-        // Trim bounds are grabbed only by their top-strip chips /
-        // the inter-chip bridge on a PLAIN chip-row press (route_trim_chip_press
+        // Trim bounds are grabbed only by their top-strip endcaps /
+        // the inter-endcap bridge on a PLAIN trim-bar press (route_trim_bar_press
         // below); a click over a bound's waveform stem is an ordinary waveform
         // click (the stem grab retired), so no trim hit test runs on the
         // waveform at all. Resolved ONCE here, ahead of every branch that
@@ -1109,7 +1109,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // index they all read.
         //
         // `stem_click` is what widens the marker branches' own gate from
-        // "inside_top" to "inside_top OR a stem": the chip-row and empty-lane
+        // "inside_top" to "inside_top OR a stem": the trim-bar and empty-lane
         // arms inside those branches are y-band tests that a waveform press
         // fails, so they fall through untouched.
         const bool stem_click =
@@ -1119,7 +1119,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // A top-strip press stops playback WHEN IT CLAIMS SOMETHING, never
         // merely because it landed in the strip (architect 2026-07-27). The
         // stop is the price of an authoring or a navigation act — a marker
-        // select, a trim bound set, a chip-row consume — and continuing audio
+        // select, a trim bound set, a trim-bar consume — and continuing audio
         // during authoring / text editing is the wrong default, so each of
         // those acts calls stop_playback_if_playing ITSELF at its own site
         // below. THE STOP IS INTENTIONAL, NOT POSITIONAL: a press that claims
@@ -1133,7 +1133,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // is as playback-inert as an unclaimed one. That covers every modified
         // combination the branches below reject (alt on a marker, ctrl or alt
         // on an empty flag/triangle spot, ctrl+alt, shift+alt, ...), a
-        // SHIFT-exact chip-row press (trim is transparent to shift), a
+        // SHIFT-exact trim-bar press (trim is transparent to shift), a
         // SHIFT-exact empty flag/triangle-lane press (shift binds nothing on
         // that lane — the waveform's shift region former does not extend to
         // it), every empty marker-text-lane spot, and the inter-lane gaps — all
@@ -1207,7 +1207,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // nothing at all (the ctrl+waveform selection clear is RETIRED,
         // architect 2026-07-23: ctrl is purely the zoom modifier on the waveform).
         // Ctrl-exact on a MARKERLESS top-strip spot is a strict no-op except
-        // the chip row's BEGIN bound set (the claim below).
+        // the trim bar's BEGIN bound set (the claim below).
         if (ctrl && !alt && !shift) {
             // Ctrl-exact on a top-strip MARKER is the individual membership
             // toggle (the former shift behavior) — this AMENDS the "Ctrl keeps
@@ -1320,7 +1320,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         }
 
         // Strict modifier matching: the marker reposition arm lives on the plain
-        // flag press and trim's chip/bridge drags on the plain chip-row press, so
+        // flag press and trim's endcap/bridge drags on the plain trim-bar press, so
         // every remaining modified combination — Ctrl+Alt (a strict no-op),
         // Ctrl+Shift off the trim bar (its one claim is the END bound set
         // above), Shift+Alt, Ctrl+Alt+Shift, ... — no-ops
@@ -1344,7 +1344,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // act, nothing else) — neither ever SELECTS a marker. A Shift press on
         // the waveform instead FORMS a region waveform-wide
         // (the former / marker drop, one-shot — see the waveform block). In the top strip a plain
-        // CHIP-ROW press arms a trim chip/bridge drag (claimed ahead of the
+        // TRIM-BAR press arms a trim endcap/bridge drag (claimed ahead of the
         // marker select); otherwise a marker click — its FLAG BOX, the marker's
         // one pointer item — is the whole selection interface, BOTH views. Plain
         // click: single-select, LAND the playhead on the marker (below), and ARM
@@ -1381,16 +1381,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // are disjoint y-bands, so
             // this contends with nothing: a marker-part press falls to the marker
             // handling below. The PLAIN click consumes the span-framing
-            // double-click, else arms a chip/bridge drag, else — on an unclaimed
+            // double-click, else arms an endcap/bridge drag, else — on an unclaimed
             // spot — is a CONSUMED NOTHING; the bound-set clicks
             // are the ctrl (BEGIN) / ctrl+shift (END)
-            // claims above. A SHIFT-exact chip-row press claims nothing —
+            // claims above. A SHIFT-exact trim-bar press claims nothing —
             // trim is transparent to it, and the shift fall-through below is
             // inert here (the flag boxes' y-band excludes the trim row), so it
             // ends at the inert top-strip return, having touched nothing at
-            // all: it is the only press that reaches the chip row without
+            // all: it is the only press that reaches the trim bar without
             // claiming it (ctrl and alt were discarded at the gate above), and
-            // it stops no playback — nor does the plain press: the chip row's
+            // it stops no playback — nor does the plain press: the trim bar's
             // stop belongs to the DRAG's first accepted bound change
             // (input_trim.cpp).
             // THE RULER BAND IS THE ZOOM STRIP REBORN (row 5): a PLAIN left
@@ -1422,16 +1422,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     return;
                 }
             }
-            const GuiRect chip_row = top_trim_row_area(app);
-            const bool in_chip_row =
-                (y >= chip_row.y && y < chip_row.y + chip_row.h);
-            if (!shift && in_chip_row) {
-                // Plain chip-row press. In a writable tab a chip/bridge hit ARMS
+            const GuiRect trim_bar = top_trim_row_area(app);
+            const bool in_trim_bar =
+                (y >= trim_bar.y && y < trim_bar.y + trim_bar.h);
+            if (!shift && in_trim_bar) {
+                // Plain trim-bar press. In a writable tab an endcap/bridge hit ARMS
                 // the trim drag (a motionless release then runs that same click
                 // action at on_button_release); read-only cannot arm one. Either
-                // way the chip row CONSUMES the press — it never falls to the
+                // way the trim bar CONSUMES the press — it never falls to the
                 // marker handling.
-                // A PLAIN CHIP-ROW CLICK THAT NEVER BECOMES A DRAG IS NOW A
+                // A PLAIN TRIM-BAR CLICK THAT NEVER BECOMES A DRAG IS NOW A
                 // CONSUMED NOTHING (architect 2026-07-30). Its entire act was
                 // PUBLISHING the trim window as a region highlight, and that
                 // coupling is retired outright with the SPAN FORM — so the two
@@ -1445,7 +1445,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 //
                 // THE SPAN-FRAMING DOUBLE-CLICK, rehomed onto this band from the
                 // deleted zoom lane (architect 2026-07-31): the whole band —
-                // chips, bridge and empty space alike — carries it, since it
+                // endcaps, bridge and empty space alike — carries it, since it
                 // frames rather than grabs. The CONSUME runs FIRST, ahead of
                 // every arm: a candidate from the previous motionless press-
                 // release on this band, inside kDoubleClickMs and the slack on
@@ -1469,12 +1469,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 }
                 // SEEDING is a RELEASE act (only the release knows the press
                 // stayed still), so the press records its point and the release
-                // decides — see ChipRowPressSeed. Recorded ABOVE the read-only
+                // decides — see TrimBarPressSeed. Recorded ABOVE the read-only
                 // return: a locked tab arms no drag but still frames.
-                app.chip_row_press = ChipRowPressSeed{
+                app.trim_bar_press = TrimBarPressSeed{
                     .active = true, .press_x = x, .press_y = y};
                 if (active_view_state(app).read_only) return;
-                route_trim_chip_press(x, y);
+                route_trim_bar_press(x, y);
                 return;
             }
             if (mh_index >= 0) {
@@ -1653,7 +1653,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 }
             } else {
                 // Empty top-strip spot — no marker flag under the point (the
-                // chip row already returned above; mh_index < 0 here).
+                // trim bar already returned above; mh_index < 0 here).
                 // ONE lane to test: the flag and triangle lanes became the
                 // single marker lane in row 5.
                 const GuiRect marker_lane = top_marker_row_area(app);
@@ -1670,7 +1670,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // (deselect + playhead + region arm).
                     // PLAIN ONLY: a SHIFT press on the lane claims nothing at all
                     // and falls to the inert return below, exactly like the
-                    // SHIFT-exact chip-row press — shift has no meaning here (the
+                    // SHIFT-exact trim-bar press — shift has no meaning here (the
                     // waveform's shift region former does not extend to the lane),
                     // so it seeds nothing, places nothing, and leaves a shift+drag
                     // inert. Ctrl and alt never reach this branch (discarded at the
@@ -1710,7 +1710,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // and the stops all live at the claims. That covers the whole
                 // marker lane outside every flag box — a box under the point is
                 // a marker hit and never reaches this branch. The inter-lane
-                // gaps, the SHIFT-exact chip-row press and the SHIFT-exact
+                // gaps, the SHIFT-exact trim-bar press and the SHIFT-exact
                 // marker-lane press land here too, equally inert.
                 return;
             }
@@ -2079,15 +2079,15 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 
     // THE TRIM-BAR FRAMING DOUBLE-CLICK'S SEED, resolved for every left release
     // because only the release can tell a click from a drag. The press recorded
-    // the chip-row point (ChipRowPressSeed); this seeds the candidate when the
+    // the trim-bar point (TrimBarPressSeed); this seeds the candidate when the
     // pointer never left the slack AND no trim drag went live — the two spellings
     // of "it stayed a click", equal by construction (kDoubleClickSlackPx ==
-    // kDragMovedThresholdPx). A moved chip/bridge drag therefore seeds nothing
+    // kDragMovedThresholdPx). A moved endcap/bridge drag therefore seeds nothing
     // and, its own press having cleared any candidate at the top-of-frame, leaves
     // none behind. The record is consumed either way.
     {
-        const ChipRowPressSeed seed = app.chip_row_press;
-        app.chip_row_press = ChipRowPressSeed{};
+        const TrimBarPressSeed seed = app.trim_bar_press;
+        app.trim_bar_press = TrimBarPressSeed{};
         if (seed.active && !app.trim_drag.active &&
             std::abs(x - seed.press_x) <= kDoubleClickSlackPx &&
             std::abs(y - seed.press_y) <= kDoubleClickSlackPx) {
@@ -2165,7 +2165,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     }
     if (app.pending_trim_drag.active) {
         // The pending trim drag never crossed the threshold: a motionless
-        // chip/bridge press, which is now a CONSUMED NOTHING (architect
+        // endcap/bridge press, which is now a CONSUMED NOTHING (architect
         // 2026-07-30). Its whole act was publishing the trim window as a region
         // highlight, and that coupling retired with the SPAN FORM; a deselect
         // and a playback stop left behind would be pure cost on a click that
@@ -2264,10 +2264,10 @@ void GuiInputHandler::finalize_active_drags() {
     app.pending_trim_drag   = PendingTrimDrag{};
     // A force-end is not a clean click sequence, so no candidate may survive to
     // pair with a later click (the standing rule at every non-release gesture
-    // end) — and neither may the chip row's press record, which would otherwise
+    // end) — and neither may the trim bar's press record, which would otherwise
     // seed one at the next release.
     app.double_click   = DoubleClickCandidate{};
-    app.chip_row_press = ChipRowPressSeed{};
+    app.trim_bar_press = TrimBarPressSeed{};
 }
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
@@ -2745,7 +2745,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         update_trim_drag(mouse_x);
         return;
     }
-    // Pending trim drag (armed by a plain chip-row press): the trim reposition
+    // Pending trim drag (armed by a plain trim-bar press): the trim reposition
     // begins only once the pointer travels past the shared Chebyshev threshold.
     // A lost button before the crossing ends it as a motionless click (nothing
     // committed). Placed after the trim_drag branch above: on the crossing this
@@ -2753,18 +2753,18 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // back into that branch this event.
     if (app.pending_trim_drag.active) {
         if (!mods.primary_button_held) {   // button lost -> just the click
-            // The motionless chip/bridge press commits NOTHING (architect
+            // The motionless endcap/bridge press commits NOTHING (architect
             // 2026-07-30, the clean-release twin above): its highlight publish is
             // retired, so the same physical click rests identically whichever
             // path ended it — as a consumed nothing.
             app.pending_trim_drag = PendingTrimDrag{};
-            // THE CHIP-ROW SEED DIES WITH IT. A button lost mid-press is not a
+            // THE TRIM-BAR SEED DIES WITH IT. A button lost mid-press is not a
             // clean click sequence, so it may not leave a seed behind for an
             // unrelated later release to consume into a TrimBar double-click
             // candidate — the same rule the force-end finalizer follows, and the
             // lifetime the seed's own declaration states (app_state.h). Only the
             // CLEAN release is allowed to seed.
-            app.chip_row_press = ChipRowPressSeed{};
+            app.trim_bar_press = TrimBarPressSeed{};
             return;
         }
         if (std::max(std::abs(mouse_x - app.pending_trim_drag.press_x),

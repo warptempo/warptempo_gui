@@ -47,7 +47,7 @@ struct GuiPlaybackLifecycle {
     //   * PURE VIEWPORT MOVES DO NOT STOP: bare `0`, PageUp/PageDown, the zoom
     //     steps — they move the window onto the audio, not the audio.
     //   * TRIM MUTATIONS STOP, IN BOTH VIEWS: `x` and Shift+X, matching every
-    //     POINTER trim route (the chip/bridge drags and the bound-set clicks each
+    //     POINTER trim route (the endcap/bridge drags and the bound-set clicks each
     //     stop at their own commit point). BOTH views because a live audition is
     //     playing out the very window the mutation replaces: it would keep running
     //     against bounds the paint has stopped showing — the source-view case that
