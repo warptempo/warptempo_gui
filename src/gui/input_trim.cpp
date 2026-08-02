@@ -610,6 +610,54 @@ void GuiInputHandler::commit_trim_drag() {
             snap_moved_bound(app.trim.end_frame,
                              app.trim_drag.orig_end_frame,
                              audio.total_frames() - 1);
+            // THE PARTNER CLAMP RUNS AGAIN HERE, AFTER THE SNAP, and it has to:
+            // the snap above is what defeats the mid-drag clamp. update_trim_drag
+            // stops the moving bound exactly ON its partner, but the partner is
+            // an ARBITRARY resting frame that need not sit on the painted
+            // authoring grid — so round-tripping the coincident value through
+            // painted_column_of_source_frame / authored_frame_at_column lands it
+            // on its column's own frame, which is at or BEFORE where it was, and
+            // the two bounds come apart again by up to one grid span. That
+            // silently broke the ruled drag-onto-partner quick-clear: with an end
+            // resting at 100 on a 16-frame grid, a begin dragged onto it
+            // committed as [96, 100] — a sliver auto_clear_crossed_trim's
+            // `end <= begin` compare does not recognise — instead of the full
+            // window the architect ruled ("if they are set coincident, make trim
+            // 0 to EOF"). Re-clamping restores the equality the compare needs.
+            //
+            // BOTH ARMS, not just the visibly broken one. Only the begin arm
+            // showed the sliver: the snap always pulls a value DOWN, so an END
+            // dragged onto its begin overshot to end < begin and was rescued by
+            // the same crossed compare, clearing by accident rather than by the
+            // stated rule. That is the clamp's own invariant ("the handle can
+            // land exactly ON its partner and never beyond it") being violated
+            // and then covered up, so the fix states both arms and neither
+            // depends on the rescue.
+            //
+            // AFTER THE ABSOLUTE WALL IS SAFE, the same order-independence
+            // argument the mid-drag clamp records: the partner is itself
+            // wall-held, so clamping to it only ever pulls the bound INWARD and
+            // can never push it back outside [0, EOF-1] that snap_moved_bound
+            // just enforced.
+            //
+            // SINGLE-BOUND ARM ONLY. The bridge drag moves both bounds by one
+            // shared delta and has no partner wall by ruling (the gap is
+            // invariant mid-gesture, so there is nothing to cross); adding a
+            // clamp there would invent a rule for a gesture that cannot need
+            // one. Its own release-snap deformation is the accepted ±1 frame the
+            // block comment above records.
+            if (!app.trim_drag.both) {
+                const int64_t partner = app.trim_drag.is_begin
+                                            ? app.trim.end_frame
+                                            : app.trim.begin_frame;
+                if (app.trim_drag.is_begin) {
+                    if (app.trim.begin_frame > partner)
+                        app.trim.begin_frame = partner;
+                } else {
+                    if (app.trim.end_frame < partner)
+                        app.trim.end_frame = partner;
+                }
+            }
             // Trim drags never move the playhead, so the
             // commit snaps the bounds only — there is no playhead pin/sync here.
         }
