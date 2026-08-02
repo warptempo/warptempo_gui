@@ -18,12 +18,37 @@
 // Every gesture clamps each bound to its absolute walls — frame 0 to EOF-1,
 // the same wall both marker columns hold. All authored positions (both marker
 // columns and both trim bounds) share the inclusive [0, total-1] domain — the
-// end bound's old exclusive-at-total wall is retired. There are no partner
-// walls: a bound crosses its partner freely during any gesture — but
-// crossed/equal can no longer REST: every trim commit runs
-// auto_clear_crossed_trim (below), so a commit landing on or across the
-// partner RESETS the pair to the full window. Every wall check is a plain
-// integer compare — literally the load guard's comparison.
+// end bound's old exclusive-at-total wall is retired. Every wall check is a
+// plain integer compare — literally the load guard's comparison.
+//
+// PARTNER WALLS ARE NOW PER-ROUTE (architect 2026-08-02, splitting what used to
+// be one blanket "there are no partner walls" clause). What is unchanged
+// everywhere is the REST rule: crossed/equal can never rest, because every trim
+// commit runs auto_clear_crossed_trim (below) and a pair landing on or across
+// itself RESETS to the full window. What differs is how far a gesture may push
+// before that tail sees it:
+//   THE SINGLE-BOUND DRAG CLAMPS AT ITS PARTNER — the handles "cannot move past
+//     each other". The moving bound stops INCLUSIVELY on the resting one, so
+//     mid-drag the store can hold begin == end but never a crossed pair. A
+//     coincident release then falls into the commit rule above unchanged, which
+//     makes dragging one handle onto the other the DRAG'S OWN ROUTE to clearing
+//     the trim — the reset is the feature, not an accident. Expression and
+//     rationale at the clamp itself, in update_trim_drag.
+//   THE BOTH-BOUNDS (bridge) DRAG NEEDS NO PARTNER WALL and has none: it moves
+//     the pair rigidly by one shared delta, so the gap between the bounds is
+//     invariant for the whole gesture and there is nothing to cross.
+//   THE CTRL / CTRL+SHIFT BOUND-SET CLICKS ARE STRICTER STILL, and were before
+//     this ruling: a click that would rest ON or past its partner is a consumed
+//     no-op that writes nothing (the strictly-inside guard at
+//     handle_trim_set_bound). A clamp would move the bound somewhere the user
+//     did not click; a refusal is the ruled answer there.
+//   THE TYPED AND LOADED ROUTES (the settings editor's `:trim_*=` commits, and
+//     the load) HAVE NO CLAMP AT ALL — a typed pair can still cross, and the
+//     crossed/equal reset is exactly what catches it. The clamp is the DRAG's,
+//     because a clamp is only meaningful where a bound is being pushed.
+//   `x` KEEPS ITS DEGENERATE REFUSAL (an inverse-mapped pair coming out
+//     end <= begin writes NOTHING), which is a refusal for the same
+//     no-undo reason the bound-set clicks have one.
 // The zero floor is subsumed by the walls but remains the reason the floor
 // exists at all: a negative position is unrepresentable in the authored
 // frame form the .settings file persists (parse_authored_frame rejects
@@ -54,8 +79,14 @@ void GuiInputHandler::reset_trim_to_full_window() {
 // refusing). SILENT by design: the chips visibly JUMP TO THE SONG EDGES, which
 // is the whole signal (it used to be the chips vanishing; with the window
 // always set there is nothing to vanish into). The check is the exact integer
-// compare end_frame <= begin_frame, run only at COMMIT — mid-gesture crossing
-// stays free (nothing pops mid-gesture; update_trim_drag never calls this).
+// compare end_frame <= begin_frame, run only at COMMIT — nothing pops
+// mid-gesture, and update_trim_drag never calls this.
+//
+// THE `<=` HALF CARRIES THE COINCIDENT DRAG (architect 2026-08-02). Since the
+// single-bound drag clamps at its partner, the shape it hands this function is
+// begin == end rather than a crossed pair — which this compare has always
+// caught, so the drag's route to clearing the trim (drag one handle onto the
+// other) is served by the rule exactly as written, with nothing added.
 // Every trim commit site — the x set-from-region, the chip/bridge drag release,
 // the bound-set click and the settings-editor `:trim_*=` commit — calls this
 // after its mutation and before its invalidations, so the repaint shows the
@@ -360,7 +391,12 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
         // floor 0 on each and a shared ceiling at frame EOF-1 — mapped through
         // the displayed map (monotone, so the active-domain clamp matches the
         // source-domain wall). This binds both bounds, so neither slides past
-        // EOF under the rigid delta. Crossing stays free (no partner wall).
+        // EOF under the rigid delta. NO PARTNER WALL IS NEEDED ON THIS ARM and
+        // none is applied: the pair rides ONE shared delta, so the gap between
+        // the bounds is invariant for the whole gesture and they cannot approach
+        // each other at all. The partner clamp the 2026-08-02 ruling added
+        // belongs to the single-bound arm below — the only one that can push a
+        // handle toward its twin.
         // begin_wall_active and end_wall_active compute the identical
         // expression — shape-residue of a retired per-bound wall split, now
         // that the ceiling is shared; a future pass may collapse them to one
@@ -457,12 +493,41 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     // Structural wall, applied AFTER the viewport clamp so the wall wins
     // where both bind (matching the marker-drag model where structural walls
     // compose with the viewport gate): both bounds clamp to frame EOF-1, the
-    // unified authored domain. No partner wall — the bound crosses its partner
-    // freely and rests wherever released. The floor 0 is already held by the
+    // unified authored domain. The floor 0 is already held by the
     // viewport clamp (the visible strip starts at or after frame 0), so the 0.0
     // format-representability floor holds by construction here.
     const int64_t wall_hi = audio.total_frames() - 1;
     if (src_frame > wall_hi) src_frame = wall_hi;
+
+    // THE PARTNER IS A WALL, FOR THIS DRAG ONLY (architect 2026-08-02: the trim
+    // handles "cannot move past each other"). The moving bound clamps
+    // INCLUSIVELY at the resting partner's frame — a begin drag stops at the
+    // end, an end drag stops at the begin — so the handle can land exactly ON
+    // its partner and never beyond it. This is the one route that gained a
+    // partner wall; the header block above carries the split.
+    //
+    // LANDING ON THE PARTNER IS A REACHABLE, MEANINGFUL OUTCOME rather than an
+    // edge case to avoid: a coincident release falls into the EXISTING commit
+    // rule untouched — auto_clear_crossed_trim's `end <= begin` compare resets
+    // the pair to the full window — so dragging one handle onto the other IS
+    // the drag's own route to clearing the trim, which is exactly what the
+    // architect asked for ("if they are set coincident, make trim 0 to EOF").
+    // No second arm was added for it and none is wanted: the equal case was
+    // always inside that compare.
+    //
+    // APPLIED LAST, so the partner wins over both the viewport clamp and the
+    // absolute wall. The composition is order-independent in fact — the partner
+    // is itself wall-held, so clamping to it can only ever pull the bound
+    // INWARD — but last is where it belongs by meaning: an offscreen partner
+    // must still stop the handle, and the viewport clamp above must not be able
+    // to hand back a frame past it.
+    const int64_t partner = app.trim_drag.is_begin ? app.trim.end_frame
+                                                   : app.trim.begin_frame;
+    if (app.trim_drag.is_begin) {
+        if (src_frame > partner) src_frame = partner;
+    } else {
+        if (src_frame < partner) src_frame = partner;
+    }
     // Mid-gesture tracking value: int64 throughout (the store cannot hold a
     // fractional frame), but pointer-derived, not column-canonical — the
     // release in commit_trim_drag snaps a moved bound to its painted
@@ -550,8 +615,17 @@ void GuiInputHandler::commit_trim_drag() {
         }
         // The release is the commit: a bound released on or across its
         // partner RESETS the pair to the song edges (crossed/equal cannot rest;
-        // ruling at auto_clear_crossed_trim). Mid-drag crossing stayed free; the
-        // playhead was never touched by the gesture.
+        // ruling at auto_clear_crossed_trim). The playhead was never touched by
+        // the gesture.
+        //
+        // UNCHANGED BY THE 2026-08-02 PARTNER CLAMP, deliberately. The clamp
+        // narrowed what the single-bound arm can hand this tail — ON the partner
+        // instead of across it — and `end <= begin` already covered the equal
+        // case, so a coincident release resets exactly as a crossed one used to.
+        // That is the whole implementation of "if they are set coincident, make
+        // trim 0 to EOF": no new arm here, and none wanted. The bridge arm and
+        // the typed routes can still hand it other shapes, which is the other
+        // reason the compare stays as it is.
         auto_clear_crossed_trim();
         viewport.invalidate_waveform_area();
         viewport.invalidate_timestamp_area();

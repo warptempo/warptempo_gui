@@ -1283,8 +1283,9 @@ void GuiPaintHandler::paint_toolbar_row(cairo_t* cr) {
 
         // ONE MIX FACTOR FOR BOTH INKS: the icon paths and the label each retain
         // the same fraction of themselves over the row ground, so a disabled
-        // button dims as one object. Enabled, the factor is 1 and both are
-        // bit-identical to the rest face.
+        // button dims as one object. Enabled, the factor is 1 and both paint the
+        // rest face's own colors — exactly on the pixel, the ULP caveat at
+        // mix_color's declaration (render.h) applying here as everywhere.
         const double keep = enabled ? 1.0 : kRedesignDisabledMix;
 
         // The icon fills its own square, vertically centered in the button box,

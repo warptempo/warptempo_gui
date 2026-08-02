@@ -42,9 +42,18 @@ inline constexpr GuiColor hex(uint32_t rgb) {
 }
 
 // THE ONE COLOR-MIX OWNER: `own` retained by keep_own, the remainder made up
-// with `toward`. keep_own == 1 returns `own` bit-identically and keep_own == 0
-// returns `toward`, so a call site that means "unchanged" costs nothing and
-// says so. Used by the redesign's DISABLED FACE — the icon paths (icons.cpp)
+// with `toward`. keep_own == 0 returns `toward` exactly (the `own` term is
+// annihilated), and keep_own == 1 returns `own` TO WITHIN ONE ULP — near enough
+// that a call site meaning "unchanged" costs nothing and says so.
+//
+// NOT BIT-IDENTICAL AT keep_own == 1, and this line used to claim it was: the
+// form is toward + (own - toward), and the subtraction is exact only when the
+// two channels are within a factor of two of each other (Sterbenz). Where they
+// are not — kWaveformInk over #fcfcfc, the channel split line — the result
+// misses `own` by an ULP. It has never mattered and cannot: every consumer hands
+// these doubles straight to cairo, which quantizes to 8 bits, and an ULP never
+// survives that. Stated so no future caller builds an equality test on the old
+// claim. Used by the redesign's DISABLED FACE — the icon paths (icons.cpp)
 // and the label (paint_handler.cpp) resolve through this single expression, so
 // the two halves of a greyed button can never dim by different arithmetic.
 // A MIX, NOT AN ALPHA: the palette is fully opaque and nothing composites; this
@@ -753,26 +762,41 @@ inline constexpr GuiColor kWaveformInk    = hex(0x1C816B);  // (28, 129, 107)
 // press, so the gesture split finally has a visible edge. It paints in both
 // views, always.
 //
-// DERIVED, NOT SAMPLED — and SUBTLE (architect 2026-08-01, at the live look:
-// the first value #2f9e44 "looks lime green", and the rule wants to be "clear
-// enough to see when choosing where to click, not highly noticeable"). There is
-// no kdenlive crop for it (kdenlive draws no such rule), so what is derived is a
-// RELATIONSHIP to the ground the rule sits on, exactly as kWaveformRegionCanvas
-// derives from the same canvas: THE CANVAS LIFTED A QUARTER OF THE WAY TOWARD
-// #fcfcfc, through the ONE mix_color owner.
+// DERIVED, NOT SAMPLED: there is no kdenlive crop for it (kdenlive draws no
+// such rule), so what the value is, is a RELATIONSHIP to the waveform's own two
+// colors — taken through the ONE mix_color owner, with the BASE and the
+// FRACTION both left standing as the architect's knobs.
 //
-//   kWaveformCanvas #12312b (18, 49, 43), 75% retained over #fcfcfc (252):
-//     r = 252 + (18 - 252) * 0.75 =  76.50
-//     g = 252 + (49 - 252) * 0.75 =  99.75   ->  approximately #4d645f
-//     b = 252 + (43 - 252) * 0.75 =  95.25
+// IT IS THE WAVEFORM INK ITSELF (architect 2026-08-02, "use waveform color"):
+// base kWaveformInk #1c816b, fraction 1.0 — fully retained, so the rule reads
+// as the waveform's own green drawn across the channel boundary.
 //
-// The constant holds those exact doubles, not the rounded hex — cairo takes the
-// channels straight. IT STAYS THE ARCHITECT'S KNOB, and BOTH halves are the
-// tunable part: the FRACTION (how visible the rule is) and the BASE it lifts
-// (he named "canvas or waveform [ink] mixed with fcfcfc" as the family, so
-// swapping kWaveformCanvas for kWaveformInk is the other member).
+// "FULLY RETAINED" IS EXACT ON THE PIXEL, NOT ON THE BIT, and the distinction is
+// recorded because the mix owner's contract oversells it: at keep_own == 1 the
+// expression is toward + (own - toward), which for THIS operand pair lands one
+// ULP off kWaveformInk on red and blue (the subtraction is inexact — the two
+// values are far apart in magnitude, so Sterbenz does not apply). Both quantize
+// to #1c816b, which is what cairo paints, so the drawn rule IS the ink; only the
+// doubles differ, and nothing here compares them.
+//
+// THIS SUPERSEDES THE PALE CANVAS-LIFT. The value was
+// mix_color(kWaveformCanvas, #fcfcfc, 0.75) — the canvas lifted a quarter of
+// the way toward white, approximately #4d645f — chosen on 2026-08-01 when he
+// asked for something "clear enough to see when choosing where to click, not
+// highly noticeable" after rejecting a first #2f9e44 as "lime green". The live
+// pass settled it the other way: his own 2026-08-01 framing named the family as
+// "canvas or waveform [ink] mixed with fcfcfc", and this is that family's OTHER
+// member at full strength. The prior expression is recorded here rather than
+// left in the tree.
+//
+// BOTH HALVES REMAIN TUNABLE, which is why the mix survives a fraction of 1.0
+// instead of collapsing to a bare alias: the FRACTION is still the subtlety
+// knob (lowering it washes the ink toward the base below, exactly as the old
+// 0.75 washed the canvas) and the BASE is still the family choice. A call site
+// that means "unchanged" costs nothing and says so — the mix owner's own
+// contract.
 inline constexpr GuiColor kWaveformChannelSplit =
-    mix_color(kWaveformCanvas, hex(0xFCFCFC), 0.75);
+    mix_color(kWaveformInk, hex(0xFCFCFC), 1.0);
 
 // THE REGION HIGHLIGHT, RE-DERIVED ON THE NEW GROUND (architect 2026-08-01: the
 // old value read GREY on the green canvas — "start over, don't just tune it;
