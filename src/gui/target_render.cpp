@@ -317,7 +317,7 @@ void GuiTargetRender::dispatch_render_now() {
             }
             complete_successful_buffer();
             std::fprintf(stderr,
-                "warptempo_gui: target view loaded from archival render: "
+                "warptempo_gui: Target view loaded from archival render: "
                 "%s\n",
                 artifact_candidate.c_str());
             return;
@@ -389,13 +389,13 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
     if (outcome == RenderOutcome::Success) {
         complete_successful_buffer();
     } else if (outcome == RenderOutcome::Cancelled) {
-        std::fprintf(stderr, "warptempo_gui: target render cancelled\n");
+        std::fprintf(stderr, "warptempo_gui: Target render cancelled\n");
         // Leave the target buffer's frames count at 0 — playback
         // gating checks this to refuse Space.
         app.target_buffer.clear();
         app.target_buffer_frames = 0;
     } else {
-        std::fprintf(stderr, "warptempo_gui: target render failed\n");
+        std::fprintf(stderr, "warptempo_gui: Target render failed\n");
         app.target_buffer.clear();
         app.target_buffer_frames = 0;
     }
@@ -479,7 +479,7 @@ GuiTargetRender::compute_buffer_start_frame_for(
     // Survival verdict (orchestrator decoupling; rationale at the struct in
     // target_render.h). For a proper SUB-WINDOW, two fallbacks render the FULL,
     // untrimmed buffer with anchor 0, mirroring do_render / the CLI:
-    //   - "trim end at or before trim begin": unreachable from a resting store
+    //   - "Trim end at or before trim begin": unreachable from a resting store
     //     (a sub-window can never rest crossed/equal — commit and load reset it
     //     to the full window), kept as the breach mirror of
     //     validate_trim_frames' check ORDER; and
@@ -508,12 +508,12 @@ GuiTargetRender::compute_buffer_start_frame_for(
         // the wrong reason string). Exact source-domain integer compare; a
         // resting store cannot reach it any more, so this is the breach mirror.
         if (e <= b) {
-            return {0, true, "trim end at or before trim begin"};
+            return {0, true, "Trim end at or before trim begin"};
         }
         if (t_end - t_begin < 1) {
             // Fallback: the FULL deliverable, anchor 0.
             return {0, true,
-                    "trim target span rounds below one output sample"};
+                    "Trim target span rounds below one output sample"};
         }
         // The anchor is the sub-window begin's target image — llrint(T_b).
         return {t_begin, false, nullptr};

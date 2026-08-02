@@ -371,7 +371,7 @@ int main(int argc, char** argv) {
     } else if (ends_with(path, ".settings")) {
         kind = Kind::Settings;
     } else {
-        diag("migrate", path,
+        diag("Migrate", path,
              "unrecognized extension (expected .warpmarkers, "
              ".phaseresetmarkers, or .settings)");
         return 1;
@@ -382,7 +382,7 @@ int main(int argc, char** argv) {
     {
         std::ifstream f(path, std::ios::binary);
         if (!f) {
-            diag("read", path, "cannot open file");
+            diag("Read", path, "cannot open file");
             return 1;
         }
         std::ostringstream ss;
@@ -412,7 +412,7 @@ int main(int argc, char** argv) {
                                      line_number, out_line, detail);
         }
         if (!ok) {
-            diag("convert", path, detail);
+            diag("Convert", path, detail);
             return 1;
         }
         out_lines.push_back(std::move(out_line));
@@ -420,7 +420,7 @@ int main(int argc, char** argv) {
     const std::string converted = join_lines(out_lines);
 
     // Overwrite confirmation. The user creates their own backups.
-    std::cerr << kProg << ": will overwrite '" << path
+    std::cerr << kProg << ": Will overwrite '" << path
               << "' in place; proceed? [y/N]\n";
     std::string reply;
     std::getline(std::cin, reply);
@@ -431,13 +431,13 @@ int main(int argc, char** argv) {
     // Simple truncate-and-write, matching the GUI serializers.
     std::ofstream out(path, std::ios::binary | std::ios::trunc);
     if (!out) {
-        diag("write", path, "cannot open file for writing");
+        diag("Write", path, "cannot open file for writing");
         return 1;
     }
     out << converted;
     out.flush();
     if (!out) {
-        diag("write", path, "write error");
+        diag("Write", path, "write error");
         return 1;
     }
     return 0;

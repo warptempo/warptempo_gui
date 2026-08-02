@@ -111,6 +111,10 @@ std::vector<char> warp_coincident_collapse_members(
 
 namespace {
 
+// Terminal message strings in this file carry sentence-initial capitals
+// (architect approval 2026-08-02, the terminal capitalization pass —
+// text-only, otherwise byte-identical output).
+
 // Stages 1-3 of the render resolver's normalization pipeline — the shared
 // projection: resolve_warp_markers_for_render runs it with emit_stderr=true
 // and proceeds with stages 4-6 on the result; marker_effective runs it with
@@ -187,7 +191,7 @@ std::vector<WarpMarker> normalized_surviving_markers(
                 collapsed_raw.push_back(-1);
                 if (emit_stderr) {
                     std::fprintf(stderr,
-                        "coincident warp markers at %s render as tempo 1.00\n",
+                        "Coincident warp markers at %s render as tempo 1.00\n",
                         format_timestamp(
                             static_cast<double>(owner.time_frame) / sr_d)
                             .c_str());
@@ -281,7 +285,7 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
             // concrete from here on, so stage 5 measures it like any owner.
             if (pr.from_ref) {
                 std::fprintf(stderr,
-                    "pass marker at %s inherits from a label ref; "
+                    "Pass marker at %s inherits from a label ref; "
                     "renders as tempo 1.00\n",
                     format_timestamp(
                         static_cast<double>(p.time_frame) / sr_d).c_str());
@@ -349,7 +353,7 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
             plain.time_frame = norm[i].time_frame;
             norm[i] = plain;
             std::fprintf(stderr,
-                "label reference %s at %s %s; renders as tempo 1.00\n",
+                "Label reference %s at %s %s; renders as tempo 1.00\n",
                 name.c_str(),
                 format_timestamp(
                     static_cast<double>(plain.time_frame) / sr_d).c_str(),
@@ -881,10 +885,12 @@ std::string compute_hover_popup_text(
 // (GuiInputHandler::validate_target_view_entry -> prompt.open_error_notice,
 // input_handler.cpp), which shows the owner's string verbatim on the bottom
 // strip. Every other frozen refusal reaching the GUI ends at stderr or at an
-// editor's red flash, so those keep the terminal round's lowercase. The CLI
-// prints these same strings and its bytes move with them — accepted under the
-// grant, since one string cannot serve two cases. Wording, punctuation and
-// vocabulary are otherwise untouched.
+// editor's red flash; those now carry sentence-initial capitals too (the
+// 2026-08-02 terminal capitalization pass, same grant), so the distinction
+// recorded here is about WHICH strings the GUI paints, not about their case.
+// The CLI prints these same strings and its bytes move with them — accepted
+// under the grant, since one string cannot serve two cases. Wording,
+// punctuation and vocabulary are otherwise untouched.
 std::expected<std::vector<WarpFrameMapSegment>, std::string>
 build_warp_frame_map(const std::vector<MarkerForRender>& markers,
                      double scale, long sample_rate, long total_frames) {

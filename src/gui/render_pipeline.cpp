@@ -90,7 +90,7 @@ RenderOutcome do_render(const RenderRequest& req,
     auto src_info = audio_probe(req.source_audio_path);
     if (!src_info) {
         std::fprintf(stderr,
-            "warptempo_gui: render error: open failed for '%s': %s\n",
+            "warptempo_gui: Render error: open failed for '%s': %s\n",
             req.source_audio_path.c_str(), src_info.error().c_str());
         return RenderOutcome::Failed;
     }
@@ -109,7 +109,7 @@ RenderOutcome do_render(const RenderRequest& req,
             slice_to_phase_reset_markers(req.phase_resets), sample_rate,
             total_frames);
     if (!phase_reset_source_frames_r) {
-        std::fprintf(stderr, "warptempo_gui: render error: %s\n",
+        std::fprintf(stderr, "warptempo_gui: Render error: %s\n",
                      phase_reset_source_frames_r.error().c_str());
         return RenderOutcome::Failed;
     }
@@ -134,7 +134,7 @@ RenderOutcome do_render(const RenderRequest& req,
         resolved_warp_markers, scale, sample_rate, total_frames);
     if (!rfull) {
         std::fprintf(stderr,
-            "warptempo_gui: render error: map build failed: %s\n",
+            "warptempo_gui: Render error: map build failed: %s\n",
             rfull.error().c_str());
         return RenderOutcome::Failed;
     }
@@ -186,9 +186,9 @@ RenderOutcome do_render(const RenderRequest& req,
             std::filesystem::equivalent(candidate,
                                         req.source_audio_path, ec)) {
             std::fprintf(stderr,
-                "warptempo_gui: render error: output '%s' resolves to "
+                "warptempo_gui: Render error: output '%s' resolves to "
                 "the source audio file; refusing to overwrite the "
-                "source. change the title setting.\n",
+                "source. Change the title setting.\n",
                 candidate.string().c_str());
             return RenderOutcome::Failed;
         }
@@ -233,7 +233,7 @@ RenderOutcome do_render(const RenderRequest& req,
                     target_dir.string(), stem,
                     full_warp_frame_map, full_phase_reset_frame_map); !w) {
                 std::fprintf(stderr,
-                    "warptempo_gui: render warning: cache framemap write "
+                    "warptempo_gui: Render warning: cache framemap write "
                     "skipped: %s\n", w.error().c_str());
             }
         }
@@ -279,7 +279,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 std::filesystem::remove(path, ec);
                 if (ec) {
                     std::fprintf(stderr,
-                        "warptempo_gui: render warning: remove failed for "
+                        "warptempo_gui: Render warning: remove failed for "
                         "'%s': %s\n",
                         path.c_str(), ec.message().c_str());
                 }
@@ -291,7 +291,7 @@ RenderOutcome do_render(const RenderRequest& req,
         std::filesystem::remove(final_output_path, ec);
         if (ec) {
             std::fprintf(stderr,
-                "warptempo_gui: render warning: remove failed for '%s': "
+                "warptempo_gui: Render warning: remove failed for '%s': "
                 "%s\n",
                 final_output_path.c_str(), ec.message().c_str());
         }
@@ -317,7 +317,7 @@ RenderOutcome do_render(const RenderRequest& req,
             };
             auto note_failure = [&](const std::filesystem::path& path) {
                 std::fprintf(stderr,
-                    "warptempo_gui: render error: write failed for '%s'\n",
+                    "warptempo_gui: Render error: write failed for '%s'\n",
                     path.string().c_str());
                 result.ok = false;
             };
@@ -435,7 +435,7 @@ RenderOutcome do_render(const RenderRequest& req,
 
     auto finish_success = [&](const char* outcome) -> RenderOutcome {
         (void)outcome;
-        std::fprintf(stderr, "warptempo_gui: render complete: %s\n",
+        std::fprintf(stderr, "warptempo_gui: Render complete: %s\n",
                      req.output_buffer ? "<buffer>" : final_output_path.c_str());
         return RenderOutcome::Success;
     };
@@ -497,7 +497,7 @@ RenderOutcome do_render(const RenderRequest& req,
                               b, e, static_cast<int64_t>(total_frames),
                               N_fft, R_s);
         if (!plan) {
-            // plan.error() strings all begin with "trim ..." (the
+            // plan.error() strings all begin with "Trim ..." (the
             // vocabulary in trimmer.cpp), so no extra category word here.
             std::fprintf(stderr,
                 "warptempo_gui: %s; rendering untrimmed\n",
@@ -545,7 +545,7 @@ RenderOutcome do_render(const RenderRequest& req,
     if (!req.output_buffer &&
         fingerprint_sidecar_matches(final_output_path, fingerprint)) {
         std::fprintf(stderr,
-            "warptempo_gui: render up to date (fingerprint match): %s\n",
+            "warptempo_gui: Render up to date (fingerprint match): %s\n",
             final_output_path.c_str());
         CommitCriticalSidecars sidecars =
             publish_commit_critical_batch_sidecars();
@@ -586,7 +586,7 @@ RenderOutcome do_render(const RenderRequest& req,
         // complete; every render is wav, so it is always written here.
         if (!write_fingerprint_sidecar(final_output_path, fingerprint)) {
             std::fprintf(stderr,
-                "warptempo_gui: fingerprint sidecar write skipped for %s\n",
+                "warptempo_gui: Fingerprint sidecar write skipped for %s\n",
                 final_output_path.c_str());
         }
         cleanup_all();
@@ -656,7 +656,7 @@ RenderOutcome do_render(const RenderRequest& req,
                     return finalize_published_wav("reused_artifact");
                 }
                 std::fprintf(stderr,
-                    "warptempo_gui: render warning: project artifact reuse "
+                    "warptempo_gui: Render warning: project artifact reuse "
                     "failed for '%s': %s; falling back to a full render\n",
                     artifact_candidate.c_str(), ec.message().c_str());
                 cleanup_all();
@@ -680,14 +680,14 @@ RenderOutcome do_render(const RenderRequest& req,
                 return finalize_published_wav("reused_cache");
             }
             std::fprintf(stderr,
-                "warptempo_gui: render warning: render cache publish "
+                "warptempo_gui: Render warning: render cache publish "
                 "failed for '%s'; falling back to a full render\n",
                 final_output_path.c_str());
             cleanup_all();
         }
     }
 
-    std::fprintf(stderr, "warptempo_gui: rendering -> %s\n",
+    std::fprintf(stderr, "warptempo_gui: Rendering -> %s\n",
                  final_output_path.c_str());
 
     {
@@ -764,7 +764,7 @@ RenderOutcome do_render(const RenderRequest& req,
         if (auto v = validate_render_projection(
                 engine_output_frames, encoded_frames, src_ch,
                 /*encode_to_disk=*/req.output_buffer == nullptr); !v) {
-            std::fprintf(stderr, "warptempo_gui: render error: %s\n",
+            std::fprintf(stderr, "warptempo_gui: Render error: %s\n",
                          v.error().c_str());
             cleanup_all();
             return RenderOutcome::Failed;
@@ -781,7 +781,7 @@ RenderOutcome do_render(const RenderRequest& req,
         const EngineResult er = run_warptempo_engine(ep, cancel_flag);
         if (er != EngineResult::Success) {
             if (er == EngineResult::Failed) {
-                std::fprintf(stderr, "warptempo_gui: render error: engine failed\n");
+                std::fprintf(stderr, "warptempo_gui: Render error: engine failed\n");
             }
             return handle_eng(er);
         }
@@ -800,7 +800,7 @@ RenderOutcome do_render(const RenderRequest& req,
             req.output_buffer ? std::string() : staging_output_path,
             cancel_flag);
         if (!fin) {
-            std::fprintf(stderr, "warptempo_gui: render error: %s\n",
+            std::fprintf(stderr, "warptempo_gui: Render error: %s\n",
                          fin.error().c_str());
             cleanup_all();
             return RenderOutcome::Failed;
@@ -846,7 +846,7 @@ RenderOutcome do_render(const RenderRequest& req,
             std::filesystem::rename(staging_output_path, final_output_path, ec);
             if (ec) {
                 std::fprintf(stderr,
-                    "warptempo_gui: render error: rename failed for '%s' -> "
+                    "warptempo_gui: Render error: rename failed for '%s' -> "
                     "'%s': %s\n",
                     staging_output_path.c_str(), final_output_path.c_str(),
                     ec.message().c_str());
@@ -862,7 +862,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 std::vector<char> wav_blob;
                 if (!read_file_bytes(final_output_path, wav_blob)) {
                     std::fprintf(stderr,
-                        "warptempo_gui: render warning: read failed for "
+                        "warptempo_gui: Render warning: read failed for "
                         "'%s'\n",
                         final_output_path.c_str());
                 } else if (encoded_frames > 0) {

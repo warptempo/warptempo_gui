@@ -158,7 +158,7 @@ bool GuiInputHandler::allocate_miscellaneous_cell(std::string& out_folder,
     std::filesystem::create_directories(target_folder, ec);
     if (ec) {
         std::fprintf(stderr,
-            "warptempo_gui: render-miscellaneous: could not create "
+            "warptempo_gui: render-miscellaneous: Could not create "
             "'%s': %s\n",
             target_folder.string().c_str(), ec.message().c_str());
         return false;
@@ -243,7 +243,7 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
         [this](RenderOutcome o) {
             const bool success = (o == RenderOutcome::Success);
             if (o == RenderOutcome::Cancelled) {
-                std::fprintf(stderr, "warptempo_gui: render cancelled\n");
+                std::fprintf(stderr, "warptempo_gui: Render cancelled\n");
             }
             finalize_render_run();
             // On success, re-establish a cold/stale target buffer (see
@@ -315,11 +315,11 @@ void GuiInputHandler::dispatch_next_batch_entry() {
     if (out_of_entries || cancelled) {
         if (cancelled) {
             std::fprintf(stderr,
-                "warptempo_gui: %s: rendered %d of %d entries (cancelled)\n",
+                "warptempo_gui: %s: Rendered %d of %d entries (cancelled)\n",
                 batch_.label.c_str(), batch_.rendered, total);
         } else {
             std::fprintf(stderr,
-                "warptempo_gui: %s: rendered %d of %d entries\n",
+                "warptempo_gui: %s: Rendered %d of %d entries\n",
                 batch_.label.c_str(), batch_.rendered, total);
         }
         // A finished batch just leaves its artifacts on disk; nothing
@@ -521,7 +521,7 @@ bool GuiInputHandler::render_bpm_sweep() {
             duration_seconds, owner.bpm_beats, bpm);
         if (!computed) {
             std::fprintf(stderr,
-                "warptempo_gui: render-bpm: rejected cell "
+                "warptempo_gui: render-bpm: Rejected cell "
                 "bpm=%s (duration=%.6f, beats=%d)\n",
                 format_value_double(bpm, 0).c_str(),
                 duration_seconds, owner.bpm_beats);
@@ -596,7 +596,7 @@ bool GuiInputHandler::render_bpm_sweep() {
 
     if (reqs.empty()) {
         std::fprintf(stderr,
-            "warptempo_gui: render-bpm: no valid cells; "
+            "warptempo_gui: render-bpm: No valid cells; "
             "nothing to render\n");
         return false;
     }
@@ -604,7 +604,7 @@ bool GuiInputHandler::render_bpm_sweep() {
     std::filesystem::create_directories(batch_folder, ec);
     if (ec) {
         std::fprintf(stderr,
-            "warptempo_gui: render-bpm: could not create "
+            "warptempo_gui: render-bpm: Could not create "
             "'%s': %s\n",
             batch_folder.string().c_str(), ec.message().c_str());
         return false;

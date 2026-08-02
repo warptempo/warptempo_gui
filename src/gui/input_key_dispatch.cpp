@@ -646,7 +646,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         }
         if (!any_swept) {
             std::fprintf(stderr,
-                "warptempo_gui: render-iterations: no iter ranges "
+                "warptempo_gui: render-iterations: No iter ranges "
                 "authored; nothing to render\n");
             return true;
         }
@@ -709,7 +709,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         std::filesystem::create_directories(batch_folder, ec);
         if (ec) {
             std::fprintf(stderr,
-                "warptempo_gui: render-iterations: could not create "
+                "warptempo_gui: render-iterations: Could not create "
                 "'%s': %s\n",
                 batch_folder.string().c_str(), ec.message().c_str());
             return true;
@@ -1034,13 +1034,13 @@ bool GuiInputHandler::adopt_render_entry(
         std::filesystem::remove_all(renders_root, ec);
         if (ec) {
             std::fprintf(stderr,
-                "warptempo_gui: commit: wipe failed for '%s': %s\n",
+                "warptempo_gui: commit: Wipe failed for '%s': %s\n",
                 renders_root.string().c_str(), ec.message().c_str());
         }
     }
 
     std::fprintf(stderr,
-        "warptempo_gui: commit: committed render and wiped renders/\n");
+        "warptempo_gui: commit: Committed render and wiped renders/\n");
     gui.invalidate_region(0, 0, app.width, app.height);
     return true;
 }
@@ -1472,7 +1472,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         for (const auto& e : list) wavs.push_back(e.wav_path.string());
         if (!spawn_audio_player(app.audio_player, wavs)) {
             std::fprintf(stderr,
-                "warptempo_gui: could not launch audio_player '%s'\n",
+                "warptempo_gui: Could not launch audio_player '%s'\n",
                 app.audio_player.c_str());
         }
         return true;

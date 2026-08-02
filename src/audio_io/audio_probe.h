@@ -12,7 +12,7 @@
 // "corrupt supported container", and append the convert-once acquisition
 // hint only for the former.
 inline constexpr std::string_view kUnknownAudioMagicError =
-    "unknown audio file magic";
+    "Unknown audio file magic";
 
 struct AudioFileInfo {
     int           sample_rate = 0;

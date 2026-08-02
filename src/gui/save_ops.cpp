@@ -13,7 +13,7 @@ bool GuiSaveOps::save() {
     const char* lc = std::setlocale(LC_NUMERIC, nullptr);
     if (!lc || std::strcmp(lc, "C") != 0) {
         std::fprintf(stderr,
-            "warptempo_gui: numeric locale is '%s', not 'C'; refusing to save "
+            "warptempo_gui: Numeric locale is '%s', not 'C'; refusing to save "
             "(sidecar numbers would be written corrupted)\n",
             lc ? lc : "(null)");
         return false;
@@ -36,7 +36,7 @@ bool GuiSaveOps::save() {
     const bool ok = app.warpmarkers.save(app.warpmarkers_path);
     if (!ok) {
         std::fprintf(stderr,
-            "warptempo_gui: save failed: %s\n",
+            "warptempo_gui: Save failed: %s\n",
             app.warpmarkers_path.c_str());
         return false;
     }
@@ -74,7 +74,7 @@ bool GuiSaveOps::save() {
         if (!write_settings_file(app.settings_path, gui,
                                  app.engine_settings)) {
             std::fprintf(stderr,
-                "warptempo_gui: settings save failed: %s\n",
+                "warptempo_gui: Settings save failed: %s\n",
                 app.settings_path.c_str());
             return false;
         }

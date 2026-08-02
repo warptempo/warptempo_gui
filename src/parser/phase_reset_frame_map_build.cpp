@@ -8,6 +8,13 @@
 #include <string>
 #include <vector>
 
+// Terminal message strings in this file carry sentence-initial capitals
+// (architect approval 2026-08-02, the terminal capitalization pass —
+// text-only, otherwise byte-identical output). The refusal below is a
+// standalone message after the CLI's program-name prefix, so it takes the
+// capital at its definition; it also appears mid-message in the GUI render
+// pipeline's "Render error: %s", the accepted cost recorded for the six
+// GUI-painted refusals (warp_frame_map_build.cpp).
 std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
     const std::vector<PhaseResetMarker>& markers, long sample_rate,
     int64_t total_frames) {
@@ -33,7 +40,7 @@ std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
         const double src_frame = static_cast<double>(m.time_frame);
         if (src_frame > static_cast<double>(total_frames - 1)) {
             return std::unexpected(
-                "phase reset time exceeds source length at marker "
+                "Phase reset time exceeds source length at marker "
                 + std::to_string(i));
         }
         // Exact-coincidence collapse, the phase-reset sibling of the warp
@@ -50,7 +57,7 @@ std::expected<std::vector<double>, std::string> build_phase_reset_source_frames(
         if (!out.empty() && src_frame == out.back()) {
             if (!reported_back) {
                 std::fprintf(stderr,
-                    "coincident phase reset markers at %s collapse to one reset\n",
+                    "Coincident phase reset markers at %s collapse to one reset\n",
                     format_timestamp(src_frame / sr_d).c_str());
                 reported_back = true;
             }

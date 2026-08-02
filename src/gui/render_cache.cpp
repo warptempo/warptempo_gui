@@ -827,8 +827,8 @@ void RenderCache::start_writer_job(WriterJob job) {
             if (!encode_pcm24_wav_blob(job.samples, job.channels,
                                        job.sample_rate, encoded)) {
                 std::fprintf(stderr,
-                    "warptempo_gui: render-cache insert dropped: failed to "
-                    "encode target samples as canonical PCM_24 wav\n");
+                    "warptempo_gui: render-cache insert dropped: Failed to "
+                    "encode target samples as canonical PCM_24 WAV\n");
                 return;
             }
             job.samples.clear();

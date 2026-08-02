@@ -482,7 +482,7 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     if (!wl_compositor_ || !wl_shm_ || !xdg_wm_base_ ||
         !xdg_decoration_manager_) {
         std::fprintf(stderr,
-                     "warptempo_gui: required wayland globals missing "
+                     "warptempo_gui: Required wayland globals missing "
                      "(wl_compositor=%p wl_shm=%p xdg_wm_base=%p "
                      "zxdg_decoration_manager_v1=%p)\n",
                      (void*)wl_compositor_, (void*)wl_shm_, (void*)xdg_wm_base_,
@@ -491,12 +491,12 @@ bool GuiPlatform::init(int width, int height, const char* title) {
     }
     if (!wl_output_) {
         std::fprintf(stderr,
-                     "warptempo_gui: no wl_output advertised; "
-                     "playback tick will use 60 hz fallback\n");
+                     "warptempo_gui: No wl_output advertised; "
+                     "playback tick will use 60 Hz fallback\n");
     }
     if (!pointer_constraints_ || !relative_pointer_manager_) {
         std::fprintf(stderr,
-                     "warptempo_gui: pointer capture unavailable "
+                     "warptempo_gui: Pointer capture unavailable "
                      "(zwp_pointer_constraints_v1=%p "
                      "zwp_relative_pointer_manager_v1=%p); strip drags run "
                      "without cursor lock\n",
@@ -763,7 +763,7 @@ void GuiPlatform::recreate_shm_pool(int w, int h) {
 
     shm_pool_fd_ = open_shm_fd(pool_bytes);
     if (shm_pool_fd_ < 0) {
-        std::fprintf(stderr, "warptempo_gui: failed to open shm fd: %s\n",
+        std::fprintf(stderr, "warptempo_gui: Failed to open shm fd: %s\n",
                      std::strerror(errno));
         return;
     }
@@ -859,7 +859,7 @@ bool GuiPlatform::load_cursor_theme() {
     wl_cursor_arrow_ = wl_cursor_theme_get_cursor(wl_cursor_theme_, "left_ptr");
     if (!wl_cursor_arrow_ || wl_cursor_arrow_->image_count == 0) {
         std::fprintf(stderr,
-            "warptempo_gui: cursor theme has no \"left_ptr\"; "
+            "warptempo_gui: Cursor theme has no \"left_ptr\"; "
             "pointer will not display a cursor image\n");
         return false;
     }
@@ -1026,7 +1026,7 @@ void GuiPlatform::run() {
         }
         if (wl_display_flush(wl_display_) < 0 && errno != EAGAIN) {
             std::fprintf(stderr,
-                         "warptempo_gui: connection to the compositor lost; "
+                         "warptempo_gui: Connection to the compositor lost; "
                          "wl_display_flush failed: %s\n",
                          std::strerror(errno));
             should_exit_ = true;
@@ -1082,7 +1082,7 @@ void GuiPlatform::run() {
             const bool hup = (pfds[0].revents & POLLHUP) != 0;
             const bool err = (pfds[0].revents & POLLERR) != 0;
             std::fprintf(stderr,
-                         "warptempo_gui: connection to the compositor lost; "
+                         "warptempo_gui: Connection to the compositor lost; "
                          "display fd reported %s%s%s\n",
                          hup ? "POLLHUP" : "",
                          (hup && err) ? " and " : "",
@@ -1435,7 +1435,7 @@ void GuiPlatform::on_seat_capabilities(uint32_t caps) {
 void GuiPlatform::on_keyboard_keymap(uint32_t format, int fd, uint32_t size) {
     if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
         std::fprintf(stderr,
-                     "warptempo_gui: unsupported keymap format %u\n", format);
+                     "warptempo_gui: Unsupported keymap format %u\n", format);
         close(fd);
         return;
     }
@@ -1449,7 +1449,7 @@ void GuiPlatform::on_keyboard_keymap(uint32_t format, int fd, uint32_t size) {
     close(fd);
     if (mapped == MAP_FAILED) {
         std::fprintf(stderr,
-                     "warptempo_gui: keymap mmap failed: %s\n",
+                     "warptempo_gui: Keymap mmap failed: %s\n",
                      std::strerror(errno));
         return;
     }

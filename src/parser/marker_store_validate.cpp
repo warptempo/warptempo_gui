@@ -5,6 +5,13 @@
 #include <string>
 #include <vector>
 
+// Terminal message strings in this file carry sentence-initial capitals
+// (architect approval 2026-08-02, the terminal capitalization pass —
+// text-only, otherwise byte-identical output). The CLI prints this defect
+// as a standalone message after its program-name prefix, so the capital
+// belongs here at the definition; the GUI shows it after "Source load
+// aborted: ", the embedded capital being the accepted cost recorded for the
+// six GUI-painted refusals (warp_frame_map_build.cpp).
 std::optional<std::string> first_past_eof_wall_defect(
         const std::vector<WarpMarker>&       warp_markers,
         const std::vector<PhaseResetMarker>& phase_resets,
@@ -15,7 +22,7 @@ std::optional<std::string> first_past_eof_wall_defect(
     const double sr_d = static_cast<double>(sample_rate);
     for (const auto& m : warp_markers) {
         if (m.time_frame > total_frames - 1) {
-            return "warp marker past end of audio at " +
+            return "Warp marker past end of audio at " +
                    format_timestamp(m.time_frame / sr_d);
         }
     }
@@ -29,12 +36,12 @@ std::optional<std::string> first_past_eof_wall_defect(
     // products (two-category rule); the position is musically meaningless.
     for (const auto& m : phase_resets) {
         if (m.time_frame > total_frames - 1) {
-            return "phase reset marker past end of audio at " +
+            return "Phase reset marker past end of audio at " +
                    format_timestamp(m.time_frame / sr_d);
         }
     }
     const struct { const char* name; const SettingsTrim& t; } tabs[] = {
-        {"tab A", tab_a_trim}, {"tab B", tab_b_trim},
+        {"Tab A", tab_a_trim}, {"Tab B", tab_b_trim},
     };
     // Both bounds are always meaningful since the trim window became
     // always-set, so both wall compares are unconditional — the has-bit guards

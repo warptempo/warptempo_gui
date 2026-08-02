@@ -152,7 +152,7 @@ private:
     // exactly like the old unset state, and that is NOT a fallback —
     // trim_fell_back stays false there. It is true only for a proper SUB-WINDOW
     // that plan_trim refuses: a target span rounding below one output sample
-    // (reachable), or "trim end at or before trim begin" (a breach shape now —
+    // (reachable), or "Trim end at or before trim begin" (a breach shape now —
     // a sub-window cannot rest crossed) — either way the render is the FULL,
     // untrimmed deliverable. This
     // verdict is the one GUI-thread read that must mirror the orchestrators' own

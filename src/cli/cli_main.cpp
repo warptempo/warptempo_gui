@@ -67,8 +67,15 @@ std::string cache_framemap_dir() {
     return dir;
 }
 
+// Terminal message strings in this file carry sentence-initial capitals
+// (architect approval 2026-08-02, the terminal capitalization pass —
+// text-only, otherwise byte-identical output). The bare "warptempo_cli: %s"
+// sites print an owner's error string as the whole message, so those owners
+// carry the capital at their own definitions (trimmer.cpp, wav_io.cpp,
+// audio_probe.cpp, marker_store_validate.cpp,
+// phase_reset_frame_map_build.cpp).
 void usage(const char* argv0) {
-    std::fprintf(stderr, "usage: %s <source-audio>\n", argv0);
+    std::fprintf(stderr, "Usage: %s <source-audio>\n", argv0);
 }
 
 }  // namespace
@@ -114,7 +121,7 @@ int main(int argc, char** argv) {
         auto parsed = read_settings_file(set_path);
         if (!parsed) {
             std::fprintf(stderr,
-                "warptempo_cli: settings rejected in '%s': %s\n",
+                "warptempo_cli: Settings rejected in '%s': %s\n",
                 set_path.c_str(), parsed.error().c_str());
             return 1;
         }
@@ -139,7 +146,7 @@ int main(int argc, char** argv) {
     // GUI's composition exactly. ---
     if (auto collision = render_output_source_collision(es, source_path)) {
         std::fprintf(stderr,
-            "warptempo_cli: settings in '%s' would make the render output '%s' "
+            "warptempo_cli: Settings in '%s' would make the render output '%s' "
             "overwrite the source audio file\n",
             set_path.c_str(), collision->string().c_str());
         return 1;
@@ -189,7 +196,7 @@ int main(int argc, char** argv) {
     auto info = audio_probe(source_path);
     if (!info) {
         std::fprintf(stderr,
-            "warptempo_cli: source open failed for '%s': %s\n",
+            "warptempo_cli: Source open failed for '%s': %s\n",
             source_path.c_str(), info.error().c_str());
         return 1;
     }
@@ -200,7 +207,7 @@ int main(int argc, char** argv) {
     // pixel guarantees assume the 44100 floor (higher rates only widen the margins).
     if (sample_rate < 44100) {
         std::fprintf(stderr,
-            "warptempo_cli: source load failed for '%s': sample rate %ld is "
+            "warptempo_cli: Source load failed for '%s': sample rate %ld is "
             "below the 44100 floor\n",
             source_path.c_str(), sample_rate);
         return 1;
@@ -214,7 +221,7 @@ int main(int argc, char** argv) {
     // file set is loadable in both products or neither.
     if (info->channels != 2) {
         std::fprintf(stderr,
-            "warptempo_cli: source load failed for '%s': %d channels (stereo "
+            "warptempo_cli: Source load failed for '%s': %d channels (stereo "
             "sources only)\n",
             source_path.c_str(), info->channels);
         return 1;
@@ -260,7 +267,7 @@ int main(int argc, char** argv) {
                                   es.scale, sample_rate, total_frames);
     if (!r) {
         std::fprintf(stderr,
-            "warptempo_cli: map build failed: %s\n", r.error().c_str());
+            "warptempo_cli: Map build failed: %s\n", r.error().c_str());
         return 1;
     }
     const std::vector<WarpFrameMapSegment> full_warp_frame_map =
@@ -304,7 +311,7 @@ int main(int argc, char** argv) {
                     pair_dir, pair_stem,
                     full_warp_frame_map, full_phase_reset_frame_map); !w) {
                 std::fprintf(stderr,
-                    "warptempo_cli: cache framemap write skipped: %s\n",
+                    "warptempo_cli: Cache framemap write skipped: %s\n",
                     w.error().c_str());
             }
         }
@@ -340,7 +347,7 @@ int main(int argc, char** argv) {
                               b, e, static_cast<int64_t>(total_frames),
                               N_fft, R_s);
         if (!plan) {
-            // plan.error() strings all begin with "trim ..." (the
+            // plan.error() strings all begin with "Trim ..." (the
             // vocabulary in trimmer.cpp), so no extra category word here.
             std::fprintf(stderr,
                 "warptempo_cli: %s; rendering untrimmed\n",
@@ -436,7 +443,7 @@ int main(int argc, char** argv) {
         if (sf.fftw3_threads_hash != cur.fftw3_threads) note("fftw3_threads");
         if (!changed.empty()) {
             std::fprintf(stderr,
-                "warptempo_cli: render libraries changed since last save "
+                "warptempo_cli: Render libraries changed since last save "
                 "(%s; glibc %s, fftw %s); output may differ from previous "
                 "renders\n",
                 changed.c_str(),
@@ -451,7 +458,7 @@ int main(int argc, char** argv) {
     const std::string staging_output_path = render_staging_path(out_path);
     const EngineResult er = run_warptempo_engine(ep);
     if (er != EngineResult::Success) {
-        std::fprintf(stderr, "warptempo_cli: engine %s\n",
+        std::fprintf(stderr, "warptempo_cli: Engine %s\n",
                      er == EngineResult::Cancelled ? "cancelled" : "failed");
         return 1;
     }
@@ -469,13 +476,13 @@ int main(int argc, char** argv) {
         if (ec) {
             unlink_silent(staging_output_path);
             std::fprintf(stderr,
-                "warptempo_cli: could not publish '%s' to '%s': %s\n",
+                "warptempo_cli: Could not publish '%s' to '%s': %s\n",
                 staging_output_path.c_str(), out_path.c_str(),
                 ec.message().c_str());
             return 1;
         }
     }
 
-    std::fprintf(stderr, "warptempo_cli: wrote %s\n", out_path.c_str());
+    std::fprintf(stderr, "warptempo_cli: Wrote %s\n", out_path.c_str());
     return 0;
 }

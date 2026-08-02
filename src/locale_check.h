@@ -14,7 +14,7 @@ inline bool verify_c_numeric_locale(const char* program_name) {
     const char* lc = std::setlocale(LC_NUMERIC, nullptr);
     if (lc && std::strcmp(lc, "C") == 0) return true;
     std::fprintf(stderr,
-        "%s: numeric locale is '%s', not 'C'; number parsing and "
+        "%s: Numeric locale is '%s', not 'C'; number parsing and "
         "formatting would be corrupted; refusing to run\n",
         program_name, lc ? lc : "(null)");
     return false;

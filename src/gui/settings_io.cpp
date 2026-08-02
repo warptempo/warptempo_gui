@@ -260,7 +260,7 @@ bool create_if_missing(const std::filesystem::path& p,
     // torn file that blocks future strict loads.
     if (!atomic_write_string_to_path(p.string(), contents)) {
         std::fprintf(stderr,
-                     "warptempo_gui: could not create '%s'\n",
+                     "warptempo_gui: Could not create '%s'\n",
                      p.string().c_str());
         return false;
     }

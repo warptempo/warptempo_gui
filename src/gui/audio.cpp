@@ -329,13 +329,13 @@ bool try_load_cache(const std::string& source_path,
 
     auto stale = [&]() {
         std::fprintf(stderr,
-            "warptempo_gui: peaks cache stale or invalid for %s; rebuilding\n",
+            "warptempo_gui: Peaks cache stale or invalid for %s; rebuilding\n",
             source_path.c_str());
         std::fclose(f);
     };
     auto corrupt = [&]() {
         std::fprintf(stderr,
-            "warptempo_gui: peaks cache corrupt for %s; rebuilding\n",
+            "warptempo_gui: Peaks cache corrupt for %s; rebuilding\n",
             source_path.c_str());
         reset_levels(levels);
         std::fclose(f);
@@ -428,7 +428,7 @@ bool try_load_cache(const std::string& source_path,
     }
 
     std::fclose(f);
-    std::fprintf(stderr, "warptempo_gui: peaks cache hit for %s\n",
+    std::fprintf(stderr, "warptempo_gui: Peaks cache hit for %s\n",
                  source_path.c_str());
     return true;
 }
@@ -449,7 +449,7 @@ bool write_cache_to_disk(const std::string& source_path,
     int64_t src_size = 0, src_mtime = 0;
     if (!stat_size_mtime(source_path, src_size, src_mtime)) {
         std::fprintf(stderr,
-            "warptempo_gui: peaks cache write failed for %s: %s\n",
+            "warptempo_gui: Peaks cache write failed for %s: %s\n",
             source_path.c_str(), std::strerror(errno));
         return false;
     }
@@ -457,7 +457,7 @@ bool write_cache_to_disk(const std::string& source_path,
     FILE* f = std::fopen(tpath.c_str(), "wb");
     if (!f) {
         std::fprintf(stderr,
-            "warptempo_gui: peaks cache write failed for %s: %s\n",
+            "warptempo_gui: Peaks cache write failed for %s: %s\n",
             source_path.c_str(), std::strerror(errno));
         return false;
     }
@@ -465,7 +465,7 @@ bool write_cache_to_disk(const std::string& source_path,
     auto fail = [&]() -> bool {
         const int err = errno;
         std::fprintf(stderr,
-            "warptempo_gui: peaks cache write failed for %s: %s\n",
+            "warptempo_gui: Peaks cache write failed for %s: %s\n",
             source_path.c_str(), std::strerror(err));
         std::fclose(f);
         ::unlink(tpath.c_str());
@@ -517,7 +517,7 @@ bool write_cache_to_disk(const std::string& source_path,
     if (std::fclose(f) != 0) {
         const int err = errno;
         std::fprintf(stderr,
-            "warptempo_gui: peaks cache write failed for %s: %s\n",
+            "warptempo_gui: Peaks cache write failed for %s: %s\n",
             source_path.c_str(), std::strerror(err));
         ::unlink(tpath.c_str());
         return false;
@@ -525,12 +525,12 @@ bool write_cache_to_disk(const std::string& source_path,
     if (::rename(tpath.c_str(), cpath.c_str()) != 0) {
         const int err = errno;
         std::fprintf(stderr,
-            "warptempo_gui: peaks cache write failed for %s: %s\n",
+            "warptempo_gui: Peaks cache write failed for %s: %s\n",
             source_path.c_str(), std::strerror(err));
         ::unlink(tpath.c_str());
         return false;
     }
-    std::fprintf(stderr, "warptempo_gui: peaks cache written for %s\n",
+    std::fprintf(stderr, "warptempo_gui: Peaks cache written for %s\n",
                  source_path.c_str());
     return true;
 }
@@ -541,7 +541,7 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
     auto info = audio_probe(path);
     if (!info) {
         std::fprintf(stderr,
-                     "warptempo_gui: could not open '%s': %s\n",
+                     "warptempo_gui: Could not open '%s': %s\n",
                      path.c_str(), info.error().c_str());
         return false;
     }
@@ -556,7 +556,7 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
     RenderFileIdentity next_load_identity;
     if (!stat_file_identity(path, next_load_identity)) {
         std::fprintf(stderr,
-                     "warptempo_gui: could not stat '%s'\n",
+                     "warptempo_gui: Could not stat '%s'\n",
                      path.c_str());
         return false;
     }
@@ -564,7 +564,7 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
     auto full = wav_read_full(path);
     if (!full) {
         std::fprintf(stderr,
-                     "warptempo_gui: could not read '%s': %s\n",
+                     "warptempo_gui: Could not read '%s': %s\n",
                      path.c_str(), full.error().c_str());
         return false;
     }

@@ -293,7 +293,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
             app.top_flag_editor.red = true;
             viewport.invalidate_top_strip();
             std::fprintf(stderr,
-                "warptempo_gui: edit rejected: malformed iteration "
+                "warptempo_gui: Edit rejected: malformed iteration "
                 "bracket: %s\n", app.top_flag_editor.pending.c_str());
             return;
         }
@@ -344,7 +344,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
         app.top_flag_editor.red = true;
         viewport.invalidate_top_strip();
         std::fprintf(stderr,
-            "warptempo_gui: edit rejected: %s\n", err.c_str());
+            "warptempo_gui: Edit rejected: %s\n", err.c_str());
         return;
     }
 
@@ -376,7 +376,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
             app.top_flag_editor.red = true;
             viewport.invalidate_top_strip();
             std::fprintf(stderr,
-                "warptempo_gui: edit rejected: iteration bracket cells "
+                "warptempo_gui: Edit rejected: iteration bracket cells "
                 "leave the tempo bracket [%s, %s]: %s\n",
                 format_tempo_cents(kTempoMinCents).c_str(),
                 format_tempo_cents(kTempoMaxCents).c_str(),
@@ -509,7 +509,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
 
     if (n_refs_renamed > 0) {
         std::fprintf(stderr,
-            "warptempo_gui: renamed label_def '%s' -> '%s'; "
+            "warptempo_gui: Renamed label_def '%s' -> '%s'; "
             "updated %d refs\n",
             old_def.c_str(), new_def.c_str(), n_refs_renamed);
     }
@@ -646,7 +646,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
         app.top_flag_editor.red = true;
         viewport.invalidate_timestamp_area();
         std::fprintf(stderr,
-            "warptempo_gui: bpm edit rejected: invalid syntax: %s\n",
+            "warptempo_gui: BPM edit rejected: invalid syntax: %s\n",
             s.c_str());
         return false;
     }
@@ -684,7 +684,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
                 app.top_flag_editor.red = true;
                 viewport.invalidate_timestamp_area();
                 std::fprintf(stderr,
-                    "warptempo_gui: bpm edit rejected: derived tempo or "
+                    "warptempo_gui: BPM edit rejected: derived tempo or "
                     "scale outside its bracket (tempo [%s, %s], scale "
                     "[%s, %s]): %s\n",
                     format_tempo_cents(kTempoMinCents).c_str(),

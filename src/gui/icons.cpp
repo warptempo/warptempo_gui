@@ -519,7 +519,7 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
                 idx < static_cast<int>(std::size(reported)) && !reported[idx]) {
                 reported[idx] = true;
                 std::fprintf(stderr,
-                             "icons: malformed path data, icon %d not drawn\n",
+                             "icons: Malformed path data, icon %d not drawn\n",
                              idx);
             }
             return;

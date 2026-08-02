@@ -667,7 +667,7 @@ int main(int argc, char** argv) {
     // relaunching). The audio path is therefore mandatory — there is no
     // blank-window state to load into.
     if (argc != 2) {
-        std::fprintf(stderr, "usage: warptempo_gui <audio_file>\n");
+        std::fprintf(stderr, "Usage: warptempo_gui <audio_file>\n");
         return 1;
     }
     const char* cli_path = argv[1];
@@ -713,7 +713,7 @@ int main(int argc, char** argv) {
     GuiAsyncRenderer async_renderer;
     if (!async_renderer.init()) {
         std::fprintf(stderr,
-            "warptempo_gui: failed to start async renderer; exiting\n");
+            "warptempo_gui: Failed to start async renderer; exiting\n");
         return 1;
     }
     // Waveform-cache rebuild runs on this dedicated worker; the
@@ -722,7 +722,7 @@ int main(int argc, char** argv) {
     GuiWaveformWorker waveform_worker;
     if (!waveform_worker.init()) {
         std::fprintf(stderr,
-            "warptempo_gui: failed to start waveform worker; exiting\n");
+            "warptempo_gui: Failed to start waveform worker; exiting\n");
         return 1;
     }
     // Shared process-local render cache for target-view reuse, archival

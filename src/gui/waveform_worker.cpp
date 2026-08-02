@@ -47,7 +47,7 @@ void GuiWaveformWorker::shutdown() {
 void GuiWaveformWorker::dispatch(WaveformJob job, DoneCallback on_done) {
     if (state_.load() != static_cast<int>(State::Idle)) {
         std::fprintf(stderr,
-            "warptempo_gui: waveform worker dispatch while busy "
+            "warptempo_gui: Waveform worker dispatch while busy "
             "(state=%d) — request dropped\n",
             state_.load());
         return;
@@ -96,7 +96,7 @@ void GuiWaveformWorker::wait_until_idle() {
         cancel_flag_.store(true);
         if (clock::now() >= deadline) {
             std::fprintf(stderr,
-                "warptempo_gui: waveform worker did not become idle within "
+                "warptempo_gui: Waveform worker did not become idle within "
                 "1000ms; proceeding anyway\n");
             return;
         }
@@ -151,7 +151,7 @@ void GuiWaveformWorker::signal_completion() {
     ssize_t n = ::write(completion_fd_, &one, sizeof(one));
     if (n != static_cast<ssize_t>(sizeof(one))) {
         std::fprintf(stderr,
-            "warptempo_gui: waveform worker eventfd write failed: %s\n",
+            "warptempo_gui: Waveform worker eventfd write failed: %s\n",
             std::strerror(errno));
     }
 }

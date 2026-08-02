@@ -650,8 +650,14 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
             // so a breach here would be a silent buffer overrun, the class the
             // engine owns loudly.
             if (static_cast<int64_t>(m.size()) < out_frames) {
+                // Terminal message strings in this file carry
+                // sentence-initial capitals (architect approval
+                // 2026-08-02, the terminal capitalization pass —
+                // text-only, otherwise byte-identical output); the
+                // dot-leader progress rows above are structured readout,
+                // not prose, and are unchanged.
                 std::fprintf(stderr,
-                             "warptempo_gui: synthesis output buffer shorter "
+                             "warptempo_gui: Synthesis output buffer shorter "
                              "than the frame emission; internal breach\n");
                 std::abort();
             }

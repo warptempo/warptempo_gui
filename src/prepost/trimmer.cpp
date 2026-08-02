@@ -9,6 +9,16 @@
 #include <cstddef>
 #include <utility>
 
+// Terminal message strings in this file carry sentence-initial capitals
+// (architect approval 2026-08-02, the terminal capitalization pass —
+// text-only, otherwise byte-identical output). These refusals are printed
+// as standalone messages after the program-name prefix (the CLI's bare
+// "warptempo_cli: %s" sites, and the orchestrators' "%s; rendering
+// untrimmed" line), so the capital belongs here at the definition; the
+// GUI render pipeline also shows some of them after its "Render error: "
+// category words, the same accepted cost recorded for the six GUI-painted
+// refusals (warp_frame_map_build.cpp).
+
 std::expected<void, std::string> validate_trim_frames(
         int64_t begin_frame, int64_t end_frame,
         int64_t total_frames,
@@ -22,13 +32,13 @@ std::expected<void, std::string> validate_trim_frames(
     const double b_src = static_cast<double>(begin_frame);
     const double e_src = static_cast<double>(end_frame);
     if (e_src <= b_src) {
-        return std::unexpected("trim end at or before trim begin");
+        return std::unexpected("Trim end at or before trim begin");
     }
     if (b_src >= total) {
-        return std::unexpected("trim begin at or past source end");
+        return std::unexpected("Trim begin at or past source end");
     }
     if (e_src > total) {
-        return std::unexpected("trim end past source end");
+        return std::unexpected("Trim end past source end");
     }
     // Target-span refusal: the authored window must round to at least one
     // output sample. T_b and T_e are the bounds' exact double target images
@@ -38,7 +48,7 @@ std::expected<void, std::string> validate_trim_frames(
     const double T_e = map_source_to_target(e_src, full_warp_frame_map);
     if (std::llrint(T_e) - std::llrint(T_b) < 1) {
         return std::unexpected(
-            "trim target span rounds below one output sample");
+            "Trim target span rounds below one output sample");
     }
     return {};
 }
@@ -356,7 +366,7 @@ std::expected<void, std::string> apply_post_trim(
         std::vector<float>& buffer, int channels, const PostTrim& post) {
     if (channels <= 0 || post.begin_sample < 0 || post.samples < 0) {
         return std::unexpected(
-            "post-trim crop has an invalid shape (channels=" +
+            "Post-trim crop has an invalid shape (channels=" +
             std::to_string(channels) + ", begin_sample=" +
             std::to_string(post.begin_sample) + ", samples=" +
             std::to_string(post.samples) + ")");
@@ -371,7 +381,7 @@ std::expected<void, std::string> apply_post_trim(
     // than zero-fill a padded deliverable.
     if (begin > buffer.size() || count > buffer.size() - begin) {
         return std::unexpected(
-            "post-trim crop exceeds the engine emission (buffer " +
+            "Post-trim crop exceeds the engine emission (buffer " +
             std::to_string(buffer.size()) + " samples, crop needs " +
             std::to_string(begin) + " + " + std::to_string(count) + ")");
     }
@@ -393,7 +403,7 @@ std::expected<void, std::string> validate_render_projection(
         if (wav_projected_exceeds_riff_limits(
                 channels, static_cast<uint64_t>(encoded_frames))) {
             return std::unexpected(
-                "projected output of " + std::to_string(encoded_frames) +
+                "Projected output of " + std::to_string(encoded_frames) +
                 " frames exceeds RIFF 32-bit limits");
         }
     }
@@ -418,24 +428,24 @@ std::expected<FinishRenderStatus, std::string> finish_render(
     // next to synthesis, the same argument as the buffer route's PCM 24 snap.
     if (channels <= 0) {
         return std::unexpected(
-            "render buffer has an invalid channel count (channels=" +
+            "Render buffer has an invalid channel count (channels=" +
             std::to_string(channels) + ")");
     }
     if (sample_rate <= 0) {
         return std::unexpected(
-            "render buffer has an invalid sample rate (sample_rate=" +
+            "Render buffer has an invalid sample rate (sample_rate=" +
             std::to_string(sample_rate) + ")");
     }
     if (buffer.size() % static_cast<size_t>(channels) != 0) {
         return std::unexpected(
-            "render buffer is not whole interleaved frames (size=" +
+            "Render buffer is not whole interleaved frames (size=" +
             std::to_string(buffer.size()) + ", channels=" +
             std::to_string(channels) + ")");
     }
     for (size_t i = 0; i < buffer.size(); ++i) {
         if (!std::isfinite(buffer[i])) {
             return std::unexpected(
-                "render buffer has a non-finite sample at index " +
+                "Render buffer has a non-finite sample at index " +
                 std::to_string(i));
         }
     }
@@ -467,17 +477,17 @@ std::expected<FinishRenderStatus, std::string> finish_render(
     auto writer = WavWriter::open_file(output_wav_path, channels,
                                        sample_rate);
     if (!writer) {
-        return std::unexpected("could not open output '" + output_wav_path +
+        return std::unexpected("Could not open output '" + output_wav_path +
                                "': " + writer.error());
     }
     const int64_t frames = static_cast<int64_t>(
         buffer.size() / static_cast<size_t>(channels));
     if (auto ok = writer->write_frames(buffer.data(), frames); !ok) {
-        return std::unexpected("could not write output '" + output_wav_path +
+        return std::unexpected("Could not write output '" + output_wav_path +
                                "': " + ok.error());
     }
     if (auto closed = writer->close(); !closed) {
-        return std::unexpected("could not close output '" + output_wav_path +
+        return std::unexpected("Could not close output '" + output_wav_path +
                                "': " + closed.error());
     }
     return FinishRenderStatus::Completed;

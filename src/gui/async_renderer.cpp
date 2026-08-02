@@ -48,7 +48,7 @@ void GuiAsyncRenderer::dispatch(RenderRequest req, DoneCallback on_done) {
     // error if asserted otherwise; we log and drop rather than racing.
     if (state_.load() != static_cast<int>(State::Idle)) {
         std::fprintf(stderr,
-            "warptempo_gui: async renderer dispatch while busy "
+            "warptempo_gui: Async renderer dispatch while busy "
             "(state=%d) — request dropped\n",
             state_.load());
         return;
@@ -120,7 +120,7 @@ void GuiAsyncRenderer::signal_completion() {
     ssize_t n = ::write(completion_fd_, &one, sizeof(one));
     if (n != static_cast<ssize_t>(sizeof(one))) {
         std::fprintf(stderr,
-            "warptempo_gui: async renderer eventfd write failed: %s\n",
+            "warptempo_gui: Async renderer eventfd write failed: %s\n",
             std::strerror(errno));
     }
 }

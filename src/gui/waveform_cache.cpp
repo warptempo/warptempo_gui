@@ -343,7 +343,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 
     if (!ok) {
         std::fprintf(stderr,
-            "warptempo_gui: waveform worker reported failure; will retry "
+            "warptempo_gui: Waveform worker reported failure; will retry "
             "on next tick\n");
         wf_cache.supersede = false;
         wf_cache.supersede_warp_frame_map.clear();

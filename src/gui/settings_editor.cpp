@@ -89,18 +89,18 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         app.settings_editor.red = true;
         viewport.invalidate_timestamp_area();
         std::fprintf(stderr,
-            "warptempo_gui: settings edit rejected: %s\n", reason.c_str());
+            "warptempo_gui: Settings edit rejected: %s\n", reason.c_str());
     };
     auto applied = [&]() {
         std::fprintf(stderr,
-            "warptempo_gui: setting applied: %s=%s\n",
+            "warptempo_gui: Setting applied: %s=%s\n",
             key.c_str(), value.c_str());
         viewport.invalidate_timestamp_area();
         text_editor::deactivate(app.settings_editor);
     };
     auto unchanged = [&]() {
         std::fprintf(stderr,
-            "warptempo_gui: setting unchanged: %s=%s\n",
+            "warptempo_gui: Setting unchanged: %s=%s\n",
             key.c_str(), value.c_str());
         viewport.invalidate_timestamp_area();
         text_editor::deactivate(app.settings_editor);
@@ -357,7 +357,7 @@ void GuiSettingsEditor::commit() {
         app.settings_editor.red = true;
         viewport.invalidate_timestamp_area();
         std::fprintf(stderr,
-            "warptempo_gui: settings edit rejected: %s\n", reason);
+            "warptempo_gui: Settings edit rejected: %s\n", reason);
     };
     if (eq == std::string::npos) { reject("missing '='"); return; }
     const std::string key   = trim_ws(pending.substr(0, eq));
@@ -379,7 +379,7 @@ void GuiSettingsEditor::commit() {
     if (key == "audio_player") {
         if (value == app.audio_player) {
             std::fprintf(stderr,
-                "warptempo_gui: setting unchanged: %s=%s\n",
+                "warptempo_gui: Setting unchanged: %s=%s\n",
                 key.c_str(), value.c_str());
             viewport.invalidate_timestamp_area();
             text_editor::deactivate(app.settings_editor);
@@ -408,7 +408,7 @@ void GuiSettingsEditor::commit() {
         app.settings_editor.red = true;
         viewport.invalidate_timestamp_area();
         std::fprintf(stderr,
-            "warptempo_gui: settings edit rejected: unknown engine key "
+            "warptempo_gui: Settings edit rejected: unknown engine key "
             "'%s'\n", key.c_str());
         return;
     }
@@ -419,7 +419,7 @@ void GuiSettingsEditor::commit() {
         app.settings_editor.red = true;
         viewport.invalidate_timestamp_area();
         std::fprintf(stderr,
-            "warptempo_gui: settings edit rejected: key '%s' has invalid "
+            "warptempo_gui: Settings edit rejected: key '%s' has invalid "
             "value '%s': %s\n",
             key.c_str(), value.c_str(), reason.c_str());
         return;
@@ -435,7 +435,7 @@ void GuiSettingsEditor::commit() {
         app.settings_editor.red = true;
         viewport.invalidate_timestamp_area();
         std::fprintf(stderr,
-            "warptempo_gui: settings edit rejected: this would make the "
+            "warptempo_gui: Settings edit rejected: this would make the "
             "render output overwrite the source file (%s); choose a "
             "different title\n",
             std::filesystem::path(app.source_audio_path)
@@ -455,7 +455,7 @@ void GuiSettingsEditor::commit() {
         format_engine_setting_value(candidate, key);
     if (cur_serialized == new_serialized) {
         std::fprintf(stderr,
-            "warptempo_gui: setting unchanged: %s=%s\n",
+            "warptempo_gui: Setting unchanged: %s=%s\n",
             key.c_str(), cur_serialized->c_str());
         viewport.invalidate_timestamp_area();
         text_editor::deactivate(app.settings_editor);
@@ -467,7 +467,7 @@ void GuiSettingsEditor::commit() {
     undo.push_settings_undo(std::move(pre));
 
     std::fprintf(stderr,
-        "warptempo_gui: setting applied: %s=%s\n",
+        "warptempo_gui: Setting applied: %s=%s\n",
         key.c_str(), value.c_str());
 
     viewport.invalidate_timestamp_area();

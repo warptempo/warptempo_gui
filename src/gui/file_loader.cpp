@@ -104,13 +104,13 @@ bool GuiFileLoader::load_file(const std::string& path) {
     if (!source_info) {
         if (source_info.error() == kUnknownAudioMagicError) {
             std::fprintf(stderr,
-                "warptempo_gui: source open failed for '%s': %s; inputs are "
-                "wav only, so convert once at acquisition (e.g. with ffmpeg) "
+                "warptempo_gui: Source open failed for '%s': %s; inputs are "
+                "WAV only, so convert once at acquisition (e.g. with ffmpeg) "
                 "and load the converted file\n",
                 path.c_str(), source_info.error().c_str());
         } else {
             std::fprintf(stderr,
-                "warptempo_gui: source open failed for '%s': %s\n",
+                "warptempo_gui: Source open failed for '%s': %s\n",
                 path.c_str(), source_info.error().c_str());
         }
         return false;
@@ -120,7 +120,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // pixel guarantees assume the 44100 floor (higher rates only widen the margins).
     if (source_info->sample_rate < 44100) {
         std::fprintf(stderr,
-            "warptempo_gui: source load failed for '%s': sample rate %d is "
+            "warptempo_gui: Source load failed for '%s': sample rate %d is "
             "below the 44100 floor\n",
             path.c_str(), source_info->sample_rate);
         return false;
@@ -133,7 +133,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // odd-payload pad byte stays unreachable.
     if (source_info->channels != 2) {
         std::fprintf(stderr,
-            "warptempo_gui: source load failed for '%s': %d channels (stereo "
+            "warptempo_gui: Source load failed for '%s': %d channels (stereo "
             "sources only)\n",
             path.c_str(), source_info->channels);
         return false;
@@ -306,13 +306,13 @@ bool GuiFileLoader::load_file(const std::string& path) {
     gui.set_title_dirty(false);
     if (auto r = app.warpmarkers.load(wm_path.string()); !r) {
         std::fprintf(stderr,
-            "warptempo_gui: source load aborted: invalid warp markers in "
+            "warptempo_gui: Source load aborted: invalid warp markers in "
             "'%s': %s\n",
             wm_path.string().c_str(), r.error().c_str());
         gui.request_exit();
         return false;
     } else {
-        std::fprintf(stderr, "warptempo_gui: parsed %zu markers from %s\n",
+        std::fprintf(stderr, "warptempo_gui: Parsed %zu markers from %s\n",
                      app.warpmarkers.markers().size(), wm_path.string().c_str());
     }
 
@@ -326,13 +326,13 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // the same contract as the warp load above.
     if (auto r = app.phaseresetmarkers.load(tm_path.string()); !r) {
         std::fprintf(stderr,
-            "warptempo_gui: source load aborted: invalid phase reset "
+            "warptempo_gui: Source load aborted: invalid phase reset "
             "markers in '%s': %s\n",
             tm_path.string().c_str(), r.error().c_str());
         gui.request_exit();
         return false;
     } else {
-        std::fprintf(stderr, "warptempo_gui: parsed %zu phase_resets from %s\n",
+        std::fprintf(stderr, "warptempo_gui: Parsed %zu phase_resets from %s\n",
                      app.phaseresetmarkers.markers().size(),
                      tm_path.string().c_str());
     }
@@ -385,7 +385,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
         auto sf_r = read_settings_file(app.settings_path);
         if (!sf_r) {
             std::fprintf(stderr,
-                "warptempo_gui: source load aborted: invalid settings in "
+                "warptempo_gui: Source load aborted: invalid settings in "
                 "'%s': %s\n",
                 app.settings_path.c_str(), sf_r.error().c_str());
             gui.request_exit();
@@ -404,7 +404,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
                 render_output_source_collision(sf.engine,
                                                app.source_audio_path)) {
             std::fprintf(stderr,
-                "warptempo_gui: source load aborted: settings in '%s' would "
+                "warptempo_gui: Source load aborted: settings in '%s' would "
                 "make the render output '%s' overwrite the source audio file\n",
                 app.settings_path.c_str(), collision->string().c_str());
             gui.request_exit();
@@ -515,7 +515,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
             audio.total_frames(), audio.sample_rate());
         if (detail) {
             std::fprintf(stderr,
-                "warptempo_gui: source load aborted: %s\n", detail->c_str());
+                "warptempo_gui: Source load aborted: %s\n", detail->c_str());
             gui.request_exit();
             return false;
         }
@@ -544,7 +544,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
             if (t.end_frame <= t.begin_frame) {
                 t = full_trim_window(total);
                 std::fprintf(stderr,
-                    "warptempo_gui: tab %c trim bounds crossed or equal; "
+                    "warptempo_gui: Tab %c trim bounds crossed or equal; "
                     "both reset to the song edges\n",
                     tab_name);
             }
@@ -561,7 +561,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     if (!playback.init(audio.sample_rate(), audio.channels(),
                        audio.samples_ptr(), audio.total_frames(), 0)) {
         std::fprintf(stderr,
-            "warptempo_gui: playback disabled; space bar will no-op.\n");
+            "warptempo_gui: Playback disabled; space bar will no-op.\n");
     }
     // Push the loaded speed to the engine so playback starts at the
     // persisted rate rather than the engine's default 1.0.
@@ -584,7 +584,7 @@ bool GuiFileLoader::load_file(const std::string& path) {
     const double load_ms =
         std::chrono::duration<double, std::milli>(t1 - t0).count();
     std::fprintf(stderr,
-                 "warptempo_gui: loaded %s: sr=%d, channels=%d, frames=%lld, "
+                 "warptempo_gui: Loaded %s: sr=%d, channels=%d, frames=%lld, "
                  "pyramid_levels=%d, load_time=%.1f ms\n",
                  path.c_str(), audio.sample_rate(), audio.channels(),
                  static_cast<long long>(audio.total_frames()),
