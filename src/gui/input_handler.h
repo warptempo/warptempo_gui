@@ -963,6 +963,20 @@ private:
     // invalidations, so the repaint shows the reset state.
     void auto_clear_crossed_trim();
 
+    // THE SHARED TRIM COMMIT TAIL, in code rather than in prose: every
+    // trim-SETTING commit in this handler — `x`'s set-from-region, the drag
+    // release, the bound-set click — runs the same four acts in the same order
+    // (auto_clear_crossed_trim, then the waveform + timestamp repaints, then
+    // the target-render trigger), and this member is their one spelling.
+    // Callers own everything around it: their refusals, the playback stop, the
+    // setter's deselect and any playhead/region tail, which differ per route by
+    // ruling. TWO DELIBERATE NON-CALLERS, each a different tail by design:
+    // handle_trim_clear_both (the Shift+X maximizer resets rather than
+    // auto-clears — a non-setter), and the settings editor's `:trim_*=`
+    // active-tab arm (settings_editor.cpp), which raises its timestamp repaint
+    // through its own applied() routing instead.
+    void commit_trim_mutation();
+
     // Plain chip-row press trim routing — the PLAIN press's route into a trim
     // drag, and ONE OF TWO since the bound-set clicks came back 2026-08-01 (the
     // other is set_trim_bound_at_click_then_arm_drag, which arms the same

@@ -487,9 +487,11 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
     // where the hit sites' vp_end itself was derived via nearbyint(spp*wave_w).
     const double span = static_cast<double>(vp_end - vp_start);
     const double samples_per_pixel = span / static_cast<double>(wave_w);
-    const double x_raw =
-        (displayed_ms - static_cast<double>(vp_start)) / samples_per_pixel;
-    out.col_raw = static_cast<int>(std::nearbyint(x_raw));
+    // The one rounding, on the caller's UNIFIED displayed basis (this file's
+    // header block above): displayed_column_at, warp_frame_map_view.h.
+    out.col_raw = displayed_column_at(displayed_ms,
+                                      static_cast<double>(vp_start),
+                                      samples_per_pixel);
     out.col = out.col_raw;
     if (wave_w > 0)
         out.col = std::clamp(out.col, 0, wave_w - 1);
@@ -1267,7 +1269,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // glyph, so the box must own a column the run does not; without it the
     // caret would sit on the right pad or, at the clamp, off the box entirely.
     // One authored pixel, scaled like every other row-5 length.
-    const int caret_w = static_cast<int>(std::nearbyint(1.0 * gui_scale_factor()));
+    const int caret_w = scaled_px(1.0);
     const int caret_px = caret_w < 1 ? 1 : caret_w;
 
     const int run_w = static_cast<int>(std::nearbyint(run.width_px));

@@ -62,6 +62,37 @@
 // render time still means "render untrimmed" (do_render's fallback), not a
 // refused render.
 
+namespace {
+
+// THE PARTNER CLAMP, one owner for the single-bound drag's two applications
+// (architect 2026-08-02: the trim handles "cannot move past each other"): the
+// moving bound stops INCLUSIVELY on the resting partner — a begin clamps DOWN
+// to the end, an end clamps UP to the begin — so the pair can hold begin == end
+// mid-gesture but never a crossed shape. Value in, value out; the partner is
+// read from the pair as it rests, which is the other, un-dragged field.
+//
+// TWO CALLERS, and the duality is the point: the MOTION arm (update_trim_drag's
+// single-bound path) clamps the tracked candidate, and the COMMIT arm
+// (commit_trim_drag) re-clamps AFTER the release column snap, whose
+// round-tripped value can come off the partner by up to a grid span — the
+// [96, 100] sliver that silently broke the ruled drag-onto-partner quick-clear
+// when the two applications were two independent spellings. One expression now,
+// so the invariant cannot fork again. The BRIDGE arm deliberately does not call
+// this and must not: it moves the pair rigidly by one shared delta, so the gap
+// is invariant and there is no partner wall by ruling (recorded at that arm).
+int64_t clamp_trim_bound_at_partner(bool is_begin, int64_t v,
+                                    const TrimState& trim) {
+    const int64_t partner = is_begin ? trim.end_frame : trim.begin_frame;
+    if (is_begin) {
+        if (v > partner) v = partner;
+    } else {
+        if (v < partner) v = partner;
+    }
+    return v;
+}
+
+} // namespace
+
 // Reset the pair to the canonical FULL window for the loaded source — the
 // field-level act shared verbatim by handle_trim_clear_both (the Shift+X
 // maximizer) and the crossed-commit reset (auto_clear_crossed_trim) so the two
@@ -101,6 +132,15 @@ void GuiInputHandler::auto_clear_crossed_trim() {
     if (app.trim.end_frame <= app.trim.begin_frame) {
         reset_trim_to_full_window();
     }
+}
+
+// The shared trim commit tail — contract and the two deliberate non-callers at
+// the declaration (input_handler.h).
+void GuiInputHandler::commit_trim_mutation() {
+    auto_clear_crossed_trim();
+    viewport.invalidate_waveform_area();
+    viewport.invalidate_timestamp_area();
+    target_render.trigger();
 }
 
 // Shift+X IS THE MAXIMIZER (architect 2026-07-30): it writes the FULL window
@@ -172,8 +212,8 @@ void GuiInputHandler::handle_trim_clear_both() {
 // can fire it. The refusal tests the pair x would write rather than where the
 // span came from, so it covers a narrow span over
 // stretched audio whose inverse-mapped endpoints land on one source frame. The
-// shared trim commit tail (auto_clear_crossed_trim
-// then the repaint/trigger) mirrors the other trim
+// shared trim commit tail (commit_trim_mutation —
+// auto_clear_crossed_trim then the repaint/trigger) mirrors the other trim
 // commits; the playhead is
 // untouched (trim gestures never move it).
 void GuiInputHandler::handle_trim_x() {
@@ -215,10 +255,7 @@ void GuiInputHandler::handle_trim_x() {
     playback_lifecycle.stop_playback_if_playing();
     app.trim.begin_frame = begin;
     app.trim.end_frame   = end;
-    auto_clear_crossed_trim();
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
-    target_render.trigger();
+    commit_trim_mutation();
     // THE SETTER'S DESELECT (architect 2026-07-29): every trim setter empties the
     // selection as it commits. Then CONSUME THE SPAN (architect 2026-07-30): the
     // scratch region existed to aim this gesture and its job is done — the chips
@@ -233,7 +270,8 @@ void GuiInputHandler::handle_trim_x() {
     // hears next is the window they just made, from its start.
     // THE COMMITTED BEGIN, read back out of the store rather than reused from the
     // local: `begin` above is pre-tail, and the shared commit tail
-    // (auto_clear_crossed_trim) is entitled to rewrite the pair. It cannot fire
+    // (commit_trim_mutation's auto_clear_crossed_trim) is entitled to rewrite
+    // the pair. It cannot fire
     // here — the degenerate refusal upstream guarantees end > begin — so this is
     // the same value either way, and reading the store is what keeps that true if
     // the tail ever gains an arm.
@@ -501,7 +539,8 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
 
     // THE PARTNER IS A WALL, FOR THIS DRAG ONLY (architect 2026-08-02: the trim
     // handles "cannot move past each other"). The moving bound clamps
-    // INCLUSIVELY at the resting partner's frame — a begin drag stops at the
+    // INCLUSIVELY at the resting partner's frame through the one owner
+    // (clamp_trim_bound_at_partner, above) — a begin drag stops at the
     // end, an end drag stops at the begin — so the handle can land exactly ON
     // its partner and never beyond it. This is the one route that gained a
     // partner wall; the header block above carries the split.
@@ -521,13 +560,8 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     // INWARD — but last is where it belongs by meaning: an offscreen partner
     // must still stop the handle, and the viewport clamp above must not be able
     // to hand back a frame past it.
-    const int64_t partner = app.trim_drag.is_begin ? app.trim.end_frame
-                                                   : app.trim.begin_frame;
-    if (app.trim_drag.is_begin) {
-        if (src_frame > partner) src_frame = partner;
-    } else {
-        if (src_frame < partner) src_frame = partner;
-    }
+    src_frame = clamp_trim_bound_at_partner(app.trim_drag.is_begin,
+                                            src_frame, app.trim);
     // Mid-gesture tracking value: int64 throughout (the store cannot hold a
     // fractional frame), but pointer-derived, not column-canonical — the
     // release in commit_trim_drag snaps a moved bound to its painted
@@ -610,20 +644,22 @@ void GuiInputHandler::commit_trim_drag() {
             snap_moved_bound(app.trim.end_frame,
                              app.trim_drag.orig_end_frame,
                              audio.total_frames() - 1);
-            // THE PARTNER CLAMP RUNS AGAIN HERE, AFTER THE SNAP, and it has to:
-            // the snap above is what defeats the mid-drag clamp. update_trim_drag
-            // stops the moving bound exactly ON its partner, but the partner is
-            // an ARBITRARY resting frame that need not sit on the painted
-            // authoring grid — so round-tripping the coincident value through
-            // painted_column_of_source_frame / authored_frame_at_column lands it
-            // on its column's own frame, which is at or BEFORE where it was, and
-            // the two bounds come apart again by up to one grid span. That
-            // silently broke the ruled drag-onto-partner quick-clear: with an end
-            // resting at 100 on a 16-frame grid, a begin dragged onto it
-            // committed as [96, 100] — a sliver auto_clear_crossed_trim's
-            // `end <= begin` compare does not recognise — instead of the full
-            // window the architect ruled ("if they are set coincident, make trim
-            // 0 to EOF"). Re-clamping restores the equality the compare needs.
+            // THE PARTNER CLAMP RUNS AGAIN HERE, AFTER THE SNAP — the same
+            // clamp_trim_bound_at_partner owner the motion arm applies — and it
+            // has to: the snap above is what defeats the mid-drag clamp.
+            // update_trim_drag stops the moving bound exactly ON its partner,
+            // but the partner is an ARBITRARY resting frame that need not sit
+            // on the painted authoring grid — so round-tripping the coincident
+            // value through painted_column_of_source_frame /
+            // authored_frame_at_column lands it on its column's own frame,
+            // which is at or BEFORE where it was, and the two bounds come apart
+            // again by up to one grid span. That silently broke the ruled
+            // drag-onto-partner quick-clear: with an end resting at 100 on a
+            // 16-frame grid, a begin dragged onto it committed as [96, 100] — a
+            // sliver auto_clear_crossed_trim's `end <= begin` compare does not
+            // recognise — instead of the full window the architect ruled ("if
+            // they are set coincident, make trim 0 to EOF"). Re-clamping
+            // restores the equality the compare needs.
             //
             // BOTH ARMS, not just the visibly broken one. Only the begin arm
             // showed the sliver: the snap always pulls a value DOWN, so an END
@@ -631,8 +667,8 @@ void GuiInputHandler::commit_trim_drag() {
             // the same crossed compare, clearing by accident rather than by the
             // stated rule. That is the clamp's own invariant ("the handle can
             // land exactly ON its partner and never beyond it") being violated
-            // and then covered up, so the fix states both arms and neither
-            // depends on the rescue.
+            // and then covered up, so both arms live in the one owner and
+            // neither depends on the rescue.
             //
             // AFTER THE ABSOLUTE WALL IS SAFE, the same order-independence
             // argument the mid-drag clamp records: the partner is itself
@@ -647,16 +683,10 @@ void GuiInputHandler::commit_trim_drag() {
             // one. Its own release-snap deformation is the accepted ±1 frame the
             // block comment above records.
             if (!app.trim_drag.both) {
-                const int64_t partner = app.trim_drag.is_begin
-                                            ? app.trim.end_frame
-                                            : app.trim.begin_frame;
-                if (app.trim_drag.is_begin) {
-                    if (app.trim.begin_frame > partner)
-                        app.trim.begin_frame = partner;
-                } else {
-                    if (app.trim.end_frame < partner)
-                        app.trim.end_frame = partner;
-                }
+                int64_t& moved = app.trim_drag.is_begin ? app.trim.begin_frame
+                                                        : app.trim.end_frame;
+                moved = clamp_trim_bound_at_partner(app.trim_drag.is_begin,
+                                                    moved, app.trim);
             }
             // Trim drags never move the playhead, so the
             // commit snaps the bounds only — there is no playhead pin/sync here.
@@ -674,10 +704,7 @@ void GuiInputHandler::commit_trim_drag() {
         // trim 0 to EOF": no new arm here, and none wanted. The bridge arm and
         // the typed routes can still hand it other shapes, which is the other
         // reason the compare stays as it is.
-        auto_clear_crossed_trim();
-        viewport.invalidate_waveform_area();
-        viewport.invalidate_timestamp_area();
-        target_render.trigger();
+        commit_trim_mutation();
         // THE RELEASE IS A COMMIT, so it takes the setter's deselect and the
         // trim-mutation stop like the motion events did (both already applied by
         // then in the moved case that reaches here — each is stated at every
@@ -709,7 +736,8 @@ void GuiInputHandler::commit_trim_drag() {
 // NO-OP. Nothing writes, nothing deselects, nothing stops, and the caller arms no
 // drag. STRICTLY INSIDE IS THE ONLY ACCEPTED SET, so these two routes can never
 // produce a crossed pair and never reach the crossed-commit reset with one:
-// auto_clear_crossed_trim below is the shared commit tail every setter runs, kept
+// commit_trim_mutation below carries the shared commit tail every setter runs
+// (auto_clear_crossed_trim first), kept
 // for that shape and not because this route can fire it (exactly `x`'s
 // arrangement). The reset rule itself is UNTOUCHED everywhere else — the drag
 // release and the settings commit still reset a crossed pair to the song edges.
@@ -771,10 +799,7 @@ bool GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     } else {
         app.trim.end_frame = frame;
     }
-    auto_clear_crossed_trim();
-    viewport.invalidate_waveform_area();
-    viewport.invalidate_timestamp_area();
-    target_render.trigger();
+    commit_trim_mutation();
     // THE SETTER'S DESELECT (see the header). Past every refusal above, so only a
     // click that actually set a bound deselects. It publishes no highlight — the
     // trim-window region retired 2026-07-30.

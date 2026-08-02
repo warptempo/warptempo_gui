@@ -2259,6 +2259,21 @@ inline const ViewState& active_view_state(const AppState& a) {
     return (a.active_tab_view == 'B') ? a.tab_b : a.tab_a;
 }
 
+// THE ACTIVE MARKER COLUMN'S STORE SIZE, one owner for the phase-reset/warp
+// selector the selection walk, the shift-range anchor check, the Tab/`c` jump's
+// focus resolution, the marker drag's index bound and the undo restore's extent
+// walk all gate their indices on. A COUNT ONLY, deliberately: callers that also
+// need elements (cycle_selection, the undo extent walk) bind their own store
+// refs beside it — a type-erased "active store" accessor is exactly the
+// speculative generality the two co-equal marker columns refuse. (The many
+// `active_markers_view == 'P'` dispatch sites elsewhere are NOT this concept;
+// they pick behavior, not a size.)
+inline int active_marker_count(const AppState& a) {
+    return (a.active_markers_view == 'P')
+        ? static_cast<int>(a.phaseresetmarkers.markers().size())
+        : static_cast<int>(a.warpmarkers.markers().size());
+}
+
 // THE ONE HISTORY-STEP ACTIONABILITY PREDICATE: true when a restore FROM
 // `stack` would actually act. Two ways a step is a silent no-op — an empty
 // source stack, or a top entry whose TARGET tab is currently read-only (a
@@ -2622,9 +2637,7 @@ int hit_test_marker_stem(const AppState& app, int mouse_x, int mouse_y);
 // everywhere else in the redesign paint and hit are identical by construction.
 inline constexpr int kMarkerStemGrabPx = 4;
 inline int marker_stem_grab_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kMarkerStemGrabPx) * gui_scale_factor()));
-    return v < 0 ? 0 : v;
+    return scaled_px(kMarkerStemGrabPx, 0);
 }
 
 // Which trim boundary, if any, a waveform-area click lands on.

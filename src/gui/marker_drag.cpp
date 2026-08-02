@@ -18,10 +18,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     const int sr = audio.sample_rate();
     if (sr <= 0) return false;
     const bool phase_reset = (app.active_markers_view == 'P');
-    const int n = phase_reset
-        ? static_cast<int>(app.phaseresetmarkers.markers().size())
-        : static_cast<int>(app.warpmarkers.markers().size());
-    if (hit >= n) return false;
+    if (hit >= active_marker_count(app)) return false;
 
     auto t_of = [&](int idx) -> int64_t {
         if (phase_reset) {

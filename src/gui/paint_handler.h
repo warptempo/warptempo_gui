@@ -61,7 +61,7 @@ class GuiWaveformWorker;
 // reserved cell, and the RIGHT margin after that cell. The reuse is an
 // eye-consistency choice, stated there.
 inline int bottom_row_pad_x() {
-    return static_cast<int>(std::nearbyint(13.0 * gui_scale_factor()));
+    return scaled_px(13.0);
 }
 
 // Single source for the three bottom-strip editor prefixes, read by the paint

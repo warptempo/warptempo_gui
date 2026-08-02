@@ -196,8 +196,7 @@ int painted_column_of_source_frame_on_basis(
     if (ctx.domain != GuiDisplayDomain::Source && !warp_frame_map.empty()) {
         ms = std::nearbyint(map_source_to_target(ms, warp_frame_map));
     }
-    const double x_raw = (ms - vp_start) / spp;
-    return static_cast<int>(std::nearbyint(x_raw));
+    return displayed_column_at(ms, vp_start, spp);
 }
 
 int painted_column_of_source_frame(

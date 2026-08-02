@@ -312,7 +312,11 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             // The same commit tail trim gestures use, including
             // auto_clear_crossed_trim (a bound committed onto/across its
             // partner resets the pair to the song edges, silently).
-            // History-less, like all trim.
+            // History-less, like all trim. SPELLED INLINE rather than calling
+            // GuiInputHandler::commit_trim_mutation (the gesture routes' one
+            // owner): this arm's timestamp repaint rides applied() below, so
+            // its tail is three calls where the owner's is four — the recorded
+            // divergence, not an accident.
             input->auto_clear_crossed_trim();
             viewport.invalidate_waveform_area();
             target_render.trigger();

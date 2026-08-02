@@ -197,11 +197,9 @@ void Selection::select_range_from_anchor(int idx) {
     if (idx < 0) return;
     const std::optional<int64_t> old_subject = phase_overlay_subject();
 
-    // The active column's store size — the same phase-reset/warp selector
-    // cycle_selection uses.
-    const int n = (app.active_markers_view == 'P')
-        ? static_cast<int>(app.phaseresetmarkers.markers().size())
-        : static_cast<int>(app.warpmarkers.markers().size());
+    // The active column's store size, from its one owner (active_marker_count,
+    // app_state.h).
+    const int n = active_marker_count(app);
 
     int anchor = app.shift_range_anchor;
     if (anchor < 0 || anchor >= n) {

@@ -165,8 +165,8 @@ constexpr ToolbarChord kToolbarChords[] = {
 // region is exactly the drawn one. A zero rect (before that row's first paint)
 // contains no point, which is the correct cold answer.
 bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
-    const GuiRect& r = app.redesign_buttons[redesign_button_index(id)].rect;
-    return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+    return rect_contains(
+        app.redesign_buttons[redesign_button_index(id)].rect, x, y);
 }
 
 // Active-domain playhead frame at click column `col`. SOURCE view: the exact
@@ -698,8 +698,7 @@ void GuiInputHandler::arm_strip_drag_at(int x, int y) {
 // the same thing on every press path.
 void GuiInputHandler::close_top_flag_editor_for_outside_press(int x, int y) {
     if (!text_editor::is_active(app.top_flag_editor)) return;
-    const GuiRect& b = app.flag_editor_box.box;
-    if (x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) return;
+    if (rect_contains(app.flag_editor_box.box, x, y)) return;
     flag_editor.exit_top_flag_edit_no_commit();
 }
 
@@ -739,9 +738,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         if (g.valid) {
             bool in_region = false;
             if (g.bottom_strip) {
-                const GuiRect bs = bottom_strip_area(app);
-                in_region = x >= bs.x && x < bs.x + bs.w &&
-                            y >= bs.y && y < bs.y + bs.h;
+                in_region = rect_contains(bottom_strip_area(app), x, y);
             } else {
                 // FlagPayload: the editable text lives IN THE UNROLLED FLAG BOX.
                 // The claim is the whole published BOX, pads included, not just
@@ -751,9 +748,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // search gives that for free). Any press OUTSIDE the box is a
                 // non-caret click, which closes the editor below and then routes
                 // normally (the guard-free lifecycle).
-                const GuiRect& b = app.flag_editor_box.box;
-                in_region = x >= b.x && x < b.x + b.w &&
-                            y >= b.y && y < b.y + b.h;
+                in_region = rect_contains(app.flag_editor_box.box, x, y);
             }
             if (in_region) {
                 // Double-click: a second click within the window on this
@@ -882,8 +877,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // platform translation.
     {
         const GuiRect menu_row = top_menu_row_area(app);
-        if (y >= menu_row.y && y < menu_row.y + menu_row.h &&
-            x >= menu_row.x && x < menu_row.x + menu_row.w) {
+        if (rect_contains(menu_row, x, y)) {
             if (mods.ctrl || mods.alt) return;               // strict no-op
             if (button == GuiMouseButton::Left) {
                 // SETTINGS IS THE ROSTER'S ONE NON-CHORD BUTTON, so it is
@@ -905,8 +899,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     }
     {
         const GuiRect toolbar = top_toolbar_row_area(app);
-        if (y >= toolbar.y && y < toolbar.y + toolbar.h &&
-            x >= toolbar.x && x < toolbar.x + toolbar.w) {
+        if (rect_contains(toolbar, x, y)) {
             if (mods.ctrl || mods.alt) return;               // strict no-op
             if (button == GuiMouseButton::Left) dispatch_redesign_chord(x, y, mods);
             return;
@@ -914,8 +907,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     }
     {
         const GuiRect tab_row = top_tab_row_area(app);
-        if (y >= tab_row.y && y < tab_row.y + tab_row.h &&
-            x >= tab_row.x && x < tab_row.x + tab_row.w) {
+        if (rect_contains(tab_row, x, y)) {
             if (mods.ctrl || mods.alt) return;               // strict no-op
             if (button == GuiMouseButton::Left) {
                 // THE ACTIVE TAB'S PADLOCK IS A SECOND TARGET INSIDE ITS TAB,
@@ -939,8 +931,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // Shift-exact is refused like every other non-admitting button.
                 const GuiRect& lk = app.tab_lock_rect;
                 if (!mods.shift && lk.w > 0 && lk.h > 0 &&
-                    x >= lk.x && x < lk.x + lk.w &&
-                    y >= lk.y && y < lk.y + lk.h) {
+                    rect_contains(lk, x, y)) {
                     GuiInputState chord{};
                     on_key(GuiKeys::O, chord);
                 } else {
@@ -952,8 +943,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     }
     {
         const GuiRect icon_row = top_icon_row_area(app);
-        if (y >= icon_row.y && y < icon_row.y + icon_row.h &&
-            x >= icon_row.x && x < icon_row.x + icon_row.w) {
+        if (rect_contains(icon_row, x, y)) {
             if (mods.ctrl || mods.alt) return;               // strict no-op
             if (button == GuiMouseButton::Left) dispatch_redesign_chord(x, y, mods);
             return;
@@ -974,9 +964,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     const bool inside_waveform =
         x >= area.x && x < top.w &&
         y >= area.y && y < area.y + area.h;
-    const bool inside_top =
-        x >= top.x && x < top.x + top.w &&
-        y >= top.y && y < top.y + top.h;
+    const bool inside_top = rect_contains(top, x, y);
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
@@ -2320,8 +2308,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // the hover face, and both refusals live in that one predicate rather
         // than as conditions here or in the painter.
         const bool inside = app.pointer_in_window &&
-                            mx >= f.rect.x && mx < f.rect.x + f.rect.w &&
-                            my >= f.rect.y && my < f.rect.y + f.rect.h &&
+                            rect_contains(f.rect, mx, my) &&
                             redesign_button_hoverable(
                                 app, audio.total_frames(),
                                 static_cast<RedesignButton>(i));
@@ -2372,7 +2359,7 @@ void GuiInputHandler::recompute_settings_popup_hover() {
     for (int i = 0; i < kSettingsPopupItemCount; ++i) {
         const GuiRect& r =
             app.settings_popup.item_rects[static_cast<size_t>(i)];
-        if (mx >= r.x && mx < r.x + r.w && my >= r.y && my < r.y + r.h) {
+        if (rect_contains(r, mx, my)) {
             hit = i;
             break;
         }
@@ -2455,7 +2442,7 @@ int GuiInputHandler::settings_popup_item_at(int x, int y) const {
     for (int i = 0; i < kSettingsPopupItemCount; ++i) {
         const GuiRect& r =
             app.settings_popup.item_rects[static_cast<size_t>(i)];
-        if (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) return i;
+        if (rect_contains(r, x, y)) return i;
     }
     return -1;
 }

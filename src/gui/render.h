@@ -22,6 +22,16 @@ struct GuiRect {
     int h;
 };
 
+// Point-in-rect on the tree's ONE containment convention: half-open on both
+// axes (>= x, < x + w), so adjacent rects tile with no shared column and a
+// zero-width/height rect contains nothing (the cold-stash case). Every plain
+// x/y hit test spells itself through this owner; deciders with a fused extra
+// condition (an x-only band test, a double-domain rect) keep their own compare
+// at the site.
+inline bool rect_contains(const GuiRect& r, int x, int y) {
+    return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+}
+
 struct GuiColor {
     double r;
     double g;
@@ -706,6 +716,25 @@ void   set_gui_scale_percent(int percent);
 // it: the setting's grammar floors at 100).
 double gui_scale_factor();
 
+// One authored 100%-scale length -> device pixels, the ONE conversion every
+// scaled dimension in the tree takes: std::nearbyint like every other
+// integer-domain conversion. Every scaled accessor below (and the painters'
+// own lengths in paint_handler.cpp / render.cpp) spells its conversion through
+// this pair rather than open-coding the multiply; the DOUBLE-domain readers —
+// redesign_font_size_px, the corner radii, the ruler's unrounded pitch
+// compare — are a different concept (they never round to int, or round to a
+// double on purpose) and deliberately do not come through here.
+inline int scaled_px(double authored) {
+    return static_cast<int>(std::nearbyint(authored * gui_scale_factor()));
+}
+// The floored form: `floor_px` is the PER-METRIC minimum the accessor states
+// (defensive at schema-legal scales, which never go below 100% — the floors
+// exist so a degenerate factor cannot zero a structural dimension).
+inline int scaled_px(double authored, int floor_px) {
+    const int v = scaled_px(authored);
+    return v < floor_px ? floor_px : v;
+}
+
 // (The former flag_font_size_px() — font_size * 96/72 — is gone with row 7. The
 // one text size in the tree is redesign_font_size_px(), below.)
 
@@ -789,14 +818,10 @@ inline constexpr int kPlayheadUnitPx = 8;
 inline constexpr int kMenuRowHeightPx = 34;
 inline constexpr int kMenuRowMarginPx = 1;
 inline int menu_row_margin_h_px() {
-    const int h = static_cast<int>(std::nearbyint(
-        static_cast<double>(kMenuRowMarginPx) * gui_scale_factor()));
-    return h < 1 ? 1 : h;
+    return scaled_px(kMenuRowMarginPx, 1);
 }
 inline int menu_row_content_h_px() {
-    const int h = static_cast<int>(std::nearbyint(
-        static_cast<double>(kMenuRowHeightPx) * gui_scale_factor()));
-    return h < 5 ? 5 : h;
+    return scaled_px(kMenuRowHeightPx, 5);
 }
 inline int menu_row_h_px() {
     return menu_row_content_h_px() + menu_row_margin_h_px();
@@ -817,14 +842,10 @@ inline int menu_row_h_px() {
 inline constexpr int kToolbarRowHeightPx = 44;
 inline constexpr int kToolbarBorderPx    = 1;
 inline int toolbar_border_h_px() {
-    const int h = static_cast<int>(std::nearbyint(
-        static_cast<double>(kToolbarBorderPx) * gui_scale_factor()));
-    return h < 1 ? 1 : h;
+    return scaled_px(kToolbarBorderPx, 1);
 }
 inline int toolbar_row_content_h_px() {
-    const int h = static_cast<int>(std::nearbyint(
-        static_cast<double>(kToolbarRowHeightPx) * gui_scale_factor()));
-    return h < 5 ? 5 : h;
+    return scaled_px(kToolbarRowHeightPx, 5);
 }
 inline int toolbar_row_h_px() {
     return toolbar_row_content_h_px() + toolbar_border_h_px();
@@ -844,14 +865,10 @@ inline int toolbar_row_h_px() {
 inline constexpr int kTabRowHeightPx = 30;
 inline constexpr int kTabRowBorderPx = 1;
 inline int tab_row_border_h_px() {
-    const int h = static_cast<int>(std::nearbyint(
-        static_cast<double>(kTabRowBorderPx) * gui_scale_factor()));
-    return h < 1 ? 1 : h;
+    return scaled_px(kTabRowBorderPx, 1);
 }
 inline int tab_row_content_h_px() {
-    const int h = static_cast<int>(std::nearbyint(
-        static_cast<double>(kTabRowHeightPx) * gui_scale_factor()));
-    return h < 5 ? 5 : h;
+    return scaled_px(kTabRowHeightPx, 5);
 }
 inline int tab_row_h_px() {
     return tab_row_content_h_px() + tab_row_border_h_px();
@@ -876,14 +893,10 @@ inline int tab_row_h_px() {
 inline constexpr int kIconRowHeightPx = 46;
 inline constexpr int kIconRowBorderPx = 1;
 inline int icon_row_border_h_px() {
-    const int h = static_cast<int>(std::nearbyint(
-        static_cast<double>(kIconRowBorderPx) * gui_scale_factor()));
-    return h < 1 ? 1 : h;
+    return scaled_px(kIconRowBorderPx, 1);
 }
 inline int icon_row_content_h_px() {
-    const int h = static_cast<int>(std::nearbyint(
-        static_cast<double>(kIconRowHeightPx) * gui_scale_factor()));
-    return h < 5 ? 5 : h;
+    return scaled_px(kIconRowHeightPx, 5);
 }
 inline int icon_row_h_px() {
     return icon_row_content_h_px() + icon_row_border_h_px();
@@ -899,19 +912,13 @@ inline constexpr int kTrimLaneHeightPx   = 9;
 inline constexpr int kRulerLaneHeightPx  = 28;
 inline constexpr int kMarkerLaneHeightPx = 20;
 inline int trim_lane_h_px() {
-    const int h = static_cast<int>(std::nearbyint(
-        static_cast<double>(kTrimLaneHeightPx) * gui_scale_factor()));
-    return h < 3 ? 3 : h;
+    return scaled_px(kTrimLaneHeightPx, 3);
 }
 inline int ruler_lane_h_px() {
-    const int h = static_cast<int>(std::nearbyint(
-        static_cast<double>(kRulerLaneHeightPx) * gui_scale_factor()));
-    return h < 5 ? 5 : h;
+    return scaled_px(kRulerLaneHeightPx, 5);
 }
 inline int marker_lane_h_px() {
-    const int h = static_cast<int>(std::nearbyint(
-        static_cast<double>(kMarkerLaneHeightPx) * gui_scale_factor()));
-    return h < 5 ? 5 : h;
+    return scaled_px(kMarkerLaneHeightPx, 5);
 }
 
 // Authored pixel geometry of THE BOTTOM ROW — the bottom strip's ONE lane
@@ -935,14 +942,10 @@ inline int marker_lane_h_px() {
 inline constexpr int kBottomRowHeightPx = 31;
 inline constexpr int kBottomRowBorderPx = 1;     // top AND bottom, equal
 inline int bottom_row_border_h_px() {
-    const int h = static_cast<int>(std::nearbyint(
-        static_cast<double>(kBottomRowBorderPx) * gui_scale_factor()));
-    return h < 1 ? 1 : h;
+    return scaled_px(kBottomRowBorderPx, 1);
 }
 inline int bottom_row_content_h_px() {
-    const int h = static_cast<int>(std::nearbyint(
-        static_cast<double>(kBottomRowHeightPx) * gui_scale_factor()));
-    return h < 5 ? 5 : h;
+    return scaled_px(kBottomRowHeightPx, 5);
 }
 inline int bottom_row_h_px() {
     return bottom_row_content_h_px() + 2 * bottom_row_border_h_px();
@@ -998,23 +1001,17 @@ inline double redesign_font_size_px() {
 inline constexpr int kMarkerFlagPadRightPx = 2;
 inline constexpr int kMarkerFlagPadLeftPx  = 2;
 inline int marker_flag_pad_left_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kMarkerFlagPadLeftPx) * gui_scale_factor()));
-    return v < 1 ? 1 : v;
+    return scaled_px(kMarkerFlagPadLeftPx, 1);
 }
 inline int marker_flag_pad_right_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kMarkerFlagPadRightPx) * gui_scale_factor()));
-    return v < 1 ? 1 : v;
+    return scaled_px(kMarkerFlagPadRightPx, 1);
 }
 // The 1px TOP EDGE, in the class's edge colour. The crops show no RIGHT and no
 // bottom edge, which is why this is a band and not a ring; the LEFT side is the
 // separate border below, in a colour of its own.
 inline constexpr int kMarkerFlagEdgePx = 1;
 inline int marker_flag_edge_h_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kMarkerFlagEdgePx) * gui_scale_factor()));
-    return v < 1 ? 1 : v;
+    return scaled_px(kMarkerFlagEdgePx, 1);
 }
 // THE 1px LEFT BORDER (architect 2026-08-02), full box height, in
 // kMarkerFlagBorder. The geometry clause that makes it a BORDER and not a wider
@@ -1035,9 +1032,7 @@ inline int marker_flag_edge_h_px() {
 // decoration. The right side needs no such rule — the box has no right border.
 inline constexpr int kMarkerFlagBorderPx = 1;
 inline int marker_flag_border_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kMarkerFlagBorderPx) * gui_scale_factor()));
-    return v < 1 ? 1 : v;
+    return scaled_px(kMarkerFlagBorderPx, 1);
 }
 // The label BASELINE, measured from the box's top edge. The crop's cap ink runs
 // rows 4..15 of the 20 — a 12-row cap height, which is what 16px Liberation
@@ -1047,16 +1042,12 @@ inline int marker_flag_border_px() {
 // the same crop and must agree with it, not with a font's internal leading.
 inline constexpr int kMarkerFlagBaselinePx = 16;
 inline int marker_flag_baseline_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kMarkerFlagBaselinePx) * gui_scale_factor()));
-    return v < 1 ? 1 : v;
+    return scaled_px(kMarkerFlagBaselinePx, 1);
 }
 // ROW 6's ONE LENGTH on the same axis: the area's border, 2px taken FROM the
 // area (the measurement and the reasoning are at the row-6 palette block).
 inline int waveform_border_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kWaveformBorderPx) * gui_scale_factor()));
-    return v < 1 ? 1 : v;
+    return scaled_px(kWaveformBorderPx, 1);
 }
 // THE NINE-GLYPH BUDGET, kept from the retired marker-text lane: a label longer
 // than nine glyphs displays as its first EIGHT bytes plus the UTF-8 ellipsis
@@ -1088,15 +1079,12 @@ inline double marker_flag_max_width_px() {
 // THE TRIM LANE's bevel band: the bottom TWO rows, a lighter then a darker
 // shade of whatever surface owns the column. Scales with the lane.
 inline int trim_bevel_h_px() {
-    const int h = static_cast<int>(std::nearbyint(2.0 * gui_scale_factor()));
-    return h < 2 ? 2 : h;
+    return scaled_px(2.0, 2);
 }
 // The endcap's own width, 2px at 100% (row_5_lane_1_trim_endcap.png is 2x9).
 inline constexpr int kTrimEndcapWidthPx = 2;
 inline int trim_endcap_w_px() {
-    const int w = static_cast<int>(std::nearbyint(
-        static_cast<double>(kTrimEndcapWidthPx) * gui_scale_factor()));
-    return w < 1 ? 1 : w;
+    return scaled_px(kTrimEndcapWidthPx, 1);
 }
 // THE MIDPOINT MARK IS THE 9x9 CROP, so its lengths are the crop's own: a TILE
 // 9 columns wide at 100% (its height is the lane's, which is what 9 rows means
@@ -1111,24 +1099,16 @@ inline constexpr int kTrimMiddleInnerPx = 5;   // the dark square inside it
 inline constexpr int kTrimMiddleInsetPx = 2;   // the crop's offset to that square
 inline constexpr int kTrimMiddleClearPx = 2;
 inline int trim_middle_size_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kTrimMiddleSizePx) * gui_scale_factor()));
-    return v < 1 ? 1 : v;
+    return scaled_px(kTrimMiddleSizePx, 1);
 }
 inline int trim_middle_inner_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kTrimMiddleInnerPx) * gui_scale_factor()));
-    return v < 1 ? 1 : v;
+    return scaled_px(kTrimMiddleInnerPx, 1);
 }
 inline int trim_middle_inset_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kTrimMiddleInsetPx) * gui_scale_factor()));
-    return v < 0 ? 0 : v;
+    return scaled_px(kTrimMiddleInsetPx, 0);
 }
 inline int trim_middle_clear_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kTrimMiddleClearPx) * gui_scale_factor()));
-    return v < 0 ? 0 : v;
+    return scaled_px(kTrimMiddleClearPx, 0);
 }
 
 // THE PLAYHEAD HEAD, redrawn rather than imported: 19x12 at 100%, ALIASED, from
@@ -1157,9 +1137,7 @@ inline constexpr int kPlayheadHeadHalf[kPlayheadHeadHeightPx] = {
 inline constexpr int     kTooltipDamageHeightPx = 60;
 inline constexpr int64_t kTooltipDelayMs        = 700;  // kdenlive-ish; architect-tunable
 inline int tooltip_damage_h_px() {
-    const int h = static_cast<int>(std::nearbyint(
-        static_cast<double>(kTooltipDamageHeightPx) * gui_scale_factor()));
-    return h < 5 ? 5 : h;
+    return scaled_px(kTooltipDamageHeightPx, 5);
 }
 // THE SETTINGS DROPDOWN'S VERTICAL metrics, out here for the same reason the
 // tooltip's height is: the popup's OPEN EDGE must damage the box before the box
@@ -1177,24 +1155,16 @@ inline constexpr int kPopupBorderPx     = 1;
 // the crop's own trailing space agrees with.
 inline constexpr int kPopupItemMarginYPx = 3;
 inline int popup_border_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kPopupBorderPx) * gui_scale_factor()));
-    return v < 1 ? 1 : v;
+    return scaled_px(kPopupBorderPx, 1);
 }
 inline int popup_item_h_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kPopupItemHeightPx) * gui_scale_factor()));
-    return v < 5 ? 5 : v;
+    return scaled_px(kPopupItemHeightPx, 5);
 }
 inline int popup_sep_margin_y_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kPopupSepMarginYPx) * gui_scale_factor()));
-    return v < 0 ? 0 : v;
+    return scaled_px(kPopupSepMarginYPx, 0);
 }
 inline int popup_item_margin_y_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kPopupItemMarginYPx) * gui_scale_factor()));
-    return v < 0 ? 0 : v;
+    return scaled_px(kPopupItemMarginYPx, 0);
 }
 
 
@@ -1213,9 +1183,7 @@ inline int popup_item_margin_y_px() {
 // hold the value byte-for-byte; it cannot fire while gui_scale rests in
 // [100, 200].
 inline int waveform_inset_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kPlayheadUnitPx) * gui_scale_factor()));
-    return v < 2 ? 2 : v;
+    return scaled_px(kPlayheadUnitPx, 2);
 }
 
 // THE CHANNEL SPLIT ROW — the ONE owner of where the two channel bands meet,
@@ -1258,9 +1226,7 @@ inline int waveform_channel_split_row(int area_h, int inset_px) {
 // per-site table are at playhead_pixel_x, app_state.h). Widening it to the head
 // is a retune, the architect's call, not a cleanup's.
 inline int playhead_half_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kPlayheadUnitPx) * gui_scale_factor()));
-    return (v < 2 ? 2 : v) - 1;
+    return scaled_px(kPlayheadUnitPx, 2) - 1;
 }
 
 // (THE MONOSPACE EDITOR TIER IS GONE — row 7, 2026-08-01. EditorTextBox,
@@ -1635,9 +1601,7 @@ GuiRect trim_chip_rect(bool is_begin, int strip_x, int col, GuiRect row);
 // old width, so the bound drags feel as they always did.
 inline constexpr int kTrimEndcapGrabPx = 4;
 inline int trim_endcap_grab_px() {
-    const int v = static_cast<int>(std::nearbyint(
-        static_cast<double>(kTrimEndcapGrabPx) * gui_scale_factor()));
-    return v < 0 ? 0 : v;
+    return scaled_px(kTrimEndcapGrabPx, 0);
 }
 
 // (render_trim_stems IS DELETED, architect 2026-08-01. It drew the WAVEFORM-AREA

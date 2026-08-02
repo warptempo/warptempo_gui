@@ -501,28 +501,45 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
     // one line at the first paint rather than one line per repaint forever —
     // a tripwire that floods is a tripwire nobody reads. Function-local static:
     // the GUI is single-threaded at every draw site.
+    //
+    // AND PROVE IT ONCE. The `d` strings are in-tree constexpr data, so the
+    // verdict cannot change between calls — `validated` latches a PASSED probe
+    // per icon, and later draws of that icon skip the scratch surface and the
+    // dry-run parse entirely (the fill loop below re-walks the same constant
+    // strings, which is the byte-identity the two-walk contract rests on). A
+    // FAILED probe deliberately does not latch anything but its one stderr
+    // line: the icon re-probes, re-fails and draws nothing on every call,
+    // exactly as before. An out-of-range idx (a kIconCount mismatch) never
+    // latches either — that icon simply pays the probe per draw, the same
+    // "costs that icon its latch" degradation the header records for
+    // `reported`.
     {
-        cairo_surface_t* probe_surf =
-            cairo_image_surface_create(CAIRO_FORMAT_A8, 1, 1);
-        cairo_t* probe = cairo_create(probe_surf);
-        bool ok = true;
-        for (int i = 0; i < def.path_count && ok; ++i) {
-            cairo_new_path(probe);
-            ok = append_path(probe, def.paths[i].d);
-        }
-        cairo_destroy(probe);
-        cairo_surface_destroy(probe_surf);
-        if (!ok) {
-            static bool reported[kIconCount] = {};
-            const int idx = static_cast<int>(icon);
-            if (idx >= 0 &&
-                idx < static_cast<int>(std::size(reported)) && !reported[idx]) {
-                reported[idx] = true;
-                std::fprintf(stderr,
-                             "icons: Malformed path data, icon %d not drawn\n",
-                             idx);
+        static bool validated[kIconCount] = {};
+        const int idx = static_cast<int>(icon);
+        const bool latch_ok =
+            idx >= 0 && idx < static_cast<int>(std::size(validated));
+        if (!(latch_ok && validated[idx])) {
+            cairo_surface_t* probe_surf =
+                cairo_image_surface_create(CAIRO_FORMAT_A8, 1, 1);
+            cairo_t* probe = cairo_create(probe_surf);
+            bool ok = true;
+            for (int i = 0; i < def.path_count && ok; ++i) {
+                cairo_new_path(probe);
+                ok = append_path(probe, def.paths[i].d);
             }
-            return;
+            cairo_destroy(probe);
+            cairo_surface_destroy(probe_surf);
+            if (!ok) {
+                static bool reported[kIconCount] = {};
+                if (latch_ok && !reported[idx]) {
+                    reported[idx] = true;
+                    std::fprintf(stderr,
+                                 "icons: Malformed path data, icon %d not drawn\n",
+                                 idx);
+                }
+                return;
+            }
+            if (latch_ok) validated[idx] = true;
         }
     }
 
@@ -537,9 +554,10 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
         cairo_save(cr);
         if (p.tx != 0.0 || p.ty != 0.0) cairo_translate(cr, p.tx, p.ty);
         cairo_new_path(cr);
-        // Cannot fail: the dry run above proved every path in this icon parses,
+        // Cannot fail: the dry run proved every path in this icon parses (on
+        // this call, or on the earlier call whose pass `validated` latched),
         // and the strings are compile-time constants that cannot change between
-        // the two walks.
+        // the walks.
         append_path(cr, p.d);
         // The path's own color, retained by keep_own and made up with
         // mixed_with — the disabled face. keep_own == 1 (the default every

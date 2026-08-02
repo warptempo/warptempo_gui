@@ -421,12 +421,8 @@ namespace {
 // survives untouched on every un-redesigned surface, and each redesign row
 // moves its own text over.
 
-// One authored 100%-scale length -> device pixels, the ONE conversion every
-// dimension below takes (std::nearbyint like every other integer-domain
-// conversion in this tree).
-int scaled_px(double authored) {
-    return static_cast<int>(std::nearbyint(authored * gui_scale_factor()));
-}
+// (The authored-length -> device-pixels conversion every dimension below takes
+// is scaled_px, render.h — the ONE conversion the whole scale axis shares.)
 
 // THE GROUND ROWS 1 AND 2 PAINT ON, in one owner because three things read it:
 // the ground fill itself, the disabled face's mix target, and the click face's.
@@ -750,6 +746,68 @@ void redesign_rounded_rect_path(cairo_t* cr, double x, double y,
     cairo_close_path(cr);
 }
 
+// A FACE BOX: the half-stroke-inset rounded rect every redesigned button-like
+// surface draws its fill and its frame on. ONE PATH, filled and/or stroked —
+// never a fill on the full box under a stroke on an inset one — so the fill's
+// edge and the stroke's centreline cannot describe different rectangles. THE
+// INVARIANT, stated once here and pointed at from every caller: the frame
+// insets by HALF ITS OWN WIDTH on all four sides, so the band lands on the
+// box's outermost pixel ring with no straight edge antialiased — the +0.5
+// half-pixel alignment at a 1px stroke, the integer bound at an even one, both
+// parities from the one expression — and the radius insets by the SAME half so
+// the corner stays concentric with the box. `radius` is the authored (outer)
+// corner radius; nullptr for either colour omits that pass.
+//
+// Callers: the view-bar buttons, the icon-row buttons, the popup chrome
+// (paint_popup_chrome) and the dropdown's hovered item. TWO surfaces in the
+// family deliberately keep their own bodies: the selected tab strokes the
+// OPEN-BOTTOM redesign_rounded_top_rect_path (a shared closed box would seal
+// it), and row 2's hover outline passes its radius UN-inset — its arc is not
+// concentric with any fill (there is none at rest) and its painted pixels are
+// the shipped ones, so it stays as it is rather than being harmonized.
+void redesign_face_box(cairo_t* cr, int x, int y, int w, int h,
+                       int lw, double radius,
+                       const GuiColor* fill, const GuiColor* line) {
+    const double half = static_cast<double>(lw) * 0.5;
+    redesign_rounded_rect_path(cr, x + half, y + half,
+                               static_cast<double>(w - lw),
+                               static_cast<double>(h - lw),
+                               radius - half);
+    if (fill != nullptr) {
+        cairo_set_source_rgb(cr, fill->r, fill->g, fill->b);
+        if (line != nullptr) cairo_fill_preserve(cr);
+        else                 cairo_fill(cr);
+    }
+    if (line != nullptr) {
+        cairo_set_source_rgb(cr, line->r, line->g, line->b);
+        cairo_set_line_width(cr, static_cast<double>(lw));
+        cairo_stroke(cr);
+    }
+}
+
+// THE BUTTON-FACE PUBLICATION, one writer so a row cannot forget a field: the
+// painter stashes the rect it painted plus the LIVE enabled/selected bits
+// (redesign_button_enabled / redesign_button_selected — the same predicates
+// main.cpp's per-tick drift comparator replays), and returns the face so the
+// caller reads .hovered / .selected back for its own paint. Every row painter
+// publishes through here at the top of its per-button body; the comparator's
+// vector is total over the roster, so the stash is written for every id — a
+// button with no selected state simply stores the predicate's constant false.
+// (The tab row's hand-copied stash once omitted `selected`, which made the
+// comparator disagree with the painter on the active tab EVERY tick — a
+// permanent idle full-top-strip repaint. This owner is why that class of
+// omission cannot recur.)
+AppState::RedesignButtonFace& publish_button_face(
+    AppState& app, int64_t total_frames, RedesignButton id,
+    const GuiRect& rect) {
+    AppState::RedesignButtonFace& face =
+        app.redesign_buttons[redesign_button_index(id)];
+    face.rect     = rect;
+    face.enabled  = redesign_button_enabled(app, total_frames, id);
+    face.selected = redesign_button_selected(app, id);
+    return face;
+}
+
 // ROW 4 — THE ICON ROW, measured at 100% off the five 32x32 state crops
 // (row_4_button_{rest,hover,click,selected,selectedhover}.png),
 // row_4_separator.png (1x34) and row_4_bottom_border.png. The lane metrics
@@ -1034,15 +1092,14 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // width above exists only here, so the pointer code reads this stash
         // rather than re-shaping the string. Written every paint — a font, scale
         // or window change lands in it on the frame that displays it.
-        AppState::RedesignButtonFace& face =
-            app.redesign_buttons[redesign_button_index(def.id)];
-        face.rect = GuiRect{x, row.y, btn_w, content_h};
-        // Neither menu button has a disabled face — both are live during a load
-        // and on a blank state, which is the whole reason this row paints
-        // outside the audio branches. The stash is written anyway so the tick
-        // comparator's vector is total over the roster with no membership test.
-        face.enabled = redesign_button_enabled(app, audio.total_frames(),
-                                               def.id);
+        // Neither menu button has a disabled or selected face — both are live
+        // during a load and on a blank state, which is the whole reason this
+        // row paints outside the audio branches. The stash is written anyway
+        // (through the one publisher) so the tick comparator's vector is total
+        // over the roster with no membership test.
+        AppState::RedesignButtonFace& face = publish_button_face(
+            app, audio.total_frames(), def.id,
+            GuiRect{x, row.y, btn_w, content_h});
 
         // THE SETTINGS BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
         // 2026-08-02, kdenlive's own behaviour): the pill is what says "this menu
@@ -1145,14 +1202,9 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             vx += mar;
             const int btn_w = widths[i];
 
-            AppState::RedesignButtonFace& face =
-                app.redesign_buttons[
-                    redesign_button_index(kViewBarButtons[i].id)];
-            face.rect     = GuiRect{vx, btn_y, btn_w, btn_h};
-            face.enabled  = redesign_button_enabled(app, audio.total_frames(),
-                                                    kViewBarButtons[i].id);
-            face.selected = redesign_button_selected(app,
-                                                     kViewBarButtons[i].id);
+            AppState::RedesignButtonFace& face = publish_button_face(
+                app, audio.total_frames(), kViewBarButtons[i].id,
+                GuiRect{vx, btn_y, btn_w, btn_h});
 
             const bool pressed =
                 app.redesign_pressed ==
@@ -1162,29 +1214,13 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
                               face.selected, pressed);
 
             if (f.filled || f.framed) {
-                // ONE PATH, FILLED AND STROKED — row 4's construction, and the
-                // frame insets by HALF ITS OWN WIDTH so the band lands on the
-                // box's outermost pixel ring with no straight edge antialiased
-                // (both stroke parities from the one expression). The REST face
-                // paints no fill at all: its color IS the div's background,
-                // already under it, which is why the crop's resting button is
-                // invisible.
-                const double half = static_cast<double>(bord) * 0.5;
-                redesign_rounded_rect_path(cr,
-                                           vx + half, btn_y + half,
-                                           static_cast<double>(btn_w - bord),
-                                           static_cast<double>(btn_h - bord),
-                                           bar_rad - half);
-                if (f.filled) {
-                    cairo_set_source_rgb(cr, f.fill.r, f.fill.g, f.fill.b);
-                    if (f.framed) cairo_fill_preserve(cr);
-                    else          cairo_fill(cr);
-                }
-                if (f.framed) {
-                    cairo_set_source_rgb(cr, f.frame.r, f.frame.g, f.frame.b);
-                    cairo_set_line_width(cr, static_cast<double>(bord));
-                    cairo_stroke(cr);
-                }
+                // The shared face box (redesign_face_box — the half-stroke
+                // inset rule lives there). The REST face paints no fill at all:
+                // its color IS the div's background, already under it, which is
+                // why the crop's resting button is invisible.
+                redesign_face_box(cr, vx, btn_y, btn_w, btn_h, bord, bar_rad,
+                                  f.filled ? &f.fill  : nullptr,
+                                  f.framed ? &f.frame : nullptr);
             }
 
             // The label is kRedesignLabel in EVERY state, focused and unfocused
@@ -1298,18 +1334,15 @@ void GuiPaintHandler::paint_toolbar_row(cairo_t* cr) {
         const int label_w = static_cast<int>(std::nearbyint(run.width_px));
         const int btn_w = pad_left + icon_px + icon_gap + label_w + pad_right;
 
-        AppState::RedesignButtonFace& face =
-            app.redesign_buttons[redesign_button_index(def.id)];
-        face.rect = GuiRect{x, btn_y, btn_w, btn_h};
-
-        // THE ENABLED VECTOR IS STASHED AS IT IS PAINTED, and this is the only
-        // writer: main.cpp's per-tick comparator reads it back to notice that
-        // the live answer has drifted (an undo push, a read-only toggle, a load
-        // completing — none of which damages the strip on its own) and pays one
-        // invalidate_top_strip to bring the faces up to date.
-        const bool enabled =
-            redesign_button_enabled(app, audio.total_frames(), def.id);
-        face.enabled = enabled;
+        // THE ENABLED VECTOR IS STASHED AS IT IS PAINTED, through the one
+        // publisher: main.cpp's per-tick comparator reads it back to notice
+        // that the live answer has drifted (an undo push, a read-only toggle, a
+        // load completing — none of which damages the strip on its own) and
+        // pays one invalidate_top_strip to bring the faces up to date.
+        AppState::RedesignButtonFace& face = publish_button_face(
+            app, audio.total_frames(), def.id,
+            GuiRect{x, btn_y, btn_w, btn_h});
+        const bool enabled = face.enabled;
 
         // The click face rides the PHYSICAL hold, so it survives the pointer
         // wandering off the button mid-press; a disabled button never gets one
@@ -1338,12 +1371,12 @@ void GuiPaintHandler::paint_toolbar_row(cairo_t* cr) {
 
         if (outlined && btn_h > 0) {
             // The crop's straight edges are pure accent with AA only at the
-            // corners, so the outline is INSET BY HALF ITS OWN WIDTH: the
-            // centerline runs at x + lw/2, which is the +0.5 half-pixel
-            // alignment at a 1px stroke and the integer bound at an even one
-            // (200%), and either way the painted band lands exactly on the
-            // button box's outermost pixel ring with no straight edge
-            // antialiased. One expression, both parities.
+            // corners, so the outline is INSET BY HALF ITS OWN WIDTH (the
+            // half-stroke inset rule — full statement at redesign_face_box).
+            // DELIBERATELY NOT the shared face box: this stroke passes its
+            // radius UN-inset where the owner insets it by the same half, and
+            // these painted pixels are the shipped ones — the recorded keeper
+            // at the owner's comment.
             const int    lw   = std::max(1, scaled_px(kToolbarHoverStrokePx));
             const double half = static_cast<double>(lw) * 0.5;
             cairo_set_source_rgb(cr, kRedesignAccent.r, kRedesignAccent.g,
@@ -1460,19 +1493,18 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         const int field_w = std::max(min_w, label_w + 2 * pad);
         const int tab_w   = field_w + slot_w;
 
-        const bool selected = (app.active_tab_view == def.letter);
-
         // THE STASH IS WHAT THE DRIFT COMPARATOR READS (main.cpp's per-tick
         // enabled/selected sweep), so publishing `selected` is load-bearing,
         // not bookkeeping: leave it at its default and the live active-tab
         // compare disagrees with the stash on the selected tab EVERY pass,
-        // which invalidates the whole top strip at tick cadence forever.
-        AppState::RedesignButtonFace& face =
-            app.redesign_buttons[redesign_button_index(def.id)];
-        face.rect     = GuiRect{x, lane.y, tab_w, content_h};
-        face.enabled  = redesign_button_enabled(app, audio.total_frames(),
-                                                def.id);
-        face.selected = selected;
+        // which invalidates the whole top strip at tick cadence forever. The
+        // one publisher writes it from redesign_button_selected — the roster
+        // predicate's own active_tab_view compare, so the painted face below
+        // reads THE SAME fact the comparator replays, with no second spelling.
+        AppState::RedesignButtonFace& face = publish_button_face(
+            app, audio.total_frames(), def.id,
+            GuiRect{x, lane.y, tab_w, content_h});
+        const bool selected = face.selected;
 
         if (selected) {
             sel_x = x;
@@ -1502,11 +1534,10 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             cairo_clip(cr);
             {
                 // THE STROKE GEOMETRY, in one expression per axis:
-                //  - inset by HALF the stroke width on the left, right and top,
-                //    so the band lands on the box's outermost pixel ring with no
-                //    straight edge antialiased — the +0.5 half-pixel alignment
-                //    at 1px, the integer bound at 2px, both parities from the
-                //    same term (row 2's hover outline sets the precedent);
+                //  - inset by HALF the stroke width on the left, right and top
+                //    (the half-stroke inset rule — its full statement lives at
+                //    redesign_face_box, whose CLOSED box this deliberately does
+                //    not call: the tab's path is open at the bottom);
                 //  - the radius inset by the SAME half, which keeps the arc
                 //    CONCENTRIC with the filled trim's arc above (both centered
                 //    on x+radius, lane.y+radius) so the border picks the blue up
@@ -1729,12 +1760,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
             x += btn_gap;
         }
 
-        AppState::RedesignButtonFace& face =
-            app.redesign_buttons[redesign_button_index(def.id)];
-        face.rect     = GuiRect{x, btn_y, btn, btn};
-        face.enabled  = redesign_button_enabled(app, audio.total_frames(),
-                                                def.id);
-        face.selected = redesign_button_selected(app, def.id);
+        AppState::RedesignButtonFace& face = publish_button_face(
+            app, audio.total_frames(), def.id, GuiRect{x, btn_y, btn, btn});
 
         const bool pressed =
             app.redesign_pressed == redesign_button_index(def.id);
@@ -1746,43 +1773,24 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         const bool has_fill = pressed || face.selected;
         const bool has_line = face.hovered || pressed || face.selected;
         if (has_fill || has_line) {
-            // ONE PATH, FILLED AND STROKED — not a fill on the full box under a
-            // stroke on an inset one. The crops settle it: fitting both
-            // constructions against the selected crop, the shared inset path
-            // scores 227 where the full-box fill scores 270 at its own best
-            // radius and 2129 at this one, and it is what the source widget does
-            // (a single rounded rect drawn with both a brush and a pen). Sharing
-            // the path also means the fill's edge and the stroke's centreline
-            // cannot describe different rectangles.
-            //
-            // The inset is HALF THE STROKE on all four sides, so the band lands
-            // on the box's outermost pixel ring with no straight edge
-            // antialiased — rows 2 and 3's alignment term, both parities from
-            // the one expression — and the radius insets by the same half so the
-            // corner stays concentric with the box.
-            const double half = static_cast<double>(lw) * 0.5;
-            redesign_rounded_rect_path(cr, x + half, btn_y + half,
-                                       static_cast<double>(btn - lw),
-                                       static_cast<double>(btn - lw),
-                                       radius - half);
-            if (has_fill) {
-                const GuiColor fill =
-                    pressed ? mix_color(kRedesignAccent, kRedesignTabGround,
-                                        kRedesignClickMix)
-                            : kRedesignSelectedFill;
-                cairo_set_source_rgb(cr, fill.r, fill.g, fill.b);
-                if (has_line) cairo_fill_preserve(cr);
-                else          cairo_fill(cr);
-            }
-            if (has_line) {
-                // Accent when the pointer is on it or it is held; otherwise the
-                // calm grey that frames a resting toggled-on button.
-                const GuiColor line = (face.hovered || pressed)
-                                          ? kRedesignAccent : kRedesignLine;
-                cairo_set_source_rgb(cr, line.r, line.g, line.b);
-                cairo_set_line_width(cr, static_cast<double>(lw));
-                cairo_stroke(cr);
-            }
+            // The shared face box (redesign_face_box — one path, filled and
+            // stroked, the half-stroke inset rule stated there). THIS ROW'S FIT
+            // SETTLED THE CONSTRUCTION: fitting both candidates against the
+            // selected crop, the shared inset path scores 227 where the
+            // full-box fill scores 270 at its own best radius and 2129 at this
+            // one, and it is what the source widget does (a single rounded rect
+            // drawn with both a brush and a pen).
+            const GuiColor fill =
+                pressed ? mix_color(kRedesignAccent, kRedesignTabGround,
+                                    kRedesignClickMix)
+                        : kRedesignSelectedFill;
+            // Accent when the pointer is on it or it is held; otherwise the
+            // calm grey that frames a resting toggled-on button.
+            const GuiColor line = (face.hovered || pressed)
+                                      ? kRedesignAccent : kRedesignLine;
+            redesign_face_box(cr, x, btn_y, btn, btn, lw, radius,
+                              has_fill ? &fill : nullptr,
+                              has_line ? &line : nullptr);
         }
 
         if (def.glyph != nullptr) {
@@ -1824,21 +1832,12 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
     // ONE BOX SHAPE FOR BOTH FLOATING SURFACES, TWO COLOR PAIRS. The tooltip and
     // the dropdown are built the same way and dressed differently — kdenlive
     // gives its menus a darker ground and a softer border than its tooltips, and
-    // each crop pinned its own pair — so the colors are the caller's and only
-    // the geometry is shared. ONE PATH, filled then stroked, the construction
-    // the row-4 fit settled: the fill's edge and the stroke's centreline
-    // describe the same rectangle by construction.
-    const int    lw   = popup_border_px();
-    const double half = static_cast<double>(lw) * 0.5;
-    const double rad  = std::nearbyint(kPopupCornerRadiusPx * gui_scale_factor());
-    redesign_rounded_rect_path(cr, r.x + half, r.y + half,
-                               static_cast<double>(r.w - lw),
-                               static_cast<double>(r.h - lw), rad - half);
-    cairo_set_source_rgb(cr, ground.r, ground.g, ground.b);
-    cairo_fill_preserve(cr);
-    cairo_set_source_rgb(cr, border.r, border.g, border.b);
-    cairo_set_line_width(cr, static_cast<double>(lw));
-    cairo_stroke(cr);
+    // each crop pinned its own pair — so the colors are the caller's and the
+    // geometry is the shared face box (redesign_face_box — one path, filled
+    // then stroked, the half-stroke inset rule stated there).
+    const int    lw  = popup_border_px();
+    const double rad = std::nearbyint(kPopupCornerRadiusPx * gui_scale_factor());
+    redesign_face_box(cr, r.x, r.y, r.w, r.h, lw, rad, &ground, &border);
 }
 
 void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
@@ -2093,22 +2092,16 @@ void GuiPaintHandler::paint_settings_popup(cairo_t* cr) {
                                            static_cast<double>(item.h), radius);
                 cairo_fill(cr);
             } else {
-                const double half = static_cast<double>(lw) * 0.5;
                 const GuiColor fill = mix_color(kRedesignAccent,
                                                 kRedesignPopupGround,
                                                 kRedesignClickMix);
                 const GuiColor line = mix_color(GuiColor{1.0, 1.0, 1.0},
                                                 kRedesignAccent,
                                                 kRedesignHoverLightenMix);
-                redesign_rounded_rect_path(cr, item.x + half, item.y + half,
-                                           static_cast<double>(item.w - lw),
-                                           static_cast<double>(item.h - lw),
-                                           radius - half);
-                cairo_set_source_rgb(cr, fill.r, fill.g, fill.b);
-                cairo_fill_preserve(cr);
-                cairo_set_source_rgb(cr, line.r, line.g, line.b);
-                cairo_set_line_width(cr, static_cast<double>(lw));
-                cairo_stroke(cr);
+                // The shared face box (redesign_face_box — the half-stroke
+                // inset rule lives there).
+                redesign_face_box(cr, item.x, item.y, item.w, item.h, lw,
+                                  radius, &fill, &line);
             }
         }
 
@@ -2257,8 +2250,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
 
     const int tick_bottom = marker.y + marker.h;         // the waveform top
     const int minor_top   = marker.y;                    // no rise
-    const int major_top   = marker.y - static_cast<int>(std::nearbyint(
-                                kRulerMajorRisePx * gui_scale_factor()));
+    const int major_top   = marker.y - scaled_px(kRulerMajorRisePx);
 
     cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
                            CAIRO_FONT_WEIGHT_NORMAL);
@@ -2295,8 +2287,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // out of bounds.
     constexpr int kHeadTickWindowCap = 48;
     std::array<uint8_t, kHeadTickWindowCap> head_ticks{};
-    const int head_half_max = static_cast<int>(std::nearbyint(
-        static_cast<double>(kPlayheadHeadHalf[0]) * gui_scale_factor()));
+    const int head_half_max = scaled_px(kPlayheadHeadHalf[0]);
     const double head_px_pre = playhead_pixel_x(app, basis.vp_start, basis.spp);
     const int head_cursor_col = static_cast<int>(std::nearbyint(head_px_pre));
     int head_window = 2 * head_half_max + 1;
@@ -2724,10 +2715,13 @@ GuiPaintHandler::region_columns(const PlateViewportBasis& basis) const {
     const int64_t lo = std::min(app.region.a_frame, app.region.b_frame);
     const int64_t hi = std::max(app.region.a_frame, app.region.b_frame);
     RegionColumns c;
-    c.lo_col = static_cast<int>(std::nearbyint(
-        (static_cast<double>(lo) - basis.vp_start) / basis.spp));
-    c.hi_col = static_cast<int>(std::nearbyint(
-        (static_cast<double>(hi) - basis.vp_start) / basis.spp));
+    // The one column rounding (displayed_column_at, warp_frame_map_view.h), on
+    // the PLATE basis the caller passed — the endpoints already live in the
+    // active display domain, so no warp map is walked.
+    c.lo_col = displayed_column_at(static_cast<double>(lo),
+                                   basis.vp_start, basis.spp);
+    c.hi_col = displayed_column_at(static_cast<double>(hi),
+                                   basis.vp_start, basis.spp);
     return c;
 }
 
@@ -2898,16 +2892,16 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     if (spp <= 0.0) return out;
     const double vp_start = basis.vp_start;
 
-    // Columns: left_col uses the same std::nearbyint-to-int placement the stem
-    // renderer uses, so the overlay's left edge stays on the marker's column.
+    // Columns: left_col takes the stem renderer's own placement — the shared
+    // displayed_column_at rounding (warp_frame_map_view.h) — so the overlay's
+    // left edge stays on the marker's column.
     // right_col is a fixed whole-pixel offset ahead of it, so the far edge
     // tracks the marker in lockstep instead of wobbling by independent
     // per-endpoint rounding. width_px is the overlay span banker's-rounded to
     // whole pixels — an approximate but rigid forward extent, which beats an
     // exact but jittering one (the span is an authoring aid, not an engine
     // point).
-    const int left_col =
-        static_cast<int>(std::nearbyint((ms - vp_start) / spp));
+    const int left_col = displayed_column_at(ms, vp_start, spp);
     const int width_px = static_cast<int>(std::nearbyint(
         static_cast<double>(kPhaseResetOverlaySamples) / spp));
 
@@ -3175,8 +3169,10 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
     const double spp = basis.spp;
     if (spp <= 0.0) return;
     const double vp_start = basis.vp_start;
-    const int col = static_cast<int>(std::nearbyint(
-        (app.strip_drag.anchor_sample - vp_start) / spp));
+    // The one column rounding (displayed_column_at, warp_frame_map_view.h), on
+    // the PLATE basis hoisted above.
+    const int col =
+        displayed_column_at(app.strip_drag.anchor_sample, vp_start, spp);
     render_strip_anchor_stem(cr, area, col);
 }
 

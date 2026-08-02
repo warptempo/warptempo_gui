@@ -974,10 +974,7 @@ bool GuiInputHandler::jump_playhead_to_focused_marker() {
     {
         const int idx = app.last_selected_marker;
         if (idx < 0) return false;
-        const int n = (app.active_markers_view == 'P')
-            ? static_cast<int>(app.phaseresetmarkers.markers().size())
-            : static_cast<int>(app.warpmarkers.markers().size());
-        if (idx >= n) return false;
+        if (idx >= active_marker_count(app)) return false;
     }
 
     playback_lifecycle.stop_playback_if_playing();
@@ -1271,19 +1268,14 @@ int GuiInputHandler::wheel_context(int x, int y) const {
             top_tab_row_area(app),  top_icon_row_area(app),
         };
         for (const GuiRect& b : bands) {
-            if (x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h)
-                return -1;
+            if (rect_contains(b, x, y)) return -1;
         }
     }
 
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
-    const bool inside_waveform =
-        x >= area.x && x < area.x + area.w &&
-        y >= area.y && y < area.y + area.h;
-    const bool inside_top =
-        x >= top.x && x < top.x + top.w &&
-        y >= top.y && y < top.y + top.h;
+    const bool inside_waveform = rect_contains(area, x, y);
+    const bool inside_top      = rect_contains(top, x, y);
     if (inside_waveform) return 1;
     if (inside_top) return 2;
     return 0;

@@ -197,6 +197,29 @@ inline double source_grid_position_at_column(int64_t viewport_start,
     return (m + static_cast<double>(col)) * q;
 }
 
+// THE PAINTERS' COLUMN PLACEMENT for a value ALREADY in the displayed domain:
+// nearbyint((displayed - vp_start) / spp), rounded once to the integer column.
+// One owner for the one rounding — the trim-bound column, the region span, the
+// phase-reset overlay's left edge, the strip-drag anchor stem, the undo
+// restore's visibility test and painted_column_of_source_frame_on_basis's tail
+// all place through this exact expression, and used to spell it independently,
+// tied together only by "matching region_columns"-style prose. PURE ARITHMETIC,
+// NO BASIS CHOICE INSIDE: the caller supplies its own vp_start/spp (plate
+// basis, item basis, or live values — the two-epochs split at
+// plate_viewport_basis / item_viewport_basis is the caller's to name, at the
+// call site, where the provenance comment belongs).
+//
+// THE UNROUNDED SIBLINGS ARE A DIFFERENT CONCEPT AND STAY SEPARATE:
+// playhead_pixel_x / scanner_pixel_x (main.cpp) and the strip drag's fractional
+// anchor_col want the SUB-PIXEL position, not a column, and the flag painter
+// (iterate_visible_flags_impl, render.cpp) keeps its nearbyint in the double
+// pixel domain (its left_x feeds shaped-text placement, never an int). The
+// viewport's own column walk (move_playhead_pixels) also stays: it works in an
+// int64 column domain with the subtraction fused in int64.
+inline int displayed_column_at(double displayed, double vp_start, double spp) {
+    return static_cast<int>(std::nearbyint((displayed - vp_start) / spp));
+}
+
 // Pixel-anchoring pair for gesture commits. Every gesture that moves an
 // authored position by pixel columns (the bare Left/Right nudges on both
 // marker columns) or releases one at a

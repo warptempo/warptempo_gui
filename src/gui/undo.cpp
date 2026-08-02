@@ -716,10 +716,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             // pixel range [0, W), NOT q*W samples (which overcounts by up to a
             // column) and NOT the grid-snapped start (clamp_viewport_start moves it
             // ~half a pixel). Both tests decide on the endpoints' columns under the
-            // painter's own basis (painter_samples_per_pixel + the flag painters'
-            // nearbyint((frame - vp_start)/q) — the region endpoints already live in
-            // the active display domain, so no warp map is walked, matching
-            // region_columns). Three arms:
+            // painter's own basis (painter_samples_per_pixel + the shared
+            // displayed_column_at rounding — the region endpoints already live in
+            // the active display domain, so no warp map is walked). Three arms:
             //   - fully visible (both endpoint columns in [0, W) under the CURRENT
             //     start) -> no viewport write;
             //   - otherwise TENTATIVELY center at the current zoom (the singleton
@@ -795,9 +794,10 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 const bool phase_reset = (app.active_markers_view == 'P');
                 const auto& warp_vec = app.warpmarkers.markers();
                 const auto& phase_reset_vec = app.phaseresetmarkers.markers();
-                const int n = phase_reset
-                    ? static_cast<int>(phase_reset_vec.size())
-                    : static_cast<int>(warp_vec.size());
+                // The index bound from its one owner (active_marker_count,
+                // app_state.h — it reads the same live stores the refs above
+                // bind); the refs stay for the per-element time_frame reads.
+                const int n = active_marker_count(app);
                 for (int idx : app.selected_markers) {
                     if (idx < 0 || idx >= n) continue;   // defensive
                     const int64_t src_f = phase_reset
@@ -815,12 +815,14 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 const double  q       = painter_samples_per_pixel(
                     app, viewport.audio, waveform_area(app));
                 // Endpoint column under a given viewport start, on the flag
-                // painters' basis; empty q (no geometry) leaves the viewport put.
+                // painters' basis (the shared displayed_column_at rounding,
+                // warp_frame_map_view.h); empty q (no geometry) leaves the
+                // viewport put.
                 auto both_columns_visible = [&](int64_t vp_start) {
-                    const int lo_col = static_cast<int>(std::nearbyint(
-                        (static_cast<double>(lo) - static_cast<double>(vp_start)) / q));
-                    const int hi_col = static_cast<int>(std::nearbyint(
-                        (static_cast<double>(hi) - static_cast<double>(vp_start)) / q));
+                    const int lo_col = displayed_column_at(
+                        static_cast<double>(lo), static_cast<double>(vp_start), q);
+                    const int hi_col = displayed_column_at(
+                        static_cast<double>(hi), static_cast<double>(vp_start), q);
                     return lo_col >= 0 && lo_col < W && hi_col >= 0 && hi_col < W;
                 };
                 if (q > 0.0 && W > 0 &&
