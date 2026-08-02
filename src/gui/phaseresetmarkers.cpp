@@ -3,7 +3,6 @@
 #include "frame_format.h"
 #include "settings_io.h"
 
-#include <cstdio>
 #include <sstream>
 
 std::expected<void, std::string> GuiPhaseResetMarkers::load(const std::string& path) {

@@ -11,12 +11,9 @@
 #include <cstdint>
 #include <cctype>
 #include <cstdio>
-#include <cstdlib>
 #include <cstring>
-#include <expected>
 #include <filesystem>
 #include <limits>
-#include <sys/stat.h>
 #include <unistd.h>
 
 namespace {

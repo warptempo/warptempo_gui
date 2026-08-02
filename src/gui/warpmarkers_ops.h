@@ -7,8 +7,6 @@
 #include "viewport.h"
 
 #include <optional>
-#include <string>
-#include <utility>
 #include <vector>
 
 class GuiAudio;

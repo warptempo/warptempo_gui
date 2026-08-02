@@ -21,7 +21,6 @@
 #include "audio.h"
 #include "env_fingerprint.h"
 #include "waveform_worker.h"
-#include "warpmarkers.h"
 #include "file_loader.h"
 #include "flag_editor.h"
 #include "gui_display_context.h"
@@ -40,8 +39,6 @@
 #include "render_cache.h"
 #include "target_render.h"
 #include "text_editor.h"
-#include "time_format.h"
-#include "phaseresetmarkers.h"
 #include "phaseresetmarkers_ops.h"
 #include "prompt.h"
 #include "undo.h"
@@ -54,29 +51,12 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cctype>
-#include <cerrno>
-#include <chrono>
 #include <cmath>
 #include <csignal>
 #include <cstdint>
 #include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
-#include <fcntl.h>
-#include <filesystem>
-#include <fstream>
-#include <limits>
-#include <map>
-#include <optional>
-#include <set>
 #include <string>
-#include <sys/stat.h>
-#include <system_error>
-#include <unistd.h>
 #include <utility>
-#include <vector>
 
 namespace {
 

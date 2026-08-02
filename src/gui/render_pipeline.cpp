@@ -17,12 +17,8 @@
 
 #include <algorithm>
 #include <atomic>
-#include <cmath>
 #include <cstdio>
-#include <cstdlib>
 #include <filesystem>
-#include <fstream>
-#include <iomanip>
 #include <optional>
 #include <string>
 #include <unistd.h>

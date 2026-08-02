@@ -4,13 +4,10 @@
 #include "audio.h"
 #include "playback.h"
 #include "render.h"
-#include "warpmarkers.h"
 #include "platform_wayland.h"
 #include "warp_frame_map.h"   // WarpFrameMapSegment
 
 #include <cairo/cairo.h>
-#include <functional>
-#include <string>
 #include <vector>
 
 class GuiWaveformWorker;

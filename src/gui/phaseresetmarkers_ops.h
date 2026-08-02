@@ -6,8 +6,6 @@
 #include "undo.h"
 #include "viewport.h"
 
-#include <cstdint>
-
 class GuiAudio;
 struct GuiTargetRender;
 

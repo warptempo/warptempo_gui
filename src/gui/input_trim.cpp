@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
-#include <utility>
 
 // Trim gestures (architect-ruled hardfail model; the full ruling sits at the
 // TrimState store in app_state.h): begin and end are authored named roles, and

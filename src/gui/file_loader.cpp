@@ -8,16 +8,13 @@
 #include "target_render.h"
 #include "warp_frame_map_view.h"
 
-#include "warp_frame_map.h"
-#include "time_format.h"
+#include "marker_store_validate.h"   // first_past_eof_wall_defect
 
 #include "audio_probe.h"
 
 #include <algorithm>
 #include <chrono>
-#include <cmath>
 #include <cstdio>
-#include <expected>
 #include <filesystem>
 #include <string>
 #include <system_error>

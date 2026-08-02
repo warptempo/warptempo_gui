@@ -6,7 +6,6 @@
 #include "waveform_worker.h"
 #include "warp_frame_map.h"
 
-#include <cmath>
 #include <cstdio>
 #include <cstdint>
 #include <cstring>

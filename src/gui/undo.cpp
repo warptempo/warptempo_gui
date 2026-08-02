@@ -12,7 +12,6 @@
 
 #include <algorithm>
 #include <chrono>
-#include <cmath>
 #include <cstdint>
 #include <set>
 #include <utility>

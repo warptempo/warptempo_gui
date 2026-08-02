@@ -7,7 +7,6 @@
 #include "platform_wayland.h"
 #include "viewport.h"
 
-#include <functional>
 #include <string>
 
 struct GuiTargetRender;

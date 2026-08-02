@@ -6,7 +6,6 @@
 #include "render.h"
 #include "settings_io.h"
 #include "text_editor.h"
-#include "time_format.h"
 #include "warp_frame_map_view.h"
 #include "warpmarkers.h"
 #include "warp_frame_map.h"
@@ -15,13 +14,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <filesystem>
-#include <limits>
-#include <map>
 #include <string>
-#include <system_error>
 #include <utility>
 #include <vector>
 

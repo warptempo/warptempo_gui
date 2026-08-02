@@ -1,7 +1,6 @@
 #pragma once
 
 #include "engine_settings.h"
-#include "marker_store_validate.h"
 #include "render_pipeline.h"
 #include "render.h"
 #include "settings_file.h"
@@ -13,13 +12,10 @@
 
 #include <algorithm>
 #include <array>
-#include <chrono>
 #include <cmath>
 #include <cstdint>
-#include <cstdio>
 #include <filesystem>
 #include <limits>
-#include <memory>
 #include <set>
 #include <string>
 #include <utility>

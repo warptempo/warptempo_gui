@@ -3,10 +3,10 @@
 #include "app_state.h"
 #include "audio.h"
 #include "gui_display_context.h"
+#include "warp_frame_map_build.h"   // resolve_warp_markers_for_render, build_warp_frame_map
 #include <bit>
 #include <cmath>
 #include <cstdint>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>

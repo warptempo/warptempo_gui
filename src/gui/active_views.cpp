@@ -2,9 +2,6 @@
 
 #include "input_handler.h"   // auto_select_marker_at_playhead, clear_region_highlight
 
-#include <cstdio>
-#include <string>
-
 // Active-views management cluster: the W/P marker-view, A/B tab-view, and
 // S/T audio-view switches plus the live/slot view-state sync, reaching
 // selection, viewport, and playback_lifecycle through the struct's

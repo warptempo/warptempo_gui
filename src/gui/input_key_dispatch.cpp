@@ -8,27 +8,19 @@
 #include "file_loader.h"     // apply_settings_engine_and_prefs (shared with load)
 #include "paint_handler.h"
 #include "render.h"
-#include "render_output_naming.h"
 #include "render_pipeline.h"
 #include "settings_io.h"
 #include "text_editor.h"
-#include "time_format.h"
 #include "warpmarkers.h"
 
 #include <signal.h>
 #include <spawn.h>
 
 #include <algorithm>
-#include <chrono>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
-#include <cstdlib>
-#include <expected>
 #include <filesystem>
-#include <limits>
-#include <map>
 #include <string>
 #include <system_error>
 #include <utility>

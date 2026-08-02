@@ -3,14 +3,11 @@
 #include "audio.h"
 #include "gui_display_context.h"
 #include "text_shape.h"
-#include "time_format.h"
 #include "value_format.h"
 #include "warp_frame_map_view.h"
 
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
-#include <cstring>
 #include <string>
 #include <utility>
 #include <vector>

@@ -8,7 +8,6 @@
 #include "warp_frame_map_view.h"
 #include "warpmarkers.h"
 
-#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <filesystem>

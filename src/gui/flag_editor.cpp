@@ -6,17 +6,13 @@
 
 #include "audio.h"
 #include "input_handler.h"
-#include "phaseresetmarkers.h"
 #include "render.h"
 #include "text_editor.h"
 #include "time_format.h"
 #include "warp_frame_map_view.h"
-#include "warp_frame_map.h"
 #include "warpmarkers_ops.h"
 
-#include <algorithm>
 #include <cctype>
-#include <cmath>
 #include <cstdio>
 #include <limits>
 #include <string>

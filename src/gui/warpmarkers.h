@@ -5,10 +5,7 @@
 #include "warpmarkers_parse.h"
 
 #include <algorithm>
-#include <cmath>
-#include <cstdio>
 #include <expected>
-#include <limits>
 #include <string>
 #include <vector>
 

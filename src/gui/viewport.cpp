@@ -8,9 +8,7 @@
 #include "platform_wayland.h"
 
 #include <algorithm>
-#include <chrono>
 #include <cmath>
-#include <string>
 
 std::pair<int64_t, int64_t> Viewport::trim_range() const {
     if (audio.total_frames() <= 0) return {0, 0};

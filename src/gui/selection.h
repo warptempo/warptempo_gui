@@ -4,7 +4,6 @@
 #include "viewport.h"
 
 #include <optional>
-#include <set>
 
 class GuiAudio;
 

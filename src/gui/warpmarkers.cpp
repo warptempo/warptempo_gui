@@ -5,7 +5,6 @@
 #include "value_format.h"
 #include "warp_frame_map_build.h"
 
-#include <cstdio>
 #include <sstream>
 
 std::expected<void, std::string> GuiWarpMarkers::load(const std::string& path) {

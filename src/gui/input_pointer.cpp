@@ -6,15 +6,11 @@
 #include "paint_handler.h"
 #include "render.h"
 #include "text_editor.h"
-#include "warpmarkers.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
-#include <cstring>
-#include <string>
-#include <utility>
 #include <vector>
 
 // GuiInputHandler pointer-gesture handlers (on_button_press,
