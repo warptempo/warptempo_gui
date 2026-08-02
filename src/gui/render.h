@@ -2024,6 +2024,15 @@ struct MarkerStem {
 // single owner of both — the same painter-stash contract the redesigned rows'
 // buttons already use. Either pointer may be null.
 //
+// `editing_marker_index` is the marker whose FLAG EDITOR IS OPEN, or -1. Its
+// BOX AND LABEL ARE SKIPPED — the open editor paints that flag itself, unrolled
+// (render_flag_editor_box) — while its stem and hit rect still publish. Without
+// the skip the editor's box is merely drawn OVER this one, which hides it only
+// while the edited text is the wider of the two; a SHORTENED payload then let
+// the committed label's tail show past the editor's right edge (the 2026-08-02
+// bug). The phase-reset painter takes no such parameter and the reason is
+// recorded at its call.
+//
 // `warp_frame_map`: the displayed-axis translation the painters share (the live
 // map in target view). `waveform_width` is the EFFECTIVE waveform width
 // (waveform_area.w), the column-mapping denominator; flags share the marker
@@ -2043,7 +2052,8 @@ void render_flags(cairo_t* cr,
                   std::vector<FlagHitRect>* out_hit_rects = nullptr,
                   std::vector<MarkerStem>* out_stems = nullptr,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
-                  const DragOverlay* drag_overlay = nullptr);
+                  const DragOverlay* drag_overlay = nullptr,
+                  int editing_marker_index = -1);
 
 // THE OPEN FLAG EDITOR'S RESOLVED GEOMETRY, published by render_flag_editor_box
 // and consumed by the pointer path. Every field is DERIVED FROM A SHAPED RUN,

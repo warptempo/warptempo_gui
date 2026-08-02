@@ -246,6 +246,13 @@ struct FlagCache {
     // but the rebuild is fingerprint-guarded, so without this field the damage
     // would repaint the same cached bytes.
     bool      fp_iteration_mode           = false;
+    // THE MARKER WHOSE FLAG EDITOR IS OPEN, or -1. In the fingerprint because
+    // that marker's box is SKIPPED in the cached pass (the open editor paints it
+    // unrolled instead), so opening, closing or retargeting the editor changes
+    // what this surface must contain. Without it the cache would keep the
+    // suppressed frame after the editor closed — and keep the drawn box while it
+    // opened. Contract at render_flags' editing_marker_index (render.h).
+    int       fp_editing_flag_target      = -1;
 
     void destroy_surface() {
         if (surface) {

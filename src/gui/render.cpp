@@ -956,7 +956,8 @@ void render_flag_boxes_impl(
     std::vector<FlagHitRect>* out_hit_rects,
     std::vector<MarkerStem>* out_stems,
     const std::vector<WarpFrameMapSegment>* warp_frame_map,
-    const DragOverlay* drag_overlay) {
+    const DragOverlay* drag_overlay,
+    int suppress_box_index) {
     if (out_hit_rects) out_hit_rects->clear();
     if (out_stems)     out_stems->clear();
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
@@ -1009,23 +1010,52 @@ void render_flag_boxes_impl(
             const bool sel = selected_set.count(i) > 0;
             const FlagFace face = resolve_flag_face(dis, red, sel);
 
-            // Box then top edge, both AA-off so the 1px band is exactly one
-            // row and the box's sides are exactly one column.
-            cairo_save(cr);
-            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            cairo_set_source_rgb(cr, face.fill.r, face.fill.g, face.fill.b);
-            cairo_rectangle(cr, bx, lane.y, bw, lane.h);
-            cairo_fill(cr);
-            cairo_set_source_rgb(cr, face.edge.r, face.edge.g, face.edge.b);
-            cairo_rectangle(cr, bx, lane.y, bw, edge_h);
-            cairo_fill(cr);
-            cairo_restore(cr);
+            // THE EDITED MARKER'S BOX IS NOT PAINTED HERE — the open editor
+            // owns every pixel of it (render_flag_editor_box, which paints the
+            // same face at the same lane y: the flag unrolled).
+            //
+            // THIS IS A COVERAGE FIX, NOT AN OPTIMIZATION (bug, architect
+            // 2026-08-02: "typing leaves the old text painted"). The overlay
+            // used to be drawn straight over this box on the assumption that it
+            // always covered it, which held only while the editor's text was at
+            // least as wide as the committed label — true at open (the editor
+            // shows the FULL payload where the label is capped at nine glyphs,
+            // plus caret room) and false the moment the user replaces that
+            // auto-selected text with something shorter. The overlay then
+            // shrank while THIS box kept its committed width, and the tail of
+            // the cached label stayed on screen to the right of the editor —
+            // read as a stale-pixel/invalidation fault, but the damage was
+            // always correct (the whole strip repaints on every keystroke) and
+            // the stale ink was this pass's, one z-layer down.
+            //
+            // Suppressing the BOX ONLY is deliberate. The stem below still
+            // publishes and still paints: it anchors at the flag's left column
+            // and the editor unrolls from that same column, so the marker keeps
+            // its stem for the whole session exactly as it does when idle. The
+            // hit rect publishes too — the press path resolves an open editor
+            // through app.flag_editor_box before it ever walks these rects
+            // (active_editor_text, input_pointer.cpp), so the entry is
+            // unreachable while the editor is up rather than wrong.
+            if (i != suppress_box_index) {
+                // Box then top edge, both AA-off so the 1px band is exactly one
+                // row and the box's sides are exactly one column.
+                cairo_save(cr);
+                cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+                cairo_set_source_rgb(cr, face.fill.r, face.fill.g, face.fill.b);
+                cairo_rectangle(cr, bx, lane.y, bw, lane.h);
+                cairo_fill(cr);
+                cairo_set_source_rgb(cr, face.edge.r, face.edge.g, face.edge.b);
+                cairo_rectangle(cr, bx, lane.y, bw, edge_h);
+                cairo_fill(cr);
+                cairo_restore(cr);
 
-            // The label, on the run just measured — same font, same glyphs, so
-            // the box width and the painted text cannot disagree.
-            cairo_set_source_rgb(cr, face.label.r, face.label.g, face.label.b);
-            text_shape::show_shaped_run(
-                cr, run, static_cast<double>(bx + pad_l), baseline);
+                // The label, on the run just measured — same font, same glyphs,
+                // so the box width and the painted text cannot disagree.
+                cairo_set_source_rgb(cr, face.label.r, face.label.g,
+                                     face.label.b);
+                text_shape::show_shaped_run(
+                    cr, run, static_cast<double>(bx + pad_l), baseline);
+            }
 
             if (out_hit_rects) {
                 FlagHitRect r;
@@ -1061,7 +1091,8 @@ void render_flags(cairo_t* cr,
                   std::vector<FlagHitRect>* out_hit_rects,
                   std::vector<MarkerStem>* out_stems,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map,
-                  const DragOverlay* drag_overlay) {
+                  const DragOverlay* drag_overlay,
+                  int editing_marker_index) {
     render_flag_boxes_impl(
         cr, top_strip_area, lanes, waveform_width, markers,
         viewport_start_sample, viewport_end_sample, sample_rate,
@@ -1071,7 +1102,8 @@ void render_flags(cairo_t* cr,
         [&](int i) { return flag_text_iter(markers, i, iteration_on); },
         // The warp column's disabled verdict follows the label_ref cascade.
         [&](int i) { return effective_disabled(markers, i); },
-        out_hit_rects, out_stems, warp_frame_map, drag_overlay);
+        out_hit_rects, out_stems, warp_frame_map, drag_overlay,
+        editing_marker_index);
 }
 
 void render_phase_reset_flags(cairo_t* cr,
@@ -1097,7 +1129,15 @@ void render_phase_reset_flags(cairo_t* cr,
         [&](int) { return std::string(kPhaseResetLaneToken); },
         // No label_ref cascade on this column — the bool is the whole verdict.
         [&](int i) { return phase_resets[i].disabled; },
-        out_hit_rects, out_stems, warp_frame_map, drag_overlay);
+        out_hit_rects, out_stems, warp_frame_map, drag_overlay,
+        // NO SUPPRESSION ON THIS COLUMN, and the asymmetry is real rather than
+        // an oversight (the warp/phase-reset symmetry rule, conventions.md):
+        // the flag editor is a WARP-column surface by its own open gates —
+        // render_flag_editor_box returns early on anything but a FlagPayload
+        // editor and reads app.warpmarkers — so no phase-reset flag can ever be
+        // the edited one. If a phase-reset payload editor is ever added, this
+        // is the line it changes.
+        /*suppress_box_index=*/-1);
 }
 
 namespace {

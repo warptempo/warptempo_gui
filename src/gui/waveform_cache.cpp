@@ -731,6 +731,15 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // The flags carry TEXT since row 5, and iteration mode changes what that
     // text says (flag_text_iter splices the bracket). See fp_iteration_mode.
     const bool      iter_on    = app.iteration_mode_enabled;
+    // THE EDITED MARKER (or -1): its flag box is suppressed below, so it is a
+    // fingerprint input like any other content fact. Resolved with the SAME two
+    // gates render_flag_editor_box opens on — an active editor of kind
+    // FlagPayload — so the pass that skips and the pass that draws can never
+    // disagree about which marker is being edited.
+    const int editing_flag_target =
+        (text_editor::is_active(app.top_flag_editor) &&
+         app.top_flag_editor.kind == text_editor::Kind::FlagPayload)
+            ? app.top_flag_editor.target : -1;
 
     const bool matches =
         flag_cache.surface &&
@@ -745,7 +754,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_drag_overlay_hash       == drag_hash &&
         flag_cache.fp_selection_hash          == sel_hash &&
         flag_cache.fp_active_markers_view     == mv &&
-        flag_cache.fp_iteration_mode          == iter_on;
+        flag_cache.fp_iteration_mode          == iter_on &&
+        flag_cache.fp_editing_flag_target     == editing_flag_target;
 
     if (matches) return;
 
@@ -854,6 +864,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     } else {
         const std::set<int>& warp_red = warp_red_flag_set_cached(
             app, sr, static_cast<long>(audio.total_frames())).red;
+        // (editing_flag_target reaches this call as its last argument — the
+        // edited marker's box is the open editor's to paint, not this pass's.)
         render_flags(ccr, local_top_strip, flag_lanes, wave_w,
                      app.warpmarkers.markers(),
                      vp_start, vp_end, sr,
@@ -863,7 +875,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                      &app.flag_hit_rects,
                      &app.marker_stems,
                      tmap_arg,
-                     drag_overlay);
+                     drag_overlay,
+                     editing_flag_target);
     }
 
     cairo_destroy(ccr);
@@ -880,6 +893,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_selection_hash          = sel_hash;
     flag_cache.fp_active_markers_view     = mv;
     flag_cache.fp_iteration_mode          = iter_on;
+    flag_cache.fp_editing_flag_target     = editing_flag_target;
 
     // Event-synchronized hit geometry, STAGE phase: these OFFSCREEN flags just
     // rebuilt, so stage the
