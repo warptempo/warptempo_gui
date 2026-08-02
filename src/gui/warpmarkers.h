@@ -4,6 +4,7 @@
 #include "value_format.h"
 #include "warpmarkers_parse.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <expected>
@@ -145,6 +146,57 @@ inline std::string format_iter_bracket_inline(const GuiWarpMarker& m) {
 // label_ref markers are excluded; disabled status does not matter.
 inline bool iter_popup_eligible_marker(const GuiWarpMarker& m) {
     return !m.tempo_inherits && m.label_ref.empty();
+}
+
+// Iteration mode: THE ITER BRACKET RIDES ITS BASE (architect 2026-08-02).
+// The one owner of the retroactive clamp — every site that moves a marker's
+// BASE tempo while a live bracket rests on it calls this right after the new
+// base is written. Every sweep cell renders base + delta and the deltas run
+// from iter_start_cents to iter_end_cents inclusive, so the two endpoints
+// bound every cell; without this, a base walking toward an edge drags cells
+// out of [kTempoMinCents, kTempoMaxCents] and the cell RENDERS (the frame-map
+// build refuses only a non-positive tempo) into a render-entry sidecar whose
+// strict tempo parse hard-rejects on load — the `'` adopt refuses it and the
+// CLI insurance path is dead for that entry. Folding the deltas into
+// [kTempoMinCents - base, kTempoMaxCents - base] makes the sweep's cell
+// vocabulary closed by CONSTRUCTION rather than by discipline.
+//
+// The callers are the two base-tempo authoring surfaces: the bare Up/Down
+// cent step (both arms, warpmarkers_ops.cpp) and the flag editor's commit
+// (flag_editor.cpp, after the bracket write). They divide the labour: a
+// bracket TYPED into the editor still gates LOUD at commit (red flash +
+// stderr) because it is authored input arriving at its own surface; later
+// base motion clamps SILENTLY, because there the base is what is being
+// authored and the bracket is the passenger.
+//
+// A blank bracket (either bound nullopt) is untouched — no cells, nothing to
+// bound. A bracket that lands FULLY outside degenerates to a zero-width delta
+// at the window edge: a valid one-cell sweep and the accepted result, never
+// cleared to nullopt (a clear would silently drop the marker from the sweep's
+// delta CSV and change the product's shape). Clamping both bounds into the
+// SAME interval is monotone, so lo <= hi survives. The result also stays
+// inside the session delta bracket [-kIterDeltaMaxCents, +kIterDeltaMaxCents]
+// for free: an in-bracket base bounds either limit by
+// kTempoMaxCents - kTempoMinCents = 375.
+//
+// Undo needs nothing of its own and none is invented: warp undo entries
+// snapshot the WHOLE GuiWarpMarker vector, session-only iter fields included
+// (the row-identity compare in undo.cpp says so), so an undo of the tempo
+// step restores the pre-clamp bracket together with the pre-step base — the
+// clamp is exactly as undoable as the gesture that caused it.
+inline void clamp_iter_bracket_to_tempo_bracket(GuiWarpMarker& m) {
+    if (!m.iter_start_cents.has_value() || !m.iter_end_cents.has_value()) {
+        return;
+    }
+    // A bracket rests only on an iter-eligible owner (iter_popup_eligible_marker
+    // above — every eligibility loss clears both bounds), and an owner's
+    // tempo_cents is in-bracket at every input surface, so lo_limit <= 0 <=
+    // hi_limit: the clamp window always contains the zero delta and can never
+    // be empty. Exact integer cents throughout, the domain the deltas live in.
+    const int64_t lo_limit = kTempoMinCents - m.tempo_cents;
+    const int64_t hi_limit = kTempoMaxCents - m.tempo_cents;
+    m.iter_start_cents = std::clamp(*m.iter_start_cents, lo_limit, hi_limit);
+    m.iter_end_cents   = std::clamp(*m.iter_end_cents,   lo_limit, hi_limit);
 }
 
 // BPM mode: an owning, enabled marker (owning = !tempo_inherits AND no

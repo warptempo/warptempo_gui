@@ -593,8 +593,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
         // Dispatch validates nothing: the render worker's own resolve->build
         // chain is the tripwire surface (marker arrangements normalize to
-        // tempo 1.00, trim never refuses), and its per-cell tempo_cents
-        // mutations stay on the async stderr backstop.
+        // tempo 1.00, trim never refuses). The per-cell tempo_cents mutations
+        // below need no validation either — they are in-bracket by
+        // construction now that the bracket rides its base (the retroactive
+        // clamp, warpmarkers.h), so nothing here leans on the async stderr
+        // backstop.
 
         // Snapshot markers in timeline order (the GuiWarpMarkers store is
         // sorted by time_frame, with ties legal). For each owning marker
@@ -759,15 +762,20 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             std::vector<GuiWarpMarker> cell_warp_markers = base_warp_markers;
             for (size_t k = 0; k < num_dims; ++k) {
                 const int mi = eligible_indices[k];
-                // Per-cell tempo is a computed value, not an authored one,
-                // so it takes no bracket gate: with deltas up to
-                // +-kIterDeltaMaxCents a cell tempo can go non-positive,
-                // and build_warp_frame_map's existing refusal on the async
-                // render path (stderr) is the backstop. Base and delta live
-                // in the one integer-cents domain, so the sum is plain
-                // integer addition and the cell sidecar's N.NN spelling
+                // Per-cell tempo is a computed value, not an authored one, and
+                // it needs no bracket gate HERE because it cannot leave the
+                // bracket: the bracket rides its base (architect 2026-08-02 —
+                // clamp_iter_bracket_to_tempo_bracket, warpmarkers.h, called
+                // by both base-tempo authoring surfaces), so both endpoints
+                // rest inside [kTempoMinCents - base, kTempoMaxCents - base]
+                // and every cell between them lands in the tempo bracket. No
+                // downstream backstop is load-bearing for this sum. Base and
+                // delta live in the one integer-cents domain, so the sum is
+                // plain integer addition and the cell sidecar's N.NN spelling
                 // re-parses to exactly this value — render-entry promotion
-                // (the `'` commit) stays closed under the grammar by type.
+                // (the `'` commit) stays closed under the grammar by type AND
+                // by VOCABULARY: the cell values a sweep can write are exactly
+                // the values the strict sidecar parse accepts.
                 cell_warp_markers[mi].tempo_cents =
                     base_warp_markers[mi].tempo_cents +
                     per_marker_delta_cents[k][indices[k]];

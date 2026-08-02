@@ -356,14 +356,16 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // tempo bracket [kTempoMinCents, kTempoMaxCents], some cell would
     // render a marker whose tempo cannot re-parse at a later promote (the
     // strict sidecar parse), so the bracket is refused at its own input
-    // surface — the same red-flash a malformed bracket earns. Per-cell
-    // tempos are computed values guarded only by build_warp_frame_map's
-    // refusal on the async render's stderr backstop; but the bracket TYPED
-    // here is authored input, so an authored bracket whose cells cannot all
-    // rest inside the tempo bracket is caught now. A later tempo change
-    // under a live bracket is deliberately NOT re-gated (iter state is
-    // session-only; build_warp_frame_map's refusals and the strict promote
-    // parse remain the backstops). The cleared/blank bracket (nullopt
+    // surface — the same red-flash a malformed bracket earns. THE BRACKET
+    // TYPED HERE IS AUTHORED INPUT, and that is the whole reason this gate is
+    // LOUD: it answers what the user just typed. A LATER base-tempo change
+    // under a live bracket is not answered here at all — it silently drags
+    // the bracket with it (THE BRACKET RIDES ITS BASE, architect 2026-08-02:
+    // clamp_iter_bracket_to_tempo_bracket, warpmarkers.h, called below on this
+    // very commit path and by the Up/Down cent step). The division is
+    // deliberate: typed brackets gate loud, later base motion clamps silent —
+    // and between them no sweep cell can leave the tempo bracket, so nothing
+    // rides on a downstream backstop. The cleared/blank bracket (nullopt
     // bounds) and any marker the sweep would skip (a pass or label_ref,
     // ineligible per iter_popup_eligible_marker — the base the sweep reads
     // is tempo_cents of an owning numeric marker) carry no cells, so both
@@ -471,6 +473,17 @@ void GuiFlagEditor::commit_top_flag_edit() {
         m.iter_start_cents.reset();
         m.iter_end_cents.reset();
     }
+    // THE BRACKET RIDES ITS BASE: this commit may have moved the tempo under a
+    // bracket it did not type — the mode-off commit (iter_grammar false, so the
+    // bounds above were left alone) over a bracket an undo restored, since undo
+    // is deliberately ungated and outlives the mode's exit wipe. Fold the
+    // surviving bracket onto the committed base (the one owner,
+    // clamp_iter_bracket_to_tempo_bracket in warpmarkers.h). A no-op for the
+    // bracket this commit DID type: the loud gate above already proved both its
+    // ends land inside the tempo bracket at this very base. Placed before the
+    // change compares below, so a clamp that moves a bound counts as a bracket
+    // change and earns its repaint and its undo entry.
+    clamp_iter_bracket_to_tempo_bracket(m);
 
     // Did any serialized field change? Cascade renames imply a label_def
     // change, already covered by the field compare below.

@@ -512,12 +512,14 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         m.tempo_inherits = false;
         m.tempo_cents    = cents;
         m.tempo_scale    = start_scale;
-        // The tempo step leaves this marker's iteration bracket untouched,
-        // exactly like the flag editor's manual tempo commit: a later tempo
-        // change under a live bracket is deliberately not re-gated (symmetry
-        // between the two tempo-authoring surfaces wins; staleness is
-        // accepted, backstopped by build_warp_frame_map's refusals and the
-        // strict promote parse at the ' adopt).
+        // THE BRACKET RIDES THE BASE: the stepped base drags this marker's
+        // live iteration bracket with it, so no sweep cell can leave the tempo
+        // bracket. Silent, deltas only — the rule and the loud/silent division
+        // with the flag editor's typed-bracket gate live at the one owner
+        // (clamp_iter_bracket_to_tempo_bracket, warpmarkers.h), which the flag
+        // editor's manual tempo commit calls too. A no-op on the freeze arm
+        // above: a pass carries no bracket (eligibility loss clears it).
+        clamp_iter_bracket_to_tempo_bracket(m);
         changed = true;
     }
     if (!changed) return;
@@ -648,14 +650,18 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
     // Apply +/-1 cent to each selected member (plain integer arithmetic — the
     // structural producer discipline). None is walled (checked above), so every
     // add stays in-bracket and actually changes the value; positions untouched,
-    // so no reorder/remap. Each member's iteration bracket is left in place
-    // (tempo changes never clear a bracket, per member).
+    // so no reorder/remap. A member's iteration bracket is never CLEARED by a
+    // tempo change, but it RIDES the new base per member (the retroactive clamp,
+    // owner clamp_iter_bracket_to_tempo_bracket in warpmarkers.h): the group's
+    // rigidity is about the stepped VALUES, and each member's cells are its own,
+    // so clamping member by member deforms no group relationship.
     std::vector<int> touched;
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= n) continue;
         GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
         if (!m) continue;
         m->tempo_cents = m->tempo_cents + delta_cents;
+        clamp_iter_bracket_to_tempo_bracket(*m);
         touched.push_back(idx);
     }
     if (touched.empty()) return;   // defensive (a fully-stale selection)
