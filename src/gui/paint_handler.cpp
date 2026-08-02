@@ -2970,7 +2970,7 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // The three-way chain that used to live here is gone with the SPAN FORM: the
     // region is no longer a playhead at all (it is TRIM SCRATCH — a ground recolor
     // formed by the plain upper-half waveform drag and the shift waveform press,
-    // previewed by the lower-half scrub press, consumed by `x`), so it dissolves
+    // previewed by the scrub press (either entry), consumed by `x`), so it dissolves
     // nothing and suppresses nothing, and the split half-triangle renderer is
     // deleted outright. The non-empty-selection suppression is
     // gone too: a cursor resting ON the focused marker is simply hidden behind

@@ -92,11 +92,13 @@ struct GuiInputState {
     // True iff this key event is a SYNTHESIZED KEY REPEAT — one the process
     // generated itself from a held key (GuiPlatform::maybe_fire_repeat, the only
     // writer), not a fresh physical press. A platform-boundary fact in the same
-    // spirit as `codepoint`. Its one consumer is undo coalescing: a burst of
-    // eligible gesture presses collapses into ONE undo entry exactly when the
-    // continuation presses are repeats of the press that opened it, so a held key
-    // coalesces by construction at any compositor's repeat delay and rapid
-    // MANUAL taps stay separately undoable.
+    // spirit as `codepoint`. Its one consumer is undo coalescing, where it selects
+    // the ARM (the hybrid is stated at the head of undo.h): a repeat merges into
+    // the burst by IDENTITY with no clock consulted, so a held key coalesces by
+    // construction at any compositor's repeat delay. A PHYSICAL press takes the
+    // other arm — since 2026-08-01 rapid manual taps of the same kind merge too,
+    // on a fixed 500 ms window plus a subject test, and presses beyond it stay
+    // separately undoable.
     bool     synthesized_repeat  = false;
 };
 

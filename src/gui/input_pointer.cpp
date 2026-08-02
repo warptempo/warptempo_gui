@@ -509,10 +509,15 @@ void GuiInputHandler::scrub_act_at(int64_t frame) {
         playback_lifecycle.scrub_launch_at(frame);
 }
 
-// The scanner scrub press body. SOLE CALLER: the waveform lower-half plain
-// press — the marker-text lane's empty-spot scrub is DELETED (architect
-// 2026-07-27; that lane touches playback in neither direction now), so the
-// waveform's lower half is the whole scrub surface. See the declaration for
+// The scanner scrub press body. TWO CALLERS, both in on_button_press and both
+// re-derived by grepping this function 2026-08-01: the waveform LOWER-HALF PLAIN
+// LEFT press, and the BARE RIGHT press anywhere in the waveform area (architect
+// 2026-08-01 — full height, so it overlaps the left entry's half and extends over
+// the upper half's placement press). The marker-text lane's empty-spot scrub is
+// DELETED (architect 2026-07-27; that lane touches playback in neither direction
+// now). Each caller owns only its own gate — the half test, the modifier
+// exactness, the in-flight-gesture guard — and everything below is shared, which
+// is why the second entry copied no recipe. See the declaration for
 // the full contract. ONE-SHOT per click (architect 2026-07-23, the Ableton
 // model): derive the clicked column's frame and run one scrub act — the press
 // arms NOTHING, a held press does nothing further, and motion over the scrub
@@ -778,7 +783,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // only from a press, and while an editor is up every press dies at those
     // gates. (The reverse is closed by the keyboard gate: while the popup is
     // open, `;` is swallowed, so the editor cannot open under it either.)
-    if (app.settings_popup.open && button == GuiMouseButton::Left) {
+    if (app.settings_popup.open) {
+        // OWNING THE POINTER MEANS EVERY BUTTON, not just the left one
+        // (2026-08-01, with the right-click scrub below): only LEFT carries
+        // claims inside the popup, so any other button is CONSUMED INERT here
+        // rather than falling through to the bands underneath — the popup floats
+        // over the waveform, and a right press landing on the pixels it covers
+        // must not scrub the audio behind it. Cheapest correct arm: the popup
+        // stays open (a non-Left press is not one of its two answers, item-arm
+        // or dismiss) and nothing acts.
+        if (button != GuiMouseButton::Left) return;
         const AppState::SettingsPopup& pop = app.settings_popup;
         const bool on_settings_button =
             redesign_button_hit(app, RedesignButton::Settings, x, y);
@@ -941,6 +955,52 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     if (app.drag.active) return;
     if (app.trim_drag.active) return;
 
+    // RIGHT-CLICK ANYWHERE ON THE WAVEFORM IS A SCRUB (architect 2026-08-01) —
+    // the right button's FIRST and ONLY binding in the product. The lower-half
+    // LEFT scrub is untouched; this adds the same one act over the waveform's
+    // FULL HEIGHT, so the upper half's placement press and its region drag keep
+    // the left button while the right one auditions without disturbing them.
+    //
+    // ONE OWNER: it calls scrub_press_at, the derive-column-and-act body the
+    // left press already calls — the gutter no-op, the clamped column, the one
+    // scrub_act_at, and "arms nothing" all come from there, so the two entries
+    // cannot drift.
+    //
+    // BARE-EXACT (strict modifier validation): ctrl, shift and alt carry real
+    // waveform bindings for the LEFT button (the strip drag, the region former,
+    // the grab-pan) and none of them has a right-button meaning, so any modified
+    // right press stays the standing no-op.
+    //
+    // NO GESTURE MAY BE IN FLIGHT. The two guards above cover only the marker
+    // and trim drags; the strip drag, the grab-pan, the region drag, the editor
+    // text drag and the two pendings are all reachable with the left button held
+    // while a right button goes down — and a captured strip drag keeps
+    // delivering button events under the pointer lock. So this gate is
+    // any_pointer_gesture_active (app_state.h), the one authoritative "some
+    // pointer gesture is in flight" predicate, rather than a second hand-written
+    // list. The scrub itself is not a gesture and never appears in it.
+    //
+    // GATE PROFILE — IDENTICAL TO THE LEFT SCRUB'S, by position: everything that
+    // stops the left press before it reaches scrub_press_at has already run
+    // above (the prompt swallow, the three bottom-strip modal editors, the open
+    // dropdown, the four redesigned rows' band claims, the loading / empty-audio
+    // return). Read-only tabs scrub as ever (playback is navigation), the
+    // selection / cursor / region / follow are untouched, and no double-click
+    // candidate is seeded.
+    // THE ONE DELIBERATE DIVERGENCE: the top flag editor stays OPEN under a
+    // right press. Its guard-free close belongs to the LEFT press's editor
+    // lifecycle (every left press outside the box tears it down); the flag
+    // editor is pointer-transparent and does not stop playback by ruling, so
+    // auditioning the passage under an open flag edit is the behaviour that
+    // ruling already describes.
+    if (button == GuiMouseButton::Right) {
+        if (ctrl || shift || alt) return;
+        if (any_pointer_gesture_active(app)) return;
+        if (!inside_waveform) return;
+        scrub_press_at(x - area.x);
+        return;
+    }
+
     // Mouse authoring is home-view gated like the keyboard: placement arming is
     // gated by active_column_authoring_allowed, off-home selecting and landing but
     // arming NOTHING — with no exception anywhere, since 2026-07-29. W+target used
@@ -1031,8 +1091,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // protect and a live audition survives it. A claim that can still
         // REFUSE goes one step further (architect 2026-07-27): its stop sits
         // INSIDE the refusal gate, at the latest point before the mutation, so
-        // a claimed-but-refused press (a bound set in a read-only tab or over a
-        // degenerate audio/geometry state)
+        // a claimed-but-refused press (a bound set in a read-only tab, over a
+        // degenerate audio/geometry state, or at a column not STRICTLY INSIDE the
+        // partner bound — the 2026-08-01 guard)
         // is as playback-inert as an unclaimed one. That covers every modified
         // combination the branches below reject (alt on a marker, ctrl or alt
         // on an empty flag/triangle spot, ctrl+alt, shift+alt, ...), a
@@ -1155,31 +1216,71 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 clear_region_highlight(app, viewport);
                 return;
             }
-            // Markerless top-strip ctrl-exact press: A STRICT NO-OP IN EVERY
-            // LANE (architect 2026-08-01, retiring the trim-lane bound sets).
-            // Ctrl on the chip row used to set the BEGIN bound at the click and
-            // ctrl+shift the END; BOTH CLAIMS ARE DELETED. The endcap and bar
-            // DRAGS are the whole trim authoring surface now — one gesture
-            // family instead of a drag plus a modifier-click that did the same
-            // thing by another route — and the standing strict-modifier rule
-            // absorbs the presses: a modifier combination with no explicit
-            // binding is a no-op everywhere, so ctrl and ctrl+shift over the
-            // trim lane simply fall to the inert return below, playback
-            // included. The four redesigned rows (lanes 0..3) were claimed far
+            // Markerless top-strip ctrl-exact press: the TRIM BAR sets the BEGIN
+            // trim bound at the click (REINSTATED architect 2026-08-01 — ctrl is
+            // BEGIN and ctrl+shift is END, the pair's original shape, now homed
+            // on the redesigned bar's whole band rather than the chip row it grew
+            // up on; set_trim_bound_at_click refuses a read-only tab silently —
+            // the clicks ADJUST the window that always rests, they never create
+            // one — refuses any value not STRICTLY INSIDE its partner, and, being
+            // a SETTER, deselects past its refusals). EVERY other lane is a
+            // strict no-op, falling through to the return below (the ctrl-click
+            // clear on an empty marker spot is RETIRED, architect 2026-07-23:
+            // ctrl-click in Ableton is just click, and ctrl stays the zoom
+            // modifier here; the PLAIN empty marker-lane press below is the
+            // surviving lane gesture — the waveform's own parity press, not a
+            // bare clear). The four redesigned rows (lanes 0..3) were claimed far
             // above and never reach here.
+            //
+            // THE BAND IS THE CURRENT GEOMETRY OWNER, top_trim_row_area — the
+            // exact band the plain endcap/bar drags and the span-framing
+            // double-click claim, so paint, hit and every trim gesture read ONE
+            // accessor and cannot drift.
+            if (inside_top) {
+                const GuiRect trim_band = top_trim_row_area(app);
+                if (y >= trim_band.y && y < trim_band.y + trim_band.h) {
+                    // NO stop here: the bound set has its own refusals
+                    // (read-only, a degenerate audio/geometry state, a value not
+                    // strictly inside its partner), and a refused press changes
+                    // nothing, so there is nothing for a stop to protect. The
+                    // stop lives INSIDE set_trim_bound_at_click, past every
+                    // refusal and immediately ahead of the bound write.
+                    // Set the BEGIN bound AND arm the single-bound drag on it, so
+                    // motion drags it live (a motionless release rests the set;
+                    // a refused set arms nothing).
+                    set_trim_bound_at_click_then_arm_drag(/*is_begin=*/true, x, y);
+                    return;
+                }
+            }
             if (inside_waveform) arm_strip_drag_at(x, y);
             return;
         }
 
-        // (NO CTRL+SHIFT CLAIM ANYWHERE. The chip row's END bound set was its
-        // one claim and died with the BEGIN set above, so ctrl+shift is now a
-        // strict no-op on every surface — the rule below covers it with every
-        // other unbound combination.)
+        // Ctrl+Shift-exact: the TRIM BAR is its ONE claim — set the END trim
+        // bound at the click (ctrl is BEGIN, ctrl+shift is END; the same
+        // reinstated pair, architect 2026-08-01. set_trim_bound_at_click refuses a
+        // read-only tab silently — the adjust-only pair gate died with the unset
+        // state 2026-07-30, a full pair always resting — refuses any value not
+        // strictly inside its partner, and deselects as a SETTER past its
+        // refusals). Everywhere else Ctrl+Shift stays a strict no-op, playback
+        // included, falling to the return below.
+        if (ctrl && shift && !alt && inside_top) {
+            const GuiRect trim_band = top_trim_row_area(app);
+            if (y >= trim_band.y && y < trim_band.y + trim_band.h) {
+                // NO stop here either: like the BEGIN set above, the stop sits
+                // inside set_trim_bound_at_click past that act's refusals, so a
+                // refused END set leaves a live audition alone.
+                // Set the END bound AND arm the single-bound drag on it.
+                set_trim_bound_at_click_then_arm_drag(/*is_begin=*/false, x, y);
+                return;
+            }
+        }
 
         // Strict modifier matching: the marker reposition arm lives on the plain
         // flag press and trim's chip/bridge drags on the plain chip-row press, so
-        // every remaining modified combination — Ctrl+Alt, Ctrl+Shift (which
-        // has no claim left anywhere), Shift+Alt, Ctrl+Alt+Shift, ... — no-ops
+        // every remaining modified combination — Ctrl+Alt (a strict no-op),
+        // Ctrl+Shift off the trim bar (its one claim is the END bound set
+        // above), Shift+Alt, Ctrl+Alt+Shift, ... — no-ops
         // here. Only a plain
         // or Shift-on-the-top-strip base press proceeds (Shift adjusts the
         // marker selection). Alt is POINTER-ONLY vocabulary: the Alt+wheel
@@ -1914,6 +2015,11 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     }
     if (text_editor::is_active(app.settings_editor)) return;
     if (text_editor::is_active(app.commit_editor)) return;
+    // NON-LEFT RELEASES END HERE, and nothing is owed: every release body below
+    // finishes something a LEFT press armed, and no other button arms anything.
+    // The bare RIGHT press bound 2026-08-01 is a one-shot scrub act — it arms no
+    // drag, seeds no double-click candidate and lights no button face — so its
+    // release is a pure no-op by construction, not by an omission to fix later.
     if (button != GuiMouseButton::Left) return;
 
     // THE TRIM-BAR FRAMING DOUBLE-CLICK'S SEED, resolved for every left release

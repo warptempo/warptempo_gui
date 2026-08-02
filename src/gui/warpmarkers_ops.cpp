@@ -410,11 +410,16 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // (the derivation is at Undo::coalesce_gesture) — and an invalidate that sits
     // behind a refusal is not an invalidate on arrival. `merge` is consumed far
     // below, and nothing between here and there reads coalescing state, so the hoist
-    // moves no other behavior. coalesce_gesture keys off the press's own repeat bit
-    // (threaded down from the on_key event that reached this handler), so it is
+    // moves no other behavior. coalesce_gesture computes its verdict BEFORE that
+    // invalidate (the hybrid's order rule, stated at its definition), so an early
+    // call still answers this press correctly. It reads the press's own repeat bit
+    // (threaded down from the on_key event that reached this handler) to pick its
+    // arm, so it is
     // order-independent of the focus-collapse below; it just has to run before
-    // record_gesture stamps the kind. The Up/Down step is the only route reaching
-    // here with kind TempoStep, so a held Up/Down coalesces as intended.
+    // record_gesture stamps the burst. The Up/Down step is the only route reaching
+    // here with kind TempoStep, so a held Up/Down coalesces by identity and a rapid
+    // re-tap by the tap window (architect 2026-08-01) — the SUBJECT the tap arm
+    // compares is this singleton selection, unchanged by the collapse below.
     const bool merge =
         undo.coalesce_gesture(GestureKind::TempoStep, synthesized_repeat);
     // architect ruling 2026-07-22: the Up/Down tempo step stays reachable off
@@ -605,12 +610,17 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
     // stamp when the arriving press is PHYSICAL (the derivation is at
     // Undo::coalesce_gesture), and an invalidate behind a refusal is not an
     // invalidate on arrival — a walled press must still end the previous burst.
+    // The verdict is computed BEFORE that invalidate (the hybrid's order rule at
+    // coalesce_gesture), so the hoist answers this press correctly either way.
     // Order-independent of the mutation otherwise, and `merge` is consumed below.
-    // coalesce_gesture keys on the kind + the repeat bit, NOT on any marker index,
+    // On the REPEAT arm coalesce_gesture keys on the kind + the repeat bit and NOT
+    // on any marker index,
     // so a held key over the SAME group collapses to one entry (a selection change
-    // requires a command, and a command ends the hold) — the group is
-    // coalesce-eligible unchanged, and the Up/Down step is the only route reaching
-    // here with kind TempoStep.
+    // requires a command, and a command ends the hold). On the TAP arm the
+    // selection IS compared (architect 2026-08-01), which is what keeps a rapid
+    // re-tap over a RE-MADE group from merging into the previous group's entry —
+    // the group is coalesce-eligible unchanged either way, and the Up/Down step is
+    // the only route reaching here with kind TempoStep.
     const bool merge =
         undo.coalesce_gesture(GestureKind::TempoStep, synthesized_repeat);
     const auto& mv = app.warpmarkers.markers();

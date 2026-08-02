@@ -172,7 +172,8 @@ struct UndoEntry {
 // from under the span), a plain UPPER-HALF waveform PRESS (the placement press
 // dissolves any resting highlight at mouse-down, before it knows whether the
 // gesture is a click or a fresh region drag — via arm_region_drag_at; a
-// lower-half scrub press leaves the region alone, that press being the region's
+// SCRUB press leaves the region alone in either entry, the lower-half left one
+// and the bare right one, that gesture being the region's
 // PREVIEW gesture), and the kick validator's live-domain reclamp when a bound
 // falls outside a shrunken domain. The full clear-site enumeration lives at
 // clear_region_highlight's declaration (input_handler.h).
@@ -629,9 +630,13 @@ struct ScrollDragState {
     int    last_x   = 0;
 };
 
-// (The SCRUB has no drag state: the plain lower-half waveform press — the ONE
-// scrub surface, the marker-text lane's own scrub having been deleted (architect
-// 2026-07-27, and the lane itself in row 5) — is a ONE-SHOT scrub act (scrub_act_at: stop a live session,
+// (The SCRUB has no drag state: its TWO press entries — the plain LOWER-HALF
+// left press and, since 2026-08-01, the BARE RIGHT press over the waveform's
+// FULL HEIGHT (architect: right-click anywhere on the waveform is a scrub) —
+// each run ONE act through the one body, scrub_press_at (input_pointer.cpp,
+// where the two-caller enumeration lives). The marker-text lane's own scrub was
+// deleted (architect 2026-07-27, and the lane itself in row 5). The act
+// is a ONE-SHOT (scrub_act_at: stop a live session,
 // else start one at the clicked frame), issued once per click — the press arms
 // nothing, a held press does nothing further, and motion over the scrub
 // surface is inert (architect 2026-07-23, the Ableton model; the former
@@ -1984,12 +1989,20 @@ inline int64_t snap_authored_frame(double frame) {
 // one-shot press action, not a gesture — it arms nothing and so never appears
 // here. The target-view TEMPO drag and its pending were on this list until
 // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
-// Consumed by the wheel_context
-// predicate (on_wheel's completed-detent gate and the platform's per-frame
-// sub-detent accumulator probe both route through it), the gate that must
-// never fire mid-gesture: the "nothing pops mid-gesture" boundary. The pending
-// drags are included so a wheel cannot shift the viewport out from under the
-// press before the drag begins.
+// FOUR CONSUMERS, re-derived by grep 2026-08-01, each stating the same
+// "nothing pops mid-gesture" boundary from its own side:
+//   * wheel_context (input_handler.cpp) — on_wheel's completed-detent gate and
+//     the platform's per-frame sub-detent accumulator probe both route through
+//     it, so a wheel cannot shift the viewport out from under a gesture (the
+//     PENDING drags are included for exactly that: not out from under a press
+//     before its drag begins either);
+//   * repeat_eligible (input_key_dispatch.cpp) — a key held through a gesture
+//     must not arm a repeat that fires once the gesture ends;
+//   * the run loop's per-tick redesign-button hover refresh (main.cpp) — an
+//     active gesture FREEZES hover;
+//   * the BARE RIGHT-PRESS SCRUB gate (on_button_press, input_pointer.cpp,
+//     2026-08-01) — the right button is deliverable while the left one is held,
+//     so the one scrub act it runs must not fire into a live drag.
 inline bool any_pointer_gesture_active(const AppState& app) {
     return app.drag.active ||
            app.trim_drag.active ||
@@ -2535,8 +2548,12 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // plain waveform press already splits by half — upper is playhead placement +
 // the region-drag arm, lower is the one-shot scrub — so this claim slots into a
 // seam that already exists. A full-height band would need a carve-out inside the
-// scrub branch and would make it impossible to scrub at a marker's column, which
-// is exactly where a user scrubs most.
+// LEFT press's scrub branch and would make it impossible to LEFT-scrub at a
+// marker's column, which is exactly where a user scrubs most. (The BARE RIGHT
+// press added 2026-08-01 scrubs at full height and so reaches a stem's column
+// unobstructed — it never resolves a marker, the stem claim being left-press
+// vocabulary. That relieves the cost this argument weighed but does not change
+// the ruling: the half split is what keeps the LEFT press's two arms legible.)
 //
 // IT READS THE PAINTER'S STASH (AppState::marker_stems), so the grabbable stem
 // is the DRAWN stem by construction — same column, same displayed basis — and a

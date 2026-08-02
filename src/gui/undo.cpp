@@ -8,6 +8,7 @@
                                   // singleton recenter and the group framing
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <set>
@@ -121,15 +122,76 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
 }
 
 bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
+    // THE HYBRID VERDICT (architect 2026-08-01). Two arms over one stamp; the
+    // shared precondition is that the stamp is VALID for this kind and there is an
+    // entry to merge into.
+    //
+    // `kind` separates a nudge burst from a tempo-step burst. A repeat re-enters
+    // the full dispatcher, so a hold's kind cannot change mid-burst and the test is
+    // expected always-true on the repeat arm; on the tap arm it is load-bearing (a
+    // nudge tap after a tempo tap must not merge). The non-empty-stack guard covers
+    // a stack cleared by a load/reset.
+    //
+    // EVERY CHANGE OF THE UNDO-STACK TOP CLEARS THE STAMP — the four push
+    // helpers (push_undo_warp / push_undo_phase_reset / push_undo_both /
+    // push_settings_undo) and restore_history_entry, the shared do_undo/do_redo
+    // core, one line each — so a valid stamp can never coexist with a foreign stack
+    // top, and that is what lets BOTH arms assume the top of the undo stack is the
+    // burst's own entry (refresh_coalesced_touched_live's precondition).
+    const bool stamp_matches =
+        last_gesture_kind_ == kind && !app.history.undo_stack.empty();
+
+    bool merge = false;
+    if (stamp_matches) {
+        if (synthesized_repeat) {
+            // ARM (1), REPEAT IDENTITY — NO CLOCK. A press the process
+            // synthesized itself from a still-held key merges unconditionally,
+            // because the platform's key-repeat contract already supplies the
+            // adjacency property a clock would enforce numerically: layer (1) of
+            // that contract (stated at GuiPlatform::maybe_fire_repeat) disarms the
+            // hold at every intervening pointer-button press, key press, and
+            // completed wheel emission, so a synthesized repeat STRUCTURALLY
+            // CANNOT arrive after another command ran. "Same selection / same tab
+            // / same history" all follow, which is why this arm needs neither the
+            // window nor the subject test below. Keeping it clock-free is
+            // deliberate: a hold must coalesce at ANY compositor repeat delay or
+            // rate, and that independence is the whole reason repeat identity
+            // replaced the retired kGestureCoalesceMs.
+            merge = true;
+        } else {
+            // ARM (2), THE TAP WINDOW — a physical press merging into the previous
+            // one. Two extra conditions, because a tap has NONE of the repeat
+            // arm's structure:
+            //   * WITHIN kTapCoalesceMs of the LAST ACCEPTED coalesce event (the
+            //     push, or the last merge — physical or synthesized), so a run of
+            //     taps extends press by press rather than racing one deadline from
+            //     the first;
+            //   * THE SUBJECT STILL STANDS. Nothing disarms anything between two
+            //     taps: a marker click, a Tab jump, a shift-range extension or a
+            //     Ctrl+Tab can all run in the gap and push NOTHING, leaving the
+            //     stamp and the stack top untouched. Without this test the second
+            //     tap would merge a DIFFERENT marker's nudge into the first
+            //     marker's entry and then overwrite that entry's touched_live
+            //     hints — one Ctrl+Z reverting two unrelated edits, which is the
+            //     exact composition the arrival-invalidate was introduced to kill
+            //     on the repeat side. The selection is the honest subject for all
+            //     three eligible kinds (the nudges act on its focus, the tempo step
+            //     on its members) and the tab is what the entry is filed under.
+            const long long elapsed_ms =
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - last_gesture_time_).count();
+            merge = elapsed_ms <= kTapCoalesceMs
+                 && last_gesture_tab_ == app.active_tab_view
+                 && last_gesture_selection_ == app.selected_markers;
+        }
+    }
+
     // AN ELIGIBLE PHYSICAL PRESS INVALIDATES THE STAMP ON ARRIVAL (converted
-    // 2026-07-29) — this query's one side effect, and the
-    // reason it is no longer const. Every eligible route asks this question at its
-    // ENTRY, before its own refusals run, so clearing the stamp here on a PHYSICAL
-    // press makes "a synthesized repeat coalesces only with ITS OWN burst" airtight
-    // in BOTH directions. It changes no intended merge: the verdict below requires
-    // synthesized_repeat, so a physical press never merged anyway — it only stops a
-    // physical press from LEAVING an older burst's stamp standing for a later repeat
-    // to find.
+    // 2026-07-29, and it survives the hybrid by moving BELOW the verdict) — this
+    // query's one side effect, and the reason it is not const. Every eligible route
+    // asks this question at its ENTRY, before its own refusals run, so a press that
+    // goes on to REFUSE leaves the stamp INVALID; a press that COMMITS re-stamps it
+    // in record_gesture, which is why clearing here costs the tap arm nothing.
     // THE DEFECT THIS CLOSES: a physical press can REFUSE without committing (a
     // phase-reset nudge at its wall, a zero-step press, an ineligible tempo step),
     // which pushes nothing and so cleared nothing; if the refusal then FLIPS
@@ -141,6 +203,9 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // different markers. Clearing on stack-top changes alone could not see this: the
     // intervening acts (a pointer selection command, or the refusing press's OWN
     // focus collapse under the focus-act prologue) change no stack top.
+    // THE ORDER IS THE WHOLE TRICK under the hybrid: verdict first, invalidate
+    // second. Invalidating first (the pre-2026-08-01 shape) would have killed the
+    // very stamp a tap needs to read, so the tap arm would never have fired.
     // ONE SITE, DELIBERATELY: the invalidate lives HERE rather than being spelled at
     // each of the eligible routes, so a route cannot forget it and no enumeration
     // has to be kept in sync — the standing "one authoritative site per concept"
@@ -148,54 +213,33 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // Up/Down cent step (grep this function's callers).
     if (!synthesized_repeat) last_gesture_kind_ = GestureKind::None;
 
-    // REPEAT IDENTITY IS THE WHOLE GATE. Only a press the process synthesized
-    // itself from a still-held key merges; a physical press always opens a fresh
-    // entry. There is no wall clock and no command counter, because the platform's
-    // key-repeat contract already supplies the adjacency property those enforced
-    // numerically: layer (1) of that contract (stated at
-    // GuiPlatform::maybe_fire_repeat) disarms the hold at every intervening
-    // pointer-button press, key press, and completed wheel emission, so a
-    // synthesized repeat STRUCTURALLY CANNOT arrive after another command ran.
-    // Hence "same selection / same tab / same history" and "the stack top is this
-    // burst's entry" all still hold — none of them can change without a command,
-    // and a command ends the hold.
-    //
-    // `kind` separates a nudge burst from a tempo-step burst. A repeat re-enters
-    // the full dispatcher, so a hold's kind cannot change mid-burst and this test
-    // is expected always-true in practice; it stays as the cheap structural guard
-    // it always was. The non-empty-stack guard covers a stack cleared by a
-    // load/reset.
-    //
-    // EVERY CHANGE OF THE UNDO-STACK TOP ALSO CLEARS THE STAMP — the four push
-    // helpers (push_undo_warp / push_undo_phase_reset / push_undo_both /
-    // push_settings_undo) and restore_history_entry, the shared do_undo/do_redo
-    // core, one line each — so a stale kind can never coexist with a foreign stack
-    // top either. The two rules meet at the same guarantee from opposite ends: this
-    // one bounds a burst at its START (a physical press begins a fresh burst,
-    // always), those bound it whenever the history it would merge into moves.
-    // record_gesture runs AFTER the push at every eligible route — FOUR routes over
-    // THREE call sites (the two position nudges through their shared commit tail,
-    // plus the singleton and group arms of the Up/Down cent step) — so intended
-    // merges are untouched.
-    //
-    // NO ACCEPTED DELTA REMAINS. The one that stood here — two same-kind bursts with
-    // no command between them merging across the release gap when the second's
-    // PHYSICAL press refused, the stamp surviving because nothing pushed — dies with
-    // the invalidate above: that press now clears the stamp on arrival, so its
-    // repeats can only merge into an entry the burst itself pushed. SEPARATE PRESSES
-    // ARE SEPARATE ENTRIES is now exactly true, not true-except-for-a-benign-case.
-    return synthesized_repeat
-        && last_gesture_kind_ == kind
-        && !app.history.undo_stack.empty();
+    // NO ACCEPTED DELTA REMAINS on either arm. record_gesture runs AFTER the push
+    // at every eligible route — FOUR routes over THREE call sites (the two position
+    // nudges through their shared commit tail, plus the singleton and group arms of
+    // the Up/Down cent step) — and ONLY on the accepted path, so a REFUSED press
+    // never enables a later merge into an older entry, tap or repeat. Presses
+    // beyond the window, or after a subject change, open their own entries.
+    return merge;
 }
 
 void Undo::record_gesture(GestureKind kind) {
-    last_gesture_kind_ = kind;
+    // THE STAMP IS WRITTEN AS ONE UNIT, on the accepted path only (the callers put
+    // this after their push / skip, past every refusal). The timestamp is what
+    // makes the tap window measure from the last ACCEPTED event rather than from
+    // the burst's first press; the subject is captured POST-act, so a position
+    // nudge's focus collapse and its reorder remap are already folded in and the
+    // next tap compares against what this press actually left standing.
+    last_gesture_kind_      = kind;
+    last_gesture_time_      = std::chrono::steady_clock::now();
+    last_gesture_tab_       = app.active_tab_view;
+    last_gesture_selection_ = app.selected_markers;
 }
 
 void Undo::refresh_coalesced_touched_live(std::vector<int> touched_live) {
-    // Single-writer: the burst's entry is the top of the undo stack (repeat
-    // identity admits no intervening push — a command would have ended the hold).
+    // Single-writer: the burst's entry is the top of the undo stack on BOTH
+    // coalesce arms (a repeat admits no intervening push — a command would have
+    // ended the hold; a tap admits none either — every stack-top change clears
+    // the stamp the merge was verdicted on).
     // Overwrite only touched_live; the first-press touched_snapshot stays the
     // restore-produces coordinates.
     if (app.history.undo_stack.empty()) return;

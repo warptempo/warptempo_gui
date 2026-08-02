@@ -130,8 +130,9 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // playhead_in_marker_lane); Esc is not one of them, being unbound outside the
     // editors, the prompts, the drag swallow and the render cancel since
     // 2026-07-29.
-    // NOT the audition scrub: that is the waveform LOWER-HALF one-shot press
-    // (scrub_act_at), a different gesture on a different surface, untouched here
+    // NOT the audition scrub: that is the waveform one-shot POINTER press
+    // (scrub_act_at — the lower-half left entry and the bare right one), a
+    // different gesture on a different surface, untouched here
     // and the sole owner of the "scrub" name.
     const bool is_playhead_step =
         ((key == GuiKeys::Left || key == GuiKeys::Right) &&

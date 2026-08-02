@@ -120,10 +120,11 @@ struct PositionNudgePrologue {
 // empty selection to the waveform-lane playhead step instead and never reaches
 // here, so this is the belt; (3) no-focus
 // refusal; (4) the undo-coalesce verdict, computed before the geometry refusals
-// (coalesce_gesture keys off the press's own repeat bit, which
+// (coalesce_gesture reads the press's own repeat bit, which
 // `synthesized_repeat` carries down from the on_key event that reached the
-// handler, and it just has to run before record_gesture stamps the kind in the
-// tail); (5) bad
+// handler, to pick its arm — identity for a held key, the fixed tap window plus
+// a subject test for a physical re-press — and it just has to run before
+// record_gesture stamps the burst in the tail); (5) bad
 // sample-rate refusal; (6) non-positive samples-per-pixel refusal; (7) the
 // focused-index stale refusal — the ONLY index this gesture reads, so the old
 // belt over every selected index went with the group (nothing else is touched,
@@ -259,19 +260,23 @@ int64_t stepped_anchor_frame(
 // rather than cleared. Transient display state only (no committed bytes, no undo
 // content, damage idempotent); accepted as improved twin symmetry.
 //
-// (2) WHERE record_gesture SITS IN THE TAIL — no longer a delta at all, recorded
-// because it WAS one. The phase pre-image moved the playhead THEN recorded, the
-// unified tail records THEN moves the playhead; while coalescing was timed, that
-// reordering moved a possible SYNCHRONOUS kick_waveform_sync (move_playhead_to
-// runs one when the follow shifts the viewport — the offscreen-focused case)
-// outside the measured window, so a next burst press landing near the boundary
-// could open a fresh undo entry where the pre-image would have merged. Coalescing
-// is decided by REPEAT IDENTITY now (undo.h): a held key's continuation presses
-// merge because they are synthesized repeats, with no clock to be inside or
-// outside of, so the timing question this delta was about cannot arise and the
-// accepted cost is simply gone. The ordering itself stands unchanged — the
-// unified tail adopts the warp shape verbatim to minimize warp/phase divergence,
-// and record_gesture reads nothing the playhead move writes.
+// (2) WHERE record_gesture SITS IN THE TAIL — a bounded accepted cost again since
+// the TAP ARM restored a clock to coalescing (architect 2026-08-01), recorded in
+// full so it is not re-derived as an oversight. The phase pre-image moved the
+// playhead THEN recorded; the unified tail records THEN moves the playhead, so a
+// possible SYNCHRONOUS kick_waveform_sync (move_playhead_to runs one when the
+// follow shifts the viewport — the offscreen-focused case) falls AFTER the
+// accepted-event timestamp record_gesture stamps. The window to the next press is
+// therefore measured from before that render rather than after it, i.e. the render's
+// own duration is spent out of the 500 ms: a manual re-tap landing in the last few
+// milliseconds of the window could open a fresh entry where a
+// record-after-playhead ordering would have merged. ACCEPTED and not worth a
+// reorder: the constant is a human-tapping interval, a discrete sync render is a
+// small fraction of it, and the direction of the error is the SAFE one (an extra
+// undo entry, never a wrong merge). The HELD-KEY arm is untouched — it consults no
+// clock at all. The ordering itself stands as it was, the unified tail adopting the
+// warp shape verbatim to minimize warp/phase divergence, and record_gesture reads
+// nothing the playhead move writes.
 void finish_position_nudge(
     AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
     GestureKind kind, int64_t committed_focused_frame,

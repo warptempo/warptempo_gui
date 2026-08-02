@@ -1734,15 +1734,18 @@ void GuiPlatform::maybe_fire_repeat() {
     // eligibility re-probe so the probes stay a function of key+modifiers alone.
     // It lets the application tell a held key's continuation presses from fresh
     // physical ones, and UNDO COALESCING IS BUILT ON IT (Undo::coalesce_gesture):
-    // a burst collapses into one undo entry exactly when its continuation presses
-    // carry this bit.
+    // a burst carrying this bit merges with NO clock test at all, which is the
+    // arm that must work at any compositor repeat delay. (A physical press takes
+    // the other arm of the hybrid — the fixed 500 ms tap window — and this bit is
+    // exactly what separates the two.)
     // THAT MAKES LAYER (1) OF THE REPEAT CONTRACT LOAD-BEARING FOR UNDO
     // CORRECTNESS, not just for hand-feel: because the event-edge disarms kill the
     // hold at any intervening pointer-button press, completed wheel emission, or
     // key press, no synthesized repeat can ever arrive AFTER another command ran —
-    // which is the whole reason the coalescer needs no adjacency counter of its
-    // own. Weakening a disarm would let a repeat merge a gesture into a foreign
-    // command's undo entry.
+    // which is the whole reason the REPEAT arm needs no adjacency test of its own
+    // (the TAP arm, having no such structure, carries an explicit subject test
+    // instead). Weakening a disarm would let a repeat merge a gesture into a
+    // foreign command's undo entry.
     mods.synthesized_repeat = true;
     deliver_key(repeat_key_, mods);
     repeat_due_us_ = now + repeat_period_us_;

@@ -32,7 +32,7 @@ PositionNudgePrologue position_nudge_prologue(
     // incidental since 2026-07-29: a PHYSICAL press
     // INVALIDATES the coalescing stamp inside this call — the derivation is at
     // Undo::coalesce_gesture — so it must run on every press that could otherwise
-    // refuse and leave an older burst's stamp standing for its own first repeat to
+    // refuse and leave an older burst's stamp standing for a later press to
     // merge into (the reachable flip is the async waveform publish moving the
     // displayed map under the phase twin's wall test between the physical press and
     // that repeat). Hence it sits AHEAD OF EVERYTHING THAT CAN REFUSE ON GEOMETRY OR
@@ -43,7 +43,14 @@ PositionNudgePrologue position_nudge_prologue(
     // command disarms the platform's repeat (layer (1) at maybe_fire_repeat), so no
     // repeat of this hold can survive to find the stamp. Both tempo-step arms are
     // ordered on the same rule. A held key's continuation presses carry
-    // synthesized_repeat and merge into the entry the physical press pushed.
+    // synthesized_repeat and merge by identity; a rapid MANUAL re-tap merges too,
+    // on the tap arm's fixed window plus its subject test (architect 2026-08-01).
+    // THE PLACEMENT SURVIVES THE HYBRID because coalesce_gesture computes its
+    // verdict BEFORE it invalidates — so an early call still answers this press
+    // correctly and still poisons the stamp for a press that goes on to refuse.
+    // The SUBJECT the tap arm compares is read here, PRE-collapse, against what
+    // record_gesture stamped POST-collapse in the tail; a steady run of taps has
+    // already collapsed, so the two agree from the second press on.
     const bool merge = undo.coalesce_gesture(kind, synthesized_repeat);
     if (audio.sample_rate() <= 0) return r;
     if (current_samples_per_pixel(app, audio) <= 0.0) return r;

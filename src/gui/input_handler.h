@@ -145,7 +145,8 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // WHAT THE REGION IS, so the clear list reads as one rule: TRIM SCRATCH
 // (architect 2026-07-30 — the SPAN FORM retired). It is formed by exactly two
 // gestures, both of which DESELECT at press (the plain upper-half waveform drag
-// and the shift waveform press), previewed by the lower-half scrub press, and
+// and the shift waveform press), previewed by the SCRUB press (either entry —
+// the lower-half left one or the bare right one), and
 // CONSUMED by `x`. It is not a playhead form, not a selection visual, not a
 // trim-window display — the cursor playhead paints straight across it and the
 // singleton stem is never suppressed. So a span rests ONLY beside an EMPTY
@@ -275,13 +276,16 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // definition TIGHTENS to the write alone: a route is a SETTER iff a USER COMMAND
 // runs it and, past that route's own refusals, it WRITES A BOUND of the LIVE tab's
 // trim window. ("Claiming the resting pair" left the definition with the highlight
-// it was claiming for.) Membership re-derived by grepping the live-tab trim-bound
-// writers (app.trim.* / the settings arms' active branch) — SIX
-// `selection.clear_selection()` call sites, four in input_trim.cpp and two in
-// settings_editor.cpp (the ctrl / ctrl+shift bound-set clicks were the seventh
-// and left the list with their own deletion, 2026-08-01):
+// it was claiming for.) Membership RE-DERIVED 2026-08-01 by grepping every
+// `selection.clear_selection()` call site against the live-tab trim-bound writers
+// (app.trim.* / the settings arms' active branch) — SIX call sites, FIVE in
+// input_trim.cpp and ONE in settings_editor.cpp:
 //   * bare `x` (region -> trim, handle_trim_x), which deselects after its span
 //     is read and then CONSUMES the span;
+//   * the ctrl (BEGIN) and ctrl+shift (END) BOUND-SET clicks on the trim bar, ONE
+//     function (set_trim_bound_at_click) and so one deselect — REINSTATED
+//     2026-08-01 with the strictly-inside guard, which is simply a fourth refusal
+//     ahead of the same deselect;
 //   * the trim chip/bridge DRAG — update_trim_drag's two motion arms and
 //     commit_trim_drag — which also carries the drag's PLAYBACK STOP, relocated
 //     there 2026-07-30 from the press when the press's highlight-only publish
@@ -289,14 +293,20 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 //     declaration, playback_lifecycle.h);
 //   * the settings editor's tab_X_trim_begin= / tab_X_trim_end= keys committed on
 //     the ACTIVE tab (one value form now — a whole source frame; the `-1` unset
-//     arm died with the unset state) — JOINED
+//     arm died with the unset state) — TWO KEYS THROUGH ONE SHARED ARM, hence one
+//     call site, and the count above is call sites (a re-derivation correction:
+//     the list has read "two in settings_editor.cpp" since 2026-07-30, counting
+//     the keys). JOINED
 //     2026-07-30, architect: "a typed commit is a commit", the sibling
 //     playhead_cursor= key having already cleared selection and region under the
 //     no-exemptions rule. Their INACTIVE-tab arm is not a member and never was:
-//     it writes a parked band and changes nothing visible.
+//     it writes a parked band and changes nothing visible. (settings_editor.cpp's
+//     other two clear_selection calls — the playhead_cursor= navigation jump and
+//     the engine-key commit — write no trim bound and are not members.)
 // Each deselects PAST ITS OWN REFUSALS (the refusal-gating rule these routes
 // already hold their playback stop under): a read-only bound set,
-// degenerate geometry, a drag event that moved no bound, and
+// degenerate geometry, a bound-set click not strictly inside its partner, a drag
+// event that moved no bound, and
 // a settings commit rejected for a read-only tab / an out-of-wall value / an
 // unchanged value all write no bound and so deselect nothing.
 // THE NON-SETTER IS EXACTLY ONE ROUTE: Shift+X, the dedicated trim MAXIMIZER,
@@ -937,8 +947,11 @@ private:
     // invalidations, so the repaint shows the reset state.
     void auto_clear_crossed_trim();
 
-    // Plain chip-row press trim routing — the sole pointer route into a trim
-    // drag (the Alt pointer gesture retired wholesale, and the waveform stem
+    // Plain chip-row press trim routing — the PLAIN press's route into a trim
+    // drag, and ONE OF TWO since the bound-set clicks came back 2026-08-01 (the
+    // other is set_trim_bound_at_click_then_arm_drag, which arms the same
+    // single-bound pending on the bound it has just written; the Alt pointer
+    // gesture retired wholesale, and the waveform stem
     // grab with it; bounds are grabbed by their top-strip chips / the inter-chip
     // bridge only). Arms a PendingTrimDrag (the pending+threshold pattern): the
     // press CLAIMS the chip/bridge geometry, but the trim-drag machinery begins
@@ -984,11 +997,38 @@ private:
     bool trim_mouse_x_to_active_frame(int mouse_x, int64_t& out_frame);
     void commit_trim_drag();               // release: trigger render if moved
 
-    // (set_trim_bound_at_click / set_trim_bound_at_click_then_arm_drag are
-    // DELETED, architect 2026-08-01 — the ctrl and ctrl+shift chip-row bound-set
-    // presses they served are retired outright, the endcap and bar drags being
-    // trim's whole pointer authoring surface. The retirement record is at their
-    // old site in input_trim.cpp.)
+    // Set ONE trim bound (begin or end) at the clicked column, REINSTATED on the
+    // redesigned TRIM BAR (architect 2026-08-01, after a one-day retirement) —
+    // the trim-drag release-snap basis (authored_frame_at_column over the
+    // displayed paint map), walls [0, total-1], then the shared commit tail.
+    // ADJUST-ONLY is now a statement about what the click DOES — it moves one
+    // bound of the window that always rests — rather than a condition it tests,
+    // the pair gate having died with the unset state (2026-07-30).
+    // THE STRICTLY-INSIDE GUARD is the new half (architect 2026-08-01): a value
+    // resting EQUAL TO or PAST its partner is a CONSUMED NO-OP — no write, no
+    // deselect, no stop, no drag — so this route never produces a crossed pair
+    // and never hands one to auto_clear_crossed_trim. History-less like every
+    // trim mutation; repaint + target_render.trigger() like the drag release.
+    // Read-only refuses silently (trim authoring). OWNS the press's playback
+    // stop, placed past those refusals and just ahead of the bound write, so the
+    // ctrl / ctrl+shift press carries none of its own and a refused click leaves
+    // a live audition playing. RETURNS whether a bound was written (the wrapper's
+    // arm gate). is_begin picks the bound: ctrl sets begin, ctrl+shift sets end.
+    // The full derivation lives at the definition, input_trim.cpp.
+    bool set_trim_bound_at_click(bool is_begin, int mouse_x);
+
+    // The ctrl / ctrl+shift trim-bar bound-set press: sets the bound at the
+    // clicked column (set_trim_bound_at_click, above) AND arms the EXISTING
+    // single-bound trim drag on it through arm_pending_trim_drag — the same
+    // pending an ENDCAP press arms, so motion past the threshold drags the bound
+    // live under the drag's own unchanged rules, while a motionless release rests
+    // the click-set. NOTHING is stashed: the click-set is committed when made
+    // (trim is history-less) and pointer gestures have no cancel. A REFUSED set
+    // arms nothing at all, the arm riding the setter's return value rather than a
+    // second copy of its guard ladder.
+    // is_begin picks the bound (ctrl=begin, ctrl+shift=end).
+    void set_trim_bound_at_click_then_arm_drag(bool is_begin, int mouse_x,
+                                               int mouse_y);
 
     // One scrub ACT at an active-domain frame: STOP, THEN START ON THE NEXT
     // CLICK (architect 2026-07-27, superseding the 2026-07-23 kill-and-revive).
@@ -999,9 +1039,12 @@ private:
     // the one-shot scrub press body (scrub_press_at).
     void scrub_act_at(int64_t frame);
 
-    // The scanner scrub press body. SOLE CALLER: the waveform lower-half plain
-    // press — the marker-text lane's empty-spot scrub is DELETED (architect
-    // 2026-07-27), so the lower half is the entire scrub surface. Given
+    // The scanner scrub press body. TWO CALLERS, both in on_button_press: the
+    // waveform lower-half PLAIN LEFT press and the BARE RIGHT press over the
+    // waveform's FULL HEIGHT (architect 2026-08-01) — the enumeration and the
+    // per-caller gates live at the definition, input_pointer.cpp. The
+    // marker-text lane's empty-spot scrub is DELETED (architect
+    // 2026-07-27). Given
     // the click's waveform-relative column, run ONE scrub act (scrub_act_at —
     // stop a live session, else launch) at that column's frame — the scrub is
     // ONE-SHOT per click (architect 2026-07-23, the Ableton model): the
@@ -1061,7 +1104,8 @@ private:
     // undo restore that empties the selection, and so on. There is still no
     // gesture fallback, so a marker-lane step that refuses stays a consumed no-op.
     // Distinct from the AUDITION SCRUB, which is untouched by all of this: that
-    // is the waveform lower-half one-shot press (scrub_act_at / scrub_press_at),
+    // is the waveform one-shot press (scrub_act_at / scrub_press_at — the
+    // lower-half left press and the bare right press),
     // a pointer gesture on its own surface that starts or stops a scanner and
     // never moves the resting cursor. "Scrub" names that and only that.
     // TWO READERS, one owner: the on_key dispatch (which picks the lane) and
