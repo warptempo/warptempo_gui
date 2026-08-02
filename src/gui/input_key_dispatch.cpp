@@ -1231,8 +1231,11 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
 
     // Ctrl+P: copy phase reset placements from the selected warp markers
     // into the session clipboard. Section-based (architect 2026-07-23):
-    // each selected marker contributes the block it owns (marker to next
-    // store marker, the store-final marker's block to the song end). The set
+    // each selected marker contributes the block it owns — its time to the next
+    // EFFECTIVELY-ENABLED marker's time, or to the song end when none follows
+    // (a disabled marker never reaches the warp map, so it bounds no section;
+    // the extent rule is stated in full at section_end_frame,
+    // phase_reset_propagate.cpp). The set
     // must be a CONTIGUOUS run: the paste walks every labeled
     // destination block from the anchor and matches the clipboard in strict
     // lockstep, so a disjoint clipboard (labeled blocks A, C with a labeled B

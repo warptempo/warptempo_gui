@@ -55,8 +55,11 @@ struct PhaseResetPropagate {
     // so a gap would misalign the two label sequences — the copy gate mirrors
     // the `m` sweep's contiguity requirement). Section-based (architect
     // 2026-07-23): replaces the clipboard with the named blocks each SELECTED,
-    // effective-enabled, labeled marker owns — its time to the next store
-    // marker, or to the song end for the store-final marker. Non-mutating
+    // effective-enabled, labeled marker owns — its time to the end of the
+    // section it renders, which is the next EFFECTIVELY-ENABLED marker's time
+    // or the song end when none follows (a disabled marker is dropped before
+    // the warp map is built, so it bounds nothing; the extent rule is stated in
+    // full at section_end_frame, phase_reset_propagate.cpp). Non-mutating
     // beyond clipboard state — no undo entry, no marker changes.
     void copy_from_selection();
 

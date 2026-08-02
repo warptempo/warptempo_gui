@@ -46,21 +46,49 @@ struct DestBlock {
     int64_t     end;
 };
 
+// The section rule's EFFECTIVE-participation form: a marker's section runs
+// to the next marker that PARTICIPATES IN THE RENDER (the next effectively-
+// enabled marker), else the song end. A disabled marker is dropped before the
+// warp map is built (warp_markers_render_keep_mask, the participation
+// verdict's one owner — "as if the marker were not present"), so it is not a
+// section boundary at all: its span belongs to the preceding enabled marker,
+// and the phase resets lying under it are captured, cleared and pasted with
+// the section they musically belong to. An unlabeled ENABLED marker IS a
+// boundary — it warps its own section, and is only excluded from the label
+// sequence.
+//
+// The ONE extent expression for both propagate walks (the copy's selected-run
+// loop and walk_named_blocks below), so the two sides cannot drift: the paste's
+// lockstep match assumes the destination blocks are measured exactly as the
+// clipboard's were.
+//
+// effective_disabled re-scans the store for a disabled def on every label-ref
+// query, so this forward scan is worst-case O(n^2) across a whole walk. That is
+// the deliberate choice over a per-walk keep-mask: propagate is a discrete
+// command over tens-to-hundreds of markers, and one shared expression is worth
+// more here than two callers each carrying their own cached mask.
+int64_t section_end_frame(const std::vector<GuiWarpMarker>& mv, int i,
+                          int64_t song_end_frame) {
+    const int n = static_cast<int>(mv.size());
+    for (int j = i + 1; j < n; ++j) {
+        if (!effective_disabled(mv, j)) return mv[j].time_frame;
+    }
+    return song_end_frame;
+}
+
 // Walk the warp marker list across [from_idx, to_idx_exclusive),
-// returning the named blocks in order. A block's extent runs from its
-// owning marker to the next warp marker in the list; the STORE-FINAL marker
-// owns the section running to the SONG END (song_end_frame, source frames),
-// so it contributes a block ending there (section rule, architect
-// 2026-07-23). Markers without a label name, and EFFECTIVELY-DISABLED labeled
-// markers, contribute no block: the copy filters effective-disabled selected
-// markers out of the clipboard, so this destination walk must filter them
-// identically or a disabled labeled marker opens a lockstep gap — a
-// destination section owned by a disabled marker then
-// receives no paste and keeps its resets, consistent with disabled markers
-// being excluded from eligibility. Only OWNERSHIP is filtered: a skipped
-// marker's TIME still bounds the previous block's extent (the extent stays
-// next-in-STORE, so the surviving predecessor block still ends at the next
-// store marker's time).
+// returning the named blocks in order. A block's extent is section_end_frame
+// above: its owning marker's time to the next EFFECTIVELY-ENABLED marker's
+// time, or to the SONG END (song_end_frame, source frames) when no enabled
+// marker follows — so the store-final enabled marker owns the section running
+// to the song end, and so does a marker trailed only by disabled ones (section
+// rule, architect 2026-07-23). Markers without a label name, and
+// EFFECTIVELY-DISABLED labeled markers, contribute no block: the copy filters
+// effective-disabled selected markers out of the clipboard, so this destination
+// walk must filter them identically or a disabled labeled marker opens a
+// lockstep gap. Ownership and EXTENT are filtered the same way — a disabled
+// marker neither owns a block nor ends one, so no span is left ownerless
+// between two enabled markers.
 std::vector<DestBlock> walk_named_blocks(
     const std::vector<GuiWarpMarker>& mv,
     int from_idx, int to_idx_exclusive, int64_t song_end_frame) {
@@ -71,14 +99,11 @@ std::vector<DestBlock> walk_named_blocks(
     for (int i = from_idx; i < to_idx_exclusive; ++i) {
         const std::string& name = warp_marker_label_name(mv[i]);
         if (name.empty()) continue;
-        // Effective-disabled labeled marker: not a block owner (see head
-        // comment) — but its time still bounds the previous block's extent.
+        // Effective-disabled labeled marker: not a block owner, and not a
+        // boundary either — section_end_frame walks past it (see head comment).
         if (effective_disabled(mv, i)) continue;
         const int64_t start = mv[i].time_frame;
-        // Store-final marker: its section runs to the song end. Every other
-        // marker's section ends at the next store marker.
-        const int64_t end   = (i + 1 < n) ? mv[i + 1].time_frame
-                                          : song_end_frame;
+        const int64_t end   = section_end_frame(mv, i, song_end_frame);
         out.push_back(DestBlock{name, start, end});
     }
     return out;
@@ -127,8 +152,9 @@ void PhaseResetPropagate::copy_from_selection() {
     const int64_t song_end_frame = target_render.audio.total_frames();
 
     // Section-based copy (architect 2026-07-23): each selected marker
-    // contributes the block IT owns — from its time to the next store
-    // marker's time, or to the song end for the store-final marker. The caller
+    // contributes the block IT owns — from its time to the end of the section
+    // it renders (section_end_frame: the next effectively-enabled marker's
+    // time, or the song end when none follows). The caller
     // has verified the selected set is a CONTIGUOUS run: the
     // paste walks every labeled destination block in strict lockstep, so a
     // disjoint clipboard would diverge at the first gap; contiguity is what
@@ -136,12 +162,15 @@ void PhaseResetPropagate::copy_from_selection() {
     // sweep's). Unlabeled AND effective-disabled markers inside the run still
     // contribute no block, and the paste's destination walk skips both
     // identically (walk_named_blocks filters unnamed and effective-disabled
-    // owners), so the sequences stay aligned. Not routed through
+    // owners), so the sequences stay aligned; a disabled marker is not a
+    // boundary on either side, so a captured block reaches across it exactly as
+    // the destination block will. Not routed through
     // walk_named_blocks: the copy
     // filters on the SELECTED set and on EFFECTIVE-enabled status (a disabled
     // selected marker contributes no block), neither of which that shared
     // destination walk expresses — a separate loop here, walk_named_blocks
-    // stays the paste-destination walk. std::set is ascending, so the blocks
+    // stays the paste-destination walk, and section_end_frame is the shared
+    // extent both take. std::set is ascending, so the blocks
     // come out in time order.
     std::vector<DestBlock> src_blocks;
     for (int i : app.selected_markers) {
@@ -154,8 +183,7 @@ void PhaseResetPropagate::copy_from_selection() {
         const std::string& name = warp_marker_label_name(mv[i]);
         if (name.empty()) continue;
         const int64_t start = mv[i].time_frame;
-        const int64_t end   = (i + 1 < n) ? mv[i + 1].time_frame
-                                          : song_end_frame;
+        const int64_t end   = section_end_frame(mv, i, song_end_frame);
         src_blocks.push_back(DestBlock{name, start, end});
     }
 
@@ -290,10 +318,23 @@ void PhaseResetPropagate::paste_apply() {
 
     auto& out = app.phaseresetmarkers.markers_mut();
     // Per-block clear of destination phase resets inside the shifted
-    // membership window [start - guard, end - guard). Adjacent matched
-    // blocks still tile without gap or overlap because every block's
-    // clear window shifts by the same guard (the seconds constant
-    // converted once to frames).
+    // membership window [start - guard, end - guard). Two matched blocks whose
+    // owners are consecutive in the render (nothing effectively enabled between
+    // them) tile without gap or overlap: the first block's extent ends at the
+    // second's owner, which is the second block's start, and every block's
+    // clear window shifts by the same guard (the seconds constant converted
+    // once to frames). An enabled UNLABELED marker between them still leaves a
+    // deliberate gap — it owns its own section and contributes no block, so its
+    // span is nobody's to clear.
+    //
+    // BEHAVIOR DELTA (2026-08-01, the effective-participation extent): a span
+    // lying under a DISABLED warp marker is now inside the preceding enabled
+    // block's clear window, so pre-existing destination resets there are
+    // cleared and replaced. They previously survived, the old next-in-STORE
+    // extent having stopped the block at the disabled marker and left that span
+    // owned by nobody. The prompt's own contract is what governs — "existing
+    // phase resets in matched ranges will be cleared" — and the span is inside
+    // the matched range now that the disabled marker is not a boundary.
     const double guard = kPhaseResetBoundaryGuardSeconds *
         static_cast<double>(target_render.audio.sample_rate());
     for (size_t i = 0; i < matched; ++i) {
