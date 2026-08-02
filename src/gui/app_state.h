@@ -2545,6 +2545,15 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // IN THE WAVEFORM'S UPPER HALF, is that marker's click. Returns the marker index
 // or -1.
 //
+// THE CALLER GATES IT PLAIN-EXACT (architect 2026-08-01, second pass) — stated
+// here because it bounds what this function is for, and spelled at the one call
+// site (on_button_press, input_pointer.cpp): SHIFT and CTRL bind to the FLAG
+// ALONE. Both modifiers already own a waveform gesture at the very pixels a stem
+// stands on (ctrl = the strip drag, shift = the region former), so a modified
+// press near a stem is not a marker hit at all and falls through to the waveform
+// underneath. This function is unchanged and unconditional; only its one caller
+// decides when to ask.
+//
 // UPPER HALF ONLY, and that is a structural fit rather than a compromise: the
 // plain waveform press already splits by half — upper is playhead placement +
 // the region-drag arm, lower is the one-shot scrub — so this claim slots into a

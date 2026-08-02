@@ -31,7 +31,7 @@
 // Every string on the bottom line — the timestamp, the prompts, the
 // queue/render/transient status, the resolved readout and the three editors'
 // own text — is the redesign's sans at the redesign's size, shaped and painted
-// through the ONE chokepoint like every other redesigned row. (The dirty dot
+// through the ONE chokepoint like every other redesigned row. (The dirty mark
 // used to be on this list; since 2026-08-01 it is in the WINDOW TITLE, which
 // labwc paints — see GuiPlatform::apply_window_title.)
 //
@@ -125,8 +125,8 @@ struct BottomRowSections {
 // size is the only variable, so the size is the whole key. Single-threaded paint
 // state — the waveform worker never reaches this file's bottom-row tier.
 //
-// ONE WIDTH, down from three: the dirty dot's cell and the shaped space that
-// separated it from the clock died with the dot's move to the window title.
+// ONE WIDTH, down from three: the dirty mark's cell and the shaped space that
+// separated it from the clock died with the mark's move to the window title.
 struct BottomRowTextMetrics {
     double px      = -1.0;   // the size these were measured at
     double a_w     = 0.0;    // the widest timestamp's shaped width
@@ -3083,9 +3083,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // A/B view readout and the "(read-only)" token. Rows 3 and 4 display all
     // three view states as lit buttons and tabs, and the tab locks show
     // read-only, so the letters were restating what the redesigned rows say in
-    // their own vocabulary. WHAT LEFT LATER THE SAME DAY: the dirty dot's own
+    // their own vocabulary. WHAT LEFT LATER THE SAME DAY: the dirty mark's own
     // section, which moved to the WINDOW TITLE beside the project name
-    // (GuiPlatform::apply_window_title) — the title is the dot's only home now.
+    // (GuiPlatform::apply_window_title) — the title is the mark's only home now.
     //
     // PRECEDENCE IN THE MODAL SPAN, highest first: prompt > queue /
     // loading status > settings editor > commit editor > BPM editor > transient

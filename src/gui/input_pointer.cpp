@@ -672,6 +672,17 @@ void GuiInputHandler::arm_strip_drag_at(int x, int y) {
     begin_strip_pointer_capture();
 }
 
+// The flag editor's guard-free close, shared by the left and right press arms
+// (contract at the declaration, input_handler.h). The box is the painter's
+// published rect, the same one the F2.1 caret block tests, so "outside" means
+// the same thing on every press path.
+void GuiInputHandler::close_top_flag_editor_for_outside_press(int x, int y) {
+    if (!text_editor::is_active(app.top_flag_editor)) return;
+    const GuiRect& b = app.flag_editor_box.box;
+    if (x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) return;
+    flag_editor.exit_top_flag_edit_no_commit();
+}
+
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                       GuiInputState mods) {
     // ANY PRESS HIDES THE TOOLTIP, above every gate — it has said what it had to
@@ -987,13 +998,21 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // return). Read-only tabs scrub as ever (playback is navigation), the
     // selection / cursor / region / follow are untouched, and no double-click
     // candidate is seeded.
-    // THE ONE DELIBERATE DIVERGENCE: the top flag editor stays OPEN under a
-    // right press. Its guard-free close belongs to the LEFT press's editor
-    // lifecycle (every left press outside the box tears it down); the flag
-    // editor is pointer-transparent and does not stop playback by ruling, so
-    // auditioning the passage under an open flag edit is the behaviour that
-    // ruling already describes.
+    // THE EDITOR LIFECYCLE RUNS ON BOTH BUTTONS (architect 2026-08-01, closing
+    // the one deliberate divergence this arm shipped with — a right press used
+    // to leave an open flag editor standing): a right press outside the box
+    // tears the edit down exactly as a left press does, through the SAME owner
+    // (close_top_flag_editor_for_outside_press), so there is no second recipe to
+    // drift. It runs FIRST in the arm — ahead of this arm's own modifier and
+    // in-flight-gesture gates and ahead of the scrub, so a modified right press
+    // closes the edit exactly as a modified left press does and an audition
+    // starts with the editor already gone. The two arms sit at the SAME depth
+    // otherwise: both are below the modal, popup and band claims, so a right
+    // press swallowed up there closes nothing, and neither does a left one. A
+    // right press INSIDE the box is still nothing at all: the box is the field,
+    // and the right button has no meaning on it.
     if (button == GuiMouseButton::Right) {
+        close_top_flag_editor_for_outside_press(x, y);
         if (ctrl || shift || alt) return;
         if (any_pointer_gesture_active(app)) return;
         if (!inside_waveform) return;
@@ -1012,23 +1031,20 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // navigation, not authoring, and stays view-independent.
 
     if (button == GuiMouseButton::Left) {
-        // Editor lifecycle, guard-free. A press in the editor's rendered lane
-        // text already repositioned the caret / armed the text drag above (the
-        // F2.1 block) and returned; ANY other left press with the top flag
-        // editor open CLOSES it without committing — exactly Esc's teardown
-        // (pending dropped; Enter is the only commit route, so closing is cheap
-        // and non-destructive) — and then FALLS THROUGH so the press acts
-        // normally (arm a strip drag, select a marker, arm a marker drag, land,
-        // place the playhead, ...). Placed ahead of every claim below so the
-        // close really is unconditional. Consequence: a double-click on the
+        // Editor lifecycle, guard-free — THE SHARED OWNER, called from the right
+        // press arm above too. A press in the editor's rendered lane text
+        // already repositioned the caret / armed the text drag above (the F2.1
+        // block) and returned; ANY other left press with the top flag editor
+        // open CLOSES it without committing, and then FALLS THROUGH so the press
+        // acts normally (arm a strip drag, select a marker, arm a marker drag,
+        // land, place the playhead, ...). Placed ahead of every claim below so
+        // the close really is unconditional. Consequence: a double-click on the
         // open editor's own marker is close-then-reopen — the first click
         // closes + selects + seeds a Marker candidate (+ arms the pending drag
         // on the flag part, writable), and the second consumes into a fresh
         // open. That IS the documented "double-click opens the editor"; there
         // is no own-marker special case.
-        if (text_editor::is_active(app.top_flag_editor)) {
-            flag_editor.exit_top_flag_edit_no_commit();
-        }
+        close_top_flag_editor_for_outside_press(x, y);
 
         // The marker hit, computed ONLY on the path that consumes it. The
         // marker is ONE pointer item and that item is now its FLAG BOX alone
@@ -1065,19 +1081,35 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // THE STEM IS A SECOND SURFACE OF THE SAME ITEM (architect 2026-08-01):
         // a press within a few px of an ENABLED marker's stem column, in the
         // WAVEFORM'S UPPER HALF, resolves to that marker and routes through the
-        // very same click bodies its flag does — select / land / range / toggle
-        // / arm / open, nothing restated. It is resolved HERE, beside the flag
-        // hit, so exactly one `mh_index` reaches every branch below and the two
-        // surfaces cannot answer differently. The full contract (why upper-half
-        // only, why the painter's stash, the tie rule) is at
-        // hit_test_marker_stem, app_state.h.
+        // very same click bodies its flag does — select / land / arm / open,
+        // nothing restated. It is resolved HERE, beside the flag hit, so exactly
+        // one `mh_index` reaches every branch below and the two surfaces cannot
+        // answer differently. The full contract (why upper-half only, why the
+        // painter's stash, the tie rule) is at hit_test_marker_stem, app_state.h.
+        //
+        // THE STEM SURFACE IS PLAIN-EXACT (architect 2026-08-01, second pass):
+        // the SHIFT range select and the CTRL membership toggle bind to the FLAG
+        // ALONE, because both modifiers already mean something else ON THE
+        // WAVEFORM — ctrl is the strip drag and shift is the region former — and
+        // the stem lives in the waveform area, standing over pixels those two
+        // gestures own. So a modified press near a stem is NOT a marker hit at
+        // all: it falls through to the waveform's own ctrl / shift gesture at
+        // that column, which is the answer the surface underneath promises. The
+        // FLAG keeps all three clicks (it is in the top strip, where neither
+        // waveform gesture reaches), and the plain stem click is untouched —
+        // select, land, arm the pending drag, seed the double-click.
+        //
+        // ONE HIT OWNER STILL: the gate is on this single resolution site, not a
+        // second hit function, and the short-circuit leaves `mh_index` at -1 for
+        // a modified press, so every branch below sees "no marker" from the one
+        // index they all read.
         //
         // `stem_click` is what widens the marker branches' own gate from
         // "inside_top" to "inside_top OR a stem": the chip-row and empty-lane
         // arms inside those branches are y-band tests that a waveform press
         // fails, so they fall through untouched.
         const bool stem_click =
-            !inside_top && inside_waveform && !alt &&
+            !inside_top && inside_waveform && !alt && !ctrl && !shift &&
             (mh_index = hit_test_marker_stem(app, x, y)) >= 0;
 
         // A top-strip press stops playback WHEN IT CLAIMS SOMETHING, never
@@ -1190,13 +1222,20 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // there is no result-size split here any more (the >=2 arm's extent
             // write died with the SPAN FORM, architect
             // 2026-07-30). Read-only allowed
-            // (selection + playhead are navigation). The ctrl-exact WAVEFORM
-            // press keeps the strip drag below (different surface, no
-            // collision); a markerless top-strip ctrl press claims only the
-            // chip row (BEGIN bound set, next block) and is a strict no-op on
-            // every other lane — no-op in the playback sense too, since only a
-            // CLAIM stops playback.
-            if ((inside_top || stem_click) && mh_index >= 0) {
+            // (selection + playhead are navigation).
+            //
+            // THE FLAG IS THE WHOLE SURFACE HERE — `inside_top` alone, not the
+            // stem's widened gate (architect 2026-08-01): the ctrl-exact
+            // WAVEFORM press is the strip drag, and the stem stands ON the
+            // waveform, so ctrl over a stem belongs to the drag. The gate is
+            // spelled `inside_top` rather than `inside_top || stem_click`
+            // because stem_click is FALSE for any modified press by its own
+            // definition above; saying so directly keeps this branch from
+            // reading as though a stem could still reach it. A markerless
+            // top-strip ctrl press claims only the trim bar (BEGIN bound set,
+            // next block) and is a strict no-op on every other lane — no-op in
+            // the playback sense too, since only a CLAIM stops playback.
+            if (inside_top && mh_index >= 0) {
                 // The toggle is an act, so it owns its stop: selecting while a
                 // session plays is the authoring case the top-strip stop
                 // exists for. It runs AHEAD of the toggle and the land, like
@@ -1319,12 +1358,18 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the playhead and the focused flag are coincident before any subsequent
         // drag or nudge — nothing is towed.
         if (inside_top || stem_click) {
-            // A STEM CLICK ENTERS HERE TOO (2026-08-01). Its y is in the
+            // A PLAIN STEM CLICK ENTERS HERE TOO (2026-08-01). Its y is in the
             // waveform, so every band test inside this branch — the chip row
             // below, the ruler's strip-drag arm, the empty-marker-lane parity
             // press — simply fails for it, and it lands on the one arm it is
             // for: `mh_index >= 0`, the marker click. Nothing in those bodies
             // knows or needs to know which surface resolved the index.
+            //
+            // A SHIFT PRESS NEVER ARRIVES BY THE STEM: stem_click is plain-exact
+            // (its definition above), so shift over a stem leaves both halves of
+            // this gate false and falls through to the waveform block, where
+            // shift is the region former. Shift reaches the marker RANGE select
+            // through the FLAG BOX alone, which is `inside_top`.
             //
             // The chip row (top_trim_row_area, lane 4) is trim's lane and is
             // claimed BEFORE the marker single-select. The chip row, the marker

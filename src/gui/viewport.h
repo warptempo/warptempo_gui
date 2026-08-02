@@ -82,7 +82,10 @@ struct Viewport {
     //    the damaged frame; it joins the class rather than growing a second
     //    flag-only kick (the reason is stated at its site, active_views.cpp), and
     //    the settings active_markers_view= key rides it through the same
-    //    function. The PROPAGATE PASTE'S TARGET-VIEW TAIL
+    //    function. Bare 1/2/3, the ABSOLUTE VIEW SELECTORS (2026-08-01), add NO
+    //    fourth site: they run the S/T and W/P handlers themselves, so their
+    //    kicks are those two entries and this list is unchanged by them.
+    //    The PROPAGATE PASTE'S TARGET-VIEW TAIL
     //    (land_paste_in_target_view, phase_reset_propagate.cpp) is the `p` case
     //    reached by a different door and joined 2026-07-30: it calls
     //    switch_active_markers_view_to('P') directly rather than through the

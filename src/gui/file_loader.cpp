@@ -212,8 +212,9 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // BASENAME — /path/to/K551/take3.wav shows "K551". The folder is what the
     // architect calls the project, and it reads and versions better than either
     // the audio filename or the output `title=` settings key (a different
-    // thing entirely: that one names the render). The dirty dot is appended by
-    // the title's owner, GuiPlatform::apply_window_title.
+    // thing entirely: that one names the render). The " - warptempo_gui" tail and
+    // the dirty asterisk are composed by the title's owner,
+    // GuiPlatform::apply_window_title.
     //
     // Derived off the CANONICAL path so a relative spelling ("take3.wav") or a
     // symlink still resolves to the real containing folder. canonical() cannot

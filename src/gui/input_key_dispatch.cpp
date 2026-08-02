@@ -166,6 +166,14 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (key == GuiKeys::T && !ctrl && !shift && !alt);
     const bool is_sub_p =
         (key == GuiKeys::P && !ctrl && !shift && !alt);
+    // Bare 1 / 2 / 3, the ABSOLUTE view selectors (S+W / T+P / T+W). They are
+    // admitted for exactly the reason `t` and `p` are, and by exactly the same
+    // argument: they RUN those two handlers and nothing else, so the only store
+    // write they can reach is the S->T iter wipe recorded at is_sub_t above,
+    // session-only in every direction that matters. Nothing new to weigh.
+    const bool is_view_selector =
+        ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
+          key == GuiKeys::Digit3) && !ctrl && !shift && !alt);
     const bool is_tab_cycle =
         (!ctrl && !alt && key == GuiKeys::Tab) ||
         (!ctrl && !alt && key == GuiKeys::IsoLeftTab);
@@ -199,6 +207,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_home_end || is_page_updown ||
              is_zoom_symbol || is_zero ||
              is_follow || is_center || is_sub_t || is_sub_p ||
+             is_view_selector ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
              is_esc || is_ctrl_q);
 }

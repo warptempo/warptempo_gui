@@ -674,33 +674,56 @@ void render_trim_flags(cairo_t* cr,
         surface(r.x, r.w, kTrimLaneEndcap, kTrimCapBevelHi, kTrimCapBevelLo);
     }
 
-    // THE MIDPOINT SQUARE (kdenlive's zone-middle mark, row_5_lane_1_trim_
-    // middle.png): a 5x5 square at 100% on the bar's face, centered on the
-    // window's MIDPOINT COLUMN. Painted last, over the bar and — where the
-    // window is narrow enough for them to meet — over an endcap's face too,
-    // though the clearance rule below means that cannot actually happen.
+    // THE MIDPOINT MARK IS THE CROP, BLITTED VERBATIM (architect 2026-08-01, who
+    // overlaid row_5_lane_1_trim_middle.png on the running GUI and ruled it
+    // implemented exactly). The 9x9 crop is a LANE-HEIGHT TILE, and every pixel
+    // of it is already one of this lane's own surfaces:
+    //
+    //   rows 0..6  #97b4c4  kTrimLaneEndcap    the tile's face
+    //   cols 2..6 } #2f6888 kTrimLaneBar       the inner square, inset 2px,
+    //   rows 2..6 }                            flush on the face's bottom row
+    //   row 7      #9dbbcb  kTrimCapBevelHi    the endcap bevel pair, verbatim
+    //   row 8      #94b0c0  kTrimCapBevelLo
+    //
+    // So the tile is EXACTLY AN ENDCAP-COLOURED COLUMN RUN with a bar-coloured
+    // square punched into it, and it paints through the SAME `surface` lambda
+    // the caps do — four constants reused, none invented. On our dark bar it
+    // reads as the light square RING with the dark centre the mockup shows
+    // (tmp/screenshots/kdenlive/redesign/row_5_lane_1_trim_middle_example.png).
+    // The earlier 5x5 single-colour square and its recorded deviation are gone:
+    // that deviation existed only because one flat fill could carry one half of
+    // a two-colour crop, and the tile carries both.
+    //
+    // Painted last, over the bar — and, where the window is narrow enough for
+    // them to meet, it would sit over an endcap's face too, though the clearance
+    // rule below means that cannot actually happen.
     //
     // INFORMATIONAL ONLY. It publishes no rect, claims no hit area and changes
     // no routing: the bar's press / pair-drag / span-framing double-click all
-    // read the same bands they always did, and a click on the square is a click
+    // read the same bands they always did, and a click on the tile is a click
     // on the bar. It is paint and nothing else.
     //
     // THE MIDPOINT IS THE WINDOW'S, not the visible bar's: the two bounds'
     // midpoint goes through the SAME trim_bound_column owner the bar's own
     // edges use, on the same displayed basis, so the mark sits on the column
     // the window's middle actually occupies and scrolls off the view with it
-    // rather than sliding to the middle of whatever is on screen.
+    // rather than sliding to the middle of whatever is on screen. The tile and
+    // its inner square share that centre — at 100% the tile spans the midpoint
+    // column ±4 and the square ±2, both centred on it.
     //
     // IT PAINTS ONLY WHERE IT FITS, a clean binary verdict on integer columns
-    // (so it cannot flicker — no hysteresis, none needed): the square's whole
-    // extent must sit inside the visible interior BETWEEN the endcaps
-    // (trim_bridge_gap, the shared owner, clamped to the effective width) with
-    // a clearance each side. That subsumes the width rule — the interior cannot
-    // hold the square plus both clearances without being at least that wide —
-    // and it also keeps the mark off the caps at any window size. Below the
-    // threshold it simply does not paint: no shrink, no clamp.
+    // (so it cannot flicker — no hysteresis, none needed) and the ONLY thing
+    // that hides it: the TILE's whole extent must sit inside the visible
+    // interior BETWEEN the endcaps (trim_bridge_gap, the shared owner, clamped
+    // to the effective width) with a clearance each side. Recomputed for the
+    // 9px tile, so the interior it needs grew with the mark; the clearance
+    // matters more than it did, the tile's face being the endcaps' own colour
+    // and merging with a cap it touched. Below the threshold it simply does not
+    // paint: no shrink, no clamp.
     {
-        const int sq    = trim_middle_size_px();
+        const int tile  = trim_middle_size_px();
+        const int inner = trim_middle_inner_px();
+        const int inset = trim_middle_inset_px();
         const int clear = trim_middle_clear_px();
         const TrimBridgeGap gap =
             trim_bridge_gap(bc, ec, trim_endcap_w_px(), lane_w);
@@ -710,17 +733,22 @@ void render_trim_flags(cairo_t* cr,
             (static_cast<double>(trim.begin) + static_cast<double>(trim.end)) *
                 0.5,
             viewport_start_sample, viewport_end_sample, lane_w);
-        const int x_lo = mc.col - sq / 2;      // waveform-relative, inclusive
-        const int x_hi = x_lo + sq;            // exclusive
-        // The square hangs from the FACE's bottom edge, as the crop shows it —
-        // rows 2..6 of a 0..6 face, flush on the bevel — rather than centered in
-        // the face. That relationship is what scales with the lane.
-        const int y0 = lane_y + face_h - sq;
-        if (mc.in_viewport && sq <= face_h &&
+        const int x_lo = mc.col - tile / 2;    // waveform-relative, inclusive
+        const int x_hi = x_lo + tile;          // exclusive
+        if (mc.in_viewport && inner <= face_h &&
             x_lo >= vis_lo + clear && x_hi <= vis_hi - clear) {
-            cairo_set_source_rgb(cr, kTrimMiddle.r, kTrimMiddle.g,
-                                 kTrimMiddle.b);
-            cairo_rectangle(cr, lane_x + x_lo, y0, sq, sq);
+            // The tile's own column run, bevel included — the endcap surface at
+            // the midpoint, which is what rows 0..8 of the crop are.
+            surface(lane_x + x_lo, tile, kTrimLaneEndcap,
+                    kTrimCapBevelHi, kTrimCapBevelLo);
+            // The inner square, at the crop's own offsets. It hangs from the
+            // FACE's bottom edge — crop rows 2..6 of a 0..6 face, flush on the
+            // bevel — which is the relationship that scales with the lane, and
+            // it insets from the tile's left by the crop's 2px.
+            cairo_set_source_rgb(cr, kTrimLaneBar.r, kTrimLaneBar.g,
+                                 kTrimLaneBar.b);
+            cairo_rectangle(cr, lane_x + x_lo + inset,
+                            lane_y + face_h - inner, inner, inner);
             cairo_fill(cr);
         }
     }

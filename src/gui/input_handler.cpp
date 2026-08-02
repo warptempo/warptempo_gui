@@ -359,6 +359,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              working zoom centered on the playhead
     //   - t (no mods)            → S/T sub-view toggle
     //   - p (no mods)            → W/P sub-view toggle
+    //   - 1/2/3 (no mods)        → the absolute view selectors (S+W / T+P /
+    //                              T+W), which run exactly the two handlers
+    //                              above
     //   - Tab/Shift+Tab/IsoLeftTab → cycle marker focus
     //   - Ctrl+Tab               → switch A/B tab (the other escape)
     //   - Ctrl+Shift+Tab         → march paired tabs in lockstep
@@ -415,6 +418,59 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // those still own the keyboard when active.
     if (key == GuiKeys::T && !ctrl && !shift && !alt) {
         handle_active_audio_view_toggle();
+        return;
+    }
+
+    // BARE 1 / 2 / 3 ARE ABSOLUTE VIEW SELECTORS (architect 2026-08-01): `1` is
+    // S+W, `2` is T+P, `3` is T+W. They name a COMBINATION rather than flipping
+    // an axis, so pressing the key for the combination you are already in is a
+    // consumed no-op — that is the whole difference from `t` and `p`, which are
+    // toggles. (S+P deliberately has NO key: phase resets author in target view,
+    // so S+P is the one combination that is display-only on both axes, and the
+    // architect gave the three keys to the three worth reaching directly. He
+    // intends dedicated BUTTONS for these later, outside today's icon-row
+    // layout; for now the keyboard is the whole surface.)
+    //
+    // COMPOSED, NEVER RE-SPELLED: each axis is applied by the very handler its
+    // own key uses — handle_active_audio_view_toggle for S/T (bare `t`) and
+    // GuiActiveViews::toggle_active_markers_view for W/P (bare `p`) — and only
+    // when that axis actually differs. Every invariant those two own therefore
+    // arrives by construction: the target-view entry validation and its error
+    // notice, the domain translation of viewport / playhead / zoom, the flag
+    // editor teardown and the iter wipe, the selection clear, the coincidence
+    // auto-select, the region clear, and the synchronous plate rebuild. There is
+    // no third view-switch route to keep in step with the other two.
+    //
+    // THE ORDER IS AUDIO FIRST, THEN MARKERS, and it is decided by the
+    // COINCIDENCE AUTO-SELECT rather than by taste. Exactly one of the two
+    // switches runs that scan — the W/P one (the entry chokepoint list is at
+    // auto_select_marker_at_playhead; `t` is not on it) — and the scan converts
+    // marker frames into the ACTIVE AUDIO DOMAIN before comparing them with the
+    // playhead. So when both axes change, the scan must run after the audio
+    // switch has translated the domain, or it would compare source frames
+    // against a playhead about to be re-expressed in target frames and select
+    // the wrong marker (or none). Audio-then-markers puts the scan last and
+    // makes it read the FINISHED combination. The reverse order has no
+    // compensating advantage: `t` performs no selection scan of its own that
+    // would want the final column.
+    //
+    // A REFUSED AUDIO SWITCH STOPS THE WHOLE PRESS. Entering target view can
+    // fail its validation gate (the error-notice class, unreachable from
+    // program-written input), and half-applying an ABSOLUTE selector would leave
+    // the user in a combination they did not ask for. The verdict is read off
+    // the state the handler writes rather than through a new return value —
+    // one owner, no signature change.
+    if ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
+         key == GuiKeys::Digit3) && !ctrl && !shift && !alt) {
+        const char want_audio   = (key == GuiKeys::Digit1) ? 'S' : 'T';
+        const char want_markers = (key == GuiKeys::Digit2) ? 'P' : 'W';
+        if (app.active_audio_view != want_audio) {
+            handle_active_audio_view_toggle();
+            if (app.active_audio_view != want_audio) return;   // refused
+        }
+        if (app.active_markers_view != want_markers) {
+            active_views.toggle_active_markers_view();
+        }
         return;
     }
 
@@ -605,8 +661,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // (run_zoom_toggle_command). The trim-bar double-click deliberately
     // DIVERGES from this (run_span_framing_command — it zooms to the region
     // / trim / whole-song span, never the working zoom); the key keeps the plain
-    // toggle. C remains the direct working-zoom-and-center gesture. Digits 1..9
-    // are intentionally unbound.
+    // toggle. C remains the direct working-zoom-and-center gesture. DIGITS 1, 2
+    // and 3 are the ABSOLUTE VIEW SELECTORS since 2026-08-01 (their block is up
+    // beside bare `t`, the axis handler they compose); 4..9 are unbound.
     if (!ctrl && !alt && !shift && key == GuiKeys::Digit0) {
         run_zoom_toggle_command();
         return;

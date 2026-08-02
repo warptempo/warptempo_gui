@@ -573,22 +573,20 @@ inline constexpr GuiColor kRedesignSelectedFill = hex(0x3C3F41);
 // them out rather than inventing a formula from three samples.
 inline constexpr GuiColor kTrimLaneBar       = hex(0x2F6888);
 inline constexpr GuiColor kTrimLaneEndcap    = hex(0x97B4C4);
-// THE MIDPOINT SQUARE's face (row_5_lane_1_trim_middle.png, 9x9): kdenlive
-// marks the middle of its zone with a 5x5 square, and the crop reads a #2f6888
-// square on a #97b4c4 face over the #9dbbcb/#94b0c0 bevel pair — i.e. the
-// crop's square is THE BAR COLOUR ON THE ENDCAP COLOUR.
+// THE MIDPOINT MARK NEEDS NO COLOUR OF ITS OWN (architect 2026-08-01, second
+// pass — he overlaid row_5_lane_1_trim_middle.png on the running GUI and ruled
+// the crop implemented VERBATIM): the 9x9 crop is exactly a LANE-HEIGHT TILE
+// built from the two surfaces this block already declares — face rows 0..6 in
+// kTrimLaneEndcap #97b4c4 with a 5x5 kTrimLaneBar #2f6888 square inset at cols
+// 2..6 / rows 2..6, over the endcaps' own #9dbbcb / #94b0c0 bevel pair. On our
+// dark bar that reads as a LIGHT SQUARE RING with a dark centre, which is the
+// mark he approved in the mockup.
 //
-// OUR LANE ASSIGNS THAT PAIR THE OTHER WAY ROUND, so the square takes the other
-// half of the same two-colour crop: row 5 gave the WINDOW BAR kdenlive's darker
-// #2f6888 and the 2px ENDCAPS its lighter #97b4c4, so a #2f6888 square painted
-// on our bar would be invisible — same value on same value. What the crop
-// actually states is a CONTRAST between the lane's two surface colours, and
-// this constant is that contrast preserved: the light face marking the middle of
-// the dark bar. It is deliberately its own constant rather than a second use of
-// kTrimLaneEndcap — the endcaps are grabbable bounds and this is an
-// informational mark, and if the architect wants the square tuned it must move
-// without dragging the caps with it.
-inline constexpr GuiColor kTrimMiddle        = hex(0x97B4C4);
+// The former kTrimMiddle constant (a lone #97b4c4 fill for a 5x5 square) is
+// DELETED with the deviation it recorded — that deviation reasoned about which
+// half of a two-colour crop to keep when only ONE colour could be painted, and
+// the tile paints BOTH, so the question it answered no longer exists. The
+// painter's tile is the record now (render_trim_flags, render.cpp).
 inline constexpr GuiColor kTrimGroundBevelHi = hex(0x393E43);
 inline constexpr GuiColor kTrimGroundBevelLo = hex(0x131516);
 inline constexpr GuiColor kTrimBarBevelHi    = hex(0x3B7696);
@@ -686,11 +684,26 @@ inline constexpr GuiColor kWaveformInk    = hex(0x1C816B);  // (28, 129, 107)
 // press, so the gesture split finally has a visible edge. It paints in both
 // views, always.
 //
-// CHOSEN, NOT SAMPLED: "slightly bright green" by his word, on the green
-// canvas. There is no kdenlive crop for it (kdenlive draws no such rule), so
-// this is the architect's tuning knob in the same sense kWaveformRegionCanvas
-// is — it is the only value the split-line path has.
-inline constexpr GuiColor kWaveformChannelSplit = hex(0x2F9E44);
+// DERIVED, NOT SAMPLED — and SUBTLE (architect 2026-08-01, at the live look:
+// the first value #2f9e44 "looks lime green", and the rule wants to be "clear
+// enough to see when choosing where to click, not highly noticeable"). There is
+// no kdenlive crop for it (kdenlive draws no such rule), so what is derived is a
+// RELATIONSHIP to the ground the rule sits on, exactly as kWaveformRegionCanvas
+// derives from the same canvas: THE CANVAS LIFTED A QUARTER OF THE WAY TOWARD
+// #fcfcfc, through the ONE mix_color owner.
+//
+//   kWaveformCanvas #12312b (18, 49, 43), 75% retained over #fcfcfc (252):
+//     r = 252 + (18 - 252) * 0.75 =  76.50
+//     g = 252 + (49 - 252) * 0.75 =  99.75   ->  approximately #4d645f
+//     b = 252 + (43 - 252) * 0.75 =  95.25
+//
+// The constant holds those exact doubles, not the rounded hex — cairo takes the
+// channels straight. IT STAYS THE ARCHITECT'S KNOB, and BOTH halves are the
+// tunable part: the FRACTION (how visible the rule is) and the BASE it lifts
+// (he named "canvas or waveform [ink] mixed with fcfcfc" as the family, so
+// swapping kWaveformCanvas for kWaveformInk is the other member).
+inline constexpr GuiColor kWaveformChannelSplit =
+    mix_color(kWaveformCanvas, hex(0xFCFCFC), 0.75);
 
 // THE REGION HIGHLIGHT, RE-DERIVED ON THE NEW GROUND (architect 2026-08-01: the
 // old value read GREY on the green canvas — "start over, don't just tune it;
@@ -1200,15 +1213,32 @@ inline int trim_endcap_w_px() {
         static_cast<double>(kTrimEndcapWidthPx) * gui_scale_factor()));
     return w < 1 ? 1 : w;
 }
-// THE MIDPOINT SQUARE, 5x5 at 100% (the 9x9 crop's square occupies rows 2..6
-// and five columns), and the CLEARANCE the visibility rule demands on each
-// side of it. Both scale with the lane like every other length in this row.
-inline constexpr int kTrimMiddleSizePx  = 5;
+// THE MIDPOINT MARK IS THE 9x9 CROP, so its lengths are the crop's own: a TILE
+// 9 columns wide at 100% (its height is the lane's, which is what 9 rows means
+// here), an INNER square 5x5, and the crop's 2px INSET placing that square at
+// cols 2..6 / rows 2..6. Plus the CLEARANCE the visibility rule demands on each
+// side of the whole tile. All of them scale with the lane like every other
+// length in this row, and the three tile lengths stay consistent under the
+// rounding by construction (inset + inner + inset == tile at 100% and 200%, and
+// the painter derives the right margin as what is left rather than re-rounding).
+inline constexpr int kTrimMiddleSizePx  = 9;   // the tile's width
+inline constexpr int kTrimMiddleInnerPx = 5;   // the dark square inside it
+inline constexpr int kTrimMiddleInsetPx = 2;   // the crop's offset to that square
 inline constexpr int kTrimMiddleClearPx = 2;
 inline int trim_middle_size_px() {
     const int v = static_cast<int>(std::nearbyint(
         static_cast<double>(kTrimMiddleSizePx) * gui_scale_factor()));
     return v < 1 ? 1 : v;
+}
+inline int trim_middle_inner_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kTrimMiddleInnerPx) * gui_scale_factor()));
+    return v < 1 ? 1 : v;
+}
+inline int trim_middle_inset_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kTrimMiddleInsetPx) * gui_scale_factor()));
+    return v < 0 ? 0 : v;
 }
 inline int trim_middle_clear_px() {
     const int v = static_cast<int>(std::nearbyint(
@@ -1778,12 +1808,14 @@ inline int trim_endcap_grab_px() {
 // shows only when the span is wide enough that the chips do not overlap.
 // route_trim_chip_press consumes the SAME owner under the SAME [0, wave_w) gate,
 // so the clickable bridge equals the painted bar exactly.
-// THE MIDPOINT SQUARE (2026-08-01, kdenlive's zone-middle mark) paints last, on
-// the bar's face at the WINDOW's midpoint column — through the same
-// trim_bound_column owner the bounds use — and only when the visible interior
-// between the endcaps holds it with a clearance each side. It is INFORMATIONAL:
-// no hit rect, no gesture, no routing change anywhere. Its face, size and the
-// clearance are kTrimMiddle / trim_middle_size_px / trim_middle_clear_px.
+// THE MIDPOINT MARK (2026-08-01, kdenlive's zone-middle crop blitted verbatim)
+// paints last, on the bar's face at the WINDOW's midpoint column — through the
+// same trim_bound_column owner the bounds use — and only when the visible
+// interior between the endcaps holds the whole TILE with a clearance each side.
+// It is INFORMATIONAL: no hit rect, no gesture, no routing change anywhere. Its
+// lengths are trim_middle_size_px / _inner_px / _inset_px / _clear_px and its
+// four colours are the lane's own endcap + bar surfaces; the pixel-by-pixel
+// derivation from the crop is at the paint site (render.cpp).
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
                        GuiRect chip_row,

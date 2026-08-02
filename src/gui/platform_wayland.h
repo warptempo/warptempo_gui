@@ -53,10 +53,11 @@ public:
 
     bool init(int width, int height, const char* title);
 
-    // THE WINDOW TITLE IS THE PROJECT NAME PLUS THE DIRTY DOT (architect
-    // 2026-08-01): "K551" clean, "K551 ●" with unsaved work. These two setters
-    // are its ONLY writers — set_title itself is private below so the
-    // composition cannot be bypassed by an inline string somewhere in the GUI.
+    // THE WINDOW TITLE IS THE CLASSIC APPLICATION FORM (architect 2026-08-01):
+    // "K551 - warptempo_gui" clean, "K551 * - warptempo_gui" with unsaved work.
+    // These two setters are its ONLY writers — set_title itself is private below
+    // so the composition cannot be bypassed by an inline string somewhere in the
+    // GUI.
     //
     // set_project_title takes the source's PARENT FOLDER BASENAME (derived once
     // at load, file_loader.cpp — the folder is the project's name, distinct from
@@ -65,9 +66,10 @@ public:
     // no-op when the flag has not moved, so the per-command recompute_dirty can
     // call it unconditionally.
     //
-    // THE ● IS COMPOSITOR-SIDE TEXT: labwc shapes and paints the titlebar, so
-    // the product's one-face HarfBuzz rule (which governs pixels WE paint) does
-    // not reach here, and a codepoint outside the redesign's face is fine.
+    // THE TITLE IS COMPOSITOR-SIDE TEXT: labwc shapes and paints the titlebar,
+    // so the product's one-face HarfBuzz rule (which governs pixels WE paint)
+    // does not reach here. The string is all-ASCII since the dirty mark became
+    // an asterisk, so nothing depends on that latitude any more.
     void set_project_title(std::string project_name);
     void set_title_dirty(bool dirty);
 

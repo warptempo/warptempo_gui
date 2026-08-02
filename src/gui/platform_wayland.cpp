@@ -574,21 +574,30 @@ void GuiPlatform::set_title(const std::string& title) {
     xdg_toplevel_set_title(xdg_toplevel_, title.c_str());
 }
 
-// THE TITLE'S ONE COMPOSITION SITE (architect 2026-08-01): the project name,
-// then — when there is unsaved work — ONE space and U+25CF BLACK CIRCLE. The
-// dot lives here and nowhere else; the bottom strip's old dirty cell is gone.
+// THE TITLE'S ONE COMPOSITION SITE (architect 2026-08-01, second pass): the
+// CLASSIC APPLICATION FORM — "K551 - warptempo_gui" clean, "K551 * - warptempo_gui"
+// with unsaved work. The dirty mark is an ASTERISK PLUS ONE SPACE inserted before
+// the separator, and it is present only while dirty; the U+25CF dot the title
+// shipped with a few hours earlier is retired (the asterisk is the convention
+// every editor uses, and it is plain ASCII). The mark lives here and nowhere
+// else; the bottom strip's old dirty cell is gone.
 //
-// The ● is UTF-8 in this source file and is handed straight to
-// xdg_toplevel.set_title, which is defined as UTF-8. labwc shapes the titlebar
-// with its own font stack, so this string never touches text_shape and the
-// one-face rule does not apply to it.
+// The whole string is handed straight to xdg_toplevel.set_title, which is
+// defined as UTF-8. labwc shapes the titlebar with its own font stack, so this
+// string never touches text_shape and the product's one-face rule does not
+// apply to it — that latitude simply is not needed any more now that every
+// codepoint here is ASCII.
 //
 // project_title_ is empty until the load derives it, so the pre-load frames
-// (and the loading line) keep the binary name init() seeded.
+// (and the loading line) keep the bare binary name init() seeded: with no
+// project there is no name to separate from, and no unsaved work to mark.
 void GuiPlatform::apply_window_title() {
-    std::string t = project_title_.empty() ? std::string("warptempo_gui")
-                                           : project_title_;
-    if (title_dirty_) t += " ●";
+    if (project_title_.empty()) {
+        set_title("warptempo_gui");
+        return;
+    }
+    std::string t = project_title_;
+    t += title_dirty_ ? " * - warptempo_gui" : " - warptempo_gui";
     set_title(t);
 }
 

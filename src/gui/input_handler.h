@@ -502,6 +502,19 @@ struct GuiInputHandler {
     // entries: the ctrl-exact waveform press and row 5's plain ruler-band press.
     void arm_strip_drag_at(int x, int y);
     bool dispatch_redesign_chord(int x, int y, GuiInputState mods);
+
+    // THE TOP FLAG EDITOR'S GUARD-FREE CLOSE, ONE OWNER FOR BOTH MOUSE BUTTONS
+    // (2026-08-01, when the right press joined): a press anywhere OUTSIDE the
+    // published editor box tears an open FlagPayload edit down without
+    // committing — exactly Esc's teardown (pending dropped; Enter is the only
+    // commit route, so closing is cheap and non-destructive) — and the caller
+    // then goes on to act normally. Self-contained: it tests both "is an edit
+    // open" and "is the press outside the box", so neither caller carries a
+    // guard and the two can never drift. Inside the box the press belongs to
+    // the field (caret / drag-select for the left button, nothing for the
+    // right), so it returns having done nothing.
+    void close_top_flag_editor_for_outside_press(int x, int y);
+
     // True when the settings dropdown swallowed `key` — the popup-modal gate,
     // ranked directly under the prompt at the top of on_key. Bare Esc closes,
     // Ctrl+Q closes and falls through to the close route, everything else is
