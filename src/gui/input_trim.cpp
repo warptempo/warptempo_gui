@@ -135,8 +135,8 @@ void GuiInputHandler::auto_clear_crossed_trim() {
     }
 }
 
-// The shared trim commit tail — contract and the two deliberate non-callers at
-// the declaration (input_handler.h).
+// The shared trim commit tail — contract, the four callers and the one
+// deliberate non-caller at the declaration (input_handler.h).
 void GuiInputHandler::commit_trim_mutation() {
     auto_clear_crossed_trim();
     viewport.invalidate_waveform_area();

@@ -962,7 +962,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // selection anyway). The gutter is 0 px at the deployment widths
     // (1920/2560/3840 are multiples of 16), so this only matters off-deployment.
     const bool inside_waveform =
-        x >= area.x && x < top.w &&
+        x >= area.x && x < top.x + top.w &&
         y >= area.y && y < area.y + area.h;
     const bool inside_top = rect_contains(top, x, y);
     const bool ctrl  = mods.ctrl;

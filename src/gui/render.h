@@ -225,6 +225,11 @@ inline constexpr double kRedesignClickMix = 0.30;
 // hue (a mix toward the ground desaturates without rotating). Named a MIX
 // rather than an alpha on purpose: the palette is fully opaque and nothing here
 // composites — the factor resolves to a solid color before it reaches cairo.
+// A SECOND READER SHARES THE KNOB DELIBERATELY: the tab row's UNLOCKED padlock
+// dims by this same factor over the tab's current face (paint_handler.cpp's
+// tab-lock body) — the redesign's ONE dim family reused rather than a second
+// grey invented there — so retuning how dead a disabled button looks retunes
+// the quiet open lock with it.
 inline constexpr double kRedesignDisabledMix = 0.322;
 
 // -- Row 1's RIGHT-FLOATING VIEW BAR (HARD-CODED, kdenlive-sampled) ---------

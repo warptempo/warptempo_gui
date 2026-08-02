@@ -811,7 +811,7 @@ int main(int argc, char** argv) {
     // Back-wire the settings editor to the input handler (constructed after the
     // editor, which the input handler holds by reference — the cycle is
     // resolved with a pointer set here). The editor reaches
-    // handle_active_audio_view_toggle / apply_gui_scale / auto_clear_crossed_trim
+    // handle_active_audio_view_toggle / apply_gui_scale / commit_trim_mutation
     // through it, so a `:`-typed GUI key funnels into the same gesture code.
     settings_editor.input = &input_handler;
     // Same back-wire for the phase-reset propagate: its paste tail lands in

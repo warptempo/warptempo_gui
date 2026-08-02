@@ -309,17 +309,15 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         if (fr == v) { unchanged(); return true; }
         fr = v;
         if (active) {
-            // The same commit tail trim gestures use, including
-            // auto_clear_crossed_trim (a bound committed onto/across its
-            // partner resets the pair to the song edges, silently).
-            // History-less, like all trim. SPELLED INLINE rather than calling
-            // GuiInputHandler::commit_trim_mutation (the gesture routes' one
-            // owner): this arm's timestamp repaint rides applied() below, so
-            // its tail is three calls where the owner's is four — the recorded
-            // divergence, not an accident.
-            input->auto_clear_crossed_trim();
-            viewport.invalidate_waveform_area();
-            target_render.trigger();
+            // The same commit tail trim gestures use, through their one owner
+            // (GuiInputHandler::commit_trim_mutation, input_trim.cpp): the
+            // crossed-commit reset first — a bound committed onto/across its
+            // partner resets the pair to the song edges, silently — then the
+            // waveform + timestamp repaints and the target-render trigger.
+            // History-less, like all trim. The timestamp invalidate also rides
+            // applied() below; raising it twice costs nothing — the damage list
+            // coalesces by containment, so the identical rect is dropped.
+            input->commit_trim_mutation();
             // THE SETTER'S DESELECT after the bound commit + auto_clear
             // (architect 2026-07-30). Past every refusal (read-only tab, the
             // wall range check, the unchanged early return), so a refused commit

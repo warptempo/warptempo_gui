@@ -425,7 +425,7 @@ struct GuiInputHandler {
     // GUI-kind key into the SAME gesture chokepoint the key's gesture uses.
     // Three of those chokepoints are private methods here
     // (handle_active_audio_view_toggle, apply_gui_scale,
-    // auto_clear_crossed_trim); the friendship lets the editor reach them
+    // commit_trim_mutation); the friendship lets the editor reach them
     // through its back-pointer without a parallel writer.
     friend struct GuiSettingsEditor;
     // The propagate's paste tail lands in target view through the same
@@ -908,9 +908,11 @@ private:
     // (.settings + the marker pair) as the new authoring baseline, view-
     // agnostic (source OR target authoring view). Reads and validates the wav's
     // existence and all three sidecars BEFORE mutating any store, and returns
-    // false leaving authoring untouched (silent) on any missing/malformed
-    // input; otherwise applies the recipe wholesale, wipes renders/, and
-    // returns true.
+    // false leaving authoring untouched on any missing/malformed input — each
+    // such genuine-failure arm naming its cause and path on stderr since
+    // 2026-08-02, while the caller's unknown-id refusal (a typo) stays silent
+    // behind its red flash; otherwise applies the recipe wholesale, wipes
+    // renders/, and returns true.
     bool adopt_render_entry(const AppState::RenderEntry& e);
 
     // Bare x is SET-ONLY (architect 2026-07-25): it branches on the highlight
@@ -964,17 +966,19 @@ private:
     void auto_clear_crossed_trim();
 
     // THE SHARED TRIM COMMIT TAIL, in code rather than in prose: every
-    // trim-SETTING commit in this handler — `x`'s set-from-region, the drag
-    // release, the bound-set click — runs the same four acts in the same order
+    // trim-SETTING commit runs the same four acts in the same order
     // (auto_clear_crossed_trim, then the waveform + timestamp repaints, then
-    // the target-render trigger), and this member is their one spelling.
+    // the target-render trigger), and this member is their one spelling. FOUR
+    // CALLERS — `x`'s set-from-region (handle_trim_x), the drag release
+    // (commit_trim_drag) and the bound-set click (set_trim_bound_at_click), all
+    // input_trim.cpp, plus the settings editor's `:trim_*=` active-tab arm
+    // (settings_editor.cpp, reaching it through the friendship above; its
+    // timestamp repaint rides applied() as well, harmlessly twice).
     // Callers own everything around it: their refusals, the playback stop, the
     // setter's deselect and any playhead/region tail, which differ per route by
-    // ruling. TWO DELIBERATE NON-CALLERS, each a different tail by design:
+    // ruling. ONE DELIBERATE NON-CALLER, a different tail by design:
     // handle_trim_clear_both (the Shift+X maximizer resets rather than
-    // auto-clears — a non-setter), and the settings editor's `:trim_*=`
-    // active-tab arm (settings_editor.cpp), which raises its timestamp repaint
-    // through its own applied() routing instead.
+    // auto-clears — a non-setter).
     void commit_trim_mutation();
 
     // Plain trim-bar press routing — the PLAIN press's route into a trim

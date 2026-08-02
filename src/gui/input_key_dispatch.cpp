@@ -859,15 +859,19 @@ static std::string render_entry_id(const AppState::RenderEntry& e) {
 //
 // Adopt render entry `e`'s frozen sidecar recipe as the new authoring
 // baseline, view-agnostic: callable from source OR target authoring view. It
-// takes an explicit entry and stays SILENT on a read failure (the caller
-// red-flashes).
+// takes an explicit entry, and the caller owns the visible refusal (the `'`
+// editor red-flashes).
 //
 // Reads-then-checks BEFORE any mutation: the entry wav must exist and all
 // three sidecars (.settings, .warpmarkers, .phaseresetmarkers) must read and
-// validate. On ANY failure — missing wav, or a malformed / unreadable
-// sidecar — return false with NO stderr and NO state mutation, so a failure
-// leaves authoring untouched. The entry sidecars are trusted (written once at
-// dispatch), so a genuine read failure is the only refusal. Returns true
+// validate. On ANY failure — the running-batch self-guard, a missing wav, or a
+// malformed / unreadable sidecar — return false with NO state mutation, so a
+// failure leaves authoring untouched. THE GENUINE-FAILURE ARMS NAME THEIR CAUSE
+// ON STDERR (architect 2026-08-02), one line each with the offending path, since
+// a trusted sidecar failing to read is a real fault the user cannot diagnose
+// from a flash; first-error-only holds by construction (each arm returns). The
+// caller's own unknown-id refusal — a typed identifier matching no entry — stays
+// SILENT: a typo is not a fault, and the flash is the whole answer. Returns true
 // after the recipe is applied and renders/ wiped.
 bool GuiInputHandler::adopt_render_entry(
         const AppState::RenderEntry& e) {
@@ -875,7 +879,12 @@ bool GuiInputHandler::adopt_render_entry(
     // which must never race a batch publishing into it. The `'` opener
     // already refuses on this same condition, so the keyboard route never
     // reaches here; this backstop protects any other caller.
-    if (app.queue_running || app.pending_archival.armed) return false;
+    if (app.queue_running || app.pending_archival.armed) {
+        std::fprintf(stderr,
+            "warptempo_gui: Adopt refused: a render batch is running or an "
+            "archival is armed\n");
+        return false;
+    }
 
     // NOT a modal open, so NOT the modal-open owner's business
     // (stop_playback_for_modal_open belongs to the sites that open a surface):
@@ -886,11 +895,22 @@ bool GuiInputHandler::adopt_render_entry(
 
     // -- Read + validate every input BEFORE touching a store. --
     std::error_code ec;
-    if (!std::filesystem::is_regular_file(e.wav_path, ec)) return false;
+    if (!std::filesystem::is_regular_file(e.wav_path, ec)) {
+        std::fprintf(stderr,
+            "warptempo_gui: Adopt refused: entry WAV missing or not a regular "
+            "file: '%s'\n",
+            e.wav_path.string().c_str());
+        return false;
+    }
 
     const std::filesystem::path sidecar = renders_dir.settings_path(e);
     const auto settings = read_settings_file(sidecar.string());
-    if (!settings) return false;
+    if (!settings) {
+        std::fprintf(stderr,
+            "warptempo_gui: Adopt refused: invalid settings in '%s': %s\n",
+            sidecar.string().c_str(), settings.error().c_str());
+        return false;
+    }
 
     std::vector<GuiWarpMarker>       src_warp;
     std::vector<GuiPhaseResetMarker> src_phase_resets;
@@ -899,7 +919,13 @@ bool GuiInputHandler::adopt_render_entry(
         const std::filesystem::path wm =
             e.batch_folder / (e.basename + ".warpmarkers");
         auto r = m.load(wm.string());
-        if (!r) return false;
+        if (!r) {
+            std::fprintf(stderr,
+                "warptempo_gui: Adopt refused: invalid warp markers in "
+                "'%s': %s\n",
+                wm.string().c_str(), r.error().c_str());
+            return false;
+        }
         src_warp = m.markers();
     }
     {
@@ -907,7 +933,13 @@ bool GuiInputHandler::adopt_render_entry(
         const std::filesystem::path tm =
             e.batch_folder / (e.basename + ".phaseresetmarkers");
         auto r = t.load(tm.string());
-        if (!r) return false;
+        if (!r) {
+            std::fprintf(stderr,
+                "warptempo_gui: Adopt refused: invalid phase reset markers in "
+                "'%s': %s\n",
+                tm.string().c_str(), r.error().c_str());
+            return false;
+        }
         src_phase_resets = t.markers();
     }
 
@@ -1144,8 +1176,10 @@ void GuiInputHandler::commit_editor_autocomplete() {
 // (`<batch_dir>/<basename>.wav`); ids are unique by filesystem construction
 // (one path per file), so the first match resolves. On a resolve,
 // adopt_render_entry runs; a true result closes the editor, a false result
-// (bad sidecar / missing wav) red-flashes and stays open. Zero matches
-// red-flash and stay open.
+// (bad sidecar / missing wav) red-flashes and stays open — the mutator having
+// named the cause on stderr. Zero matches red-flash and stay open SILENTLY: an
+// identifier matching nothing is a typo, not a fault, and the flash is the whole
+// answer (architect 2026-08-02).
 void GuiInputHandler::commit_editor_commit() {
     if (!text_editor::is_active(app.commit_editor)) return;
     const std::string pending = app.commit_editor.pending;

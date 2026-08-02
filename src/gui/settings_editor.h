@@ -55,7 +55,7 @@ struct GuiSettingsEditor {
     // dependency is a cycle resolved with a pointer set post-construction —
     // the same shape as the viewport request_* callbacks). Used to reach the
     // gesture chokepoints that live on GuiInputHandler:
-    // handle_active_audio_view_toggle, apply_gui_scale, auto_clear_crossed_trim.
+    // handle_active_audio_view_toggle, apply_gui_scale, commit_trim_mutation.
     GuiInputHandler*      input = nullptr;
 
     GuiSettingsEditor(AppState&             app_,

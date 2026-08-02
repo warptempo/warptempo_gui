@@ -388,7 +388,7 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
     }
 
     std::fprintf(stderr,
-        "warptempo_gui: Audio backend = JACK direct, graph_sample_rate=%u, "
+        "warptempo_gui: Audio backend: JACK direct, graph_sample_rate=%u, "
         "source_sample_rate=%d, channels=%d\n",
         impl_->jack_rate.load(std::memory_order_relaxed), sample_rate, channels);
     return true;
