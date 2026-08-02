@@ -1,5 +1,6 @@
 // migrate_sidecar_to_frames — convert one legacy MM:SS.mmm sidecar to the
-// whole-source-frame authored domain, in place.
+// whole-source-frame authored domain, at the original path, keeping the legacy
+// bytes as '<original-path>.bk'.
 //
 // The authored time domain moved from MM:SS.mmm timestamps to whole source
 // frames; there is no legacy read path in the GUI, parser, or CLI, so old
@@ -11,13 +12,15 @@
 // seconds = parse_timestamp(ts) + offset, then to whole source frames via
 // banker's rounding (std::nearbyint) — the same rounding rule the GUI uses
 // everywhere fractional values meet an integer domain — serialized via
-// format_authored_frame (plain integer text). MARKER positions
-// (.warpmarkers, .phaseresetmarkers) are additionally SNAPPED to the GUI
-// zoom-level-2 frame grid: the nearest pixel column at sample_rate * 1.25 /
+// format_authored_frame (plain integer text). EXACTLY ONE COLUMN SNAPS: WARP
+// marker positions (.warpmarkers) are additionally snapped to the GUI
+// zoom-level-2 frame grid — the nearest pixel column at sample_rate * 1.25 /
 // 1000 frames per pixel, anchored at frame 0 (55.125 frames at 44.1 kHz).
-// .settings trim values are NOT snapped — they keep plain whole-frame
-// rounding. Migrated marker positions therefore land on the SAME frame-0
-// zoom-2 grid the GUI's own authoring gestures land on, and match GUI zoom-2
+// .phaseresetmarkers positions and .settings trim values are NOT snapped —
+// both keep plain whole-frame rounding.
+//
+// Migrated WARP positions therefore land on the SAME frame-0 zoom-2 grid the
+// GUI's own source-view authoring gestures land on, and match GUI zoom-2
 // authoring EXACTLY (not merely from the file start). The GUI viewport itself
 // is snapped to this grid (clamp_viewport_start / painter_samples_per_pixel),
 // and the source-view commit rounds once (source_grid_position_at_column), so
@@ -32,12 +35,32 @@
 // design, within the accepted migration tolerance (migrated renders do not
 // cmp-null against pre-migration renders).
 //
+// PHASE RESETS CLAIM NO GRID AT ALL, DELIBERATELY. They author in the TARGET
+// view only (the home-view binding), on the target-frame column lattice the
+// LIVE WARP MAP defines — which this tool, seeing one sidecar and a sample
+// rate, cannot know. The source-grid snap this column used to take was a
+// category error: it reproduced the GUI's authorable set only under an
+// identity warp map, and drifted arbitrarily far from it under any real tempo
+// authoring. So a migrated phase reset is a plain rounded whole frame: a
+// deliberate BALLPARK, not a snapped position. Such a file loads and renders
+// normally (grid membership is nowhere validated); the position simply sits
+// wherever the millisecond landed, to be nudged into place by hand afterwards
+// — which phase resets, being a rough guide, get anyway.
+//
 // Strictness note: every field that SHOULD convert must parse as a valid
 // timestamp (is_valid_timestamp_format); anything else is a hard error that
 // writes nothing. A file whose time fields already hold frame positions
 // ("44100") does not match the MM:SS.mmm grammar, so a second run refuses
 // cleanly rather than double-converting — the tool is not idempotent by
 // re-parsing but is safe against re-running.
+//
+// Recovery: the conversion runs fully in memory, then the ORIGINAL FILE IS
+// RENAMED to '<original-path>.bk' and the converted text is written fresh at
+// the original path. The .bk is the whole recovery contract — a failed or torn
+// write leaves the legacy bytes intact beside it — so an already-existing .bk
+// is a refusal, never an overwrite: it is the only copy of an earlier run's
+// legacy input. There is no confirmation prompt; the backup is the answer the
+// prompt used to ask for.
 //
 // THE TIMESTAMP PARSE HELPERS ARE TOOL-LOCAL (architect 2026-07-30), joining
 // this file's other local mirrors (the zoom-2 pixel scale below): they had no
@@ -57,19 +80,23 @@
 #include <cerrno>
 #include <cmath>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <regex>
 #include <sstream>
+#include <stdexcept>
 #include <string>
+#include <system_error>
 #include <vector>
 
 namespace {
 
 const char* kProg = "migrate_sidecar_to_frames";
 
-// Unified diagnostic shape for every error but the usage line and the y/N
-// prompt. Single-space joined, no double spaces.
+// Unified diagnostic shape for every error but the usage line. Single-space
+// joined, no double spaces.
 void diag(const std::string& action, const std::string& path,
           const std::string& detail) {
     std::cerr << kProg << ": " << action << " failed for '" << path
@@ -85,10 +112,14 @@ void usage() {
 // settings trim values carry it as the whole value token.
 constexpr size_t kTimestampLen = 9;
 
-// The GUI zoom pixel scale that migrated MARKER frames snap to. Mirrors
-// src/gui/main.cpp's kZoomMsPerPixel[2] (the GUI zoom table is the source of
-// truth); at 44.1 kHz this is a 55.125-frame grid (sample_rate * 1.25 / 1000
-// frames per pixel).
+// The GUI zoom pixel scale that migrated WARP marker frames snap to (the warp
+// column alone — see the head comment). The live source of truth is
+// samples_per_pixel_at (src/gui/main.cpp): zoom is a continuous exponent and
+// ms-per-pixel is the function 0.625 * 2^(level - 1), which at level 2 gives
+// this same 1.25 ms/px. The old kZoomMsPerPixel[2] table that value used to be
+// read from no longer exists; the number it held for zoom 2 is unchanged. At
+// 44.1 kHz this is a 55.125-frame grid (sample_rate * 1.25 / 1000 frames per
+// pixel).
 constexpr double kMarkerSnapMsPerPx = 1.25;   // GUI zoom level 2
 
 // Validate "MM:SS.mmm" (minutes and seconds 00-59, three-digit milliseconds).
@@ -120,7 +151,8 @@ bool is_valid_offset_token(const std::string& s) {
 // Snap an exact source-sample position to the frame grid that GUI authoring
 // produces at a given zoom pixel scale, viewport anchored at frame 0: the
 // nearest pixel column's frame. snap_ms_per_px <= 0 means "no snap" (plain
-// nearbyint of the sample), used for settings trim values.
+// nearbyint of the sample), used for settings trim values and for phase reset
+// positions, which claim no grid.
 int64_t snap_frame_to_grid(double exact_sample, double sample_rate,
                            double snap_ms_per_px) {
     if (snap_ms_per_px <= 0.0)
@@ -141,9 +173,10 @@ int64_t snap_frame_to_grid(double exact_sample, double sample_rate,
 // conversion in the project). Shared by the marker and settings converters.
 // Returns true and sets `frame_text` on success; on a hard error returns false
 // and sets `reason` to a short parenthetical detail (no timestamp, a
-// malformed/over-long offset, or a negative effective time — the last refused
-// because parse_authored_frame treats negative positions as malformed at load,
-// so the tool must never write one).
+// malformed/over-long offset, an offset whose magnitude is beyond double, an
+// effective time whose frame position would not fit int64_t, or a negative
+// effective time — the last refused because parse_authored_frame treats
+// negative positions as malformed at load, so the tool must never write one).
 bool convert_time_field(const std::string& field, double sample_rate,
                         double snap_ms_per_px, std::string& frame_text,
                         std::string& reason) {
@@ -161,14 +194,42 @@ bool convert_time_field(const std::string& field, double sample_rate,
             reason = "malformed offset";
             return false;
         }
-        seconds += std::stod(offset);
+        // is_valid_offset_token admits any number of leading digits, so a
+        // well-formed but enormous run ("+99999...999.000") overflows double
+        // and std::stod throws out_of_range. Caught here so the failure lands
+        // in the same first-error/write-nothing path every other malformed
+        // field takes, rather than terminating the tool past its promise.
+        // invalid_argument cannot fire: the token already matched the grammar.
+        try {
+            seconds += std::stod(offset);
+        } catch (const std::out_of_range&) {
+            reason = "offset out of range";
+            return false;
+        }
     }
     if (seconds < 0.0) {
         reason = "negative effective time";
         return false;
     }
+    // The NON-THROWING half of the same escape the catch above closes. An
+    // offset digit run that is enormous but still inside double (~1e20) parses
+    // without throwing, and the effective sample position then overflows the
+    // int64_t cast in snap_frame_to_grid — undefined behavior writing a garbage
+    // frame, which is the promised first-error path bypassed by a second route.
+    // ONE loose bound closes it: half of int64_t's range is still ~3.3 million
+    // years of source at 44.1 kHz, so nothing reachable is refused, and the
+    // slack absorbs the snap's rounding-up at the very edge. The negated
+    // compare also refuses a non-finite value, though the throw above makes one
+    // unreachable here.
+    const double exact_sample = seconds * sample_rate;
+    constexpr double kMaxExactSample =
+        static_cast<double>(std::numeric_limits<int64_t>::max() / 2);
+    if (!(exact_sample <= kMaxExactSample)) {
+        reason = "effective time out of range";
+        return false;
+    }
     frame_text = format_authored_frame(
-        snap_frame_to_grid(seconds * sample_rate, sample_rate, snap_ms_per_px));
+        snap_frame_to_grid(exact_sample, sample_rate, snap_ms_per_px));
     return true;
 }
 
@@ -390,15 +451,17 @@ int main(int argc, char** argv) {
         data = ss.str();
     }
 
-    // Convert fully in memory first, so a refused confirmation or a conversion
-    // error never leaves a partial file.
+    // Convert fully in memory first, so a conversion error refuses before
+    // anything on disk moves: no backup rename, no partial file.
     std::vector<Line> lines = split_lines(data);
     std::vector<Line> out_lines;
     out_lines.reserve(lines.size());
-    // Marker columns snap to the GUI zoom-level-2 grid; settings trim values do
-    // not (0.0 disables the snap in convert_time_field).
+    // The WARP column alone snaps to the GUI zoom-level-2 grid. Phase resets
+    // author on the target grid this tool cannot know, and settings trim values
+    // never snapped; both take plain whole-frame rounding (0.0 disables the
+    // snap in convert_time_field).
     const double snap_ms_per_px =
-        (kind == Kind::Settings) ? 0.0 : kMarkerSnapMsPerPx;
+        (kind == Kind::Warp) ? kMarkerSnapMsPerPx : 0.0;
     for (size_t i = 0; i < lines.size(); ++i) {
         const int line_number = static_cast<int>(i + 1);
         Line out_line;
@@ -419,25 +482,53 @@ int main(int argc, char** argv) {
     }
     const std::string converted = join_lines(out_lines);
 
-    // Overwrite confirmation. The user creates their own backups.
-    std::cerr << kProg << ": Will overwrite '" << path
-              << "' in place; proceed? [y/N]\n";
-    std::string reply;
-    std::getline(std::cin, reply);
-    if (reply != "y" && reply != "Y") {
-        return 0;  // refused: leave the file untouched
+    // The original moves aside as the backup, then the converted text is
+    // written fresh at the original path. This rename IS the tool's recovery
+    // contract: the GUI serializers' atomic temp+fsync+rename writer is
+    // deliberately NOT imported here (a one-shot conversion does not need it),
+    // and the legacy bytes surviving under '<path>.bk' is what makes a failed
+    // or torn write below recoverable rather than fatal.
+    //
+    // An existing backup is a refusal, never an overwrite: it holds an earlier
+    // run's legacy input, the exact copy this tool exists to protect. Nothing
+    // has been written or moved at this point, so the refusal leaves the
+    // original in place.
+    const std::string backup_path = path + ".bk";
+    std::error_code ec;
+    if (std::filesystem::exists(backup_path, ec)) {
+        diag("Migrate", path,
+             "backup '" + backup_path + "' already exists");
+        return 1;
+    }
+    if (ec) {
+        diag("Migrate", path,
+             "cannot check for backup '" + backup_path + "': " + ec.message());
+        return 1;
+    }
+    std::filesystem::rename(path, backup_path, ec);
+    if (ec) {
+        diag("Backup", path,
+             "cannot rename to '" + backup_path + "': " + ec.message());
+        return 1;
     }
 
-    // Simple truncate-and-write, matching the GUI serializers.
+    // Plain truncate-and-write at the now-vacant original path; the .bk above
+    // is what a failure here falls back on.
     std::ofstream out(path, std::ios::binary | std::ios::trunc);
     if (!out) {
-        diag("Write", path, "cannot open file for writing");
+        // Both write failures name the backup: it is now the only copy of the
+        // legacy input, and saying where it went is the whole point of taking
+        // it.
+        diag("Write", path,
+             "cannot open file for writing (the original is at '" +
+                 backup_path + "')");
         return 1;
     }
     out << converted;
     out.flush();
     if (!out) {
-        diag("Write", path, "write error");
+        diag("Write", path,
+             "write error (the original is at '" + backup_path + "')");
         return 1;
     }
     return 0;
