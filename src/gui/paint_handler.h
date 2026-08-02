@@ -45,17 +45,20 @@ class GuiWaveformWorker;
 // lives in render.h so render.cpp can reach it without pulling paint_handler.h
 // into the lower-layer include graph.
 
-// THE BOTTOM ROW'S LEFT PAD — the pen x of the first glyph on the line,
+// THE BOTTOM ROW'S PAD — the pen x of the first glyph on the line,
 // MEASURED off row_7_text.png: fitting the crop's own string offscreen at the
 // row's 16px size puts the pen at x = 13 (12 and 14 both fit worse; the fit is
-// at the crop's left edge, which is the window's). Authored at 100% and scaled
+// at the crop's left edge, which is the window's; the architect confirmed the
+// crop's x0 is the window edge at the relayout). Authored at 100% and scaled
 // on gui_scale_factor() like every other redesigned dimension, rounded with
 // std::nearbyint so it stays an integer.
 //
 // (It replaces timestamp_pad_x, the authored 8 on the font axis. The row rides
-// gui_scale now — see bottom_row_h_px.) It is also the line's INTER-SECTION gap,
-// used three times by bottom_row_sections; the reuse is an eye-consistency
-// choice, stated there.
+// gui_scale now — see bottom_row_h_px.) ONE CONSTANT, THREE USES in
+// bottom_row_sections since the 2026-08-01 relayout: the LEFT lead-in before the
+// modal span, the INTER-SECTION gap between that span and the timestamp's
+// reserved cell, and the RIGHT margin after that cell. The reuse is an
+// eye-consistency choice, stated there.
 inline int bottom_row_pad_x() {
     return static_cast<int>(std::nearbyint(13.0 * gui_scale_factor()));
 }

@@ -28,10 +28,12 @@
 //
 // MONOSPACE IS GONE FROM THE PRODUCT (architect 2026-08-01: "I wanted to get rid
 // of monospace altogether — the last row should be the same font as the rest").
-// Every string on the bottom line — the timestamp, the dirty dot, the prompts,
-// the queue/render/transient status, the resolved readout and the three editors'
+// Every string on the bottom line — the timestamp, the prompts, the
+// queue/render/transient status, the resolved readout and the three editors'
 // own text — is the redesign's sans at the redesign's size, shaped and painted
-// through the ONE chokepoint like every other redesigned row.
+// through the ONE chokepoint like every other redesigned row. (The dirty dot
+// used to be on this list; since 2026-08-01 it is in the WINDOW TITLE, which
+// labwc paints — see GuiPlatform::apply_window_title.)
 //
 // WHAT THE TIMESTAMP LOST AND HOW IT IS REPLACED: a monospace face guaranteed
 // the clock could not wiggle as its digits changed. Two facts replace that
@@ -65,12 +67,18 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
     text_shape::show_shaped_run(cr, run, x, baseline);
 }
 
-// THE LINE'S FIXED SECTIONS (the architect's kdenlive model, 2026-08-01):
-// nothing on the row moves when the timestamp's digits change or the dirty dot
-// appears and disappears. Every boundary is computed from SHAPED MAXIMA, never
-// from the text currently on screen.
+// THE LINE'S FIXED SECTIONS (the architect's kdenlive model, 2026-08-01, RELAID
+// OUT the same day): nothing on the row moves when the timestamp's digits
+// change. Every boundary is computed from SHAPED MAXIMA, never from the text
+// currently on screen.
 //
-//   pad | A: the timestamp | space | B: the dirty dot | pad | C: everything else
+//   pad | C: the modal / status span | pad | A: the timestamp | pad
+//
+// THE CLOCK IS ON THE RIGHT AND THE MODAL TEXT ON THE LEFT (architect, at the
+// live look — superseding the clock-first order the row shipped with a few
+// hours earlier). The DIRTY DOT'S SECTION IS GONE from the line entirely: the
+// dot now rides the WINDOW TITLE beside the project name, where labwc paints it
+// (GuiPlatform::apply_window_title).
 //
 // A IS SIZED ON THE WIDEST DIGIT, not on a specimen that assumes the face
 // (architect 2026-08-01: "use the widest digit in Liberation Sans or the avg
@@ -87,34 +95,41 @@ static void show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 // are at format_timestamp, time_format.h). The section is that format's width
 // and no wider.
 //
-// B is one dot's own shaped width, present or not.
+// A IS RIGHT-ALIGNED AGAINST THE WINDOW: its cell's RIGHT edge sits one pad in
+// from the lane's right edge, so the cell — not the text — is what is anchored,
+// and the clock's own glyphs still cannot walk (the cell is the widest specimen
+// and the text inside it keeps starting at the cell's left pen, exactly as it
+// did when the cell sat on the left).
 //
-// THE TWO GAPS DIFFER, and deliberately: A→B is ONE SHAPED SPACE, because the
-// dot belongs to the clock ("the dot should look like it's basically attached to
-// the timestamp, with about a space char's worth of distance" — architect
-// 2026-08-01, at the live look); B→C is the row's own 13px pad, the same
-// constant as the left lead-in, because C is a different thing on the line
-// rather than a suffix of the clock. C runs from that boundary to the window's
-// right edge.
+// THE ONE 13px PAD IS USED THREE TIMES, unchanged from the shipped row and
+// deliberately: the left lead-in before C, the inter-section gap between C and
+// A, and the right margin after A. One constant, three uses, an
+// eye-consistency choice.
+//
+// A'S CELL IS RESERVED WHETHER OR NOT THE CLOCK PAINTS, and C ends where that
+// reservation begins — so C never jumps and never collides. C is CLIPPED at
+// that boundary; if the modal text does not fit, it clips (architect: a screen
+// too small for the line is a user problem, not a layout one). See
+// paint_bottom_strip's clip block.
 static constexpr const char* kTimestampShape = "DD:DD.DDD";
 
 struct BottomRowSections {
-    double a_x = 0.0;   // the timestamp's pen
-    double b_x = 0.0;   // the dirty dot's pen
-    double c_x = 0.0;   // the modal / status span's pen
+    double a_x    = 0.0;   // the timestamp's pen (its reserved cell's left)
+    double c_x    = 0.0;   // the modal / status span's pen
+    double c_x1   = 0.0;   // and its clip boundary: one pad before A's cell
 };
 
-// The three shaped widths the section arithmetic needs, MEMOISED ON THE FONT
-// SIZE. Deriving A costs eleven tiny shaping passes (ten digits plus the
-// specimen) and they answer the same thing on every frame: the face is fixed
-// ("sans") and the size is the only variable, so the size is the whole key.
-// Single-threaded paint state — the waveform worker never reaches this file's
-// bottom-row tier.
+// The shaped width the section arithmetic needs, MEMOISED ON THE FONT SIZE.
+// Deriving A costs eleven tiny shaping passes (ten digits plus the specimen) and
+// they answer the same thing on every frame: the face is fixed ("sans") and the
+// size is the only variable, so the size is the whole key. Single-threaded paint
+// state — the waveform worker never reaches this file's bottom-row tier.
+//
+// ONE WIDTH, down from three: the dirty dot's cell and the shaped space that
+// separated it from the clock died with the dot's move to the window title.
 struct BottomRowTextMetrics {
     double px      = -1.0;   // the size these were measured at
     double a_w     = 0.0;    // the widest timestamp's shaped width
-    double b_w     = 0.0;    // the dirty dot's
-    double space_w = 0.0;    // one space, the A->B gap
 };
 static BottomRowTextMetrics g_bottom_metrics;
 
@@ -133,8 +148,6 @@ static const BottomRowTextMetrics& bottom_row_text_metrics(
     for (char& c : specimen) if (c == 'D') c = widest;
 
     g_bottom_metrics.a_w     = text_shape::shape_text_run(font, specimen).width_px;
-    g_bottom_metrics.b_w     = text_shape::shape_text_run(font, "*").width_px;
-    g_bottom_metrics.space_w = text_shape::shape_text_run(font, " ").width_px;
     g_bottom_metrics.px      = size_px;
     return g_bottom_metrics;
 }
@@ -147,9 +160,11 @@ static BottomRowSections bottom_row_sections(cairo_scaled_font_t* font,
     BottomRowSections s;
     // Every boundary lands on an integer pen so the hinted glyphs stay crisp,
     // the same rounding convention the redesigned rows' label origins take.
-    s.a_x = std::nearbyint(static_cast<double>(lane.x) + pad);
-    s.b_x = std::nearbyint(s.a_x + m.a_w + m.space_w);
-    s.c_x = std::nearbyint(s.b_x + m.b_w + pad);
+    const double lane_x1 = static_cast<double>(lane.x) +
+                           static_cast<double>(lane.w);
+    s.a_x  = std::nearbyint(lane_x1 - pad - m.a_w);
+    s.c_x  = std::nearbyint(static_cast<double>(lane.x) + pad);
+    s.c_x1 = std::nearbyint(s.a_x - pad);
     return s;
 }
 
@@ -160,10 +175,26 @@ static BottomRowSections bottom_row_sections(cairo_scaled_font_t* font,
 // for the pointer path (AppState::BottomEditorText).
 //
 // NO VIEW OFFSET, deliberately: unlike the flag editor's unrolled box these
-// editors run off the right edge of the window rather than scrolling. That was
-// the monospace path's intent too and it is kept — the settings and commit
-// strings that reach the edge are pathological, and a scrolling field here would
-// need a right boundary the row does not have.
+// editors do not scroll. That was the monospace path's intent too and it is
+// kept — the settings and commit strings that reach the boundary are
+// pathological, and a scrolling field here would need machinery this row does
+// not want.
+//
+// WHAT THE 2026-08-01 RELAYOUT CHANGED ABOUT THAT CLAUSE, stated plainly: the
+// editors used to run off the RIGHT EDGE OF THE WINDOW, because C ran to the
+// window edge and nothing clipped it. C now ends one pad before the timestamp's
+// reserved cell and the whole section is CLIPPED there (paint_bottom_strip), so
+// an over-long editor string is cut at that boundary instead of at the window's.
+// The intent is unchanged in substance — the editor still does not scroll and
+// still has no view offset — and only the boundary moved: an editor is modal
+// text in section C, and C's contents clip alike. The caret can therefore sit
+// outside the clip on a pathological string; the accepted cost is the same one
+// the run-off always carried (the text was off-window before), and the pointer
+// mapping is unaffected because BottomEditorText publishes unclipped geometry.
+//
+// The published byte geometry is the PAINTER's, clip or no clip: a click past
+// the boundary maps through the same byte_x table, which is exactly what the
+// unclipped run-off did.
 static void render_bottom_strip_editor(cairo_t* cr,
                                        AppState& app,
                                        cairo_scaled_font_t* font,
@@ -3041,20 +3072,22 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 
 void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // ROW 7 — THE BOTTOM STRIP IS ONE LINE (architect 2026-08-01). The status
-    // row and the modal/editor row collapsed into a single lane of THREE FIXED
-    // SECTIONS: the TIMESTAMP, the DIRTY DOT, and — when one applies — the
-    // active modal / editor / prompt / status text in the span after them. The
-    // boundaries come from shaped maxima and never from the current text, so
-    // nothing on the line moves when the clock grows a digit or the dot
-    // appears (bottom_row_sections, at the top of this file, with the layout).
+    // row and the modal/editor row collapsed into a single lane of TWO FIXED
+    // SECTIONS: the active modal / editor / prompt / status text on the LEFT and
+    // the TIMESTAMP on the RIGHT. The boundaries come from shaped maxima and
+    // never from the current text, so nothing on the line moves when the clock
+    // grows a digit (bottom_row_sections, at the top of this file, with the
+    // layout).
     //
     // WHAT DIED WITH THE COLLAPSE, and why it is not missing: the S/T · W/P ·
     // A/B view readout and the "(read-only)" token. Rows 3 and 4 display all
     // three view states as lit buttons and tabs, and the tab locks show
     // read-only, so the letters were restating what the redesigned rows say in
-    // their own vocabulary.
+    // their own vocabulary. WHAT LEFT LATER THE SAME DAY: the dirty dot's own
+    // section, which moved to the WINDOW TITLE beside the project name
+    // (GuiPlatform::apply_window_title) — the title is the dot's only home now.
     //
-    // PRECEDENCE IN THE AFTER-TIMESTAMP SPAN, highest first: prompt > queue /
+    // PRECEDENCE IN THE MODAL SPAN, highest first: prompt > queue /
     // loading status > settings editor > commit editor > BPM editor > transient
     // status message > the resolved-value readout. MODAL TEXT WINS OVER THE
     // READOUT (the planner's call at the row-7 brief, FLAGGED for the architect):
@@ -3118,13 +3151,16 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
     // leaves nothing behind for the pointer path to grab.
     app.bottom_editor_text = AppState::BottomEditorText{};
 
-    // --- Section A: the timestamp. sr is the loaded file's sample rate and the
+    // --- Section A: the timestamp, RIGHT-ALIGNED — its reserved cell's right
+    //     edge one pad in from the window's right edge (architect 2026-08-01).
+    //     sr is the loaded file's sample rate and the
     //     playhead samples are source-frames. Split-playhead: track the scanner
     //     during playback (what the user hears), the cursor otherwise (the
     //     scanner is meaningful only while active, so the ternary takes the
     //     cursor at rest). The old paint-site clamp at 5999.999 is GONE: one
     //     owner caps the clock, and it is format_timestamp (at 59:59.999 — a
     //     longer source truncates, the architect's ruling, recorded there).
+    //     Unclipped: the cell is inside the lane by construction.
     {
         const int64_t ts_sample = app.playhead_scanner_active
             ? app.playhead_scanner_sample
@@ -3139,18 +3175,33 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                       format_timestamp(seconds), kRedesignLabel);
     }
 
-    // --- Section B: the dirty dot, in its own reserved cell ONE SPACE after the
-    //     clock — close enough to read as attached to it (the architect's
-    //     ruling at the live look; the section table above carries the two
-    //     gaps). It KEEPS ITS GLYPH (a bare '*') — the form was ruled unchanged
-    //     and the crop says nothing about it — and its cell exists whether or
-    //     not it shows, so appearing and disappearing moves nothing.
-    if (app.dirty) {
-        show_row_text(cr, font, sec.b_x, baseline, "*", kRedesignLabel);
-    }
-
     // --- Section C: the modal / editor / status chain, in the span that runs
-    //     from the last fixed boundary to the window's right edge. ---
+    //     from the left lead-in to one pad before the timestamp's reserved
+    //     cell. ---
+    //
+    // THE SPAN IS CLIPPED AT THE RESERVATION, and that clip is the whole
+    // overrun mechanism (architect 2026-08-01: a screen too small to hold the
+    // line is a user problem — "too small screen is adversarial" — so there is
+    // no ellipsis, no shrink and no scroll here). The reservation holds even
+    // on the frames where the clock is momentarily absent, so C's right edge
+    // never moves and its text never jumps.
+    //
+    // The clip covers the row's whole content band vertically, so the editors'
+    // caret, selection highlight and red flash clip on the same boundary as
+    // their glyphs — one rectangle for every branch below, taken once. A
+    // degenerate lane (a window narrower than pad + pad + A + pad, which the
+    // 640px minimum makes unreachable at every gui_scale) yields an empty span
+    // and simply paints no C at all rather than a normalized backwards rect.
+    const double c_w = sec.c_x1 - sec.c_x;
+    if (c_w <= 0.0) {
+        cairo_restore(cr);
+        return;
+    }
+    cairo_save(cr);
+    cairo_rectangle(cr, sec.c_x, static_cast<double>(content.y),
+                    c_w, static_cast<double>(content.h));
+    cairo_clip(cr);
+
     if (app.prompt.active) {
         // Plain tier: the prompt text and its response labels assembled
         // into one string joined by single ' ' characters and drawn in a
@@ -3193,8 +3244,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
                                    sec.c_x, baseline, band_y, band_h);
     } else if (!app.transient_status_message.empty()) {
         // The transient one-line outcome report (phase-reset paste divergence,
-        // "no renders to commit", ...). It used to ride the status line as an
-        // appendix after the dirty dot; with one line and one span it takes its
+        // "no renders to commit", ...). It used to ride the two-row status line
+        // as an appendix; with one line and one span it takes its
         // place in the chain, directly above the readout. Cleared by the next
         // key press, which is also what opens every editor above it, so the two
         // cannot compete in practice.
@@ -3230,7 +3281,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr, int sr) {
             show_row_text(cr, font, sec.c_x, baseline, readout, kRedesignLabel);
         }
     }
-    cairo_restore(cr);
+    cairo_restore(cr);   // section C's clip
+    cairo_restore(cr);   // the row's font/color state
 }
 
 // -- GuiPaintHandler::on_redraw ------------------------------------------

@@ -207,15 +207,36 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.phaseresetmarkers_path = tm_path.string();
     app.settings_path         = set_path.string();
     app.source_audio_path     = path;
-    // The title shows the canonical absolute source path: a relative or
-    // symlinked command-line spelling would otherwise surface verbatim in
-    // the window title. canonical() cannot fail here in practice (the file
-    // was just opened); on error the spelled path is the fallback.
+    // THE WINDOW TITLE IS THE PROJECT NAME (architect 2026-08-01, replacing the
+    // full source path + " - warptempo_gui"): the SOURCE'S PARENT FOLDER
+    // BASENAME — /path/to/K551/take3.wav shows "K551". The folder is what the
+    // architect calls the project, and it reads and versions better than either
+    // the audio filename or the output `title=` settings key (a different
+    // thing entirely: that one names the render). The dirty dot is appended by
+    // the title's owner, GuiPlatform::apply_window_title.
+    //
+    // Derived off the CANONICAL path so a relative spelling ("take3.wav") or a
+    // symlink still resolves to the real containing folder. canonical() cannot
+    // fail here in practice (the file was just opened); on error the spelled
+    // path is the fallback, exactly as it was for the old path title.
+    //
+    // THE ADVERSARIAL ARM: a source with no meaningful parent folder — the
+    // filesystem root ("/song.wav", whose parent basename is empty) or a bare
+    // relative spelling that canonical() could not resolve (parent empty, or
+    // "." for "./song.wav") — has no project name to show, so it falls back to
+    // the source filename WITHOUT its extension. Nothing else can appear: a
+    // parent_path always yields either a real directory component here or one
+    // of those three degenerate spellings.
     std::error_code title_ec;
     const std::filesystem::path title_path =
         std::filesystem::canonical(apath, title_ec);
-    gui.set_title((title_ec ? path : title_path.string()) +
-                  " - warptempo_gui");
+    const std::filesystem::path title_src =
+        title_ec ? std::filesystem::path(path) : title_path;
+    std::string project_name = title_src.parent_path().filename().string();
+    if (project_name.empty() || project_name == "/" || project_name == ".") {
+        project_name = title_src.stem().string();
+    }
+    gui.set_project_title(project_name);
 
     create_if_missing(wm_path, "0|1.00\n");
     // The empty file is the canonical blank phase reset sidecar: resets have
@@ -276,6 +297,12 @@ bool GuiFileLoader::load_file(const std::string& path) {
     app.warp_dirty         = false;
     app.phase_reset_dirty    = false;
     app.settings_dirty     = false;
+    // The load is the ONE dirty transition that does not go through
+    // Undo::recompute_dirty (it assigns the four flags outright), so it carries
+    // the title's dirty half itself. The other transition site is
+    // recompute_dirty's tail — those two are the whole inventory, since the four
+    // flags above have no other writer in the tree.
+    gui.set_title_dirty(false);
     if (auto r = app.warpmarkers.load(wm_path.string()); !r) {
         std::fprintf(stderr,
             "warptempo_gui: source load aborted: invalid warp markers in "

@@ -904,8 +904,9 @@ enum class DialogTrigger {
 };
 
 // In-window modal prompt state. When `active` is true, the bottom row's
-// after-timestamp span carries the prompt's text and response options (the
-// timestamp and the dirty dot keep their own fixed sections beside it).
+// left-hand modal/status span carries the prompt's text and response options
+// (the timestamp keeps its own reserved cell at the row's right edge, and the
+// span clips where that reservation begins).
 // Input is owned by the prompt: only the response keys (and Esc, which
 // activates the rightmost response) do anything; everything else is
 // swallowed. `response_keys` holds lowercase letters and the match is
@@ -1831,9 +1832,9 @@ struct AppState {
     // practice (these updates can't fire while a prompt is up).
     std::string queue_progress_text;
 
-    // Transient one-line status message shown in the bottom row's
-    // after-timestamp span, one tier above the resolved readout (the row-7
-    // chain; it was an appendix after the dirty dot when the strip had two
+    // Transient one-line status message shown in the bottom row's modal/status
+    // span, one tier above the resolved readout (the row-7
+    // chain; it was an appendix on the status line when the strip had two
     // rows and view letters). Set by a
     // command that wants to report a non-fatal outcome (e.g. phase-reset
     // state-paste divergence); cleared on the next keyboard press in

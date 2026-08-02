@@ -3,6 +3,9 @@
 #include "input_handler.h"        // land_playhead_on_marker,
                                   // clear_region_highlight,
                                   // frame_span_into_view — the restore visual tail
+#include "platform_wayland.h"     // viewport.gui.set_title_dirty — the window
+                                  // title's dirty half, pushed from
+                                  // recompute_dirty's tail
 #include "target_render.h"
 #include "warp_frame_map_view.h"  // source_frame_to_active_domain, for the
                                   // singleton recenter and the group framing
@@ -57,6 +60,14 @@ void Undo::recompute_dirty() {
         }
     }
     app.dirty = app.warp_dirty || app.phase_reset_dirty || app.settings_dirty;
+    // THE DIRTY DOT LIVES IN THE WINDOW TITLE (architect 2026-08-01): this is
+    // the derive-owner of app.dirty, so every mutation, save and undo/redo
+    // transition passes through here, and pushing the flag from this one tail
+    // is what keeps the titlebar honest without a scattered set of inline
+    // title strings. The setter is a no-op when the flag has not moved.
+    // (The load's own four-flag reset is the only other transition — it pushes
+    // the same way from file_loader.cpp.)
+    viewport.gui.set_title_dirty(app.dirty);
 }
 
 void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state,

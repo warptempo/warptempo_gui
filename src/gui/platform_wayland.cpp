@@ -24,6 +24,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <string>
+#include <utility>
 
 // ---------------------------------------------------------------------------
 // Run-loop architecture
@@ -570,6 +572,38 @@ bool GuiPlatform::init(int width, int height, const char* title) {
 void GuiPlatform::set_title(const std::string& title) {
     if (!xdg_toplevel_) return;
     xdg_toplevel_set_title(xdg_toplevel_, title.c_str());
+}
+
+// THE TITLE'S ONE COMPOSITION SITE (architect 2026-08-01): the project name,
+// then — when there is unsaved work — ONE space and U+25CF BLACK CIRCLE. The
+// dot lives here and nowhere else; the bottom strip's old dirty cell is gone.
+//
+// The ● is UTF-8 in this source file and is handed straight to
+// xdg_toplevel.set_title, which is defined as UTF-8. labwc shapes the titlebar
+// with its own font stack, so this string never touches text_shape and the
+// one-face rule does not apply to it.
+//
+// project_title_ is empty until the load derives it, so the pre-load frames
+// (and the loading line) keep the binary name init() seeded.
+void GuiPlatform::apply_window_title() {
+    std::string t = project_title_.empty() ? std::string("warptempo_gui")
+                                           : project_title_;
+    if (title_dirty_) t += " ●";
+    set_title(t);
+}
+
+void GuiPlatform::set_project_title(std::string project_name) {
+    project_title_ = std::move(project_name);
+    apply_window_title();
+}
+
+void GuiPlatform::set_title_dirty(bool dirty) {
+    // Cheap-no-op on an unchanged flag: recompute_dirty runs after every
+    // command, and re-sending an identical title on each one would be pure
+    // protocol traffic.
+    if (dirty == title_dirty_) return;
+    title_dirty_ = dirty;
+    apply_window_title();
 }
 
 // ---------------------------------------------------------------------------

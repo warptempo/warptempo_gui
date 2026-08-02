@@ -3,7 +3,6 @@
 #include "active_views.h"
 #include "app_state.h"
 #include "undo.h"
-#include "viewport.h"
 
 // Save-pipeline operations, extracted from main.cpp's
 // save_markers lambda. Coordinates the three on-disk writes
@@ -12,20 +11,21 @@
 // dirty-flag refold). The .warpmarkers write is the primary
 // target; the .phaseresetmarkers write is a sibling; the .settings
 // write is required too, so any of the three failures keeps the save dirty.
+//
+// NO Viewport REFERENCE any more (2026-08-01): a save paints nothing. Its one
+// damage request was the bottom row's dirty-dot cell, and the dot moved to the
+// window title, which the compositor repaints.
 struct GuiSaveOps {
     AppState&        app;
     Undo&            undo;
     GuiActiveViews&  active_views;
-    Viewport&        viewport;
 
     GuiSaveOps(AppState&        app_,
                Undo&            undo_,
-               GuiActiveViews&  active_views_,
-               Viewport&        viewport_)
+               GuiActiveViews&  active_views_)
         : app(app_),
           undo(undo_),
-          active_views(active_views_),
-          viewport(viewport_) {}
+          active_views(active_views_) {}
 
     bool save();
 };

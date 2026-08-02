@@ -370,8 +370,10 @@ GuiRect top_marker_row_area(const AppState& a) {
 
 // THE BOTTOM STRIP IS ONE LANE (row 7, architect 2026-08-01): the status row and
 // the modal/editor row collapsed into a single line carrying, left to right, the
-// timestamp, the dirty flag, and — when one applies — the active modal / editor /
-// prompt / status text. bottom_row_area is that lane INCLUDING both 1px borders,
+// active modal / editor / prompt / status text when one applies, and the
+// timestamp in its reserved cell at the right edge (the dirty flag moved off the
+// row entirely — it is the window title's dot now).
+// bottom_row_area is that lane INCLUDING both 1px borders,
 // as the strip stack allocates it; bottom_row_content_area is the ground between
 // them, the band every painter and baseline works in.
 //
@@ -639,9 +641,11 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     return GuiRect{x0, y0, x1 - x0, y1 - y0};
 }
 
-// The status line, the dirty flag and the modal/editor/status chain share the
-// bottom strip's ONE lane (row 7), so the invalidation region is the whole
-// bottom strip rect — borders included, since the lane owns them.
+// The timestamp and the modal/editor/status chain share the bottom strip's ONE
+// lane (row 7), so the invalidation region is the whole bottom strip rect —
+// borders included, since the lane owns them. (The dirty flag is no longer one
+// of the sharers: it lives in the window title, which the compositor repaints,
+// so a dirty transition damages nothing of ours.)
 GuiRect timestamp_invalidate_rect(const AppState& a) {
     return bottom_strip_area(a);
 }
@@ -764,7 +768,7 @@ int main(int argc, char** argv) {
     PhaseResetPropagate phase_reset_propagate(app, viewport, undo,
                                               target_render, active_views,
                                               playback_lifecycle);
-    GuiSaveOps save_ops(app, undo, active_views, viewport);
+    GuiSaveOps save_ops(app, undo, active_views);
     GuiPrompt prompt(app, gui, viewport,
                      phase_reset_propagate, save_ops, playback_lifecycle);
     GuiSettingsEditor settings_editor(app, audio, viewport, selection,

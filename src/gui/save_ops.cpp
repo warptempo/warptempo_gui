@@ -82,11 +82,13 @@ bool GuiSaveOps::save() {
 
     // Save rebinds the saved reference to the current timeline position
     // without touching either stack — undo still reverts the last op.
-    const bool was_dirty = app.dirty;
+    //
+    // NO DAMAGE ON THE CLEAN EDGE (2026-08-01): the dirty state's only display
+    // was the bottom row's dot, and the dot moved to the WINDOW TITLE, which the
+    // compositor repaints on its own. recompute_dirty pushes the new flag to the
+    // title itself, so the repaint this used to request has nothing left to
+    // redraw.
     app.history.mark_saved();
     undo.recompute_dirty();
-    if (was_dirty != app.dirty) {
-        viewport.invalidate_timestamp_area();
-    }
     return true;
 }
