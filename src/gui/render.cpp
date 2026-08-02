@@ -1061,14 +1061,12 @@ void render_flag_boxes_impl(
             // beside — or, at the editor's left clamp, inside — a box that
             // already draws its own.
             //
-            // Suppressing the BOX ONLY is deliberate. The stem below still
-            // publishes and still paints: it anchors at the flag's left column
-            // and the editor unrolls from that same column, so the marker keeps
-            // its stem for the whole session exactly as it does when idle. The
-            // hit rect publishes too — the press path resolves an open editor
-            // through app.flag_editor_box before it ever walks these rects
-            // (active_editor_text, input_pointer.cpp), so the entry is
-            // unreachable while the editor is up rather than wrong.
+            // Suppressing the box takes ITS HIT RECT WITH IT (the argument is at
+            // the publish below). THE STEM IS WHAT SURVIVES: it still paints and
+            // still publishes, anchored at the flag's left column, and the editor
+            // unrolls from that same column — so the marker keeps its stem for
+            // the whole session exactly as it does when idle, and keeps the stem
+            // click that goes with it.
             if (i != suppress_box_index) {
                 // Border, then box, then top edge — all AA-off so the 1px band
                 // is exactly one row and the box's columns are exactly one
@@ -1110,7 +1108,35 @@ void render_flag_boxes_impl(
                     cr, run, static_cast<double>(bx + pad_l), baseline);
             }
 
-            if (out_hit_rects) {
+            // THE SUPPRESSED BOX PUBLISHES NO HIT RECT EITHER (codex 2026-08-02,
+            // correcting this pass's first suppression): the rect must match the
+            // pixels, which is this stash's whole doctrine, and a box that is not
+            // painted has no extent to claim. The earlier reasoning — that the
+            // entry was unreachable because the press path resolves
+            // app.flag_editor_box first — held only while the editor was at
+            // least as WIDE as the committed flag, which is precisely the width
+            // assumption this pass removed from the painting. A narrowed editor
+            // left a visually BLANK tail between its right edge and the old
+            // committed width, and a press there closed the editor as an outside
+            // press and then fell through to hit_test_flag IN THE SAME PRESS
+            // (input_pointer.cpp), selecting, landing, seeding a double-click or
+            // arming a drag from pixels where nothing was drawn.
+            //
+            // THE FLAG IS CLICKABLE AGAIN ON THE FRAME IT REAPPEARS, and the
+            // ordering is what makes that safe rather than a lost click: the
+            // press that closes the editor is already consumed, and closing
+            // changes fp_editing_flag_target, which misses the flag cache's
+            // fingerprint and rebuilds it — one render_flags pass that paints the
+            // box and republishes its rect together, since they are the same
+            // pass. So the NEXT press sees a rect that exists exactly where a box
+            // now does. There is no frame with one and not the other in either
+            // direction.
+            //
+            // THE STEM IS THE DELIBERATE EXCEPTION and still publishes below: it
+            // is still PAINTED for the whole editing session, so it is
+            // legitimately hit-testable by the same paint-equals-claim rule that
+            // takes the box's rect away.
+            if (out_hit_rects && i != suppress_box_index) {
                 // THE RECT IS THE WHOLE BOX, BORDER INCLUDED — a click on the
                 // border is a click on the flag. It is the painted extent, as
                 // this stash always was; the border merely made the extent one

@@ -1808,13 +1808,16 @@ struct MarkerStem {
 // buttons already use. Either pointer may be null.
 //
 // `editing_marker_index` is the marker whose FLAG EDITOR IS OPEN, or -1. Its
-// BOX AND LABEL ARE SKIPPED — the open editor paints that flag itself, unrolled
-// (render_flag_editor_box) — while its stem and hit rect still publish. Without
-// the skip the editor's box is merely drawn OVER this one, which hides it only
-// while the edited text is the wider of the two; a SHORTENED payload then let
-// the committed label's tail show past the editor's right edge (the 2026-08-02
-// bug). The phase-reset painter takes no such parameter and the reason is
-// recorded at its call.
+// BOX, LABEL AND HIT RECT ARE ALL SKIPPED — the open editor paints that flag
+// itself, unrolled (render_flag_editor_box) — while its STEM still paints and
+// still publishes. Without the skip the editor's box is merely drawn OVER this
+// one, which hides it only while the edited text is the wider of the two; a
+// SHORTENED payload then let the committed label's tail show past the editor's
+// right edge (the 2026-08-02 bug). THE HIT RECT GOES WITH THE BOX for the same
+// width reason: the published geometry is the PAINTED geometry, so a box that
+// is not drawn claims nothing, and the blank tail beside a narrowed editor can
+// no longer resolve a marker click. The phase-reset painter takes no such
+// parameter and the reason is recorded at its call.
 //
 // `warp_frame_map`: the displayed-axis translation the painters share (the live
 // map in target view). `waveform_width` is the EFFECTIVE waveform width

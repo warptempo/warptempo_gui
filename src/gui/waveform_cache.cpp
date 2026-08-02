@@ -691,9 +691,10 @@ uint64_t hash_selection(const std::set<int>& s,
 // measured monospace grid every flag dimension used to derive from; row 5 moved
 // those onto the gui_scale axis, leaving the field a recorded vestige, and row 7
 // deleted the measurement itself.) The cache holds
-// EVERY flag shape (marker + phase reset) — the flag editor's text renders live
-// as a live overlay AFTER this cache's blit, so the editing target's flag is an
-// ordinary cached shape (no skip-guard). Trim's chips/stems left this cache and
+// EVERY flag shape (marker + phase reset) EXCEPT THE EDITING TARGET'S, whose box
+// and hit rect are skipped here because the live editor overlay painted after
+// this blit cannot be assumed to cover them (2026-08-02) — which is why the
+// edited marker is a fingerprint field of its own below. Trim's chips/stems left this cache and
 // the retired trim-stem cache for the live paint_trim pass, so no trim field
 // remains in the fingerprint (a trim edit repaints through its own mutation
 // damage, no cache rebuild).

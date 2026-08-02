@@ -388,8 +388,10 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
     // ruling.) The boxes CARRY THEIR TEXT since row 5 — the marker-text lane
     // that used to show it beneath them is gone — so the only thing painted
     // after this blit in that band is the open editor's overlay
-    // (render_flag_editor_box); the editing target's flag blits here as an
-    // ordinary box and the overlay covers it. Like the other
+    // (render_flag_editor_box) — which is why the editing target's box is NOT in
+    // this surface at all: it is skipped at cache-build time (2026-08-02) rather
+    // than painted here and covered, because the overlay is narrower than the
+    // committed box whenever the edited text is shorter. Like the other
     // caches, the surface may be null on the very first paint after a load
     // (before the first rebuild fires); the blit is skipped and the background
     // shows through for that one frame.
@@ -452,9 +454,12 @@ GuiColor redesign_row_ground(const AppState& app) {
 //
 // THE CSS FLOAT MODEL is the ruled layout vocabulary (architect 2026-07-31): a
 // flat button FILLS ITS WHOLE ROW and no margin or inset exists unless the
-// architect states one. The hover pill therefore spans the full 30px row — the
-// 1px vertical inset that stood here was a misread of the crop (those rows were
-// the title-bar seam, not design).
+// architect states one. The hover pill therefore spans the row's full CONTENT
+// height — the 1px vertical inset that stood here was a misread of the crop
+// (those rows were the title-bar seam, not design). That content height is
+// kMenuRowHeightPx = 34, not the crop's 30, and the lane is one pixel taller
+// still: row 1 gained a 1px MARGIN-BOTTOM (kMenuRowMarginPx) which is lane, not
+// button — the pill fills the 34 and stops at the margin strip.
 constexpr double kMenuLabelPadPx   = 10.0;   // per side, sets the button width
 constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 
@@ -1958,8 +1963,10 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 
 void GuiPaintHandler::paint_settings_popup(cairo_t* cr) {
     // THE SETTINGS DROPDOWN, hanging flush under the menu row's Settings button
-    // at ZERO margin — its top edge IS the menu row's bottom edge, under the
-    // button's left edge. Publishes its own rect and every item rect, so the
+    // at ZERO margin — its top edge is the BUTTON's bottom edge (not the lane's:
+    // row 1's 1px margin-bottom puts those one pixel apart, and the architect
+    // ruled the button; the full argument is at the anchor arithmetic below),
+    // under the button's left edge. Publishes its own rect and every item rect, so the
     // press claim hit-tests exactly what was painted and never re-shapes a
     // label.
     //

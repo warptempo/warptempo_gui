@@ -209,10 +209,14 @@ struct WaveformCache {
 // ONE authoritative copy at maybe_rebuild_flag_cache's declaration below — do
 // not restate it here. The cache
 // holds the marker/phase-reset flag BOXES ONLY (trim's bar and endcaps left it
-// for the live trim pass); the paint pass is a pure blit. The open flag editor's
-// UNROLLED box renders live as an overlay AFTER this blit and always covers the
-// flag it replaces, so the editing target's flag caches here as an ordinary box
-// — no skip-guard, no per-frame live flag render in the cache.
+// for the live trim pass); the paint pass is a pure blit. THE EDITING TARGET'S
+// BOX IS SKIPPED IN THIS CACHE (2026-08-02): the open flag editor's UNROLLED box
+// renders live as an overlay after the blit, and it does NOT reliably cover the
+// committed box it replaces — a shortened payload makes the overlay the narrower
+// of the two — so the cached pass omits that marker's box, label and hit rect
+// outright and the editor owns the flag whole. The editing target is a
+// fingerprint field (fp_editing_flag_target) precisely so open, close and
+// retarget rebuild this surface.
 //
 // The cache surface matches `top_strip_area(app)`: width = window width,
 // height = top_strip_height, origin (0,0). The blit at on_redraw time
