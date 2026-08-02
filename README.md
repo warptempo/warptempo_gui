@@ -1,15 +1,33 @@
-`warptempo_gui` is a custom phase vocoder application for transparent time-warping of recorded music under manual control. The engine is a faithful, centered Prusa-Holighaus phase-gradient heap integration (PGHI) phase vocoder, wrapped in a Cairo/Wayland GUI for marker authoring, tempo specification, and audition. The default window size is `N=4096` — matching the parameters of the authors' released PGHI implementation exactly (`M=2N=8192`, `R_s=1024`, window length 4096; the paper's text states a 4092-sample window, a figure that appears nowhere in the authors' released code), with the fullest low-frequency body — and the synthesis hop `R_s` is `N/4` (1024 at the default). `N` is locked at 4096 and is not operator-configurable.
+# warptempo_gui
 
-Commercial DAWs assume a metronome-driven timebase with a click track; classical orchestral recording is free-tempo with no underlying grid. Existing time-stretch libraries automate transient-smear mitigation; `warptempo_gui` keeps both concerns under manual control: time-stretch is applied locally to accommodate continuously varying tempo, and phase-reset markers are placed individually so the user controls the tradeoff between transient impact and the discontinuity each reset introduces. Because the stretch is local and section-scoped, sections can be tempo-locked to one another by name through a label cascade — recapitulated material across a sonata-form movement can be tied to its exposition counterpart by a single edit.
+`warptempo_gui` is a phase-vocoder application for transparent time-warping of recorded music under full manual control. The engine is a faithful, centered implementation of Prusa–Holighaus phase-gradient heap integration (PGHI — "Phase Vocoder Done Right"), wrapped in a Cairo/Wayland GUI for placing warp markers, specifying tempos, and auditioning the result over JACK.
 
-The classical phase-vocoder use case — one constant stretch ratio for an entire file — requires no warp-marker interaction at all: a default first marker at frame zero carries tempo `1.00`, and the global stretch ratio is set through the settings `scale` field (a full-precision double within `[0.5, 2]`). Warp-marker authoring becomes relevant only when the operator wants phrase-level tempo variation.
+It was built for one job: warping classical orchestral recordings toward historically informed tempos. Commercial DAWs assume a metronome-driven timebase with a click track; classical recording is free-tempo, with no underlying grid. Existing time-stretch libraries automate transient handling; here both concerns stay in the operator's hands. The stretch is applied locally through warp markers to follow a continuously varying tempo, and phase-reset markers are placed one by one, so the operator chooses the tradeoff between transient impact and the discontinuity each reset introduces. Because the stretch is local and section-scoped, sections can be tempo-locked to one another by name through a label cascade — recapitulated material across a sonata-form movement stays tied to its exposition counterpart through every subsequent edit.
 
-`warptempo_gui` renders finished 24-bit PCM wav deliverables. As future-proofing for later engines, every archival render also drops the full frame-map pair — `.warpframemap` (whitespace-separated `<src> <tgt>` frame pairs, precise double breakpoints) and `.phaseresetframemap` — into `~/.cache/warptempo_gui/<pid>/` (batch cells under a subdirectory mirroring their batch folder), together exactly the engine's input for the FULL render of that recipe (a trimmed render's engine input is the trimmer-translated pair; the cached pair is deliberately the full one); retrieve it before the cache is swept — the GUI removes its directory on close, and CLI-written directories are swept at the next GUI launch. Any time-stretch library that accepts a sample-domain warp map could be driven from those files.
+The simplest use — one constant stretch ratio for a whole file — needs no marker work at all: the ratio is set through the `scale` setting (a full-precision double in `[0.5, 2]`), and warp markers enter the picture only when you want phrase-level tempo variation.
 
-The `examples/` directory contains the working corpus: the 1972 Krips / Royal Concertgebouw Mozart symphony recordings (Christopher Bernauer 2024 remaster for Decca Eloquence) warped toward Hummel-published metronome marks. The Symphony No. 40 mvt I directory (`examples/550 - 1/`) is the reference example — it exercises every form and syntax used in the project (label cascade, phase-reset markers, two-decimal `base_tempo` with full-precision scale fine-tune).
+Renders are finished 24-bit PCM WAV deliverables.
+
+## Building and running
+
+```bash
+cmake -B build -S .
+cmake --build build -j$(nproc)
+./build/warptempo_gui "path/to/source.wav"
+```
+
+The GUI targets Linux with a Wayland compositor and JACK audio. A headless render CLI (`-DWARPTEMPO_BUILD_CLI=ON`) builds and runs without Wayland or JACK, including under WSL2, and renders byte-identically to the GUI.
+
+Dependencies, build options, the conceptual model, the file formats, and the complete hotkey reference are all in [`docs/HELP.md`](docs/HELP.md) — the guided tour, and the only guide you need.
+
+## Examples
+
+The `examples/` directory contains the working corpus: the 1972 Krips / Royal Concertgebouw Mozart symphony recordings (Christopher Bernauer's 2024 remaster for Decca Eloquence), warped toward the metronome marks Hummel published. The Symphony No. 40 first movement (`examples/550 - 1/`) is the reference project — it exercises every form and syntax the project uses, including the label cascade, phase-reset markers, and two-decimal tempos fine-tuned with the full-precision scale.
+
+Example output, in lossy audio format:
 
 [Symphony No. 40](https://www.youtube.com/playlist?list=PLm5sJJQZOLT1OkUITQ4vX2l20qzGylkqI)
 
-Linux + Wayland (JACK audio) for the GUI; the headless render CLI builds and runs without Wayland or JACK, including under WSL2. Build instructions, conceptual model, hotkey reference, and file formats are in `docs/HELP.md`.
+## License
 
-Licensed GPL v3. See `LICENSE`.
+GPL v3. See `LICENSE`.
