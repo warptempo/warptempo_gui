@@ -1,15 +1,19 @@
 #include "target_render.h"
 
 #include "app_state.h"
+#include "engine/engine_geometry.h"
 #include "phase_reset_frame_map_build.h"
 #include "render_output_naming.h"
+#include "trimmer.h"
 #include "warp_frame_map_build.h"
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
 #include <cmath>
 #include <filesystem>
 #include <cstdio>
+#include <optional>
 #include <utility>
+#include <vector>
 
 std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
                                                      const GuiAudio& audio) {
@@ -42,13 +46,81 @@ std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
     // store (gesture walls clamp to total-1 and a past-EOF sidecar is
     // adversarial load-fatal), so .value() makes a breach loud
     // (bad_expected_access -> terminate) rather than silently degrading.
+
+    // THE PHASE-RESET COMPONENT IS THE SET THAT REACHES THE ENGINE — the
+    // mirror of do_render's own fingerprint arm (render_pipeline.cpp). Under a
+    // proper sub-window the engine receives plan_trim's translated,
+    // range-filtered reset list, so a reset OUTSIDE the window cannot move a
+    // byte; keying on the raw store made every out-of-window reset mutation
+    // (nudge, drop, delete, disable, drag commit, undo) mint a fresh key, miss
+    // the cache, and re-synthesize identical audio — the "Updating..." flash
+    // the architect saw. The plan is obtained by CALLING plan_trim, never by
+    // re-implementing its head/tail predicates: a hand-rolled margin that
+    // disagreed at the boundary would drop a reset the engine actually reads
+    // and produce a WRONG-BYTES cache hit, the one unsafe direction (same
+    // no-second-arithmetic rule as compute_buffer_start_frame_for below).
+    //
+    // CROSS-SITE IDENTITY: plan_trim is a pure function of the full warp frame
+    // map, the full deliverable-form reset derivation, the authored bounds,
+    // total_frames and the fixed geometry (kN/kRs) — and every one of those is
+    // the SAME value do_render derives from the request built out of this same
+    // live state one statement later in dispatch_render_now. The full map here
+    // is the memoized target-view map, which is literally
+    // build_warp_frame_map(resolve(...), scale, sample_rate, total_frames) —
+    // do_render's construction exactly (the mirror compute_buffer_start_frame_for
+    // already relies on), and memoized so no second resolve prints a second
+    // set of normalization lines.
+    //
+    // ARM STRUCTURE, mirroring do_render: a successful plan under a proper
+    // sub-window keys on the plan's filtered list; a full window or a plan_trim
+    // REFUSAL keys on the full set, because a refusal renders untrimmed by
+    // ruling. The refusal string is discarded here — do_render owns the one
+    // fallback line per fresh dispatch, and the reuse rungs print theirs from
+    // compute_buffer_start_frame_for's verdict; a line from the key derivation
+    // would double it. A FAILED map build (empty map, tripwire-class) also
+    // keeps the full set: do_render refuses that recipe before it fingerprints
+    // anything, so there is no dispatch-side key to disagree with. The
+    // sample-rate/total-frames guard mirrors compute_buffer_start_frame_for's;
+    // dispatch_render_now is unreachable without loaded audio.
+    //
+    // ACCEPTED COST (2026-08-01): one plan_trim per keystroke under a proper
+    // sub-window, which derives a full source_frame_schedule. That is the same
+    // order as the full marker resolve above plus the memoized warp-map build
+    // this function already stands on — microseconds against a keypress — and
+    // it is what makes the key honest.
+    const bool trim_is_sub_window =
+        !trim_is_full_window(app.trim, audio.total_frames());
+    std::optional<TrimPlan> trim_plan;
+    if (trim_is_sub_window &&
+        audio.sample_rate() > 0 && audio.total_frames() > 0) {
+        const std::vector<WarpFrameMapSegment>& full_warp_frame_map =
+            target_view_warp_frame_map_cached(
+                app, audio.sample_rate(),
+                static_cast<long>(audio.total_frames())).warp_frame_map;
+        if (!full_warp_frame_map.empty()) {
+            auto plan = plan_trim(
+                full_warp_frame_map,
+                derive_phase_reset_frame_map(phase_reset_source_frames.value(),
+                                             full_warp_frame_map),
+                app.trim.begin_frame, app.trim.end_frame,
+                audio.total_frames(), kN, kRs);
+            if (plan) trim_plan = std::move(*plan);
+        }
+    }
+
     return render_fingerprint(
         app.source_audio_path, source_identity, audio.sample_rate(),
-        resolved_warp_markers, phase_reset_source_frames.value(),
+        resolved_warp_markers,
+        trim_plan ? trim_plan->pre.phase_reset_frame_map
+                  : phase_reset_source_frames.value(),
         app.engine_settings,
         // The full window hashes as the old unset state (the one recognition
         // owner, trim_window_is_full — see render_fingerprint's trim block).
-        !trim_is_full_window(app.trim, audio.total_frames()),
+        // The BOUNDS bytes stay the authored pair even when plan_trim refused
+        // above, exactly as do_render serializes them: accepted conservatism
+        // (a fallback recipe misses the equivalent explicit no-trim recipe's
+        // entries), recorded at do_render's trim-plan block.
+        trim_is_sub_window,
         app.trim.begin_frame, app.trim.end_frame);
 }
 

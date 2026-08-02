@@ -516,13 +516,29 @@ RenderOutcome do_render(const RenderRequest& req,
     // collapsed phase-reset positions), threaded through rather than
     // re-resolved — the resolver's one-line-per-normalization-per-resolve
     // stderr signal stays exactly once per dispatch here.
+    //
+    // THE PHASE-RESET COMPONENT IS THE SET THAT REACHES THE ENGINE, not the
+    // full authored derivation: under a surviving trim plan the engine
+    // receives plan_trim's translated, RANGE-FILTERED reset list (the column
+    // asymmetry at trimmer.h — point events outside the window filter away
+    // with nothing to coalesce into), so an out-of-window reset provably
+    // cannot move a byte and must not move the key. Feeding the plan's own
+    // list makes that true by construction. The ARM IS THE PLAN ITSELF —
+    // `trim_plan` has a value exactly when this dispatch renders trimmed, so
+    // the key can never disagree with what was rendered; a full window and a
+    // plan_trim REFUSAL (which renders untrimmed by ruling) both keep the full
+    // set, mirroring the untrimmed engine input. Never a re-derived predicate:
+    // trim_is_sub_window alone would mis-key a fallback render.
+    const std::vector<double>& key_phase_reset_frames =
+        trim_plan ? trim_plan->pre.phase_reset_frame_map
+                  : phase_reset_source_frames;
     RenderFileIdentity source_identity;
     source_identity.size = req.source_load_size;
     source_identity.mtime = req.source_load_mtime;
     const std::vector<uint8_t> fingerprint = render_fingerprint(
         req.source_audio_path, source_identity,
         static_cast<int>(sample_rate), resolved_warp_markers,
-        phase_reset_source_frames,
+        key_phase_reset_frames,
         req.engine_settings,
         trim_is_sub_window, req.trim_begin_frame, req.trim_end_frame);
     if (cancel_requested()) return cancelled_outcome();

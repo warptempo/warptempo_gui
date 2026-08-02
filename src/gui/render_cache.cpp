@@ -142,22 +142,37 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // provenance edit forcing a fresh render is accepted; the payoff is that no
 // inert-field classification exists anywhere, and a re-render refreshes the
 // artifact's attested .settings provenance); the trim bounds; and the
-// RESOLVED marker state — resolve_warp_markers_for_render's survivors and
-// build_phase_reset_source_frames' collapsed enabled reset positions, the
-// exact engine inputs, so two states normalization proves render-identical
-// share a key (under unconditional triggers this is what turns an inert
-// marker edit's forced re-derive into a cache hit). The key is a conservative
-// over-approximation of byte identity, and that direction is the point: a
-// match guarantees byte-identical output; a mismatch at worst re-renders
-// redundantly.
-// CALLERS OWN THE RESOLVE: render_fingerprint is pure serialization; each
-// call site either threads an already-resolved product through (do_render) or
-// runs its own resolve and accepts the resolver's per-resolve stderr lines
-// (compute_live_render_fingerprint). GUI-only marker session scratch
+// RESOLVED marker state — resolve_warp_markers_for_render's survivors and the
+// phase-reset positions the engine actually receives (the collapsed enabled
+// positions untrimmed, plan_trim's translated and range-filtered list under a
+// surviving plan), the exact engine inputs, so two states normalization or
+// the trim window proves render-identical share a key (under unconditional
+// triggers this is what turns an inert marker edit's forced re-derive into a
+// cache hit). The key is a conservative over-approximation of byte identity,
+// and that direction is the point: a match guarantees byte-identical output;
+// a mismatch at worst re-renders redundantly.
+// CALLERS OWN THE RESOLVE AND THE TRIM ARM: render_fingerprint is pure
+// serialization; each call site either threads an already-resolved product
+// through (do_render, arm selected by its own trim_plan) or runs its own
+// resolve and its own plan_trim and accepts the resolver's per-resolve stderr
+// lines (compute_live_render_fingerprint). GUI-only marker session scratch
 // (iteration / BPM authoring) never reaches the resolver, so it is excluded
 // by construction. Same inputs always produce byte-identical output; the
 // result is hashed to name a cache file and stored verbatim for an
 // exact-compare confirm on lookup.
+//
+// THE TRIM-AWARE PHASE-RESET COMPONENT DID NOT BUMP THIS VERSION
+// (2026-08-01), the trim_window_is_full precedent: the version exists to
+// invalidate keys whose ENGINE INPUT meaning changed, and this change moves no
+// engine input at all — it stops the key from carrying information that
+// provably cannot reach the engine. A sub-window state now shares a key with
+// its out-of-window-reset twin, which is exactly the safe direction: same
+// engine input, same bytes. The one-directional consequence is that some
+// PRE-FIX entries keyed on the raw reset set are now unreachable garbage,
+// aged out by the LRU budget — never a wrong-bytes hit, because the new key
+// is derived from strictly LESS information only where that information
+// cannot reach the engine, and the strictly-more direction (a key that would
+// now collide with a genuinely different render) does not exist.
 constexpr uint32_t kFingerprintVersion = 18;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk text container of the sidecar
@@ -230,7 +245,7 @@ std::vector<uint8_t> render_fingerprint(
         const RenderFileIdentity& source_identity,
         int sample_rate,
         const std::vector<MarkerForRender>& resolved_warp_markers,
-        const std::vector<double>& phase_reset_source_frames,
+        const std::vector<double>& phase_reset_engine_frames,
         const EngineSettings& s,
         bool trimmed, int64_t trim_begin_frame, int64_t trim_end_frame) {
     std::vector<uint8_t> fp;
@@ -322,14 +337,23 @@ std::vector<uint8_t> render_fingerprint(
         put_str(fp, m.label_ref);
     }
 
-    // Phase resets: the RESOLVED authored intermediate — the collapsed
-    // enabled positions build_phase_reset_source_frames emits. Disabled
-    // resets and collapsed equal-frame duplicates are already gone. The
-    // doubles are whole source frames by construction (int64 authored
-    // positions widened exactly), so the cast back is exact — no rounding
-    // occurs.
-    put_u32(fp, static_cast<uint32_t>(phase_reset_source_frames.size()));
-    for (const double p : phase_reset_source_frames) {
+    // Phase resets: the positions THE ENGINE RECEIVES for this render (the
+    // caller owns the arm — see the header). Untrimmed that is the resolved
+    // authored intermediate build_phase_reset_source_frames emits, with
+    // disabled resets and collapsed equal-frame duplicates already gone; under
+    // a surviving trim plan it is plan_trim's translated, range-filtered list,
+    // so out-of-window resets — which the trimmer keeps out of the engine
+    // entirely — cannot move the key.
+    // THE INT64 ENCODING STAYS EXACT ACROSS BOTH SPELLINGS: the authored form
+    // is whole source frames (int64 positions widened exactly), and the
+    // trimmed form is S - N/2 - cut_begin — a whole source frame minus the
+    // integer 2048 (kN is even) minus the trimmer's integer source cut — so
+    // it is whole too, negative near the head and still exact. No rounding
+    // occurs in either arm. The two arms serialize different domains, but they
+    // can never be confused: the trim bytes above already separate a
+    // sub-window key from a full-window one.
+    put_u32(fp, static_cast<uint32_t>(phase_reset_engine_frames.size()));
+    for (const double p : phase_reset_engine_frames) {
         put_i64(fp, static_cast<int64_t>(p));
     }
 

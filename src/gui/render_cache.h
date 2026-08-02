@@ -56,14 +56,22 @@ bool stat_artifact_identity(const std::string& path, ArtifactStatIdentity& out);
 // RESOLVED marker state — the exact engine inputs, not the raw stores:
 // resolve_warp_markers_for_render's survivors (per marker: frame, resolved
 // tempo cents, typed scale, label def/ref — precisely the MarkerForRender
-// fields build_warp_frame_map reads) and build_phase_reset_source_frames'
-// collapsed enabled positions as whole int64 frames. Raw disabled markers,
-// dropped fields, and collapsed duplicates therefore no longer move the key:
-// two states normalization proves render-identical share a fingerprint.
-// CALLERS OWN THE RESOLVE: this function is pure serialization; each call
-// site either threads an already-resolved product through (do_render) or
-// runs its own resolve and accepts the resolver's per-resolve stderr lines
-// (compute_live_render_fingerprint). GUI-only marker session scratch
+// fields build_warp_frame_map reads) and the phase-reset positions the engine
+// actually receives, as whole int64 frames. THAT PHASE-RESET LIST IS
+// TRIM-AWARE (2026-08-01): the caller passes build_phase_reset_source_frames'
+// collapsed enabled positions for an untrimmed render, but plan_trim's own
+// translated, RANGE-FILTERED list whenever a trim plan survives — the trimmer
+// filters out-of-window resets out of the engine input entirely (the column
+// asymmetry recorded at trimmer.h), so under a sub-window an out-of-window
+// reset provably cannot move a byte and no longer moves the key either. Raw
+// disabled markers, dropped fields, collapsed duplicates, and out-of-window
+// resets therefore no longer move the key: two states normalization or the
+// trim window proves render-identical share a fingerprint.
+// CALLERS OWN THE RESOLVE AND THE TRIM ARM: this function is pure
+// serialization; each call site either threads an already-resolved product
+// through (do_render, whose own trim_plan selects the arm) or runs its own
+// resolve and its own plan_trim and accepts the resolver's per-resolve stderr
+// lines (compute_live_render_fingerprint). GUI-only marker session scratch
 // (iteration / BPM authoring) never reaches the resolver, so it is excluded
 // by construction. Same inputs always produce byte-identical output; the
 // result is hashed to name a cache file and stored verbatim for an
@@ -73,7 +81,12 @@ std::vector<uint8_t> render_fingerprint(
     const RenderFileIdentity& source_identity,
     int sample_rate,
     const std::vector<MarkerForRender>& resolved_warp_markers,
-    const std::vector<double>& phase_reset_source_frames,
+    // The phase-reset positions the engine receives for THIS render: the
+    // authored collapsed source frames untrimmed, plan_trim's translated and
+    // range-filtered list under a surviving trim plan (the trim-aware ruling
+    // above). Both spellings are whole doubles, which is what the serializer's
+    // int64 encoding rests on.
+    const std::vector<double>& phase_reset_engine_frames,
     const EngineSettings& settings,
     // Trim: `trimmed` is false for the FULL window [0, total-1], which renders
     // untrimmed and therefore hashes IDENTICALLY to the pre-2026-07-30 unset
