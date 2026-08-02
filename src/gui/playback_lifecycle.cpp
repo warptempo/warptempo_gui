@@ -65,9 +65,10 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         // playback.stop() + restore_playhead_to_lsp() while every other stop in
         // the product called the gesture stop. That second body's only surplus work was a
         // full-width TOP-STRIP invalidate, and it was dead here — the scanner
-        // paints a waveform-area line and no top-strip pixel at all
-        // (render_playhead's triangle is the CURSOR's, draw_triangle=false for
-        // the scanner), and a stop moves no cursor. So the two collapsed onto
+        // paints a waveform-area line and no top-strip pixel at all (the
+        // playhead's top-strip half — the ruler head and the marker-lane
+        // segment — belongs to the CURSOR alone), and a stop moves no cursor.
+        // So the two collapsed onto
         // this one call, which takes the same QUIESCENCE FENCE through its own
         // playback.stop() and then deactivates the scanner and damages the
         // waveform + timestamp areas.

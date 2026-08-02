@@ -2645,7 +2645,7 @@ TrimHit hit_test_trim_chip(const AppState& app, const GuiAudio& audio,
 
 // displayed_or_live_target_map: the warp_frame_map the item hit tests decide
 // against — the map the aimed-at item pixels (flags from the committed cache;
-// the live trim chips/stems and selected stem, which read it directly per frame)
+// the live trim lane's bar and endcaps, which read it directly per frame)
 // were painted with, so a grab lands on what is
 // drawn (WYSIWYG grabs). In target view with a non-empty displayed map
 // (app.displayed_target_warp_frame_map, promoted at the frame commit that blits

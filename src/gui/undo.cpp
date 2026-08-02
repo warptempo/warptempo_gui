@@ -584,12 +584,13 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // language, superseding "undo/redo shows its target WITHOUT the playhead"):
     // a SINGLETON restore LANDS the playhead on its touched marker (which is its
     // focus; the land is a PURE playhead write, the tail's own clear below
-    // having already taken any resting span) and its
-    // always-on focus stem follows from the selection (no stamp); a GROUP
+    // having already taken any resting span) and its flag BRIGHTENS from the
+    // restored selection (no stamp); a GROUP
     // restore re-selects the touched set (done above) and LANDS the playhead on
     // its FOCUS — the EARLIEST touched member, by the focus rule above — the
-    // visible cursor on that member plus the members' own ink triangles being the
-    // group's whole cue since the SPAN FORM retired (architect 2026-07-30); then,
+    // visible cursor on that member plus the members' own brightened flags
+    // being the group's whole cue since the SPAN FORM retired (architect
+    // 2026-07-30); then,
     // when any member is
     // offscreen, it PREFERS a plain scroll and only ZOOMS OUT if the group cannot fit
     // at the current level (the group arm below, which derives the framed span
@@ -680,11 +681,12 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                     app.viewport_start_sample = domain_frame - visible / 2;
                     clamp_viewport_start(app, viewport.audio);
                 }
-                // The restored singleton's always-on focus stem follows
-                // automatically from the selection — sanitize's subject-change
-                // owner plus the full-waveform invalidate below repaint it on
-                // the touched marker. No pin stamp is needed (the whole
-                // conditional-stem apparatus was harvested).
+                // The restored singleton needs no cue work here: its flag
+                // BRIGHTENS from the restored membership and the top-strip /
+                // full-waveform invalidates below repaint it. Stems do not
+                // enter it at all — they are class-colored and always on,
+                // selection playing no part — so there is nothing to stamp
+                // or pin.
             }
         } else if (sel_size >= 2) {
             // GROUP: LAND the playhead on the restore's FOCUS (architect
@@ -695,7 +697,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             // (apply_post_restore_rules_impl) — spelled as
             // *selected_markers.begin() rather than last_selected_marker so a
             // sanitize that pruned the focus still lands somewhere live. The
-            // group's visual is the restored members' ink triangles plus the
+            // group's visual is the restored members' brightened flags plus the
             // always-visible cursor sitting on the earliest of them — the
             // extent-region write that used to follow this land is gone, the
             // region being trim scratch that a restore has no business creating.

@@ -443,8 +443,9 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 // IS NEVER PARKED). Nothing stashes a selection any more, so a route that ENTERS
 // a column or a tab re-acquires one from the PLAYHEAD: scan the active column's
 // store and single-select the marker the playhead is already sitting exactly on.
-// The payoff is the lane model — with that marker selected the flag's ink triangle
-// IS the playhead, which is precisely the state the entry's stored cursor
+// The payoff is the lane model — with that marker selected, the brightened flag
+// and the cursor standing on it say the same thing, which is precisely the
+// state the entry's stored cursor
 // describes — and the price is nothing, because a selection recovered this way is
 // derived from live data instead of remembered from a store that has since moved.
 //
@@ -1569,11 +1570,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     // this double-click). Selection is navigation, allowed in
                     // read-only.
                     selection.set_single_selection(hit);
-                    // The clicked marker's always-on focus stem appears/moves
-                    // here through set_single_selection's
-                    // subject-change owner — including the click-an-already-selected
-                    // no-op case (same subject, no stem damage needed, the stem is
-                    // already painting there). Covers the double-click-consume path
+                    // The clicked marker's flag BRIGHTENS here —
+                    // set_single_selection damages the top strip, where the
+                    // flags live. No stem work is
+                    // owed on any arm, the click-an-already-selected no-op
+                    // included: stems are class-colored and always on, so a
+                    // membership change never creates, moves or recolors one.
+                    // Covers the double-click-consume path
                     // below too (this single-select ran first).
                     // ...and LANDS the playhead exactly onto the marker (shared
                     // helper; see land_playhead_on_marker). Runs on EVERY plain

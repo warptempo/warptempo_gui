@@ -527,7 +527,24 @@ bool GuiFileLoader::load_file(const std::string& path) {
     // the trim sibling of the marker normalizations, gesture half at
     // auto_clear_crossed_trim, which spells the same full-window-first
     // precedence so a one-frame source's canonical [0, 0] is not read as
-    // crossed). Deliberately AFTER the adversarial past-EOF
+    // crossed).
+    //
+    // THIS ARM HAS NO GUI PRODUCER LEFT, AND IS KEPT ANYWAY (architect
+    // 2026-08-02). No gesture can write a crossed pair into a .settings any
+    // more: every trim commit route runs auto_clear_crossed_trim before it
+    // rests, the bound-set clicks refuse a click on or past the partner
+    // outright, `x` refuses a degenerate result, and since 2026-08-02 the
+    // single-bound drag CLAMPS INCLUSIVELY AT ITS PARTNER, so a drag hands the
+    // commit tail begin == end and never a crossing. What reaches here is
+    // therefore a HAND-EDITED pair only — the shape the load boundary otherwise
+    // hard-fails (the -1 spelling, font_size, a past-EOF bound). The architect
+    // ruled the exception deliberately: a crossed pair is a plausible
+    // slip of the hand in an editable file, and the answer to it is the Shift+X
+    // full-window reset applied at load rather than a refused source. This is
+    // the ONE crossed-pair recovery, and it is semantically Shift+X — the same
+    // full window, through the same full_trim_window formula.
+    //
+    // Deliberately AFTER the adversarial past-EOF
     // hard-fail above: a crossed pair containing a past-EOF bound must
     // still abort the load, identically in warptempo_cli (which loads the
     // same values, runs the same wall check, and has no reset) — resetting

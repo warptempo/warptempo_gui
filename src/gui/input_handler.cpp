@@ -1516,7 +1516,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
     // selection survives it BY IDENTITY — the collapse-to-focus that stood here
     // is deleted. It existed to keep a group from resting SPANLESS, and with the
     // SPAN FORM retired there is no such state to avoid: the group's cue is its
-    // members' ink triangles plus the always-visible cursor, and the
+    // members' brightened flags plus the always-visible cursor, and the
     // selection-gated land below re-expresses the focus EXACTLY, which is what
     // seats that cursor where the readout says it is. The region clear above is
     // STRUCTURAL and stays (its endpoints are ACTIVE-DOMAIN frames and the domain

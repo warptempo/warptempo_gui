@@ -441,8 +441,9 @@ void MarkerDragOps::commit_drag() {
         std::move(app.drag.pre_drag_phase_reset_snapshot);
     app.drag = DragState{};
     if (net_changed) {
-        // The position-DRAG commit (both columns). A singleton restore's
-        // always-on focus stem follows from the selection — no lateral bit.
+        // The position-DRAG commit (both columns). A restore owes no stem bit:
+        // stems key on the MARKER (always on, class-colored), never on the
+        // selection, so the restore's own damage carries them.
         if (phase_reset) {
             undo.push_undo_phase_reset(std::move(snap_t),
                                        std::move(touched_snapshot),

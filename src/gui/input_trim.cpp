@@ -830,13 +830,14 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // Read-only claims WITHOUT arming (a silent return, no fallback). The two arms:
 //   CHIP HIT: a chip-rect hit (hit_test_trim_chip, itself y-gated to the chip
 //     row) arms that bound's single drag.
-//   BRIDGE: else, a press whose y lies in the chip (upper) row band —
-//     top_trim_row_area, the band the bridge bar spans between
-//     the two chips — and whose column falls inside the shared trim_bridge_gap
-//     interval (render.h) arms the pair drag. That is the SAME owner
-//     render_trim_flags' bar uses, so the clickable band IS the painted bar
-//     exactly (no reliance on the CHIP HIT above consuming pixels first — the
-//     chip rects sit outside the gap either way), plus a [0, area_w) click gate so
+//   BRIDGE: else, a press whose y lies in the trim lane band —
+//     top_trim_row_area, the band the bar and its endcaps paint in — and whose
+//     column falls inside the shared trim_bridge_gap interval (render.h) arms
+//     the pair drag. The interval is the bar's stretch BETWEEN the two endcaps
+//     (the painter draws the bar under them and the caps over it, so the
+//     endcap-covered ends belong to the CHIP HIT above — and this arm needs no
+//     reliance on that, the cap rects sitting outside the gap either way), plus
+//     a [0, area_w) click gate so
 //     the inert non-multiple-of-16 gutter cannot arm past the painted surface.
 //     The bridge handle is the chip-ROW inter-chip span, NOT the whole strip
 //     height: a top-strip press below the chip row (the marker flag row) is not
@@ -912,15 +913,17 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
             displayed_or_live_target_map(app, audio);
         const std::vector<WarpFrameMapSegment>* map =
             dmap.empty() ? nullptr : &dmap;
-        // Bridge hit interval = the PAINTED bar's gap EXACTLY, via the shared
-        // owner trim_bridge_gap (render.h) — the SAME owner render_trim_flags'
-        // bar uses — over the two bounds' TrimBoundColumns on the DISPLAYED basis
+        // Bridge hit interval = the painted bar BETWEEN THE ENDCAPS exactly,
+        // via the shared owner trim_bridge_gap (render.h) — the same owner
+        // render_trim_flags' midpoint mark fits itself against — over the two
+        // bounds' TrimBoundColumns on the DISPLAYED basis
         // (vp_start_frame/vp_end_frame/area_w — the same triple the live trim
         // pass paints with), so the columns are exactly where the
         // bar is painted. The owner already handles the
-        // offscreen-flush edges (no chip-width inset for an unpainted bound), so
-        // this needs no min/max and no reliance on the chip single-hit consuming
-        // the chip pixels first (the chip rects sit OUTSIDE the gap either way).
+        // offscreen-flush edges (no endcap-width inset for an unpainted bound),
+        // so this needs no min/max and no reliance on the cap single-hit
+        // consuming the cap pixels first (the cap rects sit OUTSIDE the gap
+        // either way).
         auto bound_column = [&](int64_t frame) -> TrimBoundColumn {
             const double ms = displayed_trim_ms(frame, map);
             return trim_bound_column(ms, basis.vp_start_frame,
@@ -930,8 +933,8 @@ bool GuiInputHandler::route_trim_chip_press(int mouse_x, int mouse_y) {
         const TrimBoundColumn ec = bound_column(app.trim.end_frame);
         const TrimBridgeGap gap =
             trim_bridge_gap(bc, ec, trim_endcap_w_px(), basis.area_w);
-        // The [0, area_w) click gate — the SAME effective-width clip the bridge
-        // PAINTER applies (render_trim_flags intersects its drawn extent with
+        // The [0, area_w) click gate — the SAME effective-width clip the
+        // PAINTER applies (render_trim_flags clips the whole lane to
         // [0, wave_w)): the inert non-multiple-of-16 right gutter (or a newly
         // exposed width over an older committed basis) NEITHER paints the bar NOR
         // arms, so paint == hit exactly there.

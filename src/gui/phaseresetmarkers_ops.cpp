@@ -272,8 +272,8 @@ void GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     if (merge) {
         undo.refresh_coalesced_touched_live(std::move(touched_live));
     } else {
-        // The phase-reset POSITION NUDGE. The restore's always-on focus stem
-        // follows from the selection — no lateral bit.
+        // The phase-reset POSITION NUDGE. A restore owes no stem bit: stems key
+        // on the MARKER (always on, class-colored), never on the selection.
         undo.push_undo_phase_reset(std::move(pre_state),
                                    std::move(touched_snapshot),
                                    std::move(touched_live));

@@ -356,12 +356,18 @@ struct GuiPaintHandler {
 
     // THE PLATE PAINT BASIS: vp_start and samples-per-pixel LOCKED
     // to the blitted plate (wf_cache.fp_*) while the worker rebuilds against a
-    // viewport change, so every live overlay (the region ground, the overlay
-    // ring, the selected stem, the strip-drag anchor, the playheads) stays
+    // viewport change, so every live overlay stays
     // registered with the cached pixels instead of the not-yet-painted live
     // viewport. This is the ONE authoritative enumeration of the
-    // PLATE-REGISTERED overlays; other sites state only their own class plus a
-    // pointer here. spp falls back to the LIVE current_samples_per_pixel when no
+    // PLATE-REGISTERED overlays (re-derived by grep over this accessor's
+    // callers, 2026-08-02): the region ground, the phase-reset ring (through
+    // phase_reset_overlay_band), the ruler row's playhead head, the cursor
+    // playhead, the scanner — plus its two per-frame narrow damage sites in
+    // main.cpp — and the strip-drag anchor. Other sites state only their own
+    // class plus a pointer here. The MARKER STEMS are deliberately not among
+    // them: they paint from the flag painter's own stash, on the basis those
+    // boxes were laid out against, so a stem cannot leave its flag.
+    // spp falls back to the LIVE current_samples_per_pixel when no
     // plate has published a span yet (fp_area_w <= 0, cold before the first
     // completion). The ONE owner of that recipe; each caller keeps its own
     // spp <= 0 guard where it has one today.

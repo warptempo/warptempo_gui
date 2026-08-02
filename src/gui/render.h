@@ -1549,11 +1549,13 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
                                   long long vp_start, long long vp_end,
                                   int wave_w);
 
-// The inter-chip bridge-gap column interval [lo, hi) (waveform-relative,
-// half-open, EMPTY when hi <= lo), the ONE owner shared by the painter
-// (render_trim_flags' bridge bar + its ring border) and the router
-// (route_trim_chip_press' pair-drag between test), so a bridge click lands
-// exactly on the painted bar. Both bounds must be set (callers gate). The
+// The BETWEEN-THE-ENDCAPS column interval [lo, hi) (waveform-relative,
+// half-open, EMPTY when hi <= lo), the ONE owner shared by the router
+// (route_trim_chip_press' pair-drag between test) and the painter
+// (render_trim_flags' midpoint-mark fit test), so the bridge's clickable band
+// and the mark's clearance read the same interval. The bar itself no longer
+// comes from here — it spans the WINDOW, bound column to bound column, and the
+// endcaps paint over its ends. Both bounds must be set (callers gate). The
 // offscreen arms key on the bound's SIDE (TrimBoundColumn::side, the unrounded
 // verdict) — NOT col_raw, which cannot tell the side across the rounding seam
 // (a barely-off-left bound rounds to col_raw == 0). The 4x2 semantics:
@@ -1580,16 +1582,15 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 // The +chip_w inset is the ROOM a PAINTED chip occupies; an offscreen bound
 // paints no chip, so the inset is dropped and the bar fills FLUSH. This interval
 // is returned UNCLAMPED (raw sentinels included) — its role is to carry the
-// offscreen-flush and empty semantics past the visible edge; it is NOT the drawn
-// interval. The two consumers own the visible boundary identically: the PAINTER
-// intersects the drawn extent with the effective width [0, wave_w) (fill,
-// top/bottom ring runs; a side border draws only when its raw edge column lies in
-// [0, wave_w)), and the ROUTER applies the same [0, wave_w) click gate. So the
-// inert non-multiple-of-16 gutter [wave_w, strip_w) NEITHER paints NOR hits, and
-// paint == hit exactly everywhere. The border-clip guarantee holds only because
-// the sentinels push an offscreen edge STRICTLY past the visible range (never to
-// col 0 or col wave_w-1), so the [0, wave_w) test drops that border while keeping
-// an in-view one.
+// offscreen-flush and empty semantics past the visible edge; it is NOT a drawn
+// interval. The two consumers clamp it to the visible range identically: the
+// PAINTER intersects it with the effective width [0, wave_w) before asking
+// whether the midpoint tile fits, and the ROUTER applies the same [0, wave_w)
+// click gate. So the inert non-multiple-of-16 gutter [wave_w, strip_w) neither
+// paints nor hits. The sentinels earn their strictness here: an offscreen edge
+// lands STRICTLY past the visible range (never at col 0 or col wave_w-1), so a
+// window running off the view yields a flush interior rather than a spurious
+// one-column one.
 struct TrimBridgeGap {
     int lo;  // inclusive left column
     int hi;  // exclusive right column (empty gap when hi <= lo)
@@ -1649,59 +1650,60 @@ inline int trim_endcap_grab_px() {
 // in the same pixels. The `trim_stem` config key it painted from outlived it by
 // a day and died with the whole tunable palette on 2026-08-02.)
 
-// Draws the begin/end trim-boundary chips in the TRIM CHIP LANE, plus the
-// strip-crossing portion of their stems and the inter-chip bridge band. The
-// lane band is the `chip_row` PARAMETER — the caller passes
+// Draws the WHOLE TRIM BAR LANE (row 5's endcap bar, which replaced the square
+// b/e chips and their strip-crossing stems): the lane ground, the window's bar
+// over it, the two endcaps over that, and the midpoint mark last. Every run
+// paints through ONE lambda — a face band above a two-row bevel pair, all
+// pixel-bound integer fills, no stroke and no antialiasing anywhere in this
+// lane — so a surface is named by its four constants and nothing else.
+// The lane band is the `chip_row` PARAMETER — the caller passes
 // top_trim_row_area(app) (top-strip lane 4), the same accessor
 // hit_test_trim_chip's y-gate and route_trim_chip_press' bridge y-gate read, so
 // paint and hit take the band from ONE owner and cannot drift; nothing in here
-// re-derives the lane's y from the row heights above it. Only the band's y/h
-// are consumed (the chip width is the flag width, the horizontal origin is
-// top_strip_area.x). BOTH bounds always paint (the window is always set since
-// 2026-07-30; only the viewport cull can suppress a chip): each is a
-// TEXTLESS SQUARE (the trim lane's own height on both axes; no glyph, no
-// triangle — Ableton's loop bounds carry none),
-// EDGE-ANCHORED on its bound column: the begin chip's LEFT edge on the column
-// (body rightward), the end chip's RIGHT edge on it (body leftward). A bound is
-// an EDGE, not a point — the deliberate asymmetry vs centered marker flags — so
-// a bound at frame 0 / EOF shows its chip fully onscreen. Its colour was the
-// CALM half of the retired trim key family, the loud half belonging to the
-// bridge bar below (a chip is a handle, the bar is the window); the redesigned
-// lane paints kTrimLaneEndcap and kTrimLaneBar with their sampled bevels
-// instead. `waveform_area` is the real
-// waveform rect, read for its `.w` only — the column-mapping denominator (the
-// strip-crossing stems end at the waveform top edge, which this function takes
-// from `top_strip_area.y + .h`, the strip's own bottom). Column placement
-// is on the same viewport basis — `trim.begin` /
-// `trim.end` are already in the displayed
-// domain, so no further translation happens here. The chip has NO editable
-// payload; it is a plain-press grab target only (trim is outside the selection
-// system). Below each chip, a 1px stem segment runs from the chip's bottom edge
-// down to the waveform top, meeting the render_trim_stems waveform segment there
-// as one unbroken line at the bound column.
-// The BRIDGE BAR fills the GAP between the two
-// edge-anchored chips — the visual affordance of the pair (bridge) drag's grab
-// band, and the one "this is the trim window" signal. It occupies the trim-chip
-// lane's vertical band and was the family's
-// BRIGHT pair — an opaque fill under a 1px ring, over the strip background —
-// where the redesigned lane paints kTrimLaneBar. The gap interval is the
-// shared trim_bridge_gap owner (computed unconditionally, independent of the
-// chips' viewport cull): an in_viewport bound bounds the gap at its drawn chip's
-// inner edge; an OFFSCREEN bound runs the bar FLUSH via a side-specific sentinel.
-// The painter then clips the DRAWN extent to the effective width [0, wave_w) —
-// the inert gutter never paints — so an offscreen side fills flush to the edge
-// with no chip-width gap and its ring border goes offscreen with the chip. A gap
-// shows only when the span is wide enough that the chips do not overlap.
-// route_trim_chip_press consumes the SAME owner under the SAME [0, wave_w) gate,
-// so the clickable bridge equals the painted bar exactly.
+// re-derives the lane's y from the row heights above it. `chip_row` gives the
+// lane's x/y/h; `waveform_area` is read for its `.w` ALONE — both the
+// column-mapping denominator and the lane's effective width, so the inert
+// non-multiple-of-16 gutter is outside the clip and never paints.
+// `top_strip_area` is now a validity guard only: nothing in this lane measures
+// from the strip's own bottom any more.
+//
+// PAINT ORDER IS BACK TO FRONT, which is what lets each run ignore its
+// neighbours: GROUND across the whole lane, then the BAR spanning the window
+// (kTrimLaneBar), then the caps (kTrimLaneEndcap) over the bar's ends. An
+// inverted or degenerate window simply leaves the ground showing.
+// THE BAR SPANS THE WINDOW ITSELF, bound column to bound column, and FOLLOWS AN
+// OFFSCREEN BOUND rather than stopping short — an out-of-view bound means the
+// window continues past that edge, so the bar runs flush to it and the lane
+// clip trims the overhang. It is the one "this is the trim window" signal and
+// the visual affordance of the pair (bridge) drag's grab band.
+// BOTH ENDCAPS always paint unless the viewport culls them (the window is
+// always set since 2026-07-30), EDGE-ANCHORED on their bound columns with
+// their bodies facing inward: the begin cap's LEFT edge on its column, the end
+// cap's RIGHT edge on its own. A bound is an EDGE, not a point — the
+// deliberate asymmetry vs centered marker flags — so a bound at frame 0 / EOF
+// shows its cap fully onscreen. A culled bound paints no cap at all: it has no
+// column on screen to stand on, and the bar's flush edge is what says the
+// window continues past the view.
+// Both caps come from the ONE rect owner the hit test reads
+// (trim_chip_rect), so the painted cap and the grabbable cap describe the same
+// edge; the hit side adds only its stated grab tolerance. Column placement is
+// on the displayed viewport basis — `trim.begin` / `trim.end` are already in
+// the displayed domain, so no further translation happens here. A cap has NO
+// editable payload; it is a plain-press grab target only (trim is outside the
+// selection system).
 // THE MIDPOINT MARK (2026-08-01, kdenlive's zone-middle crop blitted verbatim)
 // paints last, on the bar's face at the WINDOW's midpoint column — through the
-// same trim_bound_column owner the bounds use — and only when the visible
-// interior between the endcaps holds the whole TILE with a clearance each side.
-// It is INFORMATIONAL: no hit rect, no gesture, no routing change anywhere. Its
-// lengths are trim_middle_size_px / _inner_px / _inset_px / _clear_px and its
-// four colours are the lane's own endcap + bar surfaces; the pixel-by-pixel
-// derivation from the crop is at the paint site (render.cpp).
+// same trim_bound_column owner the bounds use, so it scrolls off the view with
+// the window instead of sliding to the middle of whatever is on screen. Its
+// ONLY hide rule is TOO NARROW TO FIT: the whole tile must sit inside the
+// visible interior BETWEEN the endcaps (trim_bridge_gap, clamped to the
+// effective width) with a clearance each side — a binary verdict on integer
+// columns, so it cannot flicker, and below the threshold it simply does not
+// paint (no shrink, no clamp). It is otherwise INFORMATIONAL: no hit rect, no
+// gesture, no routing change anywhere. Its lengths are trim_middle_size_px /
+// _inner_px / _inset_px / _clear_px and its four colours are the lane's own
+// endcap + bar surfaces; the pixel-by-pixel derivation from the crop is at the
+// paint site (render.cpp).
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
                        GuiRect chip_row,

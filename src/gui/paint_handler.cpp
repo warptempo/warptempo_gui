@@ -1460,13 +1460,20 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
         const int field_w = std::max(min_w, label_w + 2 * pad);
         const int tab_w   = field_w + slot_w;
 
+        const bool selected = (app.active_tab_view == def.letter);
+
+        // THE STASH IS WHAT THE DRIFT COMPARATOR READS (main.cpp's per-tick
+        // enabled/selected sweep), so publishing `selected` is load-bearing,
+        // not bookkeeping: leave it at its default and the live active-tab
+        // compare disagrees with the stash on the selected tab EVERY pass,
+        // which invalidates the whole top strip at tick cadence forever.
         AppState::RedesignButtonFace& face =
             app.redesign_buttons[redesign_button_index(def.id)];
-        face.rect    = GuiRect{x, lane.y, tab_w, content_h};
-        face.enabled = redesign_button_enabled(app, audio.total_frames(),
-                                               def.id);
+        face.rect     = GuiRect{x, lane.y, tab_w, content_h};
+        face.enabled  = redesign_button_enabled(app, audio.total_frames(),
+                                                def.id);
+        face.selected = selected;
 
-        const bool selected = (app.active_tab_view == def.letter);
         if (selected) {
             sel_x = x;
             sel_w = tab_w;
@@ -2986,16 +2993,17 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 // -- GuiPaintHandler::paint_trim -----------------------------------------
 
 // The LIVE trim pass (architect 2026-07-25 — trim z-order below the playhead):
-// every trim pixel — both b/e chips, the bridge bar, the strip-crossing stem
-// segments, and the waveform stem segments — paints here per frame, in the old
+// every trim pixel — the lane ground, the window bar, the two endcaps and the
+// midpoint mark — paints here per frame, in the old
 // trim-stem-cache slot (after the phase-reset overlay's ring, before
 // paint_marker_stems and hence before every playhead element), so the playhead
-// stem sits OVER a trim stem sharing its column while marker flags
+// sits OVER any trim pixel sharing its column while marker flags
 // stay above the playheads (the z-order flip untouched). "Markers over trim" is
-// now STRUCTURAL pass order — trim < selected stem < playheads < flag blit —
-// not an intra-cache paint convention; the two-segment stem join (strip segment
-// (retired with render_trim_stems, 2026-08-01) lived in
-// this ONE pass instead of joining bit-exactly across two caches.
+// now STRUCTURAL pass order — trim < playheads < marker stems < flag blit —
+// not an intra-cache paint convention. The waveform-area trim stems this pass
+// once also drew are gone (render_trim_stems, retired 2026-08-01): the bar and
+// its endcaps are the whole display, so nothing has to join bit-exactly across
+// two caches any more.
 //
 // BASIS: the FREE item-geometry owners — item_viewport_basis(app, audio)
 // and displayed_or_live_target_map(app, audio) — feeding the shared geometry
@@ -3022,9 +3030,9 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 // rect carries its real screen x/y).
 void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
                                  const GuiRect& top_strip) {
-    // No trim gate: the window is ALWAYS set (2026-07-30), so the chips, the
-    // stems and the bridge bar simply always paint — at the full window the
-    // chips rest on the song edges and the bar spans between them.
+    // No trim gate: the window is ALWAYS set (2026-07-30), so the bar and its
+    // endcaps simply always paint — at the full window the caps rest on the
+    // song edges and the bar spans the whole lane between them.
     if (area.w <= 0 || area.h <= 0) return;
     if (top_strip.w <= 0 || top_strip.h <= 0) return;
 
@@ -3750,13 +3758,13 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     contributes no ground at all (architect 2026-07-27): its 1px RING
         //     is its whole visual, and a boundary line paints AFTER the plate,
         //     crossing the ink like the stems do.
-        //   THE Z-ORDER FLIP (architect 2026-07-23) — the cursor playhead (its
-        //     line+triangle) passes UNDER
+        //   THE Z-ORDER FLIP (architect 2026-07-23) — the cursor playhead's
+        //     STEM passes UNDER
         //     marker flags, so a cursor resting on a marker sits hidden behind
-        //     that marker's flag (identical 15-wide triangle geometry at the
-        //     same column); the selected-marker focus triangles are GONE
-        //     (architect 2026-07-25 — a singleton's focus is its STEM, a
-        //     group's is its members' ink triangles plus the landed cursor).
+        //     that marker's flag standing in the same column; a SELECTION adds
+        //     no playhead-like mark of its own, its whole cue being its
+        //     members' BRIGHTENED FLAGS (the class ladder's brighter pair) with
+        //     the landed cursor on the focus.
         //   TRIM BELOW THE PLAYHEAD (architect 2026-07-25) — every trim pixel
         //     paints before every playhead element, so the playhead sits over a
         //     trim stem sharing its column: trim < cursor < marker stems <

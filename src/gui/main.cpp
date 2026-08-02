@@ -634,8 +634,10 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     const int x1 = std::min(area.x + area.w, col + playhead_half_px() + 1);
     if (x1 <= x0) return GuiRect{area.x, 0, 0, 0};
     // Envelope extends up from the top of the window to the bottom of the
-    // waveform area so it covers the playhead line inside the waveform AND
-    // the triangle indicator in the flag strip above it.
+    // waveform area so it covers the playhead's stem inside the waveform AND
+    // its top-strip half above — the aliased head on the ruler and the
+    // marker-lane segment, which since row 5 are where the cursor's
+    // non-waveform pixels live.
     const int y0 = 0;
     const int y1 = area.y + area.h;
     return GuiRect{x0, y0, x1 - x0, y1 - y0};

@@ -561,9 +561,9 @@ void GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // move (the playhead is written the value it already holds). Source view needs
     // nothing: identity domain, the frame never moved — the same reason the GROUP
     // arm gates its re-land on target view.
-    // In SOURCE view nothing moves at all, so the always-on focus stem needs no
-    // repaint there; in target view the synchronous re-warp below repaints the
-    // waveform area and carries the stem to its new column with the image.
+    // In SOURCE view nothing moves at all, so the marker's always-on stem needs
+    // no repaint there; in target view the synchronous re-warp below repaints
+    // the waveform area and carries the stem to its new column with the image.
     if (app.active_audio_view == 'T') {
         // NO REGION WORK AT ALL HERE, and none is reachable: a region rests only
         // beside an EMPTY selection (both of its formers deselect at press — the
@@ -668,10 +668,12 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
     // ONE undo entry per press, with identity hints: no reorder happens
     // (positions untouched), so touched_snapshot == touched_live == the stepped
     // indices. A coalesced repeat skips the push (the hold's physical press owns
-    // the pre-burst snapshot and its hints). A 2+ selection paints no
-    // stem (its cue is the members' ink triangles plus the landed cursor), so the
-    // group step has no stem to move. (The skip is the whole per-press action:
-    // note_coalesced_commit died with the hover popup in row 5.)
+    // the pre-burst snapshot and its hints). NO SELECTION-DRIVEN STEM WORK IS
+    // OWED HERE: since row 5 every enabled marker stems always, in its CLASS
+    // colour alone, so a selection neither creates nor moves a stem — the
+    // group's cue is its members' brightened flags plus the landed cursor.
+    // (The skip is the whole per-press action: note_coalesced_commit died with
+    // the hover popup in row 5.)
     if (!merge) undo.push_undo_warp(std::move(pre_state),
                                     /*affects_persistence=*/true,
                                     touched, touched);
@@ -714,9 +716,11 @@ void GuiWarpMarkersOps::adjust_tempo_cents_group(int64_t delta_cents,
             viewport.move_playhead_to(source_frame_to_active_domain(
                 app, audio, app.warpmarkers.markers()[f].time_frame));
         }
-        // No stem to move here: a 2+ selection paints no stem at all (the
-        // members' ink triangles plus the re-landed cursor are its cue). The
-        // kick_waveform_sync above already repainted the moved images.
+        // No selection-driven stem work here either: stems are class-colored
+        // and always on, so the re-selection moves none (the members'
+        // brightened flags plus the re-landed cursor are the group's cue). The
+        // kick_waveform_sync above already repainted the moved images, stems
+        // included.
     }
     target_render.trigger();
 }
@@ -838,9 +842,9 @@ void GuiWarpMarkersOps::nudge_selected_markers(
     if (merge) {
         undo.refresh_coalesced_touched_live(std::move(touched_live));
     } else {
-        // The warp POSITION NUDGE (the receiving marker's own image slides). The
-        // restore's always-on focus stem follows from the selection — no lateral
-        // bit.
+        // The warp POSITION NUDGE (the receiving marker's own image slides). A
+        // restore owes no stem bit: stems key on the MARKER (always on,
+        // class-colored), never on the selection.
         undo.push_undo_warp(std::move(pre_state),
                             /*affects_persistence=*/true,
                             std::move(touched_snapshot),

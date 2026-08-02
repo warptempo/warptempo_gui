@@ -1448,8 +1448,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // re-insert below restores the MEMBERSHIP only — std::set::insert leaves
         // last_selected_marker alone — so the focus stays `owner`. NOTHING
         // re-derives a region here any more (the extent re-derive died with the
-        // SPAN FORM, architect 2026-07-30): the group's cue is its members' ink
-        // triangles plus the visible cursor on `owner`. No second land.
+        // SPAN FORM, architect 2026-07-30): the group's cue is its members'
+        // brightened flags plus the visible cursor on `owner`. No second land.
         bool restored = false;
         for (int s : span_selection) {
             if (app.selected_markers.insert(s).second) restored = true;
@@ -1605,8 +1605,8 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // group from resting SPANLESS, a state that no longer exists now the
         // region is trim scratch rather than a group's playhead form. The jump
         // below is a jump TO THE FOCUS and accepts a group's focus as-is; the
-        // always-visible cursor lands there, the other members keeping their ink
-        // triangles.
+        // always-visible cursor lands there, the other members keeping their
+        // brightened flags.
         clear_region_highlight(app, viewport);
         selection.repair_last_selected();
         jump_playhead_to_focused_marker();
