@@ -56,14 +56,17 @@ constexpr double kWorkingZoomLevel = 2.0;  // 2.4 s — working zoom; manual
 // truth — do not inline the divisor at either site.
 constexpr int64_t kViewportLeadDivisor = 10;
 
-// Hoisted from main.cpp's anonymous namespace so the hit_test_*
-// free functions (in app_state.cpp) and the GuiInputHandler mouse handler
-// (in input_handler.cpp) can reach them. Hit-test half-width only:
-// clicking/hovering tolerance for stems, flags, and trim bounds. It is
-// NOT a spacing gap — markers may sit arbitrarily close, overlap
-// exactly, and cross during gestures; ordering degeneracy collapses at
-// the render boundary, not at authoring time.
-constexpr int kMarkerHitHalfPx    = 4;
+// (THE ONE GLOBAL HIT HALF-WIDTH IS GONE — kMarkerHitHalfPx, deleted
+// 2026-08-02 with its last reader long behind it. It was the single
+// clicking/hovering tolerance shared by stems, flags and trim bounds; the
+// redesign gave each surface its own authored, gui_scale-aware grab constant
+// instead — kMarkerStemGrabPx / marker_stem_grab_px() below for the marker
+// stem, kTrimEndcapGrabPx / trim_endcap_grab_px() in render.h for the trim
+// endcaps — and the flags are hit on their painted boxes with no halo at all.
+// The rule it carried outlives it and belongs to nothing in particular: a grab
+// tolerance is NOT a spacing gap. Markers may sit arbitrarily close, overlap
+// exactly, and cross during gestures; ordering degeneracy collapses at the
+// render boundary, not at authoring time.)
 
 // Vertical drag distance (px) that moves the strip drag by one continuous
 // level. The strip zoom drags DOWN to zoom in (deeper, lower level) and UP to
@@ -1357,15 +1360,14 @@ struct AppState {
     std::vector<WarpFrameMapSegment> staged_displayed_target_warp_frame_map;
     bool staged_displayed_valid = false;
 
-    // Monotonic counter bumped once each time on_redraw PROMOTES a staged
-    // displayed map into displayed_target_warp_frame_map (the top-of-frame
-    // promotion). Every promotion — target-view map swap or source-view clear —
-    // advances it. Its ONE former subscriber — the hover cache's staleness key —
-    // died in row 5, so today it is the promotion's record and nothing reads it;
-    // it stays because the promotion is a real event and a counter for it is the
-    // cheapest way to make the next reader honest. Never reset (shutdown is
-    // terminal); wrap is unreachable at any real frame rate.
-    long long displayed_map_gen = 0;
+    // (THE PROMOTION COUNTER IS GONE — displayed_map_gen, a monotonic long long
+    // bumped once per top-of-frame promotion, deleted 2026-08-02. Its
+    // subscribers were the hover cache's staleness key and the tick-side
+    // stationary-cursor repair, and row 5 deleted both surfaces; it had been
+    // WRITE-ONLY ever since — one bump, no reader — and a counter kept for a
+    // reader that may never come is state the next reader has to re-verify
+    // anyway. The promotion itself is unchanged and lives in one block in
+    // on_redraw, which is where a future subscriber would hang its key.)
 
     // Displayed-VIEWPORT mirror — the SIBLING of displayed_target_warp_frame_map
     // for the viewport half of the same event-synchronized hit geometry. The

@@ -754,10 +754,15 @@ constexpr int kMinWindowHeightPx = 480;
 // axis. kFlagWidthPx / kFlagHeightPx / flag_lane_w_px / flag_lane_h_px are gone
 // with the chain; every pixel is identical at 100%.
 //
-// TWO LIVE CONSUMERS, both below: waveform_inset_px() (the waveform's symmetric
-// top/bottom margin) and playhead_half_px() (the damage half-width of a playhead
-// column). The tip-down triangle mask still sizes from it too, and still has no
-// caller — the retirement note is at render_playhead's draw_triangle branch.
+// TWO CONSUMERS, both below, and they are now ALL of them: waveform_inset_px()
+// (the waveform's symmetric top/bottom margin) and playhead_half_px() (the
+// damage half-width of a playhead column). The tip-down triangle mask sized
+// from this number too and had no caller for it; it is DELETED (2026-08-02),
+// and with it playhead_triangle_h_px(), the silhouette accessor both consumers
+// used to read through. Each consumer SPELLS ITS OWN DERIVATION from this unit
+// now — neither reads the other and neither derives from the other — so the
+// two are equal at 100% by inheritance rather than by any requirement, and a
+// retune of one is a local edit that authors its own constant when it happens.
 inline constexpr int kPlayheadUnitPx = 8;
 
 // Authored pixel geometry of the MENU ROW — the top strip's lane 0, at the
@@ -1193,43 +1198,25 @@ inline int popup_item_margin_y_px() {
 }
 
 
-// Height H (px) of the code-generated tip-down triangle. The triangle width is
-// 2*H - 1 (odd by construction, so its tip centers exactly on the 1 px column).
-// H WAS DERIVED from the marker flag's rectangle width — (kFlagWidthPx+1)/2 = 8
-// at scale 1, giving a top row of 2*8-1 = 15 = the flag width, so the slopes
-// left the rectangle's exact bottom corners with no inward step. Both the
-// rectangle and the fused triangle are gone (row 5); the derivation's VALUE is
-// kPlayheadUnitPx now, on the gui_scale axis, and it is identical at 100%.
-// Clamped to at least 2 so the triangle always has a tip row below a top row.
-// The half-width below derives from H, so the two can never drift.
-inline int playhead_triangle_h_px() {
-    const int h = static_cast<int>(std::nearbyint(
-        static_cast<double>(kPlayheadUnitPx) * gui_scale_factor()));
-    return h < 2 ? 2 : h;
-}
-
-// The cached cairo A8 mask surface for the tip-down triangle (W = 2H-1 by H,
-// ANTIALIASED — the triangle path is filled with AA enabled so the two slopes
-// carry baked gray edge alphas). Owned by render.cpp file-scope state beside the
-// grid metrics; regenerated when H changes. Stamps the PLAYHEAD cursor triangle
-// (centered on the column, tip at the waveform top edge); the per-frame playhead
-// redraws take the cheap cached-mask stamp rather than a live path fill.
-// REACHABLE ONLY THROUGH render_playhead's draw_triangle parameter, which every
-// caller now passes false: row 5 replaced the cursor's triangle with the ruler
-// lane's aliased head, and the marker/trim flags that shared this geometry are
-// boxes now. Kept with the parameter rather than ripped out mid-arc. Never null.
-cairo_surface_t* playhead_triangle_mask();
-
 // Waveform-internal top/bottom inset, in pixels. The drawn waveform samples
 // are confined to [area.y + waveform_inset_px(), area.y + area.h -
 // waveform_inset_px()] so the waveform is symmetric about its area center and
 // the marker/trim stems have a clean stem-only band at the top before the
-// samples begin. Equal to the triangle mask height by construction, which is
-// now only a sizing coincidence: no triangle is drawn anywhere (the cursor's
-// moved to its own lane in 2026-07 and then retired outright in row 5), so the
-// former triangle-clearance rationale is gone and the symmetric-margin purpose
-// is the whole of it.
-inline int waveform_inset_px() { return playhead_triangle_h_px(); }
+// samples begin. The symmetric margin is the whole of the purpose.
+//
+// PROVENANCE (2026-08-02): this used to BE the tip-down triangle's mask height,
+// returned through playhead_triangle_h_px(), which is deleted with the
+// silhouette — so the inset owns its derivation outright now, and THE VALUE IS
+// KEPT EXACT: the same authored unit, the same std::nearbyint, the same floor,
+// so every pixel is identical at every gui_scale. 8 at 100%. The floor of 2 was
+// the triangle's own ("always a tip row below a top row") and survives only to
+// hold the value byte-for-byte; it cannot fire while gui_scale rests in
+// [100, 200].
+inline int waveform_inset_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kPlayheadUnitPx) * gui_scale_factor()));
+    return v < 2 ? 2 : v;
+}
 
 // THE CHANNEL SPLIT ROW — the ONE owner of where the two channel bands meet,
 // area-local (add the area's y for a window row). Shared by the plate renderer,
@@ -1248,11 +1235,33 @@ inline int waveform_channel_split_row(int area_h, int inset_px) {
     return inset_px + inset_h / 2;
 }
 
-// Half-width (px) of the tip-down triangle's horizontal footprint, H - 1
-// (the mask is 2H-1 wide, centered on the column); bounds the playhead's
-// off-screen cull and its invalidation strip. Single definition shared by
-// render.cpp (cull) and main.cpp (invalidation). At scale 1 it is 7.
-inline int playhead_half_px() { return playhead_triangle_h_px() - 1; }
+// Half-width (px) of the playhead COLUMN's reach: a playhead at column c owns
+// [c - playhead_half_px(), c + playhead_half_px()]. Bounds the playhead's
+// off-screen cull and its narrow invalidation strip — the single definition
+// shared by render.cpp (cull) and main.cpp (invalidation). 7 at 100%.
+//
+// PROVENANCE (2026-08-02): it was the horizontal footprint of the tip-down
+// triangle (the mask was 2H-1 wide and centered, so H-1 either side), read
+// through playhead_triangle_h_px(); the silhouette is deleted and this owns its
+// derivation outright, with THE VALUE KEPT EXACT — the identical arithmetic the
+// inset above spells, less one, off the same authored unit, so every pixel and
+// every damage rect is identical at every gui_scale. It reads that unit
+// directly rather than the inset: the two are equal by inheritance, not by
+// requirement, and neither owns the other.
+//
+// RECORDED MISMATCH, live and deliberate: the cursor's aliased HEAD on the
+// ruler is 19px wide (kPlayheadHeadHalf[0] = 9 either side), so this +/-7 reach
+// is NARROWER than the head that stands on the same column. It is harmless as
+// the damage rule stands — narrow damage is reserved for the two per-frame
+// SCANNER sites, and the scanner is waveform-only and draws no head, while
+// every discrete CURSOR move takes full waveform-area damage (the rule and the
+// per-site table are at playhead_pixel_x, app_state.h). Widening it to the head
+// is a retune, the architect's call, not a cleanup's.
+inline int playhead_half_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kPlayheadUnitPx) * gui_scale_factor()));
+    return (v < 2 ? 2 : v) - 1;
+}
 
 // (THE MONOSPACE EDITOR TIER IS GONE — row 7, 2026-08-01. EditorTextBox,
 // render_editor_text_box, flag_chip_rect, flag_chip_width_px,
@@ -1432,43 +1441,33 @@ void render_waveform(cairo_surface_t* dest,
                      GuiColor color,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
 
-// Draws a thin 1px vertical line across `area` at column `playhead_pixel_x`
-// (offset from area.x, float for subpixel centering) plus, when `draw_triangle`,
-// an inverted-triangle indicator above it. No-op if outside. The line always
-// paints (column-gated only); the triangle comes from the code-generated mask
-// (playhead_triangle_mask(), cached in this module's file-scope state), stamped
-// above the stem via cairo_mask_surface and tinted with `color`. The triangle
-// belongs to the cursor exclusively; pass
-// `draw_triangle = false` for every caller that wants the line alone — which
-// since row 5 is every caller there is, the cursor's tip-down triangle having
-// been replaced by the ruler lane's aliased head. (The complementary triangle-only form was retired
-// with the selected-marker focus triangle when the singleton's focus became
-// an always-on stem, architect 2026-07-25, so there is no draw_line flag — the
-// line is unconditional.)
+// Draws a thin 1px vertical LINE across `area` at column `playhead_pixel_x`
+// (offset from area.x, float for subpixel centering), in one solid `color` end
+// to end, painted straight over whatever it crosses — waveform ink included.
+// No-op if outside; the line is column-gated only, so it never leaks into an
+// adjacent region.
 //
-// The line is ONE SOLID `color` end to end, painted straight over whatever it
-// crosses — waveform ink included. The former two-tone form (an `ink_plate`
-// parameter carrying the displayed plate, whose alpha masked a ground-colored
-// overdraw wherever the column crossed an opaque sample) is retired: architect
-// 2026-07-26, notch retired with the polarity inversion — the contrast problem
-// it patched is solved by the scheme, so the parameter went with it. The
-// triangle likewise paints in `color` over the line.
+// THE LINE IS THE WHOLE FUNCTION (2026-08-02). It used to carry a
+// `draw_triangle` flag and a `triangle_lane` rect for an inverted-triangle
+// indicator stamped from a cached mask above the stem: row 5 replaced the
+// cursor's tip-down triangle with the RULER lane's aliased head — which
+// paint_ruler_row draws, because the head's pre-blended tick crossing needs the
+// tick columns — and every caller had passed `false` ever since. The branch,
+// the mask and the lane rect are all deleted; both callers were already
+// line-only, so no painted pixel moves. (The complementary triangle-only form
+// was retired with the selected-marker focus triangle when the singleton's
+// focus became an always-on stem, architect 2026-07-25, so there was never a
+// draw_line flag either — the line has always been unconditional.)
 //
-// `triangle_lane` IS A VESTIGE, and named for a lane that no longer exists. It
-// was the top_triangle_row_area rect the tip-down cursor triangle stamped into;
-// row 5 deleted that lane and replaced the triangle with the RULER lane's
-// aliased head, which this function does not draw (paint_ruler_row does, because
-// the head's pre-blended tick crossing needs the tick columns). Every caller now
-// passes top_ruler_row_area and `draw_triangle = false`, so the parameter feeds
-// nothing but the mask stamp's dst_y on a branch nothing takes. It is kept
-// UNCONDITIONAL rather than defaulted so a call that ever starts drawing a
-// triangle again cannot forget to say which band it lands in.
+// The former two-tone form (an `ink_plate` parameter carrying the displayed
+// plate, whose alpha masked a ground-colored overdraw wherever the column
+// crossed an opaque sample) is retired too: architect 2026-07-26, the notch
+// retired with the polarity inversion — the contrast problem it patched is
+// solved by the scheme, so that parameter went with it.
 void render_playhead(cairo_t* cr,
                      GuiRect area,
-                     GuiRect triangle_lane,
                      double  playhead_pixel_x,
-                     GuiColor color,
-                     bool draw_triangle = true);
+                     GuiColor color);
 
 // Draws the strip-drag ANCHOR STEM: a 1-pixel vertical line at the drag's pivot
 // column `col` (window pixels within `area`, clamped here to [0, area.w-1]),

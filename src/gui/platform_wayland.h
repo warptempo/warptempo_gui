@@ -154,14 +154,14 @@ public:
     void begin_pointer_capture();
     void end_pointer_capture();
 
-    // Is the pointer currently over our surface? True between wl_pointer.enter
-    // and .leave. CALLER-LESS SINCE ROW 5 (2026-08-01), and recorded as such
-    // rather than removed: its two callers were the deferred-click completions,
-    // which read it to decide between re-resolving the marker hover here and
-    // leaving the clear to the pointer-left hook — and the marker hover is gone.
-    // The FIELD is still live inside this class (the synthesized-enter motion
-    // gate below), so only the accessor is idle.
-    bool pointer_focused() const { return pointer_focused_; }
+    // (THE pointer_focused() ACCESSOR IS GONE — 2026-08-02. It answered "is the
+    // pointer over our surface?" for the deferred-click completions, which read
+    // it to decide between re-resolving the marker hover here and leaving the
+    // clear to the pointer-left hook; row 5 deleted the marker hover and both
+    // callers with it, and an accessor recorded as caller-less is still a
+    // public surface nothing asks for. The FIELD stays — pointer_focused_ is
+    // live inside this class, gating the synthesized-enter motion — so this
+    // deletes the door, not the state behind it.)
 
     // Override the release-restore x for the active capture. The strip drags
     // set this each event to the surface x of their anchor stem, so the cursor

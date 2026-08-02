@@ -3302,13 +3302,10 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // any more: the tip-down triangle died with its lane, its successor is the
     // ruler lane's aliased head, and paint_ruler_row owns that head (it needs
     // the tick columns for the pre-blended crossing) along with the stem's
-    // marker-lane segment. So the call below passes draw_triangle=false and this
-    // pass is the WAVEFORM segment of the cursor's stem, nothing else. The
-    // lane rect is still threaded through — render_playhead requires it
-    // unconditionally so a triangle-drawing call can never omit it. WHICH lane
-    // it names is now arbitrary — the head moved to the MARKER lane in
-    // 2026-08-01 and this pass draws nothing in either.
-    const GuiRect tri_lane = top_ruler_row_area(app);
+    // marker-lane segment. So this pass is the WAVEFORM segment of the cursor's
+    // stem, nothing else — and since 2026-08-02 render_playhead draws a line and
+    // only a line: the dead triangle branch is deleted, and with it the lane
+    // rect this call used to thread through to it.
 
     // The cursor paints UNDER the marker flags (the Z-ORDER FLIP, architect
     // 2026-07-23 — see the paint-order block in on_redraw): its line passes
@@ -3365,8 +3362,7 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // waveform's own borders when row 6 adds them: the stem is a boundary line
     // like the marker stems beside it, not a thing the borders clip.
     if (!playhead_stem_suppressed()) {
-        render_playhead(cr, area, tri_lane, px_x, kPlayheadStem,
-                        /*draw_triangle=*/false);
+        render_playhead(cr, area, px_x, kPlayheadStem);
     }
 }
 
@@ -3389,7 +3385,8 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
 //
 // It stays WAVEFORM-ONLY: no head, no lane presence, nothing in the top strip
 // (the ruling is at paint_ruler_row's head block — render_playhead is shared
-// with the cursor and must not reach a strip lane on this caller's behalf).
+// with the cursor and, since 2026-08-02, cannot reach a strip lane at all: it
+// draws the line inside `area` and nothing else).
 // Same displayed-plate basis the cursor uses, so both ride the blitted pixels
 // through a worker rebuild; the value fields it reads are meaningful only while
 // active, which is exactly what the gate asks.
@@ -3399,10 +3396,7 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
     const PlateViewportBasis basis = plate_viewport_basis();
     const double scan_px =
         scanner_pixel_x(app, wf_cache.fp_vp_start, basis.spp);
-    // The lane rect render_playhead requires unconditionally; this call draws
-    // no triangle, so it names a band nothing is painted in.
-    render_playhead(cr, area, top_ruler_row_area(app), scan_px, kPlayheadScanner,
-                    /*draw_triangle=*/false);
+    render_playhead(cr, area, scan_px, kPlayheadScanner);
 }
 
 // -- GuiPaintHandler::paint_bottom_strip ---------------------------------
@@ -3646,26 +3640,26 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // committing frame's damage always includes the items. No input dispatches
     // mid-loop (single-threaded) and the whole frame still commits atomically
     // after the loop in GuiPlatform::paint_one_frame, so a press only ever reads
-    // the last COMMITTED frame's geometry — that guarantee is unchanged. Bump
-    // displayed_map_gen so the promotion has a record.
+    // the last COMMITTED frame's geometry — that guarantee is unchanged.
     //
-    // THE HOVER REFRESH HOOK THAT HUNG OFF THIS EDGE IS GONE (row 5): it
-    // re-resolved the marker hover cache against the just-promoted map, and
-    // there is no hover cache any more. Nothing subscribes to the promotion; the
-    // overlays below simply read the promoted basis.
+    // NOTHING SUBSCRIBES TO THIS EDGE any more, and it no longer publishes one:
+    // the hover refresh hook that hung off it re-resolved the marker hover cache
+    // against the just-promoted map, and row 5 deleted the hover cache; the
+    // displayed_map_gen counter that outlived it as a bare record went too
+    // (2026-08-02, write-only). The overlays below simply read the promoted
+    // basis. A future subscriber hangs its key here, on this block.
     if (app.staged_displayed_valid) {
         app.displayed_target_warp_frame_map =
             std::move(app.staged_displayed_target_warp_frame_map);
         app.staged_displayed_target_warp_frame_map.clear();
-        // Promote the displayed VIEWPORT mirror in the SAME block (one promote,
-        // one gen bump): the flag editor's box geometry advances to the fp_*
-        // viewport the just-blitted flag cache was built against, in
-        // lockstep with the map above.
+        // Promote the displayed VIEWPORT mirror in the SAME block (ONE promote):
+        // the flag editor's box geometry advances to the fp_* viewport the
+        // just-blitted flag cache was built against, in lockstep with the map
+        // above.
         app.displayed_vp_start = app.staged_displayed_vp_start;
         app.displayed_vp_end   = app.staged_displayed_vp_end;
         app.displayed_area_w   = app.staged_displayed_area_w;
         app.staged_displayed_valid = false;
-        ++app.displayed_map_gen;
     }
 
     cairo_save(cr);

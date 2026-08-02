@@ -66,8 +66,9 @@ void remap_marker_indices_after_reorder(AppState& app,
 }
 
 // hit_test_* promoted from lambdas in main(). The captured `app` and `audio`
-// references are now explicit arguments. The kMarkerHitHalfPx constant
-// resolves through app_state.h.
+// references are now explicit arguments. Each surface's grab tolerance resolves
+// through app_state.h (kMarkerStemGrabPx) or render.h (kTrimEndcapGrabPx) —
+// there is no shared hit half-width any more.
 
 // Event-synchronized hit map (ruling at the declaration in app_state.h): in
 // target view with a warm displayed map, the item hit tests decide against the

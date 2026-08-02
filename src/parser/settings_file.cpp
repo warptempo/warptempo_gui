@@ -14,9 +14,13 @@
 namespace {
 
 using warptempo_parse::parse_bool_token;
-// (parse_double_strict's using-declaration went with the font_size arm, its one
-// consumer here — architect approval 2026-08-01. The helper itself stays in
-// parse_text_util.h.)
+// (A THIRD using-declaration used to sit here, for parse_text_util's strict
+// whole-token double parser; it went with the font_size arm, its one consumer
+// in this file — architect approval 2026-08-01 — and the helper itself was
+// then deleted from parse_text_util.h outright, so there is nothing left to
+// name (architect approval 2026-08-02, comment retold; no code changed here).
+// This file's one double-valued key, zoom, parses through value_format.h's
+// parse_value_double against its own canonical-spelling round-trip.)
 using warptempo_parse::prefix_line_error;
 
 // Every canonical .settings key, in kSettingsOrder's on-disk order. This is

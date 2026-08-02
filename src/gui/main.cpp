@@ -90,8 +90,10 @@ namespace {
 // helpers below); nothing is window-proportional, and since row 7 nothing is
 // font-proportional either.
 
-// kMarkerHitHalfPx lives in app_state.h so the hit_test_* free
-// functions and the GuiInputHandler mouse handler can reach it.
+// The pointer grab tolerances live beside the surfaces they belong to —
+// kMarkerStemGrabPx in app_state.h (reached by the hit_test_* free functions
+// and the GuiInputHandler mouse handler), kTrimEndcapGrabPx in render.h — so
+// nothing of that family is file-local here.
 
 // ms-per-pixel is a continuous function of the zoom level (a real-valued
 // exponent): ms_per_px(level) = 0.625 * 2^(level - 1), computed directly in
@@ -628,6 +630,15 @@ bool rects_intersect(GuiRect a, GuiRect b) {
     return true;
 }
 
+// The narrow playhead-damage rect. TWO CONSUMERS, and the rect is REAL DAMAGE
+// at the first of them, not a predicate: Viewport::invalidate_playhead_columns
+// builds one per column (old and new), unions them when they are close and
+// invalidates what comes out; the tick's offscreen fallback in this file reads
+// only the WIDTH, as an emptiness test. Both are the narrow-on-plate shape,
+// reserved for the two per-frame scanner sites (the rule and the per-site table
+// are at playhead_pixel_x, app_state.h). The half-width is playhead_half_px()'s
+// to own — render.h states its authored value, its provenance, and the recorded
+// mismatch against the wider ruler head.
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     const int col = static_cast<int>(std::nearbyint(px_x));
     const int x0 = std::max(area.x, col - playhead_half_px());

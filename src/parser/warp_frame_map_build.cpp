@@ -940,18 +940,30 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
 
         if (is_numeric) {
             double tempo_val = effective_tempo(m);
-            // tempo <= 0 is the one REACHABLE refusal in this builder. Every
-            // AUTHORED product (tempo * marker scale) stays in [1/8, 8] by the
-            // value brackets, so a GUI/CLI marker never trips it; the sweep
-            // batches' per-cell tempo mutations are deliberately unbracketed
-            // and CAN drive a cell's effective product non-positive, and this
-            // builder is that path's ruled async-stderr backstop. Without this
-            // guard the degradation splits by sign: a NEGATIVE tempo yields a
-            // decreasing target the engine refuses as "not strictly ascending",
-            // while EXACTLY ZERO divides a positive span to +inf — a non-finite
-            // target the emission finiteness contract below refuses first.
-            // Neither downstream refusal could NAME the tempo; this site is
-            // kept for that message vocabulary on the async sweep path.
+            // THE BUILDER'S OWN POSITIVITY GUARD, and it is PRODUCER-LESS from
+            // the products (comment retold under architect approval 2026-08-02;
+            // the guard itself is unchanged). Every AUTHORED product (tempo *
+            // marker scale) stays in [1/8, 8] by the value brackets, so a
+            // GUI/CLI marker never trips it. The clause that used to stand here
+            // — that the sweep batches' per-cell tempo mutations are unbracketed
+            // and can drive a cell's effective product non-positive, making this
+            // the sweep's ruled async-stderr backstop — IS FALSE as of the same
+            // day: clamp_iter_bracket_to_tempo_bracket (warpmarkers.h) folds a
+            // live iter bracket back into [kTempoMinCents, kTempoMaxCents] every
+            // time its base tempo moves, so every rendered cell is in-bracket by
+            // CONSTRUCTION and no GUI path emits a non-positive tempo at all. A
+            // hand-edited sidecar cannot arrive here carrying one either — the
+            // parser applies the same cent bracket at load, first.
+            //
+            // KEPT ANYWAY, for its MESSAGE VOCABULARY: only this site can NAME
+            // the offending tempo. Without the guard the degradation splits by
+            // sign — a NEGATIVE tempo yields a decreasing target the engine
+            // refuses as "not strictly ascending", while EXACTLY ZERO divides a
+            // positive span to +inf, a non-finite target the emission finiteness
+            // contract below refuses first — and neither downstream refusal
+            // could say which marker's tempo did it. It guards the direct callers
+            // of this builder, hand-assembled marker lists included, exactly as
+            // the sub-frame guard above does.
             if (tempo_val <= 0.0) {
                 return std::unexpected("Tempo " +
                                        format_value_double(tempo_val, 2)

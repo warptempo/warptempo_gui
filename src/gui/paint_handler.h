@@ -30,20 +30,21 @@ class GuiWaveformWorker;
 //     popup_eligible_marker directly through this reference (the bottom strip's
 //     readout calls the free function). Both omitted to avoid dead weight.
 //   - GuiPlatform& is used by the cache-rebuild paths (waveform_cache.cpp)
-//     for gui.invalidate_region calls. The playhead triangle mask now lives
-//     in render.cpp file-scope state (playhead_triangle_mask()), not on
-//     GuiPlatform.
+//     for gui.invalidate_region calls. It carries no cached paint surface of
+//     its own: the playhead triangle mask, the last thing it had ever held,
+//     moved to render.cpp file-scope state and was then deleted outright with
+//     the triangle (2026-08-02).
 //   - GuiPlayback& is non-const because on_resize calls
 //     playback.resync_predictor(), which mutates atomic predictor state.
 
 // -- Constants used by paint code ----------------------------------------
 //
-// Declared here so paint_handler.cpp can reach them. Other constants
-// (kMarkerHitHalfPx) is paint-handler-independent and
-// lives in main.cpp's anonymous namespace; playhead_half_px() lives in
-// render.h. redesign_font_size_px() — the product's ONE text size since row 7 —
-// lives in render.h so render.cpp can reach it without pulling paint_handler.h
-// into the lower-layer include graph.
+// Declared here so paint_handler.cpp can reach them. The pointer-side grab
+// tolerances are paint-handler-independent and live with the surfaces they
+// belong to (kMarkerStemGrabPx in app_state.h, kTrimEndcapGrabPx in render.h);
+// playhead_half_px() lives in render.h. redesign_font_size_px() — the product's
+// ONE text size since row 7 — lives in render.h so render.cpp can reach it
+// without pulling paint_handler.h into the lower-layer include graph.
 
 // THE BOTTOM ROW'S PAD — the pen x of the first glyph on the line,
 // MEASURED off row_7_text.png: fitting the crop's own string offscreen at the
@@ -328,19 +329,26 @@ struct GuiPaintHandler {
     // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the
     // waveform's completion swap. THE ONE AUTHORITATIVE FINGERPRINT FIELD LIST
-    // (12 fields, re-derived 2026-08-01 — other sites state only a pointer
-    // here): fp_vp_start, fp_vp_end, fp_area_w, fp_area_h, fp_target,
-    // fp_warp_frame_map_hash (all six displayed-viewport inputs, read from
-    // wf_cache.fp_*), plus fp_warp_generation, fp_phase_reset_generation,
-    // fp_drag_overlay_hash, fp_selection_hash, fp_active_markers_view (the
-    // marker-driven inputs, read live from app state) and fp_iteration_mode
-    // (which changes what the flags SAY). The measured-font field left the list
-    // with row 7's monospace deletion; the flag editor's text was never one of
-    // these — it renders live as an overlay after this cache's blit. Rebuilds are
-    // synchronous (sub-millisecond at observed flag counts). This rebuild
-    // is the SOLE item-basis STAGE site (the retired trim-stem cache's
-    // rebuild was the only other one) — see the staging comment at its
-    // tail in waveform_cache.cpp.
+    // (13 fields, RE-DERIVED 2026-08-02 off the compare in
+    // maybe_rebuild_flag_cache — other sites state only a pointer here):
+    //   - GEOMETRY, four fields off the displayed plate (wf_cache.fp_*):
+    //     fp_vp_start, fp_vp_end, fp_target, fp_warp_frame_map_hash;
+    //   - GEOMETRY, two fields off the LIVE top strip rect (top_strip_area, not
+    //     the plate — this surface mirrors the strip, not the waveform):
+    //     fp_area_w, fp_area_h;
+    //   - MARKER-DRIVEN, five read live from app state: fp_warp_generation,
+    //     fp_phase_reset_generation, fp_drag_overlay_hash, fp_selection_hash,
+    //     fp_active_markers_view;
+    //   - CONTENT, two more: fp_iteration_mode (it changes what the flags SAY)
+    //     and fp_editing_flag_target (the open editor's marker, whose box this
+    //     pass SKIPS).
+    // The measured-font field left the list with row 7's monospace deletion; the
+    // flag editor's TEXT was never one of these — it renders live as an overlay
+    // after this cache's blit, and only the identity of the suppressed box is a
+    // fingerprint fact. Rebuilds are synchronous (sub-millisecond at observed
+    // flag counts). This rebuild is the SOLE item-basis STAGE site (the retired
+    // trim-stem cache's rebuild was the only other one) — see the staging
+    // comment at its tail in waveform_cache.cpp.
     void maybe_rebuild_flag_cache();
 
     // Force a synchronous waveform rebuild + fp_vp_* update for a user-driven
