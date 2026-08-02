@@ -2272,6 +2272,72 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     }
 }
 
+// -- GuiPaintHandler::paint_channel_split --------------------------------
+
+// THE 1px CHANNEL SPLIT LINE (architect 2026-08-01): a horizontal rule across
+// the waveform where the two channel bands meet — which is EXACTLY the row the
+// lower-half SCRUB press begins at, so the gesture split the area has always
+// had is finally drawn. That coincidence is arithmetic, not luck: the press
+// test is `y >= area.y + area.h/2` (input_pointer.cpp) and the split row is
+// inset + (area.h - 2*inset)/2, which is area.h/2 under integer division for
+// every parity — an even band lands on it exactly, an odd one floors to the
+// same row through the spare row falling on the split. The line is therefore
+// the scrub half's FIRST row.
+//
+// CAIRO, OVER THE PLATE, NOT IN IT. The plate is the direct ARGB32 writer's
+// output and its pixel loop stays a pure per-column min/max bar writer; a
+// horizontal rule is not a column and does not belong in it. So the line is an
+// overlay: painted straight after the blit, under every boundary line above it
+// (the overlay ring, trim, the stems, the playheads) because it is GROUND
+// FURNITURE, not a cursor — nothing about it tracks state.
+//
+// CRISP BY THE HALF-PIXEL: line width 1.0 with the centreline at row + 0.5, so
+// the stroke covers exactly that device row with no antialiased pair.
+//
+// 1px AT EVERY gui_scale, DELIBERATELY. Every other length in the redesign
+// scales; this one is a hairline cue whose job is to mark a boundary, and a 2px
+// rule at 200% would read as a divider between two tracks instead. There is no
+// scaled accessor for it on purpose.
+//
+// GEOMETRY ON THE PLATE'S OWN BASIS, the pattern paint_ruler_row states at its
+// walk width: the row and the width come from the published fingerprint
+// (fp_area_h / fp_inset_px / fp_area_w — what the blitted pixels were rendered
+// against), with the live values as the cold fallback for the frame before the
+// first publish. During an async resize the blitted plate still shows the old
+// geometry, and a line drawn at the new one would cut across it. The ROW itself
+// is the shared owner waveform_channel_split_row, the same call the renderer
+// lays its bands with.
+void GuiPaintHandler::paint_channel_split(cairo_t* cr, const GuiRect& area) {
+    if (area.w <= 0 || area.h <= 0) return;
+
+    const int plate_h = wf_cache.fp_area_h > 0 ? wf_cache.fp_area_h : area.h;
+    const int inset   = wf_cache.fp_inset_px >= 0 ? wf_cache.fp_inset_px
+                                                  : waveform_inset_px();
+    const int row = waveform_channel_split_row(plate_h, inset);
+    if (row < 0) return;
+
+    const int wave_w = wf_cache.fp_area_w > 0 ? wf_cache.fp_area_w
+                                              : waveform_area(app).w;
+    if (wave_w <= 0) return;
+
+    // Clipped to the CONTENT band exactly as the plate blit is, so the rule can
+    // never reach the area's 2px black border rows (it cannot at any real
+    // inset — the statement is structural, like the blit's own).
+    const GuiRect content = waveform_content_rect(area);
+    cairo_save(cr);
+    cairo_rectangle(cr, content.x, content.y, content.w, content.h);
+    cairo_clip(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    cairo_set_line_width(cr, 1.0);
+    cairo_set_source_rgb(cr, kWaveformChannelSplit.r, kWaveformChannelSplit.g,
+                         kWaveformChannelSplit.b);
+    const double y = static_cast<double>(area.y + row) + 0.5;
+    cairo_move_to(cr, static_cast<double>(area.x), y);
+    cairo_line_to(cr, static_cast<double>(area.x + wave_w), y);
+    cairo_stroke(cr);
+    cairo_restore(cr);
+}
+
 // -- GuiPaintHandler::plate_viewport_basis / region_columns ----------
 
 // See the declaration comment in paint_handler.h: the fp-recipe basis locked to
@@ -2868,33 +2934,28 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // any more: the tip-down triangle died with its lane, its successor is the
     // ruler lane's aliased head, and paint_ruler_row owns that head (it needs
     // the tick columns for the pre-blended crossing) along with the stem's
-    // marker-lane segment. So both calls below pass draw_triangle=false and this
-    // pass is the WAVEFORM segment of the stem, plus the scanner's line. The
+    // marker-lane segment. So the call below passes draw_triangle=false and this
+    // pass is the WAVEFORM segment of the cursor's stem, nothing else. The
     // lane rect is still threaded through — render_playhead requires it
     // unconditionally so a triangle-drawing call can never omit it. WHICH lane
     // it names is now arbitrary — the head moved to the MARKER lane in
     // 2026-08-01 and this pass draws nothing in either.
     const GuiRect tri_lane = top_ruler_row_area(app);
 
-    // Playheads paint UNDER the marker flags (the Z-ORDER FLIP, architect
-    // 2026-07-23 — see the paint-order block in on_redraw): the cursor's line
-    // passes beneath a marker flag sharing its column, so a cursor resting on a
-    // marker sits hidden behind that marker's flag. The scanner line is
-    // waveform-only and has no strip presence at all, so its stacking is
-    // unaffected; the cursor still draws over the marker STEMS below it in the
-    // waveform. Gated on the waveform OR the top strip being exposed: the head
-    // and the marker-lane stem segment live in the strip and are repainted by
-    // paint_ruler_row on the same frame, so a strip-only damage must reach both
-    // passes.
+    // The cursor paints UNDER the marker flags (the Z-ORDER FLIP, architect
+    // 2026-07-23 — see the paint-order block in on_redraw): its line passes
+    // beneath a marker flag sharing its column, so a cursor resting on a marker
+    // sits hidden behind that marker's flag, and it passes under the marker
+    // STEMS below it in the waveform too. Gated on the waveform OR the top strip
+    // being exposed: the head and the marker-lane stem segment live in the strip
+    // and are repainted by paint_ruler_row on the same frame, so a strip-only
+    // damage must reach both passes.
     //
-    // Paint order: scanner first (gated on playhead_scanner_active), then the
-    // cursor. The cursor draws over the scanner on overlap.
-    if (app.playhead_scanner_active) {
-        const double scan_px = scanner_pixel_x(app, wf_cache.fp_vp_start,
-                                               disp_spp);
-        render_playhead(cr, area, tri_lane, scan_px, kPlayheadScanner,
-                        /*draw_triangle=*/false);
-    }
+    // THE SCANNER LEFT THIS PASS (architect 2026-08-01) — it is paint_scanner
+    // now, invoked after the marker stems, so the moving line crosses a marker's
+    // stem instead of blinking out behind it. This pass is the CURSOR alone, and
+    // the two are no longer ordered against each other here: the scanner is over
+    // everything in the waveform area while it runs.
 
     // THE CURSOR PLAYHEAD ALWAYS PAINTS (architect 2026-07-30): ONE playhead
     // form, drawn at the resting cursor column whatever the selection and
@@ -2939,6 +3000,41 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
         render_playhead(cr, area, tri_lane, px_x, kPlayheadStem,
                         /*draw_triangle=*/false);
     }
+}
+
+// -- GuiPaintHandler::paint_scanner --------------------------------------
+
+// THE SCANNER PASSES OVER THE MARKER STEMS (architect 2026-08-01, at the row-6
+// live playback look). It was drawn inside paint_playheads, which runs BEFORE
+// paint_marker_stems, so every always-on marker stem overpainted the moving
+// line's column: at our marker density the scanner blinked out repeatedly as it
+// crossed the song. Its own pass, invoked after the stems, is the fix — and it
+// is the SCANNER ALONE that moved. The resting cursor keeps painting under the
+// stems and under the flags (the hidden-by-marker model, which is about a
+// cursor COINCIDENT with a marker); a scanner sweeping past one is not that
+// case, and a line that vanishes where the user is looking is not a z-order
+// statement, it is a dropout.
+//
+// SO THE SCANNER IS NOW TOPMOST IN THE WAVEFORM AREA while it runs — over the
+// stems, over the cursor where they overlap, over the plate and the region
+// ground. Everything it covers is a per-frame repaint anyway.
+//
+// It stays WAVEFORM-ONLY: no head, no lane presence, nothing in the top strip
+// (the ruling is at paint_ruler_row's head block — render_playhead is shared
+// with the cursor and must not reach a strip lane on this caller's behalf).
+// Same displayed-plate basis the cursor uses, so both ride the blitted pixels
+// through a worker rebuild; the value fields it reads are meaningful only while
+// active, which is exactly what the gate asks.
+void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
+    if (!app.playhead_scanner_active) return;
+
+    const PlateViewportBasis basis = plate_viewport_basis();
+    const double scan_px =
+        scanner_pixel_x(app, wf_cache.fp_vp_start, basis.spp);
+    // The lane rect render_playhead requires unconditionally; this call draws
+    // no triangle, so it names a band nothing is painted in.
+    render_playhead(cr, area, top_ruler_row_area(app), scan_px, kPlayheadScanner,
+                    /*draw_triangle=*/false);
 }
 
 // -- GuiPaintHandler::paint_bottom_strip ---------------------------------
@@ -3259,9 +3355,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //
         // Final paint order (bottom to top of the stack): canvas ground + its
         // 2px black border (painted above, unconditionally) -> region ground ->
-        // waveform plate -> overlay ring -> LIVE
+        // waveform plate -> channel split line -> overlay ring -> LIVE
         // TRIM (bar + endcaps + waveform stem segments, one pass)
-        // -> playheads (scanner line + cursor stem) -> MARKER STEMS -> ruler ->
+        // -> cursor stem -> MARKER STEMS -> SCANNER -> ruler ->
         // flag blit -> flag editor overlay -> strip-drag anchor. (The bottom row
         // left the tail of this sequence in row 7 — it paints with the other
         // redesigned rows above, on every frame class, and overlaps none of
@@ -3282,11 +3378,13 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     group's is its members' ink triangles plus the landed cursor).
         //   TRIM BELOW THE PLAYHEAD (architect 2026-07-25) — every trim pixel
         //     paints before every playhead element, so the playhead sits over a
-        //     trim stem sharing its column: trim < playheads < marker stems <
-        //     marker flags. (Row 5 moved the marker stems ABOVE the playheads,
-        //     where the singleton selected stem used to sit below them — the
-        //     hidden-by-marker z-intent; the trim half of the rule is
-        //     untouched.)
+        //     trim stem sharing its column: trim < cursor < marker stems <
+        //     scanner, with the marker flags over all of them. (Row 5 moved the
+        //     marker stems ABOVE the playheads, where the singleton selected
+        //     stem used to sit below them — the hidden-by-marker z-intent; the
+        //     trim half of the rule is untouched. 2026-08-01 then lifted the
+        //     SCANNER alone above the stems, so the moving line does not blink
+        //     out at every marker it crosses.)
 
         if (rects_intersect(exposed, area)) {
             // THE GROUND RECOLOR, under the plate. render_canvas already laid
@@ -3295,6 +3393,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // the recolored ground rather than the plain one.
             paint_region_ground(cr, area);
             paint_waveform_plate(cr, area);
+            // The channel split line, straight over the blit: the L/R boundary
+            // and the scrub boundary are the same row, and it is drawn as
+            // GROUND FURNITURE — over the ink, under every boundary line that
+            // follows.
+            paint_channel_split(cr, area);
             // The overlay band's boundary ring — the phase-reset overlay's whole
             // visual — over the plate and under trim
             // and the stems, so the focused reset's own stem stays crisp on top
@@ -3314,11 +3417,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             paint_trim(cr, area, top_strip);
         }
 
-        // Playheads BEFORE the flag blit (Z-ORDER FLIP, architect 2026-07-23):
-        // the scanner line stays waveform-only (triangle-free, no lane conflict —
-        // its stacking vs the lanes is unaffected by this move), while the cursor
-        // line+triangle now paints UNDER the
-        // marker flags that follow. flag_cache.surface is ARGB32, CLEAR-cleared
+        // The CURSOR BEFORE the flag blit (Z-ORDER FLIP, architect 2026-07-23):
+        // its line paints UNDER the
+        // marker flags that follow. (The scanner used to ride along in this pass
+        // and now paints after the stems, below — waveform-only either way, so
+        // its stacking against the lanes never entered the question.)
+        // flag_cache.surface is ARGB32, CLEAR-cleared
         // each rebuild and transparent outside the painted shapes, so the flag
         // blit composites source-over and never erases the playheads it does not
         // cover. Gated on area OR top_strip: the cursor line lives in the waveform
@@ -3328,7 +3432,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             paint_playheads(cr, area);
         }
 
-        // MARKER STEMS AFTER THE PLAYHEADS (row 5's z-intent, now verifiable
+        // MARKER STEMS AFTER THE CURSOR (row 5's z-intent, now verifiable
         // because both exist): ruler ticks, then the playhead head + stem, then
         // the marker flags and their stems ON TOP. That is the hidden-by-marker
         // model translated — a marker sharing the cursor's column hides it,
@@ -3336,9 +3440,18 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // stems paint here rather than in the pre-playhead slot the singleton
         // selected stem occupied. The flag BOXES follow in the strip blit below;
         // the stems are their waveform half and must not be split across the
-        // playhead by paint order.
+        // cursor by paint order.
         if (rects_intersect(exposed, area)) {
             paint_marker_stems(cr, area);
+        }
+
+        // THE SCANNER LAST OF THE WAVEFORM VERTICALS (architect 2026-08-01):
+        // the moving line paints AFTER the stems, so it crosses them instead of
+        // being erased column by column as it sweeps past every marker. Only the
+        // scanner moved — the cursor stayed in paint_playheads above, under the
+        // stems and under the flags. Waveform-only, so no top_strip arm.
+        if (rects_intersect(exposed, area)) {
+            paint_scanner(cr, area);
         }
 
         if (rects_intersect(exposed, top_strip)) {

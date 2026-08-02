@@ -111,7 +111,7 @@ struct TrimRange {
 //   kBackground     — the base chrome erase (render_background);
 //   kAccent + kAccentOutline — the bottom editors' invalid-flash box
 //                     (render_bottom_strip_editor, paint_handler.cpp);
-//   kPlayheadScanner — the moving playback line (paint_playheads).
+//   kPlayheadScanner — the moving playback line (paint_scanner).
 // EVERY OTHER KEY IS INERT: declared, loaded, still validated by the whole-file
 // grammar, and read by nothing — each declaration below carries its own
 // retirement record. No key is deleted (a removal is a grammar change, and the
@@ -234,9 +234,11 @@ inline GuiColor kStripAnchorStem  = hex(0x686A6C);
 // BreezeClassic, not by hunting BreezeDark for a role that does not exist.
 inline GuiColor kPlayheadCursor   = hex(0x7F8C8D);
 // LIVE — one of the four keys still painting (the header's completed-shrink
-// record): the moving playback line, drawn by paint_playheads while the
-// scanner runs. It reads WHITE against the canvas (the Ableton play-head cue;
-// also Breeze's text/icon foreground, so it is the scheme's brightest ink).
+// record): the moving playback line, drawn by paint_scanner while the
+// scanner runs (its own pass since 2026-08-01 — it paints over the marker
+// stems, where the cursor still paints under them). It reads WHITE against the
+// canvas (the Ableton play-head cue; also Breeze's text/icon foreground, so it
+// is the scheme's brightest ink).
 inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
 
 // THE THREE MARKER CLASSES, each a FILL + OUTLINE pair — AND EVERY MARKER PAIR
@@ -273,7 +275,8 @@ inline GuiColor kPlayheadScanner  = hex(0xFCFCFC);
 // ink triangle, the z-order lift and the "selection is not a class" rule all
 // belonged to the fused rectangle-plus-triangle flag; row 5's flag is a text box
 // whose SELECTION IS A COLOUR SWAP (kMarkerFlagFillSel / kMarkerFlagEdgeSel),
-// resolved below the disabled class so the old masking defect has no site. The
+// and since 2026-08-01 a DISABLED marker takes that swap too — inside its own
+// blend, so the muting still wins and the old masking defect has no site. The
 // remaining selection cues are that swap and the playhead landing on the marker.
 //
 // kSelectedStem SURVIVES AS A DECLARED KEY WITH NO PAINT SITE. It was the
@@ -328,11 +331,13 @@ inline GuiColor kMarkerOutline    = hex(0x3895C7);
 // lane text (kTextDisabled) is that set's Text, so shape and glyph go disabled
 // together by provenance. It WINS over red and over the default class, and
 // there is nothing left for it to compose with: a disabled marker paints BOTH
-// halves of this pair whatever its red-flag status. Selection does not alter
-// the pair either (architect 2026-07-27) — its one paint is the triangle
+// halves of this pair whatever its red-flag status. Selection did not alter
+// the pair either (architect 2026-07-27) — its one paint was the triangle
 // interior described in SELECTION IS NOT A CLASS above, never the ring — so a
-// selected disabled marker keeps both muted halves and reads instead through
-// that triangle ink, the paint order, and the stem.
+// selected disabled marker kept both muted halves and read instead through
+// that triangle ink, the paint order, and the stem. (The LIVE disabled face
+// does take the selection lift, inside its blend — kMarkerDisabledMix and the
+// row-5 marker block carry that rule; this key reaches no pixel either way.)
 inline GuiColor kMarkerDisabled        = hex(0x164160);
 inline GuiColor kMarkerDisabledOutline = hex(0x42464A);
 
@@ -363,13 +368,15 @@ inline GuiColor kAccentOutline    = hex(0xDA4453);
 // It is TRIM SCRATCH: the span the plain waveform drag / the shift waveform
 // press form and `x` consumes into the trim window (architect 2026-07-30 — it
 // was the group's spread focus cue until the span form retired; it is no longer
-// a playhead form, a selection visual, or a trim-window display). Its default is kCanvas
-// lifted by Breeze's OWN shipped View->ViewAlternate step, #141618 -> #1d1f22 =
-// +9/+9/+10 per channel — the theme's native "subtly lighter than the surface"
-// relationship, applied to our canvas instead of a tint invented for it, so the
-// highlighted span reads as the same surface raised rather than as a colour
-// wash. The cursor playhead paints straight across it, unchanged — the span is a
-// ground, never a playhead.
+// a playhead form, a selection visual, or a trim-window display). THIS KEY's
+// default is kCanvas lifted ONCE by Breeze's OWN shipped View->ViewAlternate
+// step, #141618 -> #1d1f22 = +9/+9/+10 per channel — the theme's native "subtly
+// lighter than the surface" relationship, applied to our canvas instead of a
+// tint invented for it, so the highlighted span reads as the same surface raised
+// rather than as a colour wash. The LIVE constant takes that same step TWICE
+// (the architect's brighter-highlight tweak; the derivation is at
+// kWaveformRegionCanvas). The cursor playhead paints straight across it,
+// unchanged — the span is a ground, never a playhead.
 //
 // THE OVERLAY IS A RING ONLY (architect 2026-07-27). It is the 1px border of the
 // phase reset overlay band — the stretch of output immediately following the
@@ -389,10 +396,11 @@ inline GuiColor kAccentOutline    = hex(0xDA4453);
 // default to (provenance at kPlayheadCursor), a line colour rather than the
 // outline sibling of any fill.
 // kRegionCanvas IS NOW INERT (2026-08-01): the region highlight paints
-// kWaveformRegionCanvas, re-derived on the row-6 canvas by the same lift that
-// produced this value on the old one, and this key's one paint site went with
-// it. Declared and unread, like kCanvas, kWaveform, kLine, kStripAnchorStem and
-// kOverlayOutline.
+// kWaveformRegionCanvas, re-derived on the row-6 canvas from the same
+// View->ViewAlternate lift that produced this value on the old one (taken TWICE
+// there since the architect's brighter-highlight tweak), and this key's one
+// paint site went with it. Declared and unread, like kCanvas, kWaveform, kLine,
+// kStripAnchorStem and kOverlayOutline.
 inline GuiColor kRegionCanvas     = hex(0x42474D);
 inline GuiColor kOverlayOutline   = hex(0x7F8C8D);
 
@@ -565,6 +573,22 @@ inline constexpr GuiColor kRedesignSelectedFill = hex(0x3C3F41);
 // them out rather than inventing a formula from three samples.
 inline constexpr GuiColor kTrimLaneBar       = hex(0x2F6888);
 inline constexpr GuiColor kTrimLaneEndcap    = hex(0x97B4C4);
+// THE MIDPOINT SQUARE's face (row_5_lane_1_trim_middle.png, 9x9): kdenlive
+// marks the middle of its zone with a 5x5 square, and the crop reads a #2f6888
+// square on a #97b4c4 face over the #9dbbcb/#94b0c0 bevel pair — i.e. the
+// crop's square is THE BAR COLOUR ON THE ENDCAP COLOUR.
+//
+// OUR LANE ASSIGNS THAT PAIR THE OTHER WAY ROUND, so the square takes the other
+// half of the same two-colour crop: row 5 gave the WINDOW BAR kdenlive's darker
+// #2f6888 and the 2px ENDCAPS its lighter #97b4c4, so a #2f6888 square painted
+// on our bar would be invisible — same value on same value. What the crop
+// actually states is a CONTRAST between the lane's two surface colours, and
+// this constant is that contrast preserved: the light face marking the middle of
+// the dark bar. It is deliberately its own constant rather than a second use of
+// kTrimLaneEndcap — the endcaps are grabbable bounds and this is an
+// informational mark, and if the architect wants the square tuned it must move
+// without dragging the caps with it.
+inline constexpr GuiColor kTrimMiddle        = hex(0x97B4C4);
 inline constexpr GuiColor kTrimGroundBevelHi = hex(0x393E43);
 inline constexpr GuiColor kTrimGroundBevelLo = hex(0x131516);
 inline constexpr GuiColor kTrimBarBevelHi    = hex(0x3B7696);
@@ -599,9 +623,11 @@ inline constexpr GuiColor kPlayheadStem     = hex(0xFCFCFC);
 // the bright pair, an unselected one the calm pair, and the geometry, the stem
 // and the hit rect are identical either way. This RETIRES the "selection is not
 // a class" ruling for the marker flags — that rule existed because a selected
-// OUTLINE would have outranked the disabled pair; here disabled still wins
-// outright (it is resolved first, below the selection swap), so the defect it
-// guarded against has no site left.
+// OUTLINE would have outranked the disabled pair; here the swap can never
+// outrank disabled, because since 2026-08-01 it happens INSIDE it: a selected
+// disabled marker blends THIS pair toward the lane ground through
+// kMarkerDisabledMix, so it lifts like a live selection and still reads
+// switched off, and the defect the old rule guarded against has no site left.
 //
 // The RED crop is 56x17 and supplies COLORS ONLY — its dimensions are the
 // regular class's (the architect's own instruction).
@@ -623,6 +649,13 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // channel, through the ONE mix_color owner. Alpha would be wrong here for a
 // reason specific to this lane — flags OVERLAP, so a translucent disabled flag
 // would show its neighbour through itself and read as a third color.
+//
+// "THE CLASS COLOR" INCLUDES THE SELECTION SWAP (architect 2026-08-01): the
+// pair entering this blend is the one the marker would paint LIVE — red's,
+// the selected pair's, or the calm default's, resolved by the live ladder's own
+// order — so a selected disabled marker takes the same relative lift a live one
+// does, border included, and red takes none on either side. One blend, one
+// ladder: there is no separate disabled brightness rule to drift.
 inline constexpr double kMarkerDisabledMix = 0.25;
 
 // -- ROW 6: THE WAVEFORM ITSELF ---------------------------------------------
@@ -647,6 +680,18 @@ inline constexpr double kMarkerDisabledMix = 0.25;
 inline constexpr GuiColor kWaveformCanvas = hex(0x12312B);  // (18, 49, 43)
 inline constexpr GuiColor kWaveformInk    = hex(0x1C816B);  // (28, 129, 107)
 
+// THE CHANNEL SPLIT LINE (architect 2026-08-01): a 1px horizontal rule across
+// the waveform at the L/R channel boundary — which is also the SCRUB BOUNDARY,
+// the row that divides the upper half's region drag from the lower half's scrub
+// press, so the gesture split finally has a visible edge. It paints in both
+// views, always.
+//
+// CHOSEN, NOT SAMPLED: "slightly bright green" by his word, on the green
+// canvas. There is no kdenlive crop for it (kdenlive draws no such rule), so
+// this is the architect's tuning knob in the same sense kWaveformRegionCanvas
+// is — it is the only value the split-line path has.
+inline constexpr GuiColor kWaveformChannelSplit = hex(0x2F9E44);
+
 // THE REGION HIGHLIGHT, RE-DERIVED ON THE NEW GROUND (architect 2026-08-01: the
 // old value read GREY on the green canvas — "start over, don't just tune it;
 // leave it more greenish").
@@ -655,10 +700,17 @@ inline constexpr GuiColor kWaveformInk    = hex(0x1C816B);  // (28, 129, 107)
 // it, because kdenlive has no comparable highlight. What is transplanted is the
 // RELATIONSHIP, not the colour. The old kRegionCanvas #42474d was the old grey
 // canvas #393e43 plus Breeze's own View -> ViewAlternate lift, +9/+9/+10 per
-// channel; applying that same lift to the crop's canvas
-//     kWaveformCanvas (18, 49, 43) + (9, 9, 10) = (27, 58, 53) = #1b3a35
-// keeps the theme's-native-lift logic and lands same-hue and subtly lifted on
-// the green, which is what the grey pair was on the grey.
+// channel; applying that same lift to the crop's canvas keeps the
+// theme's-native-lift logic and lands same-hue and subtly lifted on the green,
+// which is what the grey pair was on the grey.
+//
+// THE LIFT IS DOUBLED (architect 2026-08-01: "the waveform highlight should be
+// brighter"). One native step was too quiet to find on the green ground, so the
+// step is applied TWICE — still the theme's own relationship, taken twice, not
+// a tint invented for it:
+//     kWaveformCanvas (18, 49, 43) + 2*(9, 9, 10) = (36, 67, 63) = #24433f
+// (one step gave (27, 58, 53) = #1b3a35, the value this constant held between
+// the row-6 re-derivation and the tweak).
 //
 // THE ARCHITECT'S TUNING KNOB, explicitly: the lift is a derivation and not a
 // measurement, so this constant is the one to move if the highlight wants to be
@@ -672,7 +724,7 @@ inline constexpr GuiColor kWaveformInk    = hex(0x1C816B);  // (28, 129, 107)
 // transparent: the highlight shows through the gaps and the ink is bit-identical
 // either way. "The ink looks unaffected" is now structurally true rather than a
 // near-miss, which is why nothing in the ink path is touched here.
-inline constexpr GuiColor kWaveformRegionCanvas = hex(0x1B3A35);  // (27, 58, 53)
+inline constexpr GuiColor kWaveformRegionCanvas = hex(0x24433F);  // (36, 67, 63)
 
 // THE AREA'S BORDER: 2px of pure black at the top and the bottom, full window
 // width. Both rows of row_6_waveform_border.png are (0,0,0), and the full crop's
@@ -1148,6 +1200,21 @@ inline int trim_endcap_w_px() {
         static_cast<double>(kTrimEndcapWidthPx) * gui_scale_factor()));
     return w < 1 ? 1 : w;
 }
+// THE MIDPOINT SQUARE, 5x5 at 100% (the 9x9 crop's square occupies rows 2..6
+// and five columns), and the CLEARANCE the visibility rule demands on each
+// side of it. Both scale with the lane like every other length in this row.
+inline constexpr int kTrimMiddleSizePx  = 5;
+inline constexpr int kTrimMiddleClearPx = 2;
+inline int trim_middle_size_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kTrimMiddleSizePx) * gui_scale_factor()));
+    return v < 1 ? 1 : v;
+}
+inline int trim_middle_clear_px() {
+    const int v = static_cast<int>(std::nearbyint(
+        static_cast<double>(kTrimMiddleClearPx) * gui_scale_factor()));
+    return v < 0 ? 0 : v;
+}
 
 // THE PLAYHEAD HEAD, redrawn rather than imported: 19x12 at 100%, ALIASED, from
 // row_5_lane_3_playhead.png. Its silhouette is a per-row HALF-WIDTH table, not a
@@ -1253,6 +1320,23 @@ cairo_surface_t* playhead_triangle_mask();
 // former triangle-clearance rationale is gone and the symmetric-margin purpose
 // is the whole of it.
 inline int waveform_inset_px() { return playhead_triangle_h_px(); }
+
+// THE CHANNEL SPLIT ROW — the ONE owner of where the two channel bands meet,
+// area-local (add the area's y for a window row). Shared by the plate renderer,
+// which lays the bands against it (render_waveform_to_cache_surface), and by the
+// split LINE's paint pass, which draws on it: the two cannot drift, and a line
+// drawn on a row the renderer did not split at is exactly the defect this
+// removes.
+//
+// The band is the area minus the symmetric inset at each end; the channels take
+// EQUAL halves of it and an odd row over falls HERE, on the split, so the pair
+// is symmetric about this row (the reasoning is at the renderer). Returns -1
+// when the inset leaves no band at all — the callers' own refusal case.
+inline int waveform_channel_split_row(int area_h, int inset_px) {
+    const int inset_h = area_h - 2 * inset_px;
+    if (inset_h <= 0) return -1;
+    return inset_px + inset_h / 2;
+}
 
 // Half-width (px) of the tip-down triangle's horizontal footprint, H - 1
 // (the mask is 2H-1 wide, centered on the column); bounds the playhead's
@@ -1694,6 +1778,12 @@ inline int trim_endcap_grab_px() {
 // shows only when the span is wide enough that the chips do not overlap.
 // route_trim_chip_press consumes the SAME owner under the SAME [0, wave_w) gate,
 // so the clickable bridge equals the painted bar exactly.
+// THE MIDPOINT SQUARE (2026-08-01, kdenlive's zone-middle mark) paints last, on
+// the bar's face at the WINDOW's midpoint column — through the same
+// trim_bound_column owner the bounds use — and only when the visible interior
+// between the endcaps holds it with a clearance each side. It is INFORMATIONAL:
+// no hit rect, no gesture, no routing change anywhere. Its face, size and the
+// clearance are kTrimMiddle / trim_middle_size_px / trim_middle_clear_px.
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
                        GuiRect chip_row,
@@ -1764,6 +1854,12 @@ struct MarkerStem {
 //              a disabled red marker stays red; disabled decides the blend and
 //              the missing stem, not the hue. (The old ladder's disabled was a
 //              separate opaque PAIR, which is why red used to test `!dis`.)
+//              SELECTION IS PART OF "ITS OWN CLASS" (architect 2026-08-01): a
+//              selected disabled marker blends the SELECTED pair, fill and edge
+//              both, so it carries the same relative lift a live marker's
+//              selection gives — the disabled rendition of the selected face.
+//              RED STILL REFUSES THE LIFT, exactly as the live red class does
+//              (no selected pair by ruling, the normalization cue unmasked).
 //   Red:       kMarkerFlagFillRed / kMarkerFlagEdgeRed; stem kMarkerStemRed.
 //   Otherwise: kMarkerFlagFill / kMarkerFlagEdge, swapping to the bright
 //              kMarkerFlagFillSel / kMarkerFlagEdgeSel pair when selected —

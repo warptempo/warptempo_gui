@@ -2125,8 +2125,10 @@ void    clamp_viewport_start(AppState& a, const GuiAudio& audio);
 // THE PLAYHEADS' DAMAGE RULE (architect 2026-07-30 — the one authoritative
 // statement; every damage site carries only its own class plus a pointer here).
 // DAMAGE FOLLOWS THE BASIS OF THE PIXELS IT ERASES, and the playheads' pixels
-// are PLATE-REGISTERED: paint_playheads draws both the cursor and the scanner
-// through the explicit-basis form at GuiPaintHandler::plate_viewport_basis.
+// are PLATE-REGISTERED: paint_playheads (the cursor) and paint_scanner — one
+// pass each since 2026-08-01, when the scanner moved above the marker stems —
+// both draw through the explicit-basis form at
+// GuiPaintHandler::plate_viewport_basis.
 // So NARROW playhead/scanner damage must resolve its columns on the PLATE basis
 // too. The superseded rule here said the opposite ("the narrow-damage path needs
 // the live position because live == displayed in steady state") — true at a

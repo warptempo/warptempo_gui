@@ -508,6 +508,12 @@ private:
     // untouched). The region highlight is the only one: the phase-reset overlay
     // recolors no ground (architect 2026-07-27).
     void paint_region_ground(cairo_t* cr, const GuiRect& area);
+    // THE 1px CHANNEL SPLIT LINE (2026-08-01) — the L/R boundary, which is also
+    // the lower-half scrub boundary, drawn in cairo OVER the plate blit and
+    // under every boundary line above it (ground furniture, not a cursor). Both
+    // views, always; 1px at every gui_scale by ruling. Its row is the shared
+    // owner waveform_channel_split_row, read on the plate's published geometry.
+    void paint_channel_split(cairo_t* cr, const GuiRect& area);
     // The overlay band's 1px ring — the phase-reset overlay's whole visual —
     // painted AFTER the plate, a boundary line like the playheads, so it
     // crosses the ink deliberately.
@@ -564,7 +570,17 @@ private:
     // ways a stem qualifies, and why this is a state compare and never a pixel
     // one.
     bool playhead_stem_suppressed() const;
+    // THE RESTING CURSOR's waveform stem (the head and the marker-lane segment
+    // belong to paint_ruler_row). Paints UNDER the marker stems and the flags —
+    // the z-order flip — which is the hidden-by-marker model for a cursor
+    // sitting ON a marker.
     void paint_playheads(cairo_t* cr, const GuiRect& area);
+    // THE MOVING PLAYBACK LINE, its own pass since 2026-08-01 and invoked AFTER
+    // paint_marker_stems: the scanner draws OVER the stems (and over the cursor
+    // where they meet) instead of being erased by every marker it sweeps past.
+    // Waveform-only, gated on playhead_scanner_active — see the definition for
+    // the ruling and for why the cursor did NOT move with it.
+    void paint_scanner(cairo_t* cr, const GuiRect& area);
     void paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr, int sr);
 };

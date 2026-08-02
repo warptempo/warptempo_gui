@@ -1253,7 +1253,7 @@ int main(int argc, char** argv) {
             // duplicating the timestamp rect there is wasted on_redraw
             // work.
             // PLATE basis, not live: the scanner's pixels are plate-registered
-            // (paint_playheads), so its damage resolves there too — the rule and
+            // (paint_scanner), so its damage resolves there too — the rule and
             // the per-site shape table live at playhead_pixel_x, app_state.h.
             // NARROW is mandatory here (this fires ~2x per frame while playing),
             // and this lambda's scope reaches paint_handler, so the site takes
@@ -1374,7 +1374,7 @@ int main(int argc, char** argv) {
         if (cur == app.playhead_scanner_sample) return;
 
         // PLATE basis for both columns, not live: the scanner's pixels are
-        // plate-registered (paint_playheads), so its damage resolves there —
+        // plate-registered (paint_scanner), so its damage resolves there —
         // the rule and the per-site shape table live at playhead_pixel_x
         // (app_state.h). NARROW is mandatory here (this is the per-frame
         // scanner advance) and this lambda reaches paint_handler, so the site
@@ -1384,7 +1384,7 @@ int main(int argc, char** argv) {
         const int64_t pb_vp = static_cast<int64_t>(pb.vp_start);
         // OLD COLUMN, DERIVED — never stashed (the viewport-mutation stash
         // playhead_scanner_old_px_stash was retired 2026-07-30; do not reintroduce
-        // one). The plate basis IS the answer by construction: paint_playheads
+        // one). The plate basis IS the answer by construction: paint_scanner
         // draws the scanner through this same basis, so scanner_pixel_x against it,
         // read with the still-current playhead_scanner_precise (the last painted
         // continuous position), names exactly the column the last paint put the

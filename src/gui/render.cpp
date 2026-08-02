@@ -674,6 +674,57 @@ void render_trim_flags(cairo_t* cr,
         surface(r.x, r.w, kTrimLaneEndcap, kTrimCapBevelHi, kTrimCapBevelLo);
     }
 
+    // THE MIDPOINT SQUARE (kdenlive's zone-middle mark, row_5_lane_1_trim_
+    // middle.png): a 5x5 square at 100% on the bar's face, centered on the
+    // window's MIDPOINT COLUMN. Painted last, over the bar and — where the
+    // window is narrow enough for them to meet — over an endcap's face too,
+    // though the clearance rule below means that cannot actually happen.
+    //
+    // INFORMATIONAL ONLY. It publishes no rect, claims no hit area and changes
+    // no routing: the bar's press / pair-drag / span-framing double-click all
+    // read the same bands they always did, and a click on the square is a click
+    // on the bar. It is paint and nothing else.
+    //
+    // THE MIDPOINT IS THE WINDOW'S, not the visible bar's: the two bounds'
+    // midpoint goes through the SAME trim_bound_column owner the bar's own
+    // edges use, on the same displayed basis, so the mark sits on the column
+    // the window's middle actually occupies and scrolls off the view with it
+    // rather than sliding to the middle of whatever is on screen.
+    //
+    // IT PAINTS ONLY WHERE IT FITS, a clean binary verdict on integer columns
+    // (so it cannot flicker — no hysteresis, none needed): the square's whole
+    // extent must sit inside the visible interior BETWEEN the endcaps
+    // (trim_bridge_gap, the shared owner, clamped to the effective width) with
+    // a clearance each side. That subsumes the width rule — the interior cannot
+    // hold the square plus both clearances without being at least that wide —
+    // and it also keeps the mark off the caps at any window size. Below the
+    // threshold it simply does not paint: no shrink, no clamp.
+    {
+        const int sq    = trim_middle_size_px();
+        const int clear = trim_middle_clear_px();
+        const TrimBridgeGap gap =
+            trim_bridge_gap(bc, ec, trim_endcap_w_px(), lane_w);
+        const int vis_lo = std::max(gap.lo, 0);
+        const int vis_hi = std::min(gap.hi, lane_w);
+        const TrimBoundColumn mc = trim_bound_column(
+            (static_cast<double>(trim.begin) + static_cast<double>(trim.end)) *
+                0.5,
+            viewport_start_sample, viewport_end_sample, lane_w);
+        const int x_lo = mc.col - sq / 2;      // waveform-relative, inclusive
+        const int x_hi = x_lo + sq;            // exclusive
+        // The square hangs from the FACE's bottom edge, as the crop shows it —
+        // rows 2..6 of a 0..6 face, flush on the bevel — rather than centered in
+        // the face. That relationship is what scales with the lane.
+        const int y0 = lane_y + face_h - sq;
+        if (mc.in_viewport && sq <= face_h &&
+            x_lo >= vis_lo + clear && x_hi <= vis_hi - clear) {
+            cairo_set_source_rgb(cr, kTrimMiddle.r, kTrimMiddle.g,
+                                 kTrimMiddle.b);
+            cairo_rectangle(cr, lane_x + x_lo, y0, sq, sq);
+            cairo_fill(cr);
+        }
+    }
+
     cairo_restore(cr);
 }
 
@@ -776,12 +827,17 @@ struct FlagFace {
 
 // THE COLOR-CLASS LADDER, one owner for both marker columns (the full statement
 // is at render_flags' declaration): disabled wins outright, then red, then the
-// default pair with selection swapping it for the bright one.
+// default pair with selection swapping it for the bright one — and the DISABLED
+// arm runs that same red-then-selection ladder INSIDE ITSELF to pick the pair it
+// blends, so selection lifts a disabled marker exactly as it lifts a live one
+// (architect 2026-08-01) and red refuses the lift on both sides alike.
 //
 // THE DISABLED FACE'S LABEL DIMS AGAINST THE FLAG, NOT AGAINST THE LANE. Every
 // SHAPE surface takes 25% of itself over the lane ground, as ruled. The LABEL
 // takes the same 25%-of-itself through the same mix_color owner but toward the
-// surface it actually sits on — the already-blended fill — because that is what
+// surface it actually sits on — the already-blended fill, whichever pair
+// produced it, so a selected disabled marker's label dims against ITS OWN
+// brighter flag — because that is what
 // the redesign's disabled-label rule says ("a fraction of itself over the row's
 // CURRENT ground", render.h) and the label's ground here is the flag, not the
 // lane. The numbers are why it matters: blending the label toward the LANE
@@ -793,11 +849,39 @@ struct FlagFace {
 FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
     FlagFace f;
     if (disabled) {
-        // The class the marker WOULD paint, blended. Red keeps its own hue
-        // through the blend rather than collapsing to the default one, so a
-        // disabled red marker is still recognisably red.
-        const GuiColor base_fill = red ? kMarkerFlagFillRed : kMarkerFlagFill;
-        const GuiColor base_edge = red ? kMarkerFlagEdgeRed : kMarkerFlagEdge;
+        // The class the marker WOULD paint, blended — the LIVE LADDER RUN
+        // WHOLE and then damped, which is why the three arms below are the
+        // live arms in the live order. Red keeps its own hue through the blend
+        // rather than collapsing to the default one, so a disabled red marker
+        // is still recognisably red.
+        //
+        // SELECTION REACHES THE DISABLED FACE (architect 2026-08-01: the same
+        // brightness lift as a regular marker's, "including the border
+        // color"). The pair fed into the blend is the SELECTED pair, so a
+        // selected disabled marker is the disabled RENDITION OF THE SELECTED
+        // FACE — fill and edge both, through the ONE blend, so the lift is
+        // exactly the live swap's with the disabled damping applied to it and
+        // there is no second brightness rule to keep in step. It cannot
+        // resurrect the pre-row-5 masking defect either: the swap happens
+        // INSIDE the blend, so the face stays a 25%-of-itself-over-the-ground
+        // colour and still reads switched off.
+        //
+        // RED TAKES NO LIFT, selected or not, mirroring the live red class,
+        // which has no selected pair by ruling: a red marker's face is its
+        // normalization cue, and selection must not mask it on a disabled
+        // marker any more than on a live one.
+        GuiColor base_fill;
+        GuiColor base_edge;
+        if (red) {
+            base_fill = kMarkerFlagFillRed;
+            base_edge = kMarkerFlagEdgeRed;
+        } else if (selected) {
+            base_fill = kMarkerFlagFillSel;
+            base_edge = kMarkerFlagEdgeSel;
+        } else {
+            base_fill = kMarkerFlagFill;
+            base_edge = kMarkerFlagEdge;
+        }
         f.fill  = mix_color(base_fill, kRedesignTabGround, kMarkerDisabledMix);
         f.edge  = mix_color(base_edge, kRedesignTabGround, kMarkerDisabledMix);
         f.label = mix_color(kRedesignLabel, f.fill, kMarkerDisabledMix);
