@@ -1,8 +1,8 @@
 #pragma once
 
+// Dead include removed under grant (architect approval 2026-08-02).
 #include "warp_frame_map.h"      // WarpFrameMapSegment
 
-#include <cstdint>
 #include <expected>
 #include <string>
 #include <vector>

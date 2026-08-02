@@ -1,7 +1,6 @@
 #pragma once
+// Dead includes removed under grant (architect approval 2026-08-02).
 #include "stft_container.h"
-#include <complex>
-#include <cstddef>
 
 class Synthesis {
 public:

@@ -1,6 +1,6 @@
+// Dead include removed under grant (architect approval 2026-08-02).
 #include "map_output.h"
 
-#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>

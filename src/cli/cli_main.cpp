@@ -1,3 +1,4 @@
+// Dead includes removed under grant (architect approval 2026-08-02).
 #include "warpmarkers_parse.h"          // WarpMarker, parse_warpmarkers_file
 #include "phaseresetmarkers_parse.h"  // PhaseResetMarker, parse_phaseresetmarkers_file
 #include "engine_settings.h"            // EngineSettings
@@ -8,7 +9,6 @@
 #include "phase_reset_frame_map_build.h"  // build_phase_reset_source_frames
 #include "map_output.h"                 // write_frame_map_pair
 #include "marker_store_validate.h"      // first_past_eof_wall_defect
-#include "time_format.h"                // format_timestamp
 #include "engine/engine.h"              // EngineParams, run_warptempo_engine
 #include "engine/engine_geometry.h"     // kN, kRs
 #include "locale_check.h"
@@ -22,7 +22,6 @@
 
 #include "audio_probe.h"
 
-#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>

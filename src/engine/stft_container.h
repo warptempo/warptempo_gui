@@ -1,15 +1,17 @@
 #pragma once
 
+// Dead includes removed under grant (architect approval 2026-08-02); <cstddef>
+// added under the same grant — this header's bare size_t uses were served
+// transitively through the removed engine.h include.
 #include <algorithm>
 #include <atomic>
 #include <random>
 #include <vector>
-#include <string>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <fftw3.h>
 
-#include "engine.h"
 #include "engine_geometry.h"     // kN, kRs
 #include "synth_spectrum_trig.h"
 #include "warp_frame_map.h"

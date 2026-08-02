@@ -1,6 +1,6 @@
 #pragma once
 
-#include <expected>
+// Dead include removed under grant (architect approval 2026-08-02).
 #include <optional>
 #include <string>
 

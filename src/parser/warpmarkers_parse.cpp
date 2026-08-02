@@ -1,11 +1,10 @@
+// Dead includes removed under grant (architect approval 2026-08-02).
 #include "warpmarkers_parse.h"
 
 #include "frame_format.h"
 #include "parse_text_util.h"
 #include "value_format.h"
 
-#include <algorithm>
-#include <cstdio>
 #include <expected>
 #include <fstream>
 #include <set>

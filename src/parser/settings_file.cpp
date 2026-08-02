@@ -1,3 +1,4 @@
+// Dead include removed under grant (architect approval 2026-08-02).
 #include "settings_file.h"
 
 #include "frame_format.h"
@@ -5,7 +6,6 @@
 #include "playback_speed_presets.h"
 #include "value_format.h"
 
-#include <cstdio>
 #include <expected>
 #include <fstream>
 #include <set>

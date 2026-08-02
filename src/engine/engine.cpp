@@ -16,13 +16,13 @@
 // You should have received a copy of the GNU General Public License along
 // with this program. If not, see <https://www.gnu.org/licenses/>.
 
+// Dead includes removed under grant (architect approval 2026-08-02).
 #include "engine.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
-#include <string>
 #include <vector>
 
 #include <fftw3.h>

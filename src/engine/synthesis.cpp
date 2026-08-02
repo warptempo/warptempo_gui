@@ -1,8 +1,7 @@
+// Dead includes removed under grant (architect approval 2026-08-02).
 #include "synthesis.h"
 #include <algorithm>
 #include <condition_variable>
-#include <cmath>
-#include <complex>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -655,7 +654,12 @@ void Synthesis::process_to_buffer(AudioSTFT& stft,
                 // 2026-08-02, the terminal capitalization pass —
                 // text-only, otherwise byte-identical output); the
                 // dot-leader progress rows above are structured readout,
-                // not prose, and are unchanged.
+                // not prose, and are unchanged. The "warptempo_gui:"
+                // prefix is CORRECT in both binaries (architect ruling
+                // 2026-08-02): warptempo_gui is the PROJECT name (the
+                // GitHub repository name), not the GUI binary's name, so
+                // the engine — compiled into both products — prefixes
+                // with it in the CLI too.
                 std::fprintf(stderr,
                              "warptempo_gui: Synthesis output buffer shorter "
                              "than the frame emission; internal breach\n");
